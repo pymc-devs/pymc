@@ -49,7 +49,17 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
     model : Model (optional if in `with` context)
     *args, **kwargs
         Extra args passed to scipy.optimize.minimize
+
+    Notes
+    -----
+    Older code examples used find_MAP() to initialize the NUTS sampler,
+    this turned out to be a rather inefficient method.
+    Since then, we have greatly enhanced the initialization of NUTS and
+    wrapped it inside pymc3.sample() and you should thus avoid this method.
     """
+
+    warnings.warn('find_MAP should not be used to initialize the NUTS sampler, simply call pymc3.sample() and it will automatically initialize NUTS in a better way.')
+
     model = modelcontext(model)
     if start is None:
         start = model.test_point

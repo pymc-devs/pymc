@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """Sequential Monte Carlo sampler also known as
 Adaptive Transitional Markov Chain Monte Carlo sampler.
 Runs on any pymc3 model.
@@ -6,27 +7,31 @@ Various significant updates July, August 2016
 Made pymc3 compatible November 2016
 Renamed to SMC and further improvements March 2017
 @author: Hannes Vasyura-Bathke
+=======
+"""
+Sequential Monte Carlo sampler
+>>>>>>> 28ab6d9f9d83cd6a3f85e523d15ee65c2c233e76
 """
 import numpy as np
+import theano
 import pymc3 as pm
 from tqdm import tqdm
+import warnings
 
-import theano
-
-from ..model import modelcontext
-from ..vartypes import discrete_types
-from ..theanof import inputvars, make_shared_replacements, join_nonshared_inputs
-import numpy.random as nr
-
-from .metropolis import MultivariateNormalProposal
 from .arraystep import metrop_select
-from ..backends import smc_text as atext
+from .metropolis import MultivariateNormalProposal
+from ..theanof import floatX, make_shared_replacements, join_nonshared_inputs
+from ..model import modelcontext
+from ..backends.ndarray import NDArray
+from ..backends.base import MultiTrace
+
 
 __all__ = ['SMC', 'sample_smc']
 
 proposal_dists = {'MultivariateNormal': MultivariateNormalProposal}
 
 
+<<<<<<< HEAD
 def choose_proposal(proposal_name, scale=1.):
     """Initialize and select proposal distribution.
     Parameters
@@ -44,120 +49,64 @@ def choose_proposal(proposal_name, scale=1.):
 class SMC(atext.ArrayStepSharedLLK):
     """Adaptive Transitional Markov-Chain Monte-Carlo sampler class.
     Creates initial samples and framework around the (C)ATMIP parameters
+=======
+class SMC():
+    """
+    Sequential Monte Carlo step
+
+>>>>>>> 28ab6d9f9d83cd6a3f85e523d15ee65c2c233e76
     Parameters
     ----------
-    vars : list
-        List of variables for sampler
-    out_vars : list
-        List of output variables for trace recording. If empty unobserved_RVs are taken.
     n_steps : int
-        The number of steps of a Markov Chain. If `tune_interval > 0` `n_steps` will be used for
-        the first and last stages, and the number of steps of the intermediate states will be
-        determined automatically. Otherwise, if `tune_interval = 0`,  `n_steps` will be used for
-        all stages.
+        The number of steps of a Markov Chain. If `tune == True` `n_steps` will be used for
+        the first stage, and the number of steps of the other states will be determined
+        automatically based on the acceptance rate and `p_acc_rate`.
     scaling : float
         Factor applied to the proposal distribution i.e. the step size of the Markov Chain. Only
-        works if `tune_interval=0` otherwise it will be determined automatically
+        works if `tune == False` otherwise is determined automatically
     p_acc_rate : float
-        Probability of not accepting a step. Used to compute `n_steps` when `tune_interval > 0`.
-        It should be between 0 and 1.
-    covariance : :class:`numpy.ndarray`
-        (chains x chains)
-        Initial Covariance matrix for proposal distribution, if None - identity matrix taken
-    likelihood_name : string
-        name of the :class:`pymc3.deterministic` variable that contains the model likelihood.
-        Defaults to 'l_like__'
+        Probability of not accepting a Markov Chain proposal. Used to compute `n_steps` when
+        `tune == True`. It should be between 0 and 1.
     proposal_name :
-        Type of proposal distribution, see smc.proposal_dists.keys() for options
-    tune_interval : int
-        Number of steps to tune for. If tune=0 no tunning will be used. Default 10. SMC tunes two
-        related quantities, the scaling of the proposal distribution (i.e. the step size of Markov
-        Chain) and the number of steps of a Markov Chain (i.e. `n_steps`).
+        Type of proposal distribution. Currently the only valid option is `MultivariateNormal`.
     threshold : float
         Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
-        the higher the value of threshold the higher the number of stage. Defaults to 0.5.
+        the higher the value of threshold the higher the number of stages. Defaults to 0.5.
         It should be between 0 and 1.
-    check_bound : boolean
-        Check if current sample lies outside of variable definition speeds up computation as the
-        forward model wont be executed. Default: True
     model : :class:`pymc3.Model`
         Optional model for sampling step. Defaults to None (taken from context).
+<<<<<<< HEAD
     random_seed : int
         Optional to set the random seed.  Necessary for initial population.
+=======
+
+>>>>>>> 28ab6d9f9d83cd6a3f85e523d15ee65c2c233e76
     References
     ----------
+    .. [Minson2013] Minson, S. E. and Simons, M. and Beck, J. L., (2013),
+        Bayesian inversion for finite fault earthquake source models I- Theory and algorithm.
+        Geophysical Journal International, 2013, 194(3), pp.1701-1726,
+        `link <https://gji.oxfordjournals.org/content/194/3/1701.full>`__
+
     .. [Ching2007] Ching, J. and Chen, Y. (2007).
         Transitional Markov Chain Monte Carlo Method for Bayesian Model Updating, Model Class
         Selection, and Model Averaging. J. Eng. Mech., 10.1061/(ASCE)0733-9399(2007)133:7(816),
         816-832. `link <http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399
         %282007%29133:7%28816%29>`__
     """
-    default_blocked = True
 
-    def __init__(self, vars=None, out_vars=None, n_steps=25, scaling=1., p_acc_rate=0.001,
-                 covariance=None, likelihood_name='l_like__', proposal_name='MultivariateNormal',
-                 tune_interval=10, threshold=0.5, check_bound=True, model=None, random_seed=-1):
+    def __init__(self, n_steps=5, scaling=1., p_acc_rate=0.01, tune=True,
+                 proposal_name='MultivariateNormal', threshold=0.5):
 
-        if random_seed != -1:
-            nr.seed(random_seed)
-
-        model = modelcontext(model)
-
-        if vars is None:
-            vars = model.vars
-
-        vars = inputvars(vars)
-
-        if out_vars is None:
-            if not any(likelihood_name == RV.name for RV in model.unobserved_RVs):
-                pm._log.info('Adding model likelihood to RVs!')
-                with model:
-                    llk = pm.Deterministic(likelihood_name, model.logpt)
-            else:
-                pm._log.info('Using present model likelihood!')
-
-            out_vars = model.unobserved_RVs
-
-        out_varnames = [out_var.name for out_var in out_vars]
-
-        if covariance is None and proposal_name == 'MultivariateNormal':
-            self.covariance = np.eye(sum(v.dsize for v in vars))
-            scale = self.covariance
-        elif covariance is None:
-            scale = np.ones(sum(v.dsize for v in vars))
-        else:
-            scale = covariance
-
-        self.vars = vars
-        self.proposal_name = proposal_name
-        self.proposal_dist = choose_proposal(self.proposal_name, scale=scale)
-        self.scaling = np.atleast_1d(scaling)
-        self.check_bnd = check_bound
-        self.tune_interval = tune_interval
-        self.steps_until_tune = tune_interval
-        self.population = [model.test_point]
         self.n_steps = n_steps
-        self.n_steps_final = n_steps
+        self.scaling = scaling
         self.p_acc_rate = p_acc_rate
-        self.stage_sample = 0
-        self.accepted = 0
-        self.beta = 0
-        #self.sjs = 1
-        self.stage = 0
-        self.chain_index = 0
+        self.tune = tune
+        self.proposal = proposal_dists[proposal_name]
         self.threshold = threshold
-        self.likelihood_name = likelihood_name
-        self._llk_index = out_varnames.index(likelihood_name)
-        self.discrete = np.concatenate([[v.dtype in discrete_types] * (v.dsize or 1) for v in vars])
-        self.any_discrete = self.discrete.any()
-        self.all_discrete = self.discrete.all()
 
-        shared = make_shared_replacements(vars, model)
-        self.logp_forw = logp_forw(out_vars, vars, shared)
-        self.check_bnd = logp_forw([model.varlogpt], vars, shared)
 
-        super(SMC, self).__init__(vars, out_vars, shared)
-
+<<<<<<< HEAD
     def astep(self, q0):
         if self.stage == 0:
             l_new = self.logp_forw(q0)
@@ -395,29 +344,22 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
     (4) New `chains` Markov chains are seeded on the traces with high weight for a given number of
         iterations, the iterations can be computed automatically.
     (5) Repeat until `beta` > 1.
+=======
+def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed=-1):
+    """
+    Sequential Monte Carlo sampling
+
+>>>>>>> 28ab6d9f9d83cd6a3f85e523d15ee65c2c233e76
     Parameters
     ----------
-    samples : int
-        The number of samples to draw from the posterior (i.e. last stage). Defaults to 1000.
-    chains : int
-        Number of chains used to store samples in backend.
+    draws : int
+        The number of samples to draw from the posterior (i.e. last stage). And also the number of
+        independent Markov Chains. Defaults to 5000.
     step : :class:`SMC`
         SMC initialization object
-    start : List of dictionaries
-        with length of (`chains`). Starting points in parameter space (or partial point)
-        Defaults to random draws from variables (defaults to empty dict)
-    homepath : string
-        Result_folder for storing stages, will be created if not existing.
-    stage : int
-        Stage where to start or continue the calculation. It is possible to continue after
-        completed stages (`stage` should be the number of the completed stage + 1). If None the
-        start will be at `stage=0`.
-    cores : int
-        The number of cores to be used in parallel. Be aware that Theano has internal
-        parallelization. Sometimes this is more efficient especially for simple models.
-        `chains / cores` has to be an integer number!
     progressbar : bool
         Flag for displaying a progress bar
+<<<<<<< HEAD
     model : :class:`pymc3.Model`
         (optional if in `with` context) has to contain deterministic variable name defined under
         `step.likelihood_name` that contains the model likelihood
@@ -431,171 +373,119 @@ def sample_smc(samples=1000, chains=100, step=None, start=None, homepath=None, s
         Bayesian inversion for finite fault earthquake source models I- Theory and algorithm.
         Geophysical Journal International, 2013, 194(3), pp.1701-1726,
         `link <https://gji.oxfordjournals.org/content/194/3/1701.full>`__
+=======
+    model : pymc3 Model
+        optional if in `with` context
+    random_seed : int
+        random seed
+>>>>>>> 28ab6d9f9d83cd6a3f85e523d15ee65c2c233e76
     """
-
+    warnings.warn("Warning: SMC is experimental, hopefully it will be ready for PyMC 3.6")
     model = modelcontext(model)
 
     if random_seed != -1:
-        nr.seed(random_seed)
+        np.random.seed(random_seed)
 
-    if homepath is None:
-        raise TypeError('Argument `homepath` should be path to result_directory.')
+    beta = 0
+    stage = 0
+    acc_rate = 1
+    model.marginal_likelihood = 1
+    variables = model.vars
+    discrete = np.concatenate([[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables])
+    any_discrete = discrete.any()
+    all_discrete = discrete.all()
+    shared = make_shared_replacements(variables, model)
+    prior_logp = logp_forw([model.varlogpt], variables, shared)
+    likelihood_logp = logp_forw([model.datalogpt], variables, shared)
 
-    if cores > 1:
-        if not (chains / float(cores)).is_integer():
-            raise TypeError('chains / cores has to be a whole number!')
+    pm._log.info('Sample initial stage: ...')
+    posterior, var_info = _initial_population(draws, model, variables)
 
-    if not any(step.likelihood_name in var.name for var in model.deterministics):
-        raise TypeError('Model (deterministic) variables need to contain a variable {} as defined '
-                        'in `step`.'.format(step.likelihood_name))
+    while beta < 1:
+        # compute plausibility weights (measure fitness)
+        likelihoods = np.array([likelihood_logp(sample) for sample in posterior]).squeeze()
+        beta, old_beta, weights, sj = _calc_beta(beta, likelihoods, step.threshold)
+        model.marginal_likelihood *= sj
+        # resample based on plausibility weights (selection)
+        resampling_indexes = np.random.choice(np.arange(draws), size=draws, p=weights)
+        posterior = posterior[resampling_indexes]
+        likelihoods = likelihoods[resampling_indexes]
 
-    stage_handler = atext.TextStage(homepath)
+        # compute proposal distribution based on weights
+        covariance = _calc_covariance(posterior, weights)
+        proposal = step.proposal(covariance)
 
-    if progressbar and cores > 1:
-        progressbar = False
+        # compute scaling and number of Markov chains steps (optional), based on previous
+        # acceptance rate
+        if step.tune and stage > 0:
+            if acc_rate == 0:
+                acc_rate = 1. / step.n_steps
+            step.scaling = _tune(acc_rate)
+            step.n_steps = 1 + int(np.log(step.p_acc_rate) / np.log(1 - acc_rate))
 
-    if stage == 0:
-        # continue or start initial stage
-        step.stage = stage
-        draws = 1
-    else:
-        step = stage_handler.load_atmip_params(stage, model=model)
-        draws = step.n_steps
+        pm._log.info('Stage: {:d} Beta: {:f} Steps: {:d} Acc: {:f}'.format(stage, beta,
+                                                                           step.n_steps, acc_rate))
+        # Apply Metropolis kernel (mutation)
+        proposed = 0.
+        accepted = 0.
+        priors = np.array([prior_logp(sample) for sample in posterior]).squeeze()
+        tempered_post = priors + likelihoods * beta
+        for draw in tqdm(range(draws), disable=not progressbar):
+            old_tempered_post = tempered_post[draw]
+            q_old = posterior[draw]
+            deltas = np.squeeze(proposal(step.n_steps) * step.scaling)
+            for n_step in range(0, step.n_steps):
+                delta = deltas[n_step]
 
-    stage_handler.clean_directory(stage, None, rm_flag)
-
-    x_chains = stage_handler.recover_existing_results(stage, draws, chains, step)
-
-    step.resampling_indexes = np.arange(chains)
-    step.proposal_samples_array = step.proposal_dist(chains)
-
-    if start is not None:
-        if len(start) != chains:
-            raise TypeError('Argument `start` should have dicts equal the '
-                            'number of chains (`chains`)')
-        else:
-            step.population = start
-    else:
-        step.population = _initial_population(samples, chains, model, step.vars)
-
-    with model:
-        while step.beta < 1:
-            if step.stage == 0:
-                # Initial stage
-                pm._log.info('Sample initial stage: ...')
-                draws = 1
-            else:
-                draws = step.n_steps
-
-            pm._log.info('Beta: %f Stage: %i' % (step.beta, step.stage))
-
-            # Metropolis sampling intermediate stages
-            x_chains = stage_handler.clean_directory(step.stage, x_chains, rm_flag)
-            sample_args = {'draws': draws,
-                           'step': step,
-                           'stage_path': stage_handler.stage_path(step.stage),
-                           'progressbar': progressbar,
-                           'model': model,
-                           'n_jobs': cores,
-                           'x_chains': x_chains,
-                           'chains': chains}
-
-            _iter_parallel_chains(**sample_args)
-
-            mtrace = stage_handler.load_multitrace(step.stage)
-
-            step.population, step.array_population, step.likelihoods = step.select_end_points(
-                mtrace, chains)
-
-            step.beta, step.old_beta, step.weights = step.calc_beta()
-            #step.beta, step.old_beta, step.weights, sj = step.calc_beta()
-            #step.sjs *= sj
-
-            if step.beta > 1.:
-                pm._log.info('Beta > 1.: %f' % step.beta)
-                step.beta = 1.
-                stage_handler.dump_atmip_params(step)
-                if stage == -1:
-                    x_chains = []
+                if any_discrete:
+                    if all_discrete:
+                        delta = np.round(delta, 0).astype('int64')
+                        q_old = q_old.astype('int64')
+                        q_new = (q_old + delta).astype('int64')
+                    else:
+                        delta[discrete] = np.round(delta[discrete], 0)
+                        q_new = (q_old + delta)
                 else:
-                    x_chains = None
-            else:
-                step.covariance = step.calc_covariance()
-                step.proposal_dist = choose_proposal(step.proposal_name, scale=step.covariance)
-                step.resampling_indexes = step.resample(chains)
-                step.chain_previous_lpoint = step.get_chain_previous_lpoint(mtrace, chains)
+                    q_new = floatX(q_old + delta)
 
-                stage_handler.dump_atmip_params(step)
+                new_tempered_post = prior_logp(q_new) + likelihood_logp(q_new)[0] * beta
 
-                step.stage += 1
+                q_old, accept = metrop_select(new_tempered_post - old_tempered_post, q_new, q_old)
+                if accept:
+                    accepted += accept
+                    posterior[draw] = q_old
+                    old_tempered_post = new_tempered_post
+                proposed += 1.
 
-        # Metropolis sampling final stage
-        pm._log.info('Sample final stage')
-        step.stage = -1
-        x_chains = stage_handler.clean_directory(step.stage, x_chains, rm_flag)
-        weights_un = np.exp((1 - step.old_beta) * (step.likelihoods - step.likelihoods.max()))
-        step.weights = weights_un / np.sum(weights_un)
-        step.covariance = step.calc_covariance()
-        step.proposal_dist = choose_proposal(step.proposal_name, scale=step.covariance)
-        step.resampling_indexes = step.resample(chains)
-        step.chain_previous_lpoint = step.get_chain_previous_lpoint(mtrace, chains)
+        acc_rate = accepted / proposed
+        stage += 1
 
-        x_chains = nr.randint(0, chains, size=samples)
+    trace = _posterior_to_trace(posterior, model, var_info)
 
-        sample_args['draws'] = step.n_steps_final
-        sample_args['step'] = step
-        sample_args['stage_path'] = stage_handler.stage_path(step.stage)
-        sample_args['x_chains'] = x_chains
-        _iter_parallel_chains(**sample_args)
-
-        stage_handler.dump_atmip_params(step)
-
-        #model.marginal_likelihood = step.sjs
-        return stage_handler.create_result_trace(step.stage,
-                                                 step=step,
-                                                 model=model)
+    return trace
 
 
-def _initial_population(samples, chains, model, variables):
+def _initial_population(draws, model, variables):
     """
     Create an initial population from the prior
     """
     population = []
-    init_rnd = {}
+    var_info = {}
     start = model.test_point
+    init_rnd = pm.sample_prior_predictive(draws, model=model)
     for v in variables:
-        if pm.util.is_transformed_name(v.name):
-            trans = v.distribution.transform_used.forward_val
-            init_rnd[v.name] = trans(v.distribution.dist.random(size=chains, point=start))
-        else:
-            init_rnd[v.name] = v.random(size=chains, point=start)
+        var_info[v.name] = (start[v.name].shape, start[v.name].size)
 
-    for i in range(chains):
-        population.append(pm.Point({v.name: init_rnd[v.name][i] for v in variables}, model=model))
+    for i in range(draws):
+        point = pm.Point({v.name: init_rnd[v.name][i] for v in variables}, model=model)
+        population.append(model.dict_to_array(point))
 
-    return population
+    return np.array(population), var_info
 
 
-def _sample(draws, step=None, start=None, trace=None, chain=0, progressbar=True, model=None,
-            random_seed=-1, chain_idx=0):
-
-    sampling = _iter_sample(draws, step, start, trace, chain, model, random_seed, chain_idx)
-
-    if progressbar:
-        sampling = tqdm(sampling, total=draws)
-
-    try:
-        for strace in sampling:
-            pass
-
-    except KeyboardInterrupt:
-        pass
-
-    return chain
-
-
-def _iter_sample(draws, step, start=None, trace=None, chain=0, model=None, random_seed=-1, chain_idx=0):
+def _calc_beta(beta, likelihoods, threshold=0.5):
     """
+<<<<<<< HEAD
     Modified from :func:`pymc3.sampling._iter_sample` to be more efficient with SMC algorithm.
     """
     model = modelcontext(model)
@@ -630,56 +520,75 @@ def _work_chain(work):
     work : List
         Containing all the information that is unique for each Markov Chain
         i.e. [:class:'SMC', chain_number(int), sampling index(int), start_point(dictionary)]
+=======
+    Calculate next inverse temperature (beta) and importance weights based on current beta
+    and tempered likelihood.
+
+    Parameters
+    ----------
+    beta : float
+        tempering parameter of current stage
+    likelihoods : numpy array
+        likelihoods computed from the model
+    threshold : float
+        Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
+        the higher the value of threshold the higher the number of stage. Defaults to 0.5.
+        It should be between 0 and 1.
+
+>>>>>>> 28ab6d9f9d83cd6a3f85e523d15ee65c2c233e76
     Returns
     -------
-    chain : int
-        Index of chain that has been sampled
+    new_beta : float
+        tempering parameter of the next stage
+    old_beta : float
+        tempering parameter of the current stage
+    weights : numpy array
+        Importance weights (floats)
+    sj : float
+        Partial marginal likelihood
     """
-    return _sample(*work)
+    low_beta = old_beta = beta
+    up_beta = 2.
+    rN = int(len(likelihoods) * threshold)
+
+    while up_beta - low_beta > 1e-6:
+        new_beta = (low_beta + up_beta) / 2.
+        weights_un = np.exp((new_beta - old_beta) * (likelihoods - likelihoods.max()))
+        weights = weights_un / np.sum(weights_un)
+        ESS = int(1 / np.sum(weights ** 2))
+        if ESS == rN:
+            break
+        elif ESS < rN:
+            up_beta = new_beta
+        else:
+            low_beta = new_beta
+    if new_beta >= 1:
+        new_beta = 1
+    sj = np.exp((new_beta - old_beta) * likelihoods)
+    weights_un = np.exp((new_beta - old_beta) * (likelihoods - likelihoods.max()))
+    weights = weights_un / np.sum(weights_un)
+    return new_beta, old_beta, weights, np.mean(sj)
 
 
-def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs, chains,
-                          x_chains=None):
-    """Do Metropolis sampling over all the x_chains with each chain being sampled 'draws' times.
-    Parallel execution according to n_jobs.
+def _calc_covariance(posterior_array, weights):
     """
-    if x_chains is None:
-        x_chains = range(chains)
-
-    chain_idx = range(0, len(x_chains))
-    pm._log.info('Initializing chain traces ...')
-
-    max_int = np.iinfo(np.int32).max
-
-    random_seeds = nr.randint(1, max_int, size=len(x_chains))
-    pm._log.info('Sampling ...')
-
-    work = [(draws,
-             step,
-             step.population[step.resampling_indexes[chain]],
-             atext.TextChain(stage_path, model=model),
-             chain,
-             False,
-             model,
-             rseed,
-             chain_idx) for chain, rseed, chain_idx in zip(x_chains, random_seeds, chain_idx)]
-
-    if draws < 10:
-        chunksize = n_jobs
-    else:
-        chunksize = 1
-
-    p = atext.paripool(_work_chain, work, chunksize=chunksize, nprocs=n_jobs)
-
-    if n_jobs == 1 and progressbar:
-        p = tqdm(p, total=len(x_chains))
-
-    for _ in p:
-        pass
+    Calculate trace covariance matrix based on importance weights.
+    """
+    cov = np.cov(np.squeeze(posterior_array), aweights=weights.ravel(), bias=False, rowvar=0)
+    if np.isnan(cov).any() or np.isinf(cov).any():
+        raise ValueError('Sample covariances not valid! Likely "chains" is too small!')
+    return np.atleast_2d(cov)
 
 
+<<<<<<< HEAD
 def tune(acc_rate):
     """Tune adaptively based on the acceptance rate.
+=======
+def _tune(acc_rate):
+    """
+    Tune adaptively based on the acceptance rate.
+
+>>>>>>> 28ab6d9f9d83cd6a3f85e523d15ee65c2c233e76
     Parameters
     ----------
     acc_rate: float
@@ -692,6 +601,27 @@ def tune(acc_rate):
     a = 1. / 9
     b = 8. / 9
     return (a + b * acc_rate) ** 2
+
+
+def _posterior_to_trace(posterior, model, var_info):
+    """
+    Save results into a PyMC3 trace
+    """
+    lenght_pos = len(posterior)
+    varnames = [v.name for v in model.vars]
+
+    with model:
+        strace = NDArray(model)
+        strace.setup(lenght_pos, 0)
+    for i in range(lenght_pos):
+        value = []
+        size = 0
+        for var in varnames:
+            shape, new_size = var_info[var]
+            value.append(posterior[i][size:size+new_size].reshape(shape))
+            size += new_size
+        strace.record({k: v for k, v in zip(varnames, value)})
+    return MultiTrace([strace])
 
 
 def logp_forw(out_vars, vars, shared):

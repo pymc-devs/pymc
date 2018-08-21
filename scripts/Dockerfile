@@ -1,6 +1,6 @@
 FROM jupyter/minimal-notebook
 
-ARG SRC_DIR
+ARG SRC_DIR=.
 
 MAINTAINER Austin Rochford <austin.rochford@gmail.com>
 
