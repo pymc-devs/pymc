@@ -737,7 +737,14 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         """Theano scalar of log-probability of the unobserved random variables
            (excluding deterministic)."""
         with self:
-            factors = [var.logpt for var in self.vars]
+            factors = [var.logpt for var in self.free_RVs]
+            return tt.sum(factors)
+
+    @property
+    def datalogpt(self):
+        with self:
+            factors = [var.logpt for var in self.observed_RVs]
+            factors += [tt.sum(factor) for factor in self.potentials]
             return tt.sum(factors)
 
     @property
@@ -1293,6 +1300,10 @@ class ObservedRV(Factor, TensorVariable):
             needed for upscaling logp
         """
         from .distributions import TensorType
+
+        if hasattr(data, 'type') and isinstance(data.type, tt.TensorType):
+            type = data.type
+
         if type is None:
             data = pandas_to_array(data)
             type = TensorType(distribution.dtype, data.shape)

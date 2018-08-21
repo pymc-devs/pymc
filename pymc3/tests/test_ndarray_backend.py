@@ -120,7 +120,7 @@ class TestMultiTrace(bf.ModelBackendSetupTestCase):
             base.merge_traces([mtrace0, mtrace1])
 
 
-class TestMultiTrace_add_values(bf.ModelBackendSampledTestCase):
+class TestMultiTrace_add_remove_values(bf.ModelBackendSampledTestCase):
     name = None
     backend = ndarray.NDArray
     shape = ()
@@ -134,6 +134,9 @@ class TestMultiTrace_add_values(bf.ModelBackendSampledTestCase):
         assert len(orig_varnames) == len(mtrace.varnames) - 1
         assert name in mtrace.varnames
         assert np.all(mtrace[orig_varnames[0]] == mtrace[name])
+        mtrace.remove_values(name)
+        assert len(orig_varnames) == len(mtrace.varnames)
+        assert name not in mtrace.varnames
 
 
 class TestSqueezeCat(object):
@@ -210,7 +213,7 @@ class TestSaveLoad(object):
         for var in ('x', 'z'):
             assert (self.trace[var] == trace2[var]).all()
 
-    def test_sample_ppc(self, tmpdir_factory):
+    def test_sample_posterior_predictive(self, tmpdir_factory):
         directory = str(tmpdir_factory.mktemp('data'))
         save_dir = pm.save_trace(self.trace, directory, overwrite=True)
 
@@ -219,13 +222,13 @@ class TestSaveLoad(object):
         seed = 10
         np.random.seed(seed)
         with TestSaveLoad.model():
-            ppc = pm.sample_ppc(self.trace)
+            ppc = pm.sample_posterior_predictive(self.trace)
 
         seed = 10
         np.random.seed(seed)
         with TestSaveLoad.model():
             trace2 = pm.load_trace(directory)
-            ppc2 = pm.sample_ppc(trace2)
+            ppc2 = pm.sample_posterior_predictive(trace2)
 
         for key, value in ppc.items():
             assert (value == ppc2[key]).all()

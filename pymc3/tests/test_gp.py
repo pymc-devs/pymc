@@ -552,6 +552,30 @@ class TestGibbs(object):
             pm.gp.cov.Gibbs(3, lambda x: x, active_dims=[0,1])
 
 
+class TestScaledCov(object):
+    def test_1d(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        def scaling_func(x, a, b):
+            return a + b*x
+        with pm.Model() as model:
+            cov_m52 = pm.gp.cov.Matern52(1, 0.2)
+            cov = pm.gp.cov.ScaledCov(1, scaling_func=scaling_func, args=(2, -1), cov_func=cov_m52)
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 3.00686, atol=1e-3)
+        K = theano.function([], cov(X, X))()
+        npt.assert_allclose(K[0, 1], 3.00686, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_raises(self):
+        cov_m52 = pm.gp.cov.Matern52(1, 0.2)
+        with pytest.raises(TypeError):
+            pm.gp.cov.ScaledCov(1, cov_m52, "str is not callable")
+        with pytest.raises(TypeError):
+            pm.gp.cov.ScaledCov(1, "str is not Covariance object", lambda x: x)
+
+
 class TestHandleArgs(object):
     def test_handleargs(self):
         def func_noargs(x):

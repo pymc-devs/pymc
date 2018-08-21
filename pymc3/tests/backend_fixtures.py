@@ -60,6 +60,10 @@ class ModelBackendSetupTestCase(object):
             self.strace.setup(self.draws, self.chain, self.sampler_vars)
             assert len(self.strace) == 0
 
+    def test_double_close(self):
+        self.strace.close()
+        self.strace.close()
+
     def teardown_method(self):
         if self.name is not None:
             remove_file_or_directory(self.name)

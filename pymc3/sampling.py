@@ -27,7 +27,9 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_ppc_w', 'init_nuts', 'sample_prior_predictive']
+__all__ = ['sample', 'iter_sample', 'sample_posterior_predictive',
+           'sample_posterior_predictive_w', 'init_nuts',
+           'sample_prior_predictive', 'sample_ppc', 'sample_ppc_w']
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
@@ -321,23 +323,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     if isinstance(step, pm.step_methods.smc.SMC):
         if step_kwargs is None:
             step_kwargs = {}
-        if chains is None:
-            chains = 100
-        if cores is None:
-            cores = 1
         test_folder = mkdtemp(prefix='SMC_TEST')
-        trace = smc.sample_smc(samples=draws,
-                               chains=chains,
+        trace = smc.sample_smc(draws=draws,
                                step=step,
-                               start=start,
-                               homepath=step_kwargs.get('homepath', test_folder),
-                               stage=step_kwargs.get('stage', 0),
-                               cores=cores,
                                progressbar=progressbar,
                                model=model,
-                               random_seed=random_seed,
-                               rm_flag=step_kwargs.get('rm_flag', True),
-                               **kwargs)
+                               random_seed=random_seed)
     else:
         if cores is None:
             cores = min(4, _cpu_count())
@@ -438,7 +429,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
 
         sample_args.update(kwargs)
 
-        has_population_samplers = np.any([ isinstance(m, arraystep.PopulationArrayStepShared)
+        has_population_samplers = np.any([isinstance(m, arraystep.PopulationArrayStepShared)
             for m in (step.methods if isinstance(step, CompoundStep) else [step])])
 
         parallel = cores > 1 and chains > 1 and not has_population_samplers
@@ -1068,8 +1059,8 @@ def stop_tuning(step):
     return step
 
 
-def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
-               random_seed=None, progressbar=True):
+def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size=None,
+                                random_seed=None, progressbar=True):
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -1153,8 +1144,15 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None,
     return ppc_trace
 
 
-def sample_ppc_w(traces, samples=None, models=None, weights=None,
-                 random_seed=None, progressbar=True):
+def sample_ppc(*args, **kwargs):
+    """This method is deprecated.  Please use :func:`~sampling.sample_posterior_predictive`"""
+    message = 'sample_ppc() is deprecated.  Please use sample_posterior_predictive()'
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
+    return sample_posterior_predictive(*args, **kwargs)
+
+
+def sample_posterior_predictive_w(traces, samples=None, models=None, weights=None,
+                                    random_seed=None, progressbar=True):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.
 
@@ -1268,7 +1266,7 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
         for idx in indices:
             param = trace[idx]
             var = variables[idx]
-            # TODO sample_ppc_w is currently only work for model with
+            # TODO sample_posterior_predictive_w is currently only work for model with
             # one observed.
             ppc[var.name].append(draw_values([var],
                                              point=param,
@@ -1285,6 +1283,13 @@ def sample_ppc_w(traces, samples=None, models=None, weights=None,
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
+def sample_ppc_w(*args, **kwargs):
+    """This method is deprecated.  Please use :func:`~sampling.sample_posterior_predictive_w`"""
+    message = 'sample_ppc() is deprecated.  Please use sample_posterior_predictive_w()'
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
+    return sample_posterior_predictive_w(*args, **kwargs)
+
+
 def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None):
     """Generate samples from the prior predictive distribution.
 
@@ -1294,7 +1299,8 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
         Number of samples from the prior predictive to generate. Defaults to 500.
     model : Model (optional if in `with` context)
     vars : iterable
-        Variables for which to compute the posterior predictive samples.
+        A list of names of variables for which to compute the posterior predictive
+         samples.
         Defaults to `model.named_vars`.
     random_seed : int
         Seed for the random number generator.
@@ -1302,7 +1308,8 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
     Returns
     -------
     dict
-        Dictionary with the variables as keys. The values are arrays of prior samples.
+        Dictionary with variable names as keys. The values are numpy arrays of prior
+         samples.
     """
     model = modelcontext(model)
 

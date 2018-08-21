@@ -327,7 +327,7 @@ class MvStudentT(_QuadFormBase):
     """
 
     def __init__(self, nu, Sigma=None, mu=None, cov=None, tau=None, chol=None,
-                 lower=None, *args, **kwargs):
+                 lower=True, *args, **kwargs):
         if Sigma is not None:
             if cov is not None:
                 raise ValueError('Specify only one of cov and Sigma')
@@ -383,10 +383,9 @@ class Dirichlet(Continuous):
 
     .. math::
 
-       f(\mathbf{x}) =
-           \frac{\Gamma(\sum_{i=1}^k \theta_i)}{\prod \Gamma(\theta_i)}
-           \prod_{i=1}^{k-1} x_i^{\theta_i - 1}
-           \left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k
+       f(\mathbf{x}|\mathbf{a}) =
+           \frac{\Gamma(\sum_{i=1}^k a_i)}{\prod_{i=1}^k \Gamma(a_i)}
+           \prod_{i=1}^k x_i^{a_i - 1}
 
     ========  ===============================================
     Support   :math:`x_i \in (0, 1)` for :math:`i \in \{1, \ldots, K\}`
@@ -400,11 +399,6 @@ class Dirichlet(Continuous):
     ----------
     a : array
         Concentration parameters (a > 0).
-
-    Notes
-    -----
-    Only the first `k-1` elements of `x` are expected. Can be used
-    as a parent of Multinomial and Categorical nevertheless.
     """
 
     def __init__(self, a, transform=transforms.stick_breaking,
@@ -584,7 +578,7 @@ class Multinomial(Discrete):
         p = self.p
 
         return bound(
-            factln(n) + tt.sum(-factln(x) + x * tt.log(p), axis=-1, keepdims=True),
+            factln(n) + tt.sum(-factln(x) + logpow(p, x), axis=-1, keepdims=True),
             tt.all(x >= 0),
             tt.all(tt.eq(tt.sum(x, axis=-1, keepdims=True), n)),
             tt.all(p <= 1),

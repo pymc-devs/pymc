@@ -22,6 +22,7 @@ __all__ = [
     'FullRankADVI',
     'SVGD',
     'ASVGD',
+    'NFVI',
     'Inference',
     'ImplicitGradient',
     'KLqp',
@@ -272,15 +273,28 @@ class KLqp(Inference):
     """**Kullback Leibler Divergence Inference**
 
     General approach to fit Approximations that define :math:`logq`
-    by maximizing ELBO (Evidence Lower Bound).
+    by maximizing ELBO (Evidence Lower Bound). In some cases
+    rescaling the regularization term KL may be beneficial
+
+    .. math::
+
+        ELBO_\beta = \log p(D|\theta) - \beta KL(q||p)
 
     Parameters
     ----------
     approx : :class:`Approximation`
         Approximation to fit, it is required to have `logQ`
+    beta : float
+        Scales the regularization term in ELBO (see Christopher P. Burgess et al., 2017)
+
+    References
+    ----------
+    -   Christopher P. Burgess et al. (NIPS, 2017)
+        Understanding disentangling in :math:`\beta`-VAE
+        arXiv preprint 1804.03599
     """
-    def __init__(self, approx):
-        super(KLqp, self).__init__(KL, approx, None)
+    def __init__(self, approx, beta=1.):
+        super(KLqp, self).__init__(KL, approx, None, beta=beta)
 
 
 class ADVI(KLqp):

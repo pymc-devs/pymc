@@ -145,73 +145,72 @@ class BaseTestCases(object):
             except AttributeError:
                 return random_variable.distribution.random(size=size)
 
-        def test_scalar_parameter_shape(self):
+        @pytest.mark.parametrize('size', [None, 5, (4, 5)], ids=str)
+        def test_scalar_parameter_shape(self, size):
             rv = self.get_random_variable(None)
-            for size in (None, 5, (4, 5)):
-                if size is None:
-                    expected = 1,
-                else:
-                    expected = np.atleast_1d(size).tolist()
-                actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
-                assert tuple(expected) == actual
+            if size is None:
+                expected = 1,
+            else:
+                expected = np.atleast_1d(size).tolist()
+            actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
+            assert tuple(expected) == actual
 
-        def test_scalar_shape(self):
+        @pytest.mark.parametrize('size', [None, 5, (4, 5)], ids=str)
+        def test_scalar_shape(self, size):
             shape = 10
             rv = self.get_random_variable(shape)
-            for size in (None, 5, (4, 5)):
-                if size is None:
-                    expected = []
-                else:
-                    expected = np.atleast_1d(size).tolist()
-                expected.append(shape)
-                actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
-                assert tuple(expected) == actual
 
-        def test_parameters_1d_shape(self):
+            if size is None:
+                expected = []
+            else:
+                expected = np.atleast_1d(size).tolist()
+            expected.append(shape)
+            actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
+            assert tuple(expected) == actual
+
+        @pytest.mark.parametrize('size', [None, 5, (4, 5)], ids=str)
+        def test_parameters_1d_shape(self, size):
             rv = self.get_random_variable(self.shape, with_vector_params=True)
-            for size in (None, 5, (4, 5)):
-                if size is None:
-                    expected = []
-                else:
-                    expected = np.atleast_1d(size).tolist()
-                expected.append(self.shape)
-                actual = self.sample_random_variable(rv, size).shape
-                assert tuple(expected) == actual
+            if size is None:
+                expected = []
+            else:
+                expected = np.atleast_1d(size).tolist()
+            expected.append(self.shape)
+            actual = self.sample_random_variable(rv, size).shape
+            assert tuple(expected) == actual
 
-        def test_broadcast_shape(self):
+        @pytest.mark.parametrize('size', [None, 5, (4, 5)], ids=str)
+        def test_broadcast_shape(self, size):
             broadcast_shape = (2 * self.shape, self.shape)
             rv = self.get_random_variable(broadcast_shape, with_vector_params=True)
-            for size in (None, 5, (4, 5)):
-                if size is None:
-                    expected = []
-                else:
-                    expected = np.atleast_1d(size).tolist()
-                expected.extend(broadcast_shape)
-                actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
-                assert tuple(expected) == actual
+            if size is None:
+                expected = []
+            else:
+                expected = np.atleast_1d(size).tolist()
+            expected.extend(broadcast_shape)
+            actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
+            assert tuple(expected) == actual
 
-        def test_different_shapes_and_sample_sizes(self):
-            shapes = [(), (1,), (1, 1), (1, 2), (10, 10, 1), (10, 10, 2)]
+        @pytest.mark.parametrize('shape', [(), (1,), (1, 1), (1, 2), (10, 10, 1), (10, 10, 2)], ids=str)
+        def test_different_shapes_and_sample_sizes(self, shape):
             prefix = self.distribution.__name__
-            expected = []
-            actual = []
-            for shape in shapes:
-                rv = self.get_random_variable(shape, name='%s_%s' % (prefix, shape))
-                for size in (None, 1, 5, (4, 5)):
-                    if size is None:
+
+            rv = self.get_random_variable(shape, name='%s_%s' % (prefix, shape))
+            for size in (None, 1, 5, (4, 5)):
+                if size is None:
+                    s = []
+                else:
+                    try:
+                        s = list(size)
+                    except TypeError:
+                        s = [size]
+                    if s == [1]:
                         s = []
-                    else:
-                        try:
-                            s = list(size)
-                        except TypeError:
-                            s = [size]
-                        if s == [1]:
-                            s = []
-                    if shape not in ((), (1,)):
-                        s.extend(shape)
-                    e = tuple(s)
-                    a = self.sample_random_variable(rv, size).shape
-                    assert e == a
+                if shape not in ((), (1,)):
+                    s.extend(shape)
+                e = tuple(s)
+                a = self.sample_random_variable(rv, size).shape
+                assert e == a
 
 
 class TestNormal(BaseTestCases.BaseTestCase):
@@ -220,7 +219,7 @@ class TestNormal(BaseTestCases.BaseTestCase):
 
 class TestTruncatedNormal(BaseTestCases.BaseTestCase):
     distribution = pm.TruncatedNormal
-    params = {'mu': 0., 'tau': 1., 'a':-0.5, 'b':0.5}
+    params = {'mu': 0., 'tau': 1., 'lower':-0.5, 'upper':0.5}
 
 class TestSkewNormal(BaseTestCases.BaseTestCase):
     distribution = pm.SkewNormal
@@ -402,6 +401,11 @@ class TestCategorical(BaseTestCases.BaseTestCase):
     def get_random_variable(self, shape, with_vector_params=False, **kwargs):  # don't transform categories
         return super(TestCategorical, self).get_random_variable(shape, with_vector_params=False, **kwargs)
 
+    def test_probability_vector_shape(self):
+        """Check that if a 2d array of probabilities are passed to categorical correct shape is returned"""
+        p = np.ones((10, 5))
+        assert pm.Categorical.dist(p=p).random().shape == (10,)
+
 
 class TestScalarParameterSamples(SeededTest):
     def test_bounded(self):
@@ -424,9 +428,10 @@ class TestScalarParameterSamples(SeededTest):
         pymc3_random(pm.Normal, {'mu': R, 'sd': Rplus}, ref_rand=ref_rand)
 
     def test_truncated_normal(self):
-        def ref_rand(size, mu, sd, a,b):
-            return st.truncnorm.rvs((a-mu)/sd, (b-mu)/sd, size=size, loc=mu, scale=sd)
-        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sd': Rplusbig, 'a':-Rplusbig, 'b':Rplusbig}, ref_rand=ref_rand)
+        def ref_rand(size, mu, sd, lower, upper):
+            return st.truncnorm.rvs((lower-mu)/sd, (upper-mu)/sd, size=size, loc=mu, scale=sd)
+        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sd': Rplusbig, 'lower':-Rplusbig, 'upper':Rplusbig},
+                     ref_rand=ref_rand)
 
     def test_skew_normal(self):
         def ref_rand(size, alpha, mu, sd):
@@ -845,7 +850,7 @@ def test_mixture_random_shape():
     assert rand3.shape == (100, 20)
 
     with m:
-        ppc = pm.sample_ppc([m.test_point], samples=200)
+        ppc = pm.sample_posterior_predictive([m.test_point], samples=200)
     assert ppc['like0'].shape == (200, 20)
     assert ppc['like1'].shape == (200, 20)
     assert ppc['like2'].shape == (200, 20)
@@ -860,7 +865,7 @@ def test_density_dist_with_random_sampleable():
         trace = pm.sample(100)
 
     samples = 500
-    ppc = pm.sample_ppc(trace, samples=samples, model=model, size=100)
+    ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
     assert len(ppc['density_dist']) == samples
 
 
@@ -873,4 +878,4 @@ def test_density_dist_without_random_not_sampleable():
 
     samples = 500
     with pytest.raises(ValueError):
-        pm.sample_ppc(trace, samples=samples, model=model, size=100)
+        pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
