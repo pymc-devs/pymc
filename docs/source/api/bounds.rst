@@ -6,6 +6,10 @@ PyMC3 includes the construct :class:`~pymc3.distributions.bound.Bound` for
 placing constraints on existing probability distributions.  It modifies a given
 distribution to take values only within a specified interval.
 
+Note that the `Bound` class does *not* directly create a bounded
+distribution: instead it creates a Callable class that can be
+*invoked* to create a bounded distribution, as the example below illustrates.
+
 Some types of variables require constraints.  For instance, it doesn't make
 sense for a standard deviation to have a negative value, so something like a
 Normal prior on a parameter that represents a standard deviation would be
@@ -42,6 +46,14 @@ cleaner notationally to define both the bound and variable together. ::
 
     with model:
         x = pm.Bound(pm.Normal, lower=0.0)('x', mu=1.0, sd=3.0)
+
+However, it is possible to create multiple different random variables
+that have the same bound applied to them::
+
+    with model:
+        BoundNormal = pm.Bound(pm.Normal, lower=0.0)
+        hyper_mu = BoundNormal("hyper_mu", mu=1, sd=0.5)
+        mu = BoundNormal("mu", mu=hyper_mu, sd=1)
 
 Bounds can also be applied to a vector of random variables.  With the same
 ``BoundedNormal`` object we created previously we can write::
