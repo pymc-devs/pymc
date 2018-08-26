@@ -456,3 +456,11 @@ class TestNutsCheckTrace(object):
             error.match('issues during sampling')
 
             assert not trace.report.ok
+
+    def test_sampler_stats(self):
+        with Model():
+            x = Normal('x', mu=0, sd=1)
+            trace = sample(draws=10, tune=1, chains=1)
+
+        for varname in trace.stat_names:
+            assert(trace.get_sampler_stats(varname).shape == (10,))
