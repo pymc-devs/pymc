@@ -7,6 +7,7 @@ Multivariate
 
    MvNormal
    MatrixNormal
+   KroneckerNormal
    MvStudentT
    Wishart
    LKJCholeskyCov

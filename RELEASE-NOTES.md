@@ -1,6 +1,6 @@
 # Release Notes
 
-## PyMC3 3.6
+## PyMC3 3.6 (unreleased)
 
 ### New features
 
@@ -10,6 +10,8 @@
 ### Maintenance
 
 - Renamed `sample_ppc()` and `sample_ppc_w()` to `sample_posterior_predictive()` and `sample_posterior_predictive_w()`, respectively.
+- Refactor SMC and properly compute marginal likelihood (#3124)
+
 
 ## PyMC 3.5 (July 21 2018)
 
@@ -446,3 +448,4 @@ Thus, Thomas, Chris and I are pleased to announce that PyMC3 is now in Beta.
 * maahnman <github@mm.maahn.de>
 * paul sorenson <paul@metrak.com>
 * zenourn <daniel@zeno.co.nz>
+

@@ -157,7 +157,8 @@ class _ContinuousBounded(_Bounded, Continuous):
 
 class Bound(object):
     R"""
-    Create a new upper, lower or upper+lower bounded distribution.
+    Create a Bound variable object that can be applied to create
+    a new upper, lower, or upper and lower bounded distribution.
 
     The resulting distribution is not normalized anymore. This
     is usually fine if the bounds are constants. If you need
@@ -181,9 +182,13 @@ class Bound(object):
 
         with pm.Model():
             NegativeNormal = pm.Bound(pm.Normal, upper=0.0)
-            par1 = NegativeNormal('par2', mu=0.0, sd=1.0, testval=1.0)
+            par1 = NegativeNormal('par`', mu=0.0, sd=1.0, testval=-0.5)
+            # you can use the Bound object multiple times to
+            # create multiple bounded random variables
+            par1_1 = NegativeNormal('par1_1', mu=-1.0, sd=1.0, testval=-1.5)
 
-            # or you can define it implicitly within the model context
+            # you can also define a Bound implicitly, while applying
+            # it to a random variable
             par2 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)(
                     'par2', mu=0.0, sd=1.0, testval=1.0)
     """
@@ -201,23 +206,23 @@ class Bound(object):
         self.lower = lower
         self.upper = upper
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, name, *args, **kwargs):
         if 'observed' in kwargs:
             raise ValueError('Observed Bound distributions are not supported. '
                              'If you want to model truncated data '
                              'you can use a pm.Potential in combination '
                              'with the cumulative probability function. See '
                              'pymc3/examples/censored_data.py for an example.')
-        first, args = args[0], args[1:]
 
         if issubclass(self.distribution, Continuous):
-            return _ContinuousBounded(first, self.distribution,
+            return _ContinuousBounded(name, self.distribution,
                                       self.lower, self.upper, *args, **kwargs)
         elif issubclass(self.distribution, Discrete):
-            return _DiscreteBounded(first, self.distribution,
+            return _DiscreteBounded(name, self.distribution,
                                     self.lower, self.upper, *args, **kwargs)
         else:
-            raise ValueError('Distribution is neither continuous nor discrete.')
+            raise ValueError(
+                'Distribution is neither continuous nor discrete.')
 
     def dist(self, *args, **kwargs):
         if issubclass(self.distribution, Continuous):
