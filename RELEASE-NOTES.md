@@ -5,7 +5,7 @@
 ### New features
 
 - Track the model log-likelihood as a sampler stat for NUTS and HMC samplers
-  (accessible as `trace.get_sampler_stats('logp')`) (#3134)
+  (accessible as `trace.get_sampler_stats('model_logp')`) (#3134)
 
 ### Maintenance
 

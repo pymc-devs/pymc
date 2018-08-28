@@ -32,7 +32,7 @@ class CompoundStep(object):
             # one. Pop all others (if dict), or set to np.nan (if namedtuple).
             for state in states[:-1]:
                 if isinstance(state, dict):
-                    state.pop('logp', None)
+                    state.pop('model_logp', None)
                 elif isinstance(state, namedtuple):
                     state = state._replace(logp=np.nan)
             return point, states

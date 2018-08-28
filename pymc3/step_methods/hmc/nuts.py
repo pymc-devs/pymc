@@ -87,7 +87,7 @@ class NUTS(BaseHMC):
         'energy_error': np.float64,
         'energy': np.float64,
         'max_energy_error': np.float64,
-        'logp': np.float64,
+        'model_logp': np.float64,
     }]
 
     def __init__(self, vars=None, max_treedepth=10, early_max_treedepth=8,
@@ -356,5 +356,5 @@ class _Tree(object):
             'energy': self.proposal.energy,
             'tree_size': self.n_proposals,
             'max_energy_error': self.max_energy_change,
-            'logp': self.proposal.logp,
+            'model_logp': self.proposal.logp,
         }

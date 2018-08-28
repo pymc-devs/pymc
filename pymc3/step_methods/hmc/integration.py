@@ -4,7 +4,7 @@ import numpy as np
 from scipy import linalg
 
 
-State = namedtuple("State", 'q, p, v, q_grad, energy, logp')
+State = namedtuple("State", 'q, p, v, q_grad, energy, model_logp')
 
 
 class IntegrationError(RuntimeError):
