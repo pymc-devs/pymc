@@ -64,7 +64,7 @@ class NUTS(BaseHMC):
     - `step_size_bar`: The current best known step-size. After the tuning
       samples, the step size is set to this value. This should converge
       during tuning.
-    - `logp`: The model log-likelihood for this sample.
+    - `model_logp`: The model log-likelihood for this sample.
 
     References
     ----------
@@ -234,7 +234,7 @@ class _Tree(object):
 
         self.left = self.right = start
         self.proposal = Proposal(
-            start.q, start.q_grad, start.energy, 1.0, start.logp)
+            start.q, start.q_grad, start.energy, 1.0, start.model_logp)
         self.depth = 0
         self.log_size = 0
         self.accept_sum = 0
@@ -301,7 +301,7 @@ class _Tree(object):
                 p_accept = min(1, np.exp(-energy_change))
                 log_size = -energy_change
                 proposal = Proposal(
-                    right.q, right.q_grad, right.energy, p_accept, right.logp)
+                    right.q, right.q_grad, right.energy, p_accept, right.model_logp)
                 tree = Subtree(right, right, right.p,
                                proposal, log_size, p_accept, 1)
                 return tree, None, False

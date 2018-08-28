@@ -126,7 +126,7 @@ class HamiltonianMC(BaseHMC):
             'energy_error': energy_change,
             'energy': state.energy,
             'accepted': accepted,
-            'model_logp': state.logp,
+            'model_logp': state.model_logp,
         }
         return HMCStepData(end, accept_stat, div_info, stats)
 
