@@ -462,9 +462,11 @@ class TestNutsCheckTrace(object):
             x = Normal('x', mu=0, sd=1)
             trace = sample(draws=10, tune=1, chains=1)
 
-        expected_stat_names = {'depth', 'diverging', 'energy', 'energy_error',
-            'model_logp', 'max_energy_error', 'mean_tree_accept', 'step_size',
-            'step_size_bar', 'tree_size', 'tune'}
+        expected_stat_names = {
+            'depth', 'diverging', 'energy', 'energy_error', 'model_logp',
+            'max_energy_error', 'mean_tree_accept', 'step_size',
+            'step_size_bar', 'tree_size', 'tune'
+        }
 
         assert(trace.stat_names == expected_stat_names)
         for varname in trace.stat_names:
