@@ -1415,7 +1415,7 @@ def Deterministic(name, var, model=None):
     var : var, with name attribute
     """
     model = modelcontext(model)
-    var.name = model.name_for(name)
+    var = var.copy(model.name_for(name))
     model.deterministics.append(var)
     model.add_random_variable(var)
     var._repr_latex_ = functools.partial(_latex_repr_rv, var)

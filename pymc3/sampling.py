@@ -245,7 +245,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     chains : int
         The number of chains to sample. Running independent chains is important for some
         convergence statistics and can also reveal multiple modes in the posterior. If `None`,
-        then set to either `chains` or 2, whichever is larger. For SMC the default value is 100.
+        then set to either `cores` or 2, whichever is larger. For SMC the default value is 100.
     cores : int
         The number of chains to run in parallel. If `None`, set to the number of CPUs in the
         system, but at most 4 (for 'SMC' defaults to 1). Keep in mind that some chains might

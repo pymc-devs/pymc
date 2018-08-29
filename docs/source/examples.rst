@@ -27,7 +27,6 @@ Applied
    notebooks/BEST.ipynb
    notebooks/multilevel_modeling.ipynb
    notebooks/stochastic_volatility.ipynb
-   notebooks/probabilistic_matrix_factorization.ipynb
    notebooks/rugby_analytics.ipynb
    notebooks/dawid-skene.ipynb
 
@@ -63,6 +62,7 @@ Gaussian Processes
    notebooks/GP-Marginal.ipynb
    notebooks/GP-Latent.ipynb
    notebooks/GP-SparseApprox.ipynb
+   notebooks/GP-Kron.ipynb
    notebooks/GP-TProcess.ipynb
    notebooks/GP-MaunaLoa.ipynb
    notebooks/GP-slice-sampling.ipynb

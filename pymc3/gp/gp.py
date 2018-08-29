@@ -11,9 +11,10 @@ from pymc3.gp.util import (conditioned_vars, infer_shape,
                            stabilize, cholesky, solve_lower, solve_upper)
 from pymc3.distributions import draw_values
 from theano.tensor.nlinalg import eigh
-from ..math import cartesian, kron_dot, kron_diag
+from ..math import (cartesian, kron_dot, kron_diag,
+                    kron_solve_lower, kron_solve_upper)
 
-__all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse', 'MarginalKron']
+__all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse', 'LatentKron', 'MarginalKron']
 
 
 class Base(object):
@@ -797,19 +798,172 @@ class MarginalSparse(Marginal):
         return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
 
 
+@conditioned_vars(["Xs", "f"])
+class LatentKron(Base):
+    R"""
+    Latent Gaussian process whose covariance is a tensor product kernel.
+
+    The `gp.LatentKron` class is a direct implementation of a GP with a
+    Kronecker structured covariance, without reference to any noise or
+    specific likelihood.  The GP is constructed with the `prior` method,
+    and the conditional GP over new input locations is constructed with
+    the `conditional` method.  `conditional` and method.  For more
+    information on these methods, see their docstrings.  This GP
+    implementation can be used to model a Gaussian process whose inputs
+    cover evenly spaced grids on more than one dimension.  `LatentKron`
+    is relies on the `KroneckerNormal` distribution, see its docstring
+    for more information.
+
+    Parameters
+    ----------
+    cov_funcs : list of Covariance objects
+        The covariance functions that compose the tensor (Kronecker) product.
+        Defaults to [zero].
+    mean_func : None, instance of Mean
+        The mean function.  Defaults to zero.
+
+    Examples
+    --------
+    .. code:: python
+
+        # One dimensional column vectors of inputs
+        X1 = np.linspace(0, 1, 10)[:, None]
+        X2 = np.linspace(0, 2, 5)[:, None]
+        Xs = [X1, X2]
+        with pm.Model() as model:
+            # Specify the covariance functions for each Xi
+            cov_func1 = pm.gp.cov.ExpQuad(1, ls=0.1)  # Must accept X1 without error
+            cov_func2 = pm.gp.cov.ExpQuad(1, ls=0.3)  # Must accept X2 without error
+
+            # Specify the GP.  The default mean function is `Zero`.
+            gp = pm.gp.LatentKron(cov_funcs=[cov_func1, cov_func2])
+
+            # ...
+
+        # After fitting or sampling, specify the distribution
+        # at new points with .conditional
+        # Xnew need not be on a full grid
+        Xnew1 = np.linspace(-1, 2, 10)[:, None]
+        Xnew2 = np.linspace(0, 3, 10)[:, None]
+        Xnew = np.concatenate((Xnew1, Xnew2), axis=1)  # Not full grid, works
+        Xnew = pm.math.cartesian(Xnew1, Xnew2)  # Full grid, also works
+
+        with model:
+            fcond = gp.conditional("fcond", Xnew=Xnew)
+    """
+
+    def __init__(self, mean_func=Zero(), cov_funcs=(Constant(0.0))):
+        try:
+            self.cov_funcs = list(cov_funcs)
+        except TypeError:
+            self.cov_funcs = [cov_funcs]
+        cov_func = pm.gp.cov.Kron(self.cov_funcs)
+        super(LatentKron, self).__init__(mean_func, cov_func)
+
+    def __add__(self, other):
+        raise TypeError('Additive, Kronecker-structured processes not implemented')
+
+    def _build_prior(self, name, Xs, **kwargs):
+        self.N = np.prod([len(X) for X in Xs])
+        mu = self.mean_func(cartesian(*Xs))
+        chols = [cholesky(stabilize(cov(X))) for cov, X in zip(self.cov_funcs, Xs)]
+        # remove reparameterization option
+        v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=self.N, **kwargs)
+        f = pm.Deterministic(name, mu + tt.flatten(kron_dot(chols, v)))
+        return f
+
+    def prior(self, name, Xs, **kwargs):
+        """
+        Returns the prior distribution evaluated over the input
+        locations `Xs`.
+
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        Xs : list of array-like
+            Function input values for each covariance function. Each entry
+            must be passable to its respective covariance without error. The
+            total covariance function is measured on the full grid
+            `cartesian(*Xs)`.
+        **kwargs
+            Extra keyword arguments that are passed to the `KroneckerNormal`
+            distribution constructor.
+        """
+        if len(Xs) != len(self.cov_funcs):
+            raise ValueError('Must provide a covariance function for each X')
+        f = self._build_prior(name, Xs, **kwargs)
+        self.Xs = Xs
+        self.f = f
+        return f
+
+    def _build_conditional(self, Xnew):
+        Xs, f = self.Xs, self.f
+        X = cartesian(*Xs)
+        delta = f - self.mean_func(X)
+        covs = [stabilize(cov(Xi)) for cov, Xi in zip(self.cov_funcs, Xs)]
+        chols = [cholesky(cov) for cov in covs]
+        cholTs = [tt.transpose(chol) for chol in chols]
+        Kss = self.cov_func(Xnew)
+        Kxs = self.cov_func(X, Xnew)
+        Ksx = tt.transpose(Kxs)
+        alpha = kron_solve_lower(chols, delta)
+        alpha = kron_solve_upper(cholTs, alpha)
+        mu = tt.dot(Ksx, alpha).ravel() + self.mean_func(Xnew)
+        A = kron_solve_lower(chols, Kxs)
+        cov = stabilize(Kss - tt.dot(tt.transpose(A), A))
+        return mu, cov
+
+    def conditional(self, name, Xnew, **kwargs):
+        """
+        Returns the conditional distribution evaluated over new input
+        locations `Xnew`.
+
+        `Xnew` will be split by columns and fed to the relevant
+        covariance functions based on their `input_dim`. For example, if
+        `cov_func1`, `cov_func2`, and `cov_func3` have `input_dim` of 2,
+        1, and 4, respectively, then `Xnew` must have 7 columns and a
+        covariance between the prediction points
+
+        .. code:: python
+
+            cov_func(Xnew) = cov_func1(Xnew[:, :2]) * cov_func1(Xnew[:, 2:3]) * cov_func1(Xnew[:, 3:])
+
+        The distribution returned by `conditional` does not have a
+        Kronecker structure regardless of whether the input points lie
+        on a full grid.  Therefore, `Xnew` does not need to have grid
+        structure.
+
+        Parameters
+        ----------
+        name : string
+            Name of the random variable
+        Xnew : array-like
+            Function input values.  If one-dimensional, must be a column
+            vector with shape `(n, 1)`.
+        **kwargs
+            Extra keyword arguments that are passed to `MvNormal` distribution
+            constructor.
+        """
+        mu, cov = self._build_conditional(Xnew)
+        shape = infer_shape(Xnew, kwargs.pop("shape", None))
+        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
+
+
 @conditioned_vars(["Xs", "y", "sigma"])
 class MarginalKron(Base):
     R"""
     Marginal Gaussian process whose covariance is a tensor product kernel.
 
-    The `gp.MarginalKron` class is an implementation of the sum of a Kronecker
-    GP prior and additive white noise. It has `marginal_likelihood`,
-    `conditional` and `predict` methods. This GP implementation can be used to
-    efficiently implement regression on data that are normally distributed with
-    a tensor product kernel and are measured on a full grid of inputs:
-    `cartesian(*Xs)`. `MarginalKron` is based on the `KroneckerNormal`
-    distribution, see its docstring for more information. For more information
-    on the `prior` and `conditional` methods, see their docstrings.
+    The `gp.MarginalKron` class is an implementation of the sum of a
+    Kronecker GP prior and additive white noise. It has
+    `marginal_likelihood`, `conditional` and `predict` methods. This GP
+    implementation can be used to efficiently implement regression on
+    data that are normally distributed with a tensor product kernel and
+    are measured on a full grid of inputs: `cartesian(*Xs)`.
+    `MarginalKron` is based on the `KroneckerNormal` distribution, see
+    its docstring for more information. For more information on the
+    `prior` and `conditional` methods, see their docstrings.
 
     Parameters
     ----------
@@ -863,7 +1017,7 @@ class MarginalKron(Base):
         super(MarginalKron, self).__init__(mean_func, cov_func)
 
     def __add__(self, other):
-        raise TypeError("Efficient implementation of additive, Kronecker-structured processes not implemented")
+        raise TypeError('Additive, Kronecker-structured processes not implemented')
 
     def _build_marginal_likelihood(self, Xs):
         self.X = cartesian(*Xs)
@@ -871,12 +1025,13 @@ class MarginalKron(Base):
         covs = [f(X) for f, X in zip(self.cov_funcs, Xs)]
         return mu, covs
 
-    def _check_inputs(self, Xs, y, sigma):
+    def _check_inputs(self, Xs, y):
         N = np.prod([len(X) for X in Xs])
         if len(Xs) != len(self.cov_funcs):
             raise ValueError('Must provide a covariance function for each X')
         if N != len(y):
-            raise ValueError('Length of y must match cartesian product of Xs')
+            raise ValueError(('Length of y ({}) must match length of cartesian'
+                              'cartesian product of Xs ({})').format(len(y), N))
 
     def marginal_likelihood(self, name, Xs, y, sigma, is_observed=True, **kwargs):
         """
@@ -904,7 +1059,7 @@ class MarginalKron(Base):
             Extra keyword arguments that are passed to `KroneckerNormal`
             distribution constructor.
         """
-        self._check_inputs(Xs, y, sigma)
+        self._check_inputs(Xs, y)
         mu, covs = self._build_marginal_likelihood(Xs)
         self.Xs = Xs
         self.y = y
@@ -953,28 +1108,28 @@ class MarginalKron(Base):
             Asq = tt.dot(A.T, A)
             cov = Km - Asq
             if pred_noise:
-                cov += sigma * np.eye(cov.shape)
-        return mu, cov if pred_noise else stabilize(cov)
+                cov += sigma * tt.identity_like(cov)
+        return mu, cov
 
     def conditional(self, name, Xnew, pred_noise=False, **kwargs):
         """
         Returns the conditional distribution evaluated over new input
         locations `Xnew`, just as in `Marginal`.
 
-        `Xnew` will be split
-        by columns and fed to the relevant covariance functions based on their
-        `input_dim`. For example, if `cov_func1`, `cov_func2`, and `cov_func3`
-        have `input_dim` of 2, 1, and 4, respectively, then `Xnew` must have
-        7 columns and a covariance between the prediction points
+        `Xnew` will be split by columns and fed to the relevant
+        covariance functions based on their `input_dim`. For example, if
+        `cov_func1`, `cov_func2`, and `cov_func3` have `input_dim` of 2,
+        1, and 4, respectively, then `Xnew` must have 7 columns and a
+        covariance between the prediction points
 
         .. code:: python
 
             cov_func(Xnew) = cov_func1(Xnew[:, :2]) * cov_func1(Xnew[:, 2:3]) * cov_func1(Xnew[:, 3:])
 
-        This `cov_func` does not have a Kronecker structure without a full
-        grid, but the conditional distribution does not have a Kronecker
-        structure regardless. Thus, the conditional method must fall back to
-        using `MvNormal` rather than `KroneckerNormal` in either case.
+        The distribution returned by `conditional` does not have a
+        Kronecker structure regardless of whether the input points lie
+        on a full grid.  Therefore, `Xnew` does not need to have grid
+        structure.
 
         Parameters
         ----------
