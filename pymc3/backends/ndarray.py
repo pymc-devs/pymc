@@ -13,7 +13,8 @@ from ..backends import base
 
 
 
-def save_trace(trace: base.MultiTrace, directory: Optional[str]=None, overwrite=False) -> str:
+def save_trace(trace, directory=None, overwrite=False):
+    # type: (base.MultiTrace, Optional[str], Optional[bool]) -> str
     """Save multitrace to file.
 
     TODO: Also save warnings.
