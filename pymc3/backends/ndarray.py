@@ -6,12 +6,14 @@ import glob
 import json
 import os
 import shutil
+from typing import Optional # noqa
 
 import numpy as np
 from ..backends import base
 
 
-def save_trace(trace, directory=None, overwrite=False):
+
+def save_trace(trace: base.MultiTrace, directory: Optional[str]=None, overwrite=False) -> str:
     """Save multitrace to file.
 
     TODO: Also save warnings.
