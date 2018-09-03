@@ -7,7 +7,7 @@ import numpy as np
 import pymc3 as pm
 import theano.tensor as tt
 import theano
-from typing import Dict, List # no qa
+from typing import Dict, List  # @UnusedImport
 
 __all__ = [
     'get_data',

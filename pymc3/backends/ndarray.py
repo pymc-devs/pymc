@@ -6,7 +6,7 @@ import glob
 import json
 import os
 import shutil
-from typing import Optional # noqa
+from typing import Optional  # @UnusedImport
 
 import numpy as np
 from ..backends import base
