@@ -669,7 +669,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
     def isroot(self):
         return self.parent is None
 
-    @property
+    @property # type: ignore
     @memoize(bound=True)
     def bijection(self):
         vars = inputvars(self.cont_vars)

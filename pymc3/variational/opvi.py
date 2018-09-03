@@ -1553,7 +1553,7 @@ class Approximation(WithMemoization):
             raise KeyError('%r not found' % name)
         return found
 
-    @property
+    @property # type: ignore
     @memoize(bound=True)
     @change_flags(compute_test_value='off')
     def sample_dict_fn(self):

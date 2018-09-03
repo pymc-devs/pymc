@@ -190,7 +190,7 @@ class AbstractFlow(WithMemoization):
             params.extend(current.params)
         return params
 
-    @property
+    @property # type: ignore
     @change_flags(compute_test_value='off')
     def sum_logdets(self):
         dets = [self.logdet]
