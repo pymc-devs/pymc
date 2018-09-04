@@ -54,7 +54,7 @@ def save_trace(trace, directory=None, overwrite=False):
     return directory
 
 
-def load_trace(directory, model=None):
+def load(directory, model=None):
     """Loads a multitrace that has been written to file.
 
     A the model used for the trace must be passed in, or the command
@@ -76,6 +76,9 @@ def load_trace(directory, model=None):
         if os.path.isdir(directory):
             straces.append(SerializeNDArray(directory).load(model))
     return base.MultiTrace(straces)
+
+# Old name for load method: doesn't agree with documentation.
+load_trace = load
 
 
 class SerializeNDArray(object):
