@@ -72,14 +72,16 @@ def load(directory, model=None):
     pm.Multitrace that was saved in the directory
     """
     straces = []
+    assert os.path.isdir(directory), "No such trace directory: " + directory
     for directory in glob.glob(os.path.join(directory, '*')):
         if os.path.isdir(directory):
             straces.append(SerializeNDArray(directory).load(model))
     return base.MultiTrace(straces)
 
 # Old name for load method: doesn't agree with documentation.
-load_trace = load
-
+def load_trace(directory, model=None):
+    """Deprecated load function, replaced by pymc3.backends.ndarray.load()."""
+    return load(directory, model)
 
 class SerializeNDArray(object):
     metadata_file = 'metadata.json'
