@@ -3,6 +3,7 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
+import numpy as np
 
 
 class CompoundStep(object):
@@ -27,6 +28,13 @@ class CompoundStep(object):
                     states.extend(state)
                 else:
                     point = method.step(point)
+            # Model logp can only be the logp of the _last_ state, if there is
+            # one. Pop all others (if dict), or set to np.nan (if namedtuple).
+            for state in states[:-1]:
+                if isinstance(state, dict):
+                    state.pop('model_logp', None)
+                elif isinstance(state, namedtuple):
+                    state = state._replace(logp=np.nan)
             return point, states
         else:
             for method in self.methods:

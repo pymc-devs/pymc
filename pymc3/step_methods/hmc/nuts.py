@@ -64,6 +64,7 @@ class NUTS(BaseHMC):
     - `step_size_bar`: The current best known step-size. After the tuning
       samples, the step size is set to this value. This should converge
       during tuning.
+    - `model_logp`: The model log-likelihood for this sample.
 
     References
     ----------
@@ -86,6 +87,7 @@ class NUTS(BaseHMC):
         'energy_error': np.float64,
         'energy': np.float64,
         'max_energy_error': np.float64,
+        'model_logp': np.float64,
     }]
 
     def __init__(self, vars=None, max_treedepth=10, early_max_treedepth=8,
@@ -199,7 +201,7 @@ class NUTS(BaseHMC):
 
 
 # A proposal for the next position
-Proposal = namedtuple("Proposal", "q, q_grad, energy, p_accept")
+Proposal = namedtuple("Proposal", "q, q_grad, energy, p_accept, logp")
 
 # A subtree of the binary tree built by nuts.
 Subtree = namedtuple(
@@ -231,7 +233,8 @@ class _Tree(object):
         self.start_energy = np.array(start.energy)
 
         self.left = self.right = start
-        self.proposal = Proposal(start.q, start.q_grad, start.energy, 1.0)
+        self.proposal = Proposal(
+            start.q, start.q_grad, start.energy, 1.0, start.model_logp)
         self.depth = 0
         self.log_size = 0
         self.accept_sum = 0
@@ -298,7 +301,7 @@ class _Tree(object):
                 p_accept = min(1, np.exp(-energy_change))
                 log_size = -energy_change
                 proposal = Proposal(
-                    right.q, right.q_grad, right.energy, p_accept)
+                    right.q, right.q_grad, right.energy, p_accept, right.model_logp)
                 tree = Subtree(right, right, right.p,
                                proposal, log_size, p_accept, 1)
                 return tree, None, False
@@ -353,4 +356,5 @@ class _Tree(object):
             'energy': self.proposal.energy,
             'tree_size': self.n_proposals,
             'max_energy_error': self.max_energy_change,
+            'model_logp': self.proposal.logp,
         }
