@@ -126,7 +126,7 @@ In particular, the Council may:
 The current Steering Council membership comprises:
 
 - Colin Carroll
-- Paedar Coyle
+- Peadar Coyle
 - Bill Engels
 - Chris Fonnesbeck
 - Maxim Kochurov
