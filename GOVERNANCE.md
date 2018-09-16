@@ -240,6 +240,13 @@ interactions with NumFOCUS.
     contracting work (including the reportee, i.e. the reportee + 1 is the
     max). This avoids effective majorities resting on one person.
 
+The current NumFOCUS Subcommittee consists of:
+
+- Paedar Coyle
+- Chris Fonnesbeck
+- John Salvatier
+- Jon Sedar
+- Thomas Wiecki
 
 ### Institutional Partners and Funding
 
