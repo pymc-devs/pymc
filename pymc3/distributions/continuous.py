@@ -1957,7 +1957,7 @@ class HalfCauchy(PositiveContinuous):
         plt.show()
 
     ========  ========================
-    Support   :math:`x \in \mathbb{R}`
+    Support   :math:`x \in [0, \infty)`
     Mode      0
     Mean      undefined
     Variance  undefined
