@@ -24,17 +24,7 @@ open and public Project discussions on GitHub, Google+, Slack, Hackpad, Gitter c
 rooms and mailing lists. The foundation of Project participation is openness
 and transparency.
 
-Here is a list of the current Contributors to the main repository:
-- John Salvatier
-- Chris Fonnesbeck
-- Thomas Wiecki
-- Peadar Coyle
-- Taku Yoshioka
-- Austin Rochford
-- Jon Sedar
-
-
-There are also many other Contributors listed in the logs of other repositories of
+There have been over 100 Contributors to the Project, whose contributions are listed in the logs of other repositories of
 the PyMC and projects.
 
 The Project Community consists of all Contributors and Users of the Project.
@@ -132,6 +122,19 @@ In particular, the Council may:
     those Services for the benefit of the Project and Community.
 -   Make decisions when regular community discussion doesn’t produce consensus
     on an issue in a reasonable time frame.
+
+The current Steering Council membership comprises:
+
+- Colin Carroll
+- Paedar Coyle
+- Bill Engels
+- Chris Fonnesbeck
+- Maxim Kochurov
+- Junpeng Lao
+- Osvaldo Martin
+- Austin Rochford
+- Adrian Seyboldt 
+- Thomas Wiecki
 
 ### Council membership
 
