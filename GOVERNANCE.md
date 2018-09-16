@@ -242,7 +242,7 @@ interactions with NumFOCUS.
 
 The current NumFOCUS Subcommittee consists of:
 
-- Paedar Coyle
+- Peadar Coyle
 - Chris Fonnesbeck
 - John Salvatier
 - Jon Sedar
