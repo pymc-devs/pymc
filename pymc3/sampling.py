@@ -66,15 +66,15 @@ def instantiate_steppers(model, steps, selected_steps, step_kwargs=None):
     if step_kwargs is None:
         step_kwargs = {}
 
-    used_keys = set()
-    for step_class, vars in selected_steps.items():
-        if len(vars) == 0:
+    used_args = set()
+    for step, var_list in selected_steps.items():
+        if len(var_list) == 0:
             continue
-        args = step_kwargs.get(step_class.name, {})
-        used_keys.add(step_class.name)
-        steps.append(step_class)
+        args = step_kwargs.get(step.name, {})
+        used_args.add(step.name)
+        steps.append(step)
 
-    unused_args = set(step_kwargs).difference(used_keys)
+    unused_args = set(step_kwargs).difference(used_args)
     if unused_args:
         raise ValueError('Unused step method arguments: %s' % unused_args)
 
