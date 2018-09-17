@@ -66,7 +66,7 @@ class EllipticalSlice(ArrayStep):
        Artificial Intelligence and Statistics (AISTATS), JMLR W&CP
        9:541-548, 2010.
     """
-
+    name = 'elliptical_slice'
     default_blocked = True
 
     def __init__(self, vars=None, prior_cov=None, prior_chol=None, model=None,

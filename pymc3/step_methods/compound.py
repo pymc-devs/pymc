@@ -9,6 +9,7 @@ import numpy as np
 class CompoundStep(object):
     """Step method composed of a list of several other step
     methods applied in sequence."""
+    name = 'compound'
 
     def __init__(self, methods):
         self.methods = list(methods)
