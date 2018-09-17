@@ -117,25 +117,27 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
         List of step methods associated with the model's variables.
     """
     steps = []
-    assigned_vars = set()
+    selected_steps = defaultdict(list)
 
     if step is not None:
         try:  # If `step` is a list, concatenate
             steps += list(step)
-        except TypeError:  # If `step` is a single step method, append
+        except TypeError:  # If `step` is not iterable, append
             steps.append(step)
 
         for step in steps:
             try:
-                assigned_vars = assigned_vars.union(set(step.vars))
+                selected_steps[step] += step.vars
             except AttributeError:
                 for method in step.methods:
-                    assigned_vars = assigned_vars.union(set(method.vars))
+                    selected_steps[step] += method.vars
 
     # Use competence classmethods to select step methods for remaining
     # variables
-    selected_steps = defaultdict(list)
     for var in model.free_RVs:
+        # Flatten assigned variables into a set
+        assigned_vars = set(var for lst in selected_steps.values()
+                            for var in lst)
         if var not in assigned_vars:
             # Determine if a gradient can be computed
             has_gradient = var.dtype not in discrete_types
