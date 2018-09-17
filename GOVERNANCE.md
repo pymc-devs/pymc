@@ -213,12 +213,12 @@ the main private mailing list of the Council unless specifically called for.
 
 Even if the BDFL does not sit on a specific subcommittee, he/she still retains
 override authority on the subcommittee's decisions. However, it is expected that
-the he/she will appoint a delegate to oversee the subcommittee's decisions, and
+he/she will appoint a delegate to oversee the subcommittee's decisions, and
 explicit intervention from the BDFL will only be sought if the committee
 disagrees with the delegate's decision and no resolution is possible within the
 subcommittee. This is a different situation from a BDFL delegate for a specific
-decision, or a recusal, in which the BDFL gives up his/her authority to someone
-else in full.
+decision, or a recusal situation, in which the BDFL gives up his/her authority
+to someone else in full.
 
 ### NumFOCUS Subcommittee
 
