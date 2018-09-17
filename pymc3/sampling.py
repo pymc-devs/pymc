@@ -124,6 +124,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
             steps += list(step)
         except TypeError:  # If `step` is a single step method, append
             steps.append(step)
+
         for step in steps:
             try:
                 assigned_vars = assigned_vars.union(set(step.vars))
