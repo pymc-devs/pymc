@@ -190,7 +190,7 @@ All members of the Council, BDFL included, shall disclose to the rest of the
 Council any conflict of interest they may have. Members with a conflict of
 interest in a particular issue may participate in Council discussions on that
 issue, but must recuse themselves from voting on the issue. If the BDFL has
-recused his/herself for a particular decision, they will appoint a substitute
+recused him/herself for a particular decision, they will appoint a substitute
 BDFL for that decision.
 
 ### Private communications of the Council
