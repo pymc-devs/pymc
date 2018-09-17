@@ -76,7 +76,8 @@ def instantiate_steppers(model, steps, selected_steps, step_kwargs=None):
 
     unused_args = set(step_kwargs).difference(used_args)
     if unused_args:
-        raise ValueError('Unused step method arguments: %s' % unused_args)
+        raise ValueError('Unused arguments for step method(s): %s'
+                         % [s.title() for s in unused_args])
 
     if len(steps) == 1:
         steps = steps[0]
