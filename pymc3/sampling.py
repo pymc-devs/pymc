@@ -52,7 +52,8 @@ def instantiate_steppers(model, steps, selected_steps, step_kwargs=None):
         One or more step functions that have been assigned to some subset of
         the model's parameters. Defaults to None (no assigned variables).
     selected_steps: dictionary of step methods and variables
-        The step methods and the variables that have were assigned to them.
+        Variables with selected step methods. Keys are the step methods, and
+        values are the variables that have been assigned to them.
     step_kwargs : dict
         Parameters for the samplers. Keys are the lower case names of
         the step method, values a dict of arguments.
@@ -100,7 +101,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
     ----------
     model : Model object
         A fully-specified model object
-    step : step function or vector of step functions
+    step : step function or list of step functions
         One or more step functions that have been assigned to some subset of
         the model's parameters. Defaults to None (no assigned variables).
     methods : vector of step method classes
@@ -119,9 +120,9 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
     assigned_vars = set()
 
     if step is not None:
-        try:
+        try:  # If `step` is a list, concatenate
             steps += list(step)
-        except TypeError:
+        except TypeError:  # If `step` is a single step method, append
             steps.append(step)
         for step in steps:
             try:
@@ -135,7 +136,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
     selected_steps = defaultdict(list)
     for var in model.free_RVs:
         if var not in assigned_vars:
-            # determine if a gradient can be computed
+            # Determine if a gradient can be computed
             has_gradient = var.dtype not in discrete_types
             if has_gradient:
                 try:
@@ -144,7 +145,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
                         NotImplementedError,
                         tg.NullTypeGradError):
                     has_gradient = False
-            # select the best method
+            # Select the method with maximum competence
             selected = max(methods, key=lambda method,
                            var=var, has_gradient=has_gradient:
                            method._competence(var, has_gradient))
