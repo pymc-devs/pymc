@@ -48,7 +48,7 @@ def instantiate_steppers(model, steps, selected_steps, step_kwargs=None):
     ----------
     model : Model object
         A fully-specified model object
-    step : step function or list of step functions
+    step : step function or iterable of step functions
         One or more step functions that have been assigned to some subset of
         the model's parameters. Defaults to None (no assigned variables).
     selected_steps: dictionary of step methods and variables
@@ -77,7 +77,7 @@ def instantiate_steppers(model, steps, selected_steps, step_kwargs=None):
     unused_args = set(step_kwargs).difference(used_args)
     if unused_args:
         raise ValueError('Unused arguments for step method(s): %s'
-                         % [s.title() for s in unused_args])
+                         % [s for s in unused_args])
 
     if len(steps) == 1:
         steps = steps[0]
@@ -101,7 +101,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
     ----------
     model : Model object
         A fully-specified model object
-    step : step function or list of step functions
+    step : step function or iterable of step functions
         One or more step functions that have been assigned to some subset of
         the model's parameters. Defaults to None (no assigned variables).
     methods : vector of step method classes
