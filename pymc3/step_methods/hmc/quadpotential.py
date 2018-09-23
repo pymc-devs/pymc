@@ -94,7 +94,7 @@ class QuadPotential(object):
         """
         pass
 
-    def raise_ok(self):
+    def raise_ok(self, vmap):
         pass
 
     def reset(self):
