@@ -18,7 +18,7 @@ from .memoize import memoize, WithMemoization
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
-from .util import get_transformed_name
+from .util import get_transformed_name, DependenceDAG
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -635,6 +635,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
 
     def __init__(self, name='', model=None, theano_config=None):
         self.name = name
+        self.variable_dependence_dag = DependenceDAG()
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
             self.free_RVs = treelist(parent=self.parent.free_RVs)
@@ -649,6 +650,11 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
             self.deterministics = treelist()
             self.potentials = treelist()
             self.missing_values = treelist()
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if 'variable_dependence_dag' not in state:
+            self.variable_dependence_dag = DependenceDAG()
 
     @property
     def model(self):
@@ -845,7 +851,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         self.add_random_variable(var)
         return var
 
-    def add_random_variable(self, var):
+    def add_random_variable(self, var, accept_cons_shared=False):
         """Add a random variable to the named variables of the model."""
         if self.named_vars.tree_contains(var.name):
             raise ValueError(
@@ -853,6 +859,10 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         self.named_vars[var.name] = var
         if not hasattr(self, self.name_of(var.name)):
             setattr(self, self.name_of(var.name), var)
+        # The model should automatically construct a DependenceDAG instance
+        # that encodes the relations between its variables
+        self.variable_dependence_dag.add(var,
+                                         accept_cons_shared=accept_cons_shared)
 
     @property
     def prefix(self):
@@ -1417,7 +1427,7 @@ def Deterministic(name, var, model=None):
     model = modelcontext(model)
     var = var.copy(model.name_for(name))
     model.deterministics.append(var)
-    model.add_random_variable(var)
+    model.add_random_variable(var, accept_cons_shared=True)
     var._repr_latex_ = functools.partial(_latex_repr_rv, var)
     var.__latex__ = var._repr_latex_
     return var
@@ -1438,7 +1448,7 @@ def Potential(name, var, model=None):
     model = modelcontext(model)
     var.name = model.name_for(name)
     model.potentials.append(var)
-    model.add_random_variable(var)
+    model.add_random_variable(var, accept_cons_shared=True)
     return var
 
 

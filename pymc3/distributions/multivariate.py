@@ -60,6 +60,7 @@ class _QuadFormBase(Continuous):
             self.chol_cov = cholesky(cov)
             self.cov = cov
             self._n = self.cov.shape[-1]
+            self.conditional_on = [self.mu, self.cov]
         elif tau is not None:
             self.k = tau.shape[0]
             self._cov_type = 'tau'
@@ -69,6 +70,7 @@ class _QuadFormBase(Continuous):
             self.chol_tau = cholesky(tau)
             self.tau = tau
             self._n = self.tau.shape[-1]
+            self.conditional_on = [self.mu, self.tau]
         else:
             self.k = chol.shape[0]
             self._cov_type = 'chol'
@@ -76,6 +78,7 @@ class _QuadFormBase(Continuous):
                 raise ValueError('chol must be two dimensional.')
             self.chol_cov = tt.as_tensor_variable(chol)
             self._n = self.chol_cov.shape[-1]
+            self.conditional_on = [self.mu, self.chol_cov]
 
     def _quaddist(self, value):
         """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""
@@ -336,17 +339,20 @@ class MvStudentT(_QuadFormBase):
                                          lower=lower, *args, **kwargs)
         self.nu = nu = tt.as_tensor_variable(nu)
         self.mean = self.median = self.mode = self.mu = self.mu
+        self.conditional_on.append(self.nu)
 
     def random(self, point=None, size=None):
-        nu, mu = draw_values([self.nu, self.mu], point=point, size=size)
         if self._cov_type == 'cov':
-            cov, = draw_values([self.cov], point=point, size=size)
+            nu, mu, cov = draw_values([self.nu, self.mu, self.cov],
+                                      point=point, size=size)
             dist = MvNormal.dist(mu=np.zeros_like(mu), cov=cov)
         elif self._cov_type == 'tau':
-            tau, = draw_values([self.tau], point=point, size=size)
+            nu, mu, tau = draw_values([self.nu, self.mu, self.tau],
+                                      point=point, size=size)
             dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau)
         else:
-            chol, = draw_values([self.chol_cov], point=point, size=size)
+            nu, mu, chol = draw_values([self.nu, self.mu, self.chol],
+                                       point=point, size=size)
             dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol)
 
         samples = dist.random(point, size)
@@ -416,6 +422,7 @@ class Dirichlet(Continuous):
         self.mode = tt.switch(tt.all(a > 1),
                               (a - 1) / tt.sum(a - 1),
                               np.nan)
+        self.conditional_on = [self.a]
 
     def _random(self, a, size=None):
         gen = stats.dirichlet.rvs
@@ -527,6 +534,7 @@ class Multinomial(Discrete):
         mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()],
                                 diff[inc_bool_arr.nonzero()])
         self.mode = mode
+        self.conditional_on = [self.n, self.p]
 
     def _random(self, n, p, size=None):
         original_dtype = p.dtype
@@ -699,6 +707,7 @@ class Wishart(Continuous):
         self.mode = tt.switch(tt.ge(nu, p + 1),
                               (nu - p - 1) * V,
                               np.nan)
+        self.conditional_on = [self.nu, self.V]
 
     def random(self, point=None, size=None):
         nu, V = draw_values([self.nu, self.V], point=point, size=size)
@@ -1070,6 +1079,7 @@ class LKJCorr(Continuous):
         self.tri_index = np.zeros([n, n], dtype='int32')
         self.tri_index[np.triu_indices(n, k=1)] = np.arange(shape)
         self.tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
+        self.conditional_on = [self.n, self.eta]
 
     def _random(self, n, eta, size=None):
         size = size if isinstance(size, tuple) else (size,)
@@ -1218,6 +1228,7 @@ class MatrixNormal(Continuous):
         self.mean = self.median = self.mode = self.mu
         self.solve_lower = tt.slinalg.solve_lower_triangular
         self.solve_upper = tt.slinalg.solve_upper_triangular
+        self.conditional_on = [self.mu, self.colchol_cov, self.rowchol_cov]
 
     def _setup_matrices(self, colcov, colchol, coltau, rowcov, rowchol, rowtau):
         cholesky = Cholesky(lower=True, on_error='raise')

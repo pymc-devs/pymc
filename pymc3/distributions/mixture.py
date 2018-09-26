@@ -101,6 +101,7 @@ class Mixture(Distribution):
 
         super(Mixture, self).__init__(shape, dtype, defaults=defaults,
                                       *args, **kwargs)
+        self.conditional_on = [self.w]
 
     def _comp_logp(self, value):
         comp_dists = self.comp_dists
@@ -225,6 +226,7 @@ class NormalMixture(Mixture):
 
         super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd, shape=comp_shape),
                                             *args, **kwargs)
+        self.conditional_on = [self.w, self.mu, self.sd]
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:

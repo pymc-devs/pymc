@@ -7,10 +7,12 @@ from theano import function
 import theano
 from ..memoize import memoize
 from ..model import (
-    Model, get_named_nodes_and_relations, FreeRV,
-    ObservedRV, MultiObservedRV
+    Model, modelcontext, FreeRV, ObservedRV,
+    MultiObservedRV
 )
 from ..vartypes import string_types
+from ..util import (not_shared_or_constant_variable, DependenceDAG,
+                    WrapAsHashable)
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
            'NoDistribution', 'TensorType', 'draw_values', 'generate_samples']
@@ -62,6 +64,7 @@ class Distribution(object):
         self.testval = testval
         self.defaults = defaults
         self.transform = transform
+        self.conditional_on = None
 
     def default(self):
         return np.asarray(self.get_test_val(self.testval, self.defaults), self.dtype)
@@ -142,6 +145,8 @@ class NoDistribution(Distribution):
         if name.startswith('__'):
             raise AttributeError(
                 "'NoDistribution' has no attribute '%s'" % name)
+        if name == 'conditional_on':
+            return None
         return getattr(self.parent_dist, name)
 
     def logp(self, x):
@@ -214,7 +219,7 @@ class DensityDist(Distribution):
                             "Define a custom random method and pass it as kwarg random")
 
 
-def draw_values(params, point=None, size=None):
+def draw_values(params, point=None, size=None, model=None):
     """
     Draw (fix) parameter values. Handles a number of cases:
 
@@ -232,99 +237,104 @@ def draw_values(params, point=None, size=None):
             b) are *RVs with a random method
 
     """
-    # Distribution parameters may be nodes which have named node-inputs
-    # specified in the point. Need to find the node-inputs, their
-    # parents and children to replace them.
-    leaf_nodes = {}
-    named_nodes_parents = {}
-    named_nodes_children = {}
-    for param in params:
-        if hasattr(param, 'name'):
-            # Get the named nodes under the `param` node
-            nn, nnp, nnc = get_named_nodes_and_relations(param)
-            leaf_nodes.update(nn)
-            # Update the discovered parental relationships
-            for k in nnp.keys():
-                if k not in named_nodes_parents.keys():
-                    named_nodes_parents[k] = nnp[k]
-                else:
-                    named_nodes_parents[k].update(nnp[k])
-            # Update the discovered child relationships
-            for k in nnc.keys():
-                if k not in named_nodes_children.keys():
-                    named_nodes_children[k] = nnc[k]
-                else:
-                    named_nodes_children[k].update(nnc[k])
+    # Get the nodes that we must draw from as list of lists
+    try:
+        model = modelcontext(model)
+        dependence_dag, index = (
+                model.variable_dependence_dag.get_sub_dag(params,
+                                                          return_index=True))
+    except Exception:
+        dependence_dag = DependenceDAG()
+        dependence_dag, index = dependence_dag.get_sub_dag(params,
+                                                           return_index=True)
+    layers = dependence_dag.get_nodes_in_depth_layers()
 
-    # Init givens and the stack of nodes to try to `_draw_value` from
-    givens = {}
-    stored = set()  # Some nodes
-    stack = list(leaf_nodes.values())  # A queue would be more appropriate
-    while stack:
-        next_ = stack.pop(0)
-        if next_ in stored:
-            # If the node already has a givens value, skip it
-            continue
-        elif isinstance(next_, (tt.TensorConstant,
-                                tt.sharedvar.SharedVariable)):
-            # If the node is a theano.tensor.TensorConstant or a
-            # theano.tensor.sharedvar.SharedVariable, its value will be
-            # available automatically in _compile_theano_function so
-            # we can skip it. Furthermore, if this node was treated as a
-            # TensorVariable that should be compiled by theano in
-            # _compile_theano_function, it would raise a `TypeError:
-            # ('Constants not allowed in param list', ...)` for
-            # TensorConstant, and a `TypeError: Cannot use a shared
-            # variable (...) as explicit input` for SharedVariable.
-            stored.add(next_.name)
-            continue
-        else:
-            # If the node does not have a givens value, try to draw it.
-            # The named node's children givens values must also be taken
-            # into account.
-            children = named_nodes_children[next_]
-            temp_givens = [givens[k] for k in givens if k in children]
+    # Init drawn values and updatable point and givens
+    drawn = {n: None for n in dependence_dag}
+    givens = []
+    if point is None:
+        point = {}
+    else:
+        point = point.copy()
+    nodes_missing_inputs = {}
+
+    for depth, layer in enumerate(layers):
+        while True:
             try:
-                # This may fail for autotransformed RVs, which don't
-                # have the random method
-                givens[next_.name] = (next_, _draw_value(next_,
-                                                         point=point,
-                                                         givens=temp_givens,
-                                                         size=size))
-                stored.add(next_.name)
-            except theano.gof.fg.MissingInputError:
-                # The node failed, so we must add the node's parents to
-                # the stack of nodes to try to draw from. We exclude the
-                # nodes in the `params` list.
-                stack.extend([node for node in named_nodes_parents[next_]
-                              if node is not None and
-                              node.name not in stored and
-                              node not in params])
+                # Pop nodes from layer because we may use stack new nodes
+                # onto the layer list in the middle of the loop
+                node = layer.pop(0)
+            except Exception:
+                break
 
-    # the below makes sure the graph is evaluated in order
-    # test_distributions_random::TestDrawValues::test_draw_order fails without it
-    params = dict(enumerate(params))  # some nodes are not hashable
-    evaluated = {}
-    to_eval = set()
-    missing_inputs = set(params)
-    while to_eval or missing_inputs:
-        if to_eval == missing_inputs:
-            raise ValueError('Cannot resolve inputs for {}'.format([str(params[j]) for j in to_eval]))
-        to_eval = set(missing_inputs)
-        missing_inputs = set()
-        for param_idx in to_eval:
-            param = params[param_idx]
-            if hasattr(param, 'name') and param.name in givens:
-                evaluated[param_idx] = givens[param.name][1]
+            # We may have flaged this node to be computed by compiling the
+            # theano function, because deterministic relations take precedence
+            # over conditional relations
+            if isinstance(node, tuple):
+                node, is_determined = node
             else:
-                try:  # might evaluate in a bad order,
-                    evaluated[param_idx] = _draw_value(param, point=point, givens=givens.values(), size=size)
-                    if isinstance(param, collections.Hashable) and named_nodes_parents.get(param):
-                        givens[param.name] = (param, evaluated[param_idx])
-                except theano.gof.fg.MissingInputError:
-                    missing_inputs.add(param_idx)
+                is_determined = False
 
-    return [evaluated[j] for j in params] # set the order back
+            # Node's value had already been determined so we jump onto the next
+            if drawn[node] is not None:
+                continue
+            try:
+                if is_determined:
+                    node_value = _compute_value(node,
+                                                givens=givens,
+                                                size=size)
+                else:
+                    node_value = _draw_value(node,
+                                             point=point,
+                                             givens=givens,
+                                             size=size)
+                drawn[node] = node_value
+            except theano.gof.fg.MissingInputError as e:
+                # Expected to fail for auto-transformed RVs whos values were
+                # not provided in point
+                nodes_missing_inputs[node] = e
+                continue
+
+            # If the node is a theano Variable, which is not TensorConstant,
+            # nor SharedVariable, we must add its value to point (only if it
+            # has conditional children) and givens (only if it has
+            # deterministic children)
+            if not_shared_or_constant_variable(node):
+                if dependence_dag.conditional_children[node]:
+                    point[node.name] = node_value
+                if dependence_dag.deterministic_children:
+                    givens.append((node, node_value))
+
+            # If the node has deterministic children, check if the children's
+            # values can be computed. This must be done because deterministic
+            # relations must take precedence over conditional relations
+            # amongst variables.
+            for child in dependence_dag.deterministic_children[node]:
+                # Check if all of the child's deterministic parents have their
+                # values set, allowing us to compute the child's value.
+                if not any([drawn[p] is None for p in
+                            dependence_dag.deterministic_parents[child]]):
+                    # Append child to the current layer's node stack, to
+                    # compute its value ahead of its scheduled depth
+                    layer.append((child, True))
+
+    # Now that the DAG has been transversed, drawing values, we can place them
+    # in a list following the indexing given by the input list `params`
+    output = []
+    for ind in range(len(params)):
+        node = index[ind]
+        value = drawn[node]
+        if value is None:
+            # We failed to draw the params[i] value. This could be due to an
+            # ignored MissingInputError, in which case we reraise it, or it
+            # could be some other form of unexpected RuntimeError.
+            if node in nodes_missing_inputs:
+                raise nodes_missing_inputs[node]
+            else:
+                raise RuntimeError('Failed to draw value for parameter {}'.
+                                   format(params[ind]))
+        output.append(value)
+    return output
 
 
 @memoize
@@ -357,7 +367,7 @@ def _draw_value(param, point=None, givens=None, size=None):
 
     Parameters
     ----------
-    param : number, array like, theano variable or pymc3 random variable
+    param : WrapAsHashable, theano variable or pymc3 random variable
         The value or distribution. Constants or shared variables
         will be converted to an array and returned. Theano variables
         are evaluated. If `param` is a pymc3 random variables, draw
@@ -365,23 +375,19 @@ def _draw_value(param, point=None, givens=None, size=None):
         in `point`.
     point : dict, optional
         A dictionary from pymc3 variable names to their values.
-    givens : dict, optional
-        A dictionary from theano variables to their values. These values
+    givens : list, optional
+        A list of tuples of theano variables and their values. These values
         are used to evaluate `param` if it is a theano variable.
     size : int, optional
         Number of samples
     """
-    if isinstance(param, (numbers.Number, np.ndarray)):
-        return param
-    elif isinstance(param, tt.TensorConstant):
-        return param.value
-    elif isinstance(param, tt.sharedvar.SharedVariable):
-        return param.get_value()
-    elif isinstance(param, (tt.TensorVariable, MultiObservedRV)):
-        if point and hasattr(param, 'model') and param.name in point:
-            return point[param.name]
+    if isinstance(param, WrapAsHashable):
+        output = param.get_value()
+    elif isinstance(param, tt.TensorVariable):
+        if point and hasattr(param, 'name') and param.name in point:
+            output = point[param.name]
         elif hasattr(param, 'random') and param.random is not None:
-            return param.random(point=point, size=size)
+            output = param.random(point=point, size=size)
         elif (hasattr(param, 'distribution') and
                 hasattr(param.distribution, 'random') and
                 param.distribution.random is not None):
@@ -402,20 +408,34 @@ def _draw_value(param, point=None, givens=None, size=None):
                     dist_tmp.shape = np.array([])
                     val = dist_tmp.random(point=point, size=None)
                     dist_tmp.shape = val.shape
-                return dist_tmp.random(point=point, size=size)
+                output =  dist_tmp.random(point=point, size=size)
             else:
                 return param.distribution.random(point=point, size=size)
         else:
-            if givens:
-                variables, values = list(zip(*givens))
-            else:
-                variables = values = []
-            func = _compile_theano_function(param, variables)
-            if size and values and not all(var.dshape == val.shape for var, val in zip(variables, values)):
-                return np.array([func(*v) for v in zip(*values)])
-            else:
-                return func(*values)
-    raise ValueError('Unexpected type in draw_value: %s' % type(param))
+            output = _compute_value(param, givens=givens, size=None)
+    elif isinstance(param, numbers.Number):
+        output = param
+    elif isinstance(param, np.ndarray):
+        output = param
+    elif isinstance(param, theano.tensor.TensorConstant):
+        output = param.value
+    elif isinstance(param, theano.tensor.sharedvar.SharedVariable):
+        output = param.get_value()
+    else:
+        raise ValueError('Unexpected type in draw_value: %s' % type(param))
+    # Maybe at this point we should control the output shape depending on size?
+    return output
+
+
+def _compute_value(param, givens=None, size=None):
+    if givens:
+        variables, values = list(zip(*givens))
+    else:
+        variables = values = []
+    func = _compile_theano_function(param, variables)
+    output = func(*values)
+    # Maybe at this point we should control the output shape depending on size?
+    return output
 
 
 def to_tuple(shape):

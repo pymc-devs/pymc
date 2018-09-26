@@ -63,6 +63,7 @@ class Binomial(Discrete):
         self.n = n = tt.as_tensor_variable(n)
         self.p = p = tt.as_tensor_variable(p)
         self.mode = tt.cast(tround(n * p), self.dtype)
+        self.conditional_on = [self.n, self.p]
 
     def random(self, point=None, size=None):
         n, p = draw_values([self.n, self.p], point=point, size=size)
@@ -150,6 +151,7 @@ class BetaBinomial(Discrete):
         self.beta = beta = tt.as_tensor_variable(beta)
         self.n = n = tt.as_tensor_variable(n)
         self.mode = tt.cast(tround(alpha / (alpha + beta)), 'int8')
+        self.conditional_on = [self.alpha, self.beta, self.n]
 
     def _random(self, alpha, beta, n, size=None):
         size = size or 1
@@ -251,6 +253,7 @@ class Bernoulli(Discrete):
             self._logit_p = tt.as_tensor_variable(logit_p)
 
         self.mode = tt.cast(tround(self.p), 'int8')
+        self.conditional_on = [self.p]
 
     def random(self, point=None, size=None):
         p = draw_values([self.p], point=point, size=size)[0]
@@ -323,6 +326,7 @@ class DiscreteWeibull(Discrete):
         self.beta = beta = tt.as_tensor_variable(beta)
 
         self.median = self._ppf(0.5)
+        self.conditional_on = [self.q, self.beta]
 
     def logp(self, value):
         q = self.q
@@ -414,6 +418,7 @@ class Poisson(Discrete):
         super(Poisson, self).__init__(*args, **kwargs)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.mode = tt.floor(mu).astype('int32')
+        self.conditional_on = [self.mu]
 
     def random(self, point=None, size=None):
         mu = draw_values([self.mu], point=point, size=size)[0]
@@ -494,6 +499,7 @@ class NegativeBinomial(Discrete):
         self.mu = mu = tt.as_tensor_variable(mu)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.mode = tt.floor(mu).astype('int32')
+        self.conditional_on = [self.mu, self.alpha]
 
     def random(self, point=None, size=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point, size=size)
@@ -568,6 +574,7 @@ class Geometric(Discrete):
         super(Geometric, self).__init__(*args, **kwargs)
         self.p = p = tt.as_tensor_variable(p)
         self.mode = 1
+        self.conditional_on = [self.p]
 
     def random(self, point=None, size=None):
         p = draw_values([self.p], point=point, size=size)[0]
@@ -634,6 +641,7 @@ class DiscreteUniform(Discrete):
         self.upper = tt.floor(upper).astype('int32')
         self.mode = tt.maximum(
             tt.floor((upper + lower) / 2.).astype('int32'), self.lower)
+        self.conditional_on = [self.lower, self.upper]
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
@@ -709,6 +717,7 @@ class Categorical(Discrete):
         p = tt.as_tensor_variable(p)
         self.p = (p.T / tt.sum(p, -1)).T
         self.mode = tt.argmax(p)
+        self.conditional_on = [self.p, self.k]
 
     def random(self, point=None, size=None):
         p, k = draw_values([self.p, self.k], point=point, size=size)
@@ -760,6 +769,7 @@ class Constant(Discrete):
                     DeprecationWarning)
         super(Constant, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
+        self.conditional_on = [self.c]
 
     def random(self, point=None, size=None):
         c = draw_values([self.c], point=point, size=size)[0]
@@ -841,6 +851,7 @@ class ZeroInflatedPoisson(Discrete):
         self.psi = psi = tt.as_tensor_variable(psi)
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
+        self.conditional_on = [self.theta, self.psi]
 
     def random(self, point=None, size=None):
         theta, psi = draw_values([self.theta, self.psi], point=point, size=size)
@@ -933,6 +944,7 @@ class ZeroInflatedBinomial(Discrete):
         self.psi = psi = tt.as_tensor_variable(psi)
         self.bin = Binomial.dist(n, p)
         self.mode = self.bin.mode
+        self.conditional_on = [self.n, self.p, self.psi]
 
     def random(self, point=None, size=None):
         n, p, psi = draw_values([self.n, self.p, self.psi], point=point, size=size)
@@ -1049,6 +1061,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         self.psi = psi = tt.as_tensor_variable(psi)
         self.nb = NegativeBinomial.dist(mu, alpha)
         self.mode = self.nb.mode
+        self.conditional_on = [self.mu, self.alpha, self.psi]
 
     def random(self, point=None, size=None):
         mu, alpha, psi = draw_values(
