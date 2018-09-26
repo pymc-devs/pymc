@@ -3,6 +3,7 @@ import functools
 import itertools
 import threading
 import six
+from copy import copy
 
 import numpy as np
 from pandas import Series
@@ -1579,10 +1580,10 @@ class DependenceDAG(object):
 
     """
 
-    def __init__(self, nodes=set(),
-                 deterministic_parents={}, deterministic_children={},
-                 conditional_parents={}, conditional_children={},
-                 deterministic_depth={}, conditional_depth={},
+    def __init__(self, nodes=None,
+                 deterministic_parents=None, deterministic_children=None,
+                 conditional_parents=None, conditional_children=None,
+                 deterministic_depth=None, conditional_depth=None,
                  check_integrity=True):
         """
         Parameters
@@ -1622,13 +1623,25 @@ class DependenceDAG(object):
             is not tested.
 
         """
-        self.nodes = set(nodes)
-        self.deterministic_parents = deterministic_parents.copy()
-        self.deterministic_children = deterministic_children.copy()
-        self.conditional_parents = conditional_parents.copy()
-        self.conditional_children = conditional_children.copy()
-        self.deterministic_depth = deterministic_depth.copy()
-        self.conditional_depth = conditional_depth.copy()
+        self.nodes = set(nodes) if nodes is not None else set()
+        self.deterministic_parents = (copy(deterministic_parents)
+                                      if deterministic_parents is not None
+                                      else dict())
+        self.deterministic_children = (copy(deterministic_children)
+                                       if deterministic_children is not None
+                                       else dict())
+        self.deterministic_depth = (copy(deterministic_depth)
+                                    if deterministic_depth is not None
+                                    else dict())
+        self.conditional_parents = (copy(conditional_parents)
+                                    if conditional_parents is not None
+                                    else dict())
+        self.conditional_children = (copy(conditional_children)
+                                     if conditional_children is not None
+                                     else dict())
+        self.conditional_depth = (copy(conditional_depth)
+                                  if conditional_depth is not None
+                                  else dict())
         self.depth = {node: max([self.deterministic_depth[node],
                                  self.conditional_depth[node]])
                       for node in self.nodes}
@@ -1965,7 +1978,7 @@ class DependenceDAG(object):
         if not isinstance(input_nodes, list):
             stack = [input_nodes]
         else:
-            stack = input_nodes.copy()
+            stack = copy(input_nodes)
 
         # We first stack the input_nodes along with their indeces in the
         # input_nodes iterable.
