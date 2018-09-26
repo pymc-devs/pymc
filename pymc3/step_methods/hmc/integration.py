@@ -4,7 +4,7 @@ import numpy as np
 from scipy import linalg
 
 
-State = namedtuple("State", 'q, p, v, q_grad, energy')
+State = namedtuple("State", 'q, p, v, q_grad, energy, model_logp')
 
 
 class IntegrationError(RuntimeError):
@@ -30,7 +30,7 @@ class CpuLeapfrogIntegrator(object):
         v = self._potential.velocity(p)
         kinetic = self._potential.energy(p, velocity=v)
         energy = kinetic - logp
-        return State(q, p, v, dlogp, energy)
+        return State(q, p, v, dlogp, energy, logp)
 
     def step(self, epsilon, state, out=None):
         """Leapfrog integrator step.
@@ -68,7 +68,7 @@ class CpuLeapfrogIntegrator(object):
         pot = self._potential
         axpy = linalg.blas.get_blas_funcs('axpy', dtype=self._dtype)
 
-        q, p, v, q_grad, energy = state
+        q, p, v, q_grad, energy, logp = state
         if out is None:
             q_new = q.copy()
             p_new = p.copy()
@@ -102,4 +102,4 @@ class CpuLeapfrogIntegrator(object):
             out.energy = energy
             return
         else:
-            return State(q_new, p_new, v_new, q_new_grad, energy)
+            return State(q_new, p_new, v_new, q_new_grad, energy, logp)

@@ -1,20 +1,25 @@
 """Statistical utility functions for PyMC"""
+from collections import namedtuple
+import itertools
+import pkg_resources
+import warnings
 
 import numpy as np
 import pandas as pd
-import itertools
+from scipy.stats import dirichlet
+from scipy.optimize import minimize
+from scipy.signal import fftconvolve
 from tqdm import tqdm
-import warnings
-from collections import namedtuple
+
 from .model import modelcontext
 from .util import get_default_varnames
 import pymc3 as pm
 from pymc3.theanof import floatX
 
-from scipy.special import logsumexp
-from scipy.stats import dirichlet
-from scipy.optimize import minimize
-from scipy.signal import fftconvolve
+if pkg_resources.get_distribution('scipy').version < '1.0.0':
+    from scipy.misc import logsumexp
+else:
+    from scipy.special import logsumexp
 
 
 __all__ = ['autocorr', 'autocov', 'waic', 'loo', 'hpd', 'quantiles',
@@ -190,7 +195,7 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     waic: widely available information criterion
     waic_se: standard error of waic
     p_waic: effective number parameters
-    var_warn: 1 if posterior variance of the log predictive 
+    var_warn: 1 if posterior variance of the log predictive
          densities exceeds 0.4
     waic_i: and array of the pointwise predictive accuracy, only if pointwise True
     """
@@ -260,7 +265,7 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
     loo: approximated Leave-one-out cross-validation
     loo_se: standard error of loo
     p_loo: effective number of parameters
-    shape_warn: 1 if the estimated shape parameter of 
+    shape_warn: 1 if the estimated shape parameter of
         Pareto distribution is greater than 0.7 for one or more samples
     loo_i: array of pointwise predictive accuracy, only if pointwise True
     """
@@ -697,6 +702,9 @@ def calc_min_interval(x, alpha):
 def hpd(x, alpha=0.05, transform=lambda x: x):
     """Calculate highest posterior density (HPD) of array for given alpha. The HPD is the
     minimum width Bayesian credible interval (BCI).
+
+    This function assumes the posterior distribution is unimodal:
+    it always returns one interval per variable.
 
     :Arguments:
       x : Numpy array

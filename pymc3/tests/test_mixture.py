@@ -74,6 +74,28 @@ class TestMixture(SeededTest):
                         np.sort(self.norm_mu),
                         rtol=0.1, atol=0.1)
 
+    def test_normal_mixture_nd(self):
+        nd, ncomp = 3, 5
+
+        with Model() as model0:
+            mus = Normal('mus', shape=(nd, ncomp))
+            taus = Gamma('taus', alpha=1, beta=1, shape=(nd, ncomp))
+            ws = Dirichlet('ws', np.ones(ncomp))
+            mixture0 = NormalMixture('m', w=ws, mu=mus, tau=taus, shape=nd)
+
+        with Model() as model1:
+            mus = Normal('mus', shape=(nd, ncomp))
+            taus = Gamma('taus', alpha=1, beta=1, shape=(nd, ncomp))
+            ws = Dirichlet('ws', np.ones(ncomp))
+            comp_dist = [Normal.dist(mu=mus[:, i], tau=taus[:, i])
+                         for i in range(ncomp)]
+            mixture1 = Mixture('m', w=ws, comp_dists=comp_dist, shape=nd)
+
+        testpoint = model0.test_point
+        testpoint['mus'] = np.random.randn(nd, ncomp)
+        assert_allclose(model0.logp(testpoint), model1.logp(testpoint))
+        assert_allclose(mixture0.logp(testpoint), mixture1.logp(testpoint))
+
     def test_poisson_mixture(self):
         with Model() as model:
             w = Dirichlet('w', floatX(np.ones_like(self.pois_w)))

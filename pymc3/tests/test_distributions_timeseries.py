@@ -2,8 +2,8 @@ from __future__ import division
 
 from ..model import Model
 from ..distributions.continuous import Flat, Normal
-from ..distributions.timeseries import EulerMaruyama, AR, GARCH11
-from ..sampling import sample, sample_ppc
+from ..distributions.timeseries import EulerMaruyama, AR1, AR, GARCH11
+from ..sampling import sample, sample_posterior_predictive
 from ..theanof import floatX
 
 import numpy as np
@@ -18,6 +18,14 @@ def test_AR():
     ar_like = t['y'].logp({'z':data[1:], 'y': data})
     reg_like = t['z'].logp({'z':data[1:], 'y': data})
     np.testing.assert_allclose(ar_like, reg_like)
+
+    # AR1 and AR(1)
+    with Model() as t:
+        rho = Normal('rho', 0., 1.)
+        y1 = AR1('y1', rho, 1., observed=data)
+        y2 = AR('y2', rho, 1., init=Normal.dist(0, 1), observed=data)
+    np.testing.assert_allclose(y1.logp(t.test_point),
+                               y2.logp(t.test_point))
 
     # AR1 + constant
     with Model() as t:
@@ -36,6 +44,29 @@ def test_AR():
     reg_like = t['z'].logp({'z':data[2:], 'y': data})
     np.testing.assert_allclose(ar_like, reg_like)
 
+
+def test_AR_nd():
+    # AR2 multidimensional
+    p, T, n = 3, 100, 5
+    beta_tp = np.random.randn(p, n)
+    y_tp = np.random.randn(T, n)
+    with Model() as t0:
+        beta = Normal('beta', 0., 1.,
+                      shape=(p, n),
+                      testval=beta_tp)
+        AR('y', beta, sd=1.0,
+           shape=(T, n), testval=y_tp)
+
+    with Model() as t1:
+        beta = Normal('beta', 0., 1.,
+                      shape=(p, n),
+                      testval=beta_tp)
+        for i in range(n):
+            AR('y_%d' % i, beta[:, i], sd=1.0,
+               shape=T, testval=y_tp[:, i])
+
+    np.testing.assert_allclose(t0.logp(t0.test_point),
+                               t1.logp(t1.test_point))
 
 
 def test_GARCH11():
@@ -91,7 +122,7 @@ def test_linear():
     with model:
         trace = sample(init='advi+adapt_diag', chains=1)
 
-    ppc = sample_ppc(trace, model=model)
+    ppc = sample_posterior_predictive(trace, model=model)
     # test
     p95 = [2.5, 97.5]
     lo, hi = np.percentile(trace[lamh], p95, axis=0)

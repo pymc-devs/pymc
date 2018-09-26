@@ -34,6 +34,7 @@ class HamiltonianMC(BaseHMC):
         'max_energy_error': np.float64,
         'path_length': np.float64,
         'accepted': np.bool,
+        'model_logp': np.float64,
     }]
 
     def __init__(self, vars=None, path_length=2.,
@@ -125,6 +126,7 @@ class HamiltonianMC(BaseHMC):
             'energy_error': energy_change,
             'energy': state.energy,
             'accepted': accepted,
+            'model_logp': state.model_logp,
         }
         return HMCStepData(end, accept_stat, div_info, stats)
 

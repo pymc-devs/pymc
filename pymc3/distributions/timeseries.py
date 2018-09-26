@@ -3,7 +3,6 @@ from theano import scan
 
 from pymc3.util import get_variable_name
 from .continuous import get_tau_sd, Normal, Flat
-from .dist_math import Cholesky
 from . import multivariate
 from . import distribution
 
@@ -79,7 +78,7 @@ class AR(distribution.Continuous):
     Parameters
     ----------
     rho : tensor
-        Vector of autoregressive coefficients.
+        Tensor of autoregressive coefficients. The first dimension is the p lag.
     sd : float
         Standard deviation of innovation (sd > 0). (only required if tau is not specified)
     tau : float
@@ -101,29 +100,38 @@ class AR(distribution.Continuous):
 
         self.mean = tt.as_tensor_variable(0.)
 
-        rho = tt.as_tensor_variable(rho, ndim=1)
-        if constant:
-            self.p = rho.shape[0] - 1
+        if isinstance(rho, list):
+            p = len(rho)
         else:
-            self.p = rho.shape[0]
+            try:
+                shape_ = rho.shape.tag.test_value
+            except AttributeError:
+                shape_ = rho.shape
+
+            if hasattr(shape_, "size") and shape_.size == 0:
+                p = 1
+            else:
+                p = shape_[0]
+
+        if constant:
+            self.p = p - 1
+        else:
+            self.p = p
 
         self.constant = constant
-        self.rho = rho
+        self.rho = rho = tt.as_tensor_variable(rho)
         self.init = init
 
     def logp(self, value):
-
-        y = value[self.p:]
-        results, _ = scan(lambda l, obs, p: obs[p - l:-l],
-                          outputs_info=None, sequences=[tt.arange(1, self.p + 1)],
-                          non_sequences=[value, self.p])
-        x = tt.stack(results)
-
         if self.constant:
-            y = y - self.rho[0]
-            eps = y - self.rho[1:].dot(x)
+            x = tt.add(*[self.rho[i + 1] * value[self.p - (i + 1):-(i + 1)] for i in range(self.p)])
+            eps = value[self.p:] - self.rho[0] - x
         else:
-            eps = y - self.rho.dot(x)
+            if self.p == 1:
+                x = self.rho * value[:-1]
+            else:
+                x = tt.add(*[self.rho[i] * value[self.p - (i + 1):-(i + 1)] for i in range(self.p)])
+            eps = value[self.p:] - x
 
         innov_like = Normal.dist(mu=0.0, tau=self.tau).logp(eps)
         init_like = self.init.logp(value[:self.p])
@@ -280,48 +288,8 @@ class EulerMaruyama(distribution.Continuous):
                                                 get_variable_name(dt))
 
 
-class _CovSet():
-    R"""
-    Convenience class to set Covariance, Inverse Covariance and Cholesky
-    descomposition of Covariance marrices.
-    """
-    def __initCov__(self, cov=None, tau=None, chol=None, lower=True):
-        if all([val is None for val in [cov, tau, chol]]):
-            raise ValueError('One of cov, tau or chol arguments must be provided.')
 
-        self.cov = self.tau = self.chol_cov = None
-
-        cholesky = Cholesky(nofail=True, lower=True)
-        if cov is not None:
-            self.k = cov.shape[0]
-            self._cov_type = 'cov'
-            cov = tt.as_tensor_variable(cov)
-            if cov.ndim != 2:
-                raise ValueError('cov must be two dimensional.')
-            self.chol_cov = cholesky(cov)
-            self.cov = cov
-            self._n = self.cov.shape[-1]
-        elif tau is not None:
-            self.k = tau.shape[0]
-            self._cov_type = 'tau'
-            tau = tt.as_tensor_variable(tau)
-            if tau.ndim != 2:
-                raise ValueError('tau must be two dimensional.')
-            self.chol_tau = cholesky(tau)
-            self.tau = tau
-            self._n = self.tau.shape[-1]
-        else:
-            if chol is not None and not lower:
-                chol = chol.T
-            self.k = chol.shape[0]
-            self._cov_type = 'chol'
-            if chol.ndim != 2:
-                raise ValueError('chol must be two dimensional.')
-            self.chol_cov = tt.as_tensor_variable(chol)
-            self._n = self.chol_cov.shape[-1]
-
-
-class MvGaussianRandomWalk(distribution.Continuous, _CovSet):
+class MvGaussianRandomWalk(distribution.Continuous):
     R"""
     Multivariate Random Walk with Normal innovations
 
@@ -346,32 +314,30 @@ class MvGaussianRandomWalk(distribution.Continuous, _CovSet):
     def __init__(self, mu=0., cov=None, tau=None, chol=None, lower=True, init=Flat.dist(),
                  *args, **kwargs):
         super(MvGaussianRandomWalk, self).__init__(*args, **kwargs)
-        super(MvGaussianRandomWalk, self).__initCov__(cov, tau, chol, lower)
 
-        self.mu = mu = tt.as_tensor_variable(mu)
         self.init = init
+        self.innovArgs = (mu, cov, tau, chol, lower)
+        self.innov = multivariate.MvNormal.dist(*self.innovArgs)
         self.mean = tt.as_tensor_variable(0.)
 
     def logp(self, x):
         x_im1 = x[:-1]
         x_i = x[1:]
 
-        innov_like = multivariate.MvNormal.dist(mu=x_im1 + self.mu, cov=self.cov,
-                                                tau=self.tau, chol=self.chol_cov).logp(x_i)
-        return self.init.logp(x[0]) + tt.sum(innov_like)
+        return self.init.logp_sum(x[0]) + self.innov.logp_sum(x_i - x_im1)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
-        mu = dist.mu
-        cov = dist.cov
+        mu = dist.innov.mu
+        cov = dist.innov.cov
         name = r'\text{%s}' % name
         return r'${} \sim \text{MvGaussianRandomWalk}(\mathit{{mu}}={},~\mathit{{cov}}={})$'.format(name,
                                                 get_variable_name(mu),
                                                 get_variable_name(cov))
 
 
-class MvStudentTRandomWalk(distribution.Continuous, _CovSet):
+class MvStudentTRandomWalk(MvGaussianRandomWalk):
     R"""
     Multivariate Random Walk with StudentT innovations
 
@@ -389,29 +355,17 @@ class MvStudentTRandomWalk(distribution.Continuous, _CovSet):
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
-    def __init__(self, nu, mu=0., cov=None, tau=None, chol=None, lower=True, init=Flat.dist(),
-                 *args, **kwargs):
+    def __init__(self, nu, *args, **kwargs):
         super(MvStudentTRandomWalk, self).__init__(*args, **kwargs)
-        super(MvStudentTRandomWalk, self).__initCov__(cov, tau, chol, lower)
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.nu = nu = tt.as_tensor_variable(nu)
-        self.init = init
-        self.mean = tt.as_tensor_variable(0.)
-
-    def logp(self, x):
-        x_im1 = x[:-1]
-        x_i = x[1:]
-        innov_like = multivariate.MvStudentT.dist(self.nu, mu=x_im1 + self.mu,
-                                                  cov=self.cov, tau=self.tau,
-                                                  chol=self.chol_cov).logp(x_i)
-        return self.init.logp(x[0]) + tt.sum(innov_like)
+        self.nu = tt.as_tensor_variable(nu)
+        self.innov = multivariate.MvStudentT.dist(self.nu, *self.innovArgs)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
-        nu = dist.nu
-        mu = dist.mu
-        cov = dist.cov
+        nu = dist.innov.nu
+        mu = dist.innov.mu
+        cov = dist.innov.cov
         name = r'\text{%s}' % name
         return r'${} \sim \text{MvStudentTRandomWalk}(\mathit{{nu}}={},~\mathit{{mu}}={},~\mathit{{cov}}={})$'.format(name,
                                                 get_variable_name(nu),

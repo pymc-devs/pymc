@@ -20,22 +20,10 @@ documentation, designs or other work to one or more Project repositories.
 Anyone can be a Contributor. Contributors can be affiliated with any legal
 entity or none. Contributors participate in the project by submitting,
 reviewing and discussing GitHub Pull Requests and Issues and participating in
-open and public Project discussions on GitHub, Google+, Slack, Hackpad, Gitter chat
-rooms and mailing lists. The foundation of Project participation is openness
+open and public Project discussions on GitHub, Google+, Slack, Hackpad, Gitter chat rooms and mailing lists. The foundation of Project participation is openness
 and transparency.
 
-Here is a list of the current Contributors to the main repository:
-- John Salvatier
-- Chris Fonnesbeck
-- Thomas Wiecki
-- Peadar Coyle
-- Taku Yoshioka
-- Austin Rochford
-- Jon Sedar
-
-
-There are also many other Contributors listed in the logs of other repositories of
-the PyMC and projects.
+There have been over 100 Contributors to the Project, whose contributions are listed in the logs of other repositories of the PyMC and projects.
 
 The Project Community consists of all Contributors and Users of the Project.
 Contributors work on behalf of and are responsible to the larger Project
@@ -133,6 +121,19 @@ In particular, the Council may:
 -   Make decisions when regular community discussion doesn’t produce consensus
     on an issue in a reasonable time frame.
 
+The current Steering Council membership comprises:
+
+- Colin Carroll
+- Peadar Coyle
+- Bill Engels
+- Chris Fonnesbeck
+- Maxim Kochurov
+- Junpeng Lao
+- Osvaldo Martin
+- Austin Rochford
+- Adrian Seyboldt 
+- Thomas Wiecki
+
 ### Council membership
 
 To become eligible for being a Steering Council Member an individual must be a
@@ -187,7 +188,7 @@ All members of the Council, BDFL included, shall disclose to the rest of the
 Council any conflict of interest they may have. Members with a conflict of
 interest in a particular issue may participate in Council discussions on that
 issue, but must recuse themselves from voting on the issue. If the BDFL has
-recused his/herself for a particular decision, they will appoint a substitute
+recused him/herself for a particular decision, they will appoint a substitute
 BDFL for that decision.
 
 ### Private communications of the Council
@@ -208,16 +209,14 @@ should conduct their business in an open and public manner unless privacy is
 specifically called for. Private subcommittee communications should happen on
 the main private mailing list of the Council unless specifically called for.
 
-Question: if the BDFL is not on a subcommittee, do they still have override
-authority?
-
-Suggestion: they do, but they should appoint a delegate who plays that role
-most of the time, and explicit BDFL intervention is sought only if the
-committee disagrees with that delegate’s decision and no resolution is possible
-within the team. This is different from a BDFL delegate for a specific decision
-(or a recusal situation), where the BDFL is literally giving up his/her
-authority to someone else in full. It’s more like what Linus Torvalds uses with his
-“lieutenants” model.
+Even if the BDFL does not sit on a specific subcommittee, he/she still retains
+override authority on the subcommittee's decisions. However, it is expected that
+he/she will appoint a delegate to oversee the subcommittee's decisions, and
+explicit intervention from the BDFL will only be sought if the committee
+disagrees with the delegate's decision and no resolution is possible within the
+subcommittee. This is a different situation from a BDFL delegate for a specific
+decision, or a recusal situation, in which the BDFL gives up his/her authority
+to someone else in full.
 
 ### NumFOCUS Subcommittee
 
@@ -237,6 +236,13 @@ interactions with NumFOCUS.
     contracting work (including the reportee, i.e. the reportee + 1 is the
     max). This avoids effective majorities resting on one person.
 
+The current NumFOCUS Subcommittee consists of:
+
+- Peadar Coyle
+- Chris Fonnesbeck
+- John Salvatier
+- Jon Sedar
+- Thomas Wiecki
 
 ### Institutional Partners and Funding
 
@@ -311,3 +317,5 @@ Partners, with associated benefits:
 -   Same benefits as Tier 1 level Partners, but:
 -   Only Institutional Contributors are invited to the Institutional Partners
     Workshop and bi-annual PyMC Developer Meeting
+
+The PyMC3 project currently recognizes Quantopian as a Tier 1 Institutional Partner, with Thomas Wiecki and Adrian Seyboldt as their institutional contributors and council members.

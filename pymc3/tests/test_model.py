@@ -130,6 +130,16 @@ class TestObserved(object):
                 x = Normal('x')
                 Normal('n', observed=x)
 
+    def test_observed_type(self):
+        X_ = np.random.randn(100, 5)
+        X = pm.floatX(theano.shared(X_))
+        with pm.Model():
+            x1 = pm.Normal('x1', observed=X_)
+            x2 = pm.Normal('x2', observed=X)
+
+        assert x1.type == X.type
+        assert x2.type == X.type
+
 
 class TestTheanoConfig(object):
     def test_set_testval_raise(self):
