@@ -1,6 +1,9 @@
 import re
 import numbers
-from collections.abc import Hashable
+try:
+    from collections.abc import Hashable
+except ImportError:
+    from collections import Hashable
 import functools
 import numpy as np
 from numpy import asscalar
