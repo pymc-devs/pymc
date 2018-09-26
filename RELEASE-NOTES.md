@@ -1,7 +1,13 @@
 # Release Notes
 
-
 ## PyMC3 3.6 (unreleased)
+
+### New features
+
+- Track the model log-likelihood as a sampler stat for NUTS and HMC samplers
+  (accessible as `trace.get_sampler_stats('model_logp')`) (#3134)
+
+### Maintenance
 
 - Renamed `sample_ppc()` and `sample_ppc_w()` to `sample_posterior_predictive()` and `sample_posterior_predictive_w()`, respectively.
 - Refactor SMC and properly compute marginal likelihood (#3124)

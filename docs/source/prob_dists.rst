@@ -50,8 +50,8 @@ An exponential survival function is defined by:
 
 .. math::
 
-    f(c, t) = \left\{ \begin{array}{l} \exp(\lambda t), \text{if c=1} \\
-               \lambda \exp(\lambda t), \text{if c=0}  \end{array} \right.
+    f(c, t) = \left\{ \begin{array}{l} \exp(-\lambda t), \text{if c=1} \\
+               \lambda \exp(-\lambda t), \text{if c=0}  \end{array} \right.
 
 Such a function can be implemented as a PyMC3 distribution by writing a function that specifies the log-probability, then passing that function as an argument to the ``DensityDist`` function, which creates an instance of a PyMC3 distribution with the custom function as its log-probability.
 

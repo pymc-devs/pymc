@@ -24,15 +24,70 @@ class Transform(object):
     name = ""
 
     def forward(self, x):
+        """Applies transformation forward to input variable `x`.
+        When transform is used on some distribution `p`, it will transform the random variable `x` after sampling
+        from `p`.
+
+        Parameters
+        ----------
+        x : tensor
+            Input tensor to be transformed.
+
+        Returns
+        --------
+        tensor
+            Transformed tensor.
+        """
         raise NotImplementedError
 
     def forward_val(self, x, point):
+        """Applies transformation forward to input array `x`.
+        Similar to `forward` but for constant data.
+
+        Parameters
+        ----------
+        x : array_like
+            Input array to be transformed.
+        point : array_like, optional
+            Test value used to draw (fix) bounds-like transformations
+
+        Returns
+        --------
+        array_like
+            Transformed array.
+        """
         raise NotImplementedError
 
     def backward(self, z):
+        """Applies inverse of transformation to input variable `z`.
+        When transform is used on some distribution `p`, which has observed values `z`, it is used to
+        transform the values of `z` correctly to the support of `p`.
+
+        Parameters
+        ----------
+        z : tensor
+            Input tensor to be inverse transformed.
+
+        Returns
+        -------
+        tensor
+            Inverse transformed tensor.
+        """
         raise NotImplementedError
 
     def jacobian_det(self, x):
+        """Calculates logarithm of the absolute value of the Jacobian determinant for input `x`.
+
+        Parameters
+        ----------
+        x : tensor
+            Input to calculate Jacobian determinant of.
+
+        Returns
+        -------
+        tensor
+            The log abs Jacobian determinant of `x` w.r.t. this transform.
+        """
         raise NotImplementedError
 
     def apply(self, dist):

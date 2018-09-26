@@ -145,6 +145,7 @@ Software using PyMC3
 
 - `Bambi <https://github.com/bambinos/bambi>`__: BAyesian Model-Building Interface (BAMBI) in Python.
 - `pymc3_models <https://github.com/parsing-science/pymc3_models>`__: Custom PyMC3 models built on top of the scikit-learn API.
+- `PMProphet <https://github.com/luke14free/pm-prophet>`__: PyMC3 port of Facebook's Prophet model for timeseries modeling
 - `webmc3 <https://github.com/AustinRochford/webmc3>`__: A web interface for exploring PyMC3 traces
 - `sampled <https://github.com/ColCarroll/sampled>`__: Decorator for PyMC3 models.
 - `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
@@ -176,6 +177,8 @@ Sponsors
 
 |Quantopian|
 
+|ODSC|
+
 .. |Binder| image:: https://mybinder.org/badge.svg
    :target: https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks
 .. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.png?branch=master
@@ -188,3 +191,5 @@ Sponsors
    :target: https://quantopian.com
 .. |NumFOCUS_badge| image:: https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A
    :target: http://www.numfocus.org/
+.. |ODSC| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/odsc_logo.png
+   :target: https://odsc.com

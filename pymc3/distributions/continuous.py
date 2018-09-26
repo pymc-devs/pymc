@@ -1957,7 +1957,7 @@ class HalfCauchy(PositiveContinuous):
         plt.show()
 
     ========  ========================
-    Support   :math:`x \in \mathbb{R}`
+    Support   :math:`x \in [0, \infty)`
     Mode      0
     Mean      undefined
     Variance  undefined
@@ -3125,7 +3125,7 @@ class Gumbel(Continuous):
     ========  ==========================================
     Support   :math:`x \in \mathbb{R}`
     Mean      :math:`\mu + \beta\gamma`, where \gamma is the Euler-Mascheroni constant
-    Variance  :math:`\frac{\pi^2}{6} \beta^2)`
+    Variance  :math:`\frac{\pi^2}{6} \beta^2`
     ========  ==========================================
 
     Parameters
@@ -3173,7 +3173,7 @@ class Gumbel(Continuous):
 
     def logp(self, value):
         """
-        Calculate log-probability of Gumbell distribution at specified value.
+        Calculate log-probability of Gumbel distribution at specified value.
 
         Parameters
         ----------

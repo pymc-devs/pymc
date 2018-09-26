@@ -456,3 +456,26 @@ class TestNutsCheckTrace(object):
             error.match('issues during sampling')
 
             assert not trace.report.ok
+
+    def test_sampler_stats(self):
+        with Model() as model:
+            x = Normal('x', mu=0, sd=1)
+            trace = sample(draws=10, tune=1, chains=1)
+
+        # Assert stats exist and have the correct shape.
+        expected_stat_names = {
+            'depth', 'diverging', 'energy', 'energy_error', 'model_logp',
+            'max_energy_error', 'mean_tree_accept', 'step_size',
+            'step_size_bar', 'tree_size', 'tune'
+        }
+        assert(trace.stat_names == expected_stat_names)
+        for varname in trace.stat_names:
+            assert(trace.get_sampler_stats(varname).shape == (10,))
+
+        # Assert model logp is computed correctly: computing post-sampling
+        # and tracking while sampling should give same results.
+        model_logp_ = np.array([
+            model.logp(trace.point(i, chain=c))
+            for c in trace.chains for i in range(len(trace))
+        ])
+        assert((trace.model_logp == model_logp_).all())
