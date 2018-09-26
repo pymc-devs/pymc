@@ -1,18 +1,15 @@
-import collections
 import numbers
-
 import numpy as np
 import theano.tensor as tt
 from theano import function
 import theano
 from ..memoize import memoize
 from ..model import (
-    Model, modelcontext, FreeRV, ObservedRV,
-    MultiObservedRV
+    Model, modelcontext, FreeRV, ObservedRV, MultiObservedRV,
+    not_shared_or_constant_variable, DependenceDAG
 )
 from ..vartypes import string_types
-from ..util import (not_shared_or_constant_variable, DependenceDAG,
-                    WrapAsHashable)
+from ..util import WrapAsHashable
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
            'NoDistribution', 'TensorType', 'draw_values', 'generate_samples']
@@ -381,10 +378,18 @@ def _draw_value(param, point=None, givens=None, size=None):
     size : int, optional
         Number of samples
     """
-    if isinstance(param, WrapAsHashable):
+    if isinstance(param, numbers.Number):
+        output = param
+    elif isinstance(param, np.ndarray):
+        output = param
+    elif isinstance(param, theano.tensor.TensorConstant):
+        output = param.value
+    elif isinstance(param, theano.tensor.sharedvar.SharedVariable):
+        output = param.get_value()
+    elif isinstance(param, WrapAsHashable):
         output = param.get_value()
     elif isinstance(param, tt.TensorVariable):
-        if point and hasattr(param, 'name') and param.name in point:
+        if point and hasattr(param, 'model') and param.name in point:
             output = point[param.name]
         elif hasattr(param, 'random') and param.random is not None:
             output = param.random(point=point, size=size)
@@ -406,21 +411,21 @@ def _draw_value(param, point=None, givens=None, size=None):
                     # reset shape to account for shape changes
                     # with theano.shared inputs
                     dist_tmp.shape = np.array([])
-                    val = dist_tmp.random(point=point, size=None)
-                    dist_tmp.shape = val.shape
-                output =  dist_tmp.random(point=point, size=size)
+                    val = np.atleast_1d(dist_tmp.random(point=point,
+                                                        size=None))
+                    # Sometimes point may change the size of val but not the
+                    # distribution's shape
+                    if point and size is not None:
+                        temp_size = np.atleast_1d(size)
+                        if all(val.shape[:len(temp_size)] == temp_size):
+                            dist_tmp.shape = val.shape[len(temp_size):]
+                        else:
+                            dist_tmp.shape = val.shape
+                output = dist_tmp.random(point=point, size=size)
             else:
-                return param.distribution.random(point=point, size=size)
+                output = param.distribution.random(point=point, size=size)
         else:
-            output = _compute_value(param, givens=givens, size=None)
-    elif isinstance(param, numbers.Number):
-        output = param
-    elif isinstance(param, np.ndarray):
-        output = param
-    elif isinstance(param, theano.tensor.TensorConstant):
-        output = param.value
-    elif isinstance(param, theano.tensor.sharedvar.SharedVariable):
-        output = param.get_value()
+            output = _compute_value(param, givens=givens, size=size)
     else:
         raise ValueError('Unexpected type in draw_value: %s' % type(param))
     # Maybe at this point we should control the output shape depending on size?
@@ -433,8 +438,17 @@ def _compute_value(param, givens=None, size=None):
     else:
         variables = values = []
     func = _compile_theano_function(param, variables)
-    output = func(*values)
-    # Maybe at this point we should control the output shape depending on size?
+    if size is not None:
+        size = np.atleast_1d(size)
+    if (values and all((hasattr(var, 'dshape') for var in variables)) and
+        not all(var.dshape == getattr(val, 'shape', tuple())
+                for var, val in zip(variables, values))):
+        output = np.array([func(*v) for v in zip(*values)])
+    elif (size is not None and any((val.ndim > var.ndim)
+          for var, val in zip(variables, values))):
+        output = np.array([func(*v) for v in zip(*values)])
+    else:
+        output = func(*values)
     return output
 
 
