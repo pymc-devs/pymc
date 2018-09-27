@@ -1126,9 +1126,9 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
         for slc, idx in enumerate(indices):
             if nchain > 1:
                 chain_idx, point_idx = np.divmod(idx, len_trace)
-                param = trace._straces[chain_idx].point(point_idx)
+                param = trace._straces[chain_idx % nchain].point(point_idx)
             else:
-                param = trace[idx]
+                param = trace[idx % len_trace]
 
             values = draw_values(vars, point=param, size=size)
             for k, v in zip(vars, values):
