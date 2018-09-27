@@ -1542,6 +1542,52 @@ def not_shared_or_constant_variable(x):
             ) or (isinstance(x, (FreeRV, MultiObservedRV, TransformedRV)))
 
 
+def get_first_level_conditionals(root):
+    """Performs a breadth first search on the supplied root node's logpt or
+    transformed logpt graph searching for named input nodes, which are
+    different from the supplied root. Each explored branch will stop when
+    either when it ends or when it finds its first named node.
+
+    Parameters
+    ----------
+    root: theano.Variable (mandatory)
+        The node from which to get the transformed.logpt or logpt and perform
+        the search. If root does not have either of these attributes, the
+        function returns None.
+
+    Returns
+    -------
+    conditional_on : set, with named nodes that are not theano.Constant nor
+    SharedVariable. The input `root` is conditionally dependent on these nodes
+    and is one step away from them in the bayesian network that specifies the
+    relationships, hence the name `get_first_level_conditionals`.
+    """
+    transformed = getattr(root, 'transformed', None)
+    try:
+        cond = transformed.logpt
+    except AttributeError:
+        cond = getattr(root, 'logpt', None)
+    if cond is None:
+        return None
+    conditional_on = set()
+    queue = copy(getattr(cond.owner, 'inputs', []))
+    while queue:
+        parent = queue.pop(0)
+        if (parent is not None and getattr(parent, 'name', None) is not None
+                and not_shared_or_constant_variable(parent)):
+            # We don't include as a conditional relation either logpt depending
+            # on root or on transformed because they are both deterministic
+            # relations
+            if parent == root and parent == transformed:
+                conditional_on.add(parent)
+        else:
+            parent_owner = getattr(parent, 'owner', None)
+            queue.extend(getattr(parent_owner, 'inputs', []))
+    if not conditional_on:
+        return None
+    return conditional_on
+
+
 class DependenceDAG(object):
     """
     `DependenceDAG` instances represent the directed acyclic graph (DAG) that
@@ -1866,6 +1912,7 @@ class DependenceDAG(object):
         self.depth[node] = 0
 
         # Try to get the conditional parents of node and add them
+#        cond = get_first_level_conditionals(node)
         try:
             cond = node.distribution.conditional_on
         except AttributeError:
