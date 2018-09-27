@@ -80,72 +80,6 @@ def incorporate_methods(source, destination, methods, default=None,
         else:
             setattr(destination, method, None)
 
-def get_named_nodes_and_relations(graph):
-    """Get the named nodes in a theano graph (i.e., nodes whose name
-    attribute is not None) along with their relationships (i.e., the
-    node's named parents, and named children, while skipping unnamed
-    intermediate nodes)
-
-    Parameters
-    ----------
-    graph - a theano node
-
-    Returns:
-    leaf_nodes: A dictionary of name:node pairs, of the named nodes that
-        are also leafs of the graph
-    node_parents: A dictionary of node:set([parents]) pairs. Each key is
-        a theano named node, and the corresponding value is the set of
-        theano named nodes that are parents of the node. These parental
-        relations skip unnamed intermediate nodes.
-    node_children: A dictionary of node:set([children]) pairs. Each key
-        is a theano named node, and the corresponding value is the set
-        of theano named nodes that are children of the node. These child
-        relations skip unnamed intermediate nodes.
-
-    """
-    if graph.name is not None:
-        node_parents = {graph: set()}
-        node_children = {graph: set()}
-    else:
-        node_parents = {}
-        node_children = {}
-    return _get_named_nodes_and_relations(graph, None, {}, node_parents, node_children)
-
-def _get_named_nodes_and_relations(graph, parent, leaf_nodes,
-                                        node_parents, node_children):
-    if getattr(graph, 'owner', None) is None:  # Leaf node
-        if graph.name is not None:  # Named leaf node
-            leaf_nodes.update({graph.name: graph})
-            if parent is not None:  # Is None for the root node
-                try:
-                    node_parents[graph].add(parent)
-                except KeyError:
-                    node_parents[graph] = set([parent])
-                node_children[parent].add(graph)
-            # Flag that the leaf node has no children
-            node_children[graph] = set()
-    else:  # Intermediate node
-        if graph.name is not None:  # Intermediate named node
-            if parent is not None:  # Is only None for the root node
-                try:
-                    node_parents[graph].add(parent)
-                except KeyError:
-                    node_parents[graph] = set([parent])
-                node_children[parent].add(graph)
-            # The current node will be set as the parent of the next
-            # nodes only if it is a named node
-            parent = graph
-            # Init the nodes children to an empty set
-            node_children[graph] = set()
-        for i in graph.owner.inputs:
-            temp_nodes, temp_inter, temp_tree = \
-                _get_named_nodes_and_relations(i, parent, leaf_nodes,
-                                               node_parents, node_children)
-            leaf_nodes.update(temp_nodes)
-            node_parents.update(temp_inter)
-            node_children.update(temp_tree)
-    return leaf_nodes, node_parents, node_children
-
 
 class Context(object):
     """Functionality for objects that put themselves in a context using
@@ -531,7 +465,8 @@ class ValueGradFunction(object):
         return args_joined, theano.clone(cost, replace=replace)
 
 
-class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization)):
+class Model(six.with_metaclass(InitContextMeta, Context, Factor,
+                               WithMemoization)):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
@@ -731,7 +666,8 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
     def logp_nojact(self):
         """Theano scalar of log-probability of the model"""
         with self:
-            factors = [var.logp_nojact for var in self.basic_RVs] + self.potentials
+            factors = ([var.logp_nojact for var in self.basic_RVs] +
+                       self.potentials)
             logp = tt.sum([tt.sum(factor) for factor in factors])
             if self.name:
                 logp.name = '__logp_nojac_%s' % self.name
@@ -821,10 +757,13 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
                                         total_size=total_size,
                                         model=self)
                 pm._log.debug('Applied {transform}-transform to {name}'
-                              ' and added transformed {orig_name} to model.'.format(
+                              ' and added transformed {orig_name} to model.'.
+                              format(
                                 transform=dist.transform.name,
                                 name=name,
-                                orig_name=get_transformed_name(name, dist.transform)))
+                                orig_name=get_transformed_name(name,
+                                                               dist.transform))
+                              )
                 self.deterministics.append(var)
                 self.add_random_variable(var)
                 return var
@@ -900,8 +839,8 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
                 raise e
 
     def makefn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Theano function which returns ``outs`` and takes the variable
-        ancestors of ``outs`` as inputs.
+        """Compiles a Theano function which returns ``outs`` and takes the
+        variable ancestors of ``outs`` as inputs.
 
         Parameters
         ----------
@@ -1011,14 +950,16 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
                     inputvar.tag.test_value = flatten_list(vars).tag.test_value
                 else:
                     inputvar.tag.test_value = np.asarray([], inputvar.dtype)
-        replacements = {self.named_vars[name]: inputvar[slc].reshape(shape).astype(dtype)
+        replacements = {self.named_vars[name]: (inputvar[slc].reshape(shape).
+                                                astype(dtype))
                         for name, slc, shape, dtype in order.vmap}
         view = {vm.var: vm for vm in order.vmap}
         flat_view = FlatView(inputvar, replacements, view)
         return flat_view
 
     def check_test_point(self, test_point=None, round_vals=2):
-        """Checks log probability of test_point for all random variables in the model.
+        """Checks log probability of test_point for all random variables in the
+        model.
 
         Parameters
         ----------
@@ -1035,8 +976,9 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         if test_point is None:
             test_point = self.test_point
 
-        return Series({RV.name:np.round(RV.logp(self.test_point), round_vals) for RV in self.basic_RVs},
-            name='Log-probability of test_point')
+        return Series({RV.name: np.round(RV.logp(self.test_point), round_vals)
+                       for RV in self.basic_RVs},
+                      name='Log-probability of test_point')
 
     def _repr_latex_(self, name=None, dist=None):
         tex_vars = []
@@ -1072,8 +1014,8 @@ def fn(outs, mode=None, model=None, *args, **kwargs):
 
 
 def fastfn(outs, mode=None, model=None):
-    """Compiles a Theano function which returns ``outs`` and takes values of model
-    vars as a dict as an argument.
+    """Compiles a Theano function which returns ``outs`` and takes values of
+    model vars as a dict as an argument.
 
     Parameters
     ----------
@@ -1109,7 +1051,9 @@ def Point(*args, **kwargs):
 
 
 class FastPointFunc(object):
-    """Wraps so a function so it takes a dict of arguments instead of arguments."""
+    """Wraps so a function so it takes a dict of arguments instead of
+    arguments.
+    """
 
     def __init__(self, f):
         self.f = f
@@ -1129,6 +1073,7 @@ class LoosePointFunc(object):
     def __call__(self, *args, **kwargs):
         point = Point(model=self.model, *args, **kwargs)
         return self.f(**point)
+
 
 compilef = fastfn
 
@@ -1158,7 +1103,8 @@ def _get_scaling(total_size, shape, ndim):
             denom = 1
         coef = floatX(total_size) / floatX(denom)
     elif isinstance(total_size, (list, tuple)):
-        if not all(isinstance(i, int) for i in total_size if (i is not Ellipsis and i is not None)):
+        if not all(isinstance(i, int) for i in total_size
+                   if (i is not Ellipsis and i is not None)):
             raise TypeError('Unrecognized `total_size` type, expected '
                             'int or list of ints, got %r' % total_size)
         if Ellipsis in total_size:
@@ -1166,13 +1112,15 @@ def _get_scaling(total_size, shape, ndim):
             begin = total_size[:sep]
             end = total_size[sep+1:]
             if Ellipsis in end:
-                raise ValueError('Double Ellipsis in `total_size` is restricted, got %r' % total_size)
+                raise ValueError('Double Ellipsis in `total_size` is '
+                                 'restricted, got %r' % total_size)
         else:
             begin = total_size
             end = []
         if (len(begin) + len(end)) > ndim:
             raise ValueError('Length of `total_size` is too big, '
-                             'number of scalings is bigger that ndim, got %r' % total_size)
+                             'number of scalings is bigger that ndim, '
+                             'got %r' % total_size)
         elif (len(begin) + len(end)) == 0:
             return floatX(1)
         if len(end) > 0:
@@ -1180,8 +1128,10 @@ def _get_scaling(total_size, shape, ndim):
         else:
             shp_end = np.asarray([])
         shp_begin = shape[:len(begin)]
-        begin_coef = [floatX(t) / shp_begin[i] for i, t in enumerate(begin) if t is not None]
-        end_coef = [floatX(t) / shp_end[i] for i, t in enumerate(end) if t is not None]
+        begin_coef = [floatX(t) / shp_begin[i] for i, t in enumerate(begin)
+                      if t is not None]
+        end_coef = [floatX(t) / shp_end[i] for i, t in enumerate(end)
+                    if t is not None]
         coefs = begin_coef + end_coef
         coef = tt.prod(coefs)
     else:
@@ -1214,8 +1164,9 @@ class FreeRV(Factor, TensorVariable):
             self.dshape = tuple(distribution.shape)
             self.dsize = int(np.prod(distribution.shape))
             self.distribution = distribution
-            self.tag.test_value = np.ones(
-                distribution.shape, distribution.dtype) * distribution.default()
+            self.tag.test_value = (np.ones(distribution.shape,
+                                           distribution.dtype) *
+                                   distribution.default())
             self.logp_elemwiset = distribution.logp(self)
             # The logp might need scaling in minibatches.
             # This is done in `Factor`.
@@ -1271,9 +1222,11 @@ def as_tensor(data, name, model, distribution):
 
     if hasattr(data, 'mask'):
         from .distributions import NoDistribution
-        testval = np.broadcast_to(distribution.default(), data.shape)[data.mask]
+        testval = np.broadcast_to(distribution.default(),
+                                  data.shape)[data.mask]
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,
-                                       testval=testval, parent_dist=distribution)
+                                       testval=testval,
+                                       parent_dist=distribution)
         missing_values = FreeRV(name=name + '_missing', distribution=fakedist,
                                 model=model)
         constant = tt.as_tensor_variable(data.filled())
@@ -1380,7 +1333,8 @@ class MultiObservedRV(Factor):
         self.data = {name: as_tensor(data, name, model, distribution)
                      for name, data in data.items()}
 
-        self.missing_values = [datum.missing_values for datum in self.data.values()
+        self.missing_values = [datum.missing_values for datum in
+                               self.data.values()
                                if datum.missing_values is not None]
         self.logp_elemwiset = distribution.logp(**self.data)
         # The logp might need scaling in minibatches.
@@ -1390,7 +1344,9 @@ class MultiObservedRV(Factor):
         self.total_size = total_size
         self.model = model
         self.distribution = distribution
-        self.scaling = _get_scaling(total_size, self.logp_elemwiset.shape, self.logp_elemwiset.ndim)
+        self.scaling = _get_scaling(total_size,
+                                    self.logp_elemwiset.shape,
+                                    self.logp_elemwiset.ndim)
 
 
 def _walk_up_rv(rv):
@@ -1410,7 +1366,8 @@ def _walk_up_rv(rv):
 
 def _latex_repr_rv(rv):
     """Make latex string for a Deterministic variable"""
-    return r'$\text{%s} \sim \text{Deterministic}(%s)$' % (rv.name, r',~'.join(_walk_up_rv(rv)))
+    return (r'$\text{%s} \sim \text{Deterministic}(%s)$' %
+            (rv.name, r',~'.join(_walk_up_rv(rv))))
 
 
 def Deterministic(name, var, model=None):
@@ -1485,7 +1442,8 @@ class TransformedRV(TensorVariable):
             transformed_name = get_transformed_name(name, transform)
 
             self.transformed = model.Var(
-                transformed_name, transform.apply(distribution), total_size=total_size)
+                transformed_name, transform.apply(distribution),
+                total_size=total_size)
 
             normalRV = transform.backward(self.transformed)
 
