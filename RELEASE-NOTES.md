@@ -6,6 +6,8 @@
 
 - Track the model log-likelihood as a sampler stat for NUTS and HMC samplers
   (accessible as `trace.get_sampler_stats('model_logp')`) (#3134)
+- Add Incomplete Beta function `incomplete_beta(a, b, value)` 
+- Add log CDF functions to continuous distributions: `Beta`, `Cauchy`, `ExGaussian`, `Exponential`, `Flat`, `Gumbel`, `HalfCauchy`, `HalfFlat`, `HalfNormal`, `Laplace`, `Logistic`, `Lognormal`, `Normal`, `Pareto`, `StudentT`, `Triangular`, `Uniform`, `Wald`, `Weibull`.
 
 ### Maintenance
 
