@@ -156,7 +156,7 @@ class TestDependenceDAG(object):
         self.expected_full_dag.add(self.e)
 
     def test_built_DependenceDAG(self):
-        assert self.expected_full_dag == self.model.variable_dependence_dag
+        assert self.expected_full_dag.match(self.model.variable_dependence_dag)
 
     def test_get_sub_dag(self):
         dag = self.model.variable_dependence_dag
@@ -167,12 +167,12 @@ class TestDependenceDAG(object):
         sub2 = dag.get_sub_dag([self.a])
         assert len(sub2.nodes) == 1
         assert sub2.check_integrity()
-        assert sub1 == sub2
+        assert sub1.match(sub2)
 
         sub3 = dag.get_sub_dag([self.e])
         assert len(sub3.nodes) == 5
         assert sub3.check_integrity()
-        assert sub3 == dag
+        assert sub3.match(dag)
 
         hard = dag.get_sub_dag([self.e,
                                 theano.tensor.exp(self.b +
@@ -180,11 +180,12 @@ class TestDependenceDAG(object):
                                 self.b + self.a])
         assert len(hard.nodes) == 6
         assert hard.check_integrity()
-        new_node_depth = [hard.depth[n] for n in hard
+        depth = hard.get_node_depths()
+        new_node_depth = [depth[n] for n in hard
                           if n not in self.model.basic_RVs +
                           self.model.deterministics][0]
         assert new_node_depth == 4
-        assert hard.get_sub_dag(self.e) == dag
+        assert hard.get_sub_dag(self.e).match(dag)
 
         params = [self.d,
                   0.,
@@ -195,7 +196,7 @@ class TestDependenceDAG(object):
         with_non_theano, index = dag.get_sub_dag(params,
                                                  return_index=True)
         assert with_non_theano.check_integrity()
-        assert with_non_theano.get_sub_dag(self.d) == dag.get_sub_dag([self.d])
+        assert with_non_theano.get_sub_dag(self.d).match(dag.get_sub_dag([self.d]))
         assert index[0] == params[0]
         assert all([isinstance(index[i], WrapAsHashable)
                     for i in range(1, 3)])
@@ -221,7 +222,7 @@ class TestDependenceDAG(object):
                 assert obj_value == expected_value
 
         wnt2 = with_non_theano.copy()
-        assert with_non_theano == wnt2
+        assert with_non_theano.match(wnt2)
         wnt2, node2 = wnt2.add(params[-1], force=True, return_added_node=True)
-        assert wnt2 == with_non_theano
+        assert wnt2.match(with_non_theano)
         assert node2 == index[len(params) - 1]

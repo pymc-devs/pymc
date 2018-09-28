@@ -84,7 +84,8 @@ class TestGLM(SeededTest):
             GLM.from_formula('y ~ x', self.data_logistic2,
                     family=families.Binomial(priors={'n': self.data_logistic2['n']}))
             trace = sample(1000, progressbar=False,
-                           random_seed=self.random_seed)
+                           random_seed=self.random_seed,
+                           cores=1)
 
             assert round(abs(np.mean(trace['Intercept'])-self.intercept), 1) == 0
             assert round(abs(np.mean(trace['x'])-self.slope), 1) == 0

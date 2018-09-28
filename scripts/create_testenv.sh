@@ -34,7 +34,7 @@ then
     fi
 fi
 conda install --yes numpy scipy mkl-service
-conda install --yes -c conda-forge python-graphviz
+conda install --yes -c conda-forge python-graphviz networkx
 
 pip install --upgrade pip
 

@@ -258,7 +258,7 @@ def draw_values(params, point=None, size=None, model=None):
     layers = dependence_dag.get_nodes_in_depth_layers()
 
     # Init drawn values and updatable point and givens
-    drawn = {n: None for n in dependence_dag}
+    drawn = {n: None for n in dependence_dag.nodes}
     givens = []
     if point is None:
         point = {}
@@ -308,20 +308,25 @@ def draw_values(params, point=None, size=None, model=None):
             # has conditional children) and givens (only if it has
             # deterministic children)
             if not_shared_or_constant_variable(node):
-                if dependence_dag.conditional_children[node]:
+                edges = dependence_dag[node]
+                if any(d['conditional'] for v, d in edges.items()):
                     point[node.name] = node_value
-                if dependence_dag.deterministic_children:
+                if any(d['deterministic'] for v, d in edges.items()):
                     givens.append((node, node_value))
 
             # If the node has deterministic children, check if the children's
             # values can be computed. This must be done because deterministic
             # relations must take precedence over conditional relations
             # amongst variables.
-            for child in dependence_dag.deterministic_children[node]:
+            deterministic_children = (child for child, d in
+                                      dependence_dag[node].items()
+                                      if d.get('deterministic', False))
+            for child in deterministic_children:
                 # Check if all of the child's deterministic parents have their
                 # values set, allowing us to compute the child's value.
-                if not any([drawn[p] is None for p in
-                            dependence_dag.deterministic_parents[child]]):
+                if not any((drawn[p] is None for p, c in
+                            dependence_dag.pred[child].items()
+                            if c.get('deterministic', False))):
                     # Append child to the current layer's node stack, to
                     # compute its value ahead of its scheduled depth
                     layer.append((child, True))

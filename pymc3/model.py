@@ -4,8 +4,13 @@ import itertools
 import threading
 import six
 from copy import copy
+try:
+    from collections.abc import Hashable
+except ImportError:
+    from collections import Hashable
 
 import numpy as np
+import networkx
 from pandas import Series
 import scipy.sparse as sps
 import theano.sparse as sparse
@@ -1536,8 +1541,14 @@ def get_first_level_conditionals(root):
             # We don't include as a conditional relation either logpt depending
             # on root or on transformed because they are both deterministic
             # relations
-            if parent == root and parent == transformed:
-                conditional_on.add(parent)
+            if parent == root or parent == transformed:
+                continue
+            if parent.name.endswith('.T') and parent.name != '.T':
+                # The transpose operation performed on a node named 'x'
+                # automatically sets the name of the output to 'x.T'. These
+                # nodes should be ignored
+                continue
+            conditional_on.add(parent)
         else:
             parent_owner = getattr(parent, 'owner', None)
             queue.extend(getattr(parent_owner, 'inputs', []))
@@ -1546,7 +1557,7 @@ def get_first_level_conditionals(root):
     return conditional_on
 
 
-class DependenceDAG(object):
+class DependenceDAG(networkx.DiGraph):
     """
     `DependenceDAG` instances represent the directed acyclic graph (DAG) that
     represents the conditional and deterministic relationships between
@@ -1584,210 +1595,53 @@ class DependenceDAG(object):
 
     """
 
-    def __init__(self, nodes=None,
-                 deterministic_parents=None, deterministic_children=None,
-                 conditional_parents=None, conditional_children=None,
-                 deterministic_depth=None, conditional_depth=None,
-                 check_integrity=True):
+    def __init__(self, *args, **kwargs):
+        super(DependenceDAG, self).__init__(*args, **kwargs)
+        if not networkx.is_directed_acyclic_graph(self):
+            raise TypeError('DependenceDAG must be a directed acyclic graph')
+
+    def copy(self):
+        return DependenceDAG(self)
+
+    def match(self, other):
+        """A helper function inteaded to be used during debugging. Is true is
+        two DependenceDAG contain the same nodes, the same edges and the
+        `deterministic` and `conditional` attributes of all edges are the same.
         """
-        Parameters
-        ----------
-        nodes: set (optional)
-            set of nodes (edges) stored in the DAG
-        deterministic_parents: dictionary (optional)
-            Dictionary whose keys are nodes (stored in nodes set), and whose
-            values are a set of nodes. The sets' nodes are the ones needed to
-            deterministically compute the key node's value.
-        deterministic_children: dictionary (optional)
-            Dictionary whose keys are nodes (stored in nodes set), and whose
-            values are a set of nodes. The sets' nodes are the ones that
-            require the value of the key's node to be able to deterministically
-            their own value.
-        conditional_parents: dictionary (optional)
-            Dictionary whose keys are nodes (stored in nodes set), and whose
-            values are a set of nodes, whose values are needed to
-            conditionally draw random sample the key node's value.
-        conditional_children: dictionary (optional)
-            Dictionary whose keys are nodes (stored in nodes set), and whose
-            values are a set of nodes. The sets' nodes are the ones that
-            require the value of the key's node to be able to randomly sample
-            their own value.
-        deterministic_depth: dictionary (optional)
-            Dictionary whose keys are nodes (stored in nodes set), and whose
-            values are ints, which represent the key's deterministic distance.
-        conditional_depth: dictionary (optional)
-            Dictionary whose keys are nodes (stored in nodes set), and whose
-            values are ints, which represent the key's conditional distance.
-        check_integrity: bool (optional)
-            If True, the integrity of the DAG is checked. This means that the
-            supplied dictionaries keys must all be in the `nodes` set, their
-            depths must be positive integers, their relations (both
-            deterministic and conditional parents and children) must all be
-            members of the `nodes` set. For now, the acyclicness of the graph
-            is not tested.
-
-        """
-        self.nodes = set(nodes) if nodes is not None else set()
-        self.deterministic_parents = (copy(deterministic_parents)
-                                      if deterministic_parents is not None
-                                      else dict())
-        self.deterministic_children = (copy(deterministic_children)
-                                       if deterministic_children is not None
-                                       else dict())
-        self.deterministic_depth = (copy(deterministic_depth)
-                                    if deterministic_depth is not None
-                                    else dict())
-        self.conditional_parents = (copy(conditional_parents)
-                                    if conditional_parents is not None
-                                    else dict())
-        self.conditional_children = (copy(conditional_children)
-                                     if conditional_children is not None
-                                     else dict())
-        self.conditional_depth = (copy(conditional_depth)
-                                  if conditional_depth is not None
-                                  else dict())
-        self.depth = {node: max([self.deterministic_depth[node],
-                                 self.conditional_depth[node]])
-                      for node in self.nodes}
-        if check_integrity:
-            self.check_integrity()
-
-    def __contains__(self, node):
-        return node in self.nodes
-
-    def __iter__(self):
-        for node in self.nodes:
-            yield node
-
-    def __str__(self):
-        s = ('<{}.{} object at {}>'.
-             format(self.__class__.__module__,
-                    self.__class__.__name__,
-                    hex(id(self)))
-             )
-        return s
-
-    def __repr__(self):
-        s = ('<{}.{} object at {}>\n'
-             'Contents:\n'
-             'nodes = {}\n'
-             'deterministic_parents = {}\n'
-             'deterministic_children = {}\n'
-             'deterministic_depth = {}\n'
-             'conditional_parents = {}\n'
-             'conditional_children = {}\n'
-             'conditional_depth = {}\n'
-             'depth = {}\n'.format(self.__class__.__module__,
-                                   self.__class__.__name__,
-                                   hex(id(self)),
-                                   self.nodes,
-                                   self.deterministic_parents,
-                                   self.deterministic_children,
-                                   self.deterministic_depth,
-                                   self.conditional_parents,
-                                   self.conditional_children,
-                                   self.conditional_depth,
-                                   self.depth,
-                                   )
-             )
-        return s
-
-    def __eq__(self, other):
+        if not isinstance(other, DependenceDAG):
+            return False
         if len(self.nodes) != len(other.nodes):
             return False
-        for at_name in ['deterministic_parents',
-                        'deterministic_children',
-                        'conditional_parents',
-                        'conditional_children',
-                        'deterministic_depth',
-                        'conditional_depth']:
-            sat = getattr(self, at_name)
-            oat = getattr(other, at_name)
-            for node in self:
-                svals = sat[node]
-                ovals = oat[node]
-                if isinstance(svals, set):
-                    if len(svals) != len(ovals):
-                        return False
-                    for sval in svals:
-                        if sval not in ovals:
-                            return False
-                else:
-                    if svals != ovals:
-                        return False
+        for n in other.nodes:
+            if n not in self:
+                return False
+            for edge in other.edges(n, data=True):
+                if not self.has_edge(edge[0], edge[1]):
+                    return False
+                data = self[edge[0]][edge[1]]
+                if (data['conditional'] != edge[2]['conditional'] or
+                        data['deterministic'] != edge[2]['deterministic']):
+                    return False
         return True
 
     def check_integrity(self):
         """
         Check the integrity of the DependenceDAG. This means that the
-        instance's relationship dictionaries keys must all be in the `nodes`
-        set, their depths must be positive integers, their relations (both
-        deterministic and conditional parents and children) must all be
-        members of the `nodes` set. For now, the acyclicness of the graph
-        is not tested.
+        instance must be a directed and acyclic graph.
 
         """
-        nodes = self.nodes
-        for at_name in ['deterministic_parents',
-                        'deterministic_children',
-                        'conditional_parents',
-                        'conditional_children']:
-            at = getattr(self, at_name)
-            if (len(nodes) != len(at.keys()) or
-                    any([node not in at for node in nodes])):
-                raise ValueError(
-                    'DependenceDAG is broken. The set of stored nodes is '
-                    'different from the keys of attribute {}'.
-                    format(at_name))
-            for node, relations in at.items():
-                # Test if parents and children listed are included in nodes
-                for relation in relations:
-                    if relation not in nodes:
-                        raise ValueError(
-                            'DependenceDAG is broken. The set of parents '
-                            'or children nodes, contain nodes that are '
-                            'not stored in the nodes attribute. '
-                            'Encountered for `{at_name}` relationship '
-                            'of node `{node}`. The element `{relation}` '
-                            'is not found in the stored nodes set.'.
-                            format(at_name=at_name,
-                                   node=node,
-                                   relation=relation))
-        for at_name in ['deterministic_depth',
-                        'conditional_depth',
-                        'depth']:
-            at = getattr(self, at_name)
-            if (len(nodes) != len(at.keys()) or
-                    any([node not in at for node in nodes])):
-                raise ValueError(
-                    'DependenceDAG is broken. The set of stored nodes is '
-                    'different from the keys of attribute {}'.
-                    format(at_name))
-            for n, d in at.items():
-                if not isinstance(d, int):
-                    raise TypeError(
-                        'DependenceDAG is broken. The {} of node `{}` holds a '
-                        'depth value, {}, that is not an integer'.
-                        format(at_name, n, d))
-                if d < 0:
-                    raise ValueError(
-                        'DependenceDAG is broken. The {} of node `{}` holds a '
-                        'depth value, {}, that is lower than zero'.
-                        format(at_name, n, d))
-                if at_name == 'depth':
-                    expected_depth = max([self.deterministic_depth[n],
-                                          self.conditional_depth[n]])
-                    if d != expected_depth:
-                        raise ValueError(
-                            "DependenceDAG is broken. The depth of node `{}` "
-                            "is different from the expected depth, which "
-                            "is computable from the node's deterministic and "
-                            "conditional depths. Expected depth {}, instead "
-                            "got {}".
-                            format(n, expected_depth, d))
-        return True
+        return networkx.is_directed_acyclic_graph(self)
 
-    def add(self, node, force=False, return_added_node=False,
+    def add_edge(self, u, v, conditional=False, deterministic=False, **attr):
+        """ Wrap around super's add_edge, which just sets the edge attributes
+        `conditional` and `deterministic` to False by default.
+        """
+        super(DependenceDAG, self).add_edge(u, v,
+                                            conditional=conditional,
+                                            deterministic=deterministic,
+                                            **attr)
+
+    def add(self, node, return_added_node=False, force=False,
             accept_cons_shared=False):
         """Add a node and its conditional and deterministic parents along with
         their relations, recursively into the `DependenceDAG` instance. To
@@ -1803,12 +1657,12 @@ class DependenceDAG(object):
             inputs.
             Other unhashable types are only accepted if `force=True`, and they
             are wrapped by `WrapAsHashable` instances.
-        force: bool (optional)
-            If True, any type of node, except None, is allowed to be added.
         accept_cons_shared: bool (optional)
             If True, `theano` `TensorConstant`s and `theano` `SharedVariable`s
             are allowed to be added to the DAG. These are treated separately
             a priori because `_draw_value` handles these cases differently.
+        force: bool (optional)
+            If True, any type of node, except None, is allowed to be added.
         return_added_node: bool (optional)
             If True, the node which was added to the DAG is returned along with
             the `DependenceDAG` instance. This may be useful because the added
@@ -1850,6 +1704,8 @@ class DependenceDAG(object):
                     'accepted by passing either `force=True` or '
                     '`accept_cons_shared=True` to `add`.'.
                     format(type(node)))
+        if not isinstance(node, Hashable):
+            node = WrapAsHashable(node)
         if node in self:
             # Should we raise a warning with we attempt to add a node that is
             # already in the DAG??
@@ -1860,39 +1716,21 @@ class DependenceDAG(object):
 
         # Add node into the nodes set and then initiate all node relations and
         # values to their defaults
-        self.nodes.add(node)
-        self.deterministic_parents[node] = set()
-        self.deterministic_children[node] = set()
-        self.conditional_parents[node] = set()
-        self.conditional_children[node] = set()
-        self.deterministic_depth[node] = 0
-        self.conditional_depth[node] = 0
-        self.depth[node] = 0
+        self.add_node(node)
 
         # Try to get the conditional parents of node and add them
-#        cond = get_first_level_conditionals(node)
-        try:
-            cond = node.distribution.conditional_on
-        except AttributeError:
-            cond = None
+        cond = get_first_level_conditionals(node)
         if cond is not None:
-            conditional_depth = 0
             for conditional_parent in self.walk_down_ownership(cond):
                 if conditional_parent not in self:
                     try:
                         self.add(conditional_parent)
                     except ConstantNodeException:
                         continue
-                self.conditional_parents[node].add(conditional_parent)
-                parent_conditional_depth = self.depth[conditional_parent]
-                if conditional_depth <= parent_conditional_depth:
-                    conditional_depth = parent_conditional_depth + 1
-                self.conditional_children[conditional_parent].add(node)
-                self.conditional_depth[node] = conditional_depth
+                self.add_edge(conditional_parent, node, conditional=True)
 
         # Try to get the deterministic parents of node and add them
         if not_shared_or_constant_variable(node):
-            deterministic_depth = 0
             for deterministic_parent in self.walk_down_ownership([node],
                                                                  ignore=True):
                 if deterministic_parent not in self:
@@ -1900,16 +1738,8 @@ class DependenceDAG(object):
                         self.add(deterministic_parent)
                     except ConstantNodeException:
                         continue
-                self.deterministic_parents[node].add(deterministic_parent)
-                parent_deterministic_depth = self.depth[deterministic_parent]
-                if deterministic_depth <= parent_deterministic_depth:
-                    deterministic_depth = parent_deterministic_depth + 1
-                self.deterministic_children[deterministic_parent].add(node)
-                self.deterministic_depth[node] = deterministic_depth
+                self.add_edge(deterministic_parent, node, deterministic=True)
 
-        # Compute the node's depth
-        self.depth[node] = max([self.deterministic_depth[node],
-                                self.conditional_depth[node]])
         if return_added_node:
             return self, node
         return self
@@ -1928,17 +1758,35 @@ class DependenceDAG(object):
                     for parent in self.walk_down_ownership(owner.inputs):
                         yield parent
 
-    def copy(self):
-        # We assume that self already passes the `check_integrity` test
-        return DependenceDAG(
-                nodes=self.nodes,
-                deterministic_parents=self.deterministic_parents,
-                deterministic_children=self.deterministic_children,
-                conditional_parents=self.conditional_parents,
-                conditional_children=self.conditional_children,
-                deterministic_depth=self.deterministic_depth,
-                conditional_depth=self.conditional_depth,
-                check_integrity=False)
+    def get_node_depths(self):
+        depths = {}
+        for node in networkx.topological_sort(self):
+            parent_depths = [depths[v] for v in self.pred[node]]
+            if parent_depths:
+                depths[node] = max(parent_depths) + 1
+            else:
+                depths[node] = 0
+        return depths
+
+    def get_nodes_in_depth_layers(self):
+        """Get the DependenceDAG as a list of layers. Each list holds a list
+        of the nodes with a common depth. All nodes at depth `d` will be
+        in layers[`d`].
+
+        """
+        depths = self.get_node_depths()
+        layers = {}
+        if not depths:
+            return []
+        max_depth = max(depths.values())
+        for node, depth in depths.items():
+            if depth not in layers:
+                layers[depth] = [node]
+            else:
+                layers[depth].append(node)
+        if not layers:
+            return []
+        return [layers[depth] for depth in range(max_depth + 1)]
 
     def get_sub_dag(self, input_nodes, force=True, return_index=False):
         """Get a new DependenceDAG instance which is like a right outer join
@@ -1981,106 +1829,24 @@ class DependenceDAG(object):
         `WrapAsHashable` instance or `input_nodes[index]` itself.
         """
         if not isinstance(input_nodes, list):
-            stack = [input_nodes]
-        else:
-            stack = copy(input_nodes)
-
-        # We first stack the input_nodes along with their indeces in the
-        # input_nodes iterable.
-        stack = list(zip(stack, range(len(stack))))
-        nodes_to_copy = set()
-        nodes_to_add = []
+            input_nodes = [input_nodes]
         index = {}
-
-        # Main loop, pop the stack, check if the node is in self, if so, mark
-        # it for copying, and add its parents to the stack, if not, mark it
-        # for addition
-        while True:
-            try:
-                node, node_index = stack.pop()
-            except Exception:
-                break
-            try:
-                node_in_self = node in self
-            except TypeError:  # Unhashable node are marked for addition
-                node_in_self = False
-            if node_in_self:
-                # This node is already known to the DAG and can be copied
-                # without any extra computation
-                if node_index is not None:
-                    index[node_index] = node
-                nodes_to_copy.add(node)
-
-                # Now we need to add this node's parents to the stack.
-                # However, the parents must be ignored for the return_index
-                # computation, so we zip them with a list of Nones
-                cond_parents = [(p, None) for p in
-                                self.conditional_parents[node]]
-                stack.extend(cond_parents)
-                det_parents = [(p, None) for p in
-                               self.deterministic_parents[node]]
-                stack.extend(det_parents)
+        copied_bunch = set()
+        nodes_to_add = []
+        for i, node in enumerate(input_nodes):
+            if node in self:
+                index[i] = node
+                copied_bunch.add(node)
+                copied_bunch.update(networkx.ancestors(self, node))
             else:
-                # This node is unknown to the DAG and it must be added taking
-                # care of all its potencial conditional and deterministic
-                # dependence
-                nodes_to_add.append((node, node_index))
+                nodes_to_add.append((i, node))
 
-        # Copy the known nodes
-        if nodes_to_copy:
-            det_pars = {k: self.deterministic_parents[k]
-                        for k in nodes_to_copy}
-            det_chis = {k: set([c for c in self.deterministic_children[k]
-                                if c in nodes_to_copy])
-                        for k in nodes_to_copy}
-            con_pars = {k: self.conditional_parents[k]
-                        for k in nodes_to_copy}
-            con_chis = {k: set([c for c in self.conditional_children[k]
-                                if c in nodes_to_copy])
-                        for k in nodes_to_copy}
-            det_deps = {k: self.deterministic_depth[k]
-                        for k in nodes_to_copy}
-            con_deps = {k: self.conditional_depth[k]
-                        for k in nodes_to_copy}
-            output = DependenceDAG(nodes=nodes_to_copy,
-                                   deterministic_parents=det_pars,
-                                   deterministic_children=det_chis,
-                                   conditional_parents=con_pars,
-                                   conditional_children=con_chis,
-                                   deterministic_depth=det_deps,
-                                   conditional_depth=con_deps,
-                                   check_integrity=False)
-        else:
-            output = DependenceDAG(check_integrity=False)
-
-        # Add in the unknown nodes
-        for node, node_index in nodes_to_add:
-            # We ask the added node to be returned, because `add` could have
-            # wrapped it with a WrapAsHashable instance
-            output, added_node = output.add(node,
-                                            force=force,
-                                            return_added_node=True)
+        subgraph = DependenceDAG(self.subgraph(copied_bunch).copy())
+        for node_index, node in nodes_to_add:
+            _, added_node = subgraph.add(node, return_added_node=True,
+                                         force=force)
             if node_index is not None:
                 index[node_index] = added_node
         if return_index:
-            return output, index
-        return output
-
-    def get_nodes_in_depth_layers(self):
-        """Get the DependenceDAG as a list of layers. Each list holds a list
-        of the nodes with a common depth. All nodes at depth `d` will be
-        in layers[`d`].
-
-        """
-        layers = {}
-        max_depth = 0
-        for node, depth in self.depth.items():
-            if depth not in layers:
-                layers[depth] = [node]
-            else:
-                layers[depth].append(node)
-            if depth > max_depth:
-                max_depth = depth
-        if not layers:
-            return []
-        return [layers[depth] for depth in range(max_depth + 1)]
+            return subgraph, index
+        return subgraph

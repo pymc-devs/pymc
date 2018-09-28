@@ -22,3 +22,4 @@ scipy>=0.12.0
 seaborn>=0.8.1
 sphinx-autobuild==0.7.1
 sphinx>=1.5.5
+networkx>=1.11.0

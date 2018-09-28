@@ -186,7 +186,6 @@ class Uniform(BoundedContinuous):
 
         super(Uniform, self).__init__(
             lower=lower, upper=upper, *args, **kwargs)
-        self.conditional_on = [self.lower, self.upper]
 
     def random(self, point=None, size=None):
         """
@@ -404,7 +403,6 @@ class Normal(Continuous):
         assert_negative_support(tau, 'tau', 'Normal')
 
         super(Normal, self).__init__(**kwargs)
-        self.conditional_on = [self.mu, self.tau]
 
     def random(self, point=None, size=None):
         """
@@ -559,7 +557,6 @@ class TruncatedNormal(BoundedContinuous):
         super(TruncatedNormal, self).__init__(
             defaults=('_defaultval',), transform=transform,
             lower=lower, upper=upper, *args, **kwargs)
-        self.conditional_on = [self.mu, self.sd, self.lower, self.upper]
 
     def random(self, point=None, size=None):
         """
@@ -731,7 +728,6 @@ class HalfNormal(PositiveContinuous):
 
         assert_negative_support(tau, 'tau', 'HalfNormal')
         assert_negative_support(sd, 'sd', 'HalfNormal')
-        self.conditional_on = [self.tau]
 
     def random(self, point=None, size=None):
         """
@@ -875,7 +871,6 @@ class Wald(PositiveContinuous):
         assert_negative_support(phi, 'phi', 'Wald')
         assert_negative_support(mu, 'mu', 'Wald')
         assert_negative_support(lam, 'lam', 'Wald')
-        self.conditional_on = [self.mu, self.lam, self.alpha]
 
     def get_mu_lam_phi(self, mu, lam, phi):
         if mu is None:
@@ -1043,7 +1038,6 @@ class Beta(UnitContinuous):
 
         assert_negative_support(alpha, 'alpha', 'Beta')
         assert_negative_support(beta, 'beta', 'Beta')
-        self.conditional_on = [self.alpha, self.beta]
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
@@ -1173,7 +1167,6 @@ class Kumaraswamy(UnitContinuous):
 
         assert_negative_support(a, 'a', 'Kumaraswamy')
         assert_negative_support(b, 'b', 'Kumaraswamy')
-        self.conditional_on = [self.a, self.b]
 
     def _random(self, a, b, size=None):
         u = np.random.uniform(size=size)
@@ -1282,7 +1275,6 @@ class Exponential(PositiveContinuous):
         self.variance = self.lam**-2
 
         assert_negative_support(lam, 'lam', 'Exponential')
-        self.conditional_on = [self.lam]
 
     def random(self, point=None, size=None):
         """
@@ -1381,7 +1373,6 @@ class Laplace(Continuous):
         self.variance = 2 * self.b**2
 
         assert_negative_support(b, 'b', 'Laplace')
-        self.conditional_on = [self.b]
 
     def random(self, point=None, size=None):
         """
@@ -1511,7 +1502,6 @@ class Lognormal(PositiveContinuous):
 
         assert_negative_support(tau, 'tau', 'Lognormal')
         assert_negative_support(sd, 'sd', 'Lognormal')
-        self.conditional_on = [self.mu, self.tau]
 
     def _random(self, mu, tau, size=None):
         samples = np.random.normal(size=size)
@@ -1648,7 +1638,6 @@ class StudentT(Continuous):
 
         assert_negative_support(lam, 'lam (sd)', 'StudentT')
         assert_negative_support(nu, 'nu', 'StudentT')
-        self.conditional_on = [self.mu, self.nu, self.lam]
 
     def random(self, point=None, size=None):
         """
@@ -1774,7 +1763,6 @@ class Pareto(Continuous):
         if transform == 'lowerbound':
             transform = transforms.lowerbound(self.m)
         super(Pareto, self).__init__(transform=transform, *args, **kwargs)
-        self.conditional_on = [self.alpha, self.m]
 
     def _random(self, alpha, m, size=None):
         u = np.random.uniform(size=size)
@@ -1885,7 +1873,6 @@ class Cauchy(Continuous):
         self.beta = tt.as_tensor_variable(beta)
 
         assert_negative_support(beta, 'beta', 'Cauchy')
-        self.conditional_on = [self.alpha, self.beta]
 
     def _random(self, alpha, beta, size=None):
         u = np.random.uniform(size=size)
@@ -1990,7 +1977,6 @@ class HalfCauchy(PositiveContinuous):
         self.beta = tt.as_tensor_variable(beta)
 
         assert_negative_support(beta, 'beta', 'HalfCauchy')
-        self.conditional_on = [self.beta]
 
     def _random(self, beta, size=None):
         u = np.random.uniform(size=size)
@@ -2115,7 +2101,6 @@ class Gamma(PositiveContinuous):
 
         assert_negative_support(alpha, 'alpha', 'Gamma')
         assert_negative_support(beta, 'beta', 'Gamma')
-        self.conditional_on = [self.alpha, self.beta]
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
@@ -2243,7 +2228,6 @@ class InverseGamma(PositiveContinuous):
                                   np.inf)
         assert_negative_support(alpha, 'alpha', 'InverseGamma')
         assert_negative_support(beta, 'beta', 'InverseGamma')
-        self.conditional_on = [self.alpha, self.beta]
 
     def _calculate_mean(self):
         m = self.beta / (self.alpha - 1.)
@@ -2349,7 +2333,6 @@ class ChiSquared(Gamma):
         self.nu = nu = tt.as_tensor_variable(nu)
         super(ChiSquared, self).__init__(alpha=nu / 2., beta=0.5,
                                          *args, **kwargs)
-        self.conditional_on = [self.nu]
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -2418,7 +2401,6 @@ class Weibull(PositiveContinuous):
 
         assert_negative_support(alpha, 'alpha', 'Weibull')
         assert_negative_support(beta, 'beta', 'Weibull')
-        self.conditional_on = [self.alpha, self.beta]
 
     def random(self, point=None, size=None):
         """
@@ -2548,7 +2530,6 @@ class HalfStudentT(PositiveContinuous):
         assert_negative_support(sd, 'sd', 'HalfStudentT')
         assert_negative_support(lam, 'lam', 'HalfStudentT')
         assert_negative_support(nu, 'nu', 'HalfStudentT')
-        self.conditional_on = [self.nu, self.lam]
 
     def random(self, point=None, size=None):
         """
@@ -2682,7 +2663,6 @@ class ExGaussian(Continuous):
 
         assert_negative_support(sigma, 'sigma', 'ExGaussian')
         assert_negative_support(nu, 'nu', 'ExGaussian')
-        self.conditional_on = [self.mu, self.sigma, self.nu]
 
     def random(self, point=None, size=None):
         """
@@ -2804,7 +2784,6 @@ class VonMises(Continuous):
         self.kappa = kappa = floatX(tt.as_tensor_variable(kappa))
 
         assert_negative_support(kappa, 'kappa', 'VonMises')
-        self.conditional_on = [self.mu, self.kappa]
 
     def random(self, point=None, size=None):
         """
@@ -2932,7 +2911,6 @@ class SkewNormal(Continuous):
 
         assert_negative_support(tau, 'tau', 'SkewNormal')
         assert_negative_support(sd, 'sd', 'SkewNormal')
-        self.conditional_on = [self.mu, self.tau, self.alpha]
 
     def random(self, point=None, size=None):
         """
@@ -3056,7 +3034,6 @@ class Triangular(BoundedContinuous):
 
         super(Triangular, self).__init__(lower=lower, upper=upper,
                                          *args, **kwargs)
-        self.conditional_on = [self.lower, self.upper, self.c]
 
     def random(self, point=None, size=None):
         """
@@ -3172,7 +3149,6 @@ class Gumbel(Continuous):
         self.variance = (np.pi ** 2 / 6.0) * self.beta ** 2
 
         super(Gumbel, self).__init__(**kwargs)
-        self.conditional_on = [self.mu, self.beta]
 
     def random(self, point=None, size=None):
         """
@@ -3259,7 +3235,6 @@ class Rice(PositiveContinuous):
                                  * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2))
         self.variance = 2 * sd**2 + nu**2 - (np.pi * sd**2 / 2) * (tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (
             2 * sd**2))) * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2)))**2
-        self.conditional_on = [self.nu, self.sd]
 
     def random(self, point=None, size=None):
         """
@@ -3358,7 +3333,6 @@ class Logistic(Continuous):
 
         self.mean = self.mode = mu
         self.variance = s**2 * np.pi**2 / 3.
-        self.conditional_on = [self.mu, self.s]
 
     def logp(self, value):
         """
@@ -3471,7 +3445,6 @@ class LogitNormal(UnitContinuous):
         assert_negative_support(tau, 'tau', 'LogitNormal')
 
         super(LogitNormal, self).__init__(**kwargs)
-        self.conditional_on = [self.mu, self.tau]
 
     def random(self, point=None, size=None):
         """
