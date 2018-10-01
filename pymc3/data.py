@@ -124,6 +124,13 @@ class Minibatch(tt.TensorVariable):
     minibatch : minibatch tensor
         Used for training
 
+    Notes
+    -----
+    It is a common case to use a `Minibatch` within variational inference.
+    However, there are some tips. We need to make PyMC3 "aware" of minibatch training or-else
+    we will have wrong :math:`logp` for the model. To do so we need to pass `total_size` parameter to the observed node
+    that is influenced by the minibatch. See more in examples below.
+
     Examples
     --------
     Consider we have data
