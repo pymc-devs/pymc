@@ -61,8 +61,7 @@ class TestDrawValues(object):
 
     def test_simple_model(self):
         with pm.Model():
-            mu = (2 * tt.constant(np.array([5., 6.])) +
-                  theano.shared(np.array(5)))
+            mu = (2 * tt.constant(np.array([5., 6.])) + theano.shared(np.array(5)))
             a = pm.Normal('a', mu=mu, sd=5, shape=2)
 
         val1 = draw_values([a])
@@ -74,8 +73,7 @@ class TestDrawValues(object):
 
     def test_dep_vars(self):
         with pm.Model():
-            mu = (2 * tt.constant(np.array([5., 6.])) +
-                  theano.shared(np.array(5)))
+            mu = (2 * tt.constant(np.array([5., 6.])) + theano.shared(np.array(5)))
             sd = pm.HalfNormal('sd', shape=2)
             tau = 1 / sd ** 2
             a = pm.Normal('a', mu=mu, tau=tau, shape=2)
@@ -87,7 +85,7 @@ class TestDrawValues(object):
         val2 = draw_values([a], point={'sd': np.array([2., 3.])})[0]
         val3 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
         val4 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
-
+        
         assert all([np.all(val1 != val2), np.all(val1 != val3),
                     np.all(val1 != val4), np.all(val2 != val3),
                     np.all(val2 != val4), np.all(val3 != val4)])

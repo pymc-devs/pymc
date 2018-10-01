@@ -395,8 +395,7 @@ class Normal(Continuous):
         self.sd = tt.as_tensor_variable(sd)
         self.tau = tt.as_tensor_variable(tau)
 
-        mu = tt.as_tensor_variable(mu)
-        self.mean = self.median = self.mode = self.mu = mu
+        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
         self.variance = 1. / self.tau
 
         assert_negative_support(sd, 'sd', 'Normal')

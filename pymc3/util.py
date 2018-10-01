@@ -67,16 +67,14 @@ def is_transformed_name(name):
     Returns
     -------
     bool
-        Boolean, whether the string could have been produced by
-        `get_transormed_name`
+        Boolean, whether the string could have been produced by `get_transormed_name`
     """
     return name.endswith('__') and name.count('_') >= 3
 
 
 def get_untransformed_name(name):
     """
-    Undo transformation in `get_transformed_name`. Throws ValueError if name
-    wasn't transformed
+    Undo transformation in `get_transformed_name`. Throws ValueError if name wasn't transformed
 
     Parameters
     ----------
@@ -100,8 +98,7 @@ def get_default_varnames(var_iterator, include_transformed):
     Parameters
     ----------
     varname_iterator : iterator
-        Elements will be cast to string to check whether it is transformed,
-        and optionally filtered
+        Elements will be cast to string to check whether it is transformed, and optionally filtered
     include_transformed : boolean
         Should transformed variable names be included in return value
 
@@ -113,8 +110,7 @@ def get_default_varnames(var_iterator, include_transformed):
     if include_transformed:
         return list(var_iterator)
     else:
-        return [var for var in var_iterator
-                if not is_transformed_name(str(var))]
+        return [var for var in var_iterator if not is_transformed_name(str(var))]
 
 
 def get_variable_name(variable):
@@ -128,8 +124,7 @@ def get_variable_name(variable):
                 names = [get_variable_name(item)
                          for item in variable.get_parents()[0].inputs]
                 # do not escape_latex these, since it is not idempotent
-                return 'f(%s)' % ',~'.join([n for n in names
-                                            if isinstance(n, str)])
+                return 'f(%s)' % ',~'.join([n for n in names if isinstance(n, str)])
             except IndexError:
                 pass
         value = variable.eval()
@@ -141,17 +136,15 @@ def get_variable_name(variable):
 
 def update_start_vals(a, b, model):
     """Update a with b, without overwriting existing keys. Values specified for
-    transformed variables on the original scale are also transformed and
-    inserted.
+    transformed variables on the original scale are also transformed and inserted.
     """
     if model is not None:
         for free_RV in model.free_RVs:
             tname = free_RV.name
             for name in a:
-                if (is_transformed_name(tname) and
-                        get_untransformed_name(tname) == name):
-                    transform_func = [d.transformation for d in
-                                      model.deterministics if d.name == name]
+                if is_transformed_name(tname) and get_untransformed_name(tname) == name:
+                    transform_func = [
+                        d.transformation for d in model.deterministics if d.name == name]
                     if transform_func:
                         b[tname] = transform_func[0].forward_val(
                             a[name], point=b)
