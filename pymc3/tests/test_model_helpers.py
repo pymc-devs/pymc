@@ -2,8 +2,12 @@ import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
 import pandas as pd
+from networkx import DiGraph, is_directed_acyclic_graph, topological_sort
 import pymc3 as pm
-from pymc3.model import DependenceDAG
+from pymc3.model import (build_dependence_dag_from_model,
+                         matching_dependence_dags,
+                         add_to_dependence_dag,
+                         get_sub_dag)
 from pymc3.util import WrapAsHashable
 import scipy.sparse as sps
 
@@ -152,40 +156,46 @@ class TestDependenceDAG(object):
             self.d = pm.Deterministic('d', self.b + self.c)
             self.e = pm.Normal('e', mu=self.d, sd=1, observed=self.obs)
         self.model = model
-        self.expected_full_dag = DependenceDAG()
-        self.expected_full_dag.add(self.e)
+        self.expected_full_dag = DiGraph()
+        add_to_dependence_dag(self.expected_full_dag, self.e)
 
     def test_built_DependenceDAG(self):
-        assert self.expected_full_dag.match(self.model.variable_dependence_dag)
+        assert matching_dependence_dags(self.expected_full_dag,
+                                        self.model.dependence_dag)
+        assert matching_dependence_dags(
+            build_dependence_dag_from_model(self.model),
+            self.model.dependence_dag)
 
     def test_get_sub_dag(self):
-        dag = self.model.variable_dependence_dag
-        sub1 = dag.get_sub_dag(self.a)
+        dag = self.model.dependence_dag
+        sub1 = get_sub_dag(dag, self.a)
         assert len(sub1.nodes) == 1
-        assert sub1.check_integrity()
+        assert is_directed_acyclic_graph(sub1)
 
-        sub2 = dag.get_sub_dag([self.a])
+        sub2 = get_sub_dag(dag, [self.a])
         assert len(sub2.nodes) == 1
-        assert sub2.check_integrity()
-        assert sub1.match(sub2)
+        assert is_directed_acyclic_graph(sub2)
+        assert matching_dependence_dags(sub1, sub2)
 
-        sub3 = dag.get_sub_dag([self.e])
+        sub3 = get_sub_dag(dag, [self.e])
         assert len(sub3.nodes) == 5
-        assert sub3.check_integrity()
-        assert sub3.match(dag)
+        assert is_directed_acyclic_graph(sub3)
+        assert matching_dependence_dags(sub3, dag)
 
-        hard = dag.get_sub_dag([self.e,
-                                theano.tensor.exp(self.b +
-                                                  self.e * self.e) * self.e *
-                                self.b + self.a])
+        hard_expr = (theano.tensor.exp(self.b + self.e * self.e) *
+                     self.e * self.b + self.a)
+        hard = get_sub_dag(dag, [self.e, hard_expr])
         assert len(hard.nodes) == 6
-        assert hard.check_integrity()
-        depth = hard.get_node_depths()
-        new_node_depth = [depth[n] for n in hard
-                          if n not in self.model.basic_RVs +
-                          self.model.deterministics][0]
-        assert new_node_depth == 4
-        assert hard.get_sub_dag(self.e).match(dag)
+        assert is_directed_acyclic_graph(hard)
+        sorted_nodes = list(topological_sort(hard))
+        expected = [(self.a,),
+                    (self.b, self.c),
+                    (self.b, self.c),
+                    (self.d,),
+                    (self.e,),
+                    (hard_expr,)]
+        assert all((n in e for n, e in zip(sorted_nodes, expected)))
+        assert matching_dependence_dags(get_sub_dag(hard, self.e), dag)
 
         params = [self.d,
                   0.,
@@ -193,17 +203,20 @@ class TestDependenceDAG(object):
                   theano.tensor.constant(5.354),
                   theano.shared(np.array([2, 6, 8])),
                   ]
-        with_non_theano, index = dag.get_sub_dag(params,
-                                                 return_index=True)
-        assert with_non_theano.check_integrity()
-        assert with_non_theano.get_sub_dag(self.d).match(dag.get_sub_dag([self.d]))
+        with_non_theano, index = get_sub_dag(dag,
+                                             params,
+                                             return_index=True)
+        assert is_directed_acyclic_graph(with_non_theano)
+        assert matching_dependence_dags(get_sub_dag(with_non_theano, self.d),
+                                        get_sub_dag(dag, [self.d]))
         assert index[0] == params[0]
         assert all([isinstance(index[i], WrapAsHashable)
                     for i in range(1, 3)])
-        for i in range(1, 3):
+        for i in range(len(params)):
             supplied = params[i]
             obj = index[i]
-            assert isinstance(obj, WrapAsHashable)
+            if not isinstance(obj, WrapAsHashable):
+                continue
             assert obj in with_non_theano
             if obj.node_is_hashable:
                 assert obj.node == supplied
@@ -222,7 +235,10 @@ class TestDependenceDAG(object):
                 assert obj_value == expected_value
 
         wnt2 = with_non_theano.copy()
-        assert with_non_theano.match(wnt2)
-        wnt2, node2 = wnt2.add(params[-1], force=True, return_added_node=True)
-        assert wnt2.match(with_non_theano)
+        assert matching_dependence_dags(with_non_theano, wnt2)
+        wnt2, node2 = add_to_dependence_dag(wnt2,
+                                            params[-1],
+                                            force=True,
+                                            return_added_node=True)
+        assert matching_dependence_dags(wnt2, with_non_theano)
         assert node2 == index[len(params) - 1]

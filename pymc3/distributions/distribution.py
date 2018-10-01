@@ -3,10 +3,11 @@ import numpy as np
 import theano.tensor as tt
 from theano import function
 import theano
+from networkx import DiGraph, topological_sort
 from ..memoize import memoize
 from ..model import (
     Model, modelcontext, FreeRV, ObservedRV,
-    not_shared_or_constant_variable, DependenceDAG
+    not_shared_or_constant_variable, get_sub_dag
 )
 from ..vartypes import string_types
 from ..util import WrapAsHashable
@@ -248,14 +249,17 @@ def draw_values(params, point=None, size=None, model=None):
     # Get the nodes that we must draw from as list of lists
     try:
         model = modelcontext(model)
-        dependence_dag, index = (
-                model.variable_dependence_dag.get_sub_dag(params,
-                                                          return_index=True))
+        dependence_dag, index = get_sub_dag(model.dependence_dag,
+                                            params,
+                                            return_index=True)
     except Exception:
-        dependence_dag = DependenceDAG()
-        dependence_dag, index = dependence_dag.get_sub_dag(params,
-                                                           return_index=True)
-    layers = dependence_dag.get_nodes_in_depth_layers()
+        dependence_dag, index = get_sub_dag(DiGraph(),
+                                            params,
+                                            return_index=True)
+    # Store list of nodes in reversed topological sort order, i.e. the nodes
+    # without ancestors at the end. This way, default pop() will get the
+    # correct node, and append() will add a node for the next iteration
+    queue = list(reversed(list(topological_sort(dependence_dag))))
 
     # Init drawn values and updatable point and givens
     drawn = {n: None for n in dependence_dag.nodes}
@@ -266,70 +270,69 @@ def draw_values(params, point=None, size=None, model=None):
         point = point.copy()
     nodes_missing_inputs = {}
 
-    for depth, layer in enumerate(layers):
-        while True:
-            try:
-                # Pop nodes from layer because we may use stack new nodes
-                # onto the layer list in the middle of the loop
-                node = layer.pop(0)
-            except Exception:
-                break
+    while queue:
+        try:
+            # Pop nodes from queue because we may use stack new nodes
+            # onto it in the middle of the loop
+            node = queue.pop()
+        except Exception:
+            break
 
-            # We may have flaged this node to be computed by compiling the
-            # theano function, because deterministic relations take precedence
-            # over conditional relations
-            if isinstance(node, tuple):
-                node, is_determined = node
+        # We may have flaged this node to be computed by compiling the
+        # theano function, because deterministic relations take precedence
+        # over conditional relations
+        if isinstance(node, tuple):
+            node, is_determined = node
+        else:
+            is_determined = False
+
+        # Node's value had already been determined so we jump onto the next
+        if drawn[node] is not None:
+            continue
+        try:
+            if is_determined:
+                node_value = _compute_value(node,
+                                            givens=givens,
+                                            size=size)
             else:
-                is_determined = False
+                node_value = _draw_value(node,
+                                         point=point,
+                                         givens=givens,
+                                         size=size)
+            drawn[node] = node_value
+        except theano.gof.fg.MissingInputError as e:
+            # Expected to fail for auto-transformed RVs whos values were
+            # not provided in point
+            nodes_missing_inputs[node] = e
+            continue
 
-            # Node's value had already been determined so we jump onto the next
-            if drawn[node] is not None:
-                continue
-            try:
-                if is_determined:
-                    node_value = _compute_value(node,
-                                                givens=givens,
-                                                size=size)
-                else:
-                    node_value = _draw_value(node,
-                                             point=point,
-                                             givens=givens,
-                                             size=size)
-                drawn[node] = node_value
-            except theano.gof.fg.MissingInputError as e:
-                # Expected to fail for auto-transformed RVs whos values were
-                # not provided in point
-                nodes_missing_inputs[node] = e
-                continue
+        # If the node is a theano Variable, which is not TensorConstant,
+        # nor SharedVariable, we must add its value to point (only if it
+        # has conditional children) and givens (only if it has
+        # deterministic children)
+        if not_shared_or_constant_variable(node):
+            edges = dependence_dag[node]
+            if any(d['conditional'] for v, d in edges.items()):
+                point[node.name] = node_value
+            if any(d['deterministic'] for v, d in edges.items()):
+                givens.append((node, node_value))
 
-            # If the node is a theano Variable, which is not TensorConstant,
-            # nor SharedVariable, we must add its value to point (only if it
-            # has conditional children) and givens (only if it has
-            # deterministic children)
-            if not_shared_or_constant_variable(node):
-                edges = dependence_dag[node]
-                if any(d['conditional'] for v, d in edges.items()):
-                    point[node.name] = node_value
-                if any(d['deterministic'] for v, d in edges.items()):
-                    givens.append((node, node_value))
-
-            # If the node has deterministic children, check if the children's
-            # values can be computed. This must be done because deterministic
-            # relations must take precedence over conditional relations
-            # amongst variables.
-            deterministic_children = (child for child, d in
-                                      dependence_dag[node].items()
-                                      if d.get('deterministic', False))
-            for child in deterministic_children:
-                # Check if all of the child's deterministic parents have their
-                # values set, allowing us to compute the child's value.
-                if not any((drawn[p] is None for p, c in
-                            dependence_dag.pred[child].items()
-                            if c.get('deterministic', False))):
-                    # Append child to the current layer's node stack, to
-                    # compute its value ahead of its scheduled depth
-                    layer.append((child, True))
+        # If the node has deterministic children, check if the children's
+        # values can be computed. This must be done because deterministic
+        # relations must take precedence over conditional relations
+        # amongst variables.
+        deterministic_children = (child for child, d in
+                                  dependence_dag[node].items()
+                                  if d.get('deterministic', False))
+        for child in deterministic_children:
+            # Check if all of the child's deterministic parents have their
+            # values set, allowing us to compute the child's value.
+            if not any((drawn[p] is None for p, c in
+                        dependence_dag.pred[child].items()
+                        if c.get('deterministic', False))):
+                # Append child to the queue, to
+                # compute its value ahead of its schedule
+                queue.append((child, True))
 
     # Now that the DAG has been transversed, drawing values, we can place them
     # in a list following the indexing given by the input list `params`

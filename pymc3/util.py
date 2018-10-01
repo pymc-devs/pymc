@@ -212,10 +212,7 @@ class WrapAsHashable(object):
             else:
                 return False
         else:
-            if self.node_is_hashable:
-                return self.node == other
-            else:
-                return id(self.node) == id(other)
+            return False
 
     def get_value(self):
         node = self.node
