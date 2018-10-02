@@ -207,6 +207,9 @@ class WrapAsHashable(object):
         else:
             return False
 
+    def __ne__(self, other):
+        return not self == other
+
     def get_value(self):
         node = self.node
         if isinstance(node, numbers.Number):
