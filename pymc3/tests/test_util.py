@@ -1,10 +1,16 @@
 import pytest
-
+import numbers
+try:
+    from collections.abc import Hashable
+except ImportError:
+    from collections import Hashable
 import pymc3 as pm
 import numpy as np
 from numpy.testing import assert_almost_equal
 from .helpers import SeededTest
 from pymc3.distributions.transforms import Transform
+from pymc3.util import WrapAsHashable
+import theano
 
 
 class TestTransformName(object):
@@ -70,8 +76,8 @@ class TestUpdateStartVals(SeededTest):
             pm.Uniform('lower', lower=a, upper=3.)
             pm.Uniform('upper', lower=0., upper=b)
             pm.Uniform('interv', lower=a, upper=b)
-    
-        start = {'a': .3, 'b': 2.1, 'lower': 1.4, 'upper': 1.4, 'interv': 1.4}
+        
+        start = {'a': .3, 'b': 2.1, 'lower': 1.4, 'upper': 1.4, 'interv':1.4}
         test_point = {'lower_interval__': -0.3746934494414109,
             'upper_interval__': 0.693147180559945,
                 'interv_interval__': 0.4519851237430569}
@@ -82,3 +88,56 @@ class TestUpdateStartVals(SeededTest):
                             test_point['upper_interval__'])
         assert_almost_equal(start['interv_interval__'],
                             test_point['interv_interval__'])
+
+
+class TestWrapAsHashable(object):
+    def setup_method(self):
+        class test_obj(object):
+            def get_value(self):
+                return 'test_obj_value'
+        self.objects = ['string',
+                        123,
+                        -123.543,
+                        np.arange(10),
+                        {'key': 'value'},
+                        [0, 1, 2],
+                        theano.tensor.constant(10),
+                        theano.shared(np.arange(5)),
+                        test_obj()]
+        self.wraps = [WrapAsHashable(obj) for obj in self.objects]
+
+    def test_hashable(self):
+        for obj, wrap in zip(self.objects, self.wraps):
+            assert isinstance(wrap, Hashable)
+            if isinstance(obj, Hashable):
+                assert hash(obj) == hash(wrap)
+            else:
+                assert hash((type(obj), id(obj))) == hash(wrap)
+
+    def test_eq(self):
+        for obj, wrap in zip(self.objects, self.wraps):
+            wrap2 = WrapAsHashable(obj)
+            assert wrap2 == wrap
+            assert wrap == wrap2
+            assert wrap != obj
+
+    def test_get_value(self):
+        for obj, wrap in zip(self.objects, self.wraps):
+            if isinstance(obj, (numbers.Number,
+                                np.ndarray,
+                                theano.tensor.TensorConstant,
+                                theano.tensor.sharedvar.SharedVariable)):
+                wrap_value = wrap.get_value()
+                if isinstance(obj, numbers.Number):
+                    assert obj == wrap_value
+                elif isinstance(obj, np.ndarray):
+                    assert np.all(obj == wrap_value)
+                elif isinstance(obj, theano.tensor.TensorConstant):
+                    assert np.all(obj.value == wrap_value)
+                elif isinstance(obj, theano.tensor.sharedvar.SharedVariable):
+                    assert np.all(obj.get_value() == wrap_value)
+            elif hasattr(obj, 'get_value'):
+                assert np.all(obj.get_value() == wrap.get_value())
+            else:
+                with pytest.raises(TypeError):
+                    wrap.get_value()

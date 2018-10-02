@@ -2,6 +2,7 @@ import collections
 import functools
 import itertools
 import threading
+import re
 import six
 from copy import copy
 try:
@@ -1484,6 +1485,27 @@ def not_shared_or_constant_variable(x):
             ) or (isinstance(x, (FreeRV, MultiObservedRV, TransformedRV)))
 
 
+_theano_autonamed_ops = [('.+\.T$',
+                          theano.tensor.elemwise.DimShuffle,
+                          None),
+                         ('max$',
+                          theano.tensor.basic.MaxAndArgmax,
+                          None),
+                         ('argmax$',
+                          theano.tensor.basic.MaxAndArgmax,
+                          None),
+                         ('mean$',
+                          theano.tensor.elemwise.Elemwise,
+                          'Elemwise{true_div,no_inplace}'),
+                         ('var$',
+                          theano.tensor.elemwise.Elemwise,
+                          'Elemwise{true_div,no_inplace}'),
+                         ('std$',
+                          theano.tensor.elemwise.Elemwise,
+                          'Elemwise{sqrt,no_inplace}'),
+                         ]
+
+
 def get_first_level_conditionals(root):
     """Performs a breadth first search on the supplied root node's logpt or
     transformed logpt graph searching for named input nodes, which are
@@ -1511,7 +1533,6 @@ def get_first_level_conditionals(root):
         cond = getattr(root, 'logpt', None)
     if cond is None:
         return None
-    theano.printing.debugprint(cond)
     conditional_on = set()
     queue = copy(getattr(cond.owner, 'inputs', []))
     while queue:
@@ -1523,24 +1544,23 @@ def get_first_level_conditionals(root):
             # relations
             if parent == root or parent == transformed:
                 continue
-            if parent.name.endswith('.T'):
-                # The transpose operation performed on a node named 'x'
-                # automatically sets the name of the output to 'x.T'. These
-                # nodes should be ignored
-                owner = getattr(parent, 'owner', None)
-                if owner is not None:
-                    if isinstance(owner.op,
-                                  theano.tensor.elemwise.DimShuffle):
-                        continue
-            if parent.name == 'max':
-                # The max operation performed on a node named 'x'
-                # automatically sets the name of the output to 'max'. These
-                # nodes should be ignored
-                owner = getattr(parent, 'owner', None)
-                if owner is not None:
-                    if isinstance(owner.op,
-                                  theano.tensor.MaxAndArgmax):
-                        continue
+            # Some theano ops place default names to their associated output
+            # nodes. We want to ignore them, so we test that the name pattern
+            # matches with the ones we don't want, that the op is an instance
+            # of the conflicting op, and, in the case of mean, var, and std,
+            # where the op is built from other ops, that the op.name matches
+            # the default one.
+            must_ignore = False
+            for name_pattern, owner_type, owner_name in _theano_autonamed_ops:
+                if re.match(name_pattern, parent.name):
+                    owner = getattr(parent, 'owner', None)
+                    if owner is not None and isinstance(owner.op, owner_type):
+                        if (owner_name is None or
+                                getattr(owner.op, 'name', None) == owner_name):
+                            must_ignore = True
+                            break
+            if must_ignore:
+                continue
             conditional_on.add(parent)
         else:
             parent_owner = getattr(parent, 'owner', None)
