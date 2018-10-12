@@ -1485,36 +1485,15 @@ def not_shared_or_constant_variable(x):
             ) or (isinstance(x, (FreeRV, MultiObservedRV, TransformedRV)))
 
 
-_theano_autonamed_ops = [('.+\.T$',
-                          theano.tensor.elemwise.DimShuffle,
-                          None),
-                         ('max$',
-                          theano.tensor.basic.MaxAndArgmax,
-                          None),
-                         ('argmax$',
-                          theano.tensor.basic.MaxAndArgmax,
-                          None),
-                         ('mean$',
-                          theano.tensor.elemwise.Elemwise,
-                          'Elemwise{true_div,no_inplace}'),
-                         ('var$',
-                          theano.tensor.elemwise.Elemwise,
-                          'Elemwise{true_div,no_inplace}'),
-                         ('std$',
-                          theano.tensor.elemwise.Elemwise,
-                          'Elemwise{sqrt,no_inplace}'),
-                         ]
-
-
 def get_first_level_conditionals(root):
     """Performs a breadth first search on the supplied root node's logpt or
     transformed logpt graph searching for named input nodes, which are
-    different from the supplied root. Each explored branch will stop when
-    either when it ends or when it finds its first named node.
+    different from the supplied root. Each explored branch will stop
+    either when it reaches the leaf node or when it finds its first named node.
 
     Parameters
     ----------
-    root: theano.Variable (mandatory)
+    root : theano.Variable
         The node from which to get the transformed.logpt or logpt and perform
         the search. If root does not have either of these attributes, the
         function returns None.
@@ -1523,9 +1502,28 @@ def get_first_level_conditionals(root):
     -------
     conditional_on : set, with named nodes that are not theano.Constant nor
     SharedVariable. The input `root` is conditionally dependent on these nodes
-    and is one step away from them in the bayesian network that specifies the
+    and is one step away from them in the Bayesian network that specifies the
     relationships, hence the name `get_first_level_conditionals`.
     """
+    _theano_autonamed_ops = [(r'.+\.T$',
+                              theano.tensor.elemwise.DimShuffle,
+                              None),
+                             (r'max$',
+                              theano.tensor.basic.MaxAndArgmax,
+                              None),
+                             (r'argmax$',
+                              theano.tensor.basic.MaxAndArgmax,
+                              None),
+                             (r'mean$',
+                              theano.tensor.elemwise.Elemwise,
+                              'Elemwise{true_div,no_inplace}'),
+                             (r'var$',
+                              theano.tensor.elemwise.Elemwise,
+                              'Elemwise{true_div,no_inplace}'),
+                             (r'std$',
+                              theano.tensor.elemwise.Elemwise,
+                              'Elemwise{sqrt,no_inplace}'),
+                             ]
     transformed = getattr(root, 'transformed', None)
     try:
         cond = transformed.logpt
@@ -1565,23 +1563,22 @@ def get_first_level_conditionals(root):
         else:
             parent_owner = getattr(parent, 'owner', None)
             queue.extend(getattr(parent_owner, 'inputs', []))
-    if not conditional_on:
+    if len(conditional_on) == 0:
         return None
     return conditional_on
 
 
-def add_to_dependence_dag(dag, node, return_added_node=False, force=False,
-                          accept_cons_shared=False, inplace=True):
+def add_to_dependence_dag(dag, node, force=False,
+                          accept_cons_shared=False):
     """Add a node and its conditional and deterministic parents along with
     their relations, recursively into the `networkx.DiGraph` instance.
 
     Parameters
     ----------
-    dag: networkx.DiGraph instance (mandatory)
-        The Digraph instance on which to add the node. By default, the addition
-        is done inplace, but if `inplace=False` is supplied, it is performed
-        on a copy of the graph.
-    node: The variable to add to the DAG (mandatory)
+    dag : networkx.DiGraph instance
+        The Digraph instance on which to add the node. The addition
+        is done inplace.
+    node : The variable to add to the DAG
         By default `theano.Variable`'s, which could be a pymc random
         variable, Deterministic or Potential, are allowed. TensorConstants
         and SharedVariables are not allowed by default, but this behavior
@@ -1589,25 +1586,18 @@ def add_to_dependence_dag(dag, node, return_added_node=False, force=False,
         inputs.
         Other unhashable types are only accepted if `force=True`, and they
         are wrapped by `WrapAsHashable` instances.
-    accept_cons_shared: bool (optional)
+    force : bool (optional)
+        If True, any type of node, except None, is allowed to be added.
+    accept_cons_shared : bool (optional)
         If True, `theano` `TensorConstant`s and `theano` `SharedVariable`s
         are allowed to be added to the DAG. These are treated separately
         a priori because `_draw_value` handles these cases differently.
-    force: bool (optional)
-        If True, any type of node, except None, is allowed to be added.
-    return_added_node: bool (optional)
-        If True, the node which was added to the DAG is returned along with
-        the `DiGraph` instance. This may be useful because the added
-        node may be a `WrapAsHashable` instance which wraps to inputed node
-        depending on its type.
 
     Returns
     -------
-    The `DiGraph` instance to which the node was added.
-    If `return_added_node` is `True`, the `DiGraph` instance is
-    packed into a tuple along with the node that was actually added into
-    the DAG. Usually this node is the input node, but depending on the
-    node's type, it could be a `WrapAsHashable` instance.
+    The node that was actually added into the `dag`. Usually this node is the
+    input node, but depending on the node's type, it could be a
+    `WrapAsHashable` instance.
     """
     if node is None:
         raise TypeError('None is not allowed to be added as a node in '
@@ -1616,8 +1606,6 @@ def add_to_dependence_dag(dag, node, return_added_node=False, force=False,
         raise TypeError('Input `dag` must be an instance of networkx.DiGraph. '
                         'Got {}, which has type {}, instead.'.
                         format(dag, type(dag)))
-    if not inplace:
-        dag = dag.copy()
     if not isinstance(node, (theano.Variable, MultiObservedRV)):
         if not force:
             raise TypeError(
@@ -1627,9 +1615,7 @@ def add_to_dependence_dag(dag, node, return_added_node=False, force=False,
                 "Got node `{}` of type `{}`. "
                 "However, this kind of node could be added by "
                 "passing `force=True` to `add`. It would be "
-                "wrapped by a `WrapAsHashable` instead. This "
-                "wrapped node can be returned by `add` by passing "
-                "`return_added_node=True`.".
+                "wrapped by a `WrapAsHashable` instead.".
                 format(node, type(node)))
         node = WrapAsHashable(node)
     elif not (not_shared_or_constant_variable(node) or
@@ -1647,10 +1633,7 @@ def add_to_dependence_dag(dag, node, return_added_node=False, force=False,
     if node in dag:
         # Should we raise a warning with we attempt to add a node that is
         # already in the DAG??
-        if return_added_node:
-            return dag, node
-        else:
-            return dag
+        return node
 
     # Add node into the nodes set and then initiate all node relations and
     # values to their defaults
@@ -1690,14 +1673,13 @@ def add_to_dependence_dag(dag, node, return_added_node=False, force=False,
                            'graph. Consider raising an issue with developers.'.
                            format(node, type(node)))
 
-    if return_added_node:
-        return dag, node
-    return dag
+    return node
 
 
 def walk_down_ownership(node_list, ignore=False):
     """This function goes through an iterable of nodes provided in
-    `node_list`, yielding the non None named nodes in the ownership graph.
+    `node_list`, yielding the named nodes in the ownership graph, whoes name is
+    not None.
     With the optional input `ignore`, a node without a name can be yielded.
     """
     for node in node_list:
@@ -1710,46 +1692,39 @@ def walk_down_ownership(node_list, ignore=False):
                     yield parent
 
 
-def get_sub_dag(dag, input_nodes, force=True, return_index=False):
+def get_sub_dag(dag, input_nodes, force=True):
     """Get a new DiGraph instance which is like a right outer join
     of `dag` with a list of input nodes provided in `input_nodes`.
     What this means is that it will look for the `input_nodes` inside
     `dag`, the nodes which are contained in `dag`, along with all their
     predecessors will be used to get a subgraph of `dag`. Then, the
-    remaining nodes will be added to the `DiGraph` with add_to_dependence_dag.
-    Finally, this instance is returned. In summary, it copies the shared
-    part of `dag`, given the nodes in `input_nodes`, and then adds onto
-    that.
+    remaining nodes will be added to the `DiGraph` with
+    `add_to_dependence_dag`. Finally, this instance is returned.
+    In summary, it copies the shared part of `dag`, given the nodes in
+    `input_nodes`, and then adds onto that.
 
     Parameters
     ----------
-    dag: DiGraph instance (mandatory)
+    dag : DiGraph instance
         Dependence DAG DiGraph on which to perform the right outer join
         operation.
-    input_nodes: list or scalar (mandatory)
+    input_nodes : list or scalar
         If it is a scalar `input_nodes` will be converted to a list as
         `[input_nodes]`. `input_nodes` is a list of nodes that will be
         used to create a new `DependenceDAG` instance. The part of the DAG
         that is shared with `self`, will be copied, and the rest will be
         added.
-    force: bool (optional)
+    force : bool (optional)
         If True, the nodes that must be added, will be added with the
         force flag set to True. [Default is True]
-    return_index: bool (optional)
-        If True, this function will also return a dictionary of indices
-        to nodes `{index: node}`. Each key will be the position of the
-        node provided in `input_nodes` and the value will be the node
-        that was added to the `dag`, which could either be a
-        `WrapAsHashable` instance or `input_nodes[index]` itself.
 
     Returns
     -------
-    A new `DiGraph` instance that results from the right outer join
-    operation.
-    If `return_index` is `True`, the returned `DiGraph` instance is
-    packed into a tuple along with the dictionary of indices to nodes
-    `{index: node}`. Each key will be the position of the node provided in
-    `input_nodes` and the value will be the node that was added to the
+    A tuple. The first element is a new `DiGraph` instance that results from
+    the right outer join operation.
+    The second element in the output tuple is the dictionary of indices to
+    nodes `{index: node}`. Each key will be the position of the node provided
+    in `input_nodes` and the value will be the node that was added to the
     returned `DiGraph` instance, which could either be a
     `WrapAsHashable` instance or `input_nodes[index]` itself.
     """
@@ -1772,15 +1747,12 @@ def get_sub_dag(dag, input_nodes, force=True, return_index=False):
 
     subgraph = dag.subgraph(copied_bunch).copy()
     for node_index, node in nodes_to_add:
-        _, added_node = add_to_dependence_dag(subgraph,
-                                              node,
-                                              return_added_node=True,
-                                              force=force)
+        added_node = add_to_dependence_dag(subgraph,
+                                           node,
+                                           force=force)
         if node_index is not None:
             index[node_index] = added_node
-    if return_index:
-        return subgraph, index
-    return subgraph
+    return subgraph, index
 
 
 def matching_dependence_dags(a, b):

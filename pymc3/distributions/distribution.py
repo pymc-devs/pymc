@@ -232,23 +232,22 @@ def draw_values(params, point=None, size=None, model=None):
             b) are *RVs with a random method
 
     """
-    # Get the nodes that we must draw from as list of lists
+    # Get the dependence graph, either by copying a subgraph from the model's
+    # dependence_dag or by creating it from scratch
     try:
         model = modelcontext(model)
-        dependence_dag, index = get_sub_dag(model.dependence_dag,
-                                            params,
-                                            return_index=True)
+        graph = model.dependence_dag
     except Exception:
-        dependence_dag, index = get_sub_dag(DiGraph(),
-                                            params,
-                                            return_index=True)
+        graph = DiGraph()
+    dependence_dag, index = get_sub_dag(graph,
+                                        params)
     # Store list of nodes in reversed topological sort order, i.e. the nodes
     # without ancestors at the end. This way, default pop() will get the
     # correct node, and append() will add a node for the next iteration
     queue = list(reversed(list(topological_sort(dependence_dag))))
 
     # Init drawn values and updatable point and givens
-    drawn = {n: None for n in dependence_dag.nodes}
+    drawn = {}
     givens = []
     if point is None:
         point = {}
@@ -273,7 +272,7 @@ def draw_values(params, point=None, size=None, model=None):
             is_determined = False
 
         # Node's value had already been determined so we jump onto the next
-        if drawn[node] is not None:
+        if node in drawn:
             continue
         try:
             if is_determined:
@@ -313,7 +312,7 @@ def draw_values(params, point=None, size=None, model=None):
         for child in deterministic_children:
             # Check if all of the child's deterministic parents have their
             # values set, allowing us to compute the child's value.
-            if not any((drawn[p] is None for p, c in
+            if not any((p not in drawn for p, c in
                         dependence_dag.pred[child].items()
                         if c.get('deterministic', False))):
                 # Append child to the queue, to
@@ -325,7 +324,7 @@ def draw_values(params, point=None, size=None, model=None):
     output = []
     for ind in range(len(params)):
         node = index[ind]
-        value = drawn[node]
+        value = drawn.get(node, None)
         if value is None:
             # We failed to draw the params[i] value. This could be due to an
             # ignored MissingInputError, in which case we reraise it, or it
@@ -438,6 +437,19 @@ def _draw_value(param, point=None, givens=None, size=None):
 
 
 def _compute_value(param, givens=None, size=None):
+    """Compute the value of a theano variable from a givens input list
+
+    Parameters
+    ----------
+    param : Theano variable
+        The variable will be compiled into a function and then evaluated
+        using the givens input list
+    givens : list, optional
+        A list of tuples of theano variables and their values. These values
+        are used to evaluate `param` if it is a theano variable.
+    size : int, optional
+        Number of samples
+    """
     if givens:
         variables, values = list(zip(*givens))
     else:
@@ -445,7 +457,8 @@ def _compute_value(param, givens=None, size=None):
     func = _compile_theano_function(param, variables)
     if size is not None:
         size = np.atleast_1d(size)
-    if (values and all((hasattr(var, 'dshape') for var in variables)) and
+    dshaped_variables = all((hasattr(var, 'dshape') for var in variables))
+    if (values and dshaped_variables and
         not all(var.dshape == getattr(val, 'shape', tuple())
                 for var, val in zip(variables, values))):
         output = np.array([func(*v) for v in zip(*values)])

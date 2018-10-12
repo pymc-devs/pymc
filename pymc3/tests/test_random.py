@@ -100,17 +100,17 @@ class TestJointDistributionDrawValues(SeededTest):
             d = pm.Deterministic('d', b + c)
 
         # Expected RVs
-        nr.seed(self.random_seed)
         N = 1000
-        norm = np.random.randn(N, 3)
-        eA = norm[:, 0] * 100
-        eB = eA + norm[:, 1] * 1e-8
-        eC = eA + norm[:, 2] * 1e-8
+        norm = np.random.randn(3, N)
+        eA = norm[0] * 100
+        eB = eA + norm[1] * 1e-8
+        eC = eA + norm[2] * 1e-8
         eD = eB + eC
 
         # Drawn RVs
         nr.seed(self.random_seed)
-        A, B, C, D = list(zip(*[draw_values([a, b, c, d]) for i in range(N)]))
+#        A, B, C, D = list(zip(*[draw_values([a, b, c, d]) for i in range(N)]))
+        A, B, C, D = draw_values([a, b, c, d], size=N)
         A = np.array(A).flatten()
         B = np.array(B).flatten()
         C = np.array(C).flatten()

@@ -168,23 +168,23 @@ class TestDependenceDAG(object):
 
     def test_get_sub_dag(self):
         dag = self.model.dependence_dag
-        sub1 = get_sub_dag(dag, self.a)
+        sub1 = get_sub_dag(dag, self.a)[0]
         assert len(sub1.nodes) == 1
         assert is_directed_acyclic_graph(sub1)
 
-        sub2 = get_sub_dag(dag, [self.a])
+        sub2 = get_sub_dag(dag, [self.a])[0]
         assert len(sub2.nodes) == 1
         assert is_directed_acyclic_graph(sub2)
         assert matching_dependence_dags(sub1, sub2)
 
-        sub3 = get_sub_dag(dag, [self.e])
+        sub3 = get_sub_dag(dag, [self.e])[0]
         assert len(sub3.nodes) == 5
         assert is_directed_acyclic_graph(sub3)
         assert matching_dependence_dags(sub3, dag)
 
         hard_expr = (theano.tensor.exp(self.b + self.e * self.e) *
                      self.e * self.b + self.a)
-        hard = get_sub_dag(dag, [self.e, hard_expr])
+        hard = get_sub_dag(dag, [self.e, hard_expr])[0]
         assert len(hard.nodes) == 6
         assert is_directed_acyclic_graph(hard)
         sorted_nodes = list(topological_sort(hard))
@@ -195,7 +195,7 @@ class TestDependenceDAG(object):
                     (self.e,),
                     (hard_expr,)]
         assert all((n in e for n, e in zip(sorted_nodes, expected)))
-        assert matching_dependence_dags(get_sub_dag(hard, self.e), dag)
+        assert matching_dependence_dags(get_sub_dag(hard, self.e)[0], dag)
 
         params = [self.d,
                   0.,
@@ -204,11 +204,11 @@ class TestDependenceDAG(object):
                   theano.shared(np.array([2, 6, 8])),
                   ]
         with_non_theano, index = get_sub_dag(dag,
-                                             params,
-                                             return_index=True)
+                                             params)
         assert is_directed_acyclic_graph(with_non_theano)
-        assert matching_dependence_dags(get_sub_dag(with_non_theano, self.d),
-                                        get_sub_dag(dag, [self.d]))
+        assert matching_dependence_dags(get_sub_dag(with_non_theano,
+                                                    self.d)[0],
+                                        get_sub_dag(dag, [self.d])[0])
         assert index[0] == params[0]
         assert all([isinstance(index[i], WrapAsHashable)
                     for i in range(1, 3)])
@@ -236,9 +236,8 @@ class TestDependenceDAG(object):
 
         wnt2 = with_non_theano.copy()
         assert matching_dependence_dags(with_non_theano, wnt2)
-        wnt2, node2 = add_to_dependence_dag(wnt2,
-                                            params[-1],
-                                            force=True,
-                                            return_added_node=True)
+        node2 = add_to_dependence_dag(wnt2,
+                                      params[-1],
+                                      force=True)
         assert matching_dependence_dags(wnt2, with_non_theano)
         assert node2 == index[len(params) - 1]
