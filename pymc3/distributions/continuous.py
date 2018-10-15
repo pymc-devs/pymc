@@ -2455,7 +2455,6 @@ class InverseGamma(PositiveContinuous):
 
         return alpha, beta
 
-
     def random(self, point=None, size=None):
         """
         Draw random values from InverseGamma distribution.
