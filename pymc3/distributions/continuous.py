@@ -2409,10 +2409,16 @@ class InverseGamma(PositiveContinuous):
         Shape parameter (alpha > 0).
     beta : float
         Scale parameter (beta > 0).
+    mu : float
+        Alternative shape parameter (mu > 0).
+    sd : float
+        Alternative scale parameter (sd > 0).
     """
 
-    def __init__(self, alpha, beta=1, *args, **kwargs):
+    def __init__(self, alpha=None, beta=None, mu=None, sd=None, *args, **kwargs):
         super(InverseGamma, self).__init__(*args, defaults=('mode',), **kwargs)
+
+        alpha, beta = InverseGamma._get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.beta = beta = tt.as_tensor_variable(beta)
 
@@ -2431,6 +2437,24 @@ class InverseGamma(PositiveContinuous):
         except ValueError:  # alpha is an array
             m[self.alpha <= 1] = np.inf
             return m
+
+    @staticmethod
+    def _get_alpha_beta(alpha, beta, mu, sd):
+        if (alpha is not None):
+            if (beta is not None):
+                pass
+            else:
+                beta = 1
+        elif (mu is not None) and (sd is not None):
+            alpha = (2 * sd**2 + mu**2)/sd**2
+            beta = mu * (mu**2 + sd**2) / sd**2
+        else:
+            raise ValueError('Incompatible parameterization. Either use '
+                             'alpha and (optionally) beta, or mu and sd to specify '
+                             'distribution.')
+
+        return alpha, beta
+
 
     def random(self, point=None, size=None):
         """
