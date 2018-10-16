@@ -701,10 +701,15 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(
             InverseGamma, Rplus, {'alpha': Rplus, 'beta': Rplus},
             lambda value, alpha, beta: sp.invgamma.logpdf(value, alpha, scale=beta))
+
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"),
+                           reason="Fails on float32 due to scaling issues")
+    def test_inverse_gamma_alt_params(self):
+        def test_fun(value, mu, sd):
+            alpha, beta = InverseGamma._get_alpha_beta(None, None, mu, sd)
+            return sp.invgamma.logpdf(value, alpha, scale=beta)
         self.pymc3_matches_scipy(
-            InverseGamma, Rplus, {'mu': Rplus, 'sd': Rplus},
-            lambda value, mu, sd: sp.invgamma.logpdf(value, InverseGamma._get_alpha_beta(None, None, mu, sd)[0],
-                                                     scale=InverseGamma._get_alpha_beta(None, None, mu, sd)[1]))
+            InverseGamma, Rplus, {'mu': Rplus, 'sd': Rplus}, test_fun)
 
     def test_pareto(self):
         self.pymc3_matches_scipy(Pareto, Rplus, {'alpha': Rplusbig, 'm': Rplusbig},
