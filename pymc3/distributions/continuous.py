@@ -2399,7 +2399,7 @@ class InverseGamma(PositiveContinuous):
     ========  ======================================================
     Support   :math:`x \in (0, \infty)`
     Mean      :math:`\dfrac{\beta}{\alpha-1}` for :math:`\alpha > 1`
-    Variance  :math:`\dfrac{\beta^2}{(\alpha-1)^2(\alpha)}`
+    Variance  :math:`\dfrac{\beta^2}{(\alpha-1)^2(\alpha - 2)}`
               for :math:`\alpha > 2`
     ========  ======================================================
 
@@ -2419,7 +2419,7 @@ class InverseGamma(PositiveContinuous):
         self.mean = self._calculate_mean()
         self.mode = beta / (alpha + 1.)
         self.variance = tt.switch(tt.gt(alpha, 2),
-                                  (beta**2) / (alpha * (alpha - 1.)**2),
+                                  (beta**2) / ((alpha - 2) * (alpha - 1.)**2),
                                   np.inf)
         assert_negative_support(alpha, 'alpha', 'InverseGamma')
         assert_negative_support(beta, 'beta', 'InverseGamma')
