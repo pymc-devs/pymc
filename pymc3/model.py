@@ -1650,8 +1650,7 @@ def add_to_dependence_dag(dag, node, force=False,
                     continue
             dag.add_edge(conditional_parent,
                          node,
-                         conditional=True,
-                         deterministic=False)
+                         deterministic=0)
 
     # Try to get the deterministic parents of node and add them
     if not_shared_or_constant_variable(node):
@@ -1663,8 +1662,7 @@ def add_to_dependence_dag(dag, node, force=False,
                     continue
             dag.add_edge(deterministic_parent,
                          node,
-                         conditional=False,
-                         deterministic=True)
+                         deterministic=1)
     if not networkx.is_directed_acyclic_graph(dag):
         raise RuntimeError('The dependence graph is no longer a directed '
                            'acyclic graph (DAG). The addition of node `{}`, '
@@ -1756,10 +1754,10 @@ def get_sub_dag(dag, input_nodes, force=True):
 
 
 def matching_dependence_dags(a, b):
-    """A helper function inteaded to be used during debugging. Is true is
+    """A helper function intended to be used during debugging. Is true is
     two DiGraph instances that represent a dependence DAG contain the same
-    nodes, the same edges and the `deterministic` and `conditional` attributes
-    of all edges are the same.
+    nodes, the same edges and the `deterministic` attribute of all edges are
+    the same.
     """
     if (not isinstance(a, networkx.DiGraph) or
             not isinstance(a, networkx.DiGraph)):
@@ -1773,8 +1771,7 @@ def matching_dependence_dags(a, b):
             if not a.has_edge(edge[0], edge[1]):
                 return False
             data = a[edge[0]][edge[1]]
-            if (data['conditional'] != edge[2]['conditional'] or
-                    data['deterministic'] != edge[2]['deterministic']):
+            if data['deterministic'] != edge[2]['deterministic']:
                 return False
     return True
 

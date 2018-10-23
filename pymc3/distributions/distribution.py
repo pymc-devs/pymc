@@ -297,7 +297,7 @@ def draw_values(params, point=None, size=None, model=None):
         # deterministic children)
         if not_shared_or_constant_variable(node):
             edges = dependence_dag[node]
-            if any(d['conditional'] for v, d in edges.items()):
+            if any(not d['deterministic'] for v, d in edges.items()):
                 point[node.name] = node_value
             if any(d['deterministic'] for v, d in edges.items()):
                 givens.append((node, node_value))
@@ -308,13 +308,13 @@ def draw_values(params, point=None, size=None, model=None):
         # amongst variables.
         deterministic_children = (child for child, d in
                                   dependence_dag[node].items()
-                                  if d.get('deterministic', False))
+                                  if d.get('deterministic', 0))
         for child in deterministic_children:
             # Check if all of the child's deterministic parents have their
             # values set, allowing us to compute the child's value.
             if not any((p not in drawn for p, c in
                         dependence_dag.pred[child].items()
-                        if c.get('deterministic', False))):
+                        if c.get('deterministic', 0))):
                 # Append child to the queue, to
                 # compute its value ahead of its schedule
                 queue.append((child, True))

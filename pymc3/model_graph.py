@@ -2,6 +2,9 @@ from theano.gof.graph import inputs
 
 from .util import get_default_varnames
 import pymc3 as pm
+from .model import build_dependence_dag_from_model
+from matplotlib import pyplot as plt
+import networkx as nx
 
 
 class ModelGraph(object):
@@ -172,3 +175,40 @@ def model_to_graphviz(model=None):
     """
     model = pm.modelcontext(model)
     return ModelGraph(model).make_graph()
+
+
+class OtherModelGraph(object):
+    def __init__(self, model):
+        self.model = model
+        try:
+            self.graph = model.dependence_dag
+        except AttributeError:
+            self.graph = build_dependence_dag_from_model(model)
+
+    def draw(self, pos=None, draw_nodes=False, ax=None,
+             edge_kwargs={'edge_cmap': plt.get_cmap('RdBu')},
+             label_kwargs={'bbox': dict(boxstyle='round',
+                                        facecolor='lightgray')},
+             node_kwargs={}):
+        graph = self.graph
+        if pos is None:
+            try:
+                pos = nx.drawing.nx_agraph.graphviz_layout(graph, prog='dot')
+            except Exception:
+                pos = nx.shell_layout(graph)
+        d = nx.get_edge_attributes(graph, 'deterministic')
+        edgelist = list(d.keys())
+        edge_color = [float(v) for v in d.values()]
+        labels = {n: n.name for n in graph}
+        if ax is None:
+            ax = plt.gca()
+
+        if draw_nodes:
+            nx.draw_networkx_edges(graph, pos=pos, **node_kwargs)
+        nx.draw_networkx_edges(graph, pos=pos, edgelist=edgelist,
+                               edge_color=edge_color, **edge_kwargs)
+        nx.draw_networkx_labels(graph, pos=pos, labels=labels, **label_kwargs)
+
+
+def crude_draw(model, *args, **kwargs):
+    OtherModelGraph(model).draw(*args, **kwargs)
