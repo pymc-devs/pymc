@@ -53,7 +53,7 @@ class BaseHMC(arraystep.GradientSharedStep):
             `energy`, and `random` methods.
         **theano_kwargs: passed to theano functions
         """
-        model = modelcontext(model)
+        self.model = modelcontext(model)
 
         if vars is None:
             vars = model.cont_vars
@@ -110,11 +110,12 @@ class BaseHMC(arraystep.GradientSharedStep):
         """Perform a single HMC iteration."""
         p0 = self.potential.random()
         start = self.integrator.compute_state(q0, p0)
-
+        model = self.model 
         if not np.isfinite(start.energy):
+            for RV in model.basic_RVs:
+                RV.name, RV.logp(model.test_point)
             self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
-            raise ValueError('Bad initial energy: %s. The model '
-                             'might be misspecified.' % start.energy)
+            raise ValueError("Bad Initial Energy, RV named %s logp is: %f, and appears to be sampling out of bounds" % (RV.name, RV.logp(model.test_point)) )
 
         adapt_step = self.tune and self.adapt_step_size
         step_size = self.step_adapt.current(adapt_step)
