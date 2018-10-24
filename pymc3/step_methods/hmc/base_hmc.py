@@ -53,10 +53,10 @@ class BaseHMC(arraystep.GradientSharedStep):
             `energy`, and `random` methods.
         **theano_kwargs: passed to theano functions
         """
-        self.model = modelcontext(model)
+        self._model = modelcontext(model)
 
         if vars is None:
-            vars = self.model.cont_vars
+            vars = self._model.cont_vars
         vars = inputvars(vars)
 
         super(BaseHMC, self).__init__(vars, blocked=blocked, model=model,
@@ -112,7 +112,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         start = self.integrator.compute_state(q0, p0)
          
         if not np.isfinite(start.energy):
-            model = modelcontext(self.model)
+            model = self._model
             RV_set = set()
             model_points = ()
             for RV in model.basic_RVs:
