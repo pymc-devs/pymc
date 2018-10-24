@@ -45,7 +45,7 @@ def test_nuts_error():
     with pytest.raises(ValueError) as e:
         with model:
             pymc3.HalfNormal('a', sd=1, transform=None, testval=-1)
-            pymc3.HalfNormal('b', sd=1, transform=None, testval=-1)
+            pymc3.HalfNormal('b', sd=1, transform=None)
             trace = pymc3.sample(init='adapt_diag', chains=1)
-    assert "named {'a', 'b'} logp is: (-inf, -inf)" in str(e.value)
+    assert "Bad initial energy, check any log  probabilities that are inf or -inf: a        -inf\nb" in str(e.value)
 
