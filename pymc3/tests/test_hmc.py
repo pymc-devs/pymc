@@ -42,9 +42,10 @@ def test_nuts_tuning():
 
 def test_nuts_error():
     model = pymc3.Model()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as e:
         with model:
-            pymc3.HalfNormal('peadar', sd=1, transform=None, testval=-1)
-            pymc3.HalfNormal('peadar2', sd=1, transform=None, testval=-1)
+            pymc3.HalfNormal('a', sd=1, transform=None, testval=-1)
+            pymc3.HalfNormal('b', sd=1, transform=None, testval=-1)
             trace = pymc3.sample(init='adapt_diag', chains=1)
+    assert "named {'a', 'b'} logp is: (-inf, -inf)" in str(e.value)
 

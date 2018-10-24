@@ -110,8 +110,9 @@ class BaseHMC(arraystep.GradientSharedStep):
         """Perform a single HMC iteration."""
         p0 = self.potential.random()
         start = self.integrator.compute_state(q0, p0)
-        model = self.model 
+         
         if not np.isfinite(start.energy):
+            model = modelcontext(self.model)
             RV_set = set()
             model_points = ()
             for RV in model.basic_RVs:
