@@ -112,10 +112,16 @@ class BaseHMC(arraystep.GradientSharedStep):
         start = self.integrator.compute_state(q0, p0)
         model = self.model 
         if not np.isfinite(start.energy):
+            RV_set = set()
+            model_points = ()
             for RV in model.basic_RVs:
                 RV.name, RV.logp(model.test_point)
+                RV_set.add(RV.name)
+                model_points = model_points + (RV.logp(model.test_point).item(),)
+                
             self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
-            raise ValueError("Bad Initial Energy, RV named %s logp is: %f, and appears to be sampling out of bounds" % (RV.name, RV.logp(model.test_point)) )
+            import ipdb; ipdb.set_trace()
+            raise ValueError("Bad Initial Energy, RV's named %s logp is: %s, and appears to be sampling out of bounds" % (RV_set, model_points) )
 
         adapt_step = self.tune and self.adapt_step_size
         step_size = self.step_adapt.current(adapt_step)
