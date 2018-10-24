@@ -56,7 +56,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         self.model = modelcontext(model)
 
         if vars is None:
-            vars = model.cont_vars
+            vars = self.model.cont_vars
         vars = inputvars(vars)
 
         super(BaseHMC, self).__init__(vars, blocked=blocked, model=model,
