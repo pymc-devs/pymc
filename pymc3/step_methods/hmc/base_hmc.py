@@ -110,7 +110,6 @@ class BaseHMC(arraystep.GradientSharedStep):
         """Perform a single HMC iteration."""
         p0 = self.potential.random()
         start = self.integrator.compute_state(q0, p0)
-         
         if not np.isfinite(start.energy):
             model = self._model
             self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
