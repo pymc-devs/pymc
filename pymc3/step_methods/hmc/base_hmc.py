@@ -114,7 +114,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         if not np.isfinite(start.energy):
             model = self._model
             self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
-            raise ValueError("Bad initial energy, check any log  probabilities that are inf or -inf: {}".format(model.check_test_point().to_string()))
+            raise ValueError("Bad initial energy, check any log  probabilities that are inf or -inf:\n{}".format(model.check_test_point().to_string()))
 
         adapt_step = self.tune and self.adapt_step_size
         step_size = self.step_adapt.current(adapt_step)
