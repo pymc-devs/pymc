@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 import numpy as np
-
+import logging
 from pymc3.model import modelcontext, Point
 from pymc3.step_methods import arraystep
 from pymc3.step_methods.hmc import integration
@@ -10,7 +10,7 @@ from pymc3.tuning import guess_scaling
 from .quadpotential import quad_potential, QuadPotentialDiagAdapt
 from pymc3.step_methods import step_sizes
 from pymc3.backends.report import SamplerWarning, WarningType
-
+logger = logging.getLogger('pymc3')
 
 HMCStepData = namedtuple(
     "HMCStepData",
@@ -53,10 +53,10 @@ class BaseHMC(arraystep.GradientSharedStep):
             `energy`, and `random` methods.
         **theano_kwargs: passed to theano functions
         """
-        model = modelcontext(model)
+        self._model = modelcontext(model)
 
         if vars is None:
-            vars = model.cont_vars
+            vars = self._model.cont_vars
         vars = inputvars(vars)
 
         super(BaseHMC, self).__init__(vars, blocked=blocked, model=model,
@@ -110,11 +110,14 @@ class BaseHMC(arraystep.GradientSharedStep):
         """Perform a single HMC iteration."""
         p0 = self.potential.random()
         start = self.integrator.compute_state(q0, p0)
-
+        model = self._model
+    
         if not np.isfinite(start.energy):
+            check_test_point = model.check_test_point()
+            error_logp = check_test_point.loc[(np.abs(check_test_point) >= 1e20) | np.isnan(check_test_point)]
             self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
-            raise ValueError('Bad initial energy: %s. The model '
-                             'might be misspecified.' % start.energy)
+            logger.error("Bad initial energy, check any log probabilities that are inf or -inf, nan or very small:\n{}".format(error_logp.to_string()))
+            raise ValueError('Bad initial energy')
 
         adapt_step = self.tune and self.adapt_step_size
         step_size = self.step_adapt.current(adapt_step)
