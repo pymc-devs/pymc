@@ -5,6 +5,7 @@ import time
 import logging
 from collections import namedtuple
 import traceback
+from pymc3.exceptions import SamplingError
 
 import six
 import numpy as np
@@ -12,6 +13,15 @@ import numpy as np
 from . import theanof
 
 logger = logging.getLogger('pymc3')
+
+
+class ParallelSamplingError(Exception):
+    def __init__(self, message, chain, warnings=None):
+        super(ParallelSamplingError, self).__init__(message)
+        if warnings is None:
+            warnings = []
+        self._chain = chain
+        self._warnings = warnings
 
 
 # Taken from https://hg.python.org/cpython/rev/c4f92b597074
@@ -40,8 +50,8 @@ def rebuild_exc(exc, tb):
 
 
 # Messages
-# ('writing_done', is_last, sample_idx, tuning, stats)
-# ('error', *exception_info)
+# ('writing_done', is_last, sample_idx, tuning, stats, warns)
+# ('error', warnings, *exception_info)
 
 # ('abort', reason)
 # ('write_next',)
@@ -54,6 +64,7 @@ class _Process(multiprocessing.Process):
     We communicate with the main process using a pipe,
     and send finished samples using shared memory.
     """
+
     def __init__(self, name, msg_pipe, step_method, shared_point,
                  draws, tune, seed):
         super(_Process, self).__init__(daemon=True, name=name)
@@ -75,7 +86,7 @@ class _Process(multiprocessing.Process):
             pass
         except BaseException as e:
             e = ExceptionWithTraceback(e, e.__traceback__)
-            self._msg_pipe.send(('error', e))
+            self._msg_pipe.send(('error', None, e))
         finally:
             self._msg_pipe.close()
 
@@ -110,7 +121,12 @@ class _Process(multiprocessing.Process):
 
         while True:
             if draw < self._draws + self._tune:
-                point, stats = self._compute_point()
+                try:
+                    point, stats = self._compute_point()
+                except SamplingError as e:
+                    warns = self._collect_warnings()
+                    e = ExceptionWithTraceback(e, e.__traceback__)
+                    self._msg_pipe.send(('error', warns, e))
             else:
                 return
 
@@ -151,6 +167,7 @@ class _Process(multiprocessing.Process):
 
 class ProcessAdapter(object):
     """Control a Chain process from the main thread."""
+
     def __init__(self, draws, tune, step_method, chain, seed, start):
         self.chain = chain
         process_name = "worker_chain_%s" % chain
@@ -219,8 +236,13 @@ class ProcessAdapter(object):
         msg = ready[0].recv()
 
         if msg[0] == 'error':
-            old = msg[1]
-            six.raise_from(RuntimeError('Chain %s failed.' % proc.chain), old)
+            warns, old_error = msg[1:]
+            if warns is not None:
+                error = ParallelSamplingError(
+                    str(old_error), proc.chain, warns)
+            else:
+                error = RuntimeError('Chain %s failed.' % proc.chain)
+            six.raise_from(error, old_error)
         elif msg[0] == 'writing_done':
             proc._readable = True
             proc._num_samples += 1

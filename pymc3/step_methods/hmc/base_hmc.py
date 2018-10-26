@@ -10,6 +10,8 @@ from pymc3.tuning import guess_scaling
 from .quadpotential import quad_potential, QuadPotentialDiagAdapt
 from pymc3.step_methods import step_sizes
 from pymc3.backends.report import SamplerWarning, WarningType
+from pymc3.exceptions import SamplingError
+
 logger = logging.getLogger('pymc3')
 
 HMCStepData = namedtuple(
@@ -110,14 +112,23 @@ class BaseHMC(arraystep.GradientSharedStep):
         """Perform a single HMC iteration."""
         p0 = self.potential.random()
         start = self.integrator.compute_state(q0, p0)
-        model = self._model
-    
+
         if not np.isfinite(start.energy):
+            model = self._model
             check_test_point = model.check_test_point()
-            error_logp = check_test_point.loc[(np.abs(check_test_point) >= 1e20) | np.isnan(check_test_point)]
+            error_logp = (check_test_point
+                .loc[(np.abs(check_test_point) >= 1e20)
+                     | np.isnan(check_test_point)])
             self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
-            logger.error("Bad initial energy, check any log probabilities that are inf or -inf, nan or very small:\n{}".format(error_logp.to_string()))
-            raise ValueError('Bad initial energy')
+            message_energy = (
+                "Bad initial energy, check any log probabilities that "
+                "are inf or -inf, nan or very small:\n{}"
+                .format(error_logp.to_string()))
+            warning = SamplerWarning(
+                WarningType.BAD_ENERGY, message_energy, 'critical',
+                self.iter_count, None, None)
+            self._warnings.append(warning)
+            raise SamplingError('Bad initial energy')
 
         adapt_step = self.tune and self.adapt_step_size
         step_size = self.step_adapt.current(adapt_step)
