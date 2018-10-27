@@ -6,6 +6,7 @@ from .models import (simple_categorical, mv_simple, mv_simple_discrete,
                      mv_prior_simple, simple_2model_continuous)
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.parallel_sampling import ParallelSamplingError
+from pymc3.exceptions import SamplingError
 from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                                 Metropolis, Slice, CompoundStep, NormalProposal,
@@ -425,11 +426,19 @@ class TestNutsCheckTrace(object):
             messages = [msg.msg for msg in caplog.records]
             assert all('boolean index did not' not in msg for msg in messages)
 
-    def test_bad_init(self):
+    def test_bad_init_nonparallel(self):
+        with Model():
+            HalfNormal('a', sd=1, testval=-1, transform=None)
+            with pytest.raises(SamplingError) as error:
+                sample(init=None, chains=1)
+            error.match('Bad initial')
+    
+    # TODO: This could probably be parameterized instead
+    def test_bad_init_parallel(self):
         with Model():
             HalfNormal('a', sd=1, testval=-1, transform=None)
             with pytest.raises(ParallelSamplingError) as error:
-                sample(init=None)
+                sample(init=None, chains=4)
             error.match('Bad initial')
 
     def test_linalg(self, caplog):
