@@ -5,6 +5,7 @@ from .checks import close_to
 from .models import (simple_categorical, mv_simple, mv_simple_discrete,
                      mv_prior_simple, simple_2model_continuous)
 from pymc3.sampling import assign_step_methods, sample
+from pymc3.parallel_sampling import ParallelSamplingError
 from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                                 Metropolis, Slice, CompoundStep, NormalProposal,
@@ -427,7 +428,7 @@ class TestNutsCheckTrace(object):
     def test_bad_init(self):
         with Model():
             HalfNormal('a', sd=1, testval=-1, transform=None)
-            with pytest.raises(ValueError) as error:
+            with pytest.raises(ParallelSamplingError) as error:
                 sample(init=None)
             error.match('Bad initial')
 
