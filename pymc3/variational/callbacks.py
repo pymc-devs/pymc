@@ -2,11 +2,7 @@ import collections
 
 import numpy as np
 
-__all__ = [
-    'Callback',
-    'CheckParametersConvergence',
-    'Tracker'
-]
+__all__ = ["Callback", "CheckParametersConvergence", "Tracker"]
 
 
 class Callback(object):
@@ -22,10 +18,7 @@ def absolute(current, prev):
     return np.abs(current - prev)
 
 
-_diff = dict(
-    relative=relative,
-    absolute=absolute
-)
+_diff = dict(relative=relative, absolute=absolute)
 
 
 class CheckParametersConvergence(Callback):
@@ -54,8 +47,7 @@ class CheckParametersConvergence(Callback):
     ...     )
     """
 
-    def __init__(self, every=100, tolerance=1e-3,
-                 diff='relative', ord=np.inf):
+    def __init__(self, every=100, tolerance=1e-3, diff="relative", ord=np.inf):
         self._diff = _diff[diff]
         self.ord = ord
         self.every = every
@@ -74,7 +66,7 @@ class CheckParametersConvergence(Callback):
         self.prev = current
         norm = np.linalg.norm(delta, self.ord)
         if norm < self.tolerance:
-            raise StopIteration('Convergence achieved at %d' % i)
+            raise StopIteration("Convergence achieved at %d" % i)
 
     @staticmethod
     def flatten_shared(shared_list):
@@ -115,6 +107,7 @@ class Tracker(Callback):
     ...     tracker = Tracker(some_stat=my_callable, time=time.time)
     ...     approx = pm.fit(callbacks=[tracker])
     """
+
     def __init__(self, **kwargs):
         self.whatchdict = kwargs
         self.hist = collections.defaultdict(list)

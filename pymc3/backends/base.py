@@ -13,7 +13,7 @@ import theano.tensor as tt
 from ..model import modelcontext
 from .report import SamplerReport, merge_reports
 
-logger = logging.getLogger('pymc3')
+logger = logging.getLogger("pymc3")
 
 
 class BackendError(Exception):
@@ -58,10 +58,8 @@ class BaseTrace(object):
             test_point_.update(test_point)
             test_point = test_point_
         var_values = list(zip(self.varnames, self.fn(test_point)))
-        self.var_shapes = {var: value.shape
-                           for var, value in var_values}
-        self.var_dtypes = {var: value.dtype
-                           for var, value in var_values}
+        self.var_shapes = {var: value.shape for var, value in var_values}
+        self.var_dtypes = {var: value.dtype for var, value in var_values}
         self.chain = None
         self._is_base_setup = False
         self.sampler_vars = None
@@ -87,8 +85,9 @@ class BaseTrace(object):
         for stats in sampler_vars:
             for key, dtype in stats.items():
                 if dtypes.setdefault(key, dtype) != dtype:
-                    raise ValueError("Sampler statistic %s appears with "
-                                     "different types." % key)
+                    raise ValueError(
+                        "Sampler statistic %s appears with " "different types." % key
+                    )
 
         self.sampler_vars = sampler_vars
 
@@ -137,7 +136,7 @@ class BaseTrace(object):
         try:
             return self.point(int(idx))
         except (ValueError, TypeError):  # Passed variable or variable name.
-            raise ValueError('Can only index with slice or integer')
+            raise ValueError("Can only index with slice or integer")
 
     def __len__(self):
         raise NotImplementedError
@@ -181,13 +180,14 @@ class BaseTrace(object):
         if sampler_idx is not None:
             return self._get_sampler_stats(varname, sampler_idx, burn, thin)
 
-        sampler_idxs = [i for i, s in enumerate(self.sampler_vars)
-                        if varname in s]
+        sampler_idxs = [i for i, s in enumerate(self.sampler_vars) if varname in s]
         if not sampler_idxs:
             raise KeyError("Unknown sampler stat %s" % varname)
 
-        vals = np.stack([self._get_sampler_stats(varname, i, burn, thin)
-                         for i in sampler_idxs], axis=-1)
+        vals = np.stack(
+            [self._get_sampler_stats(varname, i, burn, thin) for i in sampler_idxs],
+            axis=-1,
+        )
         if vals.shape[-1] == 1:
             return vals[..., 0]
         else:
@@ -267,13 +267,14 @@ class MultiTrace(object):
 
         self._report = SamplerReport()
         for strace in straces:
-            if hasattr(strace, '_warnings'):
+            if hasattr(strace, "_warnings"):
                 self._report._add_warnings(strace._warnings, strace.chain)
 
     def __repr__(self):
-        template = '<{}: {} chains, {} iterations, {} variables>'
-        return template.format(self.__class__.__name__,
-                               self.nchains, len(self), len(self.varnames))
+        template = "<{}: {} chains, {} iterations, {} variables>"
+        return template.format(
+            self.__class__.__name__, self.nchains, len(self), len(self.varnames)
+        )
 
     @property
     def nchains(self):
@@ -310,16 +311,26 @@ class MultiTrace(object):
         var = str(var)
         if var in self.varnames:
             if var in self.stat_names:
-                warnings.warn("Attribute access on a trace object is ambigous. "
-                              "Sampler statistic and model variable share a name. Use "
-                              "trace.get_values or trace.get_sampler_stats.")
+                warnings.warn(
+                    "Attribute access on a trace object is ambigous. "
+                    "Sampler statistic and model variable share a name. Use "
+                    "trace.get_values or trace.get_sampler_stats."
+                )
             return self.get_values(var, burn=burn, thin=thin)
         if var in self.stat_names:
             return self.get_sampler_stats(var, burn=burn, thin=thin)
         raise KeyError("Unknown variable %s" % var)
 
-    _attrs = set(['_straces', 'varnames', 'chains', 'stat_names',
-                  'supports_sampler_stats', '_report'])
+    _attrs = set(
+        [
+            "_straces",
+            "varnames",
+            "chains",
+            "stat_names",
+            "supports_sampler_stats",
+            "_report",
+        ]
+    )
 
     def __getattr__(self, name):
         # Avoid infinite recursion when called before __init__
@@ -330,14 +341,17 @@ class MultiTrace(object):
         name = str(name)
         if name in self.varnames:
             if name in self.stat_names:
-                warnings.warn("Attribute access on a trace object is ambigous. "
-                              "Sampler statistic and model variable share a name. Use "
-                              "trace.get_values or trace.get_sampler_stats.")
+                warnings.warn(
+                    "Attribute access on a trace object is ambigous. "
+                    "Sampler statistic and model variable share a name. Use "
+                    "trace.get_values or trace.get_sampler_stats."
+                )
             return self.get_values(name)
         if name in self.stat_names:
             return self.get_sampler_stats(name)
-        raise AttributeError("'{}' object has no attribute '{}'".format(
-            type(self).__name__, name))
+        raise AttributeError(
+            "'{}' object has no attribute '{}'".format(type(self).__name__, name)
+        )
 
     def __len__(self):
         chain = self.chains[-1]
@@ -392,10 +406,12 @@ class MultiTrace(object):
             l_samples = len(self) * len(self.chains)
             l_v = len(v)
             if l_v != l_samples:
-                warnings.warn("The length of the values you are trying to "
-                              "add ({}) does not match the number ({}) of "
-                              "total samples in the trace "
-                              "(chains * iterations)".format(l_v, l_samples))
+                warnings.warn(
+                    "The length of the values you are trying to "
+                    "add ({}) does not match the number ({}) of "
+                    "total samples in the trace "
+                    "(chains * iterations)".format(l_v, l_samples)
+                )
 
             v = np.squeeze(v.reshape(len(chains), len(self), -1))
 
@@ -424,8 +440,9 @@ class MultiTrace(object):
                     chain.vars.remove(va)
                     del chain.samples[name]
 
-    def get_values(self, varname, burn=0, thin=1, combine=True, chains=None,
-                   squeeze=True):
+    def get_values(
+        self, varname, burn=0, thin=1, combine=True, chains=None, squeeze=True
+    ):
         """Get values from traces.
 
         Parameters
@@ -452,14 +469,16 @@ class MultiTrace(object):
             chains = self.chains
         varname = str(varname)
         try:
-            results = [self._straces[chain].get_values(varname, burn, thin)
-                       for chain in chains]
+            results = [
+                self._straces[chain].get_values(varname, burn, thin) for chain in chains
+            ]
         except TypeError:  # Single chain passed.
             results = [self._straces[chains].get_values(varname, burn, thin)]
         return _squeeze_cat(results, combine, squeeze)
 
-    def get_sampler_stats(self, varname, burn=0, thin=1, combine=True,
-                          chains=None, squeeze=True):
+    def get_sampler_stats(
+        self, varname, burn=0, thin=1, combine=True, chains=None, squeeze=True
+    ):
         """Get sampler statistics from the trace.
 
         Parameters
@@ -487,8 +506,10 @@ class MultiTrace(object):
         except TypeError:
             chains = [chains]
 
-        results = [self._straces[chain].get_sampler_stats(varname, None, burn, thin)
-                   for chain in chains]
+        results = [
+            self._straces[chain].get_sampler_stats(varname, None, burn, thin)
+            for chain in chains
+        ]
         return _squeeze_cat(results, combine, squeeze)
 
     def _slice(self, slice):

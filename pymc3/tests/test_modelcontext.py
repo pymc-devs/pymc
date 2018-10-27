@@ -12,21 +12,24 @@ class TestModelContext(object):
         that thread A enters the context manager first, then B,
         then A attempts to declare a variable while B is still in the context manager.
         """
-        aInCtxt,bInCtxt,aDone = [threading.Event() for _ in range(3)]
+        aInCtxt, bInCtxt, aDone = [threading.Event() for _ in range(3)]
         modelA = Model()
         modelB = Model()
+
         def make_model_a():
             with modelA:
                 aInCtxt.set()
                 bInCtxt.wait()
-                Normal('a',0,1)
+                Normal("a", 0, 1)
             aDone.set()
+
         def make_model_b():
             aInCtxt.wait()
             with modelB:
                 bInCtxt.set()
                 aDone.wait()
-                Normal('b', 0, 1)
+                Normal("b", 0, 1)
+
         threadA = threading.Thread(target=make_model_a)
         threadB = threading.Thread(target=make_model_b)
         threadA.start()
@@ -38,7 +41,4 @@ class TestModelContext(object):
         # - B enters it's model context after A, but before a is declared -> a goes into B
         # - A leaves it's model context before B attempts to declare b. A's context manager
         #   takes B from the stack, such that b ends up in model A
-        assert (
-                list(modelA.named_vars),
-                list(modelB.named_vars),
-            ) == (['a'],['b'])
+        assert (list(modelA.named_vars), list(modelB.named_vars)) == (["a"], ["b"])

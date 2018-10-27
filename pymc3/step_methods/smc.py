@@ -15,12 +15,12 @@ from ..backends.ndarray import NDArray
 from ..backends.base import MultiTrace
 
 
-__all__ = ['SMC', 'sample_smc']
+__all__ = ["SMC", "sample_smc"]
 
-proposal_dists = {'MultivariateNormal': MultivariateNormalProposal}
+proposal_dists = {"MultivariateNormal": MultivariateNormalProposal}
 
 
-class SMC():
+class SMC:
     """
     Sequential Monte Carlo step
 
@@ -59,8 +59,15 @@ class SMC():
         %282007%29133:7%28816%29>`__
     """
 
-    def __init__(self, n_steps=5, scaling=1., p_acc_rate=0.01, tune=True,
-                 proposal_name='MultivariateNormal', threshold=0.5):
+    def __init__(
+        self,
+        n_steps=5,
+        scaling=1.0,
+        p_acc_rate=0.01,
+        tune=True,
+        proposal_name="MultivariateNormal",
+        threshold=0.5,
+    ):
 
         self.n_steps = n_steps
         self.scaling = scaling
@@ -88,7 +95,9 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
     random_seed : int
         random seed
     """
-    warnings.warn("Warning: SMC is experimental, hopefully it will be ready for PyMC 3.6")
+    warnings.warn(
+        "Warning: SMC is experimental, hopefully it will be ready for PyMC 3.6"
+    )
     model = modelcontext(model)
 
     if random_seed != -1:
@@ -99,19 +108,23 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
     acc_rate = 1
     model.marginal_likelihood = 1
     variables = model.vars
-    discrete = np.concatenate([[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables])
+    discrete = np.concatenate(
+        [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables]
+    )
     any_discrete = discrete.any()
     all_discrete = discrete.all()
     shared = make_shared_replacements(variables, model)
     prior_logp = logp_forw([model.varlogpt], variables, shared)
     likelihood_logp = logp_forw([model.datalogpt], variables, shared)
 
-    pm._log.info('Sample initial stage: ...')
+    pm._log.info("Sample initial stage: ...")
     posterior, var_info = _initial_population(draws, model, variables)
 
     while beta < 1:
         # compute plausibility weights (measure fitness)
-        likelihoods = np.array([likelihood_logp(sample) for sample in posterior]).squeeze()
+        likelihoods = np.array(
+            [likelihood_logp(sample) for sample in posterior]
+        ).squeeze()
         beta, old_beta, weights, sj = _calc_beta(beta, likelihoods, step.threshold)
         model.marginal_likelihood *= sj
         # resample based on plausibility weights (selection)
@@ -127,15 +140,18 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
         # acceptance rate
         if step.tune and stage > 0:
             if acc_rate == 0:
-                acc_rate = 1. / step.n_steps
+                acc_rate = 1.0 / step.n_steps
             step.scaling = _tune(acc_rate)
             step.n_steps = 1 + int(np.log(step.p_acc_rate) / np.log(1 - acc_rate))
 
-        pm._log.info('Stage: {:d} Beta: {:f} Steps: {:d} Acc: {:f}'.format(stage, beta,
-                                                                           step.n_steps, acc_rate))
+        pm._log.info(
+            "Stage: {:d} Beta: {:f} Steps: {:d} Acc: {:f}".format(
+                stage, beta, step.n_steps, acc_rate
+            )
+        )
         # Apply Metropolis kernel (mutation)
-        proposed = 0.
-        accepted = 0.
+        proposed = 0.0
+        accepted = 0.0
         priors = np.array([prior_logp(sample) for sample in posterior]).squeeze()
         tempered_post = priors + likelihoods * beta
         for draw in tqdm(range(draws), disable=not progressbar):
@@ -147,23 +163,25 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
 
                 if any_discrete:
                     if all_discrete:
-                        delta = np.round(delta, 0).astype('int64')
-                        q_old = q_old.astype('int64')
-                        q_new = (q_old + delta).astype('int64')
+                        delta = np.round(delta, 0).astype("int64")
+                        q_old = q_old.astype("int64")
+                        q_new = (q_old + delta).astype("int64")
                     else:
                         delta[discrete] = np.round(delta[discrete], 0)
-                        q_new = (q_old + delta)
+                        q_new = q_old + delta
                 else:
                     q_new = floatX(q_old + delta)
 
                 new_tempered_post = prior_logp(q_new) + likelihood_logp(q_new)[0] * beta
 
-                q_old, accept = metrop_select(new_tempered_post - old_tempered_post, q_new, q_old)
+                q_old, accept = metrop_select(
+                    new_tempered_post - old_tempered_post, q_new, q_old
+                )
                 if accept:
                     accepted += accept
                     posterior[draw] = q_old
                     old_tempered_post = new_tempered_post
-                proposed += 1.
+                proposed += 1.0
 
         acc_rate = accepted / proposed
         stage += 1
@@ -219,11 +237,11 @@ def _calc_beta(beta, likelihoods, threshold=0.5):
         Partial marginal likelihood
     """
     low_beta = old_beta = beta
-    up_beta = 2.
+    up_beta = 2.0
     rN = int(len(likelihoods) * threshold)
 
     while up_beta - low_beta > 1e-6:
-        new_beta = (low_beta + up_beta) / 2.
+        new_beta = (low_beta + up_beta) / 2.0
         weights_un = np.exp((new_beta - old_beta) * (likelihoods - likelihoods.max()))
         weights = weights_un / np.sum(weights_un)
         ESS = int(1 / np.sum(weights ** 2))
@@ -245,7 +263,9 @@ def _calc_covariance(posterior_array, weights):
     """
     Calculate trace covariance matrix based on importance weights.
     """
-    cov = np.cov(np.squeeze(posterior_array), aweights=weights.ravel(), bias=False, rowvar=0)
+    cov = np.cov(
+        np.squeeze(posterior_array), aweights=weights.ravel(), bias=False, rowvar=0
+    )
     if np.isnan(cov).any() or np.isinf(cov).any():
         raise ValueError('Sample covariances not valid! Likely "chains" is too small!')
     return np.atleast_2d(cov)
@@ -265,8 +285,8 @@ def _tune(acc_rate):
     scaling: float
     """
     # a and b after Muto & Beck 2008 .
-    a = 1. / 9
-    b = 8. / 9
+    a = 1.0 / 9
+    b = 8.0 / 9
     return (a + b * acc_rate) ** 2
 
 
@@ -285,7 +305,7 @@ def _posterior_to_trace(posterior, model, var_info):
         size = 0
         for var in varnames:
             shape, new_size = var_info[var]
-            value.append(posterior[i][size:size+new_size].reshape(shape))
+            value.append(posterior[i][size : size + new_size].reshape(shape))
             size += new_size
         strace.record({k: v for k, v in zip(varnames, value)})
     return MultiTrace([strace])

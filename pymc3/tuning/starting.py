@@ -1,8 +1,8 @@
-'''
+"""
 Created on Mar 12, 2011
 
 @author: johnsalvatier
-'''
+"""
 from scipy.optimize import minimize
 import numpy as np
 from numpy import isfinite, nan_to_num
@@ -18,12 +18,21 @@ from ..util import update_start_vals, get_default_varnames
 import warnings
 from inspect import getargspec
 
-__all__ = ['find_MAP']
+__all__ = ["find_MAP"]
 
 
-def find_MAP(start=None, vars=None, method="L-BFGS-B",
-             return_raw=False, include_transformed=True, progressbar=True, maxeval=5000, model=None,
-             *args, **kwargs):
+def find_MAP(
+    start=None,
+    vars=None,
+    method="L-BFGS-B",
+    return_raw=False,
+    include_transformed=True,
+    progressbar=True,
+    maxeval=5000,
+    model=None,
+    *args,
+    **kwargs
+):
     """
     Finds the local maximum a posteriori point given a model.
 
@@ -58,7 +67,9 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
     wrapped it inside pymc3.sample() and you should thus avoid this method.
     """
 
-    warnings.warn('find_MAP should not be used to initialize the NUTS sampler, simply call pymc3.sample() and it will automatically initialize NUTS in a better way.')
+    warnings.warn(
+        "find_MAP should not be used to initialize the NUTS sampler, simply call pymc3.sample() and it will automatically initialize NUTS in a better way."
+    )
 
     model = modelcontext(model)
     if start is None:
@@ -67,10 +78,12 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
         update_start_vals(start, model.test_point, model)
 
     if not set(start.keys()).issubset(model.named_vars.keys()):
-        extra_keys = ', '.join(set(start.keys()) - set(model.named_vars.keys()))
-        valid_keys = ', '.join(model.named_vars.keys())
-        raise KeyError('Some start parameters do not appear in the model!\n'
-                       'Valid keys are: {}, but {} was supplied'.format(valid_keys, extra_keys))
+        extra_keys = ", ".join(set(start.keys()) - set(model.named_vars.keys()))
+        valid_keys = ", ".join(model.named_vars.keys())
+        raise KeyError(
+            "Some start parameters do not appear in the model!\n"
+            "Valid keys are: {}, but {} was supplied".format(valid_keys, extra_keys)
+        )
 
     if vars is None:
         vars = model.cont_vars
@@ -90,29 +103,37 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
         compute_gradient = False
 
     if disc_vars or not compute_gradient:
-        pm._log.warning("Warning: gradient not available." +
-                        "(E.g. vars contains discrete variables). MAP " +
-                        "estimates may not be accurate for the default " +
-                        "parameters. Defaulting to non-gradient minimization " +
-                        "'Powell'.")
+        pm._log.warning(
+            "Warning: gradient not available."
+            + "(E.g. vars contains discrete variables). MAP "
+            + "estimates may not be accurate for the default "
+            + "parameters. Defaulting to non-gradient minimization "
+            + "'Powell'."
+        )
         method = "Powell"
 
     if "fmin" in kwargs:
         fmin = kwargs.pop("fmin")
-        warnings.warn('In future versions, set the optimization algorithm with a string. '
-                      'For example, use `method="L-BFGS-B"` instead of '
-                      '`fmin=sp.optimize.fmin_l_bfgs_b"`.')
+        warnings.warn(
+            "In future versions, set the optimization algorithm with a string. "
+            'For example, use `method="L-BFGS-B"` instead of '
+            '`fmin=sp.optimize.fmin_l_bfgs_b"`.'
+        )
 
         cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
 
         # Check to see if minimization function actually uses the gradient
-        if 'fprime' in getargspec(fmin).args:
+        if "fprime" in getargspec(fmin).args:
+
             def grad_logp(point):
                 return nan_to_num(-dlogp_func(point))
-            opt_result = fmin(cost_func, bij.map(start), fprime=grad_logp, *args, **kwargs)
+
+            opt_result = fmin(
+                cost_func, bij.map(start), fprime=grad_logp, *args, **kwargs
+            )
         else:
             # Check to see if minimization function uses a starting value
-            if 'x0' in getargspec(fmin).args:
+            if "x0" in getargspec(fmin).args:
                 opt_result = fmin(cost_func, bij.map(start), *args, **kwargs)
             else:
                 opt_result = fmin(cost_func, *args, **kwargs)
@@ -129,7 +150,9 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
             cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
 
         try:
-            opt_result = minimize(cost_func, x0, method=method, jac=compute_gradient, *args, **kwargs)
+            opt_result = minimize(
+                cost_func, x0, method=method, jac=compute_gradient, *args, **kwargs
+            )
             mx0 = opt_result["x"]  # r -> opt_result
             cost_func.progress.total = cost_func.progress.n + 1
             cost_func.progress.update()
@@ -142,7 +165,9 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
             cost_func.progress.close()
 
     vars = get_default_varnames(model.unobserved_RVs, include_transformed)
-    mx = {var.name: value for var, value in zip(vars, model.fastfn(vars)(bij.rmap(mx0)))}
+    mx = {
+        var.name: value for var, value in zip(vars, model.fastfn(vars)(bij.rmap(mx0)))
+    }
 
     if return_raw:
         return mx, opt_result
@@ -171,11 +196,11 @@ class CostFuncWrapper(object):
         self.logp_func = logp_func
         if dlogp_func is None:
             self.use_gradient = False
-            self.desc = 'logp = {:,.5g}'
+            self.desc = "logp = {:,.5g}"
         else:
             self.dlogp_func = dlogp_func
             self.use_gradient = True
-            self.desc = 'logp = {:,.5g}, ||grad|| = {:,.5g}'
+            self.desc = "logp = {:,.5g}, ||grad|| = {:,.5g}"
         self.previous_x = None
         self.progress = tqdm(total=maxeval, disable=not progressbar)
         self.progress.n = 0
@@ -187,7 +212,7 @@ class CostFuncWrapper(object):
             neg_grad = self.dlogp_func(pm.floatX(x))
             if np.all(np.isfinite(neg_grad)):
                 self.previous_x = x
-            grad = nan_to_num(-1.0*neg_grad)
+            grad = nan_to_num(-1.0 * neg_grad)
             grad = grad.astype(np.float64)
         else:
             self.previous_x = x

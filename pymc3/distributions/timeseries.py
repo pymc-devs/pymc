@@ -8,13 +8,13 @@ from . import distribution
 
 
 __all__ = [
-    'AR1',
-    'AR',
-    'GaussianRandomWalk',
-    'GARCH11',
-    'EulerMaruyama',
-    'MvGaussianRandomWalk',
-    'MvStudentTRandomWalk'
+    "AR1",
+    "AR",
+    "GaussianRandomWalk",
+    "GARCH11",
+    "EulerMaruyama",
+    "MvGaussianRandomWalk",
+    "MvStudentTRandomWalk",
 ]
 
 
@@ -35,7 +35,7 @@ class AR1(distribution.Continuous):
         self.k = k = tt.as_tensor_variable(k)
         self.tau_e = tau_e = tt.as_tensor_variable(tau_e)
         self.tau = tau_e * (1 - k ** 2)
-        self.mode = tt.as_tensor_variable(0.)
+        self.mode = tt.as_tensor_variable(0.0)
 
     def logp(self, x):
         k = self.k
@@ -43,7 +43,7 @@ class AR1(distribution.Continuous):
 
         x_im1 = x[:-1]
         x_i = x[1:]
-        boundary = Normal.dist(0., tau=tau_e).logp
+        boundary = Normal.dist(0.0, tau=tau_e).logp
 
         innov_like = Normal.dist(k * x_im1, tau=tau_e).logp(x_i)
         return boundary(x[0]) + tt.sum(innov_like)
@@ -53,13 +53,14 @@ class AR1(distribution.Continuous):
             dist = self
         k = dist.k
         tau_e = dist.tau_e
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{AR1}}(\mathit{{k}}={},~\mathit{{tau_e}}={})$'.format(name,
-                 get_variable_name(k), get_variable_name(tau_e))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{AR1}}(\mathit{{k}}={},~\mathit{{tau_e}}={})$".format(
+            name, get_variable_name(k), get_variable_name(tau_e)
+        )
 
 
 class AR(distribution.Continuous):
-    R"""
+    r"""
     Autoregressive process with p lags.
 
     .. math::
@@ -89,16 +90,16 @@ class AR(distribution.Continuous):
         distribution for initial values (Defaults to Flat())
     """
 
-    def __init__(self, rho, sd=None, tau=None,
-                 constant=False, init=Flat.dist(),
-                 *args, **kwargs):
+    def __init__(
+        self, rho, sd=None, tau=None, constant=False, init=Flat.dist(), *args, **kwargs
+    ):
 
         super(AR, self).__init__(*args, **kwargs)
         tau, sd = get_tau_sd(tau=tau, sd=sd)
         self.sd = tt.as_tensor_variable(sd)
         self.tau = tt.as_tensor_variable(tau)
 
-        self.mean = tt.as_tensor_variable(0.)
+        self.mean = tt.as_tensor_variable(0.0)
 
         if isinstance(rho, list):
             p = len(rho)
@@ -124,23 +125,33 @@ class AR(distribution.Continuous):
 
     def logp(self, value):
         if self.constant:
-            x = tt.add(*[self.rho[i + 1] * value[self.p - (i + 1):-(i + 1)] for i in range(self.p)])
-            eps = value[self.p:] - self.rho[0] - x
+            x = tt.add(
+                *[
+                    self.rho[i + 1] * value[self.p - (i + 1) : -(i + 1)]
+                    for i in range(self.p)
+                ]
+            )
+            eps = value[self.p :] - self.rho[0] - x
         else:
             if self.p == 1:
                 x = self.rho * value[:-1]
             else:
-                x = tt.add(*[self.rho[i] * value[self.p - (i + 1):-(i + 1)] for i in range(self.p)])
-            eps = value[self.p:] - x
+                x = tt.add(
+                    *[
+                        self.rho[i] * value[self.p - (i + 1) : -(i + 1)]
+                        for i in range(self.p)
+                    ]
+                )
+            eps = value[self.p :] - x
 
         innov_like = Normal.dist(mu=0.0, tau=self.tau).logp(eps)
-        init_like = self.init.logp(value[:self.p])
+        init_like = self.init.logp(value[: self.p])
 
         return tt.sum(innov_like) + tt.sum(init_like)
 
 
 class GaussianRandomWalk(distribution.Continuous):
-    R"""
+    r"""
     Random Walk with Normal innovations
 
     Parameters
@@ -155,15 +166,14 @@ class GaussianRandomWalk(distribution.Continuous):
         distribution for initial value (Defaults to Flat())
     """
 
-    def __init__(self, tau=None, init=Flat.dist(), sd=None, mu=0.,
-                 *args, **kwargs):
+    def __init__(self, tau=None, init=Flat.dist(), sd=None, mu=0.0, *args, **kwargs):
         super(GaussianRandomWalk, self).__init__(*args, **kwargs)
         tau, sd = get_tau_sd(tau=tau, sd=sd)
         self.tau = tau = tt.as_tensor_variable(tau)
         self.sd = sd = tt.as_tensor_variable(sd)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.init = init
-        self.mean = tt.as_tensor_variable(0.)
+        self.mean = tt.as_tensor_variable(0.0)
 
     def logp(self, x):
         tau = self.tau
@@ -182,14 +192,14 @@ class GaussianRandomWalk(distribution.Continuous):
             dist = self
         mu = dist.mu
         sd = dist.sd
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{GaussianRandomWalk}}(\mathit{{mu}}={},~\mathit{{sd}}={})$'.format(name,
-                                                get_variable_name(mu),
-                                                get_variable_name(sd))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{GaussianRandomWalk}}(\mathit{{mu}}={},~\mathit{{sd}}={})$".format(
+            name, get_variable_name(mu), get_variable_name(sd)
+        )
 
 
 class GARCH11(distribution.Continuous):
-    R"""
+    r"""
     GARCH(1,1) with Normal innovations. The model is specified by
 
     .. math::
@@ -212,15 +222,14 @@ class GARCH11(distribution.Continuous):
         initial_vol >= 0, initial volatility, sigma_0
     """
 
-    def __init__(self, omega, alpha_1, beta_1,
-                 initial_vol, *args, **kwargs):
+    def __init__(self, omega, alpha_1, beta_1, initial_vol, *args, **kwargs):
         super(GARCH11, self).__init__(*args, **kwargs)
 
         self.omega = omega = tt.as_tensor_variable(omega)
         self.alpha_1 = alpha_1 = tt.as_tensor_variable(alpha_1)
         self.beta_1 = beta_1 = tt.as_tensor_variable(beta_1)
         self.initial_vol = tt.as_tensor_variable(initial_vol)
-        self.mean = tt.as_tensor_variable(0.)
+        self.mean = tt.as_tensor_variable(0.0)
 
     def get_volatility(self, x):
         x = x[:-1]
@@ -228,16 +237,17 @@ class GARCH11(distribution.Continuous):
         def volatility_update(x, vol, w, a, b):
             return tt.sqrt(w + a * tt.square(x) + b * tt.square(vol))
 
-        vol, _ = scan(fn=volatility_update,
-                      sequences=[x],
-                      outputs_info=[self.initial_vol],
-                      non_sequences=[self.omega, self.alpha_1,
-                                     self.beta_1])
+        vol, _ = scan(
+            fn=volatility_update,
+            sequences=[x],
+            outputs_info=[self.initial_vol],
+            non_sequences=[self.omega, self.alpha_1, self.beta_1],
+        )
         return tt.concatenate([[self.initial_vol], vol])
 
     def logp(self, x):
         vol = self.get_volatility(x)
-        return tt.sum(Normal.dist(0., sd=vol).logp(x))
+        return tt.sum(Normal.dist(0.0, sd=vol).logp(x))
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -245,16 +255,17 @@ class GARCH11(distribution.Continuous):
         omega = dist.omega
         alpha_1 = dist.alpha_1
         beta_1 = dist.beta_1
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{GARCH}(1,~1,~\mathit{{omega}}={},~\mathit{{alpha_1}}={},~\mathit{{beta_1}}={})$'.format(
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{GARCH}(1,~1,~\mathit{{omega}}={},~\mathit{{alpha_1}}={},~\mathit{{beta_1}}={})$".format(
             name,
             get_variable_name(omega),
             get_variable_name(alpha_1),
-            get_variable_name(beta_1))
+            get_variable_name(beta_1),
+        )
 
 
 class EulerMaruyama(distribution.Continuous):
-    R"""
+    r"""
     Stochastic differential equation discretized with the Euler-Maruyama method.
 
     Parameters
@@ -266,6 +277,7 @@ class EulerMaruyama(distribution.Continuous):
     sde_pars : tuple
         parameters of the SDE, passed as *args to sde_fn
     """
+
     def __init__(self, dt, sde_fn, sde_pars, *args, **kwds):
         super(EulerMaruyama, self).__init__(*args, **kwds)
         self.dt = dt = tt.as_tensor_variable(dt)
@@ -283,14 +295,14 @@ class EulerMaruyama(distribution.Continuous):
         if dist is None:
             dist = self
         dt = dist.dt
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{EulerMaruyama}(\mathit{{dt}}={})$'.format(name,
-                                                get_variable_name(dt))
-
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{EulerMaruyama}(\mathit{{dt}}={})$".format(
+            name, get_variable_name(dt)
+        )
 
 
 class MvGaussianRandomWalk(distribution.Continuous):
-    R"""
+    r"""
     Multivariate Random Walk with Normal innovations
 
     Parameters
@@ -311,14 +323,24 @@ class MvGaussianRandomWalk(distribution.Continuous):
     Only one of cov, tau or chol is required.
 
     """
-    def __init__(self, mu=0., cov=None, tau=None, chol=None, lower=True, init=Flat.dist(),
-                 *args, **kwargs):
+
+    def __init__(
+        self,
+        mu=0.0,
+        cov=None,
+        tau=None,
+        chol=None,
+        lower=True,
+        init=Flat.dist(),
+        *args,
+        **kwargs
+    ):
         super(MvGaussianRandomWalk, self).__init__(*args, **kwargs)
 
         self.init = init
         self.innovArgs = (mu, cov, tau, chol, lower)
         self.innov = multivariate.MvNormal.dist(*self.innovArgs)
-        self.mean = tt.as_tensor_variable(0.)
+        self.mean = tt.as_tensor_variable(0.0)
 
     def logp(self, x):
         x_im1 = x[:-1]
@@ -331,14 +353,14 @@ class MvGaussianRandomWalk(distribution.Continuous):
             dist = self
         mu = dist.innov.mu
         cov = dist.innov.cov
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{MvGaussianRandomWalk}(\mathit{{mu}}={},~\mathit{{cov}}={})$'.format(name,
-                                                get_variable_name(mu),
-                                                get_variable_name(cov))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{MvGaussianRandomWalk}(\mathit{{mu}}={},~\mathit{{cov}}={})$".format(
+            name, get_variable_name(mu), get_variable_name(cov)
+        )
 
 
 class MvStudentTRandomWalk(MvGaussianRandomWalk):
-    R"""
+    r"""
     Multivariate Random Walk with StudentT innovations
 
     Parameters
@@ -355,6 +377,7 @@ class MvStudentTRandomWalk(MvGaussianRandomWalk):
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
+
     def __init__(self, nu, *args, **kwargs):
         super(MvStudentTRandomWalk, self).__init__(*args, **kwargs)
         self.nu = tt.as_tensor_variable(nu)
@@ -366,8 +389,7 @@ class MvStudentTRandomWalk(MvGaussianRandomWalk):
         nu = dist.innov.nu
         mu = dist.innov.mu
         cov = dist.innov.cov
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{MvStudentTRandomWalk}(\mathit{{nu}}={},~\mathit{{mu}}={},~\mathit{{cov}}={})$'.format(name,
-                                                get_variable_name(nu),
-                                                get_variable_name(mu),
-                                                get_variable_name(cov))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{MvStudentTRandomWalk}(\mathit{{nu}}={},~\mathit{{mu}}={},~\mathit{{cov}}={})$".format(
+            name, get_variable_name(nu), get_variable_name(mu), get_variable_name(cov)
+        )

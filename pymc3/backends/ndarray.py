@@ -35,7 +35,7 @@ def save_trace(trace, directory=None, overwrite=False):
     str, path to the directory where the trace was saved
     """
     if directory is None:
-        directory = '.pymc_{}.trace'
+        directory = ".pymc_{}.trace"
         idx = 1
         while os.path.exists(directory.format(idx)):
             idx += 1
@@ -45,8 +45,10 @@ def save_trace(trace, directory=None, overwrite=False):
         if overwrite:
             shutil.rmtree(directory)
         else:
-            raise OSError('Cautiously refusing to overwrite the already existing {}! Please supply '
-                          'a different directory, or set `overwrite=True`'.format(directory))
+            raise OSError(
+                "Cautiously refusing to overwrite the already existing {}! Please supply "
+                "a different directory, or set `overwrite=True`".format(directory)
+            )
     os.makedirs(directory)
 
     for chain, ndarray in trace._straces.items():
@@ -72,15 +74,15 @@ def load_trace(directory, model=None):
     pm.Multitrace that was saved in the directory
     """
     straces = []
-    for directory in glob.glob(os.path.join(directory, '*')):
+    for directory in glob.glob(os.path.join(directory, "*")):
         if os.path.isdir(directory):
             straces.append(SerializeNDArray(directory).load(model))
     return base.MultiTrace(straces)
 
 
 class SerializeNDArray(object):
-    metadata_file = 'metadata.json'
-    samples_file = 'samples.npz'
+    metadata_file = "metadata.json"
+    samples_file = "samples.npz"
 
     def __init__(self, directory):
         """Helper to save and load NDArray objects"""
@@ -99,10 +101,10 @@ class SerializeNDArray(object):
                 stats.append({key: value.tolist() for key, value in stat.items()})
 
         metadata = {
-            'draw_idx': ndarray.draw_idx,
-            'draws': ndarray.draws,
-            '_stats': stats,
-            'chain': ndarray.chain,
+            "draw_idx": ndarray.draw_idx,
+            "draws": ndarray.draws,
+            "_stats": stats,
+            "chain": ndarray.chain,
         }
         return metadata
 
@@ -114,14 +116,14 @@ class SerializeNDArray(object):
         to reload the multitrace.
         """
         if not isinstance(ndarray, NDArray):
-            raise TypeError('Can only save NDArray')
+            raise TypeError("Can only save NDArray")
 
         if os.path.isdir(self.directory):
             shutil.rmtree(self.directory)
 
         os.mkdir(self.directory)
 
-        with open(self.metadata_path, 'w') as buff:
+        with open(self.metadata_path, "w") as buff:
             json.dump(SerializeNDArray.to_metadata(ndarray), buff)
 
         np.savez_compressed(self.samples_path, **ndarray.samples)
@@ -129,10 +131,12 @@ class SerializeNDArray(object):
     def load(self, model):
         """Load the saved ndarray from file"""
         new_trace = NDArray(model=model)
-        with open(self.metadata_path, 'r') as buff:
+        with open(self.metadata_path, "r") as buff:
             metadata = json.load(buff)
 
-        metadata['_stats'] = [{k: np.array(v) for k, v in stat.items()} for stat in metadata['_stats']]
+        metadata["_stats"] = [
+            {k: np.array(v) for k, v in stat.items()} for stat in metadata["_stats"]
+        ]
 
         for key, value in metadata.items():
             setattr(new_trace, key, value)
@@ -187,16 +191,16 @@ class NDArray(base.BaseTrace):
             self.draw_idx = old_draws
             for varname, shape in self.var_shapes.items():
                 old_var_samples = self.samples[varname]
-                new_var_samples = np.zeros((draws, ) + shape,
-                                           self.var_dtypes[varname])
-                self.samples[varname] = np.concatenate((old_var_samples,
-                                                        new_var_samples),
-                                                       axis=0)
+                new_var_samples = np.zeros((draws,) + shape, self.var_dtypes[varname])
+                self.samples[varname] = np.concatenate(
+                    (old_var_samples, new_var_samples), axis=0
+                )
         else:  # Otherwise, make array of zeros for each variable.
             self.draws = draws
             for varname, shape in self.var_shapes.items():
-                self.samples[varname] = np.zeros((draws, ) + shape,
-                                                 dtype=self.var_dtypes[varname])
+                self.samples[varname] = np.zeros(
+                    (draws,) + shape, dtype=self.var_dtypes[varname]
+                )
 
         if sampler_vars is None:
             return
@@ -247,12 +251,14 @@ class NDArray(base.BaseTrace):
             return
         # Remove trailing zeros if interrupted before completed all
         # draws.
-        self.samples = {var: vtrace[:self.draw_idx]
-                        for var, vtrace in self.samples.items()}
+        self.samples = {
+            var: vtrace[: self.draw_idx] for var, vtrace in self.samples.items()
+        }
         if self._stats is not None:
             self._stats = [
-                {var: trace[:self.draw_idx] for var, trace in stats.items()}
-                for stats in self._stats]
+                {var: trace[: self.draw_idx] for var, trace in stats.items()}
+                for stats in self._stats
+            ]
 
     # Selection methods
 
@@ -286,8 +292,9 @@ class NDArray(base.BaseTrace):
 
         sliced = NDArray(model=self.model, vars=self.vars)
         sliced.chain = self.chain
-        sliced.samples = {varname: values[idx]
-                          for varname, values in self.samples.items()}
+        sliced.samples = {
+            varname: values[idx] for varname, values in self.samples.items()
+        }
         sliced.sampler_vars = self.sampler_vars
         sliced.draw_idx = (idx.stop - idx.start) // idx.step
 
@@ -307,8 +314,7 @@ class NDArray(base.BaseTrace):
         with variable names as keys.
         """
         idx = int(idx)
-        return {varname: values[idx]
-                for varname, values in self.samples.items()}
+        return {varname: values[idx] for varname, values in self.samples.items()}
 
 
 def _slice_as_ndarray(strace, idx):
@@ -316,16 +322,20 @@ def _slice_as_ndarray(strace, idx):
     sliced.chain = strace.chain
 
     # Happy path where we do not need to load everything from the trace
-    if ((idx.step is None or idx.step >= 1) and
-            (idx.stop is None or idx.stop == len(strace))):
+    if (idx.step is None or idx.step >= 1) and (
+        idx.stop is None or idx.stop == len(strace)
+    ):
         start, stop, step = idx.indices(len(strace))
-        sliced.samples = {v: strace.get_values(v, burn=idx.start, thin=idx.step)
-                          for v in strace.varnames}
+        sliced.samples = {
+            v: strace.get_values(v, burn=idx.start, thin=idx.step)
+            for v in strace.varnames
+        }
         sliced.draw_idx = (stop - start) // step
     else:
         start, stop, step = idx.indices(len(strace))
-        sliced.samples = {v: strace.get_values(v)[start:stop:step]
-                          for v in strace.varnames}
+        sliced.samples = {
+            v: strace.get_values(v)[start:stop:step] for v in strace.varnames
+        }
         sliced.draw_idx = (stop - start) // step
 
     return sliced

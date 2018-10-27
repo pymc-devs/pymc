@@ -38,16 +38,16 @@ def test_equal_diag():
         x = floatX(np.random.randn(5))
         pots = [
             quadpotential.quad_potential(diag, False),
-            quadpotential.quad_potential(1. / diag, True),
+            quadpotential.quad_potential(1.0 / diag, True),
             quadpotential.quad_potential(np.diag(diag), False),
-            quadpotential.quad_potential(np.diag(1. / diag), True),
+            quadpotential.quad_potential(np.diag(1.0 / diag), True),
         ]
         if quadpotential.chol_available:
-            diag_ = scipy.sparse.csc_matrix(np.diag(1. / diag))
+            diag_ = scipy.sparse.csc_matrix(np.diag(1.0 / diag))
             pots.append(quadpotential.quad_potential(diag_, True))
 
-        v = np.diag(1. / diag).dot(x)
-        e = x.dot(np.diag(1. / diag).dot(x)) / 2
+        v = np.diag(1.0 / diag).dot(x)
+        e = x.dot(np.diag(1.0 / diag).dot(x)) / 2
         for pot in pots:
             v_ = pot.velocity(x)
             e_ = pot.energy(x)
@@ -85,9 +85,9 @@ def test_random_diag():
     np.random.seed(42)
     pots = [
         quadpotential.quad_potential(d, True),
-        quadpotential.quad_potential(1./d, False),
+        quadpotential.quad_potential(1.0 / d, False),
         quadpotential.quad_potential(np.diag(d), True),
-        quadpotential.quad_potential(np.diag(1./d), False),
+        quadpotential.quad_potential(np.diag(1.0 / d), False),
     ]
     if quadpotential.chol_available:
         d_ = scipy.sparse.csc_matrix(np.diag(d))
@@ -95,7 +95,7 @@ def test_random_diag():
         pots.append(pot)
     for pot in pots:
         vals = np.array([pot.random() for _ in range(1000)])
-        npt.assert_allclose(vals.std(0), np.sqrt(1./d), atol=0.1)
+        npt.assert_allclose(vals.std(0), np.sqrt(1.0 / d), atol=0.1)
 
 
 def test_random_dense():

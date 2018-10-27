@@ -8,10 +8,26 @@ from .artists import histplot_op, kdeplot_op
 from .utils import identity_transform, get_default_varnames, get_axis, make_2d
 
 
-def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, lines=None,
-              combined=False, plot_transformed=False, grid=False, alpha=0.35, priors=None,
-              prior_alpha=1, prior_style='--', bw=4.5, ax=None, live_plot=False,
-              skip_first=0, refresh_every=100, roll_over=1000):
+def traceplot(
+    trace,
+    varnames=None,
+    transform=identity_transform,
+    figsize=None,
+    lines=None,
+    combined=False,
+    plot_transformed=False,
+    grid=False,
+    alpha=0.35,
+    priors=None,
+    prior_alpha=1,
+    prior_style="--",
+    bw=4.5,
+    ax=None,
+    live_plot=False,
+    skip_first=0,
+    refresh_every=100,
+    roll_over=1000,
+):
     """Plot samples histograms and values.
 
     Parameters
@@ -107,11 +123,13 @@ def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, 
                         x0 = len(d) - roll_over + skip_first
                     d_stream = d[-roll_over:]
             width = len(d_stream)
-            if d.dtype.kind == 'i':
+            if d.dtype.kind == "i":
                 hist_objs = histplot_op(ax[i, 0], d, alpha=alpha)
                 colors = [h[-1][0].get_facecolor() for h in hist_objs]
             else:
-                artists = kdeplot_op(ax[i, 0], d, bw, prior, prior_alpha, prior_style)[0]
+                artists = kdeplot_op(ax[i, 0], d, bw, prior, prior_alpha, prior_style)[
+                    0
+                ]
                 colors = [a[0].get_color() for a in artists]
             ax[i, 0].set_title(str(v))
             ax[i, 0].grid(grid)
@@ -124,17 +142,18 @@ def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, 
             if lines:
                 try:
                     if isinstance(lines[v], (float, int)):
-                        line_values, colors = [lines[v]], ['r']
+                        line_values, colors = [lines[v]], ["r"]
                     else:
                         line_values = np.atleast_1d(lines[v]).ravel()
                         if len(colors) != len(line_values):
-                            raise AssertionError("An incorrect number of lines was specified for "
-                                                 "'{}'. Expected an iterable of length {} or to "
-                                                 " a scalar".format(v, len(colors)))
+                            raise AssertionError(
+                                "An incorrect number of lines was specified for "
+                                "'{}'. Expected an iterable of length {} or to "
+                                " a scalar".format(v, len(colors))
+                            )
                     for c, l in zip(colors, line_values):
                         ax[i, 0].axvline(x=l, color=c, lw=1.5, alpha=0.75)
-                        ax[i, 1].axhline(y=l, color=c,
-                                         lw=1.5, alpha=alpha)
+                        ax[i, 1].axhline(y=l, color=c, lw=1.5, alpha=alpha)
                 except KeyError:
                     pass
         if live_plot:

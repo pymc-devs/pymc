@@ -6,40 +6,50 @@ from pymc3.step_methods.hmc.integration import IntegrationError
 from pymc3.step_methods.hmc.base_hmc import BaseHMC, HMCStepData, DivergenceInfo
 
 
-__all__ = ['HamiltonianMC']
+__all__ = ["HamiltonianMC"]
 
 
-def unif(step_size, elow=.85, ehigh=1.15):
+def unif(step_size, elow=0.85, ehigh=1.15):
     return np.random.uniform(elow, ehigh) * step_size
 
 
 class HamiltonianMC(BaseHMC):
-    R"""A sampler for continuous variables based on Hamiltonian mechanics.
+    r"""A sampler for continuous variables based on Hamiltonian mechanics.
 
     See NUTS sampler for automatically tuned stopping time and step size scaling.
     """
 
-    name = 'hmc'
+    name = "hmc"
     default_blocked = True
     generates_stats = True
-    stats_dtypes = [{
-        'step_size': np.float64,
-        'n_steps': np.int64,
-        'tune': np.bool,
-        'step_size_bar': np.float64,
-        'accept': np.float64,
-        'diverging': np.bool,
-        'energy_error': np.float64,
-        'energy': np.float64,
-        'max_energy_error': np.float64,
-        'path_length': np.float64,
-        'accepted': np.bool,
-        'model_logp': np.float64,
-    }]
+    stats_dtypes = [
+        {
+            "step_size": np.float64,
+            "n_steps": np.int64,
+            "tune": np.bool,
+            "step_size_bar": np.float64,
+            "accept": np.float64,
+            "diverging": np.bool,
+            "energy_error": np.float64,
+            "energy": np.float64,
+            "max_energy_error": np.float64,
+            "path_length": np.float64,
+            "accepted": np.bool,
+            "model_logp": np.float64,
+        }
+    ]
 
-    def __init__(self, vars=None, path_length=2.,
-                 adapt_step_size=True, gamma=0.05, k=0.75, t0=10,
-                 target_accept=0.8, **kwargs):
+    def __init__(
+        self,
+        vars=None,
+        path_length=2.0,
+        adapt_step_size=True,
+        gamma=0.05,
+        k=0.75,
+        t0=10,
+        target_accept=0.8,
+        **kwargs
+    ):
         """Set up the Hamiltonian Monte Carlo sampler.
 
         Parameters
@@ -99,16 +109,17 @@ class HamiltonianMC(BaseHMC):
             for _ in range(n_steps):
                 state = self.integrator.step(step_size, state)
         except IntegrationError as e:
-            div_info = DivergenceInfo('Divergence encountered.', e, state)
+            div_info = DivergenceInfo("Divergence encountered.", e, state)
         else:
             if not np.isfinite(state.energy):
                 div_info = DivergenceInfo(
-                    'Divergence encountered, bad energy.', None, state)
+                    "Divergence encountered, bad energy.", None, state
+                )
             energy_change = start.energy - state.energy
             if np.abs(energy_change) > self.Emax:
                 div_info = DivergenceInfo(
-                    'Divergence encountered, large integration error.',
-                    None, state)
+                    "Divergence encountered, large integration error.", None, state
+                )
 
         accept_stat = min(1, np.exp(energy_change))
 
@@ -120,13 +131,13 @@ class HamiltonianMC(BaseHMC):
             accepted = True
 
         stats = {
-            'path_length': path_length,
-            'n_steps': n_steps,
-            'accept': accept_stat,
-            'energy_error': energy_change,
-            'energy': state.energy,
-            'accepted': accepted,
-            'model_logp': state.model_logp,
+            "path_length": path_length,
+            "n_steps": n_steps,
+            "accept": accept_stat,
+            "energy_error": energy_change,
+            "energy": state.energy,
+            "accepted": accepted,
+            "model_logp": state.model_logp,
         }
         return HMCStepData(end, accept_stat, div_info, stats)
 

@@ -9,10 +9,12 @@ from ..theanof import tt_rng, make_shared_replacements
 import theano
 import numpy as np
 
-__all__ = ['SGFS', 'CSG']
+__all__ = ["SGFS", "CSG"]
 
-EXPERIMENTAL_WARNING = "Warning: Stochastic Gradient based sampling methods are experimental step methods and not yet"\
+EXPERIMENTAL_WARNING = (
+    "Warning: Stochastic Gradient based sampling methods are experimental step methods and not yet"
     " recommended for use in PyMC3!"
+)
 
 
 def _value_error(cond, str):
@@ -23,17 +25,17 @@ def _value_error(cond, str):
 
 def _check_minibatches(minibatch_tensors, minibatches):
     _value_error(
-        isinstance(minibatch_tensors, list),
-        'minibatch_tensors must be a list.')
+        isinstance(minibatch_tensors, list), "minibatch_tensors must be a list."
+    )
 
-    _value_error(
-        hasattr(minibatches, "__iter__"), 'minibatches must be an iterator.')
+    _value_error(hasattr(minibatches, "__iter__"), "minibatches must be an iterator.")
 
 
 def prior_dlogp(vars, model, flat_view):
     """Returns the gradient of the prior on the parameters as a vector of size D x 1"""
     terms = tt.concatenate(
-        [theano.grad(var.logpt, var).flatten() for var in vars], axis=0)
+        [theano.grad(var.logpt, var).flatten() for var in vars], axis=0
+    )
     dlogp = theano.clone(terms, flat_view.replacements, strict=False)
 
     return dlogp
@@ -47,21 +49,23 @@ def elemwise_dlogL(vars, model, flat_view):
     # select one observed random variable
     obs_var = model.observed_RVs[0]
     # tensor of shape (batch_size,)
-    logL = obs_var.logp_elemwiset.sum(
-        axis=tuple(range(1, obs_var.logp_elemwiset.ndim)))
+    logL = obs_var.logp_elemwiset.sum(axis=tuple(range(1, obs_var.logp_elemwiset.ndim)))
     # calculate fisher information
     terms = []
     for var in vars:
-        output, _ =  theano.scan(lambda i, logX=logL, v=var: theano.grad(logX[i], v).flatten(),\
-                           sequences=[tt.arange(logL.shape[0])])
+        output, _ = theano.scan(
+            lambda i, logX=logL, v=var: theano.grad(logX[i], v).flatten(),
+            sequences=[tt.arange(logL.shape[0])],
+        )
         terms.append(output)
     dlogL = theano.clone(
-        tt.concatenate(terms, axis=1), flat_view.replacements, strict=False)
+        tt.concatenate(terms, axis=1), flat_view.replacements, strict=False
+    )
     return dlogL
 
 
 class BaseStochasticGradient(ArrayStepShared):
-    R"""
+    r"""
     BaseStochasticGradient Object
 
     For working with BaseStochasticGradient Object
@@ -99,16 +103,18 @@ class BaseStochasticGradient(ArrayStepShared):
             Returns None it creates class variables which are required for the training fn
     """
 
-    def __init__(self,
-                 vars=None,
-                 batch_size=None,
-                 total_size=None,
-                 step_size=1.0,
-                 model=None,
-                 random_seed=None,
-                 minibatches=None,
-                 minibatch_tensors=None,
-                 **kwargs):
+    def __init__(
+        self,
+        vars=None,
+        batch_size=None,
+        total_size=None,
+        step_size=1.0,
+        model=None,
+        random_seed=None,
+        minibatches=None,
+        minibatch_tensors=None,
+        **kwargs
+    ):
         warnings.warn(EXPERIMENTAL_WARNING)
 
         model = modelcontext(model)
@@ -124,7 +130,8 @@ class BaseStochasticGradient(ArrayStepShared):
         self.total_size = total_size
         _value_error(
             total_size != None or batch_size != None,
-            'total_size and batch_size of training data have to be specified')
+            "total_size and batch_size of training data have to be specified",
+        )
         self.expected_iter = int(total_size / batch_size)
 
         # set random stream
@@ -156,12 +163,10 @@ class BaseStochasticGradient(ArrayStepShared):
             def is_shared(t):
                 return isinstance(t, theano.compile.sharedvalue.SharedVariable)
 
-            tensors = [(t.type() if is_shared(t) else t)
-                       for t in minibatch_tensors]
-            updates = OrderedDict({
-                t: t_
-                for t, t_ in zip(minibatch_tensors, tensors) if is_shared(t)
-            })
+            tensors = [(t.type() if is_shared(t) else t) for t in minibatch_tensors]
+            updates = OrderedDict(
+                {t: t_ for t, t_ in zip(minibatch_tensors, tensors) if is_shared(t)}
+            )
             self.minibatch_tensors = tensors
             self.inarray += self.minibatch_tensors
             self.updates.update(updates)
@@ -195,14 +200,14 @@ class BaseStochasticGradient(ArrayStepShared):
         -------
         q
         """
-        if hasattr(self, 'minibatch_tensors'):
+        if hasattr(self, "minibatch_tensors"):
             return q0 + self.training_fn(q0, *next(self.minibatches))
         else:
             return q0 + self.training_fn(q0)
 
 
 class SGFS(BaseStochasticGradient):
-    R"""
+    r"""
     StochasticGradientFisherScoring
 
     Parameters
@@ -220,7 +225,7 @@ class SGFS(BaseStochasticGradient):
     -   Bayesian Posterior Sampling via Stochastic Gradient Fisher Scoring
         Implements Algorithm 1 from the publication http://people.ee.duke.edu/%7Elcarin/782.pdf
     """
-    name = 'stochastic_gradient_fisher_scoring'
+    name = "stochastic_gradient_fisher_scoring"
 
     def __init__(self, vars=None, B=None, step_size_decay=100, **kwargs):
         """
@@ -238,9 +243,8 @@ class SGFS(BaseStochasticGradient):
 
     def _initialize_values(self):
         # Init avg_I
-        self.avg_I = theano.shared(
-            np.zeros((self.q_size, self.q_size)), name='avg_I')
-        self.t = theano.shared(1, name='t')
+        self.avg_I = theano.shared(np.zeros((self.q_size, self.q_size)), name="avg_I")
+        self.t = theano.shared(1, name="t")
         # 2. Set gamma
         self.gamma = (self.batch_size + self.total_size) / (self.total_size)
 
@@ -265,12 +269,12 @@ class SGFS(BaseStochasticGradient):
         avg_gt = gt.mean(axis=0)
 
         # 6. Calculate approximate Fisher Score
-        gt_diff = (gt - avg_gt)
+        gt_diff = gt - avg_gt
 
-        V = (1. / (n - 1)) * tt.dot(gt_diff.T, gt_diff)
+        V = (1.0 / (n - 1)) * tt.dot(gt_diff.T, gt_diff)
 
         # 7. Update moving average
-        I_t = (1. - 1. / t) * avg_I + (1. / t) * V
+        I_t = (1.0 - 1.0 / t) * avg_I + (1.0 / t) * V
 
         if B is None:
             # if B is not specified
@@ -287,23 +291,23 @@ class SGFS(BaseStochasticGradient):
         # where B_ch is cholesky decomposition of B
         # i.e. B = dot(B_ch, B_ch^T)
         B_ch = tt.slinalg.cholesky(B)
-        noise_term = tt.dot((2.*B_ch)/tt.sqrt(epsilon), \
-                random.normal((q_size,), dtype=theano.config.floatX))
+        noise_term = tt.dot(
+            (2.0 * B_ch) / tt.sqrt(epsilon),
+            random.normal((q_size,), dtype=theano.config.floatX),
+        )
         # 9.
         # Inv. Fisher Cov. Matrix
-        cov_mat = (gamma * I_t * N) + ((4. / epsilon) * B)
+        cov_mat = (gamma * I_t * N) + ((4.0 / epsilon) * B)
         inv_cov_mat = tt.nlinalg.matrix_inverse(cov_mat)
         # Noise Coefficient
-        noise_coeff = (dlog_prior + (N * avg_gt) + noise_term)
+        noise_coeff = dlog_prior + (N * avg_gt) + noise_term
         dq = 2 * tt.dot(inv_cov_mat, noise_coeff)
 
         updates.update({avg_I: I_t, t: t + 1})
 
         f = theano.function(
-            outputs=dq,
-            inputs=inarray,
-            updates=updates,
-            allow_input_downcast=True)
+            outputs=dq, inputs=inarray, updates=updates, allow_input_downcast=True
+        )
 
         return f
 
@@ -315,7 +319,7 @@ class SGFS(BaseStochasticGradient):
 
 
 class CSG(BaseStochasticGradient):
-    R"""
+    r"""
     CSG: ConstantStochasticGradient
     
     It is an approximate stochastic variational inference algorithm
@@ -337,7 +341,7 @@ class CSG(BaseStochasticGradient):
     -   Stochastic Gradient Descent as Approximate Bayesian Inference
         https://arxiv.org/pdf/1704.04289v1.pdf
     """
-    name = 'constant_stochastic_gradient'
+    name = "constant_stochastic_gradient"
 
     def __init__(self, vars=None, **kwargs):
         """
@@ -351,9 +355,8 @@ class CSG(BaseStochasticGradient):
 
     def _initialize_values(self):
         # Init avg_C: Noise Covariance Moving Average
-        self.avg_C = theano.shared(
-            np.zeros((self.q_size, self.q_size)), name='avg_C')
-        self.t = theano.shared(1, name='t')
+        self.avg_C = theano.shared(np.zeros((self.q_size, self.q_size)), name="avg_C")
+        self.t = theano.shared(1, name="t")
         # Init training fn
         self.training_fn = self.mk_training_fn()
 
@@ -373,36 +376,36 @@ class CSG(BaseStochasticGradient):
         inarray = self.inarray
 
         # gradient of log likelihood
-        gt = -1 * (1. / S) * (self.dlogp_elemwise.sum(axis=0) +
-                              (S / N) * self.dlog_prior)
+        gt = (
+            -1
+            * (1.0 / S)
+            * (self.dlogp_elemwise.sum(axis=0) + (S / N) * self.dlog_prior)
+        )
 
         # update moving average of Noise Covariance
-        gt_diff = (self.dlogp_elemwise - self.dlogp_elemwise.mean(axis=0))
-        V = (1. / (S - 1)) * theano.dot(gt_diff.T, gt_diff)
-        C_t = (1. - 1. / t) * avg_C + (1. / t) * V
-        # BB^T = C 
+        gt_diff = self.dlogp_elemwise - self.dlogp_elemwise.mean(axis=0)
+        V = (1.0 / (S - 1)) * theano.dot(gt_diff.T, gt_diff)
+        C_t = (1.0 - 1.0 / t) * avg_C + (1.0 / t) * V
+        # BB^T = C
         B = tt.switch(t < 0, tt.eye(q_size), tt.slinalg.cholesky(C_t))
         # Optimal Preconditioning Matrix
-        H = (2. * S / N) * tt.nlinalg.matrix_inverse(C_t)
+        H = (2.0 * S / N) * tt.nlinalg.matrix_inverse(C_t)
         # step value on the log likelihood gradient preconditioned with H
-        step = -1 * theano.dot(H, gt.dimshuffle([0, 'x']))
+        step = -1 * theano.dot(H, gt.dimshuffle([0, "x"]))
 
         # sample gaussian noise dW
-        dW = random.normal(
-            (q_size, 1), dtype=theano.config.floatX, avg=0.0, std=1.0)
+        dW = random.normal((q_size, 1), dtype=theano.config.floatX, avg=0.0, std=1.0)
         # noise term is inversely proportional to batch size
-        noise_term = (1. / np.sqrt(S)) * theano.dot(H, theano.dot(B, dW))
+        noise_term = (1.0 / np.sqrt(S)) * theano.dot(H, theano.dot(B, dW))
         # step + noise term
         dq = (step + noise_term).flatten()
 
-        # update time and avg_C 
+        # update time and avg_C
         updates.update({avg_C: C_t, t: t + 1})
 
         f = theano.function(
-            outputs=dq,
-            inputs=inarray,
-            updates=updates,
-            allow_input_downcast=True)
+            outputs=dq, inputs=inarray, updates=updates, allow_input_downcast=True
+        )
 
         return f
 

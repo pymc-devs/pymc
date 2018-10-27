@@ -5,7 +5,15 @@ from .blocking import *
 from .distributions import *
 from .glm import *
 from . import gp
-from .math import logaddexp, logsumexp, logit, invlogit, expand_packed_triangular, probit, invprobit
+from .math import (
+    logaddexp,
+    logsumexp,
+    logit,
+    invlogit,
+    expand_packed_triangular,
+    probit,
+    invprobit,
+)
 from .model import *
 from .model_graph import model_to_graphviz
 from .stats import *
@@ -28,7 +36,8 @@ from .tests import test
 from .data import *
 
 import logging
-_log = logging.getLogger('pymc3')
+
+_log = logging.getLogger("pymc3")
 if not logging.root.handlers:
     _log.setLevel(logging.INFO)
     handler = logging.StreamHandler()

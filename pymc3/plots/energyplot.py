@@ -1,6 +1,7 @@
 import warnings
 
 import numpy as np
+
 try:
     import matplotlib.pyplot as plt
 except ImportError:  # mpl is optional
@@ -8,8 +9,18 @@ except ImportError:  # mpl is optional
 from .kdeplot import kdeplot
 
 
-def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, shade=0.35, bw=4.5,
-               frame=True, kwargs_shade=None, **kwargs):
+def energyplot(
+    trace,
+    kind="kde",
+    figsize=None,
+    ax=None,
+    legend=True,
+    shade=0.35,
+    bw=4.5,
+    frame=True,
+    kwargs_shade=None,
+    **kwargs
+):
     """Plot energy transition distribution and marginal energy distribution in
     order to diagnose poor exploration by HMC algorithms.
 
@@ -46,13 +57,15 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, shade=0.35
         _, ax = plt.subplots(figsize=figsize)
 
     try:
-        energy = trace['energy']
+        energy = trace["energy"]
     except KeyError:
-        warnings.warn('There is no energy information in the passed trace.')
+        warnings.warn("There is no energy information in the passed trace.")
         return ax
 
-    series = [('Marginal energy distribution', energy - energy.mean()),
-              ('Energy transition distribution', np.diff(energy))]
+    series = [
+        ("Marginal energy distribution", energy - energy.mean()),
+        ("Energy transition distribution", np.diff(energy)),
+    ]
 
     if figsize is None:
         figsize = (8, 6)
@@ -60,17 +73,24 @@ def energyplot(trace, kind='kde', figsize=None, ax=None, legend=True, shade=0.35
     if kwargs_shade is None:
         kwargs_shade = {}
 
-    if kind == 'kde':
+    if kind == "kde":
         for label, value in series:
-            kdeplot(value, label=label, shade=shade, bw=bw, ax=ax, kwargs_shade=kwargs_shade,
-                    **kwargs)
+            kdeplot(
+                value,
+                label=label,
+                shade=shade,
+                bw=bw,
+                ax=ax,
+                kwargs_shade=kwargs_shade,
+                **kwargs
+            )
 
-    elif kind == 'hist':
+    elif kind == "hist":
         for label, value in series:
             ax.hist(value, alpha=shade, label=label, **kwargs)
 
     else:
-        raise ValueError('Plot type {} not recognized.'.format(kind))
+        raise ValueError("Plot type {} not recognized.".format(kind))
 
     ax.set_xticks([])
     ax.set_yticks([])

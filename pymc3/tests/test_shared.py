@@ -7,9 +7,11 @@ import theano
 class TestShared(SeededTest):
     def test_deterministic(self):
         with pm.Model() as model:
-            data_values = np.array([.5, .4, 5, 2])
-            X = theano.shared(np.asarray(data_values, dtype=theano.config.floatX), borrow=True)
-            pm.Normal('y', 0, 1, observed=X)
+            data_values = np.array([0.5, 0.4, 5, 2])
+            X = theano.shared(
+                np.asarray(data_values, dtype=theano.config.floatX), borrow=True
+            )
+            pm.Normal("y", 0, 1, observed=X)
             model.logp(model.test_point)
 
     def test_sample(self):
@@ -21,8 +23,8 @@ class TestShared(SeededTest):
         x_shared = theano.shared(x)
 
         with pm.Model() as model:
-            b = pm.Normal('b', 0., 10.)
-            pm.Normal('obs', b * x_shared, np.sqrt(1e-2), observed=y)
+            b = pm.Normal("b", 0.0, 10.0)
+            pm.Normal("obs", b * x_shared, np.sqrt(1e-2), observed=y)
             prior_trace0 = pm.sample_prior_predictive(1000)
 
             trace = pm.sample(1000, init=None, progressbar=False)
@@ -32,10 +34,10 @@ class TestShared(SeededTest):
             prior_trace1 = pm.sample_prior_predictive(1000)
             pp_trace1 = pm.sample_posterior_predictive(trace, 1000)
 
-        assert prior_trace0['b'].shape == (1000,)
-        assert prior_trace0['obs'].shape == (1000, 100)
-        np.testing.assert_allclose(x, pp_trace0['obs'].mean(axis=0), atol=1e-1)
+        assert prior_trace0["b"].shape == (1000,)
+        assert prior_trace0["obs"].shape == (1000, 100)
+        np.testing.assert_allclose(x, pp_trace0["obs"].mean(axis=0), atol=1e-1)
 
-        assert prior_trace1['b'].shape == (1000,)
-        assert prior_trace1['obs'].shape == (1000, 200)
-        np.testing.assert_allclose(x_pred, pp_trace1['obs'].mean(axis=0), atol=1e-1)
+        assert prior_trace1["b"].shape == (1000,)
+        assert prior_trace1["obs"].shape == (1000, 200)
+        np.testing.assert_allclose(x_pred, pp_trace1["obs"].mean(axis=0), atol=1e-1)

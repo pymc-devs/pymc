@@ -14,21 +14,27 @@ def powerset(iterable):
     powerset([1,2,3]) --> (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)
     """
     s = list(iterable)
-    return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(1, len(s)+1))
+    return itertools.chain.from_iterable(
+        itertools.combinations(s, r) for r in range(1, len(s) + 1)
+    )
 
 
 class ModelGraph(object):
     def __init__(self, model):
         self.model = model
-        self.var_names = get_default_varnames(self.model.named_vars, include_transformed=False)
+        self.var_names = get_default_varnames(
+            self.model.named_vars, include_transformed=False
+        )
         self.var_list = self.model.named_vars.values()
-        self.transform_map = {v.transformed: v.name for v in self.var_list if hasattr(v, 'transformed')}
+        self.transform_map = {
+            v.transformed: v.name for v in self.var_list if hasattr(v, "transformed")
+        }
         self._deterministics = None
 
     def get_deterministics(self, var):
         """Compute the deterministic nodes of the graph"""
         deterministics = []
-        attrs = ('transformed', 'logpt')
+        attrs = ("transformed", "logpt")
         for v in self.var_list:
             if v != var and all(not hasattr(v, attr) for attr in attrs):
                 deterministics.append(v)
@@ -36,7 +42,13 @@ class ModelGraph(object):
 
     def _ancestors(self, var, func, blockers=None):
         """Get ancestors of a function that are also named PyMC3 variables"""
-        return set([j for j in ancestors([func], blockers=blockers) if j in self.var_list and j != var])
+        return set(
+            [
+                j
+                for j in ancestors([func], blockers=blockers)
+                if j in self.var_list and j != var
+            ]
+        )
 
     def _get_ancestors(self, var, func):
         """Get all ancestors of a function, doing some accounting for deterministics
@@ -51,12 +63,14 @@ class ModelGraph(object):
         # Usual case
         if upstream == self._ancestors(var, func, blockers=upstream):
             return upstream
-        else: # deterministic accounting
+        else:  # deterministic accounting
             for d in powerset(upstream):
                 blocked = self._ancestors(var, func, blockers=d)
                 if set(d) == blocked:
                     return d
-        raise RuntimeError('Could not traverse graph. Consider raising an issue with developers.')
+        raise RuntimeError(
+            "Could not traverse graph. Consider raising an issue with developers."
+        )
 
     def _filter_parents(self, var, parents):
         """Get direct parents of a var, as strings"""
@@ -70,14 +84,14 @@ class ModelGraph(object):
                 if self.transform_map[p] != var.name:
                     keep.add(self.transform_map[p])
             else:
-                raise AssertionError('Do not know what to do with {}'.format(str(p)))
+                raise AssertionError("Do not know what to do with {}".format(str(p)))
         return keep
 
     def get_parents(self, var):
         """Get the named nodes that are direct inputs to the var"""
-        if hasattr(var, 'transformed'):
+        if hasattr(var, "transformed"):
             func = var.transformed.logpt
-        elif hasattr(var, 'logpt'):
+        elif hasattr(var, "logpt"):
             func = var.logpt
         else:
             func = var
@@ -99,18 +113,22 @@ class ModelGraph(object):
         # styling for node
         attrs = {}
         if isinstance(v, pm.model.ObservedRV):
-            attrs['style'] = 'filled'
+            attrs["style"] = "filled"
 
         # Get name for node
-        if hasattr(v, 'distribution'):
+        if hasattr(v, "distribution"):
             distribution = v.distribution.__class__.__name__
         else:
-            distribution = 'Deterministic'
-            attrs['shape'] = 'box'
+            distribution = "Deterministic"
+            attrs["shape"] = "box"
 
-        graph.node(var_name,
-                '{var_name} ~ {distribution}'.format(var_name=var_name, distribution=distribution),
-                **attrs)
+        graph.node(
+            var_name,
+            "{var_name} ~ {distribution}".format(
+                var_name=var_name, distribution=distribution
+            ),
+            **attrs
+        )
 
     def get_plates(self):
         """ Rough but surprisingly accurate plate detection.
@@ -125,9 +143,9 @@ class ModelGraph(object):
         plates = {}
         for var_name in self.var_names:
             v = self.model[var_name]
-            if hasattr(v, 'observations'):
+            if hasattr(v, "observations"):
                 shape = v.observations.shape
-            elif hasattr(v, 'dshape'):
+            elif hasattr(v, "dshape"):
                 shape = v.dshape
             else:
                 shape = v.tag.test_value.shape
@@ -148,19 +166,21 @@ class ModelGraph(object):
         try:
             import graphviz
         except ImportError:
-            raise ImportError('This function requires the python library graphviz, along with binaries. '
-                              'The easiest way to install all of this is by running\n\n'
-                              '\tconda install -c conda-forge python-graphviz')
+            raise ImportError(
+                "This function requires the python library graphviz, along with binaries. "
+                "The easiest way to install all of this is by running\n\n"
+                "\tconda install -c conda-forge python-graphviz"
+            )
         graph = graphviz.Digraph(self.model.name)
         for shape, var_names in self.get_plates().items():
-            label = ' x '.join(map('{:,d}'.format, shape))
+            label = " x ".join(map("{:,d}".format, shape))
             if label:
                 # must be preceded by 'cluster' to get a box around it
-                with graph.subgraph(name='cluster' + label) as sub:
+                with graph.subgraph(name="cluster" + label) as sub:
                     for var_name in var_names:
                         self._make_node(var_name, sub)
                     # plate label goes bottom right
-                    sub.attr(label=label, labeljust='r', labelloc='b', style='rounded')
+                    sub.attr(label=label, labeljust="r", labelloc="b", style="rounded")
             else:
                 for var_name in var_names:
                     self._make_node(var_name, graph)

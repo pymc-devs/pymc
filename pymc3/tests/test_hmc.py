@@ -7,7 +7,9 @@ import pymc3
 import pytest
 import logging
 from pymc3.theanof import floatX
-logger = logging.getLogger('pymc3')
+
+logger = logging.getLogger("pymc3")
+
 
 def test_leapfrog_reversible():
     n = 3
@@ -20,7 +22,7 @@ def test_leapfrog_reversible():
     p = floatX(step.potential.random())
     q = floatX(np.random.randn(size))
     start = step.integrator.compute_state(p, q)
-    for epsilon in [.01, .1]:
+    for epsilon in [0.01, 0.1]:
         for n_steps in [1, 2, 3, 4, 20]:
             state = start
             for _ in range(n_steps):
@@ -39,14 +41,17 @@ def test_nuts_tuning():
         trace = pymc3.sample(10, step=step, tune=5, progressbar=False, chains=1)
 
     assert not step.tune
-    assert np.all(trace['step_size'][5:] == trace['step_size'][5])
+    assert np.all(trace["step_size"][5:] == trace["step_size"][5])
+
 
 def test_nuts_error_reporting(caplog):
     model = pymc3.Model()
     with caplog.at_level(logging.ERROR) and pytest.raises(ValueError):
         with model:
-            pymc3.HalfNormal('a', sd=1, transform=None, testval=-1)
-            pymc3.HalfNormal('b', sd=1, transform=None)
-            trace = pymc3.sample(init='adapt_diag', chains=1)
-        assert "Bad initial energy, check any log  probabilities that are inf or -inf: a        -inf\nb" in caplog.text
-
+            pymc3.HalfNormal("a", sd=1, transform=None, testval=-1)
+            pymc3.HalfNormal("b", sd=1, transform=None)
+            trace = pymc3.sample(init="adapt_diag", chains=1)
+        assert (
+            "Bad initial energy, check any log  probabilities that are inf or -inf: a        -inf\nb"
+            in caplog.text
+        )

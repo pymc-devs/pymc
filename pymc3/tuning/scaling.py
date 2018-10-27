@@ -1,16 +1,16 @@
-'''
+"""
 Created on Mar 12, 2011
 
 from __future__ import division
 @author: johnsalvatier
-'''
+"""
 import numpy as np
 from numpy import exp, log, sqrt
 from ..model import modelcontext, Point
 from ..theanof import hessian_diag, inputvars
 from ..blocking import DictToArrayBijection, ArrayOrdering
 
-__all__ = ['approx_hessian', 'find_hessian', 'trace_cov', 'guess_scaling']
+__all__ = ["approx_hessian", "find_hessian", "trace_cov", "guess_scaling"]
 
 
 def approx_hessian(point, vars=None, model=None):
@@ -39,11 +39,11 @@ def approx_hessian(point, vars=None, model=None):
     def grad_logp(point):
         return np.nan_to_num(dlogp(point))
 
-    '''
+    """
     Find the jacobian of the gradient function at the current position
     this should be the Hessian; invert it to find the approximate
     covariance matrix.
-    '''
+    """
     return -Jacobian(grad_logp)(bij.map(point))
 
 
@@ -124,8 +124,8 @@ def adjust_scaling(s, scaling_bound):
 def adjust_precision(tau, scaling_bound=1e-8):
     mag = sqrt(abs(tau))
 
-    bounded = bound(log(mag), log(scaling_bound), log(1./scaling_bound))
-    return exp(bounded)**2
+    bounded = bound(log(mag), log(scaling_bound), log(1.0 / scaling_bound))
+    return exp(bounded) ** 2
 
 
 def bound(a, l, u):

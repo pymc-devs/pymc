@@ -1,4 +1,4 @@
-__all__ = ['SamplingError']
+__all__ = ["SamplingError"]
 
 
 class SamplingError(RuntimeError):

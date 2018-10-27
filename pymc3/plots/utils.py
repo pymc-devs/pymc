@@ -3,8 +3,9 @@ try:
 except ImportError:  # mpl is optional
     pass
 import numpy as np
+
 # plotting utilities can all be in this namespace
-from ..util import get_default_varnames # pylint: disable=unused-import
+from ..util import get_default_varnames  # pylint: disable=unused-import
 
 
 def identity_transform(x):
@@ -29,7 +30,7 @@ def get_axis(ax, default_rows, default_columns, **default_kwargs):
     if ax is None:
         _, ax = plt.subplots(*default_shape, **default_kwargs)
     elif ax.shape != default_shape:
-        raise ValueError('Subplots with shape %r required' % (default_shape,))
+        raise ValueError("Subplots with shape %r required" % (default_shape,))
     return ax
 
 
@@ -39,5 +40,5 @@ def make_2d(a):
     # flatten out dimensions beyond the first
     n = a.shape[0]
     newshape = np.product(a.shape[1:]).astype(int)
-    a = a.reshape((n, newshape), order='F')
+    a = a.reshape((n, newshape), order="F")
     return a

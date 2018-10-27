@@ -48,10 +48,12 @@ def _theano_energy_function(H, q, **theano_kwargs):
     energy_function : theano function that computes the energy at a point (p, q) in phase space
     p : Starting momentum variable.
     """
-    p = tt.vector('p')
+    p = tt.vector("p")
     p.tag.test_value = q.tag.test_value
     total_energy = H.pot.energy(p) - H.logp(q)
-    energy_function = theano.function(inputs=[q, p], outputs=total_energy, **theano_kwargs)
+    energy_function = theano.function(
+        inputs=[q, p], outputs=total_energy, **theano_kwargs
+    )
     energy_function.trust_input = True
 
     return energy_function, p
@@ -81,23 +83,31 @@ def _theano_leapfrog_integrator(H, q, p, **theano_kwargs):
     theano function which returns
     q_new, p_new, energy_new
     """
-    epsilon = tt.scalar('epsilon')
-    epsilon.tag.test_value = 1.
+    epsilon = tt.scalar("epsilon")
+    epsilon.tag.test_value = 1.0
 
-    n_steps = tt.iscalar('n_steps')
+    n_steps = tt.iscalar("n_steps")
     n_steps.tag.test_value = 2
 
     q_new, p_new = leapfrog(H, q, p, epsilon, n_steps)
     energy_new = energy(H, q_new, p_new)
 
-    f = theano.function([q, p, epsilon, n_steps], [q_new, p_new, energy_new], **theano_kwargs)
+    f = theano.function(
+        [q, p, epsilon, n_steps], [q_new, p_new, energy_new], **theano_kwargs
+    )
     f.trust_input = True
     return f
 
 
-def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
-                                     use_single_leapfrog=False,
-                                     integrator="leapfrog", **theano_kwargs):
+def get_theano_hamiltonian_functions(
+    model_vars,
+    shared,
+    logpt,
+    potential,
+    use_single_leapfrog=False,
+    integrator="leapfrog",
+    **theano_kwargs
+):
     """Construct theano functions for the Hamiltonian, energy, and leapfrog integrator.
 
     Parameters
@@ -174,15 +184,19 @@ def leapfrog(H, q, p, epsilon, n_steps):
     momentum : Theano.tensor
         momentum estimate at time :math:`n \cdot e`.
     """
+
     def full_update(p, q):
         p = p + epsilon * H.dlogp(q)
         q += epsilon * H.pot.velocity(p)
         return p, q
+
     #  This first line can't be +=, possibly because of theano
     p = p + 0.5 * epsilon * H.dlogp(q)  # half momentum update
     q += epsilon * H.pot.velocity(p)  # full position update
     if tt.gt(n_steps, 1):
-        (p_seq, q_seq), _ = theano.scan(full_update, outputs_info=[p, q], n_steps=n_steps - 1)
+        (p_seq, q_seq), _ = theano.scan(
+            full_update, outputs_info=[p, q], n_steps=n_steps - 1
+        )
         p, q = p_seq[-1], q_seq[-1]
     p += 0.5 * epsilon * H.dlogp(q)  # half momentum update
     return q, p
@@ -203,8 +217,8 @@ def _theano_single_threestage(H, q, p, q_grad, **theano_kwargs):
     Hamiltonian Monte Carlo." arXiv:1608.07048 [Stat],
     August 25, 2016. http://arxiv.org/abs/1608.07048.
     """
-    epsilon = tt.scalar('epsilon')
-    epsilon.tag.test_value = 1.
+    epsilon = tt.scalar("epsilon")
+    epsilon.tag.test_value = 1.0
 
     a = 12127897.0 / 102017882
     b = 4271554.0 / 14421423
@@ -227,9 +241,11 @@ def _theano_single_threestage(H, q, p, q_grad, **theano_kwargs):
 
     new_energy = energy(H, q_e, p_e)
 
-    f = theano.function(inputs=[q, p, q_grad, epsilon],
-                        outputs=[q_e, p_e, v_e, grad_e, new_energy],
-                        **theano_kwargs)
+    f = theano.function(
+        inputs=[q, p, q_grad, epsilon],
+        outputs=[q_e, p_e, v_e, grad_e, new_energy],
+        **theano_kwargs
+    )
     f.trust_input = True
     return f
 
@@ -249,8 +265,8 @@ def _theano_single_twostage(H, q, p, q_grad, **theano_kwargs):
     Hamiltonian Monte Carlo." arXiv:1608.07048 [Stat],
     August 25, 2016. http://arxiv.org/abs/1608.07048.
     """
-    epsilon = tt.scalar('epsilon')
-    epsilon.tag.test_value = 1.
+    epsilon = tt.scalar("epsilon")
+    epsilon.tag.test_value = 1.0
 
     a = floatX((3 - np.sqrt(3)) / 6)
 
@@ -263,9 +279,11 @@ def _theano_single_twostage(H, q, p, q_grad, **theano_kwargs):
     v_e = H.pot.velocity(p_e)
 
     new_energy = energy(H, q_e, p_e)
-    f = theano.function(inputs=[q, p, q_grad, epsilon],
-                        outputs=[q_e, p_e, v_e, grad_e, new_energy],
-                        **theano_kwargs)
+    f = theano.function(
+        inputs=[q, p, q_grad, epsilon],
+        outputs=[q_e, p_e, v_e, grad_e, new_energy],
+        **theano_kwargs
+    )
     f.trust_input = True
     return f
 
@@ -276,8 +294,8 @@ def _theano_single_leapfrog(H, q, p, q_grad, **theano_kwargs):
     See above for documentation.  This is optimized for the case where only a single step is
     needed, in case of, for example, a recursive algorithm.
     """
-    epsilon = tt.scalar('epsilon')
-    epsilon.tag.test_value = 1.
+    epsilon = tt.scalar("epsilon")
+    epsilon.tag.test_value = 1.0
 
     p_new = p + 0.5 * epsilon * q_grad  # half momentum update
     q_new = q + epsilon * H.pot.velocity(p_new)  # full position update
@@ -286,15 +304,17 @@ def _theano_single_leapfrog(H, q, p, q_grad, **theano_kwargs):
     energy_new = energy(H, q_new, p_new)
     v_new = H.pot.velocity(p_new)
 
-    f = theano.function(inputs=[q, p, q_grad, epsilon],
-                        outputs=[q_new, p_new, v_new, q_new_grad, energy_new],
-                        **theano_kwargs)
+    f = theano.function(
+        inputs=[q, p, q_grad, epsilon],
+        outputs=[q_new, p_new, v_new, q_new_grad, energy_new],
+        **theano_kwargs
+    )
     f.trust_input = True
     return f
 
 
 INTEGRATORS_SINGLE = {
-    'leapfrog': _theano_single_leapfrog,
-    'two-stage': _theano_single_twostage,
-    'three-stage': _theano_single_threestage,
+    "leapfrog": _theano_single_leapfrog,
+    "two-stage": _theano_single_twostage,
+    "three-stage": _theano_single_threestage,
 }

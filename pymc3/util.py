@@ -2,7 +2,7 @@ import re
 import functools
 from numpy import asscalar
 
-LATEX_ESCAPE_RE = re.compile(r'(%|_|\$|#|&)', re.MULTILINE)
+LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
 
 
 def escape_latex(strng):
@@ -25,8 +25,8 @@ def escape_latex(strng):
         A string with LaTeX escaped
     """
     if strng is None:
-        return u'None'
-    return LATEX_ESCAPE_RE.sub(r'\\\1', strng)
+        return u"None"
+    return LATEX_ESCAPE_RE.sub(r"\\\1", strng)
 
 
 def get_transformed_name(name, transform):
@@ -62,7 +62,7 @@ def is_transformed_name(name):
     bool
         Boolean, whether the string could have been produced by `get_transormed_name`
     """
-    return name.endswith('__') and name.count('_') >= 3
+    return name.endswith("__") and name.count("_") >= 3
 
 
 def get_untransformed_name(name):
@@ -80,9 +80,8 @@ def get_untransformed_name(name):
         String with untransformed version of the name.
     """
     if not is_transformed_name(name):
-        raise ValueError(
-            u'{} does not appear to be a transformed name'.format(name))
-    return '_'.join(name.split('_')[:-3])
+        raise ValueError(u"{} does not appear to be a transformed name".format(name))
+    return "_".join(name.split("_")[:-3])
 
 
 def get_default_varnames(var_iterator, include_transformed):
@@ -112,19 +111,20 @@ def get_variable_name(variable):
     """
     name = variable.name
     if name is None:
-        if hasattr(variable, 'get_parents'):
+        if hasattr(variable, "get_parents"):
             try:
-                names = [get_variable_name(item)
-                         for item in variable.get_parents()[0].inputs]
+                names = [
+                    get_variable_name(item) for item in variable.get_parents()[0].inputs
+                ]
                 # do not escape_latex these, since it is not idempotent
-                return 'f(%s)' % ',~'.join([n for n in names if isinstance(n, str)])
+                return "f(%s)" % ",~".join([n for n in names if isinstance(n, str)])
             except IndexError:
                 pass
         value = variable.eval()
         if not value.shape:
             return asscalar(value)
-        return 'array'
-    return r'\text{%s}' % name
+        return "array"
+    return r"\text{%s}" % name
 
 
 def update_start_vals(a, b, model):
@@ -137,16 +137,16 @@ def update_start_vals(a, b, model):
             for name in a:
                 if is_transformed_name(tname) and get_untransformed_name(tname) == name:
                     transform_func = [
-                        d.transformation for d in model.deterministics if d.name == name]
+                        d.transformation for d in model.deterministics if d.name == name
+                    ]
                     if transform_func:
-                        b[tname] = transform_func[0].forward_val(
-                            a[name], point=b)
+                        b[tname] = transform_func[0].forward_val(a[name], point=b)
 
     a.update({k: v for k, v in b.items() if k not in a})
 
 
 def get_transformed(z):
-    if hasattr(z, 'transformed'):
+    if hasattr(z, "transformed"):
         z = z.transformed
     return z
 
@@ -165,4 +165,5 @@ def biwrap(wrapper):
         else:
             newwrapper = functools.partial(wrapper, *args, **kwargs)
             return newwrapper
+
     return enhanced

@@ -9,9 +9,23 @@ from .artists import plot_posterior_op, get_trace_dict, scale_text
 from .utils import identity_transform, get_default_varnames
 
 
-def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=None, text_size=None,
-                   alpha_level=0.05, round_to=3, point_estimate='mean', rope=None,
-                   ref_val=None, kde_plot=False, plot_transformed=False, bw=4.5, ax=None, **kwargs):
+def plot_posterior(
+    trace,
+    varnames=None,
+    transform=identity_transform,
+    figsize=None,
+    text_size=None,
+    alpha_level=0.05,
+    round_to=3,
+    point_estimate="mean",
+    rope=None,
+    ref_val=None,
+    kde_plot=False,
+    plot_transformed=False,
+    bw=4.5,
+    ax=None,
+    **kwargs
+):
     """Plot Posterior densities in style of John K. Kruschke book.
 
     Parameters
@@ -83,10 +97,19 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
 
-
-        plot_posterior_op(transform(trace), ax=ax, bw=bw, kde_plot=kde_plot,
-                          point_estimate=point_estimate, round_to=round_to, alpha_level=alpha_level,
-                          ref_val=ref_val, rope=rope, text_size=scale_text(figsize, text_size), **kwargs)
+        plot_posterior_op(
+            transform(trace),
+            ax=ax,
+            bw=bw,
+            kde_plot=kde_plot,
+            point_estimate=point_estimate,
+            round_to=round_to,
+            alpha_level=alpha_level,
+            ref_val=ref_val,
+            rope=rope,
+            text_size=scale_text(figsize, text_size),
+            **kwargs
+        )
 
     else:
         if varnames is None:
@@ -110,10 +133,19 @@ def plot_posterior(trace, varnames=None, transform=identity_transform, figsize=N
 
         for idx, (a, v) in enumerate(zip(np.atleast_1d(ax), trace_dict)):
             tr_values = transform(trace_dict[v])
-            plot_posterior_op(tr_values, ax=a, bw=bw, kde_plot=kde_plot,
-                              point_estimate=point_estimate, round_to=round_to,
-                              alpha_level=alpha_level, ref_val=ref_val[idx],
-                              rope=rope[idx], text_size=scale_text(figsize, text_size), **kwargs)
+            plot_posterior_op(
+                tr_values,
+                ax=a,
+                bw=bw,
+                kde_plot=kde_plot,
+                point_estimate=point_estimate,
+                round_to=round_to,
+                alpha_level=alpha_level,
+                ref_val=ref_val[idx],
+                rope=rope[idx],
+                text_size=scale_text(figsize, text_size),
+                **kwargs
+            )
             a.set_title(v, fontsize=scale_text(figsize, text_size))
 
         plt.tight_layout()
@@ -137,21 +169,21 @@ def plot_posterior_predictive_glm(trace, eval=None, lm=None, samples=30, **kwarg
     Additional keyword arguments are passed to pylab.plot().
     """
     if lm is None:
-        lm = lambda x, sample: sample['Intercept'] + sample['x'] * x
+        lm = lambda x, sample: sample["Intercept"] + sample["x"] * x
 
     if eval is None:
         eval = np.linspace(0, 1, 100)
 
     # Set default plotting arguments
-    if 'lw' not in kwargs and 'linewidth' not in kwargs:
-        kwargs['lw'] = .2
-    if 'c' not in kwargs and 'color' not in kwargs:
-        kwargs['c'] = 'k'
+    if "lw" not in kwargs and "linewidth" not in kwargs:
+        kwargs["lw"] = 0.2
+    if "c" not in kwargs and "color" not in kwargs:
+        kwargs["c"] = "k"
 
     for rand_loc in np.random.randint(0, len(trace), samples):
         rand_sample = trace[rand_loc]
         plt.plot(eval, lm(eval, rand_sample), **kwargs)
-    # Make sure to not plot label multiple times
-        kwargs.pop('label', None)
+        # Make sure to not plot label multiple times
+        kwargs.pop("label", None)
 
-    plt.title('Posterior predictive')
+    plt.title("Posterior predictive")

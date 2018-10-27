@@ -19,7 +19,7 @@ def all_discrete(comp_dists):
 
 
 class Mixture(Distribution):
-    R"""
+    r"""
     Mixture log-likelihood
 
     Often used to model subpopulation heterogeneity
@@ -69,23 +69,23 @@ class Mixture(Distribution):
     """
 
     def __init__(self, w, comp_dists, *args, **kwargs):
-        shape = kwargs.pop('shape', ())
+        shape = kwargs.pop("shape", ())
 
         self.w = w = tt.as_tensor_variable(w)
         self.comp_dists = comp_dists
 
-        defaults = kwargs.pop('defaults', [])
+        defaults = kwargs.pop("defaults", [])
 
         if all_discrete(comp_dists):
-            dtype = kwargs.pop('dtype', 'int64')
+            dtype = kwargs.pop("dtype", "int64")
         else:
-            dtype = kwargs.pop('dtype', 'float64')
+            dtype = kwargs.pop("dtype", "float64")
 
             try:
                 self.mean = (w * self._comp_means()).sum(axis=-1)
 
-                if 'mean' not in defaults:
-                    defaults.append('mean')
+                if "mean" not in defaults:
+                    defaults.append("mean")
             except AttributeError:
                 pass
 
@@ -94,13 +94,12 @@ class Mixture(Distribution):
             comp_mode_logps = self.logp(comp_modes)
             self.mode = comp_modes[tt.argmax(w * comp_mode_logps, axis=-1)]
 
-            if 'mode' not in defaults:
-                defaults.append('mode')
+            if "mode" not in defaults:
+                defaults.append("mode")
         except (AttributeError, ValueError, IndexError):
             pass
 
-        super(Mixture, self).__init__(shape, dtype, defaults=defaults,
-                                      *args, **kwargs)
+        super(Mixture, self).__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
     def _comp_logp(self, value):
         comp_dists = self.comp_dists
@@ -110,41 +109,49 @@ class Mixture(Distribution):
 
             return comp_dists.logp(value_)
         except AttributeError:
-            return tt.squeeze(tt.stack([comp_dist.logp(value)
-                                        for comp_dist in comp_dists],
-                                       axis=1))
+            return tt.squeeze(
+                tt.stack([comp_dist.logp(value) for comp_dist in comp_dists], axis=1)
+            )
 
     def _comp_means(self):
         try:
             return tt.as_tensor_variable(self.comp_dists.mean)
         except AttributeError:
-            return tt.squeeze(tt.stack([comp_dist.mean
-                                        for comp_dist in self.comp_dists],
-                                       axis=1))
+            return tt.squeeze(
+                tt.stack([comp_dist.mean for comp_dist in self.comp_dists], axis=1)
+            )
 
     def _comp_modes(self):
         try:
             return tt.as_tensor_variable(self.comp_dists.mode)
         except AttributeError:
-            return tt.squeeze(tt.stack([comp_dist.mode
-                                        for comp_dist in self.comp_dists],
-                                       axis=1))
+            return tt.squeeze(
+                tt.stack([comp_dist.mode for comp_dist in self.comp_dists], axis=1)
+            )
 
     def _comp_samples(self, point=None, size=None):
         try:
             samples = self.comp_dists.random(point=point, size=size)
         except AttributeError:
-            samples = np.column_stack([comp_dist.random(point=point, size=size)
-                                       for comp_dist in self.comp_dists])
+            samples = np.column_stack(
+                [
+                    comp_dist.random(point=point, size=size)
+                    for comp_dist in self.comp_dists
+                ]
+            )
 
         return np.squeeze(samples)
 
     def logp(self, value):
         w = self.w
 
-        return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1),
-                     w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1),
-                     broadcast_conditions=False)
+        return bound(
+            logsumexp(tt.log(w) + self._comp_logp(value), axis=-1),
+            w >= 0,
+            w <= 1,
+            tt.allclose(w.sum(axis=-1), 1),
+            broadcast_conditions=False,
+        )
 
     def random(self, point=None, size=None):
         w = draw_values([self.w], point=point)[0]
@@ -157,26 +164,34 @@ class Mixture(Distribution):
         # Normalize inputs
         w /= w.sum(axis=-1, keepdims=True)
 
-        w_samples = generate_samples(random_choice,
-                                     p=w,
-                                     broadcast_shape=w.shape[:-1] or (1,),
-                                     dist_shape=distshape,
-                                     size=size).squeeze()
+        w_samples = generate_samples(
+            random_choice,
+            p=w,
+            broadcast_shape=w.shape[:-1] or (1,),
+            dist_shape=distshape,
+            size=size,
+        ).squeeze()
         if (size is None) or (distshape.size == 0):
             comp_samples = self._comp_samples(point=point, size=size)
             if comp_samples.ndim > 1:
-                samples = np.squeeze(comp_samples[np.arange(w_samples.size), ..., w_samples])
+                samples = np.squeeze(
+                    comp_samples[np.arange(w_samples.size), ..., w_samples]
+                )
             else:
                 samples = np.squeeze(comp_samples[w_samples])
         else:
             if w_samples.ndim == 1:
-                w_samples = np.reshape(np.tile(w_samples, size), (size,) + w_samples.shape)
-            samples = np.zeros((size,)+tuple(distshape))
+                w_samples = np.reshape(
+                    np.tile(w_samples, size), (size,) + w_samples.shape
+                )
+            samples = np.zeros((size,) + tuple(distshape))
             for i in range(size):
                 w_tmp = w_samples[i, :]
                 comp_tmp = self._comp_samples(point=point, size=None)
                 if comp_tmp.ndim > 1:
-                    samples[i, :] = np.squeeze(comp_tmp[np.arange(w_tmp.size), ..., w_tmp])
+                    samples[i, :] = np.squeeze(
+                        comp_tmp[np.arange(w_tmp.size), ..., w_tmp]
+                    )
                 else:
                     samples[i, :] = np.squeeze(comp_tmp[w_tmp])
 
@@ -184,7 +199,7 @@ class Mixture(Distribution):
 
 
 class NormalMixture(Mixture):
-    R"""
+    r"""
     Normal mixture log-likelihood
 
     .. math::
@@ -217,14 +232,14 @@ class NormalMixture(Mixture):
     """
 
     def __init__(self, w, mu, comp_shape=(), *args, **kwargs):
-        _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
-                           sd=kwargs.pop('sd', None))
+        _, sd = get_tau_sd(tau=kwargs.pop("tau", None), sd=kwargs.pop("sd", None))
 
         self.mu = mu = tt.as_tensor_variable(mu)
         self.sd = sd = tt.as_tensor_variable(sd)
 
-        super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd, shape=comp_shape),
-                                            *args, **kwargs)
+        super(NormalMixture, self).__init__(
+            w, Normal.dist(mu, sd=sd, shape=comp_shape), *args, **kwargs
+        )
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -232,8 +247,7 @@ class NormalMixture(Mixture):
         mu = dist.mu
         w = dist.w
         sd = dist.sd
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{NormalMixture}}(\mathit{{w}}={},~\mathit{{mu}}={},~\mathit{{sigma}}={})$'.format(name,
-                                                get_variable_name(w),
-                                                get_variable_name(mu),
-                                                get_variable_name(sd))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{NormalMixture}}(\mathit{{w}}={},~\mathit{{mu}}={},~\mathit{{sigma}}={})$".format(
+            name, get_variable_name(w), get_variable_name(mu), get_variable_name(sd)
+        )

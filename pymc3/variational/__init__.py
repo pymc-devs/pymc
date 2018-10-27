@@ -13,7 +13,7 @@ from .updates import (
     adam,
     adamax,
     norm_constraint,
-    total_norm_constraint
+    total_norm_constraint,
 )
 
 from . import inference
@@ -26,7 +26,7 @@ from .inference import (
     Inference,
     KLqp,
     ImplicitGradient,
-    fit
+    fit,
 )
 
 from . import approximations
@@ -35,13 +35,10 @@ from .approximations import (
     FullRank,
     Empirical,
     NormalizingFlow,
-    sample_approx
+    sample_approx,
 )
 from . import opvi
-from .opvi import (
-    Group,
-    Approximation
-)
+from .opvi import Group, Approximation
 
 # special
 from .stein import Stein

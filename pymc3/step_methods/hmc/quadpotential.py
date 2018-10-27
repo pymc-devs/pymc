@@ -7,8 +7,14 @@ import theano
 from pymc3.theanof import floatX
 
 
-__all__ = ['quad_potential', 'QuadPotentialDiag', 'QuadPotentialFull',
-           'QuadPotentialFullInv', 'QuadPotentialDiagAdapt', 'isquadpotential']
+__all__ = [
+    "quad_potential",
+    "QuadPotentialDiag",
+    "QuadPotentialFull",
+    "QuadPotentialFullInv",
+    "QuadPotentialDiagAdapt",
+    "isquadpotential",
+]
 
 
 def quad_potential(C, is_cov):
@@ -40,7 +46,7 @@ def quad_potential(C, is_cov):
         if is_cov:
             return QuadPotentialDiag(C)
         else:
-            return QuadPotentialDiag(1. / C)
+            return QuadPotentialDiag(1.0 / C)
     else:
         if is_cov:
             return QuadPotentialFull(C)
@@ -58,7 +64,8 @@ def partial_check_positive_definite(C):
 
     if len(i):
         raise PositiveDefiniteError(
-            "Simple check failed. Diagonal contains negatives", i)
+            "Simple check failed. Diagonal contains negatives", i
+        )
 
 
 class PositiveDefiniteError(ValueError):
@@ -68,23 +75,25 @@ class PositiveDefiniteError(ValueError):
         self.msg = msg
 
     def __str__(self):
-        return ("Scaling is not positive definite: %s. Check indexes %s."
-                % (self.msg, self.idx))
+        return "Scaling is not positive definite: %s. Check indexes %s." % (
+            self.msg,
+            self.idx,
+        )
 
 
 class QuadPotential(object):
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
-        raise NotImplementedError('Abstract method')
+        raise NotImplementedError("Abstract method")
 
     def energy(self, x, velocity=None):
-        raise NotImplementedError('Abstract method')
+        raise NotImplementedError("Abstract method")
 
     def random(self, x):
-        raise NotImplementedError('Abstract method')
+        raise NotImplementedError("Abstract method")
 
     def velocity_energy(self, x, v_out):
-        raise NotImplementedError('Abstract method')
+        raise NotImplementedError("Abstract method")
 
     def update(self, sample, grad, tune):
         """Inform the potential about a new sample during tuning.
@@ -124,19 +133,30 @@ def isquadpotential(value):
 class QuadPotentialDiagAdapt(QuadPotential):
     """Adapt a diagonal mass matrix from the sample variances."""
 
-    def __init__(self, n, initial_mean, initial_diag=None, initial_weight=0,
-                 adaptation_window=101, dtype=None):
+    def __init__(
+        self,
+        n,
+        initial_mean,
+        initial_diag=None,
+        initial_weight=0,
+        adaptation_window=101,
+        dtype=None,
+    ):
         """Set up a diagonal mass matrix."""
         if initial_diag is not None and initial_diag.ndim != 1:
-            raise ValueError('Initial diagonal must be one-dimensional.')
+            raise ValueError("Initial diagonal must be one-dimensional.")
         if initial_mean.ndim != 1:
-            raise ValueError('Initial mean must be one-dimensional.')
+            raise ValueError("Initial mean must be one-dimensional.")
         if initial_diag is not None and len(initial_diag) != n:
-            raise ValueError('Wrong shape for initial_diag: expected %s got %s'
-                             % (n, len(initial_diag)))
+            raise ValueError(
+                "Wrong shape for initial_diag: expected %s got %s"
+                % (n, len(initial_diag))
+            )
         if len(initial_mean) != n:
-            raise ValueError('Wrong shape for initial_mean: expected %s got %s'
-                             % (n, len(initial_mean)))
+            raise ValueError(
+                "Wrong shape for initial_mean: expected %s got %s"
+                % (n, len(initial_mean))
+            )
 
         if dtype is None:
             dtype = theano.config.floatX
@@ -150,9 +170,10 @@ class QuadPotentialDiagAdapt(QuadPotential):
         self._var = np.array(initial_diag, dtype=self.dtype, copy=True)
         self._var_theano = theano.shared(self._var)
         self._stds = np.sqrt(initial_diag)
-        self._inv_stds = floatX(1.) / self._stds
+        self._inv_stds = floatX(1.0) / self._stds
         self._foreground_var = _WeightedVariance(
-            self._n, initial_mean, initial_diag, initial_weight, self.dtype)
+            self._n, initial_mean, initial_diag, initial_weight, self.dtype
+        )
         self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
         self._n_samples = 0
         self.adaptation_window = adaptation_window
@@ -224,11 +245,13 @@ class QuadPotentialDiagAdapt(QuadPotential):
                 for i in range(slclen):
                     name_slc.append((vmap_.var, i))
             index = np.where(self._stds == 0)[0]
-            errmsg = ['Mass matrix contains zeros on the diagonal. ']
+            errmsg = ["Mass matrix contains zeros on the diagonal. "]
             for ii in index:
-                errmsg.append('The derivative of RV `{}`.ravel()[{}]'
-                              ' is zero.'.format(*name_slc[ii]))
-            raise ValueError('\n'.join(errmsg))
+                errmsg.append(
+                    "The derivative of RV `{}`.ravel()[{}]"
+                    " is zero.".format(*name_slc[ii])
+                )
+            raise ValueError("\n".join(errmsg))
 
         if np.any(~np.isfinite(self._stds)):
             name_slc = []
@@ -238,11 +261,13 @@ class QuadPotentialDiagAdapt(QuadPotential):
                 for i in range(slclen):
                     name_slc.append((vmap_.var, i))
             index = np.where(~np.isfinite(self._stds))[0]
-            errmsg = ['Mass matrix contains non-finite values on the diagonal. ']
+            errmsg = ["Mass matrix contains non-finite values on the diagonal. "]
             for ii in index:
-                errmsg.append('The derivative of RV `{}`.ravel()[{}]'
-                              ' is non-finite.'.format(*name_slc[ii]))
-            raise ValueError('\n'.join(errmsg))
+                errmsg.append(
+                    "The derivative of RV `{}`.ravel()[{}]"
+                    " is non-finite.".format(*name_slc[ii])
+                )
+            raise ValueError("\n".join(errmsg))
 
 
 class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
@@ -289,26 +314,32 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
 class _WeightedVariance(object):
     """Online algorithm for computing mean of variance."""
 
-    def __init__(self, nelem, initial_mean=None, initial_variance=None,
-                 initial_weight=0, dtype='d'):
+    def __init__(
+        self,
+        nelem,
+        initial_mean=None,
+        initial_variance=None,
+        initial_weight=0,
+        dtype="d",
+    ):
         self._dtype = dtype
         self.w_sum = float(initial_weight)
         self.w_sum2 = float(initial_weight) ** 2
         if initial_mean is None:
-            self.mean = np.zeros(nelem, dtype='d')
+            self.mean = np.zeros(nelem, dtype="d")
         else:
-            self.mean = np.array(initial_mean, dtype='d', copy=True)
+            self.mean = np.array(initial_mean, dtype="d", copy=True)
         if initial_variance is None:
-            self.raw_var = np.zeros(nelem, dtype='d')
+            self.raw_var = np.zeros(nelem, dtype="d")
         else:
-            self.raw_var = np.array(initial_variance, dtype='d', copy=True)
+            self.raw_var = np.array(initial_variance, dtype="d", copy=True)
 
         self.raw_var[:] *= self.w_sum
 
         if self.raw_var.shape != (nelem,):
-            raise ValueError('Invalid shape for initial variance.')
+            raise ValueError("Invalid shape for initial variance.")
         if self.mean.shape != (nelem,):
-            raise ValueError('Invalid shape for initial mean.')
+            raise ValueError("Invalid shape for initial mean.")
 
     def add_sample(self, x, weight):
         x = np.asarray(x)
@@ -322,7 +353,7 @@ class _WeightedVariance(object):
 
     def current_variance(self, out=None):
         if self.w_sum == 0:
-            raise ValueError('Can not compute variance without samples.')
+            raise ValueError("Can not compute variance without samples.")
         if out is not None:
             return np.divide(self.raw_var, self.w_sum, out=out)
         else:
@@ -347,10 +378,10 @@ class QuadPotentialDiag(QuadPotential):
             dtype = theano.config.floatX
         self.dtype = dtype
         v = v.astype(self.dtype)
-        s = v ** .5
+        s = v ** 0.5
 
         self.s = s
-        self.inv_s = 1. / s
+        self.inv_s = 1.0 / s
         self.v = v
 
     def velocity(self, x, out=None):
@@ -368,7 +399,7 @@ class QuadPotentialDiag(QuadPotential):
         """Compute kinetic energy at a position in parameter space."""
         if velocity is not None:
             return 0.5 * np.dot(x, velocity)
-        return .5 * x.dot(self.v * x)
+        return 0.5 * x.dot(self.v * x)
 
     def velocity_energy(self, x, v_out):
         """Compute velocity and return kinetic energy at a position in parameter space."""
@@ -408,7 +439,7 @@ class QuadPotentialFullInv(QuadPotential):
         """Compute kinetic energy at a position in parameter space."""
         if velocity is None:
             velocity = self.velocity(x)
-        return .5 * x.dot(velocity)
+        return 0.5 * x.dot(velocity)
 
     def velocity_energy(self, x, v_out):
         """Compute velocity and return kinetic energy at a position in parameter space."""
@@ -446,7 +477,7 @@ class QuadPotentialFull(QuadPotential):
         """Compute kinetic energy at a position in parameter space."""
         if velocity is None:
             velocity = self.velocity(x)
-        return .5 * x.dot(velocity)
+        return 0.5 * x.dot(velocity)
 
     def velocity_energy(self, x, v_out):
         """Compute velocity and return kinetic energy at a position in parameter space."""
@@ -458,12 +489,13 @@ class QuadPotentialFull(QuadPotential):
 
 try:
     import sksparse.cholmod as cholmod
+
     chol_available = True
 except ImportError:
     chol_available = False
 
 if chol_available:
-    __all__ += ['QuadPotentialSparse']
+    __all__ += ["QuadPotentialSparse"]
 
     import theano.sparse
 

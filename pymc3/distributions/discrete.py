@@ -10,14 +10,27 @@ from .distribution import Discrete, draw_values, generate_samples
 from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
 
 
-__all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
-           'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
-           'ZeroInflatedPoisson', 'ZeroInflatedBinomial', 'ZeroInflatedNegativeBinomial',
-           'DiscreteUniform', 'Geometric', 'Categorical', 'OrderedLogistic']
+__all__ = [
+    "Binomial",
+    "BetaBinomial",
+    "Bernoulli",
+    "DiscreteWeibull",
+    "Poisson",
+    "NegativeBinomial",
+    "ConstantDist",
+    "Constant",
+    "ZeroInflatedPoisson",
+    "ZeroInflatedBinomial",
+    "ZeroInflatedNegativeBinomial",
+    "DiscreteUniform",
+    "Geometric",
+    "Categorical",
+    "OrderedLogistic",
+]
 
 
 class Binomial(Discrete):
-    R"""
+    r"""
     Binomial log-likelihood.
 
     The discrete probability distribution of the number of successes
@@ -66,9 +79,9 @@ class Binomial(Discrete):
 
     def random(self, point=None, size=None):
         n, p = draw_values([self.n, self.p], point=point, size=size)
-        return generate_samples(stats.binom.rvs, n=n, p=p,
-                                dist_shape=self.shape,
-                                size=size)
+        return generate_samples(
+            stats.binom.rvs, n=n, p=p, dist_shape=self.shape, size=size
+        )
 
     def logp(self, value):
         n = self.n
@@ -76,21 +89,25 @@ class Binomial(Discrete):
 
         return bound(
             binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
-            0 <= value, value <= n,
-            0 <= p, p <= 1)
+            0 <= value,
+            value <= n,
+            0 <= p,
+            p <= 1,
+        )
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         n = dist.n
         p = dist.p
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Binomial}}(\mathit{{n}}={},~\mathit{{p}}={})$'.format(name,
-                                                get_variable_name(n),
-                                                get_variable_name(p))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{Binomial}}(\mathit{{n}}={},~\mathit{{p}}={})$".format(
+            name, get_variable_name(n), get_variable_name(p)
+        )
+
 
 class BetaBinomial(Discrete):
-    R"""
+    r"""
     Beta-binomial log-likelihood.
 
     Equivalent to binomial random variable with success probability
@@ -149,7 +166,7 @@ class BetaBinomial(Discrete):
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.beta = beta = tt.as_tensor_variable(beta)
         self.n = n = tt.as_tensor_variable(n)
-        self.mode = tt.cast(tround(alpha / (alpha + beta)), 'int8')
+        self.mode = tt.cast(tround(alpha / (alpha + beta)), "int8")
 
     def _random(self, alpha, beta, n, size=None):
         size = size or 1
@@ -163,42 +180,50 @@ class BetaBinomial(Discrete):
 
         quotient, remainder = divmod(_p.shape[0], _n.shape[0])
         if remainder != 0:
-            raise TypeError('n has a bad size! Was cast to {}, must evenly divide {}'.format(
-                _n.shape[0], _p.shape[0]))
+            raise TypeError(
+                "n has a bad size! Was cast to {}, must evenly divide {}".format(
+                    _n.shape[0], _p.shape[0]
+                )
+            )
         if quotient != 1:
             _n = np.tile(_n, quotient)
         samples = np.reshape(stats.binom.rvs(n=_n, p=_p, size=_size), size)
         return samples
 
     def random(self, point=None, size=None):
-        alpha, beta, n = \
-            draw_values([self.alpha, self.beta, self.n], point=point, size=size)
-        return generate_samples(self._random, alpha=alpha, beta=beta, n=n,
-                                dist_shape=self.shape,
-                                size=size)
+        alpha, beta, n = draw_values(
+            [self.alpha, self.beta, self.n], point=point, size=size
+        )
+        return generate_samples(
+            self._random, alpha=alpha, beta=beta, n=n, dist_shape=self.shape, size=size
+        )
 
     def logp(self, value):
         alpha = self.alpha
         beta = self.beta
-        return bound(binomln(self.n, value)
-                     + betaln(value + alpha, self.n - value + beta)
-                     - betaln(alpha, beta),
-                     value >= 0, value <= self.n,
-                     alpha > 0, beta > 0)
+        return bound(
+            binomln(self.n, value)
+            + betaln(value + alpha, self.n - value + beta)
+            - betaln(alpha, beta),
+            value >= 0,
+            value <= self.n,
+            alpha > 0,
+            beta > 0,
+        )
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         alpha = dist.alpha
         beta = dist.beta
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{BetaBinomial}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
-                                                get_variable_name(alpha),
-                                                get_variable_name(beta))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{BetaBinomial}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$".format(
+            name, get_variable_name(alpha), get_variable_name(beta)
+        )
 
 
 class Bernoulli(Discrete):
-    R"""Bernoulli log-likelihood
+    r"""Bernoulli log-likelihood
 
     The Bernoulli distribution describes the probability of successes
     (x=1) and failures (x=0).
@@ -240,7 +265,7 @@ class Bernoulli(Discrete):
     def __init__(self, p=None, logit_p=None, *args, **kwargs):
         super(Bernoulli, self).__init__(*args, **kwargs)
         if sum(int(var is None) for var in [p, logit_p]) != 1:
-            raise ValueError('Specify one of p and logit_p')
+            raise ValueError("Specify one of p and logit_p")
         if p is not None:
             self._is_logit = False
             self.p = p = tt.as_tensor_variable(p)
@@ -250,13 +275,13 @@ class Bernoulli(Discrete):
             self.p = tt.nnet.sigmoid(logit_p)
             self._logit_p = tt.as_tensor_variable(logit_p)
 
-        self.mode = tt.cast(tround(self.p), 'int8')
+        self.mode = tt.cast(tround(self.p), "int8")
 
     def random(self, point=None, size=None):
         p = draw_values([self.p], point=point, size=size)[0]
-        return generate_samples(stats.bernoulli.rvs, p,
-                                dist_shape=self.shape,
-                                size=size)
+        return generate_samples(
+            stats.bernoulli.rvs, p, dist_shape=self.shape, size=size
+        )
 
     def logp(self, value):
         if self._is_logit:
@@ -266,20 +291,24 @@ class Bernoulli(Discrete):
             p = self.p
             return bound(
                 tt.switch(value, tt.log(p), tt.log(1 - p)),
-                value >= 0, value <= 1,
-                p >= 0, p <= 1)
+                value >= 0,
+                value <= 1,
+                p >= 0,
+                p <= 1,
+            )
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         p = dist.p
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Bernoulli}}(\mathit{{p}}={})$'.format(name,
-                                                get_variable_name(p))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{Bernoulli}}(\mathit{{p}}={})$".format(
+            name, get_variable_name(p)
+        )
 
 
 class DiscreteWeibull(Discrete):
-    R"""Discrete Weibull log-likelihood
+    r"""Discrete Weibull log-likelihood
 
     The discrete Weibull distribution is a flexible model of count data that
     can handle both over- and under-dispersion.
@@ -316,8 +345,9 @@ class DiscreteWeibull(Discrete):
     Variance  :math:`2 \sum_{x = 1}^{\infty} x q^{x^{\beta}} - \mu - \mu^2`
     ========  ======================
     """
+
     def __init__(self, q, beta, *args, **kwargs):
-        super(DiscreteWeibull, self).__init__(*args, defaults=('median',), **kwargs)
+        super(DiscreteWeibull, self).__init__(*args, defaults=("median",), **kwargs)
 
         self.q = q = tt.as_tensor_variable(q)
         self.beta = beta = tt.as_tensor_variable(beta)
@@ -328,10 +358,16 @@ class DiscreteWeibull(Discrete):
         q = self.q
         beta = self.beta
 
-        return bound(tt.log(tt.power(q, tt.power(value, beta)) - tt.power(q, tt.power(value + 1, beta))),
-                     0 <= value,
-                     0 < q, q < 1,
-                     0 < beta)
+        return bound(
+            tt.log(
+                tt.power(q, tt.power(value, beta))
+                - tt.power(q, tt.power(value + 1, beta))
+            ),
+            0 <= value,
+            0 < q,
+            q < 1,
+            0 < beta,
+        )
 
     def _ppf(self, p):
         """
@@ -341,33 +377,33 @@ class DiscreteWeibull(Discrete):
         q = self.q
         beta = self.beta
 
-        return (tt.ceil(tt.power(tt.log(1 - p) / tt.log(q), 1. / beta)) - 1).astype('int64')
+        return (tt.ceil(tt.power(tt.log(1 - p) / tt.log(q), 1.0 / beta)) - 1).astype(
+            "int64"
+        )
 
     def _random(self, q, beta, size=None):
         p = np.random.uniform(size=size)
 
-        return np.ceil(np.power(np.log(1 - p) / np.log(q), 1. / beta)) - 1
+        return np.ceil(np.power(np.log(1 - p) / np.log(q), 1.0 / beta)) - 1
 
     def random(self, point=None, size=None):
         q, beta = draw_values([self.q, self.beta], point=point, size=size)
 
-        return generate_samples(self._random, q, beta,
-                                dist_shape=self.shape,
-                                size=size)
+        return generate_samples(self._random, q, beta, dist_shape=self.shape, size=size)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         q = dist.q
         beta = dist.beta
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{DiscreteWeibull}}(\mathit{{q}}={},~\mathit{{beta}}={})$'.format(name,
-                                                get_variable_name(q),
-                                                get_variable_name(beta))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{DiscreteWeibull}}(\mathit{{q}}={},~\mathit{{beta}}={})$".format(
+            name, get_variable_name(q), get_variable_name(beta)
+        )
 
 
 class Poisson(Discrete):
-    R"""
+    r"""
     Poisson log-likelihood.
 
     Often used to model the number of events occurring in a fixed period
@@ -413,34 +449,30 @@ class Poisson(Discrete):
     def __init__(self, mu, *args, **kwargs):
         super(Poisson, self).__init__(*args, **kwargs)
         self.mu = mu = tt.as_tensor_variable(mu)
-        self.mode = tt.floor(mu).astype('int32')
+        self.mode = tt.floor(mu).astype("int32")
 
     def random(self, point=None, size=None):
         mu = draw_values([self.mu], point=point, size=size)[0]
-        return generate_samples(stats.poisson.rvs, mu,
-                                dist_shape=self.shape,
-                                size=size)
+        return generate_samples(stats.poisson.rvs, mu, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         mu = self.mu
-        log_prob = bound(
-            logpow(mu, value) - factln(value) - mu,
-            mu >= 0, value >= 0)
+        log_prob = bound(logpow(mu, value) - factln(value) - mu, mu >= 0, value >= 0)
         # Return zero when mu and value are both zero
-        return tt.switch(tt.eq(mu, 0) * tt.eq(value, 0),
-                         0, log_prob)
+        return tt.switch(tt.eq(mu, 0) * tt.eq(value, 0), 0, log_prob)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         mu = dist.mu
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Poisson}}(\mathit{{mu}}={})$'.format(name,
-                                                get_variable_name(mu))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{Poisson}}(\mathit{{mu}}={})$".format(
+            name, get_variable_name(mu)
+        )
 
 
 class NegativeBinomial(Discrete):
-    R"""
+    r"""
     Negative binomial log-likelihood.
 
     The negative binomial distribution describes a Poisson random variable
@@ -493,42 +525,46 @@ class NegativeBinomial(Discrete):
         super(NegativeBinomial, self).__init__(*args, **kwargs)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
-        self.mode = tt.floor(mu).astype('int32')
+        self.mode = tt.floor(mu).astype("int32")
 
     def random(self, point=None, size=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point, size=size)
-        g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
-                             dist_shape=self.shape,
-                             size=size)
+        g = generate_samples(
+            stats.gamma.rvs, alpha, scale=mu / alpha, dist_shape=self.shape, size=size
+        )
         g[g == 0] = np.finfo(float).eps  # Just in case
         return np.asarray(stats.poisson.rvs(g)).reshape(g.shape)
 
     def logp(self, value):
         mu = self.mu
         alpha = self.alpha
-        negbinom = bound(binomln(value + alpha - 1, value)
-                         + logpow(mu / (mu + alpha), value)
-                         + logpow(alpha / (mu + alpha), alpha),
-                         value >= 0, mu > 0, alpha > 0)
+        negbinom = bound(
+            binomln(value + alpha - 1, value)
+            + logpow(mu / (mu + alpha), value)
+            + logpow(alpha / (mu + alpha), alpha),
+            value >= 0,
+            mu > 0,
+            alpha > 0,
+        )
 
         # Return Poisson when alpha gets very large.
-        return tt.switch(tt.gt(alpha, 1e10),
-                         Poisson.dist(self.mu).logp(value),
-                         negbinom)
+        return tt.switch(
+            tt.gt(alpha, 1e10), Poisson.dist(self.mu).logp(value), negbinom
+        )
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         mu = dist.mu
         alpha = dist.alpha
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{NegativeBinomial}}(\mathit{{mu}}={},~\mathit{{alpha}}={})$'.format(name,
-                                                get_variable_name(mu),
-                                                get_variable_name(alpha))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{NegativeBinomial}}(\mathit{{mu}}={},~\mathit{{alpha}}={})$".format(
+            name, get_variable_name(mu), get_variable_name(alpha)
+        )
 
 
 class Geometric(Discrete):
-    R"""
+    r"""
     Geometric log-likelihood.
 
     The probability that the first success in a sequence of Bernoulli
@@ -571,26 +607,26 @@ class Geometric(Discrete):
 
     def random(self, point=None, size=None):
         p = draw_values([self.p], point=point, size=size)[0]
-        return generate_samples(np.random.geometric, p,
-                                dist_shape=self.shape,
-                                size=size)
+        return generate_samples(
+            np.random.geometric, p, dist_shape=self.shape, size=size
+        )
 
     def logp(self, value):
         p = self.p
-        return bound(tt.log(p) + logpow(1 - p, value - 1),
-                     0 <= p, p <= 1, value >= 1)
+        return bound(tt.log(p) + logpow(1 - p, value - 1), 0 <= p, p <= 1, value >= 1)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         p = dist.p
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Geometric}}(\mathit{{p}}={})$'.format(name,
-                                                get_variable_name(p))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{Geometric}}(\mathit{{p}}={})$".format(
+            name, get_variable_name(p)
+        )
 
 
 class DiscreteUniform(Discrete):
-    R"""
+    r"""
     Discrete uniform distribution.
     The pmf of this distribution is
 
@@ -630,10 +666,11 @@ class DiscreteUniform(Discrete):
 
     def __init__(self, lower, upper, *args, **kwargs):
         super(DiscreteUniform, self).__init__(*args, **kwargs)
-        self.lower = tt.floor(lower).astype('int32')
-        self.upper = tt.floor(upper).astype('int32')
+        self.lower = tt.floor(lower).astype("int32")
+        self.upper = tt.floor(upper).astype("int32")
         self.mode = tt.maximum(
-            tt.floor((upper + lower) / 2.).astype('int32'), self.lower)
+            tt.floor((upper + lower) / 2.0).astype("int32"), self.lower
+        )
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
@@ -643,30 +680,28 @@ class DiscreteUniform(Discrete):
 
     def random(self, point=None, size=None):
         lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
-        return generate_samples(self._random,
-                                lower, upper,
-                                dist_shape=self.shape,
-                                size=size)
+        return generate_samples(
+            self._random, lower, upper, dist_shape=self.shape, size=size
+        )
 
     def logp(self, value):
         upper = self.upper
         lower = self.lower
-        return bound(-tt.log(upper - lower + 1),
-                     lower <= value, value <= upper)
+        return bound(-tt.log(upper - lower + 1), lower <= value, value <= upper)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         lower = dist.lower
         upper = dist.upper
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{DiscreteUniform}}(\mathit{{lower}}={},~\mathit{{upper}}={})$'.format(name,
-                                                get_variable_name(lower),
-                                                get_variable_name(upper))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{DiscreteUniform}}(\mathit{{lower}}={},~\mathit{{upper}}={})$".format(
+            name, get_variable_name(lower), get_variable_name(upper)
+        )
 
 
 class Categorical(Discrete):
-    R"""
+    r"""
     Categorical log-likelihood.
 
     The most general discrete distribution. The pmf of this distribution is
@@ -713,11 +748,13 @@ class Categorical(Discrete):
     def random(self, point=None, size=None):
         p, k = draw_values([self.p, self.k], point=point, size=size)
 
-        return generate_samples(random_choice,
-                                p=p,
-                                broadcast_shape=p.shape[:-1] or (1,),
-                                dist_shape=self.shape,
-                                size=size)
+        return generate_samples(
+            random_choice,
+            p=p,
+            broadcast_shape=p.shape[:-1] or (1,),
+            dist_shape=self.shape,
+            size=size,
+        )
 
     def logp(self, value):
         p = self.p
@@ -726,8 +763,7 @@ class Categorical(Discrete):
         # Clip values before using them for indexing
         value_clip = tt.clip(value, 0, k - 1)
 
-        sumto1 = theano.gradient.zero_grad(
-            tt.le(abs(tt.sum(p, axis=-1) - 1), 1e-5))
+        sumto1 = theano.gradient.zero_grad(tt.le(abs(tt.sum(p, axis=-1) - 1), 1e-5))
 
         if p.ndim > 1:
             a = tt.log(p[tt.arange(p.shape[0]), value_clip])
@@ -740,9 +776,10 @@ class Categorical(Discrete):
         if dist is None:
             dist = self
         p = dist.p
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Categorical}}(\mathit{{p}}={})$'.format(name,
-                                                get_variable_name(p))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{Categorical}}(\mathit{{p}}={})$".format(
+            name, get_variable_name(p)
+        )
 
 
 class Constant(Discrete):
@@ -756,8 +793,10 @@ class Constant(Discrete):
     """
 
     def __init__(self, c, *args, **kwargs):
-        warnings.warn("Constant has been deprecated. We recommend using a Deterministic object instead.",
-                    DeprecationWarning)
+        warnings.warn(
+            "Constant has been deprecated. We recommend using a Deterministic object instead.",
+            DeprecationWarning,
+        )
         super(Constant, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
@@ -768,8 +807,9 @@ class Constant(Discrete):
         def _random(c, dtype=dtype, size=None):
             return np.full(size, fill_value=c, dtype=dtype)
 
-        return generate_samples(_random, c=c, dist_shape=self.shape,
-                                size=size).astype(dtype)
+        return generate_samples(_random, c=c, dist_shape=self.shape, size=size).astype(
+            dtype
+        )
 
     def logp(self, value):
         c = self.c
@@ -778,15 +818,15 @@ class Constant(Discrete):
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Constant}}()$'.format(name)
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{Constant}}()$".format(name)
 
 
 ConstantDist = Constant
 
 
 class ZeroInflatedPoisson(Discrete):
-    R"""
+    r"""
     Zero-inflated Poisson log-likelihood.
 
     Often used to model the number of events occurring in a fixed period
@@ -844,9 +884,7 @@ class ZeroInflatedPoisson(Discrete):
 
     def random(self, point=None, size=None):
         theta, psi = draw_values([self.theta, self.psi], point=point, size=size)
-        g = generate_samples(stats.poisson.rvs, theta,
-                             dist_shape=self.shape,
-                             size=size)
+        g = generate_samples(stats.poisson.rvs, theta, dist_shape=self.shape, size=size)
         return g * (np.random.random(np.squeeze(g.shape)) < psi)
 
     def logp(self, value):
@@ -856,27 +894,24 @@ class ZeroInflatedPoisson(Discrete):
         logp_val = tt.switch(
             tt.gt(value, 0),
             tt.log(psi) + self.pois.logp(value),
-            logaddexp(tt.log1p(-psi), tt.log(psi) - theta))
+            logaddexp(tt.log1p(-psi), tt.log(psi) - theta),
+        )
 
-        return bound(
-            logp_val,
-            0 <= value,
-            0 <= psi, psi <= 1,
-            0 <= theta)
+        return bound(logp_val, 0 <= value, 0 <= psi, psi <= 1, 0 <= theta)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         theta = dist.theta
         psi = dist.psi
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{ZeroInflatedPoisson}}(\mathit{{theta}}={},~\mathit{{psi}}={})$'.format(name,
-                                                get_variable_name(theta),
-                                                get_variable_name(psi))
+        name = r"\text{%s}" % name
+        return r"${} \sim \text{{ZeroInflatedPoisson}}(\mathit{{theta}}={},~\mathit{{psi}}={})$".format(
+            name, get_variable_name(theta), get_variable_name(psi)
+        )
 
 
 class ZeroInflatedBinomial(Discrete):
-    R"""
+    r"""
     Zero-inflated Binomial log-likelihood.
 
     The pmf of this distribution is
@@ -936,9 +971,7 @@ class ZeroInflatedBinomial(Discrete):
 
     def random(self, point=None, size=None):
         n, p, psi = draw_values([self.n, self.p, self.psi], point=point, size=size)
-        g = generate_samples(stats.binom.rvs, n, p,
-                             dist_shape=self.shape,
-                             size=size)
+        g = generate_samples(stats.binom.rvs, n, p, dist_shape=self.shape, size=size)
         return g * (np.random.random(np.squeeze(g.shape)) < psi)
 
     def logp(self, value):
@@ -949,13 +982,12 @@ class ZeroInflatedBinomial(Discrete):
         logp_val = tt.switch(
             tt.gt(value, 0),
             tt.log(psi) + self.bin.logp(value),
-            logaddexp(tt.log1p(-psi), tt.log(psi) + n * tt.log1p(-p)))
+            logaddexp(tt.log1p(-psi), tt.log(psi) + n * tt.log1p(-p)),
+        )
 
         return bound(
-            logp_val,
-            0 <= value, value <= n,
-            0 <= psi, psi <= 1,
-            0 <= p, p <= 1)
+            logp_val, 0 <= value, value <= n, 0 <= psi, psi <= 1, 0 <= p, p <= 1
+        )
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -967,15 +999,16 @@ class ZeroInflatedBinomial(Discrete):
         name_n = get_variable_name(n)
         name_p = get_variable_name(p)
         name_psi = get_variable_name(psi)
-        name = r'\text{%s}' % name
-        return (r'${} \sim \text{{ZeroInflatedBinomial}}'
-                r'(\mathit{{n}}={},~\mathit{{p}}={},~'
-                r'\mathit{{psi}}={})$'
-                .format(name, name_n, name_p, name_psi))
+        name = r"\text{%s}" % name
+        return (
+            r"${} \sim \text{{ZeroInflatedBinomial}}"
+            r"(\mathit{{n}}={},~\mathit{{p}}={},~"
+            r"\mathit{{psi}}={})$".format(name, name_n, name_p, name_psi)
+        )
 
 
 class ZeroInflatedNegativeBinomial(Discrete):
-    R"""
+    r"""
     Zero-Inflated Negative binomial log-likelihood.
 
     The Zero-inflated version of the Negative Binomial (NB).
@@ -1052,10 +1085,11 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     def random(self, point=None, size=None):
         mu, alpha, psi = draw_values(
-            [self.mu, self.alpha, self.psi], point=point, size=size)
-        g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
-                             dist_shape=self.shape,
-                             size=size)
+            [self.mu, self.alpha, self.psi], point=point, size=size
+        )
+        g = generate_samples(
+            stats.gamma.rvs, alpha, scale=mu / alpha, dist_shape=self.shape, size=size
+        )
         g[g == 0] = np.finfo(float).eps  # Just in case
         return stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
 
@@ -1066,19 +1100,12 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
         logp_other = tt.log(psi) + self.nb.logp(value)
         logp_0 = logaddexp(
-            tt.log1p(-psi),
-            tt.log(psi) + alpha * (tt.log(alpha) - tt.log(alpha + mu)))
+            tt.log1p(-psi), tt.log(psi) + alpha * (tt.log(alpha) - tt.log(alpha + mu))
+        )
 
-        logp_val = tt.switch(
-            tt.gt(value, 0),
-            logp_other,
-            logp_0)
+        logp_val = tt.switch(tt.gt(value, 0), logp_other, logp_0)
 
-        return bound(
-            logp_val,
-            0 <= value,
-            0 <= psi, psi <= 1,
-            mu > 0, alpha > 0)
+        return bound(logp_val, 0 <= value, 0 <= psi, psi <= 1, mu > 0, alpha > 0)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -1090,15 +1117,16 @@ class ZeroInflatedNegativeBinomial(Discrete):
         name_mu = get_variable_name(mu)
         name_alpha = get_variable_name(alpha)
         name_psi = get_variable_name(psi)
-        name = r'\text{%s}' % name
-        return (r'${} \sim \text{{ZeroInflatedNegativeBinomial}}'
-                r'(\mathit{{mu}}={},~\mathit{{alpha}}={},~'
-                r'\mathit{{psi}}={})$'
-                .format(name, name_mu, name_alpha, name_psi))
+        name = r"\text{%s}" % name
+        return (
+            r"${} \sim \text{{ZeroInflatedNegativeBinomial}}"
+            r"(\mathit{{mu}}={},~\mathit{{alpha}}={},~"
+            r"\mathit{{psi}}={})$".format(name, name_mu, name_alpha, name_psi)
+        )
 
 
 class OrderedLogistic(Categorical):
-    R"""
+    r"""
     Ordered Logistic log-likelihood.
 
     Useful for regression on ordinal data values whose values range
@@ -1167,11 +1195,14 @@ class OrderedLogistic(Categorical):
         self.cutpoints = tt.as_tensor_variable(cutpoints)
 
         pa = sigmoid(tt.shape_padleft(self.cutpoints) - tt.shape_padright(self.eta))
-        p_cum = tt.concatenate([
-            tt.zeros_like(tt.shape_padright(pa[:, 0])),
-            pa,
-            tt.ones_like(tt.shape_padright(pa[:, 0]))
-        ], axis=1)
+        p_cum = tt.concatenate(
+            [
+                tt.zeros_like(tt.shape_padright(pa[:, 0])),
+                pa,
+                tt.ones_like(tt.shape_padright(pa[:, 0])),
+            ],
+            axis=1,
+        )
         p = p_cum[:, 1:] - p_cum[:, :-1]
 
         super(OrderedLogistic, self).__init__(p=p, *args, **kwargs)
@@ -1181,6 +1212,9 @@ class OrderedLogistic(Categorical):
             dist = self
         name_eta = get_variable_name(dist.eta)
         name_cutpoints = get_variable_name(dist.cutpoints)
-        return (r'${} \sim \text{{OrderedLogistic}}'
-                r'(\mathit{{eta}}={}, \mathit{{cutpoints}}={}$'
-                .format(name, name_eta, name_cutpoints))
+        return (
+            r"${} \sim \text{{OrderedLogistic}}"
+            r"(\mathit{{eta}}={}, \mathit{{cutpoints}}={}$".format(
+                name, name_eta, name_cutpoints
+            )
+        )

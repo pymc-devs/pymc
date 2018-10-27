@@ -12,7 +12,7 @@ from pymc3.backends.report import SamplerWarning, WarningType
 from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
 
-__all__ = ['NUTS']
+__all__ = ["NUTS"]
 
 
 def logbern(log_p):
@@ -22,7 +22,7 @@ def logbern(log_p):
 
 
 class NUTS(BaseHMC):
-    R"""A sampler for continuous variables based on Hamiltonian mechanics.
+    r"""A sampler for continuous variables based on Hamiltonian mechanics.
 
     NUTS automatically tunes the step size and the number of steps per
     sample. A detailed description can be found at [1], "Algorithm 6:
@@ -72,27 +72,28 @@ class NUTS(BaseHMC):
        Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
     """
 
-    name = 'nuts'
+    name = "nuts"
 
     default_blocked = True
     generates_stats = True
-    stats_dtypes = [{
-        'depth': np.int64,
-        'step_size': np.float64,
-        'tune': np.bool,
-        'mean_tree_accept': np.float64,
-        'step_size_bar': np.float64,
-        'tree_size': np.float64,
-        'diverging': np.bool,
-        'energy_error': np.float64,
-        'energy': np.float64,
-        'max_energy_error': np.float64,
-        'model_logp': np.float64,
-    }]
+    stats_dtypes = [
+        {
+            "depth": np.int64,
+            "step_size": np.float64,
+            "tune": np.bool,
+            "mean_tree_accept": np.float64,
+            "step_size_bar": np.float64,
+            "tree_size": np.float64,
+            "diverging": np.bool,
+            "energy_error": np.float64,
+            "energy": np.float64,
+            "max_energy_error": np.float64,
+            "model_logp": np.float64,
+        }
+    ]
 
-    def __init__(self, vars=None, max_treedepth=10, early_max_treedepth=8,
-                 **kwargs):
-        R"""Set up the No-U-Turn sampler.
+    def __init__(self, vars=None, max_treedepth=10, early_max_treedepth=8, **kwargs):
+        r"""Set up the No-U-Turn sampler.
 
         Parameters
         ----------
@@ -176,7 +177,7 @@ class NUTS(BaseHMC):
                 self._reached_max_treedepth += 1
 
         stats = tree.stats()
-        accept_stat = stats['mean_tree_accept']
+        accept_stat = stats["mean_tree_accept"]
         return HMCStepData(tree.proposal, accept_stat, divergence_info, stats)
 
     @staticmethod
@@ -192,10 +193,11 @@ class NUTS(BaseHMC):
         n_treedepth = self._reached_max_treedepth
 
         if n_samples > 0 and n_treedepth / float(n_samples) > 0.05:
-            msg = ('The chain reached the maximum tree depth. Increase '
-                   'max_treedepth, increase target_accept or reparameterize.')
-            warn = SamplerWarning(WarningType.TREEDEPTH, msg, 'warn',
-                                  None, None, None)
+            msg = (
+                "The chain reached the maximum tree depth. Increase "
+                "max_treedepth, increase target_accept or reparameterize."
+            )
+            warn = SamplerWarning(WarningType.TREEDEPTH, msg, "warn", None, None, None)
             warnings.append(warn)
         return warnings
 
@@ -205,8 +207,8 @@ Proposal = namedtuple("Proposal", "q, q_grad, energy, p_accept, logp")
 
 # A subtree of the binary tree built by nuts.
 Subtree = namedtuple(
-    "Subtree",
-    "left, right, p_sum, proposal, log_size, accept_sum, n_proposals")
+    "Subtree", "left, right, p_sum, proposal, log_size, accept_sum, n_proposals"
+)
 
 
 class _Tree(object):
@@ -234,7 +236,8 @@ class _Tree(object):
 
         self.left = self.right = start
         self.proposal = Proposal(
-            start.q, start.q_grad, start.energy, 1.0, start.model_logp)
+            start.q, start.q_grad, start.energy, 1.0, start.model_logp
+        )
         self.depth = 0
         self.log_size = 0
         self.accept_sum = 0
@@ -256,11 +259,13 @@ class _Tree(object):
         """
         if direction > 0:
             tree, diverging, turning = self._build_subtree(
-                self.right, self.depth, floatX(np.asarray(self.step_size)))
+                self.right, self.depth, floatX(np.asarray(self.step_size))
+            )
             self.right = tree.right
         else:
             tree, diverging, turning = self._build_subtree(
-                self.left, self.depth, floatX(np.asarray(-self.step_size)))
+                self.left, self.depth, floatX(np.asarray(-self.step_size))
+            )
             self.left = tree.right
 
         self.depth += 1
@@ -301,13 +306,14 @@ class _Tree(object):
                 p_accept = min(1, np.exp(-energy_change))
                 log_size = -energy_change
                 proposal = Proposal(
-                    right.q, right.q_grad, right.energy, p_accept, right.model_logp)
-                tree = Subtree(right, right, right.p,
-                               proposal, log_size, p_accept, 1)
+                    right.q, right.q_grad, right.energy, p_accept, right.model_logp
+                )
+                tree = Subtree(right, right, right.p, proposal, log_size, p_accept, 1)
                 return tree, None, False
             else:
-                error_msg = ("Energy change in leapfrog step is too large: %s."
-                             % energy_change)
+                error_msg = (
+                    "Energy change in leapfrog step is too large: %s." % energy_change
+                )
                 error = None
         tree = Subtree(None, None, None, None, -np.inf, 0, 1)
         divergance_info = DivergenceInfo(error_msg, error, left)
@@ -317,13 +323,11 @@ class _Tree(object):
         if depth == 0:
             return self._single_step(left, epsilon)
 
-        tree1, diverging, turning = self._build_subtree(
-            left, depth - 1, epsilon)
+        tree1, diverging, turning = self._build_subtree(left, depth - 1, epsilon)
         if diverging or turning:
             return tree1, diverging, turning
 
-        tree2, diverging, turning = self._build_subtree(
-            tree1.right, depth - 1, epsilon)
+        tree2, diverging, turning = self._build_subtree(tree1.right, depth - 1, epsilon)
 
         left, right = tree1.left, tree2.right
 
@@ -344,17 +348,16 @@ class _Tree(object):
         accept_sum = tree1.accept_sum + tree2.accept_sum
         n_proposals = tree1.n_proposals + tree2.n_proposals
 
-        tree = Subtree(left, right, p_sum, proposal,
-                       log_size, accept_sum, n_proposals)
+        tree = Subtree(left, right, p_sum, proposal, log_size, accept_sum, n_proposals)
         return tree, diverging, turning
 
     def stats(self):
         return {
-            'depth': self.depth,
-            'mean_tree_accept': self.accept_sum / self.n_proposals,
-            'energy_error': self.proposal.energy - self.start.energy,
-            'energy': self.proposal.energy,
-            'tree_size': self.n_proposals,
-            'max_energy_error': self.max_energy_change,
-            'model_logp': self.proposal.logp,
+            "depth": self.depth,
+            "mean_tree_accept": self.accept_sum / self.n_proposals,
+            "energy_error": self.proposal.energy - self.start.energy,
+            "energy": self.proposal.energy,
+            "tree_size": self.n_proposals,
+            "max_energy_error": self.max_energy_change,
+            "model_logp": self.proposal.logp,
         }

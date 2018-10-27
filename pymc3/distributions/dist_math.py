@@ -1,8 +1,8 @@
-'''
+"""
 Created on Mar 7, 2011
 
 @author: johnsalvatier
-'''
+"""
 from __future__ import division
 
 import numpy as np
@@ -19,7 +19,7 @@ from pymc3.theanof import floatX
 
 
 f = floatX
-c = - .5 * np.log(2. * np.pi)
+c = -0.5 * np.log(2.0 * np.pi)
 
 
 def bound(logp, *conditions, **kwargs):
@@ -41,7 +41,7 @@ def bound(logp, *conditions, **kwargs):
     -------
     logp with elements set to -inf where any condition is False
     """
-    broadcast_conditions = kwargs.get('broadcast_conditions', True)
+    broadcast_conditions = kwargs.get("broadcast_conditions", True)
 
     if broadcast_conditions:
         alltrue = alltrue_elemwise
@@ -86,7 +86,7 @@ def std_cdf(x):
     """
     Calculates the standard normal cumulative distribution function.
     """
-    return .5 + .5 * tt.erf(x / tt.sqrt(2.))
+    return 0.5 + 0.5 * tt.erf(x / tt.sqrt(2.0))
 
 
 def normal_lcdf(mu, sigma, x):
@@ -94,8 +94,8 @@ def normal_lcdf(mu, sigma, x):
     z = (x - mu) / sigma
     return tt.switch(
         tt.lt(z, -1.0),
-        tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) - tt.sqr(z) / 2.,
-        tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
+        tt.log(tt.erfcx(-z / tt.sqrt(2.0)) / 2.0) - tt.sqr(z) / 2.0,
+        tt.log1p(-tt.erfc(z / tt.sqrt(2.0)) / 2.0),
     )
 
 
@@ -103,8 +103,8 @@ def normal_lccdf(mu, sigma, x):
     z = (x - mu) / sigma
     return tt.switch(
         tt.gt(z, 1.0),
-        tt.log(tt.erfcx(z / tt.sqrt(2.)) / 2.) - tt.sqr(z) / 2.,
-        tt.log1p(-tt.erfc(-z / tt.sqrt(2.)) / 2.)
+        tt.log(tt.erfcx(z / tt.sqrt(2.0)) / 2.0) - tt.sqr(z) / 2.0,
+        tt.log1p(-tt.erfc(-z / tt.sqrt(2.0)) / 2.0),
     )
 
 
@@ -112,7 +112,7 @@ def sd2rho(sd):
     """
     `sd -> rho` theano converter
     :math:`mu + sd*e = mu + log(1+exp(rho))*e`"""
-    return tt.log(tt.exp(tt.abs_(sd)) - 1.)
+    return tt.log(tt.exp(tt.abs_(sd)) - 1.0)
 
 
 def rho2sd(rho):
@@ -145,16 +145,16 @@ def log_normal(x, mean, **kwargs):
         4) `tau` that follows this equation :math:`tau = std^{-1}`
     ----
     """
-    sd = kwargs.get('sd')
-    w = kwargs.get('w')
-    rho = kwargs.get('rho')
-    tau = kwargs.get('tau')
-    eps = kwargs.get('eps', 0.)
+    sd = kwargs.get("sd")
+    w = kwargs.get("w")
+    rho = kwargs.get("rho")
+    tau = kwargs.get("tau")
+    eps = kwargs.get("eps", 0.0)
     check = sum(map(lambda a: a is not None, [sd, w, rho, tau]))
     if check > 1:
-        raise ValueError('more than one required kwarg is passed')
+        raise ValueError("more than one required kwarg is passed")
     if check == 0:
-        raise ValueError('none of required kwarg is passed')
+        raise ValueError("none of required kwarg is passed")
     if sd is not None:
         std = sd
     elif w is not None:
@@ -162,9 +162,9 @@ def log_normal(x, mean, **kwargs):
     elif rho is not None:
         std = rho2sd(rho)
     else:
-        std = tau**(-1)
+        std = tau ** (-1)
     std += f(eps)
-    return f(c) - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2. * std ** 2)
+    return f(c) - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2.0 * std ** 2)
 
 
 def MvNormalLogp():
@@ -179,14 +179,14 @@ def MvNormalLogp():
     delta : tt.matrix
         Array of deviations from the mean.
     """
-    cov = tt.matrix('cov')
+    cov = tt.matrix("cov")
     cov.tag.test_value = floatX(np.eye(3))
-    delta = tt.matrix('delta')
+    delta = tt.matrix("delta")
     delta.tag.test_value = floatX(np.zeros((2, 3)))
 
-    solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
-    solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
-    cholesky = Cholesky(lower=True, on_error='nan')
+    solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
+    solve_upper = tt.slinalg.Solve(A_structure="upper_triangular")
+    cholesky = Cholesky(lower=True, on_error="nan")
 
     n, k = delta.shape
     n, k = f(n), f(k)
@@ -200,14 +200,14 @@ def MvNormalLogp():
     result = n * k * tt.log(f(2) * np.pi)
     result += f(2) * n * tt.sum(tt.log(diag))
     result += (delta_trans ** f(2)).sum()
-    result = f(-.5) * result
+    result = f(-0.5) * result
     logp = tt.switch(ok, result, -np.inf)
 
     def dlogp(inputs, gradients):
         g_logp, = gradients
         cov, delta = inputs
 
-        g_logp.tag.test_value = floatX(1.)
+        g_logp.tag.test_value = floatX(1.0)
         n, k = delta.shape
 
         chol_cov = cholesky(cov)
@@ -229,8 +229,7 @@ def MvNormalLogp():
 
         return [-0.5 * g_cov * g_logp, -g_delta * g_logp]
 
-    return theano.OpFromGraph(
-        [cov, delta], [logp], grad_overrides=dlogp, inline=True)
+    return theano.OpFromGraph([cov, delta], [logp], grad_overrides=dlogp, inline=True)
 
 
 class SplineWrapper(theano.Op):
@@ -238,7 +237,7 @@ class SplineWrapper(theano.Op):
     Creates a theano operation from scipy.interpolate.UnivariateSpline
     """
 
-    __props__ = ('spline',)
+    __props__ = ("spline",)
 
     def __init__(self, spline):
         self.spline = spline
@@ -249,14 +248,14 @@ class SplineWrapper(theano.Op):
 
     @property
     def grad_op(self):
-        if not hasattr(self, '_grad_op'):
+        if not hasattr(self, "_grad_op"):
             try:
                 self._grad_op = SplineWrapper(self.spline.derivative())
             except ValueError:
                 self._grad_op = None
 
         if self._grad_op is None:
-            raise NotImplementedError('Spline of order 0 is not differentiable')
+            raise NotImplementedError("Spline of order 0 is not differentiable")
         return self._grad_op
 
     def perform(self, node, inputs, output_storage):
@@ -270,18 +269,18 @@ class SplineWrapper(theano.Op):
         return [x_grad * self.grad_op(x)]
 
 
-
 class I0e(UnaryScalarOp):
     """
     Modified Bessel function of the first kind of order 0, exponentially scaled.
     """
-    nfunc_spec = ('scipy.special.i0e', 1, 1)
+
+    nfunc_spec = ("scipy.special.i0e", 1, 1)
 
     def impl(self, x):
         return scipy.special.i0e(x)
 
 
-i0e = I0e(upgrade_to_float, name='i0e')
+i0e = I0e(upgrade_to_float, name="i0e")
 
 
 def random_choice(*args, **kwargs):
@@ -299,8 +298,8 @@ def random_choice(*args, **kwargs):
         random sample: array
 
     """
-    p = kwargs.pop('p')
-    size = kwargs.pop('size')
+    p = kwargs.pop("p")
+    size = kwargs.pop("size")
     k = p.shape[-1]
 
     if p.ndim > 1:
@@ -319,17 +318,17 @@ def zvalue(value, sd, mu):
 
 
 def incomplete_beta_cfe(a, b, x, small):
-    '''Incomplete beta continued fraction expansions
+    """Incomplete beta continued fraction expansions
     based on Cephes library by Steve Moshier (incbet.c).
     small: Choose element-wise which continued fraction expansion to use.
-    '''
-    BIG = tt.constant(4.503599627370496e15, dtype='float64')
-    BIGINV = tt.constant(2.22044604925031308085e-16, dtype='float64')
-    THRESH = tt.constant(3. * np.MachAr().eps, dtype='float64')
+    """
+    BIG = tt.constant(4.503599627370496e15, dtype="float64")
+    BIGINV = tt.constant(2.22044604925031308085e-16, dtype="float64")
+    THRESH = tt.constant(3.0 * np.MachAr().eps, dtype="float64")
 
-    zero = tt.constant(0., dtype='float64')
-    one = tt.constant(1., dtype='float64')
-    two = tt.constant(2., dtype='float64')
+    zero = tt.constant(0.0, dtype="float64")
+    one = tt.constant(1.0, dtype="float64")
+    two = tt.constant(2.0, dtype="float64")
 
     r = one
     k1 = a
@@ -350,11 +349,7 @@ def incomplete_beta_cfe(a, b, x, small):
     qkm1 = one
     r = one
 
-    def _step(
-            i,
-            pkm1, pkm2, qkm1, qkm2,
-            k1, k2, k3, k4, k5, k6, k7, k8, r
-    ):
+    def _step(i, pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r):
         xk = -(x * k1 * k2) / (k3 * k4)
         pk = pkm1 + pkm2 * xk
         qk = qkm1 + qkm2 * xk
@@ -372,7 +367,7 @@ def incomplete_beta_cfe(a, b, x, small):
         qkm1 = qk
 
         old_r = r
-        r = tt.switch(tt.eq(qk, zero), r, pk/qk)
+        r = tt.switch(tt.eq(qk, zero), r, pk / qk)
 
         k1 += one
         k2 += k26update
@@ -384,10 +379,7 @@ def incomplete_beta_cfe(a, b, x, small):
         k8 += two
 
         big_cond = tt.gt(tt.abs_(qk) + tt.abs_(pk), BIG)
-        biginv_cond = tt.or_(
-            tt.lt(tt.abs_(qk), BIGINV),
-            tt.lt(tt.abs_(pk), BIGINV)
-        )
+        biginv_cond = tt.or_(tt.lt(tt.abs_(qk), BIGINV), tt.lt(tt.abs_(pk), BIGINV))
 
         pkm2 = tt.switch(big_cond, pkm2 * BIGINV, pkm2)
         pkm1 = tt.switch(big_cond, pkm1 * BIGINV, pkm1)
@@ -399,37 +391,37 @@ def incomplete_beta_cfe(a, b, x, small):
         qkm2 = tt.switch(biginv_cond, qkm2 * BIG, qkm2)
         qkm1 = tt.switch(biginv_cond, qkm1 * BIG, qkm1)
 
-        return ((pkm1, pkm2, qkm1, qkm2,
-                 k1, k2, k3, k4, k5, k6, k7, k8, r),
-                until(tt.abs_(old_r - r) < (THRESH * tt.abs_(r))))
+        return (
+            (pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r),
+            until(tt.abs_(old_r - r) < (THRESH * tt.abs_(r))),
+        )
 
-    (pkm1, pkm2, qkm1, qkm2,
-     k1, k2, k3, k4, k5, k6, k7, k8, r), _ = scan(
+    (pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r), _ = scan(
         _step,
         sequences=[tt.arange(0, 300)],
         outputs_info=[
-            e for e in
-            tt.cast((pkm1, pkm2, qkm1, qkm2,
-                     k1, k2, k3, k4, k5, k6, k7, k8, r),
-                    'float64')
-        ]
+            e
+            for e in tt.cast(
+                (pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r), "float64"
+            )
+        ],
     )
 
     return r[-1]
 
 
 def incomplete_beta_ps(a, b, value):
-    '''Power series for incomplete beta
+    """Power series for incomplete beta
     Use when b*x is small and value not too close to 1.
     Based on Cephes library by Steve Moshier (incbet.c)
-    '''
-    one = tt.constant(1, dtype='float64')
+    """
+    one = tt.constant(1, dtype="float64")
     ai = one / a
     u = (one - b) * value
     t1 = u / (a + one)
     t = u
     threshold = np.MachAr().eps * ai
-    s = tt.constant(0, dtype='float64')
+    s = tt.constant(0, dtype="float64")
 
     def _step(i, t, s):
         t *= (i - b) * value / i
@@ -440,30 +432,22 @@ def incomplete_beta_ps(a, b, value):
     (t, s), _ = scan(
         _step,
         sequences=[tt.arange(2, 302)],
-        outputs_info=[
-            e for e in
-            tt.cast((t, s),
-                    'float64')
-        ]
+        outputs_info=[e for e in tt.cast((t, s), "float64")],
     )
 
     s = s[-1] + t1 + ai
 
-    t = (
-        gammaln(a + b) - gammaln(a) - gammaln(b) +
-        a * tt.log(value) +
-        tt.log(s)
-    )
+    t = gammaln(a + b) - gammaln(a) - gammaln(b) + a * tt.log(value) + tt.log(s)
     return tt.exp(t)
 
 
 def incomplete_beta(a, b, value):
-    '''Incomplete beta implementation
+    """Incomplete beta implementation
     Power series and continued fraction expansions chosen for best numerical
     convergence across the board based on inputs.
-    '''
-    machep = tt.constant(np.MachAr().eps, dtype='float64')
-    one = tt.constant(1, dtype='float64')
+    """
+    machep = tt.constant(np.MachAr().eps, dtype="float64")
+    one = tt.constant(1, dtype="float64")
     w = one - value
 
     ps = incomplete_beta_ps(a, b, value)
@@ -485,20 +469,17 @@ def incomplete_beta(a, b, value):
 
     # Direct incomplete beta accounting for flipped a, b.
     t = tt.exp(
-        a * tt.log(x) + b * tt.log(xc) +
-        gammaln(a + b) - gammaln(a) - gammaln(b) +
-        tt.log(w / a)
+        a * tt.log(x)
+        + b * tt.log(xc)
+        + gammaln(a + b)
+        - gammaln(a)
+        - gammaln(b)
+        + tt.log(w / a)
     )
 
-    t = tt.switch(
-        flip,
-        tt.switch(tt.le(t, machep), one - machep, one - t),
-        t
-    )
+    t = tt.switch(flip, tt.switch(tt.le(t, machep), one - machep, one - t), t)
     return tt.switch(
         tt.and_(flip, tt.and_(tt.le((b * x), one), tt.le(x, 0.95))),
         tps,
-        tt.switch(
-            tt.and_(tt.le(b * value, one), tt.le(value, 0.95)),
-            ps,
-            t))
+        tt.switch(tt.and_(tt.le(b * value, one), tt.le(value, 0.95)), ps, t),
+    )

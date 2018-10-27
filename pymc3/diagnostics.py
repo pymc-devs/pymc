@@ -5,12 +5,12 @@ from .stats import statfunc, autocov
 from .util import get_default_varnames
 from .backends.base import MultiTrace
 
-__all__ = ['geweke', 'gelman_rubin', 'effective_n']
+__all__ = ["geweke", "gelman_rubin", "effective_n"]
 
 
 @statfunc
-def geweke(x, first=.1, last=.5, intervals=20):
-    R"""Return z-scores for convergence diagnostics.
+def geweke(x, first=0.1, last=0.5, intervals=20):
+    r"""Return z-scores for convergence diagnostics.
 
     Compare the mean of the first % of series with the mean of the last % of
     series. x is divided into a number of segments for which this difference is
@@ -58,14 +58,12 @@ def geweke(x, first=.1, last=.5, intervals=20):
     for interval in (first, last):
         if interval <= 0 or interval >= 1:
             raise ValueError(
-                "Invalid intervals for Geweke convergence analysis",
-                (first,
-                 last))
+                "Invalid intervals for Geweke convergence analysis", (first, last)
+            )
     if first + last >= 1:
         raise ValueError(
-            "Invalid intervals for Geweke convergence analysis",
-            (first,
-             last))
+            "Invalid intervals for Geweke convergence analysis", (first, last)
+        )
 
     # Initialize list of z-scores
     zscores = []
@@ -77,14 +75,15 @@ def geweke(x, first=.1, last=.5, intervals=20):
     last_start_idx = (1 - last) * end
 
     # Calculate starting indices
-    start_indices = np.arange(0, int(last_start_idx), step=int(
-        (last_start_idx) / (intervals - 1)))
+    start_indices = np.arange(
+        0, int(last_start_idx), step=int((last_start_idx) / (intervals - 1))
+    )
 
     # Loop over start indices
     for start in start_indices:
         # Calculate slices
-        first_slice = x[start: start + int(first * (end - start))]
-        last_slice = x[int(end - last * (end - start)):]
+        first_slice = x[start : start + int(first * (end - start))]
+        last_slice = x[int(end - last * (end - start)) :]
 
         z = first_slice.mean() - last_slice.mean()
         z /= np.sqrt(first_slice.var() + last_slice.var())
@@ -98,7 +97,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
 
 
 def gelman_rubin(mtrace, varnames=None, include_transformed=False):
-    R"""Returns estimate of R for a set of traces.
+    r"""Returns estimate of R for a set of traces.
 
     The Gelman-Rubin diagnostic tests for lack of convergence by comparing
     the variance between multiple chains to the variance within each chain.
@@ -160,11 +159,13 @@ def gelman_rubin(mtrace, varnames=None, include_transformed=False):
 
     if mtrace.nchains < 2:
         raise ValueError(
-            'Gelman-Rubin diagnostic requires multiple chains '
-            'of the same length.')
+            "Gelman-Rubin diagnostic requires multiple chains " "of the same length."
+        )
 
     if varnames is None:
-        varnames = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
+        varnames = get_default_varnames(
+            mtrace.varnames, include_transformed=include_transformed
+        )
 
     Rhat = {}
 
@@ -177,7 +178,7 @@ def gelman_rubin(mtrace, varnames=None, include_transformed=False):
 
 
 def effective_n(mtrace, varnames=None, include_transformed=False):
-    R"""Returns estimate of the effective sample size of a set of traces.
+    r"""Returns estimate of the effective sample size of a set of traces.
 
     Parameters
     ----------
@@ -221,23 +222,23 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
         acov = np.asarray([autocov(trace_value[chain]) for chain in range(nchain)])
 
         chain_mean = trace_value.mean(axis=1)
-        chain_var = acov[:, 0] * n_samples / (n_samples - 1.)
-        acov_t = acov[:, 1] * n_samples / (n_samples - 1.)
+        chain_var = acov[:, 0] * n_samples / (n_samples - 1.0)
+        acov_t = acov[:, 1] * n_samples / (n_samples - 1.0)
         mean_var = np.mean(chain_var)
-        var_plus = mean_var * (n_samples - 1.) / n_samples
+        var_plus = mean_var * (n_samples - 1.0) / n_samples
         var_plus += np.var(chain_mean, ddof=1)
 
         rho_hat_t = np.zeros(n_samples)
-        rho_hat_even = 1.
+        rho_hat_even = 1.0
         rho_hat_t[0] = rho_hat_even
-        rho_hat_odd = 1. - (mean_var - np.mean(acov_t)) / var_plus
+        rho_hat_odd = 1.0 - (mean_var - np.mean(acov_t)) / var_plus
         rho_hat_t[1] = rho_hat_odd
         # Geyer's initial positive sequence
         max_t = 1
         t = 1
-        while t < (n_samples - 2) and (rho_hat_even + rho_hat_odd) >= 0.:
-            rho_hat_even = 1. - (mean_var - np.mean(acov[:, t + 1])) / var_plus
-            rho_hat_odd = 1. - (mean_var - np.mean(acov[:, t + 2])) / var_plus
+        while t < (n_samples - 2) and (rho_hat_even + rho_hat_odd) >= 0.0:
+            rho_hat_even = 1.0 - (mean_var - np.mean(acov[:, t + 1])) / var_plus
+            rho_hat_odd = 1.0 - (mean_var - np.mean(acov[:, t + 2])) / var_plus
             if (rho_hat_even + rho_hat_odd) >= 0:
                 rho_hat_t[t + 1] = rho_hat_even
                 rho_hat_t[t + 2] = rho_hat_odd
@@ -247,12 +248,14 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
         # Geyer's initial monotone sequence
         t = 3
         while t <= max_t - 2:
-            if (rho_hat_t[t + 1] + rho_hat_t[t + 2]) > (rho_hat_t[t - 1] + rho_hat_t[t]):
-                rho_hat_t[t + 1] = (rho_hat_t[t - 1] + rho_hat_t[t]) / 2.
+            if (rho_hat_t[t + 1] + rho_hat_t[t + 2]) > (
+                rho_hat_t[t - 1] + rho_hat_t[t]
+            ):
+                rho_hat_t[t + 1] = (rho_hat_t[t - 1] + rho_hat_t[t]) / 2.0
                 rho_hat_t[t + 2] = rho_hat_t[t + 1]
             t += 2
         ess = nchain * n_samples
-        ess = ess / (-1. + 2. * np.sum(rho_hat_t))
+        ess = ess / (-1.0 + 2.0 * np.sum(rho_hat_t))
         return ess
 
     def generate_neff(trace_values):
@@ -288,11 +291,14 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
 
     if mtrace.nchains < 2:
         raise ValueError(
-            'Calculation of effective sample size requires multiple chains '
-            'of the same length.')
+            "Calculation of effective sample size requires multiple chains "
+            "of the same length."
+        )
 
     if varnames is None:
-        varnames = get_default_varnames(mtrace.varnames,include_transformed=include_transformed)
+        varnames = get_default_varnames(
+            mtrace.varnames, include_transformed=include_transformed
+        )
 
     n_eff = {}
 

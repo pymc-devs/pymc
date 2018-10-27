@@ -78,7 +78,7 @@ def fast_kde(x, bw=4.5):
     dx = (xmax - xmin) / (nx - 1)
     std_x = entropy((x - xmin) / dx) * bw
     if ~np.isfinite(std_x):
-        std_x = 0.
+        std_x = 0.0
     grid, _ = np.histogram(x, bins=nx)
 
     scotts_factor = n ** (-0.2)
@@ -86,8 +86,8 @@ def fast_kde(x, bw=4.5):
     kernel = gaussian(kern_nx, scotts_factor * std_x)
 
     npad = min(nx, 2 * kern_nx)
-    grid = np.concatenate([grid[npad: 0: -1], grid, grid[nx: nx - npad: -1]])
-    density = convolve(grid, kernel, mode='same')[npad: npad + nx]
+    grid = np.concatenate([grid[npad:0:-1], grid, grid[nx : nx - npad : -1]])
+    density = convolve(grid, kernel, mode="same")[npad : npad + nx]
 
     norm_factor = n * dx * (2 * np.pi * std_x ** 2 * scotts_factor ** 2) ** 0.5
 

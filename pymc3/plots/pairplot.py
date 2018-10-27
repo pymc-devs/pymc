@@ -9,10 +9,20 @@ from ..util import get_default_varnames, is_transformed_name, get_untransformed_
 from .artists import get_trace_dict, scale_text
 
 
-def pairplot(trace, varnames=None, figsize=None, text_size=None,
-             gs=None, ax=None, hexbin=False, plot_transformed=False,
-             divergences=False, kwargs_divergence=None,
-             sub_varnames=None, **kwargs):
+def pairplot(
+    trace,
+    varnames=None,
+    figsize=None,
+    text_size=None,
+    gs=None,
+    ax=None,
+    hexbin=False,
+    plot_transformed=False,
+    divergences=False,
+    kwargs_divergence=None,
+    sub_varnames=None,
+    **kwargs
+):
     """
     Plot a scatter or hexbin matrix of the sampled parameters.
 
@@ -55,8 +65,11 @@ def pairplot(trace, varnames=None, figsize=None, text_size=None,
         if plot_transformed:
 
             varnames_copy = list(trace.varnames)
-            remove = [get_untransformed_name(var) for var in trace.varnames
-                      if is_transformed_name(var)]
+            remove = [
+                get_untransformed_name(var)
+                for var in trace.varnames
+                if is_transformed_name(var)
+            ]
 
             try:
                 [varnames_copy.remove(i) for i in remove]
@@ -65,21 +78,21 @@ def pairplot(trace, varnames=None, figsize=None, text_size=None,
                 varnames = varnames_copy
 
             trace_dict = get_trace_dict(
-                trace, get_default_varnames(
-                    varnames, plot_transformed))
+                trace, get_default_varnames(varnames, plot_transformed)
+            )
 
         else:
             trace_dict = get_trace_dict(
-                trace, get_default_varnames(
-                    trace.varnames, plot_transformed))
+                trace, get_default_varnames(trace.varnames, plot_transformed)
+            )
 
         if sub_varnames is None:
             varnames = list(trace_dict.keys())
 
         else:
             trace_dict = get_trace_dict(
-                trace, get_default_varnames(
-                    trace.varnames, True))
+                trace, get_default_varnames(trace.varnames, True)
+            )
             varnames = sub_varnames
 
     else:
@@ -98,30 +111,30 @@ def pairplot(trace, varnames=None, figsize=None, text_size=None,
         figsize = (8 + numvars, 8 + numvars)
 
     if numvars < 2:
-        raise Exception(
-            'Number of variables to be plotted must be 2 or greater.')
+        raise Exception("Number of variables to be plotted must be 2 or greater.")
 
     if numvars == 2 and ax is not None:
         if hexbin:
-            ax.hexbin(trace_dict[varnames[0]],
-                      trace_dict[varnames[1]], mincnt=1, **kwargs)
+            ax.hexbin(
+                trace_dict[varnames[0]], trace_dict[varnames[1]], mincnt=1, **kwargs
+            )
         else:
-            ax.scatter(trace_dict[varnames[0]],
-                       trace_dict[varnames[1]], **kwargs)
+            ax.scatter(trace_dict[varnames[0]], trace_dict[varnames[1]], **kwargs)
 
         if divergences:
             try:
-                divergent = trace['diverging']
+                divergent = trace["diverging"]
             except KeyError:
-                warnings.warn('No divergences were found.')
+                warnings.warn("No divergences were found.")
 
-            diverge = (divergent == 1)
-            ax.scatter(trace_dict[varnames[0]][diverge],
-                       trace_dict[varnames[1]][diverge], **kwargs_divergence)
-        ax.set_xlabel('{}'.format(varnames[0]),
-                      fontsize=text_size)
-        ax.set_ylabel('{}'.format(
-            varnames[1]), fontsize=text_size)
+            diverge = divergent == 1
+            ax.scatter(
+                trace_dict[varnames[0]][diverge],
+                trace_dict[varnames[1]][diverge],
+                **kwargs_divergence
+            )
+        ax.set_xlabel("{}".format(varnames[0]), fontsize=text_size)
+        ax.set_ylabel("{}".format(varnames[1]), fontsize=text_size)
         ax.tick_params(labelsize=text_size)
 
     if gs is None and ax is None:
@@ -143,26 +156,22 @@ def pairplot(trace, varnames=None, figsize=None, text_size=None,
 
                 if divergences:
                     try:
-                        divergent = trace['diverging']
+                        divergent = trace["diverging"]
                     except KeyError:
-                        warnings.warn('No divergences were found.')
+                        warnings.warn("No divergences were found.")
                         return ax
 
-                    diverge = (divergent == 1)
-                    ax.scatter(var1[diverge],
-                               var2[diverge],
-                               **kwargs_divergence)
+                    diverge = divergent == 1
+                    ax.scatter(var1[diverge], var2[diverge], **kwargs_divergence)
 
                 if j + 1 != numvars - 1:
                     ax.set_xticks([])
                 else:
-                    ax.set_xlabel('{}'.format(varnames[i]),
-                                  fontsize=text_size)
+                    ax.set_xlabel("{}".format(varnames[i]), fontsize=text_size)
                 if i != 0:
                     ax.set_yticks([])
                 else:
-                    ax.set_ylabel('{}'.format(
-                        varnames[j + 1]), fontsize=text_size)
+                    ax.set_ylabel("{}".format(varnames[j + 1]), fontsize=text_size)
 
                 ax.tick_params(labelsize=text_size)
 

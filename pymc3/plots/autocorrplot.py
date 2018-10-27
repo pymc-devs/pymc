@@ -9,8 +9,16 @@ except ImportError:  # mpl is optional
 from .utils import get_default_varnames, get_axis
 
 
-def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=False,
-                 symmetric_plot=False, ax=None, figsize=None):
+def autocorrplot(
+    trace,
+    varnames=None,
+    max_lag=100,
+    burn=0,
+    plot_transformed=False,
+    symmetric_plot=False,
+    ax=None,
+    figsize=None,
+):
     """Bar plot of the autocorrelation function for a trace.
 
     Parameters
@@ -39,39 +47,53 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
     -------
     ax : matplotlib axes
     """
+
     def _handle_array_varnames(varname):
         if trace[0][varname].__class__ is np.ndarray:
             k = trace[varname].shape[1]
             for i in range(k):
-                yield varname + '_{0}'.format(i)
+                yield varname + "_{0}".format(i)
         else:
             yield varname
 
     if varnames is None:
         varnames = get_default_varnames(trace.varnames, plot_transformed)
 
-    varnames = list(itertools.chain.from_iterable(map(_handle_array_varnames, varnames)))
+    varnames = list(
+        itertools.chain.from_iterable(map(_handle_array_varnames, varnames))
+    )
 
     nchains = trace.nchains
 
     if figsize is None:
         figsize = (12, len(varnames) * 2)
 
-    ax = get_axis(ax, len(varnames), nchains,
-                  squeeze=False, sharex=True, sharey=True, figsize=figsize)
+    ax = get_axis(
+        ax,
+        len(varnames),
+        nchains,
+        squeeze=False,
+        sharex=True,
+        sharey=True,
+        figsize=figsize,
+    )
 
     max_lag = min(len(trace) - 1, max_lag)
 
     for i, v in enumerate(varnames):
         for j, chain in enumerate(trace.chains):
             try:
-                d = np.squeeze(trace.get_values(v, chains=[chain], burn=burn,
-                                                combine=False))
+                d = np.squeeze(
+                    trace.get_values(v, chains=[chain], burn=burn, combine=False)
+                )
             except KeyError:
-                k = int(v.split('_')[-1])
-                v_use = '_'.join(v.split('_')[:-1])
-                d = np.squeeze(trace.get_values(v_use, chains=[chain],
-                                                burn=burn, combine=False)[:, k])
+                k = int(v.split("_")[-1])
+                v_use = "_".join(v.split("_")[:-1])
+                d = np.squeeze(
+                    trace.get_values(v_use, chains=[chain], burn=burn, combine=False)[
+                        :, k
+                    ]
+                )
 
             ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
 

@@ -16,14 +16,25 @@ from .util import get_default_varnames
 import pymc3 as pm
 from pymc3.theanof import floatX
 
-if pkg_resources.get_distribution('scipy').version < '1.0.0':
+if pkg_resources.get_distribution("scipy").version < "1.0.0":
     from scipy.misc import logsumexp
 else:
     from scipy.special import logsumexp
 
 
-__all__ = ['autocorr', 'autocov', 'waic', 'loo', 'hpd', 'quantiles',
-           'mc_error', 'summary', 'compare', 'bfmi', 'r2_score']
+__all__ = [
+    "autocorr",
+    "autocov",
+    "waic",
+    "loo",
+    "hpd",
+    "quantiles",
+    "mc_error",
+    "summary",
+    "compare",
+    "bfmi",
+    "r2_score",
+]
 
 
 def statfunc(f):
@@ -34,23 +45,23 @@ def statfunc(f):
 
     def wrapped_f(pymc3_obj, *args, **kwargs):
         try:
-            vars = kwargs.pop('vars',  pymc3_obj.varnames)
-            chains = kwargs.pop('chains', pymc3_obj.chains)
+            vars = kwargs.pop("vars", pymc3_obj.varnames)
+            chains = kwargs.pop("chains", pymc3_obj.chains)
         except AttributeError:
             # If fails, assume that raw data was passed.
             return f(pymc3_obj, *args, **kwargs)
 
-        burn = kwargs.pop('burn', 0)
-        thin = kwargs.pop('thin', 1)
-        combine = kwargs.pop('combine', False)
+        burn = kwargs.pop("burn", 0)
+        thin = kwargs.pop("thin", 1)
+        combine = kwargs.pop("combine", False)
         # Remove outer level chain keys if only one chain)
-        squeeze = kwargs.pop('squeeze', True)
+        squeeze = kwargs.pop("squeeze", True)
 
         results = {chain: {} for chain in chains}
         for var in vars:
-            samples = pymc3_obj.get_values(var, chains=chains, burn=burn,
-                                           thin=thin, combine=combine,
-                                           squeeze=False)
+            samples = pymc3_obj.get_values(
+                var, chains=chains, burn=burn, thin=thin, combine=combine, squeeze=False
+            )
             for chain, data in zip(chains, samples):
                 results[chain][var] = f(np.squeeze(data), *args, **kwargs)
 
@@ -82,7 +93,7 @@ def autocorr(x, lag=None):
     y = x - x.mean()
     n = len(y)
     result = fftconvolve(y, y[::-1])
-    acorr = result[len(result) // 2:]
+    acorr = result[len(result) // 2 :]
     acorr /= np.arange(n, 0, -1)
     acorr /= acorr[0]
     if lag is None:
@@ -91,7 +102,8 @@ def autocorr(x, lag=None):
         warnings.warn(
             "The `lag` argument has been deprecated. If you want to get "
             "the value of a specific lag please call `autocorr(x)[lag]`.",
-            DeprecationWarning)
+            DeprecationWarning,
+        )
         return acorr[lag]
 
 
@@ -117,7 +129,8 @@ def autocov(x, lag=None):
         warnings.warn(
             "The `lag` argument has been deprecated. If you want to get "
             "the value of a specific lag please call `autocov(x)[lag]`.",
-            DeprecationWarning)
+            DeprecationWarning,
+        )
         return acov[lag]
 
 
@@ -144,7 +157,7 @@ def _log_post_trace(trace, model=None, progressbar=False):
 
     def logp_vals_point(pt):
         if len(model.observed_RVs) == 0:
-            return floatX(np.array([], dtype='d'))
+            return floatX(np.array([], dtype="d"))
 
         logp_vals = []
         for var, logp in cached:
@@ -203,20 +216,22 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
 
     log_py = _log_post_trace(trace, model, progressbar=progressbar)
     if log_py.size == 0:
-        raise ValueError('The model does not contain observed values.')
+        raise ValueError("The model does not contain observed values.")
 
     lppd_i = logsumexp(log_py, axis=0, b=1.0 / log_py.shape[0])
 
     vars_lpd = np.var(log_py, axis=0)
     warn_mg = 0
     if np.any(vars_lpd > 0.4):
-        warnings.warn("""For one or more samples the posterior variance of the
+        warnings.warn(
+            """For one or more samples the posterior variance of the
         log predictive densities exceeds 0.4. This could be indication of
         WAIC starting to fail see http://arxiv.org/abs/1507.04544 for details
-        """)
+        """
+        )
         warn_mg = 1
 
-    waic_i = - 2 * (lppd_i - vars_lpd)
+    waic_i = -2 * (lppd_i - vars_lpd)
 
     waic_se = np.sqrt(len(waic_i) * np.var(waic_i))
 
@@ -226,14 +241,16 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
 
     if pointwise:
         if np.equal(waic, waic_i).all():
-            warnings.warn("""The point-wise WAIC is the same with the sum WAIC,
+            warnings.warn(
+                """The point-wise WAIC is the same with the sum WAIC,
             please double check the Observed RV in your model to make sure it
             returns element-wise logp.
-            """)
-        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC, var_warn, WAIC_i')
+            """
+            )
+        WAIC_r = namedtuple("WAIC_r", "WAIC, WAIC_se, p_WAIC, var_warn, WAIC_i")
         return WAIC_r(waic, waic_se, p_waic, warn_mg, waic_i)
     else:
-        WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC, var_warn')
+        WAIC_r = namedtuple("WAIC_r", "WAIC, WAIC_se, p_WAIC, var_warn")
         return WAIC_r(waic, waic_se, p_waic, warn_mg)
 
 
@@ -273,46 +290,50 @@ def loo(trace, model=None, pointwise=False, reff=None, progressbar=False):
 
     if reff is None:
         if trace.nchains == 1:
-            reff = 1.
+            reff = 1.0
         else:
             eff = pm.effective_n(trace)
-            eff_ave = pm.stats.dict2pd(eff, 'eff').mean()
+            eff_ave = pm.stats.dict2pd(eff, "eff").mean()
             samples = len(trace) * trace.nchains
             reff = eff_ave / samples
 
     log_py = _log_post_trace(trace, model, progressbar=progressbar)
     if log_py.size == 0:
-        raise ValueError('The model does not contain observed values.')
+        raise ValueError("The model does not contain observed values.")
 
     lw, ks = _psislw(-log_py, reff)
     lw += log_py
 
     warn_mg = 0
     if np.any(ks > 0.7):
-        warnings.warn("""Estimated shape parameter of Pareto distribution is
+        warnings.warn(
+            """Estimated shape parameter of Pareto distribution is
         greater than 0.7 for one or more samples.
         You should consider using a more robust model, this is because
         importance sampling is less likely to work well if the marginal
         posterior and LOO posterior are very different. This is more likely to
-        happen with a non-robust model and highly influential observations.""")
+        happen with a non-robust model and highly influential observations."""
+        )
         warn_mg = 1
 
-    loo_lppd_i = - 2 * logsumexp(lw, axis=0)
+    loo_lppd_i = -2 * logsumexp(lw, axis=0)
     loo_lppd = loo_lppd_i.sum()
     loo_lppd_se = (len(loo_lppd_i) * np.var(loo_lppd_i)) ** 0.5
-    lppd = np.sum(logsumexp(log_py, axis=0, b=1. / log_py.shape[0]))
+    lppd = np.sum(logsumexp(log_py, axis=0, b=1.0 / log_py.shape[0]))
     p_loo = lppd + (0.5 * loo_lppd)
 
     if pointwise:
         if np.equal(loo_lppd, loo_lppd_i).all():
-            warnings.warn("""The point-wise LOO is the same with the sum LOO,
+            warnings.warn(
+                """The point-wise LOO is the same with the sum LOO,
             please double check the Observed RV in your model to make sure it
             returns element-wise logp.
-            """)
-        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO, shape_warn, LOO_i')
+            """
+            )
+        LOO_r = namedtuple("LOO_r", "LOO, LOO_se, p_LOO, shape_warn, LOO_i")
         return LOO_r(loo_lppd, loo_lppd_se, p_loo, warn_mg, loo_lppd_i)
     else:
-        LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO, shape_warn')
+        LOO_r = namedtuple("LOO_r", "LOO, LOO_se, p_LOO, shape_warn")
         return LOO_r(loo_lppd, loo_lppd_se, p_loo, warn_mg)
 
 
@@ -335,13 +356,13 @@ def _psislw(lw, reff):
     """
     n, m = lw.shape
 
-    lw_out = np.copy(lw, order='F')
+    lw_out = np.copy(lw, order="F")
     kss = np.empty(m)
 
     # precalculate constants
-    cutoff_ind = - int(np.ceil(min(n / 5., 3 * (n / reff) ** 0.5))) - 1
+    cutoff_ind = -int(np.ceil(min(n / 5.0, 3 * (n / reff) ** 0.5))) - 1
     cutoffmin = np.log(np.finfo(float).tiny)
-    k_min = 1. / 3
+    k_min = 1.0 / 3
 
     # loop over sets of log weights
     for i, x in enumerate(lw_out.T):
@@ -405,10 +426,10 @@ def _gpdfit(x):
     prior_bs = 3
     prior_k = 10
     n = len(x)
-    m = 30 + int(n**0.5)
+    m = 30 + int(n ** 0.5)
 
     bs = 1 - np.sqrt(m / (np.arange(1, m + 1, dtype=float) - 0.5))
-    bs /= prior_bs * x[int(n/4 + 0.5) - 1]
+    bs /= prior_bs * x[int(n / 4 + 0.5) - 1]
     bs += 1 / x[-1]
 
     ks = np.log1p(-bs[:, None] * x).mean(axis=1)
@@ -426,10 +447,10 @@ def _gpdfit(x):
     # posterior mean for b
     b = np.sum(bs * w)
     # estimate for k
-    k = np.log1p(- b * x).mean()
+    k = np.log1p(-b * x).mean()
     # add prior for k
     k = (n * k + prior_k * 0.5) / (n + prior_k)
-    sigma = - k / b
+    sigma = -k / b
 
     return k, sigma
 
@@ -442,13 +463,13 @@ def _gpinv(p, k, sigma):
     ok = (p > 0) & (p < 1)
     if np.all(ok):
         if np.abs(k) < np.finfo(float).eps:
-            x = - np.log1p(-p)
+            x = -np.log1p(-p)
         else:
             x = np.expm1(-k * np.log1p(-p)) / k
         x *= sigma
     else:
         if np.abs(k) < np.finfo(float).eps:
-            x[ok] = - np.log1p(-p[ok])
+            x[ok] = -np.log1p(-p[ok])
         else:
             x[ok] = np.expm1(-k * np.log1p(-p[ok])) / k
         x *= sigma
@@ -456,14 +477,21 @@ def _gpinv(p, k, sigma):
         if k >= 0:
             x[p == 1] = np.inf
         else:
-            x[p == 1] = - sigma / k
+            x[p == 1] = -sigma / k
 
     return x
 
 
-def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
-            alpha=1, seed=None, round_to=2):
-    R"""Compare models based on the widely available information criterion (WAIC)
+def compare(
+    model_dict,
+    ic="WAIC",
+    method="stacking",
+    b_samples=1000,
+    alpha=1,
+    seed=None,
+    round_to=2,
+):
+    r"""Compare models based on the widely available information criterion (WAIC)
     or leave-one-out (LOO) cross-validation.
     Read more theory here - in a paper by some of the leading authorities on
     model selection - dx.doi.org/10.1111/1467-9868.00353
@@ -528,29 +556,34 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
     if not names:
         names = np.arange(len(model_dict))
 
-    if ic == 'WAIC':
+    if ic == "WAIC":
         ic_func = waic
-        df_comp = pd.DataFrame(index=names,
-                               columns=['WAIC', 'pWAIC', 'dWAIC', 'weight',
-                                        'SE', 'dSE', 'var_warn'])
+        df_comp = pd.DataFrame(
+            index=names,
+            columns=["WAIC", "pWAIC", "dWAIC", "weight", "SE", "dSE", "var_warn"],
+        )
 
-    elif ic == 'LOO':
+    elif ic == "LOO":
         ic_func = loo
-        df_comp = pd.DataFrame(index=names,
-                               columns=['LOO', 'pLOO', 'dLOO', 'weight',
-                                        'SE', 'dSE', 'shape_warn'])
+        df_comp = pd.DataFrame(
+            index=names,
+            columns=["LOO", "pLOO", "dLOO", "weight", "SE", "dSE", "shape_warn"],
+        )
 
     else:
         raise NotImplementedError(
-            'The information criterion {} is not supported.'.format(ic))
+            "The information criterion {} is not supported.".format(ic)
+        )
 
     if len(set([len(m.observed_RVs) for m in model_dict])) != 1:
         raise ValueError(
-            'The number of observed RVs should be the same across all models')
+            "The number of observed RVs should be the same across all models"
+        )
 
-    if method not in ['stacking', 'BB-pseudo-BMA', 'pseudo-BMA']:
-        raise ValueError('The method {}, to compute weights,'
-                         'is not supported.'.format(method))
+    if method not in ["stacking", "BB-pseudo-BMA", "pseudo-BMA"]:
+        raise ValueError(
+            "The method {}, to compute weights," "is not supported.".format(method)
+        )
 
     ics = []
     for n, (m, t) in zip(names, model_dict.items()):
@@ -558,17 +591,17 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
 
     ics.sort(key=lambda x: x[1][0])
 
-    if method == 'stacking':
+    if method == "stacking":
         N, K, ic_i = _ic_matrix(ics)
         exp_ic_i = np.exp(-0.5 * ic_i)
         Km = K - 1
 
         def w_fuller(w):
-            return np.concatenate((w, [max(1. - np.sum(w), 0.)]))
+            return np.concatenate((w, [max(1.0 - np.sum(w), 0.0)]))
 
         def log_score(w):
             w_full = w_fuller(w)
-            score = 0.
+            score = 0.0
             for i in range(N):
                 score += np.log(np.dot(exp_ic_i[i], w_full))
             return -score
@@ -578,30 +611,36 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
             grad = np.zeros(Km)
             for k in range(Km):
                 for i in range(N):
-                    grad[k] += (exp_ic_i[i, k] - exp_ic_i[i, Km]) / \
-                        np.dot(exp_ic_i[i], w_full)
+                    grad[k] += (exp_ic_i[i, k] - exp_ic_i[i, Km]) / np.dot(
+                        exp_ic_i[i], w_full
+                    )
             return -grad
 
-        theta = np.full(Km, 1. / K)
-        bounds = [(0., 1.) for i in range(Km)]
-        constraints = [{'type': 'ineq', 'fun': lambda x: -np.sum(x) + 1.},
-                       {'type': 'ineq', 'fun': lambda x: np.sum(x)}]
+        theta = np.full(Km, 1.0 / K)
+        bounds = [(0.0, 1.0) for i in range(Km)]
+        constraints = [
+            {"type": "ineq", "fun": lambda x: -np.sum(x) + 1.0},
+            {"type": "ineq", "fun": lambda x: np.sum(x)},
+        ]
 
-        w = minimize(fun=log_score,
-                     x0=theta,
-                     jac=gradient,
-                     bounds=bounds,
-                     constraints=constraints)
+        w = minimize(
+            fun=log_score,
+            x0=theta,
+            jac=gradient,
+            bounds=bounds,
+            constraints=constraints,
+        )
 
-        weights = w_fuller(w['x'])
+        weights = w_fuller(w["x"])
         ses = [res[1] for _, res in ics]
 
-    elif method == 'BB-pseudo-BMA':
+    elif method == "BB-pseudo-BMA":
         N, K, ic_i = _ic_matrix(ics)
         ic_i = ic_i * N
 
-        b_weighting = dirichlet.rvs(alpha=[alpha] * N, size=b_samples,
-                                    random_state=seed)
+        b_weighting = dirichlet.rvs(
+            alpha=[alpha] * N, size=b_samples, random_state=seed
+        )
         weights = np.zeros((b_samples, K))
         z_bs = np.zeros_like(weights)
         for i in range(b_samples):
@@ -613,7 +652,7 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
         weights = weights.mean(0)
         ses = z_bs.std(0)
 
-    elif method == 'pseudo-BMA':
+    elif method == "pseudo-BMA":
         min_ic = ics[0][1][0]
         Z = np.sum([np.exp(-0.5 * (x[1][0] - min_ic)) for x in ics])
         weights = []
@@ -629,13 +668,15 @@ def compare(model_dict, ic='WAIC', method='stacking', b_samples=1000,
             d_se = np.sqrt(len(diff) * np.var(diff))
             se = ses[i]
             weight = weights[i]
-            df_comp.at[idx] = (round(res[0], round_to),
-                               round(res[2], round_to),
-                               round(d_ic, round_to),
-                               round(weight, round_to),
-                               round(se, round_to),
-                               round(d_se, round_to),
-                               res[3])
+            df_comp.at[idx] = (
+                round(res[0], round_to),
+                round(res[2], round_to),
+                round(d_ic, round_to),
+                round(weight, round_to),
+                round(se, round_to),
+                round(d_se, round_to),
+                res[3],
+            )
 
         return df_comp.sort_values(by=ic)
 
@@ -651,12 +692,14 @@ def _ic_matrix(ics):
     for i in range(K):
         ic = ics[i][1][4]
         if len(ic) != N:
-            raise ValueError('The number of observations should be the same '
-                             'across all models')
+            raise ValueError(
+                "The number of observations should be the same " "across all models"
+            )
         else:
             ic_i[:, i] = ic
 
     return N, K, ic_i
+
 
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions
@@ -690,7 +733,7 @@ def calc_min_interval(x, alpha):
     interval_width = x[interval_idx_inc:] - x[:n_intervals]
 
     if len(interval_width) == 0:
-        raise ValueError('Too few elements for interval calculation')
+        raise ValueError("Too few elements for interval calculation")
 
     min_idx = np.argmin(interval_width)
     hdi_min = x[min_idx]
@@ -752,14 +795,16 @@ def hpd(x, alpha=0.05, transform=lambda x: x):
 
 
 def _hpd_df(x, alpha):
-    cnames = ['hpd_{0:g}'.format(100 * alpha / 2),
-              'hpd_{0:g}'.format(100 * (1 - alpha / 2))]
+    cnames = [
+        "hpd_{0:g}".format(100 * alpha / 2),
+        "hpd_{0:g}".format(100 * (1 - alpha / 2)),
+    ]
     return pd.DataFrame(hpd(x, alpha), columns=cnames)
 
 
 @statfunc
 def mc_error(x, batches=5):
-    R"""Calculates the simulation standard error, accounting for non-independent
+    r"""Calculates the simulation standard error, accounting for non-independent
         samples. The trace is divided into batches, and the standard deviation of
         the batch means is calculated.
 
@@ -777,7 +822,7 @@ def mc_error(x, batches=5):
     if x.ndim > 1:
 
         dims = np.shape(x)
-        #ttrace = np.transpose(np.reshape(trace, (dims[0], sum(dims[1:]))))
+        # ttrace = np.transpose(np.reshape(trace, (dims[0], sum(dims[1:]))))
         trace = np.transpose([t.ravel() for t in x])
 
         return np.reshape([mc_error(t, batches) for t in trace], dims[1:])
@@ -801,7 +846,7 @@ def mc_error(x, batches=5):
 
 @statfunc
 def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
-    R"""Returns a dictionary of requested quantiles from array
+    r"""Returns a dictionary of requested quantiles from array
 
     Parameters
     ----------
@@ -836,11 +881,13 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
     except IndexError:
         pm._log.warning("Too few elements for quantile calculation")
 
+
 def dict2pd(statdict, labelname):
     """Small helper function to transform a diagnostics output dict into a
     pandas Series.
     """
     from .backends import tracetab as ttab
+
     var_dfs = []
     for key, value in statdict.items():
         var_df = pd.Series(value.flatten())
@@ -850,10 +897,19 @@ def dict2pd(statdict, labelname):
     statpd = statpd.rename(labelname)
     return statpd
 
-def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
-               extend=False, include_transformed=False,
-               alpha=0.05, start=0, batches=None):
-    R"""Create a data frame with summary statistics.
+
+def summary(
+    trace,
+    varnames=None,
+    transform=lambda x: x,
+    stat_funcs=None,
+    extend=False,
+    include_transformed=False,
+    alpha=0.05,
+    start=0,
+    batches=None,
+):
+    r"""Create a data frame with summary statistics.
 
     Parameters
     ----------
@@ -939,16 +995,19 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
     from .backends import tracetab as ttab
 
     if varnames is None:
-        varnames = get_default_varnames(trace.varnames,
-                       include_transformed=include_transformed)
+        varnames = get_default_varnames(
+            trace.varnames, include_transformed=include_transformed
+        )
 
     if batches is None:
         batches = min([100, len(trace)])
 
-    funcs = [lambda x: pd.Series(np.mean(x, 0), name='mean'),
-             lambda x: pd.Series(np.std(x, 0), name='sd'),
-             lambda x: pd.Series(mc_error(x, batches), name='mc_error'),
-             lambda x: _hpd_df(x, alpha)]
+    funcs = [
+        lambda x: pd.Series(np.mean(x, 0), name="mean"),
+        lambda x: pd.Series(np.std(x, 0), name="sd"),
+        lambda x: pd.Series(mc_error(x, batches), name="mc_error"),
+        lambda x: _hpd_df(x, alpha),
+    ]
 
     if stat_funcs is not None:
         if extend:
@@ -970,16 +1029,15 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
     elif trace.nchains < 2:
         return dforg
     else:
-        n_eff = pm.effective_n(trace,
-                               varnames=varnames,
-                               include_transformed=include_transformed)
-        n_eff_pd = dict2pd(n_eff, 'n_eff')
-        rhat = pm.gelman_rubin(trace,
-                               varnames=varnames,
-                               include_transformed=include_transformed)
-        rhat_pd = dict2pd(rhat, 'Rhat')
-        return pd.concat([dforg, n_eff_pd, rhat_pd],
-                         axis=1, join_axes=[dforg.index])
+        n_eff = pm.effective_n(
+            trace, varnames=varnames, include_transformed=include_transformed
+        )
+        n_eff_pd = dict2pd(n_eff, "n_eff")
+        rhat = pm.gelman_rubin(
+            trace, varnames=varnames, include_transformed=include_transformed
+        )
+        rhat_pd = dict2pd(rhat, "Rhat")
+        return pd.concat([dforg, n_eff_pd, rhat_pd], axis=1, join_axes=[dforg.index])
 
 
 def _calculate_stats(sample, batches, alpha):
@@ -992,14 +1050,14 @@ def _calculate_stats(sample, batches, alpha):
         for idx in idxs:
             mean, sd, mce = [stat[idx] for stat in (means, sds, mces)]
             interval = intervals[idx].squeeze().tolist()
-            yield {'mean': mean, 'sd': sd, 'mce': mce, 'hpd': interval}
+            yield {"mean": mean, "sd": sd, "mce": mce, "hpd": interval}
 
 
 def _calculate_posterior_quantiles(sample, qlist):
     var_quantiles = quantiles(sample, qlist=qlist)
     # Replace ends of qlist with 'lo' and 'hi'
-    qends = {qlist[0]: 'lo', qlist[-1]: 'hi'}
-    qkeys = {q: qends[q] if q in qends else 'q{}'.format(q) for q in qlist}
+    qends = {qlist[0]: "lo", qlist[-1]: "hi"}
+    qkeys = {q: qends[q] if q in qends else "q{}".format(q) for q in qlist}
     for key, idxs in _groupby_leading_idxs(sample.shape[1:]):
         yield key
         for idx in idxs:
@@ -1044,7 +1102,7 @@ def _groupby_leading_idxs(shape):
 
 
 def bfmi(trace):
-    R"""Calculate the estimated Bayesian fraction of missing information (BFMI).
+    r"""Calculate the estimated Bayesian fraction of missing information (BFMI).
 
     BFMI quantifies how well momentum resampling matches the marginal energy
     distribution.  For more information on BFMI, see
@@ -1063,13 +1121,13 @@ def bfmi(trace):
     z : float
         The Bayesian fraction of missing information of the model and trace.
     """
-    energy = trace['energy']
+    energy = trace["energy"]
 
     return np.square(np.diff(energy)).mean() / np.var(energy)
 
 
 def r2_score(y_true, y_pred, round_to=2):
-    R"""R-squared for Bayesian regression models. Only valid for linear models.
+    r"""R-squared for Bayesian regression models. Only valid for linear models.
     http://www.stat.columbia.edu/%7Egelman/research/unpublished/bayes_R2.pdf
 
     Parameters
@@ -1099,6 +1157,5 @@ def r2_score(y_true, y_pred, round_to=2):
     r2_median = np.around(np.median(r2), round_to)
     r2_mean = np.around(np.mean(r2), round_to)
     r2_std = np.around(np.std(r2), round_to)
-    r2_r = namedtuple('r2_r', 'r2_median, r2_mean, r2_std')
+    r2_r = namedtuple("r2_r", "r2_median, r2_mean, r2_std")
     return r2_r(r2_median, r2_mean, r2_std)
-

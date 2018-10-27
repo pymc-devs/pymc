@@ -7,18 +7,23 @@ import theano.tensor as tt
 import pymc3 as pm
 from pymc3.gp.cov import Covariance, Constant
 from pymc3.gp.mean import Zero
-from pymc3.gp.util import (conditioned_vars, infer_shape,
-                           stabilize, cholesky, solve_lower, solve_upper)
+from pymc3.gp.util import (
+    conditioned_vars,
+    infer_shape,
+    stabilize,
+    cholesky,
+    solve_lower,
+    solve_upper,
+)
 from pymc3.distributions import draw_values
 from theano.tensor.nlinalg import eigh
-from ..math import (cartesian, kron_dot, kron_diag,
-                    kron_solve_lower, kron_solve_upper)
+from ..math import cartesian, kron_dot, kron_diag, kron_solve_lower, kron_solve_upper
 
-__all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse', 'LatentKron', 'MarginalKron']
+__all__ = ["Latent", "Marginal", "TP", "MarginalSparse", "LatentKron", "MarginalKron"]
 
 
 class Base(object):
-    R"""
+    r"""
     Base class.
     """
 
@@ -49,7 +54,7 @@ class Base(object):
 
 @conditioned_vars(["X", "f"])
 class Latent(Base):
-    R"""
+    r"""
     Latent Gaussian process.
 
     The `gp.Latent` class is a direct implementation of a GP.  No addiive
@@ -118,7 +123,7 @@ class Latent(Base):
         return f
 
     def prior(self, name, X, reparameterize=True, **kwargs):
-        R"""
+        r"""
         Returns the GP prior distribution evaluated over the input
         locations `X`.
 
@@ -150,14 +155,14 @@ class Latent(Base):
     def _get_given_vals(self, given):
         if given is None:
             given = {}
-        if 'gp' in given:
-            cov_total = given['gp'].cov_func
-            mean_total = given['gp'].mean_func
+        if "gp" in given:
+            cov_total = given["gp"].cov_func
+            mean_total = given["gp"].mean_func
         else:
             cov_total = self.cov_func
             mean_total = self.mean_func
-        if all(val in given for val in ['X', 'f']):
-            X, f = given['X'], given['f']
+        if all(val in given for val in ["X", "f"]):
+            X, f = given["X"], given["f"]
         else:
             X, f = self.X, self.f
         return X, f, cov_total, mean_total
@@ -174,7 +179,7 @@ class Latent(Base):
         return mu, cov
 
     def conditional(self, name, Xnew, given=None, **kwargs):
-        R"""
+        r"""
         Returns the conditional distribution evaluated over new input
         locations `Xnew`.
 
@@ -240,7 +245,9 @@ class TP(Latent):
 
     def __init__(self, mean_func=Zero(), cov_func=Constant(0.0), nu=None):
         if nu is None:
-            raise ValueError("Student's T process requires a degrees of freedom parameter, 'nu'")
+            raise ValueError(
+                "Student's T process requires a degrees of freedom parameter, 'nu'"
+            )
         self.nu = nu
         super(TP, self).__init__(mean_func, cov_func)
 
@@ -254,13 +261,15 @@ class TP(Latent):
         if reparameterize:
             chi2 = pm.ChiSquared("chi2_", self.nu)
             v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
-            f = pm.Deterministic(name, (tt.sqrt(self.nu) / chi2) * (mu + cholesky(cov).dot(v)))
+            f = pm.Deterministic(
+                name, (tt.sqrt(self.nu) / chi2) * (mu + cholesky(cov).dot(v))
+            )
         else:
             f = pm.MvStudentT(name, nu=self.nu, mu=mu, cov=cov, shape=shape, **kwargs)
         return f
 
     def prior(self, name, X, reparameterize=True, **kwargs):
-        R"""
+        r"""
         Returns the TP prior distribution evaluated over the input
         locations `X`.
 
@@ -296,11 +305,11 @@ class TP(Latent):
         mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
         beta = tt.dot(v, v)
         nu2 = self.nu + X.shape[0]
-        covT = (self.nu + beta - 2)/(nu2 - 2) * cov
+        covT = (self.nu + beta - 2) / (nu2 - 2) * cov
         return nu2, mu, covT
 
     def conditional(self, name, Xnew, **kwargs):
-        R"""
+        r"""
         Returns the conditional distribution evaluated over new input
         locations `Xnew`.
 
@@ -328,7 +337,7 @@ class TP(Latent):
 
 @conditioned_vars(["X", "y", "noise"])
 class Marginal(Base):
-    R"""
+    r"""
     Marginal Gaussian process.
 
     The `gp.Marginal` class is an implementation of the sum of a GP
@@ -383,7 +392,7 @@ class Marginal(Base):
         return mu, cov
 
     def marginal_likelihood(self, name, X, y, noise, is_observed=True, **kwargs):
-        R"""
+        r"""
         Returns the marginal likelihood distribution, given the input
         locations `X` and the data `y`.
 
@@ -430,22 +439,23 @@ class Marginal(Base):
         if given is None:
             given = {}
 
-        if 'gp' in given:
-            cov_total = given['gp'].cov_func
-            mean_total = given['gp'].mean_func
+        if "gp" in given:
+            cov_total = given["gp"].cov_func
+            mean_total = given["gp"].mean_func
         else:
             cov_total = self.cov_func
             mean_total = self.mean_func
-        if all(val in given for val in ['X', 'y', 'noise']):
-            X, y, noise = given['X'], given['y'], given['noise']
+        if all(val in given for val in ["X", "y", "noise"]):
+            X, y, noise = given["X"], given["y"], given["noise"]
             if not isinstance(noise, Covariance):
                 noise = pm.gp.cov.WhiteNoise(noise)
         else:
             X, y, noise = self.X, self.y, self.noise
         return X, y, noise, cov_total, mean_total
 
-    def _build_conditional(self, Xnew, pred_noise, diag, X, y, noise,
-                           cov_total, mean_total):
+    def _build_conditional(
+        self, Xnew, pred_noise, diag, X, y, noise, cov_total, mean_total
+    ):
         Kxx = cov_total(X)
         Kxs = self.cov_func(X, Xnew)
         Knx = noise(X)
@@ -468,7 +478,7 @@ class Marginal(Base):
             return mu, cov if pred_noise else stabilize(cov)
 
     def conditional(self, name, Xnew, pred_noise=False, given=None, **kwargs):
-        R"""
+        r"""
         Returns the conditional distribution evaluated over new input
         locations `Xnew`.
 
@@ -506,7 +516,7 @@ class Marginal(Base):
         return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False, given=None):
-        R"""
+        r"""
         Return the mean vector and covariance matrix of the conditional
         distribution as numpy arrays, given a `point`, such as the MAP
         estimate or a sample from a `trace`.
@@ -534,7 +544,7 @@ class Marginal(Base):
         return draw_values([mu, cov], point=point)
 
     def predictt(self, Xnew, diag=False, pred_noise=False, given=None):
-        R"""
+        r"""
         Return the mean vector and covariance matrix of the conditional
         distribution as symbolic variables.
 
@@ -559,7 +569,7 @@ class Marginal(Base):
 
 @conditioned_vars(["X", "Xu", "y", "sigma"])
 class MarginalSparse(Marginal):
-    R"""
+    r"""
     Approximate marginal Gaussian process.
 
     The `gp.MarginalSparse` class is an implementation of the sum of a GP
@@ -653,9 +663,9 @@ class MarginalSparse(Marginal):
             trace = 0.0
         elif self.approx == "VFE":
             Lamd = tt.ones_like(Qffd) * sigma2
-            trace = ((1.0 / (2.0 * sigma2)) *
-                     (tt.sum(self.cov_func(X, diag=True)) -
-                      tt.sum(tt.sum(A * A, 0))))
+            trace = (1.0 / (2.0 * sigma2)) * (
+                tt.sum(self.cov_func(X, diag=True)) - tt.sum(tt.sum(A * A, 0))
+            )
         else:  # DTC
             Lamd = tt.ones_like(Qffd) * sigma2
             trace = 0.0
@@ -669,8 +679,10 @@ class MarginalSparse(Marginal):
         quadratic = 0.5 * (tt.dot(r, r_l) - tt.dot(c, c))
         return -1.0 * (constant + logdet + quadratic + trace)
 
-    def marginal_likelihood(self, name, X, Xu, y, noise=None, is_observed=True, **kwargs):
-        R"""
+    def marginal_likelihood(
+        self, name, X, Xu, y, noise=None, is_observed=True, **kwargs
+    ):
+        r"""
         Returns the approximate marginal likelihood distribution, given the input
         locations `X`, inducing point locations `Xu`, data `y`, and white noise
         standard deviations `sigma`.
@@ -701,25 +713,29 @@ class MarginalSparse(Marginal):
         self.Xu = Xu
         self.y = y
         if noise is None:
-            sigma = kwargs.get('sigma')
+            sigma = kwargs.get("sigma")
             if sigma is None:
-                raise ValueError('noise argument must be specified')
+                raise ValueError("noise argument must be specified")
             else:
                 self.sigma = sigma
                 warnings.warn(
                     "The 'sigma' argument has been deprecated. Use 'noise' instead.",
-                DeprecationWarning)
+                    DeprecationWarning,
+                )
         else:
             self.sigma = noise
-        logp = functools.partial(self._build_marginal_likelihood_logp,
-                                 X=X, Xu=Xu, sigma=noise)
+        logp = functools.partial(
+            self._build_marginal_likelihood_logp, X=X, Xu=Xu, sigma=noise
+        )
         if is_observed:
             return pm.DensityDist(name, logp, observed=y, **kwargs)
         else:
             shape = infer_shape(X, kwargs.pop("shape", None))
             return pm.DensityDist(name, logp, shape=shape, **kwargs)
 
-    def _build_conditional(self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total):
+    def _build_conditional(
+        self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total
+    ):
         sigma2 = tt.square(sigma)
         Kuu = cov_total(Xu)
         Kuf = cov_total(Xu, X)
@@ -738,7 +754,9 @@ class MarginalSparse(Marginal):
         c = solve_lower(L_B, tt.dot(A, r_l))
         Kus = self.cov_func(Xu, Xnew)
         As = solve_lower(Luu, Kus)
-        mu = self.mean_func(Xnew) + tt.dot(tt.transpose(As), solve_upper(tt.transpose(L_B), c))
+        mu = self.mean_func(Xnew) + tt.dot(
+            tt.transpose(As), solve_upper(tt.transpose(L_B), c)
+        )
         C = solve_lower(L_B, As)
         if diag:
             Kss = self.cov_func(Xnew, diag=True)
@@ -747,8 +765,11 @@ class MarginalSparse(Marginal):
                 var += sigma2
             return mu, var
         else:
-            cov = (self.cov_func(Xnew) - tt.dot(tt.transpose(As), As) +
-                   tt.dot(tt.transpose(C), C))
+            cov = (
+                self.cov_func(Xnew)
+                - tt.dot(tt.transpose(As), As)
+                + tt.dot(tt.transpose(C), C)
+            )
             if pred_noise:
                 cov += sigma2 * tt.identity_like(cov)
             return mu, cov if pred_noise else stabilize(cov)
@@ -756,20 +777,20 @@ class MarginalSparse(Marginal):
     def _get_given_vals(self, given):
         if given is None:
             given = {}
-        if 'gp' in given:
-            cov_total = given['gp'].cov_func
-            mean_total = given['gp'].mean_func
+        if "gp" in given:
+            cov_total = given["gp"].cov_func
+            mean_total = given["gp"].mean_func
         else:
             cov_total = self.cov_func
             mean_total = self.mean_func
-        if all(val in given for val in ['X', 'Xu', 'y', 'sigma']):
-            X, Xu, y, sigma = given['X'], given['Xu'], given['y'], given['sigma']
+        if all(val in given for val in ["X", "Xu", "y", "sigma"]):
+            X, Xu, y, sigma = given["X"], given["Xu"], given["y"], given["sigma"]
         else:
             X, Xu, y, sigma = self.X, self.Xu, self.y, self.sigma
         return X, Xu, y, sigma, cov_total, mean_total
 
     def conditional(self, name, Xnew, pred_noise=False, given=None, **kwargs):
-        R"""
+        r"""
         Returns the approximate conditional distribution of the GP evaluated over
         new input locations `Xnew`.
 
@@ -800,7 +821,7 @@ class MarginalSparse(Marginal):
 
 @conditioned_vars(["Xs", "f"])
 class LatentKron(Base):
-    R"""
+    r"""
     Latent Gaussian process whose covariance is a tensor product kernel.
 
     The `gp.LatentKron` class is a direct implementation of a GP with a
@@ -861,7 +882,7 @@ class LatentKron(Base):
         super(LatentKron, self).__init__(mean_func, cov_func)
 
     def __add__(self, other):
-        raise TypeError('Additive, Kronecker-structured processes not implemented')
+        raise TypeError("Additive, Kronecker-structured processes not implemented")
 
     def _build_prior(self, name, Xs, **kwargs):
         self.N = np.prod([len(X) for X in Xs])
@@ -891,7 +912,7 @@ class LatentKron(Base):
             distribution constructor.
         """
         if len(Xs) != len(self.cov_funcs):
-            raise ValueError('Must provide a covariance function for each X')
+            raise ValueError("Must provide a covariance function for each X")
         f = self._build_prior(name, Xs, **kwargs)
         self.Xs = Xs
         self.f = f
@@ -952,7 +973,7 @@ class LatentKron(Base):
 
 @conditioned_vars(["Xs", "y", "sigma"])
 class MarginalKron(Base):
-    R"""
+    r"""
     Marginal Gaussian process whose covariance is a tensor product kernel.
 
     The `gp.MarginalKron` class is an implementation of the sum of a
@@ -1017,7 +1038,7 @@ class MarginalKron(Base):
         super(MarginalKron, self).__init__(mean_func, cov_func)
 
     def __add__(self, other):
-        raise TypeError('Additive, Kronecker-structured processes not implemented')
+        raise TypeError("Additive, Kronecker-structured processes not implemented")
 
     def _build_marginal_likelihood(self, Xs):
         self.X = cartesian(*Xs)
@@ -1028,10 +1049,14 @@ class MarginalKron(Base):
     def _check_inputs(self, Xs, y):
         N = np.prod([len(X) for X in Xs])
         if len(Xs) != len(self.cov_funcs):
-            raise ValueError('Must provide a covariance function for each X')
+            raise ValueError("Must provide a covariance function for each X")
         if N != len(y):
-            raise ValueError(('Length of y ({}) must match length of cartesian'
-                              'cartesian product of Xs ({})').format(len(y), N))
+            raise ValueError(
+                (
+                    "Length of y ({}) must match length of cartesian"
+                    "cartesian product of Xs ({})"
+                ).format(len(y), N)
+            )
 
     def marginal_likelihood(self, name, Xs, y, sigma, is_observed=True, **kwargs):
         """
@@ -1065,12 +1090,14 @@ class MarginalKron(Base):
         self.y = y
         self.sigma = sigma
         if is_observed:
-            return pm.KroneckerNormal(name, mu=mu, covs=covs, sigma=sigma,
-                                      observed=y, **kwargs)
+            return pm.KroneckerNormal(
+                name, mu=mu, covs=covs, sigma=sigma, observed=y, **kwargs
+            )
         else:
             shape = np.prod([len(X) for X in Xs])
-            return pm.KroneckerNormal(name, mu=mu, covs=covs, sigma=sigma,
-                                      shape=shape, **kwargs)
+            return pm.KroneckerNormal(
+                name, mu=mu, covs=covs, sigma=sigma, shape=shape, **kwargs
+            )
 
     def _build_conditional(self, Xnew, pred_noise, diag):
         Xs, y, sigma = self.Xs, self.y, self.sigma
@@ -1083,7 +1110,7 @@ class MarginalKron(Base):
         QTs = list(map(tt.transpose, Qs))
         eigs = kron_diag(*eigs_sep)  # Combine separate eigs
         if sigma is not None:
-            eigs += sigma**2
+            eigs += sigma ** 2
 
         # New points
         Km = self.cov_func(Xnew, diag=diag)
@@ -1092,13 +1119,13 @@ class MarginalKron(Base):
 
         # Build conditional mu
         alpha = kron_dot(QTs, delta)
-        alpha = alpha/eigs[:, None]
+        alpha = alpha / eigs[:, None]
         alpha = kron_dot(Qs, alpha)
         mu = tt.dot(Kmn, alpha).ravel() + self.mean_func(Xnew)
 
         # Build conditional cov
         A = kron_dot(QTs, Knm)
-        A = A/tt.sqrt(eigs[:, None])
+        A = A / tt.sqrt(eigs[:, None])
         if diag:
             Asq = tt.sum(tt.square(A), 0)
             cov = Km - Asq
@@ -1150,7 +1177,7 @@ class MarginalKron(Base):
         return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False):
-        R"""
+        r"""
         Return the mean vector and covariance matrix of the conditional
         distribution as numpy arrays, given a `point`, such as the MAP
         estimate or a sample from a `trace`.
@@ -1173,7 +1200,7 @@ class MarginalKron(Base):
         return draw_values([mu, cov], point=point)
 
     def predictt(self, Xnew, diag=False, pred_noise=False):
-        R"""
+        r"""
         Return the mean vector and covariance matrix of the conditional
         distribution as symbolic variables.
 

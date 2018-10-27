@@ -6,7 +6,7 @@ import theano
 
 
 class TestTextSampling(object):
-    name = 'text-db'
+    name = "text-db"
 
     def test_supports_sampler_stats(self):
         with pm.Model():
@@ -20,53 +20,57 @@ class TestTextSampling(object):
 
 class TestText0dSampling(bf.SamplingTestCase):
     backend = text.Text
-    name = 'text-db'
+    name = "text-db"
     shape = ()
 
 
 class TestText1dSampling(bf.SamplingTestCase):
     backend = text.Text
-    name = 'text-db'
+    name = "text-db"
     shape = 2
 
 
 class TestText2dSampling(bf.SamplingTestCase):
     backend = text.Text
-    name = 'text-db'
+    name = "text-db"
     shape = (2, 3)
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+@pytest.mark.xfail(
+    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
+)
 class TestText0dSelection(bf.SelectionTestCase):
     backend = text.Text
-    name = 'text-db'
+    name = "text-db"
     shape = ()
 
 
 class TestText1dSelection(bf.SelectionTestCase):
     backend = text.Text
-    name = 'text-db'
+    name = "text-db"
     shape = 2
 
 
 class TestText2dSelection(bf.SelectionTestCase):
     backend = text.Text
-    name = 'text-db'
+    name = "text-db"
     shape = (2, 3)
 
 
 class TestTextDumpLoad(bf.DumpLoadTestCase):
     backend = text.Text
     load_func = staticmethod(text.load)
-    name = 'text-db'
+    name = "text-db"
     shape = (2, 3)
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+@pytest.mark.xfail(
+    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
+)
 class TestTextDumpFunction(bf.BackendEqualityTestCase):
     backend0 = backend1 = ndarray.NDArray
     name0 = None
-    name1 = 'text-db'
+    name1 = "text-db"
     shape = (2, 3)
 
     @classmethod
@@ -81,5 +85,5 @@ class TestNDArrayTextEquality(bf.BackendEqualityTestCase):
     backend0 = ndarray.NDArray
     name0 = None
     backend1 = text.Text
-    name1 = 'text-db'
+    name1 = "text-db"
     shape = (2, 3)

@@ -18,8 +18,8 @@ class TestZeroMean(object):
         with pm.Model() as model:
             zero_mean = pm.gp.mean.Zero()
         M = theano.function([], zero_mean(X))()
-        assert np.all(M==0)
-        assert M.shape == (10, )
+        assert np.all(M == 0)
+        assert M.shape == (10,)
 
 
 class TestConstantMean(object):
@@ -28,8 +28,8 @@ class TestConstantMean(object):
         with pm.Model() as model:
             const_mean = pm.gp.mean.Constant(6)
         M = theano.function([], const_mean(X))()
-        assert np.all(M==6)
-        assert M.shape == (10, )
+        assert np.all(M == 6)
+        assert M.shape == (10,)
 
 
 class TestLinearMean(object):
@@ -39,7 +39,7 @@ class TestLinearMean(object):
             linear_mean = pm.gp.mean.Linear(2, 0.5)
         M = theano.function([], linear_mean(X))()
         npt.assert_allclose(M[1], 0.7222, atol=1e-3)
-        assert M.shape == (10, )
+        assert M.shape == (10,)
 
 
 class TestAddProdMean(object):
@@ -212,8 +212,16 @@ class TestCovProd(object):
         X = np.linspace(0, 1, 3)[:, None]
         M = np.array([[1, 2, 3], [2, 1, 2], [3, 2, 1]])
         with pm.Model() as model:
-            cov1 = 3 + pm.gp.cov.ExpQuad(1, 0.1) + M * pm.gp.cov.ExpQuad(1, 0.1) * M * pm.gp.cov.ExpQuad(1, 0.1)
-            cov2 = pm.gp.cov.ExpQuad(1, 0.1) * M * pm.gp.cov.ExpQuad(1, 0.1) * M + pm.gp.cov.ExpQuad(1, 0.1) + 3
+            cov1 = (
+                3
+                + pm.gp.cov.ExpQuad(1, 0.1)
+                + M * pm.gp.cov.ExpQuad(1, 0.1) * M * pm.gp.cov.ExpQuad(1, 0.1)
+            )
+            cov2 = (
+                pm.gp.cov.ExpQuad(1, 0.1) * M * pm.gp.cov.ExpQuad(1, 0.1) * M
+                + pm.gp.cov.ExpQuad(1, 0.1)
+                + 3
+            )
         K1 = theano.function([], cov1(X))()
         K2 = theano.function([], cov2(X))()
         assert np.allclose(K1, K2)
@@ -247,10 +255,16 @@ class TestCovKron(object):
         X2 = cartesian(X21, X22)
         X = cartesian(X1, X21, X22)
         with pm.Model() as model:
-            cov1 = 3 + pm.gp.cov.ExpQuad(1, 0.1) + pm.gp.cov.ExpQuad(1, 0.1) * pm.gp.cov.ExpQuad(1, 0.1)
+            cov1 = (
+                3
+                + pm.gp.cov.ExpQuad(1, 0.1)
+                + pm.gp.cov.ExpQuad(1, 0.1) * pm.gp.cov.ExpQuad(1, 0.1)
+            )
             cov2 = pm.gp.cov.ExpQuad(1, 0.1) * pm.gp.cov.ExpQuad(2, 0.1)
             cov = pm.gp.cov.Kron([cov1, cov2])
-        K_true = kronecker(theano.function([], cov1(X1))(), theano.function([], cov2(X2))()).eval()
+        K_true = kronecker(
+            theano.function([], cov1(X1))(), theano.function([], cov2(X2))()
+        ).eval()
         K = theano.function([], cov(X))()
         npt.assert_allclose(K_true, K)
 
@@ -269,7 +283,7 @@ class TestCovSliceDim(object):
     def test_slice2(self):
         X = np.linspace(0, 1, 30).reshape(10, 3)
         with pm.Model() as model:
-            cov = pm.gp.cov.ExpQuad(3, ls=[0.1, 0.1], active_dims=[1,2])
+            cov = pm.gp.cov.ExpQuad(3, ls=[0.1, 0.1], active_dims=[1, 2])
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.34295549, atol=1e-3)
         # check diagonal
@@ -279,7 +293,7 @@ class TestCovSliceDim(object):
     def test_slice3(self):
         X = np.linspace(0, 1, 30).reshape(10, 3)
         with pm.Model() as model:
-            cov = pm.gp.cov.ExpQuad(3, ls=np.array([0.1, 0.1]), active_dims=[1,2])
+            cov = pm.gp.cov.ExpQuad(3, ls=np.array([0.1, 0.1]), active_dims=[1, 2])
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.34295549, atol=1e-3)
         # check diagonal
@@ -289,7 +303,9 @@ class TestCovSliceDim(object):
     def test_diffslice(self):
         X = np.linspace(0, 1, 30).reshape(10, 3)
         with pm.Model() as model:
-            cov = pm.gp.cov.ExpQuad(3, ls=0.1, active_dims=[1, 0, 0]) + pm.gp.cov.ExpQuad(3, ls=[0.1, 0.2, 0.3])
+            cov = pm.gp.cov.ExpQuad(
+                3, ls=0.1, active_dims=[1, 0, 0]
+            ) + pm.gp.cov.ExpQuad(3, ls=[0.1, 0.2, 0.3])
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.683572, atol=1e-3)
         # check diagonal
@@ -305,7 +321,7 @@ class TestCovSliceDim(object):
 
 class TestStability(object):
     def test_stable(self):
-        X = np.random.uniform(low=320., high=400., size=[2000, 2])
+        X = np.random.uniform(low=320.0, high=400.0, size=[2000, 2])
         with pm.Model() as model:
             cov = pm.gp.cov.ExpQuad(2, 0.1)
         dists = theano.function([], cov.square_dist(X, X))()
@@ -365,7 +381,7 @@ class TestWhiteNoise(object):
             cov = pm.gp.cov.WhiteNoise(sigma=0.5)
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.0, atol=1e-3)
-        npt.assert_allclose(K[0, 0], 0.5**2, atol=1e-3)
+        npt.assert_allclose(K[0, 0], 0.5 ** 2, atol=1e-3)
         # check diagonal
         Kd = theano.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
@@ -507,11 +523,15 @@ class TestPolynomial(object):
 class TestWarpedInput(object):
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
+
         def warp_func(x, a, b, c):
             return x + (a * tt.tanh(b * (x - c)))
+
         with pm.Model() as model:
             cov_m52 = pm.gp.cov.Matern52(1, 0.2)
-            cov = pm.gp.cov.WarpedInput(1, warp_func=warp_func, args=(1, 10, 1), cov_func=cov_m52)
+            cov = pm.gp.cov.WarpedInput(
+                1, warp_func=warp_func, args=(1, 10, 1), cov_func=cov_m52
+            )
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.79593, atol=1e-3)
         K = theano.function([], cov(X, X))()
@@ -531,8 +551,10 @@ class TestWarpedInput(object):
 class TestGibbs(object):
     def test_1d(self):
         X = np.linspace(0, 2, 10)[:, None]
+
         def tanh_func(x, x1, x2, w, x0):
             return (x1 + x2) / 2.0 - (x1 - x2) / 2.0 * tt.tanh((x - x0) / w)
+
         with pm.Model() as model:
             cov = pm.gp.cov.Gibbs(1, tanh_func, args=(0.05, 0.6, 0.4, 1.0))
         K = theano.function([], cov(X))()
@@ -549,17 +571,21 @@ class TestGibbs(object):
         with pytest.raises(NotImplementedError):
             pm.gp.cov.Gibbs(2, lambda x: x)
         with pytest.raises(NotImplementedError):
-            pm.gp.cov.Gibbs(3, lambda x: x, active_dims=[0,1])
+            pm.gp.cov.Gibbs(3, lambda x: x, active_dims=[0, 1])
 
 
 class TestScaledCov(object):
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
+
         def scaling_func(x, a, b):
-            return a + b*x
+            return a + b * x
+
         with pm.Model() as model:
             cov_m52 = pm.gp.cov.Matern52(1, 0.2)
-            cov = pm.gp.cov.ScaledCov(1, scaling_func=scaling_func, args=(2, -1), cov_func=cov_m52)
+            cov = pm.gp.cov.ScaledCov(
+                1, scaling_func=scaling_func, args=(2, -1), cov_func=cov_m52
+            )
         K = theano.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 3.00686, atol=1e-3)
         K = theano.function([], cov(X, X))()
@@ -580,10 +606,13 @@ class TestHandleArgs(object):
     def test_handleargs(self):
         def func_noargs(x):
             return x
+
         def func_onearg(x, a):
             return x + a
+
         def func_twoarg(x, a, b):
             return x + a + b
+
         x = 100
         a = 2
         b = 3
@@ -612,19 +641,15 @@ class TestCoregion(object):
         with pm.Model() as model:
             B = pm.gp.cov.Coregion(2, W=self.W, kappa=self.kappa, active_dims=[0])
             npt.assert_allclose(
-                B(np.array([[2, 1.5], [3, -42]])).eval(),
-                self.B[2:4, 2:4]
-                )
+                B(np.array([[2, 1.5], [3, -42]])).eval(), self.B[2:4, 2:4]
+            )
             npt.assert_allclose(B(self.X).eval(), B_mat)
 
     def test_fullB(self):
         B_mat = self.B[self.rand_rows, self.rand_rows.T]
         with pm.Model() as model:
             B = pm.gp.cov.Coregion(1, B=self.B)
-            npt.assert_allclose(
-                B(np.array([[2], [3]])).eval(),
-                self.B[2:4, 2:4]
-                )
+            npt.assert_allclose(B(np.array([[2], [3]])).eval(), self.B[2:4, 2:4])
             npt.assert_allclose(B(self.X).eval(), B_mat)
 
     def test_Xs(self):
@@ -632,9 +657,8 @@ class TestCoregion(object):
         with pm.Model() as model:
             B = pm.gp.cov.Coregion(2, W=self.W, kappa=self.kappa, active_dims=[0])
             npt.assert_allclose(
-                B(np.array([[2, 1.5]]), np.array([[3, -42]])).eval(),
-                self.B[2, 3]
-                )
+                B(np.array([[2, 1.5]]), np.array([[3, -42]])).eval(), self.B[2, 3]
+            )
             npt.assert_allclose(B(self.X, self.Xs).eval(), B_mat)
 
     def test_diag(self):
@@ -642,9 +666,8 @@ class TestCoregion(object):
         with pm.Model() as model:
             B = pm.gp.cov.Coregion(2, W=self.W, kappa=self.kappa, active_dims=[0])
             npt.assert_allclose(
-                B(np.array([[2, 1.5]]), diag=True).eval(),
-                np.diag(self.B)[2]
-                )
+                B(np.array([[2, 1.5]]), diag=True).eval(), np.diag(self.B)[2]
+            )
             npt.assert_allclose(B(self.X, diag=True).eval(), B_diag)
 
     def test_raises(self):
@@ -664,19 +687,22 @@ class TestCoregion(object):
 
 
 class TestMarginalVsLatent(object):
-    R"""
+    r"""
     Compare the logp of models Marginal, noise=0 and Latent.
     """
+
     def setup_method(self):
-        X = np.random.randn(50,3)
-        y = np.random.randn(50)*0.01
+        X = np.random.randn(50, 3)
+        y = np.random.randn(50) * 0.01
         Xnew = np.random.randn(60, 3)
-        pnew = np.random.randn(60)*0.01
+        pnew = np.random.randn(60) * 0.01
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
             gp = pm.gp.Marginal(mean_func, cov_func)
-            f = gp.marginal_likelihood("f", X, y, noise=0.0, is_observed=False, observed=y)
+            f = gp.marginal_likelihood(
+                "f", X, y, noise=0.0, is_observed=False, observed=y
+            )
             p = gp.conditional("p", Xnew)
         self.logp = model.logp({"p": pnew})
         self.X = X
@@ -708,15 +734,16 @@ class TestMarginalVsLatent(object):
 
 
 class TestMarginalVsMarginalSparse(object):
-    R"""
+    r"""
     Compare logp of models Marginal and MarginalSparse.
     Should be nearly equal when inducing points are same as inputs.
     """
+
     def setup_method(self):
-        X = np.random.randn(50,3)
-        y = np.random.randn(50)*0.01
+        X = np.random.randn(50, 3)
+        y = np.random.randn(50) * 0.01
         Xnew = np.random.randn(60, 3)
-        pnew = np.random.randn(60)*0.01
+        pnew = np.random.randn(60) * 0.01
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
@@ -732,7 +759,7 @@ class TestMarginalVsMarginalSparse(object):
         self.pnew = pnew
         self.gp = gp
 
-    @pytest.mark.parametrize('approx', ['FITC', 'VFE', 'DTC'])
+    @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
     def testApproximations(self, approx):
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
@@ -743,7 +770,7 @@ class TestMarginalVsMarginalSparse(object):
         approx_logp = model.logp({"f": self.y, "p": self.pnew})
         npt.assert_allclose(approx_logp, self.logp, atol=0, rtol=1e-2)
 
-    @pytest.mark.parametrize('approx', ['FITC', 'VFE', 'DTC'])
+    @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
     def testPredictVar(self, approx):
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
@@ -760,7 +787,9 @@ class TestMarginalVsMarginalSparse(object):
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
             gp = pm.gp.MarginalSparse(mean_func, cov_func, approx="DTC")
-            f = gp.marginal_likelihood("f", self.X, self.X, self.y, self.sigma, is_observed=False)
+            f = gp.marginal_likelihood(
+                "f", self.X, self.X, self.y, self.sigma, is_observed=False
+            )
         mu1, cov1 = self.gp.predict(self.Xnew, pred_noise=True)
         mu2, cov2 = gp.predict(self.Xnew, pred_noise=True)
         npt.assert_allclose(mu1, mu2, atol=0, rtol=1e-3)
@@ -769,16 +798,20 @@ class TestMarginalVsMarginalSparse(object):
 
 class TestGPAdditive(object):
     def setup_method(self):
-        self.X = np.random.randn(50,3)
-        self.y = np.random.randn(50)*0.01
+        self.X = np.random.randn(50, 3)
+        self.y = np.random.randn(50) * 0.01
         self.Xnew = np.random.randn(60, 3)
         self.noise = pm.gp.cov.WhiteNoise(0.1)
-        self.covs = (pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]),
-                     pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]),
-                     pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]))
-        self.means = (pm.gp.mean.Constant(0.5),
-                      pm.gp.mean.Constant(0.5),
-                      pm.gp.mean.Constant(0.5))
+        self.covs = (
+            pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]),
+            pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]),
+            pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]),
+        )
+        self.means = (
+            pm.gp.mean.Constant(0.5),
+            pm.gp.mean.Constant(0.5),
+            pm.gp.mean.Constant(0.5),
+        )
 
     def testAdditiveMarginal(self):
         with pm.Model() as model1:
@@ -797,15 +830,20 @@ class TestGPAdditive(object):
         npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
 
         with model1:
-            fp1 = gpsum.conditional("fp1", self.Xnew, given={"X": self.X, "y": self.y,
-                                                            "noise": self.noise, "gp": gpsum})
+            fp1 = gpsum.conditional(
+                "fp1",
+                self.Xnew,
+                given={"X": self.X, "y": self.y, "noise": self.noise, "gp": gpsum},
+            )
         with model2:
             fp2 = gptot.conditional("fp2", self.Xnew)
 
         fp = np.random.randn(self.Xnew.shape[0])
-        npt.assert_allclose(fp1.logp({"fp1": fp}), fp2.logp({"fp2": fp}), atol=0, rtol=1e-2)
+        npt.assert_allclose(
+            fp1.logp({"fp1": fp}), fp2.logp({"fp2": fp}), atol=0, rtol=1e-2
+        )
 
-    @pytest.mark.parametrize('approx', ['FITC', 'VFE', 'DTC'])
+    @pytest.mark.parametrize("approx", ["FITC", "VFE", "DTC"])
     def testAdditiveMarginalSparse(self, approx):
         Xu = np.random.randn(10, 3)
         sigma = 0.1
@@ -819,19 +857,26 @@ class TestGPAdditive(object):
             model1_logp = model1.logp({"fsum": self.y})
 
         with pm.Model() as model2:
-            gptot = pm.gp.MarginalSparse(reduce(add, self.means), reduce(add, self.covs), approx=approx)
+            gptot = pm.gp.MarginalSparse(
+                reduce(add, self.means), reduce(add, self.covs), approx=approx
+            )
             fsum = gptot.marginal_likelihood("f", self.X, Xu, self.y, noise=sigma)
             model2_logp = model2.logp({"fsum": self.y})
         npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
 
         with model1:
-            fp1 = gpsum.conditional("fp1", self.Xnew, given={"X": self.X, "Xu": Xu, "y": self.y,
-                                                            "sigma": sigma, "gp": gpsum})
+            fp1 = gpsum.conditional(
+                "fp1",
+                self.Xnew,
+                given={"X": self.X, "Xu": Xu, "y": self.y, "sigma": sigma, "gp": gpsum},
+            )
         with model2:
             fp2 = gptot.conditional("fp2", self.Xnew)
 
         fp = np.random.randn(self.Xnew.shape[0])
-        npt.assert_allclose(fp1.logp({"fp1": fp}), fp2.logp({"fp2": fp}), atol=0, rtol=1e-2)
+        npt.assert_allclose(
+            fp1.logp({"fp1": fp}), fp2.logp({"fp2": fp}), atol=0, rtol=1e-2
+        )
 
     def testAdditiveLatent(self):
         with pm.Model() as model1:
@@ -850,13 +895,19 @@ class TestGPAdditive(object):
         npt.assert_allclose(model1_logp, model2_logp, atol=0, rtol=1e-2)
 
         with model1:
-            fp1 = gpsum.conditional("fp1", self.Xnew, given={"X": self.X, "f": self.y, "gp": gpsum})
+            fp1 = gpsum.conditional(
+                "fp1", self.Xnew, given={"X": self.X, "f": self.y, "gp": gpsum}
+            )
         with model2:
             fp2 = gptot.conditional("fp2", self.Xnew)
 
         fp = np.random.randn(self.Xnew.shape[0])
-        npt.assert_allclose(fp1.logp({"fsum": self.y, "fp1": fp}),
-                            fp2.logp({"fsum": self.y, "fp2": fp}), atol=0, rtol=1e-2)
+        npt.assert_allclose(
+            fp1.logp({"fsum": self.y, "fp1": fp}),
+            fp2.logp({"fsum": self.y, "fp2": fp}),
+            atol=0,
+            rtol=1e-2,
+        )
 
     def testAdditiveSparseRaises(self):
         # cant add different approximations
@@ -885,14 +936,15 @@ class TestGPAdditive(object):
 
 
 class TestTP(object):
-    R"""
+    r"""
     Compare TP with high degress of freedom to GP
     """
+
     def setup_method(self):
-        X = np.random.randn(20,3)
-        y = np.random.randn(20)*0.01
+        X = np.random.randn(20, 3)
+        y = np.random.randn(20) * 0.01
         Xnew = np.random.randn(50, 3)
-        pnew = np.random.randn(50)*0.01
+        pnew = np.random.randn(50) * 0.01
         with pm.Model() as model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             gp = pm.gp.Latent(cov_func=cov_func)
@@ -923,7 +975,9 @@ class TestTP(object):
         chol = np.linalg.cholesky(cov_func(self.X).eval())
         y_rotated = np.linalg.solve(chol, self.y)
         # testing full model logp unreliable due to introduction of chi2__log__
-        plogp = p.logp({"f_rotated_": y_rotated, "p": self.pnew, "chi2__log__": np.log(1e20)})
+        plogp = p.logp(
+            {"f_rotated_": y_rotated, "p": self.pnew, "chi2__log__": np.log(1e20)}
+        )
         npt.assert_allclose(self.plogp, plogp, atol=0, rtol=1e-2)
 
     def testAdditiveTPRaises(self):
@@ -939,23 +993,30 @@ class TestLatentKron(object):
     """
     Compare gp.LatentKron to gp.Latent, both with Gaussian noise.
     """
+
     def setup_method(self):
-        self.Xs = [np.linspace(0, 1, 7)[:, None],
-                   np.linspace(0, 1, 5)[:, None],
-                   np.linspace(0, 1, 6)[:, None]]
+        self.Xs = [
+            np.linspace(0, 1, 7)[:, None],
+            np.linspace(0, 1, 5)[:, None],
+            np.linspace(0, 1, 6)[:, None],
+        ]
         self.X = cartesian(*self.Xs)
         self.N = np.prod([len(X) for X in self.Xs])
         self.y = np.random.randn(self.N) * 0.1
-        self.Xnews = (np.random.randn(5, 1),
-                      np.random.randn(5, 1),
-                      np.random.randn(5, 1))
+        self.Xnews = (
+            np.random.randn(5, 1),
+            np.random.randn(5, 1),
+            np.random.randn(5, 1),
+        )
         self.Xnew = np.concatenate(self.Xnews, axis=1)
-        self.pnew = np.random.randn(len(self.Xnew))*0.01
+        self.pnew = np.random.randn(len(self.Xnew)) * 0.01
         ls = 0.2
         with pm.Model() as latent_model:
-            self.cov_funcs = (pm.gp.cov.ExpQuad(1, ls),
-                              pm.gp.cov.ExpQuad(1, ls),
-                              pm.gp.cov.ExpQuad(1, ls))
+            self.cov_funcs = (
+                pm.gp.cov.ExpQuad(1, ls),
+                pm.gp.cov.ExpQuad(1, ls),
+                pm.gp.cov.ExpQuad(1, ls),
+            )
             cov_func = pm.gp.cov.Kron(self.cov_funcs)
             self.mean = pm.gp.mean.Constant(0.5)
             gp = pm.gp.Latent(mean_func=self.mean, cov_func=cov_func)
@@ -967,53 +1028,59 @@ class TestLatentKron(object):
 
     def testLatentKronvsLatent(self):
         with pm.Model() as kron_model:
-            kron_gp = pm.gp.LatentKron(mean_func=self.mean,
-                                       cov_funcs=self.cov_funcs)
-            f = kron_gp.prior('f', self.Xs)
-            p = kron_gp.conditional('p', self.Xnew)
-        kronlatent_logp = kron_model.logp({"f_rotated_": self.y_rotated, "p": self.pnew})
+            kron_gp = pm.gp.LatentKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
+            f = kron_gp.prior("f", self.Xs)
+            p = kron_gp.conditional("p", self.Xnew)
+        kronlatent_logp = kron_model.logp(
+            {"f_rotated_": self.y_rotated, "p": self.pnew}
+        )
         npt.assert_allclose(kronlatent_logp, self.logp, atol=0, rtol=1e-3)
 
     def testLatentKronRaisesAdditive(self):
         with pm.Model() as kron_model:
-            gp1 = pm.gp.LatentKron(mean_func=self.mean,
-                                   cov_funcs=self.cov_funcs)
-            gp2 = pm.gp.LatentKron(mean_func=self.mean,
-                                   cov_funcs=self.cov_funcs)
+            gp1 = pm.gp.LatentKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
+            gp2 = pm.gp.LatentKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
         with pytest.raises(TypeError):
             gp1 + gp2
 
     def testLatentKronRaisesSizes(self):
         with pm.Model() as kron_model:
-            gp = pm.gp.LatentKron(mean_func=self.mean,
-                                  cov_funcs=self.cov_funcs)
+            gp = pm.gp.LatentKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
         with pytest.raises(ValueError):
-            gp.prior("f", Xs=[np.linspace(0, 1, 7)[:, None],
-                              np.linspace(0, 1, 5)[:, None]])
+            gp.prior(
+                "f", Xs=[np.linspace(0, 1, 7)[:, None], np.linspace(0, 1, 5)[:, None]]
+            )
 
 
 class TestMarginalKron(object):
     """
     Compare gp.MarginalKron to gp.Marginal.
     """
+
     def setup_method(self):
-        self.Xs = [np.linspace(0, 1, 7)[:, None],
-                   np.linspace(0, 1, 5)[:, None],
-                   np.linspace(0, 1, 6)[:, None]]
+        self.Xs = [
+            np.linspace(0, 1, 7)[:, None],
+            np.linspace(0, 1, 5)[:, None],
+            np.linspace(0, 1, 6)[:, None],
+        ]
         self.X = cartesian(*self.Xs)
         self.N = np.prod([len(X) for X in self.Xs])
         self.y = np.random.randn(self.N) * 0.1
-        self.Xnews = (np.random.randn(5, 1),
-                      np.random.randn(5, 1),
-                      np.random.randn(5, 1))
+        self.Xnews = (
+            np.random.randn(5, 1),
+            np.random.randn(5, 1),
+            np.random.randn(5, 1),
+        )
         self.Xnew = np.concatenate(self.Xnews, axis=1)
         self.sigma = 0.2
-        self.pnew = np.random.randn(len(self.Xnew))*0.01
+        self.pnew = np.random.randn(len(self.Xnew)) * 0.01
         ls = 0.2
         with pm.Model() as model:
-            self.cov_funcs = [pm.gp.cov.ExpQuad(1, ls),
-                              pm.gp.cov.ExpQuad(1, ls),
-                              pm.gp.cov.ExpQuad(1, ls)]
+            self.cov_funcs = [
+                pm.gp.cov.ExpQuad(1, ls),
+                pm.gp.cov.ExpQuad(1, ls),
+                pm.gp.cov.ExpQuad(1, ls),
+            ]
             cov_func = pm.gp.cov.Kron(self.cov_funcs)
             self.mean = pm.gp.mean.Constant(0.5)
             gp = pm.gp.Marginal(mean_func=self.mean, cov_func=cov_func)
@@ -1024,30 +1091,28 @@ class TestMarginalKron(object):
 
     def testMarginalKronvsMarginalpredict(self):
         with pm.Model() as kron_model:
-            kron_gp = pm.gp.MarginalKron(mean_func=self.mean,
-                                         cov_funcs=self.cov_funcs)
-            f = kron_gp.marginal_likelihood('f', self.Xs, self.y,
-                                            sigma=self.sigma, shape=self.N)
-            p = kron_gp.conditional('p', self.Xnew)
+            kron_gp = pm.gp.MarginalKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
+            f = kron_gp.marginal_likelihood(
+                "f", self.Xs, self.y, sigma=self.sigma, shape=self.N
+            )
+            p = kron_gp.conditional("p", self.Xnew)
             mu, cov = kron_gp.predict(self.Xnew)
         npt.assert_allclose(mu, self.mu, atol=0, rtol=1e-2)
         npt.assert_allclose(cov, self.cov, atol=0, rtol=1e-2)
 
     def testMarginalKronvsMarginal(self):
         with pm.Model() as kron_model:
-            kron_gp = pm.gp.MarginalKron(mean_func=self.mean,
-                                         cov_funcs=self.cov_funcs)
-            f = kron_gp.marginal_likelihood('f', self.Xs, self.y,
-                                            sigma=self.sigma, shape=self.N)
-            p = kron_gp.conditional('p', self.Xnew)
-        kron_logp = kron_model.logp({'p': self.pnew})
+            kron_gp = pm.gp.MarginalKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
+            f = kron_gp.marginal_likelihood(
+                "f", self.Xs, self.y, sigma=self.sigma, shape=self.N
+            )
+            p = kron_gp.conditional("p", self.Xnew)
+        kron_logp = kron_model.logp({"p": self.pnew})
         npt.assert_allclose(kron_logp, self.logp, atol=0, rtol=1e-2)
 
     def testMarginalKronRaises(self):
         with pm.Model() as kron_model:
-            gp1 = pm.gp.MarginalKron(mean_func=self.mean,
-                                     cov_funcs=self.cov_funcs)
-            gp2 = pm.gp.MarginalKron(mean_func=self.mean,
-                                     cov_funcs=self.cov_funcs)
+            gp1 = pm.gp.MarginalKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
+            gp2 = pm.gp.MarginalKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
         with pytest.raises(TypeError):
             gp1 + gp2

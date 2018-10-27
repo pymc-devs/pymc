@@ -1,4 +1,5 @@
 import numpy as np
+
 try:
     import matplotlib.pyplot as plt
 except ImportError:  # mpl is optional
@@ -8,9 +9,22 @@ from .utils import get_default_varnames
 from ..stats import hpd
 
 
-def densityplot(trace, models=None, varnames=None, alpha=0.05, point_estimate='mean',
-                colors='cycle', outline=True, hpd_markers='', shade=0., bw=4.5, figsize=None,
-                textsize=12, plot_transformed=False, ax=None):
+def densityplot(
+    trace,
+    models=None,
+    varnames=None,
+    alpha=0.05,
+    point_estimate="mean",
+    colors="cycle",
+    outline=True,
+    hpd_markers="",
+    shade=0.0,
+    bw=4.5,
+    figsize=None,
+    textsize=12,
+    plot_transformed=False,
+    ax=None,
+):
     """
     Generates KDE plots for continuous variables and histograms for discretes ones.
     Plots are truncated at their 100*(1-alpha)% credible intervals. Plots are grouped
@@ -64,7 +78,7 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05, point_estimate='m
     ax : Matplotlib axes
 
     """
-    if point_estimate not in ('mean', 'median', None):
+    if point_estimate not in ("mean", "median", None):
         raise ValueError("Point estimate should be 'mean', 'median' or None")
 
     if not isinstance(trace, (list, tuple)):
@@ -74,17 +88,18 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05, point_estimate='m
 
     if models is None:
         if length_trace > 1:
-            models = ['m_{}'.format(i) for i in range(length_trace)]
+            models = ["m_{}".format(i) for i in range(length_trace)]
         else:
-            models = ['']
+            models = [""]
     elif len(models) != length_trace:
         raise ValueError(
-            "The number of names for the models does not match the number of models")
+            "The number of names for the models does not match the number of models"
+        )
 
     length_models = len(models)
 
-    if colors == 'cycle':
-        colors = ['C{}'.format(i % 10) for i in range(length_models)]
+    if colors == "cycle":
+        colors = ["C{}".format(i % 10) for i in range(length_models)]
     elif isinstance(colors, str):
         colors = [colors for i in range(length_models)]
 
@@ -110,12 +125,32 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05, point_estimate='m
                 if k > 1:
                     vec = np.split(vec.T.ravel(), k)
                     for i in range(k):
-                        _d_helper(vec[i], vname, colors[t_idx], bw, alpha, point_estimate,
-                                  hpd_markers, outline, shade, dplot[v_idx])
+                        _d_helper(
+                            vec[i],
+                            vname,
+                            colors[t_idx],
+                            bw,
+                            alpha,
+                            point_estimate,
+                            hpd_markers,
+                            outline,
+                            shade,
+                            dplot[v_idx],
+                        )
 
                 else:
-                    _d_helper(vec, vname, colors[t_idx], bw, alpha, point_estimate,
-                              hpd_markers, outline, shade, dplot[v_idx])
+                    _d_helper(
+                        vec,
+                        vname,
+                        colors[t_idx],
+                        bw,
+                        alpha,
+                        point_estimate,
+                        hpd_markers,
+                        outline,
+                        shade,
+                        dplot[v_idx],
+                    )
 
     if length_trace > 1:
         for m_idx, m in enumerate(models):
@@ -127,7 +162,9 @@ def densityplot(trace, models=None, varnames=None, alpha=0.05, point_estimate='m
     return dplot
 
 
-def _d_helper(vec, vname, c, bw, alpha, point_estimate, hpd_markers, outline, shade, ax):
+def _d_helper(
+    vec, vname, c, bw, alpha, point_estimate, hpd_markers, outline, shade, ax
+):
     """
     vec : array
         1D array from trace
@@ -148,7 +185,7 @@ def _d_helper(vec, vname, c, bw, alpha, point_estimate, hpd_markers, outline, sh
         (opaque). Defaults to 0.
     ax : matplotlib axes
     """
-    if vec.dtype.kind == 'f':
+    if vec.dtype.kind == "f":
         density, l, u = fast_kde(vec)
         x = np.linspace(l, u, len(density))
         hpd_ = hpd(vec, alpha)
@@ -161,31 +198,31 @@ def _d_helper(vec, vname, c, bw, alpha, point_estimate, hpd_markers, outline, sh
 
         if outline:
             ax.plot(x[cut], density[cut], color=c)
-            ax.plot([xmin, xmin], [-ymin/100, ymin], color=c, ls='-')
-            ax.plot([xmax, xmax], [-ymax/100, ymax], color=c, ls='-')
+            ax.plot([xmin, xmin], [-ymin / 100, ymin], color=c, ls="-")
+            ax.plot([xmax, xmax], [-ymax / 100, ymax], color=c, ls="-")
 
         if shade:
             ax.fill_between(x, density, where=cut, color=c, alpha=shade)
 
     else:
         xmin, xmax = hpd(vec, alpha)
-        bins = range(xmin, xmax+1)
+        bins = range(xmin, xmax + 1)
         if outline:
-            ax.hist(vec, bins=bins, color=c, histtype='step')
+            ax.hist(vec, bins=bins, color=c, histtype="step")
         ax.hist(vec, bins=bins, color=c, alpha=shade)
 
     if hpd_markers:
-        ax.plot(xmin, 0, hpd_markers, color=c, markeredgecolor='k')
-        ax.plot(xmax, 0, hpd_markers, color=c, markeredgecolor='k')
+        ax.plot(xmin, 0, hpd_markers, color=c, markeredgecolor="k")
+        ax.plot(xmax, 0, hpd_markers, color=c, markeredgecolor="k")
 
     if point_estimate is not None:
-        if point_estimate == 'mean':
+        if point_estimate == "mean":
             ps = np.mean(vec)
-        elif point_estimate == 'median':
+        elif point_estimate == "median":
             ps = np.median(vec)
-        ax.plot(ps, -0.001, 'o', color=c, markeredgecolor='k')
+        ax.plot(ps, -0.001, "o", color=c, markeredgecolor="k")
 
     ax.set_yticks([])
     ax.set_title(vname)
-    for pos in ['left', 'right', 'top']:
+    for pos in ["left", "right", "top"]:
         ax.spines[pos].set_visible(0)

@@ -1,15 +1,15 @@
 import theano.tensor as tt
 
-__all__ = ['Zero', 'Constant', 'Linear']
+__all__ = ["Zero", "Constant", "Linear"]
 
 
 class Mean(object):
-    R"""
+    r"""
     Base class for mean functions
     """
 
     def __call__(self, X):
-        R"""
+        r"""
         Evaluate the mean function.
 
         Parameters
@@ -26,7 +26,7 @@ class Mean(object):
 
 
 class Zero(Mean):
-    R"""
+    r"""
     Zero mean function for Gaussian process.
 
     """
@@ -34,8 +34,9 @@ class Zero(Mean):
     def __call__(self, X):
         return tt.alloc(0.0, X.shape[0])
 
+
 class Constant(Mean):
-    R"""
+    r"""
     Constant mean function for Gaussian process.
 
     Parameters
@@ -53,7 +54,7 @@ class Constant(Mean):
 
 
 class Linear(Mean):
-    R"""
+    r"""
     Linear mean function for Gaussian process.
 
     Parameters
@@ -91,4 +92,3 @@ class Prod(Mean):
 
     def __call__(self, X):
         return tt.mul(self.m1(X), self.m2(X))
-

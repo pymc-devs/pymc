@@ -1,8 +1,8 @@
-'''
+"""
 Created on Mar 7, 2011
 
 @author: johnsalvatier
-'''
+"""
 import numpy as np
 
 
@@ -12,8 +12,7 @@ class CompoundStep(object):
 
     def __init__(self, methods):
         self.methods = list(methods)
-        self.generates_stats = any(
-            method.generates_stats for method in self.methods)
+        self.generates_stats = any(method.generates_stats for method in self.methods)
         self.stats_dtypes = []
         for method in self.methods:
             if method.generates_stats:
@@ -32,7 +31,7 @@ class CompoundStep(object):
             # one. Pop all others (if dict), or set to np.nan (if namedtuple).
             for state in states[:-1]:
                 if isinstance(state, dict):
-                    state.pop('model_logp', None)
+                    state.pop("model_logp", None)
                 elif isinstance(state, namedtuple):
                     state = state._replace(logp=np.nan)
             return point, states
@@ -44,7 +43,7 @@ class CompoundStep(object):
     def warnings(self):
         warns = []
         for method in self.methods:
-            if hasattr(method, 'warnings'):
+            if hasattr(method, "warnings"):
                 warns.extend(method.warnings())
         return warns
 
