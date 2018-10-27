@@ -16,8 +16,8 @@ from .helpers import SeededTest
 from scipy import stats
 
 import pytest
-
-
+        
+        
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestSample(SeededTest):
     def setup_method(self):
