@@ -12,7 +12,7 @@ import numpy as np
 
 from . import theanof
 
-logger = logging.getLogger('pymc3')
+logger = logging.getLogger("pymc3")
 
 
 class ParallelSamplingError(Exception):
@@ -36,7 +36,7 @@ class RemoteTraceback(Exception):
 class ExceptionWithTraceback:
     def __init__(self, exc, tb):
         tb = traceback.format_exception(type(exc), exc, tb)
-        tb = ''.join(tb)
+        tb = "".join(tb)
         self.exc = exc
         self.tb = '\n"""\n%s"""' % tb
 
@@ -64,8 +64,7 @@ class _Process(multiprocessing.Process):
     and send finished samples using shared memory.
     """
 
-    def __init__(self, name, msg_pipe, step_method, shared_point,
-                 draws, tune, seed):
+    def __init__(self, name, msg_pipe, step_method, shared_point, draws, tune, seed):
         super(_Process, self).__init__(daemon=True, name=name)
         self._msg_pipe = msg_pipe
         self._step_method = step_method
@@ -85,7 +84,7 @@ class _Process(multiprocessing.Process):
             pass
         except BaseException as e:
             e = ExceptionWithTraceback(e, e.__traceback__)
-            self._msg_pipe.send(('error', None, e))
+            self._msg_pipe.send(("error", None, e))
         finally:
             self._msg_pipe.close()
 
@@ -113,10 +112,10 @@ class _Process(multiprocessing.Process):
         tuning = True
 
         msg = self._recv_msg()
-        if msg[0] == 'abort':
+        if msg[0] == "abort":
             raise KeyboardInterrupt()
-        if msg[0] != 'start':
-            raise ValueError('Unexpected msg ' + msg[0])
+        if msg[0] != "start":
+            raise ValueError("Unexpected msg " + msg[0])
 
         while True:
             if draw < self._draws + self._tune:
@@ -125,7 +124,7 @@ class _Process(multiprocessing.Process):
                 except SamplingError as e:
                     warns = self._collect_warnings()
                     e = ExceptionWithTraceback(e, e.__traceback__)
-                    self._msg_pipe.send(('error', warns, e))
+                    self._msg_pipe.send(("error", warns, e))
             else:
                 return
 
@@ -134,9 +133,9 @@ class _Process(multiprocessing.Process):
                 tuning = False
 
             msg = self._recv_msg()
-            if msg[0] == 'abort':
+            if msg[0] == "abort":
                 raise KeyboardInterrupt()
-            elif msg[0] == 'write_next':
+            elif msg[0] == "write_next":
                 self._write_point(point)
                 is_last = draw + 1 == self._draws + self._tune
                 if is_last:
@@ -144,10 +143,11 @@ class _Process(multiprocessing.Process):
                 else:
                     warns = None
                 self._msg_pipe.send(
-                    ('writing_done', is_last, draw, tuning, stats, warns))
+                    ("writing_done", is_last, draw, tuning, stats, warns)
+                )
                 draw += 1
             else:
-                raise ValueError('Unknown message ' + msg[0])
+                raise ValueError("Unknown message " + msg[0])
 
     def _compute_point(self):
         if self._step_method.generates_stats:
@@ -158,7 +158,7 @@ class _Process(multiprocessing.Process):
         return point, stats
 
     def _collect_warnings(self):
-        if hasattr(self._step_method, 'warnings'):
+        if hasattr(self._step_method, "warnings"):
             return self._step_method.warnings()
         else:
             return []
@@ -180,9 +180,9 @@ class ProcessAdapter(object):
                 size *= int(dim)
             size *= dtype.itemsize
             if size != ctypes.c_size_t(size).value:
-                raise ValueError('Variable %s is too large' % name)
+                raise ValueError("Variable %s is too large" % name)
 
-            array = multiprocessing.sharedctypes.RawArray('c', size)
+            array = multiprocessing.sharedctypes.RawArray("c", size)
             self._shared_point[name] = array
             array_np = np.frombuffer(array, dtype).reshape(shape)
             array_np[...] = start[name]
@@ -192,8 +192,14 @@ class ProcessAdapter(object):
         self._num_samples = 0
 
         self._process = _Process(
-            process_name, remote_conn, step_method, self._shared_point,
-            draws, tune, seed)
+            process_name,
+            remote_conn,
+            step_method,
+            self._shared_point,
+            draws,
+            tune,
+            seed,
+        )
         # We fork right away, so that the main process can start tqdm threads
         self._process.start()
 
@@ -207,14 +213,14 @@ class ProcessAdapter(object):
         return self._point
 
     def start(self):
-        self._msg_pipe.send(('start',))
+        self._msg_pipe.send(("start",))
 
     def write_next(self):
         self._readable = False
-        self._msg_pipe.send(('write_next',))
+        self._msg_pipe.send(("write_next",))
 
     def abort(self):
-        self._msg_pipe.send(('abort',))
+        self._msg_pipe.send(("abort",))
 
     def join(self, timeout=None):
         self._process.join(timeout)
@@ -225,29 +231,28 @@ class ProcessAdapter(object):
     @staticmethod
     def recv_draw(processes, timeout=3600):
         if not processes:
-            raise ValueError('No processes.')
+            raise ValueError("No processes.")
         pipes = [proc._msg_pipe for proc in processes]
         ready = multiprocessing.connection.wait(pipes)
         if not ready:
-            raise multiprocessing.TimeoutError('No message from samplers.')
+            raise multiprocessing.TimeoutError("No message from samplers.")
         idxs = {id(proc._msg_pipe): proc for proc in processes}
         proc = idxs[id(ready[0])]
         msg = ready[0].recv()
 
-        if msg[0] == 'error':
+        if msg[0] == "error":
             warns, old_error = msg[1:]
             if warns is not None:
-                error = ParallelSamplingError(
-                    str(old_error), proc.chain, warns)
+                error = ParallelSamplingError(str(old_error), proc.chain, warns)
             else:
-                error = RuntimeError('Chain %s failed.' % proc.chain)
+                error = RuntimeError("Chain %s failed." % proc.chain)
             six.raise_from(error, old_error)
-        elif msg[0] == 'writing_done':
+        elif msg[0] == "writing_done":
             proc._readable = True
             proc._num_samples += 1
             return (proc,) + msg[1:]
         else:
-            raise ValueError('Sampler sent bad message.')
+            raise ValueError("Sampler sent bad message.")
 
     @staticmethod
     def terminate_all(processes, patience=2):
@@ -265,8 +270,10 @@ class ProcessAdapter(object):
                     raise multiprocessing.TimeoutError()
                 process.join(timeout)
         except multiprocessing.TimeoutError:
-            logger.warn('Chain processes did not terminate as expected. '
-                        'Terminating forcefully...')
+            logger.warn(
+                "Chain processes did not terminate as expected. "
+                "Terminating forcefully..."
+            )
             for process in processes:
                 process.terminate()
             for process in processes:
@@ -274,25 +281,35 @@ class ProcessAdapter(object):
 
 
 Draw = namedtuple(
-    'Draw',
-    ['chain', 'is_last', 'draw_idx', 'tuning', 'stats', 'point', 'warnings']
+    "Draw", ["chain", "is_last", "draw_idx", "tuning", "stats", "point", "warnings"]
 )
 
 
 class ParallelSampler(object):
-    def __init__(self, draws, tune, chains, cores, seeds, start_points,
-                 step_method, start_chain_num=0, progressbar=True):
+    def __init__(
+        self,
+        draws,
+        tune,
+        chains,
+        cores,
+        seeds,
+        start_points,
+        step_method,
+        start_chain_num=0,
+        progressbar=True,
+    ):
         if progressbar:
             import tqdm
+
             tqdm_ = tqdm.tqdm
 
         if any(len(arg) != chains for arg in [seeds, start_points]):
-            raise ValueError(
-                'Number of seeds and start_points must be %s.' % chains)
+            raise ValueError("Number of seeds and start_points must be %s." % chains)
 
         self._samplers = [
-            ProcessAdapter(draws, tune, step_method,
-                           chain + start_chain_num, seed, start)
+            ProcessAdapter(
+                draws, tune, step_method, chain + start_chain_num, seed, start
+            )
             for chain, seed, start in zip(range(chains), seeds, start_points)
         ]
 
@@ -307,8 +324,10 @@ class ParallelSampler(object):
         self._progress = None
         if progressbar:
             self._progress = tqdm_(
-                total=chains * (draws + tune), unit='draws',
-                desc='Sampling %s chains' % chains)
+                total=chains * (draws + tune),
+                unit="draws",
+                desc="Sampling %s chains" % chains,
+            )
 
     def _make_active(self):
         while self._inactive and len(self._active) < self._max_active:
@@ -319,7 +338,7 @@ class ParallelSampler(object):
 
     def __iter__(self):
         if not self._in_context:
-            raise ValueError('Use ParallelSampler as context manager.')
+            raise ValueError("Use ParallelSampler as context manager.")
         self._make_active()
 
         while self._active:
@@ -338,8 +357,7 @@ class ParallelSampler(object):
             # and only call proc.write_next() after the yield returns.
             # This seems to be faster overally though, as the worker
             # loses less time waiting.
-            point = {name: val.copy()
-                     for name, val in proc.shared_point_view.items()}
+            point = {name: val.copy() for name, val in proc.shared_point_view.items()}
 
             # Already called for new proc in _make_active
             if not is_last:
