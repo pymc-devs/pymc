@@ -438,7 +438,7 @@ class TestNutsCheckTrace(object):
         with Model():
             HalfNormal('a', sd=1, testval=-1, transform=None)
             with pytest.raises(ParallelSamplingError) as error:
-                sample(init=None, chains=4, random_seed=1)
+                sample(init=None, cores=4, random_seed=1)
             error.match('Bad initial')
 
     def test_linalg(self, caplog):
