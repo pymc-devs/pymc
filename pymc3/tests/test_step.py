@@ -987,8 +987,10 @@ class TestNutsCheckTrace(object):
     def test_bad_init_parallel(self):
         with Model():
             HalfNormal("a", sd=1, testval=-1, transform=None)
-            with pytest.raises(SamplingError) as error:
-                sample(init=None, cores=4, random_seed=1)
+            
+            with pytest.raises(ParallelSamplingError) as error:
+                sample(init=None, cores=2, random_seed=1)
+            assert 0
             error.match("Bad initial")
 
     def test_linalg(self, caplog):
