@@ -987,7 +987,7 @@ class TestNutsCheckTrace(object):
     def test_bad_init_parallel(self):
         with Model():
             HalfNormal("a", sd=1, testval=-1, transform=None)
-            with pytest.raises(ParallelSamplingError) as error:
+            with pytest.raises(SamplingError) as error:
                 sample(init=None, cores=4, random_seed=1)
             error.match("Bad initial")
 
