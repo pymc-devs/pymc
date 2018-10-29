@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+import sys
 
 from .checks import close_to
 from .models import (
