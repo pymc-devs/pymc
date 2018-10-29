@@ -163,7 +163,7 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
                         q_new = (q_old + delta).astype("int64")
                     else:
                         delta[discrete] = np.round(delta[discrete], 0)
-                        q_new = q_old + delta
+                        q_new = floatX(q_old + delta)
                 else:
                     q_new = floatX(q_old + delta)
 
@@ -201,7 +201,7 @@ def _initial_population(draws, model, variables):
         point = pm.Point({v.name: init_rnd[v.name][i] for v in variables}, model=model)
         population.append(dict_to_array(point))
 
-    return np.array(population), var_info
+    return np.array(floatX(population)), var_info
 
 
 def _calc_beta(beta, likelihoods, threshold=0.5):

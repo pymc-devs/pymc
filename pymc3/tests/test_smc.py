@@ -49,7 +49,7 @@ class TestSMC(SeededTest):
         mu1d = np.abs(x).mean(axis=0)
         np.testing.assert_allclose(self.muref, mu1d, rtol=0., atol=0.03)
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+
     def test_discrete_continuous(self):
         with pm.Model() as model:
             a = pm.Poisson('a', 5)
