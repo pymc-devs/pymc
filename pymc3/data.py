@@ -129,7 +129,7 @@ class Minibatch(tt.TensorVariable):
     Below is a common use case of Minibatch within the variational inference.
     Importantly, we need to make PyMC3 "aware" of minibatch being used in inference.
     Otherwise, we will get wrong :math:`logp` for the model.
-    To do so, we need to pass total_size parameter to the observed node, which correctly scale
+    To do so, we need to pass total_size parameter to the observed node, which correctly scales
     the density of the model logp that effected by Minibatch. See more in examples below.
 
     Examples
