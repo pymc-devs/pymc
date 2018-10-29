@@ -983,7 +983,8 @@ class TestNutsCheckTrace(object):
                 sample(init=None, chains=1, random_seed=1)
             error.match("Bad initial")
 
-    # TODO: This could probably be parameterized instead
+    @pytest.mark.skipif(sys.version_info < (3,6),
+                    reason="requires python3.6 or higher")
     def test_bad_init_parallel(self):
         with Model():
             HalfNormal("a", sd=1, testval=-1, transform=None)
