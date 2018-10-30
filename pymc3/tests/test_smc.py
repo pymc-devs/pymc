@@ -47,6 +47,15 @@ class TestSMC(SeededTest):
         mu1d = np.abs(x).mean(axis=0)
         np.testing.assert_allclose(self.muref, mu1d, rtol=0., atol=0.03)
 
+
+    def test_discrete_continuous(self):
+        with pm.Model() as model:
+            a = pm.Poisson('a', 5)
+            b = pm.HalfNormal('b', 10)
+            y = pm.Normal('y', a, b, observed=[1, 2, 3, 4])
+            trace = pm.sample(step=pm.SMC())
+
+
     def test_ml(self):
         data = np.repeat([1, 0], [50, 50])
         marginals = []
