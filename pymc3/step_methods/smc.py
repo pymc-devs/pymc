@@ -13,7 +13,6 @@ from ..theanof import floatX, make_shared_replacements, join_nonshared_inputs, i
 from ..model import modelcontext
 from ..backends.ndarray import NDArray
 from ..backends.base import MultiTrace
-from ..blocking import ArrayOrdering, DictToArrayBijection
 
 
 __all__ = ["SMC", "sample_smc"]
