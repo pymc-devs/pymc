@@ -9,7 +9,7 @@ import warnings
 
 from .arraystep import metrop_select
 from .metropolis import MultivariateNormalProposal
-from ..theanof import floatX, make_shared_replacements, join_nonshared_inputs
+from ..theanof import floatX, make_shared_replacements, join_nonshared_inputs, inputvars
 from ..model import modelcontext
 from ..backends.ndarray import NDArray
 from ..backends.base import MultiTrace
@@ -106,7 +106,7 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
     stage = 0
     acc_rate = 1
     model.marginal_likelihood = 1
-    variables = model.vars
+    variables = inputvars(model.vars)
     discrete = np.concatenate([[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables])
     any_discrete = discrete.any()
     all_discrete = discrete.all()
@@ -179,7 +179,7 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
         acc_rate = accepted / proposed
         stage += 1
 
-    trace = _posterior_to_trace(posterior, model, var_info)
+    trace = _posterior_to_trace(posterior, variables, model, var_info)
 
     return trace
 
@@ -192,14 +192,13 @@ def _initial_population(draws, model, variables):
     population = []
     var_info = {}
     start = model.test_point
-    dict_to_array = DictToArrayBijection(ArrayOrdering(variables), start).map
     init_rnd = pm.sample_prior_predictive(draws, model=model)
     for v in variables:
         var_info[v.name] = (start[v.name].shape, start[v.name].size)
 
     for i in range(draws):
         point = pm.Point({v.name: init_rnd[v.name][i] for v in variables}, model=model)
-        population.append(dict_to_array(point))
+        population.append(model.dict_to_array(point))
 
     return np.array(floatX(population)), var_info
 
@@ -283,12 +282,12 @@ def _tune(acc_rate):
     return (a + b * acc_rate) ** 2
 
 
-def _posterior_to_trace(posterior, model, var_info):
+def _posterior_to_trace(posterior, variables, model, var_info):
     """
     Save results into a PyMC3 trace
     """
     lenght_pos = len(posterior)
-    varnames = [v.name for v in model.vars]
+    varnames = [v.name for v in variables]
 
     with model:
         strace = NDArray(model)
