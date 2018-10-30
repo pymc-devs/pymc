@@ -3,6 +3,7 @@ import numpy.testing as npt
 
 from . import models
 from pymc3.step_methods.hmc.base_hmc import BaseHMC
+from pymc3.exceptions import SamplingError
 import pymc3
 import pytest
 import logging
@@ -43,7 +44,7 @@ def test_nuts_tuning():
 
 def test_nuts_error_reporting(caplog):
     model = pymc3.Model()
-    with caplog.at_level(logging.ERROR) and pytest.raises(ValueError):
+    with caplog.at_level(logging.CRITICAL) and pytest.raises(SamplingError):
         with model:
             pymc3.HalfNormal('a', sd=1, transform=None, testval=-1)
             pymc3.HalfNormal('b', sd=1, transform=None)

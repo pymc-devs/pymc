@@ -14,7 +14,6 @@ import theano
 from .models import simple_init
 from .helpers import SeededTest
 from scipy import stats
-
 import pytest
 
 

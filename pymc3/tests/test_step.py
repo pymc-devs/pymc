@@ -29,7 +29,14 @@ from pymc3.step_methods import (
     DEMetropolis,
 )
 from pymc3.theanof import floatX
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal
+from pymc3.distributions import (
+    Binomial,
+    Normal,
+    Bernoulli,
+    Categorical,
+    Beta,
+    HalfNormal,
+)
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
@@ -670,7 +677,9 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
     def teardown_class(self):
         shutil.rmtree(self.temp_dir)
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(
+        condition=(theano.config.floatX == "float32"), reason="Fails on float32"
+    )
     def test_sample_exact(self):
         for step_method in self.master_samples:
             self.check_trace(step_method)
@@ -696,11 +705,18 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             x = Normal("x", mu=0, sd=1)
             y = Normal("y", mu=x, sd=1, observed=1)
             if step_method.__name__ == "SMC":
-                trace = sample(draws=200, random_seed=1, progressbar=False, step=step_method())
+                trace = sample(
+                    draws=200, random_seed=1, progressbar=False, step=step_method()
+                )
             elif step_method.__name__ == "NUTS":
                 step = step_method(scaling=model.test_point)
                 trace = sample(
-                    0, tune=n_steps, discard_tuned_samples=False, step=step, random_seed=1, chains=1
+                    0,
+                    tune=n_steps,
+                    discard_tuned_samples=False,
+                    step=step,
+                    random_seed=1,
+                    chains=1,
                 )
             else:
                 trace = sample(
@@ -766,7 +782,13 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             steps = (Metropolis(S=C, proposal_dist=MultivariateNormalProposal),)
         for step in steps:
             trace = sample(
-                20000, tune=0, step=step, start=start, model=model, random_seed=1, chains=1
+                20000,
+                tune=0,
+                step=step,
+                start=start,
+                model=model,
+                random_seed=1,
+                chains=1,
             )
             self.check_stat(check, trace, step.__class__.__name__)
 
@@ -780,7 +802,9 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
                 CategoricalGibbsMetropolis(model.x, proposal="proportional"),
             )
         for step in steps:
-            trace = sample(8000, tune=0, step=step, start=start, model=model, random_seed=1)
+            trace = sample(
+                8000, tune=0, step=step, start=start, model=model, random_seed=1
+            )
             self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_elliptical_slice(self):
@@ -791,7 +815,13 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             steps = (EllipticalSlice(prior_cov=K), EllipticalSlice(prior_chol=L))
         for step in steps:
             trace = sample(
-                5000, tune=0, step=step, start=start, model=model, random_seed=1, chains=1
+                5000,
+                tune=0,
+                step=step,
+                start=start,
+                model=model,
+                random_seed=1,
+                chains=1,
             )
             self.check_stat(check, trace, step.__class__.__name__)
 
@@ -823,7 +853,8 @@ class TestCompoundStep(object):
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS, DEMetropolis)
 
     @pytest.mark.skipif(
-        theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues"
+        theano.config.floatX == "float32",
+        reason="Test fails on 32 bit due to linalg issues",
     )
     def test_non_blocked(self):
         """Test that samplers correctly create non-blocked compound steps."""
@@ -833,7 +864,8 @@ class TestCompoundStep(object):
                 assert isinstance(sampler(blocked=False), CompoundStep)
 
     @pytest.mark.skipif(
-        theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues"
+        theano.config.floatX == "float32",
+        reason="Test fails on 32 bit due to linalg issues",
     )
     def test_blocked(self):
         _, model = simple_2model_continuous()
@@ -892,7 +924,9 @@ class TestAssignStepMethods(object):
                 return x
 
             data = np.random.normal(size=(100,))
-            Normal("y", mu=kill_grad(x), sd=1, observed=data.astype(theano.config.floatX))
+            Normal(
+                "y", mu=kill_grad(x), sd=1, observed=data.astype(theano.config.floatX)
+            )
 
             steps = assign_step_methods(model, [])
         assert isinstance(steps, Slice)
@@ -918,17 +952,20 @@ class TestPopulationSamplers(object):
             x = Normal("x", 0, 1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
-
-                trace = sample(chains=4, draws=20, tune=0, step=DEMetropolis(), parallelize=True)
+                trace = sample(
+                    chains=4, draws=20, tune=0, step=DEMetropolis(), parallelize=True
+                )
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
 
-                assert len(set(samples)) == 4, "Parallelized {} " "chains are identical.".format(
-                    stepper
-                )
+                assert (
+                    len(set(samples)) == 4
+                ), "Parallelized {} " "chains are identical.".format(stepper)
         pass
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+@pytest.mark.xfail(
+    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
+)
 class TestNutsCheckTrace(object):
     def test_multiple_samplers(self, caplog):
         with Model():
@@ -946,7 +983,8 @@ class TestNutsCheckTrace(object):
                 sample(init=None, chains=1, random_seed=1)
             error.match("Bad initial")
 
-    @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
+    @pytest.mark.skipif(sys.version_info < (3,6),
+                    reason="requires python3.6 or higher")
     def test_bad_init_parallel(self):
         with Model():
             HalfNormal("a", sd=1, testval=-1, transform=None)
@@ -1002,6 +1040,10 @@ class TestNutsCheckTrace(object):
         # Assert model logp is computed correctly: computing post-sampling
         # and tracking while sampling should give same results.
         model_logp_ = np.array(
-            [model.logp(trace.point(i, chain=c)) for c in trace.chains for i in range(len(trace))]
+            [
+                model.logp(trace.point(i, chain=c))
+                for c in trace.chains
+                for i in range(len(trace))
+            ]
         )
         assert (trace.model_logp == model_logp_).all()
