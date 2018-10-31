@@ -1485,6 +1485,36 @@ def not_shared_or_constant_variable(x):
             ) or (isinstance(x, (FreeRV, MultiObservedRV, TransformedRV)))
 
 
+def is_autonamed_node(node):
+    _theano_autonamed_ops = [(r'.+\.T$',
+                              theano.tensor.elemwise.DimShuffle,
+                              None),
+                             (r'max$',
+                              theano.tensor.basic.MaxAndArgmax,
+                              None),
+                             (r'argmax$',
+                              theano.tensor.basic.MaxAndArgmax,
+                              None),
+                             (r'mean$',
+                              theano.tensor.elemwise.Elemwise,
+                              'Elemwise{true_div,no_inplace}'),
+                             (r'var$',
+                              theano.tensor.elemwise.Elemwise,
+                              'Elemwise{true_div,no_inplace}'),
+                             (r'std$',
+                              theano.tensor.elemwise.Elemwise,
+                              'Elemwise{sqrt,no_inplace}'),
+                             ]
+    for name_pattern, owner_type, owner_name in _theano_autonamed_ops:
+        if node.name and re.match(name_pattern, node.name):
+            owner = getattr(node, 'owner', None)
+            if owner is not None and isinstance(owner.op, owner_type):
+                if (owner_name is None or
+                        getattr(owner.op, 'name', None) == owner_name):
+                    return True
+    return False
+
+
 def get_first_level_conditionals(root):
     """Performs a breadth first search on the supplied root node's logpt or
     transformed logpt graph searching for named input nodes, which are
@@ -1505,25 +1535,6 @@ def get_first_level_conditionals(root):
     and is one step away from them in the Bayesian network that specifies the
     relationships, hence the name `get_first_level_conditionals`.
     """
-    _theano_autonamed_ops = [(r'.+\.T$',
-                              theano.tensor.elemwise.DimShuffle,
-                              None),
-                             (r'max$',
-                              theano.tensor.basic.MaxAndArgmax,
-                              None),
-                             (r'argmax$',
-                              theano.tensor.basic.MaxAndArgmax,
-                              None),
-                             (r'mean$',
-                              theano.tensor.elemwise.Elemwise,
-                              'Elemwise{true_div,no_inplace}'),
-                             (r'var$',
-                              theano.tensor.elemwise.Elemwise,
-                              'Elemwise{true_div,no_inplace}'),
-                             (r'std$',
-                              theano.tensor.elemwise.Elemwise,
-                              'Elemwise{sqrt,no_inplace}'),
-                             ]
     transformed = getattr(root, 'transformed', None)
     try:
         cond = transformed.logpt
@@ -1539,25 +1550,15 @@ def get_first_level_conditionals(root):
                 and not_shared_or_constant_variable(parent)):
             # We don't include as a conditional relation either logpt depending
             # on root or on transformed because they are both deterministic
-            # relations
-            if parent == root or parent == transformed:
-                continue
-            # Some theano ops place default names to their associated output
-            # nodes. We want to ignore them, so we test that the name pattern
-            # matches with the ones we don't want, that the op is an instance
-            # of the conflicting op, and, in the case of mean, var, and std,
-            # where the op is built from other ops, that the op.name matches
-            # the default one.
-            must_ignore = False
-            for name_pattern, owner_type, owner_name in _theano_autonamed_ops:
-                if re.match(name_pattern, parent.name):
-                    owner = getattr(parent, 'owner', None)
-                    if owner is not None and isinstance(owner.op, owner_type):
-                        if (owner_name is None or
-                                getattr(owner.op, 'name', None) == owner_name):
-                            must_ignore = True
-                            break
-            if must_ignore:
+            # relations.
+            # Also, some theano ops place default names to their associated
+            # output nodes. We want to ignore them, so we test that the name
+            # pattern matches with the ones we don't want, that the op is an
+            # instance of the conflicting op, and, in the case of mean, var,
+            # and std, where the op is built from other ops, that the op.name
+            # matches the default one.
+            if (parent == root or parent == transformed or
+                    is_autonamed_node(parent)):
                 continue
             conditional_on.add(parent)
         else:
@@ -1681,7 +1682,8 @@ def walk_down_ownership(node_list, ignore=False):
     With the optional input `ignore`, a node without a name can be yielded.
     """
     for node in node_list:
-        if hasattr(node, 'name') and node.name is not None and not ignore:
+        if (not ignore and hasattr(node, 'name') and node.name is not None and
+                not is_autonamed_node(node)):
             yield node
         elif not_shared_or_constant_variable(node):
             owner = getattr(node, 'owner', None)

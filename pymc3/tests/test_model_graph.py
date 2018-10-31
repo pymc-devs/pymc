@@ -1,6 +1,7 @@
 import numpy as np
 import pymc3 as pm
-from pymc3.model_graph import ModelGraph, model_to_graphviz
+from pymc3.model_graph import ModelGraph, model_to_graphviz, OtherModelGraph
+from theano import tensor as tt
 
 from .helpers import SeededTest
 
@@ -77,3 +78,90 @@ class TestSimpleModel(SeededTest):
         for key in self.compute_graph:
             assert key in g.source
 
+
+def radon_model2():
+    """Similar in shape to the Radon model"""
+    n_homes = 919
+    counties = 85
+    uranium = np.random.normal(-.1, 0.4, size=n_homes)
+    xbar = np.random.normal(1, 0.1, size=n_homes)
+    floor_measure = np.random.randint(0, 2, size=n_homes)
+    log_radon = np.random.normal(1, 1, size=n_homes)
+    radon_dispensers = np.random.normal(1, 0.2, size=n_homes)
+
+    d, r = divmod(919, 85)
+    county = np.hstack((
+        np.tile(np.arange(counties, dtype=int), d),
+        np.arange(r)
+        ))
+    with pm.Model() as model:
+        sigma_a = pm.HalfCauchy('sigma_a', 5)
+        gamma = pm.Normal('gamma', mu=0., sd=1e5, shape=3)
+        mu_a = pm.Deterministic('mu_a', gamma[0] + gamma[1]*uranium + gamma[2]*xbar)
+        eps_a = pm.Normal('eps_a', mu=0, sd=sigma_a, shape=counties)
+        a = pm.Deterministic('a', mu_a + eps_a[county])
+        b = pm.Normal('b', mu=0., sd=1e15)
+        sigma_y = pm.Uniform('sigma_y', lower=0, upper=100)
+        p_rad = pm.Beta('p_rad', alpha=1, beta=1)
+        disp_on = pm.Bernoulli('disp_on', p=p_rad, shape=n_homes)
+        rad_cloud = pm.Deterministic('rad_cloud', tt.mean(disp_on * radon_dispensers))
+        y_hat = a + b * floor_measure + rad_cloud
+        y_like = pm.Normal('y_like', mu=y_hat, sd=sigma_y, observed=log_radon)
+
+    plates_without_trans = [((3,), {gamma}),
+                            ((), {b}),
+                            ((), {rad_cloud}),
+                            ((), {sigma_a}),
+                            ((), {p_rad}),
+                            ((), {sigma_y}),
+                            ((919,), {a, mu_a, y_like}),
+                            ((919,), {disp_on}),
+                            ((85,), {eps_a})]
+    plates_with_trans = [((), {b}),
+                         ((), {rad_cloud}),
+                         ((), {sigma_a, model['sigma_a_log__']}),
+                         ((), {sigma_y, model['sigma_y_interval__']}),
+                         ((), {p_rad, model['p_rad_logodds__']}),
+                         ((3,), {gamma}),
+                         ((919,), {a, mu_a, y_like}),
+                         ((919,), {disp_on}),
+                         ((85,), {eps_a})]
+    return model, plates_without_trans, plates_with_trans
+
+
+class TestSimpleModel2(SeededTest):
+    @classmethod
+    def setup_class(cls):
+        cls.model, cls.plates_without_trans, cls.plates_with_trans= radon_model2()
+        cls.model_graph = OtherModelGraph(cls.model)
+
+    def test_plates(self):
+        assert all([plate in self.plates_without_trans
+                    for plate in self.model_graph.get_plates(ignore_transformed=True)])
+        assert all([plate in self.plates_with_trans
+                    for plate in self.model_graph.get_plates(ignore_transformed=False)])
+
+    def test_graphviz(self):
+        # just make sure everything runs without error
+
+        transforms = set([n.transformed for n in self.model_graph.graph
+                          if hasattr(n, 'transformed')])
+        g = self.model_graph.make_graph(ignore_transformed=True)
+        for node, key in self.model_graph.node_names.items():
+            if node not in transforms:
+                assert key in g.source
+            else:
+                assert key not in g.source
+        g = OtherModelGraph(self.model).make_graph(ignore_transformed=True)
+        for node, key in self.model_graph.node_names.items():
+            if node not in transforms:
+                assert key in g.source
+            else:
+                assert key not in g.source
+
+        g = self.model_graph.make_graph(ignore_transformed=False)
+        for node, key in self.model_graph.node_names.items():
+            assert key in g.source
+        g = OtherModelGraph(self.model).make_graph(ignore_transformed=False)
+        for node, key in self.model_graph.node_names.items():
+            assert key in g.source

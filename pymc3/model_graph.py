@@ -3,7 +3,6 @@ from theano.gof.graph import inputs
 from .util import get_default_varnames
 import pymc3 as pm
 from .model import build_dependence_dag_from_model
-from matplotlib import pyplot as plt
 import networkx as nx
 
 
@@ -181,14 +180,27 @@ class OtherModelGraph(object):
     def __init__(self, model):
         self.model = model
         try:
-            self.graph = model.dependence_dag
+            graph = model.dependence_dag
         except AttributeError:
-            self.graph = build_dependence_dag_from_model(model)
+            graph = build_dependence_dag_from_model(model)
+        self.set_graph(graph)
+
+    def set_graph(self, graph):
+        self.graph = graph
+        self.node_names = {}
+        unnamed_count = 0
+        for n in self.graph.nodes():
+            try:
+                name = n.name
+            except AttributeError:
+                name = 'Unnamed {}'.format(unnamed_count)
+                unnamed_count += 1
+            self.node_names[n] = name
 
     def draw(self, pos=None, draw_nodes=False, ax=None,
-             edge_kwargs={'edge_cmap': plt.get_cmap('RdBu')},
-             label_kwargs={'bbox': dict(boxstyle='round',
-                                        facecolor='lightgray')},
+             edge_kwargs={},
+             label_kwargs={'bbox': {'boxstyle': 'round',
+                                    'facecolor': 'lightgray'}},
              node_kwargs={}):
         graph = self.graph
         if pos is None:
@@ -200,14 +212,129 @@ class OtherModelGraph(object):
         edgelist = list(d.keys())
         edge_color = [float(v) for v in d.values()]
         labels = {n: n.name for n in graph}
-        if ax is None:
-            ax = plt.gca()
 
         if draw_nodes:
-            nx.draw_networkx_edges(graph, pos=pos, **node_kwargs)
-        nx.draw_networkx_edges(graph, pos=pos, edgelist=edgelist,
+            nx.draw_networkx_edges(graph, pos=pos, ax=ax, **node_kwargs)
+        nx.draw_networkx_edges(graph, pos=pos, ax=ax, edgelist=edgelist,
                                edge_color=edge_color, **edge_kwargs)
-        nx.draw_networkx_labels(graph, pos=pos, labels=labels, **label_kwargs)
+        nx.draw_networkx_labels(graph, pos=pos, ax=ax, labels=labels,
+                                **label_kwargs)
+
+    def get_plates(self, graph=None, ignore_transformed=True):
+        """ Groups nodes by the shape of the underlying distribution, and if
+        the nodes form a disconnected component of the graph.
+
+        Parameters
+        ----------
+        graph: networkx.DiGraph (optional)
+            The graph object from which to get the plates. If None, self.graph
+            will be used.
+        ignore_transformed: bool (optional)
+            If True, the transformed variables will be ignored while getting
+            the plates.
+
+        Returns
+        -------
+        list of tuples: (shape, set(nodes_in_plate))
+        """
+        if graph is None:
+            graph = self.graph
+        if ignore_transformed:
+            transforms = set([n.transformed for n in graph
+                              if hasattr(n, 'transformed')])
+            nbunch = [n for n in graph if n not in transforms]
+            graph = nx.subgraph(graph, nbunch)
+        shape_plates = {}
+        for node in graph:
+            if hasattr(node, 'observations'):
+                shape = node.observations.shape
+            elif hasattr(node, 'dshape'):
+                shape = node.dshape
+            else:
+                try:
+                    shape = node.tag.test_value.shape
+                except AttributeError:
+                    shape = tuple()
+            if shape == (1,):
+                shape = tuple()
+            if shape not in shape_plates:
+                shape_plates[shape] = set()
+            shape_plates[shape].add(node)
+        plates = []
+        for shape, nodes in shape_plates.items():
+            # We want to find the disconnected components that have a common
+            # shape. These will be the plates
+            subgraph = nx.subgraph(graph, nodes).to_undirected()
+            for G in nx.connected_component_subgraphs(subgraph, copy=False):
+                plates.append((shape, set(G.nodes())))
+        return plates
+
+    def make_graph(self, ignore_transformed=True, edge_cmap=None):
+        """Make graphviz Digraph of PyMC3 model
+
+        Returns
+        -------
+        graphviz.Digraph
+        """
+        try:
+            import graphviz
+        except ImportError:
+            raise ImportError('This function requires the python library graphviz, along with binaries. '
+                              'The easiest way to install all of this is by running\n\n'
+                              '\tconda install -c conda-forge python-graphviz')
+
+        G = self.graph
+        if ignore_transformed:
+            transforms = set([n.transformed for n in G
+                              if hasattr(n, 'transformed')])
+            nbunch = [n for n in G if n not in transforms]
+            G = nx.subgraph(G, nbunch)
+        graph = graphviz.Digraph(self.model.name)
+        nclusters = 0
+        for shape, nodes in self.get_plates(graph=G):
+            label = ' x '.join(map('{:,d}'.format, shape))
+            if label:
+                # must be preceded by 'cluster' to get a box around it
+                with graph.subgraph(name='cluster {}'.format(nclusters)) as sub:
+                    nclusters += 1
+                    for node in nodes:
+                        self._make_node(node, sub)
+                    # plate label goes bottom right
+                    sub.attr(label=label, labeljust='r', labelloc='b', style='rounded')
+            else:
+                for node in nodes:
+                    self._make_node(node, graph)
+
+        for from_node, to_node, ats in G.edges(data=True):
+            if edge_cmap is None:
+                edge_color = '#000000'
+            else:
+                from matplotlib import colors
+                val = float(ats['deterministic'])
+                edge_color = colors.to_hex(edge_cmap(val), keep_alpha=True)
+            graph.edge(self.node_names[from_node],
+                       self.node_names[to_node],
+                       color=edge_color)
+        return graph
+
+    def _make_node(self, node, graph):
+        """Attaches the given variable to a graphviz Digraph"""
+        # styling for node
+        attrs = {}
+        if isinstance(node, pm.model.ObservedRV):
+            attrs['style'] = 'filled'
+
+        # Get name for node
+        if hasattr(node, 'distribution'):
+            distribution = node.distribution.__class__.__name__
+        else:
+            distribution = 'Deterministic'
+            attrs['shape'] = 'box'
+        var_name = self.node_names[node]
+
+        graph.node(var_name,
+                '{var_name} ~ {distribution}'.format(var_name=var_name, distribution=distribution),
+                **attrs)
 
 
 def crude_draw(model, *args, **kwargs):
