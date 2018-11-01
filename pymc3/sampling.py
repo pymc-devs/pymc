@@ -986,17 +986,28 @@ def _mp_sample(draws, tune, step, chains, cores, chain, random_seed,
             draws, tune, chains, cores, random_seed, start, step,
             chain, progressbar)
         try:
-            with sampler:
-                for draw in sampler:
-                    trace = traces[draw.chain - chain]
-                    if trace.supports_sampler_stats and draw.stats is not None:
-                        trace.record(draw.point, draw.stats)
-                    else:
-                        trace.record(draw.point)
-                    if draw.is_last:
-                        trace.close()
-                        if draw.warnings is not None:
-                            trace._add_warnings(draw.warnings)
+            try:
+                with sampler:
+                    for draw in sampler:
+                        trace = traces[draw.chain - chain]
+                        if (trace.supports_sampler_stats
+                                and draw.stats is not None):
+                            trace.record(draw.point, draw.stats)
+                        else:
+                            trace.record(draw.point)
+                        if draw.is_last:
+                            trace.close()
+                            if draw.warnings is not None:
+                                trace._add_warnings(draw.warnings)
+            except ps.ParallelSamplingError as error:
+                trace = traces[error._chain - chain]
+                trace._add_warnings(error._warnings)
+                for trace in traces:
+                    trace.close()
+
+                multitrace = MultiTrace(traces)
+                multitrace._report._log_summary()
+                raise
             return MultiTrace(traces)
         except KeyboardInterrupt:
             traces, length = _choose_chains(traces, tune)
@@ -1098,7 +1109,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
         nchain = 1
 
     if samples is None:
-        samples = len(trace)
+        samples = sum(len(v) for v in trace._straces.values())
 
     model = modelcontext(model)
 
@@ -1108,7 +1119,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     if random_seed is not None:
         np.random.seed(random_seed)
 
-    indices = np.random.randint(0, nchain * len_trace, samples)
+    indices = np.arange(samples)
 
     if progressbar:
         indices = tqdm(indices, total=samples)
@@ -1126,9 +1137,9 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
         for slc, idx in enumerate(indices):
             if nchain > 1:
                 chain_idx, point_idx = np.divmod(idx, len_trace)
-                param = trace._straces[chain_idx].point(point_idx)
+                param = trace._straces[chain_idx % nchain].point(point_idx)
             else:
-                param = trace[idx]
+                param = trace[idx % len_trace]
 
             values = draw_values(vars, point=param, size=size)
             for k, v in zip(vars, values):

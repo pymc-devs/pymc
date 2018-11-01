@@ -6,6 +6,10 @@
 
 - Track the model log-likelihood as a sampler stat for NUTS and HMC samplers
   (accessible as `trace.get_sampler_stats('model_logp')`) (#3134)
+- Add Incomplete Beta function `incomplete_beta(a, b, value)`
+- Add log CDF functions to continuous distributions: `Beta`, `Cauchy`, `ExGaussian`, `Exponential`, `Flat`, `Gumbel`, `HalfCauchy`, `HalfFlat`, `HalfNormal`, `Laplace`, `Logistic`, `Lognormal`, `Normal`, `Pareto`, `StudentT`, `Triangular`, `Uniform`, `Wald`, `Weibull`.
+- Behavior of `sample_posterior_predictive` is now to produce posterior predictive samples, in order, from all values of the `trace`. Previously, by default it would produce 1 chain worth of samples, using a random selection from the `trace` (#3212)
+- Show diagnostics for initial energy errors in HMC and NUTS.
 
 ### Maintenance
 

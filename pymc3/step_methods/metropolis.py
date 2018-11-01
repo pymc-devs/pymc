@@ -9,7 +9,7 @@ from .arraystep import ArrayStepShared, PopulationArrayStepShared, ArrayStep, me
 import pymc3 as pm
 from pymc3.theanof import floatX
 
-__all__ = ['Metropolis', 'BinaryMetropolis', 'BinaryGibbsMetropolis',
+__all__ = ['Metropolis', 'DEMetropolis', 'BinaryMetropolis', 'BinaryGibbsMetropolis',
            'CategoricalGibbsMetropolis', 'NormalProposal', 'CauchyProposal',
            'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal']
 

@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 A collection of common probability distributions for stochastic
 nodes in PyMC.
@@ -19,8 +20,8 @@ from pymc3.util import get_variable_name
 from .special import log_i0
 from ..math import invlogit, logit, logdiffexp
 from .dist_math import (
-    bound, logpow, gammaln, betaln, std_cdf, alltrue_elemwise,
-    SplineWrapper, i0e, normal_lcdf, normal_lccdf
+    alltrue_elemwise, betaln, bound, gammaln, i0e, incomplete_beta, logpow,
+    normal_lccdf, normal_lcdf, SplineWrapper, std_cdf, zvalue,
 )
 from .distribution import Continuous, draw_values, generate_samples
 
@@ -239,6 +240,18 @@ class Uniform(BoundedContinuous):
         return r'${} \sim \text{{Uniform}}(\mathit{{lower}}={},~\mathit{{upper}}={})$'.format(
             name, get_variable_name(lower), get_variable_name(upper))
 
+    def logcdf(self, value):
+        return tt.switch(
+            tt.or_(tt.lt(value, self.lower), tt.gt(value, self.upper)),
+            -np.inf,
+            tt.switch(
+                tt.eq(value, self.upper),
+                0,
+                tt.log((value - self.lower)) -
+                tt.log((self.upper - self.lower))
+            )
+        )
+
 
 class Flat(Continuous):
     """
@@ -284,6 +297,17 @@ class Flat(Continuous):
         name = r'\text{%s}' % name
         return r'${} \sim \text{{Flat}}()$'.format(name)
 
+    def logcdf(self, value):
+        return tt.switch(
+            tt.eq(value, -np.inf),
+            -np.inf,
+            tt.switch(
+                tt.eq(value, np.inf),
+                0,
+                tt.log(0.5)
+            )
+        )
+
 
 class HalfFlat(PositiveContinuous):
     """Improper flat prior over the positive reals."""
@@ -325,6 +349,17 @@ class HalfFlat(PositiveContinuous):
     def _repr_latex_(self, name=None, dist=None):
         name = r'\text{%s}' % name
         return r'${} \sim \text{{HalfFlat}}()$'.format(name)
+
+    def logcdf(self, value):
+        return tt.switch(
+            tt.lt(value, np.inf),
+            -np.inf,
+            tt.switch(
+                tt.eq(value, np.inf),
+                0,
+                -np.inf
+            )
+        )
 
 
 class Normal(Continuous):
@@ -456,6 +491,9 @@ class Normal(Continuous):
         return r'${} \sim \text{{Normal}}(\mathit{{mu}}={},~\mathit{{sd}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(sd))
+
+    def logcdf(self, value):
+        return normal_lcdf(self.mu, self.sd, value)
 
 
 class TruncatedNormal(BoundedContinuous):
@@ -778,6 +816,15 @@ class HalfNormal(PositiveContinuous):
         return r'${} \sim \text{{HalfNormal}}(\mathit{{sd}}={})$'.format(name,
                                                                          get_variable_name(sd))
 
+    def logcdf(self, value):
+        sd = self.sd
+        z = zvalue(value, mu=0, sd=sd)
+        return tt.switch(
+            tt.lt(z, -1.0),
+            tt.log(tt.erfcx(-z / tt.sqrt(2.))) - tt.sqr(z),
+            tt.log1p(-tt.erfc(z / tt.sqrt(2.)))
+        )
+
 
 class Wald(PositiveContinuous):
     R"""
@@ -852,6 +899,9 @@ class Wald(PositiveContinuous):
     .. [Michael1976] Michael, J. R., Schucany, W. R. and Hass, R. W. (1976).
         Generating Random Variates Using Transformations with Multiple Roots.
         The American Statistician, Vol. 30, No. 2, pp. 88-90
+
+    .. [Giner2016] Göknur Giner, Gordon K. Smyth (2016)
+       statmod: Probability Calculations for the Inverse Gaussian Distribution
     """
 
     def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
@@ -958,6 +1008,46 @@ class Wald(PositiveContinuous):
                                                                 get_variable_name(mu),
                                                                 get_variable_name(lam),
                                                                 get_variable_name(alpha))
+
+    def logcdf(self, value):
+        # Distribution parameters
+        mu = self.mu
+        lam = self.lam
+        alpha = self.alpha
+
+        value -= alpha
+        q = value / mu
+        l = lam * mu
+        r = tt.sqrt(value * lam)
+
+        a = normal_lcdf(0, 1, (q - 1.)/r)
+        b = 2./l + normal_lcdf(0, 1, -(q + 1.)/r)
+        return tt.switch(
+            (
+                # Left limit
+                tt.lt(value, 0) |
+                (tt.eq(value, 0) & tt.gt(mu, 0) & tt.lt(lam, np.inf)) |
+                (tt.lt(value, mu) & tt.eq(lam, 0))
+            ),
+            -np.inf,
+            tt.switch(
+                (
+                    # Right limit
+                    tt.eq(value, np.inf) |
+                    (tt.eq(lam, 0) & tt.gt(value, mu)) |
+                    (tt.gt(value, 0) & tt.eq(lam, np.inf)) |
+                    # Degenerate distribution
+                    (
+                        tt.lt(mu, np.inf) &
+                        tt.eq(mu, value) &
+                        tt.eq(lam, 0)
+                    ) |
+                    (tt.eq(value, 0) & tt.eq(lam, np.inf))
+                ),
+                0,
+                a + tt.log1p(tt.exp(b - a))
+            )
+        )
 
 
 class Beta(UnitContinuous):
@@ -1101,6 +1191,20 @@ class Beta(UnitContinuous):
                      value >= 0, value <= 1,
                      alpha > 0, beta > 0)
 
+    def logcdf(self, value):
+        value = floatX(tt.as_tensor(value))
+        a = floatX(tt.as_tensor(self.alpha))
+        b = floatX(tt.as_tensor(self.beta))
+        return tt.switch(
+            tt.le(value, 0),
+            -np.inf,
+            tt.switch(
+                tt.ge(value, 1),
+                0,
+                tt.log(incomplete_beta(a, b, value))
+            )
+        )
+
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
@@ -1227,6 +1331,7 @@ class Kumaraswamy(UnitContinuous):
                                                                                           get_variable_name(a),
                                                                                           get_variable_name(b))
 
+
 class Exponential(PositiveContinuous):
     R"""
     Exponential log-likelihood.
@@ -1321,6 +1426,30 @@ class Exponential(PositiveContinuous):
         name = r'\text{%s}' % name
         return r'${} \sim \text{{Exponential}}(\mathit{{lam}}={})$'.format(name,
                                                                 get_variable_name(lam))
+
+    def logcdf(self, value):
+        """
+        Compute the log CDF for the Exponential distribution
+
+        References
+        ----------
+        .. [Machler2012] Martin Mächler (2012).
+            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            package"
+        """
+        value = floatX(tt.as_tensor(value))
+        lam = self.lam
+        a = lam * value
+        return tt.switch(
+            tt.le(value, 0.0),
+            -np.inf,
+            tt.switch(
+                tt.le(a, tt.log(2.0)),
+                tt.log(-tt.expm1(-a)),
+                tt.log1p(-tt.exp(-a)),
+            )
+        )
+
 
 class Laplace(Continuous):
     R"""
@@ -1423,6 +1552,20 @@ class Laplace(Continuous):
         return r'${} \sim \text{{Laplace}}(\mathit{{mu}}={},~\mathit{{b}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(b))
+
+    def logcdf(self, value):
+        a = self.mu
+        b = self.b
+        y = (value - a) / b
+        return tt.switch(
+            tt.le(value, a),
+            tt.log(0.5) + y,
+            tt.switch(
+                tt.gt(y, 1),
+                tt.log1p(-0.5 * tt.exp(-y)),
+                tt.log(1 - 0.5 * tt.exp(-y))
+            )
+        )
 
 
 class Lognormal(PositiveContinuous):
@@ -1558,6 +1701,22 @@ class Lognormal(PositiveContinuous):
         return r'${} \sim \text{{Lognormal}}(\mathit{{mu}}={},~\mathit{{tau}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(tau))
+
+    def logcdf(self, value):
+        mu = self.mu
+        sd = self.sd
+        z = zvalue(tt.log(value), mu=mu, sd=sd)
+
+        return tt.switch(
+            tt.le(value, 0),
+            -np.inf,
+            tt.switch(
+                tt.lt(z, -1.0),
+                tt.log(tt.erfcx(-z / tt.sqrt(2.)) / 2.) -
+                tt.sqr(z) / 2,
+                tt.log1p(-tt.erfc(z / tt.sqrt(2.)) / 2.)
+            )
+        )
 
 
 class StudentT(Continuous):
@@ -1698,6 +1857,15 @@ class StudentT(Continuous):
                                                                 get_variable_name(mu),
                                                                 get_variable_name(lam))
 
+    def logcdf(self, value):
+        nu = self.nu
+        mu = self.mu
+        sd = self.sd
+        t = (value - mu)/sd
+        sqrt_t2_nu = tt.sqrt(t**2 + nu)
+        x = (t + sqrt_t2_nu)/(2.0 * sqrt_t2_nu)
+        return tt.log(incomplete_beta(nu/2., nu/2., x))
+
 
 class Pareto(Continuous):
     R"""
@@ -1820,6 +1988,20 @@ class Pareto(Continuous):
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(m))
 
+    def logcdf(self, value):
+        m = self.m
+        alpha = self.alpha
+        arg = (m / value) ** alpha
+        return tt.switch(
+            tt.lt(value, m),
+            -np.inf,
+            tt.switch(
+                tt.le(arg, 1e-5),
+                tt.log1p(-arg),
+                tt.log(1 - arg)
+            )
+        )
+
 
 class Cauchy(Continuous):
     R"""
@@ -1930,6 +2112,11 @@ class Cauchy(Continuous):
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(beta))
 
+    def logcdf(self, value):
+        return tt.log(
+            0.5 + tt.arctan((value - self.alpha) / self.beta) / np.pi
+        )
+
 
 class HalfCauchy(PositiveContinuous):
     R"""
@@ -2029,6 +2216,15 @@ class HalfCauchy(PositiveContinuous):
         name = r'\text{%s}' % name
         return r'${} \sim \text{{HalfCauchy}}(\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(beta))
+
+    def logcdf(self, value):
+        return tt.switch(
+            tt.le(value, 0),
+            -np.inf,
+            tt.log(
+                2 * tt.arctan(value / self.beta) / np.pi
+            ))
+
 
 class Gamma(PositiveContinuous):
     R"""
@@ -2203,7 +2399,7 @@ class InverseGamma(PositiveContinuous):
     ========  ======================================================
     Support   :math:`x \in (0, \infty)`
     Mean      :math:`\dfrac{\beta}{\alpha-1}` for :math:`\alpha > 1`
-    Variance  :math:`\dfrac{\beta^2}{(\alpha-1)^2(\alpha)}`
+    Variance  :math:`\dfrac{\beta^2}{(\alpha-1)^2(\alpha - 2)}`
               for :math:`\alpha > 2`
     ========  ======================================================
 
@@ -2213,17 +2409,23 @@ class InverseGamma(PositiveContinuous):
         Shape parameter (alpha > 0).
     beta : float
         Scale parameter (beta > 0).
+    mu : float
+        Alternative shape parameter (mu > 0).
+    sd : float
+        Alternative scale parameter (sd > 0).
     """
 
-    def __init__(self, alpha, beta=1, *args, **kwargs):
+    def __init__(self, alpha=None, beta=None, mu=None, sd=None, *args, **kwargs):
         super(InverseGamma, self).__init__(*args, defaults=('mode',), **kwargs)
+
+        alpha, beta = InverseGamma._get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.beta = beta = tt.as_tensor_variable(beta)
 
         self.mean = self._calculate_mean()
         self.mode = beta / (alpha + 1.)
         self.variance = tt.switch(tt.gt(alpha, 2),
-                                  (beta**2) / (alpha * (alpha - 1.)**2),
+                                  (beta**2) / ((alpha - 2) * (alpha - 1.)**2),
                                   np.inf)
         assert_negative_support(alpha, 'alpha', 'InverseGamma')
         assert_negative_support(beta, 'beta', 'InverseGamma')
@@ -2235,6 +2437,23 @@ class InverseGamma(PositiveContinuous):
         except ValueError:  # alpha is an array
             m[self.alpha <= 1] = np.inf
             return m
+
+    @staticmethod
+    def _get_alpha_beta(alpha, beta, mu, sd):
+        if (alpha is not None):
+            if (beta is not None):
+                pass
+            else:
+                beta = 1
+        elif (mu is not None) and (sd is not None):
+            alpha = (2 * sd**2 + mu**2)/sd**2
+            beta = mu * (mu**2 + sd**2) / sd**2
+        else:
+            raise ValueError('Incompatible parameterization. Either use '
+                             'alpha and (optionally) beta, or mu and sd to specify '
+                             'distribution.')
+
+        return alpha, beta
 
     def random(self, point=None, size=None):
         """
@@ -2458,6 +2677,28 @@ class Weibull(PositiveContinuous):
         return r'${} \sim \text{{Weibull}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(alpha),
                                                                 get_variable_name(beta))
+
+    def logcdf(self, value):
+        '''
+        Compute the log CDF for the Weibull distribution
+
+        References
+        ----------
+        .. [Machler2012] Martin Mächler (2012).
+            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            package"
+        '''
+        alpha = self.alpha
+        beta = self.beta
+        a = (value / beta)**alpha
+        return tt.switch(
+            tt.le(value, 0.0),
+            -np.inf,
+            tt.switch(
+                tt.le(a, tt.log(2.0)),
+                tt.log(-tt.expm1(-a)),
+                tt.log1p(-tt.exp(-a)))
+        )
 
 
 class HalfStudentT(PositiveContinuous):
@@ -2728,6 +2969,30 @@ class ExGaussian(Continuous):
                                                                 get_variable_name(mu),
                                                                 get_variable_name(sigma),
                                                                 get_variable_name(nu))
+
+    def logcdf(self, value):
+        """
+        Compute the log CDF for the ExGaussian distribution
+
+        References
+        ----------
+        .. [Rigby2005] R.A. Rigby (2005).
+           "Generalized additive models for location, scale and shape"
+           http://dx.doi.org/10.1111/j.1467-9876.2005.00510.x
+        """
+        mu = self.mu
+        sigma = self.sigma
+        sigma_2 = sigma**2
+        nu = self.nu
+        z = value - mu - sigma_2/nu
+        return tt.switch(
+            tt.gt(nu, 0.05 * sigma),
+            tt.log(std_cdf((value - mu)/sigma) -
+                   std_cdf(z/sigma) * tt.exp(
+                       ((mu + (sigma_2/nu))**2 -
+                        (mu**2) -
+                        2 * value * ((sigma_2)/nu))/(2 * sigma_2))),
+            normal_lcdf(mu, sigma, value))
 
 
 class VonMises(Continuous):
@@ -3093,6 +3358,24 @@ class Triangular(BoundedContinuous):
                                                                 get_variable_name(lower),
                                                                 get_variable_name(upper))
 
+    def logcdf(self, value):
+        l = self.lower
+        u = self.upper
+        c = self.c
+        return tt.switch(
+            tt.le(value, l),
+            -np.inf,
+            tt.switch(
+                tt.le(value, c),
+                tt.log(((value - l) ** 2) / ((u - l) * (c - l))),
+                tt.switch(
+                    tt.lt(value, u),
+                    tt.log1p(-((u - value) ** 2) / ((u - l) * (u - c))),
+                    0
+                )
+            )
+        )
+
 
 class Gumbel(Continuous):
     R"""
@@ -3197,6 +3480,12 @@ class Gumbel(Continuous):
         return r'${} \sim \text{{Gumbel}}(\mathit{{mu}}={},~\mathit{{beta}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(beta))
+
+    def logcdf(self, value):
+        beta = self.beta
+        mu = self.mu
+
+        return -tt.exp(-(value - mu)/beta)
 
 
 class Rice(PositiveContinuous):
@@ -3387,6 +3676,30 @@ class Logistic(Continuous):
         return r'${} \sim \text{{Logistic}}(\mathit{{mu}}={},~\mathit{{s}}={})$'.format(name,
                                                                 get_variable_name(mu),
                                                                 get_variable_name(s))
+
+    def logcdf(self, value):
+        """
+        Compute the log CDF for the Logistic distribution
+
+        References
+        ----------
+        .. [Machler2012] Martin Mächler (2012).
+            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            package"
+        """
+        mu = self.mu
+        s = self.s
+        a = -(value - mu)/s
+        return - tt.switch(
+            tt.le(a, -37),
+            tt.exp(a),
+            tt.switch(
+                tt.le(a, 18),
+                tt.log1p(tt.exp(a)),
+                tt.switch(
+                    tt.le(a, 33.3),
+                    tt.exp(-a) + a,
+                    a)))
 
 
 class LogitNormal(UnitContinuous):

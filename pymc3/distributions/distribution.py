@@ -472,13 +472,9 @@ def _compute_value(param, givens=None, size=None):
 
 def to_tuple(shape):
     """Convert ints, arrays, and Nones to tuples"""
-    try:
-        shape = tuple(shape or ())
-    except TypeError:  # If size is an int
-        shape = tuple((shape,))
-    except ValueError:  # If size is np.array
-        shape = tuple(shape)
-    return shape
+    if shape is None:
+        return tuple()
+    return tuple(np.atleast_1d(shape))
 
 
 def _is_one_d(dist_shape):
@@ -486,7 +482,7 @@ def _is_one_d(dist_shape):
         return True
     elif hasattr(dist_shape, 'shape') and dist_shape.shape in ((), (0,), (1,)):
         return True
-    elif dist_shape == ():
+    elif to_tuple(dist_shape) == ():
         return True
     return False
 

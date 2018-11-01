@@ -19,6 +19,7 @@ class WarningType(enum.Enum):
     # Indications that chains did not converge, eg Rhat
     CONVERGENCE = 6
     BAD_ACCEPTANCE = 7
+    BAD_ENERGY = 8
 
 
 SamplerWarning = namedtuple(
