@@ -210,11 +210,18 @@ class OtherModelGraph(object):
             self.node_names[n] = name
 
     def draw(self, pos=None, draw_nodes=False, ax=None,
-             edge_kwargs={},
-             label_kwargs={'bbox': {'boxstyle': 'round',
-                                    'facecolor': 'lightgray'}},
-             node_kwargs={}):
+             edge_kwargs=None,
+             label_kwargs=None,
+             node_kwargs=None):
         graph = self.graph
+        if edge_kwargs is None:
+            edge_kwargs = {}
+        if node_kwargs is None:
+            node_kwargs = {}
+        if label_kwargs is None:
+            label_kwargs = {}
+        label_kwargs.setdefault('bbox', {'boxstyle': 'round',
+                                         'facecolor': 'lightgray'})
         if pos is None:
             try:
                 pos = nx.drawing.nx_agraph.graphviz_layout(graph, prog='dot')

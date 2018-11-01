@@ -1128,7 +1128,10 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
 
     # draw once to inspect the shape
     var_values = list(zip(varnames,
-                          draw_values(vars, point=model.test_point, size=size)))
+                          draw_values(vars,
+                                      point=model.test_point,
+                                      size=size,
+                                      model=model)))
     ppc_trace = defaultdict(list)
     for varname, value in var_values:
         ppc_trace[varname] = np.zeros((samples,) + value.shape, value.dtype)
@@ -1141,7 +1144,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
             else:
                 param = trace[idx % len_trace]
 
-            values = draw_values(vars, point=param, size=size)
+            values = draw_values(vars, point=param, size=size, model=model)
             for k, v in zip(vars, values):
                 ppc_trace[k.name][slc] = v
 
@@ -1279,6 +1282,7 @@ def sample_posterior_predictive_w(traces, samples=None, models=None, weights=Non
             var = variables[idx]
             # TODO sample_posterior_predictive_w is currently only work for model with
             # one observed.
+            # TODO supply the proper model to draw_values
             ppc[var.name].append(draw_values([var],
                                              point=param,
                                              size=size[idx]
@@ -1331,7 +1335,8 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
         np.random.seed(random_seed)
     names = get_default_varnames(model.named_vars, include_transformed=False)
     # draw_values fails with auto-transformed variables. transform them later!
-    values = draw_values([model[name] for name in names], size=samples)
+    values = draw_values([model[name] for name in names], size=samples,
+                         model=model)
 
     data = {k: v for k, v in zip(names, values)}
 
