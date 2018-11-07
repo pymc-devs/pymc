@@ -3,6 +3,7 @@ import functools
 import itertools
 import threading
 import six
+import warnings
 
 import numpy as np
 from pandas import Series
@@ -1259,6 +1260,10 @@ def as_tensor(data, name, model, distribution):
     data = pandas_to_array(data).astype(dtype)
 
     if hasattr(data, 'mask'):
+        impute_message = ('Data in {name} contains missing values and'
+                          ' will be automatically imputed from the'
+                          ' sampling distribution.'.format(name=name))
+        warnings.warn(impute_message, UserWarning)
         from .distributions import NoDistribution
         testval = np.broadcast_to(distribution.default(), data.shape)[data.mask]
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,
