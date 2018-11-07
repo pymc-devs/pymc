@@ -30,8 +30,8 @@ then
       echo "Environment ${ENVNAME} already exists, keeping up to date"
     else
       conda create -n ${ENVNAME} --yes pip python=${PYTHON_VERSION}
-      source activate ${ENVNAME}
     fi
+    source activate ${ENVNAME}
 fi
 conda install --yes numpy scipy mkl-service
 conda install --yes -c conda-forge python-graphviz

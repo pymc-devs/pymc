@@ -3,9 +3,12 @@ import numpy.testing as npt
 
 from . import models
 from pymc3.step_methods.hmc.base_hmc import BaseHMC
+from pymc3.exceptions import SamplingError
 import pymc3
+import pytest
+import logging
 from pymc3.theanof import floatX
-
+logger = logging.getLogger('pymc3')
 
 def test_leapfrog_reversible():
     n = 3
@@ -38,3 +41,13 @@ def test_nuts_tuning():
 
     assert not step.tune
     assert np.all(trace['step_size'][5:] == trace['step_size'][5])
+
+def test_nuts_error_reporting(caplog):
+    model = pymc3.Model()
+    with caplog.at_level(logging.CRITICAL) and pytest.raises(SamplingError):
+        with model:
+            pymc3.HalfNormal('a', sd=1, transform=None, testval=-1)
+            pymc3.HalfNormal('b', sd=1, transform=None)
+            trace = pymc3.sample(init='adapt_diag', chains=1)
+        assert "Bad initial energy, check any log  probabilities that are inf or -inf: a        -inf\nb" in caplog.text
+

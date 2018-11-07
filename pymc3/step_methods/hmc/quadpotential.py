@@ -94,8 +94,23 @@ class QuadPotential(object):
         """
         pass
 
-    def raise_ok(self):
-        pass
+    def raise_ok(self, vmap=None):
+        """Check if the mass matrix is ok, and raise ValueError if not.
+
+        Parameters
+        ----------
+        vmap : blocking.ArrayOrdering.vmap
+            List of `VarMap`s, which are namedtuples with var, slc, shp, dtyp
+
+        Raises
+        ------
+        ValueError if any standard deviations are 0 or infinite
+
+        Returns
+        -------
+        None
+        """
+        return None
 
     def reset(self):
         pass
@@ -186,6 +201,21 @@ class QuadPotentialDiagAdapt(QuadPotential):
         self._n_samples += 1
 
     def raise_ok(self, vmap):
+        """Check if the mass matrix is ok, and raise ValueError if not.
+
+        Parameters
+        ----------
+        vmap : blocking.ArrayOrdering.vmap
+            List of `VarMap`s, which are namedtuples with var, slc, shp, dtyp
+
+        Raises
+        ------
+        ValueError if any standard deviations are 0 or infinite
+
+        Returns
+        -------
+        None
+        """
         if np.any(self._stds == 0):
             name_slc = []
             tmp_hold = list(range(self._stds.size))

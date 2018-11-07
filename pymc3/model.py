@@ -672,7 +672,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
     @property
     @memoize(bound=True)
     def bijection(self):
-        vars = inputvars(self.cont_vars)
+        vars = inputvars(self.vars)
 
         bij = DictToArrayBijection(ArrayOrdering(vars),
                                    self.test_point)
