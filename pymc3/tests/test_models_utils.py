@@ -19,7 +19,7 @@ class TestUtils:
         assert l == list(lt or self.data.columns)
 
     def test_numpy_init(self):
-        m, l = utils.any_to_tensor_and_labels(self.data.values
+        m, l = utils.any_to_tensor_and_labels(self.data.values)
         self.assertMatrixLabels(m, l, lt=['x0', 'x1'])
         m, l = utils.any_to_tensor_and_labels(self.data.values, labels=['x2', 'x3'])
         self.assertMatrixLabels(m, l, lt=['x2', 'x3'])
