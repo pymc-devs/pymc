@@ -1,0 +1,89 @@
+{% extends "basic/layout.html" %}
+
+{% set script_files = script_files + [
+'_static/highlight.min.js',
+'_static/semantic.min.js',
+]
+%}
+
+{%- set render_sidebar = False %}
+
+{%- block doctype -%}
+<!DOCTYPE html>
+{%- endblock %}
+
+{%- block extrahead %}
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+{% endblock %}
+
+{# Silence the sidebar's, relbar's #}
+{% block header %}{% endblock %}
+{% block relbar1 %}{% endblock %}
+{% block relbar2 %}{% endblock %}
+{% block sidebarsourcelink %}{% endblock %}
+
+<body>
+    {%- block content %}
+    <div class="ui vertical masthead center aligned segment">
+
+        <div class="ui container">
+            <div class="ui large secondary pointing menu">
+                {% if theme_navbar_links %}
+                {%- for link in theme_navbar_links %}
+                <a href="{{ pathto(*link[1:]) }}" class="item">{{ link[0] }}</a>
+                {%- endfor %}
+                {% endif %}
+                <a class="right item" href="https://github.com/pymc-devs/pymc3"><i class="github blue icon large"></i></a>
+            </div>
+        </div>
+        {% if pagename == 'index' %}
+        <div class="ui text container">
+            <img src="https://cdn.rawgit.com/pymc-devs/pymc3/master/docs/logos/svg/PyMC3_banner.svg" />
+            <h2>Probabilistic Programming in Python</h2>
+            <a href="intro.html">
+                <div class="ui huge primary button">Quickstart <i class="right arrow icon"></i></div>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    <div class="ui container">
+        {% block body %}{% endblock %}
+    </div>
+    {%- endblock %}
+</body>
+{%- block footer %}
+<div class="ui vertical footer segment">
+    <div class="ui center aligned container">
+        <a href="https://github.com/pymc-devs/pymc3"><i class="github icon large"></i></a>
+        <a href="https://twitter.com/pymc_devs"><i class="twitter icon large"></i></a>
+        <a href="https://discourse.pymc.io/"><i class="discourse icon large"></i></a>
+    </div>
+    <div class="ui center aligned container">
+
+        {%- if show_copyright %}
+        <p>
+            {%- if hasdoc('copyright') %}
+            {% trans path=pathto('copyright'), copyright=copyright|e %}&copy; <a href="{{ path }}">Copyright</a> {{
+            copyright }}.{% endtrans %}
+            {%- else %}
+            {% trans copyright=copyright|e %}&copy; Copyright {{ copyright }}.{% endtrans %}
+            {%- endif %}
+        </p>
+        {%- endif %}
+        {%- if last_updated %}
+        <p>
+            {% trans last_updated=last_updated|e %}Last updated on {{ last_updated }}.{% endtrans %}<br />
+        </p>
+        {%- endif %}
+        {%- if show_sphinx %}
+        <p>
+            {% trans sphinx_version=sphinx_version|e %}Created using <a href="http://sphinx-doc.org/">Sphinx</a> {{
+            sphinx_version }}.{% endtrans %}<br />
+        </p>
+        {%- endif %}
+    </div>
+</div>
+{%- endblock %}

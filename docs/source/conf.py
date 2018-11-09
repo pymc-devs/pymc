@@ -36,12 +36,11 @@ extensions = [
     'matplotlib.sphinxext.plot_directive',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
-    'sphinx.ext.doctest',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.napoleon',
-    'numpydoc',
     'nbsphinx',
+    'sphinx.ext.mathjax',
+    'numpydoc',
     'IPython.sphinxext.ipython_console_highlighting',
+    'sphinx.ext.autosectionlabel',
 ]
 
 # Don't auto-generate summary for class members.
@@ -72,7 +71,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'PyMC3'
-copyright = '2017, The PyMC Development Team'
+copyright = '2018, The PyMC Development Team'
 author = 'PyMC developers'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -119,7 +118,7 @@ nbsphinx_execute = 'never'
 #show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = 'friendly'
 
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
@@ -135,15 +134,24 @@ todo_include_todos = False
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'alabaster'
+html_theme_path = './semantic_sphinx'
+html_theme = 'semantic_sphinx'
 
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
+html_add_permalinks=" 🔗"
+
 html_theme_options = {
-    "fixed_sidebar": "false",
-    "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
+     "navbar_links": [
+         ("Home", "index"),
+         ("Quickstart", "intro"),
+         ("API", "api"),
+         ("Examples", "examples"),
+    ],
+#     "fixed_sidebar": "false",
+#     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
@@ -319,3 +327,6 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+
+def setup(app):
+    app.add_stylesheet("https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css")
