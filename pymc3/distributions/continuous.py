@@ -579,11 +579,11 @@ class TruncatedNormal(BoundedContinuous):
         self.upper = tt.as_tensor_variable(upper) if upper is not None else np.inf
         self.mu = tt.as_tensor_variable(mu)
 
-        if self.lower is None and self.upper is None:
+        if not np.isfinite(self.lower) and not np.isfinite(self.upper):
             self._defaultval = mu
-        elif self.lower is None and self.upper is not None:
+        elif not np.isfinite(self.lower) and np.isfinite(self.upper):
             self._defaultval = self.upper - 1.
-        elif self.lower is not None and self.upper is None:
+        elif np.isfinite(self.lower) and not np.isfinite(self.upper):
             self._defaultval = self.lower + 1.
         else:
             self._defaultval = (self.lower + self.upper) / 2

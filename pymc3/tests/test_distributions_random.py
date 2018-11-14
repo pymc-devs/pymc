@@ -221,6 +221,10 @@ class TestTruncatedNormal(BaseTestCases.BaseTestCase):
     distribution = pm.TruncatedNormal
     params = {'mu': 0., 'tau': 1., 'lower':-0.5, 'upper':0.5}
 
+class TestTruncatedNormalLower(BaseTestCases.BaseTestCase):
+    distribution = pm.TruncatedNormal
+    params = {'mu': 0., 'tau': 1., 'lower':-0.5}
+
 class TestSkewNormal(BaseTestCases.BaseTestCase):
     distribution = pm.SkewNormal
     params = {'mu': 0., 'sd': 1., 'alpha': 5.}
@@ -430,6 +434,12 @@ class TestScalarParameterSamples(SeededTest):
         def ref_rand(size, mu, sd, lower, upper):
             return st.truncnorm.rvs((lower-mu)/sd, (upper-mu)/sd, size=size, loc=mu, scale=sd)
         pymc3_random(pm.TruncatedNormal, {'mu': R, 'sd': Rplusbig, 'lower':-Rplusbig, 'upper':Rplusbig},
+                     ref_rand=ref_rand)
+
+    def test_truncated_normal_lower(self):
+        def ref_rand(size, mu, sd, lower, upper):
+            return st.truncnorm.rvs((lower-mu)/sd, (np.inf-mu)/sd, size=size, loc=mu, scale=sd)
+        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sd': Rplusbig, 'lower':-Rplusbig},
                      ref_rand=ref_rand)
 
     def test_skew_normal(self):
@@ -878,7 +888,3 @@ def test_density_dist_without_random_not_sampleable():
     samples = 500
     with pytest.raises(ValueError):
         pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
-
-def test_truncated_normal_sample_random_variable_default_params(size=None):
-    rv = pm.TruncatedNormal.dist(transform=None)
-    rv.random(size=size)
