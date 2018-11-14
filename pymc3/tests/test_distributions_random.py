@@ -138,25 +138,12 @@ class BaseTestCases(object):
                 else:
                     return self.distribution(name, shape=shape, transform=None, **params)
 
-        def get_random_variable_default_params(self, shape, name=None):
-            if name is None:
-                name = self.distribution.__name__
-            with self.model:
-                if shape is None:
-                    return self.distribution(name, transform=None)
-                else:
-                    return self.distribution(name, shape=shape, transform=None)
-
         @staticmethod
         def sample_random_variable(random_variable, size):
             try:
                 return random_variable.random(size=size)
             except AttributeError:
                 return random_variable.distribution.random(size=size)
-
-        def test_sample_random_variable_default_params(self, size):
-            rv = self.get_random_variable_default_params(None)
-            self.sample_random_variable(rv, size)
 
         @pytest.mark.parametrize('size', [None, 5, (4, 5)], ids=str)
         def test_scalar_parameter_shape(self, size):
@@ -432,7 +419,6 @@ class TestScalarParameterSamples(SeededTest):
     def test_uniform(self):
         def ref_rand(size, lower, upper):
             return st.uniform.rvs(size=size, loc=lower, scale=upper - lower)
-
         pymc3_random(pm.Uniform, {'lower': -Rplus, 'upper': Rplus}, ref_rand=ref_rand)
 
     def test_normal(self):
@@ -892,3 +878,7 @@ def test_density_dist_without_random_not_sampleable():
     samples = 500
     with pytest.raises(ValueError):
         pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
+
+def test_truncated_normal_sample_random_variable_default_params(self, size)
+    rv = pm.TruncatedNormal.dist(transform=None)
+    rv.random(size=size)
