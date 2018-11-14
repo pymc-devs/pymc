@@ -225,6 +225,10 @@ class TestTruncatedNormalLower(BaseTestCases.BaseTestCase):
     distribution = pm.TruncatedNormal
     params = {'mu': 0., 'tau': 1., 'lower':-0.5}
 
+class TestTruncatedNormalUpper(BaseTestCases.BaseTestCase):
+    distribution = pm.TruncatedNormal
+    params = {'mu': 0., 'tau': 1., 'upper':0.5}
+
 class TestSkewNormal(BaseTestCases.BaseTestCase):
     distribution = pm.SkewNormal
     params = {'mu': 0., 'sd': 1., 'alpha': 5.}

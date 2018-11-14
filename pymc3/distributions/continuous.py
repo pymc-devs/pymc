@@ -653,10 +653,10 @@ class TruncatedNormal(BoundedContinuous):
     def _normalization(self):
         mu, sd = self.mu, self.sd
 
-        if self.lower is None and self.upper is None:
+        if tt.isinf(self.lower) and tt.isinf(self.upper):
             return 0.
 
-        if self.lower is not None and self.upper is not None:
+        if not tt.isinf(self.lower) and not tt.isinf(self.upper):
             lcdf_a = normal_lcdf(mu, sd, self.lower)
             lcdf_b = normal_lcdf(mu, sd, self.upper)
             lsf_a = normal_lccdf(mu, sd, self.lower)
@@ -668,7 +668,7 @@ class TruncatedNormal(BoundedContinuous):
                 logdiffexp(lcdf_b, lcdf_a),
             )
 
-        if self.lower is not None:
+        if not tt.isinf(self.lower):
             return normal_lccdf(mu, sd, self.lower)
         else:
             return normal_lcdf(mu, sd, self.upper)
