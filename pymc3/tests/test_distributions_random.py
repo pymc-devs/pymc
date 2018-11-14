@@ -879,6 +879,6 @@ def test_density_dist_without_random_not_sampleable():
     with pytest.raises(ValueError):
         pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
 
-def test_truncated_normal_sample_random_variable_default_params(self, size)
+def test_truncated_normal_sample_random_variable_default_params(self, size):
     rv = pm.TruncatedNormal.dist(transform=None)
     rv.random(size=size)
