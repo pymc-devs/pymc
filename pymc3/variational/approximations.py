@@ -570,6 +570,26 @@ class Empirical(SingleGroupApproximation):
             raise opvi.LocalGroupError('Empirical approximation does not support local variables')
         super(Empirical, self).__init__(trace=trace, size=size, **kwargs)
 
+    def evaluate_over_trace(self, node):
+        R"""
+        This allows to statically evaluate any symbolic expression over the trace.
+
+        Parameters
+        ----------
+        node : Theano Variables (or Theano expressions)
+
+        Returns
+        -------
+        evaluated node(s) over the posterior trace contained in the empirical approximation
+        """
+        node = self.to_flat_input(node)
+
+        def sample(post):
+            return theano.clone(node, {self.input: post})
+
+        nodes, _ = theano.scan(sample, self.histogram)
+        return nodes
+
 
 class NormalizingFlow(SingleGroupApproximation):
     __doc__ = """**Single Group Normalizing Flow Approximation**
