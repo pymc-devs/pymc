@@ -645,11 +645,13 @@ class TruncatedNormal(BoundedContinuous):
 
         bounds = [sd > 0]
         print('self.lower', self.lower)
+        print('tt.isinf(self.lower)', tt.isinf(self.lower))
         print('not tt.isinf(self.lower)', not tt.isinf(self.lower))
         if not tt.isinf(self.lower):
             print('setting lower', value >= self.lower)
             bounds.append(value >= self.lower)
         print('self.upper', self.upper)
+        print('tt.isinf(self.upper)', tt.isinf(self.upper))
         print('not tt.isinf(self.upper)', not tt.isinf(self.upper))
         if not tt.isinf(self.upper):
             bounds.append(value <= self.upper)
