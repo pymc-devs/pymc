@@ -644,10 +644,12 @@ class TruncatedNormal(BoundedContinuous):
         logp = Normal.dist(mu=mu, sd=sd).logp(value) - norm
 
         bounds = [sd > 0]
+        print('self.lower', self.lower)
         print('not tt.isinf(self.lower)', not tt.isinf(self.lower))
         if not tt.isinf(self.lower):
             print('setting lower', value >= self.lower)
             bounds.append(value >= self.lower)
+        print('self.upper', self.upper)
         print('not tt.isinf(self.upper)', not tt.isinf(self.upper))
         if not tt.isinf(self.upper):
             bounds.append(value <= self.upper)
