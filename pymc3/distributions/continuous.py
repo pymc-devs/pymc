@@ -645,9 +645,11 @@ class TruncatedNormal(BoundedContinuous):
 
         bounds = [sd > 0]
         if not tt.isinf(self.lower):
+            print('setting lower', value >= self.lower)
             bounds.append(value >= self.lower)
         if not tt.isinf(self.upper):
             bounds.append(value <= self.upper)
+            print('setting upper', value <= self.upper)
         return bound(logp, *bounds)
 
     def _normalization(self):
