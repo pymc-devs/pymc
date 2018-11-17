@@ -138,7 +138,7 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
             if step.tune_scaling:
                 step.scaling = _tune(acc_rate)
             if step.tune_steps:
-                acc_rate = max(1 / proposed, acc_rate)
+                acc_rate = max(1. / proposed, acc_rate)
                 step.n_steps = min(
                     step.max_steps, 1 + int(np.log(step.p_acc_rate) / np.log(1 - acc_rate))
                 )
