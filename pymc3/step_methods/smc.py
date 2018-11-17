@@ -102,9 +102,9 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
     if random_seed != -1:
         np.random.seed(random_seed)
 
-    beta = 0
+    beta = 0.
     stage = 0
-    acc_rate = 1
+    acc_rate = 1.
     proposed = draws * step.n_steps
     model.marginal_likelihood = 1
     variables = inputvars(model.vars)
@@ -148,7 +148,7 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
         )
         # Apply Metropolis kernel (mutation)
         proposed = draws * step.n_steps
-        accepted = 0
+        accepted = 0.
         priors = np.array([prior_logp(sample) for sample in posterior]).squeeze()
         tempered_post = priors + likelihoods * beta
         for draw in tqdm(range(draws), disable=not progressbar):
