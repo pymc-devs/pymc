@@ -6,7 +6,6 @@ import warnings
 
 from six import integer_types
 from joblib import Parallel, delayed
-from tempfile import mkdtemp
 import numpy as np
 import theano.gradient as tg
 

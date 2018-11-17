@@ -105,6 +105,7 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
     beta = 0
     stage = 0
     acc_rate = 1
+    proposed = 1
     model.marginal_likelihood = 1
     variables = inputvars(model.vars)
     discrete = np.concatenate([[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables])
