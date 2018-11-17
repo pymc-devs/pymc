@@ -15,7 +15,6 @@
 
 import sys
 import os
-import shlex
 
 import pymc3
 
@@ -36,7 +35,6 @@ extensions = [
     'matplotlib.sphinxext.plot_directive',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
-    'nbsphinx',
     'sphinx.ext.mathjax',
     'numpydoc',
     'IPython.sphinxext.ipython_console_highlighting',
@@ -141,7 +139,6 @@ html_theme = 'semantic_sphinx'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_add_permalinks=" 🔗"
 
 html_theme_options = {
      "navbar_links": [

@@ -1,3 +1,5 @@
+.. title:: PyMC3 Documentation
+
 .. raw:: html
 
     <div class="ui vertical stripe segment">
