@@ -16,25 +16,20 @@
                         Gaussian processes to fit a regression model.</p>
                 </div>
                 <div class="eight wide right floated column">
-
-::
-
+                    <pre><code class="python">
     X, y = linear_training_data()
 
     with pm.Model() as linear_model:
         weights = pm.Normal('weights', mu=0, sd=1)
         noise = pm.Gamma('noise', alpha=2, beta=1)
         y_observed = pm.Normal('y_observed',
-                            mu=X.dot(weights),
-                            sd=noise,
-                            observed=y)
+                    mu=X.dot(weights),
+                    sd=noise,
+                    observed=y)
 
         prior = pm.sample_prior_predictive()
         posterior = pm.sample()
-        posterior_pred = pm.sample_posterior_predictive(posterior)
-
-.. raw:: html
-
+        posterior_pred = pm.sample_posterior_predictive(posterior)</code></pre>
                 </div>
             </div>
         </div>
@@ -74,18 +69,15 @@
         </div>
 
         <div class="ui container">
-            <h2 class="ui dividing header">etc.</h2>
-            <div class="ui text container">
-                <h3 class="ui dividing header">License</h3>
-                <p>PyMC3 is licensed <a href="https://github.com/pymc-devs/pymc3/blob/master/LICENSE">under the Apache License, V2.</a></p>
-            </div>
+            <h2 class="ui dividing header">Licence</h2>
+            <p>PyMC3 is licensed <a href="https://github.com/pymc-devs/pymc3/blob/master/LICENSE">under the Apache License, V2.</a></p>
+        </div>
 
-            <div class="ui text container">
-                <h3 class="ui dividing header">Citing PyMC3</h3>
-                <p>Salvatier J., Wiecki T.V., Fonnesbeck C. (2016) Probabilistic programming in Python using PyMC3. PeerJ
-                    Computer Science 2:e55 <a href="https://doi.org/10.7717/peerj-cs.55">DOI: 10.7717/peerj-cs.55</a>.</p>
-                <p>See <a href="https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&cites=6936955228135731011">Google Scholar</a> for a continuously updated list of papers citing PyMC3.</p>
-            </div>
+        <div class="ui container">
+            <h2 class="ui dividing header">Citing PyMC3</h2>
+            <p>Salvatier J., Wiecki T.V., Fonnesbeck C. (2016) Probabilistic programming in Python using PyMC3. PeerJ
+                Computer Science 2:e55 <a href="https://doi.org/10.7717/peerj-cs.55">DOI: 10.7717/peerj-cs.55</a>.</p>
+            <p>See <a href="https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&cites=6936955228135731011">Google Scholar</a> for a continuously updated list of papers citing PyMC3.</p>
         </div>
 
         <div class="ui segment">

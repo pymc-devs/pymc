@@ -25,9 +25,10 @@
 
     <div class="ui container">
         <div class="ui large secondary pointing menu">
-            {% if theme_navbar_links %}
-            {%- for link in theme_navbar_links %}
-            <a href="{{ pathto(*link[1:]) }}" class="item">{{ link[0] }}</a>
+            <img class="ui bottom aligned tiny image item" src="https://cdn.rawgit.com/pymc-devs/pymc3/master/docs/logos/svg/PyMC3_banner.svg" />
+            {% if
+            theme_navbar_links %} {%- for link in theme_navbar_links %} <a href="{{ pathto(*link[1:]) }}" class="item">{{
+                link[0] }}</a>
             {%- endfor %}
             {% endif %}
             <div class="right menu">
