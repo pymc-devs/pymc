@@ -146,6 +146,7 @@ html_theme_options = {
          ("Quickstart", "intro"),
          ("API", "api"),
          ("Examples", "examples"),
+         ("Learn", "learn"),
     ],
 #     "fixed_sidebar": "false",
 #     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
