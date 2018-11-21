@@ -775,7 +775,7 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
     -----
     This is not a standard Distribution class but follows a similar
     interface. Besides the Wishart distribution, it will add RVs
-    c and z to your model which make up the matrix.
+    name_c and name_z to your model which make up the matrix.
 
     This distribution is usually a bad idea to use as a prior for multivariate
     normal. You should instead use LKJCholeskyCov or LKJCorr.
@@ -797,11 +797,11 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
         diag_testval = None
         tril_testval = None
 
-    c = tt.sqrt(ChiSquared('c', nu - np.arange(2, 2 + n_diag), shape=n_diag,
+    c = tt.sqrt(ChiSquared('%s_c' % name, nu - np.arange(2, 2 + n_diag), shape=n_diag,
                            testval=diag_testval))
-    pm._log.info('Added new variable c to model diagonal of Wishart.')
-    z = Normal('z', 0., 1., shape=n_tril, testval=tril_testval)
-    pm._log.info('Added new variable z to model off-diagonals of Wishart.')
+    pm._log.info('Added new variable %s_c to model diagonal of Wishart.' % name)
+    z = Normal('%s_z' % name, 0., 1., shape=n_tril, testval=tril_testval)
+    pm._log.info('Added new variable %s_z to model off-diagonals of Wishart.' % name)
     # Construct A matrix
     A = tt.zeros(S.shape, dtype=np.float32)
     A = tt.set_subtensor(A[diag_idx], c)
