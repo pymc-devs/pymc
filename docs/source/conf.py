@@ -22,6 +22,7 @@ import pymc3
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath(os.path.join('..', '..')))
+sys.path.insert(0, os.path.abspath('sphinxext'))
 
 # -- General configuration ------------------------------------------------
 
@@ -37,8 +38,10 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.mathjax',
     'numpydoc',
+    'nbsphinx',
     'IPython.sphinxext.ipython_console_highlighting',
     'sphinx.ext.autosectionlabel',
+    'gallery_generator',
 ]
 
 # Don't auto-generate summary for class members.
@@ -142,10 +145,9 @@ html_theme = 'semantic_sphinx'
 
 html_theme_options = {
      "navbar_links": [
-         ("Home", "index"),
          ("Quickstart", "intro"),
          ("API", "api"),
-         ("Examples", "examples"),
+         ("Examples", "nb_examples/index"),
          ("Learn", "learn"),
     ],
 #     "fixed_sidebar": "false",
@@ -174,7 +176,7 @@ html_favicon = "../logos/PyMC3.ico"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ['_static', 'nb_examples/_images']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
