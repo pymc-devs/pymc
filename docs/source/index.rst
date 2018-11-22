@@ -68,19 +68,19 @@
             </div>
         </div>
 
-        <div class="ui container">
-            <h2 class="ui dividing header">Licence</h2>
+        <div class="ui vertical segment">
+            <h2 class="ui dividing header">License</h2>
             <p>PyMC3 is licensed <a href="https://github.com/pymc-devs/pymc3/blob/master/LICENSE">under the Apache License, V2.</a></p>
         </div>
 
-        <div class="ui container">
+        <div class="ui vertical segment">
             <h2 class="ui dividing header">Citing PyMC3</h2>
             <p>Salvatier J., Wiecki T.V., Fonnesbeck C. (2016) Probabilistic programming in Python using PyMC3. PeerJ
                 Computer Science 2:e55 <a href="https://doi.org/10.7717/peerj-cs.55">DOI: 10.7717/peerj-cs.55</a>.</p>
             <p>See <a href="https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&cites=6936955228135731011">Google Scholar</a> for a continuously updated list of papers citing PyMC3.</p>
         </div>
 
-        <div class="ui segment">
+        <div class="ui bottom attached segment">
             <h2 class="ui dividing header">Support and sponsors</h2>
             <p>PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3 financially, you <a href="https://www.flipcause.com/widget/widget_home/MTE4OTc=">can donate here</a>.</p>
 

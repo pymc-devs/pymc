@@ -39,6 +39,20 @@
 
     </div>
 
+    <h2 class="ui header">...with a video!</h2>
+    <div class="ui celled list">
+
+        <div class="item">
+            <i class="large youtube middle aligned icon"></i>
+            <div class="content">
+                <a href="https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy" class="header"> YouTube Playlist</a>
+                <div class="description">
+                    There is an actively curated playlist of PyMC3 talks on YouTube.
+                </div>
+            </div>
+        </div>
+    </div>
+
     <h2 class="ui header">...with a book!</h2>
     <div class="ui link four stackable cards">
 
@@ -144,37 +158,6 @@
 
         <div class="card">
             <div class="image">
-                <img src="https://images-na.ssl-images-amazon.com/images/I/51K33XI2I8L._SX330_BO1,204,203,200_.jpg">
-            </div>
-            <div class="content">
-                <div class="header">Bayesian Cognitive Modeling: A Practical Course</div>
-                <div class="meta">Michael Lee and Eric-Jan Wagenmakers</div>
-                <div class="description">
-                Focused on using Bayesian statistics in cognitive modeling.
-                </div>
-            </div>
-            <table class="ui table">
-                <tbody>
-                    <tr>
-                        <td>
-                            <a href="https://bayesmodels.com/">
-                                <i class="linkify icon"></i> Book website
-                            </a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <a href="https://github.com/pymc-devs/resources/tree/master/BCM">
-                                <i class="linkify icon"></i> PyMC3 implementations
-                            </a>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="card">
-            <div class="image">
                 <img src="https://dz13w8afd47il.cloudfront.net/sites/default/files/imagecache/ppv4_main_book_cover/3804OS_4958_Bayesian%20Analysis%20with%20Python.png">
             </div>
             <div class="content">
@@ -197,6 +180,37 @@
                         <td>
                             <a href="https://github.com/aloctavodia/BAP">
                                 <i class="linkify icon"></i> Code and errata in PyMC3
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div class="image">
+                <img src="https://images-na.ssl-images-amazon.com/images/I/51K33XI2I8L._SX330_BO1,204,203,200_.jpg">
+            </div>
+            <div class="content">
+                <div class="header">Bayesian Cognitive Modeling: A Practical Course</div>
+                <div class="meta">Michael Lee and Eric-Jan Wagenmakers</div>
+                <div class="description">
+                Focused on using Bayesian statistics in cognitive modeling.
+                </div>
+            </div>
+            <table class="ui table">
+                <tbody>
+                    <tr>
+                        <td>
+                            <a href="https://bayesmodels.com/">
+                                <i class="linkify icon"></i> Book website
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <a href="https://github.com/pymc-devs/resources/tree/master/BCM">
+                                <i class="linkify icon"></i> PyMC3 implementations
                             </a>
                         </td>
                     </tr>
@@ -236,7 +250,3 @@
         </div>
 
     </div>
-
-    <h2 class="ui header">...with a video!</h2>
-
-    <p> There is an <a href="https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy">actively curated playlist of PyMC3 talks</a> on YouTube.
