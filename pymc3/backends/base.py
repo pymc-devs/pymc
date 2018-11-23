@@ -12,8 +12,20 @@ import theano.tensor as tt
 
 from ..model import modelcontext
 from .report import SamplerReport, merge_reports
+from abc import ABC
+from abc.collections import Sized
 
 logger = logging.getLogger('pymc3')
+
+if sys.version_info >= (3, 6):
+    class TraceMap:
+        def __getitem__(self, idx: Union[int,str,Tuple[str,slice]]) -> ndarray: ...
+        def keys(self) -> Iterator[str]: ...
+else:
+    class TraceMap:
+        def __getitem__(self, idx): ...
+        def keys(self): ...
+
 
 
 class BackendError(Exception):
@@ -218,7 +230,7 @@ class BaseTrace(object):
             return set()
 
 
-class MultiTrace(object):
+class MultiTrace(object, TraceMap, Sized):
     """Main interface for accessing values from MCMC results
 
     The core method to select values is `get_values`. The method
@@ -362,6 +374,9 @@ class MultiTrace(object):
             for vars in trace.sampler_vars:
                 names.update(vars.keys())
         return names
+
+    def keys(self):
+        return iter(self.varnames)
 
     def add_values(self, vals, overwrite=False):
         """add variables to traces.
