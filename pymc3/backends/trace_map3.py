@@ -1,0 +1,6 @@
+from abc import ABC
+from typing import Union, Tuple, Iterator, Any
+ndarray = Any # don't have good typing for this right now.
+class TraceMap(ABC):
+    def __getitem__(self, idx: Union[int,str,Tuple[str,slice]]) -> ndarray: ...
+    def keys(self) -> Iterator[str]: ...
