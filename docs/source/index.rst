@@ -69,6 +69,45 @@
         </div>
 
         <div class="ui vertical segment">
+            <h2 class="ui dividing header">In-Depth Guides</h2>
+            <div class="ui four stackable cards">
+
+                <a class="ui link card" href="/prob_dists.html">
+                    <div class="content">
+                        <div class="header">Probability Distributions</div>
+                        <div class="description">PyMC3 includes a comprehensive set of pre-defined statistical distributions that can be used as model building blocks.
+                        </div>
+                    </div>
+                </a>
+
+                <a class="ui link card" href="/gp.html">
+                    <div class="content">
+                        <div class="header">Gaussian Processes</div>
+                        <div class="description">Sometimes an unknown parameter or variable in a model is not a scalar value or a fixed-length vector, but a function. A Gaussian process (GP) can be used as a prior probability distribution whose support is over the space of continuous functions. PyMC3 provides rich support for defining and using GPs.
+                        </div>
+                    </div>
+                </a>
+
+                <a class="ui link card" href="/notebooks/variational_api_quickstart.html">
+                    <div class="content">
+                        <div class="header">Variational Inference</div>
+                        <div class="description">Variational inference saves computational cost by turning a problem of integration into one of optimization. PyMC3's variational API supports a number of cutting edge algorithms, as well as minibatch for scaling to large datasets.
+                        </div>
+                    </div>
+                </a>
+
+                <a class="ui link card" href="/theano.html">
+                    <div class="content">
+                        <div class="header">Theano</div>
+                        <div class="description">Theano is the deep-learning library PyMC3 uses to construct probability distributions and then access the gradient in order to implement cutting edge inference algorithms. More advanced models may be built by understanding this layer.
+                        </div>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+
+        <div class="ui vertical segment">
             <h2 class="ui dividing header">License</h2>
             <p>PyMC3 is licensed <a href="https://github.com/pymc-devs/pymc3/blob/master/LICENSE">under the Apache License, V2.</a></p>
         </div>
