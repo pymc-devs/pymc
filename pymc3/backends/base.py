@@ -13,11 +13,14 @@ import theano.tensor as tt
 from ..model import modelcontext
 from .report import SamplerReport, merge_reports
 from abc import ABC
-from abc.collections import Sized
+from collections.abc import Sized
+from sys import version_info
 
 logger = logging.getLogger('pymc3')
 
-if sys.version_info >= (3, 6):
+if version_info >= (3, 6):
+    from typing import Union, Tuple, Iterator, Any
+    ndarray = Any # don't have good typing for this right now.
     class TraceMap:
         def __getitem__(self, idx: Union[int,str,Tuple[str,slice]]) -> ndarray: ...
         def keys(self) -> Iterator[str]: ...
@@ -230,7 +233,7 @@ class BaseTrace(object):
             return set()
 
 
-class MultiTrace(object, TraceMap, Sized):
+class MultiTrace(TraceMap, Sized, object):
     """Main interface for accessing values from MCMC results
 
     The core method to select values is `get_values`. The method
