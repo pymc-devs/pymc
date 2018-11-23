@@ -169,6 +169,7 @@ def _log_post_trace(trace, model=None, progressbar=False):
         if progressbar:
             points.close()
 
+
 WAIC_r_pointwise = namedtuple('WAIC_r_pointwise', 'WAIC, WAIC_se, p_WAIC, var_warn, WAIC_i')
 WAIC_r = namedtuple('WAIC_r', 'WAIC, WAIC_se, p_WAIC, var_warn')
 def waic(trace, model=None, pointwise=False, progressbar=False):
@@ -234,6 +235,7 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
         return WAIC_r_pointwise(waic, waic_se, p_waic, warn_mg, waic_i)
     else:
         return WAIC_r(waic, waic_se, p_waic, warn_mg)
+
 
 LOO_r_pointwise = namedtuple('LOO_r_pointwise', 'LOO, LOO_se, p_LOO, shape_warn, LOO_i')
 LOO_r = namedtuple('LOO_r', 'LOO, LOO_se, p_LOO, shape_warn')
