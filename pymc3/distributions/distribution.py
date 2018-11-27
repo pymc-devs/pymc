@@ -512,10 +512,6 @@ def _draw_value(param, point=None, givens=None, size=None):
             else:
                 output = func(*values)
             return output
-    print(param,
-          type(param),
-          isinstance(param, tt.TensorVariable),
-          isinstance(param, (tt.TensorVariable, MultiObservedRV)))
     raise ValueError('Unexpected type in draw_value: %s' % type(param))
 
 
