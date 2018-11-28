@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 from matplotlib import image
 
 DOC_SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TABLE_OF_CONTENTS_FILENAME = "table_of_contents.js"
 
 INDEX_TEMPLATE = """
 .. _{sphinx_tag}:
@@ -26,8 +27,7 @@ INDEX_TEMPLATE = """
 .. raw:: html
 
     <h1 class="ui header">Example Notebooks</h1>
-    <div class="ui link six stackable cards">
-        {contents}
+    <div id="gallery" class="ui vertical segment">
     </div>
 """
 
@@ -101,13 +101,13 @@ class NotebookGenerator(object):
         return None
 
     def extract_title(self):
-        for cell in self.json_source['cells']:
+        for cell in self.json_source["cells"]:
             if cell["cell_type"] == "markdown":
                 rows = [row.strip() for row in cell["source"] if row.strip()]
                 for row in rows:
                     if row.startswith("# "):
                         return row[2:]
-        return self.basename.replace('_', ' ')
+        return self.basename.replace("_", " ")
 
     def gen_previews(self):
         preview = self.extract_preview_pic()
@@ -118,30 +118,13 @@ class NotebookGenerator(object):
             shutil.copy(self.default_image_loc, self.png_path)
         create_thumbnail(self.png_path)
 
-    def contents_entry(self):
-        return """
-.. raw:: html
-
-    <a class='card' href='./{0}'>
-        <div class="image">
-            <img src=../_static/{1}>
-        </div>
-        <div class="content">
-            <div class="header">{2}</div>
-        </div>
-    </a>
-
-        """.format(
-            self.output_html, os.path.basename(self.png_path), self.pagetitle
-        )
-
 
 def main(app):
     working_dir = os.getcwd()
     os.chdir(app.builder.srcdir)
     static_dir = os.path.join(app.builder.srcdir, "_static")
     target_dir = os.path.join(app.builder.srcdir, "nb_examples")
-    image_dir = os.path.join(app.builder.srcdir, "nb_examples/_images")
+    image_dir = os.path.join(target_dir, "_images")
     source_dir = os.path.abspath(
         os.path.join(os.path.dirname(os.path.dirname(app.builder.srcdir)), "notebooks")
     )
@@ -158,35 +141,29 @@ def main(app):
     if not os.path.exists(source_dir):
         os.makedirs(source_dir)
 
-    banner_data = []
-
-    contents = "\n\n"
-
     # Write individual example files
-    files = sorted(glob.glob(os.path.join(source_dir, "*.ipynb")))
-    for filename in files:
-
+    data = {}
+    for filename in sorted(glob.glob(os.path.join(source_dir, "*.ipynb"))):
         ex = NotebookGenerator(filename, target_dir)
+        data[ex.stripped_name] = {
+            "title": ex.pagetitle,
+            "url": os.path.join("/examples", ex.output_html),
+            "thumb": os.path.basename(ex.png_path),
+        }
 
-        banner_data.append(
-            {
-                "title": ex.pagetitle,
-                "url": os.path.join("examples", ex.output_html),
-                "thumb": ex.png_path,
-            }
-        )
+    js_file = os.path.join(image_dir, "gallery_contents.js")
+    with open(os.path.join(source_dir, TABLE_OF_CONTENTS_FILENAME), "r") as toc:
+        table_of_contents = toc.read()
 
-        contents += ex.contents_entry()
+    js_contents = "Gallery.examples = {}\n{}".format(
+        json.dumps(data), table_of_contents
+    )
 
-    if len(banner_data) < 10:
-        banner_data = (4 * banner_data)[:10]
+    with open(js_file, "w") as js:
+        js.write(js_contents)
 
-    # write index file
-    index_file = os.path.join(target_dir, "index.rst")
-    with open(index_file, "w") as index:
-        index.write(
-            INDEX_TEMPLATE.format(sphinx_tag="notebook_gallery", contents=contents)
-        )
+    with open(os.path.join(target_dir, "index.rst"), "w") as index:
+        index.write(INDEX_TEMPLATE.format(sphinx_tag="notebook_gallery"))
 
     os.chdir(working_dir)
 
