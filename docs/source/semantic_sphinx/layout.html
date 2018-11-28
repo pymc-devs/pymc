@@ -20,7 +20,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 {% if pagename == 'nb_examples/index' %}
 <script type="text/javascript">
-    jQuery(function () { Gallery.loadScript("/_static/gallery_contents.js", "exampleloader"); });
+    jQuery(function () { Gallery.loadScript("{{ pathto('_static/gallery_contents.js', 1) }}", "exampleloader"); });
 </script>
 {# this is used when loading the gallery index using $.ajax fails,
 such as on Chrome for documents on localhost #}
