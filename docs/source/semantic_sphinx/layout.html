@@ -70,6 +70,23 @@ such as on Chrome for documents on localhost #}
 </div>
 
 <div class="ui container" role="main">
+    {% if pagename == 'index' %}
+    <div class="ui vertical segment">
+        <a class="ui image" href="https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks">
+            <img src="https://mybinder.org/badge.svg">
+        </a>
+        <a class="ui image" href="https://travis-ci.org/pymc-devs/pymc3">
+            <img src="https://travis-ci.org/pymc-devs/pymc3.png?branch=master">
+        </a>
+        <a class="ui image" href="https://coveralls.io/github/pymc-devs/pymc3?branch=master">
+            <img src="https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master">
+        </a>
+        <a class="ui image" href="https://www.numfocus.org/">
+            <img src="https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A">
+        </a>
+    </div>
+    {% endif %}
+
     <div class="ui vertical segment">
         {% block body %}{% endblock %}
     </div>
@@ -102,7 +119,7 @@ such as on Chrome for documents on localhost #}
         {%- endif %}
         {%- if show_sphinx %}
         <p>
-            {% trans sphinx_version=sphinx_version|e %}Created using <a href="http://sphinx-doc.org/">Sphinx</a> {{
+            {% trans sphinx_version=sphinx_version|e %}Created using <a href="https://sphinx-doc.org/">Sphinx</a> {{
             sphinx_version }}.{% endtrans %}<br />
         </p>
         {%- endif %}
