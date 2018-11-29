@@ -16,7 +16,8 @@ import pymc3 as pm
 from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
-from .distribution import Continuous, Discrete, draw_values, generate_samples
+from .distribution import (Continuous, Discrete, draw_values, generate_samples,
+                           _DrawValuesContext)
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
@@ -338,18 +339,19 @@ class MvStudentT(_QuadFormBase):
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
-        nu, mu = draw_values([self.nu, self.mu], point=point, size=size)
-        if self._cov_type == 'cov':
-            cov, = draw_values([self.cov], point=point, size=size)
-            dist = MvNormal.dist(mu=np.zeros_like(mu), cov=cov)
-        elif self._cov_type == 'tau':
-            tau, = draw_values([self.tau], point=point, size=size)
-            dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau)
-        else:
-            chol, = draw_values([self.chol_cov], point=point, size=size)
-            dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol)
+        with _DrawValuesContext():
+            nu, mu = draw_values([self.nu, self.mu], point=point, size=size)
+            if self._cov_type == 'cov':
+                cov, = draw_values([self.cov], point=point, size=size)
+                dist = MvNormal.dist(mu=np.zeros_like(mu), cov=cov)
+            elif self._cov_type == 'tau':
+                tau, = draw_values([self.tau], point=point, size=size)
+                dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau)
+            else:
+                chol, = draw_values([self.chol_cov], point=point, size=size)
+                dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol)
 
-        samples = dist.random(point, size)
+            samples = dist.random(point, size)
 
         chi2 = np.random.chisquare
         return (np.sqrt(nu) * samples.T / chi2(nu, size)).T + mu

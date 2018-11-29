@@ -10,12 +10,23 @@
 - Add log CDF functions to continuous distributions: `Beta`, `Cauchy`, `ExGaussian`, `Exponential`, `Flat`, `Gumbel`, `HalfCauchy`, `HalfFlat`, `HalfNormal`, `Laplace`, `Logistic`, `Lognormal`, `Normal`, `Pareto`, `StudentT`, `Triangular`, `Uniform`, `Wald`, `Weibull`.
 - Behavior of `sample_posterior_predictive` is now to produce posterior predictive samples, in order, from all values of the `trace`. Previously, by default it would produce 1 chain worth of samples, using a random selection from the `trace` (#3212)
 - Show diagnostics for initial energy errors in HMC and NUTS.
+- PR #3273 has added the `distributions.distribution._DrawValuesContext` context
+  manager. This is used to store the values already drawn in nested `random`
+  and `draw_values` calls, enabling `draw_values` to draw samples from the
+  joint probability distribution of RVs and not the marginals. Custom
+  distributions that must call `draw_values` several times in their `random`
+  method, or that invoke many calls to other distribution's `random` methods
+  (e.g. mixtures) must do all of these calls under the same `_DrawValuesContext`
+  context manager instance. If they do not, the conditional relations between
+  the distribution's parameters could be broken, and `random` could return
+  values drawn from an incorrect distribution.
 
 ### Maintenance
 
 - Fixed Triangular distribution `c` attribute handling in `random` and updated sample codes for consistency (#3225)
 - Renamed `sample_ppc()` and `sample_ppc_w()` to `sample_posterior_predictive()` and `sample_posterior_predictive_w()`, respectively.
 - Refactor SMC and properly compute marginal likelihood (#3124)
+- Fix for #3210. Now `distribution.draw_values(params)`, will draw the `params` values from their joint probability distribution and not from combinations of their marginals (Refer to PR #3273).
 
 
 ## PyMC 3.5 (July 21 2018)
