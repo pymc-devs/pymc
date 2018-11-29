@@ -181,7 +181,7 @@ Sponsors
 
 .. |Binder| image:: https://mybinder.org/badge.svg
    :target: https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks
-.. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.png?branch=master
+.. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.svg?branch=master
    :target: https://travis-ci.org/pymc-devs/pymc3
 .. |Coverage| image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master
    :target: https://coveralls.io/github/pymc-devs/pymc3?branch=master
