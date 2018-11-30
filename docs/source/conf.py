@@ -324,4 +324,5 @@ def setup(app):
     app.add_stylesheet(
         "https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css"
     )
+    app.add_stylesheet("default.css")
 
