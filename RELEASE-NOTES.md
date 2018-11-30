@@ -16,6 +16,7 @@
 - Big rewrite of documentation (#3275)
 - Fixed Triangular distribution `c` attribute handling in `random` and updated sample codes for consistency (#3225)
 - Refactor SMC and properly compute marginal likelihood (#3124)
+- Removed use of deprecated `ymin` keyword in matplotlib's `Axes.set_ylim` (#3279)
 
 ### Deprecations
 
