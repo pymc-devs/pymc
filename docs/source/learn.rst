@@ -158,7 +158,7 @@
 
         <div class="card">
             <div class="image">
-                <img src="https://dz13w8afd47il.cloudfront.net/sites/default/files/imagecache/ppv4_main_book_cover/3804OS_4958_Bayesian%20Analysis%20with%20Python.png">
+                <img src="https://raw.githubusercontent.com/aloctavodia/BAP/master/Cover.png">
             </div>
             <div class="content">
                 <div class="header">Bayesian Analysis with Python</div>
@@ -171,7 +171,7 @@
                 <tbody>
                     <tr>
                         <td>
-                            <a href="https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python">
+                            <a href="https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python-second-edition">
                                 <i class="linkify icon"></i> Book website
                             </a>
                         </td>
