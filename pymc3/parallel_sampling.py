@@ -6,6 +6,7 @@ import logging
 from collections import namedtuple
 import traceback
 from pymc3.exceptions import SamplingError
+import errno
 
 import six
 import numpy as np
@@ -13,6 +14,34 @@ import numpy as np
 from . import theanof
 
 logger = logging.getLogger("pymc3")
+
+
+def _get_broken_pipe_exception():
+    import sys
+    if sys.platform == 'win32':
+        return RuntimeError("The communication pipe between the main process "
+                            "and its spawned children is broken.\n"
+                            "In Windows OS, this usually means that the child "
+                            "process raised an exception while it was being "
+                            "spawned, before it was setup to communicate to "
+                            "the main process.\n"
+                            "The exceptions raised by the child process while "
+                            "spawning cannot be caught or handled from the "
+                            "main process, and when running from an IPython or "
+                            "jupyter notebook interactive kernel, the child's "
+                            "exception and traceback appears to be lost.\n"
+                            "A known way to see the child's error, and try to "
+                            "fix or handle it, is to run the problematic code "
+                            "as a batch script from a system's Command Prompt. "
+                            "The child's exception will be printed to the "
+                            "Command Promt's stderr, and it should be visible "
+                            "above this error and traceback.\n"
+                            "Note that if running a jupyter notebook that was "
+                            "invoked from a Command Prompt, the child's "
+                            "exception should have been printed to the Command "
+                            "Prompt on which the notebook is running.")
+    else:
+        return None
 
 
 class ParallelSamplingError(Exception):
@@ -84,9 +113,18 @@ class _Process(multiprocessing.Process):
             pass
         except BaseException as e:
             e = ExceptionWithTraceback(e, e.__traceback__)
+            # Send is not blocking so we have to force a wait for the abort
+            # message
             self._msg_pipe.send(("error", None, e))
+            self._wait_for_abortion()
         finally:
             self._msg_pipe.close()
+
+    def _wait_for_abortion(self):
+        while True:
+            msg = self._recv_msg()
+            if msg[0] == "abort":
+                break
 
     def _make_numpy_refs(self):
         shape_dtypes = self._step_method.vars_shape_dtype
@@ -201,7 +239,15 @@ class ProcessAdapter(object):
             seed,
         )
         # We fork right away, so that the main process can start tqdm threads
-        self._process.start()
+        try:
+            self._process.start()
+        except IOError as e:
+            if e.errno == errno.EPIPE:
+                exc = _get_broken_pipe_exception()
+                if exc is not None:
+                    raise exc
+                else:
+                    raise
 
     @property
     def shared_point_view(self):
