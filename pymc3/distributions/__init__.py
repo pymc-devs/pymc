@@ -156,4 +156,5 @@ __all__ = ['Uniform',
            'LogitNormal',
            'Interpolated',
            'Bound',
+           'Rice',
            ]
