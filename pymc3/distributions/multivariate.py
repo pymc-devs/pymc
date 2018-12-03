@@ -1077,22 +1077,21 @@ class LKJCorr(Continuous):
         size = size if isinstance(size, tuple) else (size,)
         # original implementation in R see:
         # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
-        beta = eta - 1 + n/2
-        r12 = 2 * stats.beta.rvs(a=beta, b=beta, size=size) - 1
+        beta = eta - 1. + n/2.
+        r12 = 2. * stats.beta.rvs(a=beta, b=beta, size=size) - 1.
         P = np.eye(n)[:, :, np.newaxis] * np.ones(size)
         P[0, 1] = r12
-        P[1, 1] = np.sqrt(1 - r12**2)
-        if n > 2:
-            for m in range(1, n-1):
-                beta -= 0.5
-                y = stats.beta.rvs(a=(m+1) / 2., b=beta, size=size)
-                z = stats.norm.rvs(loc=0, scale=1, size=(m+1, ) + size)
-                z = z / np.sqrt(np.einsum('ij,ij->j', z, z))
-                P[0:m+1, m+1] = np.sqrt(y) * z
-                P[m+1, m+1] = np.sqrt(1 - y)
-        Pt = np.transpose(P, (2, 0 ,1))
-        C = np.einsum('...ji,...jk->...ik', Pt, Pt)
-        return C.transpose((1, 2, 0))[np.triu_indices(n, k=1)].T
+        P[1, 1] = np.sqrt(1. - r12**2)
+        for mp1 in range(2, n):
+            beta -= 0.5
+            y = stats.beta.rvs(a=mp1 / 2., b=beta, size=size)
+            z = stats.norm.rvs(loc=0, scale=1, size=(mp1, ) + size)
+            z = z / np.sqrt(np.einsum('ij,ij->j', z, z))
+            P[0:mp1, mp1] = np.sqrt(y) * z
+            P[mp1, mp1] = np.sqrt(1. - y)
+        C = np.einsum('ji...,jk...->...ik', P, P)
+        triu_idx = np.triu_indices(n, k=1)
+        return C[..., triu_idx[0], triu_idx[1]]
 
     def random(self, point=None, size=None):
         n, eta = draw_values([self.n, self.eta], point=point, size=size)
