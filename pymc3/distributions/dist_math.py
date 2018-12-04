@@ -270,6 +270,18 @@ class SplineWrapper(theano.Op):
         return [x_grad * self.grad_op(x)]
 
 
+class I1e(UnaryScalarOp):
+    """
+    Modified Bessel function of the first kind of order 1, exponentially scaled.
+    """
+    nfunc_spec = ('scipy.special.i1e', 1, 1)
+
+    def impl(self, x):
+        return scipy.special.i1e(x)
+
+
+i1e = I1e(upgrade_to_float, name='i1e')
+
 
 class I0e(UnaryScalarOp):
     """
@@ -279,6 +291,11 @@ class I0e(UnaryScalarOp):
 
     def impl(self, x):
         return scipy.special.i0e(x)
+
+    def grad(self, inp, grads):
+        x, = inp
+        gz, = grads
+        return [gz * (i1e(x) - tt.sgn(x) * i0e(x))]
 
 
 i0e = I0e(upgrade_to_float, name='i0e')
