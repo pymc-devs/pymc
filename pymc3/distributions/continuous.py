@@ -3521,8 +3521,9 @@ class Rice(PositiveContinuous):
     Notes
     -----
     The distribution :math:`\mathrm{Rice}\left(|\nu|,\sigma\right)` is the
-    distribution of :math:`R=\sqrt{X^2+Y^2}` where :math:`X\sim N(\nu, \sigma^2)`,
-    :math:`Y\sim N(\nu, \sigma^2)`, and :math:`X` and :math:`Y` are independent.
+    distribution of :math:`R=\sqrt{X^2+Y^2}` where :math:`X\sim N(\nu \cos{\theta}, \sigma^2)`,
+    :math:`Y\sim N(\nu \sin{\theta}, \sigma^2)` are independent and for any
+    real :math:`\theta`.
 
     The distribution is defined with either nu or b. 
     The link between the two parametrizations is given by
