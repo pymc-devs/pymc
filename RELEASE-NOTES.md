@@ -28,7 +28,7 @@
 - Refactor SMC and properly compute marginal likelihood (#3124)
 - Removed use of deprecated `ymin` keyword in matplotlib's `Axes.set_ylim` (#3279)
 - Fix for #3210. Now `distribution.draw_values(params)`, will draw the `params` values from their joint probability distribution and not from combinations of their marginals (Refer to PR #3273).
-- Rewrote Multinomial._random method to better handle shape broadcasting (#3271)
+- Rewrote `Multinomial._random` method to better handle shape broadcasting (#3271)
 
 ### Deprecations
 
