@@ -249,6 +249,23 @@ class _DrawValuesContext(six.with_metaclass(InitContextMeta, Context)):
         return self._parent
 
 
+class _DrawValuesOutContext(six.with_metaclass(InitContextMeta,
+                                               _DrawValuesContext)):
+    """
+    Context manager that starts a new drawn variables context disregarding all
+    parent contexts. This can be used inside a random method to ensure that
+    the drawn values wont be the ones cached by previous calls
+    """
+    def __new__(cls, *args, **kwargs):
+        # resolves the parent instance
+        instance = super(_DrawValuesOutContext, cls).__new__(cls)
+        instance._parent = None
+        return instance
+
+    def __init__(self):
+        self.drawn_vars = dict()
+
+
 def is_fast_drawable(var):
     return isinstance(var, (numbers.Number,
                             np.ndarray,
@@ -519,7 +536,11 @@ def to_tuple(shape):
     """Convert ints, arrays, and Nones to tuples"""
     if shape is None:
         return tuple()
-    return tuple(np.atleast_1d(shape))
+    temp = np.atleast_1d(shape)
+    if temp.size == 0:
+        return tuple()
+    else:
+        return tuple(temp)
 
 def _is_one_d(dist_shape):
     if hasattr(dist_shape, 'dshape') and dist_shape.dshape in ((), (0,), (1,)):
@@ -586,6 +607,7 @@ def generate_samples(generator, *args, **kwargs):
     dist_shape = to_tuple(dist_shape)
     broadcast_shape = to_tuple(broadcast_shape)
     size_tup = to_tuple(size)
+    print(broadcast_shape, type(broadcast_shape))
 
     # All inputs are scalars, end up size (size_tup, dist_shape)
     if broadcast_shape in {(), (0,), (1,)}:

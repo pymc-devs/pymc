@@ -5,7 +5,8 @@ from pymc3.util import get_variable_name
 from ..math import logsumexp
 from .dist_math import bound, random_choice
 from .distribution import (Discrete, Distribution, draw_values,
-                           generate_samples, _DrawValuesContext)
+                           generate_samples, _DrawValuesContext,
+                           _DrawValuesOutContext)
 from .continuous import get_tau_sd, Normal
 
 
@@ -133,12 +134,16 @@ class Mixture(Distribution):
 
     def _comp_samples(self, point=None, size=None):
         try:
-            samples = self.comp_dists.random(point=point, size=size)
+            return self.comp_dists.random(point=point, size=size)
         except AttributeError:
-            samples = np.column_stack([comp_dist.random(point=point, size=size)
-                                       for comp_dist in self.comp_dists])
+            samples = np.array([comp_dist.random(point=point, size=size)
+                                for comp_dist in self.comp_dists])
+            samples = np.moveaxis(samples, 0, samples.ndim - 1)
 
-        return np.squeeze(samples)
+        if samples.shape[-1] == 1:
+            return samples[..., 0]
+        else:
+            return samples
 
     def logp(self, value):
         w = self.w
@@ -149,40 +154,56 @@ class Mixture(Distribution):
 
     def random(self, point=None, size=None):
         with _DrawValuesContext() as draw_context:
-            w = draw_values([self.w], point=point)[0]
+            # We first need to check w and comp_tmp shapes and re compute size
+            w = draw_values([self.w], point=point, size=size)[0]
+        with _DrawValuesOutContext():
+            # We don't want to store the values drawn here in the context
+            # because they wont have the correct size
             comp_tmp = self._comp_samples(point=point, size=None)
-        if np.asarray(self.shape).size == 0:
-            distshape = np.asarray(np.broadcast(w, comp_tmp).shape)[..., :-1]
+        param_shape = np.broadcast(w,
+                                   comp_tmp).shape
+        if np.asarray(self.shape).size != 0:
+            distshape = np.broadcast(np.empty(self.shape),
+                                     np.empty(param_shape[:-1])).shape
         else:
-            distshape = np.asarray(self.shape)
+            distshape = param_shape[:-1]
+        w = np.broadcast_to(w, distshape + (param_shape[-1],))
+        if size is not None and not isinstance(size, tuple):
+            size = tuple(size)
+        if size is not None:
+            if size == distshape:
+                size = None
+                _size = -1
+            elif size[-len(distshape):] == distshape:
+                size = size[:len(size) - len(distshape)]
+                _size = np.prod(size)
+            else:
+                _size = np.prod(size)
+        else:
+            _size = 1
+        output_size = _size * np.prod(distshape) * param_shape[-1]
+        underlying_size = output_size // np.prod(comp_tmp.shape)
 
         # Normalize inputs
-        w /= w.sum(axis=-1, keepdims=True)
+        w = np.reshape(w, (-1, w.shape[-1]))
+        w = w / w.sum(axis=-1, keepdims=True)
 
         w_samples = generate_samples(random_choice,
                                      p=w,
                                      broadcast_shape=w.shape[:-1] or (1,),
-                                     dist_shape=distshape,
-                                     size=size).squeeze()
-        if (size is None) or (distshape.size == 0):
-            with draw_context:
-                comp_samples = self._comp_samples(point=point, size=size)
-            if comp_samples.ndim > 1:
-                samples = np.squeeze(comp_samples[np.arange(w_samples.size), ..., w_samples])
-            else:
-                samples = np.squeeze(comp_samples[w_samples])
+                                     dist_shape=w.shape[:-1] or (1,),
+                                     size=size)
+        with draw_context:
+            mixed_samples = self._comp_samples(point=point,
+                                               size=underlying_size)
+        w_samples = w_samples.flatten()
+        mixed_samples = np.reshape(mixed_samples, (-1, comp_tmp.shape[-1]))
+        samples = np.array([mixed[choice] for choice, mixed in
+                            zip(w_samples, mixed_samples)])
+        if size is None:
+            samples = np.reshape(samples, distshape)
         else:
-            if w_samples.ndim == 1:
-                w_samples = np.reshape(np.tile(w_samples, size), (size,) + w_samples.shape)
-            samples = np.zeros((size,)+tuple(distshape))
-            with draw_context:
-                for i in range(size):
-                    w_tmp = w_samples[i, :]
-                    comp_tmp = self._comp_samples(point=point, size=None)
-                    if comp_tmp.ndim > 1:
-                        samples[i, :] = np.squeeze(comp_tmp[np.arange(w_tmp.size), ..., w_tmp])
-                    else:
-                        samples[i, :] = np.squeeze(comp_tmp[w_tmp])
+            samples = np.reshape(samples, size + distshape)
 
         return samples
 

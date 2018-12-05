@@ -998,6 +998,49 @@ class LKJCholeskyCov(Continuous):
 
         return norm + logp_lkj + logp_sd + det_invjac
 
+    def _random(self, n, eta, size=None):
+        size = size if isinstance(size, tuple) else (size,)
+        # original implementation in R see:
+        # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
+        beta = eta - 1. + n/2.
+        r12 = 2. * stats.beta.rvs(a=beta, b=beta, size=size) - 1.
+        P = np.eye(n)[:, :, np.newaxis] * np.ones(size)
+        P[0, 1] = r12
+        P[1, 1] = np.sqrt(1. - r12**2)
+        for mp1 in range(2, n):
+            beta -= 0.5
+            y = stats.beta.rvs(a=mp1 / 2., b=beta, size=size)
+            z = stats.norm.rvs(loc=0, scale=1, size=(mp1, ) + size)
+            z = z / np.sqrt(np.einsum('ij,ij->j', z, z))
+            P[0:mp1, mp1] = np.sqrt(y) * z
+            P[mp1, mp1] = np.sqrt(1. - y)
+        C = np.einsum('ji...,jk...->...ik', P, P)
+        D = np.atleast_1d(self.sd_dist.random(size=size))
+        if D.shape == size:
+            D = np.array([D] + [self.sd_dist.random(size=size)
+                                for _ in range(C.shape[-1] - 1)])
+            D = np.moveaxis(np.array(D), 0, D.ndim - 1)
+        elif D.shape[-1] == 1:
+            D = [D] + [self.sd_dist.random(size=size)
+                       for _ in range(C.shape[-1] - 1)]
+            D = np.concatenate(D, axis=-1)
+        try:
+            C *= D[..., :, np.newaxis] * D[..., np.newaxis, :]
+        except TypeError:
+            pass
+        chol = np.linalg.cholesky(C)
+        tril_idx = np.tril_indices(n, k=0)
+        return chol[..., tril_idx[0], tril_idx[1]]
+
+    def random(self, point=None, size=None):
+        n, eta = draw_values([self.n, self.eta], point=point, size=size)
+        size= 1 if size is None else size
+        samples = generate_samples(self._random, n, eta,
+                                   dist_shape=self.shape,
+                                   broadcast_shape=self.shape,
+                                   size=size)
+        return samples
+
 
 class LKJCorr(Continuous):
     R"""
@@ -1097,6 +1140,7 @@ class LKJCorr(Continuous):
         n, eta = draw_values([self.n, self.eta], point=point, size=size)
         size= 1 if size is None else size
         samples = generate_samples(self._random, n, eta,
+                                   dist_shape=self.shape,
                                    broadcast_shape=(size,))
         return samples
 
