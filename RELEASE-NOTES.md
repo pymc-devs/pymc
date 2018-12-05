@@ -20,6 +20,7 @@
   context manager instance. If they do not, the conditional relations between
   the distribution's parameters could be broken, and `random` could return
   values drawn from an incorrect distribution.
+- `Rice` distribution is now defined with either the noncentrality parameter or the shape parameter (#3287).
 
 ### Maintenance
 
@@ -29,6 +30,7 @@
 - Removed use of deprecated `ymin` keyword in matplotlib's `Axes.set_ylim` (#3279)
 - Fix for #3210. Now `distribution.draw_values(params)`, will draw the `params` values from their joint probability distribution and not from combinations of their marginals (Refer to PR #3273).
 - Rewrote `Multinomial._random` method to better handle shape broadcasting (#3271)
+- Fixed `Rice` distribution, which inconsistently mixed two parametrizations (#3286).
 
 ### Deprecations
 
