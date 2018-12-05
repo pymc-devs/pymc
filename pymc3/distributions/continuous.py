@@ -3539,7 +3539,7 @@ class Rice(PositiveContinuous):
         nu, b, sd = self.get_nu_b(nu, b, sd)
         self.nu = nu = tt.as_tensor_variable(nu)
         self.sd = sd = tt.as_tensor_variable(sd)
-        self.b = b = tt.as_tensor_variable(b) 
+        self.b = b = tt.as_tensor_variable(b)
         self.mean = sd * np.sqrt(np.pi / 2) * tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (2 * sd**2)))
                                  * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2))
         self.variance = 2 * sd**2 + nu**2 - (np.pi * sd**2 / 2) * (tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (
@@ -3576,7 +3576,7 @@ class Rice(PositiveContinuous):
         """
         nu, sd = draw_values([self.nu, self.sd],
                              point=point, size=size)
-        return generate_samples(stats.rice.rvs, b=nu/sd, scale=sd, loc=0,
+        return generate_samples(stats.rice.rvs, b=nu / sd, scale=sd, loc=0,
                                 dist_shape=self.shape, size=size)
 
     def logp(self, value):
