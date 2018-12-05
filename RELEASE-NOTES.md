@@ -29,6 +29,7 @@
 - Removed use of deprecated `ymin` keyword in matplotlib's `Axes.set_ylim` (#3279)
 - Fix for #3210. Now `distribution.draw_values(params)`, will draw the `params` values from their joint probability distribution and not from combinations of their marginals (Refer to PR #3273).
 - Removed dependence on pandas-datareader for retrieving Yahoo Finance data in examples (#3262)
+- Rewrote `Multinomial._random` method to better handle shape broadcasting (#3271)
 
 ### Deprecations
 
