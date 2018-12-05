@@ -280,7 +280,7 @@ class I1e(UnaryScalarOp):
         return scipy.special.i1e(x)
 
 
-i1e = I1e(upgrade_to_float, name='i1e')
+i1e = tt.Elemwise(I1e(upgrade_to_float), name="Elemwise{i1e,no_inplace}")
 
 
 class I0e(UnaryScalarOp):
@@ -298,7 +298,7 @@ class I0e(UnaryScalarOp):
         return [gz * (i1e(x) - tt.sgn(x) * i0e(x))]
 
 
-i0e = I0e(upgrade_to_float, name='i0e')
+i0e = tt.Elemwise(I0e(upgrade_to_float), name="Elemwise{i0e,no_inplace}")
 
 
 def random_choice(*args, **kwargs):
