@@ -245,6 +245,10 @@ class ProcessAdapter(object):
             if e.errno == errno.EPIPE:
                 exc = _get_broken_pipe_exception()
                 if exc is not None:
+                    import time
+                    # Sleep a little to give the child process time to flush
+                    # all its error message
+                    time.sleep(0.2)
                     raise exc
                 else:
                     raise
