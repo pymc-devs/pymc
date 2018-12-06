@@ -12,8 +12,6 @@ from scipy.special import expit
 from scipy.interpolate import InterpolatedUnivariateSpline
 import warnings
 
-from theano.scalar import i1, i0
-
 from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
@@ -3541,9 +3539,9 @@ class Rice(PositiveContinuous):
         self.sd = sd = tt.as_tensor_variable(sd)
         self.b = b = tt.as_tensor_variable(b)
         self.mean = sd * np.sqrt(np.pi / 2) * tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (2 * sd**2)))
-                                 * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2))
+                                 * tt.i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * tt.i1(-(-nu**2 / (2 * sd**2)) / 2))
         self.variance = 2 * sd**2 + nu**2 - (np.pi * sd**2 / 2) * (tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (
-            2 * sd**2))) * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2)))**2
+            2 * sd**2))) * tt.i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * tt.i1(-(-nu**2 / (2 * sd**2)) / 2)))**2
 
     def get_nu_b(self, nu, b, sd):
         if sd is None:
