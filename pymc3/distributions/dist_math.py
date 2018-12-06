@@ -9,7 +9,7 @@ import numpy as np
 import scipy.linalg
 import theano.tensor as tt
 import theano
-from theano.scalar import UnaryScalarOp, upgrade_to_float
+from theano.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from theano.tensor.slinalg import Cholesky
 from theano.scan_module import until
 from theano import scan
@@ -280,7 +280,8 @@ class I1e(UnaryScalarOp):
         return scipy.special.i1e(x)
 
 
-i1e = tt.Elemwise(I1e(upgrade_to_float), name="Elemwise{i1e,no_inplace}")
+i1e_scalar = I1e(upgrade_to_float_no_complex, name="i1e")
+i1e = tt.Elemwise(i1e_scalar, name="Elemwise{i1e,no_inplace}")
 
 
 class I0e(UnaryScalarOp):
@@ -295,10 +296,11 @@ class I0e(UnaryScalarOp):
     def grad(self, inp, grads):
         x, = inp
         gz, = grads
-        return [gz * (i1e(x) - tt.sgn(x) * i0e(x))]
+        return gz * (i1e_scalar(x) - theano.scalar.sgn(x) * i0e_scalar(x)),
 
 
-i0e = tt.Elemwise(I0e(upgrade_to_float), name="Elemwise{i0e,no_inplace}")
+i0e_scalar = I0e(upgrade_to_float_no_complex, name="i0e")
+i0e = tt.Elemwise(i0e_scalar, name="Elemwise{i0e,no_inplace}")
 
 
 def random_choice(*args, **kwargs):

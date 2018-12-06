@@ -201,3 +201,4 @@ class TestI0e(object):
         utt.verify_grad(i0e, [0.5])
         utt.verify_grad(i0e, [-2.])
         utt.verify_grad(i0e, [[0.5, -2.]])
+        utt.verify_grad(i0e, [[[0.5, -2.]]])
