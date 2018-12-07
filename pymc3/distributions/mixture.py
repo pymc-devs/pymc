@@ -6,7 +6,7 @@ from ..math import logsumexp
 from .dist_math import bound, random_choice
 from .distribution import (Discrete, Distribution, draw_values,
                            generate_samples, _DrawValuesContext,
-                           _DrawValuesOutContext)
+                           _DrawValuesContextBlocker)
 from .continuous import get_tau_sd, Normal
 
 
@@ -153,23 +153,36 @@ class Mixture(Distribution):
                      broadcast_conditions=False)
 
     def random(self, point=None, size=None):
+        if size is not None:
+            if not isinstance(size, tuple):
+                try:
+                    size = tuple(size)
+                except TypeError:
+                    size = (size,)
         with _DrawValuesContext() as draw_context:
             # We first need to check w and comp_tmp shapes and re compute size
             w = draw_values([self.w], point=point, size=size)[0]
-        with _DrawValuesOutContext():
+        with _DrawValuesContextBlocker():
             # We don't want to store the values drawn here in the context
             # because they wont have the correct size
             comp_tmp = self._comp_samples(point=point, size=None)
-        param_shape = np.broadcast(w,
+
+        # When size is not None, it's hard to tell the w parameter shape
+        if size is not None:
+            w_shape = w.shape[len(size):]
+        else:
+            w_shape = w.shape
+
+        # Try to determine parameter shape and distshape
+        param_shape = np.broadcast(np.empty(w_shape),
                                    comp_tmp).shape
         if np.asarray(self.shape).size != 0:
             distshape = np.broadcast(np.empty(self.shape),
                                      np.empty(param_shape[:-1])).shape
         else:
             distshape = param_shape[:-1]
-        w = np.broadcast_to(w, distshape + (param_shape[-1],))
-        if size is not None and not isinstance(size, tuple):
-            size = tuple(size)
+
+        # When size is not None, it's hard to broadcast w correctly
         if size is not None:
             if size == distshape:
                 size = None
@@ -180,9 +193,23 @@ class Mixture(Distribution):
             else:
                 _size = np.prod(size)
         else:
-            _size = 1
-        output_size = _size * np.prod(distshape) * param_shape[-1]
+            _size = None
+        if size is not None:
+            # To allow w to broadcast, we insert new axis in between the "size"
+            # axis and the "mixture" axis
+            _w = w[(slice(None),) * len(size) +  # Index the size axis
+                   (np.newaxis,) * len(distshape) +  # Add new axis for the distshape
+                   (slice(None),)]  # Close with the slice of mixture components
+            w = np.broadcast_to(_w, size + distshape + (param_shape[-1],))
+        else:
+            w = np.broadcast_to(w, distshape + (param_shape[-1],))
+        if _size is not None:
+            output_size = _size * np.prod(distshape) * param_shape[-1]
+        else:
+            output_size = np.prod(distshape) * param_shape[-1]
         underlying_size = output_size // np.prod(comp_tmp.shape)
+        if underlying_size == 1 and _size is None:
+            underlying_size = None
 
         # Normalize inputs
         w = np.reshape(w, (-1, w.shape[-1]))
