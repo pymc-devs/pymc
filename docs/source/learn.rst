@@ -51,6 +51,16 @@
                 </div>
             </div>
         </div>
+
+        <div class="item">
+            <i class="large youtube middle aligned icon"></i>
+            <div class="content">
+                <a href="https://github.com/junpenglao/advance-bayesian-modelling-with-PyMC3" class="header"> Advance Bayesian Modelling with PyMC3</a>
+                <div class="description">
+                    A two days advance workshop in May 2018 @CEAi in the Czech Republic.
+                </div>
+            </div>
+        </div>
     </div>
 
     <h2 class="ui header">...with a book!</h2>
