@@ -242,16 +242,15 @@ class ProcessAdapter(object):
         try:
             self._process.start()
         except IOError as e:
+            # Something may have gone wrong during the fork / spawn
             if e.errno == errno.EPIPE:
                 exc = _get_broken_pipe_exception()
                 if exc is not None:
-                    import time
                     # Sleep a little to give the child process time to flush
                     # all its error message
                     time.sleep(0.2)
                     raise exc
-                else:
-                    raise
+            raise
 
     @property
     def shared_point_view(self):

@@ -16,6 +16,7 @@
 - Fixed Triangular distribution `c` attribute handling in `random` and updated sample codes for consistency (#3225)
 - Renamed `sample_ppc()` and `sample_ppc_w()` to `sample_posterior_predictive()` and `sample_posterior_predictive_w()`, respectively.
 - Refactor SMC and properly compute marginal likelihood (#3124)
+- Made `BrokenPipeError` for parallel sampling more verbose on Windows.
 
 
 ## PyMC 3.5 (July 21 2018)
