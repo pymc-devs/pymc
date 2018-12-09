@@ -289,6 +289,21 @@ class TestSamplePPC(SeededTest):
             _, pval = stats.kstest(ppc['b'], stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
+    def test_model_not_drawable_prior(self):
+        data = np.random.poisson(lam=10, size=200)
+        model = pm.Model()
+        with model:
+            mu = pm.HalfFlat('sigma')
+            pm.Poisson('foo', mu=mu, observed=data)
+            trace = pm.sample(tune=1000)
+
+        with model:
+            with pytest.raises(ValueError) as excinfo:
+                pm.sample_prior_predictive(50)
+            assert "Cannot sample" in str(excinfo.value)
+            samples = pm.sample_posterior_predictive(trace, 50)
+            assert samples['foo'].shape == (50, 200)
+
 
 class TestSamplePPCW(SeededTest):
     def test_sample_posterior_predictive_w(self):
