@@ -3387,7 +3387,13 @@ class Gumbel(Continuous):
 
     .. math::
 
-       f(x \mid \mu, \beta) = -\frac{x - \mu}{\beta} - \exp \left(-\frac{x - \mu}{\beta} \right) - \log(\beta)
+       f(x \mid \mu, \beta) = \frac{1}{\beta}e^{-(z + e^{-z})}
+
+    where
+
+    .. math::
+
+        z = \frac{x - \mu}{\beta}.
 
     .. plot::
 
