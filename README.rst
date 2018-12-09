@@ -143,6 +143,7 @@ License
 Software using PyMC3
 ====================
 
+- `Exoplanet <https://github.com/dfm/exoplanet>`__: a toolkit for modeling of transit and/or radial velocity observations of exoplanets and other astronomical time series.
 - `Bambi <https://github.com/bambinos/bambi>`__: BAyesian Model-Building Interface (BAMBI) in Python.
 - `pymc3_models <https://github.com/parsing-science/pymc3_models>`__: Custom PyMC3 models built on top of the scikit-learn API.
 - `PMProphet <https://github.com/luke14free/pm-prophet>`__: PyMC3 port of Facebook's Prophet model for timeseries modeling
@@ -181,7 +182,7 @@ Sponsors
 
 .. |Binder| image:: https://mybinder.org/badge.svg
    :target: https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks
-.. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.png?branch=master
+.. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.svg?branch=master
    :target: https://travis-ci.org/pymc-devs/pymc3
 .. |Coverage| image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master
    :target: https://coveralls.io/github/pymc-devs/pymc3?branch=master

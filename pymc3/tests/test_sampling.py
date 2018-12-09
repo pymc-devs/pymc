@@ -370,6 +370,22 @@ class TestSamplePriorPredictive(SeededTest):
         assert m.random(size=10).shape == (10, 4)
         assert trace['m'].shape == (10, 4)
 
+    def test_multivariate2(self):
+        # Added test for issue #3271
+        mn_data = np.random.multinomial(n=100, pvals=[1/6.]*6, size=10)
+        with pm.Model() as dm_model:
+            probs = pm.Dirichlet('probs', a=np.ones(6), shape=6)
+            obs = pm.Multinomial('obs', n=100, p=probs, observed=mn_data)
+            burned_trace = pm.sample(20, tune=10, cores=1)
+        sim_priors = pm.sample_prior_predictive(samples=20,
+                                                model=dm_model)
+        sim_ppc = pm.sample_posterior_predictive(burned_trace,
+                                                 samples=20,
+                                                 model=dm_model)
+        assert sim_priors['probs'].shape == (20, 6)
+        assert sim_priors['obs'].shape == (20, 6)
+        assert sim_ppc['obs'].shape == (20,) + obs.distribution.shape
+
     def test_layers(self):
         with pm.Model() as model:
             a = pm.Uniform('a', lower=0, upper=1, shape=10)
