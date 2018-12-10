@@ -112,27 +112,24 @@ class Mixture(Distribution):
     def comp_dists(self, _comp_dists):
         self._comp_dists = _comp_dists
         # Tests if the comp_dists can call random with non None size
-        test_draw = None
-        try:
-            test_draw = self.comp_dists.random(size=20)
-        except TypeError:
-            # The comp_dists cannot call random with non None size or
-            # without knowledge of the point so we assume that we will
-            # have to iterate calls to random to get the correct size
-            pass
-        except AttributeError:
+        if isinstance(self.comp_dists, (list, tuple)):
             try:
-                test_draw = np.array([comp_dist.random(size=20)
-                                      for comp_dist in self.comp_dists])
-            except TypeError:
+                [comp_dist.random(size=23) for comp_dist in self.comp_dists]
+                self._comp_dists_vect = True
+            except Exception:
                 # The comp_dists cannot call random with non None size or
                 # without knowledge of the point so we assume that we will
                 # have to iterate calls to random to get the correct size
-                pass
-        if test_draw is None:
-            self._comp_dists_vect = False
+                self._comp_dists_vect = False
         else:
-            self._comp_dists_vect = True
+            try:
+                self.comp_dists.random(size=23)
+                self._comp_dists_vect = True
+            except Exception:
+                # The comp_dists cannot call random with non None size or
+                # without knowledge of the point so we assume that we will
+                # have to iterate calls to random to get the correct size
+                self._comp_dists_vect = False
 
     def _comp_logp(self, value):
         comp_dists = self.comp_dists
