@@ -236,9 +236,9 @@ class TestMixture(SeededTest):
     def test_sample_prior_and_posterior(self):
         def build_toy_dataset(N, K):
             pi = np.array([0.2, 0.5, 0.3])
-            mus = [[1, 1], [-1, -1], [2, -2]]
-            stds = [[0.1, 0.1], [0.1, 0.2], [0.2, 0.3]]
-            x = np.zeros((N, 2), dtype=np.float32)
+            mus = [[1, 1, 1], [-1, -1, -1], [2, -2, 0]]
+            stds = [[0.1, 0.1, 0.1], [0.1, 0.2, 0.2], [0.2, 0.3, 0.3]]
+            x = np.zeros((N, 3), dtype=np.float32)
             y = np.zeros((N,), dtype=np.int)
             for n in range(N):
                 k = np.argmax(np.random.multinomial(1, pi))
@@ -248,11 +248,11 @@ class TestMixture(SeededTest):
             return x, y
 
         N = 100  # number of data points
-        D = 2  # dimensionality of data
+        K = 3  # number of mixture components
+        D = 3  # dimensionality of the data
 
-        X, y = build_toy_dataset(N, 3)
+        X, y = build_toy_dataset(N, K)
 
-        K = 3
         with pm.Model() as model:
             pi = pm.Dirichlet('pi', np.ones(K))
 
@@ -261,14 +261,14 @@ class TestMixture(SeededTest):
             packed_chol = []
             chol = []
             for i in range(K):
-                mu.append(pm.Normal('mu%i' % i, 0, 10, shape=2))
+                mu.append(pm.Normal('mu%i' % i, 0, 10, shape=D))
                 packed_chol.append(
                     pm.LKJCholeskyCov('chol_cov_%i' % i,
                                       eta=2,
-                                      n=2,
+                                      n=D,
                                       sd_dist=pm.HalfNormal.dist(2.5))
                 )
-                chol.append(pm.expand_packed_triangular(2, packed_chol[i],
+                chol.append(pm.expand_packed_triangular(D, packed_chol[i],
                                                         lower=True))
                 comp_dist.append(pm.MvNormal.dist(mu=mu[i], chol=chol[i]))
 
@@ -281,4 +281,6 @@ class TestMixture(SeededTest):
             ppc = pm.sample_posterior_predictive(trace, n_samples)
             prior = pm.sample_prior_predictive(samples=n_samples)
         assert ppc['x_obs'].shape == (n_samples,) + X.shape
-        assert prior['x_obs'].shape == (n_samples, D)
+        assert prior['x_obs'].shape == (n_samples,) + X.shape
+        assert prior['mu0'].shape == (n_samples, D)
+        assert prior['chol_cov_0'].shape == (n_samples, D * (D + 1) // 2)

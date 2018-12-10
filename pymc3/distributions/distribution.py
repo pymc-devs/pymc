@@ -518,20 +518,34 @@ def _draw_value(param, point=None, givens=None, size=None):
                 variables, values = list(zip(*givens))
             else:
                 variables = values = []
-            func = _compile_theano_function(param, variables)
+            # We only truly care if the ancestors of param that were given
+            # value have the matching dshape and val.shape
+            param_ancestors = \
+                set(theano.gof.graph.ancestors([param],
+                                               blockers=list(variables))
+                    )
+            inputs = [(var, val) for var, val in
+                      zip(variables, values)
+                      if var in param_ancestors]
+            if inputs:
+                input_vars, input_vals = list(zip(*inputs))
+            else:
+                input_vars = []
+                input_vals = []
+            func = _compile_theano_function(param, input_vars)
             if size is not None:
                 size = np.atleast_1d(size)
             dshaped_variables = all((hasattr(var, 'dshape')
-                                     for var in variables))
+                                     for var in input_vars))
             if (values and dshaped_variables and
                 not all(var.dshape == getattr(val, 'shape', tuple())
-                        for var, val in zip(variables, values))):
-                output = np.array([func(*v) for v in zip(*values)])
+                        for var, val in zip(input_vars, input_vals))):
+                output = np.array([func(*v) for v in zip(*input_vals)])
             elif (size is not None and any((val.ndim > var.ndim)
-                  for var, val in zip(variables, values))):
-                output = np.array([func(*v) for v in zip(*values)])
+                  for var, val in zip(input_vars, input_vals))):
+                output = np.array([func(*v) for v in zip(*input_vals)])
             else:
-                output = func(*values)
+                output = func(*input_vals)
             return output
     raise ValueError('Unexpected type in draw_value: %s' % type(param))
 

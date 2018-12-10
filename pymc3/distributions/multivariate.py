@@ -244,13 +244,13 @@ class MvNormal(_QuadFormBase):
                 dist = stats.multivariate_normal(
                     mean=mu, cov=cov, allow_singular=True)
             except ValueError:
-                size.append(mu.shape[-1])
+                size += (mu.shape[-1],)
                 return np.nan * np.zeros(size)
             return dist.rvs(size)
         elif self._cov_type == 'chol':
             mu, chol = draw_values([self.mu, self.chol_cov],
                                    point=point, size=size)
-            if size and mu.ndim == len(size):
+            if size and mu.ndim == len(size) and mu.shape == size:
                 mu = mu[..., np.newaxis]
             if mu.shape[-1] != chol.shape[-1] and mu.shape[-1] != 1:
                 raise ValueError("Shapes for mu and chol don't match")
@@ -268,13 +268,13 @@ class MvNormal(_QuadFormBase):
             else:
                 std_norm_shape = mu.shape
             standard_normal = np.random.standard_normal(std_norm_shape)
-            return mu + np.tensordot(standard_normal, chol, axes=[[-1], [-2]])
+            return mu + np.tensordot(standard_normal, chol, axes=[[-1], [-1]])
         else:
             mu, tau = draw_values([self.mu, self.tau], point=point, size=size)
             if mu.shape[-1] != tau[0].shape[-1]:
                 raise ValueError("Shapes for mu and tau don't match")
 
-            size.append(mu.shape[-1])
+            size += (mu.shape[-1],)
             try:
                 chol = linalg.cholesky(tau, lower=True)
             except linalg.LinAlgError:
@@ -962,7 +962,7 @@ class LKJCholeskyCov(Continuous):
         self.n = n
         self.eta = eta
 
-        if 'transform' in kwargs:
+        if 'transform' in kwargs and kwargs['transform'] is not None:
             raise ValueError('Invalid parameter: transform.')
         if 'shape' in kwargs:
             raise ValueError('Invalid parameter: shape.')
@@ -1025,9 +1025,9 @@ class LKJCholeskyCov(Continuous):
         for mp1 in range(2, n):
             beta -= 0.5
             y = stats.beta.rvs(a=mp1 / 2., b=beta, size=eta_sample_shape)
-            z = stats.norm.rvs(loc=0, scale=1, size=(mp1, ) + eta_sample_shape)
+            z = stats.norm.rvs(loc=0, scale=1, size=eta_sample_shape + (mp1,))
             z = z / np.sqrt(np.einsum('ij,ij->j', z, z))
-            P[..., 0:mp1, mp1] = np.sqrt(y) * z
+            P[..., 0:mp1, mp1] = np.sqrt(y[..., np.newaxis]) * z
             P[..., mp1, mp1] = np.sqrt(1. - y)
         C = np.einsum('...ji,...jk->...ik', P, P)
         D = np.atleast_1d(self.sd_dist.random(size=P.shape[:-2]))
