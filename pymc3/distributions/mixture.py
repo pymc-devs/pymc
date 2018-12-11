@@ -112,24 +112,26 @@ class Mixture(Distribution):
     def comp_dists(self, _comp_dists):
         self._comp_dists = _comp_dists
         # Tests if the comp_dists can call random with non None size
-        if isinstance(self.comp_dists, (list, tuple)):
-            try:
-                [comp_dist.random(size=23) for comp_dist in self.comp_dists]
-                self._comp_dists_vect = True
-            except Exception:
-                # The comp_dists cannot call random with non None size or
-                # without knowledge of the point so we assume that we will
-                # have to iterate calls to random to get the correct size
-                self._comp_dists_vect = False
-        else:
-            try:
-                self.comp_dists.random(size=23)
-                self._comp_dists_vect = True
-            except Exception:
-                # The comp_dists cannot call random with non None size or
-                # without knowledge of the point so we assume that we will
-                # have to iterate calls to random to get the correct size
-                self._comp_dists_vect = False
+        with _DrawValuesContextBlocker():
+            if isinstance(self.comp_dists, (list, tuple)):
+                try:
+                    [comp_dist.random(size=23)
+                     for comp_dist in self.comp_dists]
+                    self._comp_dists_vect = True
+                except Exception:
+                    # The comp_dists cannot call random with non None size or
+                    # without knowledge of the point so we assume that we will
+                    # have to iterate calls to random to get the correct size
+                    self._comp_dists_vect = False
+            else:
+                try:
+                    self.comp_dists.random(size=23)
+                    self._comp_dists_vect = True
+                except Exception:
+                    # The comp_dists cannot call random with non None size or
+                    # without knowledge of the point so we assume that we will
+                    # have to iterate calls to random to get the correct size
+                    self._comp_dists_vect = False
 
     def _comp_logp(self, value):
         comp_dists = self.comp_dists

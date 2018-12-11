@@ -10,7 +10,9 @@ import numpy.random as nr
 import theano
 
 import pymc3 as pm
-from pymc3.distributions.distribution import draw_values
+from pymc3.distributions.distribution import (draw_values,
+                                              _DrawValuesContext,
+                                              _DrawValuesContextBlocker)
 from .helpers import SeededTest
 from .test_distributions import (
     build_model, Domain, product, R, Rplus, Rplusbig, Runif, Rplusdunif,
@@ -114,6 +116,44 @@ class TestDrawValues(SeededTest):
             mu, tau = draw_values([y.distribution.mu, y.distribution.tau])
         assert isinstance(mu, np.ndarray)
         assert isinstance(tau, np.ndarray)
+
+
+class TestDrawValuesContext(object):
+    def test_normal_context(self):
+        with _DrawValuesContext() as context0:
+            assert context0.parent is None
+            context0.drawn_vars['root_test'] = 1
+            with _DrawValuesContext() as context1:
+                assert id(context1.drawn_vars) == id(context0.drawn_vars)
+                assert context1.parent == context0
+                with _DrawValuesContext() as context2:
+                    assert id(context2.drawn_vars) == id(context0.drawn_vars)
+                    assert context2.parent == context1
+                    context2.drawn_vars['leaf_test'] = 2
+                assert context1.drawn_vars['leaf_test'] == 2
+                context1.drawn_vars['root_test'] = 3
+            assert context0.drawn_vars['root_test'] == 3
+            assert context0.drawn_vars['leaf_test'] == 2
+
+    def test_blocking_context(self):
+        with _DrawValuesContext() as context0:
+            assert context0.parent is None
+            context0.drawn_vars['root_test'] = 1
+            with _DrawValuesContext() as context1:
+                assert id(context1.drawn_vars) == id(context0.drawn_vars)
+                assert context1.parent == context0
+                with _DrawValuesContextBlocker() as blocker:
+                    assert id(blocker.drawn_vars) != id(context0.drawn_vars)
+                    assert blocker.parent is None
+                    blocker.drawn_vars['root_test'] = 2
+                    with _DrawValuesContext() as context2:
+                        assert id(context2.drawn_vars) == id(blocker.drawn_vars)
+                        assert context2.parent == blocker
+                        context2.drawn_vars['root_test'] = 3
+                        context2.drawn_vars['leaf_test'] = 4
+                    assert blocker.drawn_vars['root_test'] == 3
+                assert 'leaf_test' not in context1.drawn_vars
+            assert context0.drawn_vars['root_test'] == 1
 
 
 class BaseTestCases(object):
