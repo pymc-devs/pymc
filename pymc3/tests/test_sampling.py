@@ -289,6 +289,21 @@ class TestSamplePPC(SeededTest):
             _, pval = stats.kstest(ppc['b'], stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
+    def test_model_not_drawable_prior(self):
+        data = np.random.poisson(lam=10, size=200)
+        model = pm.Model()
+        with model:
+            mu = pm.HalfFlat('sigma')
+            pm.Poisson('foo', mu=mu, observed=data)
+            trace = pm.sample(tune=1000)
+
+        with model:
+            with pytest.raises(ValueError) as excinfo:
+                pm.sample_prior_predictive(50)
+            assert "Cannot sample" in str(excinfo.value)
+            samples = pm.sample_posterior_predictive(trace, 50)
+            assert samples['foo'].shape == (50, 200)
+
 
 class TestSamplePPCW(SeededTest):
     def test_sample_posterior_predictive_w(self):
@@ -369,6 +384,22 @@ class TestSamplePriorPredictive(SeededTest):
 
         assert m.random(size=10).shape == (10, 4)
         assert trace['m'].shape == (10, 4)
+
+    def test_multivariate2(self):
+        # Added test for issue #3271
+        mn_data = np.random.multinomial(n=100, pvals=[1/6.]*6, size=10)
+        with pm.Model() as dm_model:
+            probs = pm.Dirichlet('probs', a=np.ones(6), shape=6)
+            obs = pm.Multinomial('obs', n=100, p=probs, observed=mn_data)
+            burned_trace = pm.sample(20, tune=10, cores=1)
+        sim_priors = pm.sample_prior_predictive(samples=20,
+                                                model=dm_model)
+        sim_ppc = pm.sample_posterior_predictive(burned_trace,
+                                                 samples=20,
+                                                 model=dm_model)
+        assert sim_priors['probs'].shape == (20, 6)
+        assert sim_priors['obs'].shape == (20, 6)
+        assert sim_ppc['obs'].shape == (20,) + obs.distribution.shape
 
     def test_layers(self):
         with pm.Model() as model:

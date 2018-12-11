@@ -10,7 +10,7 @@ import pytest
 from ..theanof import floatX
 from ..distributions import Discrete
 from ..distributions.dist_math import (
-    bound, factln, alltrue_scalar, MvNormalLogp, SplineWrapper)
+    bound, factln, alltrue_scalar, MvNormalLogp, SplineWrapper, i0e)
 
 
 def test_bound():
@@ -193,3 +193,12 @@ class TestSplineWrapper(object):
         g_x, = tt.grad(spline(x_var), [x_var])
         with pytest.raises(NotImplementedError):
             tt.grad(g_x, [x_var])
+
+
+class TestI0e(object):
+    @theano.configparser.change_flags(compute_test_value="ignore")
+    def test_grad(self):
+        utt.verify_grad(i0e, [0.5])
+        utt.verify_grad(i0e, [-2.])
+        utt.verify_grad(i0e, [[0.5, -2.]])
+        utt.verify_grad(i0e, [[[0.5, -2.]]])
