@@ -1,4 +1,4 @@
-.. title:: Learn
+.. title:: Learning Resources
 
 .. raw:: html
 
