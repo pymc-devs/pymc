@@ -143,10 +143,10 @@ html_theme = "semantic_sphinx"
 
 html_theme_options = {
     "navbar_links": [
-        ("Examples", "nb_examples/index"),
         ("Tutorials", "nb_tutorials/index"),
-        ("API", "api"),
+        ("Examples", "nb_examples/index"),
         ("Books + Videos", "learn"),
+        ("API", "api"),
         ("About PyMC3", "intro")
     ],
     #     "fixed_sidebar": "false",

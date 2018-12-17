@@ -1,11 +1,11 @@
 Gallery.contents = {
     "api_quickstart": "Basics",
     "getting_started": "Basics",
-    "live_sample_plots": "Basics",
-    "profiling": "Basics",
     "sampler-stats": "Basics",
     "sampling_compound_step": "Basics",
     "howto_debugging": "Basics",
+    "live_sample_plots": "How-To",
+    "profiling": "How-To",
     "updating_priors": "How-To",
     "lasso_block_update": "How-To",
     "model_averaging": "How-To",
