@@ -143,11 +143,11 @@ html_theme = "semantic_sphinx"
 
 html_theme_options = {
     "navbar_links": [
-        ("Quickstart", "intro"),
-        ("API", "api"),
-        ("Tutorials", "nb_tutorials/index"),
         ("Examples", "nb_examples/index"),
-        ("Resources", "learn"),
+        ("Tutorials", "nb_tutorials/index"),
+        ("API", "api"),
+        ("Books + Videos", "learn"),
+        ("About PyMC3", "intro")
     ],
     #     "fixed_sidebar": "false",
     #     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
