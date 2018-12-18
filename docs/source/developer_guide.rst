@@ -866,9 +866,6 @@ everything into a single function:
     func_logp_and_grad = theano.function(m.free_RVs, [m.logpt, logpt_grad])  # ==> ERROR
 
 
-::
-
-
 We want to have a function that return the evaluation and its gradient
 re each input: ``value, grad = f(x)``, but the naive implementation does
 not work. We can of course wrap 2 functions - one for logp one for dlogp
