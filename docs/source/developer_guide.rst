@@ -586,6 +586,7 @@ using theano.clone to replace the inputs to a tensor.
     m.logpt.eval({x: np.random.randn(*x.tag.test_value.shape) for x in m.free_RVs})
 
 output:
+
 .. parsed-literal::
 
     array(-51.25369126)
