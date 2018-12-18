@@ -306,7 +306,7 @@ Same as:
     m = pm.Model()
     x = m.Var('x', pm.Normal.dist(mu=0., sd=1.))
 
-::
+.. code:: python
 
     with pm.Model() as m:
         x = pm.Normal('x', mu=0., sd=1.)
@@ -327,7 +327,7 @@ Same as:
     -13.418938533204672
 
 
-::
+.. code:: python
 
     m = pm.Model()
     x = m.Var('x', pm.Normal.dist(mu=0., sd=1.))
@@ -410,7 +410,7 @@ usually created in consideration of optimising performance. But
 ``TransformedDistribution`` is also possible (see also in
 `doc <https://docs.pymc.io/notebooks/api_quickstart.html#Transformed-distributions-and-changes-of-variables>`__):
 
-::
+.. code:: python
 
     tr = pm.distributions.transforms
     class Exp(tr.ElemwiseTransform):
@@ -470,7 +470,7 @@ transformation by nested applying multiple transforms to a Distribution
 (however, you can use `Chain
 transformation <https://docs.pymc.io/notebooks/api_quickstart.html?highlight=chain%20transformation>`__).
 
-::
+.. code:: python
 
     z = pm.Lognormal.dist(mu=0., sd=1., transform=tr.Log)
     z.transform
@@ -482,7 +482,7 @@ transformation <https://docs.pymc.io/notebooks/api_quickstart.html?highlight=cha
 
 
 
-::
+.. code:: python
 
     z2 = Exp().apply(z)
     z2.transform is None
@@ -510,7 +510,7 @@ take a ndarray as input. More importantly, a pm.Model() contains methods
 to compile theano function that takes Random Variables (that are also
 initialised within the same model) as input.
 
-::
+.. code:: python
 
     with pm.Model() as m:
         z = pm.Normal('z', 0., 10., shape=10)
@@ -528,7 +528,7 @@ initialised within the same model) as input.
     {'z': array([10., 11., 12., 13., 14., 15., 16., 17., 18., 19.]), 'x': array([0., 1., 2., 3., 4., 5., 6., 7., 8., 9.])}
 
 
-::
+.. code:: python
 
     list(filter(lambda x: "logp" in x, dir(pm.Model)))
 
@@ -584,7 +584,7 @@ input in the theano graph, thus you cannot pass new tensor to generate a
 logp function. For similar reason, in PyMC3 we do graph copying a lot
 using theano.clone to replace the inputs to a tensor.
 
-::
+.. code:: python
 
     with pm.Model() as m:
         z = pm.Normal('z', 0., 10., shape=10)
@@ -601,7 +601,7 @@ using theano.clone to replace the inputs to a tensor.
     [z, x]
 
 
-::
+.. code:: python
 
     type(m.logpt)
 
@@ -612,7 +612,7 @@ using theano.clone to replace the inputs to a tensor.
 
 
 
-::
+.. code:: python
 
     m.logpt.eval({x: np.random.randn(*x.tag.test_value.shape) for x in m.free_RVs})
 
@@ -736,7 +736,7 @@ The important parts of the above function is highlighted and commented.
 On a high level, it allows us to build conditional logp function and its
 gradient easily. Here is a taste of how it works in action:
 
-::
+.. code:: python
 
     inputlist = [np.random.randn(*x.tag.test_value.shape) for x in m.free_RVs]
 
@@ -774,7 +774,7 @@ gradient easily. Here is a taste of how it works in action:
 
 
 
-::
+.. code:: python
 
     irv = 1
     print("Condition Logp: take %s as input and conditioned on the rest."%(m.free_RVs[irv].name))
@@ -808,7 +808,7 @@ So why is this necessary? One can imagine that we just compile one logp
 function, and do bookkeeping ourselves. For example, we can build the
 logp function in theano directly:
 
-::
+.. code:: python
 
     import theano
     func = theano.function(m.free_RVs, m.logpt)
@@ -821,7 +821,7 @@ logp function in theano directly:
 
 
 
-::
+.. code:: python
 
     logpt_grad = theano.grad(m.logpt, m.free_RVs)
     func_d = theano.function(m.free_RVs, logpt_grad)
@@ -839,7 +839,7 @@ logp function in theano directly:
 
 Similarly, build conditional logp:
 
-::
+.. code:: python
 
     shared = theano.shared(inputlist[1])
     func2 = theano.function([m.free_RVs[0]], m.logpt, givens=[(m.free_RVs[1], shared)])
@@ -861,7 +861,7 @@ The above also gives the same logp and gradient as the output from
 ``model.logp_dlogp_function``. But the difficulty is to compile
 everything into a single function:
 
-::
+.. code:: python
 
     func_logp_and_grad = theano.function(m.free_RVs, [m.logpt, logpt_grad])  # ==> ERROR
 
@@ -946,7 +946,7 @@ TFP, which is a tenor in tensor out function. Moreover, transition
 kernels in TFP do not flatten the tensors, see eg docstring of
 `tensorflow\_probability/python/mcmc/random\_walk\_metropolis.py <https://github.com/tensorflow/probability/blob/master/tensorflow_probability/python/mcmc/random_walk_metropolis.py>`__:
 
-::
+.. code:: python
 
           new_state_fn: Python callable which takes a list of state parts and a
             seed; returns a same-type `list` of `Tensor`s, each being a perturbation
@@ -988,7 +988,7 @@ where it builds the objective function by calling:
 
 Where:
 
-::
+.. code:: python
 
         op     : Operator class
         approx : Approximation class or instance
@@ -1098,7 +1098,7 @@ generate (n\_sample, ) + RV.shape random samples. In some cases, where
 we broadcast RV1 and RV2 to creat a RV3 that has one more batch shape,
 we get error (even worse, wrong answer with silent error):
 
-::
+.. code:: python
 
     with pm.Model() as m:
         mu = pm.Normal('mu', 0., 1., shape=(5, 1))
@@ -1108,7 +1108,7 @@ we get error (even worse, wrong answer with silent error):
 
     trace['x'].shape # ==> should be (100, 2, 5, 10), but get (100, 5, 10)
 
-::
+.. code:: python
 
     pm.Normal.dist(mu=np.zeros(2), sd=1).random(size=(10, 4)) # ==> Will get error
 
