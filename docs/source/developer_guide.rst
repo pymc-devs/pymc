@@ -306,7 +306,7 @@ Same as:
     m = pm.Model()
     x = m.Var('x', pm.Normal.dist(mu=0., sd=1.))
 
-.. code:: ipython3
+::
 
     with pm.Model() as m:
         x = pm.Normal('x', mu=0., sd=1.)
@@ -327,7 +327,7 @@ Same as:
     -13.418938533204672
 
 
-.. code:: ipython3
+::
 
     m = pm.Model()
     x = m.Var('x', pm.Normal.dist(mu=0., sd=1.))
@@ -410,7 +410,7 @@ usually created in consideration of optimising performance. But
 ``TransformedDistribution`` is also possible (see also in
 `doc <https://docs.pymc.io/notebooks/api_quickstart.html#Transformed-distributions-and-changes-of-variables>`__):
 
-.. code:: ipython3
+::
 
     tr = pm.distributions.transforms
     class Exp(tr.ElemwiseTransform):
@@ -424,8 +424,6 @@ usually created in consideration of optimising performance. But
 
     lognorm = Exp().apply(pm.Normal.dist(0., 1.))
     lognorm
-
-
 
 
 .. parsed-literal::
@@ -472,12 +470,10 @@ transformation by nested applying multiple transforms to a Distribution
 (however, you can use `Chain
 transformation <https://docs.pymc.io/notebooks/api_quickstart.html?highlight=chain%20transformation>`__).
 
-.. code:: ipython3
+::
 
     z = pm.Lognormal.dist(mu=0., sd=1., transform=tr.Log)
     z.transform
-
-
 
 
 .. parsed-literal::
@@ -486,12 +482,10 @@ transformation <https://docs.pymc.io/notebooks/api_quickstart.html?highlight=cha
 
 
 
-.. code:: ipython3
+::
 
     z2 = Exp().apply(z)
     z2.transform is None
-
-
 
 
 .. parsed-literal::
@@ -516,7 +510,7 @@ take a ndarray as input. More importantly, a pm.Model() contains methods
 to compile theano function that takes Random Variables (that are also
 initialised within the same model) as input.
 
-.. code:: ipython3
+::
 
     with pm.Model() as m:
         z = pm.Normal('z', 0., 10., shape=10)
@@ -534,11 +528,9 @@ initialised within the same model) as input.
     {'z': array([10., 11., 12., 13., 14., 15., 16., 17., 18., 19.]), 'x': array([0., 1., 2., 3., 4., 5., 6., 7., 8., 9.])}
 
 
-.. code:: ipython3
+::
 
     list(filter(lambda x: "logp" in x, dir(pm.Model)))
-
-
 
 
 .. parsed-literal::
@@ -592,7 +584,7 @@ input in the theano graph, thus you cannot pass new tensor to generate a
 logp function. For similar reason, in PyMC3 we do graph copying a lot
 using theano.clone to replace the inputs to a tensor.
 
-.. code:: ipython3
+::
 
     with pm.Model() as m:
         z = pm.Normal('z', 0., 10., shape=10)
@@ -609,11 +601,9 @@ using theano.clone to replace the inputs to a tensor.
     [z, x]
 
 
-.. code:: ipython3
+::
 
     type(m.logpt)
-
-
 
 
 .. parsed-literal::
@@ -622,11 +612,9 @@ using theano.clone to replace the inputs to a tensor.
 
 
 
-.. code:: ipython3
+::
 
     m.logpt.eval({x: np.random.randn(*x.tag.test_value.shape) for x in m.free_RVs})
-
-
 
 
 .. parsed-literal::
@@ -748,11 +736,9 @@ The important parts of the above function is highlighted and commented.
 On a high level, it allows us to build conditional logp function and its
 gradient easily. Here is a taste of how it works in action:
 
-.. code:: ipython3
+::
 
     inputlist = [np.random.randn(*x.tag.test_value.shape) for x in m.free_RVs]
-
-.. code:: ipython3
 
     func = m.logp_dlogp_function()
     func.set_extra_values({})
@@ -788,7 +774,7 @@ gradient easily. Here is a taste of how it works in action:
 
 
 
-.. code:: ipython3
+::
 
     irv = 1
     print("Condition Logp: take %s as input and conditioned on the rest."%(m.free_RVs[irv].name))
@@ -822,16 +808,11 @@ So why is this necessary? One can imagine that we just compile one logp
 function, and do bookkeeping ourselves. For example, we can build the
 logp function in theano directly:
 
-.. code:: ipython3
+::
 
     import theano
     func = theano.function(m.free_RVs, m.logpt)
-
-.. code:: ipython3
-
     func(*inputlist)
-
-
 
 
 .. parsed-literal::
@@ -840,13 +821,11 @@ logp function in theano directly:
 
 
 
-.. code:: ipython3
+::
 
     logpt_grad = theano.grad(m.logpt, m.free_RVs)
     func_d = theano.function(m.free_RVs, logpt_grad)
     func_d(*inputlist)
-
-
 
 
 .. parsed-literal::
@@ -860,7 +839,7 @@ logp function in theano directly:
 
 Similarly, build conditional logp:
 
-.. code:: ipython3
+::
 
     shared = theano.shared(inputlist[1])
     func2 = theano.function([m.free_RVs[0]], m.logpt, givens=[(m.free_RVs[1], shared)])
@@ -882,7 +861,7 @@ The above also gives the same logp and gradient as the output from
 ``model.logp_dlogp_function``. But the difficulty is to compile
 everything into a single function:
 
-.. code:: ipython3
+::
 
     func_logp_and_grad = theano.function(m.free_RVs, [m.logpt, logpt_grad])  # ==> ERROR
 
@@ -1122,7 +1101,7 @@ generate (n\_sample, ) + RV.shape random samples. In some cases, where
 we broadcast RV1 and RV2 to creat a RV3 that has one more batch shape,
 we get error (even worse, wrong answer with silent error):
 
-.. code:: ipython3
+::
 
     with pm.Model() as m:
         mu = pm.Normal('mu', 0., 1., shape=(5, 1))
@@ -1132,7 +1111,7 @@ we get error (even worse, wrong answer with silent error):
 
     trace['x'].shape # ==> should be (100, 2, 5, 10), but get (100, 5, 10)
 
-.. code:: ipython3
+::
 
     pm.Normal.dist(mu=np.zeros(2), sd=1).random(size=(10, 4)) # ==> Will get error
 
