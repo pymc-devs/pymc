@@ -1123,17 +1123,9 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     if progressbar:
         indices = tqdm(indices, total=samples)
 
-    varnames = [var.name for var in vars]
-
-    # draw once to inspect the shape
-    var_values = list(zip(varnames,
-                          draw_values(vars, point=model.test_point, size=size)))
     ppc_trace = defaultdict(list)
-    for varname, value in var_values:
-        ppc_trace[varname] = np.zeros((samples,) + value.shape, value.dtype)
-
     try:
-        for slc, idx in enumerate(indices):
+        for idx in indices:
             if nchain > 1:
                 chain_idx, point_idx = np.divmod(idx, len_trace)
                 param = trace._straces[chain_idx % nchain].point(point_idx)
@@ -1142,7 +1134,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
 
             values = draw_values(vars, point=param, size=size)
             for k, v in zip(vars, values):
-                ppc_trace[k.name][slc] = v
+                ppc_trace[k.name].append(v)
 
     except KeyboardInterrupt:
         pass
@@ -1151,7 +1143,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
         if progressbar:
             indices.close()
 
-    return ppc_trace
+    return {k: np.asarray(v) for k, v in ppc_trace.items()}
 
 
 def sample_ppc(*args, **kwargs):
