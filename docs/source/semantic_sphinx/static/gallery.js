@@ -70,6 +70,9 @@ var Gallery = {
                 categories["Other"].push(key)
             }
         })
+        if(categories["Other"].length === 0){
+          delete categories["Other"]
+        }
         return categories
     },
 
