@@ -11,6 +11,7 @@ from ..model import (
     ObservedRV, MultiObservedRV, Context, InitContextMeta
 )
 from ..vartypes import string_types
+from .greek_alphabet import greek_alphabet
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
            'NoDistribution', 'TensorType', 'draw_values', 'generate_samples']
@@ -38,6 +39,13 @@ class Distribution(object):
             if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
                 raise TypeError("observed needs to be data but got: {}".format(type(data)))
             total_size = kwargs.pop('total_size', None)
+
+            # convert greek unicode kwargs to ascii
+            for k, v in kwargs.items():
+                if k in greek_alphabet.keys():
+                    kwargs[greek_alphabet[k]] = v
+                    kwargs.pop(k)
+
             dist = cls.dist(*args, **kwargs)
             return model.Var(name, dist, data, total_size)
         else:
