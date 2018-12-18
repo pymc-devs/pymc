@@ -106,19 +106,21 @@ def normal_lccdf(mu, sigma, x):
     )
 
 
-def sd2rho(sd):
+def sigma2rho(sigma):
     """
-    `sd -> rho` theano converter
-    :math:`mu + sd*e = mu + log(1+exp(rho))*e`"""
-    return tt.log(tt.exp(tt.abs_(sd)) - 1.)
+    `sigma -> rho` theano converter
+    :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
+    return tt.log(tt.exp(tt.abs_(sigma)) - 1.)
 
 
-def rho2sd(rho):
+def rho2sigma(rho):
     """
-    `rho -> sd` theano converter
-    :math:`mu + sd*e = mu + log(1+exp(rho))*e`"""
+    `rho -> sigma` theano converter
+    :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
     return tt.nnet.softplus(rho)
 
+rho2sd = rho2sigma
+sd2rho = sigma2rho
 
 def log_normal(x, mean, **kwargs):
     """
@@ -131,7 +133,7 @@ def log_normal(x, mean, **kwargs):
         point of evaluation
     mean : Tensor
         mean of normal distribution
-    kwargs : one of parameters `{sd, tau, w, rho}`
+    kwargs : one of parameters `{sigma, tau, w, rho}`
 
     Notes
     -----
@@ -143,22 +145,22 @@ def log_normal(x, mean, **kwargs):
         4) `tau` that follows this equation :math:`tau = std^{-1}`
     ----
     """
-    sd = kwargs.get('sd')
+    sigma = kwargs.get('sigma')
     w = kwargs.get('w')
     rho = kwargs.get('rho')
     tau = kwargs.get('tau')
     eps = kwargs.get('eps', 0.)
-    check = sum(map(lambda a: a is not None, [sd, w, rho, tau]))
+    check = sum(map(lambda a: a is not None, [sigma, w, rho, tau]))
     if check > 1:
         raise ValueError('more than one required kwarg is passed')
     if check == 0:
         raise ValueError('none of required kwarg is passed')
-    if sd is not None:
-        std = sd
+    if sigma is not None:
+        std = sigma
     elif w is not None:
         std = tt.exp(w)
     elif rho is not None:
-        std = rho2sd(rho)
+        std = rho2sigma(rho)
     else:
         std = tau**(-1)
     std += f(eps)
@@ -328,11 +330,11 @@ def random_choice(*args, **kwargs):
     return samples
 
 
-def zvalue(value, sd, mu):
+def zvalue(value, sigma, mu):
     """
     Calculate the z-value for a normal distribution.
     """
-    return (value - mu) / sd
+    return (value - mu) / sigma
 
 
 def incomplete_beta_cfe(a, b, x, small):

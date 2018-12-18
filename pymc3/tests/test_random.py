@@ -33,7 +33,7 @@ def test_draw_value():
 
     with pm.Model():
         mu = 2 * tt.constant(np.array([5., 6.])) + theano.shared(np.array(5))
-        a = pm.Normal('a', mu=mu, sd=5, shape=2)
+        a = pm.Normal('a', mu=mu, sigma=5, shape=2)
 
     val1 = _draw_value(a)
     val2 = _draw_value(a)
@@ -63,7 +63,7 @@ class TestDrawValues:
     def test_simple_model(self):
         with pm.Model():
             mu = 2 * tt.constant(np.array([5., 6.])) + theano.shared(np.array(5))
-            a = pm.Normal('a', mu=mu, sd=5, shape=2)
+            a = pm.Normal('a', mu=mu, sigma=5, shape=2)
 
         val1 = draw_values([a])
         val2 = draw_values([a])
@@ -95,9 +95,9 @@ class TestDrawValues:
 class TestJointDistributionDrawValues(SeededTest):
     def test_joint_distribution(self):
         with pm.Model() as model:
-            a = pm.Normal('a', mu=0, sd=100)
-            b = pm.Normal('b', mu=a, sd=1e-8)
-            c = pm.Normal('c', mu=a, sd=1e-8)
+            a = pm.Normal('a', mu=0, sigma=100)
+            b = pm.Normal('b', mu=a, sigma=1e-8)
+            c = pm.Normal('c', mu=a, sigma=1e-8)
             d = pm.Deterministic('d', b + c)
 
         # Expected RVs

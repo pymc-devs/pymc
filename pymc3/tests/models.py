@@ -170,6 +170,6 @@ def simple_normal(bounded_prior=False):
             mu_i = pm.Uniform("mu_i", a, b)
         else:
             mu_i = pm.Flat("mu_i")
-        pm.Normal("X_obs", mu=mu_i, sd=sd, observed=x0)
+        pm.Normal("X_obs", mu=mu_i, sigma=sd, observed=x0)
 
     return model.test_point, model, None

@@ -21,7 +21,7 @@ with model_1:
                        1000.0, upper=light_speed.std() * 1000.0)
 
     # define likelihood
-    y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=light_speed)
+    y_obs = pm.Normal('Y_obs', mu=mu, sigma=sigma, observed=light_speed)
 
 
 def run(n=5000):

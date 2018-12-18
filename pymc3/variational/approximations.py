@@ -3,7 +3,7 @@ import theano
 from theano import tensor as tt
 
 import pymc3 as pm
-from pymc3.distributions.dist_math import rho2sd
+from pymc3.distributions.dist_math import rho2sigma
 from . import opvi
 from pymc3.variational.opvi import Group, Approximation, node_property
 from pymc3.util import update_start_vals
@@ -42,7 +42,7 @@ class MeanFieldGroup(Group):
 
     @node_property
     def cov(self):
-        var = rho2sd(self.rho)**2
+        var = rho2sigma(self.rho)**2
         if self.batched:
             return batched_diag(var)
         else:
@@ -50,7 +50,7 @@ class MeanFieldGroup(Group):
 
     @node_property
     def std(self):
-        return rho2sd(self.rho)
+        return rho2sigma(self.rho)
 
     @change_flags(compute_test_value='off')
     def __init_group__(self, group):
@@ -84,14 +84,14 @@ class MeanFieldGroup(Group):
     @node_property
     def symbolic_random(self):
         initial = self.symbolic_initial
-        sd = self.std
+        sigma = self.std
         mu = self.mean
-        return sd * initial + mu
+        return sigma * initial + mu
 
     @node_property
     def symbolic_logq_not_scaled(self):
         z0 = self.symbolic_initial
-        std = rho2sd(self.rho)
+        std = rho2sigma(self.rho)
         logdet = tt.log(std)
         logq = pm.Normal.dist().logp(z0) - logdet
         return logq.sum(range(1, logq.ndim))

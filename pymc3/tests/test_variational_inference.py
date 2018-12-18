@@ -253,10 +253,10 @@ def test_vae():
 
     with pm.Model():
         # Hidden variables
-        zs = pm.Normal('zs', mu=0, sd=1, shape=minibatch_size)
+        zs = pm.Normal('zs', mu=0, sigma=1, shape=minibatch_size)
         dec = zs * ad + bd
         # Observation model
-        pm.Normal('xs_', mu=dec, sd=0.1, observed=x_inp)
+        pm.Normal('xs_', mu=dec, sigma=0.1, observed=x_inp)
 
         pm.fit(1, local_rv={zs: dict(mu=mu, rho=rho)},
                more_replacements={x_inp: x_mini}, more_obj_params=[ae, be, ad, bd])
@@ -437,8 +437,8 @@ def test_elbo():
     post_sd = np.array([1], dtype=theano.config.floatX)
     # Create a model for test
     with pm.Model() as model:
-        mu = pm.Normal('mu', mu=mu0, sd=sigma)
-        pm.Normal('y', mu=mu, sd=1, observed=y_obs)
+        mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+        pm.Normal('y', mu=mu, sigma=1, observed=y_obs)
 
     # Create variational gradient tensor
     mean_field = MeanField(model=model)
@@ -479,8 +479,8 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
         with pm.Model():
             assert theano.config.floatX == 'float64'
             assert theano.config.warn_float64 == 'ignore'
-            mu = pm.Normal('mu', mu=mu0, sd=sigma)
-            pm.Normal('y', mu=mu, sd=1, observed=y_obs, total_size=aux_total_size)
+            mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+            pm.Normal('y', mu=mu, sigma=1, observed=y_obs, total_size=aux_total_size)
             # Create variational gradient tensor
             mean_field_1 = MeanField()
             assert mean_field_1.scale_cost_to_minibatch
@@ -491,8 +491,8 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
                 elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
 
         with pm.Model():
-            mu = pm.Normal('mu', mu=mu0, sd=sigma)
-            pm.Normal('y', mu=mu, sd=1, observed=y_obs, total_size=aux_total_size)
+            mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+            pm.Normal('y', mu=mu, sigma=1, observed=y_obs, total_size=aux_total_size)
             # Create variational gradient tensor
             mean_field_2 = MeanField()
             assert mean_field_1.scale_cost_to_minibatch
@@ -521,8 +521,8 @@ def test_elbo_beta_kl(aux_total_size):
     post_sd = np.array([1], dtype=theano.config.floatX)
     with pm.theanof.change_flags(floatX='float64', warn_float64='ignore'):
         with pm.Model():
-            mu = pm.Normal('mu', mu=mu0, sd=sigma)
-            pm.Normal('y', mu=mu, sd=1, observed=y_obs, total_size=aux_total_size)
+            mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+            pm.Normal('y', mu=mu, sigma=1, observed=y_obs, total_size=aux_total_size)
             # Create variational gradient tensor
             mean_field_1 = MeanField()
             mean_field_1.scale_cost_to_minibatch = True
@@ -533,8 +533,8 @@ def test_elbo_beta_kl(aux_total_size):
                 elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
 
         with pm.Model():
-            mu = pm.Normal('mu', mu=mu0, sd=sigma)
-            pm.Normal('y', mu=mu, sd=1, observed=y_obs)
+            mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+            pm.Normal('y', mu=mu, sigma=1, observed=y_obs)
             # Create variational gradient tensor
             mean_field_3 = MeanField()
             mean_field_3.shared_params['mu'].set_value(post_mu)
@@ -575,7 +575,7 @@ def simple_model_data(use_minibatch):
         d=d,
         mu0=mu0,
         sd0=sd0,
-        sd=sd,
+        sigma=sd,
     )
 
 
@@ -584,8 +584,8 @@ def simple_model(simple_model_data):
     with pm.Model() as model:
         mu_ = pm.Normal(
             'mu', mu=simple_model_data['mu0'],
-            sd=simple_model_data['sd0'], testval=0)
-        pm.Normal('x', mu=mu_, sd=simple_model_data['sd'],
+            sigma=simple_model_data['sd0'], testval=0)
+        pm.Normal('x', mu=mu_, sigma=simple_model_data['sd'],
                   observed=simple_model_data['data'],
                   total_size=simple_model_data['n'])
     return model
@@ -930,9 +930,9 @@ def test_discrete_not_allowed():
     y = np.random.normal(mu_true[z_true], np.ones_like(z_true))
 
     with pm.Model():
-        mu = pm.Normal('mu', mu=0, sd=10, shape=3)
+        mu = pm.Normal('mu', mu=0, sigma=10, shape=3)
         z = pm.Categorical('z', p=tt.ones(3) / 3, shape=len(y))
-        pm.Normal('y_obs', mu=mu[z], sd=1., observed=y)
+        pm.Normal('y_obs', mu=mu[z], sigma=1., observed=y)
         with pytest.raises(opvi.ParametrizationError):
             pm.fit(n=1)  # fails
 

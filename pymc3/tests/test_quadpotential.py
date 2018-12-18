@@ -122,7 +122,7 @@ def test_random_dense():
 def test_user_potential():
     model = pymc3.Model()
     with model:
-        pymc3.Normal("a", mu=0, sd=1)
+        pymc3.Normal("a", mu=0, sigma=1)
 
     # Work around missing nonlocal in python2
     called = []

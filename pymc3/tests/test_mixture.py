@@ -170,11 +170,11 @@ class TestMixture(SeededTest):
             # mixtures components
             g_comp = Normal.dist(
                 mu=Exponential('mu_g', lam=1.0, shape=nbr, transform=None),
-                sd=1,
+                sigma=1,
                 shape=nbr)
             l_comp = Lognormal.dist(
                 mu=Exponential('mu_l', lam=1.0, shape=nbr, transform=None),
-                sd=1,
+                sigma=1,
                 shape=nbr)
             # weight vector for the mixtures
             g_w = Dirichlet('g_w', a=floatX(np.ones(nbr)*0.0000001), transform=None)

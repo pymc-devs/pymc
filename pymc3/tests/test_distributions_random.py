@@ -72,14 +72,14 @@ def pymc3_random_discrete(dist, paramdomains,
 class TestDrawValues(SeededTest):
     def test_draw_scalar_parameters(self):
         with pm.Model():
-            y = pm.Normal('y1', mu=0., sd=1.)
+            y = pm.Normal('y1', mu=0., sigma=1.)
             mu, tau = draw_values([y.distribution.mu, y.distribution.tau])
         npt.assert_almost_equal(mu, 0)
         npt.assert_almost_equal(tau, 1)
 
     def test_draw_dependencies(self):
         with pm.Model():
-            x = pm.Normal('x', mu=0., sd=1.)
+            x = pm.Normal('x', mu=0., sigma=1.)
             exp_x = pm.Deterministic('exp_x', pm.math.exp(x))
 
         x, exp_x = draw_values([x, exp_x])
@@ -87,7 +87,7 @@ class TestDrawValues(SeededTest):
 
     def test_draw_order(self):
         with pm.Model():
-            x = pm.Normal('x', mu=0., sd=1.)
+            x = pm.Normal('x', mu=0., sigma=1.)
             exp_x = pm.Deterministic('exp_x', pm.math.exp(x))
 
         # Need to draw x before drawing log_x
@@ -98,7 +98,7 @@ class TestDrawValues(SeededTest):
         with pm.Model():
             mu = pm.Normal('mu', mu=0., tau=1e-3)
             sigma = pm.Gamma('sigma', alpha=1., beta=1., transform=None)
-            y = pm.Normal('y', mu=mu, sd=sigma)
+            y = pm.Normal('y', mu=mu, sigma=sigma)
             mu2, tau2 = draw_values([y.distribution.mu, y.distribution.tau],
                                                      point={'mu': 5., 'sigma': 2.})
         npt.assert_almost_equal(mu2, 5)
@@ -108,7 +108,7 @@ class TestDrawValues(SeededTest):
         with pm.Model():
             mu = pm.Normal('mu', mu=0., tau=1e-3)
             sigma = pm.Gamma('sigma', alpha=1., beta=1., transform=None)
-            y = pm.Normal('y', mu=mu, sd=sigma)
+            y = pm.Normal('y', mu=mu, sigma=sigma)
             mu, tau = draw_values([y.distribution.mu, y.distribution.tau])
         assert isinstance(mu, np.ndarray)
         assert isinstance(tau, np.ndarray)
@@ -221,7 +221,7 @@ class TestTruncatedNormal(BaseTestCases.BaseTestCase):
 
 class TestSkewNormal(BaseTestCases.BaseTestCase):
     distribution = pm.SkewNormal
-    params = {'mu': 0., 'sd': 1., 'alpha': 5.}
+    params = {'mu': 0., 'sigma': 1., 'alpha': 5.}
 
 
 class TestHalfNormal(BaseTestCases.BaseTestCase):
@@ -331,7 +331,7 @@ class TestLogistic(BaseTestCases.BaseTestCase):
 
 class TestLogitNormal(BaseTestCases.BaseTestCase):
     distribution = pm.LogitNormal
-    params = {'mu': 0., 'sd': 1.}
+    params = {'mu': 0., 'sigma': 1.}
 
 
 class TestBinomial(BaseTestCases.BaseTestCase):
@@ -421,20 +421,20 @@ class TestScalarParameterSamples(SeededTest):
         pymc3_random(pm.Uniform, {'lower': -Rplus, 'upper': Rplus}, ref_rand=ref_rand)
 
     def test_normal(self):
-        def ref_rand(size, mu, sd):
-            return st.norm.rvs(size=size, loc=mu, scale=sd)
-        pymc3_random(pm.Normal, {'mu': R, 'sd': Rplus}, ref_rand=ref_rand)
+        def ref_rand(size, mu, sigma):
+            return st.norm.rvs(size=size, loc=mu, scale=sigma)
+        pymc3_random(pm.Normal, {'mu': R, 'sigma': Rplus}, ref_rand=ref_rand)
 
     def test_truncated_normal(self):
-        def ref_rand(size, mu, sd, lower, upper):
-            return st.truncnorm.rvs((lower-mu)/sd, (upper-mu)/sd, size=size, loc=mu, scale=sd)
-        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sd': Rplusbig, 'lower':-Rplusbig, 'upper':Rplusbig},
+        def ref_rand(size, mu, sigma, lower, upper):
+            return st.truncnorm.rvs((lower-mu)/sigma, (upper-mu)/sigma, size=size, loc=mu, scale=sigma)
+        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sigma': Rplusbig, 'lower':-Rplusbig, 'upper':Rplusbig},
                      ref_rand=ref_rand)
 
     def test_skew_normal(self):
-        def ref_rand(size, alpha, mu, sd):
-            return st.skewnorm.rvs(size=size, a=alpha, loc=mu, scale=sd)
-        pymc3_random(pm.SkewNormal, {'mu': R, 'sd': Rplus, 'alpha': R}, ref_rand=ref_rand)
+        def ref_rand(size, alpha, mu, sigma):
+            return st.skewnorm.rvs(size=size, a=alpha, loc=mu, scale=sigma)
+        pymc3_random(pm.SkewNormal, {'mu': R, 'sigma': Rplus, 'alpha': R}, ref_rand=ref_rand)
 
     def test_half_normal(self):
         def ref_rand(size, tau):
@@ -491,10 +491,10 @@ class TestScalarParameterSamples(SeededTest):
             return st.gamma.rvs(alpha, scale=1. / beta, size=size)
         pymc3_random(pm.Gamma, {'alpha': Rplusbig, 'beta': Rplusbig}, ref_rand=ref_rand)
 
-    def test_gamma_mu_sd(self):
-        def ref_rand(size, mu, sd):
-            return st.gamma.rvs(mu**2 / sd**2, scale=sd ** 2 / mu, size=size)
-        pymc3_random(pm.Gamma, {'mu': Rplusbig, 'sd': Rplusbig}, ref_rand=ref_rand)
+    def test_gamma_mu_sigma(self):
+        def ref_rand(size, mu, sigma):
+            return st.gamma.rvs(mu**2 / sigma**2, scale=sigma ** 2 / mu, size=size)
+        pymc3_random(pm.Gamma, {'mu': Rplusbig, 'sigma': Rplusbig}, ref_rand=ref_rand)
 
     def test_inverse_gamma(self):
         def ref_rand(size, alpha, beta):
@@ -727,24 +727,28 @@ class TestScalarParameterSamples(SeededTest):
         pymc3_random(pm.Logistic, {'mu': R, 's': Rplus}, ref_rand=ref_rand)
 
     def test_logitnormal(self):
-        def ref_rand(size, mu, sd):
-            return expit(st.norm.rvs(loc=mu, scale=sd, size=size))
-        pymc3_random(pm.LogitNormal, {'mu': R, 'sd': Rplus}, ref_rand=ref_rand)
+        def ref_rand(size, mu, sigma):
+            return expit(st.norm.rvs(loc=mu, scale=sigma, size=size))
+        pymc3_random(pm.LogitNormal, {'mu': R, 'sigma': Rplus}, ref_rand=ref_rand)
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
-            for sd in Rplus.vals:
+            for sigma in Rplus.vals:
                 #pylint: disable=cell-var-from-loop
                 def ref_rand(size):
-                    return st.norm.rvs(loc=mu, scale=sd, size=size)
+                    return st.norm.rvs(loc=mu, scale=sigma, size=size)
 
                 class TestedInterpolated (pm.Interpolated):
 
                     def __init__(self, **kwargs):
-                        x_points = np.linspace(mu - 5 * sd, mu + 5 * sd, 100)
-                        pdf_points = st.norm.pdf(x_points, loc=mu, scale=sd)
-                        super().__init__(x_points=x_points, pdf_points=pdf_points, **kwargs)
+                        x_points = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 100)
+                        pdf_points = st.norm.pdf(x_points, loc=mu, scale=sigma)
+                        super().__init__(
+                            x_points=x_points,
+                            pdf_points=pdf_points,
+                            **kwargs
+                        )
 
                 pymc3_random(TestedInterpolated, {}, ref_rand=ref_rand)
 
@@ -782,19 +786,19 @@ class TestScalarParameterSamples(SeededTest):
                      ref_rand=ref_rand)
 
     def test_normalmixture(self):
-        def ref_rand(size, w, mu, sd):
+        def ref_rand(size, w, mu, sigma):
             component = np.random.choice(w.size, size=size, p=w)
-            return np.random.normal(mu[component], sd[component], size=size)
+            return np.random.normal(mu[component], sigma[component], size=size)
 
         pymc3_random(pm.NormalMixture, {'w': Simplex(2),
                      'mu': Domain([[.05, 2.5], [-5., 1.]], edges=(None, None)),
-                     'sd': Domain([[1, 1], [1.5, 2.]], edges=(None, None))},
+                     'sigma': Domain([[1, 1], [1.5, 2.]], edges=(None, None))},
                      extra_args={'comp_shape': 2},
                      size=1000,
                      ref_rand=ref_rand)
         pymc3_random(pm.NormalMixture, {'w': Simplex(3),
                      'mu': Domain([[-5., 1., 2.5]], edges=(None, None)),
-                     'sd': Domain([[1.5, 2., 3.]], edges=(None, None))},
+                     'sigma': Domain([[1.5, 2., 3.]], edges=(None, None))},
                      extra_args={'comp_shape': 3},
                      size=1000,
                      ref_rand=ref_rand)

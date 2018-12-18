@@ -143,8 +143,8 @@ def test_empty_model():
 
 def test_partial_trace_sample():
     with pm.Model() as model:
-        a = pm.Normal('a', mu=0, sd=1)
-        b = pm.Normal('b', mu=0, sd=1)
+        a = pm.Normal('a', mu=0, sigma=1)
+        b = pm.Normal('b', mu=0, sigma=1)
         trace = pm.sample(trace=[a])
 
 
@@ -214,7 +214,7 @@ class TestSamplePPC(SeededTest):
     def test_normal_scalar(self):
         with pm.Model() as model:
             mu = pm.Normal('mu', 0., 1.)
-            a = pm.Normal('a', mu=mu, sd=1, observed=0.)
+            a = pm.Normal('a', mu=mu, sigma=1, observed=0.)
             trace = pm.sample()
 
         with model:
@@ -236,7 +236,7 @@ class TestSamplePPC(SeededTest):
     def test_normal_vector(self):
         with pm.Model() as model:
             mu = pm.Normal('mu', 0., 1.)
-            a = pm.Normal('a', mu=mu, sd=1,
+            a = pm.Normal('a', mu=mu, sigma=1,
                           observed=np.array([.5, .2]))
             trace = pm.sample()
 
@@ -255,8 +255,8 @@ class TestSamplePPC(SeededTest):
 
     def test_vector_observed(self):
         with pm.Model() as model:
-            mu = pm.Normal('mu', mu=0, sd=1)
-            a = pm.Normal('a', mu=mu, sd=1,
+            mu = pm.Normal('mu', mu=0, sigma=1)
+            a = pm.Normal('a', mu=mu, sigma=1,
                           observed=np.array([0., 1.]))
             trace = pm.sample()
 
@@ -275,7 +275,7 @@ class TestSamplePPC(SeededTest):
 
     def test_sum_normal(self):
         with pm.Model() as model:
-            a = pm.Normal('a', sd=0.2)
+            a = pm.Normal('a', sigma=0.2)
             b = pm.Normal('b', mu=a)
             trace = pm.sample()
 
@@ -310,13 +310,13 @@ class TestSamplePPCW(SeededTest):
         data0 = np.random.normal(0, 1, size=500)
 
         with pm.Model() as model_0:
-            mu = pm.Normal('mu', mu=0, sd=1)
-            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            mu = pm.Normal('mu', mu=0, sigma=1)
+            y = pm.Normal('y', mu=mu, sigma=1, observed=data0)
             trace_0 = pm.sample()
 
         with pm.Model() as model_1:
-            mu = pm.Normal('mu', mu=0, sd=1, shape=len(data0))
-            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            mu = pm.Normal('mu', mu=0, sigma=1, shape=len(data0))
+            y = pm.Normal('y', mu=mu, sigma=1, observed=data0)
             trace_1 = pm.sample()
 
         traces = [trace_0, trace_0]
@@ -336,8 +336,8 @@ class TestSamplePPCW(SeededTest):
 ])
 def test_exec_nuts_init(method):
     with pm.Model() as model:
-        pm.Normal('a', mu=0, sd=1, shape=2)
-        pm.HalfNormal('b', sd=1)
+        pm.Normal('a', mu=0, sigma=1, shape=2)
+        pm.HalfNormal('b', sigma=1)
     with model:
         start, _ = pm.init_nuts(init=method, n_init=10)
         assert isinstance(start, list)
@@ -355,10 +355,10 @@ class TestSamplePriorPredictive(SeededTest):
         observed = np.random.normal(10, 1, size=200)
         with pm.Model():
             # Use a prior that's way off to show we're ignoring the observed variables
-            mu = pm.Normal('mu', mu=-100, sd=1)
+            mu = pm.Normal('mu', mu=-100, sigma=1)
             positive_mu = pm.Deterministic('positive_mu', np.abs(mu))
             z = -1 - positive_mu
-            pm.Normal('x_obs', mu=z, sd=1, observed=observed)
+            pm.Normal('x_obs', mu=z, sigma=1, observed=observed)
             prior = pm.sample_prior_predictive()
 
         assert (prior['mu'] < 90).all()
@@ -464,6 +464,6 @@ class TestSamplePriorPredictive(SeededTest):
         with pm.Model():
             mu = pm.Normal('mu', shape=5)
             sd = pm.Uniform('sd', lower=2, upper=3)
-            x = pm.Normal('x', mu=mu, sd=sd, shape=5)
+            x = pm.Normal('x', mu=mu, sigma=sd, shape=5)
             prior = pm.sample_prior_predictive(10)
         assert prior['mu'].shape == (10, 5)
