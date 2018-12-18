@@ -147,6 +147,7 @@ html_theme_options = {
         ("Examples", "nb_examples/index"),
         ("Books + Videos", "learn"),
         ("API", "api"),
+        ("Developer Guide", "developer_guide"),
         ("About PyMC3", "history")
     ],
     #     "fixed_sidebar": "false",

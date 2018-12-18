@@ -10,7 +10,7 @@
                     <h3 class="ui header">Friendly modelling API</h3>
                     <p>PyMC3 allows you to write down models using an intuitive syntax to describe a data generating
                         process.</p>
-                    <h3 class="ui header">Cutting edge algorithms and modules</h3>
+                    <h3 class="ui header">Cutting edge algorithms and model building blocks</h3>
                     <p>Fit your model using gradient-based MCMC algorithms like NUTS, using ADVI for fast approximate
                         inference &mdash; including minibatch-ADVI for scaling to large datasets &mdash; or using
                         Gaussian processes to build Bayesian nonparametric models.</p>
