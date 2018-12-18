@@ -193,4 +193,4 @@ pseudoxml:
 	@echo "Build finished. The pseudo-XML files are in $(BUILDDIR)/pseudoxml."
 
 serve: html
-	python -m http.server --directory $(BUILDDIR)/html
+	cd $(BUILDDIR)/html && python -m http.server

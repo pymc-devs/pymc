@@ -11,5 +11,6 @@ Gallery.contents = {
     "model_averaging": "How-To",
     "blackbox_external_likelihood": "How-To",
     "LKJ": "How-To",
+    "variational_api_quickstart": "How-To",
     "PyMC3_tips_and_heuristic": "How-To"
 }

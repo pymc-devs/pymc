@@ -53,6 +53,5 @@ Gallery.contents = {
     "sgfs_simple_optimization": "Stochastic Gradients",
     "stochastic_volatility": "Applied",
     "survival_analysis": "Survival Analysis",
-    "variational_api_quickstart": "Variational Inference",
     "weibull_aft": "Survival Analysis"
 }

@@ -147,7 +147,7 @@ html_theme_options = {
         ("Examples", "nb_examples/index"),
         ("Books + Videos", "learn"),
         ("API", "api"),
-        ("About PyMC3", "intro")
+        ("About PyMC3", "history")
     ],
     #     "fixed_sidebar": "false",
     #     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
