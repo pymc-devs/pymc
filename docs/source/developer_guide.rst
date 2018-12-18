@@ -294,17 +294,6 @@ From the above session, we know that when we call eg
 variable. Thus, we have two equivalent ways of adding random variable to
 a model:
 
-.. code:: python
-
-    with pm.Model() as m:
-        x = pm.Normal('x', mu=0., sd=1.)
-
-Same as:
-
-.. code:: python
-
-    m = pm.Model()
-    x = m.Var('x', pm.Normal.dist(mu=0., sd=1.))
 
 .. code:: python
 
@@ -317,6 +306,7 @@ Same as:
     print(x.distribution.logp(5.).eval({}))
     print(m.logp({'x': 5.}))
 
+with the output
 
 .. parsed-literal::
 
@@ -326,6 +316,7 @@ Same as:
     -13.418938533204672
     -13.418938533204672
 
+Same as:
 
 .. code:: python
 
@@ -338,6 +329,7 @@ Same as:
     print(x.distribution.logp(5.).eval({}))
     print(m.logp({'x': 5.}))
 
+with the output
 
 .. parsed-literal::
 
@@ -473,24 +465,13 @@ transformation <https://docs.pymc.io/notebooks/api_quickstart.html?highlight=cha
 .. code:: python
 
     z = pm.Lognormal.dist(mu=0., sd=1., transform=tr.Log)
-    z.transform
-
-
-.. parsed-literal::
-
-    pymc3.distributions.transforms.Log
-
+    z.transform           # ==> pymc3.distributions.transforms.Log
 
 
 .. code:: python
 
     z2 = Exp().apply(z)
-    z2.transform is None
-
-
-.. parsed-literal::
-
-    True
+    z2.transform is None  # ==> True
 
 
 
@@ -517,7 +498,7 @@ initialised within the same model) as input.
         x = pm.Normal('x', z, 1., shape=10)
 
     print(m.test_point)
-    print(m.dict_to_array(m.test_point))  #==> m.bijection.map(m.test_point)
+    print(m.dict_to_array(m.test_point))  # ==> m.bijection.map(m.test_point)
     print(m.bijection.rmap(np.arange(20)))
 
 
@@ -591,32 +572,20 @@ using theano.clone to replace the inputs to a tensor.
         x = pm.Normal('x', z, 1., shape=10)
         y = pm.Normal('y', x.sum(), 1., observed=2.5)
 
-    print(m.basic_RVs)
-    print(m.free_RVs)
-
-
-.. parsed-literal::
-
-    [z, x, y]
-    [z, x]
+    print(m.basic_RVs)    # ==> [z, x, y]
+    print(m.free_RVs)     # ==> [z, x]
 
 
 .. code:: python
 
-    type(m.logpt)
-
-
-.. parsed-literal::
-
-    theano.tensor.var.TensorVariable
-
+    type(m.logpt)         # ==> theano.tensor.var.TensorVariable
 
 
 .. code:: python
 
     m.logpt.eval({x: np.random.randn(*x.tag.test_value.shape) for x in m.free_RVs})
 
-
+output:
 .. parsed-literal::
 
     array(-51.25369126)
@@ -762,8 +731,6 @@ gradient easily. Here is a taste of how it works in action:
      =====
 
 
-
-
 .. parsed-literal::
 
     (array(-51.0769075),
@@ -792,8 +759,6 @@ gradient easily. Here is a taste of how it works in action:
     [ 0.01490006  0.60958275 -0.06955203 -0.42430833 -1.43392303  1.13713493
       0.31650495 -0.62582879  0.75642811  0.50114527]
      =====
-
-
 
 
 .. parsed-literal::
