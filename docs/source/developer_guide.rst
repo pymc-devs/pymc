@@ -5,14 +5,12 @@ PyMC3 Developer Guide
 `PyMC3 <https://docs.pymc.io/>`__ is a Python package for Bayesian
 statistical modeling built on top of
 `Theano <http://deeplearning.net/software/theano/>`__. This
-notebook aims to explain the design and implementation of probabilistic
+doc aims to explain the design and implementation of probabilistic
 programming in PyMC3, with comparisons to other PPL like TensorFlow Probability (TFP)
 and Pyro in mind. A user-facing API
 introduction can be found in the `API
-quickstart <https://docs.pymc.io/notebooks/api_quickstart.html>`__.
-
-A more accessible, user facing deep introduction can be found in
-https://github.com/springcoil/probabilisticprogrammingprimer
+quickstart <https://docs.pymc.io/notebooks/api_quickstart.html>`__. A more accessible, user facing deep introduction can be found in
+`Peadar Coyle's probabilistic programming primer <https://github.com/springcoil/probabilisticprogrammingprimer>`__
 
 Distribution
 ------------
@@ -21,8 +19,8 @@ A high-level introduction of ``Distribution`` in PyMC3 can be found in
 the `documentation <https://docs.pymc.io/prob_dists.html>`__. The source
 code of the probability distributions is nested under
 `pymc3/distributions <https://github.com/pymc-devs/pymc3/blob/master/pymc3/distributions/>`__,
-with the ``Distribution`` class defined in
-https://github.com/pymc-devs/pymc3/blob/master/pymc3/distributions/distribution.py#L23-L44.
+with the ``Distribution`` class defined in `distribution.py
+<https://github.com/pymc-devs/pymc3/blob/master/pymc3/distributions/distribution.py#L23-L44>`__.
 A few important points to highlight:
 
 .. code:: python
@@ -62,9 +60,18 @@ functions. Instead, to access a stateless distribution, you need to call
 https://docs.pymc.io/prob\_dists.html#using-pymc-distributions-without-a-model).
 
 With this distinction in mind, we can take a closer look at the
-stateless distribution part of pymc3
-https://docs.pymc.io/api/distributions.html, which is divided into: -
-Continuous - Discrete - Multivariate - Mixture - Timeseries
+stateless distribution part of pymc3 (see distriution api in `doc
+<https://docs.pymc.io/api/distributions.html>`__), which divided into:
+
+- Continuous
+
+- Discrete
+
+- Multivariate
+
+- Mixture
+
+- Timeseries
 
 Quote from the doc:
 
@@ -197,8 +204,8 @@ when the graph is built and compiled.
 
 As explained above, distribution in a ``pm.Model()`` context
 automatically turn into a tensor with distribution property (pymc3
-random variable). To get the logp of a free\_RV is just `evaluating the
-``logp()`` on
+random variable). To get the logp of a free\_RV is just evaluating the
+``logp()`` `on
 itself <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/model.py#L1212-L1213>`__:
 
 .. code:: python
@@ -1056,7 +1063,7 @@ Forward sampling
 As explained above, in distribution we have method to walk the model
 dependence graph and generate forward random sample in scipy/numpy. This
 allows us to do prior predictive samples using
-```pymc3.sampling.sample_prior_predictive`` <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/sampling.py#L1303-L1345>`__.
+``pymc3.sampling.sample_prior_predictive`` see `code <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/sampling.py#L1303-L1345>`__.
 It is a fairly fast batch operation, but we have quite a lot of bugs and
 edge case especially in high dimensions. The biggest pain point is the
 automatic broadcasting. As in the batch random generation, we want to
