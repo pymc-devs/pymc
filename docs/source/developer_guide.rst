@@ -998,7 +998,7 @@ dimension more, so that we can compute the expectation and get the
 gradient of the expectation (by computing the `expectation of the
 gradient! <http://blog.shakirm.com/2015/10/machine-learning-trick-of-the-day-4-reparameterisation-tricks/>`__).
 As for the ``logq`` since it is a Gaussian `it is pretty
-straightforward to evaluate<https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/variational/approximations.py#L91-L97>`__.
+straightforward to evaluate <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/variational/approximations.py#L91-L97>`__.
 
 Some challenges and insights from implementing VI.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1068,17 +1068,13 @@ Extending PyMC3
 ---------------
 
 -  Custom Inference method
--  `Inferencing Linear Mixed Model with
-   EM.ipynb <https://github.com/junpenglao/Planet_Sakaar_Data_Science/blob/master/Ports/Inferencing%20Linear%20Mixed%20Model%20with%20EM.ipynb>`__
--  `Laplace approximation in
-   pymc3.ipynb <https://github.com/junpenglao/Planet_Sakaar_Data_Science/blob/master/Ports/Laplace%20approximation%20in%20pymc3.ipynb>`__
+    -  `Inferencing Linear Mixed Model with EM.ipynb <https://github.com/junpenglao/Planet_Sakaar_Data_Science/blob/master/Ports/Inferencing%20Linear%20Mixed%20Model%20with%20EM.ipynb>`__
+    -  `Laplace approximation in  pymc3.ipynb <https://github.com/junpenglao/Planet_Sakaar_Data_Science/blob/master/Ports/Laplace%20approximation%20in%20pymc3.ipynb>`__
 -  Connecting it to other library within a model
--  `Using “black box” likelihood function by creating a custom Theano
-   Op <https://docs.pymc.io/notebooks/blackbox_external_likelihood.html>`__
--  Using emcee
+    -  `Using “black box” likelihood function by creating a custom Theano Op <https://docs.pymc.io/notebooks/blackbox_external_likelihood.html>`__
+    -  Using emcee
 -  Using other library for inference
--  Connecting to Julia for solving ODE (with gradient for solution that
-   can be used in NUTS)
+    -  Connecting to Julia for solving ODE (with gradient for solution that can be used in NUTS)
 
 What we got wrong
 -----------------
