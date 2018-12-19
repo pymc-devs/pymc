@@ -5,7 +5,7 @@ PyMC3 Developer Guide
 `PyMC3 <https://docs.pymc.io/>`__ is a Python package for Bayesian
 statistical modeling built on top of
 `Theano <http://deeplearning.net/software/theano/>`__. This
-doc aims to explain the design and implementation of probabilistic
+document aims to explain the design and implementation of probabilistic
 programming in PyMC3, with comparisons to other PPL like TensorFlow Probability (TFP)
 and Pyro in mind. A user-facing API
 introduction can be found in the `API
@@ -21,7 +21,7 @@ code of the probability distributions is nested under
 `pymc3/distributions <https://github.com/pymc-devs/pymc3/blob/master/pymc3/distributions/>`__,
 with the ``Distribution`` class defined in `distribution.py
 <https://github.com/pymc-devs/pymc3/blob/master/pymc3/distributions/distribution.py#L23-L44>`__.
-A few important points to highlight:
+A few important points to highlight in the Distribution Class:
 
 .. code:: python
 
@@ -41,15 +41,16 @@ A few important points to highlight:
             ...
 
 In a way, the snippet above represents the unique features of pymc3's
-``Distribution`` class: - Distribution objects are only usable inside of
-a ``Model`` context. If they are created outside of the model context
-manager, it raises an error. - A ``Distribution`` requires at least a
-name argument, and other parameters that defines the Distribution. -
-When a ``Distribution`` is initialized inside of a Model context, two
-things happen: 1. a stateless distribution is initialized
-``dist = {DISTRIBUTION_cls}.dist(*args, **kwargs)``; 2. a random varible
-following the said distribution is added to the model
-``model.Var(name, dist, ...)``
+``Distribution`` class:
+
+- Distribution objects are only usable inside of a ``Model`` context. If they are created outside of the model context manager, it raises an error.
+
+- A ``Distribution`` requires at least a name argument, and other parameters that defines the Distribution.
+
+- When a ``Distribution`` is initialized inside of a Model context, two things happen:
+
+  1. a stateless distribution is initialized ``dist = {DISTRIBUTION_cls}.dist(*args, **kwargs)``;
+  2. a random variable following the said distribution is added to the model ``model.Var(name, dist, ...)``
 
 Thus, users who are building models using ``with pm.Model() ...`` should
 be aware that they are never directly exposed to static and stateless
@@ -95,7 +96,7 @@ Quote from the doc:
 PyMC3 expects the ``logp()`` method to return a log-probability
 evaluated at the passed value argument. This method is used internally
 by all of the inference methods to calculate the model log-probability,
-which is used in turn for fitting models. The ``random()`` method is
+which is then used for fitting models. The ``random()`` method is
 used to simulate values from the variable, and is used internally for
 posterior predictive checks.
 
@@ -120,17 +121,15 @@ properties.
 Reflection
 ~~~~~~~~~~
 
-Recently, there have been Google internal debates regarding enabling the
-tensor/value semantics for probability distributions. Below is some of
-my thoughts regarding how it is handled in pymc3:
+How tensor/value semantics for probability distributions is enabled in pymc3:
 
 In PyMC3, we treat ``x = Normal('x', 0, 1)`` as defining a random
 variable (intercepted and collected under a model context, more on that
 below), and x.dist() as the associated density/mass function
 (distribution in the mathematical sense). It is not perfect, and now
-after a few years learning Bayesian statistics I also realised these
-subtleties (*i.e.*, the distinction between random variable and
-distribution). But when I was learning probabilistic modelling as a
+after a few years learning Bayesian statistics I also realized these
+subtleties (i.e., the distinction between *random variable* and
+*distribution*). But when I was learning probabilistic modelling as a
 beginner, I did find this approach to be the easiest and most
 straightforward. In a perfect world, we should have
 :math:`x \sim \text{Normal}(0, 1)` which defines a random variable that
@@ -184,7 +183,7 @@ Random method and logp method, very different behind the curtain
 
 In short, the random method is scipy/numpy-based, and the logp method is
 Theano-based. The ``logp`` method is straightforward - it is a Theano
-function for each distribution. It has the following signature:
+function within each distribution. It has the following signature:
 
 .. code:: python
 
@@ -200,7 +199,11 @@ or could be converted to tensors. It is rather convenient as the
 evaluation of logp is represented as a tensor (``RV.logpt``), and when
 we linked different ``logp`` together (e.g., summing all ``RVs.logpt``
 to get the model totall logp) the dependence is taken care of by Theano
-when the graph is built and compiled.
+when the graph is built and compiled. Again, since the compiled function
+depends on the nodes that already in the graph, whenever you want to generate
+a new function that takes new input tensors you either need to regenerate the graph
+with the appropriate dependencies, or replace the node by editing the existing graph.
+In PyMC3 we use the second approach by using ``theano.clone()`` when it is needed.
 
 As explained above, distribution in a ``pm.Model()`` context
 automatically turn into a tensor with distribution property (pymc3
@@ -290,7 +293,7 @@ or conceptually:
         # DO SOME ADDITIONAL THINGS
 
 So what happened within the ``with pm.Model() as model: ...`` block,
-besides the initual set up ``model = pm.Model()``? Starting from the
+besides the initial set up ``model = pm.Model()``? Starting from the
 most elementary:
 
 Random Variable
@@ -307,44 +310,27 @@ a model:
     with pm.Model() as m:
         x = pm.Normal('x', mu=0., sd=1.)
 
-    print(type(x))
-    print(m.free_RVs)
-    print(x.distribution.logp(5.))
-    print(x.distribution.logp(5.).eval({}))
-    print(m.logp({'x': 5.}))
 
-with the output
+Which is the same as doing:
 
-.. parsed-literal::
-
-    <class 'pymc3.model.FreeRV'>
-    [x]
-    Elemwise{switch,no_inplace}.0
-    -13.418938533204672
-    -13.418938533204672
-
-Same as:
 
 .. code:: python
 
     m = pm.Model()
     x = m.Var('x', pm.Normal.dist(mu=0., sd=1.))
 
-    print(type(x))
-    print(m.free_RVs)
-    print(x.distribution.logp(5.))
-    print(x.distribution.logp(5.).eval({}))
-    print(m.logp({'x': 5.}))
 
-with the output
+Both with the same output:
+
 
 .. parsed-literal::
 
-    <class 'pymc3.model.FreeRV'>
-    [x]
-    Elemwise{switch,no_inplace}.0
-    -13.418938533204672
-    -13.418938533204672
+    print(type(x))                              # ==> <class 'pymc3.model.FreeRV'>
+    print(m.free_RVs)                           # ==> [x]
+    print(x.distribution.logp(5.))              # ==> Elemwise{switch,no_inplace}.0
+    print(x.distribution.logp(5.).eval({}))     # ==> -13.418938533204672
+    print(m.logp({'x': 5.}))                    # ==> -13.418938533204672
+
 
 
 Looking closer to the classmethod ``model.Var``, it is clear that what
@@ -388,8 +374,8 @@ https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8
         return var
 
 In general, if there is observed, the RV is defined as a ``ObservedRV``,
-otherwise if it has a transformed method, it is a ``TransformedRV``. The
-most elementary form is a ``FreeRV``.
+otherwise if it has a transformed method, it is a ``TransformedRV``, otherwise, it returns the
+most elementary form: a ``FreeRV``.
 
 Below, I will take a deeper look into ``TransformedRV``, a normal user
 might not necessary come in contact with the concept, as
@@ -398,14 +384,14 @@ user facing.
 
 Because in PyMC3 there is no bijector class like in TFP or pyro, we only
 have a partial implementation called ``Transform``, which implements
-jacobian correction for forward mapping only (there is no jacobian
+Jacobian correction for forward mapping only (there is no Jacobian
 correction for inverse mapping). The use case we considered are limited
 to the set of distributions that are bounded, and the transformation
 maps the bounded set to the real line - see
 `doc <https://docs.pymc.io/notebooks/api_quickstart.html#Automatic-transforms-of-bounded-RVs>`__.
 In general, PyMC3 does not provide explicit functionality to transform
 one distribution to another. Instead, a dedicated distribution is
-usually created in consideration of optimising performance. But
+usually created in consideration of optimising performance. But getting a
 ``TransformedDistribution`` is also possible (see also in
 `doc <https://docs.pymc.io/notebooks/api_quickstart.html#Transformed-distributions-and-changes-of-variables>`__):
 
@@ -432,7 +418,7 @@ usually created in consideration of optimising performance. But
 
 
 Now, back to ``model.RV(...)`` - things return from ``model.RV(...)``
-are theano tensor variables, and it is clear from looking at
+are Theano tensor variables, and it is clear from looking at
 ``TransformedRV``:
 
 .. code:: python
@@ -450,7 +436,7 @@ Factor:
 
 and ``Factor`` basically `enable and assign the
 logp <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/model.py#L195-L276>`__
-(representated as a tensor also) property to a theano tensor (thus
+(representated as a tensor also) property to a Theano tensor (thus
 making it a random variable). For a ``TransformedRV``, it transform the
 distribution into a ``TransformedDistribution``, and then model.Var is
 called again to added the RV associated with the
@@ -492,10 +478,10 @@ the model logp), and also deterministic transformation (as bookkeeping):
 named\_vars, free\_RVs, observed\_RVs, deterministics, potentials,
 missing\_values. The model context then computes some simple model
 properties, builds a bijection mapping that transforms between
-dictionary and numpy/theano ndarray, thus allowing logp/dlogp function
+dictionary and numpy/Theano ndarray, thus allowing logp/dlogp function
 to have two equivalent version: one take a dict as input and the other
 take a ndarray as input. More importantly, a pm.Model() contains methods
-to compile theano function that takes Random Variables (that are also
+to compile Theano function that takes Random Variables (that are also
 initialised within the same model) as input.
 
 .. code:: python
@@ -564,11 +550,11 @@ sum them together to get the model logp:
             ...
             return logp
 
-which returns a theano tensor that its value depends on the free
-parameters in the model (i.e., its parent nodes from the theano
+which returns a Theano tensor that its value depends on the free
+parameters in the model (i.e., its parent nodes from the Theano
 graph).You can evaluate or compile into a python callable (that you can
 pass numpy as input args). Note that the logp tensor depends on its
-input in the theano graph, thus you cannot pass new tensor to generate a
+input in the Theano graph, thus you cannot pass new tensor to generate a
 logp function. For similar reason, in PyMC3 we do graph copying a lot
 using theano.clone to replace the inputs to a tensor.
 
@@ -618,7 +604,7 @@ logp/dlogp function:
         return ValueGradFunction(self.logpt, grad_vars, extra_vars, **kwargs)
 
 ``ValueGradFunction`` is a callable class which isolates part of the
-theano graph to compile additional theano functions. PyMC3 relies on
+Theano graph to compile additional Theano functions. PyMC3 relies on
 ``theano.clone`` to copy the ``model.logpt`` and replace its input. It
 does not edit or rewrite the graph directly.
 
@@ -737,10 +723,6 @@ gradient easily. Here is a taste of how it works in action:
      -0.06955203 -0.42430833 -1.43392303  1.13713493  0.31650495 -0.62582879
       0.75642811  0.50114527]
      =====
-
-
-.. parsed-literal::
-
     (array(-51.0769075),
      array([ 0.74230226,  0.01658948,  1.38606194,  0.11253699, -1.07003284,
              2.64302891,  1.12497754, -0.35967542, -1.18117557, -1.11489642,
@@ -767,10 +749,6 @@ gradient easily. Here is a taste of how it works in action:
     [ 0.01490006  0.60958275 -0.06955203 -0.42430833 -1.43392303  1.13713493
       0.31650495 -0.62582879  0.75642811  0.50114527]
      =====
-
-
-.. parsed-literal::
-
     (array(-51.0769075),
      array([ 0.98281586,  1.69545542,  0.34626619,  1.61069443,  2.79155183,
             -0.91020295,  0.60094326,  2.08022672,  2.8799075 ,  2.81681213]))
@@ -779,7 +757,7 @@ gradient easily. Here is a taste of how it works in action:
 
 So why is this necessary? One can imagine that we just compile one logp
 function, and do bookkeeping ourselves. For example, we can build the
-logp function in theano directly:
+logp function in Theano directly:
 
 .. code:: python
 
@@ -810,7 +788,7 @@ logp function in theano directly:
 
 
 
-Similarly, build conditional logp:
+Similarly, build a conditional logp:
 
 .. code:: python
 
@@ -845,18 +823,18 @@ not work. We can of course wrap 2 functions - one for logp one for dlogp
 - and output a list. But that would mean we need to call 2 functions. In
 addition, when we write code using python logic to do bookkeeping when
 we build our conditional logp. Using ``theano.clone``, we always have
-the input to the theano function being a 1d vector (instead of a list of
+the input to the Theano function being a 1d vector (instead of a list of
 RV that each can have very different shape), thus it is very easy to do
 matrix operation like rotation etc.
 
 Reflection
 ~~~~~~~~~~
 
-| The current setup is quite powerful, as the theano compiled function
+| The current setup is quite powerful, as the Theano compiled function
   is fairly fast to compile and to call. Also, when we are repeatedly
   calling a conditional logp function, external RV only need to reset
   once. However, there are still significant overheads when we are
-  passing values between theano graph and numpy. That is the reason we
+  passing values between Theano graph and numpy. That is the reason we
   often see no advantage in using GPU, because the data is copying
   between GPU and CPU at each function call - and for a small model, the
   result is a slower inference under GPU than CPU.
@@ -928,26 +906,23 @@ kernels in TFP do not flatten the tensors, see eg docstring of
             Default value: `None` which is mapped to
               `tfp.mcmc.random_walk_normal_fn()`.
 
-However, would this give complication when we try to implement tunning
-for mass matrix in HMC and NUTS? As you still need to map all elements
-of RVs into a vector to build covariance matrix?
 
 Dynamic HMC
 ^^^^^^^^^^^
 
 We love NUTS, or to be more precise Dynamic HMC with complex stoping
-rules. This part is actually all done outside of theano, for NUTS, it
+rules. This part is actually all done outside of Theano, for NUTS, it
 includes: the leapfrog, dual averaging, tunning of mass matrix and step
 size, the tree building, sampler related statistics like divergence and
-energy checking. We actually have a theano version of HMC:
+energy checking. We actually have a Theano version of HMC:
 https://github.com/pymc-devs/pymc3/blob/master/pymc3/step\_methods/hmc/trajectory.py
-but it is never actually been used.
+but it is never been used.
 
 Variational Inference (VI)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The design of the VI module takes a bit of a different approach than
-MCMC - it is a functional design, and everything is done within theano
+The design of the VI module takes a different approach than
+MCMC - it has a functional design, and everything is done within Theano
 (i.e., Optimization and building the variational objective). The base
 class of variational inference is
 `pymc3.variational.Inference <https://github.com/pymc-devs/pymc3/blob/master/pymc3/variational/inference.py>`__,
@@ -973,15 +948,15 @@ Inference <https://arxiv.org/abs/1610.09033>`__. ``Inference`` object is
 a very high level of VI implementation. It uses primitives: Operator,
 Approximation, and Test functions to combine them into single objective
 function. Currently we do not care too much about the test function, it
-is usually not required (and not implemented). These primitives are
+is usually not required (and not implemented). The other primitives are
 defined as base classes in `this
 file <https://github.com/pymc-devs/pymc3/blob/master/pymc3/variational/opvi.py>`__.
 We use inheritance to easily implement a broad class of VI methods
 leaving a lot of flexibility for further extensions.
 
 For example, consider ADVI. We know that in the high-level, we are
-approximating the posterior in the latent space with A diagnonal
-MvGaussian. In another word, we are approximating each elements in
+approximating the posterior in the latent space with a diagonal
+Multivariate Gaussian. In another word, we are approximating each elements in
 ``model.free_RVs`` with a Gaussian. Below is what happen in the set up:
 
 .. code:: python
@@ -1012,28 +987,28 @@ skip this for now and only consider ``SingleGroupApproximation`` like
 ``varlogp_norm`` are in
 `variational/opvi <https://github.com/pymc-devs/pymc3/blob/master/pymc3/variational/opvi.py>`__,
 strip away the normalizing term, ``datalogp`` and ``varlogp`` are
-expecation of the variational free\_RVs and data logp - we clone the
-datalogp and varlogp from the model, replace its input with theano
+expectation of the variational free\_RVs and data logp - we clone the
+datalogp and varlogp from the model, replace its input with Theano
 tensor that `samples from the variational
 posterior <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/variational/opvi.py#L1098-L1111>`__.
 For ADVI, these samples are from `a
 Gaussian <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/variational/approximations.py#L84-L89>`__.
 Note that the samples from the posterior approximations are usually 1
 dimension more, so that we can compute the expectation and get the
-gradient of the expection (by computing the `expection of the
+gradient of the expectation (by computing the `expectation of the
 gradient! <http://blog.shakirm.com/2015/10/machine-learning-trick-of-the-day-4-reparameterisation-tricks/>`__).
 As for the ``logq`` since it is a Gaussian `it is pretty
-straightforward <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/variational/approximations.py#L91-L97>`__.
+straightforward to evaluate<https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/variational/approximations.py#L91-L97>`__.
 
 Some challenges and insights from implementing VI.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  Graph based approach was helpful, but theano had no direct access to
+-  Graph based approach was helpful, but Theano had no direct access to
    previously created nodes in the computational graph. you can find a
    lot of ``@node_property`` usages in implementation. This is done to
    cache nodes. TensorFlow has graph utils for that that could
    potentially help in doing this. On the other hand graph management in
-   tensorflow seemed to more tricky than expected. The high level reason
+   Tensorflow seemed to more tricky than expected. The high level reason
    is that graph is an add only container
 
 -  There were few fixed bugs not obvoius in the first place. Theano has
@@ -1068,7 +1043,7 @@ It is a fairly fast batch operation, but we have quite a lot of bugs and
 edge case especially in high dimensions. The biggest pain point is the
 automatic broadcasting. As in the batch random generation, we want to
 generate (n\_sample, ) + RV.shape random samples. In some cases, where
-we broadcast RV1 and RV2 to creat a RV3 that has one more batch shape,
+we broadcast RV1 and RV2 to create a RV3 that has one more batch shape,
 we get error (even worse, wrong answer with silent error):
 
 .. code:: python
@@ -1083,7 +1058,7 @@ we get error (even worse, wrong answer with silent error):
 
 .. code:: python
 
-    pm.Normal.dist(mu=np.zeros(2), sd=1).random(size=(10, 4)) # ==> Will get error
+    pm.Normal.dist(mu=np.zeros(2), sd=1).random(size=(10, 4)) # ==> ERROR
 
 There are also other error related random sample generation (e.g.,
 `Mixture is currently
