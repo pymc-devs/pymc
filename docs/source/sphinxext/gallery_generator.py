@@ -160,7 +160,10 @@ def build_gallery(srcdir, gallery):
     # Write individual example files
     data = {}
     for basename in sorted(tocjs.contents):
-        filename = os.path.join(source_dir, basename + ".ipynb")
+        if basename.find(".") > 0:
+            filename = os.path.join(source_dir, basename)
+        else:
+            filename = os.path.join(source_dir, basename + ".ipynb")
         ex = NotebookGenerator(filename, target_dir)
         data[ex.stripped_name] = {
             "title": ex.pagetitle,
