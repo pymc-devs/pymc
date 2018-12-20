@@ -104,13 +104,8 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
 
     beta = 0.
     stage = 0
-<<<<<<< HEAD
-    acc_rate = 1
-    #max_steps = step.n_steps
-=======
     acc_rate = 1.
     proposed = draws * step.n_steps
->>>>>>> 0d4470746be8a9e64a5de7d02a62d64b82f417bd
     model.marginal_likelihood = 1
     variables = inputvars(model.vars)
     discrete = np.concatenate([[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables])
@@ -137,26 +132,12 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
         covariance = _calc_covariance(posterior, weights)
         proposal = MultivariateNormalProposal(covariance)
 
-<<<<<<< HEAD
-        # compute scaling and number of Markov chains steps (optional), based on previous
-        # acceptance rate
-=======
         # compute scaling (optional) and number of Markov chains steps (optional), based on the
         # acceptance rate of the previous stage
->>>>>>> 0d4470746be8a9e64a5de7d02a62d64b82f417bd
         if (step.tune_scaling or step.tune_steps) and stage > 0:
             if step.tune_scaling:
                 step.scaling = _tune(acc_rate)
             if step.tune_steps:
-<<<<<<< HEAD
-                acc_rate = max(1 / proposed, acc_rate)
-                step.n_steps = min(step.max_steps, 1 + int(np.log(step.p_acc_rate) / np.log(1 - acc_rate)))
-
-
-        pm._log.info("Stage: {:d} Beta: {:f} Steps: {:d}".format(stage, beta, step.n_steps, acc_rate))
-        proposed = draws * step.n_steps
-        accepted = 0
-=======
                 acc_rate = max(1. / proposed, acc_rate)
                 step.n_steps = min(
                     step.max_steps, 1 + int(np.log(step.p_acc_rate) / np.log(1 - acc_rate))
@@ -168,7 +149,6 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
         # Apply Metropolis kernel (mutation)
         proposed = draws * step.n_steps
         accepted = 0.
->>>>>>> 0d4470746be8a9e64a5de7d02a62d64b82f417bd
         priors = np.array([prior_logp(sample) for sample in posterior]).squeeze()
         tempered_post = priors + likelihoods * beta
         for draw in tqdm(range(draws), disable=not progressbar):
