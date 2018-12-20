@@ -159,9 +159,9 @@ def build_gallery(srcdir, gallery):
         os.makedirs(source_dir)
     
     # Create default image
-    png_path = os.path.join(os.path.join(target_dir, "_images"), "default.png")
-    shutil.copy(DEFAULT_IMG_LOC, png_path)
-    create_thumbnail(png_path)
+    default_png_path = os.path.join(os.path.join(target_dir, "_images"), "default.png")
+    shutil.copy(DEFAULT_IMG_LOC, default_png_path)
+    create_thumbnail(default_png_path)
 
     # Write individual example files
     data = {}
@@ -179,7 +179,7 @@ def build_gallery(srcdir, gallery):
             data[basename] = {
                 "title": " ".join(filename.split("_")),
                 "url": os.path.join(os.sep, gallery, "../"+filename+".html"),
-                "thumb": png_path,
+                "thumb": os.path.basename(default_png_path),
             }
 
     js_file = os.path.join(image_dir, "gallery_{}_contents.js".format(gallery))
