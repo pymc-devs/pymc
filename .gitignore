@@ -1,6 +1,8 @@
 *.pyc
 *.sw[op]
 examples/*.png
+nb_examples/
+nb_tutorials/
 build/*
 dist/*
 *.egg-info/

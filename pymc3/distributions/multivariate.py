@@ -16,7 +16,8 @@ import pymc3 as pm
 from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
-from .distribution import Continuous, Discrete, draw_values, generate_samples
+from .distribution import (Continuous, Discrete, draw_values, generate_samples,
+                           _DrawValuesContext)
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
@@ -338,18 +339,19 @@ class MvStudentT(_QuadFormBase):
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
-        nu, mu = draw_values([self.nu, self.mu], point=point, size=size)
-        if self._cov_type == 'cov':
-            cov, = draw_values([self.cov], point=point, size=size)
-            dist = MvNormal.dist(mu=np.zeros_like(mu), cov=cov)
-        elif self._cov_type == 'tau':
-            tau, = draw_values([self.tau], point=point, size=size)
-            dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau)
-        else:
-            chol, = draw_values([self.chol_cov], point=point, size=size)
-            dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol)
+        with _DrawValuesContext():
+            nu, mu = draw_values([self.nu, self.mu], point=point, size=size)
+            if self._cov_type == 'cov':
+                cov, = draw_values([self.cov], point=point, size=size)
+                dist = MvNormal.dist(mu=np.zeros_like(mu), cov=cov)
+            elif self._cov_type == 'tau':
+                tau, = draw_values([self.tau], point=point, size=size)
+                dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau)
+            else:
+                chol, = draw_values([self.chol_cov], point=point, size=size)
+                dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol)
 
-        samples = dist.random(point, size)
+            samples = dist.random(point, size)
 
         chi2 = np.random.chisquare
         return (np.sqrt(nu) * samples.T / chi2(nu, size)).T + mu
@@ -533,37 +535,93 @@ class Multinomial(Discrete):
         # Set float type to float64 for numpy. This change is related to numpy issue #8317 (https://github.com/numpy/numpy/issues/8317)
         p = p.astype('float64')
         # Now, re-normalize all of the values in float64 precision. This is done inside the conditionals
-        if size == p.shape:
-            size = None
-        elif size[-len(p.shape):] == p.shape:
-            size = size[:len(size) - len(p.shape)]
 
-        n_dim = n.squeeze().ndim
-
-        if (n_dim == 0) and (p.ndim == 1):
+        # np.random.multinomial needs `n` to be a scalar int and `p` a
+        # sequence
+        if p.ndim == 1 and (n.ndim == 0 or (n.ndim == 1 and n.shape[0] == 1)):
+            # If `n` is already a scalar and `p` is a sequence, then just
+            # return np.multinomial with some size handling
             p = p / p.sum()
-            randnum = np.random.multinomial(n, p.squeeze(), size=size)
-        elif (n_dim == 0) and (p.ndim > 1):
-            p = p / p.sum(axis=1, keepdims=True)
-            randnum = np.asarray([
-                np.random.multinomial(n.squeeze(), pp, size=size)
-                for pp in p
-            ])
-            randnum = np.moveaxis(randnum, 1, 0)
-        elif (n_dim > 0) and (p.ndim == 1):
-            p = p / p.sum()
-            randnum = np.asarray([
-                np.random.multinomial(nn, p.squeeze(), size=size)
-                for nn in n
-            ])
-            randnum = np.moveaxis(randnum, 1, 0)
+            if size is not None:
+                if size == p.shape:
+                    size = None
+                elif size[-len(p.shape):] == p.shape:
+                    size = size[:len(size) - len(p.shape)]
+            randnum = np.random.multinomial(n, p, size=size)
+            return randnum.astype(original_dtype)
+        # The shapes of `p` and `n` must be broadcasted by hand depending on
+        # their ndim. We will assume that the last axis of the `p` array will
+        # be the sequence to feed into np.random.multinomial. The other axis
+        # will only have to be iterated over.
+        if n.ndim == p.ndim:
+            # p and n have the same ndim, so n.shape[-1] must be 1
+            if n.shape[-1] != 1:
+                raise ValueError('If n and p have the same number of '
+                                 'dimensions, the last axis of n must be '
+                                 'have len 1. Got {} instead.\n'
+                                 'n.shape = {}\n'
+                                 'p.shape = {}.'.format(n.shape[-1],
+                                                        n.shape,
+                                                        p.shape))
+            n_p_shape = np.broadcast(np.empty(p.shape[:-1]),
+                                     np.empty(n.shape[:-1])).shape
+            p = np.broadcast_to(p, n_p_shape + (p.shape[-1],))
+            n = np.broadcast_to(n, n_p_shape + (1,))
+        elif n.ndim == p.ndim - 1:
+            # n has the number of dimensions of p for the iteration, these must
+            # broadcast together
+            n_p_shape = np.broadcast(np.empty(p.shape[:-1]),
+                                     n).shape
+            p = np.broadcast_to(p, n_p_shape + (p.shape[-1],))
+            n = np.broadcast_to(n, n_p_shape + (1,))
+        elif p.ndim == 1:
+            # p only has the sequence array. We extend it with the dimensions
+            # of n
+            n_p_shape = n.shape
+            p = np.broadcast_to(p, n_p_shape + (p.shape[-1],))
+            n = np.broadcast_to(n, n_p_shape + (1,))
+        elif n.ndim == 0 or (n.dim == 1 and n.shape[0] == 1):
+            # n is a scalar. We extend it with the dimensions of p
+            n_p_shape = p.shape[:-1]
+            n = np.broadcast_to(n, n_p_shape + (1,))
         else:
-            p = p / p.sum(axis=1, keepdims=True)
-            randnum = np.asarray([
-                np.random.multinomial(nn, pp, size=size)
-                for (nn, pp) in zip(n, p)
-            ])
-            randnum = np.moveaxis(randnum, 1, 0)
+            # There is no clear rule to broadcast p and n so we raise an error
+            raise ValueError('Incompatible shapes of n and p.\n'
+                             'n.shape = {}\n'
+                             'p.shape = {}'.format(n.shape, p.shape))
+
+        # Check what happens with size
+        if size is not None:
+            if size == p.shape:
+                size = None
+                _size = 1
+            elif size[-len(p.shape):] == p.shape:
+                size = size[:len(size) - len(p.shape)]
+                _size = np.prod(size)
+            else:
+                _size = np.prod(size)
+        else:
+            _size = 1
+
+        # We now flatten p and n up to the last dimension
+        p_shape = p.shape
+        p = np.reshape(p, (np.prod(n_p_shape), -1))
+        n = np.reshape(n, (np.prod(n_p_shape), -1))
+        # We renormalize p
+        p = p / p.sum(axis=1, keepdims=True)
+        # We iterate calls to np.random.multinomial
+        randnum = np.asarray([
+            np.random.multinomial(nn, pp, size=_size)
+            for (nn, pp) in zip(n, p)
+        ])
+        # We swap the iteration axis with the _size axis
+        randnum = np.moveaxis(randnum, 1, 0)
+        # We reshape the random numbers to the corresponding size + p_shape
+        if size is None:
+            randnum = np.reshape(randnum, p_shape)
+        else:
+            randnum = np.reshape(randnum, size + p_shape)
+        # We cast back to the original dtype
         return randnum.astype(original_dtype)
 
     def random(self, point=None, size=None):
@@ -775,7 +833,7 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
     -----
     This is not a standard Distribution class but follows a similar
     interface. Besides the Wishart distribution, it will add RVs
-    c and z to your model which make up the matrix.
+    name_c and name_z to your model which make up the matrix.
 
     This distribution is usually a bad idea to use as a prior for multivariate
     normal. You should instead use LKJCholeskyCov or LKJCorr.
@@ -797,11 +855,11 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
         diag_testval = None
         tril_testval = None
 
-    c = tt.sqrt(ChiSquared('c', nu - np.arange(2, 2 + n_diag), shape=n_diag,
+    c = tt.sqrt(ChiSquared('%s_c' % name, nu - np.arange(2, 2 + n_diag), shape=n_diag,
                            testval=diag_testval))
-    pm._log.info('Added new variable c to model diagonal of Wishart.')
-    z = Normal('z', 0., 1., shape=n_tril, testval=tril_testval)
-    pm._log.info('Added new variable z to model off-diagonals of Wishart.')
+    pm._log.info('Added new variable %s_c to model diagonal of Wishart.' % name)
+    z = Normal('%s_z' % name, 0., 1., shape=n_tril, testval=tril_testval)
+    pm._log.info('Added new variable %s_z to model off-diagonals of Wishart.' % name)
     # Construct A matrix
     A = tt.zeros(S.shape, dtype=np.float32)
     A = tt.set_subtensor(A[diag_idx], c)
@@ -1075,22 +1133,21 @@ class LKJCorr(Continuous):
         size = size if isinstance(size, tuple) else (size,)
         # original implementation in R see:
         # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
-        beta = eta - 1 + n/2
-        r12 = 2 * stats.beta.rvs(a=beta, b=beta, size=size) - 1
+        beta = eta - 1. + n/2.
+        r12 = 2. * stats.beta.rvs(a=beta, b=beta, size=size) - 1.
         P = np.eye(n)[:, :, np.newaxis] * np.ones(size)
         P[0, 1] = r12
-        P[1, 1] = np.sqrt(1 - r12**2)
-        if n > 2:
-            for m in range(1, n-1):
-                beta -= 0.5
-                y = stats.beta.rvs(a=(m+1) / 2., b=beta, size=size)
-                z = stats.norm.rvs(loc=0, scale=1, size=(m+1, ) + size)
-                z = z / np.sqrt(np.einsum('ij,ij->j', z, z))
-                P[0:m+1, m+1] = np.sqrt(y) * z
-                P[m+1, m+1] = np.sqrt(1 - y)
-        Pt = np.transpose(P, (2, 0 ,1))
-        C = np.einsum('...ji,...jk->...ik', Pt, Pt)
-        return C.transpose((1, 2, 0))[np.triu_indices(n, k=1)].T
+        P[1, 1] = np.sqrt(1. - r12**2)
+        for mp1 in range(2, n):
+            beta -= 0.5
+            y = stats.beta.rvs(a=mp1 / 2., b=beta, size=size)
+            z = stats.norm.rvs(loc=0, scale=1, size=(mp1, ) + size)
+            z = z / np.sqrt(np.einsum('ij,ij->j', z, z))
+            P[0:mp1, mp1] = np.sqrt(y) * z
+            P[mp1, mp1] = np.sqrt(1. - y)
+        C = np.einsum('ji...,jk...->...ik', P, P)
+        triu_idx = np.triu_indices(n, k=1)
+        return C[..., triu_idx[0], triu_idx[1]]
 
     def random(self, point=None, size=None):
         n, eta = draw_values([self.n, self.eta], point=point, size=size)

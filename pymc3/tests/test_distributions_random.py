@@ -13,7 +13,7 @@ import pymc3 as pm
 from pymc3.distributions.distribution import draw_values
 from .helpers import SeededTest
 from .test_distributions import (
-    build_model, Domain, product, R, Rplus, Rplusbig, Rplusdunif,
+    build_model, Domain, product, R, Rplus, Rplusbig, Runif, Rplusdunif,
     Unit, Nat, NatSmall, I, Simplex, Vector, PdMatrix,
     PdMatrixChol, PdMatrixCholUpper, RealMatrix, RandomPdMatrix
 )
@@ -517,6 +517,13 @@ class TestScalarParameterSamples(SeededTest):
         def ref_rand(size, mu, kappa):
             return st.vonmises.rvs(size=size, loc=mu, kappa=kappa)
         pymc3_random(pm.VonMises, {'mu': R, 'kappa': Rplus}, ref_rand=ref_rand)
+
+    def test_triangular(self):
+        def ref_rand(size, lower, upper, c):
+            scale = upper - lower
+            c_ = (c - lower) / scale
+            return st.triang.rvs(size=size, loc=lower, scale=scale, c=c_)
+        pymc3_random(pm.Triangular, {'lower': Runif, 'upper': Runif + 3, 'c': Runif + 1}, ref_rand=ref_rand)
 
     def test_flat(self):
         with pm.Model():

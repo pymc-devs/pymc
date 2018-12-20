@@ -12,8 +12,6 @@ from scipy.special import expit
 from scipy.interpolate import InterpolatedUnivariateSpline
 import warnings
 
-from theano.scalar import i1, i0
-
 from pymc3.theanof import floatX
 from . import transforms
 from pymc3.util import get_variable_name
@@ -3262,13 +3260,15 @@ class Triangular(BoundedContinuous):
         plt.style.use('seaborn-darkgrid')
         x = np.linspace(-2, 10, 500)
         lowers = [0., -1, 2]
-        cs = [0.5, 0.5, 0.75]
-        uppers = [4., 2, 6]
-        for lower, c_, upper_ in zip(lowers, cs, uppers):
-            pdf = st.triang.pdf(x, loc=lower, c=c_, scale=upper_)
+        cs = [2., 0., 6.5]
+        uppers = [4., 1, 8]
+        for lower, c, upper in zip(lowers, cs, uppers):
+            scale = upper - lower
+            c_ = (c - lower) / scale
+            pdf = st.triang.pdf(x, loc=lower, c=c_, scale=scale)
             plt.plot(x, pdf, label='lower = {}, c = {}, upper = {}'.format(lower,
-                                                                           lower + upper_ * c_,
-                                                                           lower + upper_))
+                                                                           c,
+                                                                           upper))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -3318,7 +3318,9 @@ class Triangular(BoundedContinuous):
         """
         c, lower, upper = draw_values([self.c, self.lower, self.upper],
                                       point=point, size=size)
-        return generate_samples(stats.triang.rvs, c=c-lower, loc=lower, scale=upper-lower,
+        scale = upper - lower
+        c_ = (c - lower) / scale
+        return generate_samples(stats.triang.rvs, c=c_, loc=lower, scale=scale,
                                 size=size, dist_shape=self.shape, random_state=None)
 
     def logp(self, value):
@@ -3385,7 +3387,13 @@ class Gumbel(Continuous):
 
     .. math::
 
-       f(x \mid \mu, \beta) = -\frac{x - \mu}{\beta} - \exp \left(-\frac{x - \mu}{\beta} \right) - \log(\beta)
+       f(x \mid \mu, \beta) = \frac{1}{\beta}e^{-(z + e^{-z})}
+
+    where
+
+    .. math::
+
+        z = \frac{x - \mu}{\beta}.
 
     .. plot::
 
@@ -3501,28 +3509,57 @@ class Rice(PositiveContinuous):
     ========  ==============================================================
     Support   :math:`x \in (0, \infty)`
     Mean      :math:`\sigma {\sqrt  {\pi /2}}\,\,L_{{1/2}}(-\nu ^{2}/2\sigma ^{2})`
-    Variance  :math:`2\sigma ^{2}+\nu ^{2}-{\frac  {\pi \sigma ^{2}}{2}}L_{{1/2}}^{2}
-                        \left({\frac  {-\nu ^{2}}{2\sigma ^{2}}}\right)`
+    Variance  :math:`2\sigma ^{2}+\nu ^{2}-{\frac  {\pi \sigma ^{2}}{2}}L_{{1/2}}^{2}\left({\frac  {-\nu ^{2}}{2\sigma ^{2}}}\right)`
     ========  ==============================================================
 
 
     Parameters
     ----------
     nu : float
-        shape parameter.
+        noncentrality parameter.
     sd : float
-        standard deviation.
+        scale parameter.
+    b : float
+        shape parameter (alternative to nu).
+
+    Notes
+    -----
+    The distribution :math:`\mathrm{Rice}\left(|\nu|,\sigma\right)` is the
+    distribution of :math:`R=\sqrt{X^2+Y^2}` where :math:`X\sim N(\nu \cos{\theta}, \sigma^2)`,
+    :math:`Y\sim N(\nu \sin{\theta}, \sigma^2)` are independent and for any
+    real :math:`\theta`.
+
+    The distribution is defined with either nu or b. 
+    The link between the two parametrizations is given by
+
+    .. math::
+
+       b = \dfrac{\nu}{\sigma}
 
     """
 
-    def __init__(self, nu=None, sd=None, *args, **kwargs):
+    def __init__(self, nu=None, sd=None, b=None, *args, **kwargs):
         super(Rice, self).__init__(*args, **kwargs)
+        nu, b, sd = self.get_nu_b(nu, b, sd)
         self.nu = nu = tt.as_tensor_variable(nu)
         self.sd = sd = tt.as_tensor_variable(sd)
+        self.b = b = tt.as_tensor_variable(b)
         self.mean = sd * np.sqrt(np.pi / 2) * tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (2 * sd**2)))
-                                 * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2))
+                                 * tt.i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * tt.i1(-(-nu**2 / (2 * sd**2)) / 2))
         self.variance = 2 * sd**2 + nu**2 - (np.pi * sd**2 / 2) * (tt.exp((-nu**2 / (2 * sd**2)) / 2) * ((1 - (-nu**2 / (
-            2 * sd**2))) * i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * i1(-(-nu**2 / (2 * sd**2)) / 2)))**2
+            2 * sd**2))) * tt.i0(-(-nu**2 / (2 * sd**2)) / 2) - (-nu**2 / (2 * sd**2)) * tt.i1(-(-nu**2 / (2 * sd**2)) / 2)))**2
+
+    def get_nu_b(self, nu, b, sd):
+        if sd is None:
+            sd = 1.
+        if nu is None and b is not None:
+            nu = b * sd
+            return nu, b, sd
+        elif nu is not None and b is None:
+            b = nu / sd
+            return nu, b, sd
+        raise ValueError('Rice distribution must specify either nu'
+                         ' or b.')
 
     def random(self, point=None, size=None):
         """
@@ -3543,7 +3580,7 @@ class Rice(PositiveContinuous):
         """
         nu, sd = draw_values([self.nu, self.sd],
                              point=point, size=size)
-        return generate_samples(stats.rice.rvs, b=nu, scale=sd, loc=0,
+        return generate_samples(stats.rice.rvs, b=nu / sd, scale=sd, loc=0,
                                 dist_shape=self.shape, size=size)
 
     def logp(self, value):
@@ -3562,8 +3599,9 @@ class Rice(PositiveContinuous):
         """
         nu = self.nu
         sd = self.sd
+        b = self.b
         x = value / sd
-        return bound(tt.log(x * tt.exp((-(x - nu) * (x - nu)) / 2) * i0e(x * nu) / sd),
+        return bound(tt.log(x * tt.exp((-(x - b) * (x - b)) / 2) * i0e(x * b) / sd),
                      sd >= 0,
                      nu >= 0,
                      value > 0,

@@ -6,7 +6,6 @@ import warnings
 
 from six import integer_types
 from joblib import Parallel, delayed
-from tempfile import mkdtemp
 import numpy as np
 import theano.gradient as tg
 
@@ -245,7 +244,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     chains : int
         The number of chains to sample. Running independent chains is important for some
         convergence statistics and can also reveal multiple modes in the posterior. If `None`,
-        then set to either `cores` or 2, whichever is larger. For SMC the default value is 100.
+        then set to either `cores` or 2, whichever is larger. For SMC the number of chains is the
+        number of draws.
     cores : int
         The number of chains to run in parallel. If `None`, set to the number of CPUs in the
         system, but at most 4 (for 'SMC' defaults to 1). Keep in mind that some chains might
@@ -323,7 +323,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     if isinstance(step, pm.step_methods.smc.SMC):
         if step_kwargs is None:
             step_kwargs = {}
-        test_folder = mkdtemp(prefix='SMC_TEST')
         trace = smc.sample_smc(draws=draws,
                                step=step,
                                progressbar=progressbar,
@@ -1124,17 +1123,9 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     if progressbar:
         indices = tqdm(indices, total=samples)
 
-    varnames = [var.name for var in vars]
-
-    # draw once to inspect the shape
-    var_values = list(zip(varnames,
-                          draw_values(vars, point=model.test_point, size=size)))
     ppc_trace = defaultdict(list)
-    for varname, value in var_values:
-        ppc_trace[varname] = np.zeros((samples,) + value.shape, value.dtype)
-
     try:
-        for slc, idx in enumerate(indices):
+        for idx in indices:
             if nchain > 1:
                 chain_idx, point_idx = np.divmod(idx, len_trace)
                 param = trace._straces[chain_idx % nchain].point(point_idx)
@@ -1143,7 +1134,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
 
             values = draw_values(vars, point=param, size=size)
             for k, v in zip(vars, values):
-                ppc_trace[k.name][slc] = v
+                ppc_trace[k.name].append(v)
 
     except KeyboardInterrupt:
         pass
@@ -1152,7 +1143,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
         if progressbar:
             indices.close()
 
-    return ppc_trace
+    return {k: np.asarray(v) for k, v in ppc_trace.items()}
 
 
 def sample_ppc(*args, **kwargs):

@@ -1386,6 +1386,16 @@ class MultiObservedRV(Factor):
         self.distribution = distribution
         self.scaling = _get_scaling(total_size, self.logp_elemwiset.shape, self.logp_elemwiset.ndim)
 
+    # Make hashable by id for draw_values
+    def __hash__(self):
+        return id(self)
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __ne__(self, other):
+        return not self == other
+
 
 def _walk_up_rv(rv):
     """Walk up theano graph to get inputs for deterministic RV."""
