@@ -2,7 +2,6 @@ import collections
 import functools
 import itertools
 import threading
-import six
 import warnings
 
 import numpy as np
@@ -531,7 +530,7 @@ class ValueGradFunction(object):
         return args_joined, theano.clone(cost, replace=replace)
 
 
-class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization)):
+class Model(Context, Factor, WithMemoization, meta=InitContextMeta):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create

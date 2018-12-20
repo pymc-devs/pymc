@@ -7,4 +7,3 @@ joblib<0.13.0
 tqdm>=4.8.4
 six>=1.10.0
 h5py>=2.7.0
-enum34>=1.1.6; python_version < '3.4'

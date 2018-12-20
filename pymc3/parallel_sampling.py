@@ -7,7 +7,6 @@ from collections import namedtuple
 import traceback
 from pymc3.exceptions import SamplingError
 
-import six
 import numpy as np
 
 from . import theanof
@@ -246,7 +245,7 @@ class ProcessAdapter(object):
                 error = ParallelSamplingError(str(old_error), proc.chain, warns)
             else:
                 error = RuntimeError("Chain %s failed." % proc.chain)
-            six.raise_from(error, old_error)
+            raise error from old_error
         elif msg[0] == "writing_done":
             proc._readable = True
             proc._num_samples += 1

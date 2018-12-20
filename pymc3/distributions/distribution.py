@@ -1,4 +1,3 @@
-import six
 import numbers
 
 import numpy as np
@@ -214,7 +213,7 @@ class DensityDist(Distribution):
                             "Define a custom random method and pass it as kwarg random")
 
 
-class _DrawValuesContext(six.with_metaclass(InitContextMeta, Context)):
+class _DrawValuesContext(Context, meta=InitContextMeta):
     """ A context manager class used while drawing values with draw_values
     """
 
@@ -222,11 +221,11 @@ class _DrawValuesContext(six.with_metaclass(InitContextMeta, Context)):
         # resolves the parent instance
         instance = super(_DrawValuesContext, cls).__new__(cls)
         if cls.get_contexts():
-            potencial_parent = cls.get_contexts()[-1]
+            potential_parent = cls.get_contexts()[-1]
             # We have to make sure that the context is a _DrawValuesContext
             # and not a Model
-            if isinstance(potencial_parent, cls):
-                instance._parent = potencial_parent
+            if isinstance(potential_parent, cls):
+                instance._parent = potential_parent
             else:
                 instance._parent = None
         else:

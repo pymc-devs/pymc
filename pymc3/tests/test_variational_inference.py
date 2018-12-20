@@ -1,6 +1,6 @@
 import pytest
-import six
 import functools
+import io
 import operator
 import numpy as np
 from theano import theano, tensor as tt
@@ -694,7 +694,7 @@ def test_remove_scan_op():
     with pm.Model():
         pm.Normal('n', 0, 1)
         inference = ADVI()
-        buff = six.StringIO()
+        buff = io.StringIO()
         inference.run_profiling(n=10).summary(buff)
         assert 'theano.scan_module.scan_op.Scan' not in buff.getvalue()
         buff.close()

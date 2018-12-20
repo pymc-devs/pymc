@@ -1,7 +1,5 @@
 import sys
 
-import six
-
 __all__ = ['bool_types', 'int_types', 'float_types', 'complex_types', 'continuous_types',
            'discrete_types', 'typefilter', 'isgenerator']
 
@@ -34,5 +32,4 @@ def typefilter(vars, types):
 
 
 def isgenerator(obj):
-    return ((hasattr(obj, '__next__') and six.PY3) or
-            (hasattr(obj, 'next') and six.PY2))
+    return hasattr(obj, '__next__')
