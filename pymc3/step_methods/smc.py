@@ -17,8 +17,6 @@ from ..backends.base import MultiTrace
 
 __all__ = ["SMC", "sample_smc"]
 
-proposal_dists = {"MultivariateNormal": MultivariateNormalProposal}
-
 
 class SMC:
     """
@@ -27,20 +25,24 @@ class SMC:
     Parameters
     ----------
     n_steps : int
-        The number of steps of a Markov Chain. If `tune == True` `n_steps` will be used for
-        the first stage, and the number of steps of the other states will be determined
+        The number of steps of a Markov Chain. If `tune_steps == True` `n_steps` will be used for
+        the first stage and the number of steps of the other stages will be determined
         automatically based on the acceptance rate and `p_acc_rate`.
+        The number of steps will never be larger than `n_steps`.
     scaling : float
         Factor applied to the proposal distribution i.e. the step size of the Markov Chain. Only
-        works if `tune == False` otherwise is determined automatically
+        works if `tune_scaling == False` otherwise is determined automatically.
     p_acc_rate : float
-        Probability of not accepting a Markov Chain proposal. Used to compute `n_steps` when
-        `tune == True`. It should be between 0 and 1.
-    proposal_name :
-        Type of proposal distribution. Currently the only valid option is `MultivariateNormal`.
+        Used to compute `n_steps` when `tune_steps == True`. The higher the value of `p_acc_rate`
+        the higher the number of steps computed automatically. Defaults to 0.99. It should be
+        between 0 and 1.
+    tune_scaling : bool
+        Whether to compute the scaling automatically or not. Defaults to True
+    tune_steps : bool
+        Whether to compute the number of steps automatically or not. Defaults to True
     threshold : float
         Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
-        the higher the value of threshold the higher the number of stages. Defaults to 0.5.
+        the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
         It should be between 0 and 1.
     model : :class:`pymc3.Model`
         Optional model for sampling step. Defaults to None (taken from context).
@@ -63,17 +65,18 @@ class SMC:
         self,
         n_steps=25,
         scaling=1.0,
-        p_acc_rate=0.01,
-        tune=True,
-        proposal_name="MultivariateNormal",
+        p_acc_rate=0.99,
+        tune_scaling=True,
+        tune_steps=True,
         threshold=0.5,
     ):
 
         self.n_steps = n_steps
+        self.max_steps = n_steps
         self.scaling = scaling
-        self.p_acc_rate = p_acc_rate
-        self.tune = tune
-        self.proposal = proposal_dists[proposal_name]
+        self.p_acc_rate = 1 - p_acc_rate
+        self.tune_scaling = tune_scaling
+        self.tune_steps = tune_steps
         self.threshold = threshold
 
 
@@ -104,6 +107,7 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
     beta = 0
     stage = 0
     acc_rate = 1
+    #max_steps = step.n_steps
     model.marginal_likelihood = 1
     variables = inputvars(model.vars)
     discrete = np.concatenate([[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables])
@@ -128,31 +132,28 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
 
         # compute proposal distribution based on weights
         covariance = _calc_covariance(posterior, weights)
-        proposal = step.proposal(covariance)
+        proposal = MultivariateNormalProposal(covariance)
 
         # compute scaling and number of Markov chains steps (optional), based on previous
         # acceptance rate
-        if step.tune and stage > 0:
-            if acc_rate == 0:
-                acc_rate = 1.0 / step.n_steps
-            step.scaling = _tune(acc_rate)
-            step.n_steps = 1 + int(np.log(step.p_acc_rate) / np.log(1 - acc_rate))
+        if (step.tune_scaling or step.tune_steps) and stage > 0:
+            if step.tune_scaling:
+                step.scaling = _tune(acc_rate)
+            if step.tune_steps:
+                acc_rate = max(1 / proposed, acc_rate)
+                step.n_steps = min(step.max_steps, 1 + int(np.log(step.p_acc_rate) / np.log(1 - acc_rate)))
 
-        pm._log.info(
-            "Stage: {:d} Beta: {:f} Steps: {:d} Acc: {:f}".format(
-                stage, beta, step.n_steps, acc_rate
-            )
-        )
-        # Apply Metropolis kernel (mutation)
-        proposed = 0.0
-        accepted = 0.0
+
+        pm._log.info("Stage: {:d} Beta: {:f} Steps: {:d}".format(stage, beta, step.n_steps, acc_rate))
+        proposed = draws * step.n_steps
+        accepted = 0
         priors = np.array([prior_logp(sample) for sample in posterior]).squeeze()
         tempered_post = priors + likelihoods * beta
         for draw in tqdm(range(draws), disable=not progressbar):
             old_tempered_post = tempered_post[draw]
             q_old = posterior[draw]
             deltas = np.squeeze(proposal(step.n_steps) * step.scaling)
-            for n_step in range(0, step.n_steps):
+            for n_step in range(step.n_steps):
                 delta = deltas[n_step]
 
                 if any_discrete:
@@ -170,10 +171,9 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
 
                 q_old, accept = metrop_select(new_tempered_post - old_tempered_post, q_new, q_old)
                 if accept:
-                    accepted += accept
+                    accepted += 1
                     posterior[draw] = q_old
                     old_tempered_post = new_tempered_post
-                proposed += 1.0
 
         acc_rate = accepted / proposed
         stage += 1
