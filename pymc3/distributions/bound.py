@@ -155,7 +155,7 @@ class _ContinuousBounded(_Bounded, Continuous):
             transform=transform, default=default, *args, **kwargs)
 
 
-class Bound(object):
+class Bound:
     R"""
     Create a Bound variable object that can be applied to create
     a new upper, lower, or upper and lower bounded distribution.

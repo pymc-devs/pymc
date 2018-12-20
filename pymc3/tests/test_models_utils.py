@@ -5,7 +5,7 @@ from pymc3.glm import utils
 import pytest
 
 
-class TestUtils(object):
+class TestUtils:
     def setup_method(self):
         self.data = pd.DataFrame(dict(a=[1, 2, 3], b=[4, 5, 6]))
 

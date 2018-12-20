@@ -21,7 +21,7 @@ __all__ = ['Constant',
            'Kron']
 
 
-class Covariance(object):
+class Covariance:
     R"""
     Base class for all kernels/covariance functions.
 

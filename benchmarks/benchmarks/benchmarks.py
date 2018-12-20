@@ -58,7 +58,7 @@ def mixture_model(random_seed=1234):
     return model, start
 
 
-class OverheadSuite(object):
+class OverheadSuite:
     """
     Just tests how long sampling from a normal distribution takes for various
     samplers
@@ -77,7 +77,7 @@ class OverheadSuite(object):
                       progressbar=False, compute_convergence_checks=False)
 
 
-class ExampleSuite(object):
+class ExampleSuite:
     """Implements examples to keep up with benchmarking them."""
     timeout = 360.0  # give it a few minutes
     timer = timeit.default_timer
@@ -128,7 +128,7 @@ class ExampleSuite(object):
                       progressbar=False, compute_convergence_checks=False)
 
 
-class NUTSInitSuite(object):
+class NUTSInitSuite:
     """Tests initializations for NUTS sampler on models
     """
     timeout = 360.0
@@ -173,7 +173,7 @@ NUTSInitSuite.track_glm_hierarchical_ess.unit = 'Effective samples per second'
 NUTSInitSuite.track_marginal_mixture_model_ess.unit = 'Effective samples per second'
 
 
-class CompareMetropolisNUTSSuite(object):
+class CompareMetropolisNUTSSuite:
     timeout = 360.0
     # None will be the "sensible default", and include initialization, but should be fastest
     params = (None, pm.NUTS, pm.Metropolis)

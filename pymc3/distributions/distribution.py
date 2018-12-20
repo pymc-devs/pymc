@@ -15,11 +15,11 @@ __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
            'NoDistribution', 'TensorType', 'draw_values', 'generate_samples']
 
 
-class _Unpickling(object):
+class _Unpickling:
     pass
 
 
-class Distribution(object):
+class Distribution:
     """Statistical distribution"""
     def __new__(cls, name, *args, **kwargs):
         if name is _Unpickling:
@@ -213,7 +213,7 @@ class DensityDist(Distribution):
                             "Define a custom random method and pass it as kwarg random")
 
 
-class _DrawValuesContext(Context, meta=InitContextMeta):
+class _DrawValuesContext(Context, metaclass=InitContextMeta):
     """ A context manager class used while drawing values with draw_values
     """
 

@@ -78,7 +78,7 @@ def load_trace(directory, model=None):
     return base.MultiTrace(straces)
 
 
-class SerializeNDArray(object):
+class SerializeNDArray:
     metadata_file = 'metadata.json'
     samples_file = 'samples.npz'
 

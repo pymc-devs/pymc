@@ -69,7 +69,7 @@ def floatX(X):
 
 def smartfloatX(x):
     """
-    Convert non int types to floatX 
+    Convert non int types to floatX
     """
     if str(x.dtype).startswith('float'):
         x = floatX(x)
@@ -254,7 +254,7 @@ def reshape_t(x, shape):
         return x[0]
 
 
-class CallableTensor(object):
+class CallableTensor:
     """Turns a symbolic variable with one input into a function that returns symbolic arguments
     with the one variable replaced with the input.
     """

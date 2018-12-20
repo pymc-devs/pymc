@@ -10,7 +10,7 @@ import pytest
 import theano
 
 
-class ModelBackendSetupTestCase(object):
+class ModelBackendSetupTestCase:
     """Set up a backend trace.
 
     Provides the attributes
@@ -69,7 +69,7 @@ class ModelBackendSetupTestCase(object):
             remove_file_or_directory(self.name)
 
 
-class StatsTestCase(object):
+class StatsTestCase:
     """Test for init and setup of backups.
 
     Provides the attributes
@@ -105,7 +105,7 @@ class StatsTestCase(object):
             remove_file_or_directory(self.name)
 
 
-class ModelBackendSampledTestCase(object):
+class ModelBackendSampledTestCase:
     """Setup and sample a backend trace.
 
     Provides the attributes

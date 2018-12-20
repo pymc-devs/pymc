@@ -5,7 +5,7 @@ import pytest
 import theano
 
 
-class TestTextSampling(object):
+class TestTextSampling:
     name = 'text-db'
 
     def test_supports_sampler_stats(self):

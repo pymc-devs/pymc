@@ -20,7 +20,7 @@ class BackendError(Exception):
     pass
 
 
-class BaseTrace(object):
+class BaseTrace:
     """Base trace object
 
     Parameters
@@ -218,7 +218,7 @@ class BaseTrace(object):
             return set()
 
 
-class MultiTrace(object):
+class MultiTrace:
     """Main interface for accessing values from MCMC results
 
     The core method to select values is `get_values`. The method

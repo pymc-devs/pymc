@@ -17,7 +17,7 @@ from ..math import (cartesian, kron_dot, kron_diag,
 __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse', 'LatentKron', 'MarginalKron']
 
 
-class Base(object):
+class Base:
     R"""
     Base class.
     """

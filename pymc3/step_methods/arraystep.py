@@ -25,7 +25,7 @@ class Competence(IntEnum):
     IDEAL = 3
 
 
-class BlockedStep(object):
+class BlockedStep:
 
     generates_stats = False
 

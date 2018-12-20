@@ -44,7 +44,7 @@ def test_draw_value():
     err.match('Unexpected type')
 
 
-class TestDrawValues(object):
+class TestDrawValues:
     def test_empty(self):
         assert draw_values([]) == []
 
@@ -86,7 +86,7 @@ class TestDrawValues(object):
         val2 = draw_values([a], point={'sd': np.array([2., 3.])})[0]
         val3 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
         val4 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
-        
+
         assert all([np.all(val1 != val2), np.all(val1 != val3),
                     np.all(val1 != val4), np.all(val2 != val3),
                     np.all(val2 != val4), np.all(val3 != val4)])

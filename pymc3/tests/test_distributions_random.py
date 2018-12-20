@@ -116,7 +116,7 @@ class TestDrawValues(SeededTest):
         assert isinstance(tau, np.ndarray)
 
 
-class BaseTestCases(object):
+class BaseTestCases:
     class BaseTestCase(SeededTest):
         shape = 5
 

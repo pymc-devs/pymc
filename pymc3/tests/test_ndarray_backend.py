@@ -139,7 +139,7 @@ class TestMultiTrace_add_remove_values(bf.ModelBackendSampledTestCase):
         assert name not in mtrace.varnames
 
 
-class TestSqueezeCat(object):
+class TestSqueezeCat:
 
     def setup_method(self):
         self.x = np.arange(10)
@@ -170,7 +170,7 @@ class TestSqueezeCat(object):
         result = base._squeeze_cat([self.x, self.y], True, True)
         npt.assert_equal(result, expected)
 
-class TestSaveLoad(object):
+class TestSaveLoad:
     @staticmethod
     def model():
         with pm.Model() as model:

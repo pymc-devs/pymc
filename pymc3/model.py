@@ -28,7 +28,7 @@ __all__ = [
 FlatView = collections.namedtuple('FlatView', 'input, replacements, view')
 
 
-class InstanceMethod(object):
+class InstanceMethod:
     """Class for hiding references to instance methods so they can be pickled.
 
     >>> self.method = InstanceMethod(some_object, 'method_name')
@@ -146,7 +146,7 @@ def _get_named_nodes_and_relations(graph, parent, leaf_nodes,
     return leaf_nodes, node_parents, node_children
 
 
-class Context(object):
+class Context:
     """Functionality for objects that put themselves in a context using
     the `with` statement.
     """
@@ -191,7 +191,7 @@ def modelcontext(model):
     return model
 
 
-class Factor(object):
+class Factor:
     """Common functionality for objects with a log probability density
     associated with them.
     """
@@ -363,7 +363,7 @@ class treedict(dict):
             return dict.__contains__(self, item)
 
 
-class ValueGradFunction(object):
+class ValueGradFunction:
     """Create a theano function that computes a value and its gradient.
 
     Parameters
@@ -530,7 +530,7 @@ class ValueGradFunction(object):
         return args_joined, theano.clone(cost, replace=replace)
 
 
-class Model(Context, Factor, WithMemoization, meta=InitContextMeta):
+class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
@@ -1097,7 +1097,7 @@ def Point(*args, **kwargs):
                 if str(k) in map(str, model.vars))
 
 
-class FastPointFunc(object):
+class FastPointFunc:
     """Wraps so a function so it takes a dict of arguments instead of arguments."""
 
     def __init__(self, f):
@@ -1107,7 +1107,7 @@ class FastPointFunc(object):
         return self.f(**state)
 
 
-class LoosePointFunc(object):
+class LoosePointFunc:
     """Wraps so a function so it takes a dict of arguments instead of arguments
     but can still take arguments."""
 

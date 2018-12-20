@@ -6,7 +6,7 @@ from ..theanof import set_tt_rng, tt_rng
 import theano
 
 
-class SeededTest(object):
+class SeededTest:
     random_seed = 20160911
 
     @classmethod
@@ -49,7 +49,7 @@ class LoggingHandler(BufferingHandler):
         return result
 
 
-class Matcher(object):
+class Matcher:
 
     _partial_matches = ('msg', 'message')
 

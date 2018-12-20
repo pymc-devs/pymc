@@ -34,7 +34,7 @@ class DocstringModel(pm.Model):
         Potential('p1', tt.constant(1))
 
 
-class TestBaseModel(object):
+class TestBaseModel:
     def test_setattr_properly_works(self):
         with pm.Model() as model:
             pm.Normal('v1')
@@ -77,7 +77,7 @@ class TestBaseModel(object):
         assert m['one_more_d'] is model['one_more_d']
 
 
-class TestNested(object):
+class TestNested:
     def test_nest_context_works(self):
         with pm.Model() as m:
             new = NewModel()
@@ -123,7 +123,7 @@ class TestNested(object):
                 assert model is sub.root
 
 
-class TestObserved(object):
+class TestObserved:
     def test_observed_rv_fail(self):
         with pytest.raises(TypeError):
             with pm.Model():
@@ -141,7 +141,7 @@ class TestObserved(object):
         assert x2.type == X.type
 
 
-class TestTheanoConfig(object):
+class TestTheanoConfig:
     def test_set_testval_raise(self):
         with theano.configparser.change_flags(compute_test_value='off'):
             with pm.Model():

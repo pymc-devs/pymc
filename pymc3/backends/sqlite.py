@@ -270,7 +270,7 @@ class SQLite(base.BaseTrace):
         return var_values
 
 
-class _SQLiteDB(object):
+class _SQLiteDB:
 
     def __init__(self, name):
         self.name = name

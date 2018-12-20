@@ -209,7 +209,7 @@ Subtree = namedtuple(
     "left, right, p_sum, proposal, log_size, accept_sum, n_proposals")
 
 
-class _Tree(object):
+class _Tree:
     def __init__(self, ndim, integrator, start, step_size, Emax):
         """Binary tree from the NUTS algorithm.
 

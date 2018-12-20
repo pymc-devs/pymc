@@ -14,7 +14,7 @@ __all__ = ['transform', 'stick_breaking', 'logodds', 'interval', 'log_exp_m1',
            't_stick_breaking']
 
 
-class Transform(object):
+class Transform:
     """A transformation of a random variable from one space into another.
 
     Attributes

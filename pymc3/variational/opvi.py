@@ -144,7 +144,7 @@ def _warn_not_used(smth, where):
     warnings.warn('`%s` is not used for %s and ignored' % (smth, where))
 
 
-class ObjectiveFunction(object):
+class ObjectiveFunction:
     """Helper class for construction loss and updates for variational inference
 
     Parameters
@@ -358,7 +358,7 @@ class ObjectiveFunction(object):
         return m * self.op.T(a)
 
 
-class Operator(object):
+class Operator:
     R"""**Base class for Operator**
 
     Parameters
@@ -465,7 +465,7 @@ def collect_shared_to_list(params):
             'Unknown type %s for %r, need dict or None')
 
 
-class TestFunction(object):
+class TestFunction:
     def __init__(self):
         self._inited = False
         self.shared_params = None

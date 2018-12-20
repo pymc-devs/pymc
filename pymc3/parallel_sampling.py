@@ -163,7 +163,7 @@ class _Process(multiprocessing.Process):
             return []
 
 
-class ProcessAdapter(object):
+class ProcessAdapter:
     """Control a Chain process from the main thread."""
 
     def __init__(self, draws, tune, step_method, chain, seed, start):
@@ -284,7 +284,7 @@ Draw = namedtuple(
 )
 
 
-class ParallelSampler(object):
+class ParallelSampler:
     def __init__(
         self,
         draws,

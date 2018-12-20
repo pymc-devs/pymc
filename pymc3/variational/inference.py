@@ -32,7 +32,7 @@ __all__ = [
 State = collections.namedtuple('State', 'i,step,callbacks,score')
 
 
-class Inference(object):
+class Inference:
     R"""**Base class for Variational Inference**
 
     Communicates Operator, Approximation and Test Function to build Objective Function

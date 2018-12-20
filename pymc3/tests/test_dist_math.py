@@ -176,7 +176,7 @@ class TestMvNormalLogp():
         tt.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
 
 
-class TestSplineWrapper(object):
+class TestSplineWrapper:
     @theano.configparser.change_flags(compute_test_value="ignore")
     def test_grad(self):
         x = np.linspace(0, 1, 100)
@@ -195,7 +195,7 @@ class TestSplineWrapper(object):
             tt.grad(g_x, [x_var])
 
 
-class TestI0e(object):
+class TestI0e:
     @theano.configparser.change_flags(compute_test_value="ignore")
     def test_grad(self):
         utt.verify_grad(i0e, [0.5])

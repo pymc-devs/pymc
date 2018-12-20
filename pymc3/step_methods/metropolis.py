@@ -16,7 +16,7 @@ __all__ = ['Metropolis', 'DEMetropolis', 'BinaryMetropolis', 'BinaryGibbsMetropo
 # Available proposal distributions for Metropolis
 
 
-class Proposal(object):
+class Proposal:
     def __init__(self, s):
         self.s = s
 

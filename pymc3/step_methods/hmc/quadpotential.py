@@ -72,7 +72,7 @@ class PositiveDefiniteError(ValueError):
                 % (self.msg, self.idx))
 
 
-class QuadPotential(object):
+class QuadPotential:
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
         raise NotImplementedError('Abstract method')
@@ -286,7 +286,7 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
             self._grads2[:] = 1
 
 
-class _WeightedVariance(object):
+class _WeightedVariance:
     """Online algorithm for computing mean of variance."""
 
     def __init__(self, nelem, initial_mean=None, initial_variance=None,

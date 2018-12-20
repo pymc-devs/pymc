@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class Formula(object):
+class Formula:
     """
     Helpful class to use string like formulas with
     __call__ syntax similar to Flow.__init__
@@ -263,7 +263,7 @@ flow_for_params = AbstractFlow.flow_for_params
 flow_for_short_name = AbstractFlow.flow_for_short_name
 
 
-class FlowFn(object):
+class FlowFn:
     @staticmethod
     def fn(*args):
         raise NotImplementedError

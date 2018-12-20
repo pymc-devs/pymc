@@ -11,7 +11,7 @@ from pymc3.theanof import change_flags
 import numpy as np
 
 
-class TestType(object):
+class TestType:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
 
     def setup_method(self):

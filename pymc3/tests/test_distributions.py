@@ -55,7 +55,7 @@ def get_lkj_cases():
 LKJ_CASES = get_lkj_cases()
 
 
-class Domain(object):
+class Domain:
     def __init__(self, vals, dtype=None, edges=None, shape=None):
         avals = array(vals, dtype=dtype)
         if dtype is None and not str(avals.dtype).startswith('int'):
@@ -204,7 +204,7 @@ def beta_mu_sd(value, mu, sd):
         return -inf
 
 
-class ProductDomain(object):
+class ProductDomain:
     def __init__(self, domains):
         self.vals = list(itertools.product(*[d.vals for d in domains]))
         self.shape = (len(domains),) + domains[0].shape
@@ -349,14 +349,14 @@ def orderedlogistic_logpdf(value, eta, cutpoints):
     p = invlogit(eta - c[value]) - invlogit(eta - c[value + 1])
     return np.log(p)
 
-class Simplex(object):
+class Simplex:
     def __init__(self, n):
         self.vals = list(simplex_values(n))
         self.shape = (n,)
         self.dtype = Unit.dtype
 
 
-class MultiSimplex(object):
+class MultiSimplex:
     def __init__(self, n_dependent, n_independent):
         self.vals = []
         for simplex_value in itertools.product(simplex_values(n_dependent), repeat=n_independent):
@@ -1276,7 +1276,7 @@ def test_bound():
         BoundPoisson(name="y", mu=1)
 
 
-class TestLatex(object):
+class TestLatex:
 
     def setup_class(self):
         # True parameter values

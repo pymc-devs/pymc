@@ -666,7 +666,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
             strace._add_warnings(warns)
 
 
-class PopulationStepper(object):
+class PopulationStepper:
     def __init__(self, steppers, parallelize):
         """Tries to use multiprocessing to parallelize chains.
 
