@@ -130,9 +130,9 @@ class NoDistribution(Distribution):
 
     def __init__(self, shape, dtype, testval=None, defaults=(),
                  transform=None, parent_dist=None, *args, **kwargs):
-        super(NoDistribution, self).__init__(shape=shape, dtype=dtype,
-                                             testval=testval, defaults=defaults,
-                                             *args, **kwargs)
+        super().__init__(shape=shape, dtype=dtype,
+                         testval=testval, defaults=defaults,
+                         *args, **kwargs)
         self.parent_dist = parent_dist
 
     def __getattr__(self, name):
@@ -164,8 +164,7 @@ class Discrete(Distribution):
             raise ValueError("Transformations for discrete distributions "
                              "are not allowed.")
 
-        super(Discrete, self).__init__(
-            shape, dtype, defaults=defaults, *args, **kwargs)
+        super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
 
 class Continuous(Distribution):
@@ -175,8 +174,7 @@ class Continuous(Distribution):
                  *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
-        super(Continuous, self).__init__(
-            shape, dtype, defaults=defaults, *args, **kwargs)
+        super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
 
 class DensityDist(Distribution):
@@ -200,8 +198,7 @@ class DensityDist(Distribution):
     def __init__(self, logp, shape=(), dtype=None, testval=0, random=None, *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
-        super(DensityDist, self).__init__(
-            shape, dtype, testval, *args, **kwargs)
+        super().__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
         self.rand = random
 
@@ -219,7 +216,7 @@ class _DrawValuesContext(Context, metaclass=InitContextMeta):
 
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
-        instance = super(_DrawValuesContext, cls).__new__(cls)
+        instance = super().__new__(cls)
         if cls.get_contexts():
             potential_parent = cls.get_contexts()[-1]
             # We have to make sure that the context is a _DrawValuesContext

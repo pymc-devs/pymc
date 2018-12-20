@@ -121,7 +121,7 @@ class BaseTestCases:
         shape = 5
 
         def setup_method(self, *args, **kwargs):
-            super(BaseTestCases.BaseTestCase, self).setup_method(*args, **kwargs)
+            super().setup_method(*args, **kwargs)
             self.model = pm.Model()
 
         def get_random_variable(self, shape, with_vector_params=False, name=None):
@@ -399,7 +399,7 @@ class TestCategorical(BaseTestCases.BaseTestCase):
     params = {'p': np.ones(BaseTestCases.BaseTestCase.shape)}
 
     def get_random_variable(self, shape, with_vector_params=False, **kwargs):  # don't transform categories
-        return super(TestCategorical, self).get_random_variable(shape, with_vector_params=False, **kwargs)
+        return super().get_random_variable(shape, with_vector_params=False, **kwargs)
 
     def test_probability_vector_shape(self):
         """Check that if a 2d array of probabilities are passed to categorical correct shape is returned"""
@@ -746,11 +746,7 @@ class TestScalarParameterSamples(SeededTest):
                     def __init__(self, **kwargs):
                         x_points = np.linspace(mu - 5 * sd, mu + 5 * sd, 100)
                         pdf_points = st.norm.pdf(x_points, loc=mu, scale=sd)
-                        super(TestedInterpolated, self).__init__(
-                            x_points=x_points,
-                            pdf_points=pdf_points,
-                            **kwargs
-                        )
+                        super().__init__(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
                 pymc3_random(TestedInterpolated, {}, ref_rand=ref_rand)
 
@@ -780,10 +776,7 @@ class TestScalarParameterSamples(SeededTest):
 
                 def __init__(self, **kwargs):
                     kwargs.pop('shape', None)
-                    super(TestedLKJCorr, self).__init__(
-                            n=n,
-                            **kwargs
-                    )
+                    super().__init__(n=n, **kwargs)
 
             pymc3_random(TestedLKJCorr,
                      {'eta': Domain([1., 10., 100.])},

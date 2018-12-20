@@ -1194,11 +1194,7 @@ class TestMatchesScipy(SeededTest):
                     def __init__(self, **kwargs):
                         x_points = np.linspace(xmin, xmax, 100000)
                         pdf_points = sp.norm.pdf(x_points, loc=mu, scale=sd)
-                        super(TestedInterpolated, self).__init__(
-                            x_points=x_points,
-                            pdf_points=pdf_points,
-                            **kwargs
-                        )
+                        super().__init__(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
                 def ref_pdf(value):
                     return np.where(

@@ -26,7 +26,7 @@ class _Bounded(Distribution):
             defaults = ('_default',)
             self._default = default
 
-        super(_Bounded, self).__init__(
+        super().__init__(
             shape=self._wrapped.shape,
             dtype=self._wrapped.dtype,
             testval=self._wrapped.testval,
@@ -102,7 +102,7 @@ class _DiscreteBounded(_Bounded, Discrete):
         if lower is not None:
             default = lower + 1
 
-        super(_DiscreteBounded, self).__init__(
+        super().__init__(
             distribution=distribution, lower=lower, upper=upper,
             default=default, *args, **kwargs)
 
@@ -150,7 +150,7 @@ class _ContinuousBounded(_Bounded, Continuous):
         else:
             default = None
 
-        super(_ContinuousBounded, self).__init__(
+        super().__init__(
             distribution=distribution, lower=lower, upper=upper,
             transform=transform, default=default, *args, **kwargs)
 

@@ -68,7 +68,7 @@ def test_alltrue_shape():
 
 class MultinomialA(Discrete):
     def __init__(self, n, p, *args, **kwargs):
-        super(MultinomialA, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.n = n
         self.p = p
@@ -87,7 +87,7 @@ class MultinomialA(Discrete):
 
 class MultinomialB(Discrete):
     def __init__(self, n, p, *args, **kwargs):
-        super(MultinomialB, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.n = n
         self.p = p

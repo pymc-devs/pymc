@@ -71,7 +71,7 @@ class TestTextDumpFunction(bf.BackendEqualityTestCase):
 
     @classmethod
     def setup_class(cls):
-        super(TestTextDumpFunction, cls).setup_class()
+        super().setup_class()
         text.dump(cls.name1, cls.mtrace1)
         with cls.model:
             cls.mtrace1 = text.load(cls.name1)

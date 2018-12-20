@@ -33,7 +33,7 @@ def get_data(filename):
 
 class GenTensorVariable(tt.TensorVariable):
     def __init__(self, op, type, name=None):
-        super(GenTensorVariable, self).__init__(type=type, name=name)
+        super().__init__(type=type, name=name)
         self.op = op
 
     def set_gen(self, gen):
@@ -249,8 +249,7 @@ class Minibatch(tt.TensorVariable):
             broadcastable = (False, ) * minibatch.ndim
         minibatch = tt.patternbroadcast(minibatch, broadcastable)
         self.minibatch = minibatch
-        super(Minibatch, self).__init__(
-            self.minibatch.type, None, None, name=name)
+        super().__init__(self.minibatch.type, None, None, name=name)
         theano.Apply(
             theano.compile.view_op,
             inputs=[self.minibatch], outputs=[self])

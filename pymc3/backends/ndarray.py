@@ -157,7 +157,7 @@ class NDArray(base.BaseTrace):
     supports_sampler_stats = True
 
     def __init__(self, name=None, model=None, vars=None, test_point=None):
-        super(NDArray, self).__init__(name, model, vars, test_point)
+        super().__init__(name, model, vars, test_point)
         self.draw_idx = 0
         self.draws = None
         self.samples = {}
@@ -178,7 +178,7 @@ class NDArray(base.BaseTrace):
             Names and dtypes of the variables that are
             exported by the samplers.
         """
-        super(NDArray, self).setup(draws, chain, sampler_vars)
+        super().setup(draws, chain, sampler_vars)
 
         self.chain = chain
         if self.samples:  # Concatenate new array if chain is already present.

@@ -167,7 +167,7 @@ class BaseStochasticGradient(ArrayStepShared):
             self.updates.update(updates)
 
         self._initialize_values()
-        super(BaseStochasticGradient, self).__init__(vars, shared)
+        super().__init__(vars, shared)
 
     def _initialize_values(self):
         """Initializes the parameters for the stochastic gradient minibatch
@@ -212,9 +212,9 @@ class SGFS(BaseStochasticGradient):
     B : np.array
         the pre-conditioner matrix for the fisher scoring step
     step_size_decay : int
-        Step size decay rate. Every `step_size_decay` iteration the step size reduce 
+        Step size decay rate. Every `step_size_decay` iteration the step size reduce
         to the half of the previous step size
- 
+
     References
     ----------
     -   Bayesian Posterior Sampling via Stochastic Gradient Fisher Scoring
@@ -234,7 +234,7 @@ class SGFS(BaseStochasticGradient):
         """
         self.B = B
         self.step_size_decay = step_size_decay
-        super(SGFS, self).__init__(vars, **kwargs)
+        super().__init__(vars, **kwargs)
 
     def _initialize_values(self):
         # Init avg_I
@@ -317,16 +317,16 @@ class SGFS(BaseStochasticGradient):
 class CSG(BaseStochasticGradient):
     R"""
     CSG: ConstantStochasticGradient
-    
+
     It is an approximate stochastic variational inference algorithm
     while SGFS and many other MCMC techniques provably
-    converge towards the exact posterior. The referenced paper 
+    converge towards the exact posterior. The referenced paper
     discusses a proof for the optimal preconditioning matrix
     based on variational inference, so there is no parameter tuning required
     like in the case of 'B' matrix used for preconditioning in SGFS.
-    Take a look at this example notebook 
+    Take a look at this example notebook
     https://github.com/pymc-devs/pymc3/tree/master/docs/source/notebooks/constant_stochastic_gradient.ipynb
-     
+
     Parameters
     ----------
     vars : list
@@ -343,11 +343,11 @@ class CSG(BaseStochasticGradient):
         """
         Parameters
         ----------
-        vars : list 
+        vars : list
             Theano variables, default continuous vars
         kwargs: passed to BaseHMC
         """
-        super(CSG, self).__init__(vars, **kwargs)
+        super().__init__(vars, **kwargs)
 
     def _initialize_values(self):
         # Init avg_C: Noise Covariance Moving Average
@@ -380,7 +380,7 @@ class CSG(BaseStochasticGradient):
         gt_diff = (self.dlogp_elemwise - self.dlogp_elemwise.mean(axis=0))
         V = (1. / (S - 1)) * theano.dot(gt_diff.T, gt_diff)
         C_t = (1. - 1. / t) * avg_C + (1. / t) * V
-        # BB^T = C 
+        # BB^T = C
         B = tt.switch(t < 0, tt.eye(q_size), tt.slinalg.cholesky(C_t))
         # Optimal Preconditioning Matrix
         H = (2. * S / N) * tt.nlinalg.matrix_inverse(C_t)
@@ -395,7 +395,7 @@ class CSG(BaseStochasticGradient):
         # step + noise term
         dq = (step + noise_term).flatten()
 
-        # update time and avg_C 
+        # update time and avg_C
         updates.update({avg_C: C_t, t: t + 1})
 
         f = theano.function(

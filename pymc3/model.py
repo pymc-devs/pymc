@@ -196,7 +196,7 @@ class Factor:
     associated with them.
     """
     def __init__(self, *args, **kwargs):
-        super(Factor, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @property
     def logp(self):
@@ -304,7 +304,7 @@ class treelist(list):
     Extending treelist you will also extend its parent
     """
     def __init__(self, iterable=(), parent=None):
-        super(treelist, self).__init__(iterable)
+        super().__init__(iterable)
         assert isinstance(parent, list) or parent is None
         self.parent = parent
         if self.parent is not None:
@@ -342,7 +342,7 @@ class treedict(dict):
     Extending treedict you will also extend its parent
     """
     def __init__(self, iterable=(), parent=None, **kwargs):
-        super(treedict, self).__init__(iterable, **kwargs)
+        super().__init__(iterable, **kwargs)
         assert isinstance(parent, dict) or parent is None
         self.parent = parent
         if self.parent is not None:
@@ -568,7 +568,7 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
                 # 2) call super's init first, passing model and name
                 # to it name will be prefix for all variables here if
                 # no name specified for model there will be no prefix
-                super(CustomModel, self).__init__(name, model)
+                super().__init__(name, model)
                 # now you are in the context of instance,
                 # `modelcontext` will return self you can define
                 # variables in several ways note, that all variables
@@ -620,7 +620,7 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
     """
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
-        instance = super(Model, cls).__new__(cls)
+        instance = super().__new__(cls)
         if kwargs.get('model') is not None:
             instance._parent = kwargs.get('model')
         elif cls.get_contexts():
@@ -1197,7 +1197,7 @@ class FreeRV(Factor, TensorVariable):
         """
         if type is None:
             type = distribution.type
-        super(FreeRV, self).__init__(type, owner, index, name)
+        super().__init__(type, owner, index, name)
 
         if distribution is not None:
             self.dshape = tuple(distribution.shape)
@@ -1314,7 +1314,7 @@ class ObservedRV(Factor, TensorVariable):
 
         self.observations = data
 
-        super(ObservedRV, self).__init__(type, owner, index, name)
+        super().__init__(type, owner, index, name)
 
         if distribution is not None:
             data = as_tensor(data, name, model, distribution)
@@ -1475,7 +1475,7 @@ class TransformedRV(TensorVariable):
                  total_size=None):
         if type is None:
             type = distribution.type
-        super(TransformedRV, self).__init__(type, owner, index, name)
+        super().__init__(type, owner, index, name)
 
         self.transformation = transform
 

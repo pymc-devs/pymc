@@ -298,7 +298,7 @@ class GeneratorOp(Op):
     __props__ = ('generator',)
 
     def __init__(self, gen, default=None):
-        super(GeneratorOp, self).__init__()
+        super().__init__()
         if not isinstance(gen, GeneratorAdapter):
             gen = GeneratorAdapter(gen)
         self.generator = gen

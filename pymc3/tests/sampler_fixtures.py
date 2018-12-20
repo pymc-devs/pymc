@@ -124,7 +124,7 @@ class LKJCholeskyCovFixture(KnownCDF):
 class BaseSampler(SeededTest):
     @classmethod
     def setup_class(cls):
-        super(BaseSampler, cls).setup_class()
+        super().setup_class()
         cls.model = cls.make_model()
         with cls.model:
             cls.step = cls.make_step()

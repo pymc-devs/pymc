@@ -75,7 +75,7 @@ class SQLite(base.BaseTrace):
     """
 
     def __init__(self, name, model=None, vars=None, test_point=None):
-        super(SQLite, self).__init__(name, model, vars, test_point)
+        super().__init__(name, model, vars, test_point)
         self._var_cols = {}
         self.var_inserts = {}  # varname -> insert statement
         self.draw_idx = 0

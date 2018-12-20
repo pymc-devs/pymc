@@ -31,7 +31,7 @@ class AR1(distribution.Continuous):
     """
 
     def __init__(self, k, tau_e, *args, **kwargs):
-        super(AR1, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.k = k = tt.as_tensor_variable(k)
         self.tau_e = tau_e = tt.as_tensor_variable(tau_e)
         self.tau = tau_e * (1 - k ** 2)
@@ -93,7 +93,7 @@ class AR(distribution.Continuous):
                  constant=False, init=Flat.dist(),
                  *args, **kwargs):
 
-        super(AR, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         tau, sd = get_tau_sd(tau=tau, sd=sd)
         self.sd = tt.as_tensor_variable(sd)
         self.tau = tt.as_tensor_variable(tau)
@@ -157,7 +157,7 @@ class GaussianRandomWalk(distribution.Continuous):
 
     def __init__(self, tau=None, init=Flat.dist(), sd=None, mu=0.,
                  *args, **kwargs):
-        super(GaussianRandomWalk, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         tau, sd = get_tau_sd(tau=tau, sd=sd)
         self.tau = tau = tt.as_tensor_variable(tau)
         self.sd = sd = tt.as_tensor_variable(sd)
@@ -214,7 +214,7 @@ class GARCH11(distribution.Continuous):
 
     def __init__(self, omega, alpha_1, beta_1,
                  initial_vol, *args, **kwargs):
-        super(GARCH11, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.omega = omega = tt.as_tensor_variable(omega)
         self.alpha_1 = alpha_1 = tt.as_tensor_variable(alpha_1)
@@ -267,7 +267,7 @@ class EulerMaruyama(distribution.Continuous):
         parameters of the SDE, passed as *args to sde_fn
     """
     def __init__(self, dt, sde_fn, sde_pars, *args, **kwds):
-        super(EulerMaruyama, self).__init__(*args, **kwds)
+        super().__init__(*args, **kwds)
         self.dt = dt = tt.as_tensor_variable(dt)
         self.sde_fn = sde_fn
         self.sde_pars = sde_pars
@@ -313,7 +313,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
     """
     def __init__(self, mu=0., cov=None, tau=None, chol=None, lower=True, init=Flat.dist(),
                  *args, **kwargs):
-        super(MvGaussianRandomWalk, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.init = init
         self.innovArgs = (mu, cov, tau, chol, lower)
@@ -356,7 +356,7 @@ class MvStudentTRandomWalk(MvGaussianRandomWalk):
         distribution for initial value (Defaults to Flat())
     """
     def __init__(self, nu, *args, **kwargs):
-        super(MvStudentTRandomWalk, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.nu = tt.as_tensor_variable(nu)
         self.innov = multivariate.MvStudentT.dist(self.nu, *self.innovArgs)
 

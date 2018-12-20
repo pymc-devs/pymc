@@ -722,7 +722,7 @@ class PopulationStepper:
             else:
                 _log.info('Chains are not parallelized. You can enable this by passing '
                           'pm.sample(parallelize=True).')
-        return super(PopulationStepper, self).__init__()
+        return super().__init__()
 
     def __enter__(self):
         """Does nothing because processes are already started in __init__."""

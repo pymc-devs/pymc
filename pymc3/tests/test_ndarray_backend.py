@@ -102,10 +102,10 @@ class TestMultiTrace(bf.ModelBackendSetupTestCase):
     shape = ()
 
     def setup_method(self):
-        super(TestMultiTrace, self).setup_method()
+        super().setup_method()
         self.strace0 = self.strace
 
-        super(TestMultiTrace, self).setup_method()
+        super().setup_method()
         self.strace1 = self.strace
 
     def test_multitrace_nonunique(self):

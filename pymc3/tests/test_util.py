@@ -35,7 +35,7 @@ class TestTransformName:
 
 class TestUpdateStartVals(SeededTest):
     def setup_method(self):
-        super(TestUpdateStartVals, self).setup_method()
+        super().setup_method()
 
     def test_soft_update_all_present(self):
         start = {'a': 1, 'b': 2}

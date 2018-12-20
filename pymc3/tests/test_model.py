@@ -13,7 +13,7 @@ from pymc3.model import ValueGradFunction
 
 class NewModel(pm.Model):
     def __init__(self, name='', model=None):
-        super(NewModel, self).__init__(name, model)
+        super().__init__(name, model)
         assert pm.modelcontext(None) is self
         # 1) init variables with Var method
         self.Var('v1', pm.Normal.dist())
@@ -26,7 +26,7 @@ class NewModel(pm.Model):
 
 class DocstringModel(pm.Model):
     def __init__(self, mean=0, sd=1, name='', model=None):
-        super(DocstringModel, self).__init__(name, model)
+        super().__init__(name, model)
         self.Var('v1', Normal.dist(mu=mean, sd=sd))
         Normal('v2', mu=mean, sd=sd)
         Normal('v3', mu=mean, sd=HalfCauchy('sd', beta=10, testval=1.))

@@ -10,7 +10,7 @@ import pytest
 class DistTest(Continuous):
 
     def __init__(self, a, b, *args, **kwargs):
-        super(DistTest, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.a = a
         self.b = b
 
