@@ -5,7 +5,7 @@
 '_static/semantic.min.js',
 ]
 %}
-{% if pagename == 'nb_examples/index' %}
+{% if pagename == 'nb_examples/index' or pagename == 'nb_tutorials/index' %}
 {% set script_files = script_files + [
 '_static/gallery.js',
 ]
@@ -18,9 +18,17 @@
 <meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
 <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
 <meta name="apple-mobile-web-app-capable" content="yes">
+{% if pagename == 'nb_tutorials/index' %}
+<script type="text/javascript">
+    jQuery(function () { Gallery.loadScript("{{ pathto('_static/gallery_tutorials_contents.js', 1) }}", "exampleloader"); });
+</script>
+{# this is used when loading the gallery index using $.ajax fails,
+such as on Chrome for documents on localhost #}
+<script type="text/javascript" id="exampleloader"></script>
+{% endif %}
 {% if pagename == 'nb_examples/index' %}
 <script type="text/javascript">
-    jQuery(function () { Gallery.loadScript("{{ pathto('_static/gallery_contents.js', 1) }}", "exampleloader"); });
+    jQuery(function () { Gallery.loadScript("{{ pathto('_static/gallery_examples_contents.js', 1) }}", "exampleloader"); });
 </script>
 {# this is used when loading the gallery index using $.ajax fails,
 such as on Chrome for documents on localhost #}
@@ -62,7 +70,7 @@ such as on Chrome for documents on localhost #}
     <div class="ui center aligned text container">
         <img src="https://cdn.rawgit.com/pymc-devs/pymc3/master/docs/logos/svg/PyMC3_banner.svg" />
         <h2>Probabilistic Programming in Python</h2>
-        <a href="intro.html">
+        <a href="notebooks/api_quickstart.html">
             <div class="ui huge primary button">Quickstart <i class="right arrow icon"></i></div>
         </a>
     </div>

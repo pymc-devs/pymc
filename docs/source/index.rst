@@ -16,9 +16,12 @@
                         Gaussian processes to fit a regression model.</p>
                 </div>
                 <div class="eight wide right floated column">
-                    <pre><code class="python">
-    X, y = linear_training_data()
 
+.. code-block:: python
+
+    import pymc3 as pm
+
+    X, y = linear_training_data()
     with pm.Model() as linear_model:
         weights = pm.Normal('weights', mu=0, sd=1)
         noise = pm.Gamma('noise', alpha=2, beta=1)
@@ -29,7 +32,10 @@
 
         prior = pm.sample_prior_predictive()
         posterior = pm.sample()
-        posterior_pred = pm.sample_posterior_predictive(posterior)</code></pre>
+        posterior_pred = pm.sample_posterior_predictive(posterior)
+
+.. raw:: html
+
                 </div>
             </div>
         </div>

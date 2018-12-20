@@ -143,10 +143,11 @@ html_theme = "semantic_sphinx"
 
 html_theme_options = {
     "navbar_links": [
-        ("Quickstart", "intro"),
-        ("API", "api"),
+        ("Tutorials", "nb_tutorials/index"),
         ("Examples", "nb_examples/index"),
-        ("Learn", "learn"),
+        ("Books + Videos", "learn"),
+        ("API", "api"),
+        ("About PyMC3", "history")
     ],
     #     "fixed_sidebar": "false",
     #     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
@@ -174,7 +175,7 @@ html_favicon = "../logos/PyMC3.ico"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static", "nb_examples/_images"]
+html_static_path = ["_static", "nb_tutorials/_images", "nb_examples/_images"]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
