@@ -190,7 +190,7 @@ def _cpu_count():
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=None, chain_idx=0,
            chains=None, cores=None, tune=500, nuts_kwargs=None, step_kwargs=None, progressbar=True,
            model=None, random_seed=None, live_plot=False, discard_tuned_samples=True,
-           live_plot_kwargs=None, compute_convergence_checks=True, use_mmap=False, **kwargs):
+           live_plot_kwargs=None, compute_convergence_checks=True, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -288,9 +288,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     compute_convergence_checks : bool, default=True
         Whether to compute sampler statistics like gelman-rubin and effective_n.
         Ignored when using 'SMC'
-    use_mmap : bool, default=False
-        Whether to use joblib's memory mapping to share numpy arrays when sampling across multiple
-        cores. Ignored when using 'SMC'
 
     Returns
     -------
@@ -422,8 +419,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
                        'random_seed': random_seed,
                        'live_plot': live_plot,
                        'live_plot_kwargs': live_plot_kwargs,
-                       'cores': cores,
-                       'use_mmap': use_mmap}
+                       'cores': cores,}
 
         sample_args.update(kwargs)
 
@@ -950,8 +946,7 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
 
 
 def _mp_sample(draws, tune, step, chains, cores, chain, random_seed,
-               start, progressbar, trace=None, model=None, use_mmap=False,
-               **kwargs):
+               start, progressbar, trace=None, model=None, **kwargs):
 
     import pymc3.parallel_sampling as ps
     # We did draws += tune in pm.sample
