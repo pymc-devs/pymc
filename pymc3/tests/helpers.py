@@ -74,9 +74,9 @@ class Matcher:
         """
         Try to match a single stored value (dv) with a supplied value (v).
         """
-        if type(v) != type(dv):
+        if isinstance(v, type(dv)):
             result = False
-        elif type(dv) is not str or k not in self._partial_matches:
+        elif not isinstance(df, str) or k not in self._partial_matches:
             result = (v == dv)
         else:
             result = dv.find(v) >= 0

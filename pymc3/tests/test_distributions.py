@@ -336,8 +336,8 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
     return logp.sum()
 
 def AR1_logpdf(value, k, tau_e):
-    return (sp.norm(loc=0,scale=1/np.sqrt(tau_e)).logpdf(value[0]) +
-            sp.norm(loc=k*value[:-1],scale=1/np.sqrt(tau_e)).logpdf(value[1:]).sum())
+    return (sp.norm(loc=0, scale=1/np.sqrt(tau_e)).logpdf(value[0]) +
+            sp.norm(loc=k*value[:-1], scale=1/np.sqrt(tau_e)).logpdf(value[1:]).sum())
 
 def invlogit(x, eps=sys.float_info.epsilon):
     return (1. - 2. * eps) / (1. + np.exp(-x)) + eps
@@ -927,7 +927,7 @@ class TestMatchesScipy(SeededTest):
                                  {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
                                  mvt_logpdf)
 
-    @pytest.mark.parametrize('n',[2,3,4])
+    @pytest.mark.parametrize('n', [2, 3, 4])
     def test_AR1(self, n):
         self.pymc3_matches_scipy(AR1, Vector(R, n), {'k': Unit, 'tau_e': Rplus}, AR1_logpdf)
 
@@ -1006,13 +1006,13 @@ class TestMatchesScipy(SeededTest):
 
     def test_multinomial_mode_with_shape(self):
         n = [1, 10]
-        p = np.asarray([[.25,.25,.25,.25], [.26, .26, .26, .22]])
+        p = np.asarray([[.25, .25, .25, .25], [.26, .26, .26, .22]])
         with Model() as model:
             m = Multinomial('m', n=n, p=p, shape=(2, 4))
         assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
 
     def test_multinomial_vec(self):
-        vals = np.array([[2,4,4], [3,3,4]])
+        vals = np.array([[2, 4, 4], [3, 3, 4]])
         p = np.array([0.2, 0.3, 0.5])
         n = 10
 
@@ -1035,7 +1035,7 @@ class TestMatchesScipy(SeededTest):
                             decimal=4)
 
     def test_multinomial_vec_1d_n(self):
-        vals = np.array([[2,4,4], [4,3,4]])
+        vals = np.array([[2, 4, 4], [4, 3, 4]])
         p = np.array([0.2, 0.3, 0.5])
         ns = np.array([10, 11])
 
@@ -1047,7 +1047,7 @@ class TestMatchesScipy(SeededTest):
                             decimal=4)
 
     def test_multinomial_vec_1d_n_2d_p(self):
-        vals = np.array([[2,4,4], [4,3,4]])
+        vals = np.array([[2, 4, 4], [4, 3, 4]])
         ps = np.array([[0.2, 0.3, 0.5],
                        [0.9, 0.09, 0.01]])
         ns = np.array([10, 11])
@@ -1060,7 +1060,7 @@ class TestMatchesScipy(SeededTest):
                             decimal=4)
 
     def test_multinomial_vec_2d_p(self):
-        vals = np.array([[2,4,4], [3,3,4]])
+        vals = np.array([[2, 4, 4], [3, 3, 4]])
         ps = np.array([[0.2, 0.3, 0.5],
                        [0.3, 0.3, 0.4]])
         n = 10

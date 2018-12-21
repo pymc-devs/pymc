@@ -347,8 +347,7 @@ def _get_var_strs(cursor, varname):
 def _get_chain_list(cursor, varname):
     """Return a list of sorted chains for `varname`."""
     cursor.execute('SELECT DISTINCT chain FROM [{}]'.format(varname))
-    chains = [chain[0] for chain in cursor.fetchall()]
-    chains.sort()
+    chains = sorted([chain[0] for chain in cursor.fetchall()])
     return chains
 
 

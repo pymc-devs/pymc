@@ -180,7 +180,7 @@ class IdentityOp(scalar.UnaryScalarOp):
         return "{z} = {x};".format(x=inp[0], z=out[0])
 
     def __eq__(self, other):
-        return type(self) == type(other)
+        return isinstance(self, type(other))
 
     def __hash__(self):
         return hash(type(self))

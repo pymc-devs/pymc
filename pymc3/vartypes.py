@@ -1,5 +1,3 @@
-import sys
-
 __all__ = ['bool_types', 'int_types', 'float_types', 'complex_types', 'continuous_types',
            'discrete_types', 'typefilter', 'isgenerator']
 

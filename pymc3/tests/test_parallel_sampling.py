@@ -1,7 +1,3 @@
-import time
-import sys
-import pytest
-
 import pymc3.parallel_sampling as ps
 import pymc3 as pm
 
@@ -32,7 +28,6 @@ def test_explicit_sample():
 
     step = pm.CompoundStep([step1, step2])
 
-    start = time.time()
     proc = ps.ProcessAdapter(10, 10, step, chain=3, seed=1,
                              start={'a': 1., 'b_log__': 2.})
     proc.start()
@@ -45,7 +40,6 @@ def test_explicit_sample():
         if out[1]:
             break
     proc.join()
-    print(time.time() - start)
 
 
 def test_iterator():
@@ -57,7 +51,6 @@ def test_iterator():
 
     step = pm.CompoundStep([step1, step2])
 
-    start = time.time()
     start = {'a': 1., 'b_log__': 2.}
     sampler = ps.ParallelSampler(10, 10, 3, 2, [2, 3, 4], [start] * 3,
                                  step, 0, False)

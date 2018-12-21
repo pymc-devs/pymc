@@ -4,7 +4,6 @@ import pickle
 import logging
 import warnings
 
-from joblib import Parallel, delayed
 import numpy as np
 import theano.gradient as tg
 
