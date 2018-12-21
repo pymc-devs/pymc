@@ -467,3 +467,13 @@ class TestSamplePriorPredictive(SeededTest):
             x = pm.Normal('x', mu=mu, sd=sd, shape=5)
             prior = pm.sample_prior_predictive(10)
         assert prior['mu'].shape == (10, 5)
+
+    def test_zeroinflatedpoisson(self):
+        with pm.Model():
+            theta = pm.Beta('theta', alpha=1, beta=1)
+            psi = pm.HalfNormal('psi', sd=1)
+            pm.ZeroInflatedPoisson('suppliers', psi=psi, theta=theta, shape=20)
+            gen_data = pm.sample_prior_predictive(samples=5000)
+            assert gen_data['theta'].shape == (5000,)
+            assert gen_data['psi'].shape == (5000,)
+            assert gen_data['suppliers'].shape == (5000, 20)
