@@ -1,5 +1,3 @@
-from __future__ import division
-
 from ..model import Model
 from ..distributions import DiscreteUniform, Continuous
 

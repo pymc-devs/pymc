@@ -1,5 +1,3 @@
-from __future__ import division
-
 from ..model import Model
 from ..distributions.continuous import Flat, Normal
 from ..distributions.timeseries import EulerMaruyama, AR1, AR, GARCH11

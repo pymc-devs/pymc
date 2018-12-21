@@ -20,10 +20,7 @@ complex_types = set(['complex64',
 continuous_types = float_types | complex_types
 discrete_types = bool_types | int_types
 
-if sys.version_info[0] == 3:
-    string_types = str
-else:
-    string_types = basestring
+string_types = str
 
 
 def typefilter(vars, types):

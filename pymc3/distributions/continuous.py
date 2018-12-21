@@ -3,8 +3,6 @@
 A collection of common probability distributions for stochastic
 nodes in PyMC.
 """
-from __future__ import division
-
 import numpy as np
 import theano.tensor as tt
 from scipy import stats

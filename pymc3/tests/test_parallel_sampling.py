@@ -6,8 +6,6 @@ import pymc3.parallel_sampling as ps
 import pymc3 as pm
 
 
-@pytest.mark.skipif(sys.version_info < (3,3),
-                    reason="requires python3.3")
 def test_abort():
     with pm.Model() as model:
         a = pm.Normal('a', shape=1)
@@ -25,8 +23,6 @@ def test_abort():
     proc.join()
 
 
-@pytest.mark.skipif(sys.version_info < (3,3),
-                    reason="requires python3.3")
 def test_explicit_sample():
     with pm.Model() as model:
         a = pm.Normal('a', shape=1)
@@ -52,8 +48,6 @@ def test_explicit_sample():
     print(time.time() - start)
 
 
-@pytest.mark.skipif(sys.version_info < (3,3),
-                    reason="requires python3.3")
 def test_iterator():
     with pm.Model() as model:
         a = pm.Normal('a', shape=1)

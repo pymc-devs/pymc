@@ -34,12 +34,7 @@ REQUIREMENTS_FILE = join(PROJECT_ROOT, 'requirements.txt')
 with open(REQUIREMENTS_FILE) as f:
     install_reqs = f.read().splitlines()
 
-if sys.version_info < (3, 4):
-    install_reqs.append('enum34')
-
 test_reqs = ['pytest', 'pytest-cov']
-if sys.version_info[0] == 2:  # py3 has mock in stdlib
-    test_reqs.append('mock')
 
 def get_version():
     VERSIONFILE = join('pymc3', '__init__.py')
