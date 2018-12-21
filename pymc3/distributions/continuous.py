@@ -938,15 +938,10 @@ class Wald(PositiveContinuous):
                          'mu and lam, mu and phi, or lam and phi.')
 
     def _random(self, mu, lam, alpha, size=None):
-        _size = alpha.shape
-        if size is not None:
-            size = to_tuple(size)
-            if _size[:len(size)] != size:
-                _size = size + _size
-        v = np.random.normal(size=_size)**2
+        v = np.random.normal(size=size)**2
         value = (mu + (mu**2) * v / (2. * lam) - mu / (2. * lam)
                  * np.sqrt(4. * mu * lam * v + (mu * v)**2))
-        z = np.random.uniform(size=_size)
+        z = np.random.uniform(size=size)
         i = np.floor(z - mu / (mu + value)) * 2 + 1
         value = (value**-i) * (mu**(i + 1))
         return value + alpha
@@ -970,8 +965,11 @@ class Wald(PositiveContinuous):
         """
         mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha],
                                      point=point, size=size)
+        print(mu.shape, lam.shape, alpha.shape)
         mu, lam, alpha = broadcast_distribution_samples([mu, lam, alpha],
                                                         size=size)
+        print(mu.shape, lam.shape, alpha.shape)
+        print(self.shape, size)
         return generate_samples(self._random,
                                 mu, lam, alpha,
                                 dist_shape=self.shape,
@@ -1278,12 +1276,7 @@ class Kumaraswamy(UnitContinuous):
         assert_negative_support(b, 'b', 'Kumaraswamy')
 
     def _random(self, a, b, size=None):
-        _size = a.shape
-        if size is not None:
-            size = to_tuple(size)
-            if _size[:len(size)] != size:
-                _size = size + _size
-        u = np.random.uniform(size=_size)
+        u = np.random.uniform(size=size)
         return (1 - (1 - u) ** (1 / b)) ** (1 / a)
 
     def random(self, point=None, size=None):
@@ -1658,12 +1651,7 @@ class Lognormal(PositiveContinuous):
         assert_negative_support(sd, 'sd', 'Lognormal')
 
     def _random(self, mu, tau, size=None):
-        _size = tau.shape
-        if size is not None:
-            size = to_tuple(size)
-            if _size[:len(size)] != size:
-                _size = size + _size
-        samples = np.random.normal(size=_size)
+        samples = np.random.normal(size=size)
         return np.exp(mu + (tau**-0.5) * samples)
 
     def random(self, point=None, size=None):
@@ -1950,12 +1938,7 @@ class Pareto(Continuous):
         super(Pareto, self).__init__(transform=transform, *args, **kwargs)
 
     def _random(self, alpha, m, size=None):
-        _size = alpha.shape
-        if size is not None:
-            size = to_tuple(size)
-            if _size[:len(size)] != size:
-                _size = size + _size
-        u = np.random.uniform(size=_size)
+        u = np.random.uniform(size=size)
         return m * (1. - u)**(-1. / alpha)
 
     def random(self, point=None, size=None):
@@ -2080,12 +2063,7 @@ class Cauchy(Continuous):
         assert_negative_support(beta, 'beta', 'Cauchy')
 
     def _random(self, alpha, beta, size=None):
-        _size = alpha.shape
-        if size is not None:
-            size = to_tuple(size)
-            if _size[:len(size)] != size:
-                _size = size + _size
-        u = np.random.uniform(size=_size)
+        u = np.random.uniform(size=size)
         return alpha + beta * np.tan(np.pi * (u - 0.5))
 
     def random(self, point=None, size=None):
@@ -2195,12 +2173,7 @@ class HalfCauchy(PositiveContinuous):
         assert_negative_support(beta, 'beta', 'HalfCauchy')
 
     def _random(self, beta, size=None):
-        _size = beta.shape
-        if size is not None:
-            size = to_tuple(size)
-            if _size[:len(size)] != size:
-                _size = size + _size
-        u = np.random.uniform(size=_size)
+        u = np.random.uniform(size=size)
         return beta * np.abs(np.tan(np.pi * (u - 0.5)))
 
     def random(self, point=None, size=None):
@@ -2677,12 +2650,7 @@ class Weibull(PositiveContinuous):
         alpha, beta = broadcast_distribution_samples([alpha, beta], size=size)
 
         def _random(a, b, size=None):
-            _size = a.shape
-            if size is not None:
-                size = to_tuple(size)
-                if _size[:len(size)] != size:
-                    _size = size + _size
-            return b * (-np.log(np.random.uniform(size=_size)))**(1 / a)
+            return b * (-np.log(np.random.uniform(size=size)))**(1 / a)
 
         return generate_samples(_random, alpha, beta,
                                 dist_shape=self.shape,
