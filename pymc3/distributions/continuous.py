@@ -22,7 +22,7 @@ from .dist_math import (
     normal_lccdf, normal_lcdf, SplineWrapper, std_cdf, zvalue,
 )
 from .distribution import (Continuous, draw_values, generate_samples,
-                           to_tuple, broadcast_distribution_samples)
+                           broadcast_distribution_samples)
 
 __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'TruncatedNormal', 'Beta',
            'Kumaraswamy', 'Exponential', 'Laplace', 'StudentT', 'Cauchy',
