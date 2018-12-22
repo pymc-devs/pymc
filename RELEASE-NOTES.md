@@ -6,6 +6,8 @@
 
 ### Maintenance
 
+- Made `BrokenPipeError` for parallel sampling more verbose on Windows.
+
 ### Deprecations
 
 ## PyMC3 3.6 (Dec 21 2018)
@@ -44,7 +46,6 @@ This will be the last release to support Python 2.
 - Fixed `Rice` distribution, which inconsistently mixed two parametrizations (#3286).
 - `Rice` distribution now accepts multiple parameters and observations and is usable with NUTS (#3289).
 - `sample_posterior_predictive` no longer calls `draw_values` to initialize the shape of the ppc trace. This called could lead to `ValueError`'s when sampling the ppc from a model with `Flat` or `HalfFlat` prior distributions (Fix issue #3294).
-- Made `BrokenPipeError` for parallel sampling more verbose on Windows.
 
 
 ### Deprecations
