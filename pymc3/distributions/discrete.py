@@ -60,7 +60,7 @@ class Binomial(Discrete):
     """
 
     def __init__(self, n, p, *args, **kwargs):
-        super(Binomial, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.n = n = tt.as_tensor_variable(n)
         self.p = p = tt.as_tensor_variable(p)
         self.mode = tt.cast(tround(n * p), self.dtype)
@@ -146,7 +146,7 @@ class BetaBinomial(Discrete):
     """
 
     def __init__(self, alpha, beta, n, *args, **kwargs):
-        super(BetaBinomial, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.beta = beta = tt.as_tensor_variable(beta)
         self.n = n = tt.as_tensor_variable(n)
@@ -239,7 +239,7 @@ class Bernoulli(Discrete):
     """
 
     def __init__(self, p=None, logit_p=None, *args, **kwargs):
-        super(Bernoulli, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if sum(int(var is None) for var in [p, logit_p]) != 1:
             raise ValueError('Specify one of p and logit_p')
         if p is not None:
@@ -318,7 +318,7 @@ class DiscreteWeibull(Discrete):
     ========  ======================
     """
     def __init__(self, q, beta, *args, **kwargs):
-        super(DiscreteWeibull, self).__init__(*args, defaults=('median',), **kwargs)
+        super().__init__(*args, defaults=('median',), **kwargs)
 
         self.q = q = tt.as_tensor_variable(q)
         self.beta = beta = tt.as_tensor_variable(beta)
@@ -413,7 +413,7 @@ class Poisson(Discrete):
     """
 
     def __init__(self, mu, *args, **kwargs):
-        super(Poisson, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.mode = tt.floor(mu).astype('int32')
 
@@ -492,7 +492,7 @@ class NegativeBinomial(Discrete):
     """
 
     def __init__(self, mu, alpha, *args, **kwargs):
-        super(NegativeBinomial, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.mode = tt.floor(mu).astype('int32')
@@ -567,7 +567,7 @@ class Geometric(Discrete):
     """
 
     def __init__(self, p, *args, **kwargs):
-        super(Geometric, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.p = p = tt.as_tensor_variable(p)
         self.mode = 1
 
@@ -631,7 +631,7 @@ class DiscreteUniform(Discrete):
     """
 
     def __init__(self, lower, upper, *args, **kwargs):
-        super(DiscreteUniform, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.lower = tt.floor(lower).astype('int32')
         self.upper = tt.floor(upper).astype('int32')
         self.mode = tt.maximum(
@@ -703,7 +703,7 @@ class Categorical(Discrete):
     """
 
     def __init__(self, p, *args, **kwargs):
-        super(Categorical, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         try:
             self.k = tt.shape(p)[-1].tag.test_value
         except AttributeError:
@@ -760,7 +760,7 @@ class Constant(Discrete):
     def __init__(self, c, *args, **kwargs):
         warnings.warn("Constant has been deprecated. We recommend using a Deterministic object instead.",
                     DeprecationWarning)
-        super(Constant, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
     def random(self, point=None, size=None):
@@ -838,7 +838,7 @@ class ZeroInflatedPoisson(Discrete):
     """
 
     def __init__(self, psi, theta, *args, **kwargs):
-        super(ZeroInflatedPoisson, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.theta = theta = tt.as_tensor_variable(theta)
         self.psi = psi = tt.as_tensor_variable(psi)
         self.pois = Poisson.dist(theta)
@@ -930,7 +930,7 @@ class ZeroInflatedBinomial(Discrete):
     """
 
     def __init__(self, psi, n, p, *args, **kwargs):
-        super(ZeroInflatedBinomial, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.n = n = tt.as_tensor_variable(n)
         self.p = p = tt.as_tensor_variable(p)
         self.psi = psi = tt.as_tensor_variable(psi)
@@ -1047,7 +1047,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
     """
 
     def __init__(self, psi, mu, alpha, *args, **kwargs):
-        super(ZeroInflatedNegativeBinomial, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.psi = psi = tt.as_tensor_variable(psi)
@@ -1179,7 +1179,7 @@ class OrderedLogistic(Categorical):
         ], axis=1)
         p = p_cum[:, 1:] - p_cum[:, :-1]
 
-        super(OrderedLogistic, self).__init__(p=p, *args, **kwargs)
+        super().__init__(p=p, *args, **kwargs)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:

@@ -16,7 +16,7 @@ DataMap = collections.namedtuple('DataMap', 'list_ind, slc, shp, dtype, name')
 # TODO Classes and methods need to be fully documented.
 
 
-class ArrayOrdering(object):
+class ArrayOrdering:
     """
     An ordering for an array space
     """
@@ -45,7 +45,7 @@ class ArrayOrdering(object):
         return self.by_name[key]
 
 
-class DictToArrayBijection(object):
+class DictToArrayBijection:
     """
     A mapping between a dict space and an array space
     """
@@ -106,7 +106,7 @@ class DictToArrayBijection(object):
         return Compose(f, self.rmap)
 
 
-class ListArrayOrdering(object):
+class ListArrayOrdering:
     """
     An ordering for a list to an array space. Takes also non theano.tensors.
     Modified from pymc3 blocking.
@@ -138,7 +138,7 @@ class ListArrayOrdering(object):
             self.size += array.size
 
 
-class ListToArrayBijection(object):
+class ListToArrayBijection:
     """
     A mapping between a List of arrays and an array space
 
@@ -217,7 +217,7 @@ class ListToArrayBijection(object):
         return a_list
 
 
-class DictToVarBijection(object):
+class DictToVarBijection:
     """
     A mapping between a dict space and the array space for one element within the dict space
     """
@@ -244,7 +244,7 @@ class DictToVarBijection(object):
         return Compose(f, self.rmap)
 
 
-class Compose(object):
+class Compose:
     """
     Compose two functions in a pickleable way
     """

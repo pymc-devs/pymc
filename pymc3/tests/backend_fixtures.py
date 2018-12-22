@@ -10,7 +10,7 @@ import pytest
 import theano
 
 
-class ModelBackendSetupTestCase(object):
+class ModelBackendSetupTestCase:
     """Set up a backend trace.
 
     Provides the attributes
@@ -69,7 +69,7 @@ class ModelBackendSetupTestCase(object):
             remove_file_or_directory(self.name)
 
 
-class StatsTestCase(object):
+class StatsTestCase:
     """Test for init and setup of backups.
 
     Provides the attributes
@@ -105,7 +105,7 @@ class StatsTestCase(object):
             remove_file_or_directory(self.name)
 
 
-class ModelBackendSampledTestCase(object):
+class ModelBackendSampledTestCase:
     """Setup and sample a backend trace.
 
     Provides the attributes
@@ -435,7 +435,7 @@ class DumpLoadTestCase(ModelBackendSampledTestCase):
     """
     @classmethod
     def setup_class(cls):
-        super(DumpLoadTestCase, cls).setup_class()
+        super().setup_class()
         try:
             with cls.model:
                 cls.dumped = cls.load_func(cls.name)
@@ -479,12 +479,12 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
     def setup_class(cls):
         cls.backend = cls.backend0
         cls.name = cls.name0
-        super(BackendEqualityTestCase, cls).setup_class()
+        super().setup_class()
         cls.mtrace0 = cls.mtrace
 
         cls.backend = cls.backend1
         cls.name = cls.name1
-        super(BackendEqualityTestCase, cls).setup_class()
+        super().setup_class()
         cls.mtrace1 = cls.mtrace
 
     @classmethod

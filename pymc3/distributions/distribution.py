@@ -1,4 +1,3 @@
-import six
 import numbers
 
 import numpy as np
@@ -16,11 +15,11 @@ __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
            'NoDistribution', 'TensorType', 'draw_values', 'generate_samples']
 
 
-class _Unpickling(object):
+class _Unpickling:
     pass
 
 
-class Distribution(object):
+class Distribution:
     """Statistical distribution"""
     def __new__(cls, name, *args, **kwargs):
         if name is _Unpickling:
@@ -131,9 +130,9 @@ class NoDistribution(Distribution):
 
     def __init__(self, shape, dtype, testval=None, defaults=(),
                  transform=None, parent_dist=None, *args, **kwargs):
-        super(NoDistribution, self).__init__(shape=shape, dtype=dtype,
-                                             testval=testval, defaults=defaults,
-                                             *args, **kwargs)
+        super().__init__(shape=shape, dtype=dtype,
+                         testval=testval, defaults=defaults,
+                         *args, **kwargs)
         self.parent_dist = parent_dist
 
     def __getattr__(self, name):
@@ -165,8 +164,7 @@ class Discrete(Distribution):
             raise ValueError("Transformations for discrete distributions "
                              "are not allowed.")
 
-        super(Discrete, self).__init__(
-            shape, dtype, defaults=defaults, *args, **kwargs)
+        super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
 
 class Continuous(Distribution):
@@ -176,8 +174,7 @@ class Continuous(Distribution):
                  *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
-        super(Continuous, self).__init__(
-            shape, dtype, defaults=defaults, *args, **kwargs)
+        super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
 
 class DensityDist(Distribution):
@@ -201,8 +198,7 @@ class DensityDist(Distribution):
     def __init__(self, logp, shape=(), dtype=None, testval=0, random=None, *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
-        super(DensityDist, self).__init__(
-            shape, dtype, testval, *args, **kwargs)
+        super().__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
         self.rand = random
 
@@ -214,19 +210,19 @@ class DensityDist(Distribution):
                             "Define a custom random method and pass it as kwarg random")
 
 
-class _DrawValuesContext(six.with_metaclass(InitContextMeta, Context)):
+class _DrawValuesContext(Context, metaclass=InitContextMeta):
     """ A context manager class used while drawing values with draw_values
     """
 
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
-        instance = super(_DrawValuesContext, cls).__new__(cls)
+        instance = super().__new__(cls)
         if cls.get_contexts():
-            potencial_parent = cls.get_contexts()[-1]
+            potential_parent = cls.get_contexts()[-1]
             # We have to make sure that the context is a _DrawValuesContext
             # and not a Model
-            if isinstance(potencial_parent, cls):
-                instance._parent = potencial_parent
+            if isinstance(potential_parent, cls):
+                instance._parent = potential_parent
             else:
                 instance._parent = None
         else:

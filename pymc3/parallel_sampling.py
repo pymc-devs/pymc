@@ -7,7 +7,6 @@ from collections import namedtuple
 import traceback
 from pymc3.exceptions import SamplingError
 
-import six
 import numpy as np
 
 from . import theanof
@@ -17,7 +16,7 @@ logger = logging.getLogger("pymc3")
 
 class ParallelSamplingError(Exception):
     def __init__(self, message, chain, warnings=None):
-        super(ParallelSamplingError, self).__init__(message)
+        super().__init__(message)
         if warnings is None:
             warnings = []
         self._chain = chain
@@ -65,7 +64,7 @@ class _Process(multiprocessing.Process):
     """
 
     def __init__(self, name, msg_pipe, step_method, shared_point, draws, tune, seed):
-        super(_Process, self).__init__(daemon=True, name=name)
+        super().__init__(daemon=True, name=name)
         self._msg_pipe = msg_pipe
         self._step_method = step_method
         self._shared_point = shared_point
@@ -164,7 +163,7 @@ class _Process(multiprocessing.Process):
             return []
 
 
-class ProcessAdapter(object):
+class ProcessAdapter:
     """Control a Chain process from the main thread."""
 
     def __init__(self, draws, tune, step_method, chain, seed, start):
@@ -246,7 +245,7 @@ class ProcessAdapter(object):
                 error = ParallelSamplingError(str(old_error), proc.chain, warns)
             else:
                 error = RuntimeError("Chain %s failed." % proc.chain)
-            six.raise_from(error, old_error)
+            raise error from old_error
         elif msg[0] == "writing_done":
             proc._readable = True
             proc._num_samples += 1
@@ -285,7 +284,7 @@ Draw = namedtuple(
 )
 
 
-class ParallelSampler(object):
+class ParallelSampler:
     def __init__(
         self,
         draws,

@@ -25,7 +25,7 @@ A few important points to highlight in the Distribution Class:
 
 .. code:: python
 
-    class Distribution(object):
+    class Distribution:
         """Statistical distribution"""
         def __new__(cls, name, *args, **kwargs):
             ...
@@ -610,7 +610,7 @@ does not edit or rewrite the graph directly.
 
 .. code:: python
 
-    class ValueGradFunction(object):
+    class ValueGradFunction:
         """Create a theano function that computes a value and its gradient.
         ...
         """

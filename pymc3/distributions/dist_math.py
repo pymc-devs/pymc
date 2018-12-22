@@ -3,8 +3,6 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
-from __future__ import division
-
 import numpy as np
 import scipy.linalg
 import theano.tensor as tt

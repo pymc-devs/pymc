@@ -54,7 +54,7 @@ class MeanFieldGroup(Group):
 
     @change_flags(compute_test_value='off')
     def __init_group__(self, group):
-        super(MeanFieldGroup, self).__init_group__(group)
+        super().__init_group__(group)
         if not self._check_user_params():
             self.shared_params = self.create_shared_params(
                 self._kwargs.get('start', None)
@@ -110,7 +110,7 @@ class FullRankGroup(Group):
 
     @change_flags(compute_test_value='off')
     def __init_group__(self, group):
-        super(FullRankGroup, self).__init_group__(group)
+        super().__init_group__(group)
         if not self._check_user_params():
             self.shared_params = self.create_shared_params(
                 self._kwargs.get('start', None)
@@ -222,7 +222,7 @@ class EmpiricalGroup(Group):
 
     @change_flags(compute_test_value='off')
     def __init_group__(self, group):
-        super(EmpiricalGroup, self).__init_group__(group)
+        super().__init_group__(group)
         self._check_trace()
         if not self._check_user_params(spec_kw=dict(s=-1)):
             self.shared_params = self.create_shared_params(
@@ -381,7 +381,7 @@ class NormalizingFlowGroup(Group):
 
     @change_flags(compute_test_value='off')
     def __init_group__(self, group):
-        super(NormalizingFlowGroup, self).__init_group__(group)
+        super().__init_group__(group)
         # objects to be resolved
         # 1. string formula
         # 2. not changed default value
@@ -494,7 +494,7 @@ class NormalizingFlowGroup(Group):
     @node_property
     def bdim(self):
         if not self.local:
-            return super(NormalizingFlowGroup, self).bdim
+            return super().bdim
         else:
             return next(iter(self.user_params[0].values())).shape[0]
 
@@ -534,13 +534,13 @@ class SingleGroupApproximation(Approximation):
         if local_rv is not None:
             groups.extend([Group([v], params=p, local=True, model=kwargs.get('model'))
                            for v, p in local_rv.items()])
-        super(SingleGroupApproximation, self).__init__(groups, model=kwargs.get('model'))
+        super().__init__(groups, model=kwargs.get('model'))
 
     def __getattr__(self, item):
         return getattr(self.groups[0], item)
 
     def __dir__(self):
-        d = set(super(SingleGroupApproximation, self).__dir__())
+        d = set(super().__dir__())
         d.update(self.groups[0].__dir__())
         return list(sorted(d))
 
@@ -568,7 +568,7 @@ class Empirical(SingleGroupApproximation):
     def __init__(self, trace=None, size=None, **kwargs):
         if kwargs.get('local_rv', None) is not None:
             raise opvi.LocalGroupError('Empirical approximation does not support local variables')
-        super(Empirical, self).__init__(trace=trace, size=size, **kwargs)
+        super().__init__(trace=trace, size=size, **kwargs)
 
     def evaluate_over_trace(self, node):
         R"""
@@ -599,4 +599,4 @@ class NormalizingFlow(SingleGroupApproximation):
 
     def __init__(self, flow=NormalizingFlowGroup.default_flow, *args, **kwargs):
         kwargs['flow'] = flow
-        super(NormalizingFlow, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)

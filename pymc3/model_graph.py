@@ -17,7 +17,7 @@ def powerset(iterable):
     return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(1, len(s)+1))
 
 
-class ModelGraph(object):
+class ModelGraph:
     def __init__(self, model):
         self.model = model
         self.var_names = get_default_varnames(self.model.named_vars, include_transformed=False)

@@ -4,7 +4,7 @@ from scipy import stats
 from pymc3.backends.report import SamplerWarning, WarningType
 
 
-class DualAverageAdaptation(object):
+class DualAverageAdaptation:
     def __init__(self, initial_step, target, gamma, k, t0):
         self._log_step = np.log(initial_step)
         self._log_bar = self._log_step
