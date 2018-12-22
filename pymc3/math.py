@@ -1,4 +1,3 @@
-from __future__ import division
 import sys
 import theano.tensor as tt
 # pylint: disable=unused-import

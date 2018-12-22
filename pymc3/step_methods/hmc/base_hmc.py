@@ -71,9 +71,7 @@ class BaseHMC(arraystep.GradientSharedStep):
             vars = self._model.cont_vars
         vars = inputvars(vars)
 
-        super(BaseHMC, self).__init__(
-            vars, blocked=blocked, model=model, dtype=dtype, **theano_kwargs
-        )
+        super().__init__(vars, blocked=blocked, model=model, dtype=dtype, **theano_kwargs)
 
         self.adapt_step_size = adapt_step_size
         self.Emax = Emax

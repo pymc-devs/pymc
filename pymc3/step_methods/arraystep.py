@@ -25,7 +25,7 @@ class Competence(IntEnum):
     IDEAL = 3
 
 
-class BlockedStep(object):
+class BlockedStep:
 
     generates_stats = False
 
@@ -59,7 +59,7 @@ class BlockedStep(object):
             # and append them to a CompoundStep
             steps = []
             for var in vars:
-                step = super(BlockedStep, cls).__new__(cls)
+                step = super().__new__(cls)
                 # If we don't return the instance we have to manually
                 # call __init__
                 step.__init__([var], *args, **kwargs)
@@ -69,7 +69,7 @@ class BlockedStep(object):
 
             return CompoundStep(steps)
         else:
-            step = super(BlockedStep, cls).__new__(cls)
+            step = super().__new__(cls)
             # Hack for creating the class correctly when unpickling.
             step.__newargs = (vars, ) + args, kwargs
             return step
@@ -197,7 +197,7 @@ class PopulationArrayStepShared(ArrayStepShared):
         self.population = None
         self.this_chain = None
         self.other_chains = None
-        return super(PopulationArrayStepShared, self).__init__(vars, shared, blocked)
+        return super().__init__(vars, shared, blocked)
 
     def link_population(self, population, chain_index):
         """Links the sampler to the population.

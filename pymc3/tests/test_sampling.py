@@ -20,7 +20,7 @@ import pytest
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestSample(SeededTest):
     def setup_method(self):
-        super(TestSample, self).setup_method()
+        super().setup_method()
         self.model, self.start, self.step, _ = simple_init()
 
     def test_sample_does_not_set_seed(self):
@@ -187,7 +187,7 @@ class TestNamedSampling(SeededTest):
             assert np.isclose(res, 0.)
 
 
-class TestChooseBackend(object):
+class TestChooseBackend:
     def test_choose_backend_none(self):
         with mock.patch('pymc3.sampling.NDArray') as nd:
             pm.sampling._choose_backend(None, 'chain')

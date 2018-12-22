@@ -34,7 +34,7 @@ __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
 class _QuadFormBase(Continuous):
     def __init__(self, mu=None, cov=None, chol=None, tau=None, lower=True,
                  *args, **kwargs):
-        super(_QuadFormBase, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if len(self.shape) > 2:
             raise ValueError("Only 1 or 2 dimensions are allowed.")
 
@@ -221,8 +221,7 @@ class MvNormal(_QuadFormBase):
 
     def __init__(self, mu, cov=None, tau=None, chol=None, lower=True,
                  *args, **kwargs):
-        super(MvNormal, self).__init__(mu=mu, cov=cov, tau=tau, chol=chol,
-                                       lower=lower, *args, **kwargs)
+        super().__init__(mu=mu, cov=cov, tau=tau, chol=chol, lower=lower, *args, **kwargs)
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
@@ -333,8 +332,7 @@ class MvStudentT(_QuadFormBase):
             if cov is not None:
                 raise ValueError('Specify only one of cov and Sigma')
             cov = Sigma
-        super(MvStudentT, self).__init__(mu=mu, cov=cov, tau=tau, chol=chol,
-                                         lower=lower, *args, **kwargs)
+        super().__init__(mu=mu, cov=cov, tau=tau, chol=chol, lower=lower, *args, **kwargs)
         self.nu = nu = tt.as_tensor_variable(nu)
         self.mean = self.median = self.mode = self.mu = self.mu
 
@@ -408,7 +406,7 @@ class Dirichlet(Continuous):
         shape = np.atleast_1d(a.shape)[-1]
 
         kwargs.setdefault("shape", shape)
-        super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
+        super().__init__(transform=transform, *args, **kwargs)
 
         self.size_prefix = tuple(self.shape[:-1])
         self.k = tt.as_tensor_variable(shape)
@@ -501,7 +499,7 @@ class Multinomial(Discrete):
     """
 
     def __init__(self, n, p, *args, **kwargs):
-        super(Multinomial, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         p = p / tt.sum(p, axis=-1, keepdims=True)
         n = np.squeeze(n) # works also if n is a tensor
@@ -742,7 +740,7 @@ class Wishart(Continuous):
     """
 
     def __init__(self, nu, V, *args, **kwargs):
-        super(Wishart, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         warnings.warn('The Wishart distribution can currently not be used '
                       'for MCMC sampling. The probability of sampling a '
                       'symmetric matrix is basically zero. Instead, please '
@@ -1017,7 +1015,7 @@ class LKJCholeskyCov(Continuous):
 
         kwargs['shape'] = shape
         kwargs['transform'] = transform
-        super(LKJCholeskyCov, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.sd_dist = sd_dist
         self.diag_idxs = transform.diag_idxs
@@ -1120,8 +1118,7 @@ class LKJCorr(Continuous):
         if transform == 'interval':
             transform = transforms.interval(-1, 1)
 
-        super(LKJCorr, self).__init__(shape=shape, transform=transform,
-                                      *args, **kwargs)
+        super().__init__(shape=shape, transform=transform, *args, **kwargs)
         warnings.warn('Parameters in LKJCorr have been rename: shape parameter n -> eta '
                       'dimension parameter p -> n. Please double check your initialization.',
                       DeprecationWarning)
@@ -1270,7 +1267,7 @@ class MatrixNormal(Continuous):
             raise TypeError('shape is a required argument')
         assert len(shape) == 2, "shape must have length 2: mxn"
         self.shape = shape
-        super(MatrixNormal, self).__init__(shape=shape, *args, **kwargs)
+        super().__init__(shape=shape, *args, **kwargs)
         self.mu = tt.as_tensor_variable(mu)
         self.mean = self.median = self.mode = self.mu
         self.solve_lower = tt.slinalg.solve_lower_triangular
@@ -1485,7 +1482,7 @@ class KroneckerNormal(Continuous):
     def __init__(self, mu, covs=None, chols=None, evds=None, sigma=None,
                  *args, **kwargs):
         self._setup(covs, chols, evds, sigma)
-        super(KroneckerNormal, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.mu = tt.as_tensor_variable(mu)
         self.mean = self.median = self.mode = self.mu
 

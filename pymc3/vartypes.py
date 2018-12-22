@@ -1,7 +1,3 @@
-import sys
-
-import six
-
 __all__ = ['bool_types', 'int_types', 'float_types', 'complex_types', 'continuous_types',
            'discrete_types', 'typefilter', 'isgenerator']
 
@@ -22,10 +18,7 @@ complex_types = set(['complex64',
 continuous_types = float_types | complex_types
 discrete_types = bool_types | int_types
 
-if sys.version_info[0] == 3:
-    string_types = str
-else:
-    string_types = basestring
+string_types = str
 
 
 def typefilter(vars, types):
@@ -34,5 +27,4 @@ def typefilter(vars, types):
 
 
 def isgenerator(obj):
-    return ((hasattr(obj, '__next__') and six.PY3) or
-            (hasattr(obj, 'next') and six.PY2))
+    return hasattr(obj, '__next__')

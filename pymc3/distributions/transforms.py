@@ -14,7 +14,7 @@ __all__ = ['transform', 'stick_breaking', 'logodds', 'interval', 'log_exp_m1',
            't_stick_breaking']
 
 
-class Transform(object):
+class Transform:
     """A transformation of a random variable from one space into another.
 
     Attributes
@@ -125,9 +125,7 @@ class TransformedDistribution(distribution.Distribution):
         v = forward(FreeRV(name='v', distribution=dist))
         self.type = v.type
 
-        super(TransformedDistribution, self).__init__(
-            v.shape.tag.test_value, v.dtype,
-            testval, dist.defaults, *args, **kwargs)
+        super().__init__(v.shape.tag.test_value, v.dtype, testval, dist.defaults, *args, **kwargs)
 
         if transform.name == 'stickbreaking':
             b = np.hstack(((np.atleast_1d(self.shape) == 1)[:-1], False))
