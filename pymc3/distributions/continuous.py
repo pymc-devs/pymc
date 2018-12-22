@@ -417,7 +417,7 @@ class Normal(Continuous):
             x = pm.Normal('x', mu=0, tau=1/23)
     """
 
-    def __init__(self, mu=0, sigma=None, tau=None, sigma=None, **kwargs):
+    def __init__(self, mu=0, sigma=None, tau=None, sd=None, **kwargs):
         if sd is not None:
             sigma = sd
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
@@ -565,7 +565,7 @@ class TruncatedNormal(BoundedContinuous):
     """
 
     def __init__(self, mu=0, sigma=None, tau=None, lower=None, upper=None,
-                 transform='auto', sigma=None, *args, **kwargs):
+                 transform='auto', sd=None, *args, **kwargs):
         if sd is not None:
             sigma = sd
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
@@ -748,7 +748,7 @@ class HalfNormal(PositiveContinuous):
             x = pm.HalfNormal('x', tau=1/15)
     """
 
-    def __init__(self, sigma=None, tau=None, sigma=None, *args, **kwargs):
+    def __init__(self, sigma=None, tau=None, sd=None, *args, **kwargs):
         if sd is not None:
             sigma = sd
 
@@ -1112,7 +1112,7 @@ class Beta(UnitContinuous):
     """
 
     def __init__(self, alpha=None, beta=None, mu=None, sigma=None,
-                 sigma=None, *args, **kwargs):
+                 sd=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
@@ -1628,7 +1628,7 @@ class Lognormal(PositiveContinuous):
             x = pm.Lognormal('x', mu=2, tau=1/100)
     """
 
-    def __init__(self, mu=0, sigma=None, tau=None, sigma=None, *args, **kwargs):
+    def __init__(self, mu=0, sigma=None, tau=None, sd=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
@@ -1784,7 +1784,7 @@ class StudentT(Continuous):
             x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
     """
 
-    def __init__(self, nu, mu=0, lam=None, sigma=None, sigma=None, *args, **kwargs):
+    def __init__(self, nu, mu=0, lam=None, sigma=None, sd=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
@@ -2290,7 +2290,7 @@ class Gamma(PositiveContinuous):
     """
 
     def __init__(self, alpha=None, beta=None, mu=None, sigma=None,
-                 sigma=None, *args, **kwargs):
+                 sd=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
@@ -2423,7 +2423,7 @@ class InverseGamma(PositiveContinuous):
         Alternative scale parameter (sigma > 0).
     """
 
-    def __init__(self, alpha=None, beta=None, mu=None, sigma=None, sigma=None,
+    def __init__(self, alpha=None, beta=None, mu=None, sigma=None, sd=None,
                  *args, **kwargs):
         super().__init__(*args, defaults=('mode',), **kwargs)
 
@@ -2769,7 +2769,7 @@ class HalfStudentT(PositiveContinuous):
             x = pm.HalfStudentT('x', lam=4, nu=10)
     """
 
-    def __init__(self, nu=1, sigma=None, lam=None, sigma=None,
+    def __init__(self, nu=1, sigma=None, lam=None, sd=None,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         if sd is not None:
@@ -2908,7 +2908,7 @@ class ExGaussian(Continuous):
         Vol. 4, No. 1, pp 35-45.
     """
 
-    def __init__(self, mu=0., sigma=None, nu=None, sigma=None,
+    def __init__(self, mu=0., sigma=None, nu=None, sd=None,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -3181,7 +3181,7 @@ class SkewNormal(Continuous):
 
     """
 
-    def __init__(self, mu=0.0, sigma=None, tau=None, alpha=1, sigma=None,
+    def __init__(self, mu=0.0, sigma=None, tau=None, alpha=1, sd=None,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -3564,7 +3564,7 @@ class Rice(PositiveContinuous):
 
     """
 
-    def __init__(self, nu=None, sigma=None, b=None, sigma=None, *args, **kwargs):
+    def __init__(self, nu=None, sigma=None, b=None, sd=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
@@ -3813,7 +3813,7 @@ class LogitNormal(UnitContinuous):
         Scale parameter (tau > 0).
     """
 
-    def __init__(self, mu=0, sigma=None, tau=None, sigma=None, **kwargs):
+    def __init__(self, mu=0, sigma=None, tau=None, sd=None, **kwargs):
         if sd is not None:
             sigma = sd
         self.mu = mu = tt.as_tensor_variable(mu)

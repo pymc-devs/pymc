@@ -91,7 +91,7 @@ class AR(distribution.Continuous):
 
     def __init__(self, rho, sigma=None, tau=None,
                  constant=False, init=Flat.dist(),
-                 sigma=None, *args, **kwargs):
+                 sd=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
@@ -158,7 +158,7 @@ class GaussianRandomWalk(distribution.Continuous):
     """
 
     def __init__(self, tau=None, init=Flat.dist(), sigma=None, mu=0.,
-                 sigma=None, *args, **kwargs):
+                 sd=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
