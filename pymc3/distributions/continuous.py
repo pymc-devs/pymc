@@ -958,11 +958,8 @@ class Wald(PositiveContinuous):
         """
         mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha],
                                      point=point, size=size)
-        print(mu.shape, lam.shape, alpha.shape)
         mu, lam, alpha = broadcast_distribution_samples([mu, lam, alpha],
                                                         size=size)
-        print(mu.shape, lam.shape, alpha.shape)
-        print(self.shape, size)
         return generate_samples(self._random,
                                 mu, lam, alpha,
                                 dist_shape=self.shape,
