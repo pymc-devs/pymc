@@ -434,7 +434,7 @@ def test_elbo():
     y_obs = np.array([1.6, 1.4])
 
     post_mu = np.array([1.88], dtype=theano.config.floatX)
-    post_sd = np.array([1], dtype=theano.config.floatX)
+    post_sigma = np.array([1], dtype=theano.config.floatX)
     # Create a model for test
     with pm.Model() as model:
         mu = pm.Normal('mu', mu=mu0, sigma=sigma)
@@ -446,7 +446,7 @@ def test_elbo():
         elbo = -pm.operators.KL(mean_field)()(10000)
 
     mean_field.shared_params['mu'].set_value(post_mu)
-    mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+    mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
     f = theano.function([], elbo)
     elbo_mc = f()
@@ -469,7 +469,7 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
     y_obs = np.array([1.6, 1.4])
     beta = len(y_obs)/float(aux_total_size)
     post_mu = np.array([1.88], dtype=theano.config.floatX)
-    post_sd = np.array([1], dtype=theano.config.floatX)
+    post_sigma = np.array([1], dtype=theano.config.floatX)
 
     # TODO: theano_config
     # with pm.Model(theano_config=dict(floatX='float64')):
@@ -485,7 +485,7 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
             mean_field_1 = MeanField()
             assert mean_field_1.scale_cost_to_minibatch
             mean_field_1.shared_params['mu'].set_value(post_mu)
-            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
             with pm.theanof.change_flags(compute_test_value='off'):
                 elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
@@ -499,7 +499,7 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
             mean_field_2.scale_cost_to_minibatch = False
             assert not mean_field_2.scale_cost_to_minibatch
             mean_field_2.shared_params['mu'].set_value(post_mu)
-            mean_field_2.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+            mean_field_2.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
         with pm.theanof.change_flags(compute_test_value='off'):
             elbo_via_total_size_unscaled = -pm.operators.KL(mean_field_2)()(10000)
@@ -518,7 +518,7 @@ def test_elbo_beta_kl(aux_total_size):
     y_obs = np.array([1.6, 1.4])
     beta = len(y_obs)/float(aux_total_size)
     post_mu = np.array([1.88], dtype=theano.config.floatX)
-    post_sd = np.array([1], dtype=theano.config.floatX)
+    post_sigma = np.array([1], dtype=theano.config.floatX)
     with pm.theanof.change_flags(floatX='float64', warn_float64='ignore'):
         with pm.Model():
             mu = pm.Normal('mu', mu=mu0, sigma=sigma)
@@ -527,7 +527,7 @@ def test_elbo_beta_kl(aux_total_size):
             mean_field_1 = MeanField()
             mean_field_1.scale_cost_to_minibatch = True
             mean_field_1.shared_params['mu'].set_value(post_mu)
-            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
             with pm.theanof.change_flags(compute_test_value='off'):
                 elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
@@ -538,7 +538,7 @@ def test_elbo_beta_kl(aux_total_size):
             # Create variational gradient tensor
             mean_field_3 = MeanField()
             mean_field_3.shared_params['mu'].set_value(post_mu)
-            mean_field_3.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+            mean_field_3.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
             with pm.theanof.change_flags(compute_test_value='off'):
                 elbo_via_beta_kl = -pm.operators.KL(mean_field_3, beta=beta)()(10000)
@@ -558,14 +558,14 @@ def use_minibatch(request):
 @pytest.fixture('module')
 def simple_model_data(use_minibatch):
     n = 1000
-    sd0 = 2.
+    sigma0 = 2.
     mu0 = 4.
-    sd = 3.
+    sigma = 3.
     mu = -5.
 
-    data = sd * np.random.randn(n) + mu
-    d = n / sd ** 2 + 1 / sd0 ** 2
-    mu_post = (n * np.mean(data) / sd ** 2 + mu0 / sd0 ** 2) / d
+    data = sigma * np.random.randn(n) + mu
+    d = n / sigma ** 2 + 1 / sigma0 ** 2
+    mu_post = (n * np.mean(data) / sigma ** 2 + mu0 / sigma0 ** 2) / d
     if use_minibatch:
         data = pm.Minibatch(data)
     return dict(
@@ -574,8 +574,8 @@ def simple_model_data(use_minibatch):
         mu_post=mu_post,
         d=d,
         mu0=mu0,
-        sd0=sd0,
-        sigma=sd,
+        sigma0=sigma0,
+        sigma=sigma,
     )
 
 
@@ -584,8 +584,8 @@ def simple_model(simple_model_data):
     with pm.Model() as model:
         mu_ = pm.Normal(
             'mu', mu=simple_model_data['mu0'],
-            sigma=simple_model_data['sd0'], testval=0)
-        pm.Normal('x', mu=mu_, sigma=simple_model_data['sd'],
+            sigma=simple_model_data['sigma0'], testval=0)
+        pm.Normal('x', mu=mu_, sigma=simple_model_data['sigma'],
                   observed=simple_model_data['data'],
                   total_size=simple_model_data['n'])
     return model
