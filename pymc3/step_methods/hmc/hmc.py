@@ -85,7 +85,7 @@ class HamiltonianMC(BaseHMC):
             The model
         **kwargs : passed to BaseHMC
         """
-        super(HamiltonianMC, self).__init__(vars, **kwargs)
+        super().__init__(vars, **kwargs)
         self.path_length = path_length
 
     def _hamiltonian_step(self, start, p0, step_size):

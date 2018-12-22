@@ -33,8 +33,8 @@ def get_city_data():
 class TestARM5_4(SeededTest):
     def build_model(self):
         data = pd.read_csv(pm.get_data('wells.dat'),
-                           delimiter=u' ', index_col=u'id',
-                           dtype={u'switch': np.int8})
+                           delimiter=' ', index_col='id',
+                           dtype={'switch': np.int8})
         data.dist /= 100
         data.educ /= 4
         col = data.columns
@@ -232,7 +232,7 @@ class TestLatentOccupancy(SeededTest):
     Copyright (c) 2008 University of Otago. All rights reserved.
     """
     def setup_method(self):
-        super(TestLatentOccupancy, self).setup_method()
+        super().setup_method()
         # Sample size
         n = 100
         # True mean count, given occupancy

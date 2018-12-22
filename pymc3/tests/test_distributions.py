@@ -1,5 +1,3 @@
-from __future__ import division
-
 import itertools
 import sys
 
@@ -55,7 +53,7 @@ def get_lkj_cases():
 LKJ_CASES = get_lkj_cases()
 
 
-class Domain(object):
+class Domain:
     def __init__(self, vals, dtype=None, edges=None, shape=None):
         avals = array(vals, dtype=dtype)
         if dtype is None and not str(avals.dtype).startswith('int'):
@@ -204,7 +202,7 @@ def beta_mu_sd(value, mu, sd):
         return -inf
 
 
-class ProductDomain(object):
+class ProductDomain:
     def __init__(self, domains):
         self.vals = list(itertools.product(*[d.vals for d in domains]))
         self.shape = (len(domains),) + domains[0].shape
@@ -338,8 +336,8 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
     return logp.sum()
 
 def AR1_logpdf(value, k, tau_e):
-    return (sp.norm(loc=0,scale=1/np.sqrt(tau_e)).logpdf(value[0]) +
-            sp.norm(loc=k*value[:-1],scale=1/np.sqrt(tau_e)).logpdf(value[1:]).sum())
+    return (sp.norm(loc=0, scale=1/np.sqrt(tau_e)).logpdf(value[0]) +
+            sp.norm(loc=k*value[:-1], scale=1/np.sqrt(tau_e)).logpdf(value[1:]).sum())
 
 def invlogit(x, eps=sys.float_info.epsilon):
     return (1. - 2. * eps) / (1. + np.exp(-x)) + eps
@@ -349,14 +347,14 @@ def orderedlogistic_logpdf(value, eta, cutpoints):
     p = invlogit(eta - c[value]) - invlogit(eta - c[value + 1])
     return np.log(p)
 
-class Simplex(object):
+class Simplex:
     def __init__(self, n):
         self.vals = list(simplex_values(n))
         self.shape = (n,)
         self.dtype = Unit.dtype
 
 
-class MultiSimplex(object):
+class MultiSimplex:
     def __init__(self, n_dependent, n_independent):
         self.vals = []
         for simplex_value in itertools.product(simplex_values(n_dependent), repeat=n_independent):
@@ -929,7 +927,7 @@ class TestMatchesScipy(SeededTest):
                                  {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
                                  mvt_logpdf)
 
-    @pytest.mark.parametrize('n',[2,3,4])
+    @pytest.mark.parametrize('n', [2, 3, 4])
     def test_AR1(self, n):
         self.pymc3_matches_scipy(AR1, Vector(R, n), {'k': Unit, 'tau_e': Rplus}, AR1_logpdf)
 
@@ -1008,13 +1006,13 @@ class TestMatchesScipy(SeededTest):
 
     def test_multinomial_mode_with_shape(self):
         n = [1, 10]
-        p = np.asarray([[.25,.25,.25,.25], [.26, .26, .26, .22]])
+        p = np.asarray([[.25, .25, .25, .25], [.26, .26, .26, .22]])
         with Model() as model:
             m = Multinomial('m', n=n, p=p, shape=(2, 4))
         assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
 
     def test_multinomial_vec(self):
-        vals = np.array([[2,4,4], [3,3,4]])
+        vals = np.array([[2, 4, 4], [3, 3, 4]])
         p = np.array([0.2, 0.3, 0.5])
         n = 10
 
@@ -1037,7 +1035,7 @@ class TestMatchesScipy(SeededTest):
                             decimal=4)
 
     def test_multinomial_vec_1d_n(self):
-        vals = np.array([[2,4,4], [4,3,4]])
+        vals = np.array([[2, 4, 4], [4, 3, 4]])
         p = np.array([0.2, 0.3, 0.5])
         ns = np.array([10, 11])
 
@@ -1049,7 +1047,7 @@ class TestMatchesScipy(SeededTest):
                             decimal=4)
 
     def test_multinomial_vec_1d_n_2d_p(self):
-        vals = np.array([[2,4,4], [4,3,4]])
+        vals = np.array([[2, 4, 4], [4, 3, 4]])
         ps = np.array([[0.2, 0.3, 0.5],
                        [0.9, 0.09, 0.01]])
         ns = np.array([10, 11])
@@ -1062,7 +1060,7 @@ class TestMatchesScipy(SeededTest):
                             decimal=4)
 
     def test_multinomial_vec_2d_p(self):
-        vals = np.array([[2,4,4], [3,3,4]])
+        vals = np.array([[2, 4, 4], [3, 3, 4]])
         ps = np.array([[0.2, 0.3, 0.5],
                        [0.3, 0.3, 0.4]])
         n = 10
@@ -1194,11 +1192,7 @@ class TestMatchesScipy(SeededTest):
                     def __init__(self, **kwargs):
                         x_points = np.linspace(xmin, xmax, 100000)
                         pdf_points = sp.norm.pdf(x_points, loc=mu, scale=sd)
-                        super(TestedInterpolated, self).__init__(
-                            x_points=x_points,
-                            pdf_points=pdf_points,
-                            **kwargs
-                        )
+                        super().__init__(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
                 def ref_pdf(value):
                     return np.where(
@@ -1276,7 +1270,7 @@ def test_bound():
         BoundPoisson(name="y", mu=1)
 
 
-class TestLatex(object):
+class TestLatex:
 
     def setup_class(self):
         # True parameter values

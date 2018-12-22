@@ -46,7 +46,7 @@ def clear_cache(obj=None):
             obj.cache.clear()
 
 
-class WithMemoization(object):
+class WithMemoization:
     def __hash__(self):
         return hash(id(self))
 

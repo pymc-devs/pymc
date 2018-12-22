@@ -100,8 +100,7 @@ class Mixture(Distribution):
         except (AttributeError, ValueError, IndexError):
             pass
 
-        super(Mixture, self).__init__(shape, dtype, defaults=defaults,
-                                      *args, **kwargs)
+        super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
     def _comp_logp(self, value):
         comp_dists = self.comp_dists
@@ -227,8 +226,7 @@ class NormalMixture(Mixture):
         self.mu = mu = tt.as_tensor_variable(mu)
         self.sd = sd = tt.as_tensor_variable(sd)
 
-        super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd, shape=comp_shape),
-                                            *args, **kwargs)
+        super().__init__(w, Normal.dist(mu, sd=sd, shape=comp_shape), *args, **kwargs)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:

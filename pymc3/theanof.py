@@ -81,7 +81,7 @@ def int32(X):
 
 def smartfloatX(x):
     """
-    Convert non int types to floatX 
+    Convert non int types to floatX
     """
     if str(x.dtype).startswith('float'):
         x = floatX(x)
@@ -192,7 +192,7 @@ class IdentityOp(scalar.UnaryScalarOp):
         return "{z} = {x};".format(x=inp[0], z=out[0])
 
     def __eq__(self, other):
-        return type(self) == type(other)
+        return isinstance(self, type(other))
 
     def __hash__(self):
         return hash(type(self))
@@ -266,7 +266,7 @@ def reshape_t(x, shape):
         return x[0]
 
 
-class CallableTensor(object):
+class CallableTensor:
     """Turns a symbolic variable with one input into a function that returns symbolic arguments
     with the one variable replaced with the input.
     """
@@ -310,7 +310,7 @@ class GeneratorOp(Op):
     __props__ = ('generator',)
 
     def __init__(self, gen, default=None):
-        super(GeneratorOp, self).__init__()
+        super().__init__()
         if not isinstance(gen, GeneratorAdapter):
             gen = GeneratorAdapter(gen)
         self.generator = gen

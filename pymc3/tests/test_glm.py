@@ -16,7 +16,7 @@ def generate_data(intercept, slope, size=700):
 class TestGLM(SeededTest):
     @classmethod
     def setup_class(cls):
-        super(TestGLM, cls).setup_class()
+        super().setup_class()
         cls.intercept = 1
         cls.slope = 3
         cls.sd = .05

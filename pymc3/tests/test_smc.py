@@ -8,7 +8,7 @@ from .helpers import SeededTest
 class TestSMC(SeededTest):
 
     def setup_class(self):
-        super(TestSMC, self).setup_class()
+        super().setup_class()
         self.samples = 1000
         n = 4
         mu1 = np.ones(n) * (1. / 2)

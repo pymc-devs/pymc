@@ -1,6 +1,16 @@
 # Release Notes
 
-## PyMC3 3.6 (unreleased)
+## PyMC3 3.7 (unreleased)
+
+### New features
+
+### Maintenance
+
+### Deprecations
+
+## PyMC3 3.6 (Dec 21 2018)
+
+This will be the last release to support Python 2.
 
 ### New features
 

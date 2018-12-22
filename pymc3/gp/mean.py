@@ -3,7 +3,7 @@ import theano.tensor as tt
 __all__ = ['Zero', 'Constant', 'Linear']
 
 
-class Mean(object):
+class Mean:
     R"""
     Base class for mean functions
     """

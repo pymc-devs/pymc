@@ -10,7 +10,7 @@ import theano.tensor as tt
 import theano.sparse as sparse
 
 
-class TestHelperFunc(object):
+class TestHelperFunc:
     def test_pandas_to_array(self):
         """
         Ensure that pandas_to_array returns the dense array, masked array,

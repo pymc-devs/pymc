@@ -6,7 +6,7 @@ from theano import theano
 from pymc3.theanof import set_theano_conf
 
 
-class TestSetTheanoConfig(object):
+class TestSetTheanoConfig:
     def test_invalid_key(self):
         with pytest.raises(ValueError) as e:
             set_theano_conf({'bad_key': True})
