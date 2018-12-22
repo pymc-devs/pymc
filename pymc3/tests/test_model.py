@@ -27,8 +27,8 @@ class NewModel(pm.Model):
 class DocstringModel(pm.Model):
     def __init__(self, mean=0, sigma=1, name='', model=None):
         super().__init__(name, model)
-        self.Var('v1', Normal.dist(mu=mean, sigma=sd))
-        Normal('v2', mu=mean, sigma=sd)
+        self.Var('v1', Normal.dist(mu=mean, sigma=sigma))
+        Normal('v2', mu=mean, sigma=sigma)
         Normal('v3', mu=mean, sigma=HalfCauchy('sd', beta=10, testval=1.))
         Deterministic('v3_sq', self.v3 ** 2)
         Potential('p1', tt.constant(1))
