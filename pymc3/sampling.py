@@ -483,7 +483,7 @@ def _check_start_shape(model, start):
             # if start var has no shape
             else:
                 # if model var has a specified shape
-                if var_shape:
+                if var_shape.size > 0:
                     e += "\nExpected shape {} for var " \
                          "'{}', got scalar {}".format(
                              tuple(var_shape), var.name, start[var.name]
