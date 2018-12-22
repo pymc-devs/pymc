@@ -130,7 +130,7 @@ def test_user_potential():
     class Potential(quadpotential.QuadPotentialDiag):
         def energy(self, x, velocity=None):
             called.append(1)
-            return super(Potential, self).energy(x, velocity)
+            return super().energy(x, velocity)
 
     pot = Potential(floatX([1]))
     with model:

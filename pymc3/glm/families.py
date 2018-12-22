@@ -14,7 +14,7 @@ __all__ = ['Normal', 'StudentT', 'Binomial', 'Poisson', 'NegativeBinomial']
 # it as a method.
 
 
-class Identity():
+class Identity:
 
     def __call__(self, x):
         return x
@@ -25,7 +25,7 @@ inverse = tt.inv
 exp = tt.exp
 
 
-class Family(object):
+class Family:
     """Base class for Family of likelihood distribution and link functions.
     """
     priors = {}

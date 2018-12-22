@@ -7,21 +7,21 @@ import theano.tensor as tt
 from .helpers import SeededTest
 
 
-class KnownMean(object):
+class KnownMean:
     def test_mean(self):
         for varname, expected in self.means.items():
             samples = self.samples[varname]
             npt.assert_allclose(expected, samples.mean(0), self.rtol, self.atol)
 
 
-class KnownVariance(object):
+class KnownVariance:
     def test_var(self):
         for varname, expected in self.variances.items():
             samples = self.samples[varname]
             npt.assert_allclose(expected, samples.var(0), self.rtol, self.atol)
 
 
-class KnownCDF(object):
+class KnownCDF:
     ks_thin = 5
     alpha = 0.001
 
@@ -124,7 +124,7 @@ class LKJCholeskyCovFixture(KnownCDF):
 class BaseSampler(SeededTest):
     @classmethod
     def setup_class(cls):
-        super(BaseSampler, cls).setup_class()
+        super().setup_class()
         cls.model = cls.make_model()
         with cls.model:
             cls.step = cls.make_step()

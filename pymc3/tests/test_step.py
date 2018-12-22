@@ -47,7 +47,7 @@ import theano.tensor as tt
 from .helpers import select_by_precision
 
 
-class TestStepMethods(object):  # yield test doesn't work subclassing object
+class TestStepMethods:  # yield test doesn't work subclassing object
     master_samples = {
         Slice: np.array(
             [
@@ -826,7 +826,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             self.check_stat(check, trace, step.__class__.__name__)
 
 
-class TestMetropolisProposal(object):
+class TestMetropolisProposal:
     def test_proposal_choice(self):
         _, model, _ = mv_simple()
         with model:
@@ -849,7 +849,7 @@ class TestMetropolisProposal(object):
         npt.assert_allclose(np.cov(samples.T), cov, rtol=0.2)
 
 
-class TestCompoundStep(object):
+class TestCompoundStep:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS, DEMetropolis)
 
     @pytest.mark.skipif(
@@ -876,7 +876,7 @@ class TestCompoundStep(object):
                 assert isinstance(sampler_instance, sampler)
 
 
-class TestAssignStepMethods(object):
+class TestAssignStepMethods:
     def test_bernoulli(self):
         """Test bernoulli distribution is assigned binary gibbs metropolis method"""
         with Model() as model:
@@ -932,7 +932,7 @@ class TestAssignStepMethods(object):
         assert isinstance(steps, Slice)
 
 
-class TestPopulationSamplers(object):
+class TestPopulationSamplers:
 
     steppers = [DEMetropolis]
 
@@ -966,7 +966,7 @@ class TestPopulationSamplers(object):
 @pytest.mark.xfail(
     condition=(theano.config.floatX == "float32"), reason="Fails on float32"
 )
-class TestNutsCheckTrace(object):
+class TestNutsCheckTrace:
     def test_multiple_samplers(self, caplog):
         with Model():
             prob = Beta("prob", alpha=5.0, beta=3.0)
