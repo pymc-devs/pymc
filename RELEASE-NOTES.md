@@ -6,6 +6,8 @@
 
 ### Maintenance
 
+- All occurances of `sd` as a parameter has been replaced with `sigma` for consistency. `sd` will continue to be available for backwards compatibility.
+
 ### Deprecations
 
 ## PyMC3 3.6 (Dec 21 2018)
