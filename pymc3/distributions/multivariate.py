@@ -215,7 +215,7 @@ class MvNormal(_QuadFormBase):
         chol_packed = pm.LKJCholeskyCov('chol_packed',
             n=3, eta=2, sd_dist=sd_dist)
         chol = pm.expand_packed_triangular(3, chol_packed)
-        vals_raw = pm.Normal('vals_raw', mu=0, sd=1, shape=(5, 3))
+        vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=(5, 3))
         vals = pm.Deterministic('vals', tt.dot(chol, vals_raw.T).T)
     """
 
@@ -938,7 +938,7 @@ class LKJCholeskyCov(Continuous):
             vals = pm.MvNormal('vals', mu=np.zeros(10), chol=chol, shape=10)
 
             # Or transform an uncorrelated normal:
-            vals_raw = pm.Normal('vals_raw', mu=0, sd=1, shape=10)
+            vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=10)
             vals = tt.dot(chol, vals_raw)
 
             # Or compute the covariance matrix
@@ -1252,7 +1252,7 @@ class MatrixNormal(Continuous):
             colchol = pm.expand_packed_triangular(3, colchol_packed)
 
             # Setup left covariance matrix
-            scale = pm.Lognormal('scale', mu=np.log(true_scale), sd=0.5)
+            scale = pm.Lognormal('scale', mu=np.log(true_scale), sigma=0.5)
             rowcov = tt.nlinalg.diag([scale**(2*i) for i in range(m)])
 
             vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,

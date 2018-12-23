@@ -31,12 +31,12 @@ sigma = np.array([15, 10, 16, 11,  9, 11, 10, 18])
 with Model() as schools:
 
     eta = Normal('eta', 0, 1, shape=J)
-    mu = Normal('mu', 0, sd=1e6)
+    mu = Normal('mu', 0, sigma=1e6)
     tau = HalfCauchy('tau', 25)
 
     theta = mu + tau * eta
 
-    obs = Normal('obs', theta, sd=sigma, observed=y)
+    obs = Normal('obs', theta, sigma=sigma, observed=y)
 
 
 def run(n=1000):

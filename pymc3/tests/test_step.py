@@ -702,8 +702,8 @@ class TestStepMethods:  # yield test doesn't work subclassing object
         """
         n_steps = 100
         with Model() as model:
-            x = Normal("x", mu=0, sd=1)
-            y = Normal("y", mu=x, sd=1, observed=1)
+            x = Normal("x", mu=0, sigma=1)
+            y = Normal("y", mu=x, sigma=1, observed=1)
             if step_method.__name__ == "SMC":
                 trace = sample(
                     draws=200, random_seed=1, progressbar=False, step=step_method()
@@ -925,7 +925,7 @@ class TestAssignStepMethods:
 
             data = np.random.normal(size=(100,))
             Normal(
-                "y", mu=kill_grad(x), sd=1, observed=data.astype(theano.config.floatX)
+                "y", mu=kill_grad(x), sigma=1, observed=data.astype(theano.config.floatX)
             )
 
             steps = assign_step_methods(model, [])
@@ -939,7 +939,7 @@ class TestPopulationSamplers:
     def test_checks_population_size(self):
         """Test that population samplers check the population size."""
         with Model() as model:
-            n = Normal("n", mu=0, sd=1)
+            n = Normal("n", mu=0, sigma=1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
                 with pytest.raises(ValueError):
@@ -978,7 +978,7 @@ class TestNutsCheckTrace:
 
     def test_bad_init_nonparallel(self):
         with Model():
-            HalfNormal("a", sd=1, testval=-1, transform=None)
+            HalfNormal("a", sigma=1, testval=-1, transform=None)
             with pytest.raises(SamplingError) as error:
                 sample(init=None, chains=1, random_seed=1)
             error.match("Bad initial")
@@ -987,7 +987,7 @@ class TestNutsCheckTrace:
                     reason="requires python3.6 or higher")
     def test_bad_init_parallel(self):
         with Model():
-            HalfNormal("a", sd=1, testval=-1, transform=None)
+            HalfNormal("a", sigma=1, testval=-1, transform=None)
             with pytest.raises(ParallelSamplingError) as error:
                 sample(init=None, cores=2, random_seed=1)
             error.match("Bad initial")
@@ -1016,7 +1016,7 @@ class TestNutsCheckTrace:
 
     def test_sampler_stats(self):
         with Model() as model:
-            x = Normal("x", mu=0, sd=1)
+            x = Normal("x", mu=0, sigma=1)
             trace = sample(draws=10, tune=1, chains=1)
 
         # Assert stats exist and have the correct shape.

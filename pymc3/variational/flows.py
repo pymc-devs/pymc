@@ -2,7 +2,7 @@ import numpy as np
 import theano
 from theano import tensor as tt
 
-from ..distributions.dist_math import rho2sd
+from ..distributions.dist_math import rho2sigma
 from ..theanof import change_flags
 from ..memoize import WithMemoization
 from .opvi import node_property, collect_shared_to_list
@@ -540,7 +540,7 @@ class ScaleFlow(AbstractFlow):
     def __init__(self, rho=None, **kwargs):
         super().__init__(**kwargs)
         rho = self.add_param(rho, 'rho')
-        self.scale = rho2sd(rho)
+        self.scale = rho2sigma(rho)
         self.shared_params = dict(rho=rho)
 
     log_scale = property(lambda self: self.shared_params['log_scale'])

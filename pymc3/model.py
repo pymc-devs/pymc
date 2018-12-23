@@ -564,7 +564,7 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
 
         class CustomModel(Model):
             # 1) override init
-            def __init__(self, mean=0, sd=1, name='', model=None):
+            def __init__(self, mean=0, sigma=1, name='', model=None):
                 # 2) call super's init first, passing model and name
                 # to it name will be prefix for all variables here if
                 # no name specified for model there will be no prefix
@@ -575,18 +575,18 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
                 # will get model's name prefix
 
                 # 3) you can create variables with Var method
-                self.Var('v1', Normal.dist(mu=mean, sd=sd))
+                self.Var('v1', Normal.dist(mu=mean, sigma=sd))
                 # this will create variable named like '{prefix_}v1'
                 # and assign attribute 'v1' to instance created
                 # variable can be accessed with self.v1 or self['v1']
 
                 # 4) this syntax will also work as we are in the
                 # context of instance itself, names are given as usual
-                Normal('v2', mu=mean, sd=sd)
+                Normal('v2', mu=mean, sigma=sd)
 
                 # something more complex is allowed, too
                 half_cauchy = HalfCauchy('sd', beta=10, testval=1.)
-                Normal('v3', mu=mean, sd=half_cauchy)
+                Normal('v3', mu=mean, sigma=half_cauchy)
 
                 # Deterministic variables can be used in usual way
                 Deterministic('v3_sq', self.v3 ** 2)
@@ -606,7 +606,7 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
         # II:
         #   use new class as entering point in context
         with CustomModel() as model:
-            Normal('new_normal_var', mu=1, sd=0)
+            Normal('new_normal_var', mu=1, sigma=0)
 
         # III:
         #   just get model instance with all that was defined in it

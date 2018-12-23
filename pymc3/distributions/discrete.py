@@ -1153,7 +1153,7 @@ class OrderedLogistic(Categorical):
 
         # Ordered logistic regression
         with pm.Model() as model:
-            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sd=10, shape=2,
+            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
                                   transform=pm.distributions.transforms.ordered)
             y_ = pm.OrderedLogistic("y", cutpoints=cutpoints, eta=x, observed=y)
             tr = pm.sample(1000)

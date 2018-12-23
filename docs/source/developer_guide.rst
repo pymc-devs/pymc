@@ -147,8 +147,8 @@ explicit about the conversion. For example:
 .. code:: python
 
     with pm.Model() as model:
-        z = pm.Normal('z', mu=0., sd=5.)             # ==> pymc3.model.FreeRV, or theano.tensor with logp
-        x = pm.Normal('x', mu=z, sd=1., observed=5.) # ==> pymc3.model.ObservedRV, also has logp properties
+        z = pm.Normal('z', mu=0., sigma=5.)             # ==> pymc3.model.FreeRV, or theano.tensor with logp
+        x = pm.Normal('x', mu=z, sigma=1., observed=5.) # ==> pymc3.model.ObservedRV, also has logp properties
     x.logp({'z': 2.5})                               # ==> -4.0439386
     model.logp({'z': 2.5})                           # ==> -6.6973152
 
@@ -308,7 +308,7 @@ a model:
 .. code:: python
 
     with pm.Model() as m:
-        x = pm.Normal('x', mu=0., sd=1.)
+        x = pm.Normal('x', mu=0., sigma=1.)
 
 
 Which is the same as doing:
@@ -317,7 +317,7 @@ Which is the same as doing:
 .. code:: python
 
     m = pm.Model()
-    x = m.Var('x', pm.Normal.dist(mu=0., sd=1.))
+    x = m.Var('x', pm.Normal.dist(mu=0., sigma=1.))
 
 
 Both with the same output:
@@ -457,7 +457,7 @@ transformation <https://docs.pymc.io/notebooks/api_quickstart.html?highlight=cha
 
 .. code:: python
 
-    z = pm.Lognormal.dist(mu=0., sd=1., transform=tr.Log)
+    z = pm.Lognormal.dist(mu=0., sigma=1., transform=tr.Log)
     z.transform           # ==> pymc3.distributions.transforms.Log
 
 
@@ -1051,14 +1051,14 @@ we get error (even worse, wrong answer with silent error):
     with pm.Model() as m:
         mu = pm.Normal('mu', 0., 1., shape=(5, 1))
         sd = pm.HalfNormal('sd', 5., shape=(1, 10))
-        pm.Normal('x', mu=mu, sd=sd, observed=np.random.randn(2, 5, 10))
+        pm.Normal('x', mu=mu, sigma=sd, observed=np.random.randn(2, 5, 10))
         trace = pm.sample_prior_predictive(100)
 
     trace['x'].shape # ==> should be (100, 2, 5, 10), but get (100, 5, 10)
 
 .. code:: python
 
-    pm.Normal.dist(mu=np.zeros(2), sd=1).random(size=(10, 4)) # ==> ERROR
+    pm.Normal.dist(mu=np.zeros(2), sigma=1).random(size=(10, 4)) # ==> ERROR
 
 There are also other error related random sample generation (e.g.,
 `Mixture is currently

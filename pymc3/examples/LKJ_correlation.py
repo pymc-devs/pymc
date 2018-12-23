@@ -24,7 +24,7 @@ dataset = multivariate_normal(mu_r, cov_matrix, size=n_obs)
 
 with pm.Model() as model:
 
-    mu = pm.Normal('mu', mu=0, sd=1, shape=n_var)
+    mu = pm.Normal('mu', mu=0, sigma=1, shape=n_var)
 
     # Note that we access the distribution for the standard
     # deviations, and do not create a new random variable.
