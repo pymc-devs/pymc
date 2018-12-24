@@ -382,7 +382,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
        which was introduced by Liu in his 1996 technical report
        "Metropolized Gibbs Sampler: An Improvement".
     """
-    name = 'caregorical_gibbs_metropolis'
+    name = 'categorical_gibbs_metropolis'
 
     def __init__(self, vars, proposal='uniform', order='random', model=None):
 
