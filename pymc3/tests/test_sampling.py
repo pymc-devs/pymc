@@ -70,7 +70,7 @@ class TestSample(SeededTest):
     def test_sample_args(self):
         with self.model:
             with pytest.raises(TypeError) as excinfo:
-                pm.sample(50, tune=0, init=None, step_kwargs={'nuts': {'foo': 1}})
+                pm.sample(50, tune=0, init=None, foo=1)
             assert "'foo'" in str(excinfo.value)
 
             with pytest.raises(ValueError) as excinfo:
