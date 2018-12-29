@@ -77,7 +77,9 @@ class TestSample(SeededTest):
                 pm.sample(50, tune=0, init=None, step_kwargs={'foo': {}})
             assert 'foo' in str(excinfo.value)
 
-            pm.sample(10, tune=0, init=None, target_accept=0.9)
+            with pytest.raises(ValueError) as excinfo:
+                pm.sample(10, tune=0, init=None, target_accept=0.9)
+            assert 'target_accept' in str(excinfo.value)
 
     def test_iter_sample(self):
         with self.model:
