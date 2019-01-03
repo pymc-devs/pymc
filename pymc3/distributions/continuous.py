@@ -2923,7 +2923,7 @@ class ExGaussian(Continuous):
             sigma = sd
 
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.sigma = sigma = tt.as_tensor_variable(floatX(sigma))
+        self.sigma = self.sd = sigma = tt.as_tensor_variable(floatX(sigma))
         self.nu = nu = tt.as_tensor_variable(floatX(nu))
         self.mean = mu + nu
         self.variance = (sigma**2) + (nu**2)
