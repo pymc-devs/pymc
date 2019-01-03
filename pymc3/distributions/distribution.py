@@ -246,8 +246,7 @@ class _DrawValuesContext(Context, metaclass=InitContextMeta):
         return self._parent
 
 
-class _DrawValuesContextBlocker(six.with_metaclass(InitContextMeta,
-                                                   _DrawValuesContext)):
+class _DrawValuesContextBlocker(_DrawValuesContext, metaclass=InitContextMeta):
     """
     Context manager that starts a new drawn variables context disregarding all
     parent contexts. This can be used inside a random method to ensure that
