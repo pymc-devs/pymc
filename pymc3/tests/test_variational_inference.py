@@ -1,6 +1,6 @@
 import pytest
-import six
 import functools
+import io
 import operator
 import numpy as np
 from theano import theano, tensor as tt
@@ -253,10 +253,10 @@ def test_vae():
 
     with pm.Model():
         # Hidden variables
-        zs = pm.Normal('zs', mu=0, sd=1, shape=minibatch_size)
+        zs = pm.Normal('zs', mu=0, sigma=1, shape=minibatch_size)
         dec = zs * ad + bd
         # Observation model
-        pm.Normal('xs_', mu=dec, sd=0.1, observed=x_inp)
+        pm.Normal('xs_', mu=dec, sigma=0.1, observed=x_inp)
 
         pm.fit(1, local_rv={zs: dict(mu=mu, rho=rho)},
                more_replacements={x_inp: x_mini}, more_obj_params=[ae, be, ad, bd])
@@ -434,11 +434,11 @@ def test_elbo():
     y_obs = np.array([1.6, 1.4])
 
     post_mu = np.array([1.88], dtype=theano.config.floatX)
-    post_sd = np.array([1], dtype=theano.config.floatX)
+    post_sigma = np.array([1], dtype=theano.config.floatX)
     # Create a model for test
     with pm.Model() as model:
-        mu = pm.Normal('mu', mu=mu0, sd=sigma)
-        pm.Normal('y', mu=mu, sd=1, observed=y_obs)
+        mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+        pm.Normal('y', mu=mu, sigma=1, observed=y_obs)
 
     # Create variational gradient tensor
     mean_field = MeanField(model=model)
@@ -446,7 +446,7 @@ def test_elbo():
         elbo = -pm.operators.KL(mean_field)()(10000)
 
     mean_field.shared_params['mu'].set_value(post_mu)
-    mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+    mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
     f = theano.function([], elbo)
     elbo_mc = f()
@@ -469,7 +469,7 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
     y_obs = np.array([1.6, 1.4])
     beta = len(y_obs)/float(aux_total_size)
     post_mu = np.array([1.88], dtype=theano.config.floatX)
-    post_sd = np.array([1], dtype=theano.config.floatX)
+    post_sigma = np.array([1], dtype=theano.config.floatX)
 
     # TODO: theano_config
     # with pm.Model(theano_config=dict(floatX='float64')):
@@ -479,27 +479,27 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
         with pm.Model():
             assert theano.config.floatX == 'float64'
             assert theano.config.warn_float64 == 'ignore'
-            mu = pm.Normal('mu', mu=mu0, sd=sigma)
-            pm.Normal('y', mu=mu, sd=1, observed=y_obs, total_size=aux_total_size)
+            mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+            pm.Normal('y', mu=mu, sigma=1, observed=y_obs, total_size=aux_total_size)
             # Create variational gradient tensor
             mean_field_1 = MeanField()
             assert mean_field_1.scale_cost_to_minibatch
             mean_field_1.shared_params['mu'].set_value(post_mu)
-            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
             with pm.theanof.change_flags(compute_test_value='off'):
                 elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
 
         with pm.Model():
-            mu = pm.Normal('mu', mu=mu0, sd=sigma)
-            pm.Normal('y', mu=mu, sd=1, observed=y_obs, total_size=aux_total_size)
+            mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+            pm.Normal('y', mu=mu, sigma=1, observed=y_obs, total_size=aux_total_size)
             # Create variational gradient tensor
             mean_field_2 = MeanField()
             assert mean_field_1.scale_cost_to_minibatch
             mean_field_2.scale_cost_to_minibatch = False
             assert not mean_field_2.scale_cost_to_minibatch
             mean_field_2.shared_params['mu'].set_value(post_mu)
-            mean_field_2.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+            mean_field_2.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
         with pm.theanof.change_flags(compute_test_value='off'):
             elbo_via_total_size_unscaled = -pm.operators.KL(mean_field_2)()(10000)
@@ -518,27 +518,27 @@ def test_elbo_beta_kl(aux_total_size):
     y_obs = np.array([1.6, 1.4])
     beta = len(y_obs)/float(aux_total_size)
     post_mu = np.array([1.88], dtype=theano.config.floatX)
-    post_sd = np.array([1], dtype=theano.config.floatX)
+    post_sigma = np.array([1], dtype=theano.config.floatX)
     with pm.theanof.change_flags(floatX='float64', warn_float64='ignore'):
         with pm.Model():
-            mu = pm.Normal('mu', mu=mu0, sd=sigma)
-            pm.Normal('y', mu=mu, sd=1, observed=y_obs, total_size=aux_total_size)
+            mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+            pm.Normal('y', mu=mu, sigma=1, observed=y_obs, total_size=aux_total_size)
             # Create variational gradient tensor
             mean_field_1 = MeanField()
             mean_field_1.scale_cost_to_minibatch = True
             mean_field_1.shared_params['mu'].set_value(post_mu)
-            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
             with pm.theanof.change_flags(compute_test_value='off'):
                 elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
 
         with pm.Model():
-            mu = pm.Normal('mu', mu=mu0, sd=sigma)
-            pm.Normal('y', mu=mu, sd=1, observed=y_obs)
+            mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+            pm.Normal('y', mu=mu, sigma=1, observed=y_obs)
             # Create variational gradient tensor
             mean_field_3 = MeanField()
             mean_field_3.shared_params['mu'].set_value(post_mu)
-            mean_field_3.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+            mean_field_3.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
             with pm.theanof.change_flags(compute_test_value='off'):
                 elbo_via_beta_kl = -pm.operators.KL(mean_field_3, beta=beta)()(10000)
@@ -558,14 +558,14 @@ def use_minibatch(request):
 @pytest.fixture('module')
 def simple_model_data(use_minibatch):
     n = 1000
-    sd0 = 2.
+    sigma0 = 2.
     mu0 = 4.
-    sd = 3.
+    sigma = 3.
     mu = -5.
 
-    data = sd * np.random.randn(n) + mu
-    d = n / sd ** 2 + 1 / sd0 ** 2
-    mu_post = (n * np.mean(data) / sd ** 2 + mu0 / sd0 ** 2) / d
+    data = sigma * np.random.randn(n) + mu
+    d = n / sigma ** 2 + 1 / sigma0 ** 2
+    mu_post = (n * np.mean(data) / sigma ** 2 + mu0 / sigma0 ** 2) / d
     if use_minibatch:
         data = pm.Minibatch(data)
     return dict(
@@ -574,8 +574,8 @@ def simple_model_data(use_minibatch):
         mu_post=mu_post,
         d=d,
         mu0=mu0,
-        sd0=sd0,
-        sd=sd,
+        sigma0=sigma0,
+        sigma=sigma,
     )
 
 
@@ -584,8 +584,8 @@ def simple_model(simple_model_data):
     with pm.Model() as model:
         mu_ = pm.Normal(
             'mu', mu=simple_model_data['mu0'],
-            sd=simple_model_data['sd0'], testval=0)
-        pm.Normal('x', mu=mu_, sd=simple_model_data['sd'],
+            sigma=simple_model_data['sigma0'], testval=0)
+        pm.Normal('x', mu=mu_, sigma=simple_model_data['sigma'],
                   observed=simple_model_data['data'],
                   total_size=simple_model_data['n'])
     return model
@@ -694,7 +694,7 @@ def test_remove_scan_op():
     with pm.Model():
         pm.Normal('n', 0, 1)
         inference = ADVI()
-        buff = six.StringIO()
+        buff = io.StringIO()
         inference.run_profiling(n=10).summary(buff)
         assert 'theano.scan_module.scan_op.Scan' not in buff.getvalue()
         buff.close()
@@ -930,9 +930,9 @@ def test_discrete_not_allowed():
     y = np.random.normal(mu_true[z_true], np.ones_like(z_true))
 
     with pm.Model():
-        mu = pm.Normal('mu', mu=0, sd=10, shape=3)
+        mu = pm.Normal('mu', mu=0, sigma=10, shape=3)
         z = pm.Categorical('z', p=tt.ones(3) / 3, shape=len(y))
-        pm.Normal('y_obs', mu=mu[z], sd=1., observed=y)
+        pm.Normal('y_obs', mu=mu[z], sigma=1., observed=y)
         with pytest.raises(opvi.ParametrizationError):
             pm.fit(n=1)  # fails
 

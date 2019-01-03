@@ -33,7 +33,7 @@ def test_draw_value():
 
     with pm.Model():
         mu = 2 * tt.constant(np.array([5., 6.])) + theano.shared(np.array(5))
-        a = pm.Normal('a', mu=mu, sd=5, shape=2)
+        a = pm.Normal('a', mu=mu, sigma=5, shape=2)
 
     val1 = _draw_value(a)
     val2 = _draw_value(a)
@@ -44,7 +44,7 @@ def test_draw_value():
     err.match('Unexpected type')
 
 
-class TestDrawValues(object):
+class TestDrawValues:
     def test_empty(self):
         assert draw_values([]) == []
 
@@ -63,7 +63,7 @@ class TestDrawValues(object):
     def test_simple_model(self):
         with pm.Model():
             mu = 2 * tt.constant(np.array([5., 6.])) + theano.shared(np.array(5))
-            a = pm.Normal('a', mu=mu, sd=5, shape=2)
+            a = pm.Normal('a', mu=mu, sigma=5, shape=2)
 
         val1 = draw_values([a])
         val2 = draw_values([a])
@@ -86,7 +86,7 @@ class TestDrawValues(object):
         val2 = draw_values([a], point={'sd': np.array([2., 3.])})[0]
         val3 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
         val4 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
-        
+
         assert all([np.all(val1 != val2), np.all(val1 != val3),
                     np.all(val1 != val4), np.all(val2 != val3),
                     np.all(val2 != val4), np.all(val3 != val4)])
@@ -95,9 +95,9 @@ class TestDrawValues(object):
 class TestJointDistributionDrawValues(SeededTest):
     def test_joint_distribution(self):
         with pm.Model() as model:
-            a = pm.Normal('a', mu=0, sd=100)
-            b = pm.Normal('b', mu=a, sd=1e-8)
-            c = pm.Normal('c', mu=a, sd=1e-8)
+            a = pm.Normal('a', mu=0, sigma=100)
+            b = pm.Normal('b', mu=a, sigma=1e-8)
+            c = pm.Normal('c', mu=a, sigma=1e-8)
             d = pm.Deterministic('d', b + c)
 
         # Expected RVs

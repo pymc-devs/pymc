@@ -11,7 +11,7 @@ class IntegrationError(RuntimeError):
     pass
 
 
-class CpuLeapfrogIntegrator(object):
+class CpuLeapfrogIntegrator:
     def __init__(self, potential, logp_dlogp_func):
         """Leapfrog integrator using CPU."""
         self._potential = potential

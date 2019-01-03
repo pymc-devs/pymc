@@ -20,7 +20,7 @@ import pytest
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestSample(SeededTest):
     def setup_method(self):
-        super(TestSample, self).setup_method()
+        super().setup_method()
         self.model, self.start, self.step, _ = simple_init()
 
     def test_sample_does_not_set_seed(self):
@@ -143,8 +143,8 @@ def test_empty_model():
 
 def test_partial_trace_sample():
     with pm.Model() as model:
-        a = pm.Normal('a', mu=0, sd=1)
-        b = pm.Normal('b', mu=0, sd=1)
+        a = pm.Normal('a', mu=0, sigma=1)
+        b = pm.Normal('b', mu=0, sigma=1)
         trace = pm.sample(trace=[a])
 
 
@@ -187,7 +187,7 @@ class TestNamedSampling(SeededTest):
             assert np.isclose(res, 0.)
 
 
-class TestChooseBackend(object):
+class TestChooseBackend:
     def test_choose_backend_none(self):
         with mock.patch('pymc3.sampling.NDArray') as nd:
             pm.sampling._choose_backend(None, 'chain')
@@ -214,7 +214,7 @@ class TestSamplePPC(SeededTest):
     def test_normal_scalar(self):
         with pm.Model() as model:
             mu = pm.Normal('mu', 0., 1.)
-            a = pm.Normal('a', mu=mu, sd=1, observed=0.)
+            a = pm.Normal('a', mu=mu, sigma=1, observed=0.)
             trace = pm.sample()
 
         with model:
@@ -236,7 +236,7 @@ class TestSamplePPC(SeededTest):
     def test_normal_vector(self):
         with pm.Model() as model:
             mu = pm.Normal('mu', 0., 1.)
-            a = pm.Normal('a', mu=mu, sd=1,
+            a = pm.Normal('a', mu=mu, sigma=1,
                           observed=np.array([.5, .2]))
             trace = pm.sample()
 
@@ -255,8 +255,8 @@ class TestSamplePPC(SeededTest):
 
     def test_vector_observed(self):
         with pm.Model() as model:
-            mu = pm.Normal('mu', mu=0, sd=1)
-            a = pm.Normal('a', mu=mu, sd=1,
+            mu = pm.Normal('mu', mu=0, sigma=1)
+            a = pm.Normal('a', mu=mu, sigma=1,
                           observed=np.array([0., 1.]))
             trace = pm.sample()
 
@@ -275,7 +275,7 @@ class TestSamplePPC(SeededTest):
 
     def test_sum_normal(self):
         with pm.Model() as model:
-            a = pm.Normal('a', sd=0.2)
+            a = pm.Normal('a', sigma=0.2)
             b = pm.Normal('b', mu=a)
             trace = pm.sample()
 
@@ -289,19 +289,34 @@ class TestSamplePPC(SeededTest):
             _, pval = stats.kstest(ppc['b'], stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
+    def test_model_not_drawable_prior(self):
+        data = np.random.poisson(lam=10, size=200)
+        model = pm.Model()
+        with model:
+            mu = pm.HalfFlat('sigma')
+            pm.Poisson('foo', mu=mu, observed=data)
+            trace = pm.sample(tune=1000)
+
+        with model:
+            with pytest.raises(ValueError) as excinfo:
+                pm.sample_prior_predictive(50)
+            assert "Cannot sample" in str(excinfo.value)
+            samples = pm.sample_posterior_predictive(trace, 50)
+            assert samples['foo'].shape == (50, 200)
+
 
 class TestSamplePPCW(SeededTest):
     def test_sample_posterior_predictive_w(self):
         data0 = np.random.normal(0, 1, size=500)
 
         with pm.Model() as model_0:
-            mu = pm.Normal('mu', mu=0, sd=1)
-            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            mu = pm.Normal('mu', mu=0, sigma=1)
+            y = pm.Normal('y', mu=mu, sigma=1, observed=data0)
             trace_0 = pm.sample()
 
         with pm.Model() as model_1:
-            mu = pm.Normal('mu', mu=0, sd=1, shape=len(data0))
-            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            mu = pm.Normal('mu', mu=0, sigma=1, shape=len(data0))
+            y = pm.Normal('y', mu=mu, sigma=1, observed=data0)
             trace_1 = pm.sample()
 
         traces = [trace_0, trace_0]
@@ -321,8 +336,8 @@ class TestSamplePPCW(SeededTest):
 ])
 def test_exec_nuts_init(method):
     with pm.Model() as model:
-        pm.Normal('a', mu=0, sd=1, shape=2)
-        pm.HalfNormal('b', sd=1)
+        pm.Normal('a', mu=0, sigma=1, shape=2)
+        pm.HalfNormal('b', sigma=1)
     with model:
         start, _ = pm.init_nuts(init=method, n_init=10)
         assert isinstance(start, list)
@@ -340,10 +355,10 @@ class TestSamplePriorPredictive(SeededTest):
         observed = np.random.normal(10, 1, size=200)
         with pm.Model():
             # Use a prior that's way off to show we're ignoring the observed variables
-            mu = pm.Normal('mu', mu=-100, sd=1)
+            mu = pm.Normal('mu', mu=-100, sigma=1)
             positive_mu = pm.Deterministic('positive_mu', np.abs(mu))
             z = -1 - positive_mu
-            pm.Normal('x_obs', mu=z, sd=1, observed=observed)
+            pm.Normal('x_obs', mu=z, sigma=1, observed=observed)
             prior = pm.sample_prior_predictive()
 
         assert (prior['mu'] < 90).all()
@@ -369,6 +384,22 @@ class TestSamplePriorPredictive(SeededTest):
 
         assert m.random(size=10).shape == (10, 4)
         assert trace['m'].shape == (10, 4)
+
+    def test_multivariate2(self):
+        # Added test for issue #3271
+        mn_data = np.random.multinomial(n=100, pvals=[1/6.]*6, size=10)
+        with pm.Model() as dm_model:
+            probs = pm.Dirichlet('probs', a=np.ones(6), shape=6)
+            obs = pm.Multinomial('obs', n=100, p=probs, observed=mn_data)
+            burned_trace = pm.sample(20, tune=10, cores=1)
+        sim_priors = pm.sample_prior_predictive(samples=20,
+                                                model=dm_model)
+        sim_ppc = pm.sample_posterior_predictive(burned_trace,
+                                                 samples=20,
+                                                 model=dm_model)
+        assert sim_priors['probs'].shape == (20, 6)
+        assert sim_priors['obs'].shape == (20, 6)
+        assert sim_ppc['obs'].shape == (20,) + obs.distribution.shape
 
     def test_layers(self):
         with pm.Model() as model:
@@ -433,6 +464,16 @@ class TestSamplePriorPredictive(SeededTest):
         with pm.Model():
             mu = pm.Normal('mu', shape=5)
             sd = pm.Uniform('sd', lower=2, upper=3)
-            x = pm.Normal('x', mu=mu, sd=sd, shape=5)
+            x = pm.Normal('x', mu=mu, sigma=sd, shape=5)
             prior = pm.sample_prior_predictive(10)
         assert prior['mu'].shape == (10, 5)
+
+    def test_zeroinflatedpoisson(self):
+        with pm.Model():
+            theta = pm.Beta('theta', alpha=1, beta=1)
+            psi = pm.HalfNormal('psi', sd=1)
+            pm.ZeroInflatedPoisson('suppliers', psi=psi, theta=theta, shape=20)
+            gen_data = pm.sample_prior_predictive(samples=5000)
+            assert gen_data['theta'].shape == (5000,)
+            assert gen_data['psi'].shape == (5000,)
+            assert gen_data['suppliers'].shape == (5000, 20)

@@ -47,7 +47,7 @@ import theano.tensor as tt
 from .helpers import select_by_precision
 
 
-class TestStepMethods(object):  # yield test doesn't work subclassing object
+class TestStepMethods:  # yield test doesn't work subclassing object
     master_samples = {
         Slice: np.array(
             [
@@ -702,8 +702,8 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
         """
         n_steps = 100
         with Model() as model:
-            x = Normal("x", mu=0, sd=1)
-            y = Normal("y", mu=x, sd=1, observed=1)
+            x = Normal("x", mu=0, sigma=1)
+            y = Normal("y", mu=x, sigma=1, observed=1)
             if step_method.__name__ == "SMC":
                 trace = sample(
                     draws=200, random_seed=1, progressbar=False, step=step_method()
@@ -826,7 +826,7 @@ class TestStepMethods(object):  # yield test doesn't work subclassing object
             self.check_stat(check, trace, step.__class__.__name__)
 
 
-class TestMetropolisProposal(object):
+class TestMetropolisProposal:
     def test_proposal_choice(self):
         _, model, _ = mv_simple()
         with model:
@@ -849,7 +849,7 @@ class TestMetropolisProposal(object):
         npt.assert_allclose(np.cov(samples.T), cov, rtol=0.2)
 
 
-class TestCompoundStep(object):
+class TestCompoundStep:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS, DEMetropolis)
 
     @pytest.mark.skipif(
@@ -876,7 +876,7 @@ class TestCompoundStep(object):
                 assert isinstance(sampler_instance, sampler)
 
 
-class TestAssignStepMethods(object):
+class TestAssignStepMethods:
     def test_bernoulli(self):
         """Test bernoulli distribution is assigned binary gibbs metropolis method"""
         with Model() as model:
@@ -925,21 +925,21 @@ class TestAssignStepMethods(object):
 
             data = np.random.normal(size=(100,))
             Normal(
-                "y", mu=kill_grad(x), sd=1, observed=data.astype(theano.config.floatX)
+                "y", mu=kill_grad(x), sigma=1, observed=data.astype(theano.config.floatX)
             )
 
             steps = assign_step_methods(model, [])
         assert isinstance(steps, Slice)
 
 
-class TestPopulationSamplers(object):
+class TestPopulationSamplers:
 
     steppers = [DEMetropolis]
 
     def test_checks_population_size(self):
         """Test that population samplers check the population size."""
         with Model() as model:
-            n = Normal("n", mu=0, sd=1)
+            n = Normal("n", mu=0, sigma=1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
                 with pytest.raises(ValueError):
@@ -966,7 +966,7 @@ class TestPopulationSamplers(object):
 @pytest.mark.xfail(
     condition=(theano.config.floatX == "float32"), reason="Fails on float32"
 )
-class TestNutsCheckTrace(object):
+class TestNutsCheckTrace:
     def test_multiple_samplers(self, caplog):
         with Model():
             prob = Beta("prob", alpha=5.0, beta=3.0)
@@ -978,7 +978,7 @@ class TestNutsCheckTrace(object):
 
     def test_bad_init_nonparallel(self):
         with Model():
-            HalfNormal("a", sd=1, testval=-1, transform=None)
+            HalfNormal("a", sigma=1, testval=-1, transform=None)
             with pytest.raises(SamplingError) as error:
                 sample(init=None, chains=1, random_seed=1)
             error.match("Bad initial")
@@ -987,7 +987,7 @@ class TestNutsCheckTrace(object):
                     reason="requires python3.6 or higher")
     def test_bad_init_parallel(self):
         with Model():
-            HalfNormal("a", sd=1, testval=-1, transform=None)
+            HalfNormal("a", sigma=1, testval=-1, transform=None)
             with pytest.raises(ParallelSamplingError) as error:
                 sample(init=None, cores=2, random_seed=1)
             error.match("Bad initial")
@@ -1016,7 +1016,7 @@ class TestNutsCheckTrace(object):
 
     def test_sampler_stats(self):
         with Model() as model:
-            x = Normal("x", mu=0, sd=1)
+            x = Normal("x", mu=0, sigma=1)
             trace = sample(draws=10, tune=1, chains=1)
 
         # Assert stats exist and have the correct shape.

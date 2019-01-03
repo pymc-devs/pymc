@@ -25,7 +25,7 @@ def escape_latex(strng):
         A string with LaTeX escaped
     """
     if strng is None:
-        return u'None'
+        return 'None'
     return LATEX_ESCAPE_RE.sub(r'\\\1', strng)
 
 
@@ -80,8 +80,7 @@ def get_untransformed_name(name):
         String with untransformed version of the name.
     """
     if not is_transformed_name(name):
-        raise ValueError(
-            u'{} does not appear to be a transformed name'.format(name))
+        raise ValueError('{} does not appear to be a transformed name'.format(name))
     return '_'.join(name.split('_')[:-3])
 
 

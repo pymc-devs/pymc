@@ -28,7 +28,7 @@ def generate_poisson_mixture_data(w, mu, size=1000):
 class TestMixture(SeededTest):
     @classmethod
     def setup_class(cls):
-        super(TestMixture, cls).setup_class()
+        super().setup_class()
 
         cls.norm_w = np.array([0.75, 0.25])
         cls.norm_mu = np.array([0., 5.])
@@ -171,11 +171,11 @@ class TestMixture(SeededTest):
             # mixtures components
             g_comp = Normal.dist(
                 mu=Exponential('mu_g', lam=1.0, shape=nbr, transform=None),
-                sd=1,
+                sigma=1,
                 shape=nbr)
             l_comp = Lognormal.dist(
                 mu=Exponential('mu_l', lam=1.0, shape=nbr, transform=None),
-                sd=1,
+                sigma=1,
                 shape=nbr)
             # weight vector for the mixtures
             g_w = Dirichlet('g_w', a=floatX(np.ones(nbr)*0.0000001), transform=None)

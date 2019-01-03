@@ -1,6 +1,21 @@
 # Release Notes
 
-## PyMC3 3.6 (unreleased)
+## PyMC3 3.7 (unreleased)
+
+### New features
+
+### Maintenance
+
+- All occurances of `sd` as a parameter name have been renamed to `sigma`. `sd` will continue to function for backwards compatibility.
+- Made `BrokenPipeError` for parallel sampling more verbose on Windows.
+- Added the `broadcast_distribution_samples` function that helps broadcasting arrays of drawn samples, taking into account the requested `size` and the inferred distribution shape. This sometimes is needed by distributions that call several `rvs` separately within their `random` method, such as the `ZeroInflatedPoisson` (Fix issue #3310).
+- The `Wald`, `Kumaraswamy`, `LogNormal`, `Pareto`, `Cauchy`, `HalfCauchy`, `Weibull` and `ExGaussian` distributions `random` method used a hidden `_random` function that was written with scalars in mind. This could potentially lead to artificial correlations between random draws. Added shape guards and broadcasting of the distribution samples to prevent this (Similar to issue #3310).
+
+### Deprecations
+
+## PyMC3 3.6 (Dec 21 2018)
+
+This will be the last release to support Python 2.
 
 ### New features
 
@@ -20,6 +35,7 @@
   context manager instance. If they do not, the conditional relations between
   the distribution's parameters could be broken, and `random` could return
   values drawn from an incorrect distribution.
+- `Rice` distribution is now defined with either the noncentrality parameter or the shape parameter (#3287).
 
 ### Maintenance
 
@@ -28,6 +44,12 @@
 - Refactor SMC and properly compute marginal likelihood (#3124)
 - Removed use of deprecated `ymin` keyword in matplotlib's `Axes.set_ylim` (#3279)
 - Fix for #3210. Now `distribution.draw_values(params)`, will draw the `params` values from their joint probability distribution and not from combinations of their marginals (Refer to PR #3273).
+- Removed dependence on pandas-datareader for retrieving Yahoo Finance data in examples (#3262)
+- Rewrote `Multinomial._random` method to better handle shape broadcasting (#3271)
+- Fixed `Rice` distribution, which inconsistently mixed two parametrizations (#3286).
+- `Rice` distribution now accepts multiple parameters and observations and is usable with NUTS (#3289).
+- `sample_posterior_predictive` no longer calls `draw_values` to initialize the shape of the ppc trace. This called could lead to `ValueError`'s when sampling the ppc from a model with `Flat` or `HalfFlat` prior distributions (Fix issue #3294).
+
 
 ### Deprecations
 

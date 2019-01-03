@@ -7,7 +7,7 @@ from .dist_math import bound, random_choice
 from .distribution import (Discrete, Distribution, draw_values,
                            generate_samples, _DrawValuesContext,
                            _DrawValuesContextBlocker, to_tuple)
-from .continuous import get_tau_sd, Normal
+from .continuous import get_tau_sigma, Normal
 
 
 def all_discrete(comp_dists):
@@ -101,8 +101,7 @@ class Mixture(Distribution):
         except (AttributeError, ValueError, IndexError):
             pass
 
-        super(Mixture, self).__init__(shape, dtype, defaults=defaults,
-                                      *args, **kwargs)
+        super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
     @property
     def comp_dists(self):
@@ -315,7 +314,7 @@ class NormalMixture(Mixture):
         the mixture weights
     mu : array of floats
         the component means
-    sd : array of floats
+    sigma : array of floats
         the component standard deviations
     tau : array of floats
         the component precisions
@@ -324,17 +323,20 @@ class NormalMixture(Mixture):
         of the mixture distribution, with one axis being
         the number of components.
 
-    Note: You only have to pass in sd or tau, but not both.
+    Note: You only have to pass in sigma or tau, but not both.
     """
 
     def __init__(self, w, mu, comp_shape=(), *args, **kwargs):
-        _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
-                           sd=kwargs.pop('sd', None))
+        if 'sd' in kwargs.keys():
+            kwargs['sigma'] = kwargs.pop('sd')
+
+        _, sigma = get_tau_sigma(tau=kwargs.pop('tau', None),
+                           sigma=kwargs.pop('sigma', None))
 
         self.mu = mu = tt.as_tensor_variable(mu)
-        self.sd = sd = tt.as_tensor_variable(sd)
+        self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
 
-        super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd, shape=comp_shape),
+        super().__init__(w, Normal.dist(mu, sigma=sigma, shape=comp_shape),
                                             *args, **kwargs)
 
     def _repr_latex_(self, name=None, dist=None):
@@ -342,9 +344,9 @@ class NormalMixture(Mixture):
             dist = self
         mu = dist.mu
         w = dist.w
-        sd = dist.sd
+        sigma = dist.sigma
         name = r'\text{%s}' % name
         return r'${} \sim \text{{NormalMixture}}(\mathit{{w}}={},~\mathit{{mu}}={},~\mathit{{sigma}}={})$'.format(name,
                                                 get_variable_name(w),
                                                 get_variable_name(mu),
-                                                get_variable_name(sd))
+                                                get_variable_name(sigma))

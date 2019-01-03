@@ -21,7 +21,7 @@ __all__ = ['Constant',
            'Kron']
 
 
-class Covariance(object):
+class Covariance:
     R"""
     Base class for all kernels/covariance functions.
 
@@ -105,7 +105,7 @@ class Combination(Covariance):
     def __init__(self, factor_list):
         input_dim = max([factor.input_dim for factor in factor_list
                              if isinstance(factor, Covariance)])
-        super(Combination, self).__init__(input_dim=input_dim)
+        super().__init__(input_dim=input_dim)
         self.factor_list = []
         for factor in factor_list:
             if isinstance(factor, self.__class__):
@@ -165,7 +165,7 @@ class Kron(Covariance):
     def __init__(self, factor_list):
         self.input_dims = [factor.input_dim for factor in factor_list]
         input_dim = sum(self.input_dims)
-        super(Kron, self).__init__(input_dim=input_dim)
+        super().__init__(input_dim=input_dim)
         self.factor_list = factor_list
 
     def _split(self, X, Xs):
@@ -194,7 +194,7 @@ class Constant(Covariance):
     """
 
     def __init__(self, c):
-        super(Constant, self).__init__(1, None)
+        super().__init__(1, None)
         self.c = c
 
     def diag(self, X):
@@ -217,7 +217,7 @@ class WhiteNoise(Covariance):
     """
 
     def __init__(self, sigma):
-        super(WhiteNoise, self).__init__(1, None)
+        super().__init__(1, None)
         self.sigma = sigma
 
     def diag(self, X):
@@ -242,7 +242,7 @@ class Stationary(Covariance):
     """
 
     def __init__(self, input_dim, ls=None, ls_inv=None, active_dims=None):
-        super(Stationary, self).__init__(input_dim, active_dims)
+        super().__init__(input_dim, active_dims)
         if (ls is None and ls_inv is None) or (ls is not None and ls_inv is not None):
             raise ValueError("Only one of 'ls' or 'ls_inv' must be provided")
         elif ls_inv is not None:
@@ -285,7 +285,7 @@ class Periodic(Stationary):
     """
 
     def __init__(self, input_dim, period, ls=None, ls_inv=None, active_dims=None):
-        super(Periodic, self).__init__(input_dim, ls, ls_inv, active_dims)
+        super().__init__(input_dim, ls, ls_inv, active_dims)
         self.period = period
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
@@ -323,7 +323,7 @@ class RatQuad(Stationary):
     """
 
     def __init__(self, input_dim, alpha, ls=None, ls_inv=None, active_dims=None):
-        super(RatQuad, self).__init__(input_dim, ls, ls_inv, active_dims)
+        super().__init__(input_dim, ls, ls_inv, active_dims)
         self.alpha = alpha
 
     def full(self, X, Xs=None):
@@ -402,7 +402,7 @@ class Linear(Covariance):
     """
 
     def __init__(self, input_dim, c, active_dims=None):
-        super(Linear, self).__init__(input_dim, active_dims)
+        super().__init__(input_dim, active_dims)
         self.c = c
 
     def _common(self, X, Xs=None):
@@ -432,16 +432,16 @@ class Polynomial(Linear):
     """
 
     def __init__(self, input_dim, c, d, offset, active_dims=None):
-        super(Polynomial, self).__init__(input_dim, c, active_dims)
+        super().__init__(input_dim, c, active_dims)
         self.d = d
         self.offset = offset
 
     def full(self, X, Xs=None):
-        linear = super(Polynomial, self).full(X, Xs)
+        linear = super().full(X, Xs)
         return tt.power(linear + self.offset, self.d)
 
     def diag(self, X):
-        linear = super(Polynomial, self).diag(X)
+        linear = super().diag(X)
         return tt.power(linear + self.offset, self.d)
 
 
@@ -464,7 +464,7 @@ class WarpedInput(Covariance):
 
     def __init__(self, input_dim, cov_func, warp_func, args=None,
                  active_dims=None):
-        super(WarpedInput, self).__init__(input_dim, active_dims)
+        super().__init__(input_dim, active_dims)
         if not callable(warp_func):
             raise TypeError("warp_func must be callable")
         if not isinstance(cov_func, Covariance):
@@ -505,7 +505,7 @@ class Gibbs(Covariance):
 
     def __init__(self, input_dim, lengthscale_func, args=None,
                  active_dims=None):
-        super(Gibbs, self).__init__(input_dim, active_dims)
+        super().__init__(input_dim, active_dims)
         if active_dims is not None:
             if len(active_dims) > 1:
                 raise NotImplementedError(("Higher dimensional inputs ",
@@ -567,7 +567,7 @@ class ScaledCov(Covariance):
         Additional inputs (besides X or Xs) to lengthscale_func.
     """
     def __init__(self, input_dim, cov_func, scaling_func, args=None, active_dims=None):
-        super(ScaledCov, self).__init__(input_dim, active_dims)
+        super().__init__(input_dim, active_dims)
         if not callable(scaling_func):
             raise TypeError("scaling_func must be callable")
         if not isinstance(cov_func, Covariance):
@@ -626,7 +626,7 @@ class Coregion(Covariance):
     """
 
     def __init__(self, input_dim, W=None, kappa=None, B=None, active_dims=None):
-        super(Coregion, self).__init__(input_dim, active_dims)
+        super().__init__(input_dim, active_dims)
         if len(self.active_dims) != 1:
             raise ValueError('Coregion requires exactly one dimension to be active')
         make_B = W is not None or kappa is not None

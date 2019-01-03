@@ -1,5 +1,3 @@
-from __future__ import division
-
 import itertools
 import sys
 
@@ -55,7 +53,7 @@ def get_lkj_cases():
 LKJ_CASES = get_lkj_cases()
 
 
-class Domain(object):
+class Domain:
     def __init__(self, vals, dtype=None, edges=None, shape=None):
         avals = array(vals, dtype=dtype)
         if dtype is None and not str(avals.dtype).startswith('int'):
@@ -196,15 +194,15 @@ def multinomial_logpdf(value, n, p):
         return -inf
 
 
-def beta_mu_sd(value, mu, sd):
-    kappa = mu * (1 - mu) / sd**2 - 1
+def beta_mu_sigma(value, mu, sigma):
+    kappa = mu * (1 - mu) / sigma**2 - 1
     if kappa > 0:
         return sp.beta.logpdf(value, mu * kappa, (1 - mu) * kappa)
     else:
         return -inf
 
 
-class ProductDomain(object):
+class ProductDomain:
     def __init__(self, domains):
         self.vals = list(itertools.product(*[d.vals for d in domains]))
         self.shape = (len(domains),) + domains[0].shape
@@ -338,8 +336,8 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
     return logp.sum()
 
 def AR1_logpdf(value, k, tau_e):
-    return (sp.norm(loc=0,scale=1/np.sqrt(tau_e)).logpdf(value[0]) +
-            sp.norm(loc=k*value[:-1],scale=1/np.sqrt(tau_e)).logpdf(value[1:]).sum())
+    return (sp.norm(loc=0, scale=1/np.sqrt(tau_e)).logpdf(value[0]) +
+            sp.norm(loc=k*value[:-1], scale=1/np.sqrt(tau_e)).logpdf(value[1:]).sum())
 
 def invlogit(x, eps=sys.float_info.epsilon):
     return (1. - 2. * eps) / (1. + np.exp(-x)) + eps
@@ -349,14 +347,14 @@ def orderedlogistic_logpdf(value, eta, cutpoints):
     p = invlogit(eta - c[value]) - invlogit(eta - c[value + 1])
     return np.log(p)
 
-class Simplex(object):
+class Simplex:
     def __init__(self, n):
         self.vals = list(simplex_values(n))
         self.shape = (n,)
         self.dtype = Unit.dtype
 
 
-class MultiSimplex(object):
+class MultiSimplex:
     def __init__(self, n_dependent, n_independent):
         self.vals = []
         for simplex_value in itertools.product(simplex_values(n_dependent), repeat=n_independent):
@@ -523,10 +521,10 @@ class TestMatchesScipy(SeededTest):
 
     def test_bound_normal(self):
         PositiveNormal = Bound(Normal, lower=0.)
-        self.pymc3_matches_scipy(PositiveNormal, Rplus, {'mu': Rplus, 'sd': Rplus},
-                                 lambda value, mu, sd: sp.norm.logpdf(value, mu, sd),
+        self.pymc3_matches_scipy(PositiveNormal, Rplus, {'mu': Rplus, 'sigma': Rplus},
+                                 lambda value, mu, sigma: sp.norm.logpdf(value, mu, sigma),
                                  decimal=select_by_precision(float64=6, float32=-1))
-        with Model(): x = PositiveNormal('x', mu=0, sd=1, transform=None)
+        with Model(): x = PositiveNormal('x', mu=0, sigma=1, transform=None)
         assert np.isinf(x.logp({'x':-1}))
 
     def test_discrete_unif(self):
@@ -556,37 +554,37 @@ class TestMatchesScipy(SeededTest):
         assert -np.inf == HalfFlat.dist().logcdf(-np.inf).tag.test_value
 
     def test_normal(self):
-        self.pymc3_matches_scipy(Normal, R, {'mu': R, 'sd': Rplus},
-                                 lambda value, mu, sd: sp.norm.logpdf(value, mu, sd),
+        self.pymc3_matches_scipy(Normal, R, {'mu': R, 'sigma': Rplus},
+                                 lambda value, mu, sigma: sp.norm.logpdf(value, mu, sigma),
                                  decimal=select_by_precision(float64=6, float32=1)
                                  )
-        self.check_logcdf(Normal, R, {'mu': R, 'sd': Rplus},
-                          lambda value, mu, sd: sp.norm.logcdf(value, mu, sd))
+        self.check_logcdf(Normal, R, {'mu': R, 'sigma': Rplus},
+                          lambda value, mu, sigma: sp.norm.logcdf(value, mu, sigma))
 
     def test_truncated_normal(self):
-        def scipy_logp(value, mu, sd, lower, upper):
+        def scipy_logp(value, mu, sigma, lower, upper):
             return sp.truncnorm.logpdf(
-                value, (lower-mu)/sd, (upper-mu)/sd, loc=mu, scale=sd)
+                value, (lower-mu)/sigma, (upper-mu)/sigma, loc=mu, scale=sigma)
 
         args = {'mu': array(-2.1), 'lower': array(-100.), 'upper': array(0.01),
-                'sd': array(0.01)}
+                'sigma': array(0.01)}
         val = TruncatedNormal.dist(**args).logp(0.)
         assert_allclose(val.eval(), scipy_logp(value=0, **args))
 
         self.pymc3_matches_scipy(
             TruncatedNormal, R,
-            {'mu': R, 'sd': Rplusbig, 'lower': -Rplusbig, 'upper': Rplusbig},
+            {'mu': R, 'sigma': Rplusbig, 'lower': -Rplusbig, 'upper': Rplusbig},
             scipy_logp,
             decimal=select_by_precision(float64=6, float32=1)
         )
 
     def test_half_normal(self):
-        self.pymc3_matches_scipy(HalfNormal, Rplus, {'sd': Rplus},
-                                 lambda value, sd: sp.halfnorm.logpdf(value, scale=sd),
+        self.pymc3_matches_scipy(HalfNormal, Rplus, {'sigma': Rplus},
+                                 lambda value, sigma: sp.halfnorm.logpdf(value, scale=sigma),
                                  decimal=select_by_precision(float64=6, float32=-1)
                                  )
-        self.check_logcdf(HalfNormal, Rplus, {'sd': Rplus},
-                          lambda value, sd: sp.halfnorm.logcdf(value, scale=sd))
+        self.check_logcdf(HalfNormal, Rplus, {'sigma': Rplus},
+                          lambda value, sigma: sp.halfnorm.logcdf(value, scale=sigma))
 
     def test_chi_squared(self):
         self.pymc3_matches_scipy(ChiSquared, Rplus, {'nu': Rplusdunif},
@@ -630,7 +628,7 @@ class TestMatchesScipy(SeededTest):
     def test_beta(self):
         self.pymc3_matches_scipy(Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
                                  lambda value, alpha, beta: sp.beta.logpdf(value, alpha, beta))
-        self.pymc3_matches_scipy(Beta, Unit, {'mu': Unit, 'sd': Rplus}, beta_mu_sd)
+        self.pymc3_matches_scipy(Beta, Unit, {'mu': Unit, 'sigma': Rplus}, beta_mu_sigma)
         self.check_logcdf(Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
                                 lambda value, alpha, beta: sp.beta.logcdf(value, alpha, beta))
 
@@ -692,10 +690,10 @@ class TestMatchesScipy(SeededTest):
             Gamma, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
             lambda value, alpha, beta: sp.gamma.logpdf(value, alpha, scale=1.0 / beta))
 
-        def test_fun(value, mu, sd):
-            return sp.gamma.logpdf(value, mu**2 / sd**2, scale=1.0 / (mu / sd**2))
+        def test_fun(value, mu, sigma):
+            return sp.gamma.logpdf(value, mu**2 / sigma**2, scale=1.0 / (mu / sigma**2))
         self.pymc3_matches_scipy(
-            Gamma, Rplus, {'mu': Rplusbig, 'sd': Rplusbig}, test_fun)
+            Gamma, Rplus, {'mu': Rplusbig, 'sigma': Rplusbig}, test_fun)
 
     def test_inverse_gamma(self):
         self.pymc3_matches_scipy(
@@ -705,11 +703,11 @@ class TestMatchesScipy(SeededTest):
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"),
                            reason="Fails on float32 due to scaling issues")
     def test_inverse_gamma_alt_params(self):
-        def test_fun(value, mu, sd):
-            alpha, beta = InverseGamma._get_alpha_beta(None, None, mu, sd)
+        def test_fun(value, mu, sigma):
+            alpha, beta = InverseGamma._get_alpha_beta(None, None, mu, sigma)
             return sp.invgamma.logpdf(value, alpha, scale=beta)
         self.pymc3_matches_scipy(
-            InverseGamma, Rplus, {'mu': Rplus, 'sd': Rplus}, test_fun)
+            InverseGamma, Rplus, {'mu': Rplus, 'sigma': Rplus}, test_fun)
 
     def test_pareto(self):
         self.pymc3_matches_scipy(Pareto, Rplus, {'alpha': Rplusbig, 'm': Rplusbig},
@@ -728,12 +726,12 @@ class TestMatchesScipy(SeededTest):
 
     def test_half_studentt(self):
         # this is only testing for nu=1 (halfcauchy)
-        self.pymc3_matches_scipy(HalfStudentT, Rplus, {'sd': Rplus},
-                                 lambda value, sd: sp.halfcauchy.logpdf(value, 0, sd))
+        self.pymc3_matches_scipy(HalfStudentT, Rplus, {'sigma': Rplus},
+                                 lambda value, sigma: sp.halfcauchy.logpdf(value, 0, sigma))
 
     def test_skew_normal(self):
-        self.pymc3_matches_scipy(SkewNormal, R, {'mu': R, 'sd': Rplusbig, 'alpha': R},
-                                 lambda value, alpha, mu, sd: sp.skewnorm.logpdf(value, alpha, mu, sd))
+        self.pymc3_matches_scipy(SkewNormal, R, {'mu': R, 'sigma': Rplusbig, 'alpha': R},
+                                 lambda value, alpha, mu, sigma: sp.skewnorm.logpdf(value, alpha, mu, sigma))
 
     def test_binomial(self):
         self.pymc3_matches_scipy(Binomial, Nat, {'n': NatSmall, 'p': Unit},
@@ -929,7 +927,7 @@ class TestMatchesScipy(SeededTest):
                                  {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
                                  mvt_logpdf)
 
-    @pytest.mark.parametrize('n',[2,3,4])
+    @pytest.mark.parametrize('n', [2, 3, 4])
     def test_AR1(self, n):
         self.pymc3_matches_scipy(AR1, Vector(R, n), {'k': Unit, 'tau_e': Rplus}, AR1_logpdf)
 
@@ -1008,13 +1006,13 @@ class TestMatchesScipy(SeededTest):
 
     def test_multinomial_mode_with_shape(self):
         n = [1, 10]
-        p = np.asarray([[.25,.25,.25,.25], [.26, .26, .26, .22]])
+        p = np.asarray([[.25, .25, .25, .25], [.26, .26, .26, .22]])
         with Model() as model:
             m = Multinomial('m', n=n, p=p, shape=(2, 4))
         assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
 
     def test_multinomial_vec(self):
-        vals = np.array([[2,4,4], [3,3,4]])
+        vals = np.array([[2, 4, 4], [3, 3, 4]])
         p = np.array([0.2, 0.3, 0.5])
         n = 10
 
@@ -1037,7 +1035,7 @@ class TestMatchesScipy(SeededTest):
                             decimal=4)
 
     def test_multinomial_vec_1d_n(self):
-        vals = np.array([[2,4,4], [4,3,4]])
+        vals = np.array([[2, 4, 4], [4, 3, 4]])
         p = np.array([0.2, 0.3, 0.5])
         ns = np.array([10, 11])
 
@@ -1049,7 +1047,7 @@ class TestMatchesScipy(SeededTest):
                             decimal=4)
 
     def test_multinomial_vec_1d_n_2d_p(self):
-        vals = np.array([[2,4,4], [4,3,4]])
+        vals = np.array([[2, 4, 4], [4, 3, 4]])
         ps = np.array([[0.2, 0.3, 0.5],
                        [0.9, 0.09, 0.01]])
         ns = np.array([10, 11])
@@ -1062,7 +1060,7 @@ class TestMatchesScipy(SeededTest):
                             decimal=4)
 
     def test_multinomial_vec_2d_p(self):
-        vals = np.array([[2,4,4], [3,3,4]])
+        vals = np.array([[2, 4, 4], [3, 3, 4]])
         ps = np.array([[0.2, 0.3, 0.5],
                        [0.3, 0.3, 0.4]])
         n = 10
@@ -1102,9 +1100,9 @@ class TestMatchesScipy(SeededTest):
             Potential('value_squared', -value ** 2)
             self.check_dlogp(model, value, R, {})
 
-    def test_get_tau_sd(self):
-        sd = np.array([2])
-        assert_almost_equal(continuous.get_tau_sd(sd=sd), [1. / sd**2, sd])
+    def test_get_tau_sigma(self):
+        sigma = np.array([2])
+        assert_almost_equal(continuous.get_tau_sigma(sigma=sigma), [1. / sigma**2, sigma])
 
     @pytest.mark.parametrize('value,mu,sigma,nu,logp', [
         (0.5, -50.000, 0.500, 0.500, -99.8068528),
@@ -1167,8 +1165,8 @@ class TestMatchesScipy(SeededTest):
                           decimal=select_by_precision(float64=6, float32=1))
 
     def test_logitnormal(self):
-        self.pymc3_matches_scipy(LogitNormal, Unit, {'mu': R, 'sd': Rplus},
-                                 lambda value, mu, sd: (sp.norm.logpdf(logit(value), mu, sd)
+        self.pymc3_matches_scipy(LogitNormal, Unit, {'mu': R, 'sigma': Rplus},
+                                 lambda value, mu, sigma: (sp.norm.logpdf(logit(value), mu, sigma)
                                                         - (np.log(value) + np.log1p(-value))),
                                  decimal=select_by_precision(float64=6, float32=1))
 
@@ -1177,31 +1175,29 @@ class TestMatchesScipy(SeededTest):
             Beta('beta', alpha=1., beta=1., shape=(10, 20))
 
     def test_rice(self):
-        self.pymc3_matches_scipy(Rice, Rplus, {'nu': Rplus, 'sd': Rplusbig},
-                                 lambda value, nu, sd: sp.rice.logpdf(value, b=nu, loc=0, scale=sd))
+        self.pymc3_matches_scipy(Rice, Rplus, {'nu': Rplus, 'sigma': Rplusbig},
+                                 lambda value, nu, sigma: sp.rice.logpdf(value, b=nu / sigma, loc=0, scale=sigma))
+        self.pymc3_matches_scipy(Rice, Rplus, {'b': Rplus, 'sigma': Rplusbig},
+                                 lambda value, b, sigma: sp.rice.logpdf(value, b=b, loc=0, scale=sigma))
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
-            for sd in Rplus.vals:
+            for sigma in Rplus.vals:
                 #pylint: disable=cell-var-from-loop
-                xmin = mu - 5 * sd
-                xmax = mu + 5 * sd
+                xmin = mu - 5 * sigma
+                xmax = mu + 5 * sigma
 
                 class TestedInterpolated (Interpolated):
                     def __init__(self, **kwargs):
                         x_points = np.linspace(xmin, xmax, 100000)
-                        pdf_points = sp.norm.pdf(x_points, loc=mu, scale=sd)
-                        super(TestedInterpolated, self).__init__(
-                            x_points=x_points,
-                            pdf_points=pdf_points,
-                            **kwargs
-                        )
+                        pdf_points = sp.norm.pdf(x_points, loc=mu, scale=sigma)
+                        super().__init__(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
                 def ref_pdf(value):
                     return np.where(
                         np.logical_and(value >= xmin, value <= xmax),
-                        sp.norm.logpdf(value, mu, sd),
+                        sp.norm.logpdf(value, mu, sigma),
                         -np.inf * np.ones(value.shape)
                     )
 
@@ -1211,27 +1207,27 @@ class TestMatchesScipy(SeededTest):
 def test_bound():
     np.random.seed(42)
     UnboundNormal = Bound(Normal)
-    dist = UnboundNormal.dist(mu=0, sd=1)
+    dist = UnboundNormal.dist(mu=0, sigma=1)
     assert dist.transform is None
     assert dist.default() == 0.
     assert isinstance(dist.random(), np.ndarray)
 
     LowerNormal = Bound(Normal, lower=1)
-    dist = LowerNormal.dist(mu=0, sd=1)
+    dist = LowerNormal.dist(mu=0, sigma=1)
     assert dist.logp(0).eval() == -np.inf
     assert dist.default() > 1
     assert dist.transform is not None
     assert np.all(dist.random() > 1)
 
     UpperNormal = Bound(Normal, upper=-1)
-    dist = UpperNormal.dist(mu=0, sd=1)
+    dist = UpperNormal.dist(mu=0, sigma=1)
     assert dist.logp(-0.5).eval() == -np.inf
     assert dist.default() < -1
     assert dist.transform is not None
     assert np.all(dist.random() < -1)
 
     ArrayNormal = Bound(Normal, lower=[1, 2], upper=[2, 3])
-    dist = ArrayNormal.dist(mu=0, sd=1, shape=2)
+    dist = ArrayNormal.dist(mu=0, sigma=1, shape=2)
     assert_equal(dist.logp([0.5, 3.5]).eval(), -np.array([np.inf, np.inf]))
     assert_equal(dist.default(), np.array([1.5, 2.5]))
     assert dist.transform is not None
@@ -1247,7 +1243,7 @@ def test_bound():
     lower.tag.test_value = np.array([1, 2]).astype(theano.config.floatX)
     upper = 3
     ArrayNormal = Bound(Normal, lower=lower, upper=upper)
-    dist = ArrayNormal.dist(mu=0, sd=1, shape=2)
+    dist = ArrayNormal.dist(mu=0, sigma=1, shape=2)
     logp = dist.logp([0.5, 3.5]).eval({lower: lower.tag.test_value})
     assert_equal(logp, -np.array([np.inf, np.inf]))
     assert_equal(dist.default(), np.array([2, 2.5]))
@@ -1274,7 +1270,7 @@ def test_bound():
         BoundPoisson(name="y", mu=1)
 
 
-class TestLatex(object):
+class TestLatex:
 
     def setup_class(self):
         # True parameter values
@@ -1291,22 +1287,22 @@ class TestLatex(object):
         Y = alpha + X.dot(beta) + np.random.randn(size)*sigma
         with Model() as self.model:
             # Priors for unknown model parameters
-            alpha = Normal('alpha', mu=0, sd=10)
-            b = Normal('beta', mu=0, sd=10, shape=(2,), observed=beta)
-            sigma = HalfNormal('sigma', sd=1)
+            alpha = Normal('alpha', mu=0, sigma=10)
+            b = Normal('beta', mu=0, sigma=10, shape=(2,), observed=beta)
+            sigma = HalfNormal('sigma', sigma=1)
 
             # Expected value of outcome
             mu = Deterministic('mu', alpha + tt.dot(X, b))
 
             # Likelihood (sampling distribution) of observations
-            Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
+            Y_obs = Normal('Y_obs', mu=mu, sigma=sigma, observed=Y)
         self.distributions = [alpha, sigma, mu, b, Y_obs]
         self.expected = (
-            r'$\text{alpha} \sim \text{Normal}(\mathit{mu}=0,~\mathit{sd}=10.0)$',
-            r'$\text{sigma} \sim \text{HalfNormal}(\mathit{sd}=1.0)$',
+            r'$\text{alpha} \sim \text{Normal}(\mathit{mu}=0,~\mathit{sigma}=10.0)$',
+            r'$\text{sigma} \sim \text{HalfNormal}(\mathit{sigma}=1.0)$',
             r'$\text{mu} \sim \text{Deterministic}(\text{alpha},~\text{Constant},~\text{beta})$',
-            r'$\text{beta} \sim \text{Normal}(\mathit{mu}=0,~\mathit{sd}=10.0)$',
-            r'$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sd}=f(\text{sigma}))$'
+            r'$\text{beta} \sim \text{Normal}(\mathit{mu}=0,~\mathit{sigma}=10.0)$',
+            r'$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sigma}=f(\text{sigma}))$'
         )
 
     def test__repr_latex_(self):

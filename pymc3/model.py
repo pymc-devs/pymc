@@ -2,7 +2,6 @@ import collections
 import functools
 import itertools
 import threading
-import six
 import warnings
 
 import numpy as np
@@ -29,7 +28,7 @@ __all__ = [
 FlatView = collections.namedtuple('FlatView', 'input, replacements, view')
 
 
-class InstanceMethod(object):
+class InstanceMethod:
     """Class for hiding references to instance methods so they can be pickled.
 
     >>> self.method = InstanceMethod(some_object, 'method_name')
@@ -120,7 +119,7 @@ def _get_named_nodes_and_relations(graph, parent, leaf_nodes,
                 try:
                     node_parents[graph].add(parent)
                 except KeyError:
-                    node_parents[graph] = set([parent])
+                    node_parents[graph] = {parent}
                 node_children[parent].add(graph)
             else:
                 node_parents[graph] = set()
@@ -132,7 +131,7 @@ def _get_named_nodes_and_relations(graph, parent, leaf_nodes,
                 try:
                     node_parents[graph].add(parent)
                 except KeyError:
-                    node_parents[graph] = set([parent])
+                    node_parents[graph] = {parent}
                 node_children[parent].add(graph)
             else:
                 node_parents[graph] = set()
@@ -151,7 +150,7 @@ def _get_named_nodes_and_relations(graph, parent, leaf_nodes,
     return leaf_nodes, node_parents, node_children
 
 
-class Context(object):
+class Context:
     """Functionality for objects that put themselves in a context using
     the `with` statement.
     """
@@ -196,12 +195,12 @@ def modelcontext(model):
     return model
 
 
-class Factor(object):
+class Factor:
     """Common functionality for objects with a log probability density
     associated with them.
     """
     def __init__(self, *args, **kwargs):
-        super(Factor, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @property
     def logp(self):
@@ -309,7 +308,7 @@ class treelist(list):
     Extending treelist you will also extend its parent
     """
     def __init__(self, iterable=(), parent=None):
-        super(treelist, self).__init__(iterable)
+        super().__init__(iterable)
         assert isinstance(parent, list) or parent is None
         self.parent = parent
         if self.parent is not None:
@@ -347,7 +346,7 @@ class treedict(dict):
     Extending treedict you will also extend its parent
     """
     def __init__(self, iterable=(), parent=None, **kwargs):
-        super(treedict, self).__init__(iterable, **kwargs)
+        super().__init__(iterable, **kwargs)
         assert isinstance(parent, dict) or parent is None
         self.parent = parent
         if self.parent is not None:
@@ -368,7 +367,7 @@ class treedict(dict):
             return dict.__contains__(self, item)
 
 
-class ValueGradFunction(object):
+class ValueGradFunction:
     """Create a theano function that computes a value and its gradient.
 
     Parameters
@@ -535,7 +534,7 @@ class ValueGradFunction(object):
         return args_joined, theano.clone(cost, replace=replace)
 
 
-class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization)):
+class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
@@ -569,29 +568,29 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
 
         class CustomModel(Model):
             # 1) override init
-            def __init__(self, mean=0, sd=1, name='', model=None):
+            def __init__(self, mean=0, sigma=1, name='', model=None):
                 # 2) call super's init first, passing model and name
                 # to it name will be prefix for all variables here if
                 # no name specified for model there will be no prefix
-                super(CustomModel, self).__init__(name, model)
+                super().__init__(name, model)
                 # now you are in the context of instance,
                 # `modelcontext` will return self you can define
                 # variables in several ways note, that all variables
                 # will get model's name prefix
 
                 # 3) you can create variables with Var method
-                self.Var('v1', Normal.dist(mu=mean, sd=sd))
+                self.Var('v1', Normal.dist(mu=mean, sigma=sd))
                 # this will create variable named like '{prefix_}v1'
                 # and assign attribute 'v1' to instance created
                 # variable can be accessed with self.v1 or self['v1']
 
                 # 4) this syntax will also work as we are in the
                 # context of instance itself, names are given as usual
-                Normal('v2', mu=mean, sd=sd)
+                Normal('v2', mu=mean, sigma=sd)
 
                 # something more complex is allowed, too
                 half_cauchy = HalfCauchy('sd', beta=10, testval=1.)
-                Normal('v3', mu=mean, sd=half_cauchy)
+                Normal('v3', mu=mean, sigma=half_cauchy)
 
                 # Deterministic variables can be used in usual way
                 Deterministic('v3_sq', self.v3 ** 2)
@@ -611,7 +610,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
         # II:
         #   use new class as entering point in context
         with CustomModel() as model:
-            Normal('new_normal_var', mu=1, sd=0)
+            Normal('new_normal_var', mu=1, sigma=0)
 
         # III:
         #   just get model instance with all that was defined in it
@@ -625,7 +624,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor, WithMemoization
     """
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
-        instance = super(Model, cls).__new__(cls)
+        instance = super().__new__(cls)
         if kwargs.get('model') is not None:
             instance._parent = kwargs.get('model')
         elif cls.get_contexts():
@@ -1102,7 +1101,7 @@ def Point(*args, **kwargs):
                 if str(k) in map(str, model.vars))
 
 
-class FastPointFunc(object):
+class FastPointFunc:
     """Wraps so a function so it takes a dict of arguments instead of arguments."""
 
     def __init__(self, f):
@@ -1112,7 +1111,7 @@ class FastPointFunc(object):
         return self.f(**state)
 
 
-class LoosePointFunc(object):
+class LoosePointFunc:
     """Wraps so a function so it takes a dict of arguments instead of arguments
     but can still take arguments."""
 
@@ -1202,7 +1201,7 @@ class FreeRV(Factor, TensorVariable):
         """
         if type is None:
             type = distribution.type
-        super(FreeRV, self).__init__(type, owner, index, name)
+        super().__init__(type, owner, index, name)
 
         if distribution is not None:
             self.dshape = tuple(distribution.shape)
@@ -1319,7 +1318,7 @@ class ObservedRV(Factor, TensorVariable):
 
         self.observations = data
 
-        super(ObservedRV, self).__init__(type, owner, index, name)
+        super().__init__(type, owner, index, name)
 
         if distribution is not None:
             data = as_tensor(data, name, model, distribution)
@@ -1480,7 +1479,7 @@ class TransformedRV(TensorVariable):
                  total_size=None):
         if type is None:
             type = distribution.type
-        super(TransformedRV, self).__init__(type, owner, index, name)
+        super().__init__(type, owner, index, name)
 
         self.transformation = transform
 

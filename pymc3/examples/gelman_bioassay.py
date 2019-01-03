@@ -9,8 +9,8 @@ dose = array([-.86, -.3, -.05, .73])
 with pm.Model() as model:
 
     # Logit-linear model parameters
-    alpha = pm.Normal('alpha', 0, sd=100.)
-    beta = pm.Normal('beta', 0, sd=1.)
+    alpha = pm.Normal('alpha', 0, sigma=100.)
+    beta = pm.Normal('beta', 0, sigma=1.)
 
     # Calculate probabilities of death
     theta = pm.Deterministic('theta', pm.math.invlogit(alpha + beta * dose))
