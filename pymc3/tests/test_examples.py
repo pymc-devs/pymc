@@ -43,7 +43,7 @@ class TestARM5_4(SeededTest):
         P['1'] = 1
 
         with pm.Model() as model:
-            effects = pm.Normal('effects', mu=0, sd=100, shape=len(P.columns))
+            effects = pm.Normal('effects', mu=0, sigma=100, shape=len(P.columns))
             logit_p = tt.dot(floatX(np.array(P)), effects)
             pm.Bernoulli('s', logit_p=logit_p, observed=floatX(data.switch.values))
         return model

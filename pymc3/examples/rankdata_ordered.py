@@ -28,7 +28,7 @@ with pm.Model() as m:
     # sd = pm.HalfCauchy('sigma', 1.)
     latent = pm.Normal('latent',
                        mu=mu[y_argsort],
-                       sd=1.,  # using sd does not work yet
+                       sigma=1.,  # using sd does not work yet
                        transform=pm.distributions.transforms.ordered,
                        shape=y_argsort.shape,
                        testval=np.repeat(np.arange(K)[:,None], J, axis=1).T)

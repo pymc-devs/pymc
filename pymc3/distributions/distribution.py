@@ -636,3 +636,30 @@ def generate_samples(generator, *args, **kwargs):
     if one_d and samples.shape[-1] == 1:
         samples = samples.reshape(samples.shape[:-1])
     return np.asarray(samples)
+
+
+def broadcast_distribution_samples(samples, size=None):
+    if size is None:
+        return np.broadcast_arrays(*samples)
+    _size = to_tuple(size)
+    try:
+        broadcasted_samples = np.broadcast_arrays(*samples)
+    except ValueError:
+        # Raw samples shapes
+        p_shapes = [p.shape for p in samples]
+        # samples shapes without the size prepend
+        sp_shapes = [s[len(_size):] if _size == s[:len(_size)] else s
+                     for s in p_shapes]
+        broadcast_shape = np.broadcast(*[np.empty(s) for s in sp_shapes]).shape
+        broadcasted_samples = []
+        for param, p_shape, sp_shape in zip(samples, p_shapes, sp_shapes):
+            if _size == p_shape[:len(_size)]:
+                slicer_head = [slice(None)] * len(_size)
+            else:
+                slicer_head = [np.newaxis] * len(_size)
+            slicer_tail = ([np.newaxis] * (len(broadcast_shape) -
+                                           len(sp_shape)) +
+                           [slice(None)] * len(sp_shape))
+            broadcasted_samples.append(param[tuple(slicer_head + slicer_tail)])
+        broadcasted_samples = np.broadcast_arrays(*broadcasted_samples)
+    return broadcasted_samples

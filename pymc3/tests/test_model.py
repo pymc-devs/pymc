@@ -17,7 +17,7 @@ class NewModel(pm.Model):
         assert pm.modelcontext(None) is self
         # 1) init variables with Var method
         self.Var('v1', pm.Normal.dist())
-        self.v2 = pm.Normal('v2', mu=0, sd=1)
+        self.v2 = pm.Normal('v2', mu=0, sigma=1)
         # 2) Potentials and Deterministic variables with method too
         # be sure that names will not overlap with other same models
         pm.Deterministic('d', tt.constant(1))
@@ -25,11 +25,11 @@ class NewModel(pm.Model):
 
 
 class DocstringModel(pm.Model):
-    def __init__(self, mean=0, sd=1, name='', model=None):
+    def __init__(self, mean=0, sigma=1, name='', model=None):
         super().__init__(name, model)
-        self.Var('v1', Normal.dist(mu=mean, sd=sd))
-        Normal('v2', mu=mean, sd=sd)
-        Normal('v3', mu=mean, sd=HalfCauchy('sd', beta=10, testval=1.))
+        self.Var('v1', Normal.dist(mu=mean, sigma=sigma))
+        Normal('v2', mu=mean, sigma=sigma)
+        Normal('v3', mu=mean, sigma=HalfCauchy('sd', beta=10, testval=1.))
         Deterministic('v3_sq', self.v3 ** 2)
         Potential('p1', tt.constant(1))
 

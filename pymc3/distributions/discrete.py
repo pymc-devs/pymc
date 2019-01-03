@@ -6,7 +6,8 @@ import warnings
 
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow, random_choice
-from .distribution import Discrete, draw_values, generate_samples
+from .distribution import (Discrete, draw_values, generate_samples,
+                           broadcast_distribution_samples)
 from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
 from ..theanof import floatX, intX
 
@@ -346,6 +347,7 @@ class DiscreteWeibull(Discrete):
 
     def _random(self, q, beta, size=None):
         p = np.random.uniform(size=size)
+        p, q, beta = broadcast_distribution_samples([p, q, beta], size=size)
 
         return np.ceil(np.power(np.log(1 - p) / np.log(q), 1. / beta)) - 1
 
@@ -848,7 +850,8 @@ class ZeroInflatedPoisson(Discrete):
         g = generate_samples(stats.poisson.rvs, theta,
                              dist_shape=self.shape,
                              size=size)
-        return g * (np.random.random(np.squeeze(g.shape)) < psi)
+        g, psi = broadcast_distribution_samples([g, psi], size=size)
+        return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
         psi = self.psi
@@ -940,7 +943,8 @@ class ZeroInflatedBinomial(Discrete):
         g = generate_samples(stats.binom.rvs, n, p,
                              dist_shape=self.shape,
                              size=size)
-        return g * (np.random.random(np.squeeze(g.shape)) < psi)
+        g, psi = broadcast_distribution_samples([g, psi], size=size)
+        return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
         psi = self.psi
@@ -1058,7 +1062,8 @@ class ZeroInflatedNegativeBinomial(Discrete):
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        return stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
+        g, psi = broadcast_distribution_samples([g, psi], size=size)
+        return stats.poisson.rvs(g) * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
         alpha = self.alpha
@@ -1149,7 +1154,7 @@ class OrderedLogistic(Categorical):
 
         # Ordered logistic regression
         with pm.Model() as model:
-            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sd=10, shape=2,
+            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
                                   transform=pm.distributions.transforms.ordered)
             y_ = pm.OrderedLogistic("y", cutpoints=cutpoints, eta=x, observed=y)
             tr = pm.sample(1000)

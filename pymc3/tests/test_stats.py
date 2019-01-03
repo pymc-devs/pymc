@@ -55,12 +55,12 @@ def test_compare():
 
     with pm.Model() as model0:
         mu = pm.Normal('mu', 0, 1)
-        x = pm.Normal('x', mu=mu, sd=1, observed=x_obs)
+        x = pm.Normal('x', mu=mu, sigma=1, observed=x_obs)
         trace0 = pm.sample(1000)
 
     with pm.Model() as model1:
         mu = pm.Normal('mu', 0, 1)
-        x = pm.Normal('x', mu=mu, sd=0.8, observed=x_obs)
+        x = pm.Normal('x', mu=mu, sigma=0.8, observed=x_obs)
         trace1 = pm.sample(1000)
 
     with pm.Model() as model2:

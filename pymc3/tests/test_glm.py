@@ -37,7 +37,7 @@ class TestGLM(SeededTest):
         with Model() as model:
             lm = LinearComponent.from_formula('y ~ x', self.data_linear)
             sigma = Uniform('sigma', 0, 20)
-            Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)
+            Normal('y_obs', mu=lm.y_est, sigma=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
             trace = sample(500, tune=0, step=step, start=start,

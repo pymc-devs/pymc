@@ -10,7 +10,7 @@ class TestTextSampling:
 
     def test_supports_sampler_stats(self):
         with pm.Model():
-            pm.Normal("mu", mu=0, sd=1, shape=2)
+            pm.Normal("mu", mu=0, sigma=1, shape=2)
             db = text.Text(self.name)
             pm.sample(20, tune=10, init=None, trace=db, cores=2)
 

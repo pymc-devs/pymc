@@ -111,7 +111,7 @@ class Latent(Base):
         cov = stabilize(self.cov_func(X))
         shape = infer_shape(X, kwargs.pop("shape", None))
         if reparameterize:
-            v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
+            v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, shape=shape, **kwargs)
             f = pm.Deterministic(name, mu + cholesky(cov).dot(v))
         else:
             f = pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
@@ -253,7 +253,7 @@ class TP(Latent):
         shape = infer_shape(X, kwargs.pop("shape", None))
         if reparameterize:
             chi2 = pm.ChiSquared("chi2_", self.nu)
-            v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
+            v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, shape=shape, **kwargs)
             f = pm.Deterministic(name, (tt.sqrt(self.nu) / chi2) * (mu + cholesky(cov).dot(v)))
         else:
             f = pm.MvStudentT(name, nu=self.nu, mu=mu, cov=cov, shape=shape, **kwargs)
@@ -868,7 +868,7 @@ class LatentKron(Base):
         mu = self.mean_func(cartesian(*Xs))
         chols = [cholesky(stabilize(cov(X))) for cov, X in zip(self.cov_funcs, Xs)]
         # remove reparameterization option
-        v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=self.N, **kwargs)
+        v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, shape=self.N, **kwargs)
         f = pm.Deterministic(name, mu + tt.flatten(kron_dot(chols, v)))
         return f
 

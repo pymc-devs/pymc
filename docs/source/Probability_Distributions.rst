@@ -12,7 +12,7 @@ For example, if we wish to define a particular variable as having a normal prior
 
     with pm.Model():
     
-        x = pm.Normal('x', mu=0, sd=1)
+        x = pm.Normal('x', mu=0, sigma=1)
         
 A variable requires at least a ``name`` argument, and zero or more model parameters, depending on the distribution. Parameter names vary by distribution, using conventional names wherever possible. The example above defines a scalar variable. To make a vector-valued variable, a ``shape`` argument should be provided; for example, a 3x3 matrix of beta random variables could be defined with:
 

@@ -134,8 +134,8 @@ happens if we define a PyMC3 model. Let's look at a simple example::
     data = true_mu + np.random.randn(50)
 
     with pm.Model() as model:
-        mu = pm.Normal('mu', mu=0, sd=1)
-        y = pm.Normal('y', mu=mu, sd=1, observed=data)
+        mu = pm.Normal('mu', mu=0, sigma=1)
+        y = pm.Normal('y', mu=mu, sigma=1, observed=data)
 
 In this model we define two variables: `mu` and `y`. The first is
 a free variable that we want to infer, the second is an observed
@@ -184,7 +184,7 @@ example::
     with pm.Model() as model:
         mu = pm.Normal('mu', 0, 1)
         sd = pm.HalfNormal('sd', 1)
-        y = pm.Normal('y', mu=mu, sd=sd, observed=data)
+        y = pm.Normal('y', mu=mu, sigma=sd, observed=data)
 
 is roughly equivalent to this::
 
@@ -213,4 +213,4 @@ theano operation on them::
         beta = pm.Normal('beta', 0, 1, shape=len(design_matrix))
         predict = tt.dot(design_matrix, beta)
         sd = pm.HalfCauchy('sd', beta=2.5)
-        pm.Normal('y', mu=predict, sd=sd, observed=data)
+        pm.Normal('y', mu=predict, sigma=sd, observed=data)
