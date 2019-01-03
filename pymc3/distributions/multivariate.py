@@ -226,12 +226,13 @@ class MvNormal(_QuadFormBase):
 
     def random(self, point=None, size=None):
         if size is None:
-            size = []
+            size = tuple()
         else:
-            try:
-                size = list(size)
-            except TypeError:
-                size = [size]
+            if not isinstance(size, tuple):
+                try:
+                    size = tuple(size)
+                except TypeError:
+                    size = (size,)
 
         if self._cov_type == 'cov':
             mu, cov = draw_values([self.mu, self.cov], point=point, size=size)
@@ -242,23 +243,37 @@ class MvNormal(_QuadFormBase):
                 dist = stats.multivariate_normal(
                     mean=mu, cov=cov, allow_singular=True)
             except ValueError:
-                size.append(mu.shape[-1])
+                size += (mu.shape[-1],)
                 return np.nan * np.zeros(size)
             return dist.rvs(size)
         elif self._cov_type == 'chol':
-            mu, chol = draw_values([self.mu, self.chol_cov], point=point, size=size)
-            if mu.shape[-1] != chol[0].shape[-1]:
+            mu, chol = draw_values([self.mu, self.chol_cov],
+                                   point=point, size=size)
+            if size and mu.ndim == len(size) and mu.shape == size:
+                mu = mu[..., np.newaxis]
+            if mu.shape[-1] != chol.shape[-1] and mu.shape[-1] != 1:
                 raise ValueError("Shapes for mu and chol don't match")
+            broadcast_shape = (
+                np.broadcast(np.empty(mu.shape[:-1]),
+                             np.empty(chol.shape[:-2])).shape
+            )
 
-            size.append(mu.shape[-1])
-            standard_normal = np.random.standard_normal(size)
-            return mu + np.dot(standard_normal, chol.T)
+            mu = np.broadcast_to(mu, broadcast_shape + (chol.shape[-1],))
+            chol = np.broadcast_to(chol, broadcast_shape + chol.shape[-2:])
+            # If mu and chol were fixed by the point, only the standard normal
+            # should change
+            if mu.shape[:len(size)] != size:
+                std_norm_shape = size + mu.shape
+            else:
+                std_norm_shape = mu.shape
+            standard_normal = np.random.standard_normal(std_norm_shape)
+            return mu + np.tensordot(standard_normal, chol, axes=[[-1], [-1]])
         else:
             mu, tau = draw_values([self.mu, self.tau], point=point, size=size)
             if mu.shape[-1] != tau[0].shape[-1]:
                 raise ValueError("Shapes for mu and tau don't match")
 
-            size.append(mu.shape[-1])
+            size += (mu.shape[-1],)
             try:
                 chol = linalg.cholesky(tau, lower=True)
             except linalg.LinAlgError:
@@ -1001,7 +1016,7 @@ class LKJCholeskyCov(Continuous):
         self.n = n
         self.eta = eta
 
-        if 'transform' in kwargs:
+        if 'transform' in kwargs and kwargs['transform'] is not None:
             raise ValueError('Invalid parameter: transform.')
         if 'shape' in kwargs:
             raise ValueError('Invalid parameter: shape.')
@@ -1051,6 +1066,90 @@ class LKJCholeskyCov(Continuous):
         norm = _lkj_normalizing_constant(eta, n)
 
         return norm + logp_lkj + logp_sd + det_invjac
+
+    def _random(self, n, eta, size=1):
+        eta_sample_shape = (size,) + eta.shape
+        P = np.eye(n) * np.ones(eta_sample_shape + (n, n))
+        # original implementation in R see:
+        # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
+        beta = eta - 1. + n/2.
+        r12 = 2. * stats.beta.rvs(a=beta, b=beta, size=eta_sample_shape) - 1.
+        P[..., 0, 1] = r12
+        P[..., 1, 1] = np.sqrt(1. - r12**2)
+        for mp1 in range(2, n):
+            beta -= 0.5
+            y = stats.beta.rvs(a=mp1 / 2., b=beta, size=eta_sample_shape)
+            z = stats.norm.rvs(loc=0, scale=1, size=eta_sample_shape + (mp1,))
+            z = z / np.sqrt(np.einsum('ij,ij->j', z, z))
+            P[..., 0:mp1, mp1] = np.sqrt(y[..., np.newaxis]) * z
+            P[..., mp1, mp1] = np.sqrt(1. - y)
+        C = np.einsum('...ji,...jk->...ik', P, P)
+        D = np.atleast_1d(self.sd_dist.random(size=P.shape[:-2]))
+        if D.shape in [tuple(), (1,)]:
+            D = self.sd_dist.random(size=P.shape[:-1])
+        elif D.ndim < C.ndim - 1:
+            D = [D] + [self.sd_dist.random(size=P.shape[:-2])
+                       for _ in range(n - 1)]
+            D = np.moveaxis(np.array(D), 0, C.ndim - 2)
+        elif D.ndim == C.ndim - 1:
+            if D.shape[-1] == 1:
+                D = [D] + [self.sd_dist.random(size=P.shape[:-2])
+                           for _ in range(n - 1)]
+                D = np.concatenate(D, axis=-1)
+            elif D.shape[-1] != n:
+                raise ValueError('The size of the samples drawn from the '
+                                 'supplied sd_dist.random have the wrong '
+                                 'size. Expected {} but got {} instead.'.
+                                 format(n, D.shape[-1]))
+        else:
+            raise ValueError('Supplied sd_dist.random generates samples with '
+                             'too many dimensions. It must yield samples '
+                             'with 0 or 1 dimensions. Got {} instead'.
+                             format(D.ndim - C.ndim - 2))
+        C *= D[..., :, np.newaxis] * D[..., np.newaxis, :]
+        tril_idx = np.tril_indices(n, k=0)
+        return np.linalg.cholesky(C)[..., tril_idx[0], tril_idx[1]]
+
+    def random(self, point=None, size=None):
+        # Get parameters and broadcast them
+        n, eta = draw_values([self.n, self.eta], point=point, size=size)
+        broadcast_shape = np.broadcast(n, eta).shape
+        # We can only handle cov matrices with a constant n per random call
+        n = np.unique(n)
+        if len(n) > 1:
+            raise RuntimeError('Varying n is not supported for LKJCholeskyCov')
+        n = int(n[0])
+        dist_shape = ((n * (n + 1)) // 2,)
+        # We make sure that eta and the drawn n get their shapes broadcasted
+        eta = np.broadcast_to(eta, broadcast_shape)
+        # We change the size of the draw depending on the broadcast shape
+        sample_shape = broadcast_shape + dist_shape
+        if size is not None:
+            if not isinstance(size, tuple):
+                try:
+                    size = tuple(size)
+                except TypeError:
+                    size = (size,)
+            if size == sample_shape:
+                size = None
+            elif size == broadcast_shape:
+                size = None
+            elif size[-len(sample_shape):] == sample_shape:
+                size = size[:len(size) - len(sample_shape)]
+            elif size[-len(broadcast_shape):] == broadcast_shape:
+                size = size[:len(size) - len(broadcast_shape)]
+        # We will always provide _random with an integer size and then reshape
+        # the output to get the correct size
+        if size is not None:
+            _size = np.prod(size)
+        else:
+            _size = 1
+        samples = self._random(n, eta, size=_size)
+        if size is None:
+            samples = samples[0]
+        else:
+            samples = np.reshape(samples, size + sample_shape)
+        return samples
 
 
 class LKJCorr(Continuous):

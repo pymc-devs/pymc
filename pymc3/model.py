@@ -121,6 +121,8 @@ def _get_named_nodes_and_relations(graph, parent, leaf_nodes,
                 except KeyError:
                     node_parents[graph] = {parent}
                 node_children[parent].add(graph)
+            else:
+                node_parents[graph] = set()
             # Flag that the leaf node has no children
             node_children[graph] = set()
     else:  # Intermediate node
@@ -131,6 +133,8 @@ def _get_named_nodes_and_relations(graph, parent, leaf_nodes,
                 except KeyError:
                     node_parents[graph] = {parent}
                 node_children[parent].add(graph)
+            else:
+                node_parents[graph] = set()
             # The current node will be set as the parent of the next
             # nodes only if it is a named node
             parent = graph
