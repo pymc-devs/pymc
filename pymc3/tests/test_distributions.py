@@ -1289,7 +1289,7 @@ class TestLatex:
             sigma = HalfNormal('sigma', sigma=1)
 
             # Expected value of outcome
-            mu = Deterministic('mu', alpha + tt.dot(X, b))
+            mu = Deterministic('mu', floatX(alpha + tt.dot(X, b)))
 
             # Likelihood (sampling distribution) of observations
             Y_obs = Normal('Y_obs', mu=mu, sigma=sigma, observed=Y)
@@ -1299,7 +1299,7 @@ class TestLatex:
             r'$\text{sigma} \sim \text{HalfNormal}(\mathit{sigma}=1.0)$',
             r'$\text{mu} \sim \text{Deterministic}(\text{alpha},~\text{Constant},~\text{beta})$',
             r'$\text{beta} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$',
-            r'$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=f(\text{mu}),~\mathit{sigma}=f(\text{sigma}))$'
+            r'$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sigma}=f(\text{sigma}))$'
         )
 
     def test__repr_latex_(self):
