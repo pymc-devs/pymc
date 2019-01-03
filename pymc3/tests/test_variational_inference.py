@@ -9,7 +9,10 @@ from theano import theano, tensor as tt
 import pymc3 as pm
 import pymc3.memoize
 import pymc3.util
-from pymc3.theanof import change_flags
+from pymc3.theanof import (
+    change_flags,
+    intX,
+)
 from pymc3.variational.approximations import (
     MeanFieldGroup, FullRankGroup,
     NormalizingFlowGroup, EmpiricalGroup,
@@ -848,7 +851,7 @@ def test_pickle_approx_aevb(three_var_aevb_approx):
 @pytest.fixture('module')
 def binomial_model():
     n_samples = 100
-    xs = np.random.binomial(n=1, p=0.2, size=n_samples)
+    xs = intX(np.random.binomial(n=1, p=0.2, size=n_samples))
     with pm.Model() as model:
         p = pm.Beta('p', alpha=1, beta=1)
         pm.Binomial('xs', n=1, p=p, observed=xs)
