@@ -309,8 +309,10 @@ def logpow(v, p):
 
 
 def discrete_weibull_logpmf(value, q, beta):
-    return floatX(np.log(np.power(q, np.power(value, beta))
-                  - np.power(q, np.power(value + 1, beta))))
+    return floatX(np.log(np.power(floatX(q),
+                                  np.power(floatX(value), floatX(beta)))
+                  - np.power(floatX(q), np.power(floatX(value + 1),
+                                                 floatX(beta)))))
 
 
 def dirichlet_logpdf(value, a):
@@ -565,11 +567,6 @@ class TestMatchesScipy(SeededTest):
         def scipy_logp(value, mu, sd, lower, upper):
             return sp.truncnorm.logpdf(
                 value, (lower-mu)/sd, (upper-mu)/sd, loc=mu, scale=sd)
-
-        args = {'mu': array(-2.1), 'lower': array(-100.), 'upper': array(0.01),
-                'sd': array(0.01)}
-        val = TruncatedNormal.dist(**args).logp(0.)
-        assert_allclose(val.eval(), scipy_logp(value=0, **args))
 
         self.pymc3_matches_scipy(
             TruncatedNormal, R,
@@ -1302,7 +1299,7 @@ class TestLatex:
             r'$\text{sigma} \sim \text{HalfNormal}(\mathit{sd}=1.0)$',
             r'$\text{mu} \sim \text{Deterministic}(\text{alpha},~\text{Constant},~\text{beta})$',
             r'$\text{beta} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sd}=10.0)$',
-            r'$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sd}=f(\text{sigma}))$'
+            r'$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=f(\text{mu}),~\mathit{sd}=f(\text{sigma}))$'
         )
 
     def test__repr_latex_(self):
