@@ -122,7 +122,7 @@ def test_random_dense():
 def test_user_potential():
     model = pymc3.Model()
     with model:
-        pymc3.Normal("a", mu=0, sd=1)
+        pymc3.Normal("a", mu=0, sigma=1)
 
     # Work around missing nonlocal in python2
     called = []
@@ -130,7 +130,7 @@ def test_user_potential():
     class Potential(quadpotential.QuadPotentialDiag):
         def energy(self, x, velocity=None):
             called.append(1)
-            return super(Potential, self).energy(x, velocity)
+            return super().energy(x, velocity)
 
     pot = Potential(floatX([1]))
     with model:

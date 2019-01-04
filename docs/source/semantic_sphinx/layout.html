@@ -1,0 +1,136 @@
+{% extends "basic/layout.html" %}
+
+{% set script_files = script_files + [
+'_static/highlight.min.js',
+'_static/semantic.min.js',
+]
+%}
+{% if pagename == 'nb_examples/index' or pagename == 'nb_tutorials/index' %}
+{% set script_files = script_files + [
+'_static/gallery.js',
+]
+%}
+{% endif %}
+
+{%- block extrahead %}
+<script>hljs.initHighlightingOnLoad();</script>
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+{% if pagename == 'nb_tutorials/index' %}
+<script type="text/javascript">
+    jQuery(function () { Gallery.loadScript("{{ pathto('_static/gallery_tutorials_contents.js', 1) }}", "exampleloader"); });
+</script>
+{# this is used when loading the gallery index using $.ajax fails,
+such as on Chrome for documents on localhost #}
+<script type="text/javascript" id="exampleloader"></script>
+{% endif %}
+{% if pagename == 'nb_examples/index' %}
+<script type="text/javascript">
+    jQuery(function () { Gallery.loadScript("{{ pathto('_static/gallery_examples_contents.js', 1) }}", "exampleloader"); });
+</script>
+{# this is used when loading the gallery index using $.ajax fails,
+such as on Chrome for documents on localhost #}
+<script type="text/javascript" id="exampleloader"></script>
+{% endif %}
+{% endblock %}
+
+{# Silence the sidebar's, relbar's #}
+{% block header %}{% endblock %}
+{% block relbar1 %}{% endblock %}
+{% block relbar2 %}{% endblock %}
+{% block sidebarsourcelink %}{% endblock %}
+
+{%- block content %}
+<div class="ui vertical center aligned">
+
+    <div class="ui container">
+        <div class="ui large secondary pointing menu">
+            <a class="item" href="/">
+                <img class="ui bottom aligned tiny image" src="https://cdn.rawgit.com/pymc-devs/pymc3/master/docs/logos/svg/PyMC3_banner.svg" />
+            </a>
+            {% if
+            theme_navbar_links %} {%- for link in theme_navbar_links %} <a href="{{ pathto(*link[1:]) }}" class="item">{{
+                link[0] }}</a>
+            {%- endfor %}
+            {% endif %}
+            <div class="right menu">
+                <div class="item">
+                    <form class="ui icon input" action="{{ pathto('search') }}" method="get">
+                        <input type="text" placeholder="Search..." name="q" />
+                        <i class="search link icon"></i>
+                    </form>
+                </div>
+                <a class="item" href="https://github.com/pymc-devs/pymc3"><i class="github blue icon large"></i></a>
+            </div>
+        </div>
+    </div>
+    {% if pagename == 'index' %}
+    <div class="ui center aligned text container">
+        <img src="https://cdn.rawgit.com/pymc-devs/pymc3/master/docs/logos/svg/PyMC3_banner.svg" />
+        <h2>Probabilistic Programming in Python</h2>
+        <a href="notebooks/api_quickstart.html">
+            <div class="ui huge primary button">Quickstart <i class="right arrow icon"></i></div>
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="ui container" role="main">
+    {% if pagename == 'index' %}
+    <div class="ui vertical segment">
+        <a class="ui image" href="https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks">
+            <img src="https://mybinder.org/badge.svg">
+        </a>
+        <a class="ui image" href="https://travis-ci.org/pymc-devs/pymc3">
+            <img src="https://travis-ci.org/pymc-devs/pymc3.svg?branch=master">
+        </a>
+        <a class="ui image" href="https://coveralls.io/github/pymc-devs/pymc3?branch=master">
+            <img src="https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master">
+        </a>
+        <a class="ui image" href="https://www.numfocus.org/">
+            <img src="https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A">
+        </a>
+    </div>
+    {% endif %}
+
+    <div class="ui vertical segment">
+        {% block body %}{% endblock %}
+    </div>
+</div>
+{%- endblock %}
+
+{%- block footer %}
+<div class="ui vertical footer segment">
+    <div class="ui center aligned container">
+        <a href="https://github.com/pymc-devs/pymc3"><i class="github icon large"></i></a>
+        <a href="https://twitter.com/pymc_devs"><i class="twitter icon large"></i></a>
+        <a href="https://discourse.pymc.io/"><i class="discourse icon large"></i></a>
+    </div>
+    <div class="ui center aligned container">
+
+        {%- if show_copyright %}
+        <p>
+            {%- if hasdoc('copyright') %}
+            {% trans path=pathto('copyright'), copyright=copyright|e %}&copy; <a href="{{ path }}">Copyright</a> {{
+            copyright }}.{% endtrans %}
+            {%- else %}
+            {% trans copyright=copyright|e %}&copy; Copyright {{ copyright }}.{% endtrans %}
+            {%- endif %}
+        </p>
+        {%- endif %}
+        {%- if last_updated %}
+        <p>
+            {% trans last_updated=last_updated|e %}Last updated on {{ last_updated }}.{% endtrans %}<br />
+        </p>
+        {%- endif %}
+        {%- if show_sphinx %}
+        <p>
+            {% trans sphinx_version=sphinx_version|e %}Created using <a href="https://sphinx-doc.org/">Sphinx</a> {{
+            sphinx_version }}.{% endtrans %}<br />
+        </p>
+        {%- endif %}
+    </div>
+</div>
+{%- endblock %}

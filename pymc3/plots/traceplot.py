@@ -142,7 +142,7 @@ def traceplot(trace, varnames=None, transform=identity_transform, figsize=None, 
                 ax[i, j].relim()
                 ax[i, j].autoscale_view(True, True, True)
             ax[i, 1].set_xlim(x0, x0 + width)
-        ax[i, 0].set_ylim(ymin=0)
+        ax[i, 0].set_ylim(bottom=0)
     if live_plot:
         ax[0, 0].figure.canvas.draw()
     plt.tight_layout()

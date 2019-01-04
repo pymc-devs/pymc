@@ -9,9 +9,9 @@ data = np.random.normal(size=(2, 20))
 
 
 with pm.Model() as model:
-    x = pm.Normal('x', mu=.5, sd=2., shape=(2, 1))
+    x = pm.Normal('x', mu=.5, sigma=2., shape=(2, 1))
     z = pm.Beta('z', alpha=10, beta=5.5)
-    d = pm.Normal('data', mu=x, sd=.75, observed=data)
+    d = pm.Normal('data', mu=x, sigma=.75, observed=data)
 
 
 def run(n=1000):

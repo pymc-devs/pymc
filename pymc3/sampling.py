@@ -4,9 +4,6 @@ import pickle
 import logging
 import warnings
 
-from six import integer_types
-from joblib import Parallel, delayed
-from tempfile import mkdtemp
 import numpy as np
 import theano.gradient as tg
 
@@ -23,6 +20,7 @@ from pymc3.step_methods.hmc import quadpotential
 from pymc3 import plots
 import pymc3 as pm
 from tqdm import tqdm
+
 
 import sys
 sys.setrecursionlimit(10000)
@@ -192,7 +190,7 @@ def _cpu_count():
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=None, chain_idx=0,
            chains=None, cores=None, tune=500, nuts_kwargs=None, step_kwargs=None, progressbar=True,
            model=None, random_seed=None, live_plot=False, discard_tuned_samples=True,
-           live_plot_kwargs=None, compute_convergence_checks=True, use_mmap=False, **kwargs):
+           live_plot_kwargs=None, compute_convergence_checks=True, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -245,7 +243,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     chains : int
         The number of chains to sample. Running independent chains is important for some
         convergence statistics and can also reveal multiple modes in the posterior. If `None`,
-        then set to either `cores` or 2, whichever is larger. For SMC the default value is 100.
+        then set to either `cores` or 2, whichever is larger. For SMC the number of chains is the
+        number of draws.
     cores : int
         The number of chains to run in parallel. If `None`, set to the number of CPUs in the
         system, but at most 4 (for 'SMC' defaults to 1). Keep in mind that some chains might
@@ -289,9 +288,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     compute_convergence_checks : bool, default=True
         Whether to compute sampler statistics like gelman-rubin and effective_n.
         Ignored when using 'SMC'
-    use_mmap : bool, default=False
-        Whether to use joblib's memory mapping to share numpy arrays when sampling across multiple
-        cores. Ignored when using 'SMC'
 
     Returns
     -------
@@ -323,7 +319,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     if isinstance(step, pm.step_methods.smc.SMC):
         if step_kwargs is None:
             step_kwargs = {}
-        test_folder = mkdtemp(prefix='SMC_TEST')
         trace = smc.sample_smc(draws=draws,
                                step=step,
                                progressbar=progressbar,
@@ -348,9 +343,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
             start = [start] * chains
         if random_seed == -1:
             random_seed = None
-        if chains == 1 and isinstance(random_seed, integer_types):
+        if chains == 1 and isinstance(random_seed, int):
             random_seed = [random_seed]
-        if random_seed is None or isinstance(random_seed, integer_types):
+        if random_seed is None or isinstance(random_seed, int):
             if random_seed is not None:
                 np.random.seed(random_seed)
             random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
@@ -424,8 +419,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
                        'random_seed': random_seed,
                        'live_plot': live_plot,
                        'live_plot_kwargs': live_plot_kwargs,
-                       'cores': cores,
-                       'use_mmap': use_mmap}
+                       'cores': cores,}
 
         sample_args.update(kwargs)
 
@@ -489,7 +483,7 @@ def _check_start_shape(model, start):
             # if start var has no shape
             else:
                 # if model var has a specified shape
-                if var_shape:
+                if var_shape.size > 0:
                     e += "\nExpected shape {} for var " \
                          "'{}', got scalar {}".format(
                              tuple(var_shape), var.name, start[var.name]
@@ -668,7 +662,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
             strace._add_warnings(warns)
 
 
-class PopulationStepper(object):
+class PopulationStepper:
     def __init__(self, steppers, parallelize):
         """Tries to use multiprocessing to parallelize chains.
 
@@ -689,7 +683,7 @@ class PopulationStepper(object):
         self._master_ends = []
         self._processes = []
         self._steppers = steppers
-        if parallelize and sys.version_info >= (3, 4):
+        if parallelize:
             try:
                 # configure a child process for each stepper
                 _log.info('Attempting to parallelize chains.')
@@ -716,15 +710,9 @@ class PopulationStepper(object):
                           'Falling back to sequential stepping of chains.')
                 _log.debug('Error was: ', exec_info=True)
         else:
-            if parallelize:
-                warnings.warn('Population parallelization is only supported '
-                              'on Python 3.4 and higher.  All {} chains will '
-                              'run sequentially on one process.'
-                              .format(self.nchains))
-            else:
-                _log.info('Chains are not parallelized. You can enable this by passing '
-                          'pm.sample(parallelize=True).')
-        return super(PopulationStepper, self).__init__()
+            _log.info('Chains are not parallelized. You can enable this by passing '
+                      'pm.sample(parallelize=True).')
+        return super().__init__()
 
     def __enter__(self):
         """Does nothing because processes are already started in __init__."""
@@ -958,80 +946,60 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
 
 
 def _mp_sample(draws, tune, step, chains, cores, chain, random_seed,
-               start, progressbar, trace=None, model=None, use_mmap=False,
-               **kwargs):
+               start, progressbar, trace=None, model=None, **kwargs):
 
-    if sys.version_info.major >= 3:
-        import pymc3.parallel_sampling as ps
+    import pymc3.parallel_sampling as ps
+    # We did draws += tune in pm.sample
+    draws -= tune
 
-        # We did draws += tune in pm.sample
-        draws -= tune
+    traces = []
+    for idx in range(chain, chain + chains):
+        if trace is not None:
+            strace = _choose_backend(copy(trace), idx, model=model)
+        else:
+            strace = _choose_backend(None, idx, model=model)
+        # for user supply start value, fill-in missing value if the supplied
+        # dict does not contain all parameters
+        update_start_vals(start[idx - chain], model.test_point, model)
+        if step.generates_stats and strace.supports_sampler_stats:
+            strace.setup(draws + tune, idx + chain, step.stats_dtypes)
+        else:
+            strace.setup(draws + tune, idx + chain)
+        traces.append(strace)
 
-        traces = []
-        for idx in range(chain, chain + chains):
-            if trace is not None:
-                strace = _choose_backend(copy(trace), idx, model=model)
-            else:
-                strace = _choose_backend(None, idx, model=model)
-            # for user supply start value, fill-in missing value if the supplied
-            # dict does not contain all parameters
-            update_start_vals(start[idx - chain], model.test_point, model)
-            if step.generates_stats and strace.supports_sampler_stats:
-                strace.setup(draws + tune, idx + chain, step.stats_dtypes)
-            else:
-                strace.setup(draws + tune, idx + chain)
-            traces.append(strace)
-
-        sampler = ps.ParallelSampler(
-            draws, tune, chains, cores, random_seed, start, step,
-            chain, progressbar)
+    sampler = ps.ParallelSampler(
+        draws, tune, chains, cores, random_seed, start, step,
+        chain, progressbar)
+    try:
         try:
-            try:
-                with sampler:
-                    for draw in sampler:
-                        trace = traces[draw.chain - chain]
-                        if (trace.supports_sampler_stats
-                                and draw.stats is not None):
-                            trace.record(draw.point, draw.stats)
-                        else:
-                            trace.record(draw.point)
-                        if draw.is_last:
-                            trace.close()
-                            if draw.warnings is not None:
-                                trace._add_warnings(draw.warnings)
-            except ps.ParallelSamplingError as error:
-                trace = traces[error._chain - chain]
-                trace._add_warnings(error._warnings)
-                for trace in traces:
-                    trace.close()
-
-                multitrace = MultiTrace(traces)
-                multitrace._report._log_summary()
-                raise
-            return MultiTrace(traces)
-        except KeyboardInterrupt:
-            traces, length = _choose_chains(traces, tune)
-            return MultiTrace(traces)[:length]
-        finally:
+            with sampler:
+                for draw in sampler:
+                    trace = traces[draw.chain - chain]
+                    if (trace.supports_sampler_stats
+                            and draw.stats is not None):
+                        trace.record(draw.point, draw.stats)
+                    else:
+                        trace.record(draw.point)
+                    if draw.is_last:
+                        trace.close()
+                        if draw.warnings is not None:
+                            trace._add_warnings(draw.warnings)
+        except ps.ParallelSamplingError as error:
+            trace = traces[error._chain - chain]
+            trace._add_warnings(error._warnings)
             for trace in traces:
                 trace.close()
 
-    else:
-        chain_nums = list(range(chain, chain + chains))
-        pbars = [progressbar] + [False] * (chains - 1)
-        jobs = (
-            delayed(_sample)(
-                chain=args[0], progressbar=args[1], random_seed=args[2],
-                start=args[3], draws=draws, step=step, trace=trace,
-                tune=tune, model=model, **kwargs
-            )
-            for args in zip(chain_nums, pbars, random_seed, start)
-        )
-        if use_mmap:
-            traces = Parallel(n_jobs=cores)(jobs)
-        else:
-            traces = Parallel(n_jobs=cores, mmap_mode=None)(jobs)
+            multitrace = MultiTrace(traces)
+            multitrace._report._log_summary()
+            raise
         return MultiTrace(traces)
+    except KeyboardInterrupt:
+        traces, length = _choose_chains(traces, tune)
+        return MultiTrace(traces)[:length]
+    finally:
+        for trace in traces:
+            trace.close()
 
 
 def _choose_chains(traces, tune):
@@ -1124,17 +1092,9 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     if progressbar:
         indices = tqdm(indices, total=samples)
 
-    varnames = [var.name for var in vars]
-
-    # draw once to inspect the shape
-    var_values = list(zip(varnames,
-                          draw_values(vars, point=model.test_point, size=size)))
     ppc_trace = defaultdict(list)
-    for varname, value in var_values:
-        ppc_trace[varname] = np.zeros((samples,) + value.shape, value.dtype)
-
     try:
-        for slc, idx in enumerate(indices):
+        for idx in indices:
             if nchain > 1:
                 chain_idx, point_idx = np.divmod(idx, len_trace)
                 param = trace._straces[chain_idx % nchain].point(point_idx)
@@ -1143,7 +1103,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
 
             values = draw_values(vars, point=param, size=size)
             for k, v in zip(vars, values):
-                ppc_trace[k.name][slc] = v
+                ppc_trace[k.name].append(v)
 
     except KeyboardInterrupt:
         pass
@@ -1152,7 +1112,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
         if progressbar:
             indices.close()
 
-    return ppc_trace
+    return {k: np.asarray(v) for k, v in ppc_trace.items()}
 
 
 def sample_ppc(*args, **kwargs):

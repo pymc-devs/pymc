@@ -1,4 +1,3 @@
-import six
 import pandas as pd
 import numpy as np
 import theano.tensor as tt
@@ -27,7 +26,7 @@ def any_to_tensor_and_labels(x, labels=None):
     -------
     (x, labels) - tensor and labels for its columns
     """
-    if isinstance(labels, six.string_types):
+    if isinstance(labels, str):
         labels = [labels]
     # pandas.DataFrame
     # labels can come from here

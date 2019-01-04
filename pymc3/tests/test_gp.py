@@ -12,7 +12,7 @@ import pytest
 np.random.seed(101)
 
 
-class TestZeroMean(object):
+class TestZeroMean:
     def test_value(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -22,7 +22,7 @@ class TestZeroMean(object):
         assert M.shape == (10, )
 
 
-class TestConstantMean(object):
+class TestConstantMean:
     def test_value(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -32,7 +32,7 @@ class TestConstantMean(object):
         assert M.shape == (10, )
 
 
-class TestLinearMean(object):
+class TestLinearMean:
     def test_value(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -42,7 +42,7 @@ class TestLinearMean(object):
         assert M.shape == (10, )
 
 
-class TestAddProdMean(object):
+class TestAddProdMean:
     def test_add(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -84,7 +84,7 @@ class TestAddProdMean(object):
         npt.assert_allclose(M[1], 10.8965 * 2 * 2, atol=1e-3)
 
 
-class TestCovAdd(object):
+class TestCovAdd:
     def test_symadd_cov(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -152,7 +152,7 @@ class TestCovAdd(object):
         assert np.allclose(K, K_true)
 
 
-class TestCovProd(object):
+class TestCovProd:
     def test_symprod_cov(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -224,7 +224,7 @@ class TestCovProd(object):
         npt.assert_allclose(np.diag(K2), K1d, atol=1e-5)
 
 
-class TestCovKron(object):
+class TestCovKron:
     def test_symprod_cov(self):
         X1 = np.linspace(0, 1, 10)[:, None]
         X2 = np.linspace(0, 1, 10)[:, None]
@@ -255,7 +255,7 @@ class TestCovKron(object):
         npt.assert_allclose(K_true, K)
 
 
-class TestCovSliceDim(object):
+class TestCovSliceDim:
     def test_slice1(self):
         X = np.linspace(0, 1, 30).reshape(10, 3)
         with pm.Model() as model:
@@ -303,7 +303,7 @@ class TestCovSliceDim(object):
             pm.gp.cov.ExpQuad(2, lengthscales, [True])
 
 
-class TestStability(object):
+class TestStability:
     def test_stable(self):
         X = np.random.uniform(low=320., high=400., size=[2000, 2])
         with pm.Model() as model:
@@ -312,7 +312,7 @@ class TestStability(object):
         assert not np.any(dists < 0)
 
 
-class TestExpQuad(object):
+class TestExpQuad:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -358,7 +358,7 @@ class TestExpQuad(object):
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
-class TestWhiteNoise(object):
+class TestWhiteNoise:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -376,7 +376,7 @@ class TestWhiteNoise(object):
         npt.assert_allclose(K[0, 0], 0.0, atol=1e-3)
 
 
-class TestConstant(object):
+class TestConstant:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -392,7 +392,7 @@ class TestConstant(object):
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
-class TestRatQuad(object):
+class TestRatQuad:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -406,7 +406,7 @@ class TestRatQuad(object):
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
-class TestExponential(object):
+class TestExponential:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -420,7 +420,7 @@ class TestExponential(object):
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
-class TestMatern52(object):
+class TestMatern52:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -434,7 +434,7 @@ class TestMatern52(object):
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
-class TestMatern32(object):
+class TestMatern32:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -448,7 +448,7 @@ class TestMatern32(object):
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
-class TestCosine(object):
+class TestCosine:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -462,7 +462,7 @@ class TestCosine(object):
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
-class TestPeriodic(object):
+class TestPeriodic:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -476,7 +476,7 @@ class TestPeriodic(object):
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
-class TestLinear(object):
+class TestLinear:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -490,7 +490,7 @@ class TestLinear(object):
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
-class TestPolynomial(object):
+class TestPolynomial:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
@@ -504,7 +504,7 @@ class TestPolynomial(object):
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
-class TestWarpedInput(object):
+class TestWarpedInput:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         def warp_func(x, a, b, c):
@@ -528,7 +528,7 @@ class TestWarpedInput(object):
             pm.gp.cov.WarpedInput(1, "str is not Covariance object", lambda x: x)
 
 
-class TestGibbs(object):
+class TestGibbs:
     def test_1d(self):
         X = np.linspace(0, 2, 10)[:, None]
         def tanh_func(x, x1, x2, w, x0):
@@ -552,7 +552,7 @@ class TestGibbs(object):
             pm.gp.cov.Gibbs(3, lambda x: x, active_dims=[0,1])
 
 
-class TestScaledCov(object):
+class TestScaledCov:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         def scaling_func(x, a, b):
@@ -576,7 +576,7 @@ class TestScaledCov(object):
             pm.gp.cov.ScaledCov(1, "str is not Covariance object", lambda x: x)
 
 
-class TestHandleArgs(object):
+class TestHandleArgs:
     def test_handleargs(self):
         def func_noargs(x):
             return x
@@ -595,7 +595,7 @@ class TestHandleArgs(object):
         assert func_twoarg(x, a, b) == func_twoarg2(x, args=(a, b))
 
 
-class TestCoregion(object):
+class TestCoregion:
     def setup_method(self):
         self.nrows = 6
         self.ncols = 3
@@ -663,7 +663,7 @@ class TestCoregion(object):
                 B = pm.gp.cov.Coregion(1)
 
 
-class TestMarginalVsLatent(object):
+class TestMarginalVsLatent:
     R"""
     Compare the logp of models Marginal, noise=0 and Latent.
     """
@@ -707,7 +707,7 @@ class TestMarginalVsLatent(object):
         npt.assert_allclose(latent_logp, self.logp, atol=5)
 
 
-class TestMarginalVsMarginalSparse(object):
+class TestMarginalVsMarginalSparse:
     R"""
     Compare logp of models Marginal and MarginalSparse.
     Should be nearly equal when inducing points are same as inputs.
@@ -767,7 +767,7 @@ class TestMarginalVsMarginalSparse(object):
         npt.assert_allclose(cov1, cov2, atol=0, rtol=1e-3)
 
 
-class TestGPAdditive(object):
+class TestGPAdditive:
     def setup_method(self):
         self.X = np.random.randn(50,3)
         self.y = np.random.randn(50)*0.01
@@ -884,7 +884,7 @@ class TestGPAdditive(object):
                 gp1 + gp2
 
 
-class TestTP(object):
+class TestTP:
     R"""
     Compare TP with high degress of freedom to GP
     """
@@ -935,7 +935,7 @@ class TestTP(object):
                 gp1 + gp2
 
 
-class TestLatentKron(object):
+class TestLatentKron:
     """
     Compare gp.LatentKron to gp.Latent, both with Gaussian noise.
     """
@@ -992,7 +992,7 @@ class TestLatentKron(object):
                               np.linspace(0, 1, 5)[:, None]])
 
 
-class TestMarginalKron(object):
+class TestMarginalKron:
     """
     Compare gp.MarginalKron to gp.Marginal.
     """

@@ -6,8 +6,10 @@ import warnings
 
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow, random_choice
-from .distribution import Discrete, draw_values, generate_samples
+from .distribution import (Discrete, draw_values, generate_samples,
+                           broadcast_distribution_samples)
 from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
+from ..theanof import floatX, intX
 
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
@@ -59,9 +61,9 @@ class Binomial(Discrete):
     """
 
     def __init__(self, n, p, *args, **kwargs):
-        super(Binomial, self).__init__(*args, **kwargs)
-        self.n = n = tt.as_tensor_variable(n)
-        self.p = p = tt.as_tensor_variable(p)
+        super().__init__(*args, **kwargs)
+        self.n = n = tt.as_tensor_variable(intX(n))
+        self.p = p = tt.as_tensor_variable(floatX(p))
         self.mode = tt.cast(tround(n * p), self.dtype)
 
     def random(self, point=None, size=None):
@@ -145,10 +147,10 @@ class BetaBinomial(Discrete):
     """
 
     def __init__(self, alpha, beta, n, *args, **kwargs):
-        super(BetaBinomial, self).__init__(*args, **kwargs)
-        self.alpha = alpha = tt.as_tensor_variable(alpha)
-        self.beta = beta = tt.as_tensor_variable(beta)
-        self.n = n = tt.as_tensor_variable(n)
+        super().__init__(*args, **kwargs)
+        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
+        self.beta = beta = tt.as_tensor_variable(floatX(beta))
+        self.n = n = tt.as_tensor_variable(intX(n))
         self.mode = tt.cast(tround(alpha / (alpha + beta)), 'int8')
 
     def _random(self, alpha, beta, n, size=None):
@@ -238,16 +240,16 @@ class Bernoulli(Discrete):
     """
 
     def __init__(self, p=None, logit_p=None, *args, **kwargs):
-        super(Bernoulli, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if sum(int(var is None) for var in [p, logit_p]) != 1:
             raise ValueError('Specify one of p and logit_p')
         if p is not None:
             self._is_logit = False
-            self.p = p = tt.as_tensor_variable(p)
+            self.p = p = tt.as_tensor_variable(floatX(p))
             self._logit_p = logit(p)
         else:
             self._is_logit = True
-            self.p = tt.nnet.sigmoid(logit_p)
+            self.p = tt.nnet.sigmoid(floatX(logit_p))
             self._logit_p = tt.as_tensor_variable(logit_p)
 
         self.mode = tt.cast(tround(self.p), 'int8')
@@ -317,10 +319,10 @@ class DiscreteWeibull(Discrete):
     ========  ======================
     """
     def __init__(self, q, beta, *args, **kwargs):
-        super(DiscreteWeibull, self).__init__(*args, defaults=('median',), **kwargs)
+        super().__init__(*args, defaults=('median',), **kwargs)
 
-        self.q = q = tt.as_tensor_variable(q)
-        self.beta = beta = tt.as_tensor_variable(beta)
+        self.q = q = tt.as_tensor_variable(floatX(q))
+        self.beta = beta = tt.as_tensor_variable(floatX(beta))
 
         self.median = self._ppf(0.5)
 
@@ -345,6 +347,7 @@ class DiscreteWeibull(Discrete):
 
     def _random(self, q, beta, size=None):
         p = np.random.uniform(size=size)
+        p, q, beta = broadcast_distribution_samples([p, q, beta], size=size)
 
         return np.ceil(np.power(np.log(1 - p) / np.log(q), 1. / beta)) - 1
 
@@ -411,9 +414,9 @@ class Poisson(Discrete):
     """
 
     def __init__(self, mu, *args, **kwargs):
-        super(Poisson, self).__init__(*args, **kwargs)
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.mode = tt.floor(mu).astype('int32')
+        super().__init__(*args, **kwargs)
+        self.mu = mu = tt.as_tensor_variable(floatX(mu))
+        self.mode = intX(tt.floor(mu))
 
     def random(self, point=None, size=None):
         mu = draw_values([self.mu], point=point, size=size)[0]
@@ -490,10 +493,10 @@ class NegativeBinomial(Discrete):
     """
 
     def __init__(self, mu, alpha, *args, **kwargs):
-        super(NegativeBinomial, self).__init__(*args, **kwargs)
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.alpha = alpha = tt.as_tensor_variable(alpha)
-        self.mode = tt.floor(mu).astype('int32')
+        super().__init__(*args, **kwargs)
+        self.mu = mu = tt.as_tensor_variable(floatX(mu))
+        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
+        self.mode = intX(tt.floor(mu))
 
     def random(self, point=None, size=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point, size=size)
@@ -565,8 +568,8 @@ class Geometric(Discrete):
     """
 
     def __init__(self, p, *args, **kwargs):
-        super(Geometric, self).__init__(*args, **kwargs)
-        self.p = p = tt.as_tensor_variable(p)
+        super().__init__(*args, **kwargs)
+        self.p = p = tt.as_tensor_variable(floatX(p))
         self.mode = 1
 
     def random(self, point=None, size=None):
@@ -629,11 +632,11 @@ class DiscreteUniform(Discrete):
     """
 
     def __init__(self, lower, upper, *args, **kwargs):
-        super(DiscreteUniform, self).__init__(*args, **kwargs)
-        self.lower = tt.floor(lower).astype('int32')
-        self.upper = tt.floor(upper).astype('int32')
+        super().__init__(*args, **kwargs)
+        self.lower = intX(tt.floor(lower))
+        self.upper = intX(tt.floor(upper))
         self.mode = tt.maximum(
-            tt.floor((upper + lower) / 2.).astype('int32'), self.lower)
+            intX(tt.floor((upper + lower) / 2.)), self.lower)
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
@@ -701,12 +704,12 @@ class Categorical(Discrete):
     """
 
     def __init__(self, p, *args, **kwargs):
-        super(Categorical, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         try:
             self.k = tt.shape(p)[-1].tag.test_value
         except AttributeError:
             self.k = tt.shape(p)[-1]
-        p = tt.as_tensor_variable(p)
+        p = tt.as_tensor_variable(floatX(p))
         self.p = (p.T / tt.sum(p, -1)).T
         self.mode = tt.argmax(p)
 
@@ -758,7 +761,7 @@ class Constant(Discrete):
     def __init__(self, c, *args, **kwargs):
         warnings.warn("Constant has been deprecated. We recommend using a Deterministic object instead.",
                     DeprecationWarning)
-        super(Constant, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
     def random(self, point=None, size=None):
@@ -836,9 +839,9 @@ class ZeroInflatedPoisson(Discrete):
     """
 
     def __init__(self, psi, theta, *args, **kwargs):
-        super(ZeroInflatedPoisson, self).__init__(*args, **kwargs)
-        self.theta = theta = tt.as_tensor_variable(theta)
-        self.psi = psi = tt.as_tensor_variable(psi)
+        super().__init__(*args, **kwargs)
+        self.theta = theta = tt.as_tensor_variable(floatX(theta))
+        self.psi = psi = tt.as_tensor_variable(floatX(psi))
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
 
@@ -847,7 +850,8 @@ class ZeroInflatedPoisson(Discrete):
         g = generate_samples(stats.poisson.rvs, theta,
                              dist_shape=self.shape,
                              size=size)
-        return g * (np.random.random(np.squeeze(g.shape)) < psi)
+        g, psi = broadcast_distribution_samples([g, psi], size=size)
+        return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
         psi = self.psi
@@ -927,10 +931,10 @@ class ZeroInflatedBinomial(Discrete):
     """
 
     def __init__(self, psi, n, p, *args, **kwargs):
-        super(ZeroInflatedBinomial, self).__init__(*args, **kwargs)
-        self.n = n = tt.as_tensor_variable(n)
-        self.p = p = tt.as_tensor_variable(p)
-        self.psi = psi = tt.as_tensor_variable(psi)
+        super().__init__(*args, **kwargs)
+        self.n = n = tt.as_tensor_variable(intX(n))
+        self.p = p = tt.as_tensor_variable(floatX(p))
+        self.psi = psi = tt.as_tensor_variable(floatX(psi))
         self.bin = Binomial.dist(n, p)
         self.mode = self.bin.mode
 
@@ -939,7 +943,8 @@ class ZeroInflatedBinomial(Discrete):
         g = generate_samples(stats.binom.rvs, n, p,
                              dist_shape=self.shape,
                              size=size)
-        return g * (np.random.random(np.squeeze(g.shape)) < psi)
+        g, psi = broadcast_distribution_samples([g, psi], size=size)
+        return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
         psi = self.psi
@@ -1043,10 +1048,10 @@ class ZeroInflatedNegativeBinomial(Discrete):
     """
 
     def __init__(self, psi, mu, alpha, *args, **kwargs):
-        super(ZeroInflatedNegativeBinomial, self).__init__(*args, **kwargs)
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.alpha = alpha = tt.as_tensor_variable(alpha)
-        self.psi = psi = tt.as_tensor_variable(psi)
+        super().__init__(*args, **kwargs)
+        self.mu = mu = tt.as_tensor_variable(floatX(mu))
+        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
+        self.psi = psi = tt.as_tensor_variable(floatX(psi))
         self.nb = NegativeBinomial.dist(mu, alpha)
         self.mode = self.nb.mode
 
@@ -1057,7 +1062,8 @@ class ZeroInflatedNegativeBinomial(Discrete):
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        return stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
+        g, psi = broadcast_distribution_samples([g, psi], size=size)
+        return stats.poisson.rvs(g) * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
         alpha = self.alpha
@@ -1148,7 +1154,7 @@ class OrderedLogistic(Categorical):
 
         # Ordered logistic regression
         with pm.Model() as model:
-            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sd=10, shape=2,
+            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
                                   transform=pm.distributions.transforms.ordered)
             y_ = pm.OrderedLogistic("y", cutpoints=cutpoints, eta=x, observed=y)
             tr = pm.sample(1000)
@@ -1163,7 +1169,7 @@ class OrderedLogistic(Categorical):
     """
 
     def __init__(self, eta, cutpoints, *args, **kwargs):
-        self.eta = tt.as_tensor_variable(eta)
+        self.eta = tt.as_tensor_variable(floatX(eta))
         self.cutpoints = tt.as_tensor_variable(cutpoints)
 
         pa = sigmoid(tt.shape_padleft(self.cutpoints) - tt.shape_padright(self.eta))
@@ -1174,7 +1180,7 @@ class OrderedLogistic(Categorical):
         ], axis=1)
         p = p_cum[:, 1:] - p_cum[:, :-1]
 
-        super(OrderedLogistic, self).__init__(p=p, *args, **kwargs)
+        super().__init__(p=p, *args, **kwargs)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:

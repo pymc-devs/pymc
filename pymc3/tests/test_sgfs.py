@@ -22,7 +22,7 @@ def test_minibatch():
     y_obs = pm.data.Minibatch(y_train, batch_size=batch_size)
 
     with Model():
-        abc = Normal('abc', mu=mu0, sd=sd0, shape=(3,))
+        abc = Normal('abc', mu=mu0, sigma=sd0, shape=(3,))
         x = x_obs
         x2 = x**2
         o = tt.ones_like(x)

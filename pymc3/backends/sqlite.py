@@ -75,7 +75,7 @@ class SQLite(base.BaseTrace):
     """
 
     def __init__(self, name, model=None, vars=None, test_point=None):
-        super(SQLite, self).__init__(name, model, vars, test_point)
+        super().__init__(name, model, vars, test_point)
         self._var_cols = {}
         self.var_inserts = {}  # varname -> insert statement
         self.draw_idx = 0
@@ -270,7 +270,7 @@ class SQLite(base.BaseTrace):
         return var_values
 
 
-class _SQLiteDB(object):
+class _SQLiteDB:
 
     def __init__(self, name):
         self.name = name
@@ -347,8 +347,7 @@ def _get_var_strs(cursor, varname):
 def _get_chain_list(cursor, varname):
     """Return a list of sorted chains for `varname`."""
     cursor.execute('SELECT DISTINCT chain FROM [{}]'.format(varname))
-    chains = [chain[0] for chain in cursor.fetchall()]
-    chains.sort()
+    chains = sorted([chain[0] for chain in cursor.fetchall()])
     return chains
 
 

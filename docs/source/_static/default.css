@@ -1,0 +1,14 @@
+a.headerlink:link {
+    text-decoration: none;
+    padding: 0 20px;
+    visibility: hidden
+}
+
+h1:hover .headerlink,
+h2:hover .headerlink,
+h3:hover .headerlink,
+h4:hover .headerlink,
+h5:hover .headerlink,
+h6:hover .headerlink {
+    visibility: visible
+}

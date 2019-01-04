@@ -37,7 +37,7 @@ class HDF5(base.BaseTrace):
         self.hdf5_file = None
         self.draw_idx = 0
         self.draws = None
-        super(HDF5, self).__init__(name, model, vars, test_point)
+        super().__init__(name, model, vars, test_point)
 
     def _get_sampler_stats(self, varname, sampler_idx, burn, thin):
         with self.activate_file:

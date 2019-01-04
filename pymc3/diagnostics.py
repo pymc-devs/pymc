@@ -292,7 +292,7 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
             'of the same length.')
 
     if varnames is None:
-        varnames = get_default_varnames(mtrace.varnames,include_transformed=include_transformed)
+        varnames = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
 
     n_eff = {}
 

@@ -26,7 +26,7 @@ class _Bounded(Distribution):
             defaults = ('_default',)
             self._default = default
 
-        super(_Bounded, self).__init__(
+        super().__init__(
             shape=self._wrapped.shape,
             dtype=self._wrapped.dtype,
             testval=self._wrapped.testval,
@@ -102,7 +102,7 @@ class _DiscreteBounded(_Bounded, Discrete):
         if lower is not None:
             default = lower + 1
 
-        super(_DiscreteBounded, self).__init__(
+        super().__init__(
             distribution=distribution, lower=lower, upper=upper,
             default=default, *args, **kwargs)
 
@@ -150,12 +150,12 @@ class _ContinuousBounded(_Bounded, Continuous):
         else:
             default = None
 
-        super(_ContinuousBounded, self).__init__(
+        super().__init__(
             distribution=distribution, lower=lower, upper=upper,
             transform=transform, default=default, *args, **kwargs)
 
 
-class Bound(object):
+class Bound:
     R"""
     Create a Bound variable object that can be applied to create
     a new upper, lower, or upper and lower bounded distribution.
@@ -182,15 +182,15 @@ class Bound(object):
 
         with pm.Model():
             NegativeNormal = pm.Bound(pm.Normal, upper=0.0)
-            par1 = NegativeNormal('par`', mu=0.0, sd=1.0, testval=-0.5)
+            par1 = NegativeNormal('par`', mu=0.0, sigma=1.0, testval=-0.5)
             # you can use the Bound object multiple times to
             # create multiple bounded random variables
-            par1_1 = NegativeNormal('par1_1', mu=-1.0, sd=1.0, testval=-1.5)
+            par1_1 = NegativeNormal('par1_1', mu=-1.0, sigma=1.0, testval=-1.5)
 
             # you can also define a Bound implicitly, while applying
             # it to a random variable
             par2 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)(
-                    'par2', mu=0.0, sd=1.0, testval=1.0)
+                    'par2', mu=0.0, sigma=1.0, testval=1.0)
     """
 
     def __init__(self, distribution, lower=None, upper=None):

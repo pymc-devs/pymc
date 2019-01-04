@@ -1,7 +1,7 @@
 from .models import simple_model
 
 
-class TestProfile(object):
+class TestProfile:
     def setup_method(self):
         _, self.model, _ = simple_model()
 

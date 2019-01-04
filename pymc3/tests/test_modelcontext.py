@@ -2,7 +2,7 @@ import threading
 from pymc3 import Model, Normal
 
 
-class TestModelContext(object):
+class TestModelContext:
     def test_thread_safety(self):
         """ Regression test for issue #1552: Thread safety of model context manager
 
