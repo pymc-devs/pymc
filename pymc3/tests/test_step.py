@@ -953,7 +953,7 @@ class TestPopulationSamplers:
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
                 trace = sample(
-                    chains=4, draws=20, tune=0, step=DEMetropolis(), parallelize=True
+                    chains=4, draws=20, tune=0, step=DEMetropolis()
                 )
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
 
