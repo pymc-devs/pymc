@@ -577,13 +577,15 @@ class TruncatedNormal(BoundedContinuous):
         self.tau = tt.as_tensor_variable(tau)
         self.lower = tt.as_tensor_variable(lower) if lower is not None else -np.inf
         self.upper = tt.as_tensor_variable(upper) if upper is not None else np.inf
+        self.lower_np = lower if lower is not None else -np.inf
+        self.upper_np = upper if upper is not None else np.inf
         self.mu = tt.as_tensor_variable(mu)
 
-        if np.isinf(self.lower) and np.isinf(self.upper):
+        if np.isinf(self.lower_np) and np.isinf(self.upper_np):
             self._defaultval = mu
-        elif np.isinf(self.lower) and not np.isinf(self.upper):
+        elif np.isinf(self.lower_np) and not np.isinf(self.upper_np):
             self._defaultval = self.upper - 1.
-        elif not np.isinf(self.lower) and np.isinf(self.upper):
+        elif not np.isinf(self.lower_np) and np.isinf(self.upper_np):
             self._defaultval = self.lower + 1.
         else:
             self._defaultval = (self.lower + self.upper) / 2
@@ -644,19 +646,19 @@ class TruncatedNormal(BoundedContinuous):
         logp = Normal.dist(mu=mu, sd=sd).logp(value) - norm
 
         bounds = [sd > 0]
-        if not np.isinf(self.lower):
+        if not np.isinf(self.lower_np):
             bounds.append(value >= self.lower)
-        if not np.isinf(self.upper):
+        if not np.isinf(self.upper_np):
             bounds.append(value <= self.upper)
         return bound(logp, *bounds)
 
     def _normalization(self):
         mu, sd = self.mu, self.sd
 
-        if np.isinf(self.lower) and np.isinf(self.upper):
+        if np.isinf(self.lower_np) and np.isinf(self.upper_np):
             return 0.
 
-        if not np.isinf(self.lower) and not np.isinf(self.upper):
+        if not np.isinf(self.lower_np) and not np.isinf(self.upper_np):
             lcdf_a = normal_lcdf(mu, sd, self.lower)
             lcdf_b = normal_lcdf(mu, sd, self.upper)
             lsf_a = normal_lccdf(mu, sd, self.lower)
@@ -668,7 +670,7 @@ class TruncatedNormal(BoundedContinuous):
                 logdiffexp(lcdf_b, lcdf_a),
             )
 
-        if not np.isinf(self.lower):
+        if not np.isinf(self.lower_np):
             return normal_lccdf(mu, sd, self.lower)
         else:
             return normal_lcdf(mu, sd, self.upper)
