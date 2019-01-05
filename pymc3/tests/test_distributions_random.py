@@ -481,13 +481,13 @@ class TestScalarParameterSamples(SeededTest):
     def test_truncated_normal_lower(self):
         def ref_rand(size, mu, sigma, lower, upper):
             return st.truncnorm.rvs((lower-mu)/sigma, np.inf, size=size, loc=mu, scale=sigma)
-        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sigma': Rplusbig, 'lower':-Rplusbig, 'upper':Rplusbig},
+        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sigma': Rplusbig, 'lower':-Rplusbig},
                      ref_rand=ref_rand)
 
     def test_truncated_normal_upper(self):
         def ref_rand(size, mu, sigma, lower, upper):
             return st.truncnorm.rvs(-np.inf, (upper-mu)/sigma, size=size, loc=mu, scale=sigma)
-        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sigma': Rplusbig, 'lower':-Rplusbig, 'upper':Rplusbig},
+        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sigma': Rplusbig, 'upper':Rplusbig},
                      ref_rand=ref_rand)
 
     def test_skew_normal(self):
