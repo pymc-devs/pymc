@@ -13,6 +13,8 @@
 
 ### Deprecations
 
+- `nuts_kwargs` and `step_kwargs` have been deprecated in favor of using the standard `kwargs` to pass optional step method arguments.
+
 ## PyMC3 3.6 (Dec 21 2018)
 
 This will be the last release to support Python 2.
