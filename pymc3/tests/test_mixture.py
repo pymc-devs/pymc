@@ -2,6 +2,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from .helpers import SeededTest
+import pymc3 as pm
 from pymc3 import Dirichlet, Gamma, Normal, Lognormal, Poisson, Exponential, \
     Mixture, NormalMixture, MvNormal, sample, Metropolis, Model
 import scipy.stats as st
@@ -231,3 +232,55 @@ class TestMixture(SeededTest):
         assert_allclose(mixmixlogpg, mix.logp_elemwise(test_point))
         assert_allclose(priorlogp + mixmixlogpg.sum(),
                         model.logp(test_point))
+
+    def test_sample_prior_and_posterior(self):
+        def build_toy_dataset(N, K):
+            pi = np.array([0.2, 0.5, 0.3])
+            mus = [[1, 1, 1], [-1, -1, -1], [2, -2, 0]]
+            stds = [[0.1, 0.1, 0.1], [0.1, 0.2, 0.2], [0.2, 0.3, 0.3]]
+            x = np.zeros((N, 3), dtype=np.float32)
+            y = np.zeros((N,), dtype=np.int)
+            for n in range(N):
+                k = np.argmax(np.random.multinomial(1, pi))
+                x[n, :] = np.random.multivariate_normal(mus[k],
+                                                        np.diag(stds[k]))
+                y[n] = k
+            return x, y
+
+        N = 100  # number of data points
+        K = 3  # number of mixture components
+        D = 3  # dimensionality of the data
+
+        X, y = build_toy_dataset(N, K)
+
+        with pm.Model() as model:
+            pi = pm.Dirichlet('pi', np.ones(K))
+
+            comp_dist = []
+            mu = []
+            packed_chol = []
+            chol = []
+            for i in range(K):
+                mu.append(pm.Normal('mu%i' % i, 0, 10, shape=D))
+                packed_chol.append(
+                    pm.LKJCholeskyCov('chol_cov_%i' % i,
+                                      eta=2,
+                                      n=D,
+                                      sd_dist=pm.HalfNormal.dist(2.5))
+                )
+                chol.append(pm.expand_packed_triangular(D, packed_chol[i],
+                                                        lower=True))
+                comp_dist.append(pm.MvNormal.dist(mu=mu[i], chol=chol[i]))
+
+            pm.Mixture('x_obs', pi, comp_dist, observed=X)
+        with model:
+            trace = pm.sample(30, tune=10, chains=1)
+
+        n_samples = 20
+        with model:
+            ppc = pm.sample_posterior_predictive(trace, n_samples)
+            prior = pm.sample_prior_predictive(samples=n_samples)
+        assert ppc['x_obs'].shape == (n_samples,) + X.shape
+        assert prior['x_obs'].shape == (n_samples,) + X.shape
+        assert prior['mu0'].shape == (n_samples, D)
+        assert prior['chol_cov_0'].shape == (n_samples, D * (D + 1) // 2)

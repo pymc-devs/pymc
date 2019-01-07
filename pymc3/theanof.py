@@ -16,6 +16,7 @@ __all__ = ['gradient',
            'inputvars',
            'cont_inputs',
            'floatX',
+           'intX',
            'smartfloatX',
            'jacobian',
            'CallableTensor',
@@ -65,6 +66,24 @@ def floatX(X):
     except AttributeError:
         # Scalar passed
         return np.asarray(X, dtype=theano.config.floatX)
+
+
+_conversion_map = {'float64': 'int32',
+                   'float32': 'int16',
+                   'float16': 'int8',
+                   'float8': 'int8'}
+
+
+def intX(X):
+    """
+    Convert a theano tensor or numpy array to theano.tensor.int32 type.
+    """
+    intX = _conversion_map[theano.config.floatX]
+    try:
+        return X.astype(intX)
+    except AttributeError:
+        # Scalar passed
+        return np.asarray(X, dtype=intX)
 
 
 def smartfloatX(x):

@@ -446,7 +446,7 @@ class CholeskyCovPacked(Transform):
         return tt.advanced_set_subtensor1(y, tt.log(y[self.diag_idxs]), self.diag_idxs)
 
     def forward_val(self, y, point=None):
-        y[self.diag_idxs] = np.log(y[self.diag_idxs])
+        y[..., self.diag_idxs] = np.log(y[..., self.diag_idxs])
         return y
 
     def jacobian_det(self, y):

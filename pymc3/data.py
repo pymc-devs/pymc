@@ -355,7 +355,6 @@ class Minibatch(tt.TensorVariable):
                        if t is not None else tt.arange(shp_end[i])
                        for i, t in enumerate(end)]
             slc = slc_begin + mid + slc_end
-            slc = slc
         else:
             raise TypeError('Unrecognized size type, %r' % batch_size)
         return pm.theanof.ix_(*slc)
