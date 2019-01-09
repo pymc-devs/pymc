@@ -437,6 +437,9 @@ class ValueGradFunction:
         self._extra_vars_shared = {}
         for var in extra_vars:
             shared = theano.shared(var.tag.test_value, var.name + '_shared__')
+            if isinstance(var.tag.test_value, np.ndarray):
+                if len(var.tag.test_value) == 1:
+                    shared.type = theano.tensor.TensorType(var.dtype, (True,))
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
 
