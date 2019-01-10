@@ -440,8 +440,9 @@ class ValueGradFunction:
             # manually set the TensorType for length 1 arrays due to a
             # theano conversion problem
             if isinstance(var.tag.test_value, np.ndarray):
-                if len(var.tag.test_value) == 1:
-                    shared.type = theano.tensor.TensorType(var.dtype, (True,))
+                if var.tag.test_value.ndim == 1:
+                    if len(var.tag.test_value) == 1:
+                        shared.type = theano.tensor.TensorType(var.dtype, (True,))
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
 
