@@ -401,6 +401,8 @@ class ValueGradFunction:
     """
     def __init__(self, cost, grad_vars, extra_vars=None, dtype=None,
                  casting='no', **kwargs):
+        from .distributions import TensorType
+
         if extra_vars is None:
             extra_vars = []
 
@@ -437,6 +439,12 @@ class ValueGradFunction:
         self._extra_vars_shared = {}
         for var in extra_vars:
             shared = theano.shared(var.tag.test_value, var.name + '_shared__')
+            # test TensorType compatibility
+            if hasattr(var.tag.test_value, 'shape'):
+                testtype = TensorType(var.dtype, var.tag.test_value.shape)
+
+                if testtype != shared.type:
+                    shared.type = testtype
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
 
