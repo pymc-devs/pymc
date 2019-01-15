@@ -1,3 +1,9 @@
+"""PyMC3 Plotting.
+
+Plots are delegated to the ArviZ library, a general purpose library for
+"exploratory analysis of Bayesian models." See https://arviz-devs.github.io/arviz/
+for details on plots.
+"""
 try:
     import arviz as az
 except ImportError:  # arviz is optional, throw exception when used
@@ -8,7 +14,7 @@ except ImportError:  # arviz is optional, throw exception when used
 
         def __call__(self, *args, **kwargs):
             raise ImportError(
-                f"ArviZ is not installed. In order to use `{self.attr}`:\npip install arviz"
+                "ArviZ is not installed. In order to use `{0.attr}`:\npip install arviz".format(self)
             )
 
     class _ArviZ:
