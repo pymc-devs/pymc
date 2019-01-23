@@ -134,7 +134,7 @@ def logit(p):
 def log1pexp(x):
     """Return log(1 + exp(x)), also called softplus.
 
-    This function is numerically more stable than the naive approch.
+    This function is numerically more stable than the naive approach.
     """
     return tt.nnet.softplus(x)
 
@@ -142,7 +142,7 @@ def log1pexp(x):
 def log1mexp(x):
     """Return log(1 - exp(-x)).
 
-    This function is numerically more stable than the naive approch.
+    This function is numerically more stable than the naive approach.
 
     For details, see
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
