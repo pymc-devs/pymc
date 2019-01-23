@@ -234,7 +234,7 @@ def apply_momentum(updates, params=None, momentum=0.9):
     updates : OrderedDict
         A dictionary mapping parameters to update expressions
     params : iterable of shared variables, optional
-        The variables to apply momentum to. If omitted, will apply
+        The variables to apply momentum too. If omitted, will apply
         momentum to all `updates.keys()`.
     momentum : float or symbolic scalar, optional
         The amount of momentum to apply. Higher momentum results in
@@ -344,7 +344,7 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
     updates : OrderedDict
         A dictionary mapping parameters to update expressions
     params : iterable of shared variables, optional
-        The variables to apply momentum to. If omitted, will apply
+        The variables to apply momentum too. If omitted, will apply
         momentum to all `updates.keys()`.
     momentum : float or symbolic scalar, optional
         The amount of momentum to apply. Higher momentum results in
@@ -865,7 +865,7 @@ def adamax(loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9,
            beta2=0.999, epsilon=1e-8):
     """Adamax updates
 
-    Adamax updates implemented as in [1]_. This is a variant of of the Adam
+    Adamax updates implemented as in [1]_. This is a variant of the Adam
     algorithm based on the infinity norm.
 
     Parameters
