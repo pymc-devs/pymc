@@ -309,7 +309,7 @@ def draw_values(params, point=None, size=None):
                 # param was drawn in related contexts
                 v = drawn[(p, size)]
                 evaluated[i] = v
-            elif name is not None and name in point:
+            elif name is not None and hasattr(p, 'model') and name in point:
                 # param.name is in point
                 v = point[name]
                 evaluated[i] = drawn[(p, size)] = v
@@ -487,7 +487,7 @@ def _draw_value(param, point=None, givens=None, size=None):
 
                 dist_tmp.shape = distshape
                 try:
-                    dist_tmp.random(point=point, size=size)
+                    return dist_tmp.random(point=point, size=size)
                 except (ValueError, TypeError):
                     # reset shape to account for shape changes
                     # with theano.shared inputs
