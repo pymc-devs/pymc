@@ -303,8 +303,8 @@ class TestSamplePPC(SeededTest):
             assert samples['foo'].shape == (50, 200)
 
     def test_deterministic_of_observed(self):
-        meas_in_1 = 2 + 4 * np.random.randn(100)
-        meas_in_2 = 5 + 4 * np.random.randn(100)
+        meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(100))
+        meas_in_2 = pm.theanof.floatX(5 + 4 * np.random.randn(100))
         with pm.Model() as model:
             mu_in_1 = pm.Normal('mu_in_1', 0, 1)
             sigma_in_1 = pm.HalfNormal('sd_in_1', 1)
@@ -327,7 +327,11 @@ class TestSamplePPC(SeededTest):
                                                  samples=len(ppc_trace),
                                                  vars=(model.deterministics +
                                                        model.basic_RVs))
-            assert np.allclose(ppc['out'], ppc['in_1'] + ppc['in_2'])
+
+            rtol = 1e-5 if theano.config.floatX == 'float64' else 1e-3
+            assert np.allclose(ppc['in_1'] + ppc['in_2'],
+                               ppc['out'],
+                               rtol=rtol)
 
 
 class TestSamplePPCW(SeededTest):
