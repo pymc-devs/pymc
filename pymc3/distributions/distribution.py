@@ -366,6 +366,10 @@ def draw_values(params, point=None, size=None):
                 # ('Constants not allowed in param list', ...)` for
                 # TensorConstant, and a `TypeError: Cannot use a shared
                 # variable (...) as explicit input` for SharedVariable.
+                stack.extend([node for node in named_nodes_parents[next_]
+                              if isinstance(node, (ObservedRV,
+                                                   MultiObservedRV))
+                              and (node, size) not in drawn])
                 continue
             else:
                 # If the node does not have a givens value, try to draw it.

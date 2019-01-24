@@ -302,6 +302,33 @@ class TestSamplePPC(SeededTest):
             samples = pm.sample_posterior_predictive(trace, 50)
             assert samples['foo'].shape == (50, 200)
 
+    def test_deterministic_of_observed(self):
+        meas_in_1 = 2 + 4 * np.random.randn(100)
+        meas_in_2 = 5 + 4 * np.random.randn(100)
+        with pm.Model() as model:
+            mu_in_1 = pm.Normal('mu_in_1', 0, 1)
+            sigma_in_1 = pm.HalfNormal('sd_in_1', 1)
+            mu_in_2 = pm.Normal('mu_in_2', 0, 1)
+            sigma_in_2 = pm.HalfNormal('sd__in_2', 1)
+
+            in_1 = pm.Normal('in_1', mu_in_1, sigma_in_1, observed=meas_in_1)
+            in_2 = pm.Normal('in_2', mu_in_2, sigma_in_2, observed=meas_in_2)
+            out_diff = in_1 + in_2
+            pm.Deterministic('out', out_diff)
+
+            trace = pm.sample(100)
+            ppc_trace = pm.trace_to_dataframe(
+                trace,
+                varnames=[n for n in trace.varnames
+                          if n != 'out']
+            ).to_dict('records')
+            ppc = pm.sample_posterior_predictive(model=model,
+                                                 trace=ppc_trace,
+                                                 samples=len(ppc_trace),
+                                                 vars=(model.deterministics +
+                                                       model.basic_RVs))
+            assert np.allclose(ppc['out'], ppc['in_1'] + ppc['in_2'])
+
 
 class TestSamplePPCW(SeededTest):
     def test_sample_posterior_predictive_w(self):
