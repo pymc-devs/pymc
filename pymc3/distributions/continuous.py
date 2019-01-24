@@ -523,7 +523,6 @@ class TruncatedNormal(BoundedContinuous):
         a1 = [-3, -5, -5]
         b1 = [7, 5, 4]
         for mu, sigma, a, b in zip(mus, sigmas,a1,b1):
-            print mu, sigma, a, b
             an, bn = (a - mu) / sigma, (b - mu) / sigma
             pdf = st.truncnorm.pdf(x, an,bn, loc=mu, scale=sigma)
             plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, a={}, b={}'.format(mu, sigma, a, b))
