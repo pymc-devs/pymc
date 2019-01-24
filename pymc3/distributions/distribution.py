@@ -309,6 +309,7 @@ def draw_values(params, point=None, size=None):
                 # param was drawn in related contexts
                 v = drawn[(p, size)]
                 evaluated[i] = v
+            # We filter out Deterministics by checking for `model` attribute
             elif name is not None and hasattr(p, 'model') and name in point:
                 # param.name is in point
                 v = point[name]
