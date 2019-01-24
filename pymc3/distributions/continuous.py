@@ -2369,6 +2369,18 @@ class Gamma(PositiveContinuous):
             alpha > 0,
             beta > 0)
 
+    def logcdf(self, value):
+        """
+        Compute the log CDF for the Gamma distribution
+        """
+        alpha = self.alpha
+        beta = self.beta
+        return bound(
+            tt.log(tt.gammainc(alpha, beta * value)),
+            value >= 0,
+            alpha > 0,
+            beta > 0)
+
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
