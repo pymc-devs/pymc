@@ -288,3 +288,16 @@ class TestValueGradFunction(unittest.TestCase):
         assert logp.size == 1
         assert dlogp.size == 4
         npt.assert_allclose(dlogp, 0., atol=1e-5)
+
+    def test_tensor_type_conversion(self):
+        # case described in #3122
+        X = np.random.binomial(1, 0.5, 10)
+        X[0] = -1  # masked a single value
+        X = np.ma.masked_values(X, value=-1)
+        with pm.Model() as m:
+            x1 = pm.Uniform('x1', 0., 1.)
+            x2 = pm.Bernoulli('x2', x1, observed=X)
+
+        gf = m.logp_dlogp_function()
+
+        assert m['x2_missing'].type == gf._extra_vars_shared['x2_missing'].type

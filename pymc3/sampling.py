@@ -224,7 +224,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         Starting point in parameter space (or partial point)
         Defaults to trace.point(-1)) if there is a trace provided and model.test_point if not
         (defaults to empty dict). Initialization methods for NUTS (see `init` keyword) can
-        overwrite the default. For 'SMC' if should be a list of dict with length `chains`.
+        overwrite the default. For 'SMC' it should be a list of dict with length `chains`.
     trace : backend, list, or MultiTrace
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
@@ -863,7 +863,7 @@ def _prepare_iter_population(draws, chains, step, start, parallelize, tune=None,
     # 5. configure the PopulationStepper (expensive call)
     popstep = PopulationStepper(steppers, parallelize)
 
-    # Because the preperations above are expensive, the actual iterator is
+    # Because the preparations above are expensive, the actual iterator is
     # in another method. This way the progbar will not be disturbed.
     return _iter_population(draws, tune, popstep, steppers, traces, population)
 

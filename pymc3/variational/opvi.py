@@ -6,10 +6,10 @@ reveal the true nature of underlying problem. In some applications it can
 yield unreliable decisions.
 
 Recently on NIPS 2017 `OPVI  <https://arxiv.org/abs/1610.09033/>`_ framework
-was presented. It generalizes variational inverence so that the problem is
+was presented. It generalizes variational inference so that the problem is
 build with blocks. The first and essential block is Model itself. Second is
 Approximation, in some cases :math:`log Q(D)` is not really needed. Necessity
-depends on the third and forth part of that black box, Operator and
+depends on the third and fourth part of that black box, Operator and
 Test Function respectively.
 
 Operator is like an approach we use, it constructs loss from given Model,
