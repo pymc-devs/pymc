@@ -692,6 +692,10 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(
             Gamma, Rplus, {'mu': Rplusbig, 'sigma': Rplusbig}, test_fun)
 
+        self.check_logcdf(
+            Gamma, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
+            lambda value, alpha, beta: sp.gamma.logcdf(value, alpha, scale=1.0/beta))
+
     def test_inverse_gamma(self):
         self.pymc3_matches_scipy(
             InverseGamma, Rplus, {'alpha': Rplus, 'beta': Rplus},
