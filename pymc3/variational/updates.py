@@ -344,7 +344,7 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
     updates : OrderedDict
         A dictionary mapping parameters to update expressions
     params : iterable of shared variables, optional
-        The variables to apply momentum too. If omitted, will apply
+        The variables to apply momentum to. If omitted, will apply
         momentum to all `updates.keys()`.
     momentum : float or symbolic scalar, optional
         The amount of momentum to apply. Higher momentum results in
