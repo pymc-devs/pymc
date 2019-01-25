@@ -18,7 +18,7 @@ before_install:
 
 install:
   - . ./scripts/create_testenv.sh
-  - pip install coveralls travis-sphinx==2.0.0
+  - pip install coveralls
 
 env:
   - FLOATX='float32' TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py"
@@ -27,7 +27,7 @@ env:
   - FLOATX='float32' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py pymc3/tests/test_updates.py"
   - FLOATX='float64' TESTCMD="--durations=10 --cov-append --ignore=pymc3/tests/test_examples.py --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py"
   - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py pymc3/tests/test_smc.py pymc3/tests/test_sampling.py"
-  - FLOATX='float64' BUILD_DOCS="true" TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py"
+  - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py"
   - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py pymc3/tests/test_updates.py"
 
 script:
@@ -35,5 +35,4 @@ script:
   - . ./scripts/confirm_mpl_optional.sh
 
 after_success:
-  - if [[ "$BUILD_DOCS" == "true" ]]; then travis-sphinx deploy -c "docs.pymc.io"; fi
   - coveralls

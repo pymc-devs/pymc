@@ -2,10 +2,6 @@
 
 set -e
 
-if [[ "$BUILD_DOCS" == "true" ]]; then
-    travis-sphinx build -n -s docs/source
-fi
-
 if [[ "$RUN_PYLINT" == "true" ]]; then
     . ./scripts/lint.sh
 fi
