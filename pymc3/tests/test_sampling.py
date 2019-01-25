@@ -302,6 +302,32 @@ class TestSamplePPC(SeededTest):
             samples = pm.sample_posterior_predictive(trace, 50)
             assert samples['foo'].shape == (50, 200)
 
+    def test_model_shared_variable(self):
+        x = np.random.randn(100)
+        y = x > 0
+        x_shared = theano.shared(x)
+        y_shared = theano.shared(y)
+        with pm.Model() as model:
+            coeff = pm.Normal('x', mu=0, sd=1)
+            logistic = pm.Deterministic('p', pm.math.sigmoid(coeff * x_shared))
+
+            obs = pm.Bernoulli('obs', p=logistic, observed=y_shared)
+            trace = pm.sample(100)
+
+        x_shared.set_value([-1, 0, 1.])
+        y_shared.set_value([0, 0, 0])
+
+        samples = 100
+        with model:
+            post_pred = pm.sample_posterior_predictive(trace,
+                                                       samples=samples,
+                                                       vars=[logistic, obs])
+
+        expected_p = np.array([logistic.eval({coeff: val})
+                               for val in trace['x'][:samples]])
+        assert post_pred['obs'].shape == (samples, 3)
+        assert np.allclose(post_pred['p'], expected_p)
+
     def test_deterministic_of_observed(self):
         meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(100))
         meas_in_2 = pm.theanof.floatX(5 + 4 * np.random.randn(100))
