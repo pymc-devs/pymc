@@ -366,6 +366,10 @@ def draw_values(params, point=None, size=None):
                 # ('Constants not allowed in param list', ...)` for
                 # TensorConstant, and a `TypeError: Cannot use a shared
                 # variable (...) as explicit input` for SharedVariable.
+                # ObservedRV and MultiObservedRV instances are ViewOPs
+                # of TensorConstants or SharedVariables, we must add them
+                # to the stack or risk evaluating deterministics with the
+                # wrong values (issue #3354)
                 stack.extend([node for node in named_nodes_parents[next_]
                               if isinstance(node, (ObservedRV,
                                                    MultiObservedRV))
