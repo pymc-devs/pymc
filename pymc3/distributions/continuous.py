@@ -3018,7 +3018,7 @@ class ExGaussian(Continuous):
         ----------
         .. [Rigby2005] R.A. Rigby (2005).
            "Generalized additive models for location, scale and shape"
-           http://dx.doi.org/10.1111/j.1467-9876.2005.00510.x
+           https://doi.org/10.1111/j.1467-9876.2005.00510.x
         """
         mu = self.mu
         sigma = self.sigma
