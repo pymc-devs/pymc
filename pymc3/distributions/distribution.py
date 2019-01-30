@@ -254,12 +254,33 @@ class _DrawValuesContextBlocker(_DrawValuesContext, metaclass=InitContextMeta):
     """
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
-        instance = super(_DrawValuesContextBlocker, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance._parent = None
         return instance
 
     def __init__(self):
         self.drawn_vars = dict()
+
+
+class _DrawValuesContextDetacher(_DrawValuesContext,
+                                 metaclass=InitContextMeta):
+    """
+    Context manager that starts a new drawn variables context copying the
+    parent's context drawn_vars dict. The following changes do not affect the
+    parent contexts but do affect the subsequent calls. This can be used to
+    iterate the same random method many times to get different results, while
+    respecting the drawn variables from previous contexts.
+    """
+    def __new__(cls, *args, **kwargs):
+        return super().__new__(cls)
+
+    def __init__(self):
+        self.drawn_vars = self.drawn_vars.copy()
+
+    def update_parent(self):
+        parent = self.parent
+        if parent is not None:
+            parent.drawn_vars.update(self.drawn_vars)
 
 
 def is_fast_drawable(var):
