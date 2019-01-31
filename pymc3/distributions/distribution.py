@@ -262,27 +262,6 @@ class _DrawValuesContextBlocker(_DrawValuesContext, metaclass=InitContextMeta):
         self.drawn_vars = dict()
 
 
-class _DrawValuesContextDetacher(_DrawValuesContext,
-                                 metaclass=InitContextMeta):
-    """
-    Context manager that starts a new drawn variables context copying the
-    parent's context drawn_vars dict. The following changes do not affect the
-    parent contexts but do affect the subsequent calls. This can be used to
-    iterate the same random method many times to get different results, while
-    respecting the drawn variables from previous contexts.
-    """
-    def __new__(cls, *args, **kwargs):
-        return super().__new__(cls)
-
-    def __init__(self):
-        self.drawn_vars = self.drawn_vars.copy()
-
-    def update_parent(self):
-        parent = self.parent
-        if parent is not None:
-            parent.drawn_vars.update(self.drawn_vars)
-
-
 def is_fast_drawable(var):
     return isinstance(var, (numbers.Number,
                             np.ndarray,
@@ -660,20 +639,30 @@ def generate_samples(generator, *args, **kwargs):
             samples = generator(size=broadcast_shape, *args, **kwargs)
         elif dist_shape == broadcast_shape:
             samples = generator(size=size_tup + dist_shape, *args, **kwargs)
-        elif len(dist_shape) == 0 and size_tup and broadcast_shape[:len(size_tup)] == size_tup:
-            # Input's dist_shape is scalar, but it has size repetitions.
-            # So now the size matches but we have to manually broadcast to
-            # the right dist_shape
-            samples = [generator(*args, **kwargs)]
-            if samples[0].shape == broadcast_shape:
-                samples = samples[0]
+        elif len(dist_shape) == 0 and size_tup and broadcast_shape:
+            # There is no dist_shape (scalar distribution) but the parameters
+            # broadcast shape and size_tup determine the size to provide to
+            # the generator
+            if broadcast_shape[:len(size_tup)] == size_tup:
+                # Input's dist_shape is scalar, but it has size repetitions.
+                # So now the size matches but we have to manually broadcast to
+                # the right dist_shape
+                samples = [generator(*args, **kwargs)]
+                if samples[0].shape == broadcast_shape:
+                    samples = samples[0]
+                else:
+                    suffix = broadcast_shape[len(size_tup):] + dist_shape
+                    samples.extend([generator(*args, **kwargs).
+                                    reshape(broadcast_shape)[..., np.newaxis]
+                                    for _ in range(np.prod(suffix,
+                                                           dtype=int) - 1)])
+                    samples = np.hstack(samples).reshape(size_tup + suffix)
             else:
-                suffix = broadcast_shape[len(size_tup):] + dist_shape
-                samples.extend([generator(*args, **kwargs).
-                                reshape(broadcast_shape)[..., np.newaxis]
-                                for _ in range(np.prod(suffix,
-                                                       dtype=int) - 1)])
-                samples = np.hstack(samples).reshape(size_tup + suffix)
+                # The parameter shape is given, but we have to concatenate it
+                # with the size tuple
+                samples = generator(size=size_tup + broadcast_shape,
+                                    *args,
+                                    **kwargs)
         else:
             samples = None
     # Args have been broadcast correctly, can just ask for the right shape out

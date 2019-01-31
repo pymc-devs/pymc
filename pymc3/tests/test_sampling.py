@@ -223,8 +223,9 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(trace, samples=1000, vars=[a])
             assert 'a' in ppc
             assert ppc['a'].shape == (1000,)
-        _, pval = stats.kstest(ppc['a'],
-                               stats.norm(loc=0, scale=np.sqrt(2)).cdf)
+        # mu's standard deviation may have changed thanks to a's observed
+        _, pval = stats.kstest(ppc['a'] - trace['mu'],
+                               stats.norm(loc=0, scale=1).cdf)
         assert pval > 0.001
 
         with model:

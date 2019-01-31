@@ -9,8 +9,7 @@ from .dist_math import bound, random_choice
 from .distribution import (Discrete, Distribution, draw_values,
                            generate_samples, _DrawValuesContext,
                            _DrawValuesContextBlocker, to_tuple,
-                           broadcast_distribution_samples,
-                           _DrawValuesContextDetacher)
+                           broadcast_distribution_samples)
 from .continuous import get_tau_sigma, Normal
 from ..theanof import _conversion_map
 
@@ -192,7 +191,11 @@ class Mixture(Distribution):
                     # differently from scipy.*.rvs, and generate_samples
                     # follows the latter usage pattern. For this reason we
                     # decorate (horribly hack) the size kwarg of
-                    # comp_dist.random
+                    # comp_dist.random. We also have to disable pylint W0640
+                    # because comp_dist is changed at each iteration of the
+                    # for loop, and this generator function must be defined
+                    # for each comp_dist.
+                    # pylint: disable=W0640
                     if len(args) > 2:
                         args[1] = size
                     else:
