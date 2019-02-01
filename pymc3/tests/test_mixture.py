@@ -166,6 +166,10 @@ class TestMixture(SeededTest):
                         mixlogp_st.sum() + priorlogp)
 
     def test_mixture_of_mixture(self):
+        if theano.config.floatX == 'float32':
+            rtol = 1e-4
+        else:
+            rtol = 1e-7
         nbr = 4
         with Model() as model:
             # mixtures components
@@ -192,26 +196,33 @@ class TestMixture(SeededTest):
         test_point = model.test_point
 
         def mixmixlogp(value, point):
+            floatX = theano.config.floatX
             priorlogp = st.dirichlet.logpdf(x=point['g_w'],
                                             alpha=np.ones(nbr)*0.0000001,
-                                            ) + \
-                        st.expon.logpdf(x=point['mu_g']).sum() + \
+                                            ).astype(floatX) + \
+                        st.expon.logpdf(x=point['mu_g']).sum(dtype=floatX) + \
                         st.dirichlet.logpdf(x=point['l_w'],
                                             alpha=np.ones(nbr)*0.0000001,
-                                            ) + \
-                        st.expon.logpdf(x=point['mu_l']).sum() + \
+                                            ).astype(floatX) + \
+                        st.expon.logpdf(x=point['mu_l']).sum(dtype=floatX) + \
                         st.dirichlet.logpdf(x=point['mix_w'],
                                             alpha=np.ones(2),
-                                            )
+                                            ).astype(floatX)
             complogp1 = st.norm.logpdf(x=value,
-                                       loc=point['mu_g'])
-            mixlogp1 = logsumexp(np.log(point['g_w']) + complogp1,
+                                       loc=point['mu_g']).astype(floatX)
+            mixlogp1 = logsumexp(np.log(point['g_w']).astype(floatX) +
+                                 complogp1,
                                  axis=-1, keepdims=True)
-            complogp2 = st.lognorm.logpdf(value, 1., 0., np.exp(point['mu_l']))
-            mixlogp2 = logsumexp(np.log(point['l_w']) + complogp2,
+            complogp2 = st.lognorm.logpdf(value,
+                                          1.,
+                                          0.,
+                                          np.exp(point['mu_l'])).astype(floatX)
+            mixlogp2 = logsumexp(np.log(point['l_w']).astype(floatX) +
+                                 complogp2,
                                  axis=-1, keepdims=True)
             complogp_mix = np.concatenate((mixlogp1, mixlogp2), axis=1)
-            mixmixlogpg = logsumexp(np.log(point['mix_w']) + complogp_mix,
+            mixmixlogpg = logsumexp(np.log(point['mix_w']).astype(floatX) +
+                                    complogp_mix,
                                     axis=-1, keepdims=True)
             return priorlogp, mixmixlogpg
 
@@ -219,19 +230,23 @@ class TestMixture(SeededTest):
         priorlogp, mixmixlogpg = mixmixlogp(value, test_point)
 
         # check logp of mixture
-        assert_allclose(mixmixlogpg, mix.logp_elemwise(test_point))
+        assert_allclose(mixmixlogpg, mix.logp_elemwise(test_point),
+                        rtol=rtol)
 
         # check model logp
         assert_allclose(priorlogp + mixmixlogpg.sum(),
-                        model.logp(test_point))
+                        model.logp(test_point),
+                        rtol=rtol)
 
         # check input and check logp again
         test_point['g_w'] = np.asarray([.1, .1, .2, .6])
         test_point['mu_g'] = np.exp(np.random.randn(nbr))
         priorlogp, mixmixlogpg = mixmixlogp(value, test_point)
-        assert_allclose(mixmixlogpg, mix.logp_elemwise(test_point))
+        assert_allclose(mixmixlogpg, mix.logp_elemwise(test_point),
+                        rtol=rtol)
         assert_allclose(priorlogp + mixmixlogpg.sum(),
-                        model.logp(test_point))
+                        model.logp(test_point),
+                        rtol=rtol)
 
     def test_sample_prior_and_posterior(self):
         def build_toy_dataset(N, K):
