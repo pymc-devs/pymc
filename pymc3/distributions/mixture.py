@@ -140,10 +140,45 @@ class Mixture(Distribution):
                 raise TypeError('Supplied comp_dists shapes do not broadcast '
                                 'with each other. comp_dists shapes are: '
                                 '{}'.format(self._comp_dist_shapes))
+
+            # We wrap the _comp_dist.random by adding the kwarg raw_size_,
+            # which will be the size attribute passed to _comp_samples.
+            # _comp_samples then calls generate_samples, which may change the
+            # size value to make it compatible with scipy.stats.*.rvs
+            self._generators = []
+            for comp_dist in comp_dists:
+                generator = Mixture._comp_dist_random_wrapper(comp_dist.random)
+                self._generators.append(generator)
             self.is_multidim_comp = False
         else:
             raise TypeError('Cannot handle supplied comp_dist type {}'
                             .format(type(comp_dists)))
+
+    @staticmethod
+    def _comp_dist_random_wrapper(random):
+        """Wrap the comp_dists.random method to take the kwarg raw_size_ and
+        use it's value to replace the size parameter. This is needed because
+        generate_samples makes the size value compatible with the
+        scipy.stats.*.rvs, where size has a different meaning than in the
+        distributions' random methods.
+        """
+        def wrapped_random(*args, **kwargs):
+            raw_size_ = kwargs.pop('raw_size_', None)
+            if raw_size_ is not None:
+                if isinstance(raw_size_, np.ndarray):
+                    # This may happen because generate_samples broadcasts
+                    # parameter values
+                    raw_size_ = raw_size_.ravel()[0]
+                else:
+                    raw_size_ = int(raw_size_)
+            # Distribution.random's signature is always (point=None, size=None)
+            # so size could be the second arg or be given as a kwarg
+            if len(args) > 1:
+                args[1] = raw_size_
+            else:
+                kwargs['size'] = raw_size_
+            return random(*args, **kwargs)
+        return wrapped_random
 
     def _comp_logp(self, value):
         comp_dists = self.comp_dists
@@ -184,29 +219,15 @@ class Mixture(Distribution):
             if broadcast_shape is None:
                 broadcast_shape = self._sample_shape
             samples = []
-            for dist_shape, comp_dist in zip(comp_dist_shapes,
-                                             self.comp_dists):
-                def generator(*args, **kwargs):
-                    # The distribution random methods use the size argument
-                    # differently from scipy.*.rvs, and generate_samples
-                    # follows the latter usage pattern. For this reason we
-                    # decorate (horribly hack) the size kwarg of
-                    # comp_dist.random. We also have to disable pylint W0640
-                    # because comp_dist is changed at each iteration of the
-                    # for loop, and this generator function must be defined
-                    # for each comp_dist.
-                    # pylint: disable=W0640
-                    if len(args) > 2:
-                        args[1] = size
-                    else:
-                        kwargs['size'] = size
-                    return comp_dist.random(*args, **kwargs)
+            for dist_shape, generator in zip(comp_dist_shapes,
+                                             self._generators):
                 sample = generate_samples(
                     generator=generator,
                     dist_shape=dist_shape,
                     broadcast_shape=broadcast_shape,
                     point=point,
                     size=size,
+                    raw_size_=size,
                 )
                 samples.append(sample)
             samples = np.array(
