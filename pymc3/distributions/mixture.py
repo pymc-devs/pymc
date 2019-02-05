@@ -43,8 +43,8 @@ class Mixture(Distribution):
         w >= 0 and w <= 1
         the mixture weights
     comp_dists : multidimensional PyMC3 distribution (e.g. `pm.Poisson.dist(...)`)
-        or iterable of one-dimensional PyMC3 distributions the
-        component distributions :math:`f_1, \ldots, f_n`
+        or iterable of PyMC3 distributions the component distributions
+        :math:`f_1, \ldots, f_n`
 
     Example
     -------
@@ -75,6 +75,23 @@ class Mixture(Distribution):
     """
 
     def __init__(self, w, comp_dists, *args, **kwargs):
+        # comp_dists type checking
+        if not (
+            isinstance(comp_dists, Distribution)
+            or (
+                isinstance(comp_dists, Iterable)
+                and all((isinstance(c, Distribution) for c in comp_dists))
+            )
+        ):
+            raise TypeError(
+                "Supplied Mixture comp_dists must be a "
+                "Distribution or an iterable of "
+                "Distributions. Got {} instead.".format(
+                    type(comp_dists)
+                    if not isinstance(comp_dists, Iterable)
+                    else [type(c) for c in comp_dists]
+                )
+            )
         shape = kwargs.pop('shape', ())
 
         self.w = w = tt.as_tensor_variable(w)
@@ -114,18 +131,12 @@ class Mixture(Distribution):
 
     @comp_dists.setter
     def comp_dists(self, comp_dists):
+        self._comp_dists = comp_dists
         if isinstance(comp_dists, Distribution):
-            self._comp_dists = comp_dists
             self._comp_dist_shapes = to_tuple(comp_dists.shape)
             self._broadcast_shape = self._comp_dist_shapes
             self.is_multidim_comp = True
-        elif isinstance(comp_dists, Iterable):
-            if not all((isinstance(comp_dist, Distribution)
-                        for comp_dist in comp_dists)):
-                raise TypeError('Supplied Mixture comp_dists must be a '
-                                'Distribution or an iterable of '
-                                'Distributions.')
-            self._comp_dists = comp_dists
+        else:
             # Now we check the comp_dists distribution shape, see what
             # the broadcast shape would be. This shape will be the dist_shape
             # used by generate samples (the shape of a single random sample)
@@ -150,9 +161,6 @@ class Mixture(Distribution):
                 generator = Mixture._comp_dist_random_wrapper(comp_dist.random)
                 self._generators.append(generator)
             self.is_multidim_comp = False
-        else:
-            raise TypeError('Cannot handle supplied comp_dist type {}'
-                            .format(type(comp_dists)))
 
     @staticmethod
     def _comp_dist_random_wrapper(random):
@@ -190,7 +198,7 @@ class Mixture(Distribution):
         except AttributeError:
             return tt.squeeze(tt.stack([comp_dist.logp(value)
                                         for comp_dist in comp_dists],
-                                       axis=1))
+                                       axis=-1))
 
     def _comp_means(self):
         try:
@@ -198,7 +206,7 @@ class Mixture(Distribution):
         except AttributeError:
             return tt.squeeze(tt.stack([comp_dist.mean
                                         for comp_dist in self.comp_dists],
-                                       axis=1))
+                                       axis=-1))
 
     def _comp_modes(self):
         try:
@@ -206,7 +214,7 @@ class Mixture(Distribution):
         except AttributeError:
             return tt.squeeze(tt.stack([comp_dist.mode
                                         for comp_dist in self.comp_dists],
-                                       axis=1))
+                                       axis=-1))
 
     def _comp_samples(self, point=None, size=None,
                       comp_dist_shapes=None,
@@ -236,10 +244,7 @@ class Mixture(Distribution):
             # In the logp we assume the last axis holds the mixture components
             # so we move the axis to the last dimension
             samples = np.moveaxis(samples, 0, -1)
-        if samples.shape[-1] == 1:
-            return samples[..., 0]
-        else:
-            return samples
+        return samples.astype(self.dtype)
 
     def infer_comp_dist_shapes(self, point=None):
         if self.is_multidim_comp:
