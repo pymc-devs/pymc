@@ -5,6 +5,7 @@ import numpy as np
 import theano
 import pymc3 as pm
 from tqdm import tqdm
+import multiprocessing as mp
 
 from .arraystep import metrop_select
 from .metropolis import MultivariateNormalProposal
@@ -43,6 +44,9 @@ class SMC:
         Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
         the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
         It should be between 0 and 1.
+    parallel : bool
+        Distribute computations across cores if the number of cores is larger than 1
+        (see pm.sample() for details). Defaults to True.
     model : :class:`pymc3.Model`
         Optional model for sampling step. Defaults to None (taken from context).
 
@@ -68,6 +72,7 @@ class SMC:
         tune_scaling=True,
         tune_steps=True,
         threshold=0.5,
+        parallel=True,
     ):
 
         self.n_steps = n_steps
@@ -77,9 +82,10 @@ class SMC:
         self.tune_scaling = tune_scaling
         self.tune_steps = tune_steps
         self.threshold = threshold
+        self.parallel = parallel
 
 
-def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed=-1):
+def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None, random_seed=-1):
     """
     Sequential Monte Carlo sampling
 
@@ -90,6 +96,8 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
         independent Markov Chains. Defaults to 5000.
     step : :class:`SMC`
         SMC initialization object
+    cores : int
+        The number of chains to run in parallel.
     progressbar : bool
         Flag for displaying a progress bar
     model : pymc3 Model
@@ -102,9 +110,10 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
     if random_seed != -1:
         np.random.seed(random_seed)
 
-    beta = 0.
+    beta = 0.0
     stage = 0
-    acc_rate = 1.
+    accepted = 0
+    acc_rate = 1.0
     proposed = draws * step.n_steps
     model.marginal_likelihood = 1
     variables = inputvars(model.vars)
@@ -138,51 +147,93 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
             if step.tune_scaling:
                 step.scaling = _tune(acc_rate)
             if step.tune_steps:
-                acc_rate = max(1. / proposed, acc_rate)
+                acc_rate = max(1.0 / proposed, acc_rate)
                 step.n_steps = min(
                     step.max_steps, 1 + int(np.log(step.p_acc_rate) / np.log(1 - acc_rate))
                 )
 
-        pm._log.info(
-            "Stage: {:d} Beta: {:f} Steps: {:d}".format(stage, beta, step.n_steps, acc_rate)
-        )
+        pm._log.info("Stage: {:d} Beta: {:.3f} Steps: {:d}".format(stage, beta, step.n_steps))
         # Apply Metropolis kernel (mutation)
         proposed = draws * step.n_steps
-        accepted = 0.
         priors = np.array([prior_logp(sample) for sample in posterior]).squeeze()
-        tempered_post = priors + likelihoods * beta
-        for draw in tqdm(range(draws), disable=not progressbar):
-            old_tempered_post = tempered_post[draw]
-            q_old = posterior[draw]
-            deltas = np.squeeze(proposal(step.n_steps) * step.scaling)
-            for n_step in range(step.n_steps):
-                delta = deltas[n_step]
+        tempered_logp = priors + likelihoods * beta
+        deltas = np.squeeze(proposal(step.n_steps) * step.scaling)
 
-                if any_discrete:
-                    if all_discrete:
-                        delta = np.round(delta, 0).astype("int64")
-                        q_old = q_old.astype("int64")
-                        q_new = (q_old + delta).astype("int64")
-                    else:
-                        delta[discrete] = np.round(delta[discrete], 0)
-                        q_new = floatX(q_old + delta)
-                else:
-                    q_new = floatX(q_old + delta)
+        parameters = (
+            proposal,
+            step.scaling,
+            accepted,
+            any_discrete,
+            all_discrete,
+            discrete,
+            step.n_steps,
+            prior_logp,
+            likelihood_logp,
+            beta,
+        )
 
-                new_tempered_post = prior_logp(q_new) + likelihood_logp(q_new)[0] * beta
+        if step.parallel and cores > 1:
+            pool = mp.Pool(processes=cores)
+            results = pool.starmap(
+                _metrop_kernel,
+                [(posterior[draw], tempered_logp[draw], *parameters) for draw in range(draws)],
+            )
+        else:
+            results = [
+                _metrop_kernel(posterior[draw], tempered_logp[draw], *parameters)
+                for draw in tqdm(range(draws), disable=not progressbar)
+            ]
 
-                q_old, accept = metrop_select(new_tempered_post - old_tempered_post, q_new, q_old)
-                if accept:
-                    accepted += 1
-                    posterior[draw] = q_old
-                    old_tempered_post = new_tempered_post
-
-        acc_rate = accepted / proposed
+        posterior, acc_list = zip(*results)
+        posterior = np.array(posterior)
+        acc_rate = sum(acc_list) / proposed
         stage += 1
 
     trace = _posterior_to_trace(posterior, variables, model, var_info)
 
     return trace
+
+
+def _metrop_kernel(
+    q_old,
+    old_tempered_logp,
+    proposal,
+    scaling,
+    accepted,
+    any_discrete,
+    all_discrete,
+    discrete,
+    n_steps,
+    prior_logp,
+    likelihood_logp,
+    beta,
+):
+    """
+    Metropolis kernel
+    """
+    deltas = np.squeeze(proposal(n_steps) * scaling)
+    for n_step in range(n_steps):
+        delta = deltas[n_step]
+
+        if any_discrete:
+            if all_discrete:
+                delta = np.round(delta, 0).astype("int64")
+                q_old = q_old.astype("int64")
+                q_new = (q_old + delta).astype("int64")
+            else:
+                delta[discrete] = np.round(delta[discrete], 0)
+                q_new = floatX(q_old + delta)
+        else:
+            q_new = floatX(q_old + delta)
+
+        new_tempered_logp = prior_logp(q_new) + likelihood_logp(q_new)[0] * beta
+
+        q_old, accept = metrop_select(new_tempered_logp - old_tempered_logp, q_new, q_old)
+        if accept:
+            accepted += 1
+            old_tempered_logp = new_tempered_logp
+
+    return q_old, accepted
 
 
 def _initial_population(draws, model, variables):
