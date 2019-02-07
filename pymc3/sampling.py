@@ -15,7 +15,7 @@ from .distributions.distribution import draw_values
 from .model import modelcontext, Point, all_continuous
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
-                           Slice, CompoundStep, arraystep, smc)
+                           Slice, CompoundStep, arraystep, smc, smc_ABC)
 from .util import update_start_vals, get_untransformed_name, is_transformed_name, get_default_varnames
 from .vartypes import discrete_types
 from pymc3.step_methods.hmc import quadpotential
@@ -324,6 +324,15 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         if step_kwargs is None:
             step_kwargs = {}
         trace = smc.sample_smc(draws=draws,
+                               step=step,
+                               progressbar=progressbar,
+                               model=model,
+                               random_seed=random_seed)
+
+    elif isinstance(step, pm.step_methods.smc_ABC.SMC_ABC):
+        if step_kwargs is None:
+            step_kwargs = {}
+        trace = smc_ABC.sample_smc_abc(draws=draws,
                                step=step,
                                progressbar=progressbar,
                                model=model,

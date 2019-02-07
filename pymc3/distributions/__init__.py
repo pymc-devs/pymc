@@ -71,6 +71,8 @@ from .multivariate import WishartBartlett
 from .multivariate import LKJCholeskyCov
 from .multivariate import LKJCorr
 
+from .simulator import Simulator
+
 from .timeseries import AR1
 from .timeseries import AR
 from .timeseries import GaussianRandomWalk
@@ -156,5 +158,4 @@ __all__ = ['Uniform',
            'LogitNormal',
            'Interpolated',
            'Bound',
-           'Rice',
-           ]
+           'Simulator']

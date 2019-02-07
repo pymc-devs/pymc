@@ -1,6 +1,7 @@
 """
 Sequential Monte Carlo-ABC sampler
 """
+import warnings
 import numpy as np
 import theano
 import pymc3 as pm
@@ -16,6 +17,9 @@ from ..backends.base import MultiTrace
 
 
 __all__ = ['SMC-ABC', 'sample_smc_abc']
+
+EXPERIMENTAL_WARNING = "Warning: SMC-ABC methods are experimental step methods and not yet"\
+    " recommended for use in PyMC3!"
 
 proposal_dists = {'MultivariateNormal': MultivariateNormalProposal}
 
@@ -35,7 +39,11 @@ class SMC_ABC():
         works if `tune == False` otherwise is determined automatically
     p_acc_rate : float
         Probability of not accepting a Markov Chain proposal. Used to compute `n_steps` when
-        `tune == True`. It should be between 0 and 1.    
+        `tune == True`. It should be between 0 and 1.
+    tune: bool
+        Whether perform tuning steps.
+    proposal_name :
+        Type of proposal distribution. Currently the only valid option is `MultivariateNormal`.
     sum_stat: list
         List of summary statistics to compute.
     min_epsilon : float
@@ -46,8 +54,9 @@ class SMC_ABC():
         Distance metric to be computed between summary statistics.
     epsilons : list
         Pre-specified list of epsilon thresholds.
-    proposal_name :
-        Type of proposal distribution. Currently the only valid option is `MultivariateNormal`.
+    routine : string
+        Indicates if next epsilon step will be computed using the inter-quantile range or
+        the median of the previous population.
 
     References
     ----------
@@ -62,9 +71,12 @@ class SMC_ABC():
         816-832. `link <http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399
         %282007%29133:7%28816%29>`__
     """
+
     def __init__(self, n_steps=5, scaling=1., p_acc_rate=0.01, tune=True, sum_stat=['mean'],
-        min_epsilon=0.5, iqr_scale=1, distance_metric='absolute difference', epsilons=None, 
-        proposal_name='MultivariateNormal', routine='iqr'):
+                 min_epsilon=0.5, iqr_scale=1, distance_metric='absolute difference', epsilons=None,
+                 proposal_name='MultivariateNormal', routine='iqr'):
+
+        warnings.warn(EXPERIMENTAL_WARNING)
 
         self.n_steps = n_steps
         self.scaling = scaling
@@ -78,7 +90,9 @@ class SMC_ABC():
         self.epsilons = epsilons
         self.routine = routine
 
-def sample_smc_abc(draws=5000, step=None, progressbar=False, model=None, random_seed=-1):
+
+def sample_smc_abc(draws=5000, step=None, progressbar=False,
+                   model=None, random_seed=-1):
     """
     Sequential Monte Carlo sampling
 
@@ -102,20 +116,17 @@ def sample_smc_abc(draws=5000, step=None, progressbar=False, model=None, random_
         np.random.seed(random_seed)
 
     stage = 0
-    #variables = pm.model.treelist([])
-    #for k, v in model.named_vars.items():
-    #    if not isinstance(v, pm.model.ObservedRV):
-    #        if not pm.util.is_transformed_name(k):
-    #            print(v)
-    #            variables.append(v)
     variables = model.vars
-    discrete = np.concatenate([[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables])
+    discrete = np.concatenate(
+        [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables])
     any_discrete = discrete.any()
     all_discrete = discrete.all()
     prior_logp = theano.function(variables, model.varlogpt)
     simulator = model.observed_RVs[0]
     function = simulator.distribution.function
-    observed_sum_stat = get_sum_stats(simulator.observations, sum_stat=step.sum_stat)
+    observed_sum_stat = get_sum_stats(
+        simulator.observations,
+        sum_stat=step.sum_stat)
     epsilon = np.inf
     distance_list = []
     pm._log.info('Using {} as distance metric'.format(step.distance_metric))
@@ -135,9 +146,10 @@ def sample_smc_abc(draws=5000, step=None, progressbar=False, model=None, random_
             weights = np.ones(draws) / draws
         else:
             weights = calc_weights(un_weights)
-            
+
         # resample based on plausibility weights (selection)
-        resampling_indexes = np.random.choice(np.arange(draws), size=draws, p=weights)
+        resampling_indexes = np.random.choice(
+            np.arange(draws), size=draws, p=weights)
         posterior = posterior[resampling_indexes]
         # compute proposal distribution based on weights
         try:
@@ -148,14 +160,15 @@ def sample_smc_abc(draws=5000, step=None, progressbar=False, model=None, random_
         proposal = step.proposal(covariance)
         # get distance function
         distance_function = get_distance(step.distance_metric)
-        
+
         # compute scaling and number of Markov chains steps (optional), based on previous
         # acceptance rate
-        #if step.tune and stage > 0:
-        #    if acc_rate == 0:
-        #        acc_rate = 1. / step.n_steps
-        #    step.scaling = _tune(acc_rate)
-        #    step.n_steps = 1 + (np.ceil(np.log(step.p_acc_rate) / np.log(1 - acc_rate)).astype(int))
+        if step.tune and stage > 0:
+            if acc_rate == 0:
+                acc_rate = 1. / step.n_steps
+            step.scaling = _tune(acc_rate)
+            step.n_steps = 1 + \
+                (np.ceil(np.log(step.p_acc_rate) / np.log(1 - acc_rate)).astype(int))
 
         # Apply Rejection kernel (mutation)
         proposed = 0.
@@ -163,16 +176,33 @@ def sample_smc_abc(draws=5000, step=None, progressbar=False, model=None, random_
         new_posterior_list = []
         proposal_list = []
 
-        #if step.epsilons is None:
+        # if step.epsilons is None:
         if stage == 0:
-            simulated_sample = [function(*sample) for sample in posterior][::10]
-            epsilon_list.append(calc_epsilon(simulated_sample[0], step.iqr_scale, step, step.epsilons, stage, step.routine))
+            simulated_sample = [function(*sample)
+                                for sample in posterior][::10]
+            epsilon_list.append(
+                calc_epsilon(
+                    simulated_sample[0],
+                    step.iqr_scale,
+                    step,
+                    step.epsilons,
+                    stage,
+                    step.routine))
         else:
-            epsilon_list.append(calc_epsilon(distance_list, step.iqr_scale, step, step.epsilons, stage, step.routine))
+            epsilon_list.append(
+                calc_epsilon(
+                    distance_list,
+                    step.iqr_scale,
+                    step,
+                    step.epsilons,
+                    stage,
+                    step.routine))
             distance_list = []
-        
+
         epsilon = epsilon_list[stage]
-        pm._log.info('Sampling stage {} with Epsilon {:f}'.format(stage, epsilon))
+        pm._log.info(
+            'Sampling stage {} with Epsilon {:f}'.format(
+                stage, epsilon))
 
         for draw in tqdm(range(draws), disable=not progressbar):
             q_old = posterior[draw]
@@ -189,26 +219,30 @@ def sample_smc_abc(draws=5000, step=None, progressbar=False, model=None, random_
                         q_new = (q_old + delta)
                 else:
                     q_new = q_old + delta
-                
+
                 if np.isfinite(prior_logp(*q_new)):
 
                     simulated_data = function(*q_new)
-                    
-                    simulated_stat = get_sum_stats(simulated_data, sum_stat=step.sum_stat)
-                    distance = distance_function(simulated_stat, observed_sum_stat)
+
+                    simulated_stat = get_sum_stats(
+                        simulated_data, sum_stat=step.sum_stat)
+                    distance = distance_function(
+                        simulated_stat, observed_sum_stat)
 
                     if distance < epsilon:
                         accepted += 1.
                         new_posterior_list.append(q_new)
-                        proposal_list.append(proposal.logp(covariance * step.scaling, q_new))
+                        proposal_list.append(proposal.logp(
+                            covariance * step.scaling, q_new))
                         distance_list.append(distance)
                         break
-                    
+
                 proposed += 1.
 
         if new_posterior_list:
             new_posterior = np.array(new_posterior_list)
-            resampling_indexes = np.random.choice(np.arange(len(new_posterior)), size=draws)
+            resampling_indexes = np.random.choice(
+                np.arange(len(new_posterior)), size=draws)
 
             posterior = new_posterior[resampling_indexes]
             proposal_array = np.array(proposal_list)
@@ -225,7 +259,7 @@ def sample_smc_abc(draws=5000, step=None, progressbar=False, model=None, random_
 
     return trace
 
-# FIXME!!!!
+
 def _initial_population(samples, model, variables):
     """
     Create an initial population from the prior
@@ -236,31 +270,14 @@ def _initial_population(samples, model, variables):
     for idx, v in enumerate(variables):
         if pm.util.is_transformed_name(v.name):
             trans = v.distribution.transform_used.forward_val
-            population[:,idx] = trans(v.distribution.dist.random(size=samples, point=start))
-            population[:,idx] = v.distribution.dist.random(size=samples, point=start)
+            population[:, idx] = trans(
+                v.distribution.dist.random(size=samples, point=start))
+            population[:, idx] = v.distribution.dist.random(
+                size=samples, point=start)
         else:
-            population[:,idx] = v.random(size=samples, point=start)
+            population[:, idx] = v.random(size=samples, point=start)
 
     return population
-
-
-#def _initial_population(draws, model, variables):
-#    """
-#    Create an initial population from the prior
-#    """
-#    population = []
-#    var_info = {}
-#    start = model.test_point
-#    init_rnd = pm.sample_prior_predictive(draws, model=model)
-#    for v in variables:
-#        var_info[v.name] = (start[v.name].shape, start[v.name].size)
-#
-#    for i in range(draws):
-#        point = pm.Point({v.name: init_rnd[v.name][i] for v in variables}, model=model)
-#        population.append(model.dict_to_array(point))
-#
-#    return np.array(population), var_info
-
 
 
 def calc_epsilon(population, iqr_scale, step, epsilons, stage, routine):
@@ -279,7 +296,8 @@ def calc_epsilon(population, iqr_scale, step, epsilons, stage, routine):
     else:
         epsilon = step.epsilons[stage]
 
-    return epsilon 
+    return epsilon
+
 
 def calc_weights(un_weights):
     """Compute importance weights"""
@@ -287,14 +305,21 @@ def calc_weights(un_weights):
     weights = weights_un / np.sum(weights_un)
     return weights
 
+
 def _calc_covariance(posterior_array, weights):
     """
     Calculate trace covariance matrix based on importance weights.
     """
-    cov = np.cov(np.squeeze(posterior_array), aweights=weights.ravel(), bias=False, rowvar=0)
+    cov = np.cov(
+        np.squeeze(posterior_array),
+        aweights=weights.ravel(),
+        bias=False,
+        rowvar=0)
     if np.isnan(cov).any() or np.isinf(cov).any():
-        raise ValueError('Sample covariances not valid! Likely "chains" is too small!')
+        raise ValueError(
+            'Sample covariances not valid! Likely "chains" is too small!')
     return np.atleast_2d(cov)
+
 
 def _tune(acc_rate):
     """
@@ -314,6 +339,7 @@ def _tune(acc_rate):
     b = 8. / 9
     return (a + b * acc_rate) ** 2
 
+
 def _posterior_to_trace(posterior, model):
     """
     Save results into a PyMC3 trace
@@ -324,8 +350,9 @@ def _posterior_to_trace(posterior, model):
         strace = NDArray(model)
         strace.setup(length_pos, 0)
     for i in range(length_pos):
-        strace.record({k:v for k, v in zip(varnames, posterior[i])})
+        strace.record({k: v for k, v in zip(varnames, posterior[i])})
     return MultiTrace([strace])
+
 
 def get_sum_stats(data, sum_stat=SMC_ABC().sum_stat):
     """
@@ -334,7 +361,7 @@ def get_sum_stats(data, sum_stat=SMC_ABC().sum_stat):
     data : array
         Observed or simulated data
     sum_stat : list
-        List of summary statistics to be computed. Accepted strings are mean, std, var. 
+        List of summary statistics to be computed. Accepted strings are mean, std, var.
         Python functions can be passed in this argument.
 
     Returns:
@@ -343,43 +370,49 @@ def get_sum_stats(data, sum_stat=SMC_ABC().sum_stat):
         Array contaning the summary statistics.
     """
     if data.ndim == 1:
-        data = data[:,np.newaxis]
+        data = data[:, np.newaxis]
     sum_stat_vector = np.zeros((len(sum_stat), data.shape[1]))
 
     for i, stat in enumerate(sum_stat):
         for j in range(sum_stat_vector.shape[1]):
             if stat == 'mean':
-                sum_stat_vector[i, j] =  data[:,j].mean()
+                sum_stat_vector[i, j] = data[:, j].mean()
             elif stat == 'std':
-                sum_stat_vector[i, j] =  data[:,j].std()
+                sum_stat_vector[i, j] = data[:, j].std()
             elif stat == 'var':
-                sum_stat_vector[i, j] =  data[:,j].var()
+                sum_stat_vector[i, j] = data[:, j].var()
             else:
-                sum_stat_vector[i, j] =  stat(data[:,j])
+                sum_stat_vector[i, j] = stat(data[:, j])
 
     return np.atleast_1d(np.squeeze(sum_stat_vector))
+
 
 def absolute_difference(a, b):
     return np.sum(np.abs(a - b))
 
+
 def sum_of_squared_distance(a, b):
     return np.sum((a - b)**2)
 
+
 def mean_absolute_error(a, b):
-    return np.sum(np.abs(a - b))/len(a)
+    return np.sum(np.abs(a - b)) / len(a)
+
 
 def mean_squared_error(a, b):
-    return np.sum((a - b)**2)/len(a)
+    return np.sum((a - b)**2) / len(a)
+
 
 def euclidean_distance(a, b):
     return np.sqrt(np.sum((a - b)**2))
 
+
 def get_distance(func_name):
     d = {'absolute difference': absolute_difference,
-         'sum of squared_distance' : sum_of_squared_distance,
-         'mean absolute_error' : mean_absolute_error,
-         'mean squared_error' : mean_squared_error,
-         'euclidean' : euclidean_distance}
+         'sum of squared_distance': sum_of_squared_distance,
+         'mean absolute_error': mean_absolute_error,
+         'mean squared_error': mean_squared_error,
+         'euclidean': euclidean_distance}
     for key, value in d.items():
         if func_name == key:
             return value

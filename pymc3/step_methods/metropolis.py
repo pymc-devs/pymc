@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.random as nr
+from scipy.stats import multivariate_normal
 import theano
 import scipy.linalg
 import warnings
@@ -62,6 +63,9 @@ class MultivariateNormalProposal(Proposal):
         else:
             b = np.random.randn(self.n)
             return np.dot(self.chol, b)
+
+    def logp(self, s, value):
+        return multivariate_normal(np.zeros(s.shape[0]), cov=s).logpdf(value)
 
 
 class Metropolis(ArrayStepShared):
