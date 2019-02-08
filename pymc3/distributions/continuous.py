@@ -697,8 +697,8 @@ class HalfNormal(PositiveContinuous):
            \sqrt{\frac{2\tau}{\pi}}
            \exp\left(\frac{-x^2 \tau}{2}\right)
 
-       f(x \mid \sigma) =\sigma
-           \sqrt{\frac{2}{\pi}}
+       f(x \mid \sigma) =
+           \sqrt{\frac{2}{\pi\sigma^2}}
            \exp\left(\frac{-x^2}{2\sigma^2}\right)
 
     .. note::
