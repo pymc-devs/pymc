@@ -833,7 +833,7 @@ class Wald(PositiveContinuous):
     .. math::
 
        f(x \mid \mu, \lambda) =
-           \left(\frac{\lambda}{2\pi)}\right)^{1/2} x^{-3/2}
+           \left(\frac{\lambda}{2\pi}\right)^{1/2} x^{-3/2}
            \exp\left\{
                -\frac{\lambda}{2x}\left(\frac{x-\mu}{\mu}\right)^2
            \right\}
