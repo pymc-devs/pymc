@@ -1,12 +1,12 @@
 import numpy as np
 import numpy.random as nr
-from scipy.stats import multivariate_normal
 import theano
 import scipy.linalg
 import warnings
 
 from ..distributions import draw_values
 from .arraystep import ArrayStepShared, PopulationArrayStepShared, ArrayStep, metrop_select, Competence
+from scipy.stats import multivariate_normal
 import pymc3 as pm
 from pymc3.theanof import floatX
 
@@ -17,9 +17,12 @@ __all__ = ['Metropolis', 'DEMetropolis', 'BinaryMetropolis', 'BinaryGibbsMetropo
 # Available proposal distributions for Metropolis
 
 
-class Proposal(object):
+class Proposal:
     def __init__(self, s):
         self.s = s
+
+    def logp(self, s, value):
+        return multivariate_normal(np.zeros(s.shape[0]), cov=s).logpdf(value)
 
 
 class NormalProposal(Proposal):
@@ -63,9 +66,6 @@ class MultivariateNormalProposal(Proposal):
         else:
             b = np.random.randn(self.n)
             return np.dot(self.chol, b)
-
-    def logp(self, s, value):
-        return multivariate_normal(np.zeros(s.shape[0]), cov=s).logpdf(value)
 
 
 class Metropolis(ArrayStepShared):
@@ -138,7 +138,7 @@ class Metropolis(ArrayStepShared):
 
         shared = pm.make_shared_replacements(vars, model)
         self.delta_logp = delta_logp(model.logpt, vars, shared)
-        super(Metropolis, self).__init__(vars, shared)
+        super().__init__(vars, shared)
 
     def astep(self, q0):
         if not self.steps_until_tune and self.tune:
@@ -260,7 +260,7 @@ class BinaryMetropolis(ArrayStep):
             raise ValueError(
                 'All variables must be Bernoulli for BinaryMetropolis')
 
-        super(BinaryMetropolis, self).__init__(vars, [model.fastlogp])
+        super().__init__(vars, [model.fastlogp])
 
     def astep(self, q0, logp):
 
@@ -341,7 +341,7 @@ class BinaryGibbsMetropolis(ArrayStep):
             raise ValueError(
                 'All variables must be binary for BinaryGibbsMetropolis')
 
-        super(BinaryGibbsMetropolis, self).__init__(vars, [model.fastlogp])
+        super().__init__(vars, [model.fastlogp])
 
     def astep(self, q0, logp):
         order = self.order
@@ -386,7 +386,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
        which was introduced by Liu in his 1996 technical report
        "Metropolized Gibbs Sampler: An Improvement".
     """
-    name = 'caregorical_gibbs_metropolis'
+    name = 'categorical_gibbs_metropolis'
 
     def __init__(self, vars, proposal='uniform', order='random', model=None):
 
@@ -428,7 +428,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
             raise ValueError('Argument \'proposal\' should either be ' +
                     '\'uniform\' or \'proportional\'')
 
-        super(CategoricalGibbsMetropolis, self).__init__(vars, [model.fastlogp])
+        super().__init__(vars, [model.fastlogp])
 
     def astep_unif(self, q0, logp):
         dimcats = self.dimcats
@@ -571,7 +571,7 @@ class DEMetropolis(PopulationArrayStepShared):
 
         shared = pm.make_shared_replacements(vars, model)
         self.delta_logp = delta_logp(model.logpt, vars, shared)
-        super(DEMetropolis, self).__init__(vars, shared)
+        super().__init__(vars, shared)
 
     def astep(self, q0):
         if not self.steps_until_tune and self.tune:
