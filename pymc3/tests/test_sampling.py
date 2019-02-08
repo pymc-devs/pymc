@@ -20,7 +20,7 @@ import pytest
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestSample(SeededTest):
     def setup_method(self):
-        super(TestSample, self).setup_method()
+        super().setup_method()
         self.model, self.start, self.step, _ = simple_init()
 
     def test_sample_does_not_set_seed(self):
@@ -69,19 +69,17 @@ class TestSample(SeededTest):
 
     def test_sample_args(self):
         with self.model:
-            with pytest.raises(TypeError) as excinfo:
-                pm.sample(50, tune=0, init=None, step_kwargs={'nuts': {'foo': 1}})
+            with pytest.raises(ValueError) as excinfo:
+                pm.sample(50, tune=0, init=None, foo=1)
             assert "'foo'" in str(excinfo.value)
 
             with pytest.raises(ValueError) as excinfo:
                 pm.sample(50, tune=0, init=None, step_kwargs={'foo': {}})
             assert 'foo' in str(excinfo.value)
 
-            pm.sample(10, tune=0, init=None, nuts_kwargs={'target_accept': 0.9})
-
             with pytest.raises(ValueError) as excinfo:
-                pm.sample(5, tune=0, init=None, step_kwargs={}, nuts_kwargs={})
-            assert 'Specify only one' in str(excinfo.value)
+                pm.sample(10, tune=0, init=None, target_accept=0.9)
+            assert 'target_accept' in str(excinfo.value)
 
     def test_iter_sample(self):
         with self.model:
@@ -143,8 +141,8 @@ def test_empty_model():
 
 def test_partial_trace_sample():
     with pm.Model() as model:
-        a = pm.Normal('a', mu=0, sd=1)
-        b = pm.Normal('b', mu=0, sd=1)
+        a = pm.Normal('a', mu=0, sigma=1)
+        b = pm.Normal('b', mu=0, sigma=1)
         trace = pm.sample(trace=[a])
 
 
@@ -187,7 +185,7 @@ class TestNamedSampling(SeededTest):
             assert np.isclose(res, 0.)
 
 
-class TestChooseBackend(object):
+class TestChooseBackend:
     def test_choose_backend_none(self):
         with mock.patch('pymc3.sampling.NDArray') as nd:
             pm.sampling._choose_backend(None, 'chain')
@@ -214,7 +212,7 @@ class TestSamplePPC(SeededTest):
     def test_normal_scalar(self):
         with pm.Model() as model:
             mu = pm.Normal('mu', 0., 1.)
-            a = pm.Normal('a', mu=mu, sd=1, observed=0.)
+            a = pm.Normal('a', mu=mu, sigma=1, observed=0.)
             trace = pm.sample()
 
         with model:
@@ -236,7 +234,7 @@ class TestSamplePPC(SeededTest):
     def test_normal_vector(self):
         with pm.Model() as model:
             mu = pm.Normal('mu', 0., 1.)
-            a = pm.Normal('a', mu=mu, sd=1,
+            a = pm.Normal('a', mu=mu, sigma=1,
                           observed=np.array([.5, .2]))
             trace = pm.sample()
 
@@ -255,8 +253,8 @@ class TestSamplePPC(SeededTest):
 
     def test_vector_observed(self):
         with pm.Model() as model:
-            mu = pm.Normal('mu', mu=0, sd=1)
-            a = pm.Normal('a', mu=mu, sd=1,
+            mu = pm.Normal('mu', mu=0, sigma=1)
+            a = pm.Normal('a', mu=mu, sigma=1,
                           observed=np.array([0., 1.]))
             trace = pm.sample()
 
@@ -275,7 +273,7 @@ class TestSamplePPC(SeededTest):
 
     def test_sum_normal(self):
         with pm.Model() as model:
-            a = pm.Normal('a', sd=0.2)
+            a = pm.Normal('a', sigma=0.2)
             b = pm.Normal('b', mu=a)
             trace = pm.sample()
 
@@ -304,19 +302,76 @@ class TestSamplePPC(SeededTest):
             samples = pm.sample_posterior_predictive(trace, 50)
             assert samples['foo'].shape == (50, 200)
 
+    def test_model_shared_variable(self):
+        x = np.random.randn(100)
+        y = x > 0
+        x_shared = theano.shared(x)
+        y_shared = theano.shared(y)
+        with pm.Model() as model:
+            coeff = pm.Normal('x', mu=0, sd=1)
+            logistic = pm.Deterministic('p', pm.math.sigmoid(coeff * x_shared))
+
+            obs = pm.Bernoulli('obs', p=logistic, observed=y_shared)
+            trace = pm.sample(100)
+
+        x_shared.set_value([-1, 0, 1.])
+        y_shared.set_value([0, 0, 0])
+
+        samples = 100
+        with model:
+            post_pred = pm.sample_posterior_predictive(trace,
+                                                       samples=samples,
+                                                       vars=[logistic, obs])
+
+        expected_p = np.array([logistic.eval({coeff: val})
+                               for val in trace['x'][:samples]])
+        assert post_pred['obs'].shape == (samples, 3)
+        assert np.allclose(post_pred['p'], expected_p)
+
+    def test_deterministic_of_observed(self):
+        meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(100))
+        meas_in_2 = pm.theanof.floatX(5 + 4 * np.random.randn(100))
+        with pm.Model() as model:
+            mu_in_1 = pm.Normal('mu_in_1', 0, 1)
+            sigma_in_1 = pm.HalfNormal('sd_in_1', 1)
+            mu_in_2 = pm.Normal('mu_in_2', 0, 1)
+            sigma_in_2 = pm.HalfNormal('sd__in_2', 1)
+
+            in_1 = pm.Normal('in_1', mu_in_1, sigma_in_1, observed=meas_in_1)
+            in_2 = pm.Normal('in_2', mu_in_2, sigma_in_2, observed=meas_in_2)
+            out_diff = in_1 + in_2
+            pm.Deterministic('out', out_diff)
+
+            trace = pm.sample(100)
+            ppc_trace = pm.trace_to_dataframe(
+                trace,
+                varnames=[n for n in trace.varnames
+                          if n != 'out']
+            ).to_dict('records')
+            ppc = pm.sample_posterior_predictive(model=model,
+                                                 trace=ppc_trace,
+                                                 samples=len(ppc_trace),
+                                                 vars=(model.deterministics +
+                                                       model.basic_RVs))
+
+            rtol = 1e-5 if theano.config.floatX == 'float64' else 1e-3
+            assert np.allclose(ppc['in_1'] + ppc['in_2'],
+                               ppc['out'],
+                               rtol=rtol)
+
 
 class TestSamplePPCW(SeededTest):
     def test_sample_posterior_predictive_w(self):
         data0 = np.random.normal(0, 1, size=500)
 
         with pm.Model() as model_0:
-            mu = pm.Normal('mu', mu=0, sd=1)
-            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            mu = pm.Normal('mu', mu=0, sigma=1)
+            y = pm.Normal('y', mu=mu, sigma=1, observed=data0)
             trace_0 = pm.sample()
 
         with pm.Model() as model_1:
-            mu = pm.Normal('mu', mu=0, sd=1, shape=len(data0))
-            y = pm.Normal('y', mu=mu, sd=1, observed=data0)
+            mu = pm.Normal('mu', mu=0, sigma=1, shape=len(data0))
+            y = pm.Normal('y', mu=mu, sigma=1, observed=data0)
             trace_1 = pm.sample()
 
         traces = [trace_0, trace_0]
@@ -336,8 +391,8 @@ class TestSamplePPCW(SeededTest):
 ])
 def test_exec_nuts_init(method):
     with pm.Model() as model:
-        pm.Normal('a', mu=0, sd=1, shape=2)
-        pm.HalfNormal('b', sd=1)
+        pm.Normal('a', mu=0, sigma=1, shape=2)
+        pm.HalfNormal('b', sigma=1)
     with model:
         start, _ = pm.init_nuts(init=method, n_init=10)
         assert isinstance(start, list)
@@ -355,10 +410,10 @@ class TestSamplePriorPredictive(SeededTest):
         observed = np.random.normal(10, 1, size=200)
         with pm.Model():
             # Use a prior that's way off to show we're ignoring the observed variables
-            mu = pm.Normal('mu', mu=-100, sd=1)
+            mu = pm.Normal('mu', mu=-100, sigma=1)
             positive_mu = pm.Deterministic('positive_mu', np.abs(mu))
             z = -1 - positive_mu
-            pm.Normal('x_obs', mu=z, sd=1, observed=observed)
+            pm.Normal('x_obs', mu=z, sigma=1, observed=observed)
             prior = pm.sample_prior_predictive()
 
         assert (prior['mu'] < 90).all()
@@ -464,6 +519,16 @@ class TestSamplePriorPredictive(SeededTest):
         with pm.Model():
             mu = pm.Normal('mu', shape=5)
             sd = pm.Uniform('sd', lower=2, upper=3)
-            x = pm.Normal('x', mu=mu, sd=sd, shape=5)
+            x = pm.Normal('x', mu=mu, sigma=sd, shape=5)
             prior = pm.sample_prior_predictive(10)
         assert prior['mu'].shape == (10, 5)
+
+    def test_zeroinflatedpoisson(self):
+        with pm.Model():
+            theta = pm.Beta('theta', alpha=1, beta=1)
+            psi = pm.HalfNormal('psi', sd=1)
+            pm.ZeroInflatedPoisson('suppliers', psi=psi, theta=theta, shape=20)
+            gen_data = pm.sample_prior_predictive(samples=5000)
+            assert gen_data['theta'].shape == (5000,)
+            assert gen_data['psi'].shape == (5000,)
+            assert gen_data['suppliers'].shape == (5000, 20)

@@ -1,5 +1,3 @@
-from __future__ import division
-
 from collections import namedtuple
 
 import numpy as np
@@ -151,7 +149,7 @@ class NUTS(BaseHMC):
         This is usually achieved by setting the `tune` parameter if
         `pm.sample` to the desired number of tuning steps.
         """
-        super(NUTS, self).__init__(vars, **kwargs)
+        super().__init__(vars, **kwargs)
 
         self.max_treedepth = max_treedepth
         self.early_max_treedepth = early_max_treedepth
@@ -187,7 +185,7 @@ class NUTS(BaseHMC):
         return Competence.INCOMPATIBLE
 
     def warnings(self):
-        warnings = super(NUTS, self).warnings()
+        warnings = super().warnings()
         n_samples = self._samples_after_tune
         n_treedepth = self._reached_max_treedepth
 
@@ -209,7 +207,7 @@ Subtree = namedtuple(
     "left, right, p_sum, proposal, log_size, accept_sum, n_proposals")
 
 
-class _Tree(object):
+class _Tree:
     def __init__(self, ndim, integrator, start, step_size, Emax):
         """Binary tree from the NUTS algorithm.
 

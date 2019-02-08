@@ -36,7 +36,7 @@ _LEVELS = {
 }
 
 
-class SamplerReport(object):
+class SamplerReport:
     def __init__(self):
         self._chain_warnings = {}
         self._global_warnings = []

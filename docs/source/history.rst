@@ -109,8 +109,8 @@ Models are defined using a context manager (``with`` statement). The model is sp
     with Model() as bioassay_model:
 
         # Prior distributions for latent variables
-        alpha = Normal('alpha', 0, sd=100)
-        beta = Normal('beta', 0, sd=100)
+        alpha = Normal('alpha', 0, sigma=100)
+        beta = Normal('beta', 0, sigma=100)
 
         # Linear combinations of parameters
         theta = invlogit(alpha + beta*dose)

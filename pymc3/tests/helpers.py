@@ -6,7 +6,7 @@ from ..theanof import set_tt_rng, tt_rng
 import theano
 
 
-class SeededTest(object):
+class SeededTest:
     random_seed = 20160911
 
     @classmethod
@@ -49,7 +49,7 @@ class LoggingHandler(BufferingHandler):
         return result
 
 
-class Matcher(object):
+class Matcher:
 
     _partial_matches = ('msg', 'message')
 
@@ -74,9 +74,9 @@ class Matcher(object):
         """
         Try to match a single stored value (dv) with a supplied value (v).
         """
-        if type(v) != type(dv):
+        if isinstance(v, type(dv)):
             result = False
-        elif type(dv) is not str or k not in self._partial_matches:
+        elif not isinstance(df, str) or k not in self._partial_matches:
             result = (v == dv)
         else:
             result = dv.find(v) >= 0

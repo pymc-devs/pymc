@@ -249,8 +249,10 @@ class TestElementWiseLogp(SeededTest):
             elementwiselogp = logp_nojac.sum(axis=-1) + jacob_det
         else:
             elementwiselogp = logp_nojac + jacob_det
-
-        close_to(x.logp_elemwise(pt), elementwiselogp.eval(), tol)
+        # Hack to get relative tolerance
+        a = x.logp_elemwise(pt)
+        b = elementwiselogp.eval()
+        close_to(a, b, np.abs(0.5 * (a + b) * tol))
 
     @pytest.mark.parametrize('sd,shape', [
         (2.5, 2),

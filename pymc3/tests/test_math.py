@@ -121,7 +121,7 @@ def test_log1mexp():
 
 class TestLogDet(SeededTest):
     def setup_method(self):
-        super(TestLogDet, self).setup_method()
+        super().setup_method()
         utt.seed_rng()
         self.op_class = LogDet
         self.op = logdet

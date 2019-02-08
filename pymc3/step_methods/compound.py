@@ -6,7 +6,7 @@ Created on Mar 7, 2011
 import numpy as np
 
 
-class CompoundStep(object):
+class CompoundStep:
     """Step method composed of a list of several other step
     methods applied in sequence."""
 

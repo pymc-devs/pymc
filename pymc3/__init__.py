@@ -1,5 +1,5 @@
 # pylint: disable=wildcard-import
-__version__ = "3.6.rc1"
+__version__ = "3.6"
 
 from .blocking import *
 from .distributions import *
@@ -31,5 +31,6 @@ import logging
 _log = logging.getLogger('pymc3')
 if not logging.root.handlers:
     _log.setLevel(logging.INFO)
-    handler = logging.StreamHandler()
-    _log.addHandler(handler)
+    if len(_log.handlers) == 0:
+        handler = logging.StreamHandler()
+        _log.addHandler(handler)

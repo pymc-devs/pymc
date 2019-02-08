@@ -63,7 +63,7 @@ def partial_check_positive_definite(C):
 
 class PositiveDefiniteError(ValueError):
     def __init__(self, msg, idx):
-        super(PositiveDefiniteError, self).__init__(msg)
+        super().__init__(msg)
         self.idx = idx
         self.msg = msg
 
@@ -72,7 +72,7 @@ class PositiveDefiniteError(ValueError):
                 % (self.msg, self.idx))
 
 
-class QuadPotential(object):
+class QuadPotential:
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
         raise NotImplementedError('Abstract method')
@@ -252,7 +252,7 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
     """
 
     def __init__(self, *args, **kwargs):
-        super(QuadPotentialDiagAdaptGrad, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._grads1 = np.zeros(self._n, dtype=self.dtype)
         self._ngrads1 = 0
         self._grads2 = np.zeros(self._n, dtype=self.dtype)
@@ -286,7 +286,7 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
             self._grads2[:] = 1
 
 
-class _WeightedVariance(object):
+class _WeightedVariance:
     """Online algorithm for computing mean of variance."""
 
     def __init__(self, nelem, initial_mean=None, initial_variance=None,

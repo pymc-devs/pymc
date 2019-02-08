@@ -199,7 +199,7 @@ def waic(trace, model=None, pointwise=False, progressbar=False):
     p_waic: effective number parameters
     var_warn: 1 if posterior variance of the log predictive
          densities exceeds 0.4
-    waic_i: and array of the pointwise predictive accuracy, only if pointwise True
+    waic_i: an array of the pointwise predictive accuracy, only if pointwise True
     """
     model = modelcontext(model)
 

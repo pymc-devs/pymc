@@ -37,7 +37,7 @@ class LinearComponent(Model):
 
     def __init__(self, x, y, intercept=True, labels=None,
                  priors=None, vars=None, name='', model=None, offset=0.):
-        super(LinearComponent, self).__init__(name, model)
+        super().__init__(name, model)
         if priors is None:
             priors = {}
         if vars is None:
@@ -118,9 +118,9 @@ class GLM(LinearComponent):
     def __init__(self, x, y, intercept=True, labels=None,
                  priors=None, vars=None, family='normal', name='',
                  model=None, offset=0.):
-        super(GLM, self).__init__(
+        super().__init__(
             x, y, intercept=intercept, labels=labels,
-            priors=priors, vars=vars, name=name, 
+            priors=priors, vars=vars, name=name,
             model=model, offset=offset
         )
 

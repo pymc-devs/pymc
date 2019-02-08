@@ -1,9 +1,3 @@
-'''
-Created on Mar 12, 2011
-
-from __future__ import division
-@author: johnsalvatier
-'''
 import numpy as np
 from numpy import exp, log, sqrt
 from ..model import modelcontext, Point

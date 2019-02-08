@@ -11,7 +11,7 @@ from pymc3.theanof import change_flags
 import numpy as np
 
 
-class TestType(object):
+class TestType:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
 
     def setup_method(self):
@@ -26,7 +26,7 @@ class TestType(object):
     def test_float64(self):
         with Model() as model:
             x = Normal('x', testval=np.array(1., dtype='float64'))
-            obs = Normal('obs', mu=x, sd=1., observed=np.random.randn(5))
+            obs = Normal('obs', mu=x, sigma=1., observed=np.random.randn(5))
 
         assert x.dtype == 'float64'
         assert obs.dtype == 'float64'
@@ -39,7 +39,7 @@ class TestType(object):
     def test_float32(self):
         with Model() as model:
             x = Normal('x', testval=np.array(1., dtype='float32'))
-            obs = Normal('obs', mu=x, sd=1., observed=np.random.randn(5).astype('float32'))
+            obs = Normal('obs', mu=x, sigma=1., observed=np.random.randn(5).astype('float32'))
 
         assert x.dtype == 'float32'
         assert obs.dtype == 'float32'

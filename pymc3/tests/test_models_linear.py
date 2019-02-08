@@ -15,7 +15,7 @@ def generate_data(intercept, slope, size=700):
 class TestGLM(SeededTest):
     @classmethod
     def setup_class(cls):
-        super(TestGLM, cls).setup_class()
+        super().setup_class()
         cls.intercept = 1
         cls.slope = 3
         cls.sd = .05
@@ -43,7 +43,7 @@ class TestGLM(SeededTest):
                 name='lm'
             )   # yields lm_x0, lm_Intercept
             sigma = Uniform('sigma', 0, 20)     # yields sigma_interval__
-            Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)  # yields y_obs
+            Normal('y_obs', mu=lm.y_est, sigma=sigma, observed=self.y_linear)  # yields y_obs
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
             trace = sample(500, tune=0, step=step, start=start,
@@ -58,7 +58,7 @@ class TestGLM(SeededTest):
         with Model() as model:
             lm = LinearComponent.from_formula('y ~ x', self.data_linear)
             sigma = Uniform('sigma', 0, 20)
-            Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)
+            Normal('y_obs', mu=lm.y_est, sigma=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
             trace = sample(500, tune=0, step=step, start=start,

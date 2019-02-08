@@ -18,6 +18,9 @@ import matplotlib.pyplot as plt
 from matplotlib import image
 
 DOC_SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_IMG_LOC = os.path.join(
+            os.path.dirname(DOC_SRC), "logos", "PyMC3.png"
+        )
 TABLE_OF_CONTENTS_FILENAME = "table_of_contents_{}.js"
 
 INDEX_TEMPLATE = """
@@ -60,7 +63,7 @@ def create_thumbnail(infile, width=275, height=275, cx=0.5, cy=0.5, border=4):
     return fig
 
 
-class NotebookGenerator(object):
+class NotebookGenerator:
     """Tools for generating an example page from a file"""
 
     def __init__(self, filename, target_dir):
@@ -76,9 +79,7 @@ class NotebookGenerator(object):
         with open(filename, "r") as fid:
             self.json_source = json.load(fid)
         self.pagetitle = self.extract_title()
-        self.default_image_loc = os.path.join(
-            os.path.dirname(DOC_SRC), "logos", "PyMC3.png"
-        )
+        self.default_image_loc = DEFAULT_IMG_LOC
 
         # Only actually run it if the output RST file doesn't
         # exist or it was modified less recently than the example
@@ -120,7 +121,7 @@ class NotebookGenerator(object):
         create_thumbnail(self.png_path)
 
 
-class TableOfContentsJS(object):
+class TableOfContentsJS:
     """Container to load table of contents JS file"""
 
     def load(self, path):
@@ -156,17 +157,30 @@ def build_gallery(srcdir, gallery):
 
     if not os.path.exists(source_dir):
         os.makedirs(source_dir)
+    
+    # Create default image
+    default_png_path = os.path.join(os.path.join(target_dir, "_images"), "default.png")
+    shutil.copy(DEFAULT_IMG_LOC, default_png_path)
+    create_thumbnail(default_png_path)
 
     # Write individual example files
     data = {}
     for basename in sorted(tocjs.contents):
-        filename = os.path.join(source_dir, basename + ".ipynb")
-        ex = NotebookGenerator(filename, target_dir)
-        data[ex.stripped_name] = {
-            "title": ex.pagetitle,
-            "url": os.path.join(os.sep, gallery, ex.output_html),
-            "thumb": os.path.basename(ex.png_path),
-        }
+        if basename.find(".rst") < 1:
+            filename = os.path.join(source_dir, basename + ".ipynb")
+            ex = NotebookGenerator(filename, target_dir)
+            data[ex.stripped_name] = {
+                "title": ex.pagetitle,
+                "url": os.path.join(os.sep, gallery, ex.output_html),
+                "thumb": os.path.basename(ex.png_path),
+            }
+        else:
+            filename = basename.split(".")[0]
+            data[basename] = {
+                "title": " ".join(filename.split("_")),
+                "url": os.path.join(os.sep, gallery, "../"+filename+".html"),
+                "thumb": os.path.basename(default_png_path),
+            }
 
     js_file = os.path.join(image_dir, "gallery_{}_contents.js".format(gallery))
     with open(table_of_contents_file, "r") as toc:

@@ -1,4 +1,3 @@
-import six
 import numbers
 
 import numpy as np
@@ -16,11 +15,11 @@ __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
            'NoDistribution', 'TensorType', 'draw_values', 'generate_samples']
 
 
-class _Unpickling(object):
+class _Unpickling:
     pass
 
 
-class Distribution(object):
+class Distribution:
     """Statistical distribution"""
     def __new__(cls, name, *args, **kwargs):
         if name is _Unpickling:
@@ -132,9 +131,9 @@ class NoDistribution(Distribution):
 
     def __init__(self, shape, dtype, testval=None, defaults=(),
                  transform=None, parent_dist=None, *args, **kwargs):
-        super(NoDistribution, self).__init__(shape=shape, dtype=dtype,
-                                             testval=testval, defaults=defaults,
-                                             *args, **kwargs)
+        super().__init__(shape=shape, dtype=dtype,
+                         testval=testval, defaults=defaults,
+                         *args, **kwargs)
         self.parent_dist = parent_dist
 
     def __getattr__(self, name):
@@ -166,8 +165,7 @@ class Discrete(Distribution):
             raise ValueError("Transformations for discrete distributions "
                              "are not allowed.")
 
-        super(Discrete, self).__init__(
-            shape, dtype, defaults=defaults, *args, **kwargs)
+        super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
 
 class Continuous(Distribution):
@@ -177,8 +175,7 @@ class Continuous(Distribution):
                  *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
-        super(Continuous, self).__init__(
-            shape, dtype, defaults=defaults, *args, **kwargs)
+        super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
 
 class DensityDist(Distribution):
@@ -202,8 +199,7 @@ class DensityDist(Distribution):
     def __init__(self, logp, shape=(), dtype=None, testval=0, random=None, *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
-        super(DensityDist, self).__init__(
-            shape, dtype, testval, *args, **kwargs)
+        super().__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
         self.rand = random
 
@@ -215,19 +211,19 @@ class DensityDist(Distribution):
                             "Define a custom random method and pass it as kwarg random")
 
 
-class _DrawValuesContext(six.with_metaclass(InitContextMeta, Context)):
+class _DrawValuesContext(Context, metaclass=InitContextMeta):
     """ A context manager class used while drawing values with draw_values
     """
 
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
-        instance = super(_DrawValuesContext, cls).__new__(cls)
+        instance = super().__new__(cls)
         if cls.get_contexts():
-            potencial_parent = cls.get_contexts()[-1]
+            potential_parent = cls.get_contexts()[-1]
             # We have to make sure that the context is a _DrawValuesContext
             # and not a Model
-            if isinstance(potencial_parent, cls):
-                instance._parent = potencial_parent
+            if isinstance(potential_parent, _DrawValuesContext):
+                instance._parent = potential_parent
             else:
                 instance._parent = None
         else:
@@ -240,7 +236,8 @@ class _DrawValuesContext(six.with_metaclass(InitContextMeta, Context)):
             # another _DrawValuesContext will share the reference to the
             # drawn_vars dictionary. This means that separate branches
             # in the nested _DrawValuesContext context tree will see the
-            # same drawn values
+            # same drawn values.
+            # The drawn_vars keys shall be (RV, size) tuples
             self.drawn_vars = self.parent.drawn_vars
         else:
             self.drawn_vars = dict()
@@ -248,6 +245,22 @@ class _DrawValuesContext(six.with_metaclass(InitContextMeta, Context)):
     @property
     def parent(self):
         return self._parent
+
+
+class _DrawValuesContextBlocker(_DrawValuesContext, metaclass=InitContextMeta):
+    """
+    Context manager that starts a new drawn variables context disregarding all
+    parent contexts. This can be used inside a random method to ensure that
+    the drawn values wont be the ones cached by previous calls
+    """
+    def __new__(cls, *args, **kwargs):
+        # resolves the parent instance
+        instance = super(_DrawValuesContextBlocker, cls).__new__(cls)
+        instance._parent = None
+        return instance
+
+    def __init__(self):
+        self.drawn_vars = dict()
 
 
 def is_fast_drawable(var):
@@ -293,14 +306,15 @@ def draw_values(params, point=None, size=None):
                 continue
 
             name = getattr(p, 'name', None)
-            if p in drawn:
+            if (p, size) in drawn:
                 # param was drawn in related contexts
-                v = drawn[p]
+                v = drawn[(p, size)]
                 evaluated[i] = v
-            elif name is not None and name in point:
+            # We filter out Deterministics by checking for `model` attribute
+            elif name is not None and hasattr(p, 'model') and name in point:
                 # param.name is in point
                 v = point[name]
-                evaluated[i] = drawn[p] = v
+                evaluated[i] = drawn[(p, size)] = v
             else:
                 # param still needs to be drawn
                 symbolic_params.append((i, p))
@@ -335,12 +349,12 @@ def draw_values(params, point=None, size=None):
                         named_nodes_children[k].update(nnc[k])
 
         # Init givens and the stack of nodes to try to `_draw_value` from
-        givens = {p.name: (p, v) for p, v in drawn.items()
+        givens = {p.name: (p, v) for (p, size), v in drawn.items()
                   if getattr(p, 'name', None) is not None}
         stack = list(leaf_nodes.values())  # A queue would be more appropriate
         while stack:
             next_ = stack.pop(0)
-            if next_ in drawn:
+            if (next_, size) in drawn:
                 # If the node already has a givens value, skip it
                 continue
             elif isinstance(next_, (tt.TensorConstant,
@@ -354,6 +368,14 @@ def draw_values(params, point=None, size=None):
                 # ('Constants not allowed in param list', ...)` for
                 # TensorConstant, and a `TypeError: Cannot use a shared
                 # variable (...) as explicit input` for SharedVariable.
+                # ObservedRV and MultiObservedRV instances are ViewOPs
+                # of TensorConstants or SharedVariables, we must add them
+                # to the stack or risk evaluating deterministics with the
+                # wrong values (issue #3354)
+                stack.extend([node for node in named_nodes_parents[next_]
+                              if isinstance(node, (ObservedRV,
+                                                   MultiObservedRV))
+                              and (node, size) not in drawn])
                 continue
             else:
                 # If the node does not have a givens value, try to draw it.
@@ -369,14 +391,14 @@ def draw_values(params, point=None, size=None):
                                         givens=temp_givens,
                                         size=size)
                     givens[next_.name] = (next_, value)
-                    drawn[next_] = value
+                    drawn[(next_, size)] = value
                 except theano.gof.fg.MissingInputError:
                     # The node failed, so we must add the node's parents to
                     # the stack of nodes to try to draw from. We exclude the
                     # nodes in the `params` list.
                     stack.extend([node for node in named_nodes_parents[next_]
                                   if node is not None and
-                                  node.name not in drawn and
+                                  (node, size) not in drawn and
                                   node not in params])
 
         # the below makes sure the graph is evaluated in order
@@ -391,15 +413,15 @@ def draw_values(params, point=None, size=None):
             missing_inputs = set()
             for param_idx in to_eval:
                 param = params[param_idx]
-                if param in drawn:
-                    evaluated[param_idx] = drawn[param]
+                if (param, size) in drawn:
+                    evaluated[param_idx] = drawn[(param, size)]
                 else:
                     try:  # might evaluate in a bad order,
                         value = _draw_value(param,
                                             point=point,
                                             givens=givens.values(),
                                             size=size)
-                        evaluated[param_idx] = drawn[param] = value
+                        evaluated[param_idx] = drawn[(param, size)] = value
                         givens[param.name] = (param, value)
                     except theano.gof.fg.MissingInputError:
                         missing_inputs.add(param_idx)
@@ -475,13 +497,16 @@ def _draw_value(param, point=None, givens=None, size=None):
 
                 dist_tmp.shape = distshape
                 try:
-                    dist_tmp.random(point=point, size=size)
+                    return dist_tmp.random(point=point, size=size)
                 except (ValueError, TypeError):
                     # reset shape to account for shape changes
                     # with theano.shared inputs
                     dist_tmp.shape = np.array([])
-                    val = np.atleast_1d(dist_tmp.random(point=point,
-                                                        size=None))
+                    # We want to draw values to infer the dist_shape,
+                    # we don't want to store these drawn values to the context
+                    with _DrawValuesContextBlocker():
+                        val = np.atleast_1d(dist_tmp.random(point=point,
+                                                            size=None))
                     # Sometimes point may change the size of val but not the
                     # distribution's shape
                     if point and size is not None:
@@ -498,20 +523,34 @@ def _draw_value(param, point=None, givens=None, size=None):
                 variables, values = list(zip(*givens))
             else:
                 variables = values = []
-            func = _compile_theano_function(param, variables)
+            # We only truly care if the ancestors of param that were given
+            # value have the matching dshape and val.shape
+            param_ancestors = \
+                set(theano.gof.graph.ancestors([param],
+                                               blockers=list(variables))
+                    )
+            inputs = [(var, val) for var, val in
+                      zip(variables, values)
+                      if var in param_ancestors]
+            if inputs:
+                input_vars, input_vals = list(zip(*inputs))
+            else:
+                input_vars = []
+                input_vals = []
+            func = _compile_theano_function(param, input_vars)
             if size is not None:
                 size = np.atleast_1d(size)
             dshaped_variables = all((hasattr(var, 'dshape')
-                                     for var in variables))
+                                     for var in input_vars))
             if (values and dshaped_variables and
                 not all(var.dshape == getattr(val, 'shape', tuple())
-                        for var, val in zip(variables, values))):
-                output = np.array([func(*v) for v in zip(*values)])
+                        for var, val in zip(input_vars, input_vals))):
+                output = np.array([func(*v) for v in zip(*input_vals)])
             elif (size is not None and any((val.ndim > var.ndim)
-                  for var, val in zip(variables, values))):
-                output = np.array([func(*v) for v in zip(*values)])
+                  for var, val in zip(input_vars, input_vals))):
+                output = np.array([func(*v) for v in zip(*input_vals)])
             else:
-                output = func(*values)
+                output = func(*input_vals)
             return output
     raise ValueError('Unexpected type in draw_value: %s' % type(param))
 
@@ -520,7 +559,11 @@ def to_tuple(shape):
     """Convert ints, arrays, and Nones to tuples"""
     if shape is None:
         return tuple()
-    return tuple(np.atleast_1d(shape))
+    temp = np.atleast_1d(shape)
+    if temp.size == 0:
+        return tuple()
+    else:
+        return tuple(temp)
 
 def _is_one_d(dist_shape):
     if hasattr(dist_shape, 'dshape') and dist_shape.dshape in ((), (0,), (1,)):
@@ -641,3 +684,30 @@ def generate_samples(generator, *args, **kwargs):
     if one_d and samples.shape[-1] == 1:
         samples = samples.reshape(samples.shape[:-1])
     return np.asarray(samples)
+
+
+def broadcast_distribution_samples(samples, size=None):
+    if size is None:
+        return np.broadcast_arrays(*samples)
+    _size = to_tuple(size)
+    try:
+        broadcasted_samples = np.broadcast_arrays(*samples)
+    except ValueError:
+        # Raw samples shapes
+        p_shapes = [p.shape for p in samples]
+        # samples shapes without the size prepend
+        sp_shapes = [s[len(_size):] if _size == s[:len(_size)] else s
+                     for s in p_shapes]
+        broadcast_shape = np.broadcast(*[np.empty(s) for s in sp_shapes]).shape
+        broadcasted_samples = []
+        for param, p_shape, sp_shape in zip(samples, p_shapes, sp_shapes):
+            if _size == p_shape[:len(_size)]:
+                slicer_head = [slice(None)] * len(_size)
+            else:
+                slicer_head = [np.newaxis] * len(_size)
+            slicer_tail = ([np.newaxis] * (len(broadcast_shape) -
+                                           len(sp_shape)) +
+                           [slice(None)] * len(sp_shape))
+            broadcasted_samples.append(param[tuple(slicer_head + slicer_tail)])
+        broadcasted_samples = np.broadcast_arrays(*broadcasted_samples)
+    return broadcasted_samples

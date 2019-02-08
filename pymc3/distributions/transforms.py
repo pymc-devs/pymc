@@ -14,7 +14,7 @@ __all__ = ['transform', 'stick_breaking', 'logodds', 'interval', 'log_exp_m1',
            't_stick_breaking']
 
 
-class Transform(object):
+class Transform:
     """A transformation of a random variable from one space into another.
 
     Attributes
@@ -125,9 +125,7 @@ class TransformedDistribution(distribution.Distribution):
         v = forward(FreeRV(name='v', distribution=dist))
         self.type = v.type
 
-        super(TransformedDistribution, self).__init__(
-            v.shape.tag.test_value, v.dtype,
-            testval, dist.defaults, *args, **kwargs)
+        super().__init__(v.shape.tag.test_value, v.dtype, testval, dist.defaults, *args, **kwargs)
 
         if transform.name == 'stickbreaking':
             b = np.hstack(((np.atleast_1d(self.shape) == 1)[:-1], False))
@@ -448,7 +446,7 @@ class CholeskyCovPacked(Transform):
         return tt.advanced_set_subtensor1(y, tt.log(y[self.diag_idxs]), self.diag_idxs)
 
     def forward_val(self, y, point=None):
-        y[self.diag_idxs] = np.log(y[self.diag_idxs])
+        y[..., self.diag_idxs] = np.log(y[..., self.diag_idxs])
         return y
 
     def jacobian_det(self, y):

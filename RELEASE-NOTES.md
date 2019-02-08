@@ -1,6 +1,26 @@
 # Release Notes
 
-## PyMC3 3.6 (unreleased)
+## PyMC3 3.7 (unreleased)
+
+### New features
+
+### Maintenance
+
+- All occurances of `sd` as a parameter name have been renamed to `sigma`. `sd` will continue to function for backwards compatibility.
+- Made `BrokenPipeError` for parallel sampling more verbose on Windows.
+- Added the `broadcast_distribution_samples` function that helps broadcasting arrays of drawn samples, taking into account the requested `size` and the inferred distribution shape. This sometimes is needed by distributions that call several `rvs` separately within their `random` method, such as the `ZeroInflatedPoisson` (Fix issue #3310).
+- The `Wald`, `Kumaraswamy`, `LogNormal`, `Pareto`, `Cauchy`, `HalfCauchy`, `Weibull` and `ExGaussian` distributions `random` method used a hidden `_random` function that was written with scalars in mind. This could potentially lead to artificial correlations between random draws. Added shape guards and broadcasting of the distribution samples to prevent this (Similar to issue #3310).
+- Added a fix to allow the imputation of single missing values of observed data, which previously would fail (Fix issue #3122).
+- Fix for #3346. The `draw_values` function was too permissive with what could be grabbed from inside `point`, which lead to an error when sampling posterior predictives of variables that depended on shared variables that had changed their shape after `pm.sample()` had been called.
+- Fix for #3354. `draw_values` now adds the theano graph descendants of `TensorConstant` or `SharedVariables` to the named relationship nodes stack, only if these descendants are `ObservedRV` or `MultiObservedRV` instances.
+
+### Deprecations
+
+- `nuts_kwargs` and `step_kwargs` have been deprecated in favor of using the standard `kwargs` to pass optional step method arguments.
+
+## PyMC3 3.6 (Dec 21 2018)
+
+This will be the last release to support Python 2.
 
 ### New features
 
@@ -34,6 +54,7 @@
 - Fixed `Rice` distribution, which inconsistently mixed two parametrizations (#3286).
 - `Rice` distribution now accepts multiple parameters and observations and is usable with NUTS (#3289).
 - `sample_posterior_predictive` no longer calls `draw_values` to initialize the shape of the ppc trace. This called could lead to `ValueError`'s when sampling the ppc from a model with `Flat` or `HalfFlat` prior distributions (Fix issue #3294).
+- Added explicit conversion to `floatX` and `int32` for the continuous and discrete probability distribution parameters (addresses issue #3223).
 
 
 ### Deprecations

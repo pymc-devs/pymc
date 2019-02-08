@@ -32,13 +32,13 @@ def loglike2(value):
     return -tt.log(tt.abs_(value))
 
 with pm.Model() as model:
-    alpha = pm.Normal('intercept', mu=0, sd=100)
+    alpha = pm.Normal('intercept', mu=0, sigma=100)
     # Create custom densities
     beta = pm.DensityDist('slope', loglike1, testval=0)
     sigma = pm.DensityDist('sigma', loglike2, testval=1)
     # Create likelihood
     like = pm.Normal('y_est', mu=alpha + beta *
-                        xdata, sd=sigma, observed=ydata)
+                        xdata, sigma=sigma, observed=ydata)
 
     trace = pm.sample(2000, cores=2)
 
