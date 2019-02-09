@@ -247,9 +247,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         number of draws.
     cores : int
         The number of chains to run in parallel. If `None`, set to the number of CPUs in the
-        system, but at most 4 (for 'SMC' defaults to 1). Keep in mind that some chains might
-        themselves be multithreaded via openmp or BLAS. In those cases it might be faster to set
-        this to 1.
+        system, but at most 4 (for 'SMC' ignored if `pm.SMC(parallel=False)`. Keep in mind that
+        some chains might themselves be multithreaded via openmp or BLAS. In those cases it might
+        be faster to set this to 1.
     tune : int
         Number of iterations to tune, defaults to 500. Ignored when using 'SMC'. Samplers adjust
         the step sizes, scalings or similar during tuning. Tuning samples will be drawn in addition
@@ -319,25 +319,27 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     nuts_kwargs = kwargs.pop('nuts_kwargs', None)
     if nuts_kwargs is not None:
         warnings.warn("The nuts_kwargs argument has been deprecated. Pass step "
-            "method arguments directly to sample instead",
-            DeprecationWarning)
+                      "method arguments directly to sample instead",
+                      DeprecationWarning)
         kwargs.update(nuts_kwargs)
     step_kwargs = kwargs.pop('step_kwargs', None)
     if step_kwargs is not None:
         warnings.warn("The step_kwargs argument has been deprecated. Pass step "
-            "method arguments directly to sample instead",
-            DeprecationWarning)
+                      "method arguments directly to sample instead",
+                      DeprecationWarning)
         kwargs.update(step_kwargs)
+
+    if cores is None:
+        cores = min(4, _cpu_count())
 
     if isinstance(step, pm.step_methods.smc.SMC):
         trace = smc.sample_smc(draws=draws,
                                step=step,
+                               cores=cores,
                                progressbar=progressbar,
                                model=model,
                                random_seed=random_seed)
     else:
-        if cores is None:
-            cores = min(4, _cpu_count())
         if 'njobs' in kwargs:
             cores = kwargs['njobs']
             warnings.warn(
@@ -423,12 +425,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
                        'random_seed': random_seed,
                        'live_plot': live_plot,
                        'live_plot_kwargs': live_plot_kwargs,
-                       'cores': cores,}
+                       'cores': cores, }
 
         sample_args.update(kwargs)
 
         has_population_samplers = np.any([isinstance(m, arraystep.PopulationArrayStepShared)
-            for m in (step.methods if isinstance(step, CompoundStep) else [step])])
+                                          for m in (step.methods if isinstance(step, CompoundStep) else [step])])
 
         parallel = cores > 1 and chains > 1 and not has_population_samplers
         if parallel:
@@ -1127,7 +1129,7 @@ def sample_ppc(*args, **kwargs):
 
 
 def sample_posterior_predictive_w(traces, samples=None, models=None, weights=None,
-                                    random_seed=None, progressbar=True):
+                                  random_seed=None, progressbar=True):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.
 
@@ -1306,7 +1308,8 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
         elif is_transformed_name(var_name):
             untransformed = get_untransformed_name(var_name)
             if untransformed in data:
-                prior[var_name] = model[untransformed].transformation.forward_val(data[untransformed])
+                prior[var_name] = model[untransformed].transformation.forward_val(
+                    data[untransformed])
     return prior
 
 
