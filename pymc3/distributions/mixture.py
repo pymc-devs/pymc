@@ -191,11 +191,70 @@ class Mixture(Distribution):
     def _comp_logp(self, value):
         comp_dists = self.comp_dists
 
-        try:
-            value_ = value if value.ndim > 1 else tt.shape_padright(value)
-
+        if self.is_multidim_comp:
+            # Value can be many things. It can be the self tensor, the mode
+            # test point or it can be observed data. The latter case requires
+            # careful handling of shape, as the observed's shape could look
+            # like (repetitions,) + dist_shape, which does not include the last
+            # mixture axis. For this reason, we try to eval the value.shape,
+            # compare it with self.shape and shape_padright if we infer that
+            # the value holds observed data
+            try:
+                val_shape = tuple(value.shape.eval())
+            except AttributeError:
+                val_shape = value.shape
+            except theano.gof.MissingInputError:
+                val_shape = None
+            ndim = value.ndim
+            if val_shape is not None:
+                # If value does not hold observed data, so we can use its ndim
+                # safely to determine shape padding
+                try:
+                    self_shape = tuple(self.shape)
+                except AttributeError:
+                    # Happens in __init__ when computing self.logp(comp_modes)
+                    self_shape = None
+                comp_shape = tuple(comp_dists.shape)
+                if (
+                    not((self_shape is not None and val_shape == self_shape) or
+                        val_shape == comp_shape)
+                ):
+                    # value is neither the test point nor the self tensor, it
+                    # is likely to hold observed values, so we must compute the
+                    # ndim discarding the dimensions that don't match
+                    # self_shape
+                    if (
+                        self_shape and
+                        val_shape[-len(self_shape):] == self_shape
+                    ):
+                        # value has observed values for the Mixture
+                        ndim = len(self_shape)
+                    elif (
+                        comp_shape and
+                        val_shape[-len(comp_shape):] == comp_shape
+                    ):
+                        # value has observed for the Mixture components
+                        ndim = len(comp_shape)
+                    else:
+                        # We cannot infer what was passed, we handle this
+                        # as was done in earlier versions of Mixture. We pad
+                        # always if ndim is lower or equal to 1  (default
+                        # legacy implementation)
+                        if ndim <= 1:
+                            ndim = len(comp_dists.shape) - 1
+            else:
+                # We can only rely on the value's ndim for shape padding.
+                # We will always pad a single dimension if ndim is lower or
+                # equal to 1 (default legacy implementation)
+                if ndim <= 1:
+                    ndim = len(comp_dists.shape) - 1
+            if ndim < len(comp_dists.shape):
+                value_ = tt.shape_padright(value,
+                                           len(comp_dists.shape) - ndim)
+            else:
+                value_ = value
             return comp_dists.logp(value_)
-        except AttributeError:
+        else:
             return tt.squeeze(tt.stack([comp_dist.logp(value)
                                         for comp_dist in comp_dists],
                                        axis=-1))
