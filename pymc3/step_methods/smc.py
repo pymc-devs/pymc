@@ -12,8 +12,6 @@ from .metropolis import MultivariateNormalProposal
 from .smc_utils import _initial_population, _calc_covariance, _tune, _posterior_to_trace
 from ..theanof import floatX, make_shared_replacements, join_nonshared_inputs, inputvars
 from ..model import modelcontext
-from ..backends.ndarray import NDArray
-from ..backends.base import MultiTrace
 
 
 __all__ = ["SMC", "sample_smc"]
