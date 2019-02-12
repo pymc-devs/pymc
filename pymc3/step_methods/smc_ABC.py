@@ -416,6 +416,6 @@ def get_distance(func_name):
          'mean squared_error': mean_squared_error,
          'euclidean': euclidean_distance}
    
-   if not func_name in d:
+    if not func_name in d:
         raise KeyError('"{}" was not found in the standard distance metrics. Choose one of {}'.format(func_name, set(d.keys())))
     return d[func_name]
