@@ -172,13 +172,6 @@ class Mixture(Distribution):
         """
         def wrapped_random(*args, **kwargs):
             raw_size_ = kwargs.pop('raw_size_', None)
-            if raw_size_ is not None:
-                if isinstance(raw_size_, np.ndarray):
-                    # This may happen because generate_samples broadcasts
-                    # parameter values
-                    raw_size_ = raw_size_.ravel()[0]
-                else:
-                    raw_size_ = int(raw_size_)
             # Distribution.random's signature is always (point=None, size=None)
             # so size could be the second arg or be given as a kwarg
             if len(args) > 1:
@@ -294,7 +287,7 @@ class Mixture(Distribution):
                     broadcast_shape=broadcast_shape,
                     point=point,
                     size=size,
-                    raw_size_=size,
+                    not_broadcast_kwargs={'raw_size_': size},
                 )
                 samples.append(sample)
             samples = np.array(

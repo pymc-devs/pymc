@@ -599,6 +599,9 @@ def generate_samples(generator, *args, **kwargs):
         parameters. This may be required when the parameter shape
         does not determine the shape of a single sample, for example,
         the shape of the probabilities in the Categorical distribution.
+    not_broadcast_kwargs: dict or None
+        Key word argument dictionary to provide to the random generator, which
+        must not be broadcasted with the rest of the *args and **kwargs.
 
     Any remaining *args and **kwargs are passed on to the generator function.
     """
@@ -606,6 +609,9 @@ def generate_samples(generator, *args, **kwargs):
     one_d = _is_one_d(dist_shape)
     size = kwargs.pop('size', None)
     broadcast_shape = kwargs.pop('broadcast_shape', None)
+    not_broadcast_kwargs = kwargs.pop('not_broadcast_kwargs', None)
+    if not_broadcast_kwargs is None:
+        not_broadcast_kwargs = dict()
     if size is None:
         size = 1
 
@@ -625,6 +631,8 @@ def generate_samples(generator, *args, **kwargs):
             kwargs = {k: v.reshape(v.shape + (1,) * (max_dims - v.ndim)) for k, v in kwargs.items()}
             inputs = args + tuple(kwargs.values())
             broadcast_shape = np.broadcast(*inputs).shape  # size of generator(size=1)
+    # Update kwargs with the keyword arguments that were not broadcasted
+    kwargs.update(not_broadcast_kwargs)
 
     dist_shape = to_tuple(dist_shape)
     broadcast_shape = to_tuple(broadcast_shape)
