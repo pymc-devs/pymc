@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 from numpy.testing import assert_allclose
 
@@ -9,18 +10,29 @@ import scipy.stats as st
 from scipy.special import logsumexp
 from pymc3.theanof import floatX
 import theano
+from pymc3.distributions.distribution import to_tuple
 
 # Generate data
 def generate_normal_mixture_data(w, mu, sd, size=1000):
     component = np.random.choice(w.size, size=size, p=w)
-    x = np.random.normal(mu[component], sd[component], size=size)
+    mu, sd = np.broadcast_arrays(mu, sd)
+    out_size = to_tuple(size) + mu.shape[:-1]
+    mu_ = np.array([mu[..., comp] for comp in component.ravel()])
+    sd_ = np.array([sd[..., comp] for comp in component.ravel()])
+    mu_ = np.reshape(mu_, out_size)
+    sd_ = np.reshape(sd_, out_size)
+    x = np.random.normal(mu_, sd_, size=out_size)
 
     return x
 
 
 def generate_poisson_mixture_data(w, mu, size=1000):
     component = np.random.choice(w.size, size=size, p=w)
-    x = np.random.poisson(mu[component], size=size)
+    mu = np.atleast_1d(mu)
+    out_size = to_tuple(size) + mu.shape[:-1]
+    mu_ = np.array([mu[..., comp] for comp in component.ravel()])
+    mu_ = np.reshape(mu_, out_size)
+    x = np.random.poisson(mu_, size=out_size)
 
     return x
 
@@ -75,27 +87,98 @@ class TestMixture(SeededTest):
                         np.sort(self.norm_mu),
                         rtol=0.1, atol=0.1)
 
-    def test_normal_mixture_nd(self):
-        nd, ncomp = 3, 5
+    @pytest.mark.parametrize('nd,ncomp',
+                             [(tuple(), 5),
+                              (1, 5),
+                              (3, 5),
+                              ((3, 3), 5),
+                              (3, 3),
+                              ((3, 3), 3)],
+                             ids=str)
+    def test_normal_mixture_nd(self, nd, ncomp):
+        nd = to_tuple(nd)
+        ncomp = int(ncomp)
+        comp_shape = nd + (ncomp,)
+        test_mus = np.random.randn(*comp_shape)
+        test_taus = np.random.gamma(1, 1, size=comp_shape)
+        observed = generate_normal_mixture_data(w=np.ones(ncomp)/ncomp,
+                                                mu=test_mus,
+                                                sd=1/np.sqrt(test_taus),
+                                                size=10)
 
         with Model() as model0:
-            mus = Normal('mus', shape=(nd, ncomp))
-            taus = Gamma('taus', alpha=1, beta=1, shape=(nd, ncomp))
+            mus = Normal('mus', shape=comp_shape)
+            taus = Gamma('taus', alpha=1, beta=1, shape=comp_shape)
             ws = Dirichlet('ws', np.ones(ncomp))
-            mixture0 = NormalMixture('m', w=ws, mu=mus, tau=taus, shape=nd)
+            mixture0 = NormalMixture('m', w=ws, mu=mus, tau=taus, shape=nd,
+                                     comp_shape=comp_shape)
+            obs0 = NormalMixture('obs', w=ws, mu=mus, tau=taus, shape=nd,
+                                 comp_shape=comp_shape,
+                                 observed=observed)
 
         with Model() as model1:
-            mus = Normal('mus', shape=(nd, ncomp))
-            taus = Gamma('taus', alpha=1, beta=1, shape=(nd, ncomp))
+            mus = Normal('mus', shape=comp_shape)
+            taus = Gamma('taus', alpha=1, beta=1, shape=comp_shape)
             ws = Dirichlet('ws', np.ones(ncomp))
-            comp_dist = [Normal.dist(mu=mus[:, i], tau=taus[:, i])
+            comp_dist = [Normal.dist(mu=mus[..., i], tau=taus[..., i],
+                                     shape=nd)
                          for i in range(ncomp)]
             mixture1 = Mixture('m', w=ws, comp_dists=comp_dist, shape=nd)
+            obs1 = Mixture('obs', w=ws, comp_dists=comp_dist, shape=nd,
+                           observed=observed)
+
+        with Model() as model2:
+            # Expected to fail if comp_shape is not provided,
+            # nd is multidim and it does not broadcast with ncomp. If by chance
+            # it does broadcast, an error is raised if the mixture is given
+            # observed data.
+            # Furthermore, the Mixture will also raise errors when the observed
+            # data is multidimensional but it does not broadcast well with
+            # comp_dists.
+            mus = Normal('mus', shape=comp_shape)
+            taus = Gamma('taus', alpha=1, beta=1, shape=comp_shape)
+            ws = Dirichlet('ws', np.ones(ncomp))
+            if len(nd) > 1:
+                if nd[-1] != ncomp:
+                    with pytest.raises(ValueError):
+                        NormalMixture('m', w=ws, mu=mus, tau=taus,
+                                      shape=nd)
+                    mixture2 = None
+                else:
+                    mixture2 = NormalMixture('m', w=ws, mu=mus, tau=taus,
+                                             shape=nd)
+            else:
+                mixture2 = NormalMixture('m', w=ws, mu=mus, tau=taus,
+                                         shape=nd)
+            observed_fails = False
+            if len(nd) >= 1 and nd != (1,):
+                try:
+                    np.broadcast(np.empty(comp_shape), observed)
+                except Exception:
+                    observed_fails = True
+            if observed_fails:
+                with pytest.raises(ValueError):
+                    NormalMixture('obs', w=ws, mu=mus, tau=taus,
+                                  shape=nd,
+                                  observed=observed)
+                obs2 = None
+            else:
+                obs2 = NormalMixture('obs', w=ws, mu=mus, tau=taus,
+                                     shape=nd,
+                                     observed=observed)
 
         testpoint = model0.test_point
-        testpoint['mus'] = np.random.randn(nd, ncomp)
+        testpoint['mus'] = test_mus
+        testpoint['taus'] = test_taus
         assert_allclose(model0.logp(testpoint), model1.logp(testpoint))
         assert_allclose(mixture0.logp(testpoint), mixture1.logp(testpoint))
+        assert_allclose(obs0.logp(testpoint), obs1.logp(testpoint))
+        if mixture2 is not None and obs2 is not None:
+            assert_allclose(model0.logp(testpoint), model2.logp(testpoint))
+        if mixture2 is not None:
+            assert_allclose(mixture0.logp(testpoint), mixture2.logp(testpoint))
+        if obs2 is not None:
+            assert_allclose(obs0.logp(testpoint), obs2.logp(testpoint))
 
     def test_poisson_mixture(self):
         with Model() as model:
