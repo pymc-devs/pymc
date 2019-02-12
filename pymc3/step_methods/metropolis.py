@@ -21,10 +21,6 @@ class Proposal:
     def __init__(self, s):
         self.s = s
 
-    def logp(self, s, value):
-        return multivariate_normal(np.zeros(s.shape[0]), cov=s).logpdf(value)
-
-
 class NormalProposal(Proposal):
     def __call__(self):
         return nr.normal(scale=self.s)
@@ -52,6 +48,7 @@ class PoissonProposal(Proposal):
 
 
 class MultivariateNormalProposal(Proposal):
+
     def __init__(self, s):
         n, m = s.shape
         if n != m:
@@ -67,6 +64,9 @@ class MultivariateNormalProposal(Proposal):
             b = np.random.randn(self.n)
             return np.dot(self.chol, b)
 
+    def logp(self, s, value):
+
+        return multivariate_normal(np.zeros(s.shape[0]), cov=s).logpdf(value)
 
 class Metropolis(ArrayStepShared):
     """

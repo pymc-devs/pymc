@@ -117,8 +117,10 @@ def sample_smc_abc(draws=5000, step=None, progressbar=False,
 
     stage = 0
     variables = model.vars
-    discrete = np.concatenate(
-        [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables])
+    discrete = np.concatenate([
+        [v.dtype in pm.discrete_types] * (v.dsize or 1) 
+        for v in variables
+    ])
     any_discrete = discrete.any()
     all_discrete = discrete.all()
     prior_logp = theano.function(variables, model.varlogpt)
@@ -158,7 +160,7 @@ def sample_smc_abc(draws=5000, step=None, progressbar=False,
             pm._log.info('Could not compute covariance matrix')
             break
         proposal = step.proposal(covariance)
-        # get distance function
+
         distance_function = get_distance(step.distance_metric)
 
         # compute scaling and number of Markov chains steps (optional), based on previous
@@ -413,6 +415,7 @@ def get_distance(func_name):
          'mean absolute_error': mean_absolute_error,
          'mean squared_error': mean_squared_error,
          'euclidean': euclidean_distance}
-    for key, value in d.items():
-        if func_name == key:
-            return value
+   
+   if not func_name in d:
+        raise KeyError('"{}" was not found in the standard distance metrics. Choose one of {}'.format(func_name, set(d.keys())))
+    return d[func_name]

@@ -7,8 +7,16 @@ __all__ = ['Simulator']
 
 
 class Simulator(NoDistribution):
-
+   
     def __init__(self, function, *args, **kwargs):
+        """
+        This class stores a function defined by the user in python language.
+        
+        function : function
+            Simulation function defined by the user.
+        *args and **kwargs : 
+            Arguments and keywords arguments that the function takes.
+        """
 
         self.function = function
         observed = self.data
@@ -39,7 +47,7 @@ class Simulator(NoDistribution):
         array
         """
 
-        print('Not implemented yet')
+        raise NotImplementedError('Not implemented yet')
 
     def logp(self, value):
         """
