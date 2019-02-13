@@ -549,7 +549,7 @@ def merge_traces(mtraces):
             if new_chain in base_mtrace._straces:
                 raise ValueError("Chains are not unique.")
             base_mtrace._straces[new_chain] = strace
-    base_mtrace.report = merge_reports([trace.report for trace in mtraces])
+    base_mtrace._report = merge_reports([trace.report for trace in mtraces])
     return base_mtrace
 
 
