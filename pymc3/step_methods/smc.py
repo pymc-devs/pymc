@@ -171,13 +171,7 @@ def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None,
         # compute scaling (optional) and number of Markov chains steps (optional), based on the
         # acceptance rate of the previous stage
         if (step.tune_scaling or step.tune_steps) and stage > 0:
-            if step.tune_scaling:
-                step.scaling = _tune(acc_rate)
-            if step.tune_steps:
-                acc_rate = max(1.0 / proposed, acc_rate)
-                step.n_steps = min(
-                    step.max_steps, 1 + int(np.log(step.p_acc_rate) / np.log(1 - acc_rate))
-                )
+            _tune(acc_rate, proposed, step)
 
         pm._log.info("Stage: {:d} Beta: {:.3f} Steps: {:d}".format(stage, beta, step.n_steps))
         # Apply Metropolis kernel (mutation)

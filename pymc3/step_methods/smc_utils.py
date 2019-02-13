@@ -37,23 +37,26 @@ def _calc_covariance(posterior, weights):
     return np.atleast_2d(cov)
 
 
-def _tune(acc_rate):
+def _tune(acc_rate, proposed, step):
     """
-    Tune adaptively based on the acceptance rate.
+    Tune scaling and/or n_steps based on the acceptance rate.
 
     Parameters
     ----------
     acc_rate: float
-        Acceptance rate of the Metropolis sampling
-
-    Returns
-    -------
-    scaling: float
+        Acceptance rate of the previous stage
+    proposed: int
+        Total number of proposed steps (draws * n_steps)
+    step: SMC step method
     """
-    # a and b after Muto & Beck 2008.
-    a = 1.0 / 9
-    b = 8.0 / 9
-    return (a + b * acc_rate) ** 2
+    if step.tune_scaling:
+        # a and b after Muto & Beck 2008.
+        a = 1 / 9
+        b = 8 / 9
+        step.scaling = (a + b * acc_rate) ** 2
+    if step.tune_steps:
+        acc_rate = max(1.0 / proposed, acc_rate)
+        step.n_steps = min(step.max_steps, 1 + int(np.log(step.p_acc_rate) / np.log(1 - acc_rate)))
 
 
 def _posterior_to_trace(posterior, variables, model, var_info):
