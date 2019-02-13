@@ -135,7 +135,7 @@ class Mixture(Distribution):
         if isinstance(comp_dists, Distribution):
             self._comp_dist_shapes = to_tuple(comp_dists.shape)
             self._broadcast_shape = self._comp_dist_shapes
-            self.is_multidim_comp = True
+            self.comp_is_distribution = True
         else:
             # Now we check the comp_dists distribution shape, see what
             # the broadcast shape would be. This shape will be the dist_shape
@@ -160,7 +160,7 @@ class Mixture(Distribution):
             for comp_dist in comp_dists:
                 generator = Mixture._comp_dist_random_wrapper(comp_dist.random)
                 self._generators.append(generator)
-            self.is_multidim_comp = False
+            self.comp_is_distribution = False
 
     @staticmethod
     def _comp_dist_random_wrapper(random):
@@ -184,7 +184,7 @@ class Mixture(Distribution):
     def _comp_logp(self, value):
         comp_dists = self.comp_dists
 
-        if self.is_multidim_comp:
+        if self.comp_is_distribution:
             # Value can be many things. It can be the self tensor, the mode
             # test point or it can be observed data. The latter case requires
             # careful handling of shape, as the observed's shape could look
@@ -198,45 +198,46 @@ class Mixture(Distribution):
                 val_shape = value.shape
             except theano.gof.MissingInputError:
                 val_shape = None
+            try:
+                self_shape = tuple(self.shape)
+            except AttributeError:
+                # Happens in __init__ when computing self.logp(comp_modes)
+                self_shape = None
+            comp_shape = tuple(comp_dists.shape)
             ndim = value.ndim
-            if val_shape is not None:
-                # If value does not hold observed data, so we can use its ndim
-                # safely to determine shape padding
-                try:
-                    self_shape = tuple(self.shape)
-                except AttributeError:
-                    # Happens in __init__ when computing self.logp(comp_modes)
-                    self_shape = None
-                comp_shape = tuple(comp_dists.shape)
-                if (
+            if (
+                val_shape is not None and
                     not((self_shape is not None and val_shape == self_shape) or
                         val_shape == comp_shape)
+            ):
+                # value is neither the test point nor the self tensor, it
+                # is likely to hold observed values, so we must compute the
+                # ndim discarding the dimensions that don't match
+                # self_shape
+                if (
+                    self_shape and
+                    val_shape[-len(self_shape):] == self_shape
                 ):
-                    # value is neither the test point nor the self tensor, it
-                    # is likely to hold observed values, so we must compute the
-                    # ndim discarding the dimensions that don't match
-                    # self_shape
-                    if (
-                        self_shape and
-                        val_shape[-len(self_shape):] == self_shape
-                    ):
-                        # value has observed values for the Mixture
-                        ndim = len(self_shape)
-                    elif (
-                        comp_shape and
-                        val_shape[-len(comp_shape):] == comp_shape
-                    ):
-                        # value has observed for the Mixture components
-                        ndim = len(comp_shape)
-                    else:
-                        # We cannot infer what was passed, we handle this
-                        # as was done in earlier versions of Mixture. We pad
-                        # always if ndim is lower or equal to 1  (default
-                        # legacy implementation)
-                        if ndim <= 1:
-                            ndim = len(comp_dists.shape) - 1
+                    # value has observed values for the Mixture
+                    ndim = len(self_shape)
+                elif (
+                    comp_shape and
+                    val_shape[-len(comp_shape):] == comp_shape
+                ):
+                    # value has observed for the Mixture components
+                    ndim = len(comp_shape)
+                else:
+                    # We cannot infer what was passed, we handle this
+                    # as was done in earlier versions of Mixture. We pad
+                    # always if ndim is lower or equal to 1  (default
+                    # legacy implementation)
+                    if ndim <= 1:
+                        ndim = len(comp_dists.shape) - 1
             else:
-                # We can only rely on the value's ndim for shape padding.
+                # We reach this point if value does not hold observed data, so
+                # we can use its ndim safely to determine shape padding, or it
+                # holds something that we cannot infer, so we revert to using
+                # the value's ndim for shape padding.
                 # We will always pad a single dimension if ndim is lower or
                 # equal to 1 (default legacy implementation)
                 if ndim <= 1:
@@ -271,7 +272,7 @@ class Mixture(Distribution):
     def _comp_samples(self, point=None, size=None,
                       comp_dist_shapes=None,
                       broadcast_shape=None):
-        if self.is_multidim_comp:
+        if self.comp_is_distribution:
             samples = self._comp_dists.random(point=point, size=size)
         else:
             if comp_dist_shapes is None:
@@ -299,7 +300,35 @@ class Mixture(Distribution):
         return samples.astype(self.dtype)
 
     def infer_comp_dist_shapes(self, point=None):
-        if self.is_multidim_comp:
+        """Try to infer the shapes of the component distributions,
+        `comp_dists`, and how they should broadcast together.
+        The behavior is slightly different if `comp_dists` is a `Distribution`
+        as compared to when it is a list of `Distribution`s. When it is a list
+        the following procedure is repeated for each element in the list:
+        1. Look up the `comp_dists.shape`
+        2. If it is not empty, use it as `comp_dist_shape`
+        3. If it is an empty tuple, a single random sample is drawn by calling
+        `comp_dists.random(point=point, size=None)`, and the returned
+        test_sample's shape is used as the inferred `comp_dists.shape`
+
+        Parameters
+        ----------
+        point: None or dict (optional)
+            Dictionary that maps rv names to values, to supply to
+            `self.comp_dists.random`
+
+        Returns
+        -------
+        comp_dist_shapes: shape tuple or list of shape tuples.
+            If `comp_dists` is a `Distribution`, it is a shape tuple of the
+            inferred distribution shape.
+            If `comp_dists` is a list of `Distribution`s, it is a list of
+            shape tuples inferred for each element in `comp_dists`
+        broadcast_shape: shape tuple
+            The shape that results from broadcasting all component's shapes
+            together.
+        """
+        if self.comp_is_distribution:
             if len(self._comp_dist_shapes) > 0:
                 comp_dist_shapes = self._comp_dist_shapes
             else:
@@ -313,7 +342,6 @@ class Mixture(Distribution):
                                                           size=None)
                     comp_dist_shapes = test_sample.shape
             broadcast_shape = comp_dist_shapes
-            includes_mixture = True
         else:
             # Now we check the comp_dists distribution shape, see what
             # the broadcast shape would be. This shape will be the dist_shape
@@ -342,8 +370,7 @@ class Mixture(Distribution):
                 raise TypeError('Inferred comp_dist shapes do not broadcast '
                                 'with each other. comp_dists inferred shapes '
                                 'are: {}'.format(comp_dist_shapes))
-            includes_mixture = False
-        return comp_dist_shapes, broadcast_shape, includes_mixture
+        return comp_dist_shapes, broadcast_shape
 
     def logp(self, value):
         w = self.w
@@ -355,11 +382,11 @@ class Mixture(Distribution):
     def random(self, point=None, size=None):
         # Convert size to tuple
         size = to_tuple(size)
-        # Draw mixture weights and a sample from each mixture to infer shape
+        # Draw mixture weights and infer the comp_dists shapes
         with _DrawValuesContext() as draw_context:
             # We first need to check w and comp_tmp shapes and re compute size
             w = draw_values([self.w], point=point, size=size)[0]
-            comp_dist_shapes, broadcast_shape, includes_mixture = (
+            comp_dist_shapes, broadcast_shape = (
                 self.infer_comp_dist_shapes(point=point)
             )
 
@@ -370,7 +397,7 @@ class Mixture(Distribution):
             w_shape = w.shape
 
         # Try to determine parameter shape and dist_shape
-        if includes_mixture:
+        if self.comp_is_distribution:
             param_shape = np.broadcast(np.empty(w_shape),
                                        np.empty(broadcast_shape)).shape
         else:
@@ -418,7 +445,7 @@ class Mixture(Distribution):
         else:
             output_size = int(np.prod(dist_shape) * param_shape[-1])
         # Get the size we need for the mixture's random call
-        if includes_mixture:
+        if self.comp_is_distribution:
             mixture_size = int(output_size // np.prod(broadcast_shape))
         else:
             mixture_size = int(output_size //
