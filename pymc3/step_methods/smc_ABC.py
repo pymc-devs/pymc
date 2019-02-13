@@ -8,15 +8,13 @@ import pymc3 as pm
 from scipy.stats.mstats import mquantiles
 from tqdm import tqdm
 
-from .arraystep import metrop_select
 from .metropolis import MultivariateNormalProposal
-from ..theanof import floatX
-from ..model import modelcontext, treelist, FreeRV
+from ..model import modelcontext
 from ..backends.ndarray import NDArray
 from ..backends.base import MultiTrace
 
 
-__all__ = ['SMC-ABC', 'sample_smc_abc']
+__all__ = ['SMC_ABC', 'sample_smc_abc']
 
 EXPERIMENTAL_WARNING = "Warning: SMC-ABC methods are experimental step methods and not yet"\
     " recommended for use in PyMC3!"
@@ -60,19 +58,18 @@ class SMC_ABC():
 
     References
     ----------
-    .. [Minson2013] Minson, S. E. and Simons, M. and Beck, J. L., (2013),
-        Bayesian inversion for finite fault earthquake source models I- Theory and algorithm.
-        Geophysical Journal International, 2013, 194(3), pp.1701-1726,
-        `link <https://gji.oxfordjournals.org/content/194/3/1701.full>`__
+    .. [Lintusaari2017] Jarno Lintusaari, Michael U. Gutmann, Ritabrata Dutta, Samuel Kaski, Jukka Corander; 
+        Fundamentals and Recent Developments in Approximate Bayesian Computation, 
+        Systematic Biology, Volume 66, Issue 1, 1 January 2017, Pages e66–e82, 
+        https://doi.org/10.1093/sysbio/syw077
 
-    .. [Ching2007] Ching, J. and Chen, Y. (2007).
-        Transitional Markov Chain Monte Carlo Method for Bayesian Model Updating, Model Class
-        Selection, and Model Averaging. J. Eng. Mech., 10.1061/(ASCE)0733-9399(2007)133:7(816),
-        816-832. `link <http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399
-        %282007%29133:7%28816%29>`__
+    .. [Sunnåker2013]  Sunnåker M, Busetto AG, Numminen E, Corander J, Foll M, Dessimoz C (2013) 
+        Approximate Bayesian Computation. 
+        PLoS Comput Biol 9(1): e1002803. 
+        https://doi.org/10.1371/journal.pcbi.1002803
     """
 
-    def __init__(self, n_steps=5, scaling=1., p_acc_rate=0.01, tune=True, sum_stat=['mean'],
+    def __init__(self, n_steps=50, scaling=1, p_acc_rate=0.01, tune=True, sum_stat=None,
                  min_epsilon=0.5, iqr_scale=1, distance_metric='absolute difference', epsilons=None,
                  proposal_name='MultivariateNormal', routine='iqr'):
 
@@ -89,6 +86,8 @@ class SMC_ABC():
         self.distance_metric = distance_metric
         self.epsilons = epsilons
         self.routine = routine
+        self.un_weights = None
+        self.acc_rate = None
 
 
 def sample_smc_abc(draws=5000, step=None, progressbar=False,
@@ -126,6 +125,11 @@ def sample_smc_abc(draws=5000, step=None, progressbar=False,
     prior_logp = theano.function(variables, model.varlogpt)
     simulator = model.observed_RVs[0]
     function = simulator.distribution.function
+
+    if not step.sum_stat:
+        raise ValueError(
+            'Please specify a summary statistic or a combination of them, such as ["mean"] or ["mean", "var"]')
+
     observed_sum_stat = get_sum_stats(
         simulator.observations,
         sum_stat=step.sum_stat)
@@ -147,7 +151,7 @@ def sample_smc_abc(draws=5000, step=None, progressbar=False,
             posterior = _initial_population(draws, model, variables)
             weights = np.ones(draws) / draws
         else:
-            weights = calc_weights(un_weights)
+            weights = calc_weights(step.un_weights)
 
         # resample based on plausibility weights (selection)
         resampling_indexes = np.random.choice(
@@ -166,11 +170,11 @@ def sample_smc_abc(draws=5000, step=None, progressbar=False,
         # compute scaling and number of Markov chains steps (optional), based on previous
         # acceptance rate
         if step.tune and stage > 0:
-            if acc_rate == 0:
-                acc_rate = 1. / step.n_steps
-            step.scaling = _tune(acc_rate)
+            if step.acc_rate == 0:
+                stepacc_rate = 1. / step.n_steps
+            step.scaling = _tune(step.acc_rate)
             step.n_steps = 1 + \
-                (np.ceil(np.log(step.p_acc_rate) / np.log(1 - acc_rate)).astype(int))
+                (np.ceil(np.log(step.p_acc_rate) / np.log(1 - step.acc_rate)).astype(int))
 
         # Apply Rejection kernel (mutation)
         proposed = 0.
@@ -250,8 +254,8 @@ def sample_smc_abc(draws=5000, step=None, progressbar=False,
             proposal_array = np.array(proposal_list)
             proposal_array = proposal_array[resampling_indexes]
             priors = np.array([prior_logp(*sample) for sample in posterior])
-            un_weights = priors - proposal_array
-            acc_rate = accepted / proposed
+            step.un_weights = priors - proposal_array
+            step.acc_rate = accepted / proposed
             stage += 1
         else:
             pm._log.info('Acceptance rate is 0')
@@ -356,7 +360,7 @@ def _posterior_to_trace(posterior, model):
     return MultiTrace([strace])
 
 
-def get_sum_stats(data, sum_stat=SMC_ABC().sum_stat):
+def get_sum_stats(data, sum_stat):
     """
     Parameters:
     -----------
