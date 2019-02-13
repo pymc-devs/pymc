@@ -422,7 +422,7 @@ class Mixture(Distribution):
         w_sample_size = []
         # Loop through the dist_shape to get the conditions 2 and 3 first
         for i in range(len(dist_shape)):
-            if dist_shape[i] != psh[i]:
+            if dist_shape[i] != psh[i] and wsh[i] == 1:
                 # self.shape[i] is a non singleton dimension (usually caused by
                 # observed data)
                 sh = dist_shape[i]
@@ -439,14 +439,14 @@ class Mixture(Distribution):
         # Semiflatten the mixture weights. The last axis is the number of
         # mixture mixture components, and the rest is all about size,
         # dist_shape and broadcasting
-        w = np.reshape(w, (-1, w.shape[-1]))
+        w_ = np.reshape(w, (-1, w.shape[-1]))
         w_samples = generate_samples(random_choice,
-                                     p=w,
+                                     p=w_,
                                      broadcast_shape=w.shape[:-1] or (1,),
                                      dist_shape=w.shape[:-1] or (1,),
-                                     size=np.prod(w_sample_size))
+                                     size=None) # w's shape already includes size
         # Now we broadcast the chosen components to the dist_shape
-        w_samples = np.reshape(w_samples, w_sample_size)
+        w_samples = np.reshape(w_samples, w.shape[:-1])
         if size is not None and dist_shape[:len(size)] != size:
             w_samples = np.broadcast_to(w_samples, size + dist_shape)
         else:
