@@ -709,6 +709,11 @@ def broadcast_distribution_samples(samples, size=None):
     _size = to_tuple(size)
     # Raw samples shapes
     p_shapes = [p.shape for p in samples]
+    if (
+        all(len(p_shape) == 0 for p_shape in p_shapes) or
+        all(p_shape == p_shapes[0] for p_shape in p_shapes)
+    ):
+        return np.broadcast_arrays(*samples)
     # samples shapes without the size prepend
     sp_shapes = [s[len(_size):] if _size == s[:len(_size)] else s
                  for s in p_shapes]
@@ -722,5 +727,7 @@ def broadcast_distribution_samples(samples, size=None):
         slicer_tail = ([np.newaxis] * (len(broadcast_shape) -
                                        len(sp_shape)) +
                        [slice(None)] * len(sp_shape))
+        print(slicer_head, slicer_tail, _size, broadcast_shape, sp_shape, tuple(slicer_head + slicer_tail), param.shape)
         broadcasted_samples.append(param[tuple(slicer_head + slicer_tail)])
+    print([b.shape for b in broadcasted_samples])
     return np.broadcast_arrays(*broadcasted_samples)
