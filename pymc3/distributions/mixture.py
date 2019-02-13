@@ -409,6 +409,49 @@ class Mixture(Distribution):
         else:
             dist_shape = param_shape[:-1]
 
+        # Try to determine the size that must be used to get the mixture
+        # components (i.e. get random choices using w).
+        # 1. There must be size independent choices based on w.
+        # 2. There must also be independent draws for each non singleton axis
+        # of w.
+        # 3. There must also be independent draws for each dimension added by
+        # self.shape with respect to the w.ndim. These usually correspond to
+        # observed variables with batch shapes
+        wsh = (1,) * (len(dist_shape) - len(w_shape) + 1) + w_shape[:-1]
+        psh = (1,) * (len(dist_shape) - len(param_shape) + 1) + param_shape[:-1]
+        w_sample_size = []
+        # Loop through the dist_shape to get the conditions 2 and 3 first
+        for i in range(len(dist_shape)):
+            if dist_shape[i] != psh[i]:
+                # self.shape[i] is a non singleton dimension (usually caused by
+                # observed data)
+                sh = dist_shape[i]
+            else:
+                sh = wsh[i]
+            w_sample_size.append(sh)
+        if size is not None and w_sample_size[:len(size)] != size:
+            w_sample_size = size + tuple(w_sample_size)
+        # Broadcast w to the w_sample_size (add a singleton last axis for the
+        # mixture components)
+        w = broadcast_distribution_samples([w, np.empty(w_sample_size + (1,))],
+                                           size=size)[0]
+
+        # Semiflatten the mixture weights. The last axis is the number of
+        # mixture mixture components, and the rest is all about size,
+        # dist_shape and broadcasting
+        w = np.reshape(w, (-1, w.shape[-1]))
+        w_samples = generate_samples(random_choice,
+                                     p=w,
+                                     broadcast_shape=w.shape[:-1] or (1,),
+                                     dist_shape=w.shape[:-1] or (1,),
+                                     size=np.prod(w_sample_size))
+        # Now we broadcast the chosen components to the dist_shape
+        w_samples = np.reshape(w_samples, w_sample_size)
+        if size is not None and dist_shape[:len(size)] != size:
+            w_samples = np.broadcast_to(w_samples, size + dist_shape)
+        else:
+            w_samples = np.broadcast_to(w_samples, dist_shape)
+
         # When size is not None, maybe dist_shape partially overlaps with size
         if size is not None:
             if size == dist_shape:
@@ -422,22 +465,6 @@ class Mixture(Distribution):
             _size = None
         else:
             _size = int(np.prod(size))
-
-        # Now we must broadcast w to the shape that considers size, dist_shape
-        # and param_shape. However, we must take care with the cases in which
-        # dist_shape and param_shape overlap
-        if size is not None and w.shape[:len(size)] == size:
-            if w.shape[:len(size + dist_shape)] != (size + dist_shape):
-                # To allow w to broadcast, we insert new axis in between the
-                # "size" axis and the "mixture" axis
-                _w = w[(slice(None),) * len(size) +  # Index the size axis
-                       (np.newaxis,) * len(dist_shape) +  # Add new axis for the dist_shape
-                       (slice(None),)]  # Close with the slice of mixture components
-                w = np.broadcast_to(_w, size + dist_shape + (param_shape[-1],))
-        elif size is not None:
-            w = np.broadcast_to(w, size + dist_shape + (param_shape[-1],))
-        else:
-            w = np.broadcast_to(w, dist_shape + (param_shape[-1],))
 
         # Compute the total size of the mixture's random call with size
         if _size is not None:
@@ -453,18 +480,6 @@ class Mixture(Distribution):
         if mixture_size == 1 and _size is None:
             mixture_size = None
 
-        # Semiflatten the mixture weights. The last axis is the number of
-        # mixture mixture components, and the rest is all about size,
-        # dist_shape and broadcasting
-        w = np.reshape(w, (-1, w.shape[-1]))
-        # Normalize mixture weights
-        w = w / w.sum(axis=-1, keepdims=True)
-
-        w_samples = generate_samples(random_choice,
-                                     p=w,
-                                     broadcast_shape=w.shape[:-1] or (1,),
-                                     dist_shape=w.shape[:-1] or (1,),
-                                     size=size)
         # Sample from the mixture
         with draw_context:
             mixed_samples = self._comp_samples(
