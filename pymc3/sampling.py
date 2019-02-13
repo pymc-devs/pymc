@@ -337,8 +337,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
                                random_seed=random_seed)
         
     elif isinstance(step, pm.step_methods.smc_ABC.SMC_ABC):
-        if step_kwargs is None:
-            step_kwargs = {}
         trace = smc_ABC.sample_smc_abc(draws=draws,
                                step=step,
                                progressbar=progressbar,

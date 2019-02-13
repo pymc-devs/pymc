@@ -162,7 +162,8 @@ def sample_smc_abc(draws=5000, step=None, progressbar=False,
             covariance = _calc_covariance(posterior, weights)
         except ValueError:
             pm._log.info('Could not compute covariance matrix')
-            break
+            raise ValueError('Could not compute covariance matrix')
+            
         proposal = step.proposal(covariance)
 
         distance_function = get_distance(step.distance_metric)
