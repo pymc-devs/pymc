@@ -1,7 +1,6 @@
-import theano
 import theano.tensor as tt
 import numpy as np
-from .distribution import NoDistribution, Distribution
+from .distribution import NoDistribution
 
 __all__ = ['Simulator']
 
