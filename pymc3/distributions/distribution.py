@@ -704,16 +704,51 @@ def generate_samples(generator, *args, **kwargs):
 
 
 def broadcast_distribution_samples(samples, size=None):
+    """Broadcast samples drawn from distributions taking into account the
+    size (i.e. the number of samples) of the draw, which is prepended to
+    the sample's shape.
+
+    Parameters
+    ----------
+    samples: Iterable of ndarrays holding the sampled values
+    size: None, int or tuple (optional)
+        size of the sample set requested.
+
+    Returns
+    -------
+    List of broadcasted sample arrays
+
+    Examples
+    --------
+    .. code-block:: python
+        size = 100
+        sample0 = np.random.randn(size)
+        sample1 = np.random.randn(size, 5)
+        sample2 = np.random.randn(size, 4, 5)
+        out = broadcast_distribution_samples([sample0, sample1, sample2],
+                                             size=size)
+        assert all((o.shape == (size, 4, 5) for o in out))
+        assert np.all(sample0[:, None, None] == out[0])
+        assert np.all(sample1[:, None, :] == out[1])
+        assert np.all(sample2 == out[2])
+
+    .. code-block:: python
+        size = 100
+        sample0 = np.random.randn(size)
+        sample1 = np.random.randn(5)
+        sample2 = np.random.randn(4, 5)
+        out = broadcast_distribution_samples([sample0, sample1, sample2],
+                                             size=size)
+        assert all((o.shape == (size, 4, 5) for o in out))
+        assert np.all(sample0[:, None, None] == out[0])
+        assert np.all(sample1 == out[1])
+        assert np.all(sample2 == out[2])
+    """
     if size is None:
         return np.broadcast_arrays(*samples)
     _size = to_tuple(size)
     # Raw samples shapes
     p_shapes = [p.shape for p in samples]
-    if (
-        all(len(p_shape) == 0 for p_shape in p_shapes) or
-        all(p_shape == p_shapes[0] for p_shape in p_shapes)
-    ):
-        return np.broadcast_arrays(*samples)
     # samples shapes without the size prepend
     sp_shapes = [s[len(_size):] if _size == s[:len(_size)] else s
                  for s in p_shapes]
@@ -721,13 +756,16 @@ def broadcast_distribution_samples(samples, size=None):
     broadcasted_samples = []
     for param, p_shape, sp_shape in zip(samples, p_shapes, sp_shapes):
         if _size == p_shape[:len(_size)]:
+            # If size prepends the shape, then we have to add broadcasting axis
+            # in the middle
             slicer_head = [slice(None)] * len(_size)
+            slicer_tail = ([np.newaxis] * (len(broadcast_shape) -
+                                           len(sp_shape)) +
+                           [slice(None)] * len(sp_shape))
         else:
-            slicer_head = [np.newaxis] * len(_size)
-        slicer_tail = ([np.newaxis] * (len(broadcast_shape) -
-                                       len(sp_shape)) +
-                       [slice(None)] * len(sp_shape))
-        print(slicer_head, slicer_tail, _size, broadcast_shape, sp_shape, tuple(slicer_head + slicer_tail), param.shape)
+            # If size does not prepend the shape, then we have leave the
+            # parameter as is
+            slicer_head = []
+            slicer_tail = [slice(None)] * len(sp_shape)
         broadcasted_samples.append(param[tuple(slicer_head + slicer_tail)])
-    print([b.shape for b in broadcasted_samples])
     return np.broadcast_arrays(*broadcasted_samples)
