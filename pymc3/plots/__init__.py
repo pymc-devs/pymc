@@ -42,6 +42,7 @@ def map_args(func):
             return func(*args, **kwargs)
     return wrapped
 
+# pymc3 custom plots: override these names for custom behavior
 autocorrplot = map_args(az.plot_autocorr)
 compareplot = map_args(az.plot_compare)
 forestplot = map_args(az.plot_forest)
@@ -55,6 +56,7 @@ pairplot = map_args(az.plot_pair)
 from .posteriorplot import plot_posterior_predictive_glm
 
 
+# Access to arviz plots: base plots provided by arviz
 for plot in az.plots.__all__:
     setattr(sys.modules[__name__], plot, map_args(getattr(az.plots, plot)))
 
