@@ -21,6 +21,7 @@
 - Restructured `Mixture.random` to allow better use of vectorized calls to `comp_dists.random`.
 - Added tests for mixtures of multidimensional distributions to the test suite.
 - Fixed incorrect usage of `broadcast_distribution_samples` in `DiscreteWeibull`.
+- `Mixture`'s default dtype is now determined by `theano.config.floatX`.
 
 ### Deprecations
 

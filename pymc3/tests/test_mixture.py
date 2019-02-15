@@ -10,6 +10,7 @@ import scipy.stats as st
 from scipy.special import logsumexp
 from pymc3.theanof import floatX
 import theano
+from theano import tensor as tt
 from pymc3.distributions.distribution import to_tuple
 
 # Generate data
@@ -382,3 +383,114 @@ class TestMixture(SeededTest):
         assert prior['x_obs'].shape == (n_samples,) + X.shape
         assert prior['mu0'].shape == (n_samples, D)
         assert prior['chol_cov_0'].shape == (n_samples, D * (D + 1) // 2)
+
+
+class TestMixtureVsLatent(SeededTest):
+    def setup_method(self, *args, **kwargs):
+        super().setup_method(*args, **kwargs)
+        self.nd = 3
+        self.npop = 3
+        self.mus = tt.as_tensor_variable(
+            np.tile(
+                np.reshape(
+                    np.arange(self.npop),
+                    (1, -1,)
+                ),
+                (self.nd, 1,)
+            )
+        )
+
+    def test_1d_w(self):
+        nd = self.nd
+        npop = self.npop
+        mus = self.mus
+        size = 100
+        with pm.Model() as model:
+            m = pm.NormalMixture('m',
+                                 w=np.ones(npop) / npop,
+                                 mu=mus,
+                                 sigma=1e-5,
+                                 comp_shape=(nd, npop),
+                                 shape=nd)
+            z = pm.Categorical('z', p=np.ones(npop) / npop)
+            latent_m = pm.Normal('latent_m',
+                                 mu=mus[..., z],
+                                 sigma=1e-5,
+                                 shape=nd)
+
+        m_val = m.random(size=size)
+        latent_m_val = latent_m.random(size=size)
+        assert m_val.shape == latent_m_val.shape
+        # Test that each element in axis = -1 comes from the same mixture
+        # component
+        assert all(np.all(np.diff(m_val) < 1e-3, axis=-1))
+        assert all(np.all(np.diff(latent_m_val) < 1e-3, axis=-1))
+
+        self.samples_from_same_distribution(m_val, latent_m_val)
+        self.logp_matches(m, latent_m, z, npop, model=model)
+
+    def test_2d_w(self):
+        nd = self.nd
+        npop = self.npop
+        mus = self.mus
+        size = 100
+        with pm.Model() as model:
+            m = pm.NormalMixture('m',
+                                 w=np.ones((nd, npop)) / npop,
+                                 mu=mus,
+                                 sigma=1e-5,
+                                 comp_shape=(nd, npop),
+                                 shape=nd)
+            z = pm.Categorical('z', p=np.ones(npop) / npop, shape=nd)
+            mu = tt.as_tensor_variable([mus[i, z[i]] for i in range(nd)])
+            latent_m = pm.Normal('latent_m',
+                                 mu=mu,
+                                 sigma=1e-5,
+                                 shape=nd)
+
+        m_val = m.random(size=size)
+        latent_m_val = latent_m.random(size=size)
+        assert m_val.shape == latent_m_val.shape
+        # Test that each element in axis = -1 can come from independent
+        # components
+        assert not all(np.all(np.diff(m_val) < 1e-3, axis=-1))
+        assert not all(np.all(np.diff(latent_m_val) < 1e-3, axis=-1))
+
+        self.samples_from_same_distribution(m_val, latent_m_val)
+        self.logp_matches(m, latent_m, z, npop, model=model)
+
+    def samples_from_same_distribution(self, *args):
+        # Test if flattened samples distributions match (marginals match)
+        _, p_marginal = st.ks_2samp(*[s.flatten() for s in args])
+        # Test if correlations within non independent draws match
+        _, p_correlation = st.ks_2samp(
+            *[np.array([np.corrcoef(ss) for ss in s]).flatten()
+              for s in args]
+        )
+        assert p_marginal >= 0.05 and p_correlation >= 0.05
+
+    def logp_matches(self, mixture, latent_mix, z, npop, model):
+        if theano.config.floatX == 'float32':
+            rtol = 1e-4
+        else:
+            rtol = 1e-7
+        test_point = model.test_point
+        test_point['latent_m'] = test_point['m']
+        mix_logp = mixture.logp(test_point)
+        logps = []
+        for component in range(npop):
+            test_point['z'] = component * np.ones(z.distribution.shape)
+            # Count the number of axes that should be broadcasted from z to
+            # modify the logp
+            sh1 = test_point['z'].shape
+            sh2 = test_point['latent_m'].shape
+            if len(sh1) > len(sh2):
+                sh2 = (1,) * (len(sh1) - len(sh2)) + sh2
+            elif len(sh2) > len(sh1):
+                sh1 = (1,) * (len(sh2) - len(sh1)) + sh1
+            reps = np.prod([s2 if s1 != s2 else 1 for s1, s2 in
+                            zip(sh1, sh2)])
+            z_logp = z.logp(test_point) * reps
+            logps.append(z_logp + latent_mix.logp(test_point))
+        latent_mix_logp = logsumexp(np.array(logps), axis=0)
+        assert_allclose(mix_logp, latent_mix_logp, rtol=rtol)
