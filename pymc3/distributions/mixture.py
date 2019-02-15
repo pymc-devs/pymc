@@ -46,13 +46,13 @@ class Mixture(Distribution):
         or iterable of PyMC3 distributions the component distributions
         :math:`f_1, \ldots, f_n`
 
-    Example
-    -------
+    Examples
+    --------
     .. code-block:: python
 
         # 2-Mixture Poisson distribution
         with pm.Model() as model:
-            lam = pm.Exponential('lam', lam=1, shape=(2,))  # `shape=(2,)` indicates two mixtures.
+            lam = pm.Exponential('lam', lam=1, shape=(2,))  # `shape=(2,)` indicates two mixture components.
 
             # As we just need the logp, rather than add a RV to the model, we need to call .dist()
             components = pm.Poisson.dist(mu=lam, shape=(2,))
@@ -72,6 +72,30 @@ class Mixture(Distribution):
             w = pm.Dirichlet('w', a=np.array([1, 1]))
 
             like = pm.Mixture('like', w=w, comp_dists = [pois1, pois2], observed=data)
+
+        # npop-Mixture of multidimensional Gaussian
+        npop = 5
+        nd = (3, 4)
+        with pm.Model() as model:
+            mu = pm.Normal('mu', mu=np.arange(npop), sigma=1, shape=npop) # Each component has an independent mean
+
+            w = pm.Dirichlet('w', a=np.ones(npop))
+
+            components = pm.Normal.dist(mu=mu, sigma=1, shape=nd + (npop,))  # nd + (npop,) shaped multinomial
+
+            like = pm.Mixture('like', w=w, comp_dists = components, observed=data, shape=nd)  # The resulting mixture is nd-shaped
+
+        # Multidimensional Mixture as stacked independent mixtures
+        with pm.Model() as model:
+            mu = pm.Normal('mu', mu=np.arange(5), sigma=1, shape=5) # Each component has an independent mean
+
+            w = pm.Dirichlet('w', a=np.ones(3, 5))  # w is a stack of 3 independent 5 component weight arrays
+
+            components = pm.Normal.dist(mu=mu, sigma=1, shape=(3, 5))
+
+            # The mixture is an array of 3 elements.
+            # Each can be thought of as an independent scalar mixture of 5 components
+            like = pm.Mixture('like', w=w, comp_dists = components, observed=data, shape=3)
     """
 
     def __init__(self, w, comp_dists, *args, **kwargs):
