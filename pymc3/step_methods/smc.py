@@ -65,7 +65,7 @@ class SMC:
         is the prior).
      3. Increase \beta in order to make the effective sample size equals some predefined value
         (we use N*t, where t is 0.5 by default).
-     4. Compute a set of N impotance weights W. The weights are computed as the ratio of the
+     4. Compute a set of N importance weights W. The weights are computed as the ratio of the
         likelihoods of a sample at stage i+1 and stage i.
      5. Obtain S_{w} by re-sampling according to W.
      6. Use W to compute the covariance for the proposal distribution.
