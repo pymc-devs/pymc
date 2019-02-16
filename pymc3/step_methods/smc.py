@@ -66,7 +66,7 @@ class SMC:
      3. Increase \beta in order to make the effective sample size equals some predefined value
         (we use N*t, where t is 0.5 by default).
      4. Compute a set of N impotance weights W. The weights are computed as the ratio of the
-        probabilities of a sample at stage i+1 and stage i.
+        likelihoods of a sample at stage i+1 and stage i.
      5. Obtain S_{w} by re-sampling according to W.
      6. Use W to compute the covariance for the proposal distribution.
      7. For stages other than 0 use the acceptance rate from the previous stage to estimate the
