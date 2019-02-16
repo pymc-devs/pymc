@@ -347,12 +347,12 @@ class DiscreteWeibull(Discrete):
 
     def _random(self, q, beta, size=None):
         p = np.random.uniform(size=size)
-        p, q, beta = broadcast_distribution_samples([p, q, beta], size=size)
 
         return np.ceil(np.power(np.log(1 - p) / np.log(q), 1. / beta)) - 1
 
     def random(self, point=None, size=None):
         q, beta = draw_values([self.q, self.beta], point=point, size=size)
+        q, beta = broadcast_distribution_samples([q, beta], size=size)
 
         return generate_samples(self._random, q, beta,
                                 dist_shape=self.shape,

@@ -4,6 +4,8 @@
 
 ### New features
 
+- `Mixture` now supports mixtures of multidimensional probability distributions, not just lists of 1D distributions.
+
 ### Maintenance
 
 - All occurances of `sd` as a parameter name have been renamed to `sigma`. `sd` will continue to function for backwards compatibility.
@@ -13,6 +15,13 @@
 - Added a fix to allow the imputation of single missing values of observed data, which previously would fail (Fix issue #3122).
 - Fix for #3346. The `draw_values` function was too permissive with what could be grabbed from inside `point`, which lead to an error when sampling posterior predictives of variables that depended on shared variables that had changed their shape after `pm.sample()` had been called.
 - Fix for #3354. `draw_values` now adds the theano graph descendants of `TensorConstant` or `SharedVariables` to the named relationship nodes stack, only if these descendants are `ObservedRV` or `MultiObservedRV` instances.
+- Fixed bug in broadcast_distrution_samples, which did not handle correctly cases in which some samples did not have the size tuple prepended.
+- Changed `MvNormal.random`'s usage of `tensordot` for Cholesky encoded covariances. This lead to wrong axis broadcasting and seemed to be the cause for issue #3343.
+- Fixed defect in `Mixture.random` when multidimensional mixtures were involved. The mixture component was not preserved across all the elements of the dimensions of the mixture. This meant that the correlations across elements within a given draw of the mixture were partly broken.
+- Restructured `Mixture.random` to allow better use of vectorized calls to `comp_dists.random`.
+- Added tests for mixtures of multidimensional distributions to the test suite.
+- Fixed incorrect usage of `broadcast_distribution_samples` in `DiscreteWeibull`.
+- `Mixture`'s default dtype is now determined by `theano.config.floatX`.
 
 ### Deprecations
 

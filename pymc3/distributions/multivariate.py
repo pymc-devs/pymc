@@ -267,7 +267,7 @@ class MvNormal(_QuadFormBase):
             else:
                 std_norm_shape = mu.shape
             standard_normal = np.random.standard_normal(std_norm_shape)
-            return mu + np.tensordot(standard_normal, chol, axes=[[-1], [-1]])
+            return mu + np.einsum('...ij,...j->...i', chol, standard_normal)
         else:
             mu, tau = draw_values([self.mu, self.tau], point=point, size=size)
             if mu.shape[-1] != tau[0].shape[-1]:

@@ -254,7 +254,7 @@ class _DrawValuesContextBlocker(_DrawValuesContext, metaclass=InitContextMeta):
     """
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
-        instance = super(_DrawValuesContextBlocker, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance._parent = None
         return instance
 
@@ -599,6 +599,9 @@ def generate_samples(generator, *args, **kwargs):
         parameters. This may be required when the parameter shape
         does not determine the shape of a single sample, for example,
         the shape of the probabilities in the Categorical distribution.
+    not_broadcast_kwargs: dict or None
+        Key word argument dictionary to provide to the random generator, which
+        must not be broadcasted with the rest of the *args and **kwargs.
 
     Any remaining *args and **kwargs are passed on to the generator function.
     """
@@ -606,6 +609,9 @@ def generate_samples(generator, *args, **kwargs):
     one_d = _is_one_d(dist_shape)
     size = kwargs.pop('size', None)
     broadcast_shape = kwargs.pop('broadcast_shape', None)
+    not_broadcast_kwargs = kwargs.pop('not_broadcast_kwargs', None)
+    if not_broadcast_kwargs is None:
+        not_broadcast_kwargs = dict()
     if size is None:
         size = 1
 
@@ -625,6 +631,8 @@ def generate_samples(generator, *args, **kwargs):
             kwargs = {k: v.reshape(v.shape + (1,) * (max_dims - v.ndim)) for k, v in kwargs.items()}
             inputs = args + tuple(kwargs.values())
             broadcast_shape = np.broadcast(*inputs).shape  # size of generator(size=1)
+    # Update kwargs with the keyword arguments that were not broadcasted
+    kwargs.update(not_broadcast_kwargs)
 
     dist_shape = to_tuple(dist_shape)
     broadcast_shape = to_tuple(broadcast_shape)
@@ -639,20 +647,30 @@ def generate_samples(generator, *args, **kwargs):
             samples = generator(size=broadcast_shape, *args, **kwargs)
         elif dist_shape == broadcast_shape:
             samples = generator(size=size_tup + dist_shape, *args, **kwargs)
-        elif len(dist_shape) == 0 and size_tup and broadcast_shape[:len(size_tup)] == size_tup:
-            # Input's dist_shape is scalar, but it has size repetitions.
-            # So now the size matches but we have to manually broadcast to
-            # the right dist_shape
-            samples = [generator(*args, **kwargs)]
-            if samples[0].shape == broadcast_shape:
-                samples = samples[0]
+        elif len(dist_shape) == 0 and size_tup and broadcast_shape:
+            # There is no dist_shape (scalar distribution) but the parameters
+            # broadcast shape and size_tup determine the size to provide to
+            # the generator
+            if broadcast_shape[:len(size_tup)] == size_tup:
+                # Input's dist_shape is scalar, but it has size repetitions.
+                # So now the size matches but we have to manually broadcast to
+                # the right dist_shape
+                samples = [generator(*args, **kwargs)]
+                if samples[0].shape == broadcast_shape:
+                    samples = samples[0]
+                else:
+                    suffix = broadcast_shape[len(size_tup):] + dist_shape
+                    samples.extend([generator(*args, **kwargs).
+                                    reshape(broadcast_shape)[..., np.newaxis]
+                                    for _ in range(np.prod(suffix,
+                                                           dtype=int) - 1)])
+                    samples = np.hstack(samples).reshape(size_tup + suffix)
             else:
-                suffix = broadcast_shape[len(size_tup):] + dist_shape
-                samples.extend([generator(*args, **kwargs).
-                                reshape(broadcast_shape)[..., np.newaxis]
-                                for _ in range(np.prod(suffix,
-                                                       dtype=int) - 1)])
-                samples = np.hstack(samples).reshape(size_tup + suffix)
+                # The parameter shape is given, but we have to concatenate it
+                # with the size tuple
+                samples = generator(size=size_tup + broadcast_shape,
+                                    *args,
+                                    **kwargs)
         else:
             samples = None
     # Args have been broadcast correctly, can just ask for the right shape out
@@ -686,27 +704,68 @@ def generate_samples(generator, *args, **kwargs):
 
 
 def broadcast_distribution_samples(samples, size=None):
+    """Broadcast samples drawn from distributions taking into account the
+    size (i.e. the number of samples) of the draw, which is prepended to
+    the sample's shape.
+
+    Parameters
+    ----------
+    samples: Iterable of ndarrays holding the sampled values
+    size: None, int or tuple (optional)
+        size of the sample set requested.
+
+    Returns
+    -------
+    List of broadcasted sample arrays
+
+    Examples
+    --------
+    .. code-block:: python
+        size = 100
+        sample0 = np.random.randn(size)
+        sample1 = np.random.randn(size, 5)
+        sample2 = np.random.randn(size, 4, 5)
+        out = broadcast_distribution_samples([sample0, sample1, sample2],
+                                             size=size)
+        assert all((o.shape == (size, 4, 5) for o in out))
+        assert np.all(sample0[:, None, None] == out[0])
+        assert np.all(sample1[:, None, :] == out[1])
+        assert np.all(sample2 == out[2])
+
+    .. code-block:: python
+        size = 100
+        sample0 = np.random.randn(size)
+        sample1 = np.random.randn(5)
+        sample2 = np.random.randn(4, 5)
+        out = broadcast_distribution_samples([sample0, sample1, sample2],
+                                             size=size)
+        assert all((o.shape == (size, 4, 5) for o in out))
+        assert np.all(sample0[:, None, None] == out[0])
+        assert np.all(sample1 == out[1])
+        assert np.all(sample2 == out[2])
+    """
     if size is None:
         return np.broadcast_arrays(*samples)
     _size = to_tuple(size)
-    try:
-        broadcasted_samples = np.broadcast_arrays(*samples)
-    except ValueError:
-        # Raw samples shapes
-        p_shapes = [p.shape for p in samples]
-        # samples shapes without the size prepend
-        sp_shapes = [s[len(_size):] if _size == s[:len(_size)] else s
-                     for s in p_shapes]
-        broadcast_shape = np.broadcast(*[np.empty(s) for s in sp_shapes]).shape
-        broadcasted_samples = []
-        for param, p_shape, sp_shape in zip(samples, p_shapes, sp_shapes):
-            if _size == p_shape[:len(_size)]:
-                slicer_head = [slice(None)] * len(_size)
-            else:
-                slicer_head = [np.newaxis] * len(_size)
+    # Raw samples shapes
+    p_shapes = [p.shape for p in samples]
+    # samples shapes without the size prepend
+    sp_shapes = [s[len(_size):] if _size == s[:len(_size)] else s
+                 for s in p_shapes]
+    broadcast_shape = np.broadcast(*[np.empty(s) for s in sp_shapes]).shape
+    broadcasted_samples = []
+    for param, p_shape, sp_shape in zip(samples, p_shapes, sp_shapes):
+        if _size == p_shape[:len(_size)]:
+            # If size prepends the shape, then we have to add broadcasting axis
+            # in the middle
+            slicer_head = [slice(None)] * len(_size)
             slicer_tail = ([np.newaxis] * (len(broadcast_shape) -
                                            len(sp_shape)) +
                            [slice(None)] * len(sp_shape))
-            broadcasted_samples.append(param[tuple(slicer_head + slicer_tail)])
-        broadcasted_samples = np.broadcast_arrays(*broadcasted_samples)
-    return broadcasted_samples
+        else:
+            # If size does not prepend the shape, then we have leave the
+            # parameter as is
+            slicer_head = []
+            slicer_tail = [slice(None)] * len(sp_shape)
+        broadcasted_samples.append(param[tuple(slicer_head + slicer_tail)])
+    return np.broadcast_arrays(*broadcasted_samples)
