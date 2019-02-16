@@ -61,12 +61,12 @@ class SMC:
     A summary of the algorithm is:
 
      1. Initialize \beta at zero and stage at zero.
-     2. Generate N samples S_{\beta} from the tempered posterior (because \beta = 0 this is the
-        prior).
+     2. Generate N samples S_{\beta} from the prior (because when \beta = 0 the tempered posterior
+        is the prior).
      3. Increase \beta in order to make the effective sample size equals some predefined value
         (we use N*t, where t is 0.5 by default).
-     4. Compute a set of N weights W. The weights are computed according to the new
-        tempered posterior.
+     4. Compute a set of N impotance weights W. The weights are computed as the ratio of the
+        probabilities of a sample at stage i+1 and stage i.
      5. Obtain S_{w} by re-sampling according to W.
      6. Use W to compute the covariance for the proposal distribution.
      7. For stages other than 0 use the acceptance rate from the previous stage to estimate the
