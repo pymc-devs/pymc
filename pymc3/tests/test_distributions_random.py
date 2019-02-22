@@ -443,6 +443,7 @@ class TestCategorical(BaseTestCases.BaseTestCase):
         """Check that if a 2d array of probabilities are passed to categorical correct shape is returned"""
         p = np.ones((10, 5))
         assert pm.Categorical.dist(p=p).random().shape == (10,)
+        assert pm.Categorical.dist(p=p).random(size=4).shape == (4, 10)
 
 
 class TestScalarParameterSamples(SeededTest):
