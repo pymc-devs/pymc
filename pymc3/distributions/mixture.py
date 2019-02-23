@@ -464,11 +464,8 @@ class Mixture(Distribution):
         # mixture mixture components, and the rest is all about size,
         # dist_shape and broadcasting
         w_ = np.reshape(w, (-1, w.shape[-1]))
-        w_samples = generate_samples(random_choice,
-                                     p=w_,
-                                     broadcast_shape=w.shape[:-1] or (1,),
-                                     dist_shape=w.shape[:-1] or (1,),
-                                     size=None) # w's shape already includes size
+        w_samples = random_choice(p=w_,
+                                  size=None)  # w's shape already includes size
         # Now we broadcast the chosen components to the dist_shape
         w_samples = np.reshape(w_samples, w.shape[:-1])
         if size is not None and dist_shape[:len(size)] != size:
