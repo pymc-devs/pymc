@@ -10,6 +10,7 @@ from ..model import (
     ObservedRV, MultiObservedRV, Context, InitContextMeta
 )
 from ..vartypes import string_types
+from .dist_math import to_tuple
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
            'NoDistribution', 'TensorType', 'draw_values', 'generate_samples']
@@ -552,17 +553,6 @@ def _draw_value(param, point=None, givens=None, size=None):
                 output = func(*input_vals)
             return output
     raise ValueError('Unexpected type in draw_value: %s' % type(param))
-
-
-def to_tuple(shape):
-    """Convert ints, arrays, and Nones to tuples"""
-    if shape is None:
-        return tuple()
-    temp = np.atleast_1d(shape)
-    if temp.size == 0:
-        return tuple()
-    else:
-        return tuple(temp)
 
 def _is_one_d(dist_shape):
     if hasattr(dist_shape, 'dshape') and dist_shape.dshape in ((), (0,), (1,)):
