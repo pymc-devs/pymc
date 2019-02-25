@@ -346,8 +346,10 @@ def invlogit(x, eps=sys.float_info.epsilon):
 
 def orderedlogistic_logpdf(value, eta, cutpoints):
     c = np.concatenate(([-np.inf], cutpoints, [np.inf]))
-    p = invlogit(eta - c[value]) - invlogit(eta - c[value + 1])
-    return np.log(p)
+    ps = np.array([invlogit(eta - cc) - invlogit(eta - cc1)
+                   for cc, cc1 in zip(c[:-1], c[1:])])
+    p = ps[value]
+    return np.where(np.all(ps > 0), np.log(p), -np.inf)
 
 class Simplex:
     def __init__(self, n):
