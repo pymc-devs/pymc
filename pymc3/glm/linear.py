@@ -155,6 +155,10 @@ class GLM(LinearComponent):
                      vars=None, family='normal', name='',
                      model=None, offset=0., eval_env=0):
         """
+        Creates GLM from formula.
+
+        Parameters
+        ----------
         formula : str - a `patsy` formula
         data : a dict-like object that can be used to look up variables referenced
             in `formula`
