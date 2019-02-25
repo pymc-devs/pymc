@@ -444,6 +444,9 @@ class TestCategorical(BaseTestCases.BaseTestCase):
         p = np.ones((10, 5))
         assert pm.Categorical.dist(p=p).random().shape == (10,)
         assert pm.Categorical.dist(p=p).random(size=4).shape == (4, 10)
+        p = np.ones((3, 7, 5))
+        assert pm.Categorical.dist(p=p).random().shape == (3, 7)
+        assert pm.Categorical.dist(p=p).random(size=4).shape == (4, 3, 7)
 
 
 class TestScalarParameterSamples(SeededTest):

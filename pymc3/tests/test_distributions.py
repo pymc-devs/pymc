@@ -321,7 +321,7 @@ def dirichlet_logpdf(value, a):
 
 def categorical_logpdf(value, p):
     if value >= 0 and value <= len(p):
-        return floatX(np.log(p[value]))
+        return floatX(np.log((p.T)[value]).T)
     else:
         return -inf
 
@@ -1077,6 +1077,22 @@ class TestMatchesScipy(SeededTest):
         with Model():
             x = Categorical('x', p=np.array([0.2, 0.3, 0.5]))
             assert np.isinf(x.logp({'x': -1}))
+            assert np.isinf(x.logp({'x': 3}))
+
+    def test_categorical_valid_p(self):
+        with Model():
+            x = Categorical('x', p=np.array([-0.2, 0.3, 0.5]))
+            assert np.isinf(x.logp({'x': 0}))
+            assert np.isinf(x.logp({'x': 1}))
+        with Model():
+            # Hard edge case from #2082
+            # Early automatic normalization of p's sum would hide the negative
+            # entries if there is a single or pair number of negative values
+            # and the rest are zero
+            x = Categorical('x', p=np.array([-1, -1, 0, 0]))
+            assert np.isinf(x.logp({'x': 0}))
+            assert np.isinf(x.logp({'x': 1}))
+            assert np.isinf(x.logp({'x': 2}))
             assert np.isinf(x.logp({'x': 3}))
 
     @pytest.mark.parametrize('n', [2, 3, 4])
