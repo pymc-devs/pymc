@@ -751,8 +751,7 @@ class Categorical(Discrete):
             sumto1 = True
 
         if p.ndim > 1:
-            # Fancy trick to index the last axis without touching the other
-            a = tt.log((p.T)[value_clip].T)
+            a = tt.log(np.moveaxis(p, -1, 0)[value_clip])
         else:
             a = tt.log(p[value_clip])
 

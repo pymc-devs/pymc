@@ -321,7 +321,7 @@ def dirichlet_logpdf(value, a):
 
 def categorical_logpdf(value, p):
     if value >= 0 and value <= len(p):
-        return floatX(np.log((p.T)[value]).T)
+        return floatX(np.log(np.moveaxis(p, -1, 0)[value]))
     else:
         return -inf
 
@@ -1086,6 +1086,13 @@ class TestMatchesScipy(SeededTest):
             x = Categorical('x', p=np.array([-0.2, 0.3, 0.5]))
             assert np.isinf(x.logp({'x': 0}))
             assert np.isinf(x.logp({'x': 1}))
+            assert np.isinf(x.logp({'x': 2}))
+        with Model():
+            # A model where p sums to 1 but contains negative values
+            x = Categorical('x', p=np.array([-0.2, 0.7, 0.5]))
+            assert np.isinf(x.logp({'x': 0}))
+            assert np.isinf(x.logp({'x': 1}))
+            assert np.isinf(x.logp({'x': 2}))
         with Model():
             # Hard edge case from #2082
             # Early automatic normalization of p's sum would hide the negative
