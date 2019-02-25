@@ -5,6 +5,7 @@
 ### New features
 
 - `Mixture` now supports mixtures of multidimensional probability distributions, not just lists of 1D distributions.
+- `GLM.from_formula` and `LinearComponent.from_formula` can extract variables from the calling scope. Customizable via the new `eval_env` argument. Fixing #3382.
 
 ### Maintenance
 
@@ -506,4 +507,3 @@ Thus, Thomas, Chris and I are pleased to announce that PyMC3 is now in Beta.
 * maahnman <github@mm.maahn.de>
 * paul sorenson <paul@metrak.com>
 * zenourn <daniel@zeno.co.nz>
-
