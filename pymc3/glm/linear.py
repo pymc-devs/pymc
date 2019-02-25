@@ -85,6 +85,18 @@ class LinearComponent(Model):
     @classmethod
     def from_formula(cls, formula, data, priors=None, vars=None,
                      name='', model=None, offset=0., eval_env=0):
+        """Creates linear component from `patsy` formula.
+
+        Parameters
+        ----------
+        formula : str - a patsy formula
+        data : a dict-like object that can be used to look up variables referenced
+            in `formula`
+        eval_env : either a `patsy.EvalEnvironment` or else a depth represented as
+            an integer which will be passed to `patsy.EvalEnvironment.capture()`.
+            See `patsy.dmatrix` and `patsy.EvalEnvironment` for details.
+        Other arguments are documented in the constructor.
+        """
         import patsy
         eval_env = patsy.EvalEnvironment.capture(eval_env, reference=1)
         y, x = patsy.dmatrices(formula, data, eval_env=eval_env)
@@ -142,6 +154,15 @@ class GLM(LinearComponent):
     def from_formula(cls, formula, data, priors=None,
                      vars=None, family='normal', name='',
                      model=None, offset=0., eval_env=0):
+        """
+        formula : str - a `patsy` formula
+        data : a dict-like object that can be used to look up variables referenced
+            in `formula`
+        eval_env : either a `patsy.EvalEnvironment` or else a depth represented as
+            an integer which will be passed to `patsy.EvalEnvironment.capture()`.
+            See `patsy.dmatrix` and `patsy.EvalEnvironment` for details.
+        Other arguments are documented in the constructor.
+        """
         import patsy
         eval_env = patsy.EvalEnvironment.capture(eval_env, reference=1)
         y, x = patsy.dmatrices(formula, data, eval_env=eval_env)
