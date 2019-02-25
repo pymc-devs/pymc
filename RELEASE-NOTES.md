@@ -22,6 +22,7 @@
 - Added tests for mixtures of multidimensional distributions to the test suite.
 - Fixed incorrect usage of `broadcast_distribution_samples` in `DiscreteWeibull`.
 - `Mixture`'s default dtype is now determined by `theano.config.floatX`.
+- `dist_math.random_choice` now handles nd-arrays of category probabilities, and also handles sizes that are not `None`. Also removed unused `k` kwarg from `dist_math.random_choice`.
 
 ### Deprecations
 
