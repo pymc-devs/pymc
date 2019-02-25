@@ -2,6 +2,7 @@ import numpy as np
 from numpy.testing import assert_equal
 
 from .helpers import SeededTest
+import pymc3
 from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
 from pymc3 import families, GLM, LinearComponent
 import pandas as pd
@@ -117,3 +118,15 @@ class TestGLM(SeededTest):
             )
         )
         assert_equal(model.y.observations, model_bool.y.observations)
+
+    def test_glm_formula_from_calling_scope(self):
+        """Formula can extract variables from the calling scope."""
+        z = pd.Series([10, 20, 30])
+        df = pd.DataFrame({"y": [0, 1, 0], "x": [1.0, 2.0, 3.0]})
+        GLM.from_formula("y ~ x + z", df, family=pymc3.glm.families.Binomial())
+
+    def test_linear_component_formula_from_calling_scope(self):
+        """Formula can extract variables from the calling scope."""
+        z = pd.Series([10, 20, 30])
+        df = pd.DataFrame({"y": [0, 1, 0], "x": [1.0, 2.0, 3.0]})
+        LinearComponent.from_formula("y ~ x + z", df)
