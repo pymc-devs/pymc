@@ -739,9 +739,7 @@ class Categorical(Discrete):
         # We must only check that the values sum to 1 if p comes from a
         # tensor variable, i.e. when p is a step_method proposal. In the other
         # cases we normalize ourselves
-        if not isinstance(p_, (numbers.Number,
-                               np.ndarray,
-                               tt.TensorConstant,
+        if not isinstance(p_, (tt.TensorConstant,
                                tt.sharedvar.SharedVariable)):
             sumto1 = theano.gradient.zero_grad(
                 tt.le(abs(tt.sum(p_, axis=-1) - 1), 1e-5))
@@ -751,7 +749,8 @@ class Categorical(Discrete):
             sumto1 = True
 
         if p.ndim > 1:
-            a = tt.log(np.moveaxis(p, -1, 0)[value_clip])
+            pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
+            a = tt.log(p.dimshuffle(pattern)[value_clip])
         else:
             a = tt.log(p[value_clip])
 
