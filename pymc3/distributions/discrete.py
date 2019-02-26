@@ -1,3 +1,4 @@
+import numbers
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -710,11 +711,17 @@ class Categorical(Discrete):
         except AttributeError:
             self.k = tt.shape(p)[-1]
         p = tt.as_tensor_variable(floatX(p))
-        self.p = (p.T / tt.sum(p, -1)).T
-        self.mode = tt.argmax(p)
+
+        # From #2082, it may be dangerous to automatically rescale p at this
+        # point without checking for positiveness
+        self.p = p
+        self.mode = tt.argmax(p, axis=-1)
+        if self.mode.ndim == 1:
+            self.mode = tt.squeeze(self.mode)
 
     def random(self, point=None, size=None):
         p, k = draw_values([self.p, self.k], point=point, size=size)
+        p = p / np.sum(p, axis=-1, keepdims=True)
 
         return generate_samples(random_choice,
                                 p=p,
@@ -723,21 +730,33 @@ class Categorical(Discrete):
                                 size=size)
 
     def logp(self, value):
-        p = self.p
+        p_ = self.p
         k = self.k
 
         # Clip values before using them for indexing
         value_clip = tt.clip(value, 0, k - 1)
 
-        sumto1 = theano.gradient.zero_grad(
-            tt.le(abs(tt.sum(p, axis=-1) - 1), 1e-5))
+        # We must only check that the values sum to 1 if p comes from a
+        # tensor variable, i.e. when p is a step_method proposal. In the other
+        # cases we normalize ourselves
+        if not isinstance(p_, (numbers.Number,
+                               np.ndarray,
+                               tt.TensorConstant,
+                               tt.sharedvar.SharedVariable)):
+            sumto1 = theano.gradient.zero_grad(
+                tt.le(abs(tt.sum(p_, axis=-1) - 1), 1e-5))
+            p = p_
+        else:
+            p = p_ / tt.sum(p_, axis=-1, keepdims=True)
+            sumto1 = True
 
         if p.ndim > 1:
-            a = tt.log(p[tt.arange(p.shape[0]), value_clip])
+            a = tt.log(np.moveaxis(p, -1, 0)[value_clip])
         else:
             a = tt.log(p[value_clip])
 
-        return bound(a, value >= 0, value <= (k - 1), sumto1)
+        return bound(a, value >= 0, value <= (k - 1), sumto1,
+                     tt.all(p_ > 0, axis=-1), tt.all(p <= 1, axis=-1))
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -1177,7 +1196,7 @@ class OrderedLogistic(Categorical):
             tt.zeros_like(tt.shape_padright(pa[:, 0])),
             pa,
             tt.ones_like(tt.shape_padright(pa[:, 0]))
-        ], axis=1)
+        ], axis=-1)
         p = p_cum[:, 1:] - p_cum[:, :-1]
 
         super().__init__(p=p, *args, **kwargs)

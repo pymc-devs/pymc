@@ -23,6 +23,9 @@
 - Fixed incorrect usage of `broadcast_distribution_samples` in `DiscreteWeibull`.
 - `Mixture`'s default dtype is now determined by `theano.config.floatX`.
 - `dist_math.random_choice` now handles nd-arrays of category probabilities, and also handles sizes that are not `None`. Also removed unused `k` kwarg from `dist_math.random_choice`.
+- Changed `Categorical.mode` to preserve all the dimensions of `p` except the last one, which encodes each category's probability.
+- Changed initialization of `Categorical.p`. `p` is now normalized to sum to `1` inside `logp` and `random`, but not during initialization. This could hide negative values supplied to `p` as mentioned in #2082.
+- To be able to test for negative `p` values supplied to `Categorical`, `Categorical.logp` was changed to check for `sum(self.p, axis=-1) == 1` only if `self.p` is not a `Number`, `np.ndarray`, `TensorConstant` or `SharedVariable`. These cases are automatically normalized to sum to `1`. The other condition may originate from a `step_method` proposal, where `self.p` tensor's value may be set, but must sum to 1 nevertheless. This may break old code which intialized `p` with a theano expression and relied on the default normalization to get it to sum to 1. `Categorical.logp` now also checks that the used `p` has values lower than 1.
 
 ### Deprecations
 
