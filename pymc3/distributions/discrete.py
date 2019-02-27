@@ -1,4 +1,3 @@
-import numbers
 import numpy as np
 import theano
 import theano.tensor as tt
