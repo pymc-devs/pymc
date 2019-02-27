@@ -84,9 +84,22 @@ class LinearComponent(Model):
 
     @classmethod
     def from_formula(cls, formula, data, priors=None, vars=None,
-                     name='', model=None, offset=0.):
+                     name='', model=None, offset=0., eval_env=0):
+        """Creates linear component from `patsy` formula.
+
+        Parameters
+        ----------
+        formula : str - a patsy formula
+        data : a dict-like object that can be used to look up variables referenced
+            in `formula`
+        eval_env : either a `patsy.EvalEnvironment` or else a depth represented as
+            an integer which will be passed to `patsy.EvalEnvironment.capture()`.
+            See `patsy.dmatrix` and `patsy.EvalEnvironment` for details.
+        Other arguments are documented in the constructor.
+        """
         import patsy
-        y, x = patsy.dmatrices(formula, data)
+        eval_env = patsy.EvalEnvironment.capture(eval_env, reference=1)
+        y, x = patsy.dmatrices(formula, data, eval_env=eval_env)
         labels = x.design_info.column_names
         return cls(np.asarray(x), np.asarray(y)[:, -1], intercept=False,
                    labels=labels, priors=priors, vars=vars, name=name,
@@ -140,9 +153,23 @@ class GLM(LinearComponent):
     @classmethod
     def from_formula(cls, formula, data, priors=None,
                      vars=None, family='normal', name='',
-                     model=None, offset=0.):
+                     model=None, offset=0., eval_env=0):
+        """
+        Creates GLM from formula.
+
+        Parameters
+        ----------
+        formula : str - a `patsy` formula
+        data : a dict-like object that can be used to look up variables referenced
+            in `formula`
+        eval_env : either a `patsy.EvalEnvironment` or else a depth represented as
+            an integer which will be passed to `patsy.EvalEnvironment.capture()`.
+            See `patsy.dmatrix` and `patsy.EvalEnvironment` for details.
+        Other arguments are documented in the constructor.
+        """
         import patsy
-        y, x = patsy.dmatrices(formula, data)
+        eval_env = patsy.EvalEnvironment.capture(eval_env, reference=1)
+        y, x = patsy.dmatrices(formula, data, eval_env=eval_env)
         labels = x.design_info.column_names
         return cls(np.asarray(x), np.asarray(y)[:, -1], intercept=False,
                    labels=labels, priors=priors, vars=vars, family=family,
