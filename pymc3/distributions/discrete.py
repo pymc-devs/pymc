@@ -1,5 +1,4 @@
 import numpy as np
-import theano
 import theano.tensor as tt
 from scipy import stats
 import warnings
@@ -744,7 +743,7 @@ class Categorical(Discrete):
             a = tt.log(p[value_clip])
 
         return bound(a, value >= 0, value <= (k - 1),
-                     tt.all(p_ > 0, axis=-1), tt.all(p <= 1, axis=-1))
+                     tt.all(p_ >= 0, axis=-1), tt.all(p <= 1, axis=-1))
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
