@@ -349,7 +349,7 @@ def orderedlogistic_logpdf(value, eta, cutpoints):
     ps = np.array([invlogit(eta - cc) - invlogit(eta - cc1)
                    for cc, cc1 in zip(c[:-1], c[1:])])
     p = ps[value]
-    return np.where(np.all(ps > 0), np.log(p), -np.inf)
+    return np.where(np.all(ps >= 0), np.log(p), -np.inf)
 
 class Simplex:
     def __init__(self, n):
