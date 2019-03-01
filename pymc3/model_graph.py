@@ -1,6 +1,7 @@
 import itertools
 
 from theano.gof.graph import ancestors
+from theano.compile import SharedVariable
 
 from .util import get_default_varnames
 import pymc3 as pm
@@ -101,6 +102,9 @@ class ModelGraph:
         if isinstance(v, pm.model.ObservedRV):
             attrs['style'] = 'filled'
 
+        if isinstance(v, SharedVariable):
+            attrs['style'] = 'filled'
+
         # Get name for node
         if hasattr(v, 'distribution'):
             distribution = v.distribution.__class__.__name__
@@ -126,7 +130,12 @@ class ModelGraph:
         for var_name in self.var_names:
             v = self.model[var_name]
             if hasattr(v, 'observations'):
-                shape = v.observations.shape
+                try:
+                    # To get shape of _observed_ data container `pm.Data`
+                    # (wrapper for theano.SharedVariable) we evaluate it.
+                    shape = tuple(v.observations.shape.eval())
+                except AttributeError:
+                    shape = v.observations.shape
             elif hasattr(v, 'dshape'):
                 shape = v.dshape
             else:

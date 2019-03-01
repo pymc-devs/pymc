@@ -12,7 +12,8 @@ __all__ = [
     'get_data',
     'GeneratorAdapter',
     'Minibatch',
-    'align_minibatches'
+    'align_minibatches',
+    'Data'
 ]
 
 
@@ -385,3 +386,61 @@ def align_minibatches(batches=None):
                 raise TypeError('{b} is not a Minibatch')
             for rng in Minibatch.RNG[id(b)]:
                 rng.seed()
+
+
+class Data():
+    """Data container class that wraps the theano SharedVariable class
+    and let the model be aware of its inputs and outputs.
+
+    Parameters
+    ----------
+    name : str
+        The name for this variable
+    value
+        A value to associate with this variable
+
+    Examples
+    --------
+
+    .. code:: ipython
+
+        >>> import pymc3 as pm
+        >>> import numpy as np
+        >>> # We generate 10 datasets
+        >>> true_mu = [np.random.randn() for _ in range(10)]
+        >>> observed_data = [mu + np.random.randn(20) for mu in true_mu]
+
+        >>> with pm.Model() as model:
+        ...     data = pm.Data('data', observed_data[0])
+        ...     mu = pm.Normal('mu', 0, 10)
+        ...     pm.Normal('y', mu=mu, sigma=1, observed=data)
+
+    .. code:: ipython
+
+        >>> # Generate one trace for each dataset
+        >>> traces = []
+        >>> for data_vals in observed_data:
+        ...     # Switch out the observed dataset
+        ...     data.set_value(data_vals)
+        ...     with model:
+        ...         traces.append(pm.sample())
+    """
+    def __new__(self, name, value):
+        # `pm.model.pandas_to_array` takes care of parameter `value` and
+        # transforms it to something digestible for pymc3
+        shared_object = theano.shared(pm.model.pandas_to_array(value), name)
+
+        # To draw the node for this variable in the graphviz Digraph we need
+        # its shape.
+        shared_object.dshape = tuple(shared_object.shape.eval())
+
+        # Add data container to the named variables of the model.
+        try:
+            model = pm.Model.get_context()
+        except TypeError:
+            raise TypeError("No model on context stack, which is needed to "
+                            "instantiate a data container. Add variable "
+                            "inside a 'with model:' block.")
+        model.add_random_variable(shared_object)
+
+        return shared_object
