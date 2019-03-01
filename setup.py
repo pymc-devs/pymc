@@ -62,6 +62,6 @@ if __name__ == "__main__":
           install_requires=install_reqs,
           extras_require={
               "plots": ["arviz"],
-          }
+          },
           tests_require=test_reqs,
           test_suite='nose.collector')
