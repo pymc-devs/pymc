@@ -27,7 +27,7 @@ def test_AR():
 
     # AR1 + constant
     with Model() as t:
-        y = AR('y', [0.3, phi], sigma=1, shape=len(data), constant=True)
+        y = AR('y', np.hstack((0.3, phi)), sigma=1, shape=len(data), constant=True)
         z = Normal('z', mu=0.3 + phi*data[:-1], sigma=1, shape=len(data)-1)
     ar_like = t['y'].logp({'z':data[1:], 'y': data})
     reg_like = t['z'].logp({'z':data[1:], 'y': data})

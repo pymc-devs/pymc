@@ -60,5 +60,8 @@ if __name__ == "__main__":
           include_package_data=True,
           classifiers=classifiers,
           install_requires=install_reqs,
+          extras_require={
+              "plots": ["arviz"],
+          },
           tests_require=test_reqs,
           test_suite='nose.collector')
