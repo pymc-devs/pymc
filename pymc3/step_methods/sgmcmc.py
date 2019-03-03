@@ -1,13 +1,11 @@
 from collections import OrderedDict
 import warnings
 
-from .arraystep import Competence, ArrayStepShared
-from ..vartypes import continuous_types
+from .arraystep import ArrayStepShared
 from ..model import modelcontext, inputvars
 import theano.tensor as tt
 from ..theanof import tt_rng, make_shared_replacements
 import theano
-import numpy as np
 
 __all__ = []
 
