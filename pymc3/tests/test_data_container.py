@@ -25,8 +25,9 @@ class TestShared(SeededTest):
             pp_trace0 = pm.sample_posterior_predictive(trace, 1000)
 
         x_pred = np.linspace(-3, 3, 200)
-        pp_trace1 = model.predict(trace, {'x_shared': x_pred}, samples=1000)
-        x_shared.set_value(x_pred)
+        pp_trace1 = pm.sample_posterior_predictive(trace, samples=1000,
+                                                   model=model,
+                                                   update={'x_shared': x_pred})
         prior_trace1 = pm.sample_prior_predictive(1000, model=model)
 
         assert prior_trace0['b'].shape == (1000,)
@@ -38,16 +39,17 @@ class TestShared(SeededTest):
         np.testing.assert_allclose(x_pred, pp_trace1['obs'].mean(axis=0),
                                    atol=1e-1)
 
-    def test_predict(self):
+    def test_sample_posterior_predictive_with_update(self):
         with pm.Model() as model:
             x = pm.Data('x', [1., 2., 3.])
             y = pm.Data('y', [1., 2., 3.])
             beta = pm.Normal('beta', 0, 10.)
             pm.Normal('obs', beta * x, np.sqrt(1e-2), observed=y)
-            trace = pm.sample(1000, init=None, tune=1000, chains=1)
+            trace = pm.sample(1000, tune=1000, chains=1)
         # Predict on new data.
         x_test = [5, 6, 9]
-        y_test = model.predict(trace, {'x': x_test})
+        y_test = pm.sample_posterior_predictive(trace, update={'x': x_test},
+                                                model=model)
 
         assert y_test['obs'].shape == (1000, 3)
         np.testing.assert_allclose(x_test, y_test['obs'].mean(axis=0),
@@ -63,7 +65,7 @@ class TestShared(SeededTest):
         # Predict on new data.
         new_x = [5, 6, 9]
         new_y = [5, 6, 9]
-        new_trace = model.refit({'x': new_x, 'y': new_y})
+        new_trace = pm.refit(update={'x': new_x, 'y': new_y}, model=model)
         pp_trace = pm.sample_posterior_predictive(new_trace, 1000, model=model)
 
         assert pp_trace['obs'].shape == (1000, 3)

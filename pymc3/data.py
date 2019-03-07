@@ -388,7 +388,7 @@ def align_minibatches(batches=None):
                 rng.seed()
 
 
-class Data():
+class Data:
     """Data container class that wraps the theano SharedVariable class
     and let the model be aware of its inputs and outputs.
 
