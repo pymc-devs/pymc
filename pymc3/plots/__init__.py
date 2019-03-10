@@ -44,7 +44,6 @@ def map_args(func):
 
 # pymc3 custom plots: override these names for custom behavior
 autocorrplot = map_args(az.plot_autocorr)
-compareplot = map_args(az.plot_compare)
 forestplot = map_args(az.plot_forest)
 kdeplot = map_args(az.plot_kde)
 plot_posterior = map_args(az.plot_posterior)
@@ -52,6 +51,38 @@ traceplot = map_args(az.plot_trace)
 energyplot = map_args(az.plot_energy)
 densityplot = map_args(az.plot_density)
 pairplot = map_args(az.plot_pair)
+
+# addition arg mapping for compare plot
+swaps = [
+    ('varnames', 'var_names')
+]
+@functools.wraps(az.plot_compare)
+def compareplot(*args, **kwargs):
+    args = list(args)
+    comp_df = args[0].copy()
+    if 'WAIC' in comp_df.columns:
+        comp_df = comp_df.rename(index=str,
+                                 columns={'WAIC': 'waic',
+                                          'pWAIC': 'p_waic',
+                                          'dWAIC': 'd_waic',
+                                          'SE': 'se',
+                                          'dSE': 'dse',
+                                          'var_warn': 'warning'})
+    elif 'LOO' in comp_df.columns:
+        comp_df = comp_df.rename(index=str,
+                                 columns={'LOO': 'loo',
+                                          'pLOO': 'p_loo',
+                                          'dLOO': 'd_loo',
+                                          'SE': 'se',
+                                          'dSE': 'dse',
+                                          'shape_warn': 'warning'})
+    args[0] = comp_df
+    args = tuple(args)
+    for (old, new) in swaps:
+        if old in kwargs and new not in kwargs:
+            warnings.warn('Keyword argument `{old}` renamed to `{new}`, and will be removed in pymc3 3.8'.format(old=old, new=new))
+            kwargs[new] = kwargs.pop(old)
+        return az.plot_compare(*args, **kwargs)
 
 from .posteriorplot import plot_posterior_predictive_glm
 
