@@ -1295,7 +1295,7 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
 
     if random_seed is not None:
         np.random.seed(random_seed)
-    names = get_default_varnames(model.named_vars, include_transformed=False)
+    names = get_default_varnames(vars, include_transformed=False)
     # draw_values fails with auto-transformed variables. transform them later!
     values = draw_values([model[name] for name in names], size=samples)
 

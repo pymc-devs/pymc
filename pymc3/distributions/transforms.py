@@ -151,6 +151,9 @@ class Log(ElemwiseTransform):
     def backward(self, x):
         return tt.exp(x)
 
+    def backward_val(self, x):
+        return np.exp(x)
+
     def forward(self, x):
         return tt.log(x)
 
@@ -208,10 +211,17 @@ class Interval(ElemwiseTransform):
     def __init__(self, a, b):
         self.a = tt.as_tensor_variable(a)
         self.b = tt.as_tensor_variable(b)
+        self.a_ = a.eval()
+        self.b_ = b.eval()
 
     def backward(self, x):
         a, b = self.a, self.b
         r = (b - a) * tt.nnet.sigmoid(x) + a
+        return r
+
+    def backward_val(self, x):
+        a, b = self.a_, self.b_
+        r = (b - a) * 1/(1+np.exp(-x)) + a  ## fix this
         return r
 
     def forward(self, x):
