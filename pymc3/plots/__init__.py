@@ -53,9 +53,6 @@ densityplot = map_args(az.plot_density)
 pairplot = map_args(az.plot_pair)
 
 # addition arg mapping for compare plot
-swaps = [
-    ('varnames', 'var_names')
-]
 @functools.wraps(az.plot_compare)
 def compareplot(*args, **kwargs):
     if 'comp_df' in kwargs:
@@ -83,11 +80,7 @@ def compareplot(*args, **kwargs):
         kwargs['comp_df'] = comp_df
     else:
         args[0] = comp_df
-    for (old, new) in swaps:
-        if old in kwargs and new not in kwargs:
-            warnings.warn('Keyword argument `{old}` renamed to `{new}`, and will be removed in pymc3 3.8'.format(old=old, new=new))
-            kwargs[new] = kwargs.pop(old)
-        return az.plot_compare(*args, **kwargs)
+    return az.plot_compare(*args, **kwargs)
 
 from .posteriorplot import plot_posterior_predictive_glm
 
