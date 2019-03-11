@@ -58,8 +58,11 @@ swaps = [
 ]
 @functools.wraps(az.plot_compare)
 def compareplot(*args, **kwargs):
-    args = list(args)
-    comp_df = args[0].copy()
+    if 'comp_df' in kwargs:
+        comp_df = kwargs['comp_df'].copy()
+    else:
+        args = list(args)
+        comp_df = args[0].copy()
     if 'WAIC' in comp_df.columns:
         comp_df = comp_df.rename(index=str,
                                  columns={'WAIC': 'waic',
@@ -76,8 +79,10 @@ def compareplot(*args, **kwargs):
                                           'SE': 'se',
                                           'dSE': 'dse',
                                           'shape_warn': 'warning'})
-    args[0] = comp_df
-    args = tuple(args)
+    if 'comp_df' in kwargs:
+        kwargs['comp_df'] = comp_df
+    else:
+        args[0] = comp_df
     for (old, new) in swaps:
         if old in kwargs and new not in kwargs:
             warnings.warn('Keyword argument `{old}` renamed to `{new}`, and will be removed in pymc3 3.8'.format(old=old, new=new))
