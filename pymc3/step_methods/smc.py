@@ -112,7 +112,7 @@ class SMC:
         self.tune_steps = tune_steps
         self.threshold = threshold
         self.parallel = parallel
-        self.ABC = ABC,
+        self.ABC = ABC
         self.epsilon = epsilon
 
 

@@ -217,7 +217,7 @@ class PseudoLikelihood:
         self.var_info = var_info
         self.kernel = self.gauss_kernel
 
-        if distance == 'euclidean':
+        if distance == 'absolute_error':
             self.dist_func = self.euclidean
         elif distance == 'sum_of_squared_distance':
             self.dist_func = self.euclidean
@@ -225,7 +225,6 @@ class PseudoLikelihood:
             raise ValueError('lala')
 
     def posterior_to_function(self, posterior):
-        
         model = self.model
         var_info = self.var_info
         parameters = {}  # OrderedDict???
@@ -244,11 +243,12 @@ class PseudoLikelihood:
         epsilon = self.epsilon
         return (-(value**2)/epsilon**2 + np.log(1 / (2 * np.pi * epsilon**2))) / 2.
 
-    def euclidean(self, a, b):
-        return np.sum(np.atleast_2d((a - b)**2)**0.5)
+    def absolute_error(self, a, b):
+        return np.mean(np.atleast_2d(np.abs(a - b)))
 
     def sum_of_squared_distance(a, b):
-        np.sum(np.atleast_2d((a - b)**2))
+        return np.mean(np.sum(np.atleast_2d((a - b)**2)))
+
 
     def __call__(self, posterior):
         """
