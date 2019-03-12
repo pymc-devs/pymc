@@ -204,7 +204,7 @@ def logp_forw(out_vars, vars, shared):
 class PseudoLikelihood:
     """
     """
-    def __init__(self, epsilon, observations, function, model, var_info, distance='euclidean'):
+    def __init__(self, epsilon, observations, function, model, var_info, distance='absolute_error'):
         """
         kernel : function
             a valid scipy.stats distribution. Defaults to `stats.norm`
@@ -216,13 +216,14 @@ class PseudoLikelihood:
         self.model = model
         self.var_info = var_info
         self.kernel = self.gauss_kernel
+        self.dist_func = distance
 
         if distance == 'absolute_error':
-            self.dist_func = self.euclidean
+            self.dist_func = self.absolute_error
         elif distance == 'sum_of_squared_distance':
-            self.dist_func = self.euclidean
+            self.dist_func = self.sum_of_squared_distance
         else:
-            raise ValueError('lala')
+            raise ValueError('Distance metric not understood')
 
     def posterior_to_function(self, posterior):
         model = self.model
