@@ -6,7 +6,6 @@ import warnings
 
 import numpy as np
 import theano.gradient as tg
-from theano.compile import SharedVariable
 
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
@@ -28,8 +27,7 @@ sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_posterior_predictive',
            'sample_posterior_predictive_w', 'init_nuts',
-           'sample_prior_predictive', 'sample_ppc', 'sample_ppc_w',
-           'refit']
+           'sample_prior_predictive', 'sample_ppc', 'sample_ppc_w']
 
 STEP_METHODS = (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                 BinaryGibbsMetropolis, Slice, CategoricalGibbsMetropolis)
@@ -1047,7 +1045,7 @@ def stop_tuning(step):
 
 
 def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size=None,
-                                random_seed=None, progressbar=True, update=None):
+                                random_seed=None, progressbar=True):
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -1071,10 +1069,6 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
-    update : dict
-        New values for the data containers. The keys of the dictionary are
-        the  variables names in the model and the values are the objects
-        with which to update.
 
     Returns
     -------
@@ -1104,19 +1098,6 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     if progressbar:
         indices = tqdm(indices, total=samples)
 
-    if update:
-        for variable_name, new_value in update.items():
-            if isinstance(model[variable_name], SharedVariable):
-                model[variable_name].set_value(
-                    pm.model.pandas_to_array(new_value))
-            else:
-                message = 'The variable `{}` must be defined as ' \
-                          '`pymc3.Data` in the model to allow updating. ' \
-                          'The current type is: ' \
-                          '{}.'.format(variable_name,
-                                       type(model[variable_name]))
-                raise TypeError(message)
-
     ppc_trace = defaultdict(list)
     try:
         for idx in indices:
@@ -1145,70 +1126,6 @@ def sample_ppc(*args, **kwargs):
     message = 'sample_ppc() is deprecated.  Please use sample_posterior_predictive()'
     warnings.warn(message, DeprecationWarning, stacklevel=2)
     return sample_posterior_predictive(*args, **kwargs)
-
-
-def refit(update, model=None, **kwargs):
-    """Refits the model using new data.
-
-    Parameters
-    ----------
-    update : dict
-        New values for the data containers. The keys of the dictionary are
-        the  variables names in the model and the values are the objects
-        with which to update.
-    model : Model (optional if in `with` context)
-        Model used to generate `trace`
-    **kwargs : keyword arguments
-        Extra keyword arguments are forwarded to pymc3.sample.
-
-    Returns
-    -------
-    trace : pymc3.backends.base.MultiTrace
-        Output of the function pymc3.sample() using new values for the
-        output data containers.
-        A `MultiTrace` object that contains the samples.
-
-    Examples
-    --------
-
-    .. code:: ipython
-
-        >>> import pymc3 as pm
-        >>> import numpy as np
-        >>> # We generate 10 datasets
-        >>> true_mu = [np.random.randn() for _ in range(10)]
-        >>> observed_data = [mu + np.random.randn(20) for mu in true_mu]
-
-        >>> with pm.Model() as model:
-        ...     data = pm.Data('data', observed_data[0])
-        ...     mu = pm.Normal('mu', 0, 10)
-        ...     pm.Normal('y', mu=mu, sigma=1, observed=data)
-
-    .. code:: ipython
-
-        >>> # Generate one trace for each dataset
-        >>> traces = []
-        >>> for data_vals in observed_data:
-        ...     new_trace = pm.refit(update={'data' : data_vals}, model=model)
-        ...     traces.append(new_trace)
-    """
-    model = modelcontext(model)
-
-    for variable_name, new_value in update.items():
-        if isinstance(model[variable_name], SharedVariable):
-            model[variable_name].set_value(pm.model.pandas_to_array(new_value))
-        else:
-            message = 'The variable `{}` must be defined as `pymc3.Data `' \
-                      'in the model to allow updating. The current type is: ' \
-                      '{}.'.format(variable_name, type(model[variable_name]))
-            raise TypeError(message)
-
-    try:
-        trace = pm.sample(model=model, **kwargs)
-    except ValueError:
-        raise ValueError('Shape mis-match between new data and original data.')
-
-    return trace
 
 
 def sample_posterior_predictive_w(traces, samples=None, models=None, weights=None,

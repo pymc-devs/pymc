@@ -10,6 +10,7 @@ import scipy.sparse as sps
 import theano.sparse as sparse
 from theano import theano, tensor as tt
 from theano.tensor.var import TensorVariable
+from theano.compile import SharedVariable
 
 from pymc3.theanof import set_theano_conf, floatX
 import pymc3 as pm
@@ -22,7 +23,7 @@ from .util import get_transformed_name
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
-    'Point', 'Deterministic', 'Potential'
+    'Point', 'Deterministic', 'Potential', 'set_data'
 ]
 
 FlatView = collections.namedtuple('FlatView', 'input, replacements, view')
@@ -920,6 +921,50 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
                                    accept_inplace=True,
                                    mode=mode, *args, **kwargs)
 
+    def set_data(self, new_data):
+        """Sets the value of one or more data container variables.
+
+        Parameters
+        ----------
+        new_data : dict
+            New values for the data containers. The keys of the dictionary are
+            the  variables names in the model and the values are the objects
+            with which to update.
+
+        Examples
+        --------
+
+        .. code:: ipython
+
+            >>> import pymc3 as pm
+            >>> with pm.Model() as model:
+            ...    x = pm.Data('x', [1., 2., 3.])
+            ...    y = pm.Data('y', [1., 2., 3.])
+            ...    beta = pm.Normal('beta', 0, 1)
+            ...    obs = pm.Normal('obs', x * beta, 1, observed=y)
+            ...    trace = pm.sample(1000, tune=1000)
+
+        Set the value of `x` to predict on new data.
+
+        .. code:: ipython
+            >>> pm.set_data(new_data={'x': [5,6,9]}, model=model)
+            >>> # Another way to do the same thing using the model context is:
+            >>> # model.set_data(new_data={'x': [5,6,9]})
+            >>> y_test = pm.sample_posterior_predictive(trace, model=model)
+            >>> y_test['obs'].mean(axis=0)
+            array([4.6088569 , 5.54128318, 8.32953844])
+        """
+        for variable_name, new_value in new_data.items():
+            if isinstance(self[variable_name], SharedVariable):
+                self[variable_name].set_value(pandas_to_array(new_value))
+            else:
+                message = 'The variable `{}` must be defined as `pymc3.' \
+                          'Data` inside the model to allow updating. The ' \
+                          'current type is: ' \
+                          '{}.'.format(variable_name,
+                                       type(self[variable_name]))
+                raise TypeError(message)
+
     def fn(self, outs, mode=None, *args, **kwargs):
         """Compiles a Theano function which returns the values of ``outs``
         and takes values of model vars as arguments.
@@ -1053,6 +1098,43 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
             $$'''.format('\\\\'.join(tex_vars))
 
     __latex__ = _repr_latex_
+
+
+def set_data(new_data, model=None):
+    """Sets the value of one or more data container variables.
+
+    Parameters
+    ----------
+    new_data : dict
+        New values for the data containers. The keys of the dictionary are
+        the  variables names in the model and the values are the objects
+        with which to update.
+
+    Examples
+    --------
+
+    .. code:: ipython
+
+        >>> import pymc3 as pm
+        >>> with pm.Model() as model:
+        ...    x = pm.Data('x', [1., 2., 3.])
+        ...    y = pm.Data('y', [1., 2., 3.])
+        ...    beta = pm.Normal('beta', 0, 1)
+        ...    obs = pm.Normal('obs', x * beta, 1, observed=y)
+        ...    trace = pm.sample(1000, tune=1000)
+
+    Set the value of `x` to predict on new data.
+
+    .. code:: ipython
+        >>> pm.set_data(new_data={'x': [5,6,9]}, model=model)
+        >>> # Another way to do the same thing using the model context is:
+        >>> # model.set_data(new_data={'x': [5,6,9]})
+        >>> y_test = pm.sample_posterior_predictive(trace, model=model)
+        >>> y_test['obs'].mean(axis=0)
+        array([4.6088569 , 5.54128318, 8.32953844])
+    """
+    model = modelcontext(model)
+    model.set_data(new_data)
 
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
