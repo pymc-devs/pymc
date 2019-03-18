@@ -13,7 +13,7 @@ __all__ = [
     'GeneratorAdapter',
     'Minibatch',
     'align_minibatches',
-    'Data'
+    'Data',
 ]
 
 
