@@ -948,7 +948,7 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
 
         .. code:: ipython
             >>> pm.set_data(new_data={'x': [5,6,9]}, model=model)
-            >>> # Another way to do the same thing using the model context is:
+            >>> # Another way to do the same thing using the model itself is:
             >>> # model.set_data(new_data={'x': [5,6,9]})
             >>> y_test = pm.sample_posterior_predictive(trace, model=model)
             >>> y_test['obs'].mean(axis=0)
@@ -1127,7 +1127,7 @@ def set_data(new_data, model=None):
 
     .. code:: ipython
         >>> pm.set_data(new_data={'x': [5,6,9]}, model=model)
-        >>> # Another way to do the same thing using the model context is:
+        >>> # Another way to do the same thing using the model itself is:
         >>> # model.set_data(new_data={'x': [5,6,9]})
         >>> y_test = pm.sample_posterior_predictive(trace, model=model)
         >>> y_test['obs'].mean(axis=0)
