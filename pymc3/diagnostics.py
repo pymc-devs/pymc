@@ -5,6 +5,7 @@ from .stats import statfunc, autocov
 from .util import get_default_varnames
 from .backends.base import MultiTrace
 
+from plots.__init__ import map_args
 __all__ = ['geweke', 'gelman_rubin', 'effective_n']
 
 
@@ -96,8 +97,8 @@ def geweke(x, first=.1, last=.5, intervals=20):
     else:
         return np.array(zscores)
 
-
-def gelman_rubin(mtrace, varnames=None, include_transformed=False):
+@map_args
+def gelman_rubin(mtrace, var_names=None, include_transformed=False):
     R"""Returns estimate of R for a set of traces.
 
     The Gelman-Rubin diagnostic tests for lack of convergence by comparing
@@ -163,12 +164,12 @@ def gelman_rubin(mtrace, varnames=None, include_transformed=False):
             'Gelman-Rubin diagnostic requires multiple chains '
             'of the same length.')
 
-    if varnames is None:
-        varnames = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
+    if var_names is None:
+        var_names = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
 
     Rhat = {}
 
-    for var in varnames:
+    for var in var_names:
         x = np.array(mtrace.get_values(var, combine=False))
         num_samples = x.shape[1]
         Rhat[var] = rscore(x, num_samples)
