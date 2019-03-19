@@ -921,50 +921,6 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
                                    accept_inplace=True,
                                    mode=mode, *args, **kwargs)
 
-    def set_data(self, new_data):
-        """Sets the value of one or more data container variables.
-
-        Parameters
-        ----------
-        new_data : dict
-            New values for the data containers. The keys of the dictionary are
-            the  variables names in the model and the values are the objects
-            with which to update.
-
-        Examples
-        --------
-
-        .. code:: ipython
-
-            >>> import pymc3 as pm
-            >>> with pm.Model() as model:
-            ...    x = pm.Data('x', [1., 2., 3.])
-            ...    y = pm.Data('y', [1., 2., 3.])
-            ...    beta = pm.Normal('beta', 0, 1)
-            ...    obs = pm.Normal('obs', x * beta, 1, observed=y)
-            ...    trace = pm.sample(1000, tune=1000)
-
-        Set the value of `x` to predict on new data.
-
-        .. code:: ipython
-            >>> pm.set_data(new_data={'x': [5,6,9]}, model=model)
-            >>> # Another way to do the same thing using the model itself is:
-            >>> # model.set_data(new_data={'x': [5,6,9]})
-            >>> y_test = pm.sample_posterior_predictive(trace, model=model)
-            >>> y_test['obs'].mean(axis=0)
-            array([4.6088569 , 5.54128318, 8.32953844])
-        """
-        for variable_name, new_value in new_data.items():
-            if isinstance(self[variable_name], SharedVariable):
-                self[variable_name].set_value(pandas_to_array(new_value))
-            else:
-                message = 'The variable `{}` must be defined as `pymc3.' \
-                          'Data` inside the model to allow updating. The ' \
-                          'current type is: ' \
-                          '{}.'.format(variable_name,
-                                       type(self[variable_name]))
-                raise TypeError(message)
-
     def fn(self, outs, mode=None, *args, **kwargs):
         """Compiles a Theano function which returns the values of ``outs``
         and takes values of model vars as arguments.
@@ -1109,6 +1065,7 @@ def set_data(new_data, model=None):
         New values for the data containers. The keys of the dictionary are
         the  variables names in the model and the values are the objects
         with which to update.
+    model : Model (optional if in `with` context)
 
     Examples
     --------
@@ -1117,24 +1074,33 @@ def set_data(new_data, model=None):
 
         >>> import pymc3 as pm
         >>> with pm.Model() as model:
-        ...    x = pm.Data('x', [1., 2., 3.])
-        ...    y = pm.Data('y', [1., 2., 3.])
-        ...    beta = pm.Normal('beta', 0, 1)
-        ...    obs = pm.Normal('obs', x * beta, 1, observed=y)
-        ...    trace = pm.sample(1000, tune=1000)
+        ...     x = pm.Data('x', [1., 2., 3.])
+        ...     y = pm.Data('y', [1., 2., 3.])
+        ...     beta = pm.Normal('beta', 0, 1)
+        ...     obs = pm.Normal('obs', x * beta, 1, observed=y)
+        ...     trace = pm.sample(1000, tune=1000)
 
     Set the value of `x` to predict on new data.
 
     .. code:: ipython
-        >>> pm.set_data(new_data={'x': [5,6,9]}, model=model)
-        >>> # Another way to do the same thing using the model itself is:
-        >>> # model.set_data(new_data={'x': [5,6,9]})
-        >>> y_test = pm.sample_posterior_predictive(trace, model=model)
+        >>> with model:
+        ...     pm.set_data(new_data={'x': [5,6,9]})
+        ...     y_test = pm.sample_posterior_predictive(trace)
         >>> y_test['obs'].mean(axis=0)
         array([4.6088569 , 5.54128318, 8.32953844])
     """
     model = modelcontext(model)
-    model.set_data(new_data)
+
+    for variable_name, new_value in new_data.items():
+        if isinstance(model[variable_name], SharedVariable):
+            model[variable_name].set_value(pandas_to_array(new_value))
+        else:
+            message = 'The variable `{}` must be defined as `pymc3.' \
+                      'Data` inside the model to allow updating. The ' \
+                      'current type is: ' \
+                      '{}.'.format(variable_name,
+                                   type(model[variable_name]))
+            raise TypeError(message)
 
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
