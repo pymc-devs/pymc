@@ -849,7 +849,20 @@ def dict2pd(statdict, labelname):
     statpd = pd.concat(var_dfs, axis=0)
     statpd = statpd.rename(labelname)
     return statpd
+def map_args(func):
+    swaps = [
+        ('varnames', 'var_names')
+    ]
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
+        for (old, new) in swaps:
+            if old in kwargs and new not in kwargs:
+                warnings.warn('Keyword argument `{old}` renamed to `{new}`, and will be removed in pymc3 3.8'.format(old=old, new=new))
+                kwargs[new] = kwargs.pop(old)
+            return func(*args, **kwargs)
+    return wrapped
 
+@map_args
 def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
                extend=False, include_transformed=False,
                alpha=0.05, start=0, batches=None):
