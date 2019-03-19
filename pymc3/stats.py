@@ -863,7 +863,7 @@ def map_args(func):
     return wrapped
 
 @map_args
-def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
+def summary(trace, var_names=None, transform=lambda x: x, stat_funcs=None,
                extend=False, include_transformed=False,
                alpha=0.05, start=0, batches=None):
     R"""Create a data frame with summary statistics.
@@ -951,8 +951,8 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
     """
     from .backends import tracetab as ttab
 
-    if varnames is None:
-        varnames = get_default_varnames(trace.varnames,
+    if var_names is None:
+        var_names = get_default_varnames(trace.varnames,
                        include_transformed=include_transformed)
 
     if batches is None:
@@ -970,7 +970,7 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
             funcs = stat_funcs
 
     var_dfs = []
-    for var in varnames:
+    for var in var_names:
         vals = transform(trace.get_values(var, burn=start, combine=True))
         flat_vals = vals.reshape(vals.shape[0], -1)
         var_df = pd.concat([f(flat_vals) for f in funcs], axis=1)
@@ -984,11 +984,11 @@ def summary(trace, varnames=None, transform=lambda x: x, stat_funcs=None,
         return dforg
     else:
         n_eff = pm.effective_n(trace,
-                               varnames=varnames,
+                               varnames=var_names,
                                include_transformed=include_transformed)
         n_eff_pd = dict2pd(n_eff, 'n_eff')
         rhat = pm.gelman_rubin(trace,
-                               varnames=varnames,
+                               varnames=var_names,
                                include_transformed=include_transformed)
         rhat_pd = dict2pd(rhat, 'Rhat')
         return pd.concat([dforg, n_eff_pd, rhat_pd],
