@@ -15,7 +15,7 @@ class TestData(SeededTest):
         x = np.random.normal(size=100)
         y = x + np.random.normal(scale=1e-2, size=100)
 
-        x_pred = np.linspace(-3, 3, 200)
+        x_pred = np.linspace(-3, 3, 200, dtype='float32')
 
         with pm.Model():
             x_shared = pm.Data('x_shared', x)
