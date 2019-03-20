@@ -420,10 +420,13 @@ class Data:
         >>> # Generate one trace for each dataset
         >>> traces = []
         >>> for data_vals in observed_data:
-        ...     # Switch out the observed dataset
-        ...     data.set_value(data_vals)
         ...     with model:
+        ...         # Switch out the observed dataset
+        ...         pm.set_data({'data': data_vals})
         ...         traces.append(pm.sample())
+
+    For more information on how to set the value of the data container
+    variable check out :func:`pm.set_data()`.
     """
     def __new__(self, name, value):
         # `pm.model.pandas_to_array` takes care of parameter `value` and

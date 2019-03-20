@@ -1084,7 +1084,7 @@ def set_data(new_data, model=None):
 
     .. code:: ipython
         >>> with model:
-        ...     pm.set_data(new_data={'x': [5,6,9]})
+        ...     pm.set_data({'x': [5,6,9]})
         ...     y_test = pm.sample_posterior_predictive(trace)
         >>> y_test['obs'].mean(axis=0)
         array([4.6088569 , 5.54128318, 8.32953844])
