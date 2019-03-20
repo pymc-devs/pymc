@@ -6,6 +6,7 @@ from .util import get_default_varnames
 from .backends.base import MultiTrace
 
 from plots.__init__ import map_args
+
 __all__ = ['geweke', 'gelman_rubin', 'effective_n']
 
 
@@ -97,18 +98,6 @@ def geweke(x, first=.1, last=.5, intervals=20):
     else:
         return np.array(zscores)
 
-def map_args(func):
-    swaps = [
-        ('varnames', 'var_names')
-    ]
-    @functools.wraps(func)
-    def wrapped(*args, **kwargs):
-        for (old, new) in swaps:
-            if old in kwargs and new not in kwargs:
-                warnings.warn('Keyword argument `{old}` renamed to `{new}`, and will be removed in pymc3 3.8'.format(old=old, new=new))
-                kwargs[new] = kwargs.pop(old)
-            return func(*args, **kwargs)
-    return wrapped
 
 @map_args
 def gelman_rubin(mtrace, var_names=None, include_transformed=False):
@@ -189,8 +178,8 @@ def gelman_rubin(mtrace, var_names=None, include_transformed=False):
 
     return Rhat
 
-
-def effective_n(mtrace, varnames=None, include_transformed=False):
+@map_args
+def effective_n(mtrace, var_names=None, include_transformed=False):
     R"""Returns estimate of the effective sample size of a set of traces.
 
     Parameters
@@ -305,12 +294,12 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
             'Calculation of effective sample size requires multiple chains '
             'of the same length.')
 
-    if varnames is None:
+    if var_names is None:
         varnames = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
 
     n_eff = {}
 
-    for var in varnames:
+    for var in var_names:
         n_eff[var] = generate_neff(mtrace.get_values(var, combine=False))
 
     return n_eff
