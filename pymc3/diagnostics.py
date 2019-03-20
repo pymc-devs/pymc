@@ -97,6 +97,19 @@ def geweke(x, first=.1, last=.5, intervals=20):
     else:
         return np.array(zscores)
 
+def map_args(func):
+    swaps = [
+        ('varnames', 'var_names')
+    ]
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
+        for (old, new) in swaps:
+            if old in kwargs and new not in kwargs:
+                warnings.warn('Keyword argument `{old}` renamed to `{new}`, and will be removed in pymc3 3.8'.format(old=old, new=new))
+                kwargs[new] = kwargs.pop(old)
+            return func(*args, **kwargs)
+    return wrapped
+
 @map_args
 def gelman_rubin(mtrace, var_names=None, include_transformed=False):
     R"""Returns estimate of R for a set of traces.

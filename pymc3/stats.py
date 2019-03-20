@@ -16,7 +16,6 @@ from .util import get_default_varnames
 import pymc3 as pm
 from pymc3.theanof import floatX
 
-from plots.__init__ import map_args
 
 if pkg_resources.get_distribution('scipy').version < '1.0.0':
     from scipy.misc import logsumexp
@@ -851,6 +850,19 @@ def dict2pd(statdict, labelname):
     statpd = pd.concat(var_dfs, axis=0)
     statpd = statpd.rename(labelname)
     return statpd
+
+def map_args(func):
+    swaps = [
+        ('varnames', 'var_names')
+    ]
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
+        for (old, new) in swaps:
+            if old in kwargs and new not in kwargs:
+                warnings.warn('Keyword argument `{old}` renamed to `{new}`, and will be removed in pymc3 3.8'.format(old=old, new=new))
+                kwargs[new] = kwargs.pop(old)
+            return func(*args, **kwargs)
+    return wrapped
 
 @map_args
 def summary(trace, var_names=None, transform=lambda x: x, stat_funcs=None,
