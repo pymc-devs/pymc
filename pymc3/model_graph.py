@@ -108,7 +108,7 @@ class ModelGraph:
             distribution = 'Deterministic'
             attrs['shape'] = 'box'
 
-        graph.node(var_name,
+        graph.node(var_name.replace(':', '&'),
                 '{var_name} ~ {distribution}'.format(var_name=var_name, distribution=distribution),
                 **attrs)
 
@@ -167,7 +167,7 @@ class ModelGraph:
 
         for key, values in self.make_compute_graph().items():
             for value in values:
-                graph.edge(value, key)
+                graph.edge(value.replace(':', '&'), key.replace(':', '&'))
         return graph
 
 
