@@ -4,6 +4,7 @@ Gallery.contents = {
     "PyMC3_and_Theano.rst": "Basics",
     "Probability_Distributions.rst": "Basics",
     "Gaussian_Processes.rst": "Basics",
+    "data_container": "Basics",
     "sampling_compound_step": "Deep dives",
     "sampler-stats": "Deep dives",
     "Diagnosing_biased_Inference_with_Divergences": "Deep dives",
