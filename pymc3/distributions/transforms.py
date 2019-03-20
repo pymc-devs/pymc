@@ -8,6 +8,8 @@ from ..math import logit, invlogit
 from .distribution import draw_values
 import numpy as np
 from scipy.special import logit as nplogit
+from scipy.special import expit
+
 
 __all__ = ['transform', 'stick_breaking', 'logodds', 'interval', 'log_exp_m1',
            'lowerbound', 'upperbound', 'ordered', 'log', 'sum_to_1',
@@ -211,8 +213,8 @@ class Interval(ElemwiseTransform):
     def __init__(self, a, b):
         self.a = tt.as_tensor_variable(a)
         self.b = tt.as_tensor_variable(b)
-        self.a_ = a.eval()
-        self.b_ = b.eval()
+        self.a_ = a
+        self.b_ = b
 
     def backward(self, x):
         a, b = self.a, self.b
@@ -250,9 +252,15 @@ class LowerBound(ElemwiseTransform):
 
     def __init__(self, a):
         self.a = tt.as_tensor_variable(a)
+        self.a_ = a
 
     def backward(self, x):
         a = self.a
+        r = np.exp(x) + a
+        return r
+
+    def backward_val(self, x):
+        a = self.a_
         r = tt.exp(x) + a
         return r
 
@@ -281,10 +289,16 @@ class UpperBound(ElemwiseTransform):
 
     def __init__(self, b):
         self.b = tt.as_tensor_variable(b)
+        self.b_ = b
 
     def backward(self, x):
         b = self.b
         r = b - tt.exp(x)
+        return r
+
+    def backward_val(self, x):
+        b = self.b_
+        r = b - np.exp(x)
         return r
 
     def forward(self, x):
@@ -314,6 +328,12 @@ class Ordered(Transform):
         x = tt.inc_subtensor(x[..., 1:], tt.exp(y[..., 1:]))
         return tt.cumsum(x, axis=-1)
 
+    def backward_val(self, y):
+        x = np.zeros(y.shape)
+        x[..., 0] += y[..., 0]
+        x[..., 1:] += np.exp(y[..., 1:])
+        return np.cumsum(x, axis=-1)
+
     def forward(self, x):
         y = tt.zeros(x.shape)
         y = tt.inc_subtensor(y[..., 0], x[..., 0])
@@ -342,6 +362,10 @@ class SumTo1(Transform):
     def backward(self, y):
         remaining = 1 - tt.sum(y[..., :], axis=-1, keepdims=True)
         return tt.concatenate([y[..., :], remaining], axis=-1)
+
+    def backward_val(self, y):
+        remaining = 1 - np.sum(y[..., :], axis=-1, keepdims=True)
+        return np.concatenate([y[..., :], remaining], axis=-1)
 
     def forward(self, x):
         return x[..., :-1]
@@ -408,6 +432,18 @@ class StickBreaking(Transform):
         x = S * yl
         return floatX(x.T)
 
+    def backward_val(self, y_):
+        y = y_.T
+        Km1 = y.shape[0]
+        k = np.arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
+        eq_share = nplogit(1. / (Km1 + 1 - k).astype(str(y_.dtype)))
+        z = expit(y + eq_share, self.eps)
+        yl = np.concatenate([z, np.ones(y[:1].shape)])
+        yu = np.concatenate([np.ones(y[:1].shape), 1 - z])
+        S = np.cumprod(yu, 0)
+        x = S * yl
+        return floatX(x.T)
+
     def jacobian_det(self, y_):
         y = y_.T
         Km1 = y.shape[0]
@@ -430,6 +466,9 @@ class Circular(ElemwiseTransform):
 
     def backward(self, y):
         return tt.arctan2(tt.sin(y), tt.cos(y))
+
+    def backward_val(self, y):
+        return y
 
     def forward(self, x):
         return tt.as_tensor_variable(x)

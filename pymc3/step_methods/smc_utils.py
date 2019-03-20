@@ -8,7 +8,7 @@ import theano
 from .arraystep import metrop_select
 from ..backends.ndarray import NDArray
 from ..backends.base import MultiTrace
-from ..theanof import floatX, join_nonshared_inputs, inputvars
+from ..theanof import floatX, join_nonshared_inputs
 from ..util import get_untransformed_name, is_transformed_name
 
 
@@ -21,7 +21,8 @@ def _initial_population(draws, model, variables):
     var_info = OrderedDict()
     start = model.test_point
 
-    init_rnd = pm.sample_prior_predictive(draws, vars=[v.name for v in model.unobserved_RVs], model=model)
+    init_rnd = pm.sample_prior_predictive(
+        draws, vars=[v.name for v in model.unobserved_RVs], model=model)
     for v in variables:
         var_info[v.name] = (start[v.name].shape, start[v.name].size)
 
@@ -79,7 +80,7 @@ def _posterior_to_trace(posterior, variables, model, var_info):
         size = 0
         for var in varnames:
             shape, new_size = var_info[var]
-            value.append(posterior[i][size : size + new_size].reshape(shape))
+            value.append(posterior[i][size: size + new_size].reshape(shape))
             size += new_size
         strace.record({k: v for k, v in zip(varnames, value)})
     return MultiTrace([strace])
@@ -119,7 +120,7 @@ def metrop_kernel(
             q_new = floatX(q_old + delta)
 
         if ABC:
-            ll =  likelihood_logp(q_new)
+            ll = likelihood_logp(q_new)
         else:
             ll = likelihood_logp(q_new)[0]
 
@@ -204,11 +205,13 @@ def logp_forw(out_vars, vars, shared):
 class PseudoLikelihood:
     """
     """
-    def __init__(self, epsilon, observations, function, model, var_info, distance='absolute_error'):
+
+    def __init__(self, epsilon, observations, function, model, var_info, distance='absolute_error',
+                 sum_stat=False):
         """
         kernel : function
             a valid scipy.stats distribution. Defaults to `stats.norm`
-            
+
         """
         self.epsilon = epsilon
         self.observations = observations
@@ -217,6 +220,7 @@ class PseudoLikelihood:
         self.var_info = var_info
         self.kernel = self.gauss_kernel
         self.dist_func = distance
+        self.sum_stat = sum_stat
 
         if distance == 'absolute_error':
             self.dist_func = self.absolute_error
@@ -242,14 +246,19 @@ class PseudoLikelihood:
 
     def gauss_kernel(self, value):
         epsilon = self.epsilon
-        return (-(value**2)/epsilon**2 + np.log(1 / (2 * np.pi * epsilon**2))) / 2.
+        return (-(value**2) / epsilon**2 + np.log(1 / (2 * np.pi * epsilon**2))) / 2.
 
     def absolute_error(self, a, b):
-        return np.mean(np.atleast_2d(np.abs(a - b)))
+        if self.sum_stat:
+            return np.atleast_2d(np.abs(a.mean() - b.mean()))
+        else:
+            return np.mean(np.atleast_2d(np.abs(a - b)))
 
-    def sum_of_squared_distance(a, b):
-        return np.mean(np.sum(np.atleast_2d((a - b)**2)))
-
+    def sum_of_squared_distance(self, a, b):
+        if self.sum_stat:
+            return np.sum(np.atleast_2d((a.mean() - b.mean())**2))
+        else:
+            return np.mean(np.sum(np.atleast_2d((a - b)**2)))
 
     def __call__(self, posterior):
         """
@@ -257,7 +266,7 @@ class PseudoLikelihood:
             vector of (simulated) data or summary statistics
         b : array
             vector of (observed) data or sumary statistics
-        epsilon : 
+        epsilon :
         """
         func_parameters = self.posterior_to_function(posterior)
         sim_data = self.function(**func_parameters)

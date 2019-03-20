@@ -2,7 +2,6 @@
 Sequential Monte Carlo sampler
 """
 import numpy as np
-from scipy import stats
 import pymc3 as pm
 from tqdm import tqdm
 import multiprocessing as mp
@@ -11,7 +10,6 @@ from .metropolis import MultivariateNormalProposal
 from .smc_utils import _initial_population, _calc_covariance, _tune, _posterior_to_trace, logp_forw, calc_beta, metrop_kernel, PseudoLikelihood
 from ..theanof import inputvars, make_shared_replacements
 from ..model import modelcontext
-
 
 
 __all__ = ["SMC", "sample_smc"]
@@ -100,8 +98,10 @@ class SMC:
         tune_steps=True,
         threshold=0.5,
         parallel=True,
-        ABC = False,
-        epsilon = 1
+        ABC=False,
+        epsilon=1,
+        dist_func='absolute_error',
+        sum_stat=False
     ):
 
         self.n_steps = n_steps
@@ -114,6 +114,8 @@ class SMC:
         self.parallel = parallel
         self.ABC = ABC
         self.epsilon = epsilon
+        self.dist_func = dist_func
+        self.sum_stat = sum_stat
 
 
 def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None, random_seed=-1):
@@ -153,7 +155,7 @@ def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None,
     all_discrete = discrete.all()
     shared = make_shared_replacements(variables, model)
     prior_logp = logp_forw([model.varlogpt], variables, shared)
-    
+
     pm._log.info("Sample initial stage: ...")
     posterior, var_info = _initial_population(draws, model, variables)
 
@@ -163,11 +165,14 @@ def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None,
                                            simulator.observations,
                                            simulator.distribution.function,
                                            model,
-                                           var_info)
+                                           var_info,
+                                           step.dist_func,
+                                           step.sum_stat)
     else:
         likelihood_logp = logp_forw([model.datalogpt], variables, shared)
 
     while beta < 1:
+        
         likelihoods = np.array([likelihood_logp(sample) for sample in posterior]).squeeze()
         beta, old_beta, weights, sj = calc_beta(beta, likelihoods, step.threshold)
         model.marginal_likelihood *= sj
