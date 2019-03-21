@@ -16,7 +16,6 @@ from .util import get_default_varnames
 import pymc3 as pm
 from pymc3.theanof import floatX
 
-from plot.__init__ import map_args
 
 if pkg_resources.get_distribution('scipy').version < '1.0.0':
     from scipy.misc import logsumexp
@@ -853,10 +852,10 @@ def dict2pd(statdict, labelname):
     return statpd
 
 
-@map_args
+
 def summary(trace, var_names=None, transform=lambda x: x, stat_funcs=None,
                extend=False, include_transformed=False,
-               alpha=0.05, start=0, batches=None):
+               alpha=0.05, start=0, batches=None, **kwargs):
     R"""Create a data frame with summary statistics.
 
     Parameters
@@ -940,6 +939,12 @@ def summary(trace, var_names=None, transform=lambda x: x, stat_funcs=None,
         mu__0  0.066473  0.000312  0.105039  0.214242
         mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
+    if 'varnames' in kwargs:
+        var_names = kwargs['varname']
+        warning.warn(
+            'Keyword argument varnames renamed to var_names, and will be removed in pymc3 3.8',
+            DeprecationWarning
+            )
     from .backends import tracetab as ttab
 
     if var_names is None:
