@@ -176,7 +176,7 @@ page <https://github.com/pymc-devs/pymc3/graphs/contributors>`__
 Support
 =======
 
-PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3 financially, you can donate `here <https://www.flipcause.com/widget/widget_home/MTE4OTc=>`__.
+PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3 financially, you can donate `here <https://numfocus.salsalabs.org/donate-to-pymc3/index.html>`__.
 
 Sponsors
 ========
