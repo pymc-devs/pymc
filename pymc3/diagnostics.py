@@ -144,7 +144,7 @@ def gelman_rubin(mtrace, var_names=None, include_transformed=False,**kwargs):
     Brooks and Gelman (1998)
     Gelman and Rubin (1992)"""
     if 'varnames' in kwargs:
-        var_names = kwargs['varname']
+        var_names = kwargs['varnames']
         warnings.warn(
             'Keyword argument varnames renamed to var_names, and will be removed in pymc3 3.8',
             DeprecationWarning
@@ -219,7 +219,7 @@ def effective_n(mtrace, var_names=None, include_transformed=False,**kwargs):
     ----------
     Gelman et al. BDA (2014)"""
     if 'varnames' in kwargs:
-        var_names = kwargs['varname']
+        var_names = kwargs['varnames']
         warnings.warn(
             'Keyword argument varnames renamed to var_names, and will be removed in pymc3 3.8',
             DeprecationWarning

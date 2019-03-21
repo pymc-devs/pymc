@@ -940,7 +940,7 @@ def summary(trace, var_names=None, transform=lambda x: x, stat_funcs=None,
         mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
     if 'varnames' in kwargs:
-        var_names = kwargs['varname']
+        var_names = kwargs['varnames']
         warnings.warn(
             'Keyword argument varnames renamed to var_names, and will be removed in pymc3 3.8',
             DeprecationWarning
