@@ -425,8 +425,11 @@ class Data:
         ...         pm.set_data({'data': data_vals})
         ...         traces.append(pm.sample())
 
-    For more information on how to set the value of the data container
-    variable check out :func:`pm.set_data()`.
+    To set the value of the data container variable, check out
+    :func:`pm.set_data()`.
+
+    For more information, take a look at this example notebook
+    https://docs.pymc.io/notebooks/data_container.html
     """
     def __new__(self, name, value):
         # `pm.model.pandas_to_array` takes care of parameter `value` and
