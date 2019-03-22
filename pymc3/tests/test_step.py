@@ -29,14 +29,7 @@ from pymc3.step_methods import (
     DEMetropolis,
 )
 from pymc3.theanof import floatX
-from pymc3.distributions import (
-    Binomial,
-    Normal,
-    Bernoulli,
-    Categorical,
-    Beta,
-    HalfNormal,
-)
+from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
@@ -466,207 +459,207 @@ class TestStepMethods:  # yield test doesn't work subclassing object
             ]
         ),
         SMC: np.array(
-        [
-            -0.46336615,
-            0.12266723,
-            1.17445969,
-            0.68042971,
-            0.42684242,
-            0.56087745,
-            1.95526491,
-            0.63702815,
-            -0.38256918,
-            0.21666238,
-            0.9222132,
-            0.84231802,
-            -0.66263683,
-            -0.65473923,
-            0.70613048,
-            1.1832384,
-            1.32666297,
-            0.47234722,
-            1.308746,
-            0.62601215,
-            0.66785563,
-            0.23237286,
-            0.64742557,
-            0.4967666,
-            -0.7083572,
-            -0.6336608,
-            0.7171772,
-            1.64822516,
-            0.55755364,
-            0.3390564,
-            0.60066329,
-            -0.48225908,
-            -0.7105236,
-            1.24246519,
-            -0.42578244,
-            -0.13955727,
-            -0.45717333,
-            1.25124007,
-            0.16517031,
-            1.48844159,
-            0.53149148,
-            0.78831621,
-            -0.32179121,
-            0.2672707,
-            1.28559777,
-            0.66120255,
-            0.76382386,
-            0.20961778,
-            -0.34107706,
-            0.89994347,
-            0.76014225,
-            1.47270724,
-            -0.1048684,
-            1.443698,
-            0.05602195,
-            0.4165876,
-            0.58041505,
-            0.71206799,
-            0.35419923,
-            1.09565672,
-            0.01237362,
-            1.07233515,
-            0.4458613,
-            -0.05173648,
-            -0.05591959,
-            -0.46949795,
-            0.12817764,
-            0.33305469,
-            0.1417619,
-            1.21374348,
-            0.29950253,
-            0.30185187,
-            -0.35845575,
-            0.65644788,
-            0.13245814,
-            0.47437394,
-            -0.13326223,
-            0.64184184,
-            -0.70375623,
-            1.19480999,
-            0.12838112,
-            -1.13718892,
-            -0.23756299,
-            1.18109566,
-            0.27956406,
-            0.77662783,
-            0.70897398,
-            0.06468957,
-            1.2100561,
-            -0.07906963,
-            0.24812142,
-            1.03598538,
-            1.22311777,
-            0.50280816,
-            1.18044321,
-            0.27720922,
-            0.66501892,
-            0.02559445,
-            -0.34423967,
-            -0.18747507,
-            0.41599727,
-            0.70174315,
-            -0.21596883,
-            0.5451627,
-            0.21239221,
-            0.21520924,
-            0.16853742,
-            0.58518451,
-            0.39961851,
-            -0.2047263,
-            0.80526223,
-            0.99301123,
-            -1.19740463,
-            -0.35897795,
-            0.35797059,
-            0.4048858,
-            -0.23605507,
-            0.59722259,
-            -0.24906798,
-            0.02133243,
-            0.33906256,
-            0.03076166,
-            1.04912903,
-            0.56568619,
-            1.58915455,
-            -0.18300023,
-            0.88801506,
-            0.81190571,
-            0.54731061,
-            0.81670383,
-            1.27844735,
-            -0.17766326,
-            0.64657961,
-            -0.13964146,
-            -0.52765298,
-            -0.01829202,
-            0.12244441,
-            0.75981859,
-            0.11204214,
-            -0.3119146,
-            1.14560177,
-            1.16858157,
-            0.10582855,
-            -0.19444751,
-            -0.40425162,
-            -0.27404309,
-            0.54300282,
-            0.05307693,
-            -0.27458972,
-            0.69498755,
-            0.98924705,
-            1.55547635,
-            0.75224637,
-            0.80587839,
-            -0.2902937,
-            0.23034801,
-            1.60298928,
-            0.40614554,
-            0.77193648,
-            0.43173433,
-            1.81284039,
-            0.35098668,
-            0.57270494,
-            0.80260306,
-            0.6484185,
-            1.04529417,
-            0.22528427,
-            0.58182444,
-            1.15230697,
-            0.34743541,
-            -0.41741644,
-            0.89642521,
-            0.34436599,
-            0.46077778,
-            0.87747499,
-            0.66225042,
-            0.47267159,
-            0.05429676,
-            0.3757464,
-            0.94785268,
-            0.28064715,
-            0.55279339,
-            -0.14599467,
-            2.27580354,
-            0.24539721,
-            0.59513338,
-            1.04924511,
-            -0.17770318,
-            0.22312693,
-            -0.11805229,
-            -0.50526578,
-            2.00694516,
-            0.00603662,
-            -1.03431887,
-            0.30270517,
-            1.33821916,
-            0.72568982,
-            0.14426103,
-            0.24925792,
-            0.17099091,
+            [
+                0.85565708,
+                -0.20703928,
+                0.60432641,
+                0.82409514,
+                0.66956453,
+                1.8112792,
+                0.50997512,
+                0.01190834,
+                0.11877327,
+                1.04616417,
+                0.35542005,
+                0.97711504,
+                1.08273637,
+                0.12254235,
+                -0.2125738,
+                1.90683646,
+                0.76584362,
+                1.61601695,
+                1.26496703,
+                0.72605833,
+                0.27710235,
+                0.59466026,
+                1.48847988,
+                1.48383337,
+                0.85487674,
+                0.40339276,
+                1.11378016,
+                -0.01154067,
+                -0.24933179,
+                0.04855045,
+                0.44408864,
+                1.07009531,
+                0.71832419,
+                -0.02224457,
+                0.15732459,
+                0.74732395,
+                -0.55976656,
+                1.83476589,
+                1.13464886,
+                1.04477015,
+                -0.8829041,
+                0.68610315,
+                -0.51600577,
+                1.06577114,
+                0.72533608,
+                0.26181788,
+                0.37045769,
+                0.49110905,
+                0.95187097,
+                0.57052924,
+                1.18390833,
+                -0.28470992,
+                0.5143004,
+                0.36340091,
+                0.26524336,
+                0.91352757,
+                -0.16906895,
+                0.02671801,
+                -0.62018961,
+                0.13845522,
+                0.69578158,
+                0.82213017,
+                0.95565383,
+                0.57201004,
+                0.66751355,
+                0.74662892,
+                -0.18802906,
+                -0.16424007,
+                0.67661192,
+                0.986151,
+                1.11037246,
+                0.53367584,
+                0.81646283,
+                0.69093199,
+                1.30967566,
+                0.58455688,
+                -0.10754191,
+                -0.66843656,
+                0.61473792,
+                0.11205418,
+                1.50795552,
+                1.61304845,
+                0.97329021,
+                0.80782701,
+                1.83144593,
+                0.34256428,
+                0.49090154,
+                1.85297793,
+                0.44832949,
+                1.35766813,
+                0.48916332,
+                0.410038,
+                -0.69870943,
+                0.06616812,
+                -0.17685433,
+                -0.0487383,
+                1.92862324,
+                0.47539572,
+                1.19401681,
+                0.3670901,
+                2.11504383,
+                1.16863035,
+                0.74908135,
+                0.90147245,
+                0.6291441,
+                0.96889664,
+                0.93871964,
+                0.74575969,
+                0.06810336,
+                0.45469347,
+                0.29787682,
+                0.73557892,
+                -0.3388827,
+                -0.0991328,
+                1.12325585,
+                0.87397644,
+                -1.14737408,
+                -0.78658091,
+                0.67716022,
+                0.20961362,
+                0.11759984,
+                0.72748548,
+                -0.29959649,
+                -0.09436443,
+                0.42100225,
+                0.04656646,
+                1.21211555,
+                0.04060845,
+                1.38031545,
+                0.58429818,
+                0.33843531,
+                0.82207289,
+                0.96509587,
+                1.00370899,
+                1.23734919,
+                -0.01960951,
+                0.7721088,
+                0.04627471,
+                -0.62058523,
+                0.21093904,
+                -0.15935501,
+                0.83237845,
+                0.10157936,
+                -0.45885173,
+                1.26206955,
+                1.07601436,
+                1.23736132,
+                0.28618097,
+                -0.14328022,
+                -0.13158901,
+                0.74308368,
+                0.26291343,
+                0.17504558,
+                0.55601578,
+                1.46900503,
+                0.65131007,
+                0.89596352,
+                0.32536798,
+                -0.25504495,
+                0.07563569,
+                1.48775514,
+                0.28519783,
+                0.58513482,
+                -0.63672688,
+                1.59324146,
+                0.53826815,
+                0.41792749,
+                0.76583018,
+                0.87290581,
+                0.89110704,
+                0.27282461,
+                -0.20300455,
+                1.01058543,
+                0.68072852,
+                -0.21073928,
+                1.19114065,
+                0.6372328,
+                0.33444015,
+                1.05599084,
+                0.78372828,
+                1.0127235,
+                -0.19460124,
+                1.31807913,
+                0.58658129,
+                -0.34218648,
+                0.68725616,
+                0.37484537,
+                2.48875271,
+                -0.06424102,
+                0.22162396,
+                -0.21623175,
+                0.25998439,
+                0.37801803,
+                -0.51312636,
+                -0.35024508,
+                1.90460979,
+                0.02214471,
+                -0.59132265,
+                0.42870423,
+                0.88951751,
             ]
         ),
     }
@@ -677,9 +670,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
     def teardown_class(self):
         shutil.rmtree(self.temp_dir)
 
-    @pytest.mark.xfail(
-        condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-    )
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_sample_exact(self):
         for step_method in self.master_samples:
             self.check_trace(step_method)
@@ -711,12 +702,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
             elif step_method.__name__ == "NUTS":
                 step = step_method(scaling=model.test_point)
                 trace = sample(
-                    0,
-                    tune=n_steps,
-                    discard_tuned_samples=False,
-                    step=step,
-                    random_seed=1,
-                    chains=1,
+                    0, tune=n_steps, discard_tuned_samples=False, step=step, random_seed=1, chains=1
                 )
             else:
                 trace = sample(
@@ -782,13 +768,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
             steps = (Metropolis(S=C, proposal_dist=MultivariateNormalProposal),)
         for step in steps:
             trace = sample(
-                20000,
-                tune=0,
-                step=step,
-                start=start,
-                model=model,
-                random_seed=1,
-                chains=1,
+                20000, tune=0, step=step, start=start, model=model, random_seed=1, chains=1
             )
             self.check_stat(check, trace, step.__class__.__name__)
 
@@ -802,9 +782,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                 CategoricalGibbsMetropolis(model.x, proposal="proportional"),
             )
         for step in steps:
-            trace = sample(
-                8000, tune=0, step=step, start=start, model=model, random_seed=1
-            )
+            trace = sample(8000, tune=0, step=step, start=start, model=model, random_seed=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_elliptical_slice(self):
@@ -815,13 +793,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
             steps = (EllipticalSlice(prior_cov=K), EllipticalSlice(prior_chol=L))
         for step in steps:
             trace = sample(
-                5000,
-                tune=0,
-                step=step,
-                start=start,
-                model=model,
-                random_seed=1,
-                chains=1,
+                5000, tune=0, step=step, start=start, model=model, random_seed=1, chains=1
             )
             self.check_stat(check, trace, step.__class__.__name__)
 
@@ -853,8 +825,7 @@ class TestCompoundStep:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS, DEMetropolis)
 
     @pytest.mark.skipif(
-        theano.config.floatX == "float32",
-        reason="Test fails on 32 bit due to linalg issues",
+        theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues"
     )
     def test_non_blocked(self):
         """Test that samplers correctly create non-blocked compound steps."""
@@ -864,8 +835,7 @@ class TestCompoundStep:
                 assert isinstance(sampler(blocked=False), CompoundStep)
 
     @pytest.mark.skipif(
-        theano.config.floatX == "float32",
-        reason="Test fails on 32 bit due to linalg issues",
+        theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues"
     )
     def test_blocked(self):
         _, model = simple_2model_continuous()
@@ -924,9 +894,7 @@ class TestAssignStepMethods:
                 return x
 
             data = np.random.normal(size=(100,))
-            Normal(
-                "y", mu=kill_grad(x), sigma=1, observed=data.astype(theano.config.floatX)
-            )
+            Normal("y", mu=kill_grad(x), sigma=1, observed=data.astype(theano.config.floatX))
 
             steps = assign_step_methods(model, [])
         assert isinstance(steps, Slice)
@@ -952,20 +920,16 @@ class TestPopulationSamplers:
             x = Normal("x", 0, 1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
-                trace = sample(
-                    chains=4, draws=20, tune=0, step=DEMetropolis()
-                )
+                trace = sample(chains=4, draws=20, tune=0, step=DEMetropolis())
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
 
-                assert (
-                    len(set(samples)) == 4
-                ), "Parallelized {} " "chains are identical.".format(stepper)
+                assert len(set(samples)) == 4, "Parallelized {} " "chains are identical.".format(
+                    stepper
+                )
         pass
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNutsCheckTrace:
     def test_multiple_samplers(self, caplog):
         with Model():
@@ -983,8 +947,7 @@ class TestNutsCheckTrace:
                 sample(init=None, chains=1, random_seed=1)
             error.match("Bad initial")
 
-    @pytest.mark.skipif(sys.version_info < (3,6),
-                    reason="requires python3.6 or higher")
+    @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
     def test_bad_init_parallel(self):
         with Model():
             HalfNormal("a", sigma=1, testval=-1, transform=None)
@@ -1040,10 +1003,6 @@ class TestNutsCheckTrace:
         # Assert model logp is computed correctly: computing post-sampling
         # and tracking while sampling should give same results.
         model_logp_ = np.array(
-            [
-                model.logp(trace.point(i, chain=c))
-                for c in trace.chains
-                for i in range(len(trace))
-            ]
+            [model.logp(trace.point(i, chain=c)) for c in trace.chains for i in range(len(trace))]
         )
         assert (trace.model_logp == model_logp_).all()

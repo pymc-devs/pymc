@@ -7,7 +7,16 @@ from tqdm import tqdm
 import multiprocessing as mp
 
 from .metropolis import MultivariateNormalProposal
-from .smc_utils import _initial_population, _calc_covariance, _tune, _posterior_to_trace, logp_forw, calc_beta, metrop_kernel, PseudoLikelihood
+from .smc_utils import (
+    _initial_population,
+    _calc_covariance,
+    _tune,
+    _posterior_to_trace,
+    logp_forw,
+    calc_beta,
+    metrop_kernel,
+    PseudoLikelihood,
+)
 from ..theanof import inputvars, make_shared_replacements
 from ..model import modelcontext
 
@@ -16,7 +25,7 @@ __all__ = ["SMC", "sample_smc"]
 
 
 class SMC:
-    R"""
+    r"""
     Sequential Monte Carlo step
 
     Parameters
@@ -100,8 +109,8 @@ class SMC:
         parallel=True,
         ABC=False,
         epsilon=1,
-        dist_func='absolute_error',
-        sum_stat=False
+        dist_func="absolute_error",
+        sum_stat=False,
     ):
 
         self.n_steps = n_steps
@@ -161,18 +170,20 @@ def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None,
 
     if step.ABC:
         simulator = model.observed_RVs[0]
-        likelihood_logp = PseudoLikelihood(step.epsilon,
-                                           simulator.observations,
-                                           simulator.distribution.function,
-                                           model,
-                                           var_info,
-                                           step.dist_func,
-                                           step.sum_stat)
+        likelihood_logp = PseudoLikelihood(
+            step.epsilon,
+            simulator.observations,
+            simulator.distribution.function,
+            model,
+            var_info,
+            step.dist_func,
+            step.sum_stat,
+        )
     else:
         likelihood_logp = logp_forw([model.datalogpt], variables, shared)
 
     while beta < 1:
-        
+
         likelihoods = np.array([likelihood_logp(sample) for sample in posterior]).squeeze()
         beta, old_beta, weights, sj = calc_beta(beta, likelihoods, step.threshold)
         model.marginal_likelihood *= sj

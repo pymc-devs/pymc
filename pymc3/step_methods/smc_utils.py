@@ -22,7 +22,8 @@ def _initial_population(draws, model, variables):
     start = model.test_point
 
     init_rnd = pm.sample_prior_predictive(
-        draws, vars=[v.name for v in model.unobserved_RVs], model=model)
+        draws, vars=[v.name for v in model.unobserved_RVs], model=model
+    )
     for v in variables:
         var_info[v.name] = (start[v.name].shape, start[v.name].size)
 
@@ -80,7 +81,7 @@ def _posterior_to_trace(posterior, variables, model, var_info):
         size = 0
         for var in varnames:
             shape, new_size = var_info[var]
-            value.append(posterior[i][size: size + new_size].reshape(shape))
+            value.append(posterior[i][size : size + new_size].reshape(shape))
             size += new_size
         strace.record({k: v for k, v in zip(varnames, value)})
     return MultiTrace([strace])
@@ -204,10 +205,19 @@ def logp_forw(out_vars, vars, shared):
 
 class PseudoLikelihood:
     """
+    Pseudo Likelihood
     """
 
-    def __init__(self, epsilon, observations, function, model, var_info, distance='absolute_error',
-                 sum_stat=False):
+    def __init__(
+        self,
+        epsilon,
+        observations,
+        function,
+        model,
+        var_info,
+        distance="absolute_error",
+        sum_stat=False,
+    ):
         """
         kernel : function
             a valid scipy.stats distribution. Defaults to `stats.norm`
@@ -222,21 +232,21 @@ class PseudoLikelihood:
         self.dist_func = distance
         self.sum_stat = sum_stat
 
-        if distance == 'absolute_error':
+        if distance == "absolute_error":
             self.dist_func = self.absolute_error
-        elif distance == 'sum_of_squared_distance':
+        elif distance == "sum_of_squared_distance":
             self.dist_func = self.sum_of_squared_distance
         else:
-            raise ValueError('Distance metric not understood')
+            raise ValueError("Distance metric not understood")
 
     def posterior_to_function(self, posterior):
         model = self.model
         var_info = self.var_info
-        parameters = {}  # OrderedDict???
+        parameters = {}
         size = 0
         for var, values in var_info.items():
             shape, new_size = values
-            value = (posterior[size: size + new_size].reshape(shape))
+            value = posterior[size : size + new_size].reshape(shape)
             if is_transformed_name(var):
                 var = get_untransformed_name(var)
                 value = model[var].transformation.backward_val(value)
@@ -246,7 +256,7 @@ class PseudoLikelihood:
 
     def gauss_kernel(self, value):
         epsilon = self.epsilon
-        return (-(value**2) / epsilon**2 + np.log(1 / (2 * np.pi * epsilon**2))) / 2.
+        return (-(value ** 2) / epsilon ** 2 + np.log(1 / (2 * np.pi * epsilon ** 2))) / 2.0
 
     def absolute_error(self, a, b):
         if self.sum_stat:
@@ -256,9 +266,9 @@ class PseudoLikelihood:
 
     def sum_of_squared_distance(self, a, b):
         if self.sum_stat:
-            return np.sum(np.atleast_2d((a.mean() - b.mean())**2))
+            return np.sum(np.atleast_2d((a.mean() - b.mean()) ** 2))
         else:
-            return np.mean(np.sum(np.atleast_2d((a - b)**2)))
+            return np.mean(np.sum(np.atleast_2d((a - b) ** 2)))
 
     def __call__(self, posterior):
         """
