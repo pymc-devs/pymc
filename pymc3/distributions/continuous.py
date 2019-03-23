@@ -577,7 +577,7 @@ class TruncatedNormal(BoundedContinuous):
 
         if self.lower is None and self.upper is None:
             self._defaultval = mu
-        elif self.lower is None and self.upperis not None:
+        elif self.lower is None and self.upper is not None:
             self._defaultval = self.upper - 1.
         elif self.lower is not None and self.upper is None:
             self._defaultval = self.lower + 1.
