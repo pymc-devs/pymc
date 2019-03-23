@@ -639,7 +639,7 @@ class TruncatedNormal(BoundedContinuous):
         logp = Normal.dist(mu=mu, sigma=sigma).logp(value) - norm
 
         bounds = [sigma > 0]
-        if self.loweris not None:
+        if self.lower is not None:
             bounds.append(value >= self.lower)
         if self.upper is not None:
             bounds.append(value <= self.upper)
