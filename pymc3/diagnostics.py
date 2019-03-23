@@ -4,7 +4,7 @@ import numpy as np
 from .stats import statfunc, autocov
 from .util import get_default_varnames
 from .backends.base import MultiTrace
-
+import warnings
 
 __all__ = ['geweke', 'gelman_rubin', 'effective_n']
 
@@ -99,7 +99,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
 
 
 
-def gelman_rubin(mtrace, var_names=None, include_transformed=False,**kwargs):
+def gelman_rubin(mtrace, var_names=None, include_transformed=False, **kwargs):
     R"""Returns estimate of R for a set of traces.
 
     The Gelman-Rubin diagnostic tests for lack of convergence by comparing
@@ -183,7 +183,7 @@ def gelman_rubin(mtrace, var_names=None, include_transformed=False,**kwargs):
     return Rhat
 
 
-def effective_n(mtrace, var_names=None, include_transformed=False,**kwargs):
+def effective_n(mtrace, var_names=None, include_transformed=False, **kwargs):
     R"""Returns estimate of the effective sample size of a set of traces.
 
     Parameters
@@ -222,8 +222,7 @@ def effective_n(mtrace, var_names=None, include_transformed=False,**kwargs):
         var_names = kwargs['varnames']
         warnings.warn(
             'Keyword argument varnames renamed to var_names, and will be removed in pymc3 3.8',
-            DeprecationWarning
-            )
+            DeprecationWarning)
     def get_neff(x):
         """Compute the effective sample size for a 2D array
         """
