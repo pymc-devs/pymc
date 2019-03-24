@@ -572,7 +572,7 @@ class TruncatedNormal(BoundedContinuous):
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
         self.tau = tt.as_tensor_variable(tau)
         self.lower = tt.as_tensor_variable(floatX(lower)) if lower is not None else tt.as_tensor_variable(-np.inf)
-        self.upper = tt.as_tensor_variable(floatx(upper)) if upper is not None else tt.as_tensor_variable(np.inf)
+        self.upper = tt.as_tensor_variable(floatX(upper)) if upper is not None else tt.as_tensor_variable(np.inf)
         self.mu = tt.as_tensor_variable(floatX(mu))
 
         if self.lower is None and self.upper is None:
