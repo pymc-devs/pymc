@@ -571,15 +571,17 @@ class TruncatedNormal(BoundedContinuous):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
         self.tau = tt.as_tensor_variable(tau)
-        self.lower = tt.as_tensor_variable(floatX(lower)) if lower is not None else lower
-        self.upper = tt.as_tensor_variable(floatX(upper)) if upper is not None else upper
+        self.lower_check = tt.as_tensor_variable(floatX(lower)) if lower is not None else lower
+        self.upper_check = tt.as_tensor_variable(floatX(upper)) if upper is not None else upper
+        self.lower = tt.as_tensor_variable(floatX(lower)) if lower is not None else tt.as_tensor_variable(floatX(-np.inf))
+        self.upper = tt.as_tensor_variable(floatX(upper)) if upper is not None else tt.as_tensor_variable(floatX(np.inf))
         self.mu = tt.as_tensor_variable(floatX(mu))
 
-        if self.lower is None and self.upper is None:
+        if self.lower_check is None and self.upper_check is None:
             self._defaultval = mu
-        elif self.lower is None and self.upper is not None:
+        elif self.lower_check is None and self.upper_check is not None:
             self._defaultval = self.upper - 1.
-        elif self.lower is not None and self.upper is None:
+        elif self.lower_check is not None and self.upper_check is None:
             self._defaultval = self.lower + 1.
         else:
             self._defaultval = (self.lower + self.upper) / 2
@@ -639,19 +641,19 @@ class TruncatedNormal(BoundedContinuous):
         logp = Normal.dist(mu=mu, sigma=sigma).logp(value) - norm
 
         bounds = [sigma > 0]
-        if self.lower is not None:
+        if self.lower_check is not None:
             bounds.append(value >= self.lower)
-        if self.upper is not None:
+        if self.upper_check is not None:
             bounds.append(value <= self.upper)
         return bound(logp, *bounds)
 
     def _normalization(self):
         mu, sigma = self.mu, self.sigma
 
-        if self.lower is None and self.upper is None:
+        if self.lower_check is None and self.upper_check is None:
             return 0.
 
-        if self.lower is not None and self.upper is not None:
+        if self.lower_check is not None and self.upper_check is not None:
             lcdf_a = normal_lcdf(mu, sigma, self.lower)
             lcdf_b = normal_lcdf(mu, sigma, self.upper)
             lsf_a = normal_lccdf(mu, sigma, self.lower)
@@ -663,7 +665,7 @@ class TruncatedNormal(BoundedContinuous):
                 logdiffexp(lcdf_b, lcdf_a),
             )
 
-        if self.lower is not None:
+        if self.lower_check is not None:
             return normal_lccdf(mu, sigma, self.lower)
         else:
             return normal_lcdf(mu, sigma, self.upper)
