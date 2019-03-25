@@ -120,10 +120,7 @@ def metrop_kernel(
         else:
             q_new = floatX(q_old + delta)
 
-        if ABC:
-            ll = likelihood_logp(q_new)
-        else:
-            ll = likelihood_logp(q_new)[0]
+        ll = likelihood_logp(q_new)
 
         new_tempered_logp = prior_logp(q_new) + ll * beta
 
@@ -198,7 +195,7 @@ def logp_forw(out_vars, vars, shared):
         containing :class:`theano.tensor.Tensor` for depended shared data
     """
     out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
-    f = theano.function([inarray0], out_list)
+    f = theano.function([inarray0], out_list[0])
     f.trust_input = True
     return f
 
