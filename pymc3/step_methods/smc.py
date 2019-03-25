@@ -21,6 +21,9 @@ from ..theanof import inputvars, make_shared_replacements
 from ..model import modelcontext
 
 
+EXPERIMENTAL_WARNING = "Warning: SMC-ABC methods are experimental step methods and not yet"\
+    " recommended for use in PyMC3!"
+
 __all__ = ["SMC", "sample_smc"]
 
 
@@ -169,6 +172,7 @@ def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None,
     posterior, var_info = _initial_population(draws, model, variables)
 
     if step.ABC:
+        warnings.warn(EXPERIMENTAL_WARNING)
         simulator = model.observed_RVs[0]
         likelihood_logp = PseudoLikelihood(
             step.epsilon,
