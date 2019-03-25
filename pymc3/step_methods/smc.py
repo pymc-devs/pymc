@@ -5,6 +5,7 @@ import numpy as np
 import pymc3 as pm
 from tqdm import tqdm
 import multiprocessing as mp
+import warnings
 
 from .metropolis import MultivariateNormalProposal
 from .smc_utils import (

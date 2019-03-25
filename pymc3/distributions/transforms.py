@@ -174,6 +174,9 @@ class LogExpM1(ElemwiseTransform):
     def backward(self, x):
         return tt.nnet.softplus(x)
 
+    def backward_val(self, x):
+        return np.log(1 + np.exp(-np.abs(x))) + np.max([x, 0])
+
     def forward(self, x):
         """Inverse operation of softplus
         y = Log(Exp(x) - 1)
@@ -194,6 +197,9 @@ class LogOdds(ElemwiseTransform):
     name = "logodds"
 
     def backward(self, x):
+        return invlogit(x, 0.0)
+
+    def backward_val(self, x):
         return invlogit(x, 0.0)
 
     def forward(self, x):
@@ -255,13 +261,13 @@ class LowerBound(ElemwiseTransform):
         self.a_ = a
 
     def backward(self, x):
-        a = self.a
-        r = np.exp(x) + a
+        a = self.a_
+        r = tt.exp(x) + a
         return r
 
     def backward_val(self, x):
-        a = self.a_
-        r = tt.exp(x) + a
+        a = self.a
+        r = np.exp(x) + a
         return r
 
     def forward(self, x):
@@ -491,6 +497,10 @@ class CholeskyCovPacked(Transform):
     def backward(self, x):
         return tt.advanced_set_subtensor1(x, tt.exp(x[self.diag_idxs]), self.diag_idxs)
 
+    def backward_val(self, x):
+        x[..., self.diag_idxs] = np.exp(x[..., self.diag_idxs])
+        return x
+
     def forward(self, y):
         return tt.advanced_set_subtensor1(y, tt.log(y[self.diag_idxs]), self.diag_idxs)
 
@@ -523,6 +533,12 @@ class Chain(Transform):
         x = y
         for transf in reversed(self.transform_list):
             x = transf.backward(x)
+        return x
+
+    def backward_val(self, y):
+        x = y
+        for transf in reversed(self.transform_list):
+            x = transf.backward_val(x)
         return x
 
     def jacobian_det(self, y):
