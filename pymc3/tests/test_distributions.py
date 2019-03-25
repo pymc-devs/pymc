@@ -321,7 +321,7 @@ def dirichlet_logpdf(value, a):
 
 def categorical_logpdf(value, p):
     if value >= 0 and value <= len(p):
-        return floatX(np.log(p[value]))
+        return floatX(np.log(np.moveaxis(p, -1, 0)[value]))
     else:
         return -inf
 
@@ -346,8 +346,10 @@ def invlogit(x, eps=sys.float_info.epsilon):
 
 def orderedlogistic_logpdf(value, eta, cutpoints):
     c = np.concatenate(([-np.inf], cutpoints, [np.inf]))
-    p = invlogit(eta - c[value]) - invlogit(eta - c[value + 1])
-    return np.log(p)
+    ps = np.array([invlogit(eta - cc) - invlogit(eta - cc1)
+                   for cc, cc1 in zip(c[:-1], c[1:])])
+    p = ps[value]
+    return np.where(np.all(ps >= 0), np.log(p), -np.inf)
 
 class Simplex:
     def __init__(self, n):
@@ -691,6 +693,10 @@ class TestMatchesScipy(SeededTest):
             return sp.gamma.logpdf(value, mu**2 / sigma**2, scale=1.0 / (mu / sigma**2))
         self.pymc3_matches_scipy(
             Gamma, Rplus, {'mu': Rplusbig, 'sigma': Rplusbig}, test_fun)
+
+        self.check_logcdf(
+            Gamma, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
+            lambda value, alpha, beta: sp.gamma.logcdf(value, alpha, scale=1.0/beta))
 
     def test_inverse_gamma(self):
         self.pymc3_matches_scipy(
@@ -1073,6 +1079,29 @@ class TestMatchesScipy(SeededTest):
         with Model():
             x = Categorical('x', p=np.array([0.2, 0.3, 0.5]))
             assert np.isinf(x.logp({'x': -1}))
+            assert np.isinf(x.logp({'x': 3}))
+
+    def test_categorical_valid_p(self):
+        with Model():
+            x = Categorical('x', p=np.array([-0.2, 0.3, 0.5]))
+            assert np.isinf(x.logp({'x': 0}))
+            assert np.isinf(x.logp({'x': 1}))
+            assert np.isinf(x.logp({'x': 2}))
+        with Model():
+            # A model where p sums to 1 but contains negative values
+            x = Categorical('x', p=np.array([-0.2, 0.7, 0.5]))
+            assert np.isinf(x.logp({'x': 0}))
+            assert np.isinf(x.logp({'x': 1}))
+            assert np.isinf(x.logp({'x': 2}))
+        with Model():
+            # Hard edge case from #2082
+            # Early automatic normalization of p's sum would hide the negative
+            # entries if there is a single or pair number of negative values
+            # and the rest are zero
+            x = Categorical('x', p=np.array([-1, -1, 0, 0]))
+            assert np.isinf(x.logp({'x': 0}))
+            assert np.isinf(x.logp({'x': 1}))
+            assert np.isinf(x.logp({'x': 2}))
             assert np.isinf(x.logp({'x': 3}))
 
     @pytest.mark.parametrize('n', [2, 3, 4])

@@ -127,7 +127,7 @@
 
         <div class="ui bottom attached segment">
             <h2 class="ui dividing header">Support and sponsors</h2>
-            <p>PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3 financially, you <a href="https://www.flipcause.com/widget/widget_home/MTE4OTc=">can donate here</a>.</p>
+            <p>PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3 financially, you <a href="https://numfocus.salsalabs.org/donate-to-pymc3/index.html">can donate here</a>.</p>
 
             <div class="ui equal width grid">
                 <div class="column">

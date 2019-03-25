@@ -523,7 +523,6 @@ class TruncatedNormal(BoundedContinuous):
         a1 = [-3, -5, -5]
         b1 = [7, 5, 4]
         for mu, sigma, a, b in zip(mus, sigmas,a1,b1):
-            print mu, sigma, a, b
             an, bn = (a - mu) / sigma, (b - mu) / sigma
             pdf = st.truncnorm.pdf(x, an,bn, loc=mu, scale=sigma)
             plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, a={}, b={}'.format(mu, sigma, a, b))
@@ -700,8 +699,8 @@ class HalfNormal(PositiveContinuous):
            \sqrt{\frac{2\tau}{\pi}}
            \exp\left(\frac{-x^2 \tau}{2}\right)
 
-       f(x \mid \sigma) =\sigma
-           \sqrt{\frac{2}{\pi}}
+       f(x \mid \sigma) =
+           \sqrt{\frac{2}{\pi\sigma^2}}
            \exp\left(\frac{-x^2}{2\sigma^2}\right)
 
     .. note::
@@ -836,7 +835,7 @@ class Wald(PositiveContinuous):
     .. math::
 
        f(x \mid \mu, \lambda) =
-           \left(\frac{\lambda}{2\pi)}\right)^{1/2} x^{-3/2}
+           \left(\frac{\lambda}{2\pi}\right)^{1/2} x^{-3/2}
            \exp\left\{
                -\frac{\lambda}{2x}\left(\frac{x-\mu}{\mu}\right)^2
            \right\}
@@ -2372,6 +2371,18 @@ class Gamma(PositiveContinuous):
             alpha > 0,
             beta > 0)
 
+    def logcdf(self, value):
+        """
+        Compute the log CDF for the Gamma distribution
+        """
+        alpha = self.alpha
+        beta = self.beta
+        return bound(
+            tt.log(tt.gammainc(alpha, beta * value)),
+            value >= 0,
+            alpha > 0,
+            beta > 0)
+
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
@@ -3009,7 +3020,7 @@ class ExGaussian(Continuous):
         ----------
         .. [Rigby2005] R.A. Rigby (2005).
            "Generalized additive models for location, scale and shape"
-           http://dx.doi.org/10.1111/j.1467-9876.2005.00510.x
+           https://doi.org/10.1111/j.1467-9876.2005.00510.x
         """
         mu = self.mu
         sigma = self.sigma

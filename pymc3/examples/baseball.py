@@ -28,7 +28,7 @@ def build_model():
 def run(n=2000):
     model = build_model()
     with model:
-        trace = pm.sample(n, nuts_kwargs={'target_accept':.99})
+        trace = pm.sample(n, target_accept=0.99)
 
     pm.traceplot(trace)
 

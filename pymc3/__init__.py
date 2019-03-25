@@ -31,5 +31,6 @@ import logging
 _log = logging.getLogger('pymc3')
 if not logging.root.handlers:
     _log.setLevel(logging.INFO)
-    handler = logging.StreamHandler()
-    _log.addHandler(handler)
+    if len(_log.handlers) == 0:
+        handler = logging.StreamHandler()
+        _log.addHandler(handler)

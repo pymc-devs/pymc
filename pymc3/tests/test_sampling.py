@@ -69,19 +69,17 @@ class TestSample(SeededTest):
 
     def test_sample_args(self):
         with self.model:
-            with pytest.raises(TypeError) as excinfo:
-                pm.sample(50, tune=0, init=None, step_kwargs={'nuts': {'foo': 1}})
+            with pytest.raises(ValueError) as excinfo:
+                pm.sample(50, tune=0, init=None, foo=1)
             assert "'foo'" in str(excinfo.value)
 
             with pytest.raises(ValueError) as excinfo:
                 pm.sample(50, tune=0, init=None, step_kwargs={'foo': {}})
             assert 'foo' in str(excinfo.value)
 
-            pm.sample(10, tune=0, init=None, nuts_kwargs={'target_accept': 0.9})
-
             with pytest.raises(ValueError) as excinfo:
-                pm.sample(5, tune=0, init=None, step_kwargs={}, nuts_kwargs={})
-            assert 'Specify only one' in str(excinfo.value)
+                pm.sample(10, tune=0, init=None, target_accept=0.9)
+            assert 'target_accept' in str(excinfo.value)
 
     def test_iter_sample(self):
         with self.model:
@@ -225,8 +223,9 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(trace, samples=1000, vars=[a])
             assert 'a' in ppc
             assert ppc['a'].shape == (1000,)
-        _, pval = stats.kstest(ppc['a'],
-                               stats.norm(loc=0, scale=np.sqrt(2)).cdf)
+        # mu's standard deviation may have changed thanks to a's observed
+        _, pval = stats.kstest(ppc['a'] - trace['mu'],
+                               stats.norm(loc=0, scale=1).cdf)
         assert pval > 0.001
 
         with model:
@@ -303,6 +302,63 @@ class TestSamplePPC(SeededTest):
             assert "Cannot sample" in str(excinfo.value)
             samples = pm.sample_posterior_predictive(trace, 50)
             assert samples['foo'].shape == (50, 200)
+
+    def test_model_shared_variable(self):
+        x = np.random.randn(100)
+        y = x > 0
+        x_shared = theano.shared(x)
+        y_shared = theano.shared(y)
+        with pm.Model() as model:
+            coeff = pm.Normal('x', mu=0, sd=1)
+            logistic = pm.Deterministic('p', pm.math.sigmoid(coeff * x_shared))
+
+            obs = pm.Bernoulli('obs', p=logistic, observed=y_shared)
+            trace = pm.sample(100)
+
+        x_shared.set_value([-1, 0, 1.])
+        y_shared.set_value([0, 0, 0])
+
+        samples = 100
+        with model:
+            post_pred = pm.sample_posterior_predictive(trace,
+                                                       samples=samples,
+                                                       vars=[logistic, obs])
+
+        expected_p = np.array([logistic.eval({coeff: val})
+                               for val in trace['x'][:samples]])
+        assert post_pred['obs'].shape == (samples, 3)
+        assert np.allclose(post_pred['p'], expected_p)
+
+    def test_deterministic_of_observed(self):
+        meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(100))
+        meas_in_2 = pm.theanof.floatX(5 + 4 * np.random.randn(100))
+        with pm.Model() as model:
+            mu_in_1 = pm.Normal('mu_in_1', 0, 1)
+            sigma_in_1 = pm.HalfNormal('sd_in_1', 1)
+            mu_in_2 = pm.Normal('mu_in_2', 0, 1)
+            sigma_in_2 = pm.HalfNormal('sd__in_2', 1)
+
+            in_1 = pm.Normal('in_1', mu_in_1, sigma_in_1, observed=meas_in_1)
+            in_2 = pm.Normal('in_2', mu_in_2, sigma_in_2, observed=meas_in_2)
+            out_diff = in_1 + in_2
+            pm.Deterministic('out', out_diff)
+
+            trace = pm.sample(100)
+            ppc_trace = pm.trace_to_dataframe(
+                trace,
+                varnames=[n for n in trace.varnames
+                          if n != 'out']
+            ).to_dict('records')
+            ppc = pm.sample_posterior_predictive(model=model,
+                                                 trace=ppc_trace,
+                                                 samples=len(ppc_trace),
+                                                 vars=(model.deterministics +
+                                                       model.basic_RVs))
+
+            rtol = 1e-5 if theano.config.floatX == 'float64' else 1e-3
+            assert np.allclose(ppc['in_1'] + ppc['in_2'],
+                               ppc['out'],
+                               rtol=rtol)
 
 
 class TestSamplePPCW(SeededTest):

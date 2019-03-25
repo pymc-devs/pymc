@@ -78,6 +78,13 @@ Or via conda-forge:
 
     conda install -c conda-forge pymc3
 
+Plotting is done using `ArviZ <https://arviz-devs.github.io/arviz/>`__
+which may be installed separately, or along with PyMC3:
+
+::
+
+    pip install pymc3[plots]
+
 The current development branch of PyMC3 can be installed from GitHub, also using ``pip``:
 
 ::
@@ -169,7 +176,7 @@ page <https://github.com/pymc-devs/pymc3/graphs/contributors>`__
 Support
 =======
 
-PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3 financially, you can donate `here <https://www.flipcause.com/widget/widget_home/MTE4OTc=>`__.
+PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3 financially, you can donate `here <https://numfocus.salsalabs.org/donate-to-pymc3/index.html>`__.
 
 Sponsors
 ========

@@ -78,7 +78,7 @@ def run(n_samples=1000):
     with model:
         trace = pm.sample(draws=n_samples,
                           tune=1000,
-                          nuts_kwargs=dict(target_accept=.99))
+                          target_accept=.99)
 
     pm.plots.traceplot(trace)
     pm.plots.forestplot(trace)

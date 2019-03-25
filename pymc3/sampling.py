@@ -188,7 +188,7 @@ def _cpu_count():
 
 
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=None, chain_idx=0,
-           chains=None, cores=None, tune=500, nuts_kwargs=None, step_kwargs=None, progressbar=True,
+           chains=None, cores=None, tune=500, progressbar=True,
            model=None, random_seed=None, live_plot=False, discard_tuned_samples=True,
            live_plot_kwargs=None, compute_convergence_checks=True, **kwargs):
     """Draw samples from the posterior using the given step methods.
@@ -230,7 +230,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         Starting point in parameter space (or partial point)
         Defaults to trace.point(-1)) if there is a trace provided and model.test_point if not
         (defaults to empty dict). Initialization methods for NUTS (see `init` keyword) can
-        overwrite the default. For 'SMC' if should be a list of dict with length `chains`.
+        overwrite the default. For 'SMC' it should be a list of dict with length `chains`.
     trace : backend, list, or MultiTrace
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
@@ -247,30 +247,14 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         number of draws.
     cores : int
         The number of chains to run in parallel. If `None`, set to the number of CPUs in the
-        system, but at most 4 (for 'SMC' defaults to 1). Keep in mind that some chains might
-        themselves be multithreaded via openmp or BLAS. In those cases it might be faster to set
-        this to 1.
+        system, but at most 4 (for 'SMC' ignored if `pm.SMC(parallel=False)`. Keep in mind that
+        some chains might themselves be multithreaded via openmp or BLAS. In those cases it might
+        be faster to set this to 1.
     tune : int
         Number of iterations to tune, defaults to 500. Ignored when using 'SMC'. Samplers adjust
         the step sizes, scalings or similar during tuning. Tuning samples will be drawn in addition
         to the number specified in the `draws` argument, and will be discarded unless
         `discard_tuned_samples` is set to False.
-    nuts_kwargs : dict
-        Options for the NUTS sampler. See the docstring of NUTS for a complete list of options.
-        Common options are:
-
-        * target_accept: float in [0, 1]. The step size is tuned such that we approximate this
-          acceptance rate. Higher values like 0.9 or 0.95 often work better for problematic
-          posteriors.
-        * max_treedepth: The maximum depth of the trajectory tree.
-        * step_scale: float, default 0.25
-          The initial guess for the step size scaled down by `1/n**(1/4)`.
-
-        If you want to pass options to other step methods, please use `step_kwargs`.
-    step_kwargs : dict
-        Options for step methods. Keys are the lower case names of the step method, values are
-        dicts of keyword arguments. You can find a full list of arguments in the docstring of the
-        step methods. If you want to pass arguments only to nuts, you can use `nuts_kwargs`.
     progressbar : bool
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
@@ -294,6 +278,22 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     trace : pymc3.backends.base.MultiTrace
         A `MultiTrace` object that contains the samples.
 
+    Notes
+    -----
+
+    Optional keyword arguments can be passed to `sample` to be delivered to the 
+    `step_method`s used during sampling. In particular, the NUTS step method accepts
+    a number of arguments. Common options are:
+
+        * target_accept: float in [0, 1]. The step size is tuned such that we approximate this
+          acceptance rate. Higher values like 0.9 or 0.95 often work better for problematic
+          posteriors.
+        * max_treedepth: The maximum depth of the trajectory tree.
+        * step_scale: float, default 0.25
+          The initial guess for the step size scaled down by `1/n**(1/4)`.
+
+    You can find a full list of arguments in the docstring of the step methods.
+
     Examples
     --------
     .. code:: ipython
@@ -316,17 +316,30 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     """
     model = modelcontext(model)
 
+    nuts_kwargs = kwargs.pop('nuts_kwargs', None)
+    if nuts_kwargs is not None:
+        warnings.warn("The nuts_kwargs argument has been deprecated. Pass step "
+                      "method arguments directly to sample instead",
+                      DeprecationWarning)
+        kwargs.update(nuts_kwargs)
+    step_kwargs = kwargs.pop('step_kwargs', None)
+    if step_kwargs is not None:
+        warnings.warn("The step_kwargs argument has been deprecated. Pass step "
+                      "method arguments directly to sample instead",
+                      DeprecationWarning)
+        kwargs.update(step_kwargs)
+
+    if cores is None:
+        cores = min(4, _cpu_count())
+
     if isinstance(step, pm.step_methods.smc.SMC):
-        if step_kwargs is None:
-            step_kwargs = {}
         trace = smc.sample_smc(draws=draws,
                                step=step,
+                               cores=cores,
                                progressbar=progressbar,
                                model=model,
                                random_seed=random_seed)
     else:
-        if cores is None:
-            cores = min(4, _cpu_count())
         if 'njobs' in kwargs:
             cores = kwargs['njobs']
             warnings.warn(
@@ -372,11 +385,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
 
         draws += tune
 
-        if nuts_kwargs is not None:
-            if step_kwargs is not None:
-                raise ValueError("Specify only one of step_kwargs and nuts_kwargs")
-            step_kwargs = {'nuts': nuts_kwargs}
-
         if model.ndim == 0:
             raise ValueError('The model does not contain any free variables.')
 
@@ -384,11 +392,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
             try:
                 # By default, try to use NUTS
                 _log.info('Auto-assigning NUTS sampler...')
-                args = step_kwargs if step_kwargs is not None else {}
-                args = args.get('nuts', {})
                 start_, step = init_nuts(init=init, chains=chains, n_init=n_init,
                                          model=model, random_seed=random_seed,
-                                         progressbar=progressbar, **args)
+                                         progressbar=progressbar, **kwargs)
                 if start is None:
                     start = start_
             except (AttributeError, NotImplementedError, tg.NullTypeGradError):
@@ -396,9 +402,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
                 _log.info("Initializing NUTS failed. "
                           "Falling back to elementwise auto-assignment.")
                 _log.debug('Exception in init nuts', exec_info=True)
-                step = assign_step_methods(model, step, step_kwargs=step_kwargs)
+                step = assign_step_methods(model, step, step_kwargs=kwargs)
         else:
-            step = assign_step_methods(model, step, step_kwargs=step_kwargs)
+            step = assign_step_methods(model, step, step_kwargs=kwargs)
 
         if isinstance(step, list):
             step = CompoundStep(step)
@@ -419,12 +425,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
                        'random_seed': random_seed,
                        'live_plot': live_plot,
                        'live_plot_kwargs': live_plot_kwargs,
-                       'cores': cores,}
+                       'cores': cores, }
 
         sample_args.update(kwargs)
 
         has_population_samplers = np.any([isinstance(m, arraystep.PopulationArrayStepShared)
-            for m in (step.methods if isinstance(step, CompoundStep) else [step])])
+                                          for m in (step.methods if isinstance(step, CompoundStep) else [step])])
 
         parallel = cores > 1 and chains > 1 and not has_population_samplers
         if parallel:
@@ -865,7 +871,7 @@ def _prepare_iter_population(draws, chains, step, start, parallelize, tune=None,
     # 5. configure the PopulationStepper (expensive call)
     popstep = PopulationStepper(steppers, parallelize)
 
-    # Because the preperations above are expensive, the actual iterator is
+    # Because the preparations above are expensive, the actual iterator is
     # in another method. This way the progbar will not be disturbed.
     return _iter_population(draws, tune, popstep, steppers, traces, population)
 
@@ -1123,7 +1129,7 @@ def sample_ppc(*args, **kwargs):
 
 
 def sample_posterior_predictive_w(traces, samples=None, models=None, weights=None,
-                                    random_seed=None, progressbar=True):
+                                  random_seed=None, progressbar=True):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.
 
@@ -1302,7 +1308,8 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
         elif is_transformed_name(var_name):
             untransformed = get_untransformed_name(var_name)
             if untransformed in data:
-                prior[var_name] = model[untransformed].transformation.forward_val(data[untransformed])
+                prior[var_name] = model[untransformed].transformation.forward_val(
+                    data[untransformed])
     return prior
 
 

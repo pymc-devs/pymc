@@ -32,3 +32,6 @@ benchmarks/env/
 benchmarks/html/
 benchmarks/results/
 .pytest_cache/
+
+# VSCode
+.vscode/
