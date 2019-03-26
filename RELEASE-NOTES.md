@@ -29,6 +29,7 @@
 - Changed initialization of `Categorical.p`. `p` is now normalized to sum to `1` inside `logp` and `random`, but not during initialization. This could hide negative values supplied to `p` as mentioned in #2082.
 - `Categorical` now accepts elements of `p` equal to `0`. `logp` will return `-inf` if there are `values` that index to the zero probability categories.
 - Add `sigma`, `tau`, and `sd` to signature of `NormalMixture`.
+- Resolved issue #3248. Set default lower and upper values of -inf and inf for pm.distributions.continuous.TruncatedNormal. This avoids errors caused by their previous values of None.
 
 ### Deprecations
 
