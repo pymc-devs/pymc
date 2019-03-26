@@ -426,7 +426,7 @@ class Data:
         ...         traces.append(pm.sample())
 
     To set the value of the data container variable, check out
-    :func:`pm.set_data()`.
+    :func:`pymc3.model.set_data()`.
 
     For more information, take a look at this example notebook
     https://docs.pymc.io/notebooks/data_container.html

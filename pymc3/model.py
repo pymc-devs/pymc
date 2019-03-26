@@ -1083,6 +1083,7 @@ def set_data(new_data, model=None):
     Set the value of `x` to predict on new data.
 
     .. code:: ipython
+
         >>> with model:
         ...     pm.set_data({'x': [5,6,9]})
         ...     y_test = pm.sample_posterior_predictive(trace)
