@@ -734,7 +734,11 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
 
     @property
     def logp_nojact(self):
-        """Theano scalar of log-probability of the model"""
+        """Theano scalar of log-probability of the model but without the jacobian
+        if transformed Random Variable is presented.
+        Note that If there is no transformed variable in the model, logp_nojact 
+        will be the same as logpt as there is no need for Jacobian correction.
+        """
         with self:
             factors = [var.logp_nojact for var in self.basic_RVs] + self.potentials
             logp = tt.sum([tt.sum(factor) for factor in factors])
