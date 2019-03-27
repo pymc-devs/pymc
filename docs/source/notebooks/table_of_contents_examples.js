@@ -39,6 +39,7 @@ Gallery.contents = {
     "gaussian_mixture_model": "Mixture Models",
     "marginalized_gaussian_mixture_model": "Mixture Models",
     "SMC2_gaussians": "Simulation-based Inference",
+    "SMC-ABC_Lotka-Volterra_example": "Simulation-based Inference",
     "bayes_param_survival_pymc3": "Survival Analysis",
     "censored_data": "Survival Analysis",
     "survival_analysis": "Survival Analysis",
@@ -53,6 +54,5 @@ Gallery.contents = {
     "lda-advi-aevb": "Variational Inference",
     "normalizing_flows_overview": "Variational Inference",
     "gaussian-mixture-model-advi": "Variational Inference",
-    "GLM-hierarchical-advi-minibatch": "Variational Inference",
-    "ODE_parameter_estimation": "Inference in ODE models"
+    "GLM-hierarchical-advi-minibatch": "Variational Inference"
 }

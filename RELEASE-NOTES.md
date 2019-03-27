@@ -4,12 +4,12 @@
 
 ### New features
 
-- Add data container class (`Data`) that wraps the theano SharedVariable class and let the model be aware of its inputs and outputs.
-- Add function `set_data` to update variables defined as `Data`.
 - `Mixture` now supports mixtures of multidimensional probability distributions, not just lists of 1D distributions.
 - `GLM.from_formula` and `LinearComponent.from_formula` can extract variables from the calling scope. Customizable via the new `eval_env` argument. Fixing #3382.
+- Sequential Monte Carlo - Approximate Bayesian Computation step method is now available. The implementation is in an experimental stage and will be further improved.
 
 ### Maintenance
+
 - All occurances of `sd` as a parameter name have been renamed to `sigma`. `sd` will continue to function for backwards compatibility.
 - Made `BrokenPipeError` for parallel sampling more verbose on Windows.
 - Added the `broadcast_distribution_samples` function that helps broadcasting arrays of drawn samples, taking into account the requested `size` and the inferred distribution shape. This sometimes is needed by distributions that call several `rvs` separately within their `random` method, such as the `ZeroInflatedPoisson` (Fix issue #3310).
@@ -28,8 +28,6 @@
 - Changed `Categorical.mode` to preserve all the dimensions of `p` except the last one, which encodes each category's probability.
 - Changed initialization of `Categorical.p`. `p` is now normalized to sum to `1` inside `logp` and `random`, but not during initialization. This could hide negative values supplied to `p` as mentioned in #2082.
 - `Categorical` now accepts elements of `p` equal to `0`. `logp` will return `-inf` if there are `values` that index to the zero probability categories.
-- Add `sigma`, `tau`, and `sd` to signature of `NormalMixture`.
-- Resolved issue #3248. Set default lower and upper values of -inf and inf for pm.distributions.continuous.TruncatedNormal. This avoids errors caused by their previous values of None.
 
 ### Deprecations
 
