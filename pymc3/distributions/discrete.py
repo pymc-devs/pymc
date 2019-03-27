@@ -596,7 +596,7 @@ class DiscreteUniform(Discrete):
     Discrete uniform distribution.
     The pmf of this distribution is
 
-    .. math:: f(x \mid lower, upper) = \frac{1}{upper-lower}
+    .. math:: f(x \mid lower, upper) = \frac{1}{upper-lower+1}
 
     .. plot::
 

@@ -39,9 +39,6 @@ Gallery.contents = {
     "gaussian_mixture_model": "Mixture Models",
     "marginalized_gaussian_mixture_model": "Mixture Models",
     "SMC2_gaussians": "Simulation-based Inference",
-    // "bayesian_neural_network_with_sgfs": "Stochastic Gradients", Moved to pymc3-experimental
-    // "constant_stochastic_gradient": "Stochastic Gradients", Moved to pymc3-experimental
-    // "sgfs_simple_optimization": "Stochastic Gradients", Moved to pymc3-experimental
     "bayes_param_survival_pymc3": "Survival Analysis",
     "censored_data": "Survival Analysis",
     "survival_analysis": "Survival Analysis",
@@ -56,5 +53,6 @@ Gallery.contents = {
     "lda-advi-aevb": "Variational Inference",
     "normalizing_flows_overview": "Variational Inference",
     "gaussian-mixture-model-advi": "Variational Inference",
-    "GLM-hierarchical-advi-minibatch": "Variational Inference"
+    "GLM-hierarchical-advi-minibatch": "Variational Inference",
+    "ODE_parameter_estimation": "Inference in ODE models"
 }

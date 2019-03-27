@@ -30,7 +30,7 @@ be time consuming if the number of datasets is large)::
     observed_data = [mu + np.random.randn(20) for mu in true_mu]
 
     data = theano.shared(observed_data[0])
-    pm.Model() as model:
+    with pm.Model() as model:
         mu = pm.Normal('mu', 0, 10)
         pm.Normal('y', mu=mu, sigma=1, observed=data)
 

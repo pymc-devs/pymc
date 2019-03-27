@@ -257,7 +257,15 @@ class TestNormal(BaseTestCases.BaseTestCase):
 
 class TestTruncatedNormal(BaseTestCases.BaseTestCase):
     distribution = pm.TruncatedNormal
-    params = {'mu': 0., 'tau': 1., 'lower':-0.5, 'upper':0.5}
+    params = {'mu': 0., 'tau': 1., 'lower': -0.5, 'upper': 0.5}
+
+class TestTruncatedNormalLower(BaseTestCases.BaseTestCase):
+    distribution = pm.TruncatedNormal
+    params = {'mu': 0., 'tau': 1., 'lower': -0.5}
+
+class TestTruncatedNormalUpper(BaseTestCases.BaseTestCase):
+    distribution = pm.TruncatedNormal
+    params = {'mu': 0., 'tau': 1., 'upper': 0.5}
 
 class TestSkewNormal(BaseTestCases.BaseTestCase):
     distribution = pm.SkewNormal
@@ -461,7 +469,6 @@ class TestScalarParameterSamples(SeededTest):
     def test_uniform(self):
         def ref_rand(size, lower, upper):
             return st.uniform.rvs(size=size, loc=lower, scale=upper - lower)
-
         pymc3_random(pm.Uniform, {'lower': -Rplus, 'upper': Rplus}, ref_rand=ref_rand)
 
     def test_normal(self):
@@ -471,8 +478,20 @@ class TestScalarParameterSamples(SeededTest):
 
     def test_truncated_normal(self):
         def ref_rand(size, mu, sigma, lower, upper):
-            return st.truncnorm.rvs((lower-mu)/sigma, (upper-mu)/sigma, size=size, loc=mu, scale=sigma)
-        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sigma': Rplusbig, 'lower':-Rplusbig, 'upper':Rplusbig},
+            return st.truncnorm.rvs((lower - mu) / sigma, (upper - mu) / sigma, size=size, loc=mu, scale=sigma)
+        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sigma': Rplusbig, 'lower': -Rplusbig, 'upper': Rplusbig},
+                     ref_rand=ref_rand)
+
+    def test_truncated_normal_lower(self):
+        def ref_rand(size, mu, sigma, lower):
+            return st.truncnorm.rvs((lower - mu) / sigma, np.inf, size=size, loc=mu, scale=sigma)
+        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sigma': Rplusbig, 'lower': -Rplusbig},
+                     ref_rand=ref_rand)
+
+    def test_truncated_normal_upper(self):
+        def ref_rand(size, mu, sigma, upper):
+            return st.truncnorm.rvs(-np.inf, (upper - mu) / sigma, size=size, loc=mu, scale=sigma)
+        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sigma': Rplusbig, 'upper': Rplusbig},
                      ref_rand=ref_rand)
 
     def test_skew_normal(self):

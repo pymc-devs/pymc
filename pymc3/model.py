@@ -10,6 +10,7 @@ import scipy.sparse as sps
 import theano.sparse as sparse
 from theano import theano, tensor as tt
 from theano.tensor.var import TensorVariable
+from theano.compile import SharedVariable
 
 from pymc3.theanof import set_theano_conf, floatX
 import pymc3 as pm
@@ -22,7 +23,7 @@ from .util import get_transformed_name
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
-    'Point', 'Deterministic', 'Potential'
+    'Point', 'Deterministic', 'Potential', 'set_data'
 ]
 
 FlatView = collections.namedtuple('FlatView', 'input, replacements, view')
@@ -734,7 +735,11 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
 
     @property
     def logp_nojact(self):
-        """Theano scalar of log-probability of the model"""
+        """Theano scalar of log-probability of the model but without the jacobian
+        if transformed Random Variable is presented.
+        Note that If there is no transformed variable in the model, logp_nojact 
+        will be the same as logpt as there is no need for Jacobian correction.
+        """
         with self:
             factors = [var.logp_nojact for var in self.basic_RVs] + self.potentials
             logp = tt.sum([tt.sum(factor) for factor in factors])
@@ -1053,6 +1058,54 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
             $$'''.format('\\\\'.join(tex_vars))
 
     __latex__ = _repr_latex_
+
+
+def set_data(new_data, model=None):
+    """Sets the value of one or more data container variables.
+
+    Parameters
+    ----------
+    new_data : dict
+        New values for the data containers. The keys of the dictionary are
+        the  variables names in the model and the values are the objects
+        with which to update.
+    model : Model (optional if in `with` context)
+
+    Examples
+    --------
+
+    .. code:: ipython
+
+        >>> import pymc3 as pm
+        >>> with pm.Model() as model:
+        ...     x = pm.Data('x', [1., 2., 3.])
+        ...     y = pm.Data('y', [1., 2., 3.])
+        ...     beta = pm.Normal('beta', 0, 1)
+        ...     obs = pm.Normal('obs', x * beta, 1, observed=y)
+        ...     trace = pm.sample(1000, tune=1000)
+
+    Set the value of `x` to predict on new data.
+
+    .. code:: ipython
+
+        >>> with model:
+        ...     pm.set_data({'x': [5,6,9]})
+        ...     y_test = pm.sample_posterior_predictive(trace)
+        >>> y_test['obs'].mean(axis=0)
+        array([4.6088569 , 5.54128318, 8.32953844])
+    """
+    model = modelcontext(model)
+
+    for variable_name, new_value in new_data.items():
+        if isinstance(model[variable_name], SharedVariable):
+            model[variable_name].set_value(pandas_to_array(new_value))
+        else:
+            message = 'The variable `{}` must be defined as `pymc3.' \
+                      'Data` inside the model to allow updating. The ' \
+                      'current type is: ' \
+                      '{}.'.format(variable_name,
+                                   type(model[variable_name]))
+            raise TypeError(message)
 
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
