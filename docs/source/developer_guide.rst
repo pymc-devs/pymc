@@ -61,7 +61,7 @@ functions. Instead, to access a stateless distribution, you need to call
 https://docs.pymc.io/prob\_dists.html#using-pymc-distributions-without-a-model).
 
 With this distinction in mind, we can take a closer look at the
-stateless distribution part of pymc3 (see distriution api in `doc
+stateless distribution part of pymc3 (see distribution api in `doc
 <https://docs.pymc.io/api/distributions.html>`__), which divided into:
 
 - Continuous
@@ -670,7 +670,7 @@ does not edit or rewrite the graph directly.
         def __call__(self, array, grad_out=None, extra_vars=None):
             ...
             logp, dlogp = self._theano_function(array)
-            return
+            return logp, dlogp
 
 
         def set_extra_values(self, extra_vars):
@@ -857,7 +857,7 @@ MCMC
 The ability for model instance to generate conditional logp and dlogp
 function enable one of the unique feature of PyMC3 - `CompoundStep
 method <https://docs.pymc.io/notebooks/sampling_compound_step.html>`__.
-It is conceptual level it is a Metropolis-within-Gibbs sampler. User can
+On a conceptual level it is a Metropolis-within-Gibbs sampler. User can
 `specify different sampler of different
 RVs <https://docs.pymc.io/notebooks/sampling_compound_step.html?highlight=compoundstep#Specify-compound-steps>`__.
 Alternatively, it is implemented as yet another interceptor: the
