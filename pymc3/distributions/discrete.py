@@ -608,7 +608,7 @@ class DiscreteUniform(Discrete):
         us = [6, 2]
         for l, u in zip(ls, us):
             x = np.arange(l, u+1)
-            pmf = [1 / (u - l)] * len(x)
+            pmf = [1 / (u - l + 1)] * len(x)
             plt.plot(x, pmf, '-o', label='lower = {}, upper = {}'.format(l, u))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
