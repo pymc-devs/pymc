@@ -4,6 +4,9 @@
 
 ### New features
 
+
+- Add data container class (`Data`) that wraps the theano SharedVariable class and let the model be aware of its inputs and outputs.
+- Add function `set_data` to update variables defined as `Data`.
 - `Mixture` now supports mixtures of multidimensional probability distributions, not just lists of 1D distributions.
 - `GLM.from_formula` and `LinearComponent.from_formula` can extract variables from the calling scope. Customizable via the new `eval_env` argument. Fixing #3382.
 - Sequential Monte Carlo - Approximate Bayesian Computation step method is now available. The implementation is in an experimental stage and will be further improved.
