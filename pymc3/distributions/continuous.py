@@ -2622,7 +2622,7 @@ class Weibull(PositiveContinuous):
     ========  ====================================================
     Support   :math:`x \in [0, \infty)`
     Mean      :math:`\beta \Gamma(1 + \frac{1}{\alpha})`
-    Variance  :math:`\beta^2 \Gamma(1 + \frac{2}{\alpha} - \mu^2)`
+    Variance  :math:`\beta^2(\Gamma(1 + \frac{2}{\alpha}) - \mu^2/\beta^2)`
     ========  ====================================================
 
     Parameters
