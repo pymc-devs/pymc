@@ -30,6 +30,7 @@
 - `Categorical` now accepts elements of `p` equal to `0`. `logp` will return `-inf` if there are `values` that index to the zero probability categories.
 - Add `sigma`, `tau`, and `sd` to signature of `NormalMixture`.
 - Resolved issue #3248. Set default lower and upper values of -inf and inf for pm.distributions.continuous.TruncatedNormal. This avoids errors caused by their previous values of None.
+- Allow CategoricalGibbsMetropolis step method to be used for DiscreteUniform distribution (#3435).
 
 ### Deprecations
 
