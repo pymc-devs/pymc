@@ -402,7 +402,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
                 k = 2
             elif isinstance(distr, pm.DiscreteUniform):
                 k = draw_values([distr.upper])[0]
-                if draw_values([distr.lower])[0] != 0:
+                if np.all(draw_values([distr.lower])):
                     raise ValueError('Parameter lower must be 0 to use DiscreteUniform' +
                                      'with CategoricalGibbsMetropolis.')
             else:
