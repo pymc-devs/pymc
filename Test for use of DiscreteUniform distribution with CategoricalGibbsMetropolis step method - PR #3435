@@ -1,0 +1,29 @@
+from pymc3 import *
+%matplotlib inline
+import matplotlib
+import matplotlib.pyplot as plt
+
+
+def run_MCMC(n, obs, draws):
+    """Define and run MCMC model with using a DiscreteUniform distribution.
+    This may be useful in place of a categorical distribution for a very large support
+    (i.e. large n in example below).""" 
+    obs = np.array(obs)
+    with Model() as model2: 
+        
+        x = DiscreteUniform('x', 0, n - 1)         
+        sfs_obs = Poisson('sfs_obs', mu=x, observed=obs) 
+
+    with model2:
+        
+        step = CategoricalGibbsMetropolis([x])
+        trace = sample(draws, tune=0, step=step)  #Will set to CategoricalGibbsMetropolis
+    plt.show(forestplot(trace, varnames=['x']))
+    traceplot(trace, varnames=['x'])
+    print(summary(trace, varnames=['x']))
+    return trace
+
+obs = 5000000
+draws = 20000
+n = 20000000
+trace = run_MCMC(n, obs, draws)
