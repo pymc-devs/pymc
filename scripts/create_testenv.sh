@@ -33,15 +33,15 @@ then
     fi
     source activate ${ENVNAME}
 fi
-conda install --yes numpy scipy mkl-service matplotlib
+conda install --yes numpy scipy mkl-service
 conda install --yes -c conda-forge python-graphviz
 
 pip install --upgrade pip
 
 #  Install editable using the setup.py
-pip install -e .
+pip install --no-cache-dir -e .
 
-pip install -r requirements-dev.txt
+pip install --no-cache-dir -r requirements-dev.txt
 
 # Install untested, non-required code (linter fails without them)
 pip install ipython ipywidgets
