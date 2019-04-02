@@ -39,9 +39,9 @@ conda install --yes -c conda-forge python-graphviz
 pip install --upgrade pip
 
 #  Install editable using the setup.py
-pip install --no-cache-dir -e .
+pip install --no-cache-dir --ignore-installed -e .
 
-pip install --no-cache-dir -r requirements-dev.txt
+pip install --no-cache-dir --ignore-installed -r requirements-dev.txt
 
 # Install untested, non-required code (linter fails without them)
 pip install ipython ipywidgets
