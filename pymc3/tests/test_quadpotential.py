@@ -52,7 +52,7 @@ def test_equal_diag():
             v_ = pot.velocity(x)
             e_ = pot.energy(x)
             npt.assert_allclose(v_, v, rtol=1e-6)
-            npt.assert_allclose(e_, e)
+            npt.assert_allclose(e_, e, rtol=1e-6)
 
 
 def test_equal_dense():
