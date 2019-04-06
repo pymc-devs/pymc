@@ -39,8 +39,9 @@ conda install --yes -c conda-forge python-graphviz
 pip install --upgrade pip
 
 #  Install editable using the setup.py
-pip install --no-cache-dir --ignore-installed -e .
 
+# Travis env is unable to import cached mpl sometimes https://github.com/pymc-devs/pymc3/issues/3423
+pip install --no-cache-dir --ignore-installed -e .
 pip install --no-cache-dir --ignore-installed -r requirements-dev.txt
 
 # Install untested, non-required code (linter fails without them)
