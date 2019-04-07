@@ -189,8 +189,8 @@ def _cpu_count():
 
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=None, chain_idx=0,
            chains=None, cores=None, tune=500, progressbar=True,
-           model=None, random_seed=None, live_plot=False, discard_tuned_samples=True,
-           live_plot_kwargs=None, compute_convergence_checks=True, **kwargs):
+           model=None, random_seed=None, discard_tuned_samples=True,
+           compute_convergence_checks=True, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -262,11 +262,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     model : Model (optional if in `with` context)
     random_seed : int or list of ints
         A list is accepted if `cores` is greater than one.
-    live_plot : bool
-        Flag for live plotting the trace while sampling. Ignored when using 'SMC'.
-    live_plot_kwargs : dict
-        Options for traceplot. Example: live_plot_kwargs={'varnames': ['x']}.
-        Ignored when using 'SMC'
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval. Ignored when using 'SMC'
     compute_convergence_checks : bool, default=True
@@ -423,8 +418,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
                        'progressbar': progressbar,
                        'model': model,
                        'random_seed': random_seed,
-                       'live_plot': live_plot,
-                       'live_plot_kwargs': live_plot_kwargs,
                        'cores': cores, }
 
         sample_args.update(kwargs)
@@ -531,13 +524,11 @@ def _sample_population(draws, chain, chains, start, random_seed, step, tune,
     latest_traces = None
     for it, traces in enumerate(sampling):
         latest_traces = traces
-        # TODO: add support for liveplot during population-sampling
     return MultiTrace(latest_traces)
 
 
 def _sample(chain, progressbar, random_seed, start, draws=None, step=None,
-            trace=None, tune=None, model=None, live_plot=False,
-            live_plot_kwargs=None, **kwargs):
+            trace=None, tune=None, model=None, **kwargs):
     skip_first = kwargs.get('skip_first', 0)
     refresh_every = kwargs.get('refresh_every', 100)
 
@@ -548,15 +539,12 @@ def _sample(chain, progressbar, random_seed, start, draws=None, step=None,
     try:
         strace = None
         for it, strace in enumerate(sampling):
-            if live_plot:
-                if live_plot_kwargs is None:
-                    live_plot_kwargs = {}
-                if it >= skip_first:
-                    trace = MultiTrace([strace])
-                    if it == skip_first:
-                        ax = plots.traceplot(trace, live_plot=False, **live_plot_kwargs)
-                    elif (it - skip_first) % refresh_every == 0 or it == draws - 1:
-                        plots.traceplot(trace, ax=ax, live_plot=True, **live_plot_kwargs)
+            if it >= skip_first:
+                trace = MultiTrace([strace])
+                if it == skip_first:
+                    ax = plots.traceplot(trace)
+                elif (it - skip_first) % refresh_every == 0 or it == draws - 1:
+                    plots.traceplot(trace, ax=ax)
     except KeyboardInterrupt:
         pass
     finally:
