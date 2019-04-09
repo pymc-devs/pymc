@@ -1300,6 +1300,11 @@ def test_bound():
         BoundNormalPositionalArgs = Bound(Normal, upper=6)("x", 2., 1.)
 
 
+    with Model():
+        BoundPoissonNamedArgs = Bound(Poisson, upper=6)("y", mu=2.)
+        BoundPoissonPositionalArgs = Bound(Poisson, upper=6)("x", 2.)
+
+
 class TestLatex:
 
     def setup_class(self):

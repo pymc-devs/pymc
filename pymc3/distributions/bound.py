@@ -103,8 +103,8 @@ class _DiscreteBounded(_Bounded, Discrete):
             default = lower + 1
 
         super().__init__(
-            distribution=distribution, lower=lower, upper=upper,
-            default=default, *args, **kwargs)
+            distribution, lower, upper,
+            default, *args, transform=transform, **kwargs)
 
 
 class _ContinuousBounded(_Bounded, Continuous):
