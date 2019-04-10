@@ -103,8 +103,8 @@ class _DiscreteBounded(_Bounded, Discrete):
             default = lower + 1
 
         super().__init__(
-            distribution=distribution, lower=lower, upper=upper,
-            default=default, *args, **kwargs)
+            distribution, lower, upper,
+            default, *args, transform=transform, **kwargs)
 
 
 class _ContinuousBounded(_Bounded, Continuous):
@@ -151,8 +151,8 @@ class _ContinuousBounded(_Bounded, Continuous):
             default = None
 
         super().__init__(
-            distribution=distribution, lower=lower, upper=upper,
-            transform=transform, default=default, *args, **kwargs)
+            distribution, lower, upper,
+            default, *args, transform=transform, **kwargs)
 
 
 class Bound:
@@ -214,12 +214,13 @@ class Bound:
                              'with the cumulative probability function. See '
                              'pymc3/examples/censored_data.py for an example.')
 
+        transform = kwargs.pop('transform', 'infer')
         if issubclass(self.distribution, Continuous):
-            return _ContinuousBounded(name, self.distribution,
-                                      self.lower, self.upper, *args, **kwargs)
+            return _ContinuousBounded(name, self.distribution, self.lower,
+                                    self.upper, transform, *args, **kwargs)
         elif issubclass(self.distribution, Discrete):
-            return _DiscreteBounded(name, self.distribution,
-                                    self.lower, self.upper, *args, **kwargs)
+            return _DiscreteBounded(name, self.distribution, self.lower,
+                                    self.upper, transform, *args, **kwargs)
         else:
             raise ValueError(
                 'Distribution is neither continuous nor discrete.')

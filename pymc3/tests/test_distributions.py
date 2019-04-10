@@ -1295,6 +1295,15 @@ def test_bound():
         BoundPoisson = Bound(Poisson, upper=6)
         BoundPoisson(name="y", mu=1)
 
+    with Model():
+        BoundNormalNamedArgs = Bound(Normal, upper=6)("y", mu=2., sd=1.)
+        BoundNormalPositionalArgs = Bound(Normal, upper=6)("x", 2., 1.)
+
+
+    with Model():
+        BoundPoissonNamedArgs = Bound(Poisson, upper=6)("y", mu=2.)
+        BoundPoissonPositionalArgs = Bound(Poisson, upper=6)("x", 2.)
+
 
 class TestLatex:
 
