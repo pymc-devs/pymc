@@ -622,9 +622,9 @@ def generate_samples(generator, *args, **kwargs):
         inputs = get_broadcastable_distribution_samples(
             inputs + (np.empty(dist_shape),),
             size=size_tup,
-        )[:-1]
+        )
         broadcast_shape = broadcast_distribution_samples_shape(
-            [i.shape for i in inputs] + [dist_shape],
+            [i.shape for i in inputs],
             size=size_tup
         )
         args = tuple(inputs[:len(args)])
@@ -638,7 +638,7 @@ def generate_samples(generator, *args, **kwargs):
     dist_broadcast_shape = broadcast_shapes(dist_shape, broadcast_shape)
     # All inputs are scalars, end up size (size_tup, dist_shape)
     if broadcast_shape in {(), (0,), (1,)}:
-        print(size_tup, dist_shape, [a.shape for a in args + tuple(kwargs.values())])
+        print(size_tup, dist_shape, broadcast_shape, [a.shape for a in args + tuple(kwargs.values())])
         samples = generator(size=size_tup + dist_shape, *args, **kwargs)
     # Inputs already have the right shape. Just get the right size.
     elif dist_broadcast_shape or len(dist_shape) == 0:
