@@ -5,8 +5,8 @@ import warnings
 
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow, random_choice
-from .distribution import (Discrete, draw_values, generate_samples,
-                           broadcast_distribution_samples)
+from .distribution import Discrete, draw_values, generate_samples
+from .shape_utils import broadcast_distribution_samples
 from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
 from ..theanof import floatX, intX
 

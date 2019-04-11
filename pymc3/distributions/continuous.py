@@ -19,8 +19,8 @@ from .dist_math import (
     alltrue_elemwise, betaln, bound, gammaln, i0e, incomplete_beta, logpow,
     normal_lccdf, normal_lcdf, SplineWrapper, std_cdf, zvalue,
 )
-from .distribution import (Continuous, draw_values, generate_samples,
-                           broadcast_distribution_samples)
+from .distribution import (Continuous, draw_values, generate_samples)
+from .shape_utils import broadcast_distribution_samples
 
 __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'TruncatedNormal', 'Beta',
            'Kumaraswamy', 'Exponential', 'Laplace', 'StudentT', 'Cauchy',

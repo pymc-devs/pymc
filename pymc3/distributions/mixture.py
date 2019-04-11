@@ -8,8 +8,8 @@ from ..math import logsumexp
 from .dist_math import bound, random_choice, to_tuple
 from .distribution import (Discrete, Distribution, draw_values,
                            generate_samples, _DrawValuesContext,
-                           _DrawValuesContextBlocker,
-                           broadcast_distribution_samples)
+                           _DrawValuesContextBlocker)
+from .shape_utils import broadcast_distribution_samples
 from .continuous import get_tau_sigma, Normal
 from ..theanof import _conversion_map
 
