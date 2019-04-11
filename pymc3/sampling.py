@@ -17,7 +17,6 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
 from .util import update_start_vals, get_untransformed_name, is_transformed_name, get_default_varnames
 from .vartypes import discrete_types
 from pymc3.step_methods.hmc import quadpotential
-from pymc3 import plots
 import pymc3 as pm
 from tqdm import tqdm
 
