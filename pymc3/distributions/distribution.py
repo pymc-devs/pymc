@@ -15,7 +15,6 @@ from .shape_utils import (
     get_broadcastable_distribution_samples,
     broadcast_distribution_samples_shape,
     broadcast_shapes,
-    broadcast_distribution_samples,
 )
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
@@ -625,10 +624,10 @@ def generate_samples(generator, *args, **kwargs):
             size=size_tup,
         )[:-1]
         broadcast_shape = broadcast_distribution_samples_shape(
-            [inputs[0].shape, dist_shape],
+            [i.shape for i in inputs] + [dist_shape],
             size=size_tup
         )
-        args = inputs[:len(args)]
+        args = tuple(inputs[:len(args)])
         for offset, key in enumerate(kwargs):
             kwargs[key] = inputs[len(args) + offset]
     # Update kwargs with the keyword arguments that were not broadcasted
@@ -639,6 +638,7 @@ def generate_samples(generator, *args, **kwargs):
     dist_broadcast_shape = broadcast_shapes(dist_shape, broadcast_shape)
     # All inputs are scalars, end up size (size_tup, dist_shape)
     if broadcast_shape in {(), (0,), (1,)}:
+        print(size_tup, dist_shape, [a.shape for a in args + tuple(kwargs.values())])
         samples = generator(size=size_tup + dist_shape, *args, **kwargs)
     # Inputs already have the right shape. Just get the right size.
     elif dist_broadcast_shape or len(dist_shape) == 0:

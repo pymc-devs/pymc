@@ -27,7 +27,7 @@ def check_shape_type(shape):
         )
 
 
-def broadcast_shapes(*args):
+def broadcast_shapes(*args, raise_exception=False):
     """Return the shape resulting from broadcasting multiple shapes.
     Represents numpy's broadcasting rules.
     Parameters
@@ -49,7 +49,13 @@ def broadcast_shapes(*args):
         x[-len(y):] = [j if i == 1 else i if j == 1 else i if i == j else 0
                        for i, j in zip(x[-len(y):], y)]
         if not all(x):
-            return None
+            if raise_exception:
+                raise ValueError(
+                    "Supplied shapes {} do not broadcast together".
+                    format(", ".join(["{}".format(a) for a in args]))
+                )
+            else:
+                return None
     return tuple(x)
 
 
@@ -144,6 +150,7 @@ def get_broadcastable_distribution_samples(samples, size=None):
         assert np.all(sample1 == out[1])
         assert np.all(sample2 == out[2])
     """
+    samples = [np.atleast_1d(p) for p in samples]
     if size is None:
         return samples
     _size = to_tuple(size)
@@ -151,7 +158,7 @@ def get_broadcastable_distribution_samples(samples, size=None):
     p_shapes = [p.shape for p in samples]
     # samples shapes without the size prepend
     sp_shapes = [s[len(_size) :] if _size == s[: len(_size)] else s for s in p_shapes]
-    broadcast_shape = np.broadcast(*[np.empty(s) for s in sp_shapes]).shape
+    broadcast_shape = broadcast_shapes(*sp_shapes, raise_exception=True)
     broadcastable_samples = []
     for param, p_shape, sp_shape in zip(samples, p_shapes, sp_shapes):
         if _size == p_shape[: len(_size)]:
@@ -206,18 +213,25 @@ def broadcast_distribution_samples_shape(shapes, size=None):
         assert out == (size, 4, 5)
     """
     if size is None:
-        broadcasted_shape = broadcast_shapes(shapes)
+        broadcasted_shape = broadcast_shapes(*shapes)
         if broadcasted_shape is None:
             raise ValueError(
                 "Cannot broadcast provided shapes {} given size: {}".format(
-                    ", ".join(shapes), size
+                    ", ".join(["{}".format(s) for s in shapes]), size
                 )
             )
         return broadcasted_shape
     _size = to_tuple(size)
     # samples shapes without the size prepend
     sp_shapes = [s[len(_size) :] if _size == s[: len(_size)] else s for s in shapes]
-    broadcast_shape = np.broadcast(*[np.empty(s) for s in sp_shapes]).shape
+    try:
+        broadcast_shape = broadcast_shapes(*sp_shapes, raise_exception=True)
+    except ValueError:
+        raise ValueError(
+            "Cannot broadcast provided shapes {} given size: {}".format(
+                ", ".join(["{}".format(s) for s in shapes]), size
+            )
+        )
     broadcastable_shapes = []
     for shape, sp_shape in zip(shapes, sp_shapes):
         if _size == shape[: len(_size)]:
@@ -235,7 +249,7 @@ def broadcast_distribution_samples_shape(shapes, size=None):
     if broadcasted_shape is None:
         raise ValueError(
             "Cannot broadcast provided shapes {} given size: {}".format(
-                ", ".join(shapes), size
+                ", ".join(["{}".format(s) for s in shapes]), size
             )
         )
     return broadcasted_shape
