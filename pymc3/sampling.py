@@ -541,10 +541,6 @@ def _sample(chain, progressbar, random_seed, start, draws=None, step=None,
         for it, strace in enumerate(sampling):
             if it >= skip_first:
                 trace = MultiTrace([strace])
-                if it == skip_first:
-                    ax = plots.traceplot(trace)
-                elif (it - skip_first) % refresh_every == 0 or it == draws - 1:
-                    plots.traceplot(trace, ax=ax)
     except KeyboardInterrupt:
         pass
     finally:
