@@ -3369,7 +3369,7 @@ class Triangular(BoundedContinuous):
         scale = upper - lower
         c_ = (c - lower) / scale
         return generate_samples(stats.triang.rvs, c=c_, loc=lower, scale=scale,
-                                size=size, dist_shape=self.shape, random_state=None)
+                                size=size, dist_shape=self.shape)
 
     def logp(self, value):
         """

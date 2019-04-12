@@ -14,7 +14,7 @@ from .dist_math import to_tuple
 from .shape_utils import (
     get_broadcastable_distribution_samples,
     broadcast_distribution_samples_shape,
-    broadcast_shapes,
+    shapes_broadcasting,
 )
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
@@ -606,8 +606,8 @@ def generate_samples(generator, *args, **kwargs):
     not_broadcast_kwargs = kwargs.pop('not_broadcast_kwargs', None)
     if not_broadcast_kwargs is None:
         not_broadcast_kwargs = dict()
-    if size is None:
-        size = 1
+#    if size is None:
+#        size = 1
 
     args = tuple(p[0] if isinstance(p, tuple) else p for p in args)
 
@@ -635,14 +635,13 @@ def generate_samples(generator, *args, **kwargs):
 
     broadcast_shape = to_tuple(broadcast_shape)
 
-    dist_broadcast_shape = broadcast_shapes(dist_shape, broadcast_shape)
+    dist_broadcast_shape = shapes_broadcasting(dist_shape, broadcast_shape)
     # All inputs are scalars, end up size (size_tup, dist_shape)
     if broadcast_shape in {(), (0,), (1,)}:
-        print(size_tup, dist_shape, broadcast_shape, [a.shape for a in args + tuple(kwargs.values())])
         samples = generator(size=size_tup + dist_shape, *args, **kwargs)
     # Inputs already have the right shape. Just get the right size.
-    elif dist_broadcast_shape or len(dist_shape) == 0:
-        if size == 1:
+    elif dist_broadcast_shape is not None or len(dist_shape) == 0:
+        if size is None:
             samples = generator(size=dist_broadcast_shape, *args, **kwargs)
         elif dist_shape == broadcast_shape:
             samples = generator(size=size_tup + dist_shape, *args, **kwargs)
@@ -697,6 +696,7 @@ def generate_samples(generator, *args, **kwargs):
         '''.format(size=size, size_tup=size_tup, dist_shape=dist_shape, broadcast_shape=broadcast_shape, test=broadcast_shape[:len(size_tup)] == size_tup))
 
     # reshape samples here
+    samples = np.atleast_1d(samples)
     if samples.shape[0] == 1 and size == 1:
         if len(samples.shape) > len(dist_shape) and samples.shape[-len(dist_shape):] == dist_shape:
             samples = samples.reshape(samples.shape[1:])
