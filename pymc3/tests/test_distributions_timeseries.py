@@ -7,10 +7,7 @@ from ..theanof import floatX
 import numpy as np
 import pytest
 
-pytestmark = pytest.mark.usefixtures(
-    'strict_float32',
-    'seeded_test'
-)
+pytestmark = pytest.mark.usefixtures('seeded_test')
 
 
 def test_AR():

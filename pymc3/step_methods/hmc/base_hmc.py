@@ -80,7 +80,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         self.step_adapt = step_sizes.DualAverageAdaptation(
             self.step_size, target_accept, gamma, k, t0
         )
-
+        self.target_accept = target_accept
         self.tune = True
 
         if scaling is None and potential is None:
