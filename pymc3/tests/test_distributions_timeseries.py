@@ -5,6 +5,13 @@ from ..sampling import sample, sample_posterior_predictive
 from ..theanof import floatX
 
 import numpy as np
+import pytest
+
+pytestmark = pytest.mark.usefixtures(
+    'strict_float32',
+    'seeded_test'
+)
+
 
 def test_AR():
     # AR1
