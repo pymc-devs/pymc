@@ -601,8 +601,6 @@ def generate_samples(generator, *args, **kwargs):
     dist_shape = kwargs.pop('dist_shape', ())
     one_d = _is_one_d(dist_shape)
     size = kwargs.pop('size', None)
-#    if size is None:
-#        size = 1
     broadcast_shape = kwargs.pop('broadcast_shape', None)
     not_broadcast_kwargs = kwargs.pop('not_broadcast_kwargs', None)
     if not_broadcast_kwargs is None:

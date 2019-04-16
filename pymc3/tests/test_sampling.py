@@ -486,13 +486,14 @@ class TestSamplePriorPredictive(SeededTest):
             probs = pm.Dirichlet("probs", a=np.ones(6), shape=6)
             obs = pm.Multinomial("obs", n=100, p=probs, observed=mn_data)
             burned_trace = pm.sample(20, tune=10, cores=1)
-        sim_priors = pm.sample_prior_predictive(samples=20, model=dm_model)
-        sim_ppc = pm.sample_posterior_predictive(
-            burned_trace, samples=20, model=dm_model
-        )
-        assert sim_priors["probs"].shape == (20, 6)
-        assert sim_priors["obs"].shape == (20, 6)
-        assert sim_ppc["obs"].shape == (20,) + obs.distribution.shape
+        sim_priors = pm.sample_prior_predictive(samples=20,
+                                                model=dm_model)
+        sim_ppc = pm.sample_posterior_predictive(burned_trace,
+                                                 samples=20,
+                                                 model=dm_model)
+        assert sim_priors['probs'].shape == (20, 6)
+        assert sim_priors['obs'].shape == (20,) + obs.distribution.shape
+        assert sim_ppc['obs'].shape == (20,) + obs.distribution.shape
 
     def test_layers(self):
         with pm.Model() as model:
