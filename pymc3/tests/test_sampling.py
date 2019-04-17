@@ -247,12 +247,13 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test list input
+            n = trace.shape
             ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
-            ppc = pm.sample_posterior_predictive(trace, samples=1000, vars=[])
+            ppc = pm.sample_posterior_predictive(trace, samples=n, vars=[])
             assert len(ppc) == 0
-            ppc = pm.sample_posterior_predictive(trace, samples=1000, vars=[a])
+            ppc = pm.sample_posterior_predictive(trace, samples=n, vars=[a])
             assert "a" in ppc
-            assert ppc["a"].shape == (1000,)
+            assert ppc["a"].shape == (n,)
         # mu's standard deviation may have changed thanks to a's observed
         _, pval = stats.kstest(ppc["a"] - trace["mu"], stats.norm(loc=0, scale=1).cdf)
         assert pval > 0.001
