@@ -247,7 +247,7 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test list input
-            n = trace.shape
+            n = trace["mu"].shape[0]
             ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
             ppc = pm.sample_posterior_predictive(trace, samples=n, vars=[])
             assert len(ppc) == 0
