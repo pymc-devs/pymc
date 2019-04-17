@@ -622,7 +622,7 @@ def generate_samples(generator, *args, **kwargs):
         # account the potential size prefix
         inputs = args + tuple(kwargs.values())
         broadcast_shape = broadcast_dist_samples_shape(
-            [np.atleast_1d(i).shape for i in inputs] + [dist_shape],
+            [np.asarray(i).shape for i in inputs] + [dist_shape],
             size=size_tup
         )
         # We do this instead of broadcast_distribution_samples to avoid

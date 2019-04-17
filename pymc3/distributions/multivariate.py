@@ -520,11 +520,6 @@ class Multinomial(Discrete):
         n = np.squeeze(n) # works also if n is a tensor
 
         if len(self.shape) > 1:
-            m = self.shape[-2]
-            # try:
-            #     assert n.shape == (m,)
-            # except (AttributeError, AssertionError):
-            #     n = n * tt.ones(m)
             self.n = tt.shape_padright(n)
             self.p = p if p.ndim > 1 else tt.shape_padleft(p)
         elif n.ndim == 1:
@@ -583,12 +578,7 @@ class Multinomial(Discrete):
 
     def random(self, point=None, size=None):
         n, p = draw_values([self.n, self.p], point=point, size=size)
-        n = np.asarray(n)
-        p = np.asarray(p)
-        # n should broadcast with p[..., 0] (the last axis in p is not shared
-        # with n for broadcasting). To do this, we add a dummy axis at the end
-        # of n
-        samples = generate_samples(self._random, n[..., None], p,
+        samples = generate_samples(self._random, n, p,
                                    dist_shape=self.shape,
                                    not_broadcast_kwargs={'raw_size': size},
                                    size=size)
