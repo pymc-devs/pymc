@@ -400,9 +400,14 @@ class CategoricalGibbsMetropolis(ArrayStep):
                 k = draw_values([distr.k])[0]
             elif isinstance(distr, pm.Bernoulli) or (v.dtype in pm.bool_types):
                 k = 2
+            elif isinstance(distr, pm.DiscreteUniform):
+                k = draw_values([distr.upper])[0]
+                if np.all(draw_values([distr.lower])):
+                    raise ValueError('Parameter lower must be 0 to use DiscreteUniform' +
+                                     'with CategoricalGibbsMetropolis.')
             else:
                 raise ValueError('All variables must be categorical or binary' +
-                                 'for CategoricalGibbsMetropolis')
+                                 'or discreteuniform for CategoricalGibbsMetropolis')
             start = len(dimcats)
             dimcats += [(dim, k) for dim in range(start, start + v.dsize)]
 
@@ -478,8 +483,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
     @staticmethod
     def competence(var):
         '''
-        CategoricalGibbsMetropolis is only suitable for Bernoulli and
-        Categorical variables.
+        CategoricalGibbsMetropolis is only suitable for Bernoulli,
+        Categorical and DiscreteUniform variables.
         '''
         distribution = getattr(
             var.distribution, 'parent_dist', var.distribution)
@@ -489,8 +494,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
             return Competence.COMPATIBLE
         elif isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
             return Competence.COMPATIBLE
+        elif isinstance(distribution, pm.DiscreteUniform) and draw_values([distribution.lower])[0] == 0:
+            return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
-
 
 class DEMetropolis(PopulationArrayStepShared):
     """
