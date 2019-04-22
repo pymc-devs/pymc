@@ -4,6 +4,7 @@
 
 ### New features
 
+- Allow DiscreteUniform distribution to be used with CategoricalGibbsMetropolis step method.
 - Add data container class (`Data`) that wraps the theano SharedVariable class and let the model be aware of its inputs and outputs.
 - Add function `set_data` to update variables defined as `Data`.
 - `Mixture` now supports mixtures of multidimensional probability distributions, not just lists of 1D distributions.
