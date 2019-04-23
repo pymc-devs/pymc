@@ -407,7 +407,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
                                      'with CategoricalGibbsMetropolis.')
             else:
                 raise ValueError('All variables must be categorical or binary' +
-                                 'or discreteuniform for CategoricalGibbsMetropolis')
+                                 'or DiscreteUniform for CategoricalGibbsMetropolis')
             start = len(dimcats)
             dimcats += [(dim, k) for dim in range(start, start + v.dsize)]
 
