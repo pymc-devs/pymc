@@ -4,11 +4,11 @@
 
 ### New features
 
-- Allow DiscreteUniform distribution to be used with CategoricalGibbsMetropolis step method.
 - Add data container class (`Data`) that wraps the theano SharedVariable class and let the model be aware of its inputs and outputs.
 - Add function `set_data` to update variables defined as `Data`.
 - `Mixture` now supports mixtures of multidimensional probability distributions, not just lists of 1D distributions.
 - `GLM.from_formula` and `LinearComponent.from_formula` can extract variables from the calling scope. Customizable via the new `eval_env` argument. Fixing #3382.
+- Allow DiscreteUniform distribution to be used with CategoricalGibbsMetropolis step method.
 
 ### Maintenance
 - All occurances of `sd` as a parameter name have been renamed to `sigma`. `sd` will continue to function for backwards compatibility.
