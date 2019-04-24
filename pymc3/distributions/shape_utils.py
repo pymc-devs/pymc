@@ -20,8 +20,14 @@ __all__ = [
 def _check_shape_type(shape):
     out = []
     try:
+        shape = np.atleast_1d(shape)
         for s in shape:
-            out.append(int(s))
+            if isinstance(s, np.ndarray) and s.ndim > 0:
+                raise TypeError("Value {} is not a valid integer".format(s))
+            o = int(s)
+            if o != s:
+                raise TypeError("Value {} is not a valid integer".format(s))
+            out.append(o)
     except Exception:
         raise TypeError(
             "Supplied value {} does not represent a valid shape".format(shape)
@@ -41,11 +47,9 @@ def shapes_broadcasting(*args, raise_exception=False):
     -------
     Resulting shape or None if broadcasting is not possible.
     """
-    x = list(np.atleast_1d(args[0])) if args else ()
-    x = list(_check_shape_type(x))
+    x = list(_check_shape_type(args[0])) if args else ()
     for arg in args[1:]:
-        y = list(np.atleast_1d(arg))
-        y = list(_check_shape_type(y))
+        y = list(_check_shape_type(arg))
         if len(x) < len(y):
             x, y = y, x
         if len(y) > 0:

@@ -8,6 +8,7 @@
 - Add function `set_data` to update variables defined as `Data`.
 - `Mixture` now supports mixtures of multidimensional probability distributions, not just lists of 1D distributions.
 - `GLM.from_formula` and `LinearComponent.from_formula` can extract variables from the calling scope. Customizable via the new `eval_env` argument. Fixing #3382.
+- Added the `distributions.shape_utils` module with functions used to help broadcast samples drawn from distributions using the `size` keyword argument.
 
 ### Maintenance
 - All occurances of `sd` as a parameter name have been renamed to `sigma`. `sd` will continue to function for backwards compatibility.
@@ -31,6 +32,8 @@
 - Add `sigma`, `tau`, and `sd` to signature of `NormalMixture`.
 - Resolved issue #3248. Set default lower and upper values of -inf and inf for pm.distributions.continuous.TruncatedNormal. This avoids errors caused by their previous values of None.
 - Resolved issue #3399. Converted all calls to `pm.distributions.bound._ContinuousBounded` and `pm.distributions.bound._DiscreteBounded` to use only and all positional arguments.
+- Restructured `distributions.distribution.generate_samples` to use the `shape_utils` module. This solves issues #3421 and #3147 by using the `size` aware broadcating functions in `shape_utils`.
+- Fixed the `Multinomial.random` and `Multinomial.random_` methods to make them compatible with the new `generate_samples` function. In the process, a bug of the `Multinomial.random_` shape handling was discovered and fixed.
 
 ### Deprecations
 
