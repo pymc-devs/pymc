@@ -87,12 +87,17 @@ class TestShapesBroadcasting:
     )
     def test_broadcast_dist_samples_shape(self, size, shapes):
         size_ = to_tuple(size)
-        shapes_ = [s if s[:len(size_)] != size_ else s[len(size_):] for s in shapes]
+        shapes_ = [
+            s if s[: min([len(size_), len(s)])] != size_ else s[len(size_) :]
+            for s in shapes
+        ]
         try:
             expected_out = np.broadcast(*[np.empty(s) for s in shapes_]).shape
         except ValueError:
             expected_out = None
-        if expected_out is not None and any((s[: len(size_)] == size_ for s in shapes)):
+        if expected_out is not None and any(
+            (s[: min([len(size_), len(s)])] == size_ for s in shapes)
+        ):
             expected_out = size_ + expected_out
         if expected_out is None:
             with pytest.raises(ValueError):
@@ -100,3 +105,69 @@ class TestShapesBroadcasting:
         else:
             out = broadcast_dist_samples_shape(shapes, size=size)
             assert out == expected_out
+
+
+@pytest.fixture(
+    scope="module", params=itertools.product(test_sizes, test_shapes), ids=str
+)
+def samples_to_broadcast(request):
+    size, shapes = request.param
+    samples = [np.empty(s) for s in shapes]
+    try:
+        broadcast_shape = broadcast_dist_samples_shape(shapes, size=size)
+    except ValueError:
+        broadcast_shape = None
+    return size, samples, broadcast_shape
+
+
+@pytest.fixture(
+    scope="module", params=(tuple(), (1,), (10, 5, 4), (10, 1, 1, 5, 1)), ids=str
+)
+def samples_to_broadcast_to(request, samples_to_broadcast):
+    to_shape = request.param
+    size, samples, broadcast_shape = samples_to_broadcast
+    if broadcast_shape is not None:
+        try:
+            broadcast_shape = broadcast_dist_samples_shape(
+                [broadcast_shape, to_shape], size=size
+            )
+        except ValueError:
+            broadcast_shape = None
+    return to_shape, size, samples, broadcast_shape
+
+
+class TestSamplesBroadcasting:
+    def test_broadcast_distribution_samples(self, samples_to_broadcast):
+        size, samples, broadcast_shape = samples_to_broadcast
+        if broadcast_shape is not None:
+            outs = broadcast_distribution_samples(samples, size=size)
+            assert all((o.shape == broadcast_shape for o in outs))
+        else:
+            with pytest.raises(ValueError):
+                broadcast_distribution_samples(samples, size=size)
+
+    def test_get_broadcastable_dist_samples(self, samples_to_broadcast):
+        size, samples, broadcast_shape = samples_to_broadcast
+        if broadcast_shape is not None:
+            outs, out_shape = get_broadcastable_dist_samples(
+                samples, size=size, return_out_shape=True
+            )
+            assert out_shape == broadcast_shape
+            for o in outs:
+                for oshape, bshape in itertools.zip_longest(
+                    reversed(o.shape), reversed(broadcast_shape), fillvalue=1
+                ):
+                    assert oshape == bshape or oshape == 1
+            assert shapes_broadcasting(*[o.shape for o in outs]) == broadcast_shape
+        else:
+            with pytest.raises(ValueError):
+                get_broadcastable_dist_samples(samples, size=size)
+
+    def test_broadcast_dist_samples_to(self, samples_to_broadcast_to):
+        to_shape, size, samples, broadcast_shape = samples_to_broadcast_to
+        if broadcast_shape is not None:
+            outs = broadcast_dist_samples_to(to_shape, samples, size=size)
+            assert all((o.shape == broadcast_shape for o in outs))
+        else:
+            with pytest.raises(ValueError):
+                broadcast_dist_samples_to(to_shape, samples, size=size)

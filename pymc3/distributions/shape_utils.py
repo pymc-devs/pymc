@@ -116,7 +116,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
     shapes = [_check_shape_type(s) for s in shapes]
     _size = to_tuple(size)
     # samples shapes without the size prepend
-    sp_shapes = [s[len(_size) :] if _size == s[: len(_size)] else s for s in shapes]
+    sp_shapes = [s[len(_size) :] if _size == s[: min([len(_size), len(s)])] else s for s in shapes]
     try:
         broadcast_shape = shapes_broadcasting(*sp_shapes, raise_exception=True)
     except ValueError:
@@ -210,19 +210,17 @@ def get_broadcastable_dist_samples(
         assert np.all(sample2 == out[2])
     """
     samples = [np.asarray(p) for p in samples]
-    if size is None and must_bcast_with is None:
-        return samples
     _size = to_tuple(size)
     must_bcast_with = to_tuple(must_bcast_with)
     # Raw samples shapes
     p_shapes = [p.shape for p in samples] + [_check_shape_type(must_bcast_with)]
     out_shape = broadcast_dist_samples_shape(p_shapes, size=size)
     # samples shapes without the size prepend
-    sp_shapes = [s[len(_size) :] if _size == s[: len(_size)] else s for s in p_shapes]
+    sp_shapes = [s[len(_size) :] if _size == s[: min([len(_size), len(s)])] else s for s in p_shapes]
     broadcast_shape = shapes_broadcasting(*sp_shapes, raise_exception=True)
     broadcastable_samples = []
     for param, p_shape, sp_shape in zip(samples, p_shapes, sp_shapes):
-        if _size == p_shape[: len(_size)]:
+        if _size == p_shape[: min([len(_size), len(p_shape)])]:
             # If size prepends the shape, then we have to add broadcasting axis
             # in the middle
             slicer_head = [slice(None)] * len(_size)
