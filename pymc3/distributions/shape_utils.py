@@ -159,14 +159,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
         else:
             p_shape = shape
         broadcastable_shapes.append(p_shape)
-    broadcasted_shape = shapes_broadcasting(*broadcastable_shapes)
-    if broadcasted_shape is None:
-        raise ValueError(
-            "Cannot broadcast provided shapes {} given size: {}".format(
-                ", ".join(["{}".format(s) for s in shapes]), size
-            )
-        )
-    return broadcasted_shape
+    return shapes_broadcasting(*broadcastable_shapes, raise_exception=True)
 
 
 def get_broadcastable_dist_samples(
