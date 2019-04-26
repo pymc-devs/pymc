@@ -20,7 +20,6 @@ from .dist_math import (
     normal_lccdf, normal_lcdf, SplineWrapper, std_cdf, zvalue,
 )
 from .distribution import (Continuous, draw_values, generate_samples)
-from .shape_utils import broadcast_distribution_samples
 
 __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'TruncatedNormal', 'Beta',
            'Kumaraswamy', 'Exponential', 'Laplace', 'StudentT', 'Cauchy',
@@ -966,8 +965,6 @@ class Wald(PositiveContinuous):
         """
         mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha],
                                      point=point, size=size)
-        mu, lam, alpha = broadcast_distribution_samples([mu, lam, alpha],
-                                                        size=size)
         return generate_samples(self._random,
                                 mu, lam, alpha,
                                 dist_shape=self.shape,
@@ -1297,7 +1294,6 @@ class Kumaraswamy(UnitContinuous):
         """
         a, b = draw_values([self.a, self.b],
                            point=point, size=size)
-        a, b = broadcast_distribution_samples([a, b], size=size)
         return generate_samples(self._random, a, b,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1674,7 +1670,6 @@ class Lognormal(PositiveContinuous):
         array
         """
         mu, tau = draw_values([self.mu, self.tau], point=point, size=size)
-        mu, tau = broadcast_distribution_samples([mu, tau], size=size)
         return generate_samples(self._random, mu, tau,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1965,7 +1960,6 @@ class Pareto(Continuous):
         """
         alpha, m = draw_values([self.alpha, self.m],
                                point=point, size=size)
-        alpha, m = broadcast_distribution_samples([alpha, m], size=size)
         return generate_samples(self._random, alpha, m,
                                 dist_shape=self.shape,
                                 size=size)
@@ -2090,7 +2084,6 @@ class Cauchy(Continuous):
         """
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point, size=size)
-        alpha, beta = broadcast_distribution_samples([alpha, beta], size=size)
         return generate_samples(self._random, alpha, beta,
                                 dist_shape=self.shape,
                                 size=size)
@@ -2669,7 +2662,6 @@ class Weibull(PositiveContinuous):
         """
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point, size=size)
-        alpha, beta = broadcast_distribution_samples([alpha, beta], size=size)
 
         def _random(a, b, size=None):
             return b * (-np.log(np.random.uniform(size=size)))**(1 / a)
@@ -2963,8 +2955,6 @@ class ExGaussian(Continuous):
         """
         mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu],
                                     point=point, size=size)
-        mu, sigma, nu = broadcast_distribution_samples([mu, sigma, nu],
-                                                       size=size)
 
         def _random(mu, sigma, nu, size=None):
             return (np.random.normal(mu, sigma, size=size)

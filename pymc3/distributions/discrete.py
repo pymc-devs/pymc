@@ -351,7 +351,6 @@ class DiscreteWeibull(Discrete):
 
     def random(self, point=None, size=None):
         q, beta = draw_values([self.q, self.beta], point=point, size=size)
-        q, beta = broadcast_distribution_samples([q, beta], size=size)
 
         return generate_samples(self._random, q, beta,
                                 dist_shape=self.shape,
