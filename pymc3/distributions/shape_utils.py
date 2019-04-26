@@ -38,14 +38,21 @@ def _check_shape_type(shape):
 def shapes_broadcasting(*args, raise_exception=False):
     """Return the shape resulting from broadcasting multiple shapes.
     Represents numpy's broadcasting rules.
+
     Parameters
     ----------
     *args : array-like of int
         Tuples or arrays or lists representing the shapes of arrays to be
         broadcast.
+    raise_exception: bool (optional)
+        Controls whether to raise an exception or simply return `None` if
+        the broadcasting fails.
+
     Returns
     -------
-    Resulting shape or None if broadcasting is not possible.
+    Resulting shape. If broadcasting is not possible and `raise_exception` is
+    False, then `None` is returned. If `raise_exception` is `True`, a
+    `ValueError` is raised.
     """
     x = list(_check_shape_type(args[0])) if args else ()
     for arg in args[1:]:
@@ -70,9 +77,11 @@ def shapes_broadcasting(*args, raise_exception=False):
 
 
 def broadcast_dist_samples_shape(shapes, size=None):
-    """Get the resulting broadcasted shape for samples drawn from distributions,
-    taking into account the size (i.e. the number of samples) of the draw,
-    which is prepended to the sample's shape.
+    """Apply shape broadcasting to shape tuples but assuming that the shapes
+    correspond to draws from random variables, with the `size` tuple possibly
+    prepended to it. The `size` prepend is ignored to consider if the supplied
+    `shapes` can broadcast or not. It is prepended to the resulting broadcasted
+    `shapes`, if any of the shape tuples had the `size` prepend.
 
     Parameters
     ----------
@@ -92,7 +101,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
         shape1 = (size, 5)
         shape2 = (size, 4, 5)
         out = broadcast_dist_samples_shape([shape0, shape1, shape2],
-                                                   size=size)
+                                           size=size)
         assert out == (size, 4, 5)
 
     .. code-block:: python
@@ -101,8 +110,17 @@ def broadcast_dist_samples_shape(shapes, size=None):
         shape1 = (5,)
         shape2 = (4, 5)
         out = broadcast_dist_samples_shape([shape0, shape1, shape2],
-                                                   size=size)
+                                           size=size)
         assert out == (size, 4, 5)
+
+    .. code-block:: python
+        size = 100
+        shape0 = (1,)
+        shape1 = (5,)
+        shape2 = (4, 5)
+        out = broadcast_dist_samples_shape([shape0, shape1, shape2],
+                                           size=size)
+        assert out == (4, 5)
     """
     if size is None:
         broadcasted_shape = shapes_broadcasting(*shapes)
@@ -116,7 +134,10 @@ def broadcast_dist_samples_shape(shapes, size=None):
     shapes = [_check_shape_type(s) for s in shapes]
     _size = to_tuple(size)
     # samples shapes without the size prepend
-    sp_shapes = [s[len(_size) :] if _size == s[: min([len(_size), len(s)])] else s for s in shapes]
+    sp_shapes = [
+        s[len(_size) :] if _size == s[: min([len(_size), len(s)])] else s
+        for s in shapes
+    ]
     try:
         broadcast_shape = shapes_broadcasting(*sp_shapes, raise_exception=True)
     except ValueError:
@@ -152,11 +173,13 @@ def get_broadcastable_dist_samples(
     samples, size=None, must_bcast_with=None, return_out_shape=False
 ):
     """Get a view of the samples drawn from distributions which adds new axises
-    in between the size prepend and the distribution shape. These views should
-    be able to broadcast the samples from the distrubtions taking into account
-    the size (i.e. the number of samples) of the draw, which is prepended to
-    the sample's shape. Optionally, one can supply an extra `must_bcast_with`
-    to try to force samples to be able to broadcast with a given shape.
+    in between the `size` prepend and the distribution's `shape`. These views
+    should be able to broadcast the samples from the distrubtions taking into
+    account the `size` (i.e. the number of samples) of the draw, which is
+    prepended to the sample's `shape`. Optionally, one can supply an extra
+    `must_bcast_with` to try to force samples to be able to broadcast with a
+    given shape. A `ValueError` is raised if it is not possible to broadcast
+    the provided samples.
 
     Parameters
     ----------
@@ -188,7 +211,9 @@ def get_broadcastable_dist_samples(
             size=size,
             must_bcast_with=must_bcast_with,
         )
-        assert np.all((o.shape == (size, 3, 4, 5) for o in out))
+        assert out[0].shape == (size, 1, 1, 1)
+        assert out[1].shape == (size, 1, 1, 5)
+        assert out[2].shape == (size, 1, 4, 5)
         assert np.all(sample0[:, None, None, None] == out[0])
         assert np.all(sample1[:, None, None] == out[1])
         assert np.all(sample2[:, None] == out[2])
@@ -204,7 +229,9 @@ def get_broadcastable_dist_samples(
             size=size,
             must_bcast_with=must_bcast_with,
         )
-        assert np.all((o.shape == (size, 3, 4, 5) for o in out))
+        assert out[0].shape == (size, 1, 1, 1)
+        assert out[1].shape == (5,)
+        assert out[2].shape == (4, 5)
         assert np.all(sample0[:, None, None, None] == out[0])
         assert np.all(sample1 == out[1])
         assert np.all(sample2 == out[2])
@@ -216,7 +243,10 @@ def get_broadcastable_dist_samples(
     p_shapes = [p.shape for p in samples] + [_check_shape_type(must_bcast_with)]
     out_shape = broadcast_dist_samples_shape(p_shapes, size=size)
     # samples shapes without the size prepend
-    sp_shapes = [s[len(_size) :] if _size == s[: min([len(_size), len(s)])] else s for s in p_shapes]
+    sp_shapes = [
+        s[len(_size) :] if _size == s[: min([len(_size), len(s)])] else s
+        for s in p_shapes
+    ]
     broadcast_shape = shapes_broadcasting(*sp_shapes, raise_exception=True)
     broadcastable_samples = []
     for param, p_shape, sp_shape in zip(samples, p_shapes, sp_shapes):
@@ -290,7 +320,7 @@ def broadcast_dist_samples_to(to_shape, samples, size=None):
 
     Parameters
     ----------
-    to_shape: Tuple shape to which to broadcast the samples
+    to_shape: Tuple shape onto which the samples must be able to broadcast
     samples: Iterable of ndarrays holding the sampled values
     size: None, int or tuple (optional)
         size of the sample set requested.
