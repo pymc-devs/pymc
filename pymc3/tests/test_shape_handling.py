@@ -15,18 +15,14 @@ test_shapes = [
     (tuple(), (1,), (4,), (5, 4)),
     (tuple(), (1,), (7,), (5, 4)),
     (tuple(), (1,), (1, 4), (5, 4)),
+    (tuple(), (1,), (5, 1), (5, 4)),
+    (tuple(), (1,), (3, 4), (5, 4)),
+    (tuple(), (1,), (5, 3), (5, 4)),
     (tuple(), (1,), (10, 4), (5, 4)),
     (tuple(), (1,), (10,), (5, 4)),
-    (tuple(), (1,), (1, 4), (5, 4)),
-    (tuple(), (1,), (3, 4), (5, 4)),
     (tuple(), (1,), (1, 1, 4), (5, 4)),
     (tuple(), (1,), (10, 1, 4), (5, 4)),
-    (tuple(), (1,), (5, 1), (5, 4)),
-    (tuple(), (1,), (5, 3), (5, 4)),
-    (tuple(), (1,), (10, 5, 1), (5, 4)),
-    (tuple(), (1,), (10, 5, 3), (5, 4)),
     (tuple(), (1,), (10, 5, 4), (5, 4)),
-    (tuple(), (1,), (5, 4), (5, 4)),
 ]
 test_sizes = [
     None,
@@ -37,11 +33,53 @@ test_sizes = [
     (10,),
     (1, 1),
     (10, 1),
-    (7,),
     (1, 10),
     (5,),
     (5, 4),
+    (1, 1, 1, 1),
 ]
+test_to_shapes = [None, tuple(), (10, 5, 4), (10, 1, 1, 5, 1)]
+
+
+@pytest.fixture(scope="module", params=test_sizes, ids=str)
+def fixture_sizes(request):
+    return request.param
+
+
+@pytest.fixture(scope="module", params=test_shapes, ids=str)
+def fixture_shapes(request):
+    return request.param
+
+
+@pytest.fixture(scope="module", params=[False, True], ids=str)
+def fixture_exception_handling(request):
+    return request.param
+
+
+@pytest.fixture(scope="module")
+def samples_to_broadcast(fixture_sizes, fixture_shapes):
+    samples = [np.empty(s) for s in fixture_shapes]
+    try:
+        broadcast_shape = broadcast_dist_samples_shape(
+            fixture_shapes, size=fixture_sizes
+        )
+    except ValueError:
+        broadcast_shape = None
+    return fixture_sizes, samples, broadcast_shape
+
+
+@pytest.fixture(scope="module", params=test_to_shapes, ids=str)
+def samples_to_broadcast_to(request, samples_to_broadcast):
+    to_shape = request.param
+    size, samples, broadcast_shape = samples_to_broadcast
+    if broadcast_shape is not None:
+        try:
+            broadcast_shape = broadcast_dist_samples_shape(
+                [broadcast_shape, to_tuple(to_shape)], size=size
+            )
+        except ValueError:
+            broadcast_shape = None
+    return to_shape, size, samples, broadcast_shape
 
 
 class TestShapesBroadcasting:
@@ -55,18 +93,14 @@ class TestShapesBroadcasting:
             shapes_broadcasting(bad_input, tuple(), raise_exception=True)
             shapes_broadcasting(bad_input, tuple(), raise_exception=False)
 
-    @pytest.mark.parametrize("raise_exception", [False, True], ids=str)
-    def test_type_check_success(self, raise_exception):
+    def test_type_check_success(self):
         inputs = [3, 3.0, tuple(), [3], (3,), np.array(3), np.array([3])]
-        out = shapes_broadcasting(*inputs, raise_exception=raise_exception)
+        out = shapes_broadcasting(*inputs)
         assert out == (3,)
 
-    @pytest.mark.parametrize(
-        ["shapes", "raise_exception"],
-        itertools.product(test_shapes, [False, True]),
-        ids=str,
-    )
-    def test_broadcasting(self, shapes, raise_exception):
+    def test_broadcasting(self, fixture_shapes, fixture_exception_handling):
+        shapes = fixture_shapes
+        raise_exception = fixture_exception_handling
         try:
             expected_out = np.broadcast(*[np.empty(s) for s in shapes]).shape
         except ValueError:
@@ -82,10 +116,9 @@ class TestShapesBroadcasting:
             out = shapes_broadcasting(*shapes, raise_exception=raise_exception)
             assert out == expected_out
 
-    @pytest.mark.parametrize(
-        ["size", "shapes"], itertools.product(test_sizes, test_shapes), ids=str
-    )
-    def test_broadcast_dist_samples_shape(self, size, shapes):
+    def test_broadcast_dist_samples_shape(self, fixture_sizes, fixture_shapes):
+        size = fixture_sizes
+        shapes = fixture_shapes
         size_ = to_tuple(size)
         shapes_ = [
             s if s[: min([len(size_), len(s)])] != size_ else s[len(size_) :]
@@ -107,35 +140,6 @@ class TestShapesBroadcasting:
             assert out == expected_out
 
 
-@pytest.fixture(
-    scope="module", params=itertools.product(test_sizes, test_shapes), ids=str
-)
-def samples_to_broadcast(request):
-    size, shapes = request.param
-    samples = [np.empty(s) for s in shapes]
-    try:
-        broadcast_shape = broadcast_dist_samples_shape(shapes, size=size)
-    except ValueError:
-        broadcast_shape = None
-    return size, samples, broadcast_shape
-
-
-@pytest.fixture(
-    scope="module", params=(tuple(), (1,), (10, 5, 4), (10, 1, 1, 5, 1)), ids=str
-)
-def samples_to_broadcast_to(request, samples_to_broadcast):
-    to_shape = request.param
-    size, samples, broadcast_shape = samples_to_broadcast
-    if broadcast_shape is not None:
-        try:
-            broadcast_shape = broadcast_dist_samples_shape(
-                [broadcast_shape, to_shape], size=size
-            )
-        except ValueError:
-            broadcast_shape = None
-    return to_shape, size, samples, broadcast_shape
-
-
 class TestSamplesBroadcasting:
     def test_broadcast_distribution_samples(self, samples_to_broadcast):
         size, samples, broadcast_shape = samples_to_broadcast
@@ -149,15 +153,22 @@ class TestSamplesBroadcasting:
     def test_get_broadcastable_dist_samples(self, samples_to_broadcast):
         size, samples, broadcast_shape = samples_to_broadcast
         if broadcast_shape is not None:
+            size_ = to_tuple(size)
             outs, out_shape = get_broadcastable_dist_samples(
                 samples, size=size, return_out_shape=True
             )
             assert out_shape == broadcast_shape
-            for o in outs:
-                for oshape, bshape in itertools.zip_longest(
-                    reversed(o.shape), reversed(broadcast_shape), fillvalue=1
-                ):
-                    assert oshape == bshape or oshape == 1
+            for i, o in zip(samples, outs):
+                ishape = i.shape
+                if ishape[:min([len(size_), len(ishape)])] == size_:
+                    expected_shape = (
+                        size_ +
+                        (1,) * (len(broadcast_shape) - len(ishape)) +
+                        ishape[len(size_):]
+                    )
+                else:
+                    expected_shape = ishape
+                assert o.shape == expected_shape
             assert shapes_broadcasting(*[o.shape for o in outs]) == broadcast_shape
         else:
             with pytest.raises(ValueError):
