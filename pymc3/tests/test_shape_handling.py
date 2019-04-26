@@ -99,7 +99,7 @@ def fixture_model():
 @pytest.fixture(
     scope="module",
     params=[
-        s if len(to_tuple(s)) <= 1 else pytest.param(s, marks=pytest.mark.skip)
+        s if len(to_tuple(s)) <= 1 else pytest.param(s, marks=pytest.mark.xfail)
         for s in test_sizes
     ],
     ids=str,
