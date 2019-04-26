@@ -1,5 +1,4 @@
 import pytest
-import itertools
 import numpy as np
 import pymc3 as pm
 from pymc3.distributions.shape_utils import (
