@@ -82,6 +82,33 @@ def samples_to_broadcast_to(request, samples_to_broadcast):
     return to_shape, size, samples, broadcast_shape
 
 
+@pytest.fixture(scope="module")
+def fixture_model():
+    with pm.Model() as model:
+        n = 5
+        dim = 4
+        with pm.Model():
+            cov = pm.InverseGamma("cov", alpha=1, beta=1)
+            x = pm.Normal(
+                "x", mu=np.ones((dim,)), sigma=pm.math.sqrt(cov), shape=(n, dim)
+            )
+            eps = pm.HalfNormal("eps", np.ones((n, 1)), shape=(n, dim))
+    return model, cov, x, eps
+
+
+# TODO: once #3422 is solved this fixture should be replaced by fixture_sizes
+@pytest.fixture(
+    scope="module",
+    params=[
+        s if len(to_tuple(s)) <= 1 else pytest.param(s, marks=pytest.mark.skip)
+        for s in test_sizes
+    ],
+    ids=str,
+)
+def fixture_samples(request):
+    return request.param
+
+
 class TestShapesBroadcasting:
     @pytest.mark.parametrize(
         "bad_input",
@@ -160,11 +187,11 @@ class TestSamplesBroadcasting:
             assert out_shape == broadcast_shape
             for i, o in zip(samples, outs):
                 ishape = i.shape
-                if ishape[:min([len(size_), len(ishape)])] == size_:
+                if ishape[: min([len(size_), len(ishape)])] == size_:
                     expected_shape = (
-                        size_ +
-                        (1,) * (len(broadcast_shape) - len(ishape)) +
-                        ishape[len(size_):]
+                        size_
+                        + (1,) * (len(broadcast_shape) - len(ishape))
+                        + ishape[len(size_) :]
                     )
                 else:
                     expected_shape = ishape
@@ -182,3 +209,15 @@ class TestSamplesBroadcasting:
         else:
             with pytest.raises(ValueError):
                 broadcast_dist_samples_to(to_shape, samples, size=size)
+
+
+def test_sample_generate_values(fixture_model, fixture_samples):
+    model, cov, x, eps = fixture_model
+    size = to_tuple(fixture_samples)
+    if size == (1,):
+        # Single draws are interpreted as scalars for backwards compatibility
+        size = tuple()
+    with model:
+        prior = pm.sample_prior_predictive(samples=fixture_samples)
+        for rv in [cov, x, eps]:
+            assert prior[rv.name].shape == size + tuple(rv.distribution.shape)

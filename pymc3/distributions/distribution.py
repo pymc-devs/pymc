@@ -676,7 +676,7 @@ def generate_samples(generator, *args, **kwargs):
     samples = np.asarray(samples)
 
     # reshape samples here
-    if samples.shape[0] == 1 and size == 1:
+    if samples.ndim > 0 and samples.shape[0] == 1 and size_tup == (1,):
         if (len(samples.shape) > len(dist_shape) and
             samples.shape[-len(dist_shape):] == dist_shape[-len(dist_shape):]
         ):
