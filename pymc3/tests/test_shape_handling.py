@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+from theano import tensor as tt
 import pymc3 as pm
 from pymc3.distributions.shape_utils import (
     to_tuple,
@@ -92,7 +93,9 @@ def fixture_model():
                 "x", mu=np.ones((dim,)), sigma=pm.math.sqrt(cov), shape=(n, dim)
             )
             eps = pm.HalfNormal("eps", np.ones((n, 1)), shape=(n, dim))
-    return model, cov, x, eps
+            mu = pm.Deterministic("mu", tt.sum(x + eps, axis=-1))
+            y = pm.Normal("y", mu=mu, sigma=1, shape=(n,))
+    return model, [cov, x, eps, y]
 
 
 # TODO: once #3422 is solved this fixture should be replaced by fixture_sizes
@@ -212,12 +215,12 @@ class TestSamplesBroadcasting:
 
 
 def test_sample_generate_values(fixture_model, fixture_sizes):
-    model, cov, x, eps = fixture_model
+    model, RVs = fixture_model
     size = to_tuple(fixture_sizes)
     if size == (1,):
         # Single draws are interpreted as scalars for backwards compatibility
         size = tuple()
     with model:
         prior = pm.sample_prior_predictive(samples=fixture_sizes)
-        for rv in [cov, x, eps]:
+        for rv in RVs:
             assert prior[rv.name].shape == size + tuple(rv.distribution.shape)
