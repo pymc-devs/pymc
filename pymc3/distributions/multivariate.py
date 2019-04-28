@@ -21,7 +21,8 @@ from .distribution import (Continuous, Discrete, draw_values, generate_samples,
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln, to_tuple
+from .dist_math import bound, logpow, factln
+from .shape_utils import to_tuple
 from ..math import kron_dot, kron_diag, kron_solve_lower, kronecker
 
 

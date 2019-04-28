@@ -10,8 +10,8 @@ from ..model import (
     ObservedRV, MultiObservedRV, Context, InitContextMeta
 )
 from ..vartypes import string_types
-from .dist_math import to_tuple
 from .shape_utils import (
+    to_tuple,
     get_broadcastable_dist_samples,
     broadcast_dist_samples_shape,
 )

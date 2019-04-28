@@ -5,16 +5,27 @@ A collection of common numpy array shape operations needed for broadcasting
 samples from probability distributions for stochastic nodes in PyMC.
 """
 import numpy as np
-from .dist_math import to_tuple
 
 
 __all__ = [
+    "to_tuple",
     "shapes_broadcasting",
     "broadcast_dist_samples_shape",
     "get_broadcastable_dist_samples",
     "broadcast_distribution_samples",
     "broadcast_dist_samples_to",
 ]
+
+
+def to_tuple(shape):
+    """Convert ints, arrays, and Nones to tuples"""
+    if shape is None:
+        return tuple()
+    temp = np.atleast_1d(shape)
+    if temp.size == 0:
+        return tuple()
+    else:
+        return tuple(temp)
 
 
 def _check_shape_type(shape):

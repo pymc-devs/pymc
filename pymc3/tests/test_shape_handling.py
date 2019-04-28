@@ -2,13 +2,13 @@ import pytest
 import numpy as np
 import pymc3 as pm
 from pymc3.distributions.shape_utils import (
+    to_tuple,
     shapes_broadcasting,
     broadcast_dist_samples_shape,
     get_broadcastable_dist_samples,
     broadcast_distribution_samples,
     broadcast_dist_samples_to,
 )
-from pymc3.distributions.dist_math import to_tuple
 
 test_shapes = [
     (tuple(), (1,), (4,), (5, 4)),
@@ -211,13 +211,13 @@ class TestSamplesBroadcasting:
                 broadcast_dist_samples_to(to_shape, samples, size=size)
 
 
-def test_sample_generate_values(fixture_model, fixture_samples):
+def test_sample_generate_values(fixture_model, fixture_sizes):
     model, cov, x, eps = fixture_model
-    size = to_tuple(fixture_samples)
+    size = to_tuple(fixture_sizes)
     if size == (1,):
         # Single draws are interpreted as scalars for backwards compatibility
         size = tuple()
     with model:
-        prior = pm.sample_prior_predictive(samples=fixture_samples)
+        prior = pm.sample_prior_predictive(samples=fixture_sizes)
         for rv in [cov, x, eps]:
             assert prior[rv.name].shape == size + tuple(rv.distribution.shape)

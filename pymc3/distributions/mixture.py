@@ -5,11 +5,11 @@ import theano.tensor as tt
 
 from pymc3.util import get_variable_name
 from ..math import logsumexp
-from .dist_math import bound, random_choice, to_tuple
+from .dist_math import bound, random_choice
 from .distribution import (Discrete, Distribution, draw_values,
                            generate_samples, _DrawValuesContext,
                            _DrawValuesContextBlocker)
-from .shape_utils import broadcast_distribution_samples
+from .shape_utils import to_tuple, broadcast_distribution_samples
 from .continuous import get_tau_sigma, Normal
 from ..theanof import _conversion_map
 
