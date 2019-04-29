@@ -463,16 +463,48 @@ def _compile_theano_function(param, vars, givens=None):
 
 
 def vectorize_theano_function(f, inputs, output):
+    """Takes a compiled theano function and wraps it with a vectorized version.
+    Theano compiled functions expect inputs and outputs of a fixed number of
+    dimensions. In our context, these usually come from deterministics which
+    are compiled against a given RV, with its core shape. If we draw i.i.d.
+    samples from said RV, we would not be able to compute the deterministic
+    over the i.i.d sampled dimensions (i.e. those that are not the core
+    dimensions of the RV). To deal with this problem, we wrap the theano
+    compiled function with numpy.vectorize, providing the correct signature
+    for the core dimensions. The extra dimensions, will be interpreted as
+    i.i.d. sampled axis and will be broadcast following the usual rules.
+
+    Parameters
+    ----------
+    f : theano compiled function
+    inputs : list of theano variables used as inputs for the function
+    givens : theano variable which is the output of the function
+
+    Notes
+    -----
+    If inputs is an empty list (theano function with no inputs needed), then
+    the same `f` is returned.
+    Only functions that return a single theano variable's value can be
+    vectorized.
+
+    Returns
+    -------
+    A function which wraps `f` with numpy.vectorize with the apropriate call
+    signature.
+    """
     inputs_signatures = ",".join(
         [
             get_vectorize_signature(var, var_name="i_{}".format(input_ind))
             for input_ind, var in enumerate(inputs)
         ]
     )
-    output_signature = get_vectorize_signature(output, var_name="o")
-    signature = inputs_signatures + "->" + output_signature
+    if len(inputs_signatures) > 0:
+        output_signature = get_vectorize_signature(output, var_name="o")
+        signature = inputs_signatures + "->" + output_signature
 
-    return np.vectorize(f, signature=signature)
+        return np.vectorize(f, signature=signature)
+    else:
+        return f
 
 
 def get_vectorize_signature(var, var_name="i"):
@@ -700,6 +732,9 @@ def generate_samples(generator, *args, **kwargs):
             samples = samples.reshape(samples.shape[1:])
 
     if (one_d and samples.ndim > 0 and samples.shape[-1] == 1
-        and (size_tup == tuple() or size_tup == (1,))):
+        and (samples.shape != size_tup or
+             size_tup == tuple() or
+             size_tup == (1,))
+    ):
         samples = samples.reshape(samples.shape[:-1])
     return np.asarray(samples)
