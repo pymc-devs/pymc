@@ -34,19 +34,11 @@ class TestSliceUniform(sf.SliceFixture, sf.UniformFixture):
 
 
 class TestNUTSUniform2(TestNUTSUniform):
-    step_args = {'target_accept': 0.95, 'integrator': 'two-stage'}
+    step_args = {'target_accept': 0.95}
 
 
 class TestNUTSUniform3(TestNUTSUniform):
-    step_args = {'target_accept': 0.80, 'integrator': 'two-stage'}
-
-
-class TestNUTSUniform4(TestNUTSUniform):
-    step_args = {'target_accept': 0.95, 'integrator': 'three-stage'}
-
-
-class TestNUTSUniform5(TestNUTSUniform):
-    step_args = {'target_accept': 0.80, 'integrator': 'three-stage'}
+    step_args = {'target_accept': 0.80}
 
 
 class TestNUTSNormal(sf.NutsFixture, sf.NormalFixture):

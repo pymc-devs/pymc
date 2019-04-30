@@ -1,7 +1,6 @@
 Gallery.contents = {
     "BEST": "Case Studies",
     "LKJ": "Case Studies",
-    "dawid-skene": "Case Studies",
     "stochastic_volatility": "Case Studies",
     "rugby_analytics": "Case Studies",
     "multilevel_modeling": "Case Studies",

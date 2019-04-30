@@ -16,6 +16,5 @@ Gallery.contents = {
     "howto_debugging": "How-To",
     "model_averaging": "How-To",
     "updating_priors": "How-To",
-    "live_sample_plots": "How-To",
     "lasso_block_update": "How-To"
 }
