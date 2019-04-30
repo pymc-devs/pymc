@@ -35,6 +35,8 @@
 - Resolved issue #3399. Converted all calls to `pm.distributions.bound._ContinuousBounded` and `pm.distributions.bound._DiscreteBounded` to use only and all positional arguments.
 - Restructured `distributions.distribution.generate_samples` to use the `shape_utils` module. This solves issues #3421 and #3147 by using the `size` aware broadcating functions in `shape_utils`.
 - Fixed the `Multinomial.random` and `Multinomial.random_` methods to make them compatible with the new `generate_samples` function. In the process, a bug of the `Multinomial.random_` shape handling was discovered and fixed.
+- Fixed a defect found in `Bound.random` where the `point` dictionary was passed to `generate_samples` as an `arg` instead of in `not_broadcast_kwargs`.
+- Fixed a defect found in `Bound.random_` where `total_size` could end up as a `float64` instead of being an integer if given `size=tuple()`.
 
 ### Deprecations
 

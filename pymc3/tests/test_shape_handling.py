@@ -98,19 +98,6 @@ def fixture_model():
     return model, [cov, x, eps, y]
 
 
-# TODO: once #3422 is solved this fixture should be replaced by fixture_sizes
-@pytest.fixture(
-    scope="module",
-    params=[
-        s if len(to_tuple(s)) <= 1 else pytest.param(s, marks=pytest.mark.xfail)
-        for s in test_sizes
-    ],
-    ids=str,
-)
-def fixture_samples(request):
-    return request.param
-
-
 class TestShapesBroadcasting:
     @pytest.mark.parametrize(
         "bad_input",
