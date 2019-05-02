@@ -10,7 +10,11 @@ from ..model import (
     ObservedRV, MultiObservedRV, Context, InitContextMeta
 )
 from ..vartypes import string_types
-from .dist_math import to_tuple
+from .shape_utils import (
+    to_tuple,
+    get_broadcastable_dist_samples,
+    broadcast_dist_samples_shape,
+)
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
            'NoDistribution', 'TensorType', 'draw_values', 'generate_samples']
@@ -286,7 +290,6 @@ def draw_values(params, point=None, size=None):
 
             a) are named parameters in the point
             b) are *RVs with a random method
-
     """
     # Get fast drawable values (i.e. things in point or numbers, arrays,
     # constants or shares, or things that were already drawn in related
@@ -448,10 +451,70 @@ def _compile_theano_function(param, vars, givens=None):
     A compiled theano function that takes the values of `vars` as input
         positional args
     """
-    return function(vars, param, givens=givens,
-                    rebuild_strict=True,
-                    on_unused_input='ignore',
-                    allow_input_downcast=True)
+    f = function(
+        vars,
+        param,
+        givens=givens,
+        rebuild_strict=True,
+        on_unused_input="ignore",
+        allow_input_downcast=True,
+    )
+    return vectorize_theano_function(f, inputs=vars, output=param)
+
+
+def vectorize_theano_function(f, inputs, output):
+    """Takes a compiled theano function and wraps it with a vectorized version.
+    Theano compiled functions expect inputs and outputs of a fixed number of
+    dimensions. In our context, these usually come from deterministics which
+    are compiled against a given RV, with its core shape. If we draw i.i.d.
+    samples from said RV, we would not be able to compute the deterministic
+    over the i.i.d sampled dimensions (i.e. those that are not the core
+    dimensions of the RV). To deal with this problem, we wrap the theano
+    compiled function with numpy.vectorize, providing the correct signature
+    for the core dimensions. The extra dimensions, will be interpreted as
+    i.i.d. sampled axis and will be broadcast following the usual rules.
+
+    Parameters
+    ----------
+    f : theano compiled function
+    inputs : list of theano variables used as inputs for the function
+    givens : theano variable which is the output of the function
+
+    Notes
+    -----
+    If inputs is an empty list (theano function with no inputs needed), then
+    the same `f` is returned.
+    Only functions that return a single theano variable's value can be
+    vectorized.
+
+    Returns
+    -------
+    A function which wraps `f` with numpy.vectorize with the apropriate call
+    signature.
+    """
+    inputs_signatures = ",".join(
+        [
+            get_vectorize_signature(var, var_name="i_{}".format(input_ind))
+            for input_ind, var in enumerate(inputs)
+        ]
+    )
+    if len(inputs_signatures) > 0:
+        output_signature = get_vectorize_signature(output, var_name="o")
+        signature = inputs_signatures + "->" + output_signature
+
+        return np.vectorize(f, signature=signature)
+    else:
+        return f
+
+
+def get_vectorize_signature(var, var_name="i"):
+    if var.ndim == 0:
+        return "()"
+    else:
+        sig = ",".join(
+            ["{}_{}".format(var_name, axis_ind) for axis_ind in range(var.ndim)]
+        )
+        return "({})".format(sig)
 
 
 def _draw_value(param, point=None, givens=None, size=None):
@@ -538,19 +601,7 @@ def _draw_value(param, point=None, givens=None, size=None):
                 input_vars = []
                 input_vals = []
             func = _compile_theano_function(param, input_vars)
-            if size is not None:
-                size = np.atleast_1d(size)
-            dshaped_variables = all((hasattr(var, 'dshape')
-                                     for var in input_vars))
-            if (values and dshaped_variables and
-                not all(var.dshape == getattr(val, 'shape', tuple())
-                        for var, val in zip(input_vars, input_vals))):
-                output = np.array([func(*v) for v in zip(*input_vals)])
-            elif (size is not None and any((val.ndim > var.ndim)
-                  for var, val in zip(input_vars, input_vals))):
-                output = np.array([func(*v) for v in zip(*input_vals)])
-            else:
-                output = func(*input_vals)
+            output = func(*input_vals)
             return output
     raise ValueError('Unexpected type in draw_value: %s' % type(param))
 
@@ -602,160 +653,88 @@ def generate_samples(generator, *args, **kwargs):
     not_broadcast_kwargs = kwargs.pop('not_broadcast_kwargs', None)
     if not_broadcast_kwargs is None:
         not_broadcast_kwargs = dict()
-    if size is None:
-        size = 1
 
+    # Parse out raw input parameters for the generator
     args = tuple(p[0] if isinstance(p, tuple) else p for p in args)
-
     for key in kwargs:
         p = kwargs[key]
         kwargs[key] = p[0] if isinstance(p, tuple) else p
 
+    # Convert size and dist_shape to tuples
+    size_tup = to_tuple(size)
+    dist_shape = to_tuple(dist_shape)
+    if dist_shape[:len(size_tup)] == size_tup:
+        # dist_shape is prepended with size_tup. This is not a consequence
+        # of the parameters being drawn size_tup times! By chance, the
+        # distribution's shape has its first elements equal to size_tup.
+        # This means that we must prepend the size_tup to dist_shape, and
+        # check if that broadcasts well with the parameters
+        _dist_shape = size_tup + dist_shape
+    else:
+        _dist_shape = dist_shape
+
+
     if broadcast_shape is None:
+        # If broadcast_shape is not explicitly provided, it is inferred as the
+        # broadcasted shape of the input parameter and dist_shape, taking into
+        # account the potential size prefix
         inputs = args + tuple(kwargs.values())
-        try:
-            broadcast_shape = np.broadcast(*inputs).shape  # size of generator(size=1)
-        except ValueError:  # sometimes happens if args have shape (500,) and (500, 4)
-            max_dims = max(j.ndim for j in args + tuple(kwargs.values()))
-            args = tuple([j.reshape(j.shape + (1,) * (max_dims - j.ndim)) for j in args])
-            kwargs = {k: v.reshape(v.shape + (1,) * (max_dims - v.ndim)) for k, v in kwargs.items()}
-            inputs = args + tuple(kwargs.values())
-            broadcast_shape = np.broadcast(*inputs).shape  # size of generator(size=1)
+        broadcast_shape = broadcast_dist_samples_shape(
+            [np.asarray(i).shape for i in inputs] + [_dist_shape],
+            size=size_tup
+        )
+        # We do this instead of broadcast_distribution_samples to avoid
+        # creating a dummy array with dist_shape in memory
+        inputs = get_broadcastable_dist_samples(
+            inputs,
+            size=size_tup,
+            must_bcast_with=broadcast_shape,
+        )
+        # We modify the arguments with their broadcasted counterparts
+        args = tuple(inputs[:len(args)])
+        for offset, key in enumerate(kwargs):
+            kwargs[key] = inputs[len(args) + offset]
     # Update kwargs with the keyword arguments that were not broadcasted
     kwargs.update(not_broadcast_kwargs)
 
-    dist_shape = to_tuple(dist_shape)
+    # We ensure that broadcast_shape is a tuple
     broadcast_shape = to_tuple(broadcast_shape)
-    size_tup = to_tuple(size)
 
-    # All inputs are scalars, end up size (size_tup, dist_shape)
-    if broadcast_shape in {(), (0,), (1,)}:
-        samples = generator(size=size_tup + dist_shape, *args, **kwargs)
-    # Inputs already have the right shape. Just get the right size.
-    elif broadcast_shape[-len(dist_shape):] == dist_shape or len(dist_shape) == 0:
-        if size == 1 or (broadcast_shape == size_tup + dist_shape):
-            samples = generator(size=broadcast_shape, *args, **kwargs)
-        elif dist_shape == broadcast_shape:
-            samples = generator(size=size_tup + dist_shape, *args, **kwargs)
-        elif len(dist_shape) == 0 and size_tup and broadcast_shape:
-            # There is no dist_shape (scalar distribution) but the parameters
-            # broadcast shape and size_tup determine the size to provide to
-            # the generator
-            if broadcast_shape[:len(size_tup)] == size_tup:
-                # Input's dist_shape is scalar, but it has size repetitions.
-                # So now the size matches but we have to manually broadcast to
-                # the right dist_shape
-                samples = [generator(*args, **kwargs)]
-                if samples[0].shape == broadcast_shape:
-                    samples = samples[0]
-                else:
-                    suffix = broadcast_shape[len(size_tup):] + dist_shape
-                    samples.extend([generator(*args, **kwargs).
-                                    reshape(broadcast_shape)[..., np.newaxis]
-                                    for _ in range(np.prod(suffix,
-                                                           dtype=int) - 1)])
-                    samples = np.hstack(samples).reshape(size_tup + suffix)
-            else:
-                # The parameter shape is given, but we have to concatenate it
-                # with the size tuple
-                samples = generator(size=size_tup + broadcast_shape,
-                                    *args,
-                                    **kwargs)
-        else:
-            samples = None
-    # Args have been broadcast correctly, can just ask for the right shape out
-    elif dist_shape[-len(broadcast_shape):] == broadcast_shape:
-        samples = generator(size=size_tup + dist_shape, *args, **kwargs)
-    # Inputs have the right size, have to manually broadcast to the right dist_shape
-    elif broadcast_shape[:len(size_tup)] == size_tup:
-        suffix = broadcast_shape[len(size_tup):] + dist_shape
-        samples = [generator(*args, **kwargs).reshape(size_tup + (1,)) for _ in range(np.prod(suffix, dtype=int))]
-        samples = np.hstack(samples).reshape(size_tup + suffix)
-    else:
-        samples = None
-
-    if samples is None:
+    try:
+        dist_bcast_shape = broadcast_dist_samples_shape(
+            [_dist_shape, broadcast_shape],
+            size=size,
+        )
+    except (ValueError, TypeError):
         raise TypeError('''Attempted to generate values with incompatible shapes:
             size: {size}
             size_tup: {size_tup}
-            broadcast_shape[:len(size_tup)] == size_tup: {test}
+            broadcast_shape[:len(size_tup)] == size_tup: {size_prepended}
             dist_shape: {dist_shape}
             broadcast_shape: {broadcast_shape}
-        '''.format(size=size, size_tup=size_tup, dist_shape=dist_shape, broadcast_shape=broadcast_shape, test=broadcast_shape[:len(size_tup)] == size_tup))
+        '''.format(size=size,
+                   size_tup=size_tup,
+                   dist_shape=dist_shape,
+                   broadcast_shape=broadcast_shape,
+                   size_prepended=broadcast_shape[:len(size_tup)] == size_tup)
+        )
+    if dist_bcast_shape[:len(size_tup)] == size_tup:
+        samples = generator(size=dist_bcast_shape, *args, **kwargs)
+    else:
+        samples = generator(size=size_tup + dist_bcast_shape, *args, **kwargs)
+    samples = np.asarray(samples)
 
     # reshape samples here
-    if samples.shape[0] == 1 and size == 1:
-        if len(samples.shape) > len(dist_shape) and samples.shape[-len(dist_shape):] == dist_shape:
+    if samples.ndim > 0 and samples.shape[0] == 1 and size_tup == (1,):
+        if (len(samples.shape) > len(dist_shape) and
+            samples.shape[-len(dist_shape):] == dist_shape[-len(dist_shape):]
+        ):
             samples = samples.reshape(samples.shape[1:])
 
-    if one_d and samples.shape[-1] == 1:
+    if (one_d and samples.ndim > 0 and samples.shape[-1] == 1
+        and (samples.shape != size_tup or
+             size_tup == tuple() or
+             size_tup == (1,))
+    ):
         samples = samples.reshape(samples.shape[:-1])
     return np.asarray(samples)
-
-
-def broadcast_distribution_samples(samples, size=None):
-    """Broadcast samples drawn from distributions taking into account the
-    size (i.e. the number of samples) of the draw, which is prepended to
-    the sample's shape.
-
-    Parameters
-    ----------
-    samples: Iterable of ndarrays holding the sampled values
-    size: None, int or tuple (optional)
-        size of the sample set requested.
-
-    Returns
-    -------
-    List of broadcasted sample arrays
-
-    Examples
-    --------
-    .. code-block:: python
-        size = 100
-        sample0 = np.random.randn(size)
-        sample1 = np.random.randn(size, 5)
-        sample2 = np.random.randn(size, 4, 5)
-        out = broadcast_distribution_samples([sample0, sample1, sample2],
-                                             size=size)
-        assert all((o.shape == (size, 4, 5) for o in out))
-        assert np.all(sample0[:, None, None] == out[0])
-        assert np.all(sample1[:, None, :] == out[1])
-        assert np.all(sample2 == out[2])
-
-    .. code-block:: python
-        size = 100
-        sample0 = np.random.randn(size)
-        sample1 = np.random.randn(5)
-        sample2 = np.random.randn(4, 5)
-        out = broadcast_distribution_samples([sample0, sample1, sample2],
-                                             size=size)
-        assert all((o.shape == (size, 4, 5) for o in out))
-        assert np.all(sample0[:, None, None] == out[0])
-        assert np.all(sample1 == out[1])
-        assert np.all(sample2 == out[2])
-    """
-    if size is None:
-        return np.broadcast_arrays(*samples)
-    _size = to_tuple(size)
-    # Raw samples shapes
-    p_shapes = [p.shape for p in samples]
-    # samples shapes without the size prepend
-    sp_shapes = [s[len(_size):] if _size == s[:len(_size)] else s
-                 for s in p_shapes]
-    broadcast_shape = np.broadcast(*[np.empty(s) for s in sp_shapes]).shape
-    broadcasted_samples = []
-    for param, p_shape, sp_shape in zip(samples, p_shapes, sp_shapes):
-        if _size == p_shape[:len(_size)]:
-            # If size prepends the shape, then we have to add broadcasting axis
-            # in the middle
-            slicer_head = [slice(None)] * len(_size)
-            slicer_tail = ([np.newaxis] * (len(broadcast_shape) -
-                                           len(sp_shape)) +
-                           [slice(None)] * len(sp_shape))
-        else:
-            # If size does not prepend the shape, then we have leave the
-            # parameter as is
-            slicer_head = []
-            slicer_tail = [slice(None)] * len(sp_shape)
-        broadcasted_samples.append(param[tuple(slicer_head + slicer_tail)])
-    return np.broadcast_arrays(*broadcasted_samples)

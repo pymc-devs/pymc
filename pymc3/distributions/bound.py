@@ -59,7 +59,7 @@ class _Bounded(Distribution):
                 "Drawing samples from distributions with "
                 "array-valued bounds is not supported."
             )
-        total_size = np.prod(size)
+        total_size = np.prod(size).astype(np.int)
         samples = []
         s = 0
         while s < total_size:
@@ -81,17 +81,32 @@ class _Bounded(Distribution):
         elif self.lower is not None and self.upper is not None:
             lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
             return generate_samples(
-                self._random, lower, upper, point, dist_shape=self.shape, size=size
+                self._random,
+                lower,
+                upper,
+                dist_shape=self.shape,
+                size=size,
+                not_broadcast_kwargs={'point': point},
             )
         elif self.lower is not None:
             lower = draw_values([self.lower], point=point, size=size)
             return generate_samples(
-                self._random, lower, np.inf, point, dist_shape=self.shape, size=size
+                self._random,
+                lower,
+                np.inf,
+                dist_shape=self.shape,
+                size=size,
+                not_broadcast_kwargs={'point': point},
             )
         else:
             upper = draw_values([self.upper], point=point, size=size)
             return generate_samples(
-                self._random, -np.inf, upper, point, dist_shape=self.shape, size=size
+                self._random,
+                -np.inf,
+                upper,
+                dist_shape=self.shape,
+                size=size,
+                not_broadcast_kwargs={'point': point},
             )
 
 

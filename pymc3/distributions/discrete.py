@@ -5,8 +5,8 @@ import warnings
 
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow, random_choice
-from .distribution import (Discrete, draw_values, generate_samples,
-                           broadcast_distribution_samples)
+from .distribution import Discrete, draw_values, generate_samples
+from .shape_utils import broadcast_distribution_samples
 from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
 from ..theanof import floatX, intX
 
@@ -351,7 +351,6 @@ class DiscreteWeibull(Discrete):
 
     def random(self, point=None, size=None):
         q, beta = draw_values([self.q, self.beta], point=point, size=size)
-        q, beta = broadcast_distribution_samples([q, beta], size=size)
 
         return generate_samples(self._random, q, beta,
                                 dist_shape=self.shape,
