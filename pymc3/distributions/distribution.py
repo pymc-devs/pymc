@@ -709,14 +709,14 @@ def generate_samples(generator, *args, **kwargs):
         raise TypeError('''Attempted to generate values with incompatible shapes:
             size: {size}
             size_tup: {size_tup}
-            broadcast_shape[:len(size_tup)] == size_tup: {test}
+            broadcast_shape[:len(size_tup)] == size_tup: {size_prepended}
             dist_shape: {dist_shape}
             broadcast_shape: {broadcast_shape}
         '''.format(size=size,
                    size_tup=size_tup,
                    dist_shape=dist_shape,
                    broadcast_shape=broadcast_shape,
-                   test=broadcast_shape[:len(size_tup)] == size_tup)
+                   size_prepended=broadcast_shape[:len(size_tup)] == size_tup)
         )
     if dist_bcast_shape[:len(size_tup)] == size_tup:
         samples = generator(size=dist_bcast_shape, *args, **kwargs)
