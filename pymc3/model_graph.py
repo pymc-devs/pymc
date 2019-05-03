@@ -1,10 +1,17 @@
 import itertools
+from collections import deque
+from typing import Iterator, Optional
 
-from theano.gof.graph import ancestors
+from theano.gof.graph import ancestors, stack_search
 from theano.compile import SharedVariable
+from theano.tensor import Tensor
 
 from .util import get_default_varnames
 import pymc3 as pm
+
+# this is a placeholder for a better characterization of the type
+# of variables in a model.
+RV = Tensor
 
 
 def powerset(iterable):
@@ -27,7 +34,7 @@ class ModelGraph:
         self._deterministics = None
 
     def get_deterministics(self, var):
-        """Compute the deterministic nodes of the graph"""
+        """Compute the deterministic nodes of the graph, **not** including var itself."""
         deterministics = []
         attrs = ('transformed', 'logpt')
         for v in self.var_list:
@@ -40,24 +47,38 @@ class ModelGraph:
         return set([j for j in ancestors([func], blockers=blockers) if j in self.var_list and j != var])
 
     def _get_ancestors(self, var, func):
-        """Get all ancestors of a function, doing some accounting for deterministics
-
-        Specifically, if a deterministic is an input, theano.gof.graph.ancestors will
-        return only the inputs *to the deterministic*.  However, if we pass in the
-        deterministic as a blocker, it will skip those nodes.
+        """Get all ancestors of a function, doing some accounting for deterministics.
         """
-        deterministics = self.get_deterministics(var)
+
+        # this contains all of the variables in the model EXCEPT var...
+        vars: List[var] = set(self.var_list)
+        vars.remove(var)
+        
         upstream = self._ancestors(var, func)
 
         # Usual case
         if upstream == self._ancestors(var, func, blockers=upstream):
             return upstream
         else: # deterministic accounting
-            for d in powerset(upstream):
-                blocked = self._ancestors(var, func, blockers=d)
-                if set(d) == blocked:
-                    return d
-        raise RuntimeError('Could not traverse graph. Consider raising an issue with developers.')
+            blockers = set()
+            retval = set()
+            def _expand(node) -> Optional[Iterator[Tensor]]:
+                if node in blockers:
+                    return None
+                elif node in vars:
+                    blockers.add(node)
+                    retval.add(node)
+                    return None
+                elif node.owner:
+                    blockers.add(node)
+                    return reversed(node.owner.inputs)
+                else:
+                    return None
+            
+            stack_search(start = deque([func]),
+                         expand=_expand,
+                         mode='bfs')
+            return retval
 
     def _filter_parents(self, var, parents):
         """Get direct parents of a var, as strings"""
