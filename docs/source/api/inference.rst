@@ -47,6 +47,15 @@ Hamiltonian Monte Carlo
    :members:
 
 
+MultiTrace
+^^^^^^^^
+
+.. currentmodule:: pymc3.backends.base
+.. autoclass:: pymc3.backends.base.MultiTrace
+    :members:
+
+.. autoclass:: pymc3.backends.base.BaseTrace
+
 Variational
 -----------
 
