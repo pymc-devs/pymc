@@ -54,31 +54,25 @@ class ModelGraph:
         vars: List[var] = set(self.var_list)
         vars.remove(var)
         
-        upstream = self._ancestors(var, func)
+        blockers = set()
+        retval = set()
+        def _expand(node) -> Optional[Iterator[Tensor]]:
+            if node in blockers:
+                return None
+            elif node in vars:
+                blockers.add(node)
+                retval.add(node)
+                return None
+            elif node.owner:
+                blockers.add(node)
+                return reversed(node.owner.inputs)
+            else:
+                return None
 
-        # Usual case
-        if upstream == self._ancestors(var, func, blockers=upstream):
-            return upstream
-        else: # deterministic accounting
-            blockers = set()
-            retval = set()
-            def _expand(node) -> Optional[Iterator[Tensor]]:
-                if node in blockers:
-                    return None
-                elif node in vars:
-                    blockers.add(node)
-                    retval.add(node)
-                    return None
-                elif node.owner:
-                    blockers.add(node)
-                    return reversed(node.owner.inputs)
-                else:
-                    return None
-            
-            stack_search(start = deque([func]),
-                         expand=_expand,
-                         mode='bfs')
-            return retval
+        stack_search(start = deque([func]),
+                     expand=_expand,
+                     mode='bfs')
+        return retval
 
     def _filter_parents(self, var, parents):
         """Get direct parents of a var, as strings"""
