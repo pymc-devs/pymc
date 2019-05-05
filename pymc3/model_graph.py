@@ -1,8 +1,8 @@
 import itertools
 from collections import deque
-from typing import Iterator, Optional
+from typing import Iterator, Optional, MutableSet
 
-from theano.gof.graph import ancestors, stack_search
+from theano.gof.graph import stack_search
 from theano.compile import SharedVariable
 from theano.tensor import Tensor
 
@@ -42,19 +42,15 @@ class ModelGraph:
                 deterministics.append(v)
         return deterministics
 
-    def _ancestors(self, var, func, blockers=None):
-        """Get ancestors of a function that are also named PyMC3 variables"""
-        return set([j for j in ancestors([func], blockers=blockers) if j in self.var_list and j != var])
-
-    def _get_ancestors(self, var, func):
+    def _get_ancestors(self, var, func) -> MutableSet[RV]:
         """Get all ancestors of a function, doing some accounting for deterministics.
         """
 
         # this contains all of the variables in the model EXCEPT var...
-        vars: List[var] = set(self.var_list)
+        vars: MutableSet[RV] = set(self.var_list)
         vars.remove(var)
         
-        blockers = set()
+        blockers: MutableSet[RV] = set()
         retval = set()
         def _expand(node) -> Optional[Iterator[Tensor]]:
             if node in blockers:
