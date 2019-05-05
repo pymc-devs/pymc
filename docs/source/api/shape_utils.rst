@@ -12,6 +12,7 @@ This module introduces functions that are made aware of the requested `size_tupl
 
 .. autosummary::
 
+   to_tuple
    shapes_broadcasting
    broadcast_dist_samples_shape
    get_broadcastable_dist_samples
