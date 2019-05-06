@@ -1,4 +1,3 @@
-import itertools
 from collections import deque
 from typing import Iterator, Optional, MutableSet
 
@@ -12,17 +11,6 @@ import pymc3 as pm
 # this is a placeholder for a better characterization of the type
 # of variables in a model.
 RV = Tensor
-
-
-def powerset(iterable):
-    """All *nonempty* subsets of an iterable.
-
-    From itertools docs.
-
-    powerset([1,2,3]) --> (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)
-    """
-    s = list(iterable)
-    return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(1, len(s)+1))
 
 
 class ModelGraph:
