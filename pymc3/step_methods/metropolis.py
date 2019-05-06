@@ -400,9 +400,15 @@ class CategoricalGibbsMetropolis(ArrayStep):
                 k = draw_values([distr.k])[0]
             elif isinstance(distr, pm.Bernoulli) or (v.dtype in pm.bool_types):
                 k = 2
+            elif isinstance(distr, pm.DiscreteUniform):
+                k = draw_values([distr.upper])[0] + 1
+                if np.all(draw_values([distr.lower])):
+                    raise ValueError('Parameter lower must be 0 to use DiscreteUniform' +
+                                     'with CategoricalGibbsMetropolis.')
+
             else:
                 raise ValueError('All variables must be categorical or binary' +
-                                 'for CategoricalGibbsMetropolis')
+                                 'or DiscreteUniform for CategoricalGibbsMetropolis')
             start = len(dimcats)
             dimcats += [(dim, k) for dim in range(start, start + v.dsize)]
 
@@ -488,6 +494,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
                 return Competence.IDEAL
             return Competence.COMPATIBLE
         elif isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
+            return Competence.COMPATIBLE
+        elif isinstance(distribution, pm.DiscreteUniform) and draw_values([distribution.lower])[0] == 0:
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
 
