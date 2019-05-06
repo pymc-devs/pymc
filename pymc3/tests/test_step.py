@@ -36,6 +36,8 @@ from pymc3.distributions import (
     Categorical,
     Beta,
     HalfNormal,
+    DiscreteUniform,
+    Poisson,
 )
 
 from numpy.testing import assert_array_almost_equal
@@ -1047,3 +1049,27 @@ class TestNutsCheckTrace:
             ]
         )
         assert (trace.model_logp == model_logp_).all()
+
+
+class TestDiscreteUniform:
+
+    def test_DiscreteUniform(self, lower=0, upper=200000000,
+                             obs=5000000, draws=20000):
+        """Test that DiscreteUniform distribution can use
+         CategoricalGibbsMetropolis step method."""
+        obs = theano.shared(obs)
+        with Model() as model2:
+
+            x = DiscreteUniform('x', lower, upper - 1)
+            sfs_obs = Poisson('sfs_obs', mu=x, observed=obs)
+
+        with model2:
+
+            step = CategoricalGibbsMetropolis([x])
+            trace = sample(draws, tune=0, step=step)
+        return trace
+
+    def test_bad_lower(self):
+        with pytest.raises(ValueError):
+            self.test_DiscreteUniform(lower=1, upper=200000001,
+                                      obs=5000000, draws=20000)
