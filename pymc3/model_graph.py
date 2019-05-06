@@ -47,10 +47,10 @@ class ModelGraph:
         """
 
         # this contains all of the variables in the model EXCEPT var...
-        vars: MutableSet[RV] = set(self.var_list)
+        vars = set(self.var_list)
         vars.remove(var)
-        
-        blockers: MutableSet[RV] = set()
+
+        blockers = set()
         retval = set()
         def _expand(node) -> Optional[Iterator[Tensor]]:
             if node in blockers:
