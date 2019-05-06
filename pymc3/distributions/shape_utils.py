@@ -17,7 +17,18 @@ __all__ = [
 
 
 def to_tuple(shape):
-    """Convert ints, arrays, and Nones to tuples"""
+    """Convert ints, arrays, and Nones to tuples
+
+    Parameters
+    ----------
+    shape : None, int or array-like
+        Represents the shape to convert to tuple.
+
+    Returns
+    -------
+    If `shape` is None, returns an empty tuple. If it's an int, (shape,) is
+    returned. If it is array-like, tuple(shape) is returned.
+    """
     if shape is None:
         return tuple()
     temp = np.atleast_1d(shape)
@@ -106,6 +117,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
     Examples
     --------
     .. code-block:: python
+
         size = 100
         shape0 = (size,)
         shape1 = (size, 5)
@@ -115,6 +127,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
         assert out == (size, 4, 5)
 
     .. code-block:: python
+
         size = 100
         shape0 = (size,)
         shape1 = (5,)
@@ -124,6 +137,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
         assert out == (size, 4, 5)
 
     .. code-block:: python
+
         size = 100
         shape0 = (1,)
         shape1 = (5,)
@@ -204,6 +218,7 @@ def get_broadcastable_dist_samples(
     Examples
     --------
     .. code-block:: python
+
         must_bcast_with = (3, 1, 5)
         size = 100
         sample0 = np.random.randn(size)
@@ -222,6 +237,7 @@ def get_broadcastable_dist_samples(
         assert np.all(sample2[:, None] == out[2])
 
     .. code-block:: python
+
         size = 100
         must_bcast_with = (3, 1, 5)
         sample0 = np.random.randn(size)
@@ -290,6 +306,7 @@ def broadcast_distribution_samples(samples, size=None):
     Examples
     --------
     .. code-block:: python
+
         size = 100
         sample0 = np.random.randn(size)
         sample1 = np.random.randn(size, 5)
@@ -302,6 +319,7 @@ def broadcast_distribution_samples(samples, size=None):
         assert np.all(sample2 == out[2])
 
     .. code-block:: python
+
         size = 100
         sample0 = np.random.randn(size)
         sample1 = np.random.randn(5)
@@ -335,6 +353,7 @@ def broadcast_dist_samples_to(to_shape, samples, size=None):
     Examples
     --------
     .. code-block:: python
+
         to_shape = (3, 1, 5)
         size = 100
         sample0 = np.random.randn(size)
@@ -351,6 +370,7 @@ def broadcast_dist_samples_to(to_shape, samples, size=None):
         assert np.all(sample2[:, None] == out[2])
 
     .. code-block:: python
+
         size = 100
         to_shape = (3, 1, 5)
         sample0 = np.random.randn(size)
