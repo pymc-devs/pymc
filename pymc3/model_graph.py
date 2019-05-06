@@ -12,7 +12,6 @@ import pymc3 as pm
 # of variables in a model.
 RV = Tensor
 
-
 class ModelGraph:
     def __init__(self, model):
         self.model = model
@@ -35,10 +34,10 @@ class ModelGraph:
         """
 
         # this contains all of the variables in the model EXCEPT var...
-        vars = set(self.var_list)
+        vars: MutableSet[RV] = set(self.var_list)
         vars.remove(var)
-
-        blockers = set()
+        
+        blockers: MutableSet[RV] = set()
         retval = set()
         def _expand(node) -> Optional[Iterator[Tensor]]:
             if node in blockers:
