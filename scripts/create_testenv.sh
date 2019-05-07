@@ -34,7 +34,7 @@ then
     source activate ${ENVNAME}
 fi
 pip install --upgrade pip
-pip uninstall numpy
+pip uninstall -y numpy
 
 conda install --yes numpy scipy mkl-service
 conda install --yes -c conda-forge python-graphviz
