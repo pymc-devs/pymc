@@ -20,7 +20,7 @@ command -v conda >/dev/null 2>&1 || {
   exit 1;
 }
 
-ENVNAME="testenv"
+ENVNAME="${ENVNAME:-testenv}" # if no ENVNAME is specified, use testenv
 PYTHON_VERSION=${PYTHON_VERSION:-3.6} # if no python specified, use 3.6
 
 if [ -z ${GLOBAL} ]
