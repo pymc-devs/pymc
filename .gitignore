@@ -35,3 +35,4 @@ benchmarks/results/
 
 # VSCode
 .vscode/
+.mypy_cache
