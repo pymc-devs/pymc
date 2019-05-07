@@ -33,10 +33,12 @@ then
     fi
     source activate ${ENVNAME}
 fi
+pip install --upgrade pip
+pip uninstall numpy
+
 conda install --yes numpy scipy mkl-service
 conda install --yes -c conda-forge python-graphviz
 
-pip install --upgrade pip
 
 #  Install editable using the setup.py
 
