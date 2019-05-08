@@ -36,7 +36,7 @@ fi
 pip install --upgrade pip
 pip uninstall -y numpy
 
-conda install --yes numpy scipy mkl-service
+conda install --yes mkl-service
 conda install --yes -c conda-forge python-graphviz
 
 
