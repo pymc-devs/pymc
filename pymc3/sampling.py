@@ -1,3 +1,7 @@
+from typing import Dict, List, Optional, TYPE_CHECKING, cast
+if TYPE_CHECKING:
+    from typing import Any
+from typing import Iterable as TIterable
 from collections import defaultdict, Iterable
 from copy import copy
 import pickle
@@ -6,11 +10,12 @@ import warnings
 
 import numpy as np
 import theano.gradient as tg
+from theano.tensor import Tensor
 
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .distributions.distribution import draw_values
-from .model import modelcontext, Point, all_continuous
+from .model import modelcontext, Point, all_continuous, Model
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep, arraystep, smc)
@@ -1026,8 +1031,14 @@ def stop_tuning(step):
     return step
 
 
-def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size=None,
-                                random_seed=None, progressbar=True):
+def sample_posterior_predictive(trace,
+                                samples: Optional[int]=None,
+                                model: Optional[Model]=None,
+                                vars: Optional[TIterable[Tensor]]=None,
+                                var_names: Optional[List[str]]=None,
+                                size: Optional[int]=None,
+                                random_seed=None,
+                                progressbar: bool=True) -> Dict[str, np.ndarray]:
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -1041,7 +1052,10 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
         Model used to generate `trace`
     vars : iterable
         Variables for which to compute the posterior predictive samples.
-        Defaults to `model.observed_RVs`.
+        Defaults to `model.observed_RVs`.  Deprecated: please use `var_names` instead.
+    var_names : Iterable[str]
+        Alternative way to specify vars to sample, to make this function orthogonal with
+        others.
     size : int
         The number of random draws from the distribution specified by the parameters in each
         sample of the trace.
@@ -1055,7 +1069,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     Returns
     -------
     samples : dict
-        Dictionary with the variables as keys. The values corresponding to the
+        Dictionary with the variable names as keys, and values numpy arrays containing
         posterior predictive samples.
     """
     len_trace = len(trace)
@@ -1069,6 +1083,14 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
 
     model = modelcontext(model)
 
+    if var_names is not None:
+        if vars is not None:
+            raise ValueError("Should not specify both vars and var_names arguments.")
+        else:
+            vars = [model[x] for x in var_names]
+    elif vars is not None: # var_names is None, and vars is not.
+        warnings.warn("vars argument is deprecated in favor of var_names.",
+                      DeprecationWarning)
     if vars is None:
         vars = model.observed_RVs
 
@@ -1080,7 +1102,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     if progressbar:
         indices = tqdm(indices, total=samples)
 
-    ppc_trace = defaultdict(list)
+    ppc_trace = defaultdict(list) # type: Dict[str, List[Any]] 
     try:
         for idx in indices:
             if nchain > 1:
@@ -1249,7 +1271,11 @@ def sample_ppc_w(*args, **kwargs):
     return sample_posterior_predictive_w(*args, **kwargs)
 
 
-def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None):
+def sample_prior_predictive(samples=500,
+                            model: Optional[Model]=None,
+                            vars: Optional[TIterable[str]] = None,
+                            var_names: Optional[TIterable[str]] = None,
+                            random_seed=None) -> Dict[str, np.ndarray]:
     """Generate samples from the prior predictive distribution.
 
     Parameters
@@ -1257,10 +1283,16 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
     samples : int
         Number of samples from the prior predictive to generate. Defaults to 500.
     model : Model (optional if in `with` context)
-    vars : iterable
+    vars : Iterable[str]
         A list of names of variables for which to compute the posterior predictive
          samples.
         Defaults to `model.named_vars`.
+        DEPRECATED - Use `var_names` instead.
+    var_names : Iterable[str]
+        A list of names of variables for which to compute the posterior predictive
+         samples.
+        Defaults to `model.named_vars`.
+    
     random_seed : int
         Seed for the random number generator.
 
@@ -1272,8 +1304,16 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
     """
     model = modelcontext(model)
 
-    if vars is None:
+    if vars is None and var_names is None:
         vars = set(model.named_vars.keys())
+    elif vars is None:
+        vars = var_names
+    elif vars is not None:
+        warnings.warn("vars argument is deprecated in favor of var_names.",
+                      DeprecationWarning)
+    else:
+        raise ValueError("Cannot supply both vars and var_names arguments.")
+    vars = cast(TIterable[str], vars) # tell mypy that vars cannot be None here.
 
     if random_seed is not None:
         np.random.seed(random_seed)
@@ -1282,8 +1322,10 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
     values = draw_values([model[name] for name in names], size=samples)
 
     data = {k: v for k, v in zip(names, values)}
+    if data is None:
+        raise AssertionError("No variables sampled: attempting to sample %s"%names)
 
-    prior = {}
+    prior = {} # type: Dict[str, np.ndarray]
     for var_name in vars:
         if var_name in data:
             prior[var_name] = data[var_name]

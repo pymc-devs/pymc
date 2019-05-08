@@ -3,7 +3,7 @@ import functools
 import itertools
 import threading
 import warnings
-from typing import Optional, Dict, Any
+from typing import Optional
 
 import numpy as np
 from pandas import Series
