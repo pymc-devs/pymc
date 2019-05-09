@@ -101,19 +101,6 @@ class Binomial(Discrete):
         -------
         TensorVariable
         """
-        """
-        Calculate log-probability of Binomial distribution at specified value.
-
-        Parameters
-        ----------
-        value : numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
         n = self.n
         p = self.p
 
