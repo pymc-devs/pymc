@@ -418,6 +418,7 @@ def draw_values(params, point=None, size=None):
                 param = params[param_idx]
                 if (param, size) in drawn:
                     evaluated[param_idx] = drawn[(param, size)]
+                    givens[param.name] = (param, value)
                 else:
                     try:  # might evaluate in a bad order,
                         value = _draw_value(param,

@@ -45,6 +45,7 @@
 - Fixed an issue in `model_graph` that caused construction of the graph of the model for rendering to hang: replaced a search over the powerset of the nodes with a breadth-first search over the nodes. Fix for #3458.
 - Removed variable annotations from `model_graph` but left type hints (Fix for #3465). This means that we support `python>=3.5.4`.
 - Default `target_accept`for `HamiltonianMC` is now 0.65, as suggested in Beskos et. al. 2010 and Neal 2001.
+- Fixed bug in `draw_values` that lead to intermittent errors in python3.5. This happened with some deterministic nodes that were drawn but not added to `givens`.
 
 ### Deprecations
 
