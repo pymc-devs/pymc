@@ -88,6 +88,32 @@ class Binomial(Discrete):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Binomial distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        """
+        Calculate log-probability of Binomial distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         n = self.n
         p = self.p
 
@@ -211,6 +237,19 @@ class BetaBinomial(Discrete):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of BetaBinomial distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         alpha = self.alpha
         beta = self.beta
         return bound(binomln(self.n, value)
@@ -308,6 +347,19 @@ class Bernoulli(Discrete):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Bernoulli distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         if self._is_logit:
             lp = tt.switch(value, self._logit_p, -self._logit_p)
             return -log1pexp(-lp)
@@ -374,6 +426,19 @@ class DiscreteWeibull(Discrete):
         self.median = self._ppf(0.5)
 
     def logp(self, value):
+        """
+        Calculate log-probability of DiscreteWeibull distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         q = self.q
         beta = self.beta
 
@@ -503,6 +568,19 @@ class Poisson(Discrete):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Poisson distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         mu = self.mu
         log_prob = bound(
             logpow(mu, value) - factln(value) - mu,
@@ -601,6 +679,19 @@ class NegativeBinomial(Discrete):
         return np.asarray(stats.poisson.rvs(g)).reshape(g.shape)
 
     def logp(self, value):
+        """
+        Calculate log-probability of NegativeBinomial distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         mu = self.mu
         alpha = self.alpha
         negbinom = bound(binomln(value + alpha - 1, value)
@@ -689,6 +780,19 @@ class Geometric(Discrete):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Geometric distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         p = self.p
         return bound(tt.log(p) + logpow(1 - p, value - 1),
                      0 <= p, p <= 1, value >= 1)
@@ -778,6 +882,19 @@ class DiscreteUniform(Discrete):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of DiscreteUniform distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         upper = self.upper
         lower = self.lower
         return bound(-tt.log(upper - lower + 1),
@@ -871,6 +988,19 @@ class Categorical(Discrete):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Categorical distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         p_ = self.p
         k = self.k
 
@@ -940,6 +1070,19 @@ class Constant(Discrete):
                                 size=size).astype(dtype)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Constant distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         c = self.c
         return bound(0, tt.eq(value, c))
 
@@ -1035,6 +1178,19 @@ class ZeroInflatedPoisson(Discrete):
         return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
+        """
+        Calculate log-probability of ZeroInflatedPoisson distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         psi = self.psi
         theta = self.theta
 
@@ -1144,6 +1300,19 @@ class ZeroInflatedBinomial(Discrete):
         return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
+        """
+        Calculate log-probability of ZeroInflatedBinomial distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         psi = self.psi
         p = self.p
         n = self.n
@@ -1279,6 +1448,19 @@ class ZeroInflatedNegativeBinomial(Discrete):
         return stats.poisson.rvs(g) * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
+        """
+        Calculate log-probability of ZeroInflatedNegativeBinomial distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         alpha = self.alpha
         mu = self.mu
         psi = self.psi
