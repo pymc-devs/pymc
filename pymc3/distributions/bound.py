@@ -40,6 +40,18 @@ class _Bounded(Distribution):
         )
 
     def logp(self, value):
+        """
+        Calculate log-probability of Bounded distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         logp = self._wrapped.logp(value)
         bounds = []
         if self.lower is not None:
@@ -76,6 +88,22 @@ class _Bounded(Distribution):
             return samples[0]
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Bounded distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         if self.lower is None and self.upper is None:
             return self._wrapped.random(point=point, size=size)
         elif self.lower is not None and self.upper is not None:
