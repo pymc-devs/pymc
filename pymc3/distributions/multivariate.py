@@ -695,7 +695,7 @@ class Multinomial(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        x : numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -857,7 +857,7 @@ class Wishart(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        X : numeric
             Value for which log-probability is calculated.
 
         Returns
