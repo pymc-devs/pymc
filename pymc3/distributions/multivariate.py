@@ -226,6 +226,22 @@ class MvNormal(_QuadFormBase):
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Multivariate Normal distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         if size is None:
             size = tuple()
         else:
@@ -353,6 +369,22 @@ class MvStudentT(_QuadFormBase):
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Multivariate Student's T distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         with _DrawValuesContext():
             nu, mu = draw_values([self.nu, self.mu], point=point, size=size)
             if self._cov_type == 'cov':
@@ -455,6 +487,22 @@ class Dirichlet(Continuous):
         return samples
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Dirichlet distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         a = draw_values([self.a], point=point, size=size)[0]
         samples = generate_samples(self._random,
                                    a=a,
@@ -578,6 +626,22 @@ class Multinomial(Discrete):
         return samples.astype(original_dtype)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Multinomial distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         n, p = draw_values([self.n, self.p], point=point, size=size)
         samples = generate_samples(self._random, n, p,
                                    dist_shape=self.shape,
@@ -713,6 +777,22 @@ class Wishart(Continuous):
                               np.nan)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Wishart distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         nu, V = draw_values([self.nu, self.V], point=point, size=size)
         size= 1 if size is None else size
         return generate_samples(stats.wishart.rvs, np.asscalar(nu), V,
@@ -1052,6 +1132,23 @@ class LKJCholeskyCov(Continuous):
         return np.linalg.cholesky(C)[..., tril_idx[0], tril_idx[1]]
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Covariance matrix with LKJ
+        distributed correlations.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         # Get parameters and broadcast them
         n, eta = draw_values([self.n, self.eta], point=point, size=size)
         broadcast_shape = np.broadcast(n, eta).shape
@@ -1187,6 +1284,22 @@ class LKJCorr(Continuous):
         return C[..., triu_idx[0], triu_idx[1]]
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from LKJ distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         n, eta = draw_values([self.n, self.eta], point=point, size=size)
         size= 1 if size is None else size
         samples = generate_samples(self._random, n, eta,
@@ -1375,6 +1488,22 @@ class MatrixNormal(Continuous):
             self.colchol_cov = tt.as_tensor_variable(colchol)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Matrix-valued Normal distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, colchol, rowchol = draw_values(
                                 [self.mu, self.colchol_cov, self.rowchol_cov],
                                 point=point,
@@ -1609,6 +1738,23 @@ class KroneckerNormal(Continuous):
                 self.mv_params['cov'] = cov
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Multivariate Normal distribution
+        with Kronecker-structured covariance.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         # Expand params into terms MvNormal can understand to force consistency
         self._setup_random()
         dist = MvNormal.dist(**self.mv_params)
