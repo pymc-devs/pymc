@@ -43,7 +43,7 @@ class AR1(distribution.Continuous):
 
         Parameters
         ----------
-        value : numeric
+        x : numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -199,7 +199,7 @@ class GaussianRandomWalk(distribution.Continuous):
 
         Parameters
         ----------
-        value : numeric
+        x : numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -281,7 +281,7 @@ class GARCH11(distribution.Continuous):
 
         Parameters
         ----------
-        value : numeric
+        x : numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -330,7 +330,7 @@ class EulerMaruyama(distribution.Continuous):
 
         Parameters
         ----------
-        value : numeric
+        x : numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -391,7 +391,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
         Parameters
         ----------
-        value : numeric
+        x : numeric
             Value for which log-probability is calculated.
 
         Returns

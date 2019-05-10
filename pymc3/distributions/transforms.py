@@ -138,7 +138,7 @@ class TransformedDistribution(distribution.Distribution):
 
         Parameters
         ----------
-        value : numeric
+        x : numeric
             Value for which log-probability is calculated.
 
         Returns
