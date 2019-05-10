@@ -152,6 +152,19 @@ class TransformedDistribution(distribution.Distribution):
         return logp_nojac + jacobian_det
 
     def logp_nojac(self, x):
+        """
+        Calculate log-probability of Transformed distribution at specified value
+        without jacobian term for transforms.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         return self.dist.logp(self.transform_used.backward(x))
 
 transform = Transform
