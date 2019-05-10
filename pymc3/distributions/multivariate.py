@@ -302,6 +302,19 @@ class MvNormal(_QuadFormBase):
             return mu + transformed.T
 
     def logp(self, value):
+        """
+        Calculate log-probability of Multivariate Normal distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         quaddist, logdet, ok = self._quaddist(value)
         k = value.shape[-1].astype(theano.config.floatX)
         norm = - 0.5 * k * pm.floatX(np.log(2 * np.pi))
@@ -403,6 +416,19 @@ class MvStudentT(_QuadFormBase):
         return (np.sqrt(nu) * samples.T / chi2(nu, size)).T + mu
 
     def logp(self, value):
+        """
+        Calculate log-probability of Multivariate Student's T distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         quaddist, logdet, ok = self._quaddist(value)
         k = value.shape[-1].astype(theano.config.floatX)
 
@@ -511,6 +537,19 @@ class Dirichlet(Continuous):
         return samples
 
     def logp(self, value):
+        """
+        Calculate log-probability of Dirichlet distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         k = self.k
         a = self.a
 
@@ -650,6 +689,19 @@ class Multinomial(Discrete):
         return samples
 
     def logp(self, x):
+        """
+        Calculate log-probability of Multinomial distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         n = self.n
         p = self.p
 
@@ -799,6 +851,19 @@ class Wishart(Continuous):
                                     broadcast_shape=(size,))
 
     def logp(self, X):
+        """
+        Calculate log-probability of Wishart distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         nu = self.nu
         p = self.p
         V = self.V
@@ -1060,6 +1125,19 @@ class LKJCholeskyCov(Continuous):
         self.mode[self.diag_idxs] = 1
 
     def logp(self, x):
+        """
+        Calculate log-probability of Covariance matrix with LKJ
+        distributed correlations at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         n = self.n
         eta = self.eta
 
@@ -1307,6 +1385,19 @@ class LKJCorr(Continuous):
         return samples
 
     def logp(self, x):
+        """
+        Calculate log-probability of LKJ distribution at specified
+        value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         n = self.n
         eta = self.eta
 
@@ -1552,6 +1643,19 @@ class MatrixNormal(Continuous):
         return trquaddist, half_collogdet, half_rowlogdet
 
     def logp(self, value):
+        """
+        Calculate log-probability of Matrix-valued Normal distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         trquaddist, half_collogdet, half_rowlogdet = self._trquaddist(value)
         m = self.m
         n = self.n
@@ -1788,5 +1892,18 @@ class KroneckerNormal(Continuous):
         return quad, logdet
 
     def logp(self, value):
+        """
+        Calculate log-probability of Multivariate Normal distribution
+        with Kronecker-structured covariance at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         quad, logdet = self._quaddist(value)
         return - (quad + logdet + self.N*tt.log(2*np.pi)) / 2.0
