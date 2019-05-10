@@ -397,6 +397,19 @@ class Mixture(Distribution):
         return comp_dist_shapes, broadcast_shape
 
     def logp(self, value):
+        """
+        Calculate log-probability of defined Mixture distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         w = self.w
 
         return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1),
@@ -404,6 +417,22 @@ class Mixture(Distribution):
                      broadcast_conditions=False)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from defined Mixture distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         # Convert size to tuple
         size = to_tuple(size)
         # Draw mixture weights and infer the comp_dists shapes
