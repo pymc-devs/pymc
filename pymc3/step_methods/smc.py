@@ -46,6 +46,8 @@ class SMC:
     parallel : bool
         Distribute computations across cores if the number of cores is larger than 1
         (see pm.sample() for details). Defaults to True.
+    dask_client: dask.distributed.Client or None
+        Distribute computations across a Dask distributed scheduler (locally or on a cluster).
     model : :class:`pymc3.Model`
         Optional model for sampling step. Defaults to None (taken from context).
 
@@ -100,6 +102,7 @@ class SMC:
         tune_steps=True,
         threshold=0.5,
         parallel=True,
+        dask_client=None,
     ):
 
         self.n_steps = n_steps
@@ -110,6 +113,7 @@ class SMC:
         self.tune_steps = tune_steps
         self.threshold = threshold
         self.parallel = parallel
+        self.dask_client = dask_client
 
 
 def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None, random_seed=-1):
@@ -193,7 +197,23 @@ def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None,
             beta,
         )
 
-        if step.parallel and cores > 1:
+        if step.dask_client:
+            dask_posterior = step.dask_client.scatter([posterior[draw] for draw in range(draws)], broadcast=True)
+            dask_tempered_logp = step.dask_client.scatter([tempered_logp[draw] for draw in range(draws)], broadcast=True)
+            dask_parameters = step.dask_client.scatter(parameters, broadcast=True)
+            ncores = sum(step.dask_client.ncores().values())
+            results = []
+            chain_i0 = 0
+            done = False
+            while not done:
+                chain_i1 = min(draws, chain_i0+ncores)
+                futures = [step.dask_client.submit(_metrop_kernel, dask_posterior[draw], dask_tempered_logp[draw], *dask_parameters) for draw in range(chain_i0, chain_i1)]
+                results += step.dask_client.gather(futures)
+                if chain_i1 == draws:
+                    done = True
+                else:
+                    chain_i0 = chain_i1
+        elif step.parallel and cores > 1:
             pool = mp.Pool(processes=cores)
             results = pool.starmap(
                 _metrop_kernel,
