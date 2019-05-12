@@ -6,9 +6,9 @@ dependencies:
   - graphviz
   - numpy
   - seaborn
-  - dask
-  - distributed
-  - dask-kubernetes
+  - dask=1.1.4
+  - distributed=1.26.0
+  - dask-kubernetes=0.7.0
   - nbserverproxy
   - jupyter
   - jupyterlab=0.35
