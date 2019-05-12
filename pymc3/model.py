@@ -3,6 +3,7 @@ import functools
 import itertools
 import threading
 import warnings
+from typing import Optional, Dict, Any
 
 import numpy as np
 from pandas import Series
@@ -187,7 +188,7 @@ class Context:
             raise TypeError("No context on context stack")
 
 
-def modelcontext(model):
+def modelcontext(model: Optional['Model']) -> 'Model':
     """return the given model or try to find it in the context if there was
     none supplied.
     """
