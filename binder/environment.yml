@@ -2,7 +2,6 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - arviz
   - bokeh>=0.12.13
   - graphviz>=0.8.3
   - h5py>=2.7.0
@@ -29,3 +28,5 @@ dependencies:
   - nbserverproxy
   - jupyter
   - jupyterlab=0.35
+  - pip:
+    - arviz
