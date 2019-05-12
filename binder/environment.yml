@@ -30,4 +30,4 @@ dependencies:
   - jupyterlab=0.35
   - pip:
     - arviz
-    - "--editable=git+https://github.com/davidbrochart/pymc3@dask_smc"
+    - git+https://github.com/davidbrochart/pymc3@dask_smc
