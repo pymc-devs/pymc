@@ -47,7 +47,7 @@ class SMC:
         Distribute computations across cores if the number of cores is larger than 1
         (see pm.sample() for details). Defaults to True.
     dask_client: dask.distributed.Client or None
-        Distribute computations across a Dask distributed scheduler (locally or on a cluster).
+        Distribute computations through a Dask distributed scheduler (locally or on a cluster).
     model : :class:`pymc3.Model`
         Optional model for sampling step. Defaults to None (taken from context).
 

@@ -1,0 +1,93 @@
+{
+  "data": {
+    "layout-restorer:data": {
+      "main": {
+        "dock": {
+          "type": "split-area",
+          "orientation": "horizontal",
+          "sizes": [
+            0.5,
+            0.5
+          ],
+          "children": [
+            {
+              "type": "tab-area",
+              "currentIndex": 0,
+              "widgets": [
+                "application-mimedocuments:Welcome.md:Markdown Preview"
+              ]
+            },
+            {
+              "type": "split-area",
+              "orientation": "vertical",
+              "sizes": [
+                0.67,
+                0.33
+              ],
+              "children": [
+                {
+                  "type": "tab-area",
+                  "currentIndex": 0,
+                  "widgets": [
+                    "dask-dashboard-launcher:individual-task-stream"
+                  ]
+                },
+                {
+                  "type": "tab-area",
+                  "currentIndex": 0,
+                  "widgets": [
+                    "dask-dashboard-launcher:individual-progress"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "mode": "multiple-document",
+        "current": "application-mimedocuments:Welcome.md:Markdown Preview"
+      },
+      "left": {
+        "collapsed": false,
+        "current": "filebrowser",
+        "widgets": [
+          "filebrowser",
+          "running-sessions",
+          "dask-dashboard-launcher",
+          "command-palette",
+          "tab-manager"
+        ]
+      },
+      "right": {
+        "collapsed": true,
+        "widgets": []
+      }
+    },
+    "file-browser-filebrowser:cwd": {
+      "path": ""
+    },
+    "dask-dashboard-launcher:individual-task-stream": {
+      "data": {
+        "route": "individual-task-stream",
+        "label": "Task Stream"
+      }
+    },
+    "dask-dashboard-launcher:individual-progress": {
+      "data": {
+        "route": "individual-progress",
+        "label": "Progress"
+      }
+    },
+    "dask-dashboard-launcher": {
+      "url": "DASK_DASHBOARD_URL"
+    },
+    "application-mimedocuments:Welcome.md:Markdown Preview": {
+      "data": {
+        "path": "Welcome.md",
+        "factory": "Markdown Preview"
+      }
+    }
+  },
+  "metadata": {
+    "id": "WORKSPACE_ID"
+  }
+}

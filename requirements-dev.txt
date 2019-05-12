@@ -19,3 +19,6 @@ recommonmark>=0.4.0
 seaborn>=0.8.1
 sphinx-autobuild==0.7.1
 sphinx>=1.5.5
+dask
+distributed
+dask-kubernetes
