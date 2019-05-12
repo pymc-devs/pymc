@@ -2,7 +2,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - bokeh
+  - bokeh=1.0.4
   - graphviz
   - numpy
   - seaborn
