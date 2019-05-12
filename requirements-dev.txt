@@ -22,3 +22,5 @@ sphinx>=1.5.5
 dask
 distributed
 dask-kubernetes
+jupyter
+jupyterlab=0.35
