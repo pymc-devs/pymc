@@ -23,4 +23,4 @@ dask
 distributed
 dask-kubernetes
 jupyter
-jupyterlab=0.35
+jupyterlab==0.35
