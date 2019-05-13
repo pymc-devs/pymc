@@ -6,8 +6,6 @@ dependencies:
   - graphviz
   - numpy
   - seaborn
-  - distributed
-  - dask-kubernetes
   - nbserverproxy
   - jupyter
   - jupyterlab
@@ -16,3 +14,5 @@ dependencies:
     - arviz
     - git+https://github.com/davidbrochart/pymc3@dask_smc
     - git+https://github.com/dask/dask
+    - git+https://github.com/dask/distributed
+    - git+https://github.com/dask/dask-kubernetes
