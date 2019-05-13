@@ -12,6 +12,7 @@ dependencies:
   - nbserverproxy
   - jupyter
   - jupyterlab=0.35
+  - mkl-service
   - pip:
     - arviz
     - git+https://github.com/davidbrochart/pymc3@dask_smc
