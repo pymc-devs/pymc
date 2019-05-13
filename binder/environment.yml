@@ -2,17 +2,17 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - bokeh=1.0.4
+  - bokeh
   - graphviz
   - numpy
   - seaborn
-  - dask=1.1.4
-  - distributed=1.26.0
-  - dask-kubernetes=0.7.0
+  - distributed
+  - dask-kubernetes
   - nbserverproxy
   - jupyter
-  - jupyterlab=0.35
+  - jupyterlab
   - mkl-service
   - pip:
     - arviz
     - git+https://github.com/davidbrochart/pymc3@dask_smc
+    - git+https://github.com/dask/dask
