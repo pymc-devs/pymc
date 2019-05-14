@@ -2,7 +2,6 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - bokeh
   - graphviz
   - numpy
   - seaborn
@@ -16,3 +15,4 @@ dependencies:
     - git+https://github.com/dask/dask
     - git+https://github.com/dask/distributed
     - git+https://github.com/dask/dask-kubernetes
+    - git+https://github.com/bokeh/bokeh
