@@ -201,18 +201,8 @@ def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None,
             dask_posterior = step.dask_client.scatter([posterior[draw] for draw in range(draws)], broadcast=True)
             dask_tempered_logp = step.dask_client.scatter([tempered_logp[draw] for draw in range(draws)], broadcast=True)
             dask_parameters = step.dask_client.scatter(parameters, broadcast=True)
-            ncores = sum(step.dask_client.ncores().values())
-            results = []
-            chain_i0 = 0
-            done = False
-            while not done:
-                chain_i1 = min(draws, chain_i0+ncores)
-                futures = [step.dask_client.submit(_metrop_kernel, dask_posterior[draw], dask_tempered_logp[draw], *dask_parameters) for draw in range(chain_i0, chain_i1)]
-                results += step.dask_client.gather(futures)
-                if chain_i1 == draws:
-                    done = True
-                else:
-                    chain_i0 = chain_i1
+            futures = [step.dask_client.submit(_metrop_kernel, dask_posterior[draw], dask_tempered_logp[draw], *dask_parameters) for draw in range(draws)]
+            results = step.dask_client.gather(futures)
         elif step.parallel and cores > 1:
             pool = mp.Pool(processes=cores)
             results = pool.starmap(
