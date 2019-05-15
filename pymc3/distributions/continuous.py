@@ -3238,6 +3238,7 @@ class ExGaussian(Continuous):
         -------
         TensorVariable
         """
+        mu = self.mu
         sigma = self.sigma
         sigma_2 = sigma**2
         nu = self.nu
