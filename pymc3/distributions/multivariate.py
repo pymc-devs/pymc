@@ -226,6 +226,22 @@ class MvNormal(_QuadFormBase):
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Multivariate Normal distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         if size is None:
             size = tuple()
         else:
@@ -286,6 +302,19 @@ class MvNormal(_QuadFormBase):
             return mu + transformed.T
 
     def logp(self, value):
+        """
+        Calculate log-probability of Multivariate Normal distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         quaddist, logdet, ok = self._quaddist(value)
         k = value.shape[-1].astype(theano.config.floatX)
         norm = - 0.5 * k * pm.floatX(np.log(2 * np.pi))
@@ -353,6 +382,22 @@ class MvStudentT(_QuadFormBase):
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Multivariate Student's T distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         with _DrawValuesContext():
             nu, mu = draw_values([self.nu, self.mu], point=point, size=size)
             if self._cov_type == 'cov':
@@ -371,6 +416,19 @@ class MvStudentT(_QuadFormBase):
         return (np.sqrt(nu) * samples.T / chi2(nu, size)).T + mu
 
     def logp(self, value):
+        """
+        Calculate log-probability of Multivariate Student's T distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         quaddist, logdet, ok = self._quaddist(value)
         k = value.shape[-1].astype(theano.config.floatX)
 
@@ -455,6 +513,22 @@ class Dirichlet(Continuous):
         return samples
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Dirichlet distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         a = draw_values([self.a], point=point, size=size)[0]
         samples = generate_samples(self._random,
                                    a=a,
@@ -463,6 +537,19 @@ class Dirichlet(Continuous):
         return samples
 
     def logp(self, value):
+        """
+        Calculate log-probability of Dirichlet distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         k = self.k
         a = self.a
 
@@ -578,6 +665,22 @@ class Multinomial(Discrete):
         return samples.astype(original_dtype)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Multinomial distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         n, p = draw_values([self.n, self.p], point=point, size=size)
         samples = generate_samples(self._random, n, p,
                                    dist_shape=self.shape,
@@ -586,6 +689,19 @@ class Multinomial(Discrete):
         return samples
 
     def logp(self, x):
+        """
+        Calculate log-probability of Multinomial distribution
+        at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         n = self.n
         p = self.p
 
@@ -713,12 +829,41 @@ class Wishart(Continuous):
                               np.nan)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Wishart distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         nu, V = draw_values([self.nu, self.V], point=point, size=size)
         size= 1 if size is None else size
         return generate_samples(stats.wishart.rvs, np.asscalar(nu), V,
                                     broadcast_shape=(size,))
 
     def logp(self, X):
+        """
+        Calculate log-probability of Wishart distribution
+        at specified value.
+
+        Parameters
+        ----------
+        X : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         nu = self.nu
         p = self.p
         V = self.V
@@ -980,6 +1125,19 @@ class LKJCholeskyCov(Continuous):
         self.mode[self.diag_idxs] = 1
 
     def logp(self, x):
+        """
+        Calculate log-probability of Covariance matrix with LKJ
+        distributed correlations at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         n = self.n
         eta = self.eta
 
@@ -1052,6 +1210,23 @@ class LKJCholeskyCov(Continuous):
         return np.linalg.cholesky(C)[..., tril_idx[0], tril_idx[1]]
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Covariance matrix with LKJ
+        distributed correlations.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         # Get parameters and broadcast them
         n, eta = draw_values([self.n, self.eta], point=point, size=size)
         broadcast_shape = np.broadcast(n, eta).shape
@@ -1187,6 +1362,22 @@ class LKJCorr(Continuous):
         return C[..., triu_idx[0], triu_idx[1]]
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from LKJ distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         n, eta = draw_values([self.n, self.eta], point=point, size=size)
         size= 1 if size is None else size
         samples = generate_samples(self._random, n, eta,
@@ -1194,6 +1385,19 @@ class LKJCorr(Continuous):
         return samples
 
     def logp(self, x):
+        """
+        Calculate log-probability of LKJ distribution at specified
+        value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         n = self.n
         eta = self.eta
 
@@ -1375,6 +1579,22 @@ class MatrixNormal(Continuous):
             self.colchol_cov = tt.as_tensor_variable(colchol)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Matrix-valued Normal distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, colchol, rowchol = draw_values(
                                 [self.mu, self.colchol_cov, self.rowchol_cov],
                                 point=point,
@@ -1423,6 +1643,19 @@ class MatrixNormal(Continuous):
         return trquaddist, half_collogdet, half_rowlogdet
 
     def logp(self, value):
+        """
+        Calculate log-probability of Matrix-valued Normal distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         trquaddist, half_collogdet, half_rowlogdet = self._trquaddist(value)
         m = self.m
         n = self.n
@@ -1609,6 +1842,23 @@ class KroneckerNormal(Continuous):
                 self.mv_params['cov'] = cov
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Multivariate Normal distribution
+        with Kronecker-structured covariance.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         # Expand params into terms MvNormal can understand to force consistency
         self._setup_random()
         dist = MvNormal.dist(**self.mv_params)
@@ -1642,5 +1892,18 @@ class KroneckerNormal(Continuous):
         return quad, logdet
 
     def logp(self, value):
+        """
+        Calculate log-probability of Multivariate Normal distribution
+        with Kronecker-structured covariance at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         quad, logdet = self._quaddist(value)
         return - (quad + logdet + self.N*tt.log(2*np.pi)) / 2.0
