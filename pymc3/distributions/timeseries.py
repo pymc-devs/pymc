@@ -38,6 +38,18 @@ class AR1(distribution.Continuous):
         self.mode = tt.as_tensor_variable(0.)
 
     def logp(self, x):
+        """
+        Calculate log-probability of AR1 distribution at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         k = self.k
         tau_e = self.tau_e
 
@@ -125,6 +137,18 @@ class AR(distribution.Continuous):
         self.init = init
 
     def logp(self, value):
+        """
+        Calculate log-probability of AR distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         if self.constant:
             x = tt.add(*[self.rho[i + 1] * value[self.p - (i + 1):-(i + 1)] for i in range(self.p)])
             eps = value[self.p:] - self.rho[0] - x
@@ -170,6 +194,18 @@ class GaussianRandomWalk(distribution.Continuous):
         self.mean = tt.as_tensor_variable(0.)
 
     def logp(self, x):
+        """
+        Calculate log-probability of Gaussian Random Walk distribution at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         tau = self.tau
         sigma = self.sigma
         mu = self.mu
@@ -240,6 +276,18 @@ class GARCH11(distribution.Continuous):
         return tt.concatenate([[self.initial_vol], vol])
 
     def logp(self, x):
+        """
+        Calculate log-probability of GARCH(1, 1) distribution at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         vol = self.get_volatility(x)
         return tt.sum(Normal.dist(0., sigma=vol).logp(x))
 
@@ -277,6 +325,18 @@ class EulerMaruyama(distribution.Continuous):
         self.sde_pars = sde_pars
 
     def logp(self, x):
+        """
+        Calculate log-probability of EulerMaruyama distribution at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         xt = x[:-1]
         f, g = self.sde_fn(x[:-1], *self.sde_pars)
         mu = xt + self.dt * f
@@ -325,6 +385,19 @@ class MvGaussianRandomWalk(distribution.Continuous):
         self.mean = tt.as_tensor_variable(0.)
 
     def logp(self, x):
+        """
+        Calculate log-probability of Multivariate Gaussian
+        Random Walk distribution at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         x_im1 = x[:-1]
         x_i = x[1:]
 
