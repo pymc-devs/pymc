@@ -664,8 +664,13 @@ class TruncatedNormal(BoundedContinuous):
         -------
         array
         """
-        mu_v, std_v, a_v, b_v = draw_values(
-            [self.mu, self.sigma, self.lower, self.upper], point=point, size=size)
+        mu_v, std_v, a_v, b_v = broadcast_distribution_samples(
+            draw_values(
+                [self.mu, self.sigma, self.lower, self.upper],
+                point=point,
+                size=size),
+            size=size,
+        )
         return generate_samples(stats.truncnorm.rvs,
                                 a=(a_v - mu_v)/std_v,
                                 b=(b_v - mu_v) / std_v,
