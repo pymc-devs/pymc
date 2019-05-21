@@ -3,8 +3,8 @@ import sys
 
 from .helpers import SeededTest, select_by_precision
 from ..vartypes import continuous_types
-from ..model import Model, Point, Potential, Deterministic
-from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
+from ..model import Model, Point, Deterministic
+from ..blocking import DictToVarBijection
 from ..distributions import (
     DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
     MvStudentT, MvNormal, MatrixNormal, ZeroInflatedPoisson,
