@@ -529,7 +529,6 @@ def _sample_population(draws, chain, chains, start, random_seed, step, tune,
 def _sample(chain, progressbar, random_seed, start, draws=None, step=None,
             trace=None, tune=None, model=None, **kwargs):
     skip_first = kwargs.get('skip_first', 0)
-    refresh_every = kwargs.get('refresh_every', 100)
 
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
