@@ -20,7 +20,7 @@ command -v conda >/dev/null 2>&1 || {
   exit 1;
 }
 
-ENVNAME="testenv"
+ENVNAME="${ENVNAME:-testenv}" # if no ENVNAME is specified, use testenv
 PYTHON_VERSION=${PYTHON_VERSION:-3.6} # if no python specified, use 3.6
 
 if [ -z ${GLOBAL} ]
@@ -33,10 +33,11 @@ then
     fi
     source activate ${ENVNAME}
 fi
-conda install --yes numpy scipy mkl-service
+pip install --upgrade pip
+
+conda install --yes mkl-service
 conda install --yes -c conda-forge python-graphviz
 
-pip install --upgrade pip
 
 #  Install editable using the setup.py
 

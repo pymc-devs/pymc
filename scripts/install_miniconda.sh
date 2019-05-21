@@ -46,3 +46,5 @@ fi
 export PATH="$INSTALL_FOLDER/bin:$PATH"
 echo "Adding $INSTALL_FOLDER to PATH.  Consider adding it in your .rc file as well."
 conda update -q -y conda
+# Uninstalling miniconda's numpy to avoid conflicting versions when creating the test env
+pip uninstall -y numpy

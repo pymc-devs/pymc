@@ -401,8 +401,7 @@ def draw_values(params, point=None, size=None):
                     # nodes in the `params` list.
                     stack.extend([node for node in named_nodes_parents[next_]
                                   if node is not None and
-                                  (node, size) not in drawn and
-                                  node not in params])
+                                  (node, size) not in drawn])
 
         # the below makes sure the graph is evaluated in order
         # test_distributions_random::TestDrawValues::test_draw_order fails without it
@@ -420,6 +419,20 @@ def draw_values(params, point=None, size=None):
                     evaluated[param_idx] = drawn[(param, size)]
                 else:
                     try:  # might evaluate in a bad order,
+                        # Sometimes _draw_value recurrently calls draw_values.
+                        # This may set values for certain nodes in the drawn
+                        # dictionary, but they don't get added to the givens
+                        # dictionary. Here, we try to fix that.
+                        if param in named_nodes_children:
+                            for node in named_nodes_children[param]:
+                                if (
+                                    node.name not in givens and
+                                    (node, size) in drawn
+                                ):
+                                    givens[node.name] = (
+                                        node,
+                                        drawn[(node, size)]
+                                    )
                         value = _draw_value(param,
                                             point=point,
                                             givens=givens.values(),
