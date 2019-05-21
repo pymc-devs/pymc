@@ -471,37 +471,9 @@ class TestMatchesScipy(SeededTest):
             area = integrate_nd(pdfx, domain, value.dshape, value.dtype)
             assert_almost_equal(area, 1, err_msg=str(pt))
 
-    def check_dlogp(self, model, value, domain, paramdomains):
-        try:
-            from numdifftools import Gradient
-        except ImportError:
-            return
-        if not model.cont_vars:
-            return
-
-        domains = paramdomains.copy()
-        domains['value'] = domain
-        bij = DictToArrayBijection(
-            ArrayOrdering(model.cont_vars), model.test_point)
-        dlogp = bij.mapf(model.fastdlogp(model.cont_vars))
-        logp = bij.mapf(model.fastlogp)
-
-        def wrapped_logp(x):
-            try:
-                return logp(x)
-            except:
-                return np.nan
-
-        ndlogp = Gradient(wrapped_logp)
-        for pt in product(domains, n_samples=100):
-            pt = Point(pt, model=model)
-            pt = bij.map(pt)
-            decimals = select_by_precision(float64=6, float32=4)
-            assert_almost_equal(dlogp(pt), ndlogp(pt), decimal=decimals, err_msg=str(pt))
-
     def checkd(self, distfam, valuedomain, vardomains, checks=None, extra_args=None):
         if checks is None:
-            checks = (self.check_int_to_1, self.check_dlogp)
+            checks = (self.check_int_to_1, )
 
         if extra_args is None:
             extra_args = {}
@@ -940,7 +912,8 @@ class TestMatchesScipy(SeededTest):
         # This check compares the autodiff gradient to the numdiff gradient.
         # However, due to the strict constraints of the wishart,
         # it is impossible to numerically determine the gradient as a small
-        # pertubation breaks the symmetry. Thus disabling.
+        # pertubation breaks the symmetry. Thus disabling. Also, numdifftools was
+        # removed in June 2019, so an alternative would be needed.
         #
         # self.checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]), 'V': PdMatrix(n)},
         #             checks=[self.check_dlogp])
@@ -1119,12 +1092,6 @@ class TestMatchesScipy(SeededTest):
         def logp(x):
             return -log(2 * .5) - abs(x - .5) / .5
         self.checkd(DensityDist, R, {}, extra_args={'logp': logp})
-
-    def test_addpotential(self):
-        with Model() as model:
-            value = Normal('value', 1, 1)
-            Potential('value_squared', -value ** 2)
-            self.check_dlogp(model, value, R, {})
 
     def test_get_tau_sigma(self):
         sigma = np.array([2])
