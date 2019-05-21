@@ -15,6 +15,7 @@ from . import transforms
 from pymc3.util import get_variable_name
 from .special import log_i0
 from ..math import invlogit, logit, logdiffexp
+from .shape_utils import broadcast_distribution_samples
 from .dist_math import (
     alltrue_elemwise, betaln, bound, gammaln, i0e, incomplete_beta, logpow,
     normal_lccdf, normal_lcdf, SplineWrapper, std_cdf, zvalue,
