@@ -51,11 +51,9 @@
 
 - `nuts_kwargs` and `step_kwargs` have been deprecated in favor of using the standard `kwargs` to pass optional step method arguments.
 - `SGFS` and `CSG` have been removed (Fix for [#3353](https://github.com/pymc-devs/pymc3/issues/3353)). They have been moved to [pymc3-experimental](https://github.com/pymc-devs/pymc3-experimental).
-<<<<<<< master
 - References to `live_plot` and corresponding notebooks have been removed.
 - Function `approx_hessian` was removed, due to `numdifftools` becoming incompatible with current `scipy`. The function was already optional, only available to a user who installed `numdifftools` separately, and not hit on any common codepaths. [#3485](https://github.com/pymc-devs/pymc3/pull/3485).
 - Deprecated `vars` parameter of `sample_posterior_predictive` in favor of `varnames`.
-=======
 -  References to `live_plot` and corresponding notebooks have been removed.
 - Deprecated `vars` parameters of `sample_posterior_predictive` and `sample_prior_predictive` in favor of `var_names`.  At least for the latter, this is more accurate, since the `vars` parameter actually took names.
 
