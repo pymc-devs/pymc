@@ -58,7 +58,6 @@
 =======
 -  References to `live_plot` and corresponding notebooks have been removed.
 - Deprecated `vars` parameters of `sample_posterior_predictive` and `sample_prior_predictive` in favor of `var_names`.  At least for the latter, this is more accurate, since the `vars` parameter actually took names.
->>>>>>> Update release notes.
 
 
 ## PyMC3 3.6 (Dec 21 2018)
