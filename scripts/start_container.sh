@@ -5,6 +5,10 @@ SRC_DIR=${SRC_DIR:-`pwd`}
 NOTEBOOK_DIR=${NOTEBOOK_DIR:-$SRC_DIR/notebooks}
 TOKEN=$(openssl rand -hex 24)
 
+# stop and remove previous instances of the pymc3 container to avoid naming conflicts
+docker stop pymc3
+docker rm pymc3
+
 # note that all paths are relative to the build context, so . represents
 # SRC_DIR to Docker
 docker build \
