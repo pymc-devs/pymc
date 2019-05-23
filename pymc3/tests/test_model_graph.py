@@ -1,7 +1,7 @@
 import numpy as np
 import pymc3 as pm
+import theano as th
 from pymc3.model_graph import ModelGraph, model_to_graphviz
-
 from .helpers import SeededTest
 
 
