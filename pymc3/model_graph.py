@@ -1,16 +1,15 @@
 from collections import deque
-from typing import Iterator, Optional, MutableSet
+from typing import Dict, Iterator, Set, Optional
+
+VarName = str
 
 from theano.gof.graph import stack_search
 from theano.compile import SharedVariable
 from theano.tensor import Tensor
 
 from .util import get_default_varnames
+from .model import ObservedRV
 import pymc3 as pm
-
-# this is a placeholder for a better characterization of the type
-# of variables in a model.
-RV = Tensor
 
 
 class ModelGraph:
@@ -30,7 +29,7 @@ class ModelGraph:
                 deterministics.append(v)
         return deterministics
 
-    def _get_ancestors(self, var, func) -> MutableSet[RV]:
+    def _get_ancestors(self, var: Tensor, func) -> Set[Tensor]:
         """Get all ancestors of a function, doing some accounting for deterministics.
         """
 
@@ -38,8 +37,8 @@ class ModelGraph:
         vars = set(self.var_list)
         vars.remove(var)
 
-        blockers = set()
-        retval = set()
+        blockers = set() # type: Set[Tensor]
+        retval = set()  # type: Set[Tensor]
         def _expand(node) -> Optional[Iterator[Tensor]]:
             if node in blockers:
                 return None
@@ -58,9 +57,9 @@ class ModelGraph:
                      mode='bfs')
         return retval
 
-    def _filter_parents(self, var, parents):
+    def _filter_parents(self, var, parents) -> Set[VarName]:
         """Get direct parents of a var, as strings"""
-        keep = set()
+        keep = set() # type: Set[VarName]
         for p in parents:
             if p == var:
                 continue
@@ -73,7 +72,7 @@ class ModelGraph:
                 raise AssertionError('Do not know what to do with {}'.format(str(p)))
         return keep
 
-    def get_parents(self, var):
+    def get_parents(self, var: Tensor) -> Set[VarName]:
         """Get the named nodes that are direct inputs to the var"""
         if hasattr(var, 'transformed'):
             func = var.transformed.logpt
@@ -85,11 +84,26 @@ class ModelGraph:
         parents = self._get_ancestors(var, func)
         return self._filter_parents(var, parents)
 
-    def make_compute_graph(self):
+    def make_compute_graph(self) -> Dict[str, Set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
-        input_map = {}
+        input_map = {} # type: Dict[str, Set[VarName]]
+        def update_input_map(key: str, val: Set[VarName]):
+            if key in input_map:
+                input_map[key] = input_map[key].union(val)
+            else:
+                input_map[key] = val
+
         for var_name in self.var_names:
-            input_map[var_name] = self.get_parents(self.model[var_name])
+            var = self.model[var_name]
+            update_input_map(var_name, self.get_parents(var))
+            if isinstance(var, ObservedRV):
+                try:
+                    obs_name = var.observations.name
+                    if obs_name:
+                        input_map[var_name] = input_map[var_name].difference(set([obs_name]))
+                        update_input_map(obs_name, set([var_name]))
+                except AttributeError:
+                    pass
         return input_map
 
     def _make_node(self, var_name, graph):
@@ -101,12 +115,19 @@ class ModelGraph:
         if isinstance(v, pm.model.ObservedRV):
             attrs['style'] = 'filled'
 
+        # make Data be roundtangle, instead of rectangle
         if isinstance(v, SharedVariable):
-            attrs['style'] = 'filled'
+            attrs['style'] = 'rounded, filled'
 
         # Get name for node
-        if hasattr(v, 'distribution'):
+        if v in self.model.potentials:
+            distribution = 'Potential'
+            attrs['shape'] = 'octagon'
+        elif hasattr(v, 'distribution'):
             distribution = v.distribution.__class__.__name__
+        elif isinstance(v, SharedVariable):
+            distribution = 'Data'
+            attrs['shape'] = 'box'
         else:
             distribution = 'Deterministic'
             attrs['shape'] = 'box'

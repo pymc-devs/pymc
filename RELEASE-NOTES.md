@@ -1,5 +1,10 @@
 # Release Notes
 
+## PyMC3 3.8 (on deck)
+
+### New features
+- Distinguish between `Data` and `Deterministic` variables when graphing models with graphviz. PR [#3491](https://github.com/pymc-defs/pymc3/pulls/3491).
+
 ## PyMC3 3.7 (May 29 2019)
 
 ### New features
