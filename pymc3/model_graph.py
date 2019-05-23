@@ -161,6 +161,8 @@ class ModelGraph:
                               '\tconda install -c conda-forge python-graphviz')
         graph = graphviz.Digraph(self.model.name)
         for shape, var_names in self.get_plates().items():
+            if isinstance(shape, SharedVariable):
+                shape = shape.eval()
             label = ' x '.join(map('{:,d}'.format, shape))
             if label:
                 # must be preceded by 'cluster' to get a box around it
