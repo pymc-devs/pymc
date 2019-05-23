@@ -124,13 +124,20 @@ class ModelBackendSampledTestCase:
 
     Children may define
     - sampler_vars
+    - write_partial_chain
     """
     @classmethod
     def setup_class(cls):
         cls.test_point, cls.model, _ = models.beta_bernoulli(cls.shape)
+
+        if hasattr(cls, 'write_partial_chain') and cls.write_partial_chain is True:
+            cls.chain_vars = cls.model.unobserved_RVs[1:]
+        else:
+            cls.chain_vars = cls.model.unobserved_RVs
+
         with cls.model:
-            strace0 = cls.backend(cls.name)
-            strace1 = cls.backend(cls.name)
+            strace0 = cls.backend(cls.name, vars=cls.chain_vars)
+            strace1 = cls.backend(cls.name, vars=cls.chain_vars)
 
         if not hasattr(cls, 'sampler_vars'):
             cls.sampler_vars = None
@@ -459,7 +466,7 @@ class DumpLoadTestCase(ModelBackendSampledTestCase):
         trace = self.mtrace
         dumped = self.dumped
         for chain in trace.chains:
-            for varname in self.test_point.keys():
+            for varname in self.chain_vars:
                 data = trace.get_values(varname, chains=[chain])
                 dumped_data = dumped.get_values(varname, chains=[chain])
                 npt.assert_equal(data, dumped_data)
