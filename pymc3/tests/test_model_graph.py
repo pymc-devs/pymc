@@ -14,6 +14,8 @@ def radon_model():
     floor_measure = np.random.randint(0, 2, size=n_homes)
     log_radon = np.random.normal(1, 1, size=n_homes)
 
+    floor_measure = th.shared(floor_measure)
+
     d, r = divmod(919, 85)
     county = np.hstack((
         np.tile(np.arange(counties, dtype=int), d),
