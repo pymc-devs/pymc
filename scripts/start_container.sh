@@ -7,7 +7,7 @@ TOKEN=$(openssl rand -hex 24)
 CONTAINER_NAME=${CONTAINER_NAME:-pymc3}
 
 # stop and remove previous instances of the pymc3 container to avoid naming conflicts
-if [[ $(docker ps -q -f name=${CONTAINER_NAME}) ]]; then
+if [[ $(docker ps -aq -f name=${CONTAINER_NAME}) ]]; then
    echo "Shutting down and removing previous instance of ${CONTAINER_NAME} container..."
    docker rm -f ${CONTAINER_NAME}
 fi
