@@ -55,12 +55,10 @@
 - Deprecated `vars` parameters of `sample_posterior_predictive` and `sample_prior_predictive` in favor of `var_names`.  At least for the latter, this is more accurate, since the `vars` parameter actually took names.
 
 ### Contributors sorted by number of commits
-
+    45  Luciano Paz
     38  Thomas Wiecki
-    26  Luciano Paz
-    20  Colin Carroll
+    23  Colin Carroll
     19  Junpeng Lao
-    19  lucianopaz
     15  Chris Fonnesbeck
     13  Juan Martín Loyola
     13  Ravin Kumar
@@ -70,7 +68,6 @@
      4  adamboche
      3  Eric Ma
      3  Osvaldo Martin
-     3  Colin
      3  Sanmitra Ghosh
      3  Saurav Shekhar
      3  chartl
