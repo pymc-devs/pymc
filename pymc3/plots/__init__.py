@@ -55,8 +55,12 @@ pairplot = map_args(az.plot_pair)
 @map_args
 @functools.wraps(az.plot_trace)
 def traceplot(*args, **kwargs):
-    kwargs.setdefault('compact', True)
-    return az.plot_trace(*args, **kwargs)
+    try:
+        kwargs.setdefault('compact', True)
+        return az.plot_trace(*args, **kwargs)
+    except TypeError:
+        kwargs.pop('compact')
+        return az.plot_trace(*args, **kwargs)
 
 # addition arg mapping for compare plot
 @functools.wraps(az.plot_compare)
