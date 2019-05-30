@@ -47,10 +47,16 @@ autocorrplot = map_args(az.plot_autocorr)
 forestplot = map_args(az.plot_forest)
 kdeplot = map_args(az.plot_kde)
 plot_posterior = map_args(az.plot_posterior)
-traceplot = map_args(az.plot_trace)
 energyplot = map_args(az.plot_energy)
 densityplot = map_args(az.plot_density)
 pairplot = map_args(az.plot_pair)
+
+# Use compact traceplot by default
+@map_args
+@functools.wraps(az.plot_trace)
+def traceplot(*args, **kwargs):
+    kwargs.setdefault('compact', True)
+    return az.plot_trace(*args, **kwargs)
 
 # addition arg mapping for compare plot
 @functools.wraps(az.plot_compare)
