@@ -792,6 +792,27 @@ class Geometric(Discrete):
         return r'${} \sim \text{{Geometric}}(\mathit{{p}}={})$'.format(name,
                                                 get_variable_name(p))
 
+class HyperGeometeric(Discrete):
+
+    def __init__(self, N,  k, n, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.k = k = tt.as_tensor_variable(floatX(k))
+        self.N = N = tt.as_tensor_variable(floatX(N))
+        self.n = n = tt.as_tensor_variable(floatX(n))
+        self.mode = 1
+
+    def random(self, point=None, size=None):
+        N,n,k = draw_values([self.N, self.n, self.k], point=point, size=size)
+        return generate_samples(np.random.HyperGeometric, N, n, k,
+                                dist_shape=self.shape,
+                                size=size)
+    def logp(self, value):
+        k = self.k
+        N = self.N
+        n = self.n
+        return bound(binomln(k, value) + binomln(N-k, value) - binomln(N,n),
+                     0 <= k, k <= N, 0<=n, 0<=N, max(0, n - N + k) <=value, value<=min(k,n))
+
 
 class DiscreteUniform(Discrete):
     R"""
