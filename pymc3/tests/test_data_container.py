@@ -101,5 +101,12 @@ class TestData(SeededTest):
             pm.sample(1000, init=None, tune=1000, chains=1)
 
         g = pm.model_to_graphviz(model)
-        text = 'x [label="x ~ Deterministic" shape=box style=filled]'
+
+        # Data node rendered correctly?
+        text = 'x [label="x ~ Data" shape=box style="rounded, filled"]'
+        assert text in g.source
+        # Didn't break ordinary variables?
+        text = 'beta [label="beta ~ Normal"]'
+        assert text in g.source
+        text = 'obs [label="obs ~ Normal" style=filled]'
         assert text in g.source
