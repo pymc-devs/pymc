@@ -911,22 +911,21 @@ class DiscreteUniform(Discrete):
 
     .. plot::
 
-		import matplotlib.pyplot as plt
-		import numpy as np
-		import scipy.stats as st
-		plt.style.use('seaborn-darkgrid')
-		x = np.arange(1, 15)
-		N = 50
-		k = 10
-		for n in [20, 25]:
-		    pmf = st.hypergeom.pmf(x, N, k, n)
-		    plt.plot(x, pmf, '-o', label='n = {}'.format(n))
-		plt.plot(x, pmf, '-o', label='N = {}'.format(N))
-		plt.plot(x, pmf, '-o', label='k = {}'.format(k))
-		plt.xlabel('x', fontsize=12)
-		plt.ylabel('f(x)', fontsize=12)
-		plt.legend(loc=1)
-		plt.show()
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        ls = [1, -2]
+        us = [6, 2]
+        for l, u in zip(ls, us):
+            x = np.arange(l, u+1)
+            pmf = [1.0 / (u - l + 1)] * len(x)
+            plt.plot(x, pmf, '-o', label='lower = {}, upper = {}'.format(l, u))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 0.4)
+        plt.legend(loc=1)
+        plt.show()
 
     ========  ===============================================
     Support   :math:`x \in {lower, lower + 1, \ldots, upper}`
