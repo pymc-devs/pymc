@@ -792,9 +792,9 @@ class Geometric(Discrete):
         return r'${} \sim \text{{Geometric}}(\mathit{{p}}={})$'.format(name,
                                                 get_variable_name(p))
 
-class HyperGeometeric(Discrete):
-	 R"""
-    Hypergeometric log-likelihood.
+class HyperGeometric(Discrete):
+    R"""
+    HyperGeometric log-likelihood.
 
     The probability of x successes in a sequence of n Bernoulli
     trials (That is, sample size = n) - where the population 
@@ -849,7 +849,7 @@ class HyperGeometeric(Discrete):
         self.mode = 1
 
     def random(self, point=None, size=None):
-    	"""
+        """
         Draw random values from HyperGeometric distribution.
 
         Parameters
@@ -870,7 +870,7 @@ class HyperGeometeric(Discrete):
                                 dist_shape=self.shape,
                                 size=size)
     def logp(self, value):
-    	"""
+        """
         Calculate log-probability of HyperGeometric distribution at specified value.
 
         Parameters
@@ -888,6 +888,18 @@ class HyperGeometeric(Discrete):
         n = self.n
         return bound(binomln(k, value) + binomln(N-k, value) - binomln(N,n),
                      0 <= k, k <= N, 0<=n, 0<=N, max(0, n - N + k) <=value, value<=min(k,n))
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        N = dist.N
+        n = dist.n
+        k = dist.k
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{HyperGeometric}}(\mathit{{N}}={},~\mathit{{n}}={}, ,~\mathit{{k}}={})$'.format(name,
+                                                get_variable_name(N),
+                                                get_variable_name(n),
+                                                get_variable_name(k))
 
 
 class DiscreteUniform(Discrete):
