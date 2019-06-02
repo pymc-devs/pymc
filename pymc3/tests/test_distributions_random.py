@@ -441,7 +441,7 @@ class TestGeometric(BaseTestCases.BaseTestCase):
 
 class TestHyperGeometric(BaseTestCases.BaseTestCase):
     distribution = pm.HyperGeometric
-    params = {'p': 0.5}
+    params = {'N': 50, 'n' : 25, 'k' :10}
 
 
 class TestCategorical(BaseTestCases.BaseTestCase):
