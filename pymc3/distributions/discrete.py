@@ -14,7 +14,7 @@ from ..theanof import floatX, intX
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
            'Poisson', 'NegativeBinomial', 'ConstantDist', 'Constant',
            'ZeroInflatedPoisson', 'ZeroInflatedBinomial', 'ZeroInflatedNegativeBinomial',
-           'DiscreteUniform', 'Geometric', 'Categorical', 'OrderedLogistic']
+           'DiscreteUniform', 'Geometric', 'Categorical', 'OrderedLogistic', 'HyperGeometric']
 
 
 class Binomial(Discrete):
@@ -791,6 +791,7 @@ class Geometric(Discrete):
         name = r'\text{%s}' % name
         return r'${} \sim \text{{Geometric}}(\mathit{{p}}={})$'.format(name,
                                                 get_variable_name(p))
+        
 
 class HyperGeometric(Discrete):
     R"""
@@ -798,9 +799,9 @@ class HyperGeometric(Discrete):
 
     The probability of x successes in a sequence of n Bernoulli
     trials (That is, sample size = n) - where the population 
-	size is N, containing a total of k successful individuals.
-	The process is carried out without replacement.
-	
+    size is N, containing a total of k successful individuals.
+    The process is carried out without replacement.
+    
 
     The pmf of this distribution is
 
@@ -808,22 +809,22 @@ class HyperGeometric(Discrete):
 
     .. plot::
 
-		import matplotlib.pyplot as plt
-		import numpy as np
-		import scipy.stats as st
-		plt.style.use('seaborn-darkgrid')
-		x = np.arange(1, 15)
-		N = 50
-		k = 10
-		for n in [20, 25]:
-		    pmf = st.hypergeom.pmf(x, N, k, n)
-		    plt.plot(x, pmf, '-o', label='n = {}'.format(n))
-		plt.plot(x, pmf, '-o', label='N = {}'.format(N))
-		plt.plot(x, pmf, '-o', label='k = {}'.format(k))
-		plt.xlabel('x', fontsize=12)
-		plt.ylabel('f(x)', fontsize=12)
-		plt.legend(loc=1)
-		plt.show()
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(1, 15)
+        N = 50
+        k = 10
+        for n in [20, 25]:
+            pmf = st.hypergeom.pmf(x, N, k, n)
+            plt.plot(x, pmf, '-o', label='n = {}'.format(n))
+        plt.plot(x, pmf, '-o', label='N = {}'.format(N))
+        plt.plot(x, pmf, '-o', label='k = {}'.format(k))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
 
     ========  =============================
     Support   :math:`x \in \mathbb{N}_{>0}`
@@ -836,16 +837,16 @@ class HyperGeometric(Discrete):
     N : integer
         Total size of the population
     n : integer
-    	Number of samples drawn from the population
+        Number of samples drawn from the population
     k : integer
-    	Number of successful individuals in the population
+        Number of successful individuals in the population
     """
 
     def __init__(self, N,  k, n, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.k = k = tt.as_tensor_variable(floatX(k))
-        self.N = N = tt.as_tensor_variable(floatX(N))
-        self.n = n = tt.as_tensor_variable(floatX(n))
+        self.k = k = tt.as_tensor_variable(intX(k))
+        self.N = N = tt.as_tensor_variable(intX(N))
+        self.n = n = tt.as_tensor_variable(intX(n))
         self.mode = 1
 
     def random(self, point=None, size=None):
@@ -865,8 +866,8 @@ class HyperGeometric(Discrete):
         -------
         array
         """
-        N,n,k = draw_values([self.N, self.n, self.k], point=point, size=size)
-        return generate_samples(np.random.HyperGeometric, N, n, k,
+        N, n, k = draw_values([self.N, self.n, self.k], point=point, size=size)
+        return generate_samples(np.random.hypergeometric, N, n, k,
                                 dist_shape=self.shape,
                                 size=size)
     def logp(self, value):
@@ -886,8 +887,8 @@ class HyperGeometric(Discrete):
         k = self.k
         N = self.N
         n = self.n
-        return bound(binomln(k, value) + binomln(N-k, value) - binomln(N,n),
-                     0 <= k, k <= N, 0<=n, 0<=N, max(0, n - N + k) <=value, value<=min(k,n))
+        return bound(binomln(k, value) + binomln(N - k, value) - binomln(N, n),
+                     0 <= k, k <= N, 0 <= n, 0 <= N, max(0, n - N + k) <= value, value <= min(k, n))
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -953,9 +954,6 @@ class DiscreteUniform(Discrete):
         # as array-like.
         samples = stats.randint.rvs(lower, upper + 1, size=size)
         return samples
-
-
-
 
     def random(self, point=None, size=None):
         """
