@@ -16,7 +16,7 @@ from ..distributions import (
     Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
     Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
     ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal, Rice,
-    Kumaraswamy
+    Kumaraswamy, HyperGeometric
 )
 
 from ..distributions import continuous
@@ -618,6 +618,9 @@ class TestMatchesScipy(SeededTest):
     def test_geometric(self):
         self.pymc3_matches_scipy(Geometric, Nat, {'p': Unit},
                                  lambda value, p: np.log(sp.geom.pmf(value, p)))
+    def test_hypergeometric(self):
+        self.pymc3_matches_scipy(HyperGeometric, Nat, {'N': NatSmall, 'n': NatSmall, 'k': NatSmall},
+                                 lambda value, N, n, k: sp.hypergeom.logpmf(value, N, k, n))
 
     def test_negative_binomial(self):
         def test_fun(value, mu, alpha):
