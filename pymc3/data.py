@@ -390,7 +390,7 @@ def align_minibatches(batches=None):
 
 class Data:
     """Data container class that wraps the theano SharedVariable class
-    and let the model be aware of its inputs and outputs.
+    and lets the model be aware of its inputs and outputs.
 
     Parameters
     ----------

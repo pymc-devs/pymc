@@ -141,6 +141,18 @@ class TransformedDistribution(distribution.Distribution):
             self.type = tt.TensorType(v.dtype, b)
 
     def logp(self, x):
+        """
+        Calculate log-probability of Transformed distribution at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         logp_nojac = self.logp_nojac(x)
         jacobian_det = self.transform_used.jacobian_det(x)
         if logp_nojac.ndim > jacobian_det.ndim:
@@ -148,6 +160,19 @@ class TransformedDistribution(distribution.Distribution):
         return logp_nojac + jacobian_det
 
     def logp_nojac(self, x):
+        """
+        Calculate log-probability of Transformed distribution at specified value
+        without jacobian term for transforms.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         return self.dist.logp(self.transform_used.backward(x))
 
 

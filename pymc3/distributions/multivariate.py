@@ -22,6 +22,7 @@ from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln
+from .shape_utils import to_tuple
 from ..math import kron_dot, kron_diag, kron_solve_lower, kronecker
 
 
@@ -142,7 +143,7 @@ class _QuadFormBase(Continuous):
         if dist is None:
             dist = self
         if self._cov_type == 'chol':
-            chol = get_variable_name(self.chol)
+            chol = get_variable_name(self.chol_cov)
             return r'\mathit{{chol}}={}'.format(chol)
         elif self._cov_type == 'cov':
             cov = get_variable_name(self.cov)
@@ -225,6 +226,22 @@ class MvNormal(_QuadFormBase):
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Multivariate Normal distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         if size is None:
             size = tuple()
         else:
@@ -285,6 +302,19 @@ class MvNormal(_QuadFormBase):
             return mu + transformed.T
 
     def logp(self, value):
+        """
+        Calculate log-probability of Multivariate Normal distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         quaddist, logdet, ok = self._quaddist(value)
         k = value.shape[-1].astype(theano.config.floatX)
         norm = - 0.5 * k * pm.floatX(np.log(2 * np.pi))
@@ -352,6 +382,22 @@ class MvStudentT(_QuadFormBase):
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Multivariate Student's T distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         with _DrawValuesContext():
             nu, mu = draw_values([self.nu, self.mu], point=point, size=size)
             if self._cov_type == 'cov':
@@ -370,6 +416,19 @@ class MvStudentT(_QuadFormBase):
         return (np.sqrt(nu) * samples.T / chi2(nu, size)).T + mu
 
     def logp(self, value):
+        """
+        Calculate log-probability of Multivariate Student's T distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         quaddist, logdet, ok = self._quaddist(value)
         k = value.shape[-1].astype(theano.config.floatX)
 
@@ -454,6 +513,22 @@ class Dirichlet(Continuous):
         return samples
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Dirichlet distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         a = draw_values([self.a], point=point, size=size)[0]
         samples = generate_samples(self._random,
                                    a=a,
@@ -462,6 +537,19 @@ class Dirichlet(Continuous):
         return samples
 
     def logp(self, value):
+        """
+        Calculate log-probability of Dirichlet distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         k = self.k
         a = self.a
 
@@ -520,11 +608,6 @@ class Multinomial(Discrete):
         n = np.squeeze(n) # works also if n is a tensor
 
         if len(self.shape) > 1:
-            m = self.shape[-2]
-            # try:
-            #     assert n.shape == (m,)
-            # except (AttributeError, AssertionError):
-            #     n = n * tt.ones(m)
             self.n = tt.shape_padright(n)
             self.p = p if p.ndim > 1 else tt.shape_padleft(p)
         elif n.ndim == 1:
@@ -543,108 +626,82 @@ class Multinomial(Discrete):
                                 diff[inc_bool_arr.nonzero()])
         self.mode = mode
 
-    def _random(self, n, p, size=None):
+    def _random(self, n, p, size=None, raw_size=None):
         original_dtype = p.dtype
         # Set float type to float64 for numpy. This change is related to numpy issue #8317 (https://github.com/numpy/numpy/issues/8317)
         p = p.astype('float64')
         # Now, re-normalize all of the values in float64 precision. This is done inside the conditionals
+        p /= np.sum(p, axis=-1, keepdims=True)
+
+        # Thanks to the default shape handling done in generate_values, the last
+        # axis of n is a dummy axis that allows it to broadcast well with p
+        n = np.broadcast_to(n, size)
+        p = np.broadcast_to(p, size)
+        n = n[..., 0]
 
         # np.random.multinomial needs `n` to be a scalar int and `p` a
-        # sequence
-        if p.ndim == 1 and (n.ndim == 0 or (n.ndim == 1 and n.shape[0] == 1)):
-            # If `n` is already a scalar and `p` is a sequence, then just
-            # return np.multinomial with some size handling
-            p = p / p.sum()
-            if size is not None:
-                if size == p.shape:
-                    size = None
-                elif size[-len(p.shape):] == p.shape:
-                    size = size[:len(size) - len(p.shape)]
-            randnum = np.random.multinomial(n, p, size=size)
-            return randnum.astype(original_dtype)
-        # The shapes of `p` and `n` must be broadcasted by hand depending on
-        # their ndim. We will assume that the last axis of the `p` array will
-        # be the sequence to feed into np.random.multinomial. The other axis
-        # will only have to be iterated over.
-        if n.ndim == p.ndim:
-            # p and n have the same ndim, so n.shape[-1] must be 1
-            if n.shape[-1] != 1:
-                raise ValueError('If n and p have the same number of '
-                                 'dimensions, the last axis of n must be '
-                                 'have len 1. Got {} instead.\n'
-                                 'n.shape = {}\n'
-                                 'p.shape = {}.'.format(n.shape[-1],
-                                                        n.shape,
-                                                        p.shape))
-            n_p_shape = np.broadcast(np.empty(p.shape[:-1]),
-                                     np.empty(n.shape[:-1])).shape
-            p = np.broadcast_to(p, n_p_shape + (p.shape[-1],))
-            n = np.broadcast_to(n, n_p_shape + (1,))
-        elif n.ndim == p.ndim - 1:
-            # n has the number of dimensions of p for the iteration, these must
-            # broadcast together
-            n_p_shape = np.broadcast(np.empty(p.shape[:-1]),
-                                     n).shape
-            p = np.broadcast_to(p, n_p_shape + (p.shape[-1],))
-            n = np.broadcast_to(n, n_p_shape + (1,))
-        elif p.ndim == 1:
-            # p only has the sequence array. We extend it with the dimensions
-            # of n
-            n_p_shape = n.shape
-            p = np.broadcast_to(p, n_p_shape + (p.shape[-1],))
-            n = np.broadcast_to(n, n_p_shape + (1,))
-        elif n.ndim == 0 or (n.dim == 1 and n.shape[0] == 1):
-            # n is a scalar. We extend it with the dimensions of p
-            n_p_shape = p.shape[:-1]
-            n = np.broadcast_to(n, n_p_shape + (1,))
+        # sequence so we semi flatten them and iterate over them
+        size_ = to_tuple(raw_size)
+        if p.ndim > len(size_) and p.shape[:len(size_)] == size_:
+            # p and n have the size_ prepend so we don't need it in np.random
+            n_ = n.reshape([-1])
+            p_ = p.reshape([-1, p.shape[-1]])
+            samples = np.array([
+                np.random.multinomial(nn, pp)
+                for nn, pp in zip(n_, p_)
+            ])
+            samples = samples.reshape(p.shape)
         else:
-            # There is no clear rule to broadcast p and n so we raise an error
-            raise ValueError('Incompatible shapes of n and p.\n'
-                             'n.shape = {}\n'
-                             'p.shape = {}'.format(n.shape, p.shape))
-
-        # Check what happens with size
-        if size is not None:
-            if size == p.shape:
-                size = None
-                _size = 1
-            elif size[-len(p.shape):] == p.shape:
-                size = size[:len(size) - len(p.shape)]
-                _size = np.prod(size)
-            else:
-                _size = np.prod(size)
-        else:
-            _size = 1
-
-        # We now flatten p and n up to the last dimension
-        p_shape = p.shape
-        p = np.reshape(p, (np.prod(n_p_shape), -1))
-        n = np.reshape(n, (np.prod(n_p_shape), -1))
-        # We renormalize p
-        p = p / p.sum(axis=1, keepdims=True)
-        # We iterate calls to np.random.multinomial
-        randnum = np.asarray([
-            np.random.multinomial(nn, pp, size=_size)
-            for (nn, pp) in zip(n, p)
-        ])
-        # We swap the iteration axis with the _size axis
-        randnum = np.moveaxis(randnum, 1, 0)
-        # We reshape the random numbers to the corresponding size + p_shape
-        if size is None:
-            randnum = np.reshape(randnum, p_shape)
-        else:
-            randnum = np.reshape(randnum, size + p_shape)
+            # p and n don't have the size prepend
+            n_ = n.reshape([-1])
+            p_ = p.reshape([-1, p.shape[-1]])
+            samples = np.array([
+                np.random.multinomial(nn, pp, size=size_)
+                for nn, pp in zip(n_, p_)
+            ])
+            samples = np.moveaxis(samples, 0, -1)
+            samples = samples.reshape(size + p.shape)
         # We cast back to the original dtype
-        return randnum.astype(original_dtype)
+        return samples.astype(original_dtype)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Multinomial distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         n, p = draw_values([self.n, self.p], point=point, size=size)
         samples = generate_samples(self._random, n, p,
                                    dist_shape=self.shape,
+                                   not_broadcast_kwargs={'raw_size': size},
                                    size=size)
         return samples
 
     def logp(self, x):
+        """
+        Calculate log-probability of Multinomial distribution
+        at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         n = self.n
         p = self.p
 
@@ -772,12 +829,41 @@ class Wishart(Continuous):
                               np.nan)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Wishart distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         nu, V = draw_values([self.nu, self.V], point=point, size=size)
         size= 1 if size is None else size
         return generate_samples(stats.wishart.rvs, np.asscalar(nu), V,
                                     broadcast_shape=(size,))
 
     def logp(self, X):
+        """
+        Calculate log-probability of Wishart distribution
+        at specified value.
+
+        Parameters
+        ----------
+        X : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         nu = self.nu
         p = self.p
         V = self.V
@@ -1039,6 +1125,19 @@ class LKJCholeskyCov(Continuous):
         self.mode[self.diag_idxs] = 1
 
     def logp(self, x):
+        """
+        Calculate log-probability of Covariance matrix with LKJ
+        distributed correlations at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         n = self.n
         eta = self.eta
 
@@ -1111,6 +1210,23 @@ class LKJCholeskyCov(Continuous):
         return np.linalg.cholesky(C)[..., tril_idx[0], tril_idx[1]]
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Covariance matrix with LKJ
+        distributed correlations.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         # Get parameters and broadcast them
         n, eta = draw_values([self.n, self.eta], point=point, size=size)
         broadcast_shape = np.broadcast(n, eta).shape
@@ -1246,6 +1362,22 @@ class LKJCorr(Continuous):
         return C[..., triu_idx[0], triu_idx[1]]
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from LKJ distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         n, eta = draw_values([self.n, self.eta], point=point, size=size)
         size= 1 if size is None else size
         samples = generate_samples(self._random, n, eta,
@@ -1253,6 +1385,19 @@ class LKJCorr(Continuous):
         return samples
 
     def logp(self, x):
+        """
+        Calculate log-probability of LKJ distribution at specified
+        value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         n = self.n
         eta = self.eta
 
@@ -1434,6 +1579,22 @@ class MatrixNormal(Continuous):
             self.colchol_cov = tt.as_tensor_variable(colchol)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Matrix-valued Normal distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, colchol, rowchol = draw_values(
                                 [self.mu, self.colchol_cov, self.rowchol_cov],
                                 point=point,
@@ -1482,6 +1643,19 @@ class MatrixNormal(Continuous):
         return trquaddist, half_collogdet, half_rowlogdet
 
     def logp(self, value):
+        """
+        Calculate log-probability of Matrix-valued Normal distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         trquaddist, half_collogdet, half_rowlogdet = self._trquaddist(value)
         m = self.m
         n = self.n
@@ -1668,6 +1842,23 @@ class KroneckerNormal(Continuous):
                 self.mv_params['cov'] = cov
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Multivariate Normal distribution
+        with Kronecker-structured covariance.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         # Expand params into terms MvNormal can understand to force consistency
         self._setup_random()
         dist = MvNormal.dist(**self.mv_params)
@@ -1701,5 +1892,18 @@ class KroneckerNormal(Continuous):
         return quad, logdet
 
     def logp(self, value):
+        """
+        Calculate log-probability of Multivariate Normal distribution
+        with Kronecker-structured covariance at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         quad, logdet = self._quaddist(value)
         return - (quad + logdet + self.N*tt.log(2*np.pi)) / 2.0

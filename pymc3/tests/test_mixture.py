@@ -11,7 +11,7 @@ from scipy.special import logsumexp
 from pymc3.theanof import floatX
 import theano
 from theano import tensor as tt
-from pymc3.distributions.dist_math import to_tuple
+from pymc3.distributions.shape_utils import to_tuple
 
 # Generate data
 def generate_normal_mixture_data(w, mu, sd, size=1000):

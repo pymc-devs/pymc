@@ -3,6 +3,7 @@ import functools
 import itertools
 import threading
 import warnings
+from typing import Optional
 
 import numpy as np
 from pandas import Series
@@ -187,7 +188,7 @@ class Context:
             raise TypeError("No context on context stack")
 
 
-def modelcontext(model):
+def modelcontext(model: Optional['Model']) -> 'Model':
     """return the given model or try to find it in the context if there was
     none supplied.
     """
@@ -492,7 +493,7 @@ class ValueGradFunction:
         if grad_out is None:
             return logp, dlogp
         else:
-            out[...] = dlogp
+            np.copyto(out, dlogp)
             return logp
 
     @property
@@ -737,7 +738,7 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
     def logp_nojact(self):
         """Theano scalar of log-probability of the model but without the jacobian
         if transformed Random Variable is presented.
-        Note that If there is no transformed variable in the model, logp_nojact 
+        Note that If there is no transformed variable in the model, logp_nojact
         will be the same as logpt as there is no need for Jacobian correction.
         """
         with self:

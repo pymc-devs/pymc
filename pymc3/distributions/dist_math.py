@@ -11,6 +11,7 @@ from theano.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from theano.tensor.slinalg import Cholesky
 from theano.scan_module import until
 from theano import scan
+from .shape_utils import to_tuple
 
 from .special import gammaln
 from pymc3.theanof import floatX
@@ -18,17 +19,6 @@ from pymc3.theanof import floatX
 
 f = floatX
 c = - .5 * np.log(2. * np.pi)
-
-
-def to_tuple(shape):
-    """Convert ints, arrays, and Nones to tuples"""
-    if shape is None:
-        return tuple()
-    temp = np.atleast_1d(shape)
-    if temp.size == 0:
-        return tuple()
-    else:
-        return tuple(temp)
 
 
 def bound(logp, *conditions, **kwargs):

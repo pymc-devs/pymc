@@ -88,7 +88,7 @@ def intX(X):
 
 def smartfloatX(x):
     """
-    Convert non int types to floatX
+    Converts numpy float values to floatX and leaves values of other types unchanged.
     """
     if str(x.dtype).startswith('float'):
         x = floatX(x)

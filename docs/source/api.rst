@@ -19,3 +19,4 @@ API Reference
    api/math
    api/data
    api/model
+   api/shape_utils

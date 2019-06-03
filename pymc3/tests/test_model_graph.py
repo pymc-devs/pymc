@@ -1,7 +1,7 @@
 import numpy as np
 import pymc3 as pm
+import theano as th
 from pymc3.model_graph import ModelGraph, model_to_graphviz
-
 from .helpers import SeededTest
 
 
@@ -13,6 +13,8 @@ def radon_model():
     xbar = np.random.normal(1, 0.1, size=n_homes)
     floor_measure = np.random.randint(0, 2, size=n_homes)
     log_radon = np.random.normal(1, 1, size=n_homes)
+
+    floor_measure = th.shared(floor_measure)
 
     d, r = divmod(919, 85)
     county = np.hstack((
