@@ -29,7 +29,6 @@ Gallery.contents = {
     "GP-MeansAndCovs": "Gaussian Processes",
     "GP-SparseApprox": "Gaussian Processes",
     "GP-TProcess": "Gaussian Processes",
-    "GP-slice-sampling": "Gaussian Processes",
     "GP-smoothing": "Gaussian Processes",
     "gaussian_process": "Gaussian Processes",
     "dependent_density_regression": "Mixture Models",
