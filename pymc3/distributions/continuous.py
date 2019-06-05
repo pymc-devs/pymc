@@ -463,7 +463,8 @@ class Normal(Continuous):
         if sd is not None:
             sigma = sd
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = self.sd = tt.as_tensor_variable(sigma)
+        self.sd = tt.as_tensor_variable(sigma)
+        self.sigma = self.sd
         self.tau = tt.as_tensor_variable(tau)
 
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(floatX(mu))
@@ -624,7 +625,8 @@ class TruncatedNormal(BoundedContinuous):
         if sd is not None:
             sigma = sd
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = self.sd = tt.as_tensor_variable(sigma)
+        self.sd = tt.as_tensor_variable(sigma)
+        self.sigma = self.sd
         self.tau = tt.as_tensor_variable(tau)
         self.lower_check = tt.as_tensor_variable(floatX(lower)) if lower is not None else lower
         self.upper_check = tt.as_tensor_variable(floatX(upper)) if upper is not None else upper
@@ -812,7 +814,9 @@ class HalfNormal(PositiveContinuous):
         super().__init__(*args, **kwargs)
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
+        sigma = tt.as_tensor_variable(sigma)
+        self.sd = sigma
+        self.sigma = self.sd
         self.tau = tau = tt.as_tensor_variable(tau)
 
         self.mean = tt.sqrt(2 / (np.pi * self.tau))
@@ -1761,7 +1765,9 @@ class Lognormal(PositiveContinuous):
 
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
         self.tau = tau = tt.as_tensor_variable(tau)
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
+        sigma = tt.as_tensor_variable(sigma)
+        self.sd = sigma
+        self.sigma = self.sd
 
         self.mean = tt.exp(self.mu + 1. / (2 * self.tau))
         self.median = tt.exp(self.mu)
@@ -1930,7 +1936,9 @@ class StudentT(Continuous):
         self.nu = nu = tt.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
         self.lam = lam = tt.as_tensor_variable(lam)
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
+        sigma = tt.as_tensor_variable(sigma)
+        self.sd = sigma
+        self.sigma = self.sd
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
 
         self.variance = tt.switch((nu > 2) * 1,
@@ -3005,7 +3013,8 @@ class HalfStudentT(PositiveContinuous):
         self.mode = tt.as_tensor_variable(0)
         lam, sigma = get_tau_sigma(lam, sigma)
         self.median = tt.as_tensor_variable(sigma)
-        self.sigma = self.sd = tt.as_tensor_variable(sigma)
+        self.sd = tt.as_tensor_variable(sigma)
+        self.sigma = self.sd
         self.lam = tt.as_tensor_variable(lam)
         self.nu = nu = tt.as_tensor_variable(floatX(nu))
 
@@ -3143,7 +3152,9 @@ class ExGaussian(Continuous):
             sigma = sd
 
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(floatX(sigma))
+        sigma = tt.as_tensor_variable(floatX(sigma))
+        self.sd = sigma
+        self.sigma = self.sd
         self.nu = nu = tt.as_tensor_variable(floatX(nu))
         self.mean = mu + nu
         self.variance = (sigma**2) + (nu**2)
@@ -3429,7 +3440,8 @@ class SkewNormal(Continuous):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
         self.tau = tt.as_tensor_variable(tau)
-        self.sigma = self.sd = tt.as_tensor_variable(sigma)
+        self.sd = tt.as_tensor_variable(sigma)
+        self.sigma = self.sd
 
         self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
 
@@ -3837,7 +3849,9 @@ class Rice(PositiveContinuous):
 
         nu, b, sigma = self.get_nu_b(nu, b, sigma)
         self.nu = nu = tt.as_tensor_variable(floatX(nu))
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(floatX(sigma))
+        sigma = tt.as_tensor_variable(floatX(sigma))
+        self.sd = sigma
+        self.sigma = self.sd
         self.b = b = tt.as_tensor_variable(floatX(b))
         self.mean = sigma * np.sqrt(np.pi / 2) * tt.exp((-nu**2 / (2 * sigma**2)) / 2) * ((1 - (-nu**2 / (2 * sigma**2)))
                                  * tt.i0(-(-nu**2 / (2 * sigma**2)) / 2) - (-nu**2 / (2 * sigma**2)) * tt.i1(-(-nu**2 / (2 * sigma**2)) / 2))
@@ -4095,7 +4109,8 @@ class LogitNormal(UnitContinuous):
             sigma = sd
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = self.sd = tt.as_tensor_variable(sigma)
+        self.sd = tt.as_tensor_variable(sigma)
+        self.sigma = self.sd
         self.tau = tau = tt.as_tensor_variable(tau)
 
         self.median = invlogit(mu)
