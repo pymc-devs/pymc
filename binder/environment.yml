@@ -8,11 +8,13 @@ dependencies:
   - seaborn
   - nbserverproxy
   - jupyter
-  - jupyterlab
+  - jupyterlab=0.35
   - mkl-service
+  - dask
+  - dask-kubernetes
+  - distributed
+  - tornado=5.1.1
   - pip:
     - arviz
     - git+https://github.com/davidbrochart/pymc3@dask_smc
-    - git+https://github.com/dask/dask
-    - git+https://github.com/dask/distributed
-    - git+https://github.com/dask/dask-kubernetes
+    - dask_labextension==0.3.3
