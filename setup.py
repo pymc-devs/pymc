@@ -14,10 +14,7 @@ LICENSE = "Apache License, Version 2.0"
 
 classifiers = ['Development Status :: 5 - Production/Stable',
                'Programming Language :: Python',
-               'Programming Language :: Python :: 2',
                'Programming Language :: Python :: 3',
-               'Programming Language :: Python :: 2.7',
-               'Programming Language :: Python :: 3.4',
                'Programming Language :: Python :: 3.5',
                'Programming Language :: Python :: 3.6',
                'License :: OSI Approved :: Apache Software License',
@@ -37,12 +34,7 @@ REQUIREMENTS_FILE = join(PROJECT_ROOT, 'requirements.txt')
 with open(REQUIREMENTS_FILE) as f:
     install_reqs = f.read().splitlines()
 
-if sys.version_info < (3, 4):
-    install_reqs.append('enum34')
-
 test_reqs = ['pytest', 'pytest-cov']
-if sys.version_info[0] == 2:  # py3 has mock in stdlib
-    test_reqs.append('mock')
 
 def get_version():
     VERSIONFILE = join('pymc3', '__init__.py')
@@ -67,6 +59,10 @@ if __name__ == "__main__":
           package_data={'docs': ['*']},
           include_package_data=True,
           classifiers=classifiers,
+          python_requires=">=3.5.4",
           install_requires=install_reqs,
+          extras_require={
+              "plots": ["arviz"],
+          },
           tests_require=test_reqs,
           test_suite='nose.collector')

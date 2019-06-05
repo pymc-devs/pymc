@@ -8,6 +8,7 @@ import json
 import os
 import glob
 import shutil
+import runpy
 
 import matplotlib
 
@@ -17,16 +18,19 @@ import matplotlib.pyplot as plt
 from matplotlib import image
 
 DOC_SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TABLE_OF_CONTENTS_FILENAME = "table_of_contents.js"
+DEFAULT_IMG_LOC = os.path.join(
+            os.path.dirname(DOC_SRC), "logos", "PyMC3.png"
+        )
+TABLE_OF_CONTENTS_FILENAME = "table_of_contents_{}.js"
 
 INDEX_TEMPLATE = """
 .. _{sphinx_tag}:
 
-.. title:: example_notebooks
+.. title:: {gallery}_notebooks
 
 .. raw:: html
 
-    <h1 class="ui header">Example Notebooks</h1>
+    <h1 class="ui header">{Gallery} Notebooks</h1>
     <div id="gallery" class="ui vertical segment">
     </div>
 """
@@ -59,7 +63,7 @@ def create_thumbnail(infile, width=275, height=275, cx=0.5, cy=0.5, border=4):
     return fig
 
 
-class NotebookGenerator(object):
+class NotebookGenerator:
     """Tools for generating an example page from a file"""
 
     def __init__(self, filename, target_dir):
@@ -75,9 +79,7 @@ class NotebookGenerator(object):
         with open(filename, "r") as fid:
             self.json_source = json.load(fid)
         self.pagetitle = self.extract_title()
-        self.default_image_loc = os.path.join(
-            os.path.dirname(DOC_SRC), "logos", "PyMC3.png"
-        )
+        self.default_image_loc = DEFAULT_IMG_LOC
 
         # Only actually run it if the output RST file doesn't
         # exist or it was modified less recently than the example
@@ -119,15 +121,30 @@ class NotebookGenerator(object):
         create_thumbnail(self.png_path)
 
 
-def main(app):
+class TableOfContentsJS:
+    """Container to load table of contents JS file"""
+
+    def load(self, path):
+        """Creates an attribute ``contents`` by running the JS file as a python
+        file.
+
+        """
+        runpy.run_path(path, {"Gallery": self})
+
+
+def build_gallery(srcdir, gallery):
     working_dir = os.getcwd()
-    os.chdir(app.builder.srcdir)
-    static_dir = os.path.join(app.builder.srcdir, "_static")
-    target_dir = os.path.join(app.builder.srcdir, "nb_examples")
+    os.chdir(srcdir)
+    static_dir = os.path.join(srcdir, "_static")
+    target_dir = os.path.join(srcdir, "nb_{}".format(gallery))
     image_dir = os.path.join(target_dir, "_images")
     source_dir = os.path.abspath(
-        os.path.join(os.path.dirname(os.path.dirname(app.builder.srcdir)), "notebooks")
+        os.path.join(os.path.dirname(os.path.dirname(srcdir)), "notebooks")
     )
+    table_of_contents_file = os.path.join(
+        source_dir, TABLE_OF_CONTENTS_FILENAME.format(gallery))
+    tocjs = TableOfContentsJS()
+    tocjs.load(table_of_contents_file)
 
     if not os.path.exists(static_dir):
         os.makedirs(static_dir)
@@ -140,19 +157,33 @@ def main(app):
 
     if not os.path.exists(source_dir):
         os.makedirs(source_dir)
+    
+    # Create default image
+    default_png_path = os.path.join(os.path.join(target_dir, "_images"), "default.png")
+    shutil.copy(DEFAULT_IMG_LOC, default_png_path)
+    create_thumbnail(default_png_path)
 
     # Write individual example files
     data = {}
-    for filename in sorted(glob.glob(os.path.join(source_dir, "*.ipynb"))):
-        ex = NotebookGenerator(filename, target_dir)
-        data[ex.stripped_name] = {
-            "title": ex.pagetitle,
-            "url": os.path.join("/examples", ex.output_html),
-            "thumb": os.path.basename(ex.png_path),
-        }
+    for basename in sorted(tocjs.contents):
+        if basename.find(".rst") < 1:
+            filename = os.path.join(source_dir, basename + ".ipynb")
+            ex = NotebookGenerator(filename, target_dir)
+            data[ex.stripped_name] = {
+                "title": ex.pagetitle,
+                "url": os.path.join(os.sep, gallery, ex.output_html),
+                "thumb": os.path.basename(ex.png_path),
+            }
+        else:
+            filename = basename.split(".")[0]
+            data[basename] = {
+                "title": " ".join(filename.split("_")),
+                "url": os.path.join(os.sep, gallery, "../"+filename+".html"),
+                "thumb": os.path.basename(default_png_path),
+            }
 
-    js_file = os.path.join(image_dir, "gallery_contents.js")
-    with open(os.path.join(source_dir, TABLE_OF_CONTENTS_FILENAME), "r") as toc:
+    js_file = os.path.join(image_dir, "gallery_{}_contents.js".format(gallery))
+    with open(table_of_contents_file, "r") as toc:
         table_of_contents = toc.read()
 
     js_contents = "Gallery.examples = {}\n{}".format(
@@ -163,9 +194,18 @@ def main(app):
         js.write(js_contents)
 
     with open(os.path.join(target_dir, "index.rst"), "w") as index:
-        index.write(INDEX_TEMPLATE.format(sphinx_tag="notebook_gallery"))
+        index.write(INDEX_TEMPLATE.format(
+            sphinx_tag="notebook_gallery",
+            gallery=gallery,
+            Gallery=gallery.title().rstrip("s")
+        ))
 
     os.chdir(working_dir)
+
+
+def main(app):
+    for gallery in ("tutorials", "examples"):
+        build_gallery(app.builder.srcdir, gallery)
 
 
 def setup(app):

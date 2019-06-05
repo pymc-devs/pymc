@@ -10,7 +10,7 @@ import pytest
 from ..theanof import floatX
 from ..distributions import Discrete
 from ..distributions.dist_math import (
-    bound, factln, alltrue_scalar, MvNormalLogp, SplineWrapper)
+    bound, factln, alltrue_scalar, MvNormalLogp, SplineWrapper, i0e)
 
 
 def test_bound():
@@ -68,7 +68,7 @@ def test_alltrue_shape():
 
 class MultinomialA(Discrete):
     def __init__(self, n, p, *args, **kwargs):
-        super(MultinomialA, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.n = n
         self.p = p
@@ -87,7 +87,7 @@ class MultinomialA(Discrete):
 
 class MultinomialB(Discrete):
     def __init__(self, n, p, *args, **kwargs):
-        super(MultinomialB, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.n = n
         self.p = p
@@ -176,7 +176,7 @@ class TestMvNormalLogp():
         tt.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
 
 
-class TestSplineWrapper(object):
+class TestSplineWrapper:
     @theano.configparser.change_flags(compute_test_value="ignore")
     def test_grad(self):
         x = np.linspace(0, 1, 100)
@@ -193,3 +193,12 @@ class TestSplineWrapper(object):
         g_x, = tt.grad(spline(x_var), [x_var])
         with pytest.raises(NotImplementedError):
             tt.grad(g_x, [x_var])
+
+
+class TestI0e:
+    @theano.configparser.change_flags(compute_test_value="ignore")
+    def test_grad(self):
+        utt.verify_grad(i0e, [0.5])
+        utt.verify_grad(i0e, [-2.])
+        utt.verify_grad(i0e, [[0.5, -2.]])
+        utt.verify_grad(i0e, [[[0.5, -2.]]])

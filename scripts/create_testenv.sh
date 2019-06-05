@@ -20,7 +20,7 @@ command -v conda >/dev/null 2>&1 || {
   exit 1;
 }
 
-ENVNAME="testenv"
+ENVNAME="${ENVNAME:-testenv}" # if no ENVNAME is specified, use testenv
 PYTHON_VERSION=${PYTHON_VERSION:-3.6} # if no python specified, use 3.6
 
 if [ -z ${GLOBAL} ]
@@ -33,26 +33,20 @@ then
     fi
     source activate ${ENVNAME}
 fi
-conda install --yes numpy scipy mkl-service
-conda install --yes -c conda-forge python-graphviz
-
 pip install --upgrade pip
 
+conda install --yes mkl-service
+conda install --yes -c conda-forge python-graphviz
+
+
 #  Install editable using the setup.py
-pip install -e .
 
-# Install extra testing stuff
-if [ ${PYTHON_VERSION} == "2.7" ]; then
-    pip install mock
-fi
-
-pip install -r requirements-dev.txt
+# Travis env is unable to import cached mpl sometimes https://github.com/pymc-devs/pymc3/issues/3423
+pip install --no-cache-dir --ignore-installed -e .
+pip install --no-cache-dir --ignore-installed -r requirements-dev.txt
 
 # Install untested, non-required code (linter fails without them)
 pip install ipython ipywidgets
-
-# matplotlib is not required for the library, but is for tests
-pip install matplotlib
 
 if [ -z ${NO_SETUP} ]; then
     python setup.py build_ext --inplace

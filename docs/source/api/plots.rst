@@ -6,4 +6,4 @@ Plots
 
 .. automodule:: pymc3.plots
    :members: traceplot, plot_posterior, forestplot, compareplot, autocorrplot,
-             energyplot, kdeplot, densityplot
+             energyplot, kdeplot, densityplot, pairplot

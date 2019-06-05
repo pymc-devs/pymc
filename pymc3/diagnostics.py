@@ -4,6 +4,7 @@ import numpy as np
 from .stats import statfunc, autocov
 from .util import get_default_varnames
 from .backends.base import MultiTrace
+import warnings
 
 __all__ = ['geweke', 'gelman_rubin', 'effective_n']
 
@@ -97,7 +98,8 @@ def geweke(x, first=.1, last=.5, intervals=20):
         return np.array(zscores)
 
 
-def gelman_rubin(mtrace, varnames=None, include_transformed=False):
+
+def gelman_rubin(mtrace, var_names=None, include_transformed=False, **kwargs):
     R"""Returns estimate of R for a set of traces.
 
     The Gelman-Rubin diagnostic tests for lack of convergence by comparing
@@ -141,7 +143,12 @@ def gelman_rubin(mtrace, varnames=None, include_transformed=False):
     ----------
     Brooks and Gelman (1998)
     Gelman and Rubin (1992)"""
-
+    if 'varnames' in kwargs:
+        var_names = kwargs['varnames']
+        warnings.warn(
+            'Keyword argument varnames renamed to var_names, and will be removed in pymc3 3.8',
+            DeprecationWarning
+            )
     def rscore(x, num_samples):
         # Calculate between-chain variance
         B = num_samples * np.var(np.mean(x, axis=1), axis=0, ddof=1)
@@ -163,12 +170,12 @@ def gelman_rubin(mtrace, varnames=None, include_transformed=False):
             'Gelman-Rubin diagnostic requires multiple chains '
             'of the same length.')
 
-    if varnames is None:
-        varnames = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
+    if var_names is None:
+        var_names = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
 
     Rhat = {}
 
-    for var in varnames:
+    for var in var_names:
         x = np.array(mtrace.get_values(var, combine=False))
         num_samples = x.shape[1]
         Rhat[var] = rscore(x, num_samples)
@@ -176,7 +183,7 @@ def gelman_rubin(mtrace, varnames=None, include_transformed=False):
     return Rhat
 
 
-def effective_n(mtrace, varnames=None, include_transformed=False):
+def effective_n(mtrace, var_names=None, include_transformed=False, **kwargs):
     R"""Returns estimate of the effective sample size of a set of traces.
 
     Parameters
@@ -211,7 +218,11 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
     References
     ----------
     Gelman et al. BDA (2014)"""
-
+    if 'varnames' in kwargs:
+        var_names = kwargs['varnames']
+        warnings.warn(
+            'Keyword argument varnames renamed to var_names, and will be removed in pymc3 3.8',
+            DeprecationWarning)
     def get_neff(x):
         """Compute the effective sample size for a 2D array
         """
@@ -291,12 +302,12 @@ def effective_n(mtrace, varnames=None, include_transformed=False):
             'Calculation of effective sample size requires multiple chains '
             'of the same length.')
 
-    if varnames is None:
-        varnames = get_default_varnames(mtrace.varnames,include_transformed=include_transformed)
+    if var_names is None:
+        var_names = get_default_varnames(mtrace.varnames, include_transformed=include_transformed)
 
     n_eff = {}
 
-    for var in varnames:
+    for var in var_names:
         n_eff[var] = generate_neff(mtrace.get_values(var, combine=False))
 
     return n_eff

@@ -164,7 +164,7 @@ def allinmodel(vars, model):
         raise ValueError("Some variables not in the model: " + str(notin))
 
 
-class CostFuncWrapper(object):
+class CostFuncWrapper:
     def __init__(self, maxeval=5000, progressbar=True, logp_func=None, dlogp_func=None):
         self.n_eval = 0
         self.maxeval = maxeval

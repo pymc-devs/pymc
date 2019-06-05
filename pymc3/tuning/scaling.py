@@ -1,50 +1,10 @@
-'''
-Created on Mar 12, 2011
-
-from __future__ import division
-@author: johnsalvatier
-'''
 import numpy as np
 from numpy import exp, log, sqrt
 from ..model import modelcontext, Point
 from ..theanof import hessian_diag, inputvars
 from ..blocking import DictToArrayBijection, ArrayOrdering
 
-__all__ = ['approx_hessian', 'find_hessian', 'trace_cov', 'guess_scaling']
-
-
-def approx_hessian(point, vars=None, model=None):
-    """
-    Returns an approximation of the Hessian at the current chain location.
-
-    Parameters
-    ----------
-    model : Model (optional if in `with` context)
-    point : dict
-    vars : list
-        Variables for which Hessian is to be calculated.
-    """
-    from numdifftools import Jacobian
-
-    model = modelcontext(model)
-    if vars is None:
-        vars = model.cont_vars
-    vars = inputvars(vars)
-
-    point = Point(point, model=model)
-
-    bij = DictToArrayBijection(ArrayOrdering(vars), point)
-    dlogp = bij.mapf(model.fastdlogp(vars))
-
-    def grad_logp(point):
-        return np.nan_to_num(dlogp(point))
-
-    '''
-    Find the jacobian of the gradient function at the current position
-    this should be the Hessian; invert it to find the approximate
-    covariance matrix.
-    '''
-    return -Jacobian(grad_logp)(bij.map(point))
+__all__ = ['find_hessian', 'trace_cov', 'guess_scaling']
 
 
 def fixed_hessian(point, vars=None, model=None):

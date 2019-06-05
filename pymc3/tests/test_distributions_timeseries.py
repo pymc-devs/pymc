@@ -1,5 +1,3 @@
-from __future__ import division
-
 from ..model import Model
 from ..distributions.continuous import Flat, Normal
 from ..distributions.timeseries import EulerMaruyama, AR1, AR, GARCH11
@@ -7,14 +5,18 @@ from ..sampling import sample, sample_posterior_predictive
 from ..theanof import floatX
 
 import numpy as np
+import pytest
+
+pytestmark = pytest.mark.usefixtures('seeded_test')
+
 
 def test_AR():
     # AR1
     data = np.array([0.3,1,2,3,4])
     phi = np.array([0.99])
     with Model() as t:
-        y = AR('y', phi, sd=1, shape=len(data))
-        z = Normal('z', mu=phi*data[:-1], sd=1, shape=len(data)-1)
+        y = AR('y', phi, sigma=1, shape=len(data))
+        z = Normal('z', mu=phi*data[:-1], sigma=1, shape=len(data)-1)
     ar_like = t['y'].logp({'z':data[1:], 'y': data})
     reg_like = t['z'].logp({'z':data[1:], 'y': data})
     np.testing.assert_allclose(ar_like, reg_like)
@@ -29,8 +31,8 @@ def test_AR():
 
     # AR1 + constant
     with Model() as t:
-        y = AR('y', [0.3, phi], sd=1, shape=len(data), constant=True)
-        z = Normal('z', mu=0.3 + phi*data[:-1], sd=1, shape=len(data)-1)
+        y = AR('y', np.hstack((0.3, phi)), sigma=1, shape=len(data), constant=True)
+        z = Normal('z', mu=0.3 + phi*data[:-1], sigma=1, shape=len(data)-1)
     ar_like = t['y'].logp({'z':data[1:], 'y': data})
     reg_like = t['z'].logp({'z':data[1:], 'y': data})
     np.testing.assert_allclose(ar_like, reg_like)
@@ -38,8 +40,8 @@ def test_AR():
     # AR2
     phi = np.array([0.84, 0.10])
     with Model() as t:
-        y = AR('y', phi, sd=1, shape=len(data))
-        z = Normal('z', mu=phi[0]*data[1:-1]+phi[1]*data[:-2], sd=1, shape=len(data)-2)
+        y = AR('y', phi, sigma=1, shape=len(data))
+        z = Normal('z', mu=phi[0]*data[1:-1]+phi[1]*data[:-2], sigma=1, shape=len(data)-2)
     ar_like = t['y'].logp({'z':data[2:], 'y': data})
     reg_like = t['z'].logp({'z':data[2:], 'y': data})
     np.testing.assert_allclose(ar_like, reg_like)
@@ -54,7 +56,7 @@ def test_AR_nd():
         beta = Normal('beta', 0., 1.,
                       shape=(p, n),
                       testval=beta_tp)
-        AR('y', beta, sd=1.0,
+        AR('y', beta, sigma=1.0,
            shape=(T, n), testval=y_tp)
 
     with Model() as t1:
@@ -62,7 +64,7 @@ def test_AR_nd():
                       shape=(p, n),
                       testval=beta_tp)
         for i in range(n):
-            AR('y_%d' % i, beta[:, i], sd=1.0,
+            AR('y_%d' % i, beta[:, i], sigma=1.0,
                shape=T, testval=y_tp[:, i])
 
     np.testing.assert_allclose(t0.logp(t0.test_point),
@@ -87,7 +89,7 @@ def test_GARCH11():
     with Model() as t:
         y = GARCH11('y', omega=omega, alpha_1=alpha_1, beta_1=beta_1,
                     initial_vol=initial_vol, shape=data.shape)
-        z = Normal('z', mu=0, sd=vol, shape=data.shape)
+        z = Normal('z', mu=0, sigma=vol, shape=data.shape)
     garch_like = t['y'].logp({'z':data, 'y': data})
     reg_like = t['z'].logp({'z':data, 'y': data})
     np.testing.assert_allclose(garch_like, reg_like)
@@ -117,7 +119,7 @@ def test_linear():
     with Model() as model:
         lamh = Flat('lamh')
         xh = EulerMaruyama('xh', dt, sde, (lamh,), shape=N + 1, testval=x)
-        Normal('zh', mu=xh, sd=sig2, observed=z)
+        Normal('zh', mu=xh, sigma=sig2, observed=z)
     # invert
     with model:
         trace = sample(init='advi+adapt_diag', chains=1)

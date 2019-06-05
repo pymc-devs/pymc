@@ -109,8 +109,8 @@ Models are defined using a context manager (``with`` statement). The model is sp
     with Model() as bioassay_model:
 
         # Prior distributions for latent variables
-        alpha = Normal('alpha', 0, sd=100)
-        beta = Normal('beta', 0, sd=100)
+        alpha = Normal('alpha', 0, sigma=100)
+        beta = Normal('beta', 0, sigma=100)
 
         # Linear combinations of parameters
         theta = invlogit(alpha + beta*dose)
@@ -143,3 +143,9 @@ This example will generate 1000 posterior samples on each of two cores using the
 The sample is returned as arrays inside of a ``MultiTrace`` object, which is then passed to a plotting function. The resulting graphic shows a forest plot of the random variables in the model, along with a convergence diagnostic (R-hat) that indicates our model has converged.
 
 .. image:: ./images/forestplot.png
+
+See also
+========
+
+* `Tutorials <nb_tutorials/index.html>`__
+* `Examples <nb_examples/index.html>`__

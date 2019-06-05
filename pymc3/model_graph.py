@@ -1,23 +1,18 @@
-import itertools
+from collections import deque
+from typing import Dict, Iterator, Set, Optional
 
-from theano.gof.graph import ancestors
+VarName = str
+
+from theano.gof.graph import stack_search
+from theano.compile import SharedVariable
+from theano.tensor import Tensor
 
 from .util import get_default_varnames
+from .model import ObservedRV
 import pymc3 as pm
 
 
-def powerset(iterable):
-    """All *nonempty* subsets of an iterable.
-
-    From itertools docs.
-
-    powerset([1,2,3]) --> (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)
-    """
-    s = list(iterable)
-    return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(1, len(s)+1))
-
-
-class ModelGraph(object):
+class ModelGraph:
     def __init__(self, model):
         self.model = model
         self.var_names = get_default_varnames(self.model.named_vars, include_transformed=False)
@@ -26,7 +21,7 @@ class ModelGraph(object):
         self._deterministics = None
 
     def get_deterministics(self, var):
-        """Compute the deterministic nodes of the graph"""
+        """Compute the deterministic nodes of the graph, **not** including var itself."""
         deterministics = []
         attrs = ('transformed', 'logpt')
         for v in self.var_list:
@@ -34,33 +29,37 @@ class ModelGraph(object):
                 deterministics.append(v)
         return deterministics
 
-    def _ancestors(self, var, func, blockers=None):
-        """Get ancestors of a function that are also named PyMC3 variables"""
-        return set([j for j in ancestors([func], blockers=blockers) if j in self.var_list and j != var])
-
-    def _get_ancestors(self, var, func):
-        """Get all ancestors of a function, doing some accounting for deterministics
-
-        Specifically, if a deterministic is an input, theano.gof.graph.ancestors will
-        return only the inputs *to the deterministic*.  However, if we pass in the
-        deterministic as a blocker, it will skip those nodes.
+    def _get_ancestors(self, var: Tensor, func) -> Set[Tensor]:
+        """Get all ancestors of a function, doing some accounting for deterministics.
         """
-        deterministics = self.get_deterministics(var)
-        upstream = self._ancestors(var, func)
 
-        # Usual case
-        if upstream == self._ancestors(var, func, blockers=upstream):
-            return upstream
-        else: # deterministic accounting
-            for d in powerset(upstream):
-                blocked = self._ancestors(var, func, blockers=d)
-                if set(d) == blocked:
-                    return d
-        raise RuntimeError('Could not traverse graph. Consider raising an issue with developers.')
+        # this contains all of the variables in the model EXCEPT var...
+        vars = set(self.var_list)
+        vars.remove(var)
 
-    def _filter_parents(self, var, parents):
+        blockers = set() # type: Set[Tensor]
+        retval = set()  # type: Set[Tensor]
+        def _expand(node) -> Optional[Iterator[Tensor]]:
+            if node in blockers:
+                return None
+            elif node in vars:
+                blockers.add(node)
+                retval.add(node)
+                return None
+            elif node.owner:
+                blockers.add(node)
+                return reversed(node.owner.inputs)
+            else:
+                return None
+
+        stack_search(start = deque([func]),
+                     expand=_expand,
+                     mode='bfs')
+        return retval
+
+    def _filter_parents(self, var, parents) -> Set[VarName]:
         """Get direct parents of a var, as strings"""
-        keep = set()
+        keep = set() # type: Set[VarName]
         for p in parents:
             if p == var:
                 continue
@@ -73,7 +72,7 @@ class ModelGraph(object):
                 raise AssertionError('Do not know what to do with {}'.format(str(p)))
         return keep
 
-    def get_parents(self, var):
+    def get_parents(self, var: Tensor) -> Set[VarName]:
         """Get the named nodes that are direct inputs to the var"""
         if hasattr(var, 'transformed'):
             func = var.transformed.logpt
@@ -85,11 +84,26 @@ class ModelGraph(object):
         parents = self._get_ancestors(var, func)
         return self._filter_parents(var, parents)
 
-    def make_compute_graph(self):
+    def make_compute_graph(self) -> Dict[str, Set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
-        input_map = {}
+        input_map = {} # type: Dict[str, Set[VarName]]
+        def update_input_map(key: str, val: Set[VarName]):
+            if key in input_map:
+                input_map[key] = input_map[key].union(val)
+            else:
+                input_map[key] = val
+
         for var_name in self.var_names:
-            input_map[var_name] = self.get_parents(self.model[var_name])
+            var = self.model[var_name]
+            update_input_map(var_name, self.get_parents(var))
+            if isinstance(var, ObservedRV):
+                try:
+                    obs_name = var.observations.name
+                    if obs_name:
+                        input_map[var_name] = input_map[var_name].difference(set([obs_name]))
+                        update_input_map(obs_name, set([var_name]))
+                except AttributeError:
+                    pass
         return input_map
 
     def _make_node(self, var_name, graph):
@@ -101,14 +115,24 @@ class ModelGraph(object):
         if isinstance(v, pm.model.ObservedRV):
             attrs['style'] = 'filled'
 
+        # make Data be roundtangle, instead of rectangle
+        if isinstance(v, SharedVariable):
+            attrs['style'] = 'rounded, filled'
+
         # Get name for node
-        if hasattr(v, 'distribution'):
+        if v in self.model.potentials:
+            distribution = 'Potential'
+            attrs['shape'] = 'octagon'
+        elif hasattr(v, 'distribution'):
             distribution = v.distribution.__class__.__name__
+        elif isinstance(v, SharedVariable):
+            distribution = 'Data'
+            attrs['shape'] = 'box'
         else:
             distribution = 'Deterministic'
             attrs['shape'] = 'box'
 
-        graph.node(var_name,
+        graph.node(var_name.replace(':', '&'),
                 '{var_name} ~ {distribution}'.format(var_name=var_name, distribution=distribution),
                 **attrs)
 
@@ -126,7 +150,12 @@ class ModelGraph(object):
         for var_name in self.var_names:
             v = self.model[var_name]
             if hasattr(v, 'observations'):
-                shape = v.observations.shape
+                try:
+                    # To get shape of _observed_ data container `pm.Data`
+                    # (wrapper for theano.SharedVariable) we evaluate it.
+                    shape = tuple(v.observations.shape.eval())
+                except AttributeError:
+                    shape = v.observations.shape
             elif hasattr(v, 'dshape'):
                 shape = v.dshape
             else:
@@ -153,6 +182,8 @@ class ModelGraph(object):
                               '\tconda install -c conda-forge python-graphviz')
         graph = graphviz.Digraph(self.model.name)
         for shape, var_names in self.get_plates().items():
+            if isinstance(shape, SharedVariable):
+                shape = shape.eval()
             label = ' x '.join(map('{:,d}'.format, shape))
             if label:
                 # must be preceded by 'cluster' to get a box around it
@@ -167,7 +198,7 @@ class ModelGraph(object):
 
         for key, values in self.make_compute_graph().items():
             for value in values:
-                graph.edge(value, key)
+                graph.edge(value.replace(':', '&'), key.replace(':', '&'))
         return graph
 
 

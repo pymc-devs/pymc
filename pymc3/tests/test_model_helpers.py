@@ -10,7 +10,7 @@ import theano.tensor as tt
 import theano.sparse as sparse
 
 
-class TestHelperFunc(object):
+class TestHelperFunc:
     def test_pandas_to_array(self):
         """
         Ensure that pandas_to_array returns the dense array, masked array,
@@ -98,7 +98,7 @@ class TestHelperFunc(object):
         # Create a fake model and fake distribution to be used for the test
         fake_model = pm.Model()
         with fake_model:
-            fake_distribution = pm.Normal.dist(mu=0, sd=1)
+            fake_distribution = pm.Normal.dist(mu=0, sigma=1)
             # Create the testval attribute simply for the sake of model testing
             fake_distribution.testval = None
 

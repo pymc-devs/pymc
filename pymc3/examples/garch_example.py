@@ -40,10 +40,10 @@ def get_garch_model():
     with Model() as garch:
         alpha1 = Uniform('alpha1', 0., 1., shape=shape)
         beta1 = Uniform('beta1', 0., 1 - alpha1, shape=shape)
-        mu = Normal('mu', mu=0., sd=100., shape=shape)
+        mu = Normal('mu', mu=0., sigma=100., shape=shape)
         theta = tt.sqrt(alpha0 + alpha1 * tt.pow(r - mu, 2) +
                         beta1 * tt.pow(sigma1, 2))
-        Normal('obs', mu, sd=theta, observed=r)
+        Normal('obs', mu, sigma=theta, observed=r)
     return garch
 
 

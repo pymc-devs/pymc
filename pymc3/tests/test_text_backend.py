@@ -5,12 +5,12 @@ import pytest
 import theano
 
 
-class TestTextSampling(object):
+class TestTextSampling:
     name = 'text-db'
 
     def test_supports_sampler_stats(self):
         with pm.Model():
-            pm.Normal("mu", mu=0, sd=1, shape=2)
+            pm.Normal("mu", mu=0, sigma=1, shape=2)
             db = text.Text(self.name)
             pm.sample(20, tune=10, init=None, trace=db, cores=2)
 
@@ -71,7 +71,7 @@ class TestTextDumpFunction(bf.BackendEqualityTestCase):
 
     @classmethod
     def setup_class(cls):
-        super(TestTextDumpFunction, cls).setup_class()
+        super().setup_class()
         text.dump(cls.name1, cls.mtrace1)
         with cls.model:
             cls.mtrace1 = text.load(cls.name1)

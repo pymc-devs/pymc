@@ -14,7 +14,7 @@ __all__ = ['transform', 'stick_breaking', 'logodds', 'interval', 'log_exp_m1',
            't_stick_breaking']
 
 
-class Transform(object):
+class Transform:
     """A transformation of a random variable from one space into another.
 
     Attributes
@@ -125,9 +125,7 @@ class TransformedDistribution(distribution.Distribution):
         v = forward(FreeRV(name='v', distribution=dist))
         self.type = v.type
 
-        super(TransformedDistribution, self).__init__(
-            v.shape.tag.test_value, v.dtype,
-            testval, dist.defaults, *args, **kwargs)
+        super().__init__(v.shape.tag.test_value, v.dtype, testval, dist.defaults, *args, **kwargs)
 
         if transform.name == 'stickbreaking':
             b = np.hstack(((np.atleast_1d(self.shape) == 1)[:-1], False))
@@ -135,6 +133,18 @@ class TransformedDistribution(distribution.Distribution):
             self.type = tt.TensorType(v.dtype, b)
 
     def logp(self, x):
+        """
+        Calculate log-probability of Transformed distribution at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         logp_nojac = self.logp_nojac(x)
         jacobian_det = self.transform_used.jacobian_det(x)
         if logp_nojac.ndim > jacobian_det.ndim:
@@ -142,6 +152,19 @@ class TransformedDistribution(distribution.Distribution):
         return logp_nojac + jacobian_det
 
     def logp_nojac(self, x):
+        """
+        Calculate log-probability of Transformed distribution at specified value
+        without jacobian term for transforms.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         return self.dist.logp(self.transform_used.backward(x))
 
 transform = Transform
@@ -448,7 +471,7 @@ class CholeskyCovPacked(Transform):
         return tt.advanced_set_subtensor1(y, tt.log(y[self.diag_idxs]), self.diag_idxs)
 
     def forward_val(self, y, point=None):
-        y[self.diag_idxs] = np.log(y[self.diag_idxs])
+        y[..., self.diag_idxs] = np.log(y[..., self.diag_idxs])
         return y
 
     def jacobian_det(self, y):

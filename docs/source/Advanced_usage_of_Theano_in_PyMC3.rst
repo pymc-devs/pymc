@@ -30,9 +30,9 @@ be time consuming if the number of datasets is large)::
     observed_data = [mu + np.random.randn(20) for mu in true_mu]
 
     data = theano.shared(observed_data[0])
-    pm.Model() as model:
+    with pm.Model() as model:
         mu = pm.Normal('mu', 0, 10)
-        pm.Normal('y', mu=mu, sd=1, observed=data)
+        pm.Normal('y', mu=mu, sigma=1, observed=data)
 
     # Generate one trace for each dataset
     traces = []
@@ -53,7 +53,7 @@ variable for our observations::
     x_shared = theano.shared(x)
 
     with pm.Model() as model:
-      coeff = pm.Normal('x', mu=0, sd=1)
+      coeff = pm.Normal('x', mu=0, sigma=1)
       logistic = pm.math.sigmoid(coeff * x_shared)
       pm.Bernoulli('obs', p=logistic, observed=y)
 
@@ -210,8 +210,8 @@ We can now define our model using this new op::
     tt_mu_from_theta = MuFromTheta()
 
     with pm.Model() as model:
-        theta = pm.HalfNormal('theta', sd=1)
+        theta = pm.HalfNormal('theta', sigma=1)
         mu = pm.Deterministic('mu', tt_mu_from_theta(theta))
-        pm.Normal('y', mu=mu, sd=0.1, observed=[0.2, 0.21, 0.3])
+        pm.Normal('y', mu=mu, sigma=0.1, observed=[0.2, 0.21, 0.3])
 
         trace = pm.sample()

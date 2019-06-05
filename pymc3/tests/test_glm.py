@@ -2,6 +2,7 @@ import numpy as np
 from numpy.testing import assert_equal
 
 from .helpers import SeededTest
+import pymc3
 from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
 from pymc3 import families, GLM, LinearComponent
 import pandas as pd
@@ -16,7 +17,7 @@ def generate_data(intercept, slope, size=700):
 class TestGLM(SeededTest):
     @classmethod
     def setup_class(cls):
-        super(TestGLM, cls).setup_class()
+        super().setup_class()
         cls.intercept = 1
         cls.slope = 3
         cls.sd = .05
@@ -37,7 +38,7 @@ class TestGLM(SeededTest):
         with Model() as model:
             lm = LinearComponent.from_formula('y ~ x', self.data_linear)
             sigma = Uniform('sigma', 0, 20)
-            Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)
+            Normal('y_obs', mu=lm.y_est, sigma=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
             trace = sample(500, tune=0, step=step, start=start,
@@ -117,3 +118,15 @@ class TestGLM(SeededTest):
             )
         )
         assert_equal(model.y.observations, model_bool.y.observations)
+
+    def test_glm_formula_from_calling_scope(self):
+        """Formula can extract variables from the calling scope."""
+        z = pd.Series([10, 20, 30])
+        df = pd.DataFrame({"y": [0, 1, 0], "x": [1.0, 2.0, 3.0]})
+        GLM.from_formula("y ~ x + z", df, family=pymc3.glm.families.Binomial())
+
+    def test_linear_component_formula_from_calling_scope(self):
+        """Formula can extract variables from the calling scope."""
+        z = pd.Series([10, 20, 30])
+        df = pd.DataFrame({"y": [0, 1, 0], "x": [1.0, 2.0, 3.0]})
+        LinearComponent.from_formula("y ~ x + z", df)

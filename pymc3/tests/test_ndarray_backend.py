@@ -102,10 +102,10 @@ class TestMultiTrace(bf.ModelBackendSetupTestCase):
     shape = ()
 
     def setup_method(self):
-        super(TestMultiTrace, self).setup_method()
+        super().setup_method()
         self.strace0 = self.strace
 
-        super(TestMultiTrace, self).setup_method()
+        super().setup_method()
         self.strace1 = self.strace
 
     def test_multitrace_nonunique(self):
@@ -139,7 +139,7 @@ class TestMultiTrace_add_remove_values(bf.ModelBackendSampledTestCase):
         assert name not in mtrace.varnames
 
 
-class TestSqueezeCat(object):
+class TestSqueezeCat:
 
     def setup_method(self):
         self.x = np.arange(10)
@@ -170,7 +170,7 @@ class TestSqueezeCat(object):
         result = base._squeeze_cat([self.x, self.y], True, True)
         npt.assert_equal(result, expected)
 
-class TestSaveLoad(object):
+class TestSaveLoad:
     @staticmethod
     def model():
         with pm.Model() as model:

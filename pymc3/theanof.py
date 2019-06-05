@@ -16,6 +16,7 @@ __all__ = ['gradient',
            'inputvars',
            'cont_inputs',
            'floatX',
+           'intX',
            'smartfloatX',
            'jacobian',
            'CallableTensor',
@@ -67,9 +68,27 @@ def floatX(X):
         return np.asarray(X, dtype=theano.config.floatX)
 
 
+_conversion_map = {'float64': 'int32',
+                   'float32': 'int16',
+                   'float16': 'int8',
+                   'float8': 'int8'}
+
+
+def intX(X):
+    """
+    Convert a theano tensor or numpy array to theano.tensor.int32 type.
+    """
+    intX = _conversion_map[theano.config.floatX]
+    try:
+        return X.astype(intX)
+    except AttributeError:
+        # Scalar passed
+        return np.asarray(X, dtype=intX)
+
+
 def smartfloatX(x):
     """
-    Convert non int types to floatX 
+    Converts numpy float values to floatX and leaves values of other types unchanged.
     """
     if str(x.dtype).startswith('float'):
         x = floatX(x)
@@ -180,7 +199,7 @@ class IdentityOp(scalar.UnaryScalarOp):
         return "{z} = {x};".format(x=inp[0], z=out[0])
 
     def __eq__(self, other):
-        return type(self) == type(other)
+        return isinstance(self, type(other))
 
     def __hash__(self):
         return hash(type(self))
@@ -254,7 +273,7 @@ def reshape_t(x, shape):
         return x[0]
 
 
-class CallableTensor(object):
+class CallableTensor:
     """Turns a symbolic variable with one input into a function that returns symbolic arguments
     with the one variable replaced with the input.
     """
@@ -298,7 +317,7 @@ class GeneratorOp(Op):
     __props__ = ('generator',)
 
     def __init__(self, gen, default=None):
-        super(GeneratorOp, self).__init__()
+        super().__init__()
         if not isinstance(gen, GeneratorAdapter):
             gen = GeneratorAdapter(gen)
         self.generator = gen

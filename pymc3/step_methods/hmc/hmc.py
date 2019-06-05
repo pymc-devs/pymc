@@ -37,9 +37,7 @@ class HamiltonianMC(BaseHMC):
         'model_logp': np.float64,
     }]
 
-    def __init__(self, vars=None, path_length=2.,
-                 adapt_step_size=True, gamma=0.05, k=0.75, t0=10,
-                 target_accept=0.8, **kwargs):
+    def __init__(self, vars=None, path_length=2., **kwargs):
         """Set up the Hamiltonian Monte Carlo sampler.
 
         Parameters
@@ -63,19 +61,22 @@ class HamiltonianMC(BaseHMC):
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods. It can be specified instead
             of the scaling matrix.
-        target_accept : float, default .8
+        target_accept : float, default 0.65
             Adapt the step size such that the average acceptance
             probability across the trajectories are close to target_accept.
             Higher values for target_accept lead to smaller step sizes.
             Setting this to higher values like 0.9 or 0.99 can help
             with sampling from difficult posteriors. Valid values are
-            between 0 and 1 (exclusive).
+            between 0 and 1 (exclusive). Default of 0.65 is from (Beskos et.
+            al. 2010, Neal 2011). See Hoffman and Gelman's "The No-U-Turn
+            Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte
+            Carlo" section 3.2 for details.
         gamma : float, default .05
         k : float, default .75
             Parameter for dual averaging for step size adaptation. Values
             between 0.5 and 1 (exclusive) are admissible. Higher values
             correspond to slower adaptation.
-        t0 : int, default 10
+        t0 : float > 0, default 10
             Parameter for dual averaging. Higher values slow initial
             adaptation.
         adapt_step_size : bool, default=True
@@ -85,12 +86,13 @@ class HamiltonianMC(BaseHMC):
             The model
         **kwargs : passed to BaseHMC
         """
-        super(HamiltonianMC, self).__init__(vars, **kwargs)
+        kwargs.setdefault('step_rand', unif)
+        kwargs.setdefault('target_accept', 0.65)
+        super().__init__(vars, **kwargs)
         self.path_length = path_length
 
     def _hamiltonian_step(self, start, p0, step_size):
-        path_length = np.random.rand() * self.path_length
-        n_steps = max(1, int(path_length / step_size))
+        n_steps = max(1, int(self.path_length / step_size))
 
         energy_change = -np.inf
         state = start
@@ -120,7 +122,7 @@ class HamiltonianMC(BaseHMC):
             accepted = True
 
         stats = {
-            'path_length': path_length,
+            'path_length': self.path_length,
             'n_steps': n_steps,
             'accept': accept_stat,
             'energy_error': energy_change,

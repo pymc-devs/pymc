@@ -1,7 +1,7 @@
 import numpy as np
 import pymc3 as pm
+import theano as th
 from pymc3.model_graph import ModelGraph, model_to_graphviz
-
 from .helpers import SeededTest
 
 
@@ -14,6 +14,8 @@ def radon_model():
     floor_measure = np.random.randint(0, 2, size=n_homes)
     log_radon = np.random.normal(1, 1, size=n_homes)
 
+    floor_measure = th.shared(floor_measure)
+
     d, r = divmod(919, 85)
     county = np.hstack((
         np.tile(np.arange(counties, dtype=int), d),
@@ -21,14 +23,14 @@ def radon_model():
         ))
     with pm.Model() as model:
         sigma_a = pm.HalfCauchy('sigma_a', 5)
-        gamma = pm.Normal('gamma', mu=0., sd=1e5, shape=3)
+        gamma = pm.Normal('gamma', mu=0., sigma=1e5, shape=3)
         mu_a = pm.Deterministic('mu_a', gamma[0] + gamma[1]*uranium + gamma[2]*xbar)
-        eps_a = pm.Normal('eps_a', mu=0, sd=sigma_a, shape=counties)
+        eps_a = pm.Normal('eps_a', mu=0, sigma=sigma_a, shape=counties)
         a = pm.Deterministic('a', mu_a + eps_a[county])
-        b = pm.Normal('b', mu=0., sd=1e15)
+        b = pm.Normal('b', mu=0., sigma=1e15)
         sigma_y = pm.Uniform('sigma_y', lower=0, upper=100)
         y_hat = a + b * floor_measure
-        y_like = pm.Normal('y_like', mu=y_hat, sd=sigma_y, observed=log_radon)
+        y_like = pm.Normal('y_like', mu=y_hat, sigma=sigma_y, observed=log_radon)
 
     compute_graph = {
         'sigma_a': set(),

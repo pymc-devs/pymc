@@ -2,7 +2,7 @@ import theano.tensor as tt
 from theano import scan
 
 from pymc3.util import get_variable_name
-from .continuous import get_tau_sd, Normal, Flat
+from .continuous import get_tau_sigma, Normal, Flat
 from . import multivariate
 from . import distribution
 
@@ -31,13 +31,25 @@ class AR1(distribution.Continuous):
     """
 
     def __init__(self, k, tau_e, *args, **kwargs):
-        super(AR1, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.k = k = tt.as_tensor_variable(k)
         self.tau_e = tau_e = tt.as_tensor_variable(tau_e)
         self.tau = tau_e * (1 - k ** 2)
         self.mode = tt.as_tensor_variable(0.)
 
     def logp(self, x):
+        """
+        Calculate log-probability of AR1 distribution at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         k = self.k
         tau_e = self.tau_e
 
@@ -79,23 +91,25 @@ class AR(distribution.Continuous):
     ----------
     rho : tensor
         Tensor of autoregressive coefficients. The first dimension is the p lag.
-    sd : float
-        Standard deviation of innovation (sd > 0). (only required if tau is not specified)
+    sigma : float
+        Standard deviation of innovation (sigma > 0). (only required if tau is not specified)
     tau : float
-        Precision of innovation (tau > 0). (only required if sd is not specified)
+        Precision of innovation (tau > 0). (only required if sigma is not specified)
     constant: bool (optional, default = False)
         Whether to include a constant.
     init : distribution
         distribution for initial values (Defaults to Flat())
     """
 
-    def __init__(self, rho, sd=None, tau=None,
+    def __init__(self, rho, sigma=None, tau=None,
                  constant=False, init=Flat.dist(),
-                 *args, **kwargs):
+                 sd=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if sd is not None:
+            sigma = sd
 
-        super(AR, self).__init__(*args, **kwargs)
-        tau, sd = get_tau_sd(tau=tau, sd=sd)
-        self.sd = tt.as_tensor_variable(sd)
+        tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
+        self.sigma = self.sd = tt.as_tensor_variable(sigma)
         self.tau = tt.as_tensor_variable(tau)
 
         self.mean = tt.as_tensor_variable(0.)
@@ -123,6 +137,18 @@ class AR(distribution.Continuous):
         self.init = init
 
     def logp(self, value):
+        """
+        Calculate log-probability of AR distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         if self.constant:
             x = tt.add(*[self.rho[i + 1] * value[self.p - (i + 1):-(i + 1)] for i in range(self.p)])
             eps = value[self.p:] - self.rho[0] - x
@@ -147,45 +173,59 @@ class GaussianRandomWalk(distribution.Continuous):
     ----------
     mu: tensor
         innovation drift, defaults to 0.0
-    sd : tensor
-        sd > 0, innovation standard deviation (only required if tau is not specified)
+    sigma : tensor
+        sigma > 0, innovation standard deviation (only required if tau is not specified)
     tau : tensor
-        tau > 0, innovation precision (only required if sd is not specified)
+        tau > 0, innovation precision (only required if sigma is not specified)
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
 
-    def __init__(self, tau=None, init=Flat.dist(), sd=None, mu=0.,
-                 *args, **kwargs):
-        super(GaussianRandomWalk, self).__init__(*args, **kwargs)
-        tau, sd = get_tau_sd(tau=tau, sd=sd)
+    def __init__(self, tau=None, init=Flat.dist(), sigma=None, mu=0.,
+                 sd=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if sd is not None:
+            sigma = sd
+        tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.tau = tau = tt.as_tensor_variable(tau)
-        self.sd = sd = tt.as_tensor_variable(sd)
+        self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
         self.mu = mu = tt.as_tensor_variable(mu)
         self.init = init
         self.mean = tt.as_tensor_variable(0.)
 
     def logp(self, x):
+        """
+        Calculate log-probability of Gaussian Random Walk distribution at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         tau = self.tau
-        sd = self.sd
+        sigma = self.sigma
         mu = self.mu
         init = self.init
 
         x_im1 = x[:-1]
         x_i = x[1:]
 
-        innov_like = Normal.dist(mu=x_im1 + mu, sd=sd).logp(x_i)
+        innov_like = Normal.dist(mu=x_im1 + mu, sigma=sigma).logp(x_i)
         return init.logp(x[0]) + tt.sum(innov_like)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         mu = dist.mu
-        sd = dist.sd
+        sigma = dist.sigma
         name = r'\text{%s}' % name
-        return r'${} \sim \text{{GaussianRandomWalk}}(\mathit{{mu}}={},~\mathit{{sd}}={})$'.format(name,
+        return r'${} \sim \text{{GaussianRandomWalk}}(\mathit{{mu}}={},~\mathit{{sigma}}={})$'.format(name,
                                                 get_variable_name(mu),
-                                                get_variable_name(sd))
+                                                get_variable_name(sigma))
 
 
 class GARCH11(distribution.Continuous):
@@ -214,7 +254,7 @@ class GARCH11(distribution.Continuous):
 
     def __init__(self, omega, alpha_1, beta_1,
                  initial_vol, *args, **kwargs):
-        super(GARCH11, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.omega = omega = tt.as_tensor_variable(omega)
         self.alpha_1 = alpha_1 = tt.as_tensor_variable(alpha_1)
@@ -236,8 +276,20 @@ class GARCH11(distribution.Continuous):
         return tt.concatenate([[self.initial_vol], vol])
 
     def logp(self, x):
+        """
+        Calculate log-probability of GARCH(1, 1) distribution at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         vol = self.get_volatility(x)
-        return tt.sum(Normal.dist(0., sd=vol).logp(x))
+        return tt.sum(Normal.dist(0., sigma=vol).logp(x))
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -267,17 +319,29 @@ class EulerMaruyama(distribution.Continuous):
         parameters of the SDE, passed as *args to sde_fn
     """
     def __init__(self, dt, sde_fn, sde_pars, *args, **kwds):
-        super(EulerMaruyama, self).__init__(*args, **kwds)
+        super().__init__(*args, **kwds)
         self.dt = dt = tt.as_tensor_variable(dt)
         self.sde_fn = sde_fn
         self.sde_pars = sde_pars
 
     def logp(self, x):
+        """
+        Calculate log-probability of EulerMaruyama distribution at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         xt = x[:-1]
         f, g = self.sde_fn(x[:-1], *self.sde_pars)
         mu = xt + self.dt * f
         sd = tt.sqrt(self.dt) * g
-        return tt.sum(Normal.dist(mu=mu, sd=sd).logp(x[1:]))
+        return tt.sum(Normal.dist(mu=mu, sigma=sd).logp(x[1:]))
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -313,7 +377,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
     """
     def __init__(self, mu=0., cov=None, tau=None, chol=None, lower=True, init=Flat.dist(),
                  *args, **kwargs):
-        super(MvGaussianRandomWalk, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.init = init
         self.innovArgs = (mu, cov, tau, chol, lower)
@@ -321,6 +385,19 @@ class MvGaussianRandomWalk(distribution.Continuous):
         self.mean = tt.as_tensor_variable(0.)
 
     def logp(self, x):
+        """
+        Calculate log-probability of Multivariate Gaussian
+        Random Walk distribution at specified value.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         x_im1 = x[:-1]
         x_i = x[1:]
 
@@ -356,9 +433,9 @@ class MvStudentTRandomWalk(MvGaussianRandomWalk):
         distribution for initial value (Defaults to Flat())
     """
     def __init__(self, nu, *args, **kwargs):
-        super(MvStudentTRandomWalk, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.nu = tt.as_tensor_variable(nu)
-        self.innov = multivariate.MvStudentT.dist(self.nu, *self.innovArgs)
+        self.innov = multivariate.MvStudentT.dist(self.nu, None, *self.innovArgs)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:

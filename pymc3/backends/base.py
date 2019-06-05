@@ -20,7 +20,7 @@ class BackendError(Exception):
     pass
 
 
-class BaseTrace(object):
+class BaseTrace:
     """Base trace object
 
     Parameters
@@ -157,12 +157,12 @@ class BaseTrace(object):
         """
         raise NotImplementedError
 
-    def get_sampler_stats(self, varname, sampler_idx=None, burn=0, thin=1):
+    def get_sampler_stats(self, stat_name, sampler_idx=None, burn=0, thin=1):
         """Get sampler statistics from the trace.
 
         Parameters
         ----------
-        varname : str
+        stat_name : str
         sampler_idx : int or None
         burn : int
         thin : int
@@ -179,21 +179,21 @@ class BaseTrace(object):
             raise ValueError("This backend does not support sampler stats")
 
         if sampler_idx is not None:
-            return self._get_sampler_stats(varname, sampler_idx, burn, thin)
+            return self._get_sampler_stats(stat_name, sampler_idx, burn, thin)
 
         sampler_idxs = [i for i, s in enumerate(self.sampler_vars)
-                        if varname in s]
+                        if stat_name in s]
         if not sampler_idxs:
-            raise KeyError("Unknown sampler stat %s" % varname)
+            raise KeyError("Unknown sampler stat %s" % stat_name)
 
-        vals = np.stack([self._get_sampler_stats(varname, i, burn, thin)
+        vals = np.stack([self._get_sampler_stats(stat_name, i, burn, thin)
                          for i in sampler_idxs], axis=-1)
         if vals.shape[-1] == 1:
             return vals[..., 0]
         else:
             return vals
 
-    def _get_sampler_stats(self, varname, sampler_idx, burn, thin):
+    def _get_sampler_stats(self, stat_name, sampler_idx, burn, thin):
         """Get sampler statistics."""
         raise NotImplementedError()
 
@@ -218,7 +218,7 @@ class BaseTrace(object):
             return set()
 
 
-class MultiTrace(object):
+class MultiTrace:
     """Main interface for accessing values from MCMC results
 
     The core method to select values is `get_values`. The method
@@ -458,13 +458,13 @@ class MultiTrace(object):
             results = [self._straces[chains].get_values(varname, burn, thin)]
         return _squeeze_cat(results, combine, squeeze)
 
-    def get_sampler_stats(self, varname, burn=0, thin=1, combine=True,
+    def get_sampler_stats(self, stat_name, burn=0, thin=1, combine=True,
                           chains=None, squeeze=True):
         """Get sampler statistics from the trace.
 
         Parameters
         ----------
-        varname : str
+        stat_name : str
         sampler_idx : int or None
         burn : int
         thin : int
@@ -477,8 +477,8 @@ class MultiTrace(object):
         a numpy array of shape (m, n), where `m` is the number of
         such samplers, and `n` is the number of samples.
         """
-        if varname not in self.stat_names:
-            raise KeyError("Unknown sampler statistic %s" % varname)
+        if stat_name not in self.stat_names:
+            raise KeyError("Unknown sampler statistic %s" % stat_name)
 
         if chains is None:
             chains = self.chains
@@ -487,7 +487,7 @@ class MultiTrace(object):
         except TypeError:
             chains = [chains]
 
-        results = [self._straces[chain].get_sampler_stats(varname, None, burn, thin)
+        results = [self._straces[chain].get_sampler_stats(stat_name, None, burn, thin)
                    for chain in chains]
         return _squeeze_cat(results, combine, squeeze)
 
@@ -549,7 +549,7 @@ def merge_traces(mtraces):
             if new_chain in base_mtrace._straces:
                 raise ValueError("Chains are not unique.")
             base_mtrace._straces[new_chain] = strace
-    base_mtrace.report = merge_reports([trace.report for trace in mtraces])
+    base_mtrace._report = merge_reports([trace.report for trace in mtraces])
     return base_mtrace
 
 

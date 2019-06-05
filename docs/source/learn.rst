@@ -1,4 +1,4 @@
-.. title:: Learn
+.. title:: Learning Resources
 
 .. raw:: html
 
@@ -48,6 +48,16 @@
                 <a href="https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy" class="header"> YouTube Playlist</a>
                 <div class="description">
                     There is an actively curated playlist of PyMC3 talks on YouTube.
+                </div>
+            </div>
+        </div>
+
+        <div class="item">
+            <i class="large youtube middle aligned icon"></i>
+            <div class="content">
+                <a href="https://github.com/junpenglao/advance-bayesian-modelling-with-PyMC3" class="header"> Advance Bayesian Modelling with PyMC3</a>
+                <div class="description">
+                    A two days advance workshop in May 2018 @CEAi in the Czech Republic.
                 </div>
             </div>
         </div>
@@ -158,7 +168,7 @@
 
         <div class="card">
             <div class="image">
-                <img src="https://dz13w8afd47il.cloudfront.net/sites/default/files/imagecache/ppv4_main_book_cover/3804OS_4958_Bayesian%20Analysis%20with%20Python.png">
+                <img src="https://raw.githubusercontent.com/aloctavodia/BAP/master/Cover.png">
             </div>
             <div class="content">
                 <div class="header">Bayesian Analysis with Python</div>
@@ -171,7 +181,7 @@
                 <tbody>
                     <tr>
                         <td>
-                            <a href="https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python">
+                            <a href="https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python-second-edition">
                                 <i class="linkify icon"></i> Book website
                             </a>
                         </td>

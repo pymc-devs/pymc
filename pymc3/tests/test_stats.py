@@ -55,12 +55,12 @@ def test_compare():
 
     with pm.Model() as model0:
         mu = pm.Normal('mu', 0, 1)
-        x = pm.Normal('x', mu=mu, sd=1, observed=x_obs)
+        x = pm.Normal('x', mu=mu, sigma=1, observed=x_obs)
         trace0 = pm.sample(1000)
 
     with pm.Model() as model1:
         mu = pm.Normal('mu', 0, 1)
-        x = pm.Normal('x', mu=mu, sd=0.8, observed=x_obs)
+        x = pm.Normal('x', mu=mu, sigma=0.8, observed=x_obs)
         trace1 = pm.sample(1000)
 
     with pm.Model() as model2:
@@ -89,7 +89,7 @@ def test_compare():
     models = [model0, model1, model2]
 
     model_dict = dict(zip(models, traces))
-    
+
     w_st = pm.compare(model_dict, method='stacking')['weight']
     w_bb_bma = pm.compare(model_dict, method='BB-pseudo-BMA')['weight']
     w_bma = pm.compare(model_dict, method='pseudo-BMA')['weight']
@@ -106,7 +106,7 @@ def test_compare():
 class TestStats(SeededTest):
     @classmethod
     def setup_class(cls):
-        super(TestStats, cls).setup_class()
+        super().setup_class()
         cls.normal_sample = normal(0, 1, 200000)
 
     def test_autocorr(self):
@@ -331,7 +331,7 @@ class TestDfSummary(bf.ModelBackendSampledTestCase):
                     pm.summary(trace, varnames=[varname])['n_eff']
                                  ).reshape(n_eff.shape)
             npt.assert_equal(n_eff, n_eff_df)
-            
+
             # test Rhat value
             rhat = pm.gelman_rubin(trace, varnames=[varname])[varname]
             rhat_df = np.asarray(

@@ -5,11 +5,16 @@ import theano.tensor as tt
 import theano
 
 from pymc3.distributions.distribution import (
-    Distribution, Discrete, Continuous, draw_values, generate_samples)
+    Distribution,
+    Discrete,
+    Continuous,
+    draw_values,
+    generate_samples,
+)
 from pymc3.distributions import transforms
 from pymc3.distributions.dist_math import bound
 
-__all__ = ['Bound']
+__all__ = ["Bound"]
 
 
 class _Bounded(Distribution):
@@ -23,17 +28,30 @@ class _Bounded(Distribution):
             for name in defaults:
                 setattr(self, name, getattr(self._wrapped, name))
         else:
-            defaults = ('_default',)
+            defaults = ("_default",)
             self._default = default
 
-        super(_Bounded, self).__init__(
+        super().__init__(
             shape=self._wrapped.shape,
             dtype=self._wrapped.dtype,
             testval=self._wrapped.testval,
             defaults=defaults,
-            transform=self._wrapped.transform)
+            transform=self._wrapped.transform,
+        )
 
     def logp(self, value):
+        """
+        Calculate log-probability of Bounded distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         logp = self._wrapped.logp(value)
         bounds = []
         if self.lower is not None:
@@ -49,49 +67,83 @@ class _Bounded(Distribution):
         lower = np.asarray(lower)
         upper = np.asarray(upper)
         if lower.size > 1 or upper.size > 1:
-            raise ValueError('Drawing samples from distributions with '
-                             'array-valued bounds is not supported.')
-        samples = np.zeros(size, dtype=self.dtype).flatten()
-        i, n = 0, len(samples)
-        while i < len(samples):
-            sample = np.atleast_1d(self._wrapped.random(point=point, size=n))
+            raise ValueError(
+                "Drawing samples from distributions with "
+                "array-valued bounds is not supported."
+            )
+        total_size = np.prod(size).astype(np.int)
+        samples = []
+        s = 0
+        while s < total_size:
+            sample = np.atleast_1d(
+                self._wrapped.random(point=point, size=total_size)
+            ).flatten()
 
             select = sample[np.logical_and(sample >= lower, sample <= upper)]
-            samples[i:(i + len(select))] = select[:]
-            i += len(select)
-            n -= len(select)
+            samples.append(select)
+            s += len(select)
         if size is not None:
-            return np.reshape(samples, size)
+            return np.reshape(np.concatenate(samples)[:total_size], size)
         else:
-            return samples
+            return samples[0]
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Bounded distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         if self.lower is None and self.upper is None:
             return self._wrapped.random(point=point, size=size)
         elif self.lower is not None and self.upper is not None:
             lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
-            return generate_samples(self._random, lower, upper, point,
-                                    dist_shape=self.shape,
-                                    size=size)
+            return generate_samples(
+                self._random,
+                lower,
+                upper,
+                dist_shape=self.shape,
+                size=size,
+                not_broadcast_kwargs={'point': point},
+            )
         elif self.lower is not None:
             lower = draw_values([self.lower], point=point, size=size)
-            return generate_samples(self._random, lower, np.inf, point,
-                                    dist_shape=self.shape,
-                                    size=size)
+            return generate_samples(
+                self._random,
+                lower,
+                np.inf,
+                dist_shape=self.shape,
+                size=size,
+                not_broadcast_kwargs={'point': point},
+            )
         else:
             upper = draw_values([self.upper], point=point, size=size)
-            return generate_samples(self._random, -np.inf, upper, point,
-                                    dist_shape=self.shape,
-                                    size=size)
+            return generate_samples(
+                self._random,
+                -np.inf,
+                upper,
+                dist_shape=self.shape,
+                size=size,
+                not_broadcast_kwargs={'point': point},
+            )
 
 
 class _DiscreteBounded(_Bounded, Discrete):
-    def __init__(self, distribution, lower, upper,
-                 transform='infer', *args, **kwargs):
-        if transform == 'infer':
+    def __init__(self, distribution, lower, upper, transform="infer", *args, **kwargs):
+        if transform == "infer":
             transform = None
         if transform is not None:
-            raise ValueError('Can not transform discrete variable.')
+            raise ValueError("Can not transform discrete variable.")
 
         if lower is None and upper is None:
             default = None
@@ -102,13 +154,13 @@ class _DiscreteBounded(_Bounded, Discrete):
         if lower is not None:
             default = lower + 1
 
-        super(_DiscreteBounded, self).__init__(
-            distribution=distribution, lower=lower, upper=upper,
-            default=default, *args, **kwargs)
+        super().__init__(
+            distribution, lower, upper, default, *args, transform=transform, **kwargs
+        )
 
 
 class _ContinuousBounded(_Bounded, Continuous):
-    R"""
+    r"""
     An upper, lower or upper+lower bounded distribution
 
     Parameters
@@ -125,16 +177,15 @@ class _ContinuousBounded(_Bounded, Continuous):
         See pymc3.distributions.transforms for more information.
     """
 
-    def __init__(self, distribution, lower, upper,
-                 transform='infer', *args, **kwargs):
-        dtype = kwargs.get('dtype', theano.config.floatX)
+    def __init__(self, distribution, lower, upper, transform="infer", *args, **kwargs):
+        dtype = kwargs.get("dtype", theano.config.floatX)
 
         if lower is not None:
             lower = tt.as_tensor_variable(lower).astype(dtype)
         if upper is not None:
             upper = tt.as_tensor_variable(upper).astype(dtype)
 
-        if transform == 'infer':
+        if transform == "infer":
             if lower is None and upper is None:
                 transform = None
                 default = None
@@ -150,13 +201,13 @@ class _ContinuousBounded(_Bounded, Continuous):
         else:
             default = None
 
-        super(_ContinuousBounded, self).__init__(
-            distribution=distribution, lower=lower, upper=upper,
-            transform=transform, default=default, *args, **kwargs)
+        super().__init__(
+            distribution, lower, upper, default, *args, transform=transform, **kwargs
+        )
 
 
-class Bound(object):
-    R"""
+class Bound:
+    r"""
     Create a Bound variable object that can be applied to create
     a new upper, lower, or upper and lower bounded distribution.
 
@@ -182,15 +233,15 @@ class Bound(object):
 
         with pm.Model():
             NegativeNormal = pm.Bound(pm.Normal, upper=0.0)
-            par1 = NegativeNormal('par`', mu=0.0, sd=1.0, testval=-0.5)
+            par1 = NegativeNormal('par`', mu=0.0, sigma=1.0, testval=-0.5)
             # you can use the Bound object multiple times to
             # create multiple bounded random variables
-            par1_1 = NegativeNormal('par1_1', mu=-1.0, sd=1.0, testval=-1.5)
+            par1_1 = NegativeNormal('par1_1', mu=-1.0, sigma=1.0, testval=-1.5)
 
             # you can also define a Bound implicitly, while applying
             # it to a random variable
             par2 = pm.Bound(pm.Normal, lower=-1.0, upper=1.0)(
-                    'par2', mu=0.0, sd=1.0, testval=1.0)
+                    'par2', mu=0.0, sigma=1.0, testval=1.0)
     """
 
     def __init__(self, distribution, lower=None, upper=None):
@@ -207,30 +258,49 @@ class Bound(object):
         self.upper = upper
 
     def __call__(self, name, *args, **kwargs):
-        if 'observed' in kwargs:
-            raise ValueError('Observed Bound distributions are not supported. '
-                             'If you want to model truncated data '
-                             'you can use a pm.Potential in combination '
-                             'with the cumulative probability function. See '
-                             'pymc3/examples/censored_data.py for an example.')
-
-        if issubclass(self.distribution, Continuous):
-            return _ContinuousBounded(name, self.distribution,
-                                      self.lower, self.upper, *args, **kwargs)
-        elif issubclass(self.distribution, Discrete):
-            return _DiscreteBounded(name, self.distribution,
-                                    self.lower, self.upper, *args, **kwargs)
-        else:
+        if "observed" in kwargs:
             raise ValueError(
-                'Distribution is neither continuous nor discrete.')
+                "Observed Bound distributions are not supported. "
+                "If you want to model truncated data "
+                "you can use a pm.Potential in combination "
+                "with the cumulative probability function. See "
+                "pymc3/examples/censored_data.py for an example."
+            )
+
+        transform = kwargs.pop("transform", "infer")
+        if issubclass(self.distribution, Continuous):
+            return _ContinuousBounded(
+                name,
+                self.distribution,
+                self.lower,
+                self.upper,
+                transform,
+                *args,
+                **kwargs
+            )
+        elif issubclass(self.distribution, Discrete):
+            return _DiscreteBounded(
+                name,
+                self.distribution,
+                self.lower,
+                self.upper,
+                transform,
+                *args,
+                **kwargs
+            )
+        else:
+            raise ValueError("Distribution is neither continuous nor discrete.")
 
     def dist(self, *args, **kwargs):
         if issubclass(self.distribution, Continuous):
             return _ContinuousBounded.dist(
-                self.distribution, self.lower, self.upper, *args, **kwargs)
+                self.distribution, self.lower, self.upper, *args, **kwargs
+            )
 
         elif issubclass(self.distribution, Discrete):
             return _DiscreteBounded.dist(
-                self.distribution, self.lower, self.upper, *args, **kwargs)
+                self.distribution, self.lower, self.upper, *args, **kwargs
+            )
         else:
-            raise ValueError('Distribution is neither continuous nor discrete.')
+            raise ValueError("Distribution is neither continuous nor discrete.")
+

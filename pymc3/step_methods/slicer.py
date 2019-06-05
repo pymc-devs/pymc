@@ -44,7 +44,7 @@ class Slice(ArrayStep):
             vars = self.model.cont_vars
         vars = inputvars(vars)
 
-        super(Slice, self).__init__(vars, [self.model.fastlogp], **kwargs)
+        super().__init__(vars, [self.model.fastlogp], **kwargs)
 
     def astep(self, q0, logp):
         self.w = np.resize(self.w, len(q0))  # this is a repmat
@@ -101,4 +101,3 @@ class Slice(ArrayStep):
                 return Competence.PREFERRED
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
-       

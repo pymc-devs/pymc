@@ -865,7 +865,7 @@ def adamax(loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9,
            beta2=0.999, epsilon=1e-8):
     """Adamax updates
 
-    Adamax updates implemented as in [1]_. This is a variant of of the Adam
+    Adamax updates implemented as in [1]_. This is a variant of the Adam
     algorithm based on the infinity norm.
 
     Parameters

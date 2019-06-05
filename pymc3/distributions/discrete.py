@@ -1,5 +1,4 @@
 import numpy as np
-import theano
 import theano.tensor as tt
 from scipy import stats
 import warnings
@@ -7,7 +6,9 @@ import warnings
 from pymc3.util import get_variable_name
 from .dist_math import bound, factln, binomln, betaln, logpow, random_choice
 from .distribution import Discrete, draw_values, generate_samples
+from .shape_utils import broadcast_distribution_samples
 from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
+from ..theanof import floatX, intX
 
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
@@ -59,18 +60,47 @@ class Binomial(Discrete):
     """
 
     def __init__(self, n, p, *args, **kwargs):
-        super(Binomial, self).__init__(*args, **kwargs)
-        self.n = n = tt.as_tensor_variable(n)
-        self.p = p = tt.as_tensor_variable(p)
+        super().__init__(*args, **kwargs)
+        self.n = n = tt.as_tensor_variable(intX(n))
+        self.p = p = tt.as_tensor_variable(floatX(p))
         self.mode = tt.cast(tround(n * p), self.dtype)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Binomial distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         n, p = draw_values([self.n, self.p], point=point, size=size)
         return generate_samples(stats.binom.rvs, n=n, p=p,
                                 dist_shape=self.shape,
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Binomial distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         n = self.n
         p = self.p
 
@@ -145,10 +175,10 @@ class BetaBinomial(Discrete):
     """
 
     def __init__(self, alpha, beta, n, *args, **kwargs):
-        super(BetaBinomial, self).__init__(*args, **kwargs)
-        self.alpha = alpha = tt.as_tensor_variable(alpha)
-        self.beta = beta = tt.as_tensor_variable(beta)
-        self.n = n = tt.as_tensor_variable(n)
+        super().__init__(*args, **kwargs)
+        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
+        self.beta = beta = tt.as_tensor_variable(floatX(beta))
+        self.n = n = tt.as_tensor_variable(intX(n))
         self.mode = tt.cast(tround(alpha / (alpha + beta)), 'int8')
 
     def _random(self, alpha, beta, n, size=None):
@@ -171,6 +201,22 @@ class BetaBinomial(Discrete):
         return samples
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from BetaBinomial distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         alpha, beta, n = \
             draw_values([self.alpha, self.beta, self.n], point=point, size=size)
         return generate_samples(self._random, alpha=alpha, beta=beta, n=n,
@@ -178,6 +224,19 @@ class BetaBinomial(Discrete):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of BetaBinomial distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         alpha = self.alpha
         beta = self.beta
         return bound(binomln(self.n, value)
@@ -238,27 +297,56 @@ class Bernoulli(Discrete):
     """
 
     def __init__(self, p=None, logit_p=None, *args, **kwargs):
-        super(Bernoulli, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if sum(int(var is None) for var in [p, logit_p]) != 1:
             raise ValueError('Specify one of p and logit_p')
         if p is not None:
             self._is_logit = False
-            self.p = p = tt.as_tensor_variable(p)
+            self.p = p = tt.as_tensor_variable(floatX(p))
             self._logit_p = logit(p)
         else:
             self._is_logit = True
-            self.p = tt.nnet.sigmoid(logit_p)
+            self.p = tt.nnet.sigmoid(floatX(logit_p))
             self._logit_p = tt.as_tensor_variable(logit_p)
 
         self.mode = tt.cast(tround(self.p), 'int8')
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Bernoulli distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         p = draw_values([self.p], point=point, size=size)[0]
         return generate_samples(stats.bernoulli.rvs, p,
                                 dist_shape=self.shape,
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Bernoulli distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         if self._is_logit:
             lp = tt.switch(value, self._logit_p, -self._logit_p)
             return -log1pexp(-lp)
@@ -317,14 +405,27 @@ class DiscreteWeibull(Discrete):
     ========  ======================
     """
     def __init__(self, q, beta, *args, **kwargs):
-        super(DiscreteWeibull, self).__init__(*args, defaults=('median',), **kwargs)
+        super().__init__(*args, defaults=('median',), **kwargs)
 
-        self.q = q = tt.as_tensor_variable(q)
-        self.beta = beta = tt.as_tensor_variable(beta)
+        self.q = q = tt.as_tensor_variable(floatX(q))
+        self.beta = beta = tt.as_tensor_variable(floatX(beta))
 
         self.median = self._ppf(0.5)
 
     def logp(self, value):
+        """
+        Calculate log-probability of DiscreteWeibull distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         q = self.q
         beta = self.beta
 
@@ -349,6 +450,22 @@ class DiscreteWeibull(Discrete):
         return np.ceil(np.power(np.log(1 - p) / np.log(q), 1. / beta)) - 1
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from DiscreteWeibull distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         q, beta = draw_values([self.q, self.beta], point=point, size=size)
 
         return generate_samples(self._random, q, beta,
@@ -411,17 +528,46 @@ class Poisson(Discrete):
     """
 
     def __init__(self, mu, *args, **kwargs):
-        super(Poisson, self).__init__(*args, **kwargs)
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.mode = tt.floor(mu).astype('int32')
+        super().__init__(*args, **kwargs)
+        self.mu = mu = tt.as_tensor_variable(floatX(mu))
+        self.mode = intX(tt.floor(mu))
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Poisson distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu = draw_values([self.mu], point=point, size=size)[0]
         return generate_samples(stats.poisson.rvs, mu,
                                 dist_shape=self.shape,
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Poisson distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         mu = self.mu
         log_prob = bound(
             logpow(mu, value) - factln(value) - mu,
@@ -490,12 +636,28 @@ class NegativeBinomial(Discrete):
     """
 
     def __init__(self, mu, alpha, *args, **kwargs):
-        super(NegativeBinomial, self).__init__(*args, **kwargs)
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.alpha = alpha = tt.as_tensor_variable(alpha)
-        self.mode = tt.floor(mu).astype('int32')
+        super().__init__(*args, **kwargs)
+        self.mu = mu = tt.as_tensor_variable(floatX(mu))
+        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
+        self.mode = intX(tt.floor(mu))
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from NegativeBinomial distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, alpha = draw_values([self.mu, self.alpha], point=point, size=size)
         g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
                              dist_shape=self.shape,
@@ -504,6 +666,19 @@ class NegativeBinomial(Discrete):
         return np.asarray(stats.poisson.rvs(g)).reshape(g.shape)
 
     def logp(self, value):
+        """
+        Calculate log-probability of NegativeBinomial distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         mu = self.mu
         alpha = self.alpha
         negbinom = bound(binomln(value + alpha - 1, value)
@@ -565,17 +740,46 @@ class Geometric(Discrete):
     """
 
     def __init__(self, p, *args, **kwargs):
-        super(Geometric, self).__init__(*args, **kwargs)
-        self.p = p = tt.as_tensor_variable(p)
+        super().__init__(*args, **kwargs)
+        self.p = p = tt.as_tensor_variable(floatX(p))
         self.mode = 1
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Geometric distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         p = draw_values([self.p], point=point, size=size)[0]
         return generate_samples(np.random.geometric, p,
                                 dist_shape=self.shape,
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Geometric distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         p = self.p
         return bound(tt.log(p) + logpow(1 - p, value - 1),
                      0 <= p, p <= 1, value >= 1)
@@ -594,7 +798,7 @@ class DiscreteUniform(Discrete):
     Discrete uniform distribution.
     The pmf of this distribution is
 
-    .. math:: f(x \mid lower, upper) = \frac{1}{upper-lower}
+    .. math:: f(x \mid lower, upper) = \frac{1}{upper-lower+1}
 
     .. plot::
 
@@ -606,7 +810,7 @@ class DiscreteUniform(Discrete):
         us = [6, 2]
         for l, u in zip(ls, us):
             x = np.arange(l, u+1)
-            pmf = [1 / (u - l)] * len(x)
+            pmf = [1.0 / (u - l + 1)] * len(x)
             plt.plot(x, pmf, '-o', label='lower = {}, upper = {}'.format(l, u))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
@@ -629,11 +833,11 @@ class DiscreteUniform(Discrete):
     """
 
     def __init__(self, lower, upper, *args, **kwargs):
-        super(DiscreteUniform, self).__init__(*args, **kwargs)
-        self.lower = tt.floor(lower).astype('int32')
-        self.upper = tt.floor(upper).astype('int32')
+        super().__init__(*args, **kwargs)
+        self.lower = intX(tt.floor(lower))
+        self.upper = intX(tt.floor(upper))
         self.mode = tt.maximum(
-            tt.floor((upper + lower) / 2.).astype('int32'), self.lower)
+            intX(tt.floor((upper + lower) / 2.)), self.lower)
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
@@ -642,6 +846,22 @@ class DiscreteUniform(Discrete):
         return samples
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from DiscreteUniform distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
         return generate_samples(self._random,
                                 lower, upper,
@@ -649,6 +869,19 @@ class DiscreteUniform(Discrete):
                                 size=size)
 
     def logp(self, value):
+        """
+        Calculate log-probability of DiscreteUniform distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         upper = self.upper
         lower = self.lower
         return bound(-tt.log(upper - lower + 1),
@@ -701,17 +934,39 @@ class Categorical(Discrete):
     """
 
     def __init__(self, p, *args, **kwargs):
-        super(Categorical, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         try:
             self.k = tt.shape(p)[-1].tag.test_value
         except AttributeError:
             self.k = tt.shape(p)[-1]
-        p = tt.as_tensor_variable(p)
-        self.p = (p.T / tt.sum(p, -1)).T
-        self.mode = tt.argmax(p)
+        p = tt.as_tensor_variable(floatX(p))
+
+        # From #2082, it may be dangerous to automatically rescale p at this
+        # point without checking for positiveness
+        self.p = p
+        self.mode = tt.argmax(p, axis=-1)
+        if self.mode.ndim == 1:
+            self.mode = tt.squeeze(self.mode)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Categorical distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         p, k = draw_values([self.p, self.k], point=point, size=size)
+        p = p / np.sum(p, axis=-1, keepdims=True)
 
         return generate_samples(random_choice,
                                 p=p,
@@ -720,21 +975,35 @@ class Categorical(Discrete):
                                 size=size)
 
     def logp(self, value):
-        p = self.p
+        """
+        Calculate log-probability of Categorical distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        p_ = self.p
         k = self.k
 
         # Clip values before using them for indexing
         value_clip = tt.clip(value, 0, k - 1)
 
-        sumto1 = theano.gradient.zero_grad(
-            tt.le(abs(tt.sum(p, axis=-1) - 1), 1e-5))
+        p = p_ / tt.sum(p_, axis=-1, keepdims=True)
 
         if p.ndim > 1:
-            a = tt.log(p[tt.arange(p.shape[0]), value_clip])
+            pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
+            a = tt.log(p.dimshuffle(pattern)[value_clip])
         else:
             a = tt.log(p[value_clip])
 
-        return bound(a, value >= 0, value <= (k - 1), sumto1)
+        return bound(a, value >= 0, value <= (k - 1),
+                     tt.all(p_ >= 0, axis=-1), tt.all(p <= 1, axis=-1))
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -758,10 +1027,26 @@ class Constant(Discrete):
     def __init__(self, c, *args, **kwargs):
         warnings.warn("Constant has been deprecated. We recommend using a Deterministic object instead.",
                     DeprecationWarning)
-        super(Constant, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from Constant distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         c = draw_values([self.c], point=point, size=size)[0]
         dtype = np.array(c).dtype
 
@@ -772,6 +1057,19 @@ class Constant(Discrete):
                                 size=size).astype(dtype)
 
     def logp(self, value):
+        """
+        Calculate log-probability of Constant distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         c = self.c
         return bound(0, tt.eq(value, c))
 
@@ -836,20 +1134,50 @@ class ZeroInflatedPoisson(Discrete):
     """
 
     def __init__(self, psi, theta, *args, **kwargs):
-        super(ZeroInflatedPoisson, self).__init__(*args, **kwargs)
-        self.theta = theta = tt.as_tensor_variable(theta)
-        self.psi = psi = tt.as_tensor_variable(psi)
+        super().__init__(*args, **kwargs)
+        self.theta = theta = tt.as_tensor_variable(floatX(theta))
+        self.psi = psi = tt.as_tensor_variable(floatX(psi))
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from ZeroInflatedPoisson distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         theta, psi = draw_values([self.theta, self.psi], point=point, size=size)
         g = generate_samples(stats.poisson.rvs, theta,
                              dist_shape=self.shape,
                              size=size)
-        return g * (np.random.random(np.squeeze(g.shape)) < psi)
+        g, psi = broadcast_distribution_samples([g, psi], size=size)
+        return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
+        """
+        Calculate log-probability of ZeroInflatedPoisson distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         psi = self.psi
         theta = self.theta
 
@@ -927,21 +1255,51 @@ class ZeroInflatedBinomial(Discrete):
     """
 
     def __init__(self, psi, n, p, *args, **kwargs):
-        super(ZeroInflatedBinomial, self).__init__(*args, **kwargs)
-        self.n = n = tt.as_tensor_variable(n)
-        self.p = p = tt.as_tensor_variable(p)
-        self.psi = psi = tt.as_tensor_variable(psi)
+        super().__init__(*args, **kwargs)
+        self.n = n = tt.as_tensor_variable(intX(n))
+        self.p = p = tt.as_tensor_variable(floatX(p))
+        self.psi = psi = tt.as_tensor_variable(floatX(psi))
         self.bin = Binomial.dist(n, p)
         self.mode = self.bin.mode
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from ZeroInflatedBinomial distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         n, p, psi = draw_values([self.n, self.p, self.psi], point=point, size=size)
         g = generate_samples(stats.binom.rvs, n, p,
                              dist_shape=self.shape,
                              size=size)
-        return g * (np.random.random(np.squeeze(g.shape)) < psi)
+        g, psi = broadcast_distribution_samples([g, psi], size=size)
+        return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
+        """
+        Calculate log-probability of ZeroInflatedBinomial distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         psi = self.psi
         p = self.p
         n = self.n
@@ -1043,23 +1401,53 @@ class ZeroInflatedNegativeBinomial(Discrete):
     """
 
     def __init__(self, psi, mu, alpha, *args, **kwargs):
-        super(ZeroInflatedNegativeBinomial, self).__init__(*args, **kwargs)
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.alpha = alpha = tt.as_tensor_variable(alpha)
-        self.psi = psi = tt.as_tensor_variable(psi)
+        super().__init__(*args, **kwargs)
+        self.mu = mu = tt.as_tensor_variable(floatX(mu))
+        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
+        self.psi = psi = tt.as_tensor_variable(floatX(psi))
         self.nb = NegativeBinomial.dist(mu, alpha)
         self.mode = self.nb.mode
 
     def random(self, point=None, size=None):
+        """
+        Draw random values from ZeroInflatedNegativeBinomial distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
         mu, alpha, psi = draw_values(
             [self.mu, self.alpha, self.psi], point=point, size=size)
         g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        return stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
+        g, psi = broadcast_distribution_samples([g, psi], size=size)
+        return stats.poisson.rvs(g) * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
+        """
+        Calculate log-probability of ZeroInflatedNegativeBinomial distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
         alpha = self.alpha
         mu = self.mu
         psi = self.psi
@@ -1148,7 +1536,7 @@ class OrderedLogistic(Categorical):
 
         # Ordered logistic regression
         with pm.Model() as model:
-            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sd=10, shape=2,
+            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
                                   transform=pm.distributions.transforms.ordered)
             y_ = pm.OrderedLogistic("y", cutpoints=cutpoints, eta=x, observed=y)
             tr = pm.sample(1000)
@@ -1163,7 +1551,7 @@ class OrderedLogistic(Categorical):
     """
 
     def __init__(self, eta, cutpoints, *args, **kwargs):
-        self.eta = tt.as_tensor_variable(eta)
+        self.eta = tt.as_tensor_variable(floatX(eta))
         self.cutpoints = tt.as_tensor_variable(cutpoints)
 
         pa = sigmoid(tt.shape_padleft(self.cutpoints) - tt.shape_padright(self.eta))
@@ -1171,10 +1559,10 @@ class OrderedLogistic(Categorical):
             tt.zeros_like(tt.shape_padright(pa[:, 0])),
             pa,
             tt.ones_like(tt.shape_padright(pa[:, 0]))
-        ], axis=1)
+        ], axis=-1)
         p = p_cum[:, 1:] - p_cum[:, :-1]
 
-        super(OrderedLogistic, self).__init__(p=p, *args, **kwargs)
+        super().__init__(p=p, *args, **kwargs)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:

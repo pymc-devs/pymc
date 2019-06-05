@@ -9,7 +9,7 @@ __all__ = [
 ]
 
 
-class Callback(object):
+class Callback:
     def __call__(self, approx, loss, i):
         raise NotImplementedError
 
@@ -96,7 +96,7 @@ class Tracker(Callback):
 
     Examples
     --------
-    Consider we want time on each iteration    
+    Consider we want time on each iteration
     >>> import time
     >>> tracker = Tracker(time=time.time)
     >>> with model:

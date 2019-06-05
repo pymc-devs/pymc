@@ -1,0 +1,20 @@
+Gallery.contents = {
+    "api_quickstart": "Basics",
+    "variational_api_quickstart": "Basics",
+    "PyMC3_and_Theano.rst": "Basics",
+    "Probability_Distributions.rst": "Basics",
+    "Gaussian_Processes.rst": "Basics",
+    "data_container": "Basics",
+    "sampling_compound_step": "Deep dives",
+    "sampler-stats": "Deep dives",
+    "Diagnosing_biased_Inference_with_Divergences": "Deep dives",
+    "Advanced_usage_of_Theano_in_PyMC3.rst": "Deep dives",
+    "getting_started": "Deep dives",
+    "PyMC3_tips_and_heuristic": "How-To",
+    "blackbox_external_likelihood": "How-To",
+    "profiling": "How-To",
+    "howto_debugging": "How-To",
+    "model_averaging": "How-To",
+    "updating_priors": "How-To",
+    "lasso_block_update": "How-To"
+}

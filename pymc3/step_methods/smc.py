@@ -5,20 +5,20 @@ import numpy as np
 import theano
 import pymc3 as pm
 from tqdm import tqdm
+import multiprocessing as mp
 
 from .arraystep import metrop_select
 from .metropolis import MultivariateNormalProposal
+from .smc_utils import _initial_population, _calc_covariance, _tune, _posterior_to_trace
 from ..theanof import floatX, make_shared_replacements, join_nonshared_inputs, inputvars
 from ..model import modelcontext
-from ..backends.ndarray import NDArray
-from ..backends.base import MultiTrace
 
 
 __all__ = ["SMC", "sample_smc"]
 
 
 class SMC:
-    """
+    R"""
     Sequential Monte Carlo step
 
     Parameters
@@ -43,8 +43,39 @@ class SMC:
         Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
         the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
         It should be between 0 and 1.
+    parallel : bool
+        Distribute computations across cores if the number of cores is larger than 1
+        (see pm.sample() for details). Defaults to True.
     model : :class:`pymc3.Model`
         Optional model for sampling step. Defaults to None (taken from context).
+
+    Notes
+    -----
+    SMC works by moving from successive stages. At each stage the inverse temperature \beta is
+    increased a little bit (starting from 0 up to 1). When \beta = 0 we have the prior distribution
+    and when \beta =1 we have the posterior distribution. So in more general terms we are always
+    computing samples from a tempered posterior that we can write as:
+
+    p(\theta \mid y)_{\beta} = p(y \mid \theta)^{\beta} p(\theta)
+
+    A summary of the algorithm is:
+
+     1. Initialize \beta at zero and stage at zero.
+     2. Generate N samples S_{\beta} from the prior (because when \beta = 0 the tempered posterior
+        is the prior).
+     3. Increase \beta in order to make the effective sample size equals some predefined value
+        (we use N*t, where t is 0.5 by default).
+     4. Compute a set of N importance weights W. The weights are computed as the ratio of the
+        likelihoods of a sample at stage i+1 and stage i.
+     5. Obtain S_{w} by re-sampling according to W.
+     6. Use W to compute the covariance for the proposal distribution.
+     7. For stages other than 0 use the acceptance rate from the previous stage to estimate the
+        scaling of the proposal distribution and n_steps.
+     8. Run N Metropolis chains (each one of length n_steps), starting each one from a different
+        sample in S_{w}.
+     9. Repeat from step 3 until \beta \ge 1.
+    10. The final result is a collection of N samples from the posterior.
+
 
     References
     ----------
@@ -68,6 +99,7 @@ class SMC:
         tune_scaling=True,
         tune_steps=True,
         threshold=0.5,
+        parallel=True,
     ):
 
         self.n_steps = n_steps
@@ -77,9 +109,10 @@ class SMC:
         self.tune_scaling = tune_scaling
         self.tune_steps = tune_steps
         self.threshold = threshold
+        self.parallel = parallel
 
 
-def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed=-1):
+def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None, random_seed=-1):
     """
     Sequential Monte Carlo sampling
 
@@ -90,6 +123,8 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
         independent Markov Chains. Defaults to 5000.
     step : :class:`SMC`
         SMC initialization object
+    cores : int
+        The number of chains to run in parallel.
     progressbar : bool
         Flag for displaying a progress bar
     model : pymc3 Model
@@ -102,9 +137,10 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
     if random_seed != -1:
         np.random.seed(random_seed)
 
-    beta = 0.
+    beta = 0.0
     stage = 0
-    acc_rate = 1.
+    accepted = 0
+    acc_rate = 1.0
     proposed = draws * step.n_steps
     model.marginal_likelihood = 1
     variables = inputvars(model.vars)
@@ -135,49 +171,43 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
         # compute scaling (optional) and number of Markov chains steps (optional), based on the
         # acceptance rate of the previous stage
         if (step.tune_scaling or step.tune_steps) and stage > 0:
-            if step.tune_scaling:
-                step.scaling = _tune(acc_rate)
-            if step.tune_steps:
-                acc_rate = max(1. / proposed, acc_rate)
-                step.n_steps = min(
-                    step.max_steps, 1 + int(np.log(step.p_acc_rate) / np.log(1 - acc_rate))
-                )
+            _tune(acc_rate, proposed, step)
 
-        pm._log.info(
-            "Stage: {:d} Beta: {:f} Steps: {:d}".format(stage, beta, step.n_steps, acc_rate)
-        )
+        pm._log.info("Stage: {:d} Beta: {:.3f} Steps: {:d}".format(stage, beta, step.n_steps))
         # Apply Metropolis kernel (mutation)
         proposed = draws * step.n_steps
-        accepted = 0.
         priors = np.array([prior_logp(sample) for sample in posterior]).squeeze()
-        tempered_post = priors + likelihoods * beta
-        for draw in tqdm(range(draws), disable=not progressbar):
-            old_tempered_post = tempered_post[draw]
-            q_old = posterior[draw]
-            deltas = np.squeeze(proposal(step.n_steps) * step.scaling)
-            for n_step in range(step.n_steps):
-                delta = deltas[n_step]
+        tempered_logp = priors + likelihoods * beta
+        deltas = np.squeeze(proposal(step.n_steps) * step.scaling)
 
-                if any_discrete:
-                    if all_discrete:
-                        delta = np.round(delta, 0).astype("int64")
-                        q_old = q_old.astype("int64")
-                        q_new = (q_old + delta).astype("int64")
-                    else:
-                        delta[discrete] = np.round(delta[discrete], 0)
-                        q_new = floatX(q_old + delta)
-                else:
-                    q_new = floatX(q_old + delta)
+        parameters = (
+            proposal,
+            step.scaling,
+            accepted,
+            any_discrete,
+            all_discrete,
+            discrete,
+            step.n_steps,
+            prior_logp,
+            likelihood_logp,
+            beta,
+        )
 
-                new_tempered_post = prior_logp(q_new) + likelihood_logp(q_new)[0] * beta
+        if step.parallel and cores > 1:
+            pool = mp.Pool(processes=cores)
+            results = pool.starmap(
+                _metrop_kernel,
+                [(posterior[draw], tempered_logp[draw], *parameters) for draw in range(draws)],
+            )
+        else:
+            results = [
+                _metrop_kernel(posterior[draw], tempered_logp[draw], *parameters)
+                for draw in tqdm(range(draws), disable=not progressbar)
+            ]
 
-                q_old, accept = metrop_select(new_tempered_post - old_tempered_post, q_new, q_old)
-                if accept:
-                    accepted += 1
-                    posterior[draw] = q_old
-                    old_tempered_post = new_tempered_post
-
-        acc_rate = accepted / proposed
+        posterior, acc_list = zip(*results)
+        posterior = np.array(posterior)
+        acc_rate = sum(acc_list) / proposed
         stage += 1
 
     trace = _posterior_to_trace(posterior, variables, model, var_info)
@@ -185,23 +215,46 @@ def sample_smc(draws=5000, step=None, progressbar=False, model=None, random_seed
     return trace
 
 
-def _initial_population(draws, model, variables):
+def _metrop_kernel(
+    q_old,
+    old_tempered_logp,
+    proposal,
+    scaling,
+    accepted,
+    any_discrete,
+    all_discrete,
+    discrete,
+    n_steps,
+    prior_logp,
+    likelihood_logp,
+    beta,
+):
     """
-    Create an initial population from the prior
+    Metropolis kernel
     """
+    deltas = np.squeeze(proposal(n_steps) * scaling)
+    for n_step in range(n_steps):
+        delta = deltas[n_step]
 
-    population = []
-    var_info = {}
-    start = model.test_point
-    init_rnd = pm.sample_prior_predictive(draws, model=model)
-    for v in variables:
-        var_info[v.name] = (start[v.name].shape, start[v.name].size)
+        if any_discrete:
+            if all_discrete:
+                delta = np.round(delta, 0).astype("int64")
+                q_old = q_old.astype("int64")
+                q_new = (q_old + delta).astype("int64")
+            else:
+                delta[discrete] = np.round(delta[discrete], 0)
+                q_new = floatX(q_old + delta)
+        else:
+            q_new = floatX(q_old + delta)
 
-    for i in range(draws):
-        point = pm.Point({v.name: init_rnd[v.name][i] for v in variables}, model=model)
-        population.append(model.dict_to_array(point))
+        new_tempered_logp = prior_logp(q_new) + likelihood_logp(q_new)[0] * beta
 
-    return np.array(floatX(population)), var_info
+        q_old, accept = metrop_select(new_tempered_logp - old_tempered_logp, q_new, q_old)
+        if accept:
+            accepted += 1
+            old_tempered_logp = new_tempered_logp
+
+    return q_old, accepted
 
 
 def _calc_beta(beta, likelihoods, threshold=0.5):
@@ -252,56 +305,6 @@ def _calc_beta(beta, likelihoods, threshold=0.5):
     weights_un = np.exp((new_beta - old_beta) * (likelihoods - likelihoods.max()))
     weights = weights_un / np.sum(weights_un)
     return new_beta, old_beta, weights, np.mean(sj)
-
-
-def _calc_covariance(posterior, weights):
-    """
-    Calculate trace covariance matrix based on importance weights.
-    """
-    cov = np.cov(posterior, aweights=weights.ravel(), bias=False, rowvar=0)
-    if np.isnan(cov).any() or np.isinf(cov).any():
-        raise ValueError('Sample covariances not valid! Likely "draws" is too small!')
-    return np.atleast_2d(cov)
-
-
-def _tune(acc_rate):
-    """
-    Tune adaptively based on the acceptance rate.
-
-    Parameters
-    ----------
-    acc_rate: float
-        Acceptance rate of the Metropolis sampling
-
-    Returns
-    -------
-    scaling: float
-    """
-    # a and b after Muto & Beck 2008.
-    a = 1.0 / 9
-    b = 8.0 / 9
-    return (a + b * acc_rate) ** 2
-
-
-def _posterior_to_trace(posterior, variables, model, var_info):
-    """
-    Save results into a PyMC3 trace
-    """
-    lenght_pos = len(posterior)
-    varnames = [v.name for v in variables]
-
-    with model:
-        strace = NDArray(model)
-        strace.setup(lenght_pos, 0)
-    for i in range(lenght_pos):
-        value = []
-        size = 0
-        for var in varnames:
-            shape, new_size = var_info[var]
-            value.append(posterior[i][size : size + new_size].reshape(shape))
-            size += new_size
-        strace.record({k: v for k, v in zip(varnames, value)})
-    return MultiTrace([strace])
 
 
 def logp_forw(out_vars, vars, shared):

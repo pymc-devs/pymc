@@ -17,7 +17,7 @@ from ..math import (cartesian, kron_dot, kron_diag,
 __all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse', 'LatentKron', 'MarginalKron']
 
 
-class Base(object):
+class Base:
     R"""
     Base class.
     """
@@ -104,14 +104,14 @@ class Latent(Base):
     """
 
     def __init__(self, mean_func=Zero(), cov_func=Constant(0.0)):
-        super(Latent, self).__init__(mean_func, cov_func)
+        super().__init__(mean_func, cov_func)
 
     def _build_prior(self, name, X, reparameterize=True, **kwargs):
         mu = self.mean_func(X)
         cov = stabilize(self.cov_func(X))
         shape = infer_shape(X, kwargs.pop("shape", None))
         if reparameterize:
-            v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
+            v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, shape=shape, **kwargs)
             f = pm.Deterministic(name, mu + cholesky(cov).dot(v))
         else:
             f = pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
@@ -242,7 +242,7 @@ class TP(Latent):
         if nu is None:
             raise ValueError("Student's T process requires a degrees of freedom parameter, 'nu'")
         self.nu = nu
-        super(TP, self).__init__(mean_func, cov_func)
+        super().__init__(mean_func, cov_func)
 
     def __add__(self, other):
         raise TypeError("Student's T processes aren't additive")
@@ -253,7 +253,7 @@ class TP(Latent):
         shape = infer_shape(X, kwargs.pop("shape", None))
         if reparameterize:
             chi2 = pm.ChiSquared("chi2_", self.nu)
-            v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=shape, **kwargs)
+            v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, shape=shape, **kwargs)
             f = pm.Deterministic(name, (tt.sqrt(self.nu) / chi2) * (mu + cholesky(cov).dot(v)))
         else:
             f = pm.MvStudentT(name, nu=self.nu, mu=mu, cov=cov, shape=shape, **kwargs)
@@ -373,7 +373,7 @@ class Marginal(Base):
     """
 
     def __init__(self, mean_func=Zero(), cov_func=Constant(0.0)):
-        super(Marginal, self).__init__(mean_func, cov_func)
+        super().__init__(mean_func, cov_func)
 
     def _build_marginal_likelihood(self, X, noise):
         mu = self.mean_func(X)
@@ -626,11 +626,11 @@ class MarginalSparse(Marginal):
         if approx not in self._available_approx:
             raise NotImplementedError(approx)
         self.approx = approx
-        super(MarginalSparse, self).__init__(mean_func, cov_func)
+        super().__init__(mean_func, cov_func)
 
     def __add__(self, other):
         # new_gp will default to FITC approx
-        new_gp = super(MarginalSparse, self).__add__(other)
+        new_gp = super().__add__(other)
         # make sure new gp has correct approx
         if not self.approx == other.approx:
             raise TypeError("Cannot add GPs with different approximations")
@@ -858,7 +858,7 @@ class LatentKron(Base):
         except TypeError:
             self.cov_funcs = [cov_funcs]
         cov_func = pm.gp.cov.Kron(self.cov_funcs)
-        super(LatentKron, self).__init__(mean_func, cov_func)
+        super().__init__(mean_func, cov_func)
 
     def __add__(self, other):
         raise TypeError('Additive, Kronecker-structured processes not implemented')
@@ -868,7 +868,7 @@ class LatentKron(Base):
         mu = self.mean_func(cartesian(*Xs))
         chols = [cholesky(stabilize(cov(X))) for cov, X in zip(self.cov_funcs, Xs)]
         # remove reparameterization option
-        v = pm.Normal(name + "_rotated_", mu=0.0, sd=1.0, shape=self.N, **kwargs)
+        v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, shape=self.N, **kwargs)
         f = pm.Deterministic(name, mu + tt.flatten(kron_dot(chols, v)))
         return f
 
@@ -1014,7 +1014,7 @@ class MarginalKron(Base):
         except TypeError:
             self.cov_funcs = [cov_funcs]
         cov_func = pm.gp.cov.Kron(self.cov_funcs)
-        super(MarginalKron, self).__init__(mean_func, cov_func)
+        super().__init__(mean_func, cov_func)
 
     def __add__(self, other):
         raise TypeError('Additive, Kronecker-structured processes not implemented')

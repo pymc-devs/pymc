@@ -19,7 +19,6 @@ HMCStepData = namedtuple("HMCStepData", "end, accept_stat, divergence_info, stat
 
 DivergenceInfo = namedtuple("DivergenceInfo", "message, exec_info, state")
 
-
 class BaseHMC(arraystep.GradientSharedStep):
     """Superclass to implement Hamiltonian/hybrid monte carlo."""
 
@@ -34,7 +33,6 @@ class BaseHMC(arraystep.GradientSharedStep):
         model=None,
         blocked=True,
         potential=None,
-        integrator="leapfrog",
         dtype=None,
         Emax=1000,
         target_accept=0.8,
@@ -71,9 +69,7 @@ class BaseHMC(arraystep.GradientSharedStep):
             vars = self._model.cont_vars
         vars = inputvars(vars)
 
-        super(BaseHMC, self).__init__(
-            vars, blocked=blocked, model=model, dtype=dtype, **theano_kwargs
-        )
+        super().__init__(vars, blocked=blocked, model=model, dtype=dtype, **theano_kwargs)
 
         self.adapt_step_size = adapt_step_size
         self.Emax = Emax
@@ -81,11 +77,10 @@ class BaseHMC(arraystep.GradientSharedStep):
         size = self._logp_dlogp_func.size
 
         self.step_size = step_scale / (size ** 0.25)
-        self.target_accept = target_accept
         self.step_adapt = step_sizes.DualAverageAdaptation(
             self.step_size, target_accept, gamma, k, t0
         )
-
+        self.target_accept = target_accept
         self.tune = True
 
         if scaling is None and potential is None:
