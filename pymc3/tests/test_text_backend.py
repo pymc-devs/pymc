@@ -62,6 +62,14 @@ class TestTextDumpLoad(bf.DumpLoadTestCase):
     shape = (2, 3)
 
 
+class TestTextDumpLoadWithPartialChain(bf.DumpLoadTestCase):
+    backend = text.Text
+    load_func = staticmethod(text.load)
+    name = 'text-db'
+    shape = (2, 3)
+    write_partial_chain = True
+
+
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestTextDumpFunction(bf.BackendEqualityTestCase):
     backend0 = backend1 = ndarray.NDArray
