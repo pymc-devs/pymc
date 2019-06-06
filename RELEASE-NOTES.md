@@ -3,6 +3,7 @@
 ## PyMC3 3.8 (on deck)
 
 ### New features
+
 - Distinguish between `Data` and `Deterministic` variables when graphing models with graphviz. PR [#3491](https://github.com/pymc-defs/pymc3/pulls/3491).
 - Sequential Monte Carlo - Approximate Bayesian Computation step method is now available. The implementation is in an experimental stage and will be further improved.
 
@@ -10,14 +11,12 @@
 
 ### New features
 
-
 - Add data container class (`Data`) that wraps the theano SharedVariable class and let the model be aware of its inputs and outputs.
 - Add function `set_data` to update variables defined as `Data`.
 - `Mixture` now supports mixtures of multidimensional probability distributions, not just lists of 1D distributions.
 - `GLM.from_formula` and `LinearComponent.from_formula` can extract variables from the calling scope. Customizable via the new `eval_env` argument. Fixing [#3382](https://github.com/pymc-devs/pymc3/issues/3382).
 - Added the `distributions.shape_utils` module with functions used to help broadcast samples drawn from distributions using the `size` keyword argument.
 - Used `numpy.vectorize` in `distributions.distribution._compile_theano_function`. This enables `sample_prior_predictive` and `sample_posterior_predictive` to ask for tuples of samples instead of just integers. This fixes issue [#3422](https://github.com/pymc-devs/pymc3/issues/3422).
-
 
 ### Maintenance
 
