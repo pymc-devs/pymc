@@ -6,7 +6,6 @@ __all__ = ['Simulator']
 
 
 class Simulator(NoDistribution):
-   
     def __init__(self, function, *args, **kwargs):
         """
         This class stores a function defined by the user in python language.
@@ -19,14 +18,7 @@ class Simulator(NoDistribution):
 
         self.function = function
         observed = self.data
-        super(
-            Simulator,
-            self).__init__(
-            shape=np.prod(
-                observed.shape),
-            dtype=observed.dtype,
-            *args,
-            **kwargs)
+        super().__init__(shape=np.prod(observed.shape), dtype=observed.dtype, *args, **kwargs)
 
     def random(self, point=None, size=None):
         """
