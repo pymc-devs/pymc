@@ -2,23 +2,34 @@
 Sequential Monte Carlo sampler
 """
 import numpy as np
-import theano
 import pymc3 as pm
 from tqdm import tqdm
 import multiprocessing as mp
+import warnings
 
-from .arraystep import metrop_select
 from .metropolis import MultivariateNormalProposal
-from .smc_utils import _initial_population, _calc_covariance, _tune, _posterior_to_trace
-from ..theanof import floatX, make_shared_replacements, join_nonshared_inputs, inputvars
+from .smc_utils import (
+    _initial_population,
+    _calc_covariance,
+    _tune,
+    _posterior_to_trace,
+    logp_forw,
+    calc_beta,
+    metrop_kernel,
+    PseudoLikelihood,
+)
+from ..theanof import inputvars, make_shared_replacements
 from ..model import modelcontext
 
+
+EXPERIMENTAL_WARNING = "Warning: SMC-ABC methods are experimental step methods and not yet"\
+    " recommended for use in PyMC3!"
 
 __all__ = ["SMC", "sample_smc"]
 
 
 class SMC:
-    R"""
+    r"""
     Sequential Monte Carlo step
 
     Parameters
@@ -100,6 +111,10 @@ class SMC:
         tune_steps=True,
         threshold=0.5,
         parallel=True,
+        ABC=False,
+        epsilon=1,
+        dist_func="absolute_error",
+        sum_stat=False,
     ):
 
         self.n_steps = n_steps
@@ -110,6 +125,10 @@ class SMC:
         self.tune_steps = tune_steps
         self.threshold = threshold
         self.parallel = parallel
+        self.ABC = ABC
+        self.epsilon = epsilon
+        self.dist_func = dist_func
+        self.sum_stat = sum_stat
 
 
 def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None, random_seed=-1):
@@ -137,7 +156,7 @@ def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None,
     if random_seed != -1:
         np.random.seed(random_seed)
 
-    beta = 0.0
+    beta = 0
     stage = 0
     accepted = 0
     acc_rate = 1.0
@@ -149,15 +168,29 @@ def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None,
     all_discrete = discrete.all()
     shared = make_shared_replacements(variables, model)
     prior_logp = logp_forw([model.varlogpt], variables, shared)
-    likelihood_logp = logp_forw([model.datalogpt], variables, shared)
 
     pm._log.info("Sample initial stage: ...")
     posterior, var_info = _initial_population(draws, model, variables)
 
+    if step.ABC:
+        warnings.warn(EXPERIMENTAL_WARNING)
+        simulator = model.observed_RVs[0]
+        likelihood_logp = PseudoLikelihood(
+            step.epsilon,
+            simulator.observations,
+            simulator.distribution.function,
+            model,
+            var_info,
+            step.dist_func,
+            step.sum_stat,
+        )
+    else:
+        likelihood_logp = logp_forw([model.datalogpt], variables, shared)
+
     while beta < 1:
-        # compute plausibility weights (measure fitness)
+
         likelihoods = np.array([likelihood_logp(sample) for sample in posterior]).squeeze()
-        beta, old_beta, weights, sj = _calc_beta(beta, likelihoods, step.threshold)
+        beta, old_beta, weights, sj = calc_beta(beta, likelihoods, step.threshold)
         model.marginal_likelihood *= sj
         # resample based on plausibility weights (selection)
         resampling_indexes = np.random.choice(np.arange(draws), size=draws, p=weights)
@@ -191,17 +224,18 @@ def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None,
             prior_logp,
             likelihood_logp,
             beta,
+            step.ABC,
         )
 
         if step.parallel and cores > 1:
             pool = mp.Pool(processes=cores)
             results = pool.starmap(
-                _metrop_kernel,
+                metrop_kernel,
                 [(posterior[draw], tempered_logp[draw], *parameters) for draw in range(draws)],
             )
         else:
             results = [
-                _metrop_kernel(posterior[draw], tempered_logp[draw], *parameters)
+                metrop_kernel(posterior[draw], tempered_logp[draw], *parameters)
                 for draw in tqdm(range(draws), disable=not progressbar)
             ]
 
@@ -213,113 +247,3 @@ def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None,
     trace = _posterior_to_trace(posterior, variables, model, var_info)
 
     return trace
-
-
-def _metrop_kernel(
-    q_old,
-    old_tempered_logp,
-    proposal,
-    scaling,
-    accepted,
-    any_discrete,
-    all_discrete,
-    discrete,
-    n_steps,
-    prior_logp,
-    likelihood_logp,
-    beta,
-):
-    """
-    Metropolis kernel
-    """
-    deltas = np.squeeze(proposal(n_steps) * scaling)
-    for n_step in range(n_steps):
-        delta = deltas[n_step]
-
-        if any_discrete:
-            if all_discrete:
-                delta = np.round(delta, 0).astype("int64")
-                q_old = q_old.astype("int64")
-                q_new = (q_old + delta).astype("int64")
-            else:
-                delta[discrete] = np.round(delta[discrete], 0)
-                q_new = floatX(q_old + delta)
-        else:
-            q_new = floatX(q_old + delta)
-
-        new_tempered_logp = prior_logp(q_new) + likelihood_logp(q_new)[0] * beta
-
-        q_old, accept = metrop_select(new_tempered_logp - old_tempered_logp, q_new, q_old)
-        if accept:
-            accepted += 1
-            old_tempered_logp = new_tempered_logp
-
-    return q_old, accepted
-
-
-def _calc_beta(beta, likelihoods, threshold=0.5):
-    """
-    Calculate next inverse temperature (beta) and importance weights based on current beta
-    and tempered likelihood.
-
-    Parameters
-    ----------
-    beta : float
-        tempering parameter of current stage
-    likelihoods : numpy array
-        likelihoods computed from the model
-    threshold : float
-        Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
-        the higher the value of threshold the higher the number of stage. Defaults to 0.5.
-        It should be between 0 and 1.
-
-    Returns
-    -------
-    new_beta : float
-        tempering parameter of the next stage
-    old_beta : float
-        tempering parameter of the current stage
-    weights : numpy array
-        Importance weights (floats)
-    sj : float
-        Partial marginal likelihood
-    """
-    low_beta = old_beta = beta
-    up_beta = 2.0
-    rN = int(len(likelihoods) * threshold)
-
-    while up_beta - low_beta > 1e-6:
-        new_beta = (low_beta + up_beta) / 2.0
-        weights_un = np.exp((new_beta - old_beta) * (likelihoods - likelihoods.max()))
-        weights = weights_un / np.sum(weights_un)
-        ESS = int(1 / np.sum(weights ** 2))
-        if ESS == rN:
-            break
-        elif ESS < rN:
-            up_beta = new_beta
-        else:
-            low_beta = new_beta
-    if new_beta >= 1:
-        new_beta = 1
-    sj = np.exp((new_beta - old_beta) * likelihoods)
-    weights_un = np.exp((new_beta - old_beta) * (likelihoods - likelihoods.max()))
-    weights = weights_un / np.sum(weights_un)
-    return new_beta, old_beta, weights, np.mean(sj)
-
-
-def logp_forw(out_vars, vars, shared):
-    """Compile Theano function of the model and the input and output variables.
-
-    Parameters
-    ----------
-    out_vars : List
-        containing :class:`pymc3.Distribution` for the output variables
-    vars : List
-        containing :class:`pymc3.Distribution` for the input variables
-    shared : List
-        containing :class:`theano.tensor.Tensor` for depended shared data
-    """
-    out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
-    f = theano.function([inarray0], out_list)
-    f.trust_input = True
-    return f

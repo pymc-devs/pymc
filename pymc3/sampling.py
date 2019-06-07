@@ -1306,18 +1306,21 @@ def sample_prior_predictive(samples=500,
 
     if vars is None and var_names is None:
         vars = set(model.named_vars.keys())
+        vars_ = model.named_vars
     elif vars is None:
         vars = var_names
+        vars_ = vars
     elif vars is not None:
         warnings.warn("vars argument is deprecated in favor of var_names.",
                       DeprecationWarning)
+        vars_ = vars
     else:
         raise ValueError("Cannot supply both vars and var_names arguments.")
     vars = cast(TIterable[str], vars) # tell mypy that vars cannot be None here.
 
     if random_seed is not None:
         np.random.seed(random_seed)
-    names = get_default_varnames(model.named_vars, include_transformed=False)
+    names = get_default_varnames(vars_, include_transformed=False)
     # draw_values fails with auto-transformed variables. transform them later!
     values = draw_values([model[name] for name in names], size=samples)
 

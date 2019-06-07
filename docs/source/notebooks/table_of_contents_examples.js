@@ -37,6 +37,7 @@ Gallery.contents = {
     "gaussian_mixture_model": "Mixture Models",
     "marginalized_gaussian_mixture_model": "Mixture Models",
     "SMC2_gaussians": "Simulation-based Inference",
+    "SMC-ABC_Lotka-Volterra_example": "Simulation-based Inference",
     "bayes_param_survival_pymc3": "Survival Analysis",
     "censored_data": "Survival Analysis",
     "survival_analysis": "Survival Analysis",
