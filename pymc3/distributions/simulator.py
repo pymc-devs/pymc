@@ -2,7 +2,7 @@ import theano.tensor as tt
 import numpy as np
 from .distribution import NoDistribution
 
-__all__ = ['Simulator']
+__all__ = ["Simulator"]
 
 
 class Simulator(NoDistribution):
@@ -36,7 +36,7 @@ class Simulator(NoDistribution):
         array
         """
 
-        raise NotImplementedError('Not implemented yet')
+        raise NotImplementedError("Not implemented yet")
 
     def logp(self, value):
         """
@@ -53,9 +53,10 @@ class Simulator(NoDistribution):
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
-        name = r'\text{%s}' % name
+        name = r"\text{%s}" % name
         function = dist.function
         params = dist.parameters
         sum_stat = dist.sum_stat
-        return r'${} \sim \text{{Simulator}}(\mathit{{function}}={},~\mathit{{parameters}}={},~\mathit{{summary statistics}}={})$'.format(
-name, function, params, sum_stat)
+        return r"${} \sim \text{{Simulator}}(\mathit{{function}}={},~\mathit{{parameters}}={},~\mathit{{summary statistics}}={})$".format(
+            name, function, params, sum_stat
+        )
