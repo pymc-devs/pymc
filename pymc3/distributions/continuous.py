@@ -664,16 +664,34 @@ class TruncatedNormal(BoundedContinuous):
         -------
         array
         """
-        mu_v, std_v, a_v, b_v = draw_values(
-            [self.mu, self.sigma, self.lower, self.upper], point=point, size=size)
-        return generate_samples(stats.truncnorm.rvs,
-                                a=(a_v - mu_v)/std_v,
-                                b=(b_v - mu_v) / std_v,
-                                loc=mu_v,
-                                scale=std_v,
-                                dist_shape=self.shape,
-                                size=size,
-                                )
+        mu, sigma, lower, upper = draw_values(
+            [self.mu, self.sigma, self.lower, self.upper],
+            point=point,
+            size=size
+        )
+        return generate_samples(
+            self._random,
+            mu=mu,
+            sigma=sigma,
+            lower=lower,
+            upper=upper,
+            dist_shape=self.shape,
+            size=size,
+        )
+
+    def _random(self, mu, sigma, lower, upper, size):
+        """ Wrapper around stats.truncnorm.rvs that converts TruncatedNormal's
+        parametrization to scipy.truncnorm. All parameter arrays should have
+        been broadcasted properly by generate_samples at this point and size is
+        the scipy.rvs representation.
+        """
+        return stats.truncnorm.rvs(
+            a=(lower - mu) / sigma,
+            b=(upper - mu) / sigma,
+            loc=mu,
+            scale=sigma,
+            size=size,
+        )
 
     def logp(self, value):
         """
@@ -3582,10 +3600,22 @@ class Triangular(BoundedContinuous):
         """
         c, lower, upper = draw_values([self.c, self.lower, self.upper],
                                       point=point, size=size)
-        scale = upper - lower
-        c_ = (c - lower) / scale
-        return generate_samples(stats.triang.rvs, c=c_, loc=lower, scale=scale,
+        return generate_samples(self._random, c=c, lower=lower, upper=upper,
                                 size=size, dist_shape=self.shape)
+
+    def _random(self, c, lower, upper, size):
+        """ Wrapper around stats.triang.rvs that converts Triangular's
+        parametrization to scipy.triang. All parameter arrays should have
+        been broadcasted properly by generate_samples at this point and size is
+        the scipy.rvs representation.
+        """
+        scale = upper - lower
+        return stats.triang.rvs(
+            c=(c - lower) / scale,
+            loc=lower,
+            scale=scale,
+            size=size,
+        )
 
     def logp(self, value):
         """
@@ -3875,8 +3905,20 @@ class Rice(PositiveContinuous):
         """
         nu, sigma = draw_values([self.nu, self.sigma],
                              point=point, size=size)
-        return generate_samples(stats.rice.rvs, b=nu / sigma, scale=sigma, loc=0,
+        return generate_samples(self._random, nu=nu, sigma=sigma,
                                 dist_shape=self.shape, size=size)
+
+    def _random(self, nu, sigma, size):
+        """ Wrapper around stats.rice.rvs that converts Rice's
+        parametrization to scipy.rice. All parameter arrays should have
+        been broadcasted properly by generate_samples at this point and size is
+        the scipy.rvs representation.
+        """
+        return stats.rice.rvs(
+            b=nu / sigma,
+            scale=sigma,
+            size=size,
+        )
 
     def logp(self, value):
         """

@@ -1427,12 +1427,28 @@ class ZeroInflatedNegativeBinomial(Discrete):
         """
         mu, alpha, psi = draw_values(
             [self.mu, self.alpha, self.psi], point=point, size=size)
-        g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
-                             dist_shape=self.shape,
-                             size=size)
+        g = generate_samples(
+            self._random,
+            mu=mu,
+            alpha=alpha,
+            dist_shape=self.shape,
+            size=size
+        )
         g[g == 0] = np.finfo(float).eps  # Just in case
         g, psi = broadcast_distribution_samples([g, psi], size=size)
         return stats.poisson.rvs(g) * (np.random.random(g.shape) < psi)
+
+    def _random(self, mu, alpha, size):
+        """ Wrapper around stats.gamma.rvs that converts NegativeBinomial's
+        parametrization to scipy.gamma. All parameter arrays should have
+        been broadcasted properly by generate_samples at this point and size is
+        the scipy.rvs representation.
+        """
+        return stats.gamma.rvs(
+            a=alpha,
+            scale=mu / alpha,
+            size=size,
+        )
 
     def logp(self, value):
         """
