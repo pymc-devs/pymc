@@ -1096,6 +1096,11 @@ def sample_posterior_predictive(trace,
     if samples is None:
         samples = sum(len(v) for v in trace._straces.values())
 
+    if samples < len_trace * nchain:
+        _log.warning("samples parameter is smaller than nchains times ndraws, some draws "
+                     "and/or chains may not be represented in the returned posterior "
+                     "predictive sample")
+
     model = modelcontext(model)
 
     if var_names is not None:
