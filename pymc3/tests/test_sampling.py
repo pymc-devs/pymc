@@ -239,7 +239,7 @@ class TestChooseBackend:
 
 
 class TestSamplePPC(SeededTest):
-    def test_normal_scalar(self):
+    def test_normal_scalar(self, caplog):
         nchains = 2
         ndraws = 500
         with pm.Model() as model:
@@ -258,8 +258,11 @@ class TestSamplePPC(SeededTest):
             assert len(ppc) == 0
             # test keep_size parameter
             ppc = pm.sample_posterior_predictive(
-                trace, samples=10, keep_size=True, size=5
+                trace, keep_size=True, size=5
             )
+            msg = caplog.records[-1].message
+            assert "keep_size" in msg
+            assert "Overriding size" in msg
             assert ppc["a"].shape == (nchains, ndraws)
             # test default case
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
@@ -273,7 +276,7 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(trace, size=5, var_names=["a"])
             assert ppc["a"].shape == (nchains * ndraws, 5)
 
-    def test_normal_vector(self):
+    def test_normal_vector(self, caplog):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
@@ -288,6 +291,9 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(
                 trace, samples=10, keep_size=True
             )
+            msg = caplog.records[-1].message
+            assert "keep_size" in msg
+            assert "Overriding samples" in msg
             assert ppc["a"].shape == (trace.nchains, len(trace), 2)
             ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"])
             assert "a" in ppc
