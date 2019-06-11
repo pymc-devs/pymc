@@ -1066,7 +1066,7 @@ def sample_posterior_predictive(trace,
         predictive samples are needed.
     keep_size : bool, optional
         Force posterior predictive sample to have the same shape of posterior and sample stats
-        data: ``(nchains, ndraws, ...)``.
+        data: ``(nchains, ndraws, ...)``. Overrides samples and size parameters.
     random_seed : int
         Seed for the random number generator.
     progressbar : bool
@@ -1086,7 +1086,11 @@ def sample_posterior_predictive(trace,
     except AttributeError:
         nchain = 1
 
-    if samples is None or keep_size:
+    if keep_size:
+        samples = len_trace * nchain
+        size = None
+
+    if samples is None:
         samples = sum(len(v) for v in trace._straces.values())
 
     model = modelcontext(model)
