@@ -258,7 +258,7 @@ class TestSamplePPC(SeededTest):
             assert len(ppc) == 0
             # test keep_size parameter
             ppc = pm.sample_posterior_predictive(
-                trace, samples=10, keep_size=True
+                trace, samples=10, keep_size=True, size=5
             )
             assert ppc["a"].shape == (nchains, ndraws)
             # test default case
