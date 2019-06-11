@@ -1065,7 +1065,7 @@ def sample_posterior_predictive(trace,
         sample of the trace. Not recommended unless more than ndraws times nchains posterior
         predictive samples are needed.
     keep_size : bool, optional
-        Force posterior predictive sample to have the same shape of posterior and sample stats
+        Force posterior predictive sample to have the same shape as posterior and sample stats
         data: ``(nchains, ndraws, ...)``. Overrides samples and size parameters.
     random_seed : int
         Seed for the random number generator.
@@ -1086,9 +1086,12 @@ def sample_posterior_predictive(trace,
     except AttributeError:
         nchain = 1
 
-    if keep_size:
-        samples = len_trace * nchain
+    if keep_size and samples is not None:
+        samples = None
+        _log.warning("keep_size is True but samples is present: Overriding samples parameter")
+    if keep_size and size is not None:
         size = None
+        _log.warning("keep_size is True but size is present: Overriding size parameter")
 
     if samples is None:
         samples = sum(len(v) for v in trace._straces.values())
