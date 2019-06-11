@@ -240,27 +240,38 @@ class TestChooseBackend:
 
 class TestSamplePPC(SeededTest):
     def test_normal_scalar(self):
+        nchains = 2
+        ndraws = 500
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=0.0)
-            trace = pm.sample()
+            trace = pm.sample(draws=ndraws, chains=nchains)
 
         with model:
             # test list input
-            n = trace["mu"].shape[0]
             ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
-            ppc = pm.sample_posterior_predictive(trace, samples=n, vars=[])
+            # test DeprecationWarning
+            with pytest.warns(DeprecationWarning):
+                ppc = pm.sample_posterior_predictive(trace, vars=[a])
+            # test empty ppc
+            ppc = pm.sample_posterior_predictive(trace, var_names=[])
             assert len(ppc) == 0
-            ppc = pm.sample_posterior_predictive(trace, samples=n, vars=[a])
+            # test keep_size parameter
+            ppc = pm.sample_posterior_predictive(
+                trace, samples=10, keep_size=True
+            )
+            assert ppc["a"].shape == (nchains, ndraws)
+            # test default case
+            ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
             assert "a" in ppc
-            assert ppc["a"].shape == (n,)
+            assert ppc["a"].shape == (nchains * ndraws,)
         # mu's standard deviation may have changed thanks to a's observed
         _, pval = stats.kstest(ppc["a"] - trace["mu"], stats.norm(loc=0, scale=1).cdf)
         assert pval > 0.001
 
         with model:
-            ppc = pm.sample_posterior_predictive(trace, samples=10, size=5, vars=[a])
-            assert ppc["a"].shape == (10, 5)
+            ppc = pm.sample_posterior_predictive(trace, size=5, var_names=["a"])
+            assert ppc["a"].shape == (nchains * ndraws, 5)
 
     def test_normal_vector(self):
         with pm.Model() as model:
@@ -271,13 +282,18 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
-            ppc = pm.sample_posterior_predictive(trace, samples=10, vars=[])
+            ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=[])
             assert len(ppc) == 0
-            ppc = pm.sample_posterior_predictive(trace, samples=10, vars=[a])
+            # test keep_size parameter
+            ppc = pm.sample_posterior_predictive(
+                trace, samples=10, keep_size=True
+            )
+            assert ppc["a"].shape == (trace.nchains, len(trace), 2)
+            ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"])
             assert "a" in ppc
             assert ppc["a"].shape == (10, 2)
 
-            ppc = pm.sample_posterior_predictive(trace, samples=10, vars=[a], size=4)
+            ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"], size=4)
             assert "a" in ppc
             assert ppc["a"].shape == (10, 4, 2)
 
@@ -290,13 +306,13 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
-            ppc = pm.sample_posterior_predictive(trace, samples=10, vars=[])
+            ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=[])
             assert len(ppc) == 0
-            ppc = pm.sample_posterior_predictive(trace, samples=10, vars=[a])
+            ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"])
             assert "a" in ppc
             assert ppc["a"].shape == (10, 2)
 
-            ppc = pm.sample_posterior_predictive(trace, samples=10, vars=[a], size=4)
+            ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"], size=4)
             assert "a" in ppc
             assert ppc["a"].shape == (10, 4, 2)
 
@@ -309,7 +325,7 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
-            ppc = pm.sample_posterior_predictive(trace, samples=1000, vars=[b])
+            ppc = pm.sample_posterior_predictive(trace, samples=1000, var_names=["b"])
             assert len(ppc) == 1
             assert ppc["b"].shape == (1000,)
             scale = np.sqrt(1 + 0.2 ** 2)
@@ -349,7 +365,7 @@ class TestSamplePPC(SeededTest):
         samples = 100
         with model:
             post_pred = pm.sample_posterior_predictive(
-                trace, samples=samples, vars=[logistic, obs]
+                trace, samples=samples, var_names=["p", "obs"]
             )
 
         expected_p = np.array(
