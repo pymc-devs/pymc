@@ -280,7 +280,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     Notes
     -----
 
-    Optional keyword arguments can be passed to `sample` to be delivered to the 
+    Optional keyword arguments can be passed to `sample` to be delivered to the
     `step_method`s used during sampling. In particular, the NUTS step method accepts
     a number of arguments. Common options are:
 
@@ -1037,6 +1037,7 @@ def sample_posterior_predictive(trace,
                                 vars: Optional[TIterable[Tensor]]=None,
                                 var_names: Optional[List[str]]=None,
                                 size: Optional[int]=None,
+                                keep_size: Optional[bool]=False,
                                 random_seed=None,
                                 progressbar: bool=True) -> Dict[str, np.ndarray]:
     """Generate posterior predictive samples from a model given a trace.
@@ -1047,7 +1048,10 @@ def sample_posterior_predictive(trace,
         Trace generated from MCMC sampling. Or a list containing dicts from
         find_MAP() or points
     samples : int
-        Number of posterior predictive samples to generate. Defaults to the length of `trace`
+        Number of posterior predictive samples to generate. Defaults to one posterior predictive
+        sample per posterior sample, that is, the number of draws times the number of chains. It
+        is not recommended to modify this value; when modified, some chains may not be represented
+        in the posterior predictive sample.
     model : Model (optional if in `with` context)
         Model used to generate `trace`
     vars : iterable
@@ -1058,7 +1062,11 @@ def sample_posterior_predictive(trace,
         others.
     size : int
         The number of random draws from the distribution specified by the parameters in each
-        sample of the trace.
+        sample of the trace. Not recommended unless more than ndraws times nchains posterior
+        predictive samples are needed.
+    keep_size : bool, optional
+        Force posterior predictive sample to have the same shape of posterior and sample stats
+        data: ``(nchains, ndraws, ...)``.
     random_seed : int
         Seed for the random number generator.
     progressbar : bool
@@ -1078,7 +1086,7 @@ def sample_posterior_predictive(trace,
     except AttributeError:
         nchain = 1
 
-    if samples is None:
+    if samples is None or keep_size:
         samples = sum(len(v) for v in trace._straces.values())
 
     model = modelcontext(model)
@@ -1102,7 +1110,7 @@ def sample_posterior_predictive(trace,
     if progressbar:
         indices = tqdm(indices, total=samples)
 
-    ppc_trace = defaultdict(list) # type: Dict[str, List[Any]] 
+    ppc_trace = defaultdict(list) # type: Dict[str, List[Any]]
     try:
         for idx in indices:
             if nchain > 1:
@@ -1122,7 +1130,13 @@ def sample_posterior_predictive(trace,
         if progressbar:
             indices.close()
 
-    return {k: np.asarray(v) for k, v in ppc_trace.items()}
+    if keep_size:
+        for k, ary in ppc_trace.items():
+            ary = np.asarray(ary)
+            ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
+        return ppc_trace
+    else:
+        return {k: np.asarray(v) for k, v in ppc_trace.items()}
 
 
 def sample_ppc(*args, **kwargs):
@@ -1292,7 +1306,7 @@ def sample_prior_predictive(samples=500,
         A list of names of variables for which to compute the posterior predictive
          samples.
         Defaults to `model.named_vars`.
-    
+
     random_seed : int
         Seed for the random number generator.
 
