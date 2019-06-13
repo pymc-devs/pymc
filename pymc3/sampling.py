@@ -21,6 +21,7 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            Slice, CompoundStep, arraystep, smc)
 from .util import update_start_vals, get_untransformed_name, is_transformed_name, get_default_varnames
 from .vartypes import discrete_types
+from .exceptions import IncorrectArgumentsError
 from pymc3.step_methods.hmc import quadpotential
 import pymc3 as pm
 from tqdm import tqdm
@@ -1087,17 +1088,15 @@ def sample_posterior_predictive(trace,
         nchain = 1
 
     if keep_size and samples is not None:
-        samples = None
-        _log.warning("keep_size is True but samples is present: Overriding samples parameter")
+        raise IncorrectArgumentsError("Should not specify both keep_size and samples argukments")
     if keep_size and size is not None:
-        size = None
-        _log.warning("keep_size is True but size is present: Overriding size parameter")
+        raise IncorrectArgumentsError("Should not specify both keep_size and size argukments")
 
     if samples is None:
         samples = sum(len(v) for v in trace._straces.values())
 
     if samples < len_trace * nchain:
-        _log.warning("samples parameter is smaller than nchains times ndraws, some draws "
+        warnings.warn("samples parameter is smaller than nchains times ndraws, some draws "
                      "and/or chains may not be represented in the returned posterior "
                      "predictive sample")
 
@@ -1105,7 +1104,7 @@ def sample_posterior_predictive(trace,
 
     if var_names is not None:
         if vars is not None:
-            raise ValueError("Should not specify both vars and var_names arguments.")
+            raise IncorrectArgumentsError("Should not specify both vars and var_names arguments.")
         else:
             vars = [model[x] for x in var_names]
     elif vars is not None: # var_names is None, and vars is not.
