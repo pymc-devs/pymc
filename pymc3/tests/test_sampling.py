@@ -13,6 +13,7 @@ from theano import shared
 import theano
 from .models import simple_init
 from .helpers import SeededTest
+from ..exceptions import IncorrectArgumentsError
 from scipy import stats
 import pytest
 
@@ -239,7 +240,7 @@ class TestChooseBackend:
 
 
 class TestSamplePPC(SeededTest):
-    def test_normal_scalar(self, caplog):
+    def test_normal_scalar(self):
         nchains = 2
         ndraws = 500
         with pm.Model() as model:
@@ -257,12 +258,7 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(trace, var_names=[])
             assert len(ppc) == 0
             # test keep_size parameter
-            ppc = pm.sample_posterior_predictive(
-                trace, keep_size=True, size=5
-            )
-            msg = caplog.records[-1].message
-            assert "keep_size" in msg
-            assert "Overriding size" in msg
+            ppc = pm.sample_posterior_predictive(trace, keep_size=True)
             assert ppc["a"].shape == (nchains, ndraws)
             # test default case
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
@@ -288,20 +284,30 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=[])
             assert len(ppc) == 0
             # test keep_size parameter
-            ppc = pm.sample_posterior_predictive(
-                trace, samples=10, keep_size=True
-            )
-            msg = caplog.records[-1].message
-            assert "keep_size" in msg
-            assert "Overriding samples" in msg
+            ppc = pm.sample_posterior_predictive(trace, keep_size=True)
             assert ppc["a"].shape == (trace.nchains, len(trace), 2)
-            ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"])
+            with pytest.warns(UserWarning):
+                ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"])
             assert "a" in ppc
             assert ppc["a"].shape == (10, 2)
 
             ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"], size=4)
             assert "a" in ppc
             assert ppc["a"].shape == (10, 4, 2)
+
+    def test_exceptions(self, caplog):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0)
+            a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
+            trace = pm.sample()
+
+        with model:
+            with pytest.raises(IncorrectArgumentsError):
+                ppc = pm.sample_posterior_predictive(trace, samples=10, keep_size=True)
+            with pytest.raises(IncorrectArgumentsError):
+                ppc = pm.sample_posterior_predictive(trace, size=4, keep_size=True)
+            with pytest.raises(IncorrectArgumentsError):
+                ppc = pm.sample_posterior_predictive(trace, vars=[a], var_names=["a"])
 
     def test_vector_observed(self):
         with pm.Model() as model:
