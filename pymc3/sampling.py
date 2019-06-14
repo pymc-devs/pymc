@@ -178,6 +178,7 @@ def _cpu_count():
     that half of the cpus are only hardware threads and ignore those.
     """
     try:
+        import multiprocessing
         cpus = multiprocessing.cpu_count() // 2
     except NotImplementedError:
         cpus = 1
