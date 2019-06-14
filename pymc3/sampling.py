@@ -177,7 +177,7 @@ def _cpu_count():
     If not, we use the number provided by multiprocessing, but assume
     that half of the cpus are only hardware threads and ignore those.
     """
-    import multiprocessing
+    import psutil
     try:
         cpus = max(psutil.cpu_count(logical=False), psutil.cpu_count(logical=True) // 2)
     except NotImplementedError:
