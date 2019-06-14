@@ -179,7 +179,7 @@ def _cpu_count():
     """
     import multiprocessing
     try:
-        cpus = multiprocessing.cpu_count() // 2
+        cpus = max(psutil.cpu_count(logical=False), psutil.cpu_count(logical=True) // 2)
     except NotImplementedError:
         cpus = 1
     return cpus
