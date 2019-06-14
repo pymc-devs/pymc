@@ -7,6 +7,13 @@ Backends
 .. automodule:: pymc3.backends
    :members:
 
+basic Backends (including MultiTrace)
+^^^^^^^^
+
+.. automodule:: pymc3.backends.base
+  :members:
+
+
 ndarray
 ^^^^^^^
 
@@ -38,3 +45,4 @@ tracetab
 
 .. automodule:: pymc3.backends.tracetab
    :members:
+

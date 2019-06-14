@@ -19,3 +19,5 @@ API Reference
    api/math
    api/data
    api/model
+   api/model_graph
+   api/shape_utils

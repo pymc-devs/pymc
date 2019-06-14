@@ -1,3 +1,7 @@
+from typing import Dict, List, Optional, TYPE_CHECKING, cast
+if TYPE_CHECKING:
+    from typing import Any
+from typing import Iterable as TIterable
 from collections import defaultdict, Iterable
 from copy import copy
 import pickle
@@ -6,18 +10,18 @@ import warnings
 
 import numpy as np
 import theano.gradient as tg
+from theano.tensor import Tensor
 
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .distributions.distribution import draw_values
-from .model import modelcontext, Point, all_continuous
+from .model import modelcontext, Point, all_continuous, Model
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep, arraystep, smc)
 from .util import update_start_vals, get_untransformed_name, is_transformed_name, get_default_varnames
 from .vartypes import discrete_types
 from pymc3.step_methods.hmc import quadpotential
-from pymc3 import plots
 import pymc3 as pm
 from tqdm import tqdm
 
@@ -183,8 +187,8 @@ def _cpu_count():
 
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=None, chain_idx=0,
            chains=None, cores=None, tune=500, progressbar=True,
-           model=None, random_seed=None, live_plot=False, discard_tuned_samples=True,
-           live_plot_kwargs=None, compute_convergence_checks=True, **kwargs):
+           model=None, random_seed=None, discard_tuned_samples=True,
+           compute_convergence_checks=True, **kwargs):
     """Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -241,9 +245,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         number of draws.
     cores : int
         The number of chains to run in parallel. If `None`, set to the number of CPUs in the
-        system, but at most 4 (for 'SMC' defaults to 1). Keep in mind that some chains might
-        themselves be multithreaded via openmp or BLAS. In those cases it might be faster to set
-        this to 1.
+        system, but at most 4 (for 'SMC' ignored if `pm.SMC(parallel=False)`. Keep in mind that
+        some chains might themselves be multithreaded via openmp or BLAS. In those cases it might
+        be faster to set this to 1.
     tune : int
         Number of iterations to tune, defaults to 500. Ignored when using 'SMC'. Samplers adjust
         the step sizes, scalings or similar during tuning. Tuning samples will be drawn in addition
@@ -256,11 +260,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     model : Model (optional if in `with` context)
     random_seed : int or list of ints
         A list is accepted if `cores` is greater than one.
-    live_plot : bool
-        Flag for live plotting the trace while sampling. Ignored when using 'SMC'.
-    live_plot_kwargs : dict
-        Options for traceplot. Example: live_plot_kwargs={'varnames': ['x']}.
-        Ignored when using 'SMC'
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval. Ignored when using 'SMC'
     compute_convergence_checks : bool, default=True
@@ -313,25 +312,27 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     nuts_kwargs = kwargs.pop('nuts_kwargs', None)
     if nuts_kwargs is not None:
         warnings.warn("The nuts_kwargs argument has been deprecated. Pass step "
-            "method arguments directly to sample instead",
-            DeprecationWarning)
+                      "method arguments directly to sample instead",
+                      DeprecationWarning)
         kwargs.update(nuts_kwargs)
     step_kwargs = kwargs.pop('step_kwargs', None)
     if step_kwargs is not None:
         warnings.warn("The step_kwargs argument has been deprecated. Pass step "
-            "method arguments directly to sample instead",
-            DeprecationWarning)
+                      "method arguments directly to sample instead",
+                      DeprecationWarning)
         kwargs.update(step_kwargs)
+
+    if cores is None:
+        cores = min(4, _cpu_count())
 
     if isinstance(step, pm.step_methods.smc.SMC):
         trace = smc.sample_smc(draws=draws,
                                step=step,
+                               cores=cores,
                                progressbar=progressbar,
                                model=model,
                                random_seed=random_seed)
     else:
-        if cores is None:
-            cores = min(4, _cpu_count())
         if 'njobs' in kwargs:
             cores = kwargs['njobs']
             warnings.warn(
@@ -415,14 +416,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
                        'progressbar': progressbar,
                        'model': model,
                        'random_seed': random_seed,
-                       'live_plot': live_plot,
-                       'live_plot_kwargs': live_plot_kwargs,
-                       'cores': cores,}
+                       'cores': cores, }
 
         sample_args.update(kwargs)
 
         has_population_samplers = np.any([isinstance(m, arraystep.PopulationArrayStepShared)
-            for m in (step.methods if isinstance(step, CompoundStep) else [step])])
+                                          for m in (step.methods if isinstance(step, CompoundStep) else [step])])
 
         parallel = cores > 1 and chains > 1 and not has_population_samplers
         if parallel:
@@ -523,15 +522,12 @@ def _sample_population(draws, chain, chains, start, random_seed, step, tune,
     latest_traces = None
     for it, traces in enumerate(sampling):
         latest_traces = traces
-        # TODO: add support for liveplot during population-sampling
     return MultiTrace(latest_traces)
 
 
 def _sample(chain, progressbar, random_seed, start, draws=None, step=None,
-            trace=None, tune=None, model=None, live_plot=False,
-            live_plot_kwargs=None, **kwargs):
+            trace=None, tune=None, model=None, **kwargs):
     skip_first = kwargs.get('skip_first', 0)
-    refresh_every = kwargs.get('refresh_every', 100)
 
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
@@ -540,15 +536,8 @@ def _sample(chain, progressbar, random_seed, start, draws=None, step=None,
     try:
         strace = None
         for it, strace in enumerate(sampling):
-            if live_plot:
-                if live_plot_kwargs is None:
-                    live_plot_kwargs = {}
-                if it >= skip_first:
-                    trace = MultiTrace([strace])
-                    if it == skip_first:
-                        ax = plots.traceplot(trace, live_plot=False, **live_plot_kwargs)
-                    elif (it - skip_first) % refresh_every == 0 or it == draws - 1:
-                        plots.traceplot(trace, ax=ax, live_plot=True, **live_plot_kwargs)
+            if it >= skip_first:
+                trace = MultiTrace([strace])
     except KeyboardInterrupt:
         pass
     finally:
@@ -1036,8 +1025,14 @@ def stop_tuning(step):
     return step
 
 
-def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size=None,
-                                random_seed=None, progressbar=True):
+def sample_posterior_predictive(trace,
+                                samples: Optional[int]=None,
+                                model: Optional[Model]=None,
+                                vars: Optional[TIterable[Tensor]]=None,
+                                var_names: Optional[List[str]]=None,
+                                size: Optional[int]=None,
+                                random_seed=None,
+                                progressbar: bool=True) -> Dict[str, np.ndarray]:
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -1051,7 +1046,10 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
         Model used to generate `trace`
     vars : iterable
         Variables for which to compute the posterior predictive samples.
-        Defaults to `model.observed_RVs`.
+        Defaults to `model.observed_RVs`.  Deprecated: please use `var_names` instead.
+    var_names : Iterable[str]
+        Alternative way to specify vars to sample, to make this function orthogonal with
+        others.
     size : int
         The number of random draws from the distribution specified by the parameters in each
         sample of the trace.
@@ -1065,7 +1063,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     Returns
     -------
     samples : dict
-        Dictionary with the variables as keys. The values corresponding to the
+        Dictionary with the variable names as keys, and values numpy arrays containing
         posterior predictive samples.
     """
     len_trace = len(trace)
@@ -1079,6 +1077,14 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
 
     model = modelcontext(model)
 
+    if var_names is not None:
+        if vars is not None:
+            raise ValueError("Should not specify both vars and var_names arguments.")
+        else:
+            vars = [model[x] for x in var_names]
+    elif vars is not None: # var_names is None, and vars is not.
+        warnings.warn("vars argument is deprecated in favor of var_names.",
+                      DeprecationWarning)
     if vars is None:
         vars = model.observed_RVs
 
@@ -1090,7 +1096,7 @@ def sample_posterior_predictive(trace, samples=None, model=None, vars=None, size
     if progressbar:
         indices = tqdm(indices, total=samples)
 
-    ppc_trace = defaultdict(list)
+    ppc_trace = defaultdict(list) # type: Dict[str, List[Any]] 
     try:
         for idx in indices:
             if nchain > 1:
@@ -1121,7 +1127,7 @@ def sample_ppc(*args, **kwargs):
 
 
 def sample_posterior_predictive_w(traces, samples=None, models=None, weights=None,
-                                    random_seed=None, progressbar=True):
+                                  random_seed=None, progressbar=True):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.
 
@@ -1259,7 +1265,11 @@ def sample_ppc_w(*args, **kwargs):
     return sample_posterior_predictive_w(*args, **kwargs)
 
 
-def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None):
+def sample_prior_predictive(samples=500,
+                            model: Optional[Model]=None,
+                            vars: Optional[TIterable[str]] = None,
+                            var_names: Optional[TIterable[str]] = None,
+                            random_seed=None) -> Dict[str, np.ndarray]:
     """Generate samples from the prior predictive distribution.
 
     Parameters
@@ -1267,10 +1277,16 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
     samples : int
         Number of samples from the prior predictive to generate. Defaults to 500.
     model : Model (optional if in `with` context)
-    vars : iterable
+    vars : Iterable[str]
         A list of names of variables for which to compute the posterior predictive
          samples.
         Defaults to `model.named_vars`.
+        DEPRECATED - Use `var_names` instead.
+    var_names : Iterable[str]
+        A list of names of variables for which to compute the posterior predictive
+         samples.
+        Defaults to `model.named_vars`.
+    
     random_seed : int
         Seed for the random number generator.
 
@@ -1282,25 +1298,39 @@ def sample_prior_predictive(samples=500, model=None, vars=None, random_seed=None
     """
     model = modelcontext(model)
 
-    if vars is None:
+    if vars is None and var_names is None:
         vars = set(model.named_vars.keys())
+        vars_ = model.named_vars
+    elif vars is None:
+        vars = var_names
+        vars_ = vars
+    elif vars is not None:
+        warnings.warn("vars argument is deprecated in favor of var_names.",
+                      DeprecationWarning)
+        vars_ = vars
+    else:
+        raise ValueError("Cannot supply both vars and var_names arguments.")
+    vars = cast(TIterable[str], vars) # tell mypy that vars cannot be None here.
 
     if random_seed is not None:
         np.random.seed(random_seed)
-    names = get_default_varnames(model.named_vars, include_transformed=False)
+    names = get_default_varnames(vars_, include_transformed=False)
     # draw_values fails with auto-transformed variables. transform them later!
     values = draw_values([model[name] for name in names], size=samples)
 
     data = {k: v for k, v in zip(names, values)}
+    if data is None:
+        raise AssertionError("No variables sampled: attempting to sample %s"%names)
 
-    prior = {}
+    prior = {} # type: Dict[str, np.ndarray]
     for var_name in vars:
         if var_name in data:
             prior[var_name] = data[var_name]
         elif is_transformed_name(var_name):
             untransformed = get_untransformed_name(var_name)
             if untransformed in data:
-                prior[var_name] = model[untransformed].transformation.forward_val(data[untransformed])
+                prior[var_name] = model[untransformed].transformation.forward_val(
+                    data[untransformed])
     return prior
 
 

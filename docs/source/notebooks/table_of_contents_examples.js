@@ -1,7 +1,6 @@
 Gallery.contents = {
     "BEST": "Case Studies",
     "LKJ": "Case Studies",
-    "dawid-skene": "Case Studies",
     "stochastic_volatility": "Case Studies",
     "rugby_analytics": "Case Studies",
     "multilevel_modeling": "Case Studies",
@@ -30,7 +29,6 @@ Gallery.contents = {
     "GP-MeansAndCovs": "Gaussian Processes",
     "GP-SparseApprox": "Gaussian Processes",
     "GP-TProcess": "Gaussian Processes",
-    "GP-slice-sampling": "Gaussian Processes",
     "GP-smoothing": "Gaussian Processes",
     "gaussian_process": "Gaussian Processes",
     "dependent_density_regression": "Mixture Models",
@@ -39,9 +37,7 @@ Gallery.contents = {
     "gaussian_mixture_model": "Mixture Models",
     "marginalized_gaussian_mixture_model": "Mixture Models",
     "SMC2_gaussians": "Simulation-based Inference",
-    "bayesian_neural_network_with_sgfs": "Stochastic Gradients",
-    "constant_stochastic_gradient": "Stochastic Gradients",
-    "sgfs_simple_optimization": "Stochastic Gradients",
+    "SMC-ABC_Lotka-Volterra_example": "Simulation-based Inference",
     "bayes_param_survival_pymc3": "Survival Analysis",
     "censored_data": "Survival Analysis",
     "survival_analysis": "Survival Analysis",
@@ -56,5 +52,6 @@ Gallery.contents = {
     "lda-advi-aevb": "Variational Inference",
     "normalizing_flows_overview": "Variational Inference",
     "gaussian-mixture-model-advi": "Variational Inference",
-    "GLM-hierarchical-advi-minibatch": "Variational Inference"
+    "GLM-hierarchical-advi-minibatch": "Variational Inference",
+    "ODE_parameter_estimation": "Inference in ODE models"
 }

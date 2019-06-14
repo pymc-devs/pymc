@@ -19,8 +19,7 @@ from .dist_math import (
     alltrue_elemwise, betaln, bound, gammaln, i0e, incomplete_beta, logpow,
     normal_lccdf, normal_lcdf, SplineWrapper, std_cdf, zvalue,
 )
-from .distribution import (Continuous, draw_values, generate_samples,
-                           broadcast_distribution_samples)
+from .distribution import (Continuous, draw_values, generate_samples)
 
 __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'TruncatedNormal', 'Beta',
            'Kumaraswamy', 'Exponential', 'Laplace', 'StudentT', 'Cauchy',
@@ -234,6 +233,20 @@ class Uniform(BoundedContinuous):
             name, get_variable_name(lower), get_variable_name(upper))
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Uniform distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         return tt.switch(
             tt.or_(tt.lt(value, self.lower), tt.gt(value, self.upper)),
             -np.inf,
@@ -291,6 +304,20 @@ class Flat(Continuous):
         return r'${} \sim \text{{Flat}}()$'.format(name)
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Flat distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         return tt.switch(
             tt.eq(value, -np.inf),
             -np.inf,
@@ -344,6 +371,20 @@ class HalfFlat(PositiveContinuous):
         return r'${} \sim \text{{HalfFlat}}()$'.format(name)
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for HalfFlat distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         return tt.switch(
             tt.lt(value, np.inf),
             -np.inf,
@@ -488,6 +529,20 @@ class Normal(Continuous):
                                                                 get_variable_name(sigma))
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Normal distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         return normal_lcdf(self.mu, self.sigma, value)
 
 
@@ -523,7 +578,6 @@ class TruncatedNormal(BoundedContinuous):
         a1 = [-3, -5, -5]
         b1 = [7, 5, 4]
         for mu, sigma, a, b in zip(mus, sigmas,a1,b1):
-            print mu, sigma, a, b
             an, bn = (a - mu) / sigma, (b - mu) / sigma
             pdf = st.truncnorm.pdf(x, an,bn, loc=mu, scale=sigma)
             plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, a={}, b={}'.format(mu, sigma, a, b))
@@ -572,15 +626,17 @@ class TruncatedNormal(BoundedContinuous):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
         self.tau = tt.as_tensor_variable(tau)
-        self.lower = tt.as_tensor_variable(floatX(lower)) if lower is not None else lower
-        self.upper = tt.as_tensor_variable(floatX(upper)) if upper is not None else upper
+        self.lower_check = tt.as_tensor_variable(floatX(lower)) if lower is not None else lower
+        self.upper_check = tt.as_tensor_variable(floatX(upper)) if upper is not None else upper
+        self.lower = tt.as_tensor_variable(floatX(lower)) if lower is not None else tt.as_tensor_variable(-np.inf)
+        self.upper = tt.as_tensor_variable(floatX(upper)) if upper is not None else tt.as_tensor_variable(np.inf)
         self.mu = tt.as_tensor_variable(floatX(mu))
 
-        if self.lower is None and self.upper is None:
+        if self.lower_check is None and self.upper_check is None:
             self._defaultval = mu
-        elif self.lower is None and self.upper is not None:
+        elif self.lower_check is None and self.upper_check is not None:
             self._defaultval = self.upper - 1.
-        elif self.lower is not None and self.upper is None:
+        elif self.lower_check is not None and self.upper_check is None:
             self._defaultval = self.lower + 1.
         else:
             self._defaultval = (self.lower + self.upper) / 2
@@ -608,16 +664,34 @@ class TruncatedNormal(BoundedContinuous):
         -------
         array
         """
-        mu_v, std_v, a_v, b_v = draw_values(
-            [self.mu, self.sigma, self.lower, self.upper], point=point, size=size)
-        return generate_samples(stats.truncnorm.rvs,
-                                a=(a_v - mu_v)/std_v,
-                                b=(b_v - mu_v) / std_v,
-                                loc=mu_v,
-                                scale=std_v,
-                                dist_shape=self.shape,
-                                size=size,
-                                )
+        mu, sigma, lower, upper = draw_values(
+            [self.mu, self.sigma, self.lower, self.upper],
+            point=point,
+            size=size
+        )
+        return generate_samples(
+            self._random,
+            mu=mu,
+            sigma=sigma,
+            lower=lower,
+            upper=upper,
+            dist_shape=self.shape,
+            size=size,
+        )
+
+    def _random(self, mu, sigma, lower, upper, size):
+        """ Wrapper around stats.truncnorm.rvs that converts TruncatedNormal's
+        parametrization to scipy.truncnorm. All parameter arrays should have
+        been broadcasted properly by generate_samples at this point and size is
+        the scipy.rvs representation.
+        """
+        return stats.truncnorm.rvs(
+            a=(lower - mu) / sigma,
+            b=(upper - mu) / sigma,
+            loc=mu,
+            scale=sigma,
+            size=size,
+        )
 
     def logp(self, value):
         """
@@ -640,19 +714,19 @@ class TruncatedNormal(BoundedContinuous):
         logp = Normal.dist(mu=mu, sigma=sigma).logp(value) - norm
 
         bounds = [sigma > 0]
-        if self.lower is not None:
+        if self.lower_check is not None:
             bounds.append(value >= self.lower)
-        if self.upper is not None:
+        if self.upper_check is not None:
             bounds.append(value <= self.upper)
         return bound(logp, *bounds)
 
     def _normalization(self):
         mu, sigma = self.mu, self.sigma
 
-        if self.lower is None and self.upper is None:
+        if self.lower_check is None and self.upper_check is None:
             return 0.
 
-        if self.lower is not None and self.upper is not None:
+        if self.lower_check is not None and self.upper_check is not None:
             lcdf_a = normal_lcdf(mu, sigma, self.lower)
             lcdf_b = normal_lcdf(mu, sigma, self.upper)
             lsf_a = normal_lccdf(mu, sigma, self.lower)
@@ -664,7 +738,7 @@ class TruncatedNormal(BoundedContinuous):
                 logdiffexp(lcdf_b, lcdf_a),
             )
 
-        if self.lower is not None:
+        if self.lower_check is not None:
             return normal_lccdf(mu, sigma, self.lower)
         else:
             return normal_lcdf(mu, sigma, self.upper)
@@ -698,8 +772,8 @@ class HalfNormal(PositiveContinuous):
            \sqrt{\frac{2\tau}{\pi}}
            \exp\left(\frac{-x^2 \tau}{2}\right)
 
-       f(x \mid \sigma) =\sigma
-           \sqrt{\frac{2}{\pi}}
+       f(x \mid \sigma) =
+           \sqrt{\frac{2}{\pi\sigma^2}}
            \exp\left(\frac{-x^2}{2\sigma^2}\right)
 
     .. note::
@@ -816,6 +890,20 @@ class HalfNormal(PositiveContinuous):
                                                                          get_variable_name(sigma))
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for HalfNormal distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         sigma = self.sigma
         z = zvalue(value, mu=0, sigma=sigma)
         return tt.switch(
@@ -834,7 +922,7 @@ class Wald(PositiveContinuous):
     .. math::
 
        f(x \mid \mu, \lambda) =
-           \left(\frac{\lambda}{2\pi)}\right)^{1/2} x^{-3/2}
+           \left(\frac{\lambda}{2\pi}\right)^{1/2} x^{-3/2}
            \exp\left\{
                -\frac{\lambda}{2x}\left(\frac{x-\mu}{\mu}\right)^2
            \right\}
@@ -965,8 +1053,6 @@ class Wald(PositiveContinuous):
         """
         mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha],
                                      point=point, size=size)
-        mu, lam, alpha = broadcast_distribution_samples([mu, lam, alpha],
-                                                        size=size)
         return generate_samples(self._random,
                                 mu, lam, alpha,
                                 dist_shape=self.shape,
@@ -1011,6 +1097,20 @@ class Wald(PositiveContinuous):
                                                                 get_variable_name(alpha))
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Wald distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         # Distribution parameters
         mu = self.mu
         lam = self.lam
@@ -1194,6 +1294,20 @@ class Beta(UnitContinuous):
                      alpha > 0, beta > 0)
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Beta distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         value = floatX(tt.as_tensor(value))
         a = floatX(tt.as_tensor(self.alpha))
         b = floatX(tt.as_tensor(self.beta))
@@ -1296,7 +1410,6 @@ class Kumaraswamy(UnitContinuous):
         """
         a, b = draw_values([self.a, self.b],
                            point=point, size=size)
-        a, b = broadcast_distribution_samples([a, b], size=size)
         return generate_samples(self._random, a, b,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1432,13 +1545,24 @@ class Exponential(PositiveContinuous):
 
     def logcdf(self, value):
         """
-        Compute the log CDF for the Exponential distribution
+        Compute the log of cumulative distribution function for the Exponential distribution
+        at the specified value.
 
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
             "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
             package"
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
         """
         value = floatX(tt.as_tensor(value))
         lam = self.lam
@@ -1557,6 +1681,20 @@ class Laplace(Continuous):
                                                                 get_variable_name(b))
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Laplace distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         a = self.mu
         b = self.b
         y = (value - a) / b
@@ -1673,7 +1811,6 @@ class Lognormal(PositiveContinuous):
         array
         """
         mu, tau = draw_values([self.mu, self.tau], point=point, size=size)
-        mu, tau = broadcast_distribution_samples([mu, tau], size=size)
         return generate_samples(self._random, mu, tau,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1710,6 +1847,20 @@ class Lognormal(PositiveContinuous):
                                                                 get_variable_name(tau))
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Lognormal distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         mu = self.mu
         sigma = self.sigma
         z = zvalue(tt.log(value), mu=mu, sigma=sigma)
@@ -1868,6 +2019,20 @@ class StudentT(Continuous):
                                                                 get_variable_name(lam))
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Student's T distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         nu = self.nu
         mu = self.mu
         sigma = self.sigma
@@ -1964,7 +2129,6 @@ class Pareto(Continuous):
         """
         alpha, m = draw_values([self.alpha, self.m],
                                point=point, size=size)
-        alpha, m = broadcast_distribution_samples([alpha, m], size=size)
         return generate_samples(self._random, alpha, m,
                                 dist_shape=self.shape,
                                 size=size)
@@ -2000,6 +2164,20 @@ class Pareto(Continuous):
                                                                 get_variable_name(m))
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Pareto distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         m = self.m
         alpha = self.alpha
         arg = (m / value) ** alpha
@@ -2089,7 +2267,6 @@ class Cauchy(Continuous):
         """
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point, size=size)
-        alpha, beta = broadcast_distribution_samples([alpha, beta], size=size)
         return generate_samples(self._random, alpha, beta,
                                 dist_shape=self.shape,
                                 size=size)
@@ -2125,6 +2302,20 @@ class Cauchy(Continuous):
                                                                 get_variable_name(beta))
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Cauchy distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         return tt.log(
             0.5 + tt.arctan((value - self.alpha) / self.beta) / np.pi
         )
@@ -2229,6 +2420,20 @@ class HalfCauchy(PositiveContinuous):
                                                                 get_variable_name(beta))
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for HalfCauchy distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         return tt.switch(
             tt.le(value, 0),
             -np.inf,
@@ -2366,6 +2571,29 @@ class Gamma(PositiveContinuous):
         return bound(
             -gammaln(alpha) + logpow(
                 beta, alpha) - beta * value + logpow(value, alpha - 1),
+            value >= 0,
+            alpha > 0,
+            beta > 0)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Gamma distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        alpha = self.alpha
+        beta = self.beta
+        return bound(
+            tt.log(tt.gammainc(alpha, beta * value)),
             value >= 0,
             alpha > 0,
             beta > 0)
@@ -2611,7 +2839,7 @@ class Weibull(PositiveContinuous):
     ========  ====================================================
     Support   :math:`x \in [0, \infty)`
     Mean      :math:`\beta \Gamma(1 + \frac{1}{\alpha})`
-    Variance  :math:`\beta^2 \Gamma(1 + \frac{2}{\alpha} - \mu^2)`
+    Variance  :math:`\beta^2 \Gamma(1 + \frac{2}{\alpha} - \mu^2/\beta^2)`
     ========  ====================================================
 
     Parameters
@@ -2656,7 +2884,6 @@ class Weibull(PositiveContinuous):
         """
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point, size=size)
-        alpha, beta = broadcast_distribution_samples([alpha, beta], size=size)
 
         def _random(a, b, size=None):
             return b * (-np.log(np.random.uniform(size=size)))**(1 / a)
@@ -2697,15 +2924,26 @@ class Weibull(PositiveContinuous):
                                                                 get_variable_name(beta))
 
     def logcdf(self, value):
-        '''
-        Compute the log CDF for the Weibull distribution
+        """
+        Compute the log of the cumulative distribution function for Weibull distribution
+        at the specified value.
 
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
             "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
             package"
-        '''
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         alpha = self.alpha
         beta = self.beta
         a = (value / beta)**alpha
@@ -2950,8 +3188,6 @@ class ExGaussian(Continuous):
         """
         mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu],
                                     point=point, size=size)
-        mu, sigma, nu = broadcast_distribution_samples([mu, sigma, nu],
-                                                       size=size)
 
         def _random(mu, sigma, nu, size=None):
             return (np.random.normal(mu, sigma, size=size)
@@ -3001,13 +3237,24 @@ class ExGaussian(Continuous):
 
     def logcdf(self, value):
         """
-        Compute the log CDF for the ExGaussian distribution
+        Compute the log of the cumulative distribution function for ExGaussian distribution
+        at the specified value.
 
         References
         ----------
         .. [Rigby2005] R.A. Rigby (2005).
            "Generalized additive models for location, scale and shape"
-           http://dx.doi.org/10.1111/j.1467-9876.2005.00510.x
+           https://doi.org/10.1111/j.1467-9876.2005.00510.x
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
         """
         mu = self.mu
         sigma = self.sigma
@@ -3353,10 +3600,22 @@ class Triangular(BoundedContinuous):
         """
         c, lower, upper = draw_values([self.c, self.lower, self.upper],
                                       point=point, size=size)
+        return generate_samples(self._random, c=c, lower=lower, upper=upper,
+                                size=size, dist_shape=self.shape)
+
+    def _random(self, c, lower, upper, size):
+        """ Wrapper around stats.triang.rvs that converts Triangular's
+        parametrization to scipy.triang. All parameter arrays should have
+        been broadcasted properly by generate_samples at this point and size is
+        the scipy.rvs representation.
+        """
         scale = upper - lower
-        c_ = (c - lower) / scale
-        return generate_samples(stats.triang.rvs, c=c_, loc=lower, scale=scale,
-                                size=size, dist_shape=self.shape, random_state=None)
+        return stats.triang.rvs(
+            c=(c - lower) / scale,
+            loc=lower,
+            scale=scale,
+            size=size,
+        )
 
     def logp(self, value):
         """
@@ -3396,6 +3655,20 @@ class Triangular(BoundedContinuous):
                                                                 get_variable_name(upper))
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Triangular distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         l = self.lower
         u = self.upper
         c = self.c
@@ -3525,6 +3798,20 @@ class Gumbel(Continuous):
                                                                 get_variable_name(beta))
 
     def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Gumbel distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
         beta = self.beta
         mu = self.mu
 
@@ -3618,8 +3905,20 @@ class Rice(PositiveContinuous):
         """
         nu, sigma = draw_values([self.nu, self.sigma],
                              point=point, size=size)
-        return generate_samples(stats.rice.rvs, b=nu / sigma, scale=sigma, loc=0,
+        return generate_samples(self._random, nu=nu, sigma=sigma,
                                 dist_shape=self.shape, size=size)
+
+    def _random(self, nu, sigma, size):
+        """ Wrapper around stats.rice.rvs that converts Rice's
+        parametrization to scipy.rice. All parameter arrays should have
+        been broadcasted properly by generate_samples at this point and size is
+        the scipy.rvs representation.
+        """
+        return stats.rice.rvs(
+            b=nu / sigma,
+            scale=sigma,
+            size=size,
+        )
 
     def logp(self, value):
         """
@@ -3755,13 +4054,24 @@ class Logistic(Continuous):
 
     def logcdf(self, value):
         """
-        Compute the log CDF for the Logistic distribution
+        Compute the log of the cumulative distribution function for Logistic distribution
+        at the specified value.
 
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
             "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
             package"
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
         """
         mu = self.mu
         s = self.s

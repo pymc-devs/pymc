@@ -11,6 +11,7 @@ from theano.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from theano.tensor.slinalg import Cholesky
 from theano.scan_module import until
 from theano import scan
+from .shape_utils import to_tuple
 
 from .special import gammaln
 from pymc3.theanof import floatX
@@ -308,11 +309,12 @@ def random_choice(*args, **kwargs):
 
     Args:
         p: array
-           Probability of each class
-        size: int
-            Number of draws to return
-        k: int
-            Number of bins
+           Probability of each class. If p.ndim > 1, the last axis is
+           interpreted as the probability of each class, and numpy.random.choice
+           is iterated for every other axis element.
+        size: int or tuple
+            Shape of the desired output array. If p is multidimensional, size
+            should broadcast with p.shape[:-1].
 
     Returns:
         random sample: array
@@ -323,8 +325,19 @@ def random_choice(*args, **kwargs):
     k = p.shape[-1]
 
     if p.ndim > 1:
-        # If a 2d vector of probabilities is passed return a sample for each row of categorical probability
+        # If p is an nd-array, the last axis is interpreted as the class
+        # probability. We must iterate over the elements of all the other
+        # dimensions.
+        # We first ensure that p is broadcasted to the output's shape
+        size = to_tuple(size) + (1,)
+        p = np.broadcast_arrays(p, np.empty(size))[0]
+        out_shape = p.shape[:-1]
+        # np.random.choice accepts 1D p arrays, so we semiflatten p to
+        # iterate calls using the last axis as the category probabilities
+        p = np.reshape(p, (-1, p.shape[-1]))
         samples = np.array([np.random.choice(k, p=p_) for p_ in p])
+        # We reshape to the desired output shape
+        samples = np.reshape(samples, out_shape)
     else:
         samples = np.random.choice(k, p=p, size=size)
     return samples

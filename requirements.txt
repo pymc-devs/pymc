@@ -1,4 +1,4 @@
-theano>=1.0.0
+theano>=1.0.4
 numpy>=1.13.0
 scipy>=0.18.1
 pandas>=0.18.0

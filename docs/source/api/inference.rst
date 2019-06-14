@@ -12,10 +12,10 @@ Sampling
 
 
 Step-methods
-------------
+^^^^^^^^^^^^
 
 NUTS
-^^^^
+~~~~
 
 .. currentmodule:: pymc3.step_methods.hmc.nuts
 
@@ -23,7 +23,7 @@ NUTS
    :members:
 
 Metropolis
-^^^^^^^^^^
+~~~~~~~~~~
 
 .. currentmodule:: pymc3.step_methods.metropolis
 
@@ -31,7 +31,7 @@ Metropolis
    :members:
 
 Slice
-^^^^^
+~~~~~
 
 .. currentmodule:: pymc3.step_methods.slicer
 
@@ -39,16 +39,33 @@ Slice
    :members:
 
 Hamiltonian Monte Carlo
-^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: pymc3.step_methods.hmc.hmc
 
 .. autoclass:: pymc3.step_methods.hmc.hmc.HamiltonianMC
    :members:
 
+Sequential Monte Carlo
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Variational
------------
+.. currentmodule:: pymc3.step_methods.smc
+
+.. autoclass:: pymc3.step_methods.smc.SMC
+   :members:
+
+
+MultiTrace
+^^^^^^^^
+
+.. currentmodule:: pymc3.backends.base
+.. autoclass:: pymc3.backends.base.MultiTrace
+    :members:
+
+.. autoclass:: pymc3.backends.base.BaseTrace
+
+Variational Inference
+----------------
 
 OPVI
 ^^^^

@@ -138,8 +138,8 @@ You may also use it to run the test suite, with
 
 ```bash
 $  docker exec -it pymc3  bash # logon to the container
-$  cd ~/pymc3  
-$  . ./scripts/test.sh # takes a while!
+$  cd ~/pymc3/tests
+$  . ./../../scripts/test.sh # takes a while!
 ```
 
 This should be quite close to how the tests run on TravisCI.
