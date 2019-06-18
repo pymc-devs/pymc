@@ -190,8 +190,8 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
         window = self.adaptation_window
 
-        self._foreground_var.add_sample(sample, weight=1)
-        self._background_var.add_sample(sample, weight=1)
+        self._foreground_var.add_sample(sample)
+        self._background_var.add_sample(sample)
         self._update_from_weightvar(self._foreground_var)
 
         if self._n_samples > 0 and self._n_samples % window == 0:
@@ -292,8 +292,7 @@ class _WeightedVariance:
     def __init__(self, nelem, initial_mean=None, initial_variance=None,
                  initial_weight=0, dtype='d'):
         self._dtype = dtype
-        self.w_sum = float(initial_weight)
-        self.w_sum2 = float(initial_weight) ** 2
+        self.n_samples = float(initial_weight)
         if initial_mean is None:
             self.mean = np.zeros(nelem, dtype='d')
         else:
@@ -303,30 +302,28 @@ class _WeightedVariance:
         else:
             self.raw_var = np.array(initial_variance, dtype='d', copy=True)
 
-        self.raw_var[:] *= self.w_sum
+        self.raw_var[:] *= self.n_samples
 
         if self.raw_var.shape != (nelem,):
             raise ValueError('Invalid shape for initial variance.')
         if self.mean.shape != (nelem,):
             raise ValueError('Invalid shape for initial mean.')
 
-    def add_sample(self, x, weight):
+    def add_sample(self, x):
         x = np.asarray(x)
-        self.w_sum += weight
-        self.w_sum2 += weight * weight
-        prop = weight / self.w_sum
+        self.n_samples += 1
         old_diff = x - self.mean
-        self.mean[:] += prop * old_diff
+        self.mean[:] += old_diff / self.n_samples
         new_diff = x - self.mean
-        self.raw_var[:] += weight * old_diff * new_diff
+        self.raw_var[:] +=  old_diff * new_diff
 
     def current_variance(self, out=None):
-        if self.w_sum == 0:
+        if self.n_samples == 0:
             raise ValueError('Can not compute variance without samples.')
         if out is not None:
-            return np.divide(self.raw_var, self.w_sum, out=out)
+            return np.divide(self.raw_var, self.n_samples, out=out)
         else:
-            return (self.raw_var / self.w_sum).astype(self._dtype)
+            return (self.raw_var / self.n_samples).astype(self._dtype)
 
     def current_mean(self):
         return self.mean.copy(dtype=self._dtype)
