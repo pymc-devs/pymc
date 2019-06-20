@@ -190,8 +190,8 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
         window = self.adaptation_window
 
-        self._foreground_var.add_sample(sample)
-        self._background_var.add_sample(sample)
+        self._foreground_var.add_sample(sample, weight=1)
+        self._background_var.add_sample(sample, weight=1)
         self._update_from_weightvar(self._foreground_var)
 
         if self._n_samples > 0 and self._n_samples % window == 0:
@@ -309,13 +309,13 @@ class _WeightedVariance:
         if self.mean.shape != (nelem,):
             raise ValueError('Invalid shape for initial mean.')
 
-    def add_sample(self, x):
+    def add_sample(self, x, weight):
         x = np.asarray(x)
         self.n_samples += 1
         old_diff = x - self.mean
         self.mean[:] += old_diff / self.n_samples
         new_diff = x - self.mean
-        self.raw_var[:] +=  old_diff * new_diff
+        self.raw_var[:] +=  weight * old_diff * new_diff
 
     def current_variance(self, out=None):
         if self.n_samples == 0:
