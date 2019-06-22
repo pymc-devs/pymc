@@ -41,7 +41,7 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
         Whether to return the full output of scipy.optimize.minimize (Defaults to `False`)
     include_transformed : bool
         Flag for reporting automatically transformed variables in addition
-        to original variables (defaults to False).
+        to original variables (defaults to True).
     progressbar : bool
         Whether or not to display a progress bar in the command line.
     maxeval : int
