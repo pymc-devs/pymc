@@ -400,7 +400,7 @@ ordered = Ordered()
 
 class SumTo1(Transform):
     """
-    Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to K - 1 vector of values in [0,1]
+    Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of values in [0,1]
     This Transformation operates on the last dimension of the input tensor.
     """
 
@@ -431,7 +431,7 @@ sum_to_1 = SumTo1()
 class 
 Breaking(Transform):
     """
-    Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to K - 1 vector of real values.
+    Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of real values.
     Primarily borrowed from the STAN implementation.
 
     Parameters
