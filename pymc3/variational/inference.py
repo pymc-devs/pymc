@@ -3,7 +3,7 @@ import warnings
 import collections
 
 import numpy as np
-import tqdm
+from tqdm.auto import tqdm
 
 import pymc3 as pm
 from pymc3.variational import test_functions
@@ -73,7 +73,7 @@ class Inference:
             score=score, fn_kwargs=fn_kwargs,
             **kwargs
         )
-        progress = tqdm.trange(n)
+        progress = tqdm(range(n))
         try:
             for _ in progress:
                 step_func()
