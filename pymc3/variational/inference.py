@@ -129,7 +129,7 @@ class Inference:
             callbacks = []
         score = self._maybe_score(score)
         step_func = self.objective.step_function(score=score, **kwargs)
-        with tqdm(n, disable=not progressbar) as progress:
+        with tqdm(range(n), disable=not progressbar) as progress:
             if score:
                 state = self._iterate_with_loss(0, n, step_func, progress, callbacks)
             else:
@@ -259,7 +259,7 @@ class Inference:
         if self.state is None:
             raise TypeError('Need to call `.fit` first')
         i, step, callbacks, score = self.state
-        with tqdm(n, disable=not progressbar) as progress:
+        with tqdm(range(n), disable=not progressbar) as progress:
             if score:
                 state = self._iterate_with_loss(i, n, step, progress, callbacks)
             else:
