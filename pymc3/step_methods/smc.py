@@ -22,8 +22,10 @@ from ..theanof import inputvars, make_shared_replacements
 from ..model import modelcontext
 
 
-EXPERIMENTAL_WARNING = "Warning: SMC-ABC methods are experimental step methods and not yet"\
+EXPERIMENTAL_WARNING = (
+    "Warning: SMC-ABC methods are experimental step methods and not yet"
     " recommended for use in PyMC3!"
+)
 
 __all__ = ["SMC", "sample_smc"]
 
@@ -131,7 +133,9 @@ class SMC:
         self.sum_stat = sum_stat
 
 
-def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None, random_seed=-1):
+def sample_smc(
+    draws=5000, step=None, start=None, cores=None, progressbar=False, model=None, random_seed=-1
+):
     """
     Sequential Monte Carlo sampling
 
@@ -142,6 +146,8 @@ def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None,
         independent Markov Chains. Defaults to 5000.
     step : :class:`SMC`
         SMC initialization object
+    start : dict, or array of dict
+        Starting point in parameter space. It should be a list of dict with length `chains`.
     cores : int
         The number of chains to run in parallel.
     progressbar : bool
@@ -170,7 +176,8 @@ def sample_smc(draws=5000, step=None, cores=None, progressbar=False, model=None,
     prior_logp = logp_forw([model.varlogpt], variables, shared)
 
     pm._log.info("Sample initial stage: ...")
-    posterior, var_info = _initial_population(draws, model, variables)
+
+    posterior, var_info = _initial_population(draws, model, variables, start)
 
     if step.ABC:
         warnings.warn(EXPERIMENTAL_WARNING)
