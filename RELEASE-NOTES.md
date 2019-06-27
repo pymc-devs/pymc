@@ -4,7 +4,7 @@
 
 ### New features
 
-- Distinguish between `Data` and `Deterministic` variables when graphing models with graphviz. PR [#3491](https://github.com/pymc-defs/pymc3/pulls/3491).
+- Distinguish between `Data` and `Deterministic` variables when graphing models with graphviz. PR [#3491](https://github.com/pymc-devs/pymc3/pull/3491).
 - Sequential Monte Carlo - Approximate Bayesian Computation step method is now available. The implementation is in an experimental stage and will be further improved.
 - Makes use of new `tqdm` auto import mode which adapts the progress bars to console or jupyter notebook environments.
 
