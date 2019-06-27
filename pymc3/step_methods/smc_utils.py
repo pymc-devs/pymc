@@ -21,7 +21,7 @@ def _initial_population(draws, model, variables, start):
     var_info = OrderedDict()
     if start is None:
         init_rnd = pm.sample_prior_predictive(
-            draws, vars=[v.name for v in model.unobserved_RVs], model=model
+            draws, var_names=[v.name for v in model.unobserved_RVs], model=model
         )
     else:
         init_rnd = start
