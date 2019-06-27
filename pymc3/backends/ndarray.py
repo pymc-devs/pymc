@@ -72,17 +72,21 @@ def load_trace(directory, model=None):
     pm.Multitrace that was saved in the directory
     """
     straces = []
-    for directory in glob.glob(os.path.join(directory, '*')):
-        if os.path.isdir(directory):
-            straces.append(SerializeNDArray(directory).load(model))
+    for subdir in glob.glob(os.path.join(directory, '*')):
+        if os.path.isdir(subdir):
+            straces.append(SerializeNDArray(subdir).load(model))
+    if straces == []:
+        raise Exception("%s is not a PyMC3 saved chain directory." % directory)
     return base.MultiTrace(straces)
 
 
 class SerializeNDArray:
     metadata_file = 'metadata.json'
     samples_file = 'samples.npz'
+    metadata_path = None # type: str
+    samples_path = None # type: str
 
-    def __init__(self, directory):
+    def __init__(self, directory: str):
         """Helper to save and load NDArray objects"""
         self.directory = directory
         self.metadata_path = os.path.join(self.directory, self.metadata_file)
@@ -128,6 +132,9 @@ class SerializeNDArray:
 
     def load(self, model):
         """Load the saved ndarray from file"""
+        if not os.path.exists(self.samples_path) or not os.path.exists(self.metadata_path):
+            raise Exception("%s is not a trace directory" % self.directory)
+
         new_trace = NDArray(model=model)
         with open(self.metadata_path, 'r') as buff:
             metadata = json.load(buff)
