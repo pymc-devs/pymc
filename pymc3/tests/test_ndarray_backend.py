@@ -213,6 +213,11 @@ class TestSaveLoad:
         for var in ('x', 'z'):
             assert (self.trace[var] == trace2[var]).all()
 
+    def test_bad_load(self, tmpdir_factory):
+        directory = str(tmpdir_factory.mktemp('data'))
+        with pytest.raises(pm.TraceDirectoryError):
+            pm.load_trace(directory, model=TestSaveLoad.model())
+
     def test_sample_posterior_predictive(self, tmpdir_factory):
         directory = str(tmpdir_factory.mktemp('data'))
         save_dir = pm.save_trace(self.trace, directory, overwrite=True)
