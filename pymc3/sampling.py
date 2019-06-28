@@ -335,6 +335,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     if isinstance(step, pm.step_methods.smc.SMC):
         trace = smc.sample_smc(draws=draws,
                                step=step,
+                               start=start,
                                cores=cores,
                                progressbar=progressbar,
                                model=model,

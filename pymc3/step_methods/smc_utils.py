@@ -12,22 +12,27 @@ from ..theanof import floatX, join_nonshared_inputs
 from ..util import get_untransformed_name, is_transformed_name
 
 
-def _initial_population(draws, model, variables):
+def _initial_population(draws, model, variables, start):
     """
     Create an initial population from the prior
     """
 
     population = []
     var_info = OrderedDict()
-    start = model.test_point
+    if start is None:
+        init_rnd = pm.sample_prior_predictive(
+            draws, var_names=[v.name for v in model.unobserved_RVs], model=model
+        )
+    else:
+        init_rnd = start
 
-    init_rnd = pm.sample_prior_predictive(
-        draws, vars=[v.name for v in model.unobserved_RVs], model=model
-    )
+    init = model.test_point
+
     for v in variables:
-        var_info[v.name] = (start[v.name].shape, start[v.name].size)
+        var_info[v.name] = (init[v.name].shape, init[v.name].size)
 
     for i in range(draws):
+
         point = pm.Point({v.name: init_rnd[v.name][i] for v in variables}, model=model)
         population.append(model.dict_to_array(point))
 
