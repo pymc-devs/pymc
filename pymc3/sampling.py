@@ -24,7 +24,7 @@ from .vartypes import discrete_types
 from .exceptions import IncorrectArgumentsError
 from pymc3.step_methods.hmc import quadpotential
 import pymc3 as pm
-import tqdm
+from tqdm import tqdm 
 
 
 import sys
