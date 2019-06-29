@@ -3,7 +3,7 @@ import warnings
 import collections
 
 import numpy as np
-from tqdm.auto import tqdm
+import tqdm
 
 import pymc3 as pm
 from pymc3.variational import test_functions
@@ -73,7 +73,7 @@ class Inference:
             score=score, fn_kwargs=fn_kwargs,
             **kwargs
         )
-        progress = tqdm(range(n))
+        progress = tqdm.trange(n)
         try:
             for _ in progress:
                 step_func()
@@ -129,7 +129,7 @@ class Inference:
             callbacks = []
         score = self._maybe_score(score)
         step_func = self.objective.step_function(score=score, **kwargs)
-        with tqdm(range(n), disable=not progressbar) as progress:
+        with tqdm.trange(n, disable=not progressbar) as progress:
             if score:
                 state = self._iterate_with_loss(0, n, step_func, progress, callbacks)
             else:
@@ -259,7 +259,7 @@ class Inference:
         if self.state is None:
             raise TypeError('Need to call `.fit` first')
         i, step, callbacks, score = self.state
-        with tqdm(range(n), disable=not progressbar) as progress:
+        with tqdm.trange(n, disable=not progressbar) as progress:
             if score:
                 state = self._iterate_with_loss(i, n, step, progress, callbacks)
             else:

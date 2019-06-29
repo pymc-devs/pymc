@@ -9,7 +9,7 @@ import pandas as pd
 from scipy.stats import dirichlet
 from scipy.optimize import minimize
 from scipy.signal import fftconvolve
-from tqdm.auto import tqdm
+import tqdm
 
 from .model import modelcontext
 from .util import get_default_varnames

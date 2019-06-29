@@ -347,7 +347,7 @@ class ParallelSampler:
         progressbar=True,
     ):
         if progressbar:
-            from tqdm.auto import tqdm
+            from tqdm import tqdm
 
         if any(len(arg) != chains for arg in [seeds, start_points]):
             raise ValueError("Number of seeds and start_points must be %s." % chains)
