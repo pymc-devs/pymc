@@ -6,7 +6,7 @@ Created on Mar 12, 2011
 from scipy.optimize import minimize
 import numpy as np
 from numpy import isfinite, nan_to_num
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import pymc3 as pm
 from ..vartypes import discrete_types, typefilter
 from ..model import modelcontext, Point
