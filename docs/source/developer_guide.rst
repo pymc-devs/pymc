@@ -16,7 +16,7 @@ Distribution
 ------------
 
 A high-level introduction of ``Distribution`` in PyMC3 can be found in
-the `documentation <https://docs.pymc.io/prob_dists.html>`__. The source
+the `documentation <https://docs.pymc.io/Probability_Distributions.html>`__. The source
 code of the probability distributions is nested under
 `pymc3/distributions <https://github.com/pymc-devs/pymc3/blob/master/pymc3/distributions/>`__,
 with the ``Distribution`` class defined in `distribution.py
@@ -58,7 +58,7 @@ distributions, but rather random variables that follow some density
 functions. Instead, to access a stateless distribution, you need to call
 ``pm.SomeDistribution.dist(...)`` or ``RV.dist`` *after* you initialized
 ``RV`` in a model context (see
-https://docs.pymc.io/prob\_dists.html#using-pymc-distributions-without-a-model).
+https://docs.pymc.io/Probability\_Distributions.html#using-pymc-distributions-without-a-model).
 
 With this distinction in mind, we can take a closer look at the
 stateless distribution part of pymc3 (see distribution api in `doc
@@ -107,7 +107,7 @@ number generation is great to have, but sometimes there might not be
 efficient random number generator for some densities. Since a function
 is all you need, you can wrap almost any thenao function into a
 distribution using ``pm.DensityDist``
-https://docs.pymc.io/prob\_dists.html#custom-distributions
+https://docs.pymc.io/Probability\_Distributions.html#custom-distributions
 
 Thus, distributions that are defined in the ``distributions`` submodule
 (e.g. look at ``pm.Normal`` in ``pymc3.distributions.continuous``), each
