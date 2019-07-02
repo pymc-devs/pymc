@@ -365,6 +365,16 @@ class Matern32(Stationary):
         r = self.euclidean_dist(X, Xs)
         return (1.0 + np.sqrt(3.0) * r) * tt.exp(-np.sqrt(3.0) * r)
 
+class Matern12(Stationary):
+    R"""
+    The Matern kernel with nu = 1/2
+
+    k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell} \right]
+    """
+    def full(self, X, Xs=None):
+        X, Xs = self._slice(X, Xs)
+        r = self.euclidean_dist(X, Xs)
+        return tt.exp(-r)
 
 class Exponential(Stationary):
     R"""

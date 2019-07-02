@@ -448,6 +448,18 @@ class TestMatern32:
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
+class TestMatern12:
+    def test_1d(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model() as model:
+            cov = pm.gp.cov.Matern12(1, 0.1)
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 0.32919, atol=1e-3)
+        K = theano.function([], cov(X, X))()
+        npt.assert_allclose(K[0, 1], 0.32919, atol=1e-3)
+        Kd = theano.function([],cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
 class TestCosine:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
