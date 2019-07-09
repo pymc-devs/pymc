@@ -1,4 +1,3 @@
-import theano.tensor as tt
 import numpy as np
 from .distribution import NoDistribution
 
