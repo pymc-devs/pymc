@@ -150,7 +150,7 @@ class NoDistribution(Distribution):
         return getattr(self.parent_dist, name)
 
     def logp(self, x):
-        return 0
+        return tt.zeros_like(x)
 
 
 class Discrete(Distribution):
