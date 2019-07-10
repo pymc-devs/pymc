@@ -134,10 +134,9 @@ def TensorType(dtype, shape, broadcastable=None):
 
 class NoDistribution(Distribution):
 
-    def __init__(self, shape, dtype, testval=None, defaults=(),
-                 transform=None, parent_dist=None, *args, **kwargs):
-        super().__init__(shape=shape, dtype=dtype,
-                         testval=testval, defaults=defaults,
+    def __init__(self, shape, dtype, testval=None, defaults=(), transform=None, parent_dist=None,
+                 *args, **kwargs):
+        super().__init__(shape=shape, dtype=dtype, testval=testval, defaults=defaults,
                          *args, **kwargs)
         self.parent_dist = parent_dist
 
@@ -150,7 +149,18 @@ class NoDistribution(Distribution):
         return getattr(self.parent_dist, name)
 
     def logp(self, x):
-        return 0
+        """Calculate log probability.
+
+        Parameters
+        ----------
+        x : numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return tt.zeros_like(x)
 
 
 class Discrete(Distribution):

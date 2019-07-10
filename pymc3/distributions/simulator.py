@@ -1,4 +1,3 @@
-import theano.tensor as tt
 import numpy as np
 from .distribution import NoDistribution
 
@@ -37,18 +36,6 @@ class Simulator(NoDistribution):
         """
 
         raise NotImplementedError("Not implemented yet")
-
-    def logp(self, value):
-        """
-        Parameters
-        ----------
-        value : numeric
-            Value for which log-probability is calculated.
-        Returns
-        -------
-        TensorVariable
-        """
-        return tt.zeros_like(value)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
