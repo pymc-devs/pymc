@@ -154,7 +154,7 @@ docker exec -it pymc3 jupyter notebook list
 
 ## Style guide
 
-Follow [TensorFlow's style guide](https://www.tensorflow.org/versions/master/how_tos/style_guide.html) or the [Google style guide](https://google.github.io/styleguide/pyguide.html) for writing code, which more or less follows PEP 8.
+Follow [TensorFlow's style guide](https://www.tensorflow.org/community/contribute/code_style) or the [Google style guide](https://google.github.io/styleguide/pyguide.html) for writing code, which more or less follows PEP 8.
 
 
 #### This guide was derived from the [scikit-learn guide to contributing](https://github.com/scikit-learn/scikit-learn/blob/master/CONTRIBUTING.md)
