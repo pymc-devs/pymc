@@ -296,7 +296,7 @@ class Periodic(Stationary):
     The Periodic kernel.
 
     .. math::
-       k(x, x') = \mathrm{exp}\left( -\frac{2 \mathrm{sin}^2(\pi |x-x'| \frac{1}{T})}{\ell^2} \right)
+       k(x, x') = \mathrm{exp}\left( -\frac{\mathrm{sin}^2(\pi |x-x'| \frac{1}{T})}{2\ell^2} \right)
     """
 
     def __init__(self, input_dim, period, ls=None, ls_inv=None, active_dims=None):
