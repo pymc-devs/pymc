@@ -69,96 +69,97 @@ class _PosteriorPredictiveSampler():
         with context:
             self.init()
             self.make_graph()
-            with context:
-                drawn = context.drawn_vars
-                # Init givens and the stack of nodes to try to `_draw_value` from
-                givens = {p.name: (p, v) for (p, size), v in drawn.items()
-                          if getattr(p, 'name', None) is not None}
-                stack = list(self.leaf_nodes.values())  # A queue would be more appropriate
-                while stack:
-                    next_ = stack.pop(0)
-                    if (next_, size) in drawn:
-                        # If the node already has a givens value, skip it
-                        continue
-                    elif isinstance(next_, (tt.TensorConstant,
-                                            tt.sharedvar.SharedVariable)):
-                        # If the node is a theano.tensor.TensorConstant or a
-                        # theano.tensor.sharedvar.SharedVariable, its value will be
-                        # available automatically in _compile_theano_function so
-                        # we can skip it. Furthermore, if this node was treated as a
-                        # TensorVariable that should be compiled by theano in
-                        # _compile_theano_function, it would raise a `TypeError:
-                        # ('Constants not allowed in param list', ...)` for
-                        # TensorConstant, and a `TypeError: Cannot use a shared
-                        # variable (...) as explicit input` for SharedVariable.
-                        # ObservedRV and MultiObservedRV instances are ViewOPs
-                        # of TensorConstants or SharedVariables, we must add them
-                        # to the stack or risk evaluating deterministics with the
-                        # wrong values (issue #3354)
+
+            drawn = context.drawn_vars
+            # Init givens and the stack of nodes to try to `_draw_value` from
+            givens = {p.name: (p, v) for (p, size), v in drawn.items()
+                      if getattr(p, 'name', None) is not None}
+            stack = list(self.leaf_nodes.values())  # A queue would be more appropriate
+            while stack:
+                next_ = stack.pop(0)
+                if (next_, size) in drawn:
+                    # If the node already has a givens value, skip it
+                    continue
+                elif isinstance(next_, (tt.TensorConstant,
+                                        tt.sharedvar.SharedVariable)):
+                    # If the node is a theano.tensor.TensorConstant or a
+                    # theano.tensor.sharedvar.SharedVariable, its value will be
+                    # available automatically in _compile_theano_function so
+                    # we can skip it. Furthermore, if this node was treated as a
+                    # TensorVariable that should be compiled by theano in
+                    # _compile_theano_function, it would raise a `TypeError:
+                    # ('Constants not allowed in param list', ...)` for
+                    # TensorConstant, and a `TypeError: Cannot use a shared
+                    # variable (...) as explicit input` for SharedVariable.
+                    # ObservedRV and MultiObservedRV instances are ViewOPs
+                    # of TensorConstants or SharedVariables, we must add them
+                    # to the stack or risk evaluating deterministics with the
+                    # wrong values (issue #3354)
+                    stack.extend([node for node in self.named_nodes_parents[next_]
+                                  if isinstance(node, (ObservedRV,
+                                                       MultiObservedRV))
+                                  and (node, size) not in drawn])
+                    continue
+                else:
+                    # If the node does not have a givens value, try to draw it.
+                    # The named node's children givens values must also be taken
+                    # into account.
+                    children = self.named_nodes_children[next_]
+                    temp_givens = [givens[k] for k in givens if k in children]
+                    try:
+                        # This may fail for autotransformed RVs, which don't
+                        # have the random method
+                        value = self.draw_value(next_,
+                                                givens=temp_givens)
+                        assert isinstance(value, np.ndarray)
+                        self.pp_trace[next_.name] = value
+                        givens[next_.name] = (next_, value)
+                        drawn[(next_, size)] = value
+                    except theano.gof.fg.MissingInputError:
+                        # The node failed, so we must add the node's parents to
+                        # the stack of nodes to try to draw from. We exclude the
+                        # nodes in the `params` list.
                         stack.extend([node for node in self.named_nodes_parents[next_]
-                                      if isinstance(node, (ObservedRV,
-                                                           MultiObservedRV))
-                                      and (node, size) not in drawn])
-                        continue
+                                      if node is not None and
+                                      (node, size) not in drawn])
+
+
+            # the below makes sure the graph is evaluated in order
+            # test_distributions_random::TestDrawValues::test_draw_order fails without it
+            # The remaining params that must be drawn are all hashable
+            to_eval = set() # type: Set[int]
+            missing_inputs = set([j for j, p in self.symbolic_params]) # type: Set[int]
+            while to_eval or missing_inputs:
+                if to_eval == missing_inputs:
+                    raise ValueError('Cannot resolve inputs for {}'.format([str(trace.varnames[j]) for j in to_eval]))
+                to_eval = set(missing_inputs)
+                missing_inputs = set()
+                for param_idx in to_eval:
+                    param = vars[param_idx]
+                    drawn = context.drawn_vars
+                    if (param, size) in drawn:
+                        self.evaluated[param_idx] = drawn[(param, size)]
                     else:
-                        # If the node does not have a givens value, try to draw it.
-                        # The named node's children givens values must also be taken
-                        # into account.
-                        children = self.named_nodes_children[next_]
-                        temp_givens = [givens[k] for k in givens if k in children]
                         try:
-                            # This may fail for autotransformed RVs, which don't
-                            # have the random method
-                            value = self.draw_value(next_,
-                                                    givens=temp_givens)
+                            if param in self.named_nodes_children:
+                                for node in self.named_nodes_children[param]:
+                                    if (
+                                        node.name not in givens and
+                                        (node, size) in drawn
+                                    ):
+                                        givens[node.name] = (
+                                            node,
+                                            drawn[(node, size)]
+                                        )
+                            value = self.draw_value(param,
+                                                    trace=self.trace,
+                                                    givens=givens.values())
                             assert isinstance(value, np.ndarray)
-                            self.pp_trace[next_.name] = value
-                            givens[next_.name] = (next_, value)
-                            drawn[(next_, size)] = value
+                            self.pp_trace[param.name] = value
+                            self.evaluated[param_idx] = drawn[(param, size)] = value
+                            givens[param.name] = (param, value)
                         except theano.gof.fg.MissingInputError:
-                            # The node failed, so we must add the node's parents to
-                            # the stack of nodes to try to draw from. We exclude the
-                            # nodes in the `params` list.
-                            stack.extend([node for node in self.named_nodes_parents[next_]
-                                          if node is not None and
-                                          (node, size) not in drawn])
-
-
-                # the below makes sure the graph is evaluated in order
-                # test_distributions_random::TestDrawValues::test_draw_order fails without it
-                # The remaining params that must be drawn are all hashable
-                to_eval = set() # type: Set[int]
-                missing_inputs = set([j for j, p in self.symbolic_params]) # type: Set[int]
-                while to_eval or missing_inputs:
-                    if to_eval == missing_inputs:
-                        raise ValueError('Cannot resolve inputs for {}'.format([str(trace.varnames[j]) for j in to_eval]))
-                    to_eval = set(missing_inputs)
-                    missing_inputs = set()
-                    for param_idx in to_eval:
-                        param = vars[param_idx]
-                        drawn = context.drawn_vars
-                        if (param, size) in drawn:
-                            self.evaluated[param_idx] = drawn[(param, size)]
-                        else:
-                            try:
-                                if param in self.named_nodes_children:
-                                    for node in self.named_nodes_children[param]:
-                                        if (
-                                            node.name not in givens and
-                                            (node, size) in drawn
-                                        ):
-                                            givens[node.name] = (
-                                                node,
-                                                drawn[(node, size)]
-                                            )
-                                value = self.draw_value(param,
-                                                        givens=givens.values())
-                                assert isinstance(value, np.ndarray)
-                                self.pp_trace[param.name] = value
-                                self.evaluated[param_idx] = drawn[(param, size)] = value
-                                givens[param.name] = (param, value)
-                            except theano.gof.fg.MissingInputError:
-                                missing_inputs.add(param_idx)
+                            missing_inputs.add(param_idx)
         assert set(self.pp_trace.keys()) == {var.name for var in vars}
 
     def init(self) -> None:
@@ -218,7 +219,7 @@ class _PosteriorPredictiveSampler():
                     else:
                         self.named_nodes_children[k].update(nnc[k])
 
-    def draw_value(self, param, givens = None):
+    def draw_value(self, param, trace: Optional[MultiTrace]=None, givens = None):
         """Draw a random value from a distribution or return a constant.
 
         Parameters
@@ -239,9 +240,15 @@ class _PosteriorPredictiveSampler():
         size : int, optional
             Number of samples per point.  Currently not supported.
         """
-        trace = self.trace
+
         size = self.size
         samples = self.samples
+
+        def conditional_iter():
+            return zip(range(samples), itertools.cycle(trace.points())) if trace \
+                       else zip(range(samples), itertools.repeat(None))
+
+
         if isinstance(param, (numbers.Number, np.ndarray)):
             return param
         elif isinstance(param, tt.TensorConstant):
@@ -249,13 +256,13 @@ class _PosteriorPredictiveSampler():
         elif isinstance(param, tt.sharedvar.SharedVariable):
             return param.get_value()
         elif isinstance(param, (tt.TensorVariable, MultiObservedRV)):
-            if hasattr(param, 'model') and param.name in trace.varnames:
+            if hasattr(param, 'model') and trace and param.name in trace.varnames:
                 return trace[param.name]
             elif hasattr(param, 'random') and param.random is not None:
                 model = modelcontext(None)                                                                      
                 shape = tuple(_param_shape(param, model)) # type: Tuple[int, ...]
                 val = np.ndarray((samples, ) + shape)
-                for i, point in zip(range(samples), itertools.cycle(trace.points())):
+                for i, point in conditional_iter():
                     x = param.random(point=point)
                     if shape != ():
                         val[i,:] = x
@@ -278,7 +285,7 @@ class _PosteriorPredictiveSampler():
                     val = np.ndarray((samples, ) + distshape)
 
                     try:
-                        for i, point in zip(range(samples), itertools.cycle(trace.points())):
+                        for i, point in conditional_iter():
                             x =  dist_tmp.random(point=point, size=size)
                             if distshape == ():
                                 val[i] = x
@@ -293,12 +300,12 @@ class _PosteriorPredictiveSampler():
                         # We want to draw values to infer the dist_shape,
                         # we don't want to store these drawn values to the context
                         with _DrawValuesContextBlocker():
-                            point = next(trace.points())
+                            point = next(trace.points()) if trace else None
                             temp_val = np.atleast_1d(dist_tmp.random(point=point,
                                                                     size=None))
                             dist_tmp.shape = tuple(temp_val.shape)
                         val = np.ndarray((samples,) + tuple(dist_tmp.shape))
-                        for i, point in zip(range(samples), itertools.cycle(trace.points())):
+                        for i, point in conditional_iter():
                             x =  dist_tmp.random(point=point, size=size)
                             if dist_tmp.shape == ():
                                 val[i] = x
@@ -309,7 +316,7 @@ class _PosteriorPredictiveSampler():
                 else: # has a distribution, but no observations
                     distshape = tuple(param.distribution.shape)
                     val = np.ndarray((samples, ) + distshape)
-                    for i, point in zip(range(samples), itertools.cycle(trace.points())):
+                    for i, point in conditional_iter():
                         x = param.distribution.random(point=point, size=size)
                         if distshape == ():
                             val[i] = x
