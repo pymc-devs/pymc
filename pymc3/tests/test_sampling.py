@@ -102,7 +102,7 @@ class TestSample(SeededTest):
                 tune=0,
                 random_seed=self.random_seed,
             )
-            for i, (trace, _) in enumerate(samps):
+            for i, trace in enumerate(samps):
                 assert i == len(trace) - 1, "Trace does not have correct length."
 
     def test_parallel_start(self):
