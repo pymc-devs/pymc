@@ -256,8 +256,12 @@ class _PosteriorPredictiveSampler():
                 shape = tuple(_param_shape(param, model)) # type: Tuple[int, ...]
                 val = np.ndarray((samples, ) + shape)
                 for i, point in zip(range(samples), itertools.cycle(trace.points())):
-                    val[i,:] = x = param.random(point=point)
-                    assert shape == x.shape
+                    x = param.random(point=point)
+                    if shape != ():
+                        val[i,:] = x
+                        assert shape == x.shape
+                    else:
+                        val[i] = x
                 return val
             elif (hasattr(param, 'distribution') and
                     hasattr(param.distribution, 'random') and
@@ -275,39 +279,44 @@ class _PosteriorPredictiveSampler():
 
                     try:
                         for i, point in zip(range(samples), itertools.cycle(trace.points())):
-                            x = val[i,:] = dist_tmp.random(point=point, size=size)
-                            assert x.shape == distshape
+                            x =  dist_tmp.random(point=point, size=size)
+                            if distshape == ():
+                                val[i] = x
+                            else:
+                                val[i,:] = x
+                                assert x.shape == distshape
                         return val
                     except (ValueError, TypeError):
                         # reset shape to account for shape changes
                         # with theano.shared inputs
-                        dist_tmp.shape = np.array([])
+                        dist_tmp.shape = ()
                         # We want to draw values to infer the dist_shape,
                         # we don't want to store these drawn values to the context
                         with _DrawValuesContextBlocker():
                             point = next(trace.points())
                             temp_val = np.atleast_1d(dist_tmp.random(point=point,
                                                                     size=None))
-                        # Sometimes point may change the size of val but not the
-                        # distribution's shape
-                        if point and size is not None:
-                            temp_size = np.atleast_1d(size)
-                            if all(temp_val.shape[:len(temp_size)] == temp_size):
-                                dist_tmp.shape = temp_val.shape[len(temp_size):]
-                            else:
-                                dist_tmp.shape = temp_val.shape
+                            dist_tmp.shape = tuple(temp_val.shape)
                         val = np.ndarray((samples,) + tuple(dist_tmp.shape))
                         for i, point in zip(range(samples), itertools.cycle(trace.points())):
-                            x = val[i,:] = dist_tmp.random(point=point, size=size)
-                            assert x.shape == tuple(dist_tmp.shape)
+                            x =  dist_tmp.random(point=point, size=size)
+                            if dist_tmp.shape == ():
+                                val[i] = x
+                            else:
+                                val[i,:] = x
+                                assert x.shape == dist_tmp.shape
                         return val
                 else: # has a distribution, but no observations
                     distshape = tuple(param.distribution.shape)
                     val = np.ndarray((samples, ) + distshape)
                     for i, point in zip(range(samples), itertools.cycle(trace.points())):
-                        x = val[i, :] = param.distribution.random(point=point, size=size)
-                        assert x.shape == distshape
-                        return val
+                        x = param.distribution.random(point=point, size=size)
+                        if distshape == ():
+                            val[i] = x
+                        else:
+                            val[i, :] = x
+                            assert x.shape == distshape
+                    return val
             else: # doesn't have a distribution -- deterministic (?) -- this is probably wrong, but
                 # the values here will be a list of *sampled* values -- 1 per sample.
                 if givens:
