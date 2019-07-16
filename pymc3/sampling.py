@@ -22,7 +22,7 @@ from .vartypes import discrete_types
 from .exceptions import IncorrectArgumentsError
 from pymc3.step_methods.hmc import quadpotential
 from pymc3.distributions import draw_values
-from pymc3.distributions.posterior_predictive import _ppc_draw_values
+from pymc3.distributions.posterior_predictive import posterior_predictive_draw_values
 import pymc3 as pm
 from tqdm import tqdm
 
@@ -1132,7 +1132,7 @@ def sample_posterior_predictive(trace,
         indices = tqdm(indices, total=samples)
 
     try:
-        ppc_trace = _ppc_draw_values(cast(List[Any], vars), trace, samples, size=size)
+        ppc_trace = posterior_predictive_draw_values(cast(List[Any], vars), trace, samples, size=size)
     except KeyboardInterrupt:
         pass
 
@@ -1144,14 +1144,6 @@ def sample_posterior_predictive(trace,
         return {k: ary.reshape((nchain, len_trace, *ary.shape[1:])) for k, ary in ppc_trace.items() }
     else:
         return ppc_trace
-
-
-
-
-
-
-
-
 
 def sample_ppc(*args, **kwargs):
     """This method is deprecated.  Please use :func:`~sampling.sample_posterior_predictive`"""
