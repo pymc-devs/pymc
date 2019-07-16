@@ -24,7 +24,7 @@ from .vartypes import discrete_types
 from .exceptions import IncorrectArgumentsError
 from pymc3.step_methods.hmc import quadpotential
 import pymc3 as pm
-from tqdm import tqdm 
+from tqdm import tqdm
 
 
 import sys
@@ -539,13 +539,19 @@ def _sample(chain, progressbar, random_seed, start, draws=None, step=None,
 
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
+    _pbar_data = None
     if progressbar:
-        sampling = tqdm(sampling, total=draws)
+        _pbar_data = {"chain": chain, "divergences": 0}
+        _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
+        sampling = tqdm(sampling, total=draws, desc=_desc.format(**_pbar_data))
     try:
         strace = None
-        for it, strace in enumerate(sampling):
+        for it, (strace, diverging) in enumerate(sampling):
             if it >= skip_first:
                 trace = MultiTrace([strace])
+                if diverging and _pbar_data is not None:
+                    _pbar_data["divergences"] += 1
+                    sampling.set_description(_desc.format(**_pbar_data))
     except KeyboardInterrupt:
         pass
     finally:
@@ -591,7 +597,7 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     """
     sampling = _iter_sample(draws, step, start, trace, chain, tune,
                             model, random_seed)
-    for i, strace in enumerate(sampling):
+    for i, (strace, _) in enumerate(sampling):
         yield MultiTrace([strace[:i + 1]])
 
 
@@ -632,15 +638,17 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
             if i == tune:
                 step = stop_tuning(step)
             if step.generates_stats:
-                point, states = step.step(point)
+                point, stats = step.step(point)
                 if strace.supports_sampler_stats:
-                    strace.record(point, states)
+                    strace.record(point, stats)
+                    diverging = i > tune and stats and stats[0].get('diverging')
                 else:
                     strace.record(point)
             else:
                 point = step.step(point)
                 strace.record(point)
-            yield strace
+                diverging = False
+            yield strace, diverging
     except KeyboardInterrupt:
         strace.close()
         if hasattr(step, 'warnings'):
@@ -892,9 +900,9 @@ def _iter_population(draws, tune, popstep, steppers, traces, points):
                 # apply the update to the points and record to the traces
                 for c, strace in enumerate(traces):
                     if steppers[c].generates_stats:
-                        points[c], states = updates[c]
+                        points[c], stats = updates[c]
                         if strace.supports_sampler_stats:
-                            strace.record(points[c], states)
+                            strace.record(points[c], stats)
                         else:
                             strace.record(points[c])
                     else:
