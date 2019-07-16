@@ -1,6 +1,4 @@
-from typing import Dict, List, Optional, TYPE_CHECKING, cast
-if TYPE_CHECKING:
-    from typing import Any
+from typing import Dict, List, Optional, cast, Any
 from typing import Iterable as TIterable
 from collections import defaultdict, Iterable
 from copy import copy
@@ -14,7 +12,7 @@ from theano.tensor import Tensor
 
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
-from .distributions.distribution import draw_values
+
 from .model import modelcontext, Point, all_continuous, Model
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
@@ -23,6 +21,8 @@ from .util import update_start_vals, get_untransformed_name, is_transformed_name
 from .vartypes import discrete_types
 from .exceptions import IncorrectArgumentsError
 from pymc3.step_methods.hmc import quadpotential
+from pymc3.distributions import draw_values
+from pymc3.distributions.posterior_predictive import _ppc_draw_values
 import pymc3 as pm
 from tqdm import tqdm
 
@@ -1103,6 +1103,7 @@ def sample_posterior_predictive(trace,
 
     if samples is None:
         samples = sum(len(v) for v in trace._straces.values())
+    samples = cast(int, samples)
 
     if samples < len_trace * nchain:
         warnings.warn("samples parameter is smaller than nchains times ndraws, some draws "
@@ -1130,19 +1131,8 @@ def sample_posterior_predictive(trace,
     if progressbar:
         indices = tqdm(indices, total=samples)
 
-    ppc_trace = defaultdict(list) # type: Dict[str, List[Any]]
     try:
-        for idx in indices:
-            if nchain > 1:
-                chain_idx, point_idx = np.divmod(idx, len_trace)
-                param = trace._straces[chain_idx % nchain].point(point_idx)
-            else:
-                param = trace[idx % len_trace]
-
-            values = draw_values(vars, point=param, size=size)
-            for k, v in zip(vars, values):
-                ppc_trace[k.name].append(v)
-
+        ppc_trace = _ppc_draw_values(cast(List[Any], vars), trace, samples, size=size)
     except KeyboardInterrupt:
         pass
 
@@ -1151,12 +1141,16 @@ def sample_posterior_predictive(trace,
             indices.close()
 
     if keep_size:
-        for k, ary in ppc_trace.items():
-            ary = np.asarray(ary)
-            ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
-        return ppc_trace
+        return {k: ary.reshape((nchain, len_trace, *ary.shape[1:])) for k, ary in ppc_trace.items() }
     else:
-        return {k: np.asarray(v) for k, v in ppc_trace.items()}
+        return ppc_trace
+
+
+
+
+
+
+
 
 
 def sample_ppc(*args, **kwargs):
@@ -1281,8 +1275,8 @@ def sample_posterior_predictive_w(traces, samples=None, models=None, weights=Non
         for idx in indices:
             param = trace[idx]
             var = variables[idx]
-            # TODO sample_posterior_predictive_w is currently only work for model with
-            # one observed.
+            # TODO sample_posterior_predictive_w currently only works for models with
+            # one observed
             ppc[var.name].append(draw_values([var],
                                              point=param,
                                              size=size[idx]
