@@ -110,6 +110,7 @@ class _PosteriorPredictiveSampler():
                         # This may fail for autotransformed RVs, which don't
                         # have the random method
                         value = self.draw_value(next_,
+                                                trace=trace,
                                                 givens=temp_givens)
                         assert isinstance(value, np.ndarray)
                         self.pp_trace[next_.name] = value
@@ -229,9 +230,11 @@ class _PosteriorPredictiveSampler():
             will be converted to an array and returned. Theano variables
             are evaluated. If `param` is a pymc3 random variables, draw
             a new value from it and return that, unless a value is specified
-            in `point`.
-        point : dict, optional
-            A dictionary from pymc3 variable names to their values.
+            in the `trace`.
+        trace : pm.MultiTrace, optional
+            A dictionary from pymc3 variable names to samples of their values
+            used to provide context for evaluating `param`.
+            In one phase of `sample_posterior_predictive`, this will be None.
         givens : dict, optional
             A dictionary from theano variables to their values. These values
             are used to evaluate `param` if it is a theano variable.
