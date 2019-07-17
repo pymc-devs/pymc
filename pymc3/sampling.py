@@ -1044,12 +1044,9 @@ def stop_tuning(step):
 def sample_posterior_predictive(trace,
                                 samples: Optional[int]=None,
                                 model: Optional[Model]=None,
-                                vars: Optional[TIterable[Tensor]]=None,
                                 var_names: Optional[List[str]]=None,
-                                size: Optional[int]=None,
                                 keep_size: Optional[bool]=False,
-                                random_seed=None,
-                                progressbar: bool=True) -> Dict[str, np.ndarray]:
+                                random_seed=None) -> Dict[str, np.ndarray]:
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -1064,25 +1061,14 @@ def sample_posterior_predictive(trace,
         in the posterior predictive sample.
     model : Model (optional if in `with` context)
         Model used to generate `trace`
-    vars : iterable
-        Variables for which to compute the posterior predictive samples.
-        Defaults to `model.observed_RVs`.  Deprecated: please use `var_names` instead.
     var_names : Iterable[str]
         Alternative way to specify vars to sample, to make this function orthogonal with
         others.
-    size : int
-        The number of random draws from the distribution specified by the parameters in each
-        sample of the trace. Not recommended unless more than ndraws times nchains posterior
-        predictive samples are needed.
     keep_size : bool, optional
         Force posterior predictive sample to have the same shape as posterior and sample stats
-        data: ``(nchains, ndraws, ...)``. Overrides samples and size parameters.
+        data: ``(nchains, ndraws, ...)``.
     random_seed : int
         Seed for the random number generator.
-    progressbar : bool
-        Whether or not to display a progress bar in the command line. The bar shows the percentage
-        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
-        time until completion ("expected time of arrival"; ETA).
 
     Returns
     -------
@@ -1098,8 +1084,6 @@ def sample_posterior_predictive(trace,
 
     if keep_size and samples is not None:
         raise IncorrectArgumentsError("Should not specify both keep_size and samples argukments")
-    if keep_size and size is not None:
-        raise IncorrectArgumentsError("Should not specify both keep_size and size argukments")
 
     if samples is None:
         samples = sum(len(v) for v in trace._straces.values())
@@ -1112,33 +1096,20 @@ def sample_posterior_predictive(trace,
 
     model = modelcontext(model)
 
-    if var_names is not None:
-        if vars is not None:
-            raise IncorrectArgumentsError("Should not specify both vars and var_names arguments.")
-        else:
-            vars = [model[x] for x in var_names]
-    elif vars is not None: # var_names is None, and vars is not.
-        warnings.warn("vars argument is deprecated in favor of var_names.",
-                      DeprecationWarning)
-    if vars is None:
+    if var_names is None:
         vars = model.observed_RVs
+    else:
+        vars = [model[x] for x in var_names]
 
     if random_seed is not None:
         np.random.seed(random_seed)
 
     indices = np.arange(samples)
 
-    if progressbar:
-        indices = tqdm(indices, total=samples)
-
     try:
-        ppc_trace = posterior_predictive_draw_values(cast(List[Any], vars), trace, samples, size=size)
+        ppc_trace = posterior_predictive_draw_values(cast(List[Any], vars), trace, samples)
     except KeyboardInterrupt:
         pass
-
-    finally:
-        if progressbar:
-            indices.close()
 
     if keep_size:
         return {k: ary.reshape((nchain, len_trace, *ary.shape[1:])) for k, ary in ppc_trace.items() }
