@@ -1,3 +1,4 @@
+from typing import Dict, TypeVar
 import re
 import functools
 from numpy import asscalar
@@ -165,3 +166,14 @@ def biwrap(wrapper):
             newwrapper = functools.partial(wrapper, *args, **kwargs)
             return newwrapper
     return enhanced
+
+A = TypeVar("A")
+B = TypeVar("B")
+
+
+def merge_dicts(dict1: Dict[A, B], dict2: Dict[A, B]) -> Dict[A, B]:
+    dict3 = dict1.copy()
+    for ind, val in dict2.items():
+        if val is not None:
+            dict3[ind] = val
+    return dict3
