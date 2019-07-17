@@ -1,21 +1,110 @@
 import numbers
 import itertools
-from typing import List, Dict, Any, Optional, Set, Tuple
+from typing import List, Dict, Any, Optional, Set, Tuple, Union, cast
+import warnings
 import logging
 
 import numpy as np
 import theano
 import theano.tensor as tt
 
-from ..backends.base import MultiTrace
+from ..backends.base import MultiTrace, TraceLike, TraceDict
 from .distribution import _DrawValuesContext, _DrawValuesContextBlocker, is_fast_drawable, _compile_theano_function
 from ..model import Model, get_named_nodes_and_relations, ObservedRV, MultiObservedRV, modelcontext
-
-
+from ..exceptions import IncorrectArgumentsError
+# Failing tests:
+#    test_mixture_random_shape::test_mixture_random_shape
+#
 
 PosteriorPredictiveTrace = Dict[str, np.ndarray]
+TraceIsh = Union[MultiTrace, Dict[str, np.ndarray], List['TraceIsh']]
+Point = Dict[str, np.ndarray]
 
-def posterior_predictive_draw_values(vars: List[Any], trace: MultiTrace, samples: int, size: Optional[int] = None) -> PosteriorPredictiveTrace:
+def sample_posterior_predictive(trace: TraceIsh,
+                                samples: Optional[int]=None,
+                                model: Optional[Model]=None,
+                                var_names: Optional[List[str]]=None,
+                                keep_size: Optional[bool]=False,
+                                random_seed=None) -> Dict[str, np.ndarray]:
+    """Generate posterior predictive samples from a model given a trace.
+
+    Parameters
+    ----------
+    trace : backend, list, or MultiTrace
+        Trace generated from MCMC sampling. Or a list containing dicts from
+        find_MAP() or points
+    samples : int
+        Number of posterior predictive samples to generate. Defaults to one posterior predictive
+        sample per posterior sample, that is, the number of draws times the number of chains. It
+        is not recommended to modify this value; when modified, some chains may not be represented
+        in the posterior predictive sample.
+    model : Model (optional if in `with` context)
+        Model used to generate `trace`
+    var_names : Iterable[str]
+        Alternative way to specify vars to sample, to make this function orthogonal with
+        others.
+    keep_size : bool, optional
+        Force posterior predictive sample to have the same shape as posterior and sample stats
+        data: ``(nchains, ndraws, ...)``.
+    random_seed : int
+        Seed for the random number generator.
+
+    Returns
+    -------
+    samples : dict
+        Dictionary with the variable names as keys, and values numpy arrays containing
+        posterior predictive samples.
+    """
+
+    if isinstance(trace, (dict, list)):
+        trace = cast(Union[Dict[str, np.ndarray], List[Dict[str, np.ndarray]]], trace)
+        _trace = TraceDict(trace) # type: TraceLike
+    elif isinstance(trace, MultiTrace):
+        _trace = trace
+    else:
+        raise TypeError("Need a trace-like value for the trace argument, got: %s"%type(trace))
+
+    len_trace = len(_trace)
+    try:
+        nchain = _trace.nchains
+    except AttributeError:
+        nchain = 1
+
+    if keep_size and samples is not None:
+        raise IncorrectArgumentsError("Should not specify both keep_size and samples arguments")
+
+    if samples is None:
+        samples = len(trace)
+
+    if samples < len_trace * nchain:
+        warnings.warn("samples parameter is smaller than nchains times ndraws, some draws "
+                     "and/or chains may not be represented in the returned posterior "
+                     "predictive sample")
+
+    model = modelcontext(model)
+
+    if var_names is None:
+        vars = model.observed_RVs
+    else:
+        vars = [model[x] for x in var_names]
+
+    if random_seed is not None:
+        np.random.seed(random_seed)
+
+    indices = np.arange(samples)
+
+    try:
+        ppc_trace = posterior_predictive_draw_values(cast(List[Any], vars), _trace, samples)
+    except KeyboardInterrupt:
+        pass
+
+    if keep_size:
+        return {k: ary.reshape((nchain, len_trace, *ary.shape[1:])) for k, ary in ppc_trace.items() }
+    else:
+        return ppc_trace
+
+
+def posterior_predictive_draw_values(vars: List[Any], trace: TraceLike, samples: int, size: Optional[int] = None) -> PosteriorPredictiveTrace:
     if size is not None:
         raise NotImplementedError("size is not yet implemented for sample_posterior_predictive")
 
@@ -30,7 +119,7 @@ class _PosteriorPredictiveSampler():
 
     # inputs
     vars: List[Any]
-    trace: MultiTrace
+    trace: TraceLike
     samples: int
     size: Optional[int] # not supported!
 
@@ -165,7 +254,7 @@ class _PosteriorPredictiveSampler():
 
     def init(self) -> None:
         vars: List[Any] = self.vars
-        trace: MultiTrace = self.trace
+        trace: TraceLike = self.trace
         samples: int = self.samples
         size: Optional[int] = self.size
 
@@ -220,7 +309,7 @@ class _PosteriorPredictiveSampler():
                     else:
                         self.named_nodes_children[k].update(nnc[k])
 
-    def draw_value(self, param, trace: Optional[MultiTrace]=None, givens = None):
+    def draw_value(self, param, trace: Optional[TraceLike]=None, givens = None):
         """Draw a random value from a distribution or return a constant.
 
         Parameters
@@ -231,10 +320,9 @@ class _PosteriorPredictiveSampler():
             are evaluated. If `param` is a pymc3 random variables, draw
             a new value from it and return that, unless a value is specified
             in the `trace`.
-        trace : pm.MultiTrace, optional
+        trace : pm.MultiTrace or Dictionary of varnames to samples, optional
             A dictionary from pymc3 variable names to samples of their values
             used to provide context for evaluating `param`.
-            In one phase of `sample_posterior_predictive`, this will be None.
         givens : dict, optional
             A dictionary from theano variables to their values. These values
             are used to evaluate `param` if it is a theano variable.
@@ -380,3 +468,51 @@ def _param_shape(var_desig, model: Model) -> Tuple[int, ...]:
     if shape == (1,):
         shape = tuple()
     return shape
+
+# # Posterior predictive sampling takes a "trace-like" argument that is
+# # either a `pm.MultiTrace` or a dictionary that acts like a
+# # trace. This smooths over that distinction
+# def _trace_varnames(trace_like: TraceLike) -> List[str]:
+#     if hasattr(trace_like, 'varnames'):
+#         trace_like = cast(MultiTrace, trace_like)
+#         return trace_like.varnames
+#     elif isinstance(trace_like, list):
+#         varnames = [] # type: List[str]
+#         for tl in trace_like:
+#             varnames += _trace_varnames(tl)
+#         return varnames
+#     else:
+#         return list(trace_like.keys())
+
+
+# class _PointIterator (Iterator[Dict[str, np.ndarray]]):
+#     new_dict = None # type: Dict[str, np.ndarray]
+#     def __init__(self, trace_dict: Dict[str, np.ndarray]):
+#         new_dict = {name : val if len(val.shape) > 1 else val.reshape(val.shape + (1,))
+#                     for name, val in trace_dict.items() } # type: Dict[str, np.ndarray]
+#     def __iter__(self):
+#         return self.iter()
+#     def iter(self) --> :
+#         i = 0
+#         def ifunc():
+#             try:
+#                 point = {name: trace_dict[name][i,:] for name in self.new_dict.keys()}
+#                 yield point
+#             except IndexError:
+#                 raise StopIteration
+#         return ifunc
+
+
+
+# # Posterior predictive sampling takes a "trace-like" argument that is
+# # either a `pm.MultiTrace` or a dictionary that acts like a
+# # trace. This smooths over that distinction
+# def _trace_points(trace_like: TraceLike) -> Iterator[Dict[str, Any]]:
+#     if isinstance(trace_like, MultiTrace):
+#         return trace_like.points()
+#     elif isinstance(trace_like, dict):
+#         return _PointIterator(trace_like)
+#     elif isinstance(trace_like, list):
+#         raise ValueError("Cannot make point iterator for a list of traces.")
+#     else:
+#         raise ValueError("Do not know how to make point iterator for object of type %s"%type(trace_like))

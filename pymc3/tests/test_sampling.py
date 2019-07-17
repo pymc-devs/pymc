@@ -252,8 +252,6 @@ class TestSamplePPC(SeededTest):
             # test list input
             ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
             # test DeprecationWarning
-            with pytest.warns(DeprecationWarning):
-                ppc = pm.sample_posterior_predictive(trace, vars=[a])
             # test empty ppc
             ppc = pm.sample_posterior_predictive(trace, var_names=[])
             assert len(ppc) == 0
@@ -291,9 +289,9 @@ class TestSamplePPC(SeededTest):
             assert "a" in ppc
             assert ppc["a"].shape == (10, 2)
 
-            ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"], size=4)
-            assert "a" in ppc
-            assert ppc["a"].shape == (10, 4, 2)
+            # ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"], size=4)
+            # assert "a" in ppc
+            # assert ppc["a"].shape == (10, 4, 2)
 
     def test_exceptions(self, caplog):
         with pm.Model() as model:
@@ -304,10 +302,6 @@ class TestSamplePPC(SeededTest):
         with model:
             with pytest.raises(IncorrectArgumentsError):
                 ppc = pm.sample_posterior_predictive(trace, samples=10, keep_size=True)
-            with pytest.raises(IncorrectArgumentsError):
-                ppc = pm.sample_posterior_predictive(trace, size=4, keep_size=True)
-            with pytest.raises(IncorrectArgumentsError):
-                ppc = pm.sample_posterior_predictive(trace, vars=[a], var_names=["a"])
 
     def test_vector_observed(self):
         with pm.Model() as model:
@@ -324,9 +318,6 @@ class TestSamplePPC(SeededTest):
             assert "a" in ppc
             assert ppc["a"].shape == (10, 2)
 
-            ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"], size=4)
-            assert "a" in ppc
-            assert ppc["a"].shape == (10, 4, 2)
 
     def test_sum_normal(self):
         with pm.Model() as model:
@@ -409,7 +400,7 @@ class TestSamplePPC(SeededTest):
                     model=model,
                     trace=ppc_trace,
                     samples=len(ppc_trace),
-                    vars=(model.deterministics + model.basic_RVs)
+                    var_names=([x .name for x in model.deterministics + model.basic_RVs])
                 )
 
             rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3

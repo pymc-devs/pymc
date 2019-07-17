@@ -19,10 +19,10 @@ from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            Slice, CompoundStep, arraystep, smc)
 from .util import update_start_vals, get_untransformed_name, is_transformed_name, get_default_varnames
 from .vartypes import discrete_types
-from .exceptions import IncorrectArgumentsError
+
 from pymc3.step_methods.hmc import quadpotential
 from pymc3.distributions import draw_values
-from pymc3.distributions.posterior_predictive import posterior_predictive_draw_values
+from pymc3.distributions.posterior_predictive import sample_posterior_predictive
 import pymc3 as pm
 from tqdm import tqdm
 
@@ -1041,80 +1041,6 @@ def stop_tuning(step):
     return step
 
 
-def sample_posterior_predictive(trace,
-                                samples: Optional[int]=None,
-                                model: Optional[Model]=None,
-                                var_names: Optional[List[str]]=None,
-                                keep_size: Optional[bool]=False,
-                                random_seed=None) -> Dict[str, np.ndarray]:
-    """Generate posterior predictive samples from a model given a trace.
-
-    Parameters
-    ----------
-    trace : backend, list, or MultiTrace
-        Trace generated from MCMC sampling. Or a list containing dicts from
-        find_MAP() or points
-    samples : int
-        Number of posterior predictive samples to generate. Defaults to one posterior predictive
-        sample per posterior sample, that is, the number of draws times the number of chains. It
-        is not recommended to modify this value; when modified, some chains may not be represented
-        in the posterior predictive sample.
-    model : Model (optional if in `with` context)
-        Model used to generate `trace`
-    var_names : Iterable[str]
-        Alternative way to specify vars to sample, to make this function orthogonal with
-        others.
-    keep_size : bool, optional
-        Force posterior predictive sample to have the same shape as posterior and sample stats
-        data: ``(nchains, ndraws, ...)``.
-    random_seed : int
-        Seed for the random number generator.
-
-    Returns
-    -------
-    samples : dict
-        Dictionary with the variable names as keys, and values numpy arrays containing
-        posterior predictive samples.
-    """
-    len_trace = len(trace)
-    try:
-        nchain = trace.nchains
-    except AttributeError:
-        nchain = 1
-
-    if keep_size and samples is not None:
-        raise IncorrectArgumentsError("Should not specify both keep_size and samples argukments")
-
-    if samples is None:
-        samples = sum(len(v) for v in trace._straces.values())
-    samples = cast(int, samples)
-
-    if samples < len_trace * nchain:
-        warnings.warn("samples parameter is smaller than nchains times ndraws, some draws "
-                     "and/or chains may not be represented in the returned posterior "
-                     "predictive sample")
-
-    model = modelcontext(model)
-
-    if var_names is None:
-        vars = model.observed_RVs
-    else:
-        vars = [model[x] for x in var_names]
-
-    if random_seed is not None:
-        np.random.seed(random_seed)
-
-    indices = np.arange(samples)
-
-    try:
-        ppc_trace = posterior_predictive_draw_values(cast(List[Any], vars), trace, samples)
-    except KeyboardInterrupt:
-        pass
-
-    if keep_size:
-        return {k: ary.reshape((nchain, len_trace, *ary.shape[1:])) for k, ary in ppc_trace.items() }
-    else:
-        return ppc_trace
 
 def sample_ppc(*args, **kwargs):
     """This method is deprecated.  Please use :func:`~sampling.sample_posterior_predictive`"""

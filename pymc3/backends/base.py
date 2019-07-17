@@ -4,6 +4,8 @@ See the docstring for pymc3.backends for more information (including
 creating custom backends).
 """
 import itertools as itl
+from typing import Sized, Union, Dict, Iterator, List
+from abc import ABCMeta, abstractmethod
 import logging
 
 import numpy as np
@@ -12,9 +14,9 @@ import theano.tensor as tt
 
 from ..model import modelcontext
 from .report import SamplerReport, merge_reports
+from ..util import merge_dicts
 
 logger = logging.getLogger('pymc3')
-
 
 class BackendError(Exception):
     pass
@@ -158,7 +160,7 @@ class BaseTrace:
         raise NotImplementedError
 
     def get_sampler_stats(self, stat_name, sampler_idx=None, burn=0, thin=1):
-        """Get sampler statistics from the trace.
+        """Get sampler statistic0s from the trace.
 
         Parameters
         ----------
@@ -217,8 +219,110 @@ class BaseTrace:
         else:
             return set()
 
+Point = Dict[str, np.ndarray]
 
-class MultiTrace:
+
+
+class TraceLike(metaclass=ABCMeta):
+    '''A TraceLike entity has a `points()` iterator and a list of varnames'''
+    @abstractmethod
+    def points(self) -> Iterator[Point]:
+        pass
+
+    @abstractmethod
+    def __len__(self) -> int:
+        '''The length of a trace-like entity is the number of samples.'''
+        pass
+
+    @abstractmethod
+    def __getitem__(self, key: Union[int, str, slice]):
+        pass
+
+    nchains = None # type: int
+    
+
+class TraceDict(TraceLike):
+    '''A TraceDict is a wrapper around a Dict of strings to values
+that we can use as a wrapper to address it like a `MultiTrace`
+
+
+    Note
+    ----
+    TraceDict does not support the slicing options of a `MultiTrace`, nor 
+    burning and thinning (this could be fixed).
+    '''
+
+    trace_dict = None # type: Dict[str, np.ndarray]
+    nchains = 1
+
+    def __init__(self, traceish:  Union[Dict[str, np.ndarray], List[Dict[str, np.ndarray]]]):
+        if isinstance(traceish, list):
+            self.trace_dict = traceish[0]
+            for d in traceish[1:]:
+                self.trace_dict = merge_dicts(self.trace_dict, d)
+        elif isinstance(traceish, dict):
+            self.trace_dict = traceish.copy()
+        else:
+            raise TypeError("Cannot construct a TraceDict from an object of type %s"%type(traceish))
+
+    def points(self) -> Iterator[Point]:
+       return _PointIterator(self.trace_dict)
+
+    def point(self, idx: int) -> Point:
+        # FIXME -- inefficient
+        l = len(self)
+        if idx >= l:
+            raise IndexError("index too high")
+        if idx < 0:
+            idx = l - idx
+        
+        for i, pt in zip(range(idx), self.points()):
+            pass
+        return pt            
+
+    @property
+    def varnames(self) -> List[str]:
+        return list(self.trace_dict.keys())
+
+    def __len__(self) -> int:
+       key = next(iter(self.trace_dict))
+       return self.trace_dict[key].shape[0]
+
+    def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            raise UnimplementedError("TraceDict does not yet support slicing.")
+            # return self._slice(idx)
+
+        try:
+            return self.point(int(idx))
+        except (ValueError, TypeError):  # Passed variable or variable name.
+            pass
+
+        var = str(idx)
+        if var in self.varnames:
+            return self.trace_dict[var]
+        raise KeyError("Unknown variable %s" % var)
+
+class _PointIterator (Iterator[Point]):
+    new_dict = None # type: Dict[str, np.ndarray]
+    i = 0
+    def __init__(self, trace_dict: Dict[str, np.ndarray]):
+        self.new_dict = {name : val if len(val.shape) > 1 else val.reshape(val.shape + (1,))
+                    for name, val in trace_dict.items() } # type: Dict[str, np.ndarray]
+    def __iter__(self):
+        self.i = 0
+        return self
+
+    def __next__(self) -> Point:
+        try:
+            point = {name: self.new_dict[name][self.i,:] for name in self.new_dict.keys()}
+            self.i = self.i + 1
+            return point
+        except IndexError:
+            raise StopIteration
+
+
+class MultiTrace(TraceLike):
     """Main interface for accessing values from MCMC results
 
     The core method to select values is `get_values`. The method
