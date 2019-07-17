@@ -930,7 +930,7 @@ def test_density_dist_with_random_sampleable():
         trace = pm.sample(100)
 
     samples = 500
-    ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
+    ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model)
     assert len(ppc['density_dist']) == samples
 
 
@@ -943,7 +943,7 @@ def test_density_dist_without_random_not_sampleable():
 
     samples = 500
     with pytest.raises(ValueError):
-        pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
+        pm.sample_posterior_predictive(trace, samples=samples, model=model)
 
 
 class TestNestedRandom(SeededTest):
