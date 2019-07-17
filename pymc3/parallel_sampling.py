@@ -368,11 +368,14 @@ class ParallelSampler:
         self._start_chain_num = start_chain_num
 
         self._progress = None
+        self._divergences = 0
+        self._desc = "Sampling {0._chains:d} chains, {0._divergences:,d} divergences"
+        self._chains = chains
         if progressbar:
             self._progress = tqdm(
                 total=chains * (draws + tune),
                 unit="draws",
-                desc="Sampling %s chains" % chains,
+                desc=self._desc.format(self)
             )
 
     def _make_active(self):
@@ -391,6 +394,9 @@ class ParallelSampler:
             draw = ProcessAdapter.recv_draw(self._active)
             proc, is_last, draw, tuning, stats, warns = draw
             if self._progress is not None:
+                if not tuning and stats and stats[0].get('diverging'):
+                    self._divergences += 1
+                    self._progress.set_description(self._desc.format(self))
                 self._progress.update()
 
             if is_last:
