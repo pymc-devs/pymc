@@ -221,10 +221,10 @@ class BaseTrace:
 
 Point = Dict[str, np.ndarray]
 
-
-
 class TraceLike(metaclass=ABCMeta):
-    '''A TraceLike entity has a `points()` iterator and a list of varnames'''
+    '''A TraceLike entity has a `points()` iterator, a length, supports indexing
+    by variable names (strings) and has a list of varnames.  Like the `MultiTrace`,
+    it does *not* support iteration.'''
     @abstractmethod
     def points(self) -> Iterator[Point]:
         pass
@@ -239,16 +239,24 @@ class TraceLike(metaclass=ABCMeta):
         pass
 
     nchains = None # type: int
-    
 
 class TraceDict(TraceLike):
     '''A TraceDict is a wrapper around a Dict of strings to values
 that we can use as a wrapper to address it like a `MultiTrace`
+    Arguments
+    ---------
+    traceish : Either a trace dictionary (`Dict[str, np.ndarray]`) or a list of them.
+        We will attempt to translate this into a `TraceDict` that supports all
+        of the required operations from `pm.MultiTrace`.
 
+    Attributes
+    ----------
+    nchains : int
+        Number of chains in the `TraceDict`
 
     Note
     ----
-    TraceDict does not support the slicing options of a `MultiTrace`, nor 
+    `TraceDict` does not support the slicing options of a `MultiTrace`, nor 
     burning and thinning (this could be fixed).
     '''
 
@@ -264,6 +272,10 @@ that we can use as a wrapper to address it like a `MultiTrace`
             self.trace_dict = traceish.copy()
         else:
             raise TypeError("Cannot construct a TraceDict from an object of type %s"%type(traceish))
+        # fix ill-formed traces that we have in tests...
+        fixme = [k for k, v in self.trace_dict.items() if not v.shape ]
+        for k in fixme:
+            self.trace_dict[k] = self.trace_dict[k].reshape((1))
 
     def points(self) -> Iterator[Point]:
        return _PointIterator(self.trace_dict)
