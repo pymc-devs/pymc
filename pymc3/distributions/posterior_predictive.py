@@ -74,7 +74,7 @@ def sample_posterior_predictive(trace: TraceIsh,
         raise IncorrectArgumentsError("Should not specify both keep_size and samples arguments")
 
     if samples is None:
-        samples = len(trace)
+        samples = len(trace) * nchain
 
     if samples < len_trace * nchain:
         warnings.warn("samples parameter is smaller than nchains times ndraws, some draws "
