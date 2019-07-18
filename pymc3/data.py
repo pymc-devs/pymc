@@ -7,6 +7,7 @@ import numpy as np
 import pymc3 as pm
 import theano.tensor as tt
 import theano
+import pandas as pd
 
 __all__ = [
     'get_data',
@@ -431,22 +432,58 @@ class Data:
     For more information, take a look at this example notebook
     https://docs.pymc.io/notebooks/data_container.html
     """
-    def __new__(self, name, value):
-        # `pm.model.pandas_to_array` takes care of parameter `value` and
-        # transforms it to something digestible for pymc3
-        shared_object = theano.shared(pm.model.pandas_to_array(value), name)
-
-        # To draw the node for this variable in the graphviz Digraph we need
-        # its shape.
-        shared_object.dshape = tuple(shared_object.shape.eval())
-
-        # Add data container to the named variables of the model.
+    def __new__(self, name, value, dims=None):
         try:
             model = pm.Model.get_context()
         except TypeError:
             raise TypeError("No model on context stack, which is needed to "
                             "instantiate a data container. Add variable "
                             "inside a 'with model:' block.")
-        model.add_random_variable(shared_object)
+
+        # `pm.model.pandas_to_array` takes care of parameter `value` and
+        # transforms it to something digestible for pymc3
+        shared_object = theano.shared(pm.model.pandas_to_array(value), name)
+
+        if isinstance(dims, str):
+            dims = (dims,)
+        if dims is not None and len(dims) != shared_object.ndim:
+            raise ValueError('Length of `dims` must match the dimensionality '
+                             'of the dataset.')
+
+        coords = {}
+        if isinstance(value, (pd.Series, pd.DataFrame)):
+            name = None
+            if dims is not None:
+                name = dims[0]
+            if (name is None 
+                    and value.index.name is not None
+                    and value.index.name.isidentifier()):
+                name = value.index.name
+            if name is not None:
+                coords[name] = value.index
+        if isinstance(value, pd.DataFrame):
+            name = None
+            if dims is not None:
+                name = dims[1]
+            if (name is None
+                    and value.columns.name is not None
+                    and value.columns.name.isidentifier()):
+                name = value.columns.name
+            if name is not None:
+                coords[name] = value.columns
+
+        model.add_coords(coords)
+
+        # To draw the node for this variable in the graphviz Digraph we need
+        # its shape.
+        shared_object.dshape = tuple(shared_object.shape.eval())
+        if dims is not None:
+            shape_dims = model.shape_from_dims(dims)
+            if shared_object.dshape != shape_dims:
+                raise ValueError('Invalid shape. It is %s but the dimensions '
+                                 'suggest %s.'
+                                 % (shared_object.dshape, shape_dims))
+
+        model.add_random_variable(shared_object, dims=dims)
 
         return shared_object

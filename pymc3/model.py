@@ -647,8 +647,12 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
         instance._theano_config = theano_config
         return instance
 
-    def __init__(self, name='', model=None, theano_config=None):
+    def __init__(self, name='', model=None, theano_config=None, coords=None):
         self.name = name
+        self.coords = {}
+        self.RV_dims = {}
+        self.add_coords(coords)
+
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
             self.free_RVs = treelist(parent=self.parent.free_RVs)
@@ -800,7 +804,36 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
         """All the continuous variables in the model"""
         return list(typefilter(self.vars, continuous_types))
 
-    def Var(self, name, dist, data=None, total_size=None):
+    def shape_from_dims(self, dims):
+        shape = []
+        if len(set(dims)) != len(dims):
+            raise ValueError('Can not contain the same dimension name twice.')
+        for dim in dims:
+            if dim not in self.coords:
+                raise ValueError('Unknown dimension name %s. All dimension '
+                                 'names must be specified in the `coords` '
+                                 'argument of the model or through a pm.Data '
+                                 'variable.' % dim)
+            shape.extend(self.coords[dim].shape)
+        return tuple(shape)
+
+    def add_coords(self, coords):
+        if coords is None:
+            return
+
+        for name in coords:
+            if not name.isidentifier():
+                raise ValueError('Invalid dimension name %s' % name)
+            if name == 'draw' or name == 'chain':
+                raise ValueError('Dimensions can not be named `draw` or `chain`.')
+            if name in self.coords:
+                if not coords[name].equals(self.coords[name]):
+                    raise ValueError(
+                        'Duplicate and incompatiple coordinate: %s.' % name)
+            else:
+                self.coords[name] = coords[name]
+
+    def Var(self, name, dist, data=None, total_size=None, dims=None):
         """Create and add (un)observed random variable to the model with an
         appropriate prior distribution.
 
@@ -813,12 +846,15 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
            the variable is unobserved.
         total_size : scalar
             upscales logp of variable with ``coef = total_size/var.shape[0]``
+        dims : tuple
+            Dimension names for the variable.
 
         Returns
         -------
         FreeRV or ObservedRV
         """
         name = self.name_for(name)
+
         if data is None:
             if getattr(dist, "transform", None) is None:
                 with self:
@@ -837,7 +873,7 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
                                 name=name,
                                 orig_name=get_transformed_name(name, dist.transform)))
                 self.deterministics.append(var)
-                self.add_random_variable(var)
+                self.add_random_variable(var, dims)
                 return var
         elif isinstance(data, dict):
             with self:
@@ -860,14 +896,21 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
                 self.missing_values.append(var.missing_values)
                 self.named_vars[var.missing_values.name] = var.missing_values
 
-        self.add_random_variable(var)
+        self.add_random_variable(var, dims)
         return var
 
-    def add_random_variable(self, var):
+    def add_random_variable(self, var, dims=None):
         """Add a random variable to the named variables of the model."""
         if self.named_vars.tree_contains(var.name):
             raise ValueError(
                 "Variable name {} already exists.".format(var.name))
+
+        if dims is not None:
+            if isinstance(dims, str):
+                dims = (dims,)
+            assert all(dim in self.coords for dim in dims)
+            self.RV_dims[var.name] = dims
+
         self.named_vars[var.name] = var
         if not hasattr(self, self.name_of(var.name)):
             setattr(self, self.name_of(var.name), var)
@@ -1482,7 +1525,7 @@ def _latex_repr_rv(rv):
     return r'$\text{%s} \sim \text{Deterministic}(%s)$' % (rv.name, r',~'.join(_walk_up_rv(rv)))
 
 
-def Deterministic(name, var, model=None):
+def Deterministic(name, var, model=None, dims=None):
     """Create a named deterministic variable
 
     Parameters
@@ -1497,7 +1540,7 @@ def Deterministic(name, var, model=None):
     model = modelcontext(model)
     var = var.copy(model.name_for(name))
     model.deterministics.append(var)
-    model.add_random_variable(var)
+    model.add_random_variable(var, dims)
     var._repr_latex_ = functools.partial(_latex_repr_rv, var)
     var.__latex__ = var._repr_latex_
     return var
