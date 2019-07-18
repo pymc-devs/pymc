@@ -926,13 +926,14 @@ def test_density_dist_with_random_sampleable():
     with pm.Model() as model:
         mu = pm.Normal('mu', 0, 1)
         normal_dist = pm.Normal.dist(mu, 1)
-        pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100), random=normal_dist.random)
+        observations = 100
+        pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(observations), random=normal_dist.random)
         trace = pm.sample(100)
 
     samples = 500
-    ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
+    ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model)
     assert len(ppc['density_dist']) == samples
-
+    assert ppc['density_dist'].shape == (samples, observations)
 
 def test_density_dist_without_random_not_sampleable():
     with pm.Model() as model:
