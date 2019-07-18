@@ -4,7 +4,7 @@ See the docstring for pymc3.backends for more information (including
 creating custom backends).
 """
 import itertools as itl
-from typing import Sized, Union, Dict, Iterator, List
+from typing import Union, Dict, Iterator, List
 from abc import ABCMeta, abstractmethod
 import logging
 
@@ -269,13 +269,14 @@ that we can use as a wrapper to address it like a `MultiTrace`
        return _PointIterator(self.trace_dict)
 
     def point(self, idx: int) -> Point:
+        # pylint: disable=undefined-loop-variable
         # FIXME -- inefficient
         l = len(self)
         if idx >= l:
             raise IndexError("index too high")
         if idx < 0:
             idx = l - idx
-        
+
         for i, pt in zip(range(idx), self.points()):
             pass
         return pt            
