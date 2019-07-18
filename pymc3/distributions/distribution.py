@@ -1,4 +1,5 @@
 import numbers
+from typing import Optional
 
 import numpy as np
 import theano.tensor as tt
@@ -560,74 +561,101 @@ def _draw_value(param, point=None, givens=None, size=None):
     size : int, optional
         Number of samples
     """
-    if isinstance(param, (numbers.Number, np.ndarray)):
-        return param
-    elif isinstance(param, tt.TensorConstant):
-        return param.value
-    elif isinstance(param, tt.sharedvar.SharedVariable):
-        return param.get_value()
-    elif isinstance(param, (tt.TensorVariable, MultiObservedRV)):
-        if point and hasattr(param, 'model') and param.name in point:
-            return point[param.name]
-        elif hasattr(param, 'random') and param.random is not None:
-            return param.random(point=point, size=size)
-        elif (hasattr(param, 'distribution') and
-                hasattr(param.distribution, 'random') and
-                param.distribution.random is not None):
-            if hasattr(param, 'observations'):
-                # shape inspection for ObservedRV
-                dist_tmp = param.distribution
-                try:
-                    distshape = param.observations.shape.eval()
-                except AttributeError:
-                    distshape = param.observations.shape
+    # this class is necessary for check_shape_and_return, which is in
+    # turn necessary because python doesn't have macros.
+    class Throw(Exception):
+        def __init__(self, value):
+            self.value = value
+    try:
+        def check_shape_and_return(value, shape, size: Optional[int]=None):
+            '''Check to see if `value` matches shape and return it or signal ValueError'''
+            value_shape = tuple(value.shape)
+            shape = tuple(shape)
+            if size is not None:
+                if value_shape == (size,) + shape:
+                    raise Throw(value)
+            elif value_shape == shape:
+                raise Throw(value)
+            if size is None:
+                raise TypeError("Expected sample of shape %s, got %s. Likely this is because of a problem with a DensityDist."%(shape, value.shape))
+            else:
+                raise TypeError("Expected sample of shape %d * %s, got %s. Likely this is because of a problem with a DensityDist."%(size, shape, value.shape))
+        if isinstance(param, (numbers.Number, np.ndarray)):
+            return param
+        elif isinstance(param, tt.TensorConstant):
+            return param.value
+        elif isinstance(param, tt.sharedvar.SharedVariable):
+            return param.get_value()
+        elif isinstance(param, (tt.TensorVariable, MultiObservedRV)):
+            if point and hasattr(param, 'model') and param.name in point:
+                return point[param.name]
+            elif hasattr(param, 'random') and param.random is not None:
+                return param.random(point=point, size=size)
+            elif (hasattr(param, 'distribution') and
+                    hasattr(param.distribution, 'random') and
+                    param.distribution.random is not None):
+                if hasattr(param, 'observations'):
+                    # shape inspection for ObservedRV
+                    dist_tmp = param.distribution
+                    try:
+                        distshape = param.observations.shape.eval()
+                    except AttributeError:
+                        distshape = param.observations.shape
 
-                dist_tmp.shape = distshape
-                try:
-                    return dist_tmp.random(point=point, size=size)
-                except (ValueError, TypeError):
-                    # reset shape to account for shape changes
-                    # with theano.shared inputs
-                    dist_tmp.shape = np.array([])
-                    # We want to draw values to infer the dist_shape,
-                    # we don't want to store these drawn values to the context
-                    with _DrawValuesContextBlocker():
-                        val = np.atleast_1d(dist_tmp.random(point=point,
-                                                            size=None))
-                    # Sometimes point may change the size of val but not the
-                    # distribution's shape
-                    if point and size is not None:
-                        temp_size = np.atleast_1d(size)
-                        if all(val.shape[:len(temp_size)] == temp_size):
-                            dist_tmp.shape = val.shape[len(temp_size):]
+                    dist_tmp.shape = distshape
+                    try:
+                        value = dist_tmp.random(point=point, size=size)
+                        if size is None:
+                            actual_shape = tuple(value.shape)
                         else:
-                            dist_tmp.shape = val.shape
-                return dist_tmp.random(point=point, size=size)
+                            actual_shape =  (size,) + tuple(value.shape)
+                        if actual_shape == distshape:
+                            return value
+                    except (ValueError, TypeError):
+                        # reset shape to account for shape changes
+                        # with theano.shared inputs
+                        dist_tmp.shape = np.array([])
+                        # We want to draw values to infer the dist_shape,
+                        # we don't want to store these drawn values to the context
+                        with _DrawValuesContextBlocker():
+                            val = np.atleast_1d(dist_tmp.random(point=point,
+                                                                size=None))
+                        # Sometimes point may change the size of val but not the
+                        # distribution's shape
+                        if point and size is not None:
+                            temp_size = np.atleast_1d(size)
+                            if all(val.shape[:len(temp_size)] == temp_size):
+                                dist_tmp.shape = val.shape[len(temp_size):]
+                            else:
+                                dist_tmp.shape = val.shape
+                    check_shape_and_return(dist_tmp.random(point=point, size=size), dist_tmp.shape, size)
+                else:
+                    check_shape_and_return(param.distribution.random(point=point, size=size), param.distribution.shape, size)
             else:
-                return param.distribution.random(point=point, size=size)
-        else:
-            if givens:
-                variables, values = list(zip(*givens))
-            else:
-                variables = values = []
-            # We only truly care if the ancestors of param that were given
-            # value have the matching dshape and val.shape
-            param_ancestors = \
-                set(theano.gof.graph.ancestors([param],
-                                               blockers=list(variables))
-                    )
-            inputs = [(var, val) for var, val in
-                      zip(variables, values)
-                      if var in param_ancestors]
-            if inputs:
-                input_vars, input_vals = list(zip(*inputs))
-            else:
-                input_vars = []
-                input_vals = []
-            func = _compile_theano_function(param, input_vars)
-            output = func(*input_vals)
-            return output
-    raise ValueError('Unexpected type in draw_value: %s' % type(param))
+                if givens:
+                    variables, values = list(zip(*givens))
+                else:
+                    variables = values = []
+                # We only truly care if the ancestors of param that were given
+                # value have the matching dshape and val.shape
+                param_ancestors = \
+                    set(theano.gof.graph.ancestors([param],
+                                                   blockers=list(variables))
+                        )
+                inputs = [(var, val) for var, val in
+                          zip(variables, values)
+                          if var in param_ancestors]
+                if inputs:
+                    input_vars, input_vals = list(zip(*inputs))
+                else:
+                    input_vars = []
+                    input_vals = []
+                func = _compile_theano_function(param, input_vars)
+                output = func(*input_vals)
+                return output
+        raise ValueError('Unexpected type in draw_value: %s' % type(param))
+    except Throw as e:
+        return e.value
 
 def _is_one_d(dist_shape):
     if hasattr(dist_shape, 'dshape') and dist_shape.dshape in ((), (0,), (1,)):

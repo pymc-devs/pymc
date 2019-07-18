@@ -931,9 +931,10 @@ def test_density_dist_with_random_sampleable():
         trace = pm.sample(100)
 
     samples = 500
-    ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model)
-    assert len(ppc['density_dist']) == samples
-    assert ppc['density_dist'].shape == (samples, observations)
+    with pytest.raises(TypeError):
+        ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model)
+    # assert len(ppc['density_dist']) == samples
+    # assert ppc['density_dist'].shape == (samples, observations)
 
 def test_density_dist_without_random_not_sampleable():
     with pm.Model() as model:
