@@ -1,4 +1,4 @@
-__all__ = ['SamplingError', 'IncorrectArgumentsError', 'TraceDirectoryError']
+__all__ = ['SamplingError', 'IncorrectArgumentsError', 'TraceDirectoryError', 'ShapeError']
 
 
 class SamplingError(RuntimeError):
@@ -10,4 +10,7 @@ class IncorrectArgumentsError(ValueError):
 
 class TraceDirectoryError(ValueError):
     '''Error from trying to load a trace from an incorrectly-structured directory,'''
+    pass
+
+class ShapeError(ValueError):
     pass

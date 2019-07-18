@@ -16,6 +16,8 @@ from .shape_utils import (
     get_broadcastable_dist_samples,
     broadcast_dist_samples_shape,
 )
+from ..exceptions import ShapeError
+
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
            'NoDistribution', 'TensorType', 'draw_values', 'generate_samples']
@@ -577,9 +579,9 @@ def _draw_value(param, point=None, givens=None, size=None):
             elif value_shape == shape:
                 raise Throw(value)
             if size is None:
-                raise TypeError("Expected sample of shape %s, got %s. Likely this is because of a problem with a DensityDist."%(shape, value.shape))
+                raise ShapeError("Expected sample of shape %s, got %s. Likely this is because of a problem with a DensityDist."%(shape, value.shape))
             else:
-                raise TypeError("Expected sample of shape %d * %s, got %s. Likely this is because of a problem with a DensityDist."%(size, shape, value.shape))
+                raise ShapeError("Expected sample of shape %d * %s, got %s. Likely this is because of a problem with a DensityDist."%(size, shape, value.shape))
         if isinstance(param, (numbers.Number, np.ndarray)):
             return param
         elif isinstance(param, tt.TensorConstant):
@@ -605,12 +607,17 @@ def _draw_value(param, point=None, givens=None, size=None):
                     dist_tmp.shape = distshape
                     try:
                         value = dist_tmp.random(point=point, size=size)
-                        if size is None:
-                            actual_shape = tuple(value.shape)
-                        else:
-                            actual_shape =  (size,) + tuple(value.shape)
-                        if actual_shape == distshape:
+                        shape_ref = tuple(distshape)
+                        if size is not None:
+                            shape_ref =  (size,) + shape_ref
+                        if tuple(value.shape) == shape_ref:
                             return value
+                        if size is None:
+                            raise ShapeError("Expected sample of shape %s, got %s. Likely this is because of a problem with a DensityDist."%(shape, value.shape))
+                        else:
+                            raise ShapeError("Expected sample of shape %d * %s, got %s. Likely this is because of a problem with a DensityDist."%(size, shape, value.shape))
+                    except ShapeError as e:
+                        raise e
                     except (ValueError, TypeError):
                         # reset shape to account for shape changes
                         # with theano.shared inputs
@@ -628,7 +635,7 @@ def _draw_value(param, point=None, givens=None, size=None):
                                 dist_tmp.shape = val.shape[len(temp_size):]
                             else:
                                 dist_tmp.shape = val.shape
-                    check_shape_and_return(dist_tmp.random(point=point, size=size), dist_tmp.shape, size)
+                        check_shape_and_return(dist_tmp.random(point=point, size=size), dist_tmp.shape, size)
                 else:
                     check_shape_and_return(param.distribution.random(point=point, size=size), param.distribution.shape, size)
             else:
