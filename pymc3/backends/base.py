@@ -160,7 +160,7 @@ class BaseTrace:
         raise NotImplementedError
 
     def get_sampler_stats(self, stat_name, sampler_idx=None, burn=0, thin=1):
-        """Get sampler statistic0s from the trace.
+        """Get sampler statistics from the trace.
 
         Parameters
         ----------
