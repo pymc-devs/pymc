@@ -30,6 +30,7 @@ class TestUtils:
         m, l = utils.any_to_tensor_and_labels(self.data, labels=['x2', 'x3'])
         self.assertMatrixLabels(m, l, lt=['x2', 'x3'])
 
+    @pytest.mark.xfail
     def test_dict_input(self):
         m, l = utils.any_to_tensor_and_labels(self.data.to_dict('dict'))
         self.assertMatrixLabels(m, l, mt=self.data[l].values, lt=l)
