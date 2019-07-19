@@ -211,16 +211,101 @@ class DensityDist(Distribution):
 
     """
 
-    def __init__(self, logp, shape=(), dtype=None, testval=0, random=None, *args, **kwargs):
+    def __init__(
+        self,
+        logp,
+        shape=(),
+        dtype=None,
+        testval=0,
+        random=None,
+        wrap_random_with_dist_shape=True,
+        check_shape_in_random=True,
+        *args,
+        **kwargs
+    ):
+        """
+        Parameters
+        ----------
+
+        logp: callable
+            A callable that has the following signature ``logp(value)`` and
+            returns a theano tensor that represents the distribution's log
+            probability density.
+        shape: tuple (Optional)
+            The shape of the distribution.
+        dtype: None, str (Optional)
+            The dtype of the distribution.
+        testval: number or array (Optional)
+            The ``testval`` of the RV's tensor that follow the ``DensityDist``
+            distribution.
+        random: None or callable (Optional)
+            If ``None``, no random method is attached to the ``DensityDist``
+            instance.
+            If a callable, it is used as the distribution ``random`` method.
+            The behavior of this callable can be altered with the
+            ``wrap_random_with_dist_shape`` parameter.
+        wrap_random_with_dist_shape: bool (Optional)
+            If ``True``, the provided ``random`` callable is passed through
+            ``generate_samples`` to make the random number generator aware of
+            the ``DensityDist`` instance's ``shape``.
+            If ``False``, it is used exactly as it was provided.
+        check_shape_in_random: bool (Optional)
+            If ``True``, the shape of the random samples generate in the
+            ``random`` method is checked with the expected return shape. This
+            test is only performed if ``wrap_random_with_dist_shape is False``.
+        args, kwargs: (Optional)
+            These are passed to the parent class' ``__init__``.
+        """
         if dtype is None:
             dtype = theano.config.floatX
         super().__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
         self.rand = random
+        self.wrap_random_with_dist_shape = wrap_random_with_dist_shape
+        self.check_shape_in_random = check_shape_in_random
 
     def random(self, *args, **kwargs):
         if self.rand is not None:
-            return self.rand(*args, **kwargs)
+            if self.wrap_random_with_dist_shape:
+                samples = generate_samples(
+                    self.rand, dist_shape=self.shape, *args, **kwargs
+                )
+            else:
+                samples = self.rand(*args, **kwargs)
+                if self.check_shape_in_random:
+                    try:
+                        size = args[1]
+                    except IndexError:
+                        size = kwargs.get("size", None)
+                    expected_shape = (
+                        self.shape
+                        if size is None else
+                        to_tuple(size) + self.shape
+                    )
+                    if not expected_shape == samples.shape:
+                        raise RuntimeError(
+                            "DensityDist encountered a shape inconsistency "
+                            "while drawing samples using the supplied random "
+                            "function. Was expecting to get samples of shape "
+                            "{expected} but got {got} instead.\n"
+                            "Whenever possible wrap_random_with_dist_shape = True "
+                            "is recommended.\n"
+                            "Be aware that the random callable provided as the "
+                            "DensityDist random method cannot "
+                            "adapt to shape changes in the distribution's "
+                            "shape, which sometimes are necessary for sampling "
+                            "when the model uses pymc3.Data or theano shared "
+                            "tensors, or when the DensityDist has observed "
+                            "values.\n"
+                            "This check can be disabled by passing "
+                            "check_shape_in_random=False when the DensityDist "
+                            "is initialized.".
+                            format(
+                                expected=expected_shape,
+                                got=samples.shape,
+                            )
+                        )
+            return samples
         else:
             raise ValueError("Distribution was not passed any random method "
                             "Define a custom random method and pass it as kwarg random")
