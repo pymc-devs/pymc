@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, TYPE_CHECKING, cast
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, Tuple
 from typing import Iterable as TIterable
 from collections.abc import Iterable
 from collections import defaultdict
@@ -1097,10 +1097,35 @@ def sample_posterior_predictive(trace,
 
     indices = np.arange(samples)
 
+    class DefaultTrace():
+        trace_dict = {} # type: Dict[str, np.ndarray]
+        len = None # type: int
+        def __init__(self, len):
+            self.len = len
+            self.trace_dict = {}
+
+        def insert(self, k: str, v, idx):
+            # breakpoint()
+            if hasattr(v, 'shape'):
+                value_shape = tuple(v.shape) # type: Tuple[int, ...]
+            else:
+                value_shape = ()
+
+            # initialize if necessary
+            if k not in self.trace_dict:
+                array_shape = (self.len,) + value_shape
+                self.trace_dict[k] = np.full(array_shape, np.nan)
+
+            # do the actual insertion
+            if value_shape == ():
+                self.trace_dict[k][idx] = v
+            else:
+                self.trace_dict[k][idx:,] = v
+
     if progressbar:
         indices = tqdm(indices, total=samples)
 
-    ppc_trace = defaultdict(list) # type: Dict[str, List[Any]]
+    ppc_trace_t = DefaultTrace(samples)
     try:
         for idx in indices:
             if nchain > 1:
@@ -1111,7 +1136,7 @@ def sample_posterior_predictive(trace,
 
             values = draw_values(vars, point=param, size=size)
             for k, v in zip(vars, values):
-                ppc_trace[k.name].append(v)
+                ppc_trace_t.insert(k.name, v, idx)
 
     except KeyboardInterrupt:
         pass
@@ -1120,13 +1145,13 @@ def sample_posterior_predictive(trace,
         if progressbar:
             indices.close()
 
+    ppc_trace = ppc_trace_t.trace_dict
     if keep_size:
         for k, ary in ppc_trace.items():
-            ary = np.asarray(ary)
             ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
         return ppc_trace
     else:
-        return {k: np.asarray(v) for k, v in ppc_trace.items()}
+        return ppc_trace
 
 
 def sample_ppc(*args, **kwargs):
