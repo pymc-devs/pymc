@@ -15,6 +15,7 @@ __all__ = [
     'Minibatch',
     'align_minibatches',
     'Data',
+    'TidyData',
 ]
 
 
@@ -487,3 +488,78 @@ class Data:
         model.add_random_variable(shared_object, dims=dims)
 
         return shared_object
+
+
+class _IndexAccessor:
+    def __init__(self, data):
+        self._data = data
+
+    def __getitem__(self, key):
+        category = self._data._col_as_category(key)
+        vals = self._data.data.reset_index().loc[:, key]
+        return pd.Categorical(vals, dtype=category).codes
+
+
+class TidyData:
+    def __init__(self, data, copy_data=True, import_dims=None, model=None):
+        self.data = data
+        self._shared_vars = {}
+        self._category_cols = {}
+        self._index_dict = _IndexAccessor(self)
+
+        if import_dims is not None:
+            model = pm.model.modelcontext(model)
+            coords = self._extract_coords(import_dims)
+            model.add_coords(coords)
+
+    @property
+    def idxs(self):
+        return self._index_dict
+
+    def _col_as_category(self, key):
+        if key in self._category_cols:
+            return self._category_cols[key]
+        data = self.data.reset_index()
+        values = data.loc[:, key]
+        if values.dtype.name != 'category':
+            values = values.astype('category')
+        self._category_cols[key] = values.dtype
+        return values.dtype
+
+    def __getitem__(self, key):
+        if key not in self.data.columns:
+            raise KeyError('Unknown column %s' % key)
+        if key in self._shared_vars:
+            return self._shared_vars[key]
+
+        shared_var = theano.shared(self.data.loc[:, key].values)
+        self._shared_vars[key] = shared_var
+        return shared_var
+
+    def _extract_coords(self, dims):
+        data = self.data
+        dims = set(dims)
+        coords = {}
+
+        if data.index.name is not None and data.index.name in dims:
+            dims.remove(data.index.name)
+            coords[data.index.name] = data.index
+
+        # We want to iterate over index columns of a multi index as well
+        data = data.reset_index()
+        for col in data.columns:
+            if col not in dims:
+                continue
+            dims.remove(col)
+            category = self._col_as_category(col)
+            cat = pd.Categorical(category.categories, dtype=category)
+            coords[col] = pd.CategoricalIndex(cat, name=col)
+
+        if dims:
+            raise KeyError('Unknown columns: %s' % dims)
+
+        return coords
+
+    @property
+    def columns(self):
+        return self.data.columns

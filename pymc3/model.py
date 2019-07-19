@@ -823,7 +823,8 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
 
         for name in coords:
             if not name.isidentifier():
-                raise ValueError('Invalid dimension name %s' % name)
+                raise ValueError('Invalid dimension name. Must be a python '
+                                 'identifier: %s' % name)
             if name == 'draw' or name == 'chain':
                 raise ValueError('Dimensions can not be named `draw` or `chain`.')
             if name in self.coords:
