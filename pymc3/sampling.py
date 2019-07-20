@@ -1099,13 +1099,12 @@ def sample_posterior_predictive(trace,
 
     class DefaultTrace():
         trace_dict = {} # type: Dict[str, np.ndarray]
-        len = None # type: int
-        def __init__(self, len):
-            self.len = len
+        _len = None # type: int
+        def __init__(self, samples):
+            self._len = samples
             self.trace_dict = {}
 
         def insert(self, k: str, v, idx):
-            # breakpoint()
             if hasattr(v, 'shape'):
                 value_shape = tuple(v.shape) # type: Tuple[int, ...]
             else:
@@ -1113,14 +1112,14 @@ def sample_posterior_predictive(trace,
 
             # initialize if necessary
             if k not in self.trace_dict:
-                array_shape = (self.len,) + value_shape
+                array_shape = (self._len,) + value_shape
                 self.trace_dict[k] = np.full(array_shape, np.nan)
 
             # do the actual insertion
             if value_shape == ():
                 self.trace_dict[k][idx] = v
             else:
-                self.trace_dict[k][idx:,] = v
+                self.trace_dict[k][idx,:] = v
 
     if progressbar:
         indices = tqdm(indices, total=samples)
