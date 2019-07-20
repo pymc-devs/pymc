@@ -1010,6 +1010,60 @@ def stop_tuning(step):
     step.stop_tuning()
     return step
 
+class _DefaultTrace():
+    '''
+    This class is a utility for collecting a number of samples
+    into a dictionary. Name comes from its similarity to `defaultdict` --
+    entries are lazily created.
+
+    Parameters
+    ----------
+    samples : int
+        The number of samples that will be collected, per variable,
+        into the trace.
+
+    Attributes
+    ----------
+    trace_dict : Dict[str, np.ndarray]
+        A dictionary constituting a trace.  Should be extracted
+        after a procedure has filled the `_DefaultTrace` using the
+        `insert()` method
+    '''
+    trace_dict = {} # type: Dict[str, np.ndarray]
+    _len = None # type: int
+    def __init__(self, samples):
+        self._len = samples
+        self.trace_dict = {}
+
+    def insert(self, k: str, v, idx: int):
+        '''
+        Insert `v` as the value of the `idx`th sample for the variable `k`.
+
+        Parameters
+        ----------
+        k : str
+            Name of the variable.
+        v : anything that can go into a numpy array (including a numpy array)
+            The value of the `idx`th sample from variable `k`
+        ids : int
+            The index of the sample we are inserting into the trace.
+        '''
+        if hasattr(v, 'shape'):
+            value_shape = tuple(v.shape) # type: Tuple[int, ...]
+        else:
+            value_shape = ()
+
+        # initialize if necessary
+        if k not in self.trace_dict:
+            array_shape = (self._len,) + value_shape
+            self.trace_dict[k] = np.full(array_shape, np.nan)
+
+        # do the actual insertion
+        if value_shape == ():
+            self.trace_dict[k][idx] = v
+        else:
+            self.trace_dict[k][idx,:] = v
+
 
 def sample_posterior_predictive(trace,
                                 samples: Optional[int]=None,
@@ -1097,34 +1151,11 @@ def sample_posterior_predictive(trace,
 
     indices = np.arange(samples)
 
-    class DefaultTrace():
-        trace_dict = {} # type: Dict[str, np.ndarray]
-        _len = None # type: int
-        def __init__(self, samples):
-            self._len = samples
-            self.trace_dict = {}
-
-        def insert(self, k: str, v, idx):
-            if hasattr(v, 'shape'):
-                value_shape = tuple(v.shape) # type: Tuple[int, ...]
-            else:
-                value_shape = ()
-
-            # initialize if necessary
-            if k not in self.trace_dict:
-                array_shape = (self._len,) + value_shape
-                self.trace_dict[k] = np.full(array_shape, np.nan)
-
-            # do the actual insertion
-            if value_shape == ():
-                self.trace_dict[k][idx] = v
-            else:
-                self.trace_dict[k][idx,:] = v
-
+    
     if progressbar:
         indices = tqdm(indices, total=samples)
 
-    ppc_trace_t = DefaultTrace(samples)
+    ppc_trace_t = _DefaultTrace(samples)
     try:
         for idx in indices:
             if nchain > 1:
