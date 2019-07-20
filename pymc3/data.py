@@ -433,7 +433,7 @@ class Data:
     For more information, take a look at this example notebook
     https://docs.pymc.io/notebooks/data_container.html
     """
-    def __new__(self, name, value, dims=None):
+    def __new__(self, name, value, dims=None, export_dims=False):
         try:
             model = pm.Model.get_context()
         except TypeError:
@@ -472,8 +472,18 @@ class Data:
                 name = value.columns.name
             if name is not None:
                 coords[name] = value.columns
+        if isinstance(value, np.ndarray) and dims is not None:
+            if len(dims) != value.ndim:
+                raise ValueError('Invalid data shape %s. The rank of the dataset '
+                                 'must match the length of `dims`.'
+                                 % value.shape)
+            for size, dim in zip(value.shape, dims):
+                coord = model.coords.get(dim, None)
+                if coord is None:
+                    coords[dim] = pd.RangeIndex(size, name=dim)
 
-        model.add_coords(coords)
+        if export_dims:
+            model.add_coords(coords)
 
         # To draw the node for this variable in the graphviz Digraph we need
         # its shape.
