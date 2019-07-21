@@ -920,7 +920,7 @@ class TestPopulationSamplers:
             x = Normal("x", 0, 1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
-                trace = sample(chains=4, draws=20, tune=0, step=DEMetropolis())
+                trace = sample(chains=4, cores=1, draws=20, tune=0, step=DEMetropolis())
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
 
                 assert len(set(samples)) == 4, "Parallelized {} " "chains are identical.".format(
@@ -933,7 +933,7 @@ class TestPopulationSamplers:
             x = Normal("x", 0, 1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
-                trace = sample(chains=4, draws=20, tune=0, step=DEMetropolis(), parallelize=True)
+                trace = sample(chains=4, cores=4, draws=20, tune=0, step=DEMetropolis())
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
 
                 assert len(set(samples)) == 4, "Parallelized {} " "chains are identical.".format(

@@ -452,7 +452,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
             if has_population_samplers:
                 _log.info('Population sampling ({} chains)'.format(chains))
                 _print_step_hierarchy(step)
-                trace = _sample_population(**sample_args)
+                trace = _sample_population(**sample_args, parallelize=cores > 1)
             else:
                 _log.info('Sequential sampling ({} chains in 1 job)'.format(chains))
                 _print_step_hierarchy(step)
@@ -689,7 +689,7 @@ class PopulationStepper:
         if parallelize:
             try:
                 # configure a child process for each stepper
-                _log.info('Attempting to parallelize chains.')
+                _log.info('Attempting to parallelize chains to all cores. You can turn this off with `pm.sample(cores=1)`.')
                 import multiprocessing
                 for c, stepper in enumerate(tqdm(steppers)):
                     slave_end, master_end = multiprocessing.Pipe()
@@ -714,7 +714,7 @@ class PopulationStepper:
                 _log.debug('Error was: ', exec_info=True)
         else:
             _log.info('Chains are not parallelized. You can enable this by passing '
-                      'pm.sample(parallelize=True).')
+                      'pm.sample(cores=2).')
         return super().__init__()
 
     def __enter__(self):
