@@ -915,12 +915,25 @@ class TestPopulationSamplers:
                 trace = sample(draws=100, chains=4, step=step)
         pass
 
-    def test_parallelized_chains_are_random(self):
+    def test_nonparallelized_chains_are_random(self):
         with Model() as model:
             x = Normal("x", 0, 1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
                 trace = sample(chains=4, draws=20, tune=0, step=DEMetropolis())
+                samples = np.array(trace.get_values("x", combine=False))[:, 5]
+
+                assert len(set(samples)) == 4, "Parallelized {} " "chains are identical.".format(
+                    stepper
+                )
+        pass
+
+    def test_parallelized_chains_are_random(self):
+        with Model() as model:
+            x = Normal("x", 0, 1)
+            for stepper in TestPopulationSamplers.steppers:
+                step = stepper()
+                trace = sample(chains=4, draws=20, tune=0, step=DEMetropolis(), parallelize=True)
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
 
                 assert len(set(samples)) == 4, "Parallelized {} " "chains are identical.".format(
