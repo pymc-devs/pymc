@@ -714,7 +714,7 @@ class PopulationStepper:
                 _log.debug('Error was: ', exec_info=True)
         else:
             _log.info('Chains are not parallelized. You can enable this by passing '
-                      'pm.sample(cores=2).')
+                      '`pm.sample(cores=n)`, where n > 1.')
         return super().__init__()
 
     def __enter__(self):
