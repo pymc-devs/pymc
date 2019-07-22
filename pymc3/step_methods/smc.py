@@ -196,7 +196,15 @@ def sample_smc(
 
     while beta < 1:
 
-        likelihoods = np.array([likelihood_logp(sample) for sample in posterior]).squeeze()
+        if step.parallel and cores > 1:
+            pool = mp.Pool(processes=cores)
+            results = pool.starmap(
+                likelihood_logp,
+                [(sample,) for sample in posterior],
+            )
+        else:
+            results = [likelihood_logp(sample) for sample in posterior]
+        likelihoods = np.array(results).squeeze()
         beta, old_beta, weights, sj = calc_beta(beta, likelihoods, step.threshold)
         model.marginal_likelihood *= sj
         # resample based on plausibility weights (selection)
