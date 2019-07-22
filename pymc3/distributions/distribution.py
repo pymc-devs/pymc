@@ -231,8 +231,10 @@ class DensityDist(Distribution):
             A callable that has the following signature ``logp(value)`` and
             returns a theano tensor that represents the distribution's log
             probability density.
-        shape: tuple (Optional)
-            The shape of the distribution.
+        shape: tuple (Optional): defaults to `()`
+            The shape of the distribution. The default value indicates a scalar.
+            If the distribution is *not* scalar-valued, the programmer should pass
+            a value here.
         dtype: None, str (Optional)
             The dtype of the distribution.
         testval: number or array (Optional)
@@ -241,7 +243,7 @@ class DensityDist(Distribution):
         random: None or callable (Optional)
             If ``None``, no random method is attached to the ``DensityDist``
             instance.
-            If a callable, it is used as the distribution ``random`` method.
+            If a callable, it is used as the distribution's ``random`` method.
             The behavior of this callable can be altered with the
             ``wrap_random_with_dist_shape`` parameter.
         wrap_random_with_dist_shape: bool (Optional)
@@ -255,6 +257,12 @@ class DensityDist(Distribution):
             test is only performed if ``wrap_random_with_dist_shape is False``.
         args, kwargs: (Optional)
             These are passed to the parent class' ``__init__``.
+        Note
+        ----
+            If the `random` method is wrapped with shape, what this means is
+            that it will be invoked with an additional `dist_shape` keyword
+            argument that can be consulted by the `random` argument callable to
+            retrieve the `DensityDist`'s shape.
         """
         if dtype is None:
             dtype = theano.config.floatX
