@@ -259,10 +259,11 @@ class DensityDist(Distribution):
             These are passed to the parent class' ``__init__``.
         Note
         ----
-            If the `random` method is wrapped with shape, what this means is
-            that it will be invoked with an additional `dist_shape` keyword
-            argument that can be consulted by the `random` argument callable to
-            retrieve the `DensityDist`'s shape.
+            If the ``random`` method is wrapped with dist shape, what this means
+            is that the ``random`` callable will be wrapped with the
+            :func:`~genereate_samples` function. The distribution's shape will
+            be passed to :func:`~generate_samples` as the ``dist_shape``
+            parameter.
         """
         if dtype is None:
             dtype = theano.config.floatX
