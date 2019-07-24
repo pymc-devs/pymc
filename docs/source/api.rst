@@ -21,3 +21,11 @@ API Reference
    api/model
    api/model_graph
    api/shape_utils
+
+
+Indices and tables
+===========
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
