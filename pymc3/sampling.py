@@ -2,7 +2,8 @@ from typing import Dict, List, Optional, TYPE_CHECKING, cast
 if TYPE_CHECKING:
     from typing import Any
 from typing import Iterable as TIterable
-from collections.abc import defaultdict, Iterable
+from collections.abc import Iterable
+from collections import defaultdict
 from copy import copy
 import pickle
 import logging
