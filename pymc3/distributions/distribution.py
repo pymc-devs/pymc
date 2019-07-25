@@ -198,16 +198,7 @@ class DensityDist(Distribution):
 
         A distribution with the passed log density function is created.
         Requires a custom random function passed as kwarg `random` to
-        enable sampling.
-
-        Example:
-        --------
-        .. code-block:: python
-            with pm.Model():
-                mu = pm.Normal('mu',0,1)
-                normal_dist = pm.Normal.dist(mu, 1)
-                pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100), random=normal_dist.random)
-                trace = pm.sample(100)
+        enable prior or posterior predictive sampling.
 
     """
 
@@ -220,6 +211,7 @@ class DensityDist(Distribution):
         random=None,
         wrap_random_with_dist_shape=True,
         check_shape_in_random=True,
+        pymc3_size_interpretation=True,
         *args,
         **kwargs
     ):
@@ -246,6 +238,10 @@ class DensityDist(Distribution):
             If a callable, it is used as the distribution's ``random`` method.
             The behavior of this callable can be altered with the
             ``wrap_random_with_dist_shape`` parameter.
+            The supplied callable must have the following signature:
+            ``random(size=None, **kwargs)``, where ``size`` is the number of
+            IID draws to take from the distribution. Any extra keyword
+            argument can be added as required.
         wrap_random_with_dist_shape: bool (Optional)
             If ``True``, the provided ``random`` callable is passed through
             ``generate_samples`` to make the random number generator aware of
@@ -255,15 +251,190 @@ class DensityDist(Distribution):
             If ``True``, the shape of the random samples generate in the
             ``random`` method is checked with the expected return shape. This
             test is only performed if ``wrap_random_with_dist_shape is False``.
+        pymc3_size_interpretation: bool (Optional)
+            This flag affects how the ``size`` parameter supplied to the
+            passed ``random`` function is interpreted. If no ``random``
+            callable is supplied, this flag is ignored. Furthermore, this flag
+            is only used if ``wrap_random_with_dist_shape`` is `True``.
+            If ``True``, the ``size`` parameter of ``random`` is interpreted
+            as the number of IID draws to take from a given distribution,
+            which is how every pymc3 distribution interprets the ``size``
+            parameter.
+            If it is ``False``, the ``size`` parameter is used just like in
+            any scipy random variate generator, i.e. the shape of the returned
+            array of samples.
+            The difference is subtle and is only relevant in multidimensional
+            distributions. Consider that a multivariate normal of rank 3 is
+            used as the random number generator. With the pymc3 interpretation
+            of ``size``, a call like ``random(size=10)`` will return an array
+            with shape ``(10, 3)``. With the scipy interpretation, to get a
+            similarly shaped result, the call must be changed to
+            ``random(size=(10, 3))``.
+            A quick rule of thumb is that if the supplied ``random`` callable
+            is a pymc3 distribution's random method, you should set this flag
+            to ``True``. If you use a scipy rvs, you should set this flag to
+            ``False``. Refer to the examples for more information.
         args, kwargs: (Optional)
             These are passed to the parent class' ``__init__``.
+
         Note
         ----
-            If the ``random`` method is wrapped with dist shape, what this means
-            is that the ``random`` callable will be wrapped with the
+            If the ``random`` method is wrapped with dist shape, what this
+            means is that the ``random`` callable will be wrapped with the
             :func:`~genereate_samples` function. The distribution's shape will
             be passed to :func:`~generate_samples` as the ``dist_shape``
-            parameter.
+            parameter. Any extra ``kwargs`` provided to ``random`` will be
+            passed as ``not_broadcast_kwargs`` of :func:`~generate_samples`.
+
+        Examples
+        --------
+            .. code-block:: python
+
+                with pm.Model():
+                    mu = pm.Normal('mu',0,1)
+                    normal_dist = pm.Normal.dist(mu, 1)
+                    pm.DensityDist(
+                        'density_dist',
+                        normal_dist.logp,
+                        observed=np.random.randn(100),
+                        random=normal_dist.random
+                    )
+                    trace = pm.sample(100)
+
+            If the ``DensityDist`` is multidimensional, some care must be taken
+            with the supplied ``random`` method. By default, the supplied random
+            is wrapped by :func:`~generate_samples` to make it aware of the
+            multidimensional distribution's shape.
+            This can be prevented setting ``wrap_random_with_dist_shape=False``.
+            Furthermore, the ``size`` parameter is interpreted as the number of
+            IID draws to take from this multidimensional distribution.
+
+
+            .. code-block:: python
+
+                with pm.Model():
+                    mu = pm.Normal('mu', 0 , 1)
+                    normal_dist = pm.Normal.dist(mu, 1, shape=3)
+                    dens = pm.DensityDist(
+                        'density_dist',
+                        normal_dist.logp,
+                        observed=np.random.randn(100, 3),
+                        shape=3,
+                        random=normal_dist.random,
+                    )
+                    prior = pm.sample_prior_predictive(10)['density_dist']
+                assert prior.shape == (10, 100, 3)
+
+            If ``wrap_random_with_dist_shape=False``, we start to get samples of
+            an incorrect shape. By default, we can try to catch these situations.
+
+
+            .. code-block:: python
+
+                with pm.Model():
+                    mu = pm.Normal('mu', 0 , 1)
+                    normal_dist = pm.Normal.dist(mu, 1, shape=3)
+                    dens = pm.DensityDist(
+                        'density_dist',
+                        normal_dist.logp,
+                        observed=np.random.randn(100, 3),
+                        shape=3,
+                        random=normal_dist.random,
+                        wrap_random_with_dist_shape=False, # Is True by default
+                    )
+                    err = None
+                    try:
+                        prior = pm.sample_prior_predictive(10)['density_dist']
+                    except RuntimeError as e:
+                        err = e
+                    assert isinstance(err, RuntimeError)
+
+            The default catching can be disabled with the
+            ``check_shape_in_random`` parameter.
+
+
+            .. code-block:: python
+
+                with pm.Model():
+                    mu = pm.Normal('mu', 0 , 1)
+                    normal_dist = pm.Normal.dist(mu, 1, shape=3)
+                    dens = pm.DensityDist(
+                        'density_dist',
+                        normal_dist.logp,
+                        observed=np.random.randn(100, 3),
+                        shape=3,
+                        random=normal_dist.random,
+                        wrap_random_with_dist_shape=False, # Is True by default
+                        check_shape_in_random=False, # Is True by default
+                    )
+                    prior = pm.sample_prior_predictive(10)['density_dist']
+                    # We get samples with an incorrect shape
+                    assert prior.shape != (10, 100, 3)
+
+            The default catching can be disabled with the
+            ``check_shape_in_random`` parameter.
+
+
+            .. code-block:: python
+
+                with pm.Model():
+                    mu = pm.Normal('mu', 0 , 1)
+                    normal_dist = pm.Normal.dist(mu, 1, shape=3)
+                    dens = pm.DensityDist(
+                        'density_dist',
+                        normal_dist.logp,
+                        observed=np.random.randn(100, 3),
+                        shape=3,
+                        random=normal_dist.random,
+                        wrap_random_with_dist_shape=False, # Is True by default
+                        check_shape_in_random=False, # Is True by default
+                    )
+                    prior = pm.sample_prior_predictive(10)['density_dist']
+                    # We get samples with an incorrect shape
+                    assert prior.shape != (10, 100, 3)
+    
+            One final word of caution. If you use a pymc3 distribution's random
+            method, you should stick with ``pymc3_size_interpretation=True``, or
+            you will get incorrectly shaped samples.
+
+
+            .. code-block:: python
+
+                with pm.Model():
+                    mu = pm.Normal('mu', 0 , 1)
+                    normal_dist = pm.Normal.dist(mu, 1, shape=3)
+                    dens = pm.DensityDist(
+                        'density_dist',
+                        normal_dist.logp,
+                        observed=np.random.randn(100, 3),
+                        shape=3,
+                        random=normal_dist.random,
+                        pymc3_size_interpretation=False, # Is True by default
+                    )
+                    prior = pm.sample_prior_predictive(10)['density_dist']
+                assert prior.shape != (10, 100, 3)
+                assert prior.shape == (10, 100, 3, 3)
+    
+            If you use callables that work with ``scipy.stats`` rvs, you should
+            set ``pymc3_size_interpretation=False``.
+
+
+            .. code-block:: python
+
+                with pm.Model():
+                    mu = pm.Normal('mu', 0 , 1)
+                    normal_dist = pm.Normal.dist(mu, 1, shape=3)
+                    dens = pm.DensityDist(
+                        'density_dist',
+                        normal_dist.logp,
+                        observed=np.random.randn(100, 3),
+                        shape=3,
+                        random=stats.norm.rvs,
+                        pymc3_size_interpretation=False, # Is True by default
+                    )
+                    prior = pm.sample_prior_predictive(10)['density_dist']
+                assert prior.shape == (10, 100, 3)
+
         """
         if dtype is None:
             dtype = theano.config.floatX
@@ -272,20 +443,41 @@ class DensityDist(Distribution):
         self.rand = random
         self.wrap_random_with_dist_shape = wrap_random_with_dist_shape
         self.check_shape_in_random = check_shape_in_random
+        self.pymc3_size_interpretation = pymc3_size_interpretation
 
-    def random(self, *args, **kwargs):
+    def random(self, point=None, size=None, **kwargs):
         if self.rand is not None:
             if self.wrap_random_with_dist_shape:
+                size = to_tuple(size)
+                with _DrawValuesContextBlocker():
+                    test_draw = generate_samples(
+                        self.rand,
+                        size=None,
+                        not_broadcast_kwargs=kwargs,
+                    )
+                    test_shape = test_draw.shape
+                if self.shape[:len(size)] == size:
+                    dist_shape = size + self.shape
+                else:
+                    dist_shape = self.shape
+                broadcast_shape = broadcast_dist_samples_shape(
+                    [dist_shape, test_shape],
+                    size=size
+                )
+                if self.pymc3_size_interpretation:
+                    len(broadcast_shape) - len(test_shape)
+                    broadcast_shape = broadcast_shape[
+                        :len(broadcast_shape) - len(test_shape)
+                    ]
                 samples = generate_samples(
-                    self.rand, dist_shape=self.shape, *args, **kwargs
+                    self.rand,
+                    broadcast_shape=broadcast_shape,
+                    size=size,
+                    not_broadcast_kwargs=kwargs,
                 )
             else:
-                samples = self.rand(*args, **kwargs)
+                samples = self.rand(size=size, **kwargs)
                 if self.check_shape_in_random:
-                    try:
-                        size = args[1]
-                    except IndexError:
-                        size = kwargs.get("size", None)
                     expected_shape = (
                         self.shape
                         if size is None else
@@ -384,17 +576,17 @@ def draw_values(params, point=None, size=None):
     Draw (fix) parameter values. Handles a number of cases:
 
         1) The parameter is a scalar
-        2) The parameter is an *RV
+        2) The parameter is an RV
 
             a) parameter can be fixed to the value in the point
-            b) parameter can be fixed by sampling from the *RV
+            b) parameter can be fixed by sampling from the RV
             c) parameter can be fixed using tag.test_value (last resort)
 
         3) The parameter is a tensor variable/constant. Can be evaluated using
         theano.function, but a variable may contain nodes which
 
             a) are named parameters in the point
-            b) are *RVs with a random method
+            b) are RVs with a random method
     """
     # Get fast drawable values (i.e. things in point or numbers, arrays,
     # constants or shares, or things that were already drawn in related
@@ -740,13 +932,13 @@ def generate_samples(generator, *args, **kwargs):
     generator : function
         Function to generate the random samples. The function is
         expected take parameters for generating samples and
-        a keyword argument `size` which determines the shape
+        a keyword argument ``size`` which determines the shape
         of the samples.
-        The *args and **kwargs (stripped of the keywords below) will be
+        The args and kwargs (stripped of the keywords below) will be
         passed to the generator function.
 
     keyword arguments
-    ~~~~~~~~~~~~~~~~
+    ~~~~~~~~~~~~~~~~~
 
     dist_shape : int or tuple of int
         The shape of the random variable (i.e., the shape attribute).
@@ -760,9 +952,9 @@ def generate_samples(generator, *args, **kwargs):
         the shape of the probabilities in the Categorical distribution.
     not_broadcast_kwargs: dict or None
         Key word argument dictionary to provide to the random generator, which
-        must not be broadcasted with the rest of the *args and **kwargs.
+        must not be broadcasted with the rest of the args and kwargs.
 
-    Any remaining *args and **kwargs are passed on to the generator function.
+    Any remaining args and kwargs are passed on to the generator function.
     """
     dist_shape = kwargs.pop('dist_shape', ())
     one_d = _is_one_d(dist_shape)

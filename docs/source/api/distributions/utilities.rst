@@ -9,6 +9,7 @@ Distribution utility classes and functions
   Discrete
   Continuous
   NoDistribution
+  DensityDist
   TensorType
 
   draw_values
@@ -19,6 +20,8 @@ Distribution utility classes and functions
 .. autoclass:: Discrete
 .. autoclass:: Continuous
 .. autoclass:: NoDistribution
+.. autoclass:: DensityDist
+    :members:
 .. autofunction:: TensorType
 
 .. autofunction:: draw_values
