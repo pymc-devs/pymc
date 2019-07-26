@@ -153,12 +153,16 @@ def three_var_approx_single_group_mf(three_var_model):
 
 
 def test_sample_simple(three_var_approx):
-    trace = three_var_approx.sample(500)
-    assert set(trace.varnames) == {'one', 'one_log__', 'three', 'two'}
-    assert len(trace) == 500
-    assert trace[0]['one'].shape == (10, 2)
-    assert trace[0]['two'].shape == (10, )
-    assert trace[0]['three'].shape == (10, 1, 2)
+    for backend,name in ((None, None), 
+                        ('text', 'test'), 
+                        ('sqlite', 'test.sqlite'), 
+                        ('hdf5', 'test.h5')):
+        trace = three_var_approx.sample(100, backend=backend, name=name)
+        assert set(trace.varnames) == {'one', 'one_log__', 'three', 'two'}
+        assert len(trace) == 100
+        assert trace[0]['one'].shape == (10, 2)
+        assert trace[0]['two'].shape == (10, )
+        assert trace[0]['three'].shape == (10, 1, 2)
 
 
 @pytest.fixture
