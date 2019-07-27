@@ -151,12 +151,16 @@ def three_var_approx(three_var_model, three_var_groups):
 def three_var_approx_single_group_mf(three_var_model):
     return MeanField(model=three_var_model)
 
-
-def test_sample_simple(three_var_approx):
-    for backend,name in (('ndarray', None), 
-                        ('text', 'test'), 
-                        ('sqlite', 'test.sqlite'), 
-                        ('hdf5', 'test.h5')):
+@pytest.fixture(
+    params = [
+        ('ndarray', None),
+        ('text', 'test'),
+        ('sqlite', 'test.sqlite'),
+        ('hdf5', 'test.h5'))
+    ]
+)
+def test_sample_simple(three_var_approx, request):
+        backend, name = request.param
         trace = three_var_approx.sample(100, backend=backend, name=name)
         assert set(trace.varnames) == {'one', 'one_log__', 'three', 'two'}
         assert len(trace) == 100
