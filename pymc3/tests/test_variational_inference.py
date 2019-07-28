@@ -156,7 +156,7 @@ def three_var_approx_single_group_mf(three_var_model):
         ('ndarray', None),
         ('text', 'test'),
         ('sqlite', 'test.sqlite'),
-        ('hdf5', 'test.h5'))
+        ('hdf5', 'test.h5')
     ]
 )
 def test_sample_simple(three_var_approx, request):
