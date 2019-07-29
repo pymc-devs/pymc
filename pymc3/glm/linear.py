@@ -38,6 +38,10 @@ class LinearComponent(Model):
     def __init__(self, x, y, intercept=True, labels=None,
                  priors=None, vars=None, name='', model=None, offset=0.):
         super().__init__(name, model)
+        if len(y.shape) > 1:
+            err_msg = 'Only one-dimensional observed variable objects (i.e.'\
+                       ' of shape `(n, )`) are supported'
+            raise TypeError(err_msg)
         if priors is None:
             priors = {}
         if vars is None:
