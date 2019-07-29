@@ -382,13 +382,15 @@ class DensityDist(Distribution):
 
     def random(self, point=None, size=None, **kwargs):
         if self.rand is not None:
+            not_broadcast_kwargs = dict(point=point)
+            not_broadcast_kwargs.update(**kwargs)
             if self.wrap_random_with_dist_shape:
                 size = to_tuple(size)
                 with _DrawValuesContextBlocker():
                     test_draw = generate_samples(
                         self.rand,
                         size=None,
-                        not_broadcast_kwargs=kwargs,
+                        not_broadcast_kwargs=not_broadcast_kwargs,
                     )
                     test_shape = test_draw.shape
                 if self.shape[:len(size)] == size:
@@ -406,10 +408,10 @@ class DensityDist(Distribution):
                     self.rand,
                     broadcast_shape=broadcast_shape,
                     size=size,
-                    not_broadcast_kwargs=kwargs,
+                    not_broadcast_kwargs=not_broadcast_kwargs,
                 )
             else:
-                samples = self.rand(size=size, **kwargs)
+                samples = self.rand(point=point, size=size, **kwargs)
                 if self.check_shape_in_random:
                     expected_shape = (
                         self.shape
