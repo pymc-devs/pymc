@@ -211,7 +211,6 @@ class DensityDist(Distribution):
         random=None,
         wrap_random_with_dist_shape=True,
         check_shape_in_random=True,
-        pymc3_size_interpretation=True,
         *args,
         **kwargs
     ):
@@ -251,29 +250,6 @@ class DensityDist(Distribution):
             If ``True``, the shape of the random samples generate in the
             ``random`` method is checked with the expected return shape. This
             test is only performed if ``wrap_random_with_dist_shape is False``.
-        pymc3_size_interpretation: bool (Optional)
-            This flag affects how the ``size`` parameter supplied to the
-            passed ``random`` function is interpreted. If no ``random``
-            callable is supplied, this flag is ignored. Furthermore, this flag
-            is only used if ``wrap_random_with_dist_shape`` is `True``.
-            If ``True``, the ``size`` parameter of ``random`` is interpreted
-            as the number of IID draws to take from a given distribution,
-            which is how every pymc3 distribution interprets the ``size``
-            parameter.
-            If it is ``False``, the ``size`` parameter is used just like in
-            any scipy random variate generator, i.e. the shape of the returned
-            array of samples.
-            The difference is subtle and is only relevant in multidimensional
-            distributions. Consider that a multivariate normal of rank 3 is
-            used as the random number generator. With the pymc3 interpretation
-            of ``size``, a call like ``random(size=10)`` will return an array
-            with shape ``(10, 3)``. With the scipy interpretation, to get a
-            similarly shaped result, the call must be changed to
-            ``random(size=(10, 3))``.
-            A quick rule of thumb is that if the supplied ``random`` callable
-            is a pymc3 distribution's random method, you should set this flag
-            to ``True``. If you use a scipy rvs, you should set this flag to
-            ``False``. Refer to the examples for more information.
         args, kwargs: (Optional)
             These are passed to the parent class' ``__init__``.
 
@@ -371,52 +347,12 @@ class DensityDist(Distribution):
                     # We get samples with an incorrect shape
                     assert prior.shape != (10, 100, 3)
 
-            The default catching can be disabled with the
-            ``check_shape_in_random`` parameter.
-
-
-            .. code-block:: python
-
-                with pm.Model():
-                    mu = pm.Normal('mu', 0 , 1)
-                    normal_dist = pm.Normal.dist(mu, 1, shape=3)
-                    dens = pm.DensityDist(
-                        'density_dist',
-                        normal_dist.logp,
-                        observed=np.random.randn(100, 3),
-                        shape=3,
-                        random=normal_dist.random,
-                        wrap_random_with_dist_shape=False, # Is True by default
-                        check_shape_in_random=False, # Is True by default
-                    )
-                    prior = pm.sample_prior_predictive(10)['density_dist']
-                    # We get samples with an incorrect shape
-                    assert prior.shape != (10, 100, 3)
-    
-            One final word of caution. If you use a pymc3 distribution's random
-            method, you should stick with ``pymc3_size_interpretation=True``, or
-            you will get incorrectly shaped samples.
-
-
-            .. code-block:: python
-
-                with pm.Model():
-                    mu = pm.Normal('mu', 0 , 1)
-                    normal_dist = pm.Normal.dist(mu, 1, shape=3)
-                    dens = pm.DensityDist(
-                        'density_dist',
-                        normal_dist.logp,
-                        observed=np.random.randn(100, 3),
-                        shape=3,
-                        random=normal_dist.random,
-                        pymc3_size_interpretation=False, # Is True by default
-                    )
-                    prior = pm.sample_prior_predictive(10)['density_dist']
-                assert prior.shape != (10, 100, 3)
-                assert prior.shape == (10, 100, 3, 3)
-    
-            If you use callables that work with ``scipy.stats`` rvs, you should
-            set ``pymc3_size_interpretation=False``.
+            If you use callables that work with ``scipy.stats`` rvs, you must
+            be aware that their ``size`` parameter is not the number of IID
+            samples to draw from a distribution, but the desired ``shape`` of
+            the returned array of samples. It is the user's responsibility to
+            wrap the callable to make it comply with PyMC3's interpretation
+            of ``size``.
 
 
             .. code-block:: python
@@ -443,7 +379,6 @@ class DensityDist(Distribution):
         self.rand = random
         self.wrap_random_with_dist_shape = wrap_random_with_dist_shape
         self.check_shape_in_random = check_shape_in_random
-        self.pymc3_size_interpretation = pymc3_size_interpretation
 
     def random(self, point=None, size=None, **kwargs):
         if self.rand is not None:
@@ -464,11 +399,9 @@ class DensityDist(Distribution):
                     [dist_shape, test_shape],
                     size=size
                 )
-                if self.pymc3_size_interpretation:
-                    len(broadcast_shape) - len(test_shape)
-                    broadcast_shape = broadcast_shape[
-                        :len(broadcast_shape) - len(test_shape)
-                    ]
+                broadcast_shape = broadcast_shape[
+                    :len(broadcast_shape) - len(test_shape)
+                ]
                 samples = generate_samples(
                     self.rand,
                     broadcast_shape=broadcast_shape,

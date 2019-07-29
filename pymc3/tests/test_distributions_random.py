@@ -981,26 +981,6 @@ class TestDensityDist():
         assert len(ppc['density_dist']) == samples
         assert ((samples,) + obs.distribution.shape) != ppc['density_dist'].shape
 
-    @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
-    def test_density_dist_with_stats_random_sampleable(self, shape):
-        with pm.Model() as model:
-            mu = pm.Normal('mu', 0, 1)
-            normal_dist = pm.Normal.dist(mu, 1, shape=shape)
-            obs = pm.DensityDist(
-                'density_dist',
-                normal_dist.logp,
-                observed=np.random.randn(100, *shape),
-                shape=shape,
-                random=st.norm.rvs,
-                pymc3_size_interpretation=False
-            )
-            trace = pm.sample(100)
-
-        samples = 500
-        ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model)
-        assert len(ppc['density_dist']) == samples
-        assert ((samples,) + obs.distribution.shape) == ppc['density_dist'].shape
-
     def test_density_dist_with_random_sampleable_handcrafted_success(self):
         with pm.Model() as model:
             mu = pm.Normal('mu', 0, 1)
