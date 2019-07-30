@@ -12,9 +12,10 @@ addons:
 
 before_install:
   - . ./scripts/install_miniconda.sh
-  - sh -e /etc/init.d/xvfb start
-  - export DISPLAY=":99.0"
   - export MKL_THREADING_LAYER=GNU
+
+services:
+  - xvfb
 
 install:
   - . ./scripts/create_testenv.sh
