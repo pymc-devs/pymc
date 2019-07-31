@@ -1,5 +1,5 @@
-Gaussian Processes
-------------------
+Gaussian Processes API
+----------------------
 
 .. currentmodule:: pymc3.gp.gp
 
