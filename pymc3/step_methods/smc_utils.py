@@ -44,9 +44,11 @@ def _calc_covariance(posterior, weights):
     Calculate trace covariance matrix based on importance weights.
     """
     cov = np.cov(posterior, aweights=weights.ravel(), bias=False, rowvar=0)
+    cov = np.atleast_2d(cov)
+    cov += 1e-6 * np.eye(cov.shape[0])
     if np.isnan(cov).any() or np.isinf(cov).any():
         raise ValueError('Sample covariances not valid! Likely "draws" is too small!')
-    return np.atleast_2d(cov)
+    return cov
 
 
 def _tune(acc_rate, proposed, step):
