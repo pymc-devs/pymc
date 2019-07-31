@@ -997,6 +997,14 @@ class Categorical(Discrete):
         p = p_ / tt.sum(p_, axis=-1, keepdims=True)
 
         if p.ndim > 1:
+            if p.ndim > value_clip.ndim:
+                value_clip = tt.shape_padleft(
+                    value_clip, p_.ndim - value_clip.ndim
+                )
+            elif p.ndim < value_clip.ndim:
+                p = tt.shape_padleft(
+                    p, value_clip.ndim - p_.ndim
+                )
             pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
             a = tt.log(
                 take_along_axis(
