@@ -6,6 +6,7 @@ from ..theanof import floatX
 
 import numpy as np
 import pytest
+from .helpers import select_by_precision
 
 pytestmark = pytest.mark.usefixtures('seeded_test')
 
@@ -92,7 +93,8 @@ def test_GARCH11():
         z = Normal('z', mu=0, sigma=vol, shape=data.shape)
     garch_like = t['y'].logp({'z':data, 'y': data})
     reg_like = t['z'].logp({'z':data, 'y': data})
-    np.testing.assert_allclose(garch_like, reg_like)
+    decimal = select_by_precision(float64=7, float32=4)
+    np.testing.assert_allclose(garch_like, reg_like, 10**(-decimal))
 
 
 
