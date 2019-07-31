@@ -205,7 +205,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     ----------
     draws : int
         The number of samples to draw. Defaults to 500. The number of tuned samples are discarded
-        by default. See discard_tuned_samples.
+        by default. See `discard_tuned_samples`.
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without a step methods,
         step methods for those variables will be assigned automatically.
@@ -218,7 +218,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         * adapt_diag : Start with a identity mass matrix and then adapt a diagonal based on the
           variance of the tuning samples. All chains use the test value (usually the prior mean)
           as starting point.
-        * jitter+adapt_diag : Same as `adapt_diag`, but add uniform jitter in [-1, 1] to the
+        * jitter+adapt_diag : Same as `adapt_diag`\, but add uniform jitter in [-1, 1] to the
           starting point in each chain.
         * advi+adapt_diag : Run ADVI and then adapt the resulting diagonal mass matrix based on the
           sample variance of the tuning samples.
@@ -273,7 +273,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval. Ignored when using 'SMC'
     compute_convergence_checks : bool, default=True
-        Whether to compute sampler statistics like gelman-rubin and effective_n.
+        Whether to compute sampler statistics like Gelman-Rubin and `effective_n`.
         Ignored when using 'SMC'
 
     Returns
@@ -292,7 +292,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
           posteriors.
         * max_treedepth: The maximum depth of the trajectory tree.
         * step_scale: float, default 0.25
-          The initial guess for the step size scaled down by :math: `1/n**(1/4)`.
+          The initial guess for the step size scaled down by :math:`1/n**(1/4)`
 
     You can find a full list of arguments in the docstring of the step methods.
 
