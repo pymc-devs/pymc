@@ -1179,9 +1179,8 @@ def sample_posterior_predictive(trace,
     if keep_size:
         for k, ary in ppc_trace.items():
             ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
-        return ppc_trace
-    else:
-        return ppc_trace
+
+    return ppc_trace
 
 
 def sample_ppc(*args, **kwargs):
