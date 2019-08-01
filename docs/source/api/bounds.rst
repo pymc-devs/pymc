@@ -72,8 +72,8 @@ Caveats
   an unnormalized probability distribution.  This doesn't effect inference
   algorithms but may complicate some model comparison procedures.
 
-API
-###
+Bounded Variable API
+####################
 
 
 .. currentmodule:: pymc3.distributions.bound

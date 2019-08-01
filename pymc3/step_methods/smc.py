@@ -58,36 +58,38 @@ class SMC:
         It should be between 0 and 1.
     parallel : bool
         Distribute computations across cores if the number of cores is larger than 1
-        (see pm.sample() for details). Defaults to True.
+        (see `pm.sample()` for details). Defaults to True.
     model : :class:`pymc3.Model`
         Optional model for sampling step. Defaults to None (taken from context).
 
     Notes
     -----
-    SMC works by moving from successive stages. At each stage the inverse temperature \beta is
+    SMC works by moving through successive stages. At each stage the inverse temperature \beta is
     increased a little bit (starting from 0 up to 1). When \beta = 0 we have the prior distribution
     and when \beta =1 we have the posterior distribution. So in more general terms we are always
     computing samples from a tempered posterior that we can write as:
 
-    p(\theta \mid y)_{\beta} = p(y \mid \theta)^{\beta} p(\theta)
+    .. math::
+
+        p(\theta \mid y)_{\beta} = p(y \mid \theta)^{\beta} p(\theta)
 
     A summary of the algorithm is:
 
-     1. Initialize \beta at zero and stage at zero.
-     2. Generate N samples S_{\beta} from the prior (because when \beta = 0 the tempered posterior
+     1. Initialize :math:`\beta` at zero and stage at zero.
+     2. Generate N samples :math:`S_{\beta}` from the prior (because when :math `\beta = 0` the tempered posterior
         is the prior).
-     3. Increase \beta in order to make the effective sample size equals some predefined value
-        (we use N*t, where t is 0.5 by default).
+     3. Increase :math:`\beta` in order to make the effective sample size equals some predefined value
+        (we use :math:`Nt`, where :math:`t` is 0.5 by default).
      4. Compute a set of N importance weights W. The weights are computed as the ratio of the
         likelihoods of a sample at stage i+1 and stage i.
-     5. Obtain S_{w} by re-sampling according to W.
+     5. Obtain :math:`S_{w}` by re-sampling according to W.
      6. Use W to compute the covariance for the proposal distribution.
      7. For stages other than 0 use the acceptance rate from the previous stage to estimate the
-        scaling of the proposal distribution and n_steps.
-     8. Run N Metropolis chains (each one of length n_steps), starting each one from a different
-        sample in S_{w}.
-     9. Repeat from step 3 until \beta \ge 1.
-    10. The final result is a collection of N samples from the posterior.
+        scaling of the proposal distribution and `n_steps`.
+     8. Run N Metropolis chains (each one of length `n_steps`), starting each one from a different
+        sample in :math:`S_{w}`.
+     9. Repeat from step 3 until :math:`\beta \ge 1`.
+     10. The final result is a collection of N samples from the posterior.
 
 
     References

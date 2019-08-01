@@ -136,6 +136,8 @@ straightforward. In a perfect world, we should have
 follows a Gaussian distribution, and
 :math:`\chi = \text{Normal}(0, 1), x \sim \chi` which define a scalar
 density function that takes input :math:`x`
+
+.. math::
     (``X:=f(x) = 1/sqrt(2*pi) * exp(-.5*x**2)``)
 
 Within a model context, RVs are essentially Theano tensors (more on that
@@ -827,8 +829,8 @@ the input to the Theano function being a 1d vector (instead of a list of
 RV that each can have very different shape), thus it is very easy to do
 matrix operation like rotation etc.
 
-Reflection
-~~~~~~~~~~
+Notes
+~~~~~
 
 | The current setup is quite powerful, as the Theano compiled function
   is fairly fast to compile and to call. Also, when we are repeatedly

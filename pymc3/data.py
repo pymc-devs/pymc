@@ -141,8 +141,8 @@ class Minibatch(tt.TensorVariable):
     if we want 1d slice of size 10 we do
     >>> x = Minibatch(data, batch_size=10)
 
-    Note, that your data is cast to `floatX` if it is not integer type
-    But you still can add `dtype` kwarg for :class:`Minibatch`
+    Note that your data is cast to `floatX` if it is not integer type
+    But you still can add the `dtype` kwarg for :class:`Minibatch`
 
     in case we want 10 sampled rows and columns
     `[(size, seed), (size, seed)]` it is
