@@ -88,7 +88,7 @@ all columns of the matrix of inputs.
 Covariance functions in PyMC3 closely follow the algebraic rules for kernels,
 which allows users to combine covariance functions into new ones, for example:
 
-- The sum two covariance functions is also a covariance function::
+- The sum of two covariance functions is also a covariance function::
 
 
     cov_func = pm.gp.cov.ExpQuad(...) + pm.gp.cov.ExpQuad(...)
@@ -98,12 +98,14 @@ which allows users to combine covariance functions into new ones, for example:
 
     cov_func = pm.gp.cov.ExpQuad(...) * pm.gp.cov.Periodic(...)
     
-- The product (or sum) of a covariance function with a scalar is a covariance
-function::
+- The product (or sum) of a covariance function with a scalar is a
+  covariance function::
 
     
     cov_func = eta**2 * pm.gp.cov.Matern32(...)
     
+
+
 After the covariance function is defined, it is now a function that is
 evaluated by calling :code:`cov_func(x, x)` (or :code:`mean_func(x)`).  Since
 PyMC3 is built on top of Theano, it is relatively easy to define and experiment

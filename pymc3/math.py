@@ -50,10 +50,10 @@ def kron_matrix_op(krons, m, op):
 
     Parameters
     -----------
-    krons: list of square 2D array-like objects
-           D square matrices [A_1, A_2, ..., A_D] to be Kronecker'ed:
-              A = A_1 \otimes A_2 \otimes ... \otimes A_D
-           Product of column dimensions must be N
+    krons : list of square 2D array-like objects
+            D square matrices :math:`[A_1, A_2, ..., A_D]` to be Kronecker'ed
+            :math:`A = A_1 \otimes A_2 \otimes ... \otimes A_D`
+            Product of column dimensions must be :math:`N`
     m    : NxM array or 1D array (treated as Nx1)
            Object that krons act upon
     """

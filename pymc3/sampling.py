@@ -106,7 +106,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
         A fully-specified model object
     step : step function or vector of step functions
         One or more step functions that have been assigned to some subset of
-        the model's parameters. Defaults to None (no assigned variables).
+        the model's parameters. Defaults to `None` (no assigned variables).
     methods : vector of step method classes
         The set of step methods from which the function may choose. Defaults
         to the main step methods provided by PyMC3.
@@ -205,7 +205,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     ----------
     draws : int
         The number of samples to draw. Defaults to 500. The number of tuned samples are discarded
-        by default. See discard_tuned_samples.
+        by default. See `discard_tuned_samples`.
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without a step methods,
         step methods for those variables will be assigned automatically.
@@ -218,7 +218,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         * adapt_diag : Start with a identity mass matrix and then adapt a diagonal based on the
           variance of the tuning samples. All chains use the test value (usually the prior mean)
           as starting point.
-        * jitter+adapt_diag : Same as `adapt_diag`, but add uniform jitter in [-1, 1] to the
+        * jitter+adapt_diag : Same as `adapt_diag`\, but add uniform jitter in [-1, 1] to the
           starting point in each chain.
         * advi+adapt_diag : Run ADVI and then adapt the resulting diagonal mass matrix based on the
           sample variance of the tuning samples.
@@ -234,18 +234,19 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         If 'ADVI', number of iterations, if 'nuts', number of draws.
     start : dict, or array of dict
         Starting point in parameter space (or partial point)
-        Defaults to trace.point(-1)) if there is a trace provided and model.test_point if not
+        Defaults to `trace.point(-1))` if there is a trace provided and model.test_point if not
         (defaults to empty dict). Initialization methods for NUTS (see `init` keyword) can
-        overwrite the default. For 'SMC' it should be a list of dict with length `chains`.
+        overwrite the default. For 'SMC' step method, `start` should be a list of dicts
+        of length = `chains`.
     trace : backend, list, or MultiTrace
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
         number `chain`. If None or a list of variables, the NDArray backend is used.
         Passing either "text" or "sqlite" is taken as a shortcut to set up the corresponding
-        backend (with "mcmc" used as the base name). Ignored when using 'SMC'.
+        backend (with "mcmc" used as the base name). Ignored when using 'SMC' as step method.
     chain_idx : int
         Chain number used to store sample in backend. If `chains` is greater than one, chain
-        numbers will start here. Ignored when using 'SMC'.
+        numbers will start here. Ignored when using 'SMC' as step method.
     chains : int
         The number of chains to sample. Running independent chains is important for some
         convergence statistics and can also reveal multiple modes in the posterior. If `None`,
@@ -253,7 +254,8 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         number of draws.
     cores : int
         The number of chains to run in parallel. If `None`, set to the number of CPUs in the
-        system, but at most 4 (for 'SMC' ignored if `pm.SMC(parallel=False)`. Keep in mind that
+        system, but at most 4.  When using 'SMC', this parameter will be ignored if running with
+        `pm.SMC(parallel=False)`. Keep in mind that
         some chains might themselves be multithreaded via openmp or BLAS. In those cases it might
         be faster to set this to 1.
     tune : int
@@ -271,7 +273,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval. Ignored when using 'SMC'
     compute_convergence_checks : bool, default=True
-        Whether to compute sampler statistics like gelman-rubin and effective_n.
+        Whether to compute sampler statistics like Gelman-Rubin and `effective_n`.
         Ignored when using 'SMC'
 
     Returns
@@ -281,7 +283,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
 
     Notes
     -----
-
     Optional keyword arguments can be passed to `sample` to be delivered to the
     `step_method`s used during sampling. In particular, the NUTS step method accepts
     a number of arguments. Common options are:
@@ -291,7 +292,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
           posteriors.
         * max_treedepth: The maximum depth of the trajectory tree.
         * step_scale: float, default 0.25
-          The initial guess for the step size scaled down by `1/n**(1/4)`.
+          The initial guess for the step size scaled down by :math:`1/n**(1/4)`
 
     You can find a full list of arguments in the docstring of the step methods.
 
@@ -1320,14 +1321,10 @@ def sample_prior_predictive(samples=500,
     model : Model (optional if in `with` context)
     vars : Iterable[str]
         A list of names of variables for which to compute the posterior predictive
-         samples.
-        Defaults to `model.named_vars`.
-        DEPRECATED - Use `var_names` instead.
+        samples.  *DEPRECATED* - Use `var_names` argument instead.
     var_names : Iterable[str]
         A list of names of variables for which to compute the posterior predictive
-         samples.
-        Defaults to `model.named_vars`.
-
+        samples. Defaults to `model.named_vars`.
     random_seed : int
         Seed for the random number generator.
 
@@ -1335,7 +1332,7 @@ def sample_prior_predictive(samples=500,
     -------
     dict
         Dictionary with variable names as keys. The values are numpy arrays of prior
-         samples.
+        samples.
     """
     model = modelcontext(model)
 

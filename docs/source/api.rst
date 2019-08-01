@@ -1,8 +1,8 @@
 .. _api:
 
-*************
+***************
 API Reference
-*************
+***************
 
 .. toctree::
    :maxdepth: 2
@@ -24,7 +24,7 @@ API Reference
 
 
 Indices and tables
-===========
+===================
 
 * :ref:`genindex`
 * :ref:`modindex`
