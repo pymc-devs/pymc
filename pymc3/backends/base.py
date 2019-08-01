@@ -390,7 +390,7 @@ class MultiTrace:
 
         Returns
         -------
-            Nothing.
+            None.
         """
         for k, v in vals.items():
             new_var = 1
