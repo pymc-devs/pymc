@@ -45,7 +45,7 @@ _log = logging.getLogger('pymc3')
 def instantiate_steppers(model, steps, selected_steps, step_kwargs=None):
     """Instantiates steppers assigned to the model variables.
 
-    This function is intended to be called automatically from `sample()`, but
+    This function is intended to be called automatically from ``sample()``, but
     may be called manually.
 
     Parameters
@@ -94,9 +94,9 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
 
     Passing a specified model will auto-assign its constituent stochastic
     variables to step methods based on the characteristics of the variables.
-    This function is intended to be called automatically from `sample()`, but
+    This function is intended to be called automatically from ``sample()``, but
     may be called manually. Each step method passed should have a
-    `competence()` method that returns an ordinal competence value
+    ``competence()`` method that returns an ordinal competence value
     corresponding to the variable passed to it. This value quantifies the
     appropriateness of the step method for sampling the variable.
 
@@ -106,7 +106,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
         A fully-specified model object
     step : step function or vector of step functions
         One or more step functions that have been assigned to some subset of
-        the model's parameters. Defaults to `None` (no assigned variables).
+        the model's parameters. Defaults to ``None`` (no assigned variables).
     methods : vector of step method classes
         The set of step methods from which the function may choose. Defaults
         to the main step methods provided by PyMC3.
@@ -205,7 +205,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     ----------
     draws : int
         The number of samples to draw. Defaults to 500. The number of tuned samples are discarded
-        by default. See `discard_tuned_samples`.
+        by default. See ``discard_tuned_samples``.
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without a step methods,
         step methods for those variables will be assigned automatically.
@@ -213,12 +213,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         Initialization method to use for auto-assigned NUTS samplers.
 
         * auto : Choose a default initialization method automatically.
-          Currently, this is `'jitter+adapt_diag'`, but this can change in the future.
+          Currently, this is ``'jitter+adapt_diag'``, but this can change in the future.
           If you depend on the exact behaviour, choose an initialization method explicitly.
         * adapt_diag : Start with a identity mass matrix and then adapt a diagonal based on the
           variance of the tuning samples. All chains use the test value (usually the prior mean)
           as starting point.
-        * jitter+adapt_diag : Same as `adapt_diag`\, but add uniform jitter in [-1, 1] to the
+        * jitter+adapt_diag : Same as ``adapt_diag``\, but add uniform jitter in [-1, 1] to the
           starting point in each chain.
         * advi+adapt_diag : Run ADVI and then adapt the resulting diagonal mass matrix based on the
           sample variance of the tuning samples.
@@ -234,57 +234,57 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         If 'ADVI', number of iterations, if 'nuts', number of draws.
     start : dict, or array of dict
         Starting point in parameter space (or partial point)
-        Defaults to `trace.point(-1))` if there is a trace provided and model.test_point if not
-        (defaults to empty dict). Initialization methods for NUTS (see `init` keyword) can
-        overwrite the default. For 'SMC' step method, `start` should be a list of dicts
-        of length = `chains`.
+        Defaults to ``trace.point(-1))`` if there is a trace provided and model.test_point if not
+        (defaults to empty dict). Initialization methods for NUTS (see ``init`` keyword) can
+        overwrite the default. For 'SMC' step method, ``start`` should be a list of dicts
+        of length = ``chains``.
     trace : backend, list, or MultiTrace
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
-        number `chain`. If None or a list of variables, the NDArray backend is used.
+        number ``chain``. If None or a list of variables, the NDArray backend is used.
         Passing either "text" or "sqlite" is taken as a shortcut to set up the corresponding
         backend (with "mcmc" used as the base name). Ignored when using 'SMC' as step method.
     chain_idx : int
-        Chain number used to store sample in backend. If `chains` is greater than one, chain
+        Chain number used to store sample in backend. If ``chains`` is greater than one, chain
         numbers will start here. Ignored when using 'SMC' as step method.
     chains : int
         The number of chains to sample. Running independent chains is important for some
-        convergence statistics and can also reveal multiple modes in the posterior. If `None`,
-        then set to either `cores` or 2, whichever is larger. For SMC the number of chains is the
+        convergence statistics and can also reveal multiple modes in the posterior. If ``None``,
+        then set to either ``cores`` or 2, whichever is larger. For SMC the number of chains is the
         number of draws.
     cores : int
-        The number of chains to run in parallel. If `None`, set to the number of CPUs in the
+        The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
         system, but at most 4.  When using 'SMC', this parameter will be ignored if running with
-        `pm.SMC(parallel=False)`. Keep in mind that
+        ``pm.SMC(parallel=False)``. Keep in mind that
         some chains might themselves be multithreaded via openmp or BLAS. In those cases it might
         be faster to set this to 1.
     tune : int
         Number of iterations to tune, defaults to 500. Ignored when using 'SMC'. Samplers adjust
         the step sizes, scalings or similar during tuning. Tuning samples will be drawn in addition
-        to the number specified in the `draws` argument, and will be discarded unless
-        `discard_tuned_samples` is set to False.
+        to the number specified in the ``draws`` argument, and will be discarded unless
+        ``discard_tuned_samples`` is set to False.
     progressbar : bool
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
-    model : Model (optional if in `with` context)
+    model : Model (optional if in ``with`` context)
     random_seed : int or list of ints
-        A list is accepted if `cores` is greater than one.
+        A list is accepted if ``cores`` is greater than one.
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval. Ignored when using 'SMC'
     compute_convergence_checks : bool, default=True
-        Whether to compute sampler statistics like Gelman-Rubin and `effective_n`.
+        Whether to compute sampler statistics like Gelman-Rubin and ``effective_n``.
         Ignored when using 'SMC'
 
     Returns
     -------
     trace : pymc3.backends.base.MultiTrace
-        A `MultiTrace` object that contains the samples.
+        A ``MultiTrace`` object that contains the samples.
 
     Notes
     -----
-    Optional keyword arguments can be passed to `sample` to be delivered to the
-    `step_method`s used during sampling. In particular, the NUTS step method accepts
+    Optional keyword arguments can be passed to ``sample`` to be delivered to the
+    ``step_method``s used during sampling. In particular, the NUTS step method accepts
     a number of arguments. Common options are:
 
         * target_accept: float in [0, 1]. The step size is tuned such that we approximate this
@@ -580,15 +580,15 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     trace : backend, list, or MultiTrace
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
-        number `chain`. If None or a list of variables, the NDArray backend is used.
+        number ``chain``. If None or a list of variables, the NDArray backend is used.
     chain : int
-        Chain number used to store sample in backend. If `cores` is greater than one, chain numbers
+        Chain number used to store sample in backend. If ``cores`` is greater than one, chain numbers
         will start here.
     tune : int
         Number of iterations to tune, if applicable (defaults to None)
-    model : Model (optional if in `with` context)
+    model : Model (optional if in ``with`` context)
     random_seed : int or list of ints
-        A list is accepted if more if `cores` is greater than one.
+        A list is accepted if more if ``cores`` is greater than one.
 
     Examples
     --------
@@ -1064,11 +1064,11 @@ def sample_posterior_predictive(trace,
         sample per posterior sample, that is, the number of draws times the number of chains. It
         is not recommended to modify this value; when modified, some chains may not be represented
         in the posterior predictive sample.
-    model : Model (optional if in `with` context)
-        Model used to generate `trace`
+    model : Model (optional if in ``with`` context)
+        Model used to generate ``trace``
     vars : iterable
         Variables for which to compute the posterior predictive samples.
-        Defaults to `model.observed_RVs`.  Deprecated: please use `var_names` instead.
+        Deprecated: please use ``var_names`` instead.
     var_names : Iterable[str]
         Alternative way to specify vars to sample, to make this function orthogonal with
         others.
@@ -1185,7 +1185,7 @@ def sample_posterior_predictive_w(traces, samples=None, models=None, weights=Non
     models : list
         List of models used to generate the list of traces. The number of models should be equal to
         the number of weights and the number of observed RVs should be the same for all models.
-        By default a single model will be inferred from `with` context, in this case results will
+        By default a single model will be inferred from ``with`` context, in this case results will
         only be meaningful if all models share the same distributions for the observed RVs.
     weights: array-like
         Individual weights for each trace. Default, same weight for each model.
@@ -1318,13 +1318,13 @@ def sample_prior_predictive(samples=500,
     ----------
     samples : int
         Number of samples from the prior predictive to generate. Defaults to 500.
-    model : Model (optional if in `with` context)
+    model : Model (optional if in ``with`` context)
     vars : Iterable[str]
         A list of names of variables for which to compute the posterior predictive
-        samples.  *DEPRECATED* - Use `var_names` argument instead.
+        samples.  *DEPRECATED* - Use ``var_names`` argument instead.
     var_names : Iterable[str]
         A list of names of variables for which to compute the posterior predictive
-        samples. Defaults to `model.named_vars`.
+        samples. Defaults to ``model.named_vars``.
     random_seed : int
         Seed for the random number generator.
 
@@ -1391,7 +1391,7 @@ def init_nuts(init='auto', chains=1, n_init=500000, model=None,
         * adapt_diag : Start with a identity mass matrix and then adapt a diagonal based on the
           variance of the tuning samples. All chains use the test value (usually the prior mean)
           as starting point.
-        * jitter+adapt_diag : Same as `adapt_diag`, but use uniform jitter in [-1, 1] as starting
+        * jitter+adapt_diag : Same as ``adapt_diag``, but use uniform jitter in [-1, 1] as starting
           point in each chain.
         * advi+adapt_diag : Run ADVI and then adapt the resulting diagonal mass matrix based on the
           sample variance of the tuning samples.
@@ -1408,7 +1408,7 @@ def init_nuts(init='auto', chains=1, n_init=500000, model=None,
     n_init : int
         Number of iterations of initializer
         If 'ADVI', number of iterations, if 'nuts', number of draws.
-    model : Model (optional if in `with` context)
+    model : Model (optional if in ``with`` context)
     progressbar : bool
         Whether or not to display a progressbar for advi sampling.
     **kwargs : keyword arguments
