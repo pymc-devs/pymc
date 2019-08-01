@@ -142,12 +142,17 @@ class Minibatch(tt.TensorVariable):
     >>> x = Minibatch(data, batch_size=10)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     Note that your data is cast to ``floatX`` if it is not integer type
     But you still can add the ``dtype`` kwarg for :class:`Minibatch`
 =======
     Note that your data is cast to `floatX` if it is not integer type
     But you still can add the `dtype` kwarg for :class:`Minibatch`
 >>>>>>> WIP: Documentation cleanup (#3575)
+=======
+    Note that your data is cast to ``floatX`` if it is not integer type
+    But you still can add the ``dtype`` kwarg for :class:`Minibatch`
+>>>>>>> Fix RST bugs Luciano Paz caught.
 
     in case we want 10 sampled rows and columns
     ``[(size, seed), (size, seed)]`` it is

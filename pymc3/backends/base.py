@@ -391,10 +391,14 @@ class MultiTrace:
         Returns
         -------
 <<<<<<< HEAD
+<<<<<<< HEAD
             None.
 =======
             Nothing.
 >>>>>>> WIP: Documentation cleanup (#3575)
+=======
+            None.
+>>>>>>> Fix RST bugs Luciano Paz caught.
         """
         for k, v in vals.items():
             new_var = 1

@@ -317,10 +317,14 @@ class EulerMaruyama(distribution.Continuous):
         function returning the drift and diffusion coefficients of SDE
     sde_pars : tuple
 <<<<<<< HEAD
+<<<<<<< HEAD
         parameters of the SDE, passed as ``*args`` to ``sde_fn``
 =======
         parameters of the SDE, passed as `*args` to `sde_fn`
 >>>>>>> WIP: Documentation cleanup (#3575)
+=======
+        parameters of the SDE, passed as ``*args`` to ``sde_fn``
+>>>>>>> Fix RST bugs Luciano Paz caught.
     """
     def __init__(self, dt, sde_fn, sde_pars, *args, **kwds):
         super().__init__(*args, **kwds)

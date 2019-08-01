@@ -108,10 +108,14 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS,
     step : step function or vector of step functions
         One or more step functions that have been assigned to some subset of
 <<<<<<< HEAD
+<<<<<<< HEAD
         the model's parameters. Defaults to ``None`` (no assigned variables).
 =======
         the model's parameters. Defaults to `None` (no assigned variables).
 >>>>>>> WIP: Documentation cleanup (#3575)
+=======
+        the model's parameters. Defaults to ``None`` (no assigned variables).
+>>>>>>> Fix RST bugs Luciano Paz caught.
     methods : vector of step method classes
         The set of step methods from which the function may choose. Defaults
         to the main step methods provided by PyMC3.
@@ -190,9 +194,13 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     draws : int
         The number of samples to draw. Defaults to 500. The number of tuned samples are discarded
 <<<<<<< HEAD
+<<<<<<< HEAD
         by default. See ``discard_tuned_samples``.
 =======
         by default. See `discard_tuned_samples`.
+=======
+        by default. See ``discard_tuned_samples``.
+>>>>>>> Fix RST bugs Luciano Paz caught.
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without a step methods,
         step methods for those variables will be assigned automatically.
@@ -207,10 +215,14 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
           variance of the tuning samples. All chains use the test value (usually the prior mean)
           as starting point.
 <<<<<<< HEAD
+<<<<<<< HEAD
         * jitter+adapt_diag : Same as ``adapt_diag``\, but add uniform jitter in [-1, 1] to the
 =======
         * jitter+adapt_diag : Same as `adapt_diag`\, but add uniform jitter in [-1, 1] to the
 >>>>>>> WIP: Documentation cleanup (#3575)
+=======
+        * jitter+adapt_diag : Same as ``adapt_diag``\, but add uniform jitter in [-1, 1] to the
+>>>>>>> Fix RST bugs Luciano Paz caught.
           starting point in each chain.
         * advi+adapt_diag : Run ADVI and then adapt the resulting diagonal mass matrix based on the
           sample variance of the tuning samples.
@@ -232,6 +244,7 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     start : dict, or array of dict
         Starting point in parameter space (or partial point)
 <<<<<<< HEAD
+<<<<<<< HEAD
         Defaults to ``trace.point(-1))`` if there is a trace provided and model.test_point if not
         (defaults to empty dict). Initialization methods for NUTS (see ``init`` keyword) can
         overwrite the default.
@@ -241,6 +254,12 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         overwrite the default. For 'SMC' step method, `start` should be a list of dicts
         of length = `chains`.
 >>>>>>> WIP: Documentation cleanup (#3575)
+=======
+        Defaults to ``trace.point(-1))`` if there is a trace provided and model.test_point if not
+        (defaults to empty dict). Initialization methods for NUTS (see ``init`` keyword) can
+        overwrite the default. For 'SMC' step method, ``start`` should be a list of dicts
+        of length = ``chains``.
+>>>>>>> Fix RST bugs Luciano Paz caught.
     trace : backend, list, or MultiTrace
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
@@ -254,12 +273,13 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
 =======
         backend (with "mcmc" used as the base name). Ignored when using 'SMC' as step method.
     chain_idx : int
-        Chain number used to store sample in backend. If `chains` is greater than one, chain
+        Chain number used to store sample in backend. If ``chains`` is greater than one, chain
         numbers will start here. Ignored when using 'SMC' as step method.
 >>>>>>> WIP: Documentation cleanup (#3575)
     chains : int
         The number of chains to sample. Running independent chains is important for some
         convergence statistics and can also reveal multiple modes in the posterior. If ``None``,
+<<<<<<< HEAD
         then set to either ``cores`` or 2, whichever is larger.
     cores : int
 <<<<<<< HEAD
@@ -267,16 +287,29 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         system, but at most 4.
 =======
         The number of chains to run in parallel. If `None`, set to the number of CPUs in the
+=======
+        then set to either ``cores`` or 2, whichever is larger. For SMC the number of chains is the
+        number of draws.
+    cores : int
+        The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
+>>>>>>> Fix RST bugs Luciano Paz caught.
         system, but at most 4.  When using 'SMC', this parameter will be ignored if running with
-        `pm.SMC(parallel=False)`. Keep in mind that
+        ``pm.SMC(parallel=False)``. Keep in mind that
         some chains might themselves be multithreaded via openmp or BLAS. In those cases it might
         be faster to set this to 1.
 >>>>>>> WIP: Documentation cleanup (#3575)
     tune : int
+<<<<<<< HEAD
         Number of iterations to tune, defaults to 500. Samplers adjust the step sizes, scalings or
         similar during tuning. Tuning samples will be drawn in addition to the number specified in
         the ``draws`` argument, and will be discarded unless ``discard_tuned_samples`` is set to
         False.
+=======
+        Number of iterations to tune, defaults to 500. Ignored when using 'SMC'. Samplers adjust
+        the step sizes, scalings or similar during tuning. Tuning samples will be drawn in addition
+        to the number specified in the ``draws`` argument, and will be discarded unless
+        ``discard_tuned_samples`` is set to False.
+>>>>>>> Fix RST bugs Luciano Paz caught.
     progressbar : bool
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
@@ -288,9 +321,13 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         Whether to discard posterior samples of the tune interval.
     compute_convergence_checks : bool, default=True
 <<<<<<< HEAD
+<<<<<<< HEAD
         Whether to compute sampler statistics like Gelman-Rubin and ``effective_n``.
 =======
         Whether to compute sampler statistics like Gelman-Rubin and `effective_n`.
+=======
+        Whether to compute sampler statistics like Gelman-Rubin and ``effective_n``.
+>>>>>>> Fix RST bugs Luciano Paz caught.
         Ignored when using 'SMC'
 >>>>>>> WIP: Documentation cleanup (#3575)
 
@@ -302,12 +339,17 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     Notes
     -----
 <<<<<<< HEAD
+<<<<<<< HEAD
     Optional keyword arguments can be passed to ``sample`` to be delivered to the
     ``step_method``s used during sampling. In particular, the NUTS step method accepts
 =======
     Optional keyword arguments can be passed to `sample` to be delivered to the
     `step_method`s used during sampling. In particular, the NUTS step method accepts
 >>>>>>> WIP: Documentation cleanup (#3575)
+=======
+    Optional keyword arguments can be passed to ``sample`` to be delivered to the
+    ``step_method``s used during sampling. In particular, the NUTS step method accepts
+>>>>>>> Fix RST bugs Luciano Paz caught.
     a number of arguments. Common options are:
 
         * target_accept: float in [0, 1]. The step size is tuned such that we approximate this
@@ -1337,6 +1379,7 @@ def sample_prior_predictive(samples=500,
     vars : Iterable[str]
         A list of names of variables for which to compute the posterior predictive
 <<<<<<< HEAD
+<<<<<<< HEAD
         samples.  *DEPRECATED* - Use ``var_names`` argument instead.
     var_names : Iterable[str]
         A list of names of variables for which to compute the posterior predictive
@@ -1347,6 +1390,12 @@ def sample_prior_predictive(samples=500,
         A list of names of variables for which to compute the posterior predictive
         samples. Defaults to `model.named_vars`.
 >>>>>>> WIP: Documentation cleanup (#3575)
+=======
+        samples.  *DEPRECATED* - Use ``var_names`` argument instead.
+    var_names : Iterable[str]
+        A list of names of variables for which to compute the posterior predictive
+        samples. Defaults to ``model.named_vars``.
+>>>>>>> Fix RST bugs Luciano Paz caught.
     random_seed : int
         Seed for the random number generator.
 
