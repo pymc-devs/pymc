@@ -1550,7 +1550,11 @@ class Exponential(PositiveContinuous):
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
+<<<<<<< HEAD
             "Accurately computing :math:`\log(1-\exp(-\mid a \mid))` Assessed by the Rmpfr
+=======
+            "Accurately computing :math: `\log(1-\exp(-\mid a \mid))` Assessed by the Rmpfr
+>>>>>>> WIP: Documentation cleanup (#3575)
             package"
 
         Parameters

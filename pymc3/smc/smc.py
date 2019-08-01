@@ -89,6 +89,7 @@ def sample_smc(
         Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
         the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
         It should be between 0 and 1.
+<<<<<<< HEAD:pymc3/smc/smc.py
     epsilon : float
         Standard deviation of the gaussian pseudo likelihood. Only works with `kernel = ABC`
     dist_func : str
@@ -113,15 +114,39 @@ def sample_smc(
 
     .. math::
 
+=======
+    parallel : bool
+        Distribute computations across cores if the number of cores is larger than 1
+        (see `pm.sample()` for details). Defaults to True.
+    model : :class:`pymc3.Model`
+        Optional model for sampling step. Defaults to None (taken from context).
+
+    Notes
+    -----
+    SMC works by moving through successive stages. At each stage the inverse temperature \beta is
+    increased a little bit (starting from 0 up to 1). When \beta = 0 we have the prior distribution
+    and when \beta =1 we have the posterior distribution. So in more general terms we are always
+    computing samples from a tempered posterior that we can write as:
+
+    .. math::
+
+>>>>>>> WIP: Documentation cleanup (#3575):pymc3/step_methods/smc.py
         p(\theta \mid y)_{\beta} = p(y \mid \theta)^{\beta} p(\theta)
 
     A summary of the algorithm is:
 
      1. Initialize :math:`\beta` at zero and stage at zero.
+<<<<<<< HEAD:pymc3/smc/smc.py
      2. Generate N samples :math:`S_{\beta}` from the prior (because when :math `\beta = 0` the
          tempered posterior is the prior).
      3. Increase :math:`\beta` in order to make the effective sample size equals some predefined
         value (we use :math:`Nt`, where :math:`t` is 0.5 by default).
+=======
+     2. Generate N samples :math:`S_{\beta}` from the prior (because when :math `\beta = 0` the tempered posterior
+        is the prior).
+     3. Increase :math:`\beta` in order to make the effective sample size equals some predefined value
+        (we use :math:`Nt`, where :math:`t` is 0.5 by default).
+>>>>>>> WIP: Documentation cleanup (#3575):pymc3/step_methods/smc.py
      4. Compute a set of N importance weights W. The weights are computed as the ratio of the
         likelihoods of a sample at stage i+1 and stage i.
      5. Obtain :math:`S_{w}` by re-sampling according to W.

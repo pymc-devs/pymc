@@ -390,7 +390,11 @@ class MultiTrace:
 
         Returns
         -------
+<<<<<<< HEAD
             None.
+=======
+            Nothing.
+>>>>>>> WIP: Documentation cleanup (#3575)
         """
         for k, v in vals.items():
             new_var = 1
