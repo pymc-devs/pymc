@@ -31,24 +31,25 @@ EXPERIMENTAL_WARNING = (
 __all__ = ["sample_smc"]
 
 
-def sample_smc(draws=5000,
-        start=None,
-        cores=None,
-        kernel='metropolis',
-        n_steps=25,
-        scaling=1.0,
-        p_acc_rate=0.99,
-        tune_scaling=True,
-        tune_steps=True,
-        threshold=0.5,
-        parallel=True,
-        ABC=False,
-        epsilon=1.,
-        dist_func="absolute_error",
-        sum_stat=False,
-        progressbar=False,
-        model=None,
-        random_seed=-1):
+def sample_smc(
+    draws=1000,
+    start=None,
+    cores=None,
+    kernel="metropolis",
+    n_steps=25,
+    scaling=1.0,
+    p_acc_rate=0.99,
+    tune_scaling=True,
+    tune_steps=True,
+    threshold=0.5,
+    parallel=False,
+    epsilon=1.0,
+    dist_func="absolute_error",
+    sum_stat=False,
+    progressbar=False,
+    model=None,
+    random_seed=-1,
+):
     """
     Sequential Monte Carlo based sampling
 
@@ -56,26 +57,28 @@ def sample_smc(draws=5000,
     ----------
     draws : int
         The number of samples to draw from the posterior (i.e. last stage). And also the number of
-        independent Markov Chains. Defaults to 5000.
+        independent chains. Defaults to 1000.
     start : dict, or array of dict
-    cores : int
-        The number of chains to run in parallel.
         Starting point in parameter space. It should be a list of dict with length `chains`.
+        If you use this the first stage will not be sampled from the prior disstribution.
+    cores : int
+        The number of chains to run in parallel. If ``None`` (default), set to the number of CPUs
+        in the system.
     kernel : str
-        Kernel method of the SMC sampler. Available option are `metropolis` (default) and `ABC`.
-        Use `ABC` for likelihood free inference togheter with a `pm.Simulator`
+        Kernel method of the SMC sampler. Available option are ``metropolis`` (default) and `ABC`.
+        Use `ABC` for likelihood free inference togheter with a ``pm.Simulator``
     n_steps : int
-        The number of steps of a Markov Chain. If `tune_steps == True` `n_steps` will be used for
-        the first stage and the number of steps of the other stages will be determined
-        automatically based on the acceptance rate and `p_acc_rate`.
-        The number of steps will never be larger than `n_steps`.
+        The number of steps of a Markov Chain. If ``tune_steps == True`` ``n_steps`` will be used
+        for the first stage and for the other stages it will be determined automatically based on
+        the acceptance rate and `p_acc_rate`, the number of steps will never be larger than
+        ``n_steps``.
     scaling : float
         Factor applied to the proposal distribution i.e. the step size of the Markov Chain. Only
-        works if `tune_scaling == False` otherwise is determined automatically.
+        works if ``tune_scaling == False`` otherwise is determined automatically.
     p_acc_rate : float
-        Used to compute `n_steps` when `tune_steps == True`. The higher the value of `p_acc_rate`
-        the higher the number of steps computed automatically. Defaults to 0.99. It should be
-        between 0 and 1.
+        Used to compute ``n_steps`` when ``tune_steps == True``. The higher the value of
+        ``p_acc_rate`` the higher the number of steps computed automatically. Defaults to 0.99.
+        It should be between 0 and 1.
     tune_scaling : bool
         Whether to compute the scaling automatically or not. Defaults to True
     tune_steps : bool
@@ -85,19 +88,19 @@ def sample_smc(draws=5000,
         the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
         It should be between 0 and 1.
     parallel : bool
-        Distribute computations across cores if the number of cores is larger than 1
-        (see `pm.sample()` for details). Defaults to True.
+        Distribute computations across cores if the number of cores is larger than 1.
+        Defaults to False.
     epsilon : float
-        standard deviation of the gaussian pseudo_likelihood. Only works with `kernel = ABC`
+        Standard deviation of the gaussian pseudo likelihood. Only works with `kernel = ABC`
     dist_func : str
-        Distance function. Available options are `absolute_error` (default) and
-        `sum_of_squared_distance`. Only works with `kernel = ABC`
+        Distance function. Available options are ``absolute_error`` (default) and
+        ``sum_of_squared_distance``. Only works with ``kernel = ABC``
     sum_stat : bool
-        Whether to use or not a summary statistics. Defaults to False. Only works with `kernel = ABC`
+        Whether to use or not a summary statistics. Defaults to False. Only works with
+        ``kernel = ABC``
     progressbar : bool
         Flag for displaying a progress bar
-    model : :class:`pymc3.Model`
-        Optional model for sampling step. Defaults to None (taken from context).
+    model : Model (optional if in ``with`` context)).
     random_seed : int
         random seed
 
@@ -183,16 +186,13 @@ def sample_smc(draws=5000,
             dist_func,
             sum_stat,
         )
-    elif kernel.lower() == 'metropolis':
+    elif kernel.lower() == "metropolis":
         likelihood_logp = logp_forw([model.datalogpt], variables, shared)
 
     while beta < 1:
         if parallel and cores > 1:
             pool = mp.Pool(processes=cores)
-            results = pool.starmap(
-                likelihood_logp,
-                [(sample,) for sample in posterior],
-            )
+            results = pool.starmap(likelihood_logp, [(sample,) for sample in posterior])
         else:
             results = [likelihood_logp(sample) for sample in posterior]
         likelihoods = np.array(results).squeeze()
@@ -210,7 +210,16 @@ def sample_smc(draws=5000,
         # compute scaling (optional) and number of Markov chains steps (optional), based on the
         # acceptance rate of the previous stage
         if (tune_scaling or tune_steps) and stage > 0:
-            scaling, n_steps = _tune(acc_rate, proposed, tune_scaling, tune_steps, scaling, n_steps, max_steps, p_acc_rate)
+            scaling, n_steps = _tune(
+                acc_rate,
+                proposed,
+                tune_scaling,
+                tune_steps,
+                scaling,
+                n_steps,
+                max_steps,
+                p_acc_rate,
+            )
 
         pm._log.info("Stage: {:d} Beta: {:.3f} Steps: {:d}".format(stage, beta, n_steps))
         # Apply Metropolis kernel (mutation)
