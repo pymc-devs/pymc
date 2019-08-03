@@ -41,7 +41,7 @@ class DifferentialEquation(theano.Op):
 
     __props__ = ()
     
-    def __init__(self, func, t0, times, n_states, n_odeparams):
+    def __init__(self, func, times, n_states, n_odeparams, t0=0):
         if not callable(func):
             raise ValueError("Argument func must be callable.")
         if n_states<1:
