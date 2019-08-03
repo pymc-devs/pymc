@@ -2,6 +2,7 @@ import numpy as np
 from pymc3.ode.utils import augment_system, ODEGradop
 import scipy 
 import theano
+import theano.tensor as tt
 THEANO_FLAG = 'compute_test_value=ignore'
 
 
