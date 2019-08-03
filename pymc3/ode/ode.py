@@ -2,7 +2,6 @@ import numpy as np
 from pymc3.ode.utils import augment_system, ODEGradop
 import scipy 
 import theano
-import theano.tensor as tt
 THEANO_FLAG = 'compute_test_value=ignore'
 
 
@@ -43,11 +42,8 @@ class DifferentialEquation(theano.Op):
     __props__ = ()
     
     def __init__(self, func, t0, times, n_states, n_odeparams):
-
         if not callable(func):
             raise ValueError("Argument func must be callable.")
-        if np.any(np.diff(times)<0):
-            raise ValueError("The values in times must be monotonically increasing or monotonically decreasing; repeated values are allowed.")
         if n_states<1:
             raise ValueError('Argument n_states must be at least 1.')
         if n_odeparams<0:
@@ -73,7 +69,6 @@ class DifferentialEquation(theano.Op):
         self._cached_parameters = None
 
     def _make_sens_ic(self):
-
         # The sensitivity matrix will always have consistent form.
         # If the first n_odeparams entries of the parameters vector in the simulate call
         # correspond to ode paramaters, then the first n_odeparams columns in
@@ -93,7 +88,7 @@ class DifferentialEquation(theano.Op):
         return dydp
 
     def _system(self, Y, t, p):
-        """
+        '''
         This is the function that will be passed to odeint.
         Solves both ODE and sensitivities
         Args:
@@ -102,14 +97,13 @@ class DifferentialEquation(theano.Op):
             p (vector): parameters
         Returns:
             derivatives (vector): derivatives of state and gradient
-        """
+        '''
 
         dydt, ddt_dydp = self._augmented_func(Y[:self._n], t, p, Y[self._n:])
         derivatives = np.concatenate([dydt, ddt_dydp])
         return derivatives
 
     def _simulate(self, parameters):
-
         # Initial condition comprised of state initial conditions and raveled
         # sensitivity matrix
         y0 = np.concatenate([ parameters[self.n_odeparams:] , self._sens_ic])
@@ -128,25 +122,21 @@ class DifferentialEquation(theano.Op):
         return y, sens
 
     def _cached_simulate(self, parameters):
-
         if np.array_equal(np.array(parameters), self._cached_parameters):
             return self._cached_y, self._cached_sens
         else:
             return self._simulate(np.array(parameters))
 
     def state(self, x):
-
         y, sens = self._cached_simulate(np.array(x, dtype=np.float64))
         self._cached_y, self._cached_sens, self._cached_parameters = y, sens, x
         return y.ravel()
 
     def numpy_vsp(self, x, g):
-
         numpy_sens = self._cached_simulate(np.array(x, dtype=np.float64))[1].reshape((self.n_states * len(self.times), len(x)))
         return numpy_sens.T.dot(g)
 
     def make_node(self, odeparams, y0):
-
         if len(odeparams)!=self.n_odeparams:
             raise ValueError('odeparams has too many or too few parameters.  Expected {a} paramteres but got {b}'.format(a = self.n_odeparams, b = len(odeparams)))
         if len(y0)!=self.n_states:
@@ -164,18 +154,14 @@ class DifferentialEquation(theano.Op):
         return theano.Apply(self, [x], [x.type()])
 
     def perform(self, node, inputs_storage, output_storage):
-
         x = inputs_storage[0]
         out = output_storage[0]
-
         # get the numerical solution of ODE states
         out[0] = self.state(x)
 
     def grad(self, inputs, output_grads):
-
         x = inputs[0]
         g = output_grads[0]
-
         # pass the VSP when asked for gradient
         grad_op = ODEGradop(self.numpy_vsp)
         grad_op_apply = grad_op(x, g)

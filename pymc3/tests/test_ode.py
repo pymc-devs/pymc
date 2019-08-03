@@ -6,7 +6,6 @@ from scipy.integrate import odeint
 from scipy.stats import norm
 import pymc3 as pm
 import theano
-import theano.tensor as tt
 import pytest
 
 
@@ -290,7 +289,29 @@ class TestErrors(object):
         with pytest.raises(ValueError):
             self.ode_model(odeparams=[1], y0=[])
 
+    def test_func_callable(self):
+        with pytest.raises(ValueError):
+            DifferentialEquation(func = 1,
+                                 t0 = 0, 
+                                 times = self.times,
+                                 n_states = 1,
+                                 n_odeparams = 1)
 
+    def test_number_of_states(self):
+        with pytest.raises(ValueError):
+            DifferentialEquation(func = self.system,
+                                 t0 = 0, 
+                                 times = self.times,
+                                 n_states = 0,
+                                 n_odeparams = 1)
+
+    def test_number_of_params(self):
+        with pytest.raises(ValueError):
+            DifferentialEquation(func = self.system,
+                                 t0 = 0, 
+                                 times = self.times,
+                                 n_states = 1,
+                                 n_odeparams = 0)
 
 class TestDiffEqModel(object):
 
