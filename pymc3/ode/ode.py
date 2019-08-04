@@ -69,6 +69,9 @@ class DifferentialEquation(theano.Op):
         self._cached_sens = None
         self._cached_parameters = None
 
+        self._grad_op = ODEGradop(self.numpy_vsp)
+
+
     def _make_sens_ic(self):
         # The sensitivity matrix will always have consistent form.
         # If the first n_odeparams entries of the parameters vector in the simulate call
@@ -151,7 +154,6 @@ class DifferentialEquation(theano.Op):
         odeparams = tt.as_tensor_variable(odeparams)
         y0 = tt.as_tensor_variable(y0)
         x = tt.concatenate([odeparams, y0])
-
         return theano.Apply(self, [x], [x.type()])
 
     def perform(self, node, inputs_storage, output_storage):
@@ -164,7 +166,5 @@ class DifferentialEquation(theano.Op):
         x = inputs[0]
         g = output_grads[0]
         # pass the VSP when asked for gradient
-        grad_op = ODEGradop(self.numpy_vsp)
-        grad_op_apply = grad_op(x, g)
-
+        grad_op_apply = self._grad_op(x, g)
         return [grad_op_apply]
