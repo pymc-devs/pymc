@@ -33,16 +33,16 @@ __all__ = ["sample_smc"]
 
 def sample_smc(
     draws=1000,
-    start=None,
-    cores=None,
     kernel="metropolis",
     n_steps=25,
-    scaling=1.0,
-    p_acc_rate=0.99,
+    parallel=False,
+    start=None,
+    cores=None,
     tune_scaling=True,
     tune_steps=True,
+    scaling=1.0,
+    p_acc_rate=0.99,
     threshold=0.5,
-    parallel=False,
     epsilon=1.0,
     dist_func="absolute_error",
     sum_stat=False,
@@ -58,38 +58,37 @@ def sample_smc(
     draws : int
         The number of samples to draw from the posterior (i.e. last stage). And also the number of
         independent chains. Defaults to 1000.
+    kernel : str
+        Kernel method for the SMC sampler. Available option are ``metropolis`` (default) and `ABC`.
+        Use `ABC` for likelihood free inference togheter with a ``pm.Simulator``.
+    n_steps : int
+        The number of steps of each Markov Chain. If ``tune_steps == True`` ``n_steps`` will be used
+        for the first stage and for the others it will be determined automatically based on the
+        acceptance rate and `p_acc_rate`, the max number of steps is ``n_steps``.
+    parallel : bool
+        Distribute computations across cores if the number of cores is larger than 1.
+        Defaults to False.
     start : dict, or array of dict
         Starting point in parameter space. It should be a list of dict with length `chains`.
-        If you use this the first stage will not be sampled from the prior disstribution.
+        When None (default) the starting point is sampled from the prior distribution. 
     cores : int
-        The number of chains to run in parallel. If ``None`` (default), set to the number of CPUs
-        in the system.
-    kernel : str
-        Kernel method of the SMC sampler. Available option are ``metropolis`` (default) and `ABC`.
-        Use `ABC` for likelihood free inference togheter with a ``pm.Simulator``
-    n_steps : int
-        The number of steps of a Markov Chain. If ``tune_steps == True`` ``n_steps`` will be used
-        for the first stage and for the other stages it will be determined automatically based on
-        the acceptance rate and `p_acc_rate`, the number of steps will never be larger than
-        ``n_steps``.
+        The number of chains to run in parallel. If ``None`` (default), it will be automatically
+        set to the number of CPUs in the system.
+    tune_scaling : bool
+        Whether to compute the scaling factor automatically or not. Defaults to True
+    tune_steps : bool
+        Whether to compute the number of steps automatically or not. Defaults to True
     scaling : float
-        Factor applied to the proposal distribution i.e. the step size of the Markov Chain. Only
-        works if ``tune_scaling == False`` otherwise is determined automatically.
+        Scaling factor applied to the proposal distribution i.e. the step size of the Markov Chain.
+        If ``tune_scaling == True`` (defaults) it will be determined automatically at each stage.
     p_acc_rate : float
         Used to compute ``n_steps`` when ``tune_steps == True``. The higher the value of
         ``p_acc_rate`` the higher the number of steps computed automatically. Defaults to 0.99.
         It should be between 0 and 1.
-    tune_scaling : bool
-        Whether to compute the scaling automatically or not. Defaults to True
-    tune_steps : bool
-        Whether to compute the number of steps automatically or not. Defaults to True
     threshold : float
         Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
         the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
         It should be between 0 and 1.
-    parallel : bool
-        Distribute computations across cores if the number of cores is larger than 1.
-        Defaults to False.
     epsilon : float
         Standard deviation of the gaussian pseudo likelihood. Only works with `kernel = ABC`
     dist_func : str
@@ -99,7 +98,7 @@ def sample_smc(
         Whether to use or not a summary statistics. Defaults to False. Only works with
         ``kernel = ABC``
     progressbar : bool
-        Flag for displaying a progress bar
+        Flag for displaying a progress bar. Defaults to False.
     model : Model (optional if in ``with`` context)).
     random_seed : int
         random seed
