@@ -106,10 +106,11 @@ def sample_smc(
 
     Notes
     -----
-    SMC works by moving through successive stages. At each stage the inverse temperature \beta is
-    increased a little bit (starting from 0 up to 1). When \beta = 0 we have the prior distribution
-    and when \beta =1 we have the posterior distribution. So in more general terms we are always
-    computing samples from a tempered posterior that we can write as:
+    SMC works by moving through successive stages. At each stage the inverse temperature
+    :math:`\beta` is increased a little bit (starting from 0 up to 1). When :math:`\beta` = 0
+    we have the prior distribution and when :math:`\beta` =1 we have the posterior distribution.
+    So in more general terms we are always computing samples from a tempered posterior that we can
+    write as:
 
     .. math::
 
