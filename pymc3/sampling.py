@@ -19,10 +19,11 @@ from .distributions.distribution import draw_values
 from .model import modelcontext, Point, all_continuous, Model
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
-                           Slice, CompoundStep, arraystep, smc)
+                           Slice, CompoundStep, arraystep)
 from .util import update_start_vals, get_untransformed_name, is_transformed_name, get_default_varnames
 from .vartypes import discrete_types
 from .exceptions import IncorrectArgumentsError
+from .parallel_sampling import _cpu_count
 from pymc3.step_methods.hmc import quadpotential
 import pymc3 as pm
 from tqdm import tqdm
@@ -172,27 +173,6 @@ def _print_step_hierarchy(s, level=0):
         _log.info('>' * level + '{}: [{}]'.format(s.__class__.__name__, varnames))
 
 
-def _cpu_count():
-    """Try to guess the number of CPUs in the system.
-
-    We use the number provided by psutil if that is installed.
-    If not, we use the number provided by multiprocessing, but assume
-    that half of the cpus are only hardware threads and ignore those.
-    """
-    try:
-        import psutil
-        cpus = psutil.cpu_count(False)
-    except ImportError:
-        import multiprocessing
-        try:
-            cpus = multiprocessing.cpu_count() // 2
-        except NotImplementedError:
-            cpus = 1
-    if cpus is None:
-        cpus = 1
-    return cpus
-
-
 def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=None, chain_idx=0,
            chains=None, cores=None, tune=500, progressbar=True,
            model=None, random_seed=None, discard_tuned_samples=True,
@@ -236,33 +216,28 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         Starting point in parameter space (or partial point)
         Defaults to ``trace.point(-1))`` if there is a trace provided and model.test_point if not
         (defaults to empty dict). Initialization methods for NUTS (see ``init`` keyword) can
-        overwrite the default. For 'SMC' step method, ``start`` should be a list of dicts
-        of length = ``chains``.
+        overwrite the default.
     trace : backend, list, or MultiTrace
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
         number ``chain``. If None or a list of variables, the NDArray backend is used.
         Passing either "text" or "sqlite" is taken as a shortcut to set up the corresponding
-        backend (with "mcmc" used as the base name). Ignored when using 'SMC' as step method.
+        backend (with "mcmc" used as the base name).
     chain_idx : int
         Chain number used to store sample in backend. If ``chains`` is greater than one, chain
-        numbers will start here. Ignored when using 'SMC' as step method.
+        numbers will start here.
     chains : int
         The number of chains to sample. Running independent chains is important for some
         convergence statistics and can also reveal multiple modes in the posterior. If ``None``,
-        then set to either ``cores`` or 2, whichever is larger. For SMC the number of chains is the
-        number of draws.
+        then set to either ``cores`` or 2, whichever is larger.
     cores : int
         The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
-        system, but at most 4.  When using 'SMC', this parameter will be ignored if running with
-        ``pm.SMC(parallel=False)``. Keep in mind that
-        some chains might themselves be multithreaded via openmp or BLAS. In those cases it might
-        be faster to set this to 1.
+        system, but at most 4.
     tune : int
-        Number of iterations to tune, defaults to 500. Ignored when using 'SMC'. Samplers adjust
-        the step sizes, scalings or similar during tuning. Tuning samples will be drawn in addition
-        to the number specified in the ``draws`` argument, and will be discarded unless
-        ``discard_tuned_samples`` is set to False.
+        Number of iterations to tune, defaults to 500. Samplers adjust the step sizes, scalings or
+        similar during tuning. Tuning samples will be drawn in addition to the number specified in
+        the ``draws`` argument, and will be discarded unless ``discard_tuned_samples`` is set to
+        False.
     progressbar : bool
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
@@ -271,10 +246,9 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     random_seed : int or list of ints
         A list is accepted if ``cores`` is greater than one.
     discard_tuned_samples : bool
-        Whether to discard posterior samples of the tune interval. Ignored when using 'SMC'
+        Whether to discard posterior samples of the tune interval.
     compute_convergence_checks : bool, default=True
         Whether to compute sampler statistics like Gelman-Rubin and ``effective_n``.
-        Ignored when using 'SMC'
 
     Returns
     -------
@@ -334,142 +308,134 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     if cores is None:
         cores = min(4, _cpu_count())
 
-    if isinstance(step, pm.step_methods.smc.SMC):
-        trace = smc.sample_smc(draws=draws,
-                               step=step,
-                               start=start,
-                               cores=cores,
-                               progressbar=progressbar,
-                               model=model,
-                               random_seed=random_seed)
-    else:
-        if 'njobs' in kwargs:
-            cores = kwargs['njobs']
-            warnings.warn(
-                "The njobs argument has been deprecated. Use cores instead.",
-                DeprecationWarning)
-        if 'nchains' in kwargs:
-            chains = kwargs['nchains']
-            warnings.warn(
-                "The nchains argument has been deprecated. Use chains instead.",
-                DeprecationWarning)
-        if chains is None:
-            chains = max(2, cores)
-        if isinstance(start, dict):
-            start = [start] * chains
-        if random_seed == -1:
-            random_seed = None
-        if chains == 1 and isinstance(random_seed, int):
-            random_seed = [random_seed]
-        if random_seed is None or isinstance(random_seed, int):
-            if random_seed is not None:
-                np.random.seed(random_seed)
-            random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
-        if not isinstance(random_seed, Iterable):
-            raise TypeError(
-                'Invalid value for `random_seed`. Must be tuple, list or int')
-        if 'chain' in kwargs:
-            chain_idx = kwargs['chain']
-            warnings.warn(
-                "The chain argument has been deprecated. Use chain_idx instead.",
-                DeprecationWarning)
 
-        if start is not None:
-            for start_vals in start:
-                _check_start_shape(model, start_vals)
+    if 'njobs' in kwargs:
+        cores = kwargs['njobs']
+        warnings.warn(
+            "The njobs argument has been deprecated. Use cores instead.",
+            DeprecationWarning)
+    if 'nchains' in kwargs:
+        chains = kwargs['nchains']
+        warnings.warn(
+            "The nchains argument has been deprecated. Use chains instead.",
+            DeprecationWarning)
+    if chains is None:
+        chains = max(2, cores)
+    if isinstance(start, dict):
+        start = [start] * chains
+    if random_seed == -1:
+        random_seed = None
+    if chains == 1 and isinstance(random_seed, int):
+        random_seed = [random_seed]
+    if random_seed is None or isinstance(random_seed, int):
+        if random_seed is not None:
+            np.random.seed(random_seed)
+        random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
+    if not isinstance(random_seed, Iterable):
+        raise TypeError(
+            'Invalid value for `random_seed`. Must be tuple, list or int')
+    if 'chain' in kwargs:
+        chain_idx = kwargs['chain']
+        warnings.warn(
+            "The chain argument has been deprecated. Use chain_idx instead.",
+            DeprecationWarning)
 
-        # small trace warning
-        if draws == 0:
-            msg = "Tuning was enabled throughout the whole trace."
-            _log.warning(msg)
-        elif draws < 500:
-            msg = "Only %s samples in chain." % draws
-            _log.warning(msg)
+    if start is not None:
+        for start_vals in start:
+            _check_start_shape(model, start_vals)
 
-        draws += tune
+    # small trace warning
+    if draws == 0:
+        msg = "Tuning was enabled throughout the whole trace."
+        _log.warning(msg)
+    elif draws < 500:
+        msg = "Only %s samples in chain." % draws
+        _log.warning(msg)
 
-        if model.ndim == 0:
-            raise ValueError('The model does not contain any free variables.')
+    draws += tune
 
-        if step is None and init is not None and all_continuous(model.vars):
-            try:
-                # By default, try to use NUTS
-                _log.info('Auto-assigning NUTS sampler...')
-                start_, step = init_nuts(init=init, chains=chains, n_init=n_init,
-                                         model=model, random_seed=random_seed,
-                                         progressbar=progressbar, **kwargs)
-                if start is None:
-                    start = start_
-            except (AttributeError, NotImplementedError, tg.NullTypeGradError):
-                # gradient computation failed
-                _log.info("Initializing NUTS failed. "
-                          "Falling back to elementwise auto-assignment.")
-                _log.debug('Exception in init nuts', exec_info=True)
-                step = assign_step_methods(model, step, step_kwargs=kwargs)
-        else:
+    if model.ndim == 0:
+        raise ValueError('The model does not contain any free variables.')
+
+    if step is None and init is not None and all_continuous(model.vars):
+        try:
+            # By default, try to use NUTS
+            _log.info('Auto-assigning NUTS sampler...')
+            start_, step = init_nuts(init=init, chains=chains, n_init=n_init,
+                                     model=model, random_seed=random_seed,
+                                     progressbar=progressbar, **kwargs)
+            if start is None:
+                start = start_
+        except (AttributeError, NotImplementedError, tg.NullTypeGradError):
+            # gradient computation failed
+            _log.info("Initializing NUTS failed. "
+                      "Falling back to elementwise auto-assignment.")
+            _log.debug('Exception in init nuts', exec_info=True)
             step = assign_step_methods(model, step, step_kwargs=kwargs)
+    else:
+        step = assign_step_methods(model, step, step_kwargs=kwargs)
 
-        if isinstance(step, list):
-            step = CompoundStep(step)
-        if start is None:
-            start = {}
-        if isinstance(start, dict):
-            start = [start] * chains
+    if isinstance(step, list):
+        step = CompoundStep(step)
+    if start is None:
+        start = {}
+    if isinstance(start, dict):
+        start = [start] * chains
 
-        sample_args = {'draws': draws,
-                       'step': step,
-                       'start': start,
-                       'trace': trace,
-                       'chain': chain_idx,
-                       'chains': chains,
-                       'tune': tune,
-                       'progressbar': progressbar,
-                       'model': model,
-                       'random_seed': random_seed,
-                       'cores': cores, }
+    sample_args = {'draws': draws,
+                   'step': step,
+                   'start': start,
+                   'trace': trace,
+                   'chain': chain_idx,
+                   'chains': chains,
+                   'tune': tune,
+                   'progressbar': progressbar,
+                   'model': model,
+                   'random_seed': random_seed,
+                   'cores': cores, }
 
-        sample_args.update(kwargs)
+    sample_args.update(kwargs)
 
-        has_population_samplers = np.any([isinstance(m, arraystep.PopulationArrayStepShared)
-                                          for m in (step.methods if isinstance(step, CompoundStep) else [step])])
+    has_population_samplers = np.any([isinstance(m, arraystep.PopulationArrayStepShared)
+                                      for m in (step.methods if isinstance(step, CompoundStep) else [step])])
 
-        parallel = cores > 1 and chains > 1 and not has_population_samplers
-        if parallel:
-            _log.info('Multiprocess sampling ({} chains in {} jobs)'.format(chains, cores))
-            _print_step_hierarchy(step)
-            try:
-                trace = _mp_sample(**sample_args)
-            except pickle.PickleError:
+    parallel = cores > 1 and chains > 1 and not has_population_samplers
+    if parallel:
+        _log.info('Multiprocess sampling ({} chains in {} jobs)'.format(chains, cores))
+        _print_step_hierarchy(step)
+        try:
+            trace = _mp_sample(**sample_args)
+        except pickle.PickleError:
+            _log.warning("Could not pickle model, sampling singlethreaded.")
+            _log.debug('Pickling error:', exec_info=True)
+            parallel = False
+        except AttributeError as e:
+            if str(e).startswith("AttributeError: Can't pickle"):
                 _log.warning("Could not pickle model, sampling singlethreaded.")
                 _log.debug('Pickling error:', exec_info=True)
                 parallel = False
-            except AttributeError as e:
-                if str(e).startswith("AttributeError: Can't pickle"):
-                    _log.warning("Could not pickle model, sampling singlethreaded.")
-                    _log.debug('Pickling error:', exec_info=True)
-                    parallel = False
-                else:
-                    raise
-        if not parallel:
-            if has_population_samplers:
-                _log.info('Population sampling ({} chains)'.format(chains))
-                _print_step_hierarchy(step)
-                trace = _sample_population(**sample_args, parallelize=cores > 1)
             else:
-                _log.info('Sequential sampling ({} chains in 1 job)'.format(chains))
-                _print_step_hierarchy(step)
-                trace = _sample_many(**sample_args)
+                raise
+    if not parallel:
+        if has_population_samplers:
+            _log.info('Population sampling ({} chains)'.format(chains))
+            _print_step_hierarchy(step)
+            trace = _sample_population(**sample_args, parallelize=cores > 1)
+        else:
+            _log.info('Sequential sampling ({} chains in 1 job)'.format(chains))
+            _print_step_hierarchy(step)
+            trace = _sample_many(**sample_args)
 
-        discard = tune if discard_tuned_samples else 0
-        trace = trace[discard:]
+    discard = tune if discard_tuned_samples else 0
+    trace = trace[discard:]
 
-        if compute_convergence_checks:
-            if draws-tune < 100:
-                warnings.warn("The number of samples is too small to check convergence reliably.")
-            else:
-                trace.report._run_convergence_checks(trace, model)
+    if compute_convergence_checks:
+        if draws-tune < 100:
+            warnings.warn("The number of samples is too small to check convergence reliably.")
+        else:
+            trace.report._run_convergence_checks(trace, model)
 
-        trace.report._log_summary()
+    trace.report._log_summary()
 
     return trace
 

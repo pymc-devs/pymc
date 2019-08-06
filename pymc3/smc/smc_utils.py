@@ -5,7 +5,7 @@ from collections import OrderedDict
 import numpy as np
 import pymc3 as pm
 import theano
-from .arraystep import metrop_select
+from ..step_methods.arraystep import metrop_select
 from ..backends.ndarray import NDArray
 from ..backends.base import MultiTrace
 from ..theanof import floatX, join_nonshared_inputs
@@ -51,7 +51,7 @@ def _calc_covariance(posterior, weights):
     return cov
 
 
-def _tune(acc_rate, proposed, step):
+def _tune(acc_rate, proposed, tune_scaling, tune_steps, scaling, n_steps, max_steps, p_acc_rate):
     """
     Tune scaling and/or n_steps based on the acceptance rate.
 
@@ -63,14 +63,17 @@ def _tune(acc_rate, proposed, step):
         Total number of proposed steps (draws * n_steps)
     step: SMC step method
     """
-    if step.tune_scaling:
+    if tune_scaling:
         # a and b after Muto & Beck 2008.
         a = 1 / 9
         b = 8 / 9
-        step.scaling = (a + b * acc_rate) ** 2
-    if step.tune_steps:
+        scaling = (a + b * acc_rate) ** 2
+
+    if tune_steps:
         acc_rate = max(1.0 / proposed, acc_rate)
-        step.n_steps = min(step.max_steps, 1 + int(np.log(step.p_acc_rate) / np.log(1 - acc_rate)))
+        n_steps = min(max_steps, max(2, int(np.log(1 - p_acc_rate) / np.log(1 - acc_rate))))
+
+    return scaling, n_steps
 
 
 def _posterior_to_trace(posterior, variables, model, var_info):
@@ -107,7 +110,6 @@ def metrop_kernel(
     prior_logp,
     likelihood_logp,
     beta,
-    ABC,
 ):
     """
     Metropolis kernel
@@ -275,13 +277,6 @@ class PseudoLikelihood:
             return np.mean(np.sum(np.atleast_2d((a - b) ** 2)))
 
     def __call__(self, posterior):
-        """
-        a : array
-            vector of (simulated) data or summary statistics
-        b : array
-            vector of (observed) data or sumary statistics
-        epsilon :
-        """
         func_parameters = self.posterior_to_function(posterior)
         sim_data = self.function(**func_parameters)
         value = self.dist_func(self.observations, sim_data)

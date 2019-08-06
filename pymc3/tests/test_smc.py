@@ -42,7 +42,7 @@ class TestSMC(SeededTest):
 
     def test_sample(self):
         with self.SMC_test:
-            mtrace = pm.sample(draws=self.samples, step=pm.SMC())
+            mtrace = pm.sample_smc(draws=self.samples)
 
         x = mtrace["X"]
         mu1d = np.abs(x).mean(axis=0)
@@ -53,7 +53,7 @@ class TestSMC(SeededTest):
             a = pm.Poisson("a", 5)
             b = pm.HalfNormal("b", 10)
             y = pm.Normal("y", a, b, observed=[1, 2, 3, 4])
-            trace = pm.sample(step=pm.SMC())
+            trace = pm.sample_smc()
 
     def test_ml(self):
         data = np.repeat([1, 0], [50, 50])
@@ -65,7 +65,7 @@ class TestSMC(SeededTest):
             with pm.Model() as model:
                 a = pm.Beta("a", alpha, beta)
                 y = pm.Bernoulli("y", a, observed=data)
-                trace = pm.sample(2000, step=pm.SMC())
+                trace = pm.sample_smc(2000)
                 marginals.append(model.marginal_likelihood)
         # compare to the analytical result
         assert abs((marginals[1] / marginals[0]) - 4.0) <= 1
@@ -79,4 +79,4 @@ class TestSMC(SeededTest):
                 "a": np.random.poisson(5, size=500),
                 "b_log__": np.abs(np.random.normal(0, 10, size=500)),
             }
-            trace = pm.sample(500, start=start, step=pm.SMC())
+            trace = pm.sample_smc(500, start=start)

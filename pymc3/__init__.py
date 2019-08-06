@@ -11,6 +11,7 @@ from .model_graph import model_to_graphviz
 from .stats import *
 from .sampling import *
 from .step_methods import *
+from .smc import *
 from .theanof import *
 from .tuning import *
 from .variational import *
