@@ -186,9 +186,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     draws : int
         The number of samples to draw. Defaults to 500. The number of tuned samples are discarded
         by default. See ``discard_tuned_samples``.
-    step : function or iterable of functions
-        A step function or collection of functions. If there are variables without a step methods,
-        step methods for those variables will be assigned automatically.
     init : str
         Initialization method to use for auto-assigned NUTS samplers.
 
@@ -209,6 +206,11 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
         * map : Use the MAP as starting point. This is discouraged.
         * nuts : Run NUTS and estimate posterior mean and mass matrix from the trace.
+    step : function or iterable of functions
+        A step function or collection of functions. If there are variables without step methods,
+        step methods for those variables will be assigned automatically.  By default the NUTS step
+        method will be used, if appropriate to the model; this is a good default for beginning
+        users.
     n_init : int
         Number of iterations of initializer. Only works for 'nuts' and 'ADVI'.
         If 'ADVI', number of iterations, if 'nuts', number of draws.
