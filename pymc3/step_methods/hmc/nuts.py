@@ -125,10 +125,6 @@ class NUTS(BaseHMC):
             depth is reached.
         early_max_treedepth : int, default=8
             The maximum tree depth during the first 200 tuning samples.
-        integrator : str, default "leapfrog"
-            The integrator to use for the trajectories. One of "leapfrog",
-            "two-stage" or "three-stage". The second two can increase
-            sampling speed for some high dimensional problems.
         scaling : array_like, ndim = {1,2}
             The inverse mass, or precision matrix. One dimensional arrays are
             interpreted as diagonal matrices. If `is_cov` is set to True,
