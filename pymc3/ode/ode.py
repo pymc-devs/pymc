@@ -131,13 +131,14 @@ class DifferentialEquation(theano.Op):
         else:
             return self._simulate(np.array(parameters))
 
-    def state(self, x):
-        y, sens = self._cached_simulate(np.array(x, dtype=np.float64))
-        self._cached_y, self._cached_sens, self._cached_parameters = y, sens, x
+    def state(self, parameters):
+        y, sens = self._cached_simulate(np.array(parameters))
+        self._cached_y, self._cached_sens, self._cached_parameters = y, sens, parameters
         return y.ravel()
 
-    def numpy_vsp(self, x, g):
-        numpy_sens = self._cached_simulate(np.array(x, dtype=np.float64))[1].reshape((self.n_states * len(self.times), len(x)))
+    def numpy_vsp(self, parameters, g):
+        _,sens = self._cached_simulate(np.array(parameters))
+        numpy_sens = sens.reshape((self.n_states * len(self.times), len(parameters)))
         return numpy_sens.T.dot(g)
 
     def make_node(self, odeparams, y0):
@@ -153,14 +154,14 @@ class DifferentialEquation(theano.Op):
 
         odeparams = tt.as_tensor_variable(odeparams)
         y0 = tt.as_tensor_variable(y0)
-        x = tt.concatenate([odeparams, y0])
-        return theano.Apply(self, [x], [x.type()])
+        parameters = tt.concatenate([odeparams, y0])
+        return theano.Apply(self, [parameters], [parameters.type()])
 
     def perform(self, node, inputs_storage, output_storage):
-        x = inputs_storage[0]
+        parameters = inputs_storage[0]
         out = output_storage[0]
         # get the numerical solution of ODE states
-        out[0] = self.state(x)
+        out[0] = self.state(parameters)
 
     def grad(self, inputs, output_grads):
         x = inputs[0]
