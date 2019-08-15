@@ -366,8 +366,7 @@ class TestDiffEqModel(object):
                              0.14,
                              0.14,
                              0.09,
-                             0.10]).reshape(-1,
-                                            1)
+                             0.10]).reshape(-1,1)
 
             ode_model = DifferentialEquation(func=system,
                                             t0=0,
@@ -383,7 +382,7 @@ class TestDiffEqModel(object):
                 forward = ode_model(odeparams=[alpha,beta],y0=[y0]).reshape(yobs.shape)
                 y = pm.Lognormal('y', mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
-                trace = pm.sample(100, tune=0)
+                trace = pm.sample(100, tune=0, chains=1)
 
             assert trace['alpha'].size > 0
             assert trace['beta'].size > 0
