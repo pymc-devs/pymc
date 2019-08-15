@@ -121,7 +121,7 @@ class NUTS(BaseHMC):
             Whether step size adaptation should be enabled. If this is
             disabled, `k`, `t0`, `gamma` and `target_accept` are ignored.
         max_treedepth : int, default=10
-            The maximum tree depth. Trajectories are stoped when this
+            The maximum tree depth. Trajectories are stopped when this
             depth is reached.
         early_max_treedepth : int, default=8
             The maximum tree depth during the first 200 tuning samples.
