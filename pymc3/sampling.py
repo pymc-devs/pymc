@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, TYPE_CHECKING, cast
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, Tuple
 from typing import Iterable as TIterable
 from collections.abc import Iterable
 from collections import defaultdict
@@ -186,9 +186,6 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
     draws : int
         The number of samples to draw. Defaults to 500. The number of tuned samples are discarded
         by default. See ``discard_tuned_samples``.
-    step : function or iterable of functions
-        A step function or collection of functions. If there are variables without a step methods,
-        step methods for those variables will be assigned automatically.
     init : str
         Initialization method to use for auto-assigned NUTS samplers.
 
@@ -209,6 +206,11 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
         * map : Use the MAP as starting point. This is discouraged.
         * nuts : Run NUTS and estimate posterior mean and mass matrix from the trace.
+    step : function or iterable of functions
+        A step function or collection of functions. If there are variables without step methods,
+        step methods for those variables will be assigned automatically.  By default the NUTS step
+        method will be used, if appropriate to the model; this is a good default for beginning
+        users.
     n_init : int
         Number of iterations of initializer. Only works for 'nuts' and 'ADVI'.
         If 'ADVI', number of iterations, if 'nuts', number of draws.
@@ -1008,6 +1010,60 @@ def stop_tuning(step):
     step.stop_tuning()
     return step
 
+class _DefaultTrace():
+    '''
+    This class is a utility for collecting a number of samples
+    into a dictionary. Name comes from its similarity to `defaultdict` --
+    entries are lazily created.
+
+    Parameters
+    ----------
+    samples : int
+        The number of samples that will be collected, per variable,
+        into the trace.
+
+    Attributes
+    ----------
+    trace_dict : Dict[str, np.ndarray]
+        A dictionary constituting a trace.  Should be extracted
+        after a procedure has filled the `_DefaultTrace` using the
+        `insert()` method
+    '''
+    trace_dict = {} # type: Dict[str, np.ndarray]
+    _len = None # type: int
+    def __init__(self, samples):
+        self._len = samples
+        self.trace_dict = {}
+
+    def insert(self, k: str, v, idx: int):
+        '''
+        Insert `v` as the value of the `idx`th sample for the variable `k`.
+
+        Parameters
+        ----------
+        k : str
+            Name of the variable.
+        v : anything that can go into a numpy array (including a numpy array)
+            The value of the `idx`th sample from variable `k`
+        ids : int
+            The index of the sample we are inserting into the trace.
+        '''
+        if hasattr(v, 'shape'):
+            value_shape = tuple(v.shape) # type: Tuple[int, ...]
+        else:
+            value_shape = ()
+
+        # initialize if necessary
+        if k not in self.trace_dict:
+            array_shape = (self._len,) + value_shape
+            self.trace_dict[k] = np.full(array_shape, np.nan)
+
+        # do the actual insertion
+        if value_shape == ():
+            self.trace_dict[k][idx] = v
+        else:
+            self.trace_dict[k][idx,:] = v
+
 
 def sample_posterior_predictive(trace,
                                 samples: Optional[int]=None,
@@ -1095,10 +1151,11 @@ def sample_posterior_predictive(trace,
 
     indices = np.arange(samples)
 
+    
     if progressbar:
         indices = tqdm(indices, total=samples)
 
-    ppc_trace = defaultdict(list) # type: Dict[str, List[Any]]
+    ppc_trace_t = _DefaultTrace(samples)
     try:
         for idx in indices:
             if nchain > 1:
@@ -1109,7 +1166,7 @@ def sample_posterior_predictive(trace,
 
             values = draw_values(vars, point=param, size=size)
             for k, v in zip(vars, values):
-                ppc_trace[k.name].append(v)
+                ppc_trace_t.insert(k.name, v, idx)
 
     except KeyboardInterrupt:
         pass
@@ -1118,13 +1175,12 @@ def sample_posterior_predictive(trace,
         if progressbar:
             indices.close()
 
+    ppc_trace = ppc_trace_t.trace_dict
     if keep_size:
         for k, ary in ppc_trace.items():
-            ary = np.asarray(ary)
             ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
-        return ppc_trace
-    else:
-        return {k: np.asarray(v) for k, v in ppc_trace.items()}
+
+    return ppc_trace
 
 
 def sample_ppc(*args, **kwargs):
@@ -1290,7 +1346,7 @@ def sample_prior_predictive(samples=500,
         samples.  *DEPRECATED* - Use ``var_names`` argument instead.
     var_names : Iterable[str]
         A list of names of variables for which to compute the posterior predictive
-        samples. Defaults to ``model.named_vars``.
+        samples. Defaults to both observed and unobserved RVs.
     random_seed : int
         Seed for the random number generator.
 
@@ -1303,8 +1359,13 @@ def sample_prior_predictive(samples=500,
     model = modelcontext(model)
 
     if vars is None and var_names is None:
-        vars = set(model.named_vars.keys())
-        vars_ = model.named_vars
+        prior_pred_vars = model.observed_RVs
+        prior_vars = (
+            get_default_varnames(model.unobserved_RVs, include_transformed=True) +
+            model.potentials
+        )
+        vars_ = [var.name for var in prior_vars + prior_pred_vars]
+        vars = set(vars_)
     elif vars is None:
         vars = var_names
         vars_ = vars

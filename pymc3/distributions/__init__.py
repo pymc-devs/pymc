@@ -1,5 +1,6 @@
 from . import timeseries
 from . import transforms
+from . import shape_utils
 
 from .continuous import Uniform
 from .continuous import Flat
