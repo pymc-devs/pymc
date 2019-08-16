@@ -434,13 +434,7 @@ def _cpu_count():
     that half of the cpus are only hardware threads and ignore those.
     """
     try:
-        import psutil
-        cpus = psutil.cpu_count(False)
-    except ImportError:
-        try:
-            cpus = multiprocessing.cpu_count() // 2
-        except NotImplementedError:
-            cpus = 1
-    if cpus is None:
+        cpus = multiprocessing.cpu_count() // 2
+    except NotImplementedError:
         cpus = 1
     return cpus
