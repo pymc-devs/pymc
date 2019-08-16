@@ -189,14 +189,17 @@ def sample_smc(
     elif kernel.lower() == "metropolis":
         likelihood_logp = logp_forw([model.datalogpt], variables, shared)
 
+    if parallel and cores > 1:
+        pool = mp.Pool(processes=cores)
+
     while beta < 1:
         if parallel and cores > 1:
-            pool = mp.Pool(processes=cores)
             results = pool.starmap(likelihood_logp, [(sample,) for sample in posterior])
         else:
             results = [likelihood_logp(sample) for sample in posterior]
         likelihoods = np.array(results).squeeze()
-        beta, old_beta, weights, sj = calc_beta(beta, likelihoods, threshold)
+        beta, old_beta, weights, sj, = calc_beta(beta, likelihoods, threshold)
+
         model.marginal_likelihood *= sj
         # resample based on plausibility weights (selection)
         resampling_indexes = np.random.choice(np.arange(draws), size=draws, p=weights)
@@ -211,22 +214,14 @@ def sample_smc(
         # acceptance rate of the previous stage
         if (tune_scaling or tune_steps) and stage > 0:
             scaling, n_steps = _tune(
-                acc_rate,
-                proposed,
-                tune_scaling,
-                tune_steps,
-                scaling,
-                n_steps,
-                max_steps,
-                p_acc_rate,
+                acc_rate, proposed, tune_scaling, tune_steps, scaling, max_steps, p_acc_rate
             )
 
-        pm._log.info("Stage: {:d} Beta: {:.3f} Steps: {:d}".format(stage, beta, n_steps))
+        pm._log.info("Stage: {:3d} Beta: {:.3f} Steps: {:3d}".format(stage, beta, n_steps))
         # Apply Metropolis kernel (mutation)
         proposed = draws * n_steps
         priors = np.array([prior_logp(sample) for sample in posterior]).squeeze()
         tempered_logp = priors + likelihoods * beta
-        deltas = np.squeeze(proposal(n_steps) * scaling)
 
         parameters = (
             proposal,
@@ -240,9 +235,7 @@ def sample_smc(
             likelihood_logp,
             beta,
         )
-
         if parallel and cores > 1:
-            pool = mp.Pool(processes=cores)
             results = pool.starmap(
                 metrop_kernel,
                 [(posterior[draw], tempered_logp[draw], *parameters) for draw in range(draws)],
@@ -258,6 +251,9 @@ def sample_smc(
         acc_rate = sum(acc_list) / proposed
         stage += 1
 
+    if parallel and cores > 1:
+        pool.close()
+        pool.join()
     trace = _posterior_to_trace(posterior, variables, model, var_info)
 
     return trace

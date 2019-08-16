@@ -6,6 +6,7 @@ import numpy as np
 import pymc3 as pm
 import theano
 from ..step_methods.arraystep import metrop_select
+from ..step_methods.metropolis import tune
 from ..backends.ndarray import NDArray
 from ..backends.base import MultiTrace
 from ..theanof import floatX, join_nonshared_inputs
@@ -51,7 +52,7 @@ def _calc_covariance(posterior, weights):
     return cov
 
 
-def _tune(acc_rate, proposed, tune_scaling, tune_steps, scaling, n_steps, max_steps, p_acc_rate):
+def _tune(acc_rate, proposed, tune_scaling, tune_steps, scaling, max_steps, p_acc_rate):
     """
     Tune scaling and/or n_steps based on the acceptance rate.
 
@@ -61,17 +62,26 @@ def _tune(acc_rate, proposed, tune_scaling, tune_steps, scaling, n_steps, max_st
         Acceptance rate of the previous stage
     proposed: int
         Total number of proposed steps (draws * n_steps)
-    step: SMC step method
+    tune_scaling : bool
+        Whether to compute the scaling factor automatically or not
+    tune_steps : bool
+        Whether to compute the number of steps automatically or not
+    scaling : float
+        Scaling factor applied to the proposal distribution
+    max_steps : int
+        The maximum number of steps of each Markov Chain.
+    p_acc_rate : float
+        The higher the value of the higher the number of steps computed automatically. It should be
+        between 0 and 1.
     """
     if tune_scaling:
-        # a and b after Muto & Beck 2008.
-        a = 1 / 9
-        b = 8 / 9
-        scaling = (a + b * acc_rate) ** 2
+        scaling = tune(scaling, acc_rate)
 
     if tune_steps:
         acc_rate = max(1.0 / proposed, acc_rate)
         n_steps = min(max_steps, max(2, int(np.log(1 - p_acc_rate) / np.log(1 - acc_rate))))
+    else:
+        n_steps = max_steps
 
     return scaling, n_steps
 
@@ -115,6 +125,7 @@ def metrop_kernel(
     Metropolis kernel
     """
     deltas = np.squeeze(proposal(n_steps) * scaling)
+
     for n_step in range(n_steps):
         delta = deltas[n_step]
 
@@ -141,7 +152,7 @@ def metrop_kernel(
     return q_old, accepted
 
 
-def calc_beta(beta, likelihoods, threshold=0.5):
+def calc_beta(beta, likelihoods, threshold=0.5, psis=True):
     """
     Calculate next inverse temperature (beta) and importance weights based on current beta
     and tempered likelihood.
@@ -185,9 +196,11 @@ def calc_beta(beta, likelihoods, threshold=0.5):
             low_beta = new_beta
     if new_beta >= 1:
         new_beta = 1
+        weights_un = np.exp((new_beta - old_beta) * (likelihoods - likelihoods.max()))
+        weights = weights_un / np.sum(weights_un)
+
     sj = np.exp((new_beta - old_beta) * likelihoods)
-    weights_un = np.exp((new_beta - old_beta) * (likelihoods - likelihoods.max()))
-    weights = weights_un / np.sum(weights_un)
+
     return new_beta, old_beta, weights, np.mean(sj)
 
 
