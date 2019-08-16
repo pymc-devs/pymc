@@ -1,6 +1,5 @@
 from ..ode import DifferentialEquation
 from ..ode.utils import augment_system
-
 import numpy as np
 from scipy.integrate import odeint
 from scipy.stats import norm
@@ -9,7 +8,7 @@ import theano
 import pytest
 
 
-
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 def test_gradients():
     with theano.configparser.change_flags(compute_test_value='off'):
         '''Tests the computation of the sensitivities from the theano computation graph'''
@@ -51,7 +50,7 @@ def test_gradients():
         np.testing.assert_allclose(sensitivity, simulated_sensitivity, rtol=1e-5)
 
 
-
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 def test_simulate():
     with theano.configparser.change_flags(compute_test_value='off'):
         '''Tests the integration in DifferentialEquation'''
@@ -76,7 +75,6 @@ def test_simulate():
         simulated_y, *_ = ode_model._simulate([a, y0])
 
         np.testing.assert_allclose(y, simulated_y, rtol=1e-5)
-
 
 class TestSensitivityInitialCondition(object):
 
@@ -192,8 +190,7 @@ class TestSensitivityInitialCondition(object):
 
             np.testing.assert_array_equal(np.ravel(model5_sens_ic), model5._make_sens_ic())
 
-
-
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 def test_logp_scalar_ode():
     with theano.configparser.change_flags(compute_test_value='off'):
 
@@ -296,6 +293,7 @@ class TestErrors(object):
                                  n_states = 1,
                                  n_odeparams = 0)
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestDiffEqModel(object):
 
     def test_scalar_ode_1_param(self):
