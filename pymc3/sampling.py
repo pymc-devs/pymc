@@ -1305,8 +1305,10 @@ def sample_prior_predictive(samples=500,
     model = modelcontext(model)
 
     if vars is None and var_names is None:
-        vars = set(model.named_vars.keys())
-        vars_ = model.named_vars
+        prior_pred_vars = model.observed_RVs
+        prior_vars = get_default_varnames(model.unobserved_RVs, include_transformed=True)
+        vars_ = [var.name for var in prior_vars + prior_pred_vars]
+        vars = set(vars_)
     elif vars is None:
         vars = var_names
         vars_ = vars
