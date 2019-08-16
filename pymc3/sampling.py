@@ -1292,7 +1292,7 @@ def sample_prior_predictive(samples=500,
         samples.  *DEPRECATED* - Use ``var_names`` argument instead.
     var_names : Iterable[str]
         A list of names of variables for which to compute the posterior predictive
-        samples. Defaults to ``model.named_vars``.
+        samples. Defaults to both observed and unobserved RVs.
     random_seed : int
         Seed for the random number generator.
 
