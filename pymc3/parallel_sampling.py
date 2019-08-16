@@ -433,14 +433,9 @@ def _cpu_count():
     If not, we use the number provided by multiprocessing, but assume
     that half of the cpus are only hardware threads and ignore those.
     """
+    import multiprocessing
     try:
-        import psutil
-        cpus = psutil.cpu_count(False)
-    except ImportError:
-        try:
-            cpus = multiprocessing.cpu_count() // 2
-        except NotImplementedError:
-            cpus = 1
-    if cpus is None:
+        cpus = multiprocessing.cpu_count() // 2
+    except NotImplementedError:
         cpus = 1
     return cpus
