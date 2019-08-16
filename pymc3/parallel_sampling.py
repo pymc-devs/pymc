@@ -433,7 +433,6 @@ def _cpu_count():
     If not, we use the number provided by multiprocessing, but assume
     that half of the cpus are only hardware threads and ignore those.
     """
-    import multiprocessing
     try:
         cpus = multiprocessing.cpu_count() // 2
     except NotImplementedError:
