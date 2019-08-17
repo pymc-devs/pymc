@@ -1308,7 +1308,10 @@ def pandas_to_array(data):
         else:
             ret = data.values
     elif hasattr(data, 'mask'):
-        ret = data
+        if data.mask.any():
+            ret = data
+        else:  # empty mask
+            ret = data.filled()
     elif isinstance(data, theano.gof.graph.Variable):
         ret = data
     elif sps.issparse(data):

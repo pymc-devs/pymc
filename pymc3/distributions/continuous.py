@@ -589,8 +589,7 @@ class TruncatedNormal(BoundedContinuous):
     ========  ==========================================
     Support   :math:`x \in [a, b]`
     Mean      :math:`\mu +{\frac {\phi (\alpha )-\phi (\beta )}{Z}}\sigma`
-    Variance  :math:`\sigma ^{2}\left[1+{\frac {\alpha \phi (\alpha )-\beta \phi (\beta )}{Z}}-
-    \left({\frac {\phi (\alpha )-\phi (\beta )}{Z}}\right)^{2}\right]`
+    Variance  :math:`\sigma ^{2}\left[1+{\frac {\alpha \phi (\alpha )-\beta \phi (\beta )}{Z}}-\left({\frac {\phi (\alpha )-\phi (\beta )}{Z}}\right)^{2}\right]`
     ========  ==========================================
 
     Parameters
@@ -1544,14 +1543,14 @@ class Exponential(PositiveContinuous):
                                                                 get_variable_name(lam))
 
     def logcdf(self, value):
-        """
+        r"""
         Compute the log of cumulative distribution function for the Exponential distribution
         at the specified value.
 
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            "Accurately computing :math:`\log(1-\exp(-\mid a \mid))` Assessed by the Rmpfr
             package"
 
         Parameters
@@ -1758,11 +1757,12 @@ class Lognormal(PositiveContinuous):
     tau : float
         Scale parameter (tau > 0). (only required if sigma is not specified).
 
-    Example
-    -------
+    Examples
+    --------
+
     .. code-block:: python
 
-        # Example to show that we pass in only `sigma` or `tau` but not both.
+        # Example to show that we pass in only ``sigma`` or ``tau`` but not both.
         with pm.Model():
             x = pm.Lognormal('x', mu=2, sigma=30)
 
@@ -1913,7 +1913,7 @@ class StudentT(Continuous):
         plt.show()
 
     ========  ========================
-    Support   :math:`x \in \mathbb{R}`
+    Support   :math:``x \in \mathbb{R}``
     ========  ========================
 
     Parameters
@@ -2931,7 +2931,7 @@ class Weibull(PositiveContinuous):
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            "Accurately computing `\log(1-\exp(- \mid a \mid))` Assessed by the Rmpfr
             package"
 
         Parameters
@@ -3723,7 +3723,7 @@ class Gumbel(Continuous):
 
     ========  ==========================================
     Support   :math:`x \in \mathbb{R}`
-    Mean      :math:`\mu + \beta\gamma`, where \gamma is the Euler-Mascheroni constant
+    Mean      :math:`\mu + \beta\gamma`, where :math:`\gamma` is the Euler-Mascheroni constant
     Variance  :math:`\frac{\pi^2}{6} \beta^2`
     ========  ==========================================
 
@@ -4060,7 +4060,7 @@ class Logistic(Continuous):
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            "Accurately computing :math:  `\log(1-\exp(- \mid a \mid<))` Assessed by the Rmpfr
             package"
 
         Parameters
@@ -4213,7 +4213,7 @@ class Interpolated(BoundedContinuous):
     interpolated density is any way normalized to make the total probability
     equal to $1$.
 
-    Both parameters `x_points` and values `pdf_points` are not variables, but
+    Both parameters ``x_points`` and values ``pdf_points`` are not variables, but
     plain array-like objects, so they are constant and cannot be sampled.
 
     ========  ===========================================
@@ -4225,7 +4225,7 @@ class Interpolated(BoundedContinuous):
     x_points : array-like
         A monotonically growing list of values
     pdf_points : array-like
-        Probability density function evaluated on lattice `x_points`
+        Probability density function evaluated on lattice ``x_points``
     """
 
     def __init__(self, x_points, pdf_points, *args, **kwargs):

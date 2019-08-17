@@ -99,23 +99,23 @@ class Minibatch(tt.TensorVariable):
     ----------
     data : :class:`ndarray`
         initial data
-    batch_size : `int` or `List[int|tuple(size, random_seed)]`
+    batch_size : ``int`` or ``List[int|tuple(size, random_seed)]``
         batch size for inference, random seed is needed
         for child random generators
-    dtype : `str`
+    dtype : ``str``
         cast data to specific type
     broadcastable : tuple[bool]
-        change broadcastable pattern that defaults to `(False, ) * ndim`
-    name : `str`
+        change broadcastable pattern that defaults to ``(False, ) * ndim``
+    name : ``str``
         name for tensor, defaults to "Minibatch"
-    random_seed : `int`
+    random_seed : ``int``
         random seed that is used by default
-    update_shared_f : `callable`
+    update_shared_f : ``callable``
         returns :class:`ndarray` that will be carefully
         stored to underlying shared variable
         you can use it to change source of
         minibatches programmatically
-    in_memory_size : `int` or `List[int|slice|Ellipsis]`
+    in_memory_size : ``int`` or ``List[int|slice|Ellipsis]``
         data size for storing in theano.shared
 
     Attributes
@@ -130,7 +130,7 @@ class Minibatch(tt.TensorVariable):
     Below is a common use case of Minibatch within the variational inference.
     Importantly, we need to make PyMC3 "aware" of minibatch being used in inference.
     Otherwise, we will get the wrong :math:`logp` for the model.
-    To do so, we need to pass the `total_size` parameter to the observed node, which correctly scales
+    To do so, we need to pass the ``total_size`` parameter to the observed node, which correctly scales
     the density of the model logp that is affected by Minibatch. See more in examples below.
 
     Examples
@@ -141,16 +141,16 @@ class Minibatch(tt.TensorVariable):
     if we want 1d slice of size 10 we do
     >>> x = Minibatch(data, batch_size=10)
 
-    Note, that your data is cast to `floatX` if it is not integer type
-    But you still can add `dtype` kwarg for :class:`Minibatch`
+    Note that your data is cast to ``floatX`` if it is not integer type
+    But you still can add the ``dtype`` kwarg for :class:`Minibatch`
 
     in case we want 10 sampled rows and columns
-    `[(size, seed), (size, seed)]` it is
+    ``[(size, seed), (size, seed)]`` it is
     >>> x = Minibatch(data, batch_size=[(10, 42), (10, 42)], dtype='int32')
     >>> assert str(x.dtype) == 'int32'
 
     or simpler with default random seed = 42
-    `[size, size]`
+    ``[size, size]``
     >>> x = Minibatch(data, batch_size=[10, 10])
 
     x is a regular :class:`TensorVariable` that supports any math
@@ -166,17 +166,17 @@ class Minibatch(tt.TensorVariable):
     >>> with model:
     ...     approx = pm.fit()
 
-    Notable thing is that :class:`Minibatch` has `shared`, `minibatch`, attributes
+    Notable thing is that :class:`Minibatch` has ``shared``, ``minibatch``, attributes
     you can call later
     >>> x.set_value(np.random.laplace(size=(100, 100)))
 
     and minibatches will be then from new storage
-    it directly affects `x.shared`.
+    it directly affects ``x.shared``.
     the same thing would be but less convenient
     >>> x.shared.set_value(pm.floatX(np.random.laplace(size=(100, 100))))
 
     programmatic way to change storage is as follows
-    I import `partial` for simplicity
+    I import ``partial`` for simplicity
     >>> from functools import partial
     >>> datagen = partial(np.random.laplace, size=(100, 100))
     >>> x = Minibatch(datagen(), batch_size=10, update_shared_f=datagen)
@@ -197,7 +197,7 @@ class Minibatch(tt.TensorVariable):
     for shared variable. Feel free to use that if needed.
 
     Suppose you need some replacements in the graph, e.g. change minibatch to testdata
-    >>> node = x ** 2  # arbitrary expressions on minibatch `x`
+    >>> node = x ** 2  # arbitrary expressions on minibatch ``x``
     >>> testdata = pm.floatX(np.random.laplace(size=(1000, 10)))
 
     Then you should create a dict with replacements
@@ -214,20 +214,20 @@ class Minibatch(tt.TensorVariable):
     For more complex slices some more code is needed that can seem not so clear
     >>> moredata = np.random.rand(10, 20, 30, 40, 50)
 
-    default `total_size` that can be passed to `PyMC3` random node
-    is then `(10, 20, 30, 40, 50)` but can be less verbose in some cases
+    default ``total_size`` that can be passed to ``PyMC3`` random node
+    is then ``(10, 20, 30, 40, 50)`` but can be less verbose in some cases
 
-    1) Advanced indexing, `total_size = (10, Ellipsis, 50)`
+    1) Advanced indexing, ``total_size = (10, Ellipsis, 50)``
     >>> x = Minibatch(moredata, [2, Ellipsis, 10])
 
     We take slice only for the first and last dimension
     >>> assert x.eval().shape == (2, 20, 30, 40, 10)
 
-    2) Skipping particular dimension, `total_size = (10, None, 30)`
+    2) Skipping particular dimension, ``total_size = (10, None, 30)``
     >>> x = Minibatch(moredata, [2, None, 20])
     >>> assert x.eval().shape == (2, 20, 20, 40, 50)
 
-    3) Mixing that all, `total_size = (10, None, 30, Ellipsis, 50)`
+    3) Mixing that all, ``total_size = (10, None, 30, Ellipsis, 50)``
     >>> x = Minibatch(moredata, [2, None, 20, Ellipsis, 10])
     >>> assert x.eval().shape == (2, 20, 20, 40, 10)
     """

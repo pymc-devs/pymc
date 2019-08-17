@@ -41,7 +41,9 @@ extensions = [
     "numpydoc",
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx.ext.autosectionlabel",
+    "sphinx.ext.napoleon",
     "gallery_generator",
+    "recommonmark",
 ]
 
 # Don't auto-generate summary for class members.
@@ -59,7 +61,6 @@ templates_path = ["_templates"]
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 # source_suffix = ['.rst', '.md']
-source_parsers = {".md": "recommonmark.parser.CommonMarkParser"}
 source_suffix = [".rst", ".md"]
 
 # The encoding of source files.

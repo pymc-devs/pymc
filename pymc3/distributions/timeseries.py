@@ -316,7 +316,7 @@ class EulerMaruyama(distribution.Continuous):
     sde_fn : callable
         function returning the drift and diffusion coefficients of SDE
     sde_pars : tuple
-        parameters of the SDE, passed as *args to sde_fn
+        parameters of the SDE, passed as ``*args`` to ``sde_fn``
     """
     def __init__(self, dt, sde_fn, sde_pars, *args, **kwds):
         super().__init__(*args, **kwds)

@@ -425,3 +425,16 @@ class ParallelSampler:
         ProcessAdapter.terminate_all(self._samplers)
         if self._progress is not None:
             self._progress.close()
+
+def _cpu_count():
+    """Try to guess the number of CPUs in the system.
+
+    We use the number provided by psutil if that is installed.
+    If not, we use the number provided by multiprocessing, but assume
+    that half of the cpus are only hardware threads and ignore those.
+    """
+    try:
+        cpus = multiprocessing.cpu_count() // 2
+    except NotImplementedError:
+        cpus = 1
+    return cpus
