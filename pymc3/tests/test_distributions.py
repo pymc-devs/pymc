@@ -1335,3 +1335,35 @@ def test_discrete_trafo():
         with pytest.raises(ValueError) as err:
             Binomial('a', n=5, p=0.5, transform='log')
         err.match('Transformations for discrete distributions')
+
+
+@pytest.mark.parametrize("shape", [tuple(), (1,), (3, 1), (3, 2)], ids=str)
+def test_orderedlogistic_dimensions(shape):
+    # Test for issue #3535
+    loge = np.log10(np.exp(1))
+    size = 7
+    p = np.ones(shape + (10,)) / 10
+    cutpoints = np.tile(logit(np.linspace(0, 1, 11)[1:-1]), shape + (1,))
+    obs = np.random.randint(0, 1, size=(size,) + shape)
+    with Model():
+        ol = OrderedLogistic(
+            "ol",
+            eta=np.zeros(shape),
+            cutpoints=cutpoints,
+            shape=shape,
+            observed=obs
+        )
+        c = Categorical(
+            "c",
+            p=p,
+            shape=shape,
+            observed=obs
+        )
+    ologp = ol.logp({"ol": 1}) * loge
+    clogp = c.logp({"c": 1}) * loge
+    expected = -np.prod((size,) + shape)
+
+    assert c.distribution.p.ndim == (len(shape) + 1)
+    assert np.allclose(clogp, expected)
+    assert ol.distribution.p.ndim == (len(shape) + 1)
+    assert np.allclose(ologp, expected)

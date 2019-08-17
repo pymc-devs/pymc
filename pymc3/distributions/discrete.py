@@ -8,7 +8,7 @@ from .dist_math import bound, factln, binomln, betaln, logpow, random_choice
 from .distribution import Discrete, draw_values, generate_samples
 from .shape_utils import broadcast_distribution_samples
 from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
-from ..theanof import floatX, intX
+from ..theanof import floatX, intX, take_along_axis
 
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
@@ -997,8 +997,21 @@ class Categorical(Discrete):
         p = p_ / tt.sum(p_, axis=-1, keepdims=True)
 
         if p.ndim > 1:
+            if p.ndim > value_clip.ndim:
+                value_clip = tt.shape_padleft(
+                    value_clip, p_.ndim - value_clip.ndim
+                )
+            elif p.ndim < value_clip.ndim:
+                p = tt.shape_padleft(
+                    p, value_clip.ndim - p_.ndim
+                )
             pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
-            a = tt.log(p.dimshuffle(pattern)[value_clip])
+            a = tt.log(
+                take_along_axis(
+                    p.dimshuffle(pattern),
+                    value_clip,
+                )
+            )
         else:
             a = tt.log(p[value_clip])
 
@@ -1571,13 +1584,13 @@ class OrderedLogistic(Categorical):
         self.eta = tt.as_tensor_variable(floatX(eta))
         self.cutpoints = tt.as_tensor_variable(cutpoints)
 
-        pa = sigmoid(tt.shape_padleft(self.cutpoints) - tt.shape_padright(self.eta))
+        pa = sigmoid(self.cutpoints - tt.shape_padright(self.eta))
         p_cum = tt.concatenate([
-            tt.zeros_like(tt.shape_padright(pa[:, 0])),
+            tt.zeros_like(tt.shape_padright(pa[..., 0])),
             pa,
-            tt.ones_like(tt.shape_padright(pa[:, 0]))
+            tt.ones_like(tt.shape_padright(pa[..., 0]))
         ], axis=-1)
-        p = p_cum[:, 1:] - p_cum[:, :-1]
+        p = p_cum[..., 1:] - p_cum[..., :-1]
 
         super().__init__(p=p, *args, **kwargs)
 
