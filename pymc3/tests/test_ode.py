@@ -74,6 +74,7 @@ def test_simulate():
 
     np.testing.assert_allclose(y, simulated_y, rtol=1e-5)
 
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestSensitivityInitialCondition(object):
 
     t = np.arange(0, 12, 0.25).reshape(-1, 1)
