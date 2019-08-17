@@ -1,3 +1,4 @@
+import numpy as np
 import theano
 import theano.tensor as tt
 
@@ -21,18 +22,20 @@ def augment_system(ode_func, n, m):
 
     # Present state of the system
     t_y = tt.vector('y', dtype=theano.config.floatX)
-
+    t_y.tag.test_value = np.zeros((n,))
     # Parameter(s).  Should be vector to allow for generaliztion to multiparameter
-    # systems of ODEs
+    # systems of ODEs.  Is m dimensional because it includes all ode parameters as well as initical conditions
     t_p = tt.vector('p', dtype=theano.config.floatX)
-
+    t_p.tag.test_value = np.zeros((m,))
     # Time.  Allow for non-automonous systems of ODEs to be analyzed
     t_t = tt.scalar('t', dtype=theano.config.floatX)
+    t_t.tag.test_value = 2.459
 
     # Present state of the gradients:
     # Will always be 0 unless the parameter is the inital condition
     # Entry i,j is partial of y[i] wrt to p[j]
     dydp_vec = tt.vector('dydp', dtype=theano.config.floatX)
+    dydp_vec.tag.test_value = np.zeros(n*m)
 
     dydp = dydp_vec.reshape((n, m))
 
