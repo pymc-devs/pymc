@@ -46,8 +46,8 @@ class DifferentialEquation(theano.Op):
             raise ValueError("Argument func must be callable.")
         if n_states < 1:
             raise ValueError('Argument n_states must be at least 1.')
-        if n_odeparams < 0:
-            raise ValueError('Argument n_states must be non-negative.')
+        if n_odeparams <= 0:
+            raise ValueError('Argument n_odeparams must be positive.')
 
         #Public
         self.func = func
