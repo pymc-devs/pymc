@@ -198,7 +198,7 @@ def sample_smc(
         else:
             results = [likelihood_logp(sample) for sample in posterior]
         likelihoods = np.array(results).squeeze()
-        beta, old_beta, weights, sj, = calc_beta(beta, likelihoods, threshold)
+        beta, old_beta, weights, sj = calc_beta(beta, likelihoods, threshold)
 
         model.marginal_likelihood *= sj
         # resample based on plausibility weights (selection)
