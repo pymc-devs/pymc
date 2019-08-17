@@ -37,7 +37,6 @@ def augment_system(ode_func, n, m):
     dydp = dydp_vec.reshape((n, m))
 
     # Stack the results of the ode_func
-    # TODO: Does this behave the same of ODE is scalar?
     f_tensor = tt.stack(ode_func(t_y, t_t, t_p))
 
     # Now compute gradients
@@ -57,10 +56,8 @@ def augment_system(ode_func, n, m):
 
     return system
 
-
-
 class ODEGradop(theano.Op):
-    
+
     def __init__(self, numpy_vsp):
         self._numpy_vsp = numpy_vsp
 

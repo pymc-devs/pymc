@@ -1,10 +1,9 @@
 import numpy as np
-from pymc3.ode.utils import augment_system, ODEGradop
-import scipy 
+import scipy
 import theano
 import theano.tensor as tt
+from pymc3.ode.utils import augment_system, ODEGradop
 THEANO_FLAG = 'compute_test_value=ignore'
-
 
 class DifferentialEquation(theano.Op):
 
@@ -24,8 +23,8 @@ class DifferentialEquation(theano.Op):
     times : array
         Array of times at which to evaluate the solution of the differential equation.
     n_states : int
-        Dimension of the differential equation.  For scalar differential equations, n_states =1.  
-        For vector valued differential equations, n_states = number of differential equations iun the system.
+        Dimension of the differential equation.  For scalar differential equations, n_states=1.
+        For vector valued differential equations, n_states = number of differential equations in the system.
     n_odeparams : int
         Number of parameters in the differential equation.
 
@@ -34,9 +33,9 @@ class DifferentialEquation(theano.Op):
         def odefunc(y,t,p):
             #Logistic differential equation
             return p[0]*y[0]*(1-y[0])
-        
+       
         times = np.arange(0.5, 5, 0.5)
-        
+
         ode_model = DifferentialEquation(func = odefunc, t0 = 0, times = times, n_states = 1, n_odeparams = 1)
     '''
 
@@ -45,9 +44,9 @@ class DifferentialEquation(theano.Op):
     def __init__(self, func, times, n_states, n_odeparams, t0=0):
         if not callable(func):
             raise ValueError("Argument func must be callable.")
-        if n_states<1:
+        if n_states < 1:
             raise ValueError('Argument n_states must be at least 1.')
-        if n_odeparams<0:
+        if n_odeparams < 0:
             raise ValueError('Argument n_states must be non-negative.')
 
         #Public
@@ -69,7 +68,7 @@ class DifferentialEquation(theano.Op):
         self._cached_sens = None
         self._cached_parameters = None
 
-        self._grad_op = ODEGradop(self.numpy_vsp)
+        self._grad_op = ODEGradop(self._numpy_vsp)
 
 
     def _make_sens_ic(self):
@@ -110,13 +109,14 @@ class DifferentialEquation(theano.Op):
     def _simulate(self, parameters):
         # Initial condition comprised of state initial conditions and raveled
         # sensitivity matrix
-        y0 = np.concatenate([ parameters[self.n_odeparams:] , self._sens_ic])
+        y0 = np.concatenate([parameters[self.n_odeparams:], self._sens_ic])
 
         # perform the integration
         sol = scipy.integrate.odeint(func=self._system,
                                      y0=y0,
                                      t=self._augmented_times,
-                                     args=tuple([parameters]))
+                                     args=(parameters,) 
+                                     )
         # The solution
         y = sol[1:, :self.n_states]
 
@@ -127,25 +127,26 @@ class DifferentialEquation(theano.Op):
 
     def _cached_simulate(self, parameters):
         if np.array_equal(np.array(parameters), self._cached_parameters):
-            return self._cached_y, self._cached_sens
-        else:
-            return self._simulate(np.array(parameters))
 
-    def state(self, parameters):
+            return self._cached_y, self._cached_sens
+
+        return self._simulate(np.array(parameters))
+
+    def _state(self, parameters):
         y, sens = self._cached_simulate(np.array(parameters))
         self._cached_y, self._cached_sens, self._cached_parameters = y, sens, parameters
         return y.ravel()
 
-    def numpy_vsp(self, parameters, g):
-        _,sens = self._cached_simulate(np.array(parameters))
+    def _numpy_vsp(self, parameters, g):
+        _, sens = self._cached_simulate(np.array(parameters))
         numpy_sens = sens.reshape((self.n_states * len(self.times), len(parameters)))
         return numpy_sens.T.dot(g)
 
     def make_node(self, odeparams, y0):
-        if len(odeparams)!=self.n_odeparams:
-            raise ValueError('odeparams has too many or too few parameters.  Expected {a} paramteres but got {b}'.format(a = self.n_odeparams, b = len(odeparams)))
-        if len(y0)!=self.n_states:
-            raise ValueError('y0 has too many or too few parameters.  Expected {a} paramteres but got {b}'.format(a = self.n_states, b = len(y0)))
+        if len(odeparams) != self.n_odeparams:
+            raise ValueError('odeparams has too many or too few parameters.  Expected {a} paramteres but got {b}'.format(a=self.n_odeparams, b=len(odeparams)))
+        if len(y0) != self.n_states:
+            raise ValueError('y0 has too many or too few parameters.  Expected {a} paramteres but got {b}'.format(a=self.n_states, b=len(y0)))
 
         if np.ndim(odeparams) > 1:
             odeparams = np.ravel(odeparams)
@@ -161,11 +162,12 @@ class DifferentialEquation(theano.Op):
         parameters = inputs_storage[0]
         out = output_storage[0]
         # get the numerical solution of ODE states
-        out[0] = self.state(parameters)
+        out[0] = self._state(parameters)
 
     def grad(self, inputs, output_grads):
         x = inputs[0]
         g = output_grads[0]
         # pass the VSP when asked for gradient
         grad_op_apply = self._grad_op(x, g)
+
         return [grad_op_apply]

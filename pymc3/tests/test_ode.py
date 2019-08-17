@@ -271,27 +271,27 @@ class TestErrors(object):
 
     def test_func_callable(self):
         with pytest.raises(ValueError):
-            DifferentialEquation(func = 1,
-                                 t0 = 0, 
-                                 times = self.times,
-                                 n_states = 1,
-                                 n_odeparams = 1)
+            DifferentialEquation(func=1,
+                                 t0=0, 
+                                 times=self.times,
+                                 n_states=1,
+                                 n_odeparams=1)
 
     def test_number_of_states(self):
         with pytest.raises(ValueError):
-            DifferentialEquation(func = self.system,
-                                 t0 = 0, 
-                                 times = self.times,
-                                 n_states = 0,
-                                 n_odeparams = 1)
+            DifferentialEquation(func=self.system,
+                                 t0=0, 
+                                 times=self.times,
+                                 n_states=0,
+                                 n_odeparams=1)
 
     def test_number_of_params(self):
         with pytest.raises(ValueError):
-            DifferentialEquation(func = self.system,
-                                 t0 = 0, 
-                                 times = self.times,
-                                 n_states = 1,
-                                 n_odeparams = 0)
+            DifferentialEquation(func=self.system,
+                                 t0=0, 
+                                 times=self.times,
+                                 n_states=1,
+                                 n_odeparams=0)
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestDiffEqModel(object):
@@ -302,25 +302,9 @@ class TestDiffEqModel(object):
             def system(y, t, p):
                 return np.exp(-t) - p[0] * y[0]
 
-            times = np.array([0.5, 1., 1.5, 2., 2.5, 3., 3.5,
-                              4., 4.5, 5., 5.5, 6., 6.5, 7., 7.5])
+            times = np.array([0.5, 1., 1.5, 2., 2.5, 3., 3.5, 4., 4.5, 5., 5.5, 6., 6.5, 7., 7.5])
 
-            yobs = np.array([0.31,
-                             0.57,
-                             0.51,
-                             0.55,
-                             0.47,
-                             0.42,
-                             0.38,
-                             0.3,
-                             0.26,
-                             0.22,
-                             0.22,
-                             0.14,
-                             0.14,
-                             0.09,
-                             0.1]).reshape(-1,
-                                           1)
+            yobs = np.array([0.31, 0.57, 0.51, 0.55, 0.47, 0.42, 0.38, 0.3, 0.26, 0.22, 0.22, 0.14, 0.14, 0.09, 0.1]).reshape(-1,1)
 
             ode_model = DifferentialEquation(func=system,
                                             t0=0,
@@ -335,7 +319,7 @@ class TestDiffEqModel(object):
                 sigma = pm.HalfCauchy('sigma', 1)
                 forward = ode_model(odeparams=[alpha], y0=[y0]).reshape(yobs.shape)
                 y = pm.Lognormal('y', mu=pm.math.log(forward), sd=sigma, observed=yobs)
-                trace = pm.sample(100, tune=0, chains = 1)
+                trace = pm.sample(100, tune=0, chains=1)
 
             assert trace['alpha'].size > 0
             assert trace['y0'].size > 0
@@ -347,24 +331,9 @@ class TestDiffEqModel(object):
             def system(y, t, p):
                 return p[0] * np.exp(-p[0] * t) - p[1] * y[0]
 
-            times = np.array([0.5, 1., 1.5, 2., 2.5, 3., 3.5,
-                              4., 4.5, 5., 5.5, 6., 6.5, 7., 7.5])
+            times = np.array([0.5, 1., 1.5, 2., 2.5, 3., 3.5, 4., 4.5, 5., 5.5, 6., 6.5, 7., 7.5])
 
-            yobs = np.array([0.31,
-                             0.57,
-                             0.51,
-                             0.55,
-                             0.47,
-                             0.42,
-                             0.38,
-                             0.30,
-                             0.26,
-                             0.22,
-                             0.22,
-                             0.14,
-                             0.14,
-                             0.09,
-                             0.10]).reshape(-1,1)
+            yobs = np.array([0.31, 0.57, 0.51, 0.55, 0.47, 0.42, 0.38, 0.3, 0.26, 0.22, 0.22, 0.14, 0.14, 0.09, 0.1]).reshape(-1, 1)
 
             ode_model = DifferentialEquation(func=system,
                                             t0=0,
@@ -396,8 +365,7 @@ class TestDiffEqModel(object):
 
                 return [ds, di]
 
-            times = np.array(
-                [0.0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6, 6.4, 7.2, 8.0])
+            times = np.array([0.0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6, 6.4, 7.2, 8.0])
 
             yobs = np.array([[1.02, 0.02],
                              [0.86, 0.12],
@@ -423,7 +391,7 @@ class TestDiffEqModel(object):
                 forward = ode_model(odeparams=[R], y0=[0.99, 0.01]).reshape(yobs.shape)
                 y = pm.Lognormal('y', mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
-                trace = pm.sample(100, tune=0, chains = 1)
+                trace = pm.sample(100, tune=0, chains=1)
 
             assert trace['R'].size > 0
             assert trace['sigma'].size > 0
@@ -437,8 +405,7 @@ class TestDiffEqModel(object):
 
                 return [ds, di]
 
-            times = np.array(
-                [0.0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6, 6.4, 7.2, 8.0])
+            times = np.array([0.0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6, 6.4, 7.2, 8.0])
 
             yobs = np.array([[1.02, 0.02],
                              [0.86, 0.12],
@@ -465,7 +432,7 @@ class TestDiffEqModel(object):
                 forward = ode_model(odeparams=[beta, gamma], y0=[0.99, 0.01]).reshape(yobs.shape)
                 y = pm.Lognormal('y', mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
-                trace = pm.sample(100, tune=0, chains = 1)
+                trace = pm.sample(100, tune=0, chains=1)
 
             assert trace['beta'].size > 0
             assert trace['gamma'].size > 0
