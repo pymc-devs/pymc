@@ -3,7 +3,7 @@ import scipy
 import theano
 import theano.tensor as tt
 from pymc3.ode.utils import augment_system, ODEGradop
-THEANO_FLAG = 'compute_test_value=ignore'
+
 
 class DifferentialEquation(theano.Op):
 
@@ -139,14 +139,21 @@ class DifferentialEquation(theano.Op):
 
     def _numpy_vsp(self, parameters, g):
         _, sens = self._cached_simulate(np.array(parameters))
+
+        #Each element of sens is an nxm sensitivity matrix
+        #There is one sensitivity matrix per time step, making sens a (len(times), n_states, len(parameter))
+        #dimensional array.  Reshaping the sens array in this way is like stacking each of the elements of sens on top
+        #of one another.
         numpy_sens = sens.reshape((self.n_states * len(self.times), len(parameters)))
+        #The dot product here is equivalent to np.einsum('ijk,jk', sens, g)
+        #if sens was not reshaped and if g had the same shape as yobs
         return numpy_sens.T.dot(g)
 
     def make_node(self, odeparams, y0):
         if len(odeparams) != self.n_odeparams:
-            raise ValueError('odeparams has too many or too few parameters.  Expected {a} paramteres but got {b}'.format(a=self.n_odeparams, b=len(odeparams)))
+            raise ValueError('odeparams has too many or too few parameters.  Expected {a} parameter(s) but got {b}'.format(a=self.n_odeparams, b=len(odeparams)))
         if len(y0) != self.n_states:
-            raise ValueError('y0 has too many or too few parameters.  Expected {a} paramteres but got {b}'.format(a=self.n_states, b=len(y0)))
+            raise ValueError('y0 has too many or too few parameters.  Expected {a} parameter(s) but got {b}'.format(a=self.n_states, b=len(y0)))
 
         if np.ndim(odeparams) > 1:
             odeparams = np.ravel(odeparams)
