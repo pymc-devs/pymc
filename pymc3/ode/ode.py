@@ -39,7 +39,7 @@ class DifferentialEquation(theano.Op):
         ode_model = DifferentialEquation(func = odefunc, t0 = 0, times = times, n_states = 1, n_odeparams = 1)
     '''
 
-    __props__ = ()
+    __props__ = ('func', 't0', 'times', 'n_states', 'n_odeparams')
     
     def __init__(self, func, times, n_states, n_odeparams, t0=0):
         if not callable(func):
@@ -52,7 +52,7 @@ class DifferentialEquation(theano.Op):
         #Public
         self.func = func
         self.t0 = t0
-        self.times = times
+        self.times = tuple(times)
         self.n_states = n_states
         self.n_odeparams = n_odeparams
 
