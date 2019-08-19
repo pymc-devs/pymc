@@ -25,18 +25,10 @@ from pymc3.step_methods import (
     MultivariateNormalProposal,
     HamiltonianMC,
     EllipticalSlice,
-    SMC,
     DEMetropolis,
 )
 from pymc3.theanof import floatX
-from pymc3.distributions import (
-    Binomial,
-    Normal,
-    Bernoulli,
-    Categorical,
-    Beta,
-    HalfNormal,
-)
+from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
@@ -254,7 +246,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                 0.81375848,
                 0.81375848,
                 0.81375848,
-                1.91238675
+                1.91238675,
             ]
         ),
         Metropolis: np.array(
@@ -465,210 +457,6 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                 -0.22032854,
             ]
         ),
-        SMC: np.array(
-        [
-            -0.46336615,
-            0.12266723,
-            1.17445969,
-            0.68042971,
-            0.42684242,
-            0.56087745,
-            1.95526491,
-            0.63702815,
-            -0.38256918,
-            0.21666238,
-            0.9222132,
-            0.84231802,
-            -0.66263683,
-            -0.65473923,
-            0.70613048,
-            1.1832384,
-            1.32666297,
-            0.47234722,
-            1.308746,
-            0.62601215,
-            0.66785563,
-            0.23237286,
-            0.64742557,
-            0.4967666,
-            -0.7083572,
-            -0.6336608,
-            0.7171772,
-            1.64822516,
-            0.55755364,
-            0.3390564,
-            0.60066329,
-            -0.48225908,
-            -0.7105236,
-            1.24246519,
-            -0.42578244,
-            -0.13955727,
-            -0.45717333,
-            1.25124007,
-            0.16517031,
-            1.48844159,
-            0.53149148,
-            0.78831621,
-            -0.32179121,
-            0.2672707,
-            1.28559777,
-            0.66120255,
-            0.76382386,
-            0.20961778,
-            -0.34107706,
-            0.89994347,
-            0.76014225,
-            1.47270724,
-            -0.1048684,
-            1.443698,
-            0.05602195,
-            0.4165876,
-            0.58041505,
-            0.71206799,
-            0.35419923,
-            1.09565672,
-            0.01237362,
-            1.07233515,
-            0.4458613,
-            -0.05173648,
-            -0.05591959,
-            -0.46949795,
-            0.12817764,
-            0.33305469,
-            0.1417619,
-            1.21374348,
-            0.29950253,
-            0.30185187,
-            -0.35845575,
-            0.65644788,
-            0.13245814,
-            0.47437394,
-            -0.13326223,
-            0.64184184,
-            -0.70375623,
-            1.19480999,
-            0.12838112,
-            -1.13718892,
-            -0.23756299,
-            1.18109566,
-            0.27956406,
-            0.77662783,
-            0.70897398,
-            0.06468957,
-            1.2100561,
-            -0.07906963,
-            0.24812142,
-            1.03598538,
-            1.22311777,
-            0.50280816,
-            1.18044321,
-            0.27720922,
-            0.66501892,
-            0.02559445,
-            -0.34423967,
-            -0.18747507,
-            0.41599727,
-            0.70174315,
-            -0.21596883,
-            0.5451627,
-            0.21239221,
-            0.21520924,
-            0.16853742,
-            0.58518451,
-            0.39961851,
-            -0.2047263,
-            0.80526223,
-            0.99301123,
-            -1.19740463,
-            -0.35897795,
-            0.35797059,
-            0.4048858,
-            -0.23605507,
-            0.59722259,
-            -0.24906798,
-            0.02133243,
-            0.33906256,
-            0.03076166,
-            1.04912903,
-            0.56568619,
-            1.58915455,
-            -0.18300023,
-            0.88801506,
-            0.81190571,
-            0.54731061,
-            0.81670383,
-            1.27844735,
-            -0.17766326,
-            0.64657961,
-            -0.13964146,
-            -0.52765298,
-            -0.01829202,
-            0.12244441,
-            0.75981859,
-            0.11204214,
-            -0.3119146,
-            1.14560177,
-            1.16858157,
-            0.10582855,
-            -0.19444751,
-            -0.40425162,
-            -0.27404309,
-            0.54300282,
-            0.05307693,
-            -0.27458972,
-            0.69498755,
-            0.98924705,
-            1.55547635,
-            0.75224637,
-            0.80587839,
-            -0.2902937,
-            0.23034801,
-            1.60298928,
-            0.40614554,
-            0.77193648,
-            0.43173433,
-            1.81284039,
-            0.35098668,
-            0.57270494,
-            0.80260306,
-            0.6484185,
-            1.04529417,
-            0.22528427,
-            0.58182444,
-            1.15230697,
-            0.34743541,
-            -0.41741644,
-            0.89642521,
-            0.34436599,
-            0.46077778,
-            0.87747499,
-            0.66225042,
-            0.47267159,
-            0.05429676,
-            0.3757464,
-            0.94785268,
-            0.28064715,
-            0.55279339,
-            -0.14599467,
-            2.27580354,
-            0.24539721,
-            0.59513338,
-            1.04924511,
-            -0.17770318,
-            0.22312693,
-            -0.11805229,
-            -0.50526578,
-            2.00694516,
-            0.00603662,
-            -1.03431887,
-            0.30270517,
-            1.33821916,
-            0.72568982,
-            0.14426103,
-            0.24925792,
-            0.17099091,
-            ]
-        ),
     }
 
     def setup_class(self):
@@ -677,9 +465,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
     def teardown_class(self):
         shutil.rmtree(self.temp_dir)
 
-    @pytest.mark.xfail(
-        condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-    )
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_sample_exact(self):
         for step_method in self.master_samples:
             self.check_trace(step_method)
@@ -704,19 +490,10 @@ class TestStepMethods:  # yield test doesn't work subclassing object
         with Model() as model:
             x = Normal("x", mu=0, sigma=1)
             y = Normal("y", mu=x, sigma=1, observed=1)
-            if step_method.__name__ == "SMC":
-                trace = sample(
-                    draws=200, random_seed=1, progressbar=False, step=step_method(parallel=False)
-                )
-            elif step_method.__name__ == "NUTS":
+            if step_method.__name__ == "NUTS":
                 step = step_method(scaling=model.test_point)
                 trace = sample(
-                    0,
-                    tune=n_steps,
-                    discard_tuned_samples=False,
-                    step=step,
-                    random_seed=1,
-                    chains=1,
+                    0, tune=n_steps, discard_tuned_samples=False, step=step, random_seed=1, chains=1
                 )
             else:
                 trace = sample(
@@ -782,13 +559,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
             steps = (Metropolis(S=C, proposal_dist=MultivariateNormalProposal),)
         for step in steps:
             trace = sample(
-                20000,
-                tune=0,
-                step=step,
-                start=start,
-                model=model,
-                random_seed=1,
-                chains=1,
+                20000, tune=0, step=step, start=start, model=model, random_seed=1, chains=1
             )
             self.check_stat(check, trace, step.__class__.__name__)
 
@@ -802,9 +573,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                 CategoricalGibbsMetropolis(model.x, proposal="proportional"),
             )
         for step in steps:
-            trace = sample(
-                8000, tune=0, step=step, start=start, model=model, random_seed=1
-            )
+            trace = sample(8000, tune=0, step=step, start=start, model=model, random_seed=1)
             self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_elliptical_slice(self):
@@ -815,13 +584,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
             steps = (EllipticalSlice(prior_cov=K), EllipticalSlice(prior_chol=L))
         for step in steps:
             trace = sample(
-                5000,
-                tune=0,
-                step=step,
-                start=start,
-                model=model,
-                random_seed=1,
-                chains=1,
+                5000, tune=0, step=step, start=start, model=model, random_seed=1, chains=1
             )
             self.check_stat(check, trace, step.__class__.__name__)
 
@@ -853,8 +616,7 @@ class TestCompoundStep:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS, DEMetropolis)
 
     @pytest.mark.skipif(
-        theano.config.floatX == "float32",
-        reason="Test fails on 32 bit due to linalg issues",
+        theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues"
     )
     def test_non_blocked(self):
         """Test that samplers correctly create non-blocked compound steps."""
@@ -864,8 +626,7 @@ class TestCompoundStep:
                 assert isinstance(sampler(blocked=False), CompoundStep)
 
     @pytest.mark.skipif(
-        theano.config.floatX == "float32",
-        reason="Test fails on 32 bit due to linalg issues",
+        theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues"
     )
     def test_blocked(self):
         _, model = simple_2model_continuous()
@@ -924,9 +685,7 @@ class TestAssignStepMethods:
                 return x
 
             data = np.random.normal(size=(100,))
-            Normal(
-                "y", mu=kill_grad(x), sigma=1, observed=data.astype(theano.config.floatX)
-            )
+            Normal("y", mu=kill_grad(x), sigma=1, observed=data.astype(theano.config.floatX))
 
             steps = assign_step_methods(model, [])
         assert isinstance(steps, Slice)
@@ -947,25 +706,34 @@ class TestPopulationSamplers:
                 trace = sample(draws=100, chains=4, step=step)
         pass
 
+    def test_nonparallelized_chains_are_random(self):
+        with Model() as model:
+            x = Normal("x", 0, 1)
+            for stepper in TestPopulationSamplers.steppers:
+                step = stepper()
+                trace = sample(chains=4, cores=1, draws=20, tune=0, step=DEMetropolis())
+                samples = np.array(trace.get_values("x", combine=False))[:, 5]
+
+                assert len(set(samples)) == 4, "Parallelized {} " "chains are identical.".format(
+                    stepper
+                )
+        pass
+
     def test_parallelized_chains_are_random(self):
         with Model() as model:
             x = Normal("x", 0, 1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
-                trace = sample(
-                    chains=4, draws=20, tune=0, step=DEMetropolis()
-                )
+                trace = sample(chains=4, cores=4, draws=20, tune=0, step=DEMetropolis())
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
 
-                assert (
-                    len(set(samples)) == 4
-                ), "Parallelized {} " "chains are identical.".format(stepper)
+                assert len(set(samples)) == 4, "Parallelized {} " "chains are identical.".format(
+                    stepper
+                )
         pass
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNutsCheckTrace:
     def test_multiple_samplers(self, caplog):
         with Model():
@@ -983,8 +751,7 @@ class TestNutsCheckTrace:
                 sample(init=None, chains=1, random_seed=1)
             error.match("Bad initial")
 
-    @pytest.mark.skipif(sys.version_info < (3,6),
-                    reason="requires python3.6 or higher")
+    @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
     def test_bad_init_parallel(self):
         with Model():
             HalfNormal("a", sigma=1, testval=-1, transform=None)
@@ -1040,10 +807,6 @@ class TestNutsCheckTrace:
         # Assert model logp is computed correctly: computing post-sampling
         # and tracking while sampling should give same results.
         model_logp_ = np.array(
-            [
-                model.logp(trace.point(i, chain=c))
-                for c in trace.chains
-                for i in range(len(trace))
-            ]
+            [model.logp(trace.point(i, chain=c)) for c in trace.chains for i in range(len(trace))]
         )
         assert (trace.model_logp == model_logp_).all()

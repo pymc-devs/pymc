@@ -589,8 +589,7 @@ class TruncatedNormal(BoundedContinuous):
     ========  ==========================================
     Support   :math:`x \in [a, b]`
     Mean      :math:`\mu +{\frac {\phi (\alpha )-\phi (\beta )}{Z}}\sigma`
-    Variance  :math:`\sigma ^{2}\left[1+{\frac {\alpha \phi (\alpha )-\beta \phi (\beta )}{Z}}-
-    \left({\frac {\phi (\alpha )-\phi (\beta )}{Z}}\right)^{2}\right]`
+    Variance  :math:`\sigma ^{2}\left[1+{\frac {\alpha \phi (\alpha )-\beta \phi (\beta )}{Z}}-\left({\frac {\phi (\alpha )-\phi (\beta )}{Z}}\right)^{2}\right]`
     ========  ==========================================
 
     Parameters
@@ -664,16 +663,34 @@ class TruncatedNormal(BoundedContinuous):
         -------
         array
         """
-        mu_v, std_v, a_v, b_v = draw_values(
-            [self.mu, self.sigma, self.lower, self.upper], point=point, size=size)
-        return generate_samples(stats.truncnorm.rvs,
-                                a=(a_v - mu_v)/std_v,
-                                b=(b_v - mu_v) / std_v,
-                                loc=mu_v,
-                                scale=std_v,
-                                dist_shape=self.shape,
-                                size=size,
-                                )
+        mu, sigma, lower, upper = draw_values(
+            [self.mu, self.sigma, self.lower, self.upper],
+            point=point,
+            size=size
+        )
+        return generate_samples(
+            self._random,
+            mu=mu,
+            sigma=sigma,
+            lower=lower,
+            upper=upper,
+            dist_shape=self.shape,
+            size=size,
+        )
+
+    def _random(self, mu, sigma, lower, upper, size):
+        """ Wrapper around stats.truncnorm.rvs that converts TruncatedNormal's
+        parametrization to scipy.truncnorm. All parameter arrays should have
+        been broadcasted properly by generate_samples at this point and size is
+        the scipy.rvs representation.
+        """
+        return stats.truncnorm.rvs(
+            a=(lower - mu) / sigma,
+            b=(upper - mu) / sigma,
+            loc=mu,
+            scale=sigma,
+            size=size,
+        )
 
     def logp(self, value):
         """
@@ -1526,14 +1543,14 @@ class Exponential(PositiveContinuous):
                                                                 get_variable_name(lam))
 
     def logcdf(self, value):
-        """
+        r"""
         Compute the log of cumulative distribution function for the Exponential distribution
         at the specified value.
 
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            "Accurately computing :math:`\log(1-\exp(-\mid a \mid))` Assessed by the Rmpfr
             package"
 
         Parameters
@@ -1740,11 +1757,12 @@ class Lognormal(PositiveContinuous):
     tau : float
         Scale parameter (tau > 0). (only required if sigma is not specified).
 
-    Example
-    -------
+    Examples
+    --------
+
     .. code-block:: python
 
-        # Example to show that we pass in only `sigma` or `tau` but not both.
+        # Example to show that we pass in only ``sigma`` or ``tau`` but not both.
         with pm.Model():
             x = pm.Lognormal('x', mu=2, sigma=30)
 
@@ -1895,7 +1913,7 @@ class StudentT(Continuous):
         plt.show()
 
     ========  ========================
-    Support   :math:`x \in \mathbb{R}`
+    Support   :math:``x \in \mathbb{R}``
     ========  ========================
 
     Parameters
@@ -2913,7 +2931,7 @@ class Weibull(PositiveContinuous):
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            "Accurately computing `\log(1-\exp(- \mid a \mid))` Assessed by the Rmpfr
             package"
 
         Parameters
@@ -3582,10 +3600,22 @@ class Triangular(BoundedContinuous):
         """
         c, lower, upper = draw_values([self.c, self.lower, self.upper],
                                       point=point, size=size)
-        scale = upper - lower
-        c_ = (c - lower) / scale
-        return generate_samples(stats.triang.rvs, c=c_, loc=lower, scale=scale,
+        return generate_samples(self._random, c=c, lower=lower, upper=upper,
                                 size=size, dist_shape=self.shape)
+
+    def _random(self, c, lower, upper, size):
+        """ Wrapper around stats.triang.rvs that converts Triangular's
+        parametrization to scipy.triang. All parameter arrays should have
+        been broadcasted properly by generate_samples at this point and size is
+        the scipy.rvs representation.
+        """
+        scale = upper - lower
+        return stats.triang.rvs(
+            c=(c - lower) / scale,
+            loc=lower,
+            scale=scale,
+            size=size,
+        )
 
     def logp(self, value):
         """
@@ -3693,7 +3723,7 @@ class Gumbel(Continuous):
 
     ========  ==========================================
     Support   :math:`x \in \mathbb{R}`
-    Mean      :math:`\mu + \beta\gamma`, where \gamma is the Euler-Mascheroni constant
+    Mean      :math:`\mu + \beta\gamma`, where :math:`\gamma` is the Euler-Mascheroni constant
     Variance  :math:`\frac{\pi^2}{6} \beta^2`
     ========  ==========================================
 
@@ -3875,8 +3905,20 @@ class Rice(PositiveContinuous):
         """
         nu, sigma = draw_values([self.nu, self.sigma],
                              point=point, size=size)
-        return generate_samples(stats.rice.rvs, b=nu / sigma, scale=sigma, loc=0,
+        return generate_samples(self._random, nu=nu, sigma=sigma,
                                 dist_shape=self.shape, size=size)
+
+    def _random(self, nu, sigma, size):
+        """ Wrapper around stats.rice.rvs that converts Rice's
+        parametrization to scipy.rice. All parameter arrays should have
+        been broadcasted properly by generate_samples at this point and size is
+        the scipy.rvs representation.
+        """
+        return stats.rice.rvs(
+            b=nu / sigma,
+            scale=sigma,
+            size=size,
+        )
 
     def logp(self, value):
         """
@@ -4018,7 +4060,7 @@ class Logistic(Continuous):
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            "Accurately computing :math:  `\log(1-\exp(- \mid a \mid<))` Assessed by the Rmpfr
             package"
 
         Parameters
@@ -4171,7 +4213,7 @@ class Interpolated(BoundedContinuous):
     interpolated density is any way normalized to make the total probability
     equal to $1$.
 
-    Both parameters `x_points` and values `pdf_points` are not variables, but
+    Both parameters ``x_points`` and values ``pdf_points`` are not variables, but
     plain array-like objects, so they are constant and cannot be sampled.
 
     ========  ===========================================
@@ -4183,7 +4225,7 @@ class Interpolated(BoundedContinuous):
     x_points : array-like
         A monotonically growing list of values
     pdf_points : array-like
-        Probability density function evaluated on lattice `x_points`
+        Probability density function evaluated on lattice ``x_points``
     """
 
     def __init__(self, x_points, pdf_points, *args, **kwargs):

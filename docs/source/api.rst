@@ -1,8 +1,8 @@
 .. _api:
 
-*************
+***************
 API Reference
-*************
+***************
 
 .. toctree::
    :maxdepth: 2
@@ -19,4 +19,13 @@ API Reference
    api/math
    api/data
    api/model
+   api/model_graph
    api/shape_utils
+
+
+Indices and tables
+===================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

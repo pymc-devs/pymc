@@ -347,9 +347,7 @@ class ParallelSampler:
         progressbar=True,
     ):
         if progressbar:
-            import tqdm
-
-            tqdm_ = tqdm.tqdm
+            from tqdm import tqdm
 
         if any(len(arg) != chains for arg in [seeds, start_points]):
             raise ValueError("Number of seeds and start_points must be %s." % chains)
@@ -370,11 +368,14 @@ class ParallelSampler:
         self._start_chain_num = start_chain_num
 
         self._progress = None
+        self._divergences = 0
+        self._desc = "Sampling {0._chains:d} chains, {0._divergences:,d} divergences"
+        self._chains = chains
         if progressbar:
-            self._progress = tqdm_(
+            self._progress = tqdm(
                 total=chains * (draws + tune),
                 unit="draws",
-                desc="Sampling %s chains" % chains,
+                desc=self._desc.format(self)
             )
 
     def _make_active(self):
@@ -393,6 +394,9 @@ class ParallelSampler:
             draw = ProcessAdapter.recv_draw(self._active)
             proc, is_last, draw, tuning, stats, warns = draw
             if self._progress is not None:
+                if not tuning and stats and stats[0].get('diverging'):
+                    self._divergences += 1
+                    self._progress.set_description(self._desc.format(self))
                 self._progress.update()
 
             if is_last:
@@ -421,3 +425,16 @@ class ParallelSampler:
         ProcessAdapter.terminate_all(self._samplers)
         if self._progress is not None:
             self._progress.close()
+
+def _cpu_count():
+    """Try to guess the number of CPUs in the system.
+
+    We use the number provided by psutil if that is installed.
+    If not, we use the number provided by multiprocessing, but assume
+    that half of the cpus are only hardware threads and ignore those.
+    """
+    try:
+        cpus = multiprocessing.cpu_count() // 2
+    except NotImplementedError:
+        cpus = 1
+    return cpus

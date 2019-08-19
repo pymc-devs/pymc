@@ -1110,4 +1110,3 @@ def r2_score(y_true, y_pred, round_to=2):
     r2_mean = np.around(np.mean(r2), round_to)
     r2_std = np.around(np.std(r2), round_to)
     return r2_r(r2_median, r2_mean, r2_std)
-
