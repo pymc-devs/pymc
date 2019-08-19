@@ -417,7 +417,7 @@ class QuadPotentialFullInv(QuadPotential):
 class QuadPotentialFull(QuadPotential):
     """Basic QuadPotential object for Hamiltonian calculations."""
 
-    def __init__(self, A, dtype=None):
+    def __init__(self, cov, dtype=None):
         """Compute the lower cholesky decomposition of the potential.
 
         Parameters
@@ -428,33 +428,35 @@ class QuadPotentialFull(QuadPotential):
         if dtype is None:
             dtype = theano.config.floatX
         self.dtype = dtype
-        self.A = A.astype(self.dtype)
-        self.L = scipy.linalg.cholesky(A, lower=True)
+        self._cov = np.array(cov, dtype=self.dtype, copy=True)
+        self._chol = scipy.linalg.cholesky(self._cov, lower=True)
+        self._n = len(self._cov)
 
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
-        return np.dot(self.A, x, out=out)
+        return np.dot(self._cov, x, out=out)
 
     def random(self):
         """Draw random value from QuadPotential."""
-        n = floatX(normal(size=self.L.shape[0]))
-        return scipy.linalg.solve_triangular(self.L.T, n)
+        vals = np.random.normal(size=self._n).astype(self.dtype)
+        return scipy.linalg.solve_triangular(self._chol.T, vals,
+                                             overwrite_b=True)
 
     def energy(self, x, velocity=None):
         """Compute kinetic energy at a position in parameter space."""
         if velocity is None:
             velocity = self.velocity(x)
-        return .5 * x.dot(velocity)
+        return 0.5 * np.dot(x, velocity)
 
     def velocity_energy(self, x, v_out):
         """Compute velocity and return kinetic energy at a position in parameter space."""
         self.velocity(x, out=v_out)
-        return 0.5 * np.dot(x, v_out)
+        return self.energy(x, v_out)
 
     __call__ = random
 
 
-class QuadPotentialFullAdapt(QuadPotential):
+class QuadPotentialFullAdapt(QuadPotentialFull):
     """Adapt a dense mass matrix using the sample covariances
 
     If the parameter ``doubling`` is true, the adaptation window is doubled
@@ -509,23 +511,6 @@ class QuadPotentialFullAdapt(QuadPotential):
         self._doubling = doubling
         self._adaptation_window = int(adaptation_window)
         self._previous_update = 0
-
-    def velocity(self, x, out=None):
-        return np.dot(self._cov, x, out=out)
-
-    def energy(self, x, velocity=None):
-        if velocity is None:
-            velocity = self.velocity(x)
-        return 0.5 * np.dot(x, velocity)
-
-    def velocity_energy(self, x, v_out):
-        self.velocity(x, out=v_out)
-        return self.energy(x, v_out)
-
-    def random(self):
-        vals = np.random.normal(size=self._n).astype(self.dtype)
-        return scipy.linalg.solve_triangular(self._chol.T, vals,
-                                             overwrite_b=True)
 
     def _update_from_weightvar(self, weightvar):
         weightvar.current_covariance(out=self._cov)
