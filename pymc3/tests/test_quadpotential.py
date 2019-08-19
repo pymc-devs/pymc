@@ -137,3 +137,64 @@ def test_user_potential():
         step = pymc3.NUTS(potential=pot)
         pymc3.sample(10, init=None, step=step, chains=1)
     assert called
+
+
+def test_weighted_covariance(ndim=10, seed=5432):
+    np.random.seed(seed)
+
+    L = np.random.randn(ndim, ndim)
+    L[np.triu_indices_from(L, 1)] = 0.0
+    L[np.diag_indices_from(L)] = np.exp(L[np.diag_indices_from(L)])
+    cov = np.dot(L, L.T)
+    mean = np.random.randn(ndim)
+
+    samples = np.random.multivariate_normal(mean, cov, size=100)
+    mu_est0 = np.mean(samples, axis=0)
+    cov_est0 = np.cov(samples, rowvar=0)
+
+    est = quadpotential._WeightedCovariance(ndim)
+    for sample in samples:
+        est.add_sample(sample, 1)
+    mu_est = est.current_mean()
+    cov_est = est.current_covariance()
+
+    assert np.allclose(mu_est, mu_est0)
+    assert np.allclose(cov_est, cov_est0)
+
+    # Make sure that the weighted estimate also works
+    est2 = quadpotential._WeightedCovariance(
+        ndim,
+        np.mean(samples[:10], axis=0),
+        np.cov(samples[:10], rowvar=0, bias=True),
+        10,
+    )
+    for sample in samples[10:]:
+        est2.add_sample(sample, 1)
+    mu_est2 = est2.current_mean()
+    cov_est2 = est2.current_covariance()
+
+    assert np.allclose(mu_est2, mu_est0)
+    assert np.allclose(cov_est2, cov_est0)
+
+
+def test_full_adapt_sample_p(seed=4566):
+    # ref: https://github.com/stan-dev/stan/pull/2672
+    np.random.seed(seed)
+    m = np.array([[3.0, -2.0], [-2.0, 4.0]])
+    m_inv = np.linalg.inv(m)
+
+    var = np.array(
+        [
+            [2 * m[0, 0], m[1, 0] * m[1, 0] + m[1, 1] * m[0, 0]],
+            [m[0, 1] * m[0, 1] + m[1, 1] * m[0, 0], 2 * m[1, 1]],
+        ]
+    )
+
+    n_samples = 1000
+    pot = quadpotential.QuadPotentialFullAdapt(2, np.zeros(2), m_inv, 1)
+    samples = [pot.random() for n in range(n_samples)]
+    sample_cov = np.cov(samples, rowvar=0)
+
+    # Covariance matrix within 5 sigma of expected value
+    # (comes from a Wishart distribution)
+    assert np.all(np.abs(m - sample_cov) < 5 * np.sqrt(var / n_samples))
