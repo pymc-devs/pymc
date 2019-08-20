@@ -548,7 +548,14 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
 
 
 class _WeightedCovariance:
-    """Online algorithm for computing mean and covariance."""
+    """Online algorithm for computing mean and covariance
+
+    This implements the `Welford's algorithm
+    <https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance>`_ based
+    on the implementation in `the Stan math library
+    <https://github.com/stan-dev/math>`_.
+
+    """
 
     def __init__(
         self,
