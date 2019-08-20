@@ -30,13 +30,7 @@ Point = Dict[str, np.ndarray]
 #     if isinstance(trace, MultiTrace):
 #         return trace
 #     if isinstance(trace, list) and all((isinstance(x, MultiTrace) for x in trace)):
-        
 
-# Simplifications: 
-# 1. Don't worry about all the different kinds of things that could be the `trace`
-# argument: just accept a MultiTrace.  
-# 2. Just lock the number of samples to be the same as the number of samples in the
-# MultiTrace.
 def sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarray]]],
                                 samples: Optional[int]=None,
                                 model: Optional[Model]=None,
@@ -71,6 +65,15 @@ def sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarr
         posterior predictive samples.
     """
 
+    ### Implementation note: primarily this function canonicalizes the arguments:
+    ### Establishing the model context, wrangling the number of samples,
+    ### Canonicalizing the trace argument into a MultiTrace object and fitting it
+    ### to the requested number of samples.  Then it invokes posterior_predictive_draw_values
+    ### *repeatedly*.  It does this repeatedly, because the trace argument is set up to be
+    ### the same as the number of samples. So if the number of samples requested is
+    ### greater than the number of samples in the trace parameter, we sample repeatedly.  This
+    ### makes the shape issues just a little easier to deal with.
+
     model = modelcontext(model)
 
     if keep_size and samples is not None:
@@ -103,7 +106,7 @@ def sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarr
         # if this is less than the number of samples in the trace, take a slice and
         # work with that.  It's too hard for me to deal with uneven-length chains in the
         # MultiTrace, so we just don't let you do that. [2019/08/19:rpg]
-        if divmod(samples, len(_trace))[1] != 0:
+        if divmod(samples, nchain)[1] != 0:
             raise IncorrectArgumentsError("Number of samples must be a multiple of the number of chains in the trace.")
         _trace = _trace[slice(samples // nchain)]
         _samples = [samples]
@@ -135,7 +138,8 @@ def sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarr
     ppc_trace = _ExtendableTrace()
     for s in _samples:
         try:
-            new_trace = posterior_predictive_draw_values(cast(List[Any], vars), _trace, s)
+            values = posterior_predictive_draw_values(cast(List[Any], vars), _trace, s)
+            new_trace = {k.name: v for (k, v) in zip(vars, values)}  # type: Dict[str, np.ndarray]
             ppc_trace.extend_trace(new_trace)
         except KeyboardInterrupt:
             pass
@@ -158,14 +162,12 @@ class _ExtendableTrace(_ETPParent):
             else:
                 self.data[k] = v
 
-def posterior_predictive_draw_values(vars: List[Any], trace: MultiTrace, samples: int) -> PosteriorPredictiveTrace:
-    sampler = _PosteriorPredictiveSampler(vars, trace, samples, None)
-    sampler.draw_values()
-    return sampler.pp_trace
-    
+def posterior_predictive_draw_values(vars: List[Any], trace: MultiTrace, samples: int) -> List[np.ndarray]:
+    with _PosteriorPredictiveSampler(vars, trace, samples, None) as sampler:
+        return sampler.draw_values()
+
 class _PosteriorPredictiveSampler(AbstractContextManager):
     '''The process of posterior predictive sampling is quite complicated so this provides a central data store.'''
-    pp_trace: PosteriorPredictiveTrace
 
     # inputs
     vars: List[Any]
@@ -189,32 +191,36 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
     def __init__(self, vars, trace, samples, size=None):
         if size is not None:
             raise NotImplementedError("sample_posterior_predictive does not support the size argument at this time.")
-        self.vars = vars
+        if vars is None:
+            self.vars = model.observed_RVs
+        else:
+            self.vars = vars
         self.trace = trace
         self.samples = samples
         self.size = size
-        self.pp_trace = {}
         self.logger = logging.getLogger('posterior_predictive')
 
-    def __enter__(self):
-        self._tok = vectorized_ppc.set(self)
+    def __enter__(self) -> '_PosteriorPredictiveSampler':
+        self._tok = vectorized_ppc.set(posterior_predictive_draw_values)
         return self
 
-    def __exit__(self):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         vectorized_ppc.reset(self._tok)
         return False
         
-    def draw_values(self) -> None:
+    def draw_values(self) -> List[np.ndarray]:
         vars = self.vars
         trace = self.trace
         samples = self.samples
         # size = self.size
+        params = dict(enumerate(vars))
 
         with _DrawValuesContext() as context:
             self.init()
             self.make_graph()
 
             drawn = context.drawn_vars
+
             # Init givens and the stack of nodes to try to `_draw_value` from
             givens = {p.name: (p, v) for (p, samples), v in drawn.items()
                       if getattr(p, 'name', None) is not None}
@@ -257,7 +263,6 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                                                 trace=trace,
                                                 givens=temp_givens)
                         assert isinstance(value, np.ndarray)
-                        self.pp_trace[next_.name] = value
                         givens[next_.name] = (next_, value)
                         drawn[(next_, samples)] = value
                     except theano.gof.fg.MissingInputError:
@@ -300,12 +305,12 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                                                     trace=self.trace,
                                                     givens=givens.values())
                             assert isinstance(value, np.ndarray)
-                            self.pp_trace[param.name] = value
                             self.evaluated[param_idx] = drawn[(param, samples)] = value
                             givens[param.name] = (param, value)
                         except theano.gof.fg.MissingInputError:
                             missing_inputs.add(param_idx)
-        assert set(self.pp_trace.keys()) == {var.name for var in vars}
+        return [self.evaluated[j] for j in params]
+
 
     def init(self) -> None:
         '''This method carries out the initialization phase of sampling 
@@ -324,7 +329,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
             symbolic_params = []
             for i, var in enumerate(vars):
                 if is_fast_drawable(var):
-                    evaluated[i] = self.pp_trace[var.name] = self.draw_value(var)
+                    evaluated[i] = self.draw_value(var)
                     continue
                 name = getattr(var, 'name', None)
                 if (var, samples) in drawn:
