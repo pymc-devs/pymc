@@ -442,8 +442,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     distshape = tuple(param.distribution.shape)
                     return random_sample(meth=param.distribution.random, param=param, point=trace, size=samples, shape=distshape)
             # NOTE: I think the following is already vectorized.
-            else: # doesn't have a distribution -- deterministic (?) -- this is probably wrong, but
-                # the values here will be a list of *sampled* values -- 1 per sample.
+            else: 
                 if givens:
                     variables, values = list(zip(*givens))
                 else:
@@ -464,6 +463,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     input_vals = []
                 func = _compile_theano_function(param, input_vars)
                 if not input_vars:
+                    assert input_vals == []  # AFAICT if there are now vars, there can't be vals
                     output = func(*input_vals)
                     if hasattr(output, 'shape', None):
                         val = np.ndarray(output * samples)
@@ -471,7 +471,8 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                         val = np.full(samples, output)
 
                 else:
-                    val = np.ndarray([func(*input_vals) for inp in zip(*input_vals)])
+                    val = func(*input_vals)
+                    # np.ndarray([func(*input_vals) for inp in zip(*input_vals)])
                 return val
         raise ValueError('Unexpected type in draw_value: %s' % type(param))
 
