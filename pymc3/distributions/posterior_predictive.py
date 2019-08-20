@@ -97,7 +97,7 @@ def sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarr
     _samples = [] # type: List[int]
     # temporary replacement for more complicated logic.
     max_samples: int = len(trace) * nchain
-    if samples is None:
+    if samples is None or samples == max_samples:
         _samples = [max_samples]
     elif samples < max_samples:
         warnings.warn("samples parameter is smaller than nchains times ndraws, some draws "
@@ -113,6 +113,8 @@ def sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarr
     elif samples > max_samples:
         full, rem = divmod(samples, max_samples)
         _samples = (full * [max_samples]) + ([rem] if rem != 0 else [])
+    else:
+        raise IncorrectArgumentsError("Unexpected combination of samples (%s) and max_samples (%d)"%(samples, max_samples))
 
     # if keep_size and samples is not None:
     #     raise IncorrectArgumentsError("Should not specify both keep_size and samples arguments")
