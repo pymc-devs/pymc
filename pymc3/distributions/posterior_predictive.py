@@ -233,6 +233,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     # If the node already has a givens value, skip it
                     continue
                 elif isinstance(next_, (tt.TensorConstant,
+                                        theano.gof.graph.Constant,
                                         tt.sharedvar.SharedVariable)):
                     # If the node is a theano.tensor.TensorConstant or a
                     # theano.tensor.sharedvar.SharedVariable, its value will be
@@ -403,7 +404,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
 
         if isinstance(param, (numbers.Number, np.ndarray)):
             return param
-        elif isinstance(param, tt.TensorConstant):
+        elif isinstance(param, (tt.TensorConstant, theano.gof.graph.Constant)):
             return param.value
         elif isinstance(param, tt.sharedvar.SharedVariable):
             return param.get_value()
