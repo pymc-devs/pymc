@@ -92,7 +92,7 @@ class Distribution:
         if isinstance(val, tt.TensorVariable):
             return val.tag.test_value
 
-        if isinstance(val, tt.TensorConstant):
+        if isinstance(val, (tt.TensorConstant, theano.gof.graph.Constant)):
             return val.value
 
         return val
@@ -503,6 +503,7 @@ def is_fast_drawable(var):
     return isinstance(var, (numbers.Number,
                             np.ndarray,
                             tt.TensorConstant,
+                            theano.gof.graph.Constant,
                             tt.sharedvar.SharedVariable))
 
 
@@ -593,6 +594,7 @@ def draw_values(params, point=None, size=None):
                 # If the node already has a givens value, skip it
                 continue
             elif isinstance(next_, (tt.TensorConstant,
+                                    theano.gof.graph.Constant,
                                     tt.sharedvar.SharedVariable)):
                 # If the node is a theano.tensor.TensorConstant or a
                 # theano.tensor.sharedvar.SharedVariable, its value will be
@@ -783,7 +785,7 @@ def _draw_value(param, point=None, givens=None, size=None):
     """
     if isinstance(param, (numbers.Number, np.ndarray)):
         return param
-    elif isinstance(param, tt.TensorConstant):
+    elif isinstance(param, (tt.TensorConstant, theano.gof.graph.Constant)):
         return param.value
     elif isinstance(param, tt.sharedvar.SharedVariable):
         return param.get_value()
