@@ -25,9 +25,9 @@ import pymc3 as pm
 import theano.tensor as tt
 from theano import shared
 import theano
-from .models import simple_init
-from .helpers import SeededTest
-from ..exceptions import IncorrectArgumentsError
+from pymc3.tests.models import simple_init
+from pymc3.tests.helpers import SeededTest
+from pymc3.exceptions import IncorrectArgumentsError
 from scipy import stats
 import pytest
 
@@ -284,10 +284,10 @@ class TestSamplePPC(SeededTest):
             trace = pm.sample(draws=ndraws, chains=nchains)
 
         with model:
-            # test list input -- broken
+            # test list input
+            ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
+            # deprecated argument is removed [2019/08/20:rpg]
             if False:
-                ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
-                # test DeprecationWarning
                 with pytest.warns(DeprecationWarning):
                     ppc = pm.sample_posterior_predictive(trace, vars=[a])
             # test empty ppc
@@ -304,6 +304,7 @@ class TestSamplePPC(SeededTest):
         _, pval = stats.kstest(ppc["a"] - trace["mu"], stats.norm(loc=0, scale=1).cdf)
         assert pval > 0.001
 
+        # size argument removed [2019/08/20:rpg]
         # with model:
         #     ppc = pm.sample_posterior_predictive(trace, size=5, var_names=["a"])
         #     assert ppc["a"].shape == (nchains * ndraws, 5)
@@ -327,8 +328,7 @@ class TestSamplePPC(SeededTest):
             assert "a" in ppc
             assert ppc["a"].shape == (12, 2)
 
-            # I have removed the size argument.  It's confusing, and
-            # it's not clear what it's for. [2019/08/19:rpg]
+            # I have removed the size argument. [2019/08/19:rpg]
             # ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"], size=4)
             # assert "a" in ppc
             # assert ppc["a"].shape == (10, 4, 2)
@@ -342,6 +342,7 @@ class TestSamplePPC(SeededTest):
         with model:
             with pytest.raises(IncorrectArgumentsError):
                 ppc = pm.sample_posterior_predictive(trace, samples=10, keep_size=True)
+            # exercised removed arguments
             # with pytest.raises(IncorrectArgumentsError):
             #     ppc = pm.sample_posterior_predictive(trace, size=4, keep_size=True)
             # with pytest.raises(IncorrectArgumentsError):
@@ -362,6 +363,7 @@ class TestSamplePPC(SeededTest):
             assert "a" in ppc
             assert ppc["a"].shape == (12, 2)
 
+            # size argument removed [2019/08/20:rpg]
             # ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"], size=4)
             # assert "a" in ppc
             # assert ppc["a"].shape == (10, 4, 2)
@@ -374,7 +376,8 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test list input
-            #ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
+            ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
+            assert ppc0 == {}
             ppc = pm.sample_posterior_predictive(trace, samples=1000, var_names=["b"])
             assert len(ppc) == 1
             assert ppc["b"].shape == (1000,)
