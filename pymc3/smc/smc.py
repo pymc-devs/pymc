@@ -191,13 +191,12 @@ def sample_smc(
 
     if parallel and cores > 1:
         pool = mp.Pool(processes=cores)
+        results = pool.starmap(likelihood_logp, [(sample,) for sample in posterior])
+    else:
+        results = [likelihood_logp(sample) for sample in posterior]
+    likelihoods = np.array(results).squeeze()
 
     while beta < 1:
-        if parallel and cores > 1:
-            results = pool.starmap(likelihood_logp, [(sample,) for sample in posterior])
-        else:
-            results = [likelihood_logp(sample) for sample in posterior]
-        likelihoods = np.array(results).squeeze()
         beta, old_beta, weights, sj = calc_beta(beta, likelihoods, threshold)
 
         model.marginal_likelihood *= sj
@@ -238,16 +237,20 @@ def sample_smc(
         if parallel and cores > 1:
             results = pool.starmap(
                 metrop_kernel,
-                [(posterior[draw], tempered_logp[draw], *parameters) for draw in range(draws)],
+                [
+                    (posterior[draw], tempered_logp[draw], likelihoods[draw], *parameters)
+                    for draw in range(draws)
+                ],
             )
         else:
             results = [
-                metrop_kernel(posterior[draw], tempered_logp[draw], *parameters)
+                metrop_kernel(posterior[draw], tempered_logp[draw], likelihoods[draw], *parameters)
                 for draw in tqdm(range(draws), disable=not progressbar)
             ]
 
-        posterior, acc_list = zip(*results)
+        posterior, acc_list, likelihoods = zip(*results)
         posterior = np.array(posterior)
+        likelihoods = np.array(likelihoods)
         acc_rate = sum(acc_list) / proposed
         stage += 1
 
