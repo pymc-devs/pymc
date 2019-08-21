@@ -110,6 +110,7 @@ def _posterior_to_trace(posterior, variables, model, var_info):
 def metrop_kernel(
     q_old,
     old_tempered_logp,
+    old_likelihood,
     proposal,
     scaling,
     accepted,
@@ -147,9 +148,10 @@ def metrop_kernel(
         q_old, accept = metrop_select(new_tempered_logp - old_tempered_logp, q_new, q_old)
         if accept:
             accepted += 1
+            old_likelihood = ll
             old_tempered_logp = new_tempered_logp
 
-    return q_old, accepted
+    return q_old, accepted, old_likelihood
 
 
 def calc_beta(beta, likelihoods, threshold=0.5, psis=True):
