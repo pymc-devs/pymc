@@ -15,11 +15,9 @@
 from ..model import Model
 from ..distributions.continuous import Flat, Normal
 from ..distributions.timeseries import EulerMaruyama, AR1, AR, GARCH11
-from ..sampling import sample, sample_posterior_predictive
+from ..sampling import sample, sample_posterior_predictive, fast_sample_posterior_predictive
 from ..theanof import floatX
 
-import numpy as np
-import pytest
 from .helpers import select_by_precision
 
 pytestmark = pytest.mark.usefixtures('seeded_test')
@@ -141,9 +139,12 @@ def test_linear():
         trace = sample(init='advi+adapt_diag', chains=1)
 
     ppc = sample_posterior_predictive(trace, model=model)
+    ppcf = fast_sample_posterior_predictive(trace, model=model)
     # test
     p95 = [2.5, 97.5]
     lo, hi = np.percentile(trace[lamh], p95, axis=0)
     assert (lo < lam) and (lam < hi)
     lo, hi = np.percentile(ppc['zh'], p95, axis=0)
+    assert ((lo < z) * (z < hi)).mean() > 0.95
+    lo, hi = np.percentile(ppcf['zh'], p95, axis=0)
     assert ((lo < z) * (z < hi)).mean() > 0.95

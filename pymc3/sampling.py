@@ -33,7 +33,7 @@ from theano.tensor import Tensor
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .distributions.distribution import draw_values
-from .distributions import sample_posterior_predictive
+from .distributions.posterior_predictive import fast_sample_posterior_predictive
 from .model import modelcontext, Point, all_continuous, Model
 from .step_methods import (
     NUTS,
@@ -72,6 +72,7 @@ __all__ = [
     "sample_posterior_predictive_w",
     "init_nuts",
     "sample_prior_predictive",
+    "fast_sample_posterior_predictive",
 ]
 
 STEP_METHODS = (
@@ -1474,52 +1475,52 @@ class _DefaultTrace:
             self.trace_dict[k][idx, :] = v
 
 
-# def sample_posterior_predictive(trace,
-#                                 samples: Optional[int]=None,
-#                                 model: Optional[Model]=None,
-#                                 vars: Optional[TIterable[Tensor]]=None,
-#                                 var_names: Optional[List[str]]=None,
-#                                 size: Optional[int]=None,
-#                                 keep_size: Optional[bool]=False,
-#                                 random_seed=None,
-#                                 progressbar: bool=True) -> Dict[str, np.ndarray]:
-#     """Generate posterior predictive samples from a model given a trace.
+def sample_posterior_predictive(trace,
+                                samples: Optional[int]=None,
+                                model: Optional[Model]=None,
+                                vars: Optional[TIterable[Tensor]]=None,
+                                var_names: Optional[List[str]]=None,
+                                size: Optional[int]=None,
+                                keep_size: Optional[bool]=False,
+                                random_seed=None,
+                                progressbar: bool=True) -> Dict[str, np.ndarray]:
+    """Generate posterior predictive samples from a model given a trace.
 
-#     Parameters
-#     ----------
-#     trace : backend, list, or MultiTrace
-#         Trace generated from MCMC sampling. Or a list containing dicts from
-#         find_MAP() or points
-#     samples : int
-#         Number of posterior predictive samples to generate. Defaults to one posterior predictive
-#         sample per posterior sample, that is, the number of draws times the number of chains. It
-#         is not recommended to modify this value; when modified, some chains may not be represented
-#         in the posterior predictive sample.
-#     model : Model (optional if in ``with`` context)
-#         Model used to generate ``trace``
-#     vars : iterable
-#         Variables for which to compute the posterior predictive samples.
-#         Deprecated: please use ``var_names`` instead.
-#     var_names : Iterable[str]
-#         Alternative way to specify vars to sample, to make this function orthogonal with
-#         others.
-#     size : int
-#         The number of random draws from the distribution specified by the parameters in each
-#         sample of the trace. Not recommended unless more than ndraws times nchains posterior
-#         predictive samples are needed.
-#     keep_size : bool, optional
-#         Force posterior predictive sample to have the same shape as posterior and sample stats
-#         data: ``(nchains, ndraws, ...)``. Overrides samples and size parameters.
-#     random_seed : int
-#         Seed for the random number generator.
-#     progressbar : bool
-#         Whether or not to display a progress bar in the command line. The bar shows the percentage
-#         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
-#         time until completion ("expected time of arrival"; ETA).
+    Parameters
+    ----------
+    trace : backend, list, or MultiTrace
+        Trace generated from MCMC sampling. Or a list containing dicts from
+        find_MAP() or points
+    samples : int
+        Number of posterior predictive samples to generate. Defaults to one posterior predictive
+        sample per posterior sample, that is, the number of draws times the number of chains. It
+        is not recommended to modify this value; when modified, some chains may not be represented
+        in the posterior predictive sample.
+    model : Model (optional if in ``with`` context)
+        Model used to generate ``trace``
+    vars : iterable
+        Variables for which to compute the posterior predictive samples.
+        Deprecated: please use ``var_names`` instead.
+    var_names : Iterable[str]
+        Alternative way to specify vars to sample, to make this function orthogonal with
+        others.
+    size : int
+        The number of random draws from the distribution specified by the parameters in each
+        sample of the trace. Not recommended unless more than ndraws times nchains posterior
+        predictive samples are needed.
+    keep_size : bool, optional
+        Force posterior predictive sample to have the same shape as posterior and sample stats
+        data: ``(nchains, ndraws, ...)``. Overrides samples and size parameters.
+    random_seed : int
+        Seed for the random number generator.
+    progressbar : bool
+        Whether or not to display a progress bar in the command line. The bar shows the percentage
+        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
+        time until completion ("expected time of arrival"; ETA).
 
     Returns
     -------
-    samples: dict
+    samples : dict
         Dictionary with the variable names as keys, and values numpy arrays containing
         posterior predictive samples.
     """
@@ -1528,79 +1529,68 @@ class _DefaultTrace:
         nchain = trace.nchains
     except AttributeError:
         nchain = 1
-#     Returns
-#     -------
-#     samples : dict
-#         Dictionary with the variable names as keys, and values numpy arrays containing
-#         posterior predictive samples.
-#     """
-#     len_trace = len(trace)
-#     try:
-#         nchain = trace.nchains
-#     except AttributeError:
-#         nchain = 1
 
-#     if keep_size and samples is not None:
-#         raise IncorrectArgumentsError("Should not specify both keep_size and samples argukments")
-#     if keep_size and size is not None:
-#         raise IncorrectArgumentsError("Should not specify both keep_size and size argukments")
+    if keep_size and samples is not None:
+        raise IncorrectArgumentsError("Should not specify both keep_size and samples argukments")
+    if keep_size and size is not None:
+        raise IncorrectArgumentsError("Should not specify both keep_size and size argukments")
 
-#     if samples is None:
-#         samples = sum(len(v) for v in trace._straces.values())
+    if samples is None:
+        samples = sum(len(v) for v in trace._straces.values())
 
-#     if samples < len_trace * nchain:
-#         warnings.warn("samples parameter is smaller than nchains times ndraws, some draws "
-#                      "and/or chains may not be represented in the returned posterior "
-#                      "predictive sample")
+    if samples < len_trace * nchain:
+        warnings.warn("samples parameter is smaller than nchains times ndraws, some draws "
+                     "and/or chains may not be represented in the returned posterior "
+                     "predictive sample")
 
-#     model = modelcontext(model)
+    model = modelcontext(model)
 
-#     if var_names is not None:
-#         if vars is not None:
-#             raise IncorrectArgumentsError("Should not specify both vars and var_names arguments.")
-#         else:
-#             vars = [model[x] for x in var_names]
-#     elif vars is not None: # var_names is None, and vars is not.
-#         warnings.warn("vars argument is deprecated in favor of var_names.",
-#                       DeprecationWarning)
-#     if vars is None:
-#         vars = model.observed_RVs
+    if var_names is not None:
+        if vars is not None:
+            raise IncorrectArgumentsError("Should not specify both vars and var_names arguments.")
+        else:
+            vars = [model[x] for x in var_names]
+    elif vars is not None: # var_names is None, and vars is not.
+        warnings.warn("vars argument is deprecated in favor of var_names.",
+                      DeprecationWarning)
+    if vars is None:
+        vars = model.observed_RVs
 
-#     if random_seed is not None:
-#         np.random.seed(random_seed)
+    if random_seed is not None:
+        np.random.seed(random_seed)
 
-#     indices = np.arange(samples)
+    indices = np.arange(samples)
 
     
-#     if progressbar:
-#         indices = tqdm(indices, total=samples)
+    if progressbar:
+        indices = tqdm(indices, total=samples)
 
-#     ppc_trace_t = _DefaultTrace(samples)
-#     try:
-#         for idx in indices:
-#             if nchain > 1:
-#                 chain_idx, point_idx = np.divmod(idx, len_trace)
-#                 param = trace._straces[chain_idx % nchain].point(point_idx)
-#             else:
-#                 param = trace[idx % len_trace]
+    ppc_trace_t = _DefaultTrace(samples)
+    try:
+        for idx in indices:
+            if nchain > 1:
+                chain_idx, point_idx = np.divmod(idx, len_trace)
+                param = trace._straces[chain_idx % nchain].point(point_idx)
+            else:
+                param = trace[idx % len_trace]
 
-#             values = draw_values(vars, point=param, size=size)
-#             for k, v in zip(vars, values):
-#                 ppc_trace_t.insert(k.name, v, idx)
+            values = draw_values(vars, point=param, size=size)
+            for k, v in zip(vars, values):
+                ppc_trace_t.insert(k.name, v, idx)
 
-#     except KeyboardInterrupt:
-#         pass
+    except KeyboardInterrupt:
+        pass
 
-#     finally:
-#         if progressbar:
-#             indices.close()
+    finally:
+        if progressbar:
+            indices.close()
 
-#     ppc_trace = ppc_trace_t.trace_dict
-#     if keep_size:
-#         for k, ary in ppc_trace.items():
-#             ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
+    ppc_trace = ppc_trace_t.trace_dict
+    if keep_size:
+        for k, ary in ppc_trace.items():
+            ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
 
-#     return ppc_trace
+    return ppc_trace
 
 
 def sample_posterior_predictive_w(

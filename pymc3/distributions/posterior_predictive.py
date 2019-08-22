@@ -118,7 +118,7 @@ class _TraceDict(_TraceDictParent):
 
 
 
-def sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarray]]],
+def fast_sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarray]]],
                                 samples: Optional[int]=None,
                                 model: Optional[Model]=None,
                                 var_names: Optional[List[str]]=None,

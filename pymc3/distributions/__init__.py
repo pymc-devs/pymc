@@ -16,7 +16,7 @@ from . import timeseries
 from . import transforms
 from . import shape_utils
 
-from .posterior_predictive import sample_posterior_predictive
+from .posterior_predictive import fast_sample_posterior_predictive
 
 from .continuous import Uniform
 from .continuous import Flat
@@ -171,5 +171,5 @@ __all__ = ['Uniform',
            'Bound',
            'Rice',
            'Simulator',
-           'sample_posterior_predictive'
+           'fast_sample_posterior_predictive'
            ]
