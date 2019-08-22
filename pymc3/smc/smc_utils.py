@@ -138,9 +138,9 @@ def metrop_kernel(
                 q_new = (q_old + delta).astype("int64")
             else:
                 delta[discrete] = np.round(delta[discrete], 0)
-                q_new = q_old + delta
+                q_new = floatX(q_old + delta)
         else:
-            q_new = q_old + delta
+            q_new = floatX(q_old + delta)
 
         ll = likelihood_logp(q_new)
         pl = prior_logp(q_new)
