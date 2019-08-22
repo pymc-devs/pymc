@@ -1,18 +1,19 @@
 import numbers
-import itertools
-from typing import List, Dict, Any, Optional, Set, Tuple, Union, cast, TYPE_CHECKING, Callable
+from typing import List, Dict, Any, Optional, Tuple, Union, cast, TYPE_CHECKING, Callable
 import warnings
 import logging
 from collections import UserDict
-import contextvars
 from contextlib import AbstractContextManager
+if TYPE_CHECKING:
+    import contextvars          # noqa: F401
+    from typing import Set
+from typing_extensions import Protocol
 
 import numpy as np
 import theano
 import theano.tensor as tt
 
 from ..backends.base import MultiTrace #, TraceLike, TraceDict
-from ..backends.ndarray import point_list_to_multitrace
 from .distribution import _DrawValuesContext, _DrawValuesContextBlocker, is_fast_drawable, _compile_theano_function, vectorized_ppc
 from ..model import Model, get_named_nodes_and_relations, ObservedRV, MultiObservedRV, modelcontext
 from ..exceptions import IncorrectArgumentsError
@@ -31,17 +32,103 @@ Point = Dict[str, np.ndarray]
 #         return trace
 #     if isinstance(trace, list) and all((isinstance(x, MultiTrace) for x in trace)):
 
+class HasName(Protocol):
+    name = None                 # type: str
+
+if TYPE_CHECKING:
+    _TraceDictParent = UserDict[str, np.ndarray]
+else:
+    _TraceDictParent = UserDict
+
+class _TraceDict(_TraceDictParent):
+    """This class extends the standard trace-based representation
+    of traces by adding some helpful attributes used in posterior predictive
+    sampling.
+
+    Attributes
+    ~~~~~~~~~~
+        varnames: list of strings"""
+
+    varnames = None             # type: List[str]
+    _len = None                 # type: int
+    data = None                 # type: Dict[str, np.ndarray]
+    
+
+    def __init__(self, point_list: Optional[List[Dict[str, np.ndarray]]] = None, \
+                 multi_trace: Optional[MultiTrace] = None,
+                 dict: Optional[Dict[str, np.ndarray]] = None):
+        """
+
+        """
+        if multi_trace:
+            assert point_list is None and dict is None
+            self.data = {}      # Dict[str, np.ndarray]
+            self._len = sum((len(multi_trace._straces[chain]) for chain in multi_trace.chains))
+            self.varnames = multi_trace.varnames
+            for vn in multi_trace.varnames:
+                self.data[vn] = multi_trace.get_values(vn)
+        if point_list is not None:
+            assert multi_trace is None and dict is None
+            self.varnames = varnames = list(point_list[0].keys())
+            rep_values = [point_list[0][varname ]for varname in varnames]
+            # translate the point list.
+            self._len = num_points = len(point_list)
+            def arr_for(val):
+                if np.isscalar(val):
+                    return np.ndarray(shape=(num_points,))
+                elif isinstance(val, np.ndarray):
+                    shp = (num_points,) + val.shape
+                    return np.ndarray(shape=shp)
+                else:
+                    raise TypeError("Illegal object %s of type %s as value of variable in point list."%(val, type(val)))
+            self.data = {name: arr_for(val) for name, val in zip(varnames, rep_values)}
+            for i, point in enumerate(point_list):
+                for var, value in point.items():
+                    self.data[var][i] = value
+        if dict is not None:
+            assert point_list is None and multi_trace is None
+            self.data = dict
+            self.varnames = list(dict.keys())
+            self._len = dict[self.varnames[0]].shape[0]
+        assert self.varnames is not None and self._len is not None and self.data is not None
+
+    def __len__(self) -> int:
+        return self._len
+
+    def _extract_slice(self, slc: slice) -> '_TraceDict':
+        sliced_dict = {}        # type: Dict[str, np.ndarray]
+        def apply_slice(arr: np.ndarray) -> np.ndarray:
+            if len(arr.shape) == 1:
+                return arr[slc]
+            else:
+                return arr[slc,:]
+        for vn, arr in self.data.items():
+            sliced_dict[vn] = apply_slice(arr)
+        return _TraceDict(dict=sliced_dict)
+
+    def __getitem__(self, item: Union[str, slice, HasName]) -> Union['_TraceDict', np.ndarray]:
+        if isinstance(item, str):
+            return super(_TraceDict, self).__getitem__(item)
+        elif isinstance(item, slice):
+            return self._extract_slice(item)
+        elif hasattr(item, 'name'):
+            return super(_TraceDict, self).__getitem__(item.name)
+        else:
+            raise IndexError("Illegal index %s for _TraceDict"%str(item))
+
+
+
 def sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarray]]],
                                 samples: Optional[int]=None,
                                 model: Optional[Model]=None,
                                 var_names: Optional[List[str]]=None,
-                                keep_size: Optional[bool]=False,
+                                keep_size: bool=False,
                                 random_seed=None) -> Dict[str, np.ndarray]:
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
     ----------
-    trace : MultiTrace
+    trace : MultiTrace or List of points
         Trace generated from MCMC sampling.
     samples : int, optional
         Number of posterior predictive samples to generate. Defaults to one posterior predictive
@@ -67,7 +154,7 @@ def sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarr
 
     ### Implementation note: primarily this function canonicalizes the arguments:
     ### Establishing the model context, wrangling the number of samples,
-    ### Canonicalizing the trace argument into a MultiTrace object and fitting it
+    ### Canonicalizing the trace argument into a _TraceDict object and fitting it
     ### to the requested number of samples.  Then it invokes posterior_predictive_draw_values
     ### *repeatedly*.  It does this repeatedly, because the trace argument is set up to be
     ### the same as the number of samples. So if the number of samples requested is
@@ -77,26 +164,25 @@ def sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarr
     model = modelcontext(model)
 
     if keep_size and samples is not None:
-        raise IncorrectArgumentsError("Should not specify both keep_size and samples argukments")
+        raise IncorrectArgumentsError("Should not specify both keep_size and samples arguments")
+    if keep_size and not isinstance(trace, MultiTrace):
+        # arguably this should be just a warning.
+        raise IncorrectArgumentsError("keep_size argument only applies when sampling from MultiTrace.")
 
     if isinstance(trace, list) and all((isinstance(x, dict) for x in trace)):
-       _trace = point_list_to_multitrace(trace, model)
+       _trace = _TraceDict(point_list=trace)
     elif isinstance(trace, MultiTrace):
-        _trace = trace
+        _trace = _TraceDict(multi_trace=trace)
     else:
         raise TypeError("Unable to generate posterior predictive samples from argument of type %s"%type(trace))
 
     len_trace = len(_trace)
-    try:
-        nchain = _trace.nchains
-    except AttributeError:
-        nchain = 1
 
-    assert isinstance(_trace, MultiTrace)
+    assert isinstance(_trace, _TraceDict)
 
     _samples = [] # type: List[int]
     # temporary replacement for more complicated logic.
-    max_samples: int = len(trace) * nchain
+    max_samples: int = len_trace
     if samples is None or samples == max_samples:
         _samples = [max_samples]
     elif samples < max_samples:
@@ -104,28 +190,14 @@ def sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarr
                       "and/or chains may not be represented in the returned posterior "
                       "predictive sample")
         # if this is less than the number of samples in the trace, take a slice and
-        # work with that.  It's too hard for me to deal with uneven-length chains in the
-        # MultiTrace, so we just don't let you do that. [2019/08/19:rpg]
-        if divmod(samples, nchain)[1] != 0:
-            raise IncorrectArgumentsError("Number of samples must be a multiple of the number of chains in the trace.")
-        _trace = _trace[slice(samples // nchain)]
+        # work with that.
+        _trace = _trace[slice(samples)]
         _samples = [samples]
     elif samples > max_samples:
         full, rem = divmod(samples, max_samples)
         _samples = (full * [max_samples]) + ([rem] if rem != 0 else [])
     else:
         raise IncorrectArgumentsError("Unexpected combination of samples (%s) and max_samples (%d)"%(samples, max_samples))
-
-    # if keep_size and samples is not None:
-    #     raise IncorrectArgumentsError("Should not specify both keep_size and samples arguments")
-
-    # if samples is None:
-    #     samples = len(trace) * nchain
-
-    # if samples < len_trace * nchain:
-    #     warnings.warn("samples parameter is smaller than nchains times ndraws, some draws "
-    #                  "and/or chains may not be represented in the returned posterior "
-    #                  "predictive sample")
 
     if var_names is None:
         vars = model.observed_RVs
@@ -135,19 +207,19 @@ def sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarr
     if random_seed is not None:
         np.random.seed(random_seed)
 
-#    indices = np.arange(_samples)
-
     ppc_trace = _ExtendableTrace()
     for s in _samples:
+        strace = _trace if s == len_trace else _trace[slice(0, s)]
         try:
-            values = posterior_predictive_draw_values(cast(List[Any], vars), _trace, s)
+            values = posterior_predictive_draw_values(cast(List[Any], vars), strace, s)
             new_trace = {k.name: v for (k, v) in zip(vars, values)}  # type: Dict[str, np.ndarray]
             ppc_trace.extend_trace(new_trace)
         except KeyboardInterrupt:
             pass
 
     if keep_size:
-        return {k: ary.reshape((nchain, len_trace, *ary.shape[1:])) for k, ary in ppc_trace.items() }
+        assert isinstance(trace, MultiTrace)
+        return {k: ary.reshape((trace.nchains, len(trace), *ary.shape[1:])) for k, ary in ppc_trace.items() }
     else:
         return ppc_trace.data # this gets us a Dict[str, np.ndarray] instead of my wrapped equiv.
 
@@ -164,7 +236,7 @@ class _ExtendableTrace(_ETPParent):
             else:
                 self.data[k] = v
 
-def posterior_predictive_draw_values(vars: List[Any], trace: MultiTrace, samples: int) -> List[np.ndarray]:
+def posterior_predictive_draw_values(vars: List[Any], trace: _TraceDict, samples: int) -> List[np.ndarray]:
     with _PosteriorPredictiveSampler(vars, trace, samples, None) as sampler:
         return sampler.draw_values()
 
@@ -173,7 +245,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
 
     # inputs
     vars: List[Any]
-    trace: MultiTrace
+    trace: _TraceDict
     samples: int
     size: Optional[int] # not supported!
 
@@ -190,13 +262,11 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
     named_nodes_children: Dict[str, Any]
     _tok = None                  # type: contextvars.Token
     
-    def __init__(self, vars, trace, samples, size=None):
+    def __init__(self, vars, trace: _TraceDict, samples, model: Optional[Model], size=None):
         if size is not None:
             raise NotImplementedError("sample_posterior_predictive does not support the size argument at this time.")
-        if vars is None:
-            self.vars = model.observed_RVs
-        else:
-            self.vars = vars
+        assert vars is not None
+        self.vars = vars
         self.trace = trace
         self.samples = samples
         self.size = size
@@ -321,7 +391,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
     ``_DrawValuesContext`` bookkeeping object and evaluates the "fast drawable"
     parts of the model.'''
         vars: List[Any] = self.vars
-        trace: MultiTrace = self.trace
+        trace: _TraceDict = self.trace
         samples: int = self.samples
 
         # initialization phase
@@ -336,7 +406,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     continue
                 name = getattr(var, 'name', None)
                 if (var, samples) in drawn:
-                    evaluated[i] = val = drawn[(var, samples)]
+                    evaluated[i] = drawn[(var, samples)]
                                 # We filter out Deterministics by checking for `model` attribute
                 elif name is not None and hasattr(var, 'model') and name in trace.varnames:
                     # param.name is in point
@@ -375,7 +445,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     else:
                         self.named_nodes_children[k].update(nnc[k])
 
-    def draw_value(self, param, trace: Optional[MultiTrace]=None, givens = None):
+    def draw_value(self, param, trace: Optional[_TraceDict]=None, givens = None):
         """Draw a set of random values from a distribution or return a constant.
 
         Parameters
@@ -436,9 +506,8 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                         # We want to draw values to infer the dist_shape,
                         # we don't want to store these drawn values to the context
                         with _DrawValuesContextBlocker():
-                            point = next(trace.points()) if trace else None
-                            temp_val = np.atleast_1d(dist_tmp.random(point=point,
-                                                                    size=None))
+                            point = trace[0] if trace else None
+                            temp_val = np.atleast_1d(dist_tmp.random(point=point, size=None))
                             dist_tmp.shape = tuple(temp_val.shape)
                         return random_sample(dist_tmp.random, point=trace, size=samples, param=param, shape=tuple(dist_tmp.shape))
                 else: # has a distribution, but no observations
