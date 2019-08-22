@@ -191,10 +191,14 @@ def sample_smc(
 
     if parallel and cores > 1:
         pool = mp.Pool(processes=cores)
-        results = pool.starmap(likelihood_logp, [(sample,) for sample in posterior])
+        priors = pool.starmap(prior_logp, [(sample,) for sample in posterior])
+        likelihoods = pool.starmap(likelihood_logp, [(sample,) for sample in posterior])
     else:
-        results = [likelihood_logp(sample) for sample in posterior]
-    likelihoods = np.array(results).squeeze()
+        priors = [prior_logp(sample) for sample in posterior]
+        likelihoods = [likelihood_logp(sample) for sample in posterior]
+
+    priors = np.array(priors).squeeze()
+    likelihoods = np.array(likelihoods).squeeze()
 
     while beta < 1:
         beta, old_beta, weights, sj = calc_beta(beta, likelihoods, threshold)
@@ -203,6 +207,7 @@ def sample_smc(
         # resample based on plausibility weights (selection)
         resampling_indexes = np.random.choice(np.arange(draws), size=draws, p=weights)
         posterior = posterior[resampling_indexes]
+        priors = priors[resampling_indexes]
         likelihoods = likelihoods[resampling_indexes]
 
         # compute proposal distribution based on weights
@@ -219,7 +224,6 @@ def sample_smc(
         pm._log.info("Stage: {:3d} Beta: {:.3f} Steps: {:3d}".format(stage, beta, n_steps))
         # Apply Metropolis kernel (mutation)
         proposed = draws * n_steps
-        priors = np.array([prior_logp(sample) for sample in posterior]).squeeze()
         tempered_logp = priors + likelihoods * beta
 
         parameters = (
@@ -238,18 +242,31 @@ def sample_smc(
             results = pool.starmap(
                 metrop_kernel,
                 [
-                    (posterior[draw], tempered_logp[draw], likelihoods[draw], *parameters)
+                    (
+                        posterior[draw],
+                        tempered_logp[draw],
+                        priors[draw],
+                        likelihoods[draw],
+                        *parameters,
+                    )
                     for draw in range(draws)
                 ],
             )
         else:
             results = [
-                metrop_kernel(posterior[draw], tempered_logp[draw], likelihoods[draw], *parameters)
+                metrop_kernel(
+                    posterior[draw],
+                    tempered_logp[draw],
+                    priors[draw],
+                    likelihoods[draw],
+                    *parameters
+                )
                 for draw in tqdm(range(draws), disable=not progressbar)
             ]
 
-        posterior, acc_list, likelihoods = zip(*results)
+        posterior, acc_list, priors, likelihoods = zip(*results)
         posterior = np.array(posterior)
+        priors = np.array(priors)
         likelihoods = np.array(likelihoods)
         acc_rate = sum(acc_list) / proposed
         stage += 1
