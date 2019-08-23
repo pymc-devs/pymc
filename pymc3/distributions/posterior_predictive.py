@@ -467,11 +467,20 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
         """
         samples = self.samples
 
-        def random_sample(meth: Callable[..., np.ndarray], param, point: MultiTrace, size: int, shape: Tuple[int, ...]) -> np.ndarray:
-            val = meth(point=trace, size=size)
+        def random_sample(meth: Callable[..., np.ndarray], param, point: _TraceDict, size: int, shape: Tuple[int, ...]) -> np.ndarray:
+            val = meth(point=point, size=size)
             if size == 1:
                 val = np.expand_dims(val, axis=0)
-            assert val.shape == (size, ) + shape, "Sampling from random of %s yields wrong shape"%param
+            try:
+                assert val.shape == (size, ) + shape, "Sampling from random of %s yields wrong shape"%param
+            # error-quashing here is *extremely* ugly, but it seems to be what the logic in DensityDist wants.
+            except AssertionError as e:
+                if hasattr(param, 'distribution') and hasattr(param.distribution, 'wrap_random_with_dist_shape') \
+                   and not param.distribution.wrap_random_with_dist_shape:
+                    pass
+                else:
+                    raise e
+                
             return val
 
         if isinstance(param, (numbers.Number, np.ndarray)):
