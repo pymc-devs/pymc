@@ -106,11 +106,13 @@ class _TraceDict(_TraceDictParent):
             sliced_dict[vn] = apply_slice(arr)
         return _TraceDict(dict=sliced_dict)
 
-    def __getitem__(self, item: Union[str, slice, HasName]) -> Union['_TraceDict', np.ndarray]:
+    def __getitem__(self, item: Union[str, slice, int, HasName]) -> Union['_TraceDict', np.ndarray]:
         if isinstance(item, str):
             return super(_TraceDict, self).__getitem__(item)
         elif isinstance(item, slice):
             return self._extract_slice(item)
+        elif isinstance(item, int):
+            return _TraceDict(dict={k: np.atleast_1d(v[item]) for k, v in self.data.items()})
         elif hasattr(item, 'name'):
             return super(_TraceDict, self).__getitem__(item.name)
         else:
