@@ -11,6 +11,7 @@ import pymc3 as pm
 from pymc3.distributions.distribution import (draw_values,
                                               _DrawValuesContext,
                                               _DrawValuesContextBlocker)
+from pymc3.distributions.shape_utils import shapes_broadcasting
 from .helpers import SeededTest
 from .test_distributions import (
     build_model, Domain, product, R, Rplus, Rplusbig, Runif, Rplusdunif,
@@ -923,23 +924,72 @@ def test_mixture_random_shape():
 
 
 class TestDensityDist():
-    @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
-    def test_density_dist_with_random_sampleable(self, shape):
+    @pytest.mark.parametrize(
+        ["mu_shape", "shape"],
+        [
+            [(), ()],
+            [(), (3,)],
+            [(1,), (3,)],
+            [(3,), (3,)],
+            [(1,), (3, 2)],
+            [(1, 1), (3, 2)],
+            [(3, 1), (3, 2)],
+            [(3, 1), (3, 1)],
+            [(3, 2), (3, 1)],
+            [(3, 2), (3, 2)],
+        ],
+        ids=str,
+    )
+    def test_density_dist_with_random_sampleable(self, mu_shape, shape):
+        observed = np.random.randn(100, *shape)
         with pm.Model() as model:
             mu = pm.Normal('mu', 0, 1)
-            normal_dist = pm.Normal.dist(mu, 1, shape=shape)
+            normal_dist = pm.Normal.dist(mu, 1, shape=mu_shape)
             obs = pm.DensityDist(
                 'density_dist',
                 normal_dist.logp,
-                observed=np.random.randn(100, *shape),
+                observed=observed,
                 shape=shape,
                 random=normal_dist.random)
             trace = pm.sample(100)
 
         samples = 500
         size = 100
+        dist_shape = shapes_broadcasting(mu_shape, observed.shape)
         ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model, size=size)
-        assert ppc['density_dist'].shape == (samples, size) + obs.distribution.shape
+        assert ppc['density_dist'].shape == (samples, size) + dist_shape
+
+    @pytest.mark.parametrize(
+        ["mu_shape", "shape"],
+        [
+            [(), ()],
+            [(), (3,)],
+            [(1,), (3,)],
+            [(3,), (3,)],
+            [(1,), (3, 2)],
+            [(1, 1), (3, 2)],
+            [(3, 1), (3, 2)],
+            [(3, 1), (3, 1)],
+            [(3, 2), (3, 1)],
+            [(3, 2), (3, 2)],
+        ],
+        ids=str,
+    )
+    def test_density_dist_with_random_sampleable_prior(self, mu_shape, shape):
+        observed = np.random.randn(100, *shape)
+        samples = 10
+        with pm.Model():
+            mu = pm.Normal('mu', 0, 1)
+            normal_dist = pm.Normal.dist(mu, 1, shape=mu_shape)
+            obs = pm.DensityDist(
+                'density_dist',
+                normal_dist.logp,
+                observed=observed,
+                shape=shape,
+                random=normal_dist.random)
+            prior = pm.sample_prior_predictive(samples)
+        dist_shape = shapes_broadcasting(mu_shape, observed.shape)
+        assert prior['density_dist'].shape == (samples,) + dist_shape
 
     @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
     def test_density_dist_with_random_sampleable_failure(self, shape):

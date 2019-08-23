@@ -12,6 +12,7 @@ from ..model import (
 from ..vartypes import string_types, theano_constant
 from .shape_utils import (
     to_tuple,
+    shapes_broadcasting,
     get_broadcastable_dist_samples,
     broadcast_dist_samples_shape,
 )
@@ -243,8 +244,8 @@ class DensityDist(Distribution):
             argument can be added as required.
         wrap_random_with_dist_shape: bool (Optional)
             If ``True``, the provided ``random`` callable is passed through
-            ``generate_samples`` to make the random number generator aware of
-            the ``DensityDist`` instance's ``shape``.
+            :func:`~generate_samples` to make the random number generator aware
+            of the ``DensityDist`` instance's ``shape``.
             If ``False``, it is used exactly as it was provided.
         check_shape_in_random: bool (Optional)
             If ``True``, the shape of the random samples generate in the
@@ -386,23 +387,37 @@ class DensityDist(Distribution):
             not_broadcast_kwargs.update(**kwargs)
             if self.wrap_random_with_dist_shape:
                 size = to_tuple(size)
-                with _DrawValuesContextBlocker():
-                    test_draw = generate_samples(
-                        self.rand,
-                        size=None,
-                        not_broadcast_kwargs=not_broadcast_kwargs,
+                # We don't know anything about what self.rand returns so we
+                # have to try and make a test draw to check returned shape
+                try:
+                    with _DrawValuesContextBlocker():
+                        test_draw = self.rand(point=point, size=size)
+                        single_draw_shape = test_draw.shape
+                except Exception:
+                    # Something went wrong so we cannot know the true
+                    # single_draw_shape, and set it to an empty tuple. This
+                    # means that we must trust that self.shape is correct
+                    single_draw_shape = tuple()
+                if single_draw_shape[:len(size)] == size and point is not None:
+                    # The test shape has the size prepend and the supplied
+                    # point is not empty. This can happen when sampling from
+                    # the posterior predictive so we must take special care
+                    return self._ppc_random(
+                        single_draw_shape=single_draw_shape,
+                        point=point,
+                        size=size,
                     )
-                    test_shape = test_draw.shape
-                if self.shape[:len(size)] == size:
-                    dist_shape = size + self.shape
+                self_shape = to_tuple(self.shape)
+                if self_shape[:len(size)] == size:
+                    dist_shape = size + self_shape
                 else:
-                    dist_shape = self.shape
+                    dist_shape = self_shape
                 broadcast_shape = broadcast_dist_samples_shape(
-                    [dist_shape, test_shape],
+                    [dist_shape, single_draw_shape],
                     size=size
                 )
                 broadcast_shape = broadcast_shape[
-                    :len(broadcast_shape) - len(test_shape)
+                    :len(broadcast_shape) - len(single_draw_shape)
                 ]
                 samples = generate_samples(
                     self.rand,
@@ -445,6 +460,85 @@ class DensityDist(Distribution):
         else:
             raise ValueError("Distribution was not passed any random method "
                             "Define a custom random method and pass it as kwarg random")
+
+    def _ppc_random(self, single_draw_shape, size, point):
+        """This method is used by ``self.random`` to generate samples when a the
+        ``self.rand`` attribute returns samples that are prepended by the size
+        tuple.
+        This happens when we sample from the posterior predictive distribution.
+        We cannot rely on :func:`~generate_samples` to call ``self.rand``
+        because the ``broadcast_shape`` leads to ``size`` being changed later
+        on into something like ``size + broadcast_shape``. This means we must
+        do the call to ``self.rand`` ourselves.
+        """
+        self_shape = to_tuple(self.shape)
+        # We know that a single draw is prepended by size, so we split it to
+        # get the core draw shape and see how that is different from self_shape
+        core_draw_shape = single_draw_shape[len(size):]
+        extra_self_shape = self_shape[:len(self_shape) - len(core_draw_shape)]
+
+        # The core part of self_shape can have entries that are different than
+        # what is in core_draw_shape, but still be able to broadcast with it
+        # e.g. self.shape=(3,) and core_draw_shape=(1,) so we identify these
+        # axes.
+        # Further down the line, this leads to a problem: if we have no way of
+        # controlling self.rand's output shape in the core axes, how can we
+        # make multiple draws for them? The hackish solution is to draw many
+        # times in an axes that is to the left of single_sample_shape, and then
+        # permute the result, and reshape to remove the core_draw_shape=(1,).
+        # For example:
+        # Lets assume that single_draw_shape=(100, 1, 3, 2),
+        # self.shape=(4, 1, 2) and size=(100,). This means that we will want
+        # to call self.rand(point, size=(4,)), which should return an array
+        # with shape (4, 100, 1, 3, 2). We later transpose the axes to get an
+        # array shaped like (100, 4, 1, 3, 2) and finally reshape to the final
+        # correct output shape (100, 4, 3, 2)
+        core_output_shape = shapes_broadcasting(
+            core_draw_shape,
+            self_shape[len(extra_self_shape):],
+            raise_exception=True,
+        )
+        final_output_shape = size + extra_self_shape + core_output_shape
+        # Now comes the ugly task of finding out how we must transpose the axis
+        # of the array outputed by self.rand to the correct order
+        extended_size = list(extra_self_shape)
+        transpose_axes_destination = [
+            i + len(size) for i in range(len(extra_self_shape))
+        ]
+        tail = []
+        offset = len(size) + len(extra_self_shape)
+        for i, (cs, ss) in enumerate(
+            zip(core_draw_shape, self_shape[len(extra_self_shape):])
+        ):
+            if cs == 1 and ss != 1:
+                # This will add an artificial axis that we must permute and
+                # reshape
+                extended_size.append(ss)
+                transpose_axes_destination.append(offset)
+                # We increase the offset by one more because of our artificial
+                # axis
+                offset += 1
+            tail.append(offset)
+            offset += 1
+        extended_size = tuple(extended_size)
+        head = list(range(len(size)))
+        transpose_axes_destination = transpose_axes_destination + head + tail
+        # Now we draw the samples using rand in a loop
+        number_of_calls = np.prod(extended_size) if len(extended_size) > 0 else 0
+        output = np.array(
+            [self.rand(point=point, size=size) for _ in range(number_of_calls)]
+        )
+        # First intermediate output should have its
+        # shape == (extended_size + size + core_output_shape)
+        output = np.reshape(output, extended_size + size + core_draw_shape)
+        # Now we move the axis to the final destination and reshape
+        output = np.moveaxis(
+            output,
+            source=range(len(transpose_axes_destination)),
+            destination=transpose_axes_destination
+        )
+        output = np.reshape(output, final_output_shape)
+        return output
 
 
 class _DrawValuesContext(Context, metaclass=InitContextMeta):

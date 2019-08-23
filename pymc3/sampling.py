@@ -16,6 +16,7 @@ from theano.tensor import Tensor
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .distributions.distribution import draw_values
+from .distributions.shape_utils import to_tuple
 from .model import modelcontext, Point, all_continuous, Model
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
@@ -1145,40 +1146,58 @@ def sample_posterior_predictive(trace,
                       DeprecationWarning)
     if vars is None:
         vars = model.observed_RVs
+    if var_names is None:
+        var_names = [rv.name for rv in vars]
 
     if random_seed is not None:
         np.random.seed(random_seed)
 
-    indices = np.arange(samples)
+    size = to_tuple(size)
 
-    
-    if progressbar:
-        indices = tqdm(indices, total=samples)
+    # Now we extract all the data from the trace and build a single dictionary,
+    # point, from variable names to values.
+    point = defaultdict(list) # type: Dict[str, List[Any]]
+    for idx in range(samples):
+        if nchain > 1:
+            chain_idx, point_idx = np.divmod(idx, len_trace)
+            param = trace._straces[chain_idx % nchain].point(point_idx)
+        else:
+            param = trace[idx % len_trace]
+        for key, value in param.items():
+            point[key].append(value)
 
-    ppc_trace_t = _DefaultTrace(samples)
-    try:
-        for idx in indices:
-            if nchain > 1:
-                chain_idx, point_idx = np.divmod(idx, len_trace)
-                param = trace._straces[chain_idx % nchain].point(point_idx)
-            else:
-                param = trace[idx % len_trace]
+    for key, value in point.items():
+        # Each variable has its core dimensions in value.shape[1:], the first
+        # axis is samples.
+        # To get the output posterior predictive shape required by samples and
+        # size, we need the point values to have a shape equal to:
+        # (samples,) + size + value.shape[1:]
+        # Naively, this would mean that we should reshape value adding the
+        # extra dimensions implied by size, and then tile or repeat that size
+        # number of times. This is expensive memory-wise so we make a view
+        # with as_strided
+        value = np.asarray(value)
+        strides = value.strides
+        value = np.lib.stride_tricks.as_strided(
+            value,
+            shape=value.shape[:1] + size + value.shape[1:],
+            strides=strides[:1] + (0,)*len(size) + strides[1:],
+        )
+        point[key] = value
 
-            values = draw_values(vars, point=param, size=size)
-            for k, v in zip(vars, values):
-                ppc_trace_t.insert(k.name, v, idx)
+    # All the sampling is done by draw_values, but it needs size
+    # to match the number of samples taken from the trace in order
+    # to correctly interpret that the first dimension in the array
+    # of point values are IID draws that need to be vectorized over
+    if len(var_names) > 0:
+        values = draw_values(vars, point=point, size=(samples,) + size)
+        ppc_trace = dict(zip(var_names, values))
 
-    except KeyboardInterrupt:
-        pass
-
-    finally:
-        if progressbar:
-            indices.close()
-
-    ppc_trace = ppc_trace_t.trace_dict
-    if keep_size:
-        for k, ary in ppc_trace.items():
-            ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
+        if keep_size:
+            for k, ary in ppc_trace.items():
+                ppc_trace[k] = ary.reshape((nchain, len_trace, *ary.shape[1:]))
+    else:
+        ppc_trace = dict()
 
     return ppc_trace
 
