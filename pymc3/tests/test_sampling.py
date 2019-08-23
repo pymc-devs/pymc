@@ -735,13 +735,9 @@ class TestSamplePriorPredictive(SeededTest):
         assert sim_priors['obs'].shape == (20,) + obs.distribution.shape
         assert sim_ppc['obs'].shape == (20,) + obs.distribution.shape
 
-        sim_priors = pm.fast_sample_prior_predictive(samples=20,
-                                                model=dm_model)
         sim_ppc = pm.fast_sample_posterior_predictive(burned_trace,
                                                  samples=20,
                                                  model=dm_model)
-        assert sim_priors['probs'].shape == (20, 6)
-        assert sim_priors['obs'].shape == (20,) + obs.distribution.shape
         assert sim_ppc['obs'].shape == (20,) + obs.distribution.shape
 
 
