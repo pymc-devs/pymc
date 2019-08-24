@@ -4,8 +4,9 @@ import theano
 import theano.tensor as tt
 from ..ode.utils import augment_system, ODEGradop
 
+
 class DifferentialEquation(theano.Op):
-    '''
+    """
     Specify an ordinary differential equation
 
     .. math::
@@ -35,17 +36,17 @@ class DifferentialEquation(theano.Op):
         times=np.arange(0.5, 5, 0.5)
 
         ode_model = DifferentialEquation(func=odefunc, t0=0, times=times, n_states=1, n_odeparams=1)
-    '''
+    """
 
-    __props__ = ('func', 't0', 'times', 'n_states', 'n_odeparams')
-    
+    __props__ = ("func", "t0", "times", "n_states", "n_odeparams")
+
     def __init__(self, func, times, n_states, n_odeparams, t0=0):
         if not callable(func):
             raise ValueError("Argument func must be callable.")
         if n_states < 1:
-            raise ValueError('Argument n_states must be at least 1.')
+            raise ValueError("Argument n_states must be at least 1.")
         if n_odeparams <= 0:
-            raise ValueError('Argument n_odeparams must be positive.')
+            raise ValueError("Argument n_odeparams must be positive.")
 
         # Public
         self.func = func
@@ -68,7 +69,6 @@ class DifferentialEquation(theano.Op):
 
         self._grad_op = ODEGradop(self._numpy_vsp)
 
-
     def _make_sens_ic(self):
         # The sensitivity matrix will always have consistent form.
         # If the first n_odeparams entries of the parameters vector in the simulate call
@@ -80,7 +80,7 @@ class DifferentialEquation(theano.Op):
         # correspond to initial conditions of the system,
         # then the last n_states columns of the sensitivity matrix should form
         # an identity matrix
-        sens_matrix[:, -self.n_states:] = np.eye(self.n_states)
+        sens_matrix[:, -self.n_states :] = np.eye(self.n_states)
 
         # We need the sensitivity matrix to be a vector (see augmented_function)
         # Ravel and return
@@ -89,7 +89,7 @@ class DifferentialEquation(theano.Op):
         return dydp
 
     def _system(self, Y, t, p):
-        '''
+        """
         This is the function that will be passed to odeint.
         Solves both ODE and sensitivities
         Args:
@@ -98,28 +98,26 @@ class DifferentialEquation(theano.Op):
             p (vector): parameters
         Returns:
             derivatives (vector): derivatives of state and gradient
-        '''
+        """
 
-        dydt, ddt_dydp = self._augmented_func(Y[:self._n], t, p, Y[self._n:])
+        dydt, ddt_dydp = self._augmented_func(Y[: self._n], t, p, Y[self._n :])
         derivatives = np.concatenate([dydt, ddt_dydp])
         return derivatives
 
     def _simulate(self, parameters):
         # Initial condition comprised of state initial conditions and raveled
         # sensitivity matrix
-        y0 = np.concatenate([parameters[self.n_odeparams:], self._sens_ic])
+        y0 = np.concatenate([parameters[self.n_odeparams :], self._sens_ic])
 
         # perform the integration
-        sol = scipy.integrate.odeint(func=self._system,
-                                     y0=y0,
-                                     t=self._augmented_times,
-                                     args=(parameters,) 
-                                     )
+        sol = scipy.integrate.odeint(
+            func=self._system, y0=y0, t=self._augmented_times, args=(parameters,)
+        )
         # The solution
-        y = sol[1:, :self.n_states]
+        y = sol[1:, : self.n_states]
 
         # The sensitivities, reshaped to be a sequence of matrices
-        sens = sol[1:, self.n_states:].reshape(len(self.times), self._n, self._m)
+        sens = sol[1:, self.n_states :].reshape(len(self.times), self._n, self._m)
 
         return y, sens
 
@@ -141,7 +139,7 @@ class DifferentialEquation(theano.Op):
         # Each element of sens is an nxm sensitivity matrix
         # There is one sensitivity matrix per time step, making sens a (len(times), n_states, len(parameter))
         # dimensional array.  Reshaping the sens array in this way is like stacking each of the elements of sens on top
-        #of one another.
+        # of one another.
         numpy_sens = sens.reshape((self.n_states * len(self.times), len(parameters)))
         # The dot product here is equivalent to np.einsum('ijk,jk', sens, g)
         # if sens was not reshaped and if g had the same shape as yobs
@@ -149,9 +147,17 @@ class DifferentialEquation(theano.Op):
 
     def make_node(self, odeparams, y0):
         if len(odeparams) != self.n_odeparams:
-            raise ValueError('odeparams has too many or too few parameters.  Expected {a} parameter(s) but got {b}'.format(a=self.n_odeparams, b=len(odeparams)))
+            raise ValueError(
+                "odeparams has too many or too few parameters.  Expected {a} parameter(s) but got {b}".format(
+                    a=self.n_odeparams, b=len(odeparams)
+                )
+            )
         if len(y0) != self.n_states:
-            raise ValueError('y0 has too many or too few parameters.  Expected {a} parameter(s) but got {b}'.format(a=self.n_states, b=len(y0)))
+            raise ValueError(
+                "y0 has too many or too few parameters.  Expected {a} parameter(s) but got {b}".format(
+                    a=self.n_states, b=len(y0)
+                )
+            )
 
         if np.ndim(odeparams) > 1:
             odeparams = np.ravel(odeparams)
