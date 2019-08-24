@@ -2,11 +2,9 @@ import numpy as np
 import scipy
 import theano
 import theano.tensor as tt
-from pymc3.ode.utils import augment_system, ODEGradop
-
+from ..ode.utils import augment_system, ODEGradop
 
 class DifferentialEquation(theano.Op):
-
     '''
     Specify an ordinary differential equation
 
@@ -34,9 +32,9 @@ class DifferentialEquation(theano.Op):
             #Logistic differential equation
             return p[0]*y[0]*(1-y[0])
        
-        times = np.arange(0.5, 5, 0.5)
+        times=np.arange(0.5, 5, 0.5)
 
-        ode_model = DifferentialEquation(func = odefunc, t0 = 0, times = times, n_states = 1, n_odeparams = 1)
+        ode_model = DifferentialEquation(func=odefunc, t0=0, times=times, n_states=1, n_odeparams=1)
     '''
 
     __props__ = ('func', 't0', 'times', 'n_states', 'n_odeparams')
@@ -49,14 +47,14 @@ class DifferentialEquation(theano.Op):
         if n_odeparams <= 0:
             raise ValueError('Argument n_odeparams must be positive.')
 
-        #Public
+        # Public
         self.func = func
         self.t0 = t0
         self.times = tuple(times)
         self.n_states = n_states
         self.n_odeparams = n_odeparams
 
-        #Private
+        # Private
         self._n = n_states
         self._m = n_odeparams + n_states
 
@@ -140,13 +138,13 @@ class DifferentialEquation(theano.Op):
     def _numpy_vsp(self, parameters, g):
         _, sens = self._cached_simulate(np.array(parameters))
 
-        #Each element of sens is an nxm sensitivity matrix
-        #There is one sensitivity matrix per time step, making sens a (len(times), n_states, len(parameter))
-        #dimensional array.  Reshaping the sens array in this way is like stacking each of the elements of sens on top
+        # Each element of sens is an nxm sensitivity matrix
+        # There is one sensitivity matrix per time step, making sens a (len(times), n_states, len(parameter))
+        # dimensional array.  Reshaping the sens array in this way is like stacking each of the elements of sens on top
         #of one another.
         numpy_sens = sens.reshape((self.n_states * len(self.times), len(parameters)))
-        #The dot product here is equivalent to np.einsum('ijk,jk', sens, g)
-        #if sens was not reshaped and if g had the same shape as yobs
+        # The dot product here is equivalent to np.einsum('ijk,jk', sens, g)
+        # if sens was not reshaped and if g had the same shape as yobs
         return numpy_sens.T.dot(g)
 
     def make_node(self, odeparams, y0):
