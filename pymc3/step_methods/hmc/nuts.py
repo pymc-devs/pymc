@@ -335,12 +335,14 @@ class _Tree:
 
         if not (diverging or turning):
             p_sum = tree1.p_sum + tree2.p_sum
-            turning0 = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
-            p_sum1 = tree1.p_sum + tree2.left.p
-            turning1 = (p_sum1.dot(tree1.left.v) <= 0) or (p_sum1.dot(tree2.left.v) <= 0)
-            p_sum2 = tree1.right.p + tree2.p_sum
-            turning2 = (p_sum2.dot(tree1.right.v) <= 0) or (p_sum2.dot(tree2.right.v) <= 0)
-            turning = (turning0 | turning1 | turning2)
+            turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
+            # Additional U turn check only when depth > 1 (to avoid redundant work).
+            if depth - 1 > 0:
+                p_sum1 = tree1.p_sum + tree2.left.p
+                turning1 = (p_sum1.dot(tree1.left.v) <= 0) or (p_sum1.dot(tree2.left.v) <= 0)
+                p_sum2 = tree1.right.p + tree2.p_sum
+                turning2 = (p_sum2.dot(tree1.right.v) <= 0) or (p_sum2.dot(tree2.right.v) <= 0)
+                turning = (turning | turning1 | turning2)
 
             log_size = np.logaddexp(tree1.log_size, tree2.log_size)
             if logbern(tree2.log_size - log_size):
