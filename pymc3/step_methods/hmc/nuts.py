@@ -279,15 +279,18 @@ class _Tree:
         self.log_size = np.logaddexp(self.log_size, tree.log_size)
         self.p_sum[:] += tree.p_sum
 
-        left, right = self.left, self.right
-        p_sum = self.p_sum
-        turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
-        p_sum1 = leftmost_p_sum + rightmost_begin.p
-        turning1 = (p_sum1.dot(leftmost_begin.v) <= 0) or (p_sum1.dot(rightmost_begin.v) <= 0)
-        p_sum2 = leftmost_end.p + rightmost_p_sum
-        turning2 = (p_sum2.dot(leftmost_end.v) <= 0) or (p_sum2.dot(rightmost_end.v) <= 0)
+        # Additional turning check only when tree depth > 0 to avoid redundant work
+        if self.depth > 0:
+            left, right = self.left, self.right
+            p_sum = self.p_sum
+            turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
+            p_sum1 = leftmost_p_sum + rightmost_begin.p
+            turning1 = (p_sum1.dot(leftmost_begin.v) <= 0) or (p_sum1.dot(rightmost_begin.v) <= 0)
+            p_sum2 = leftmost_end.p + rightmost_p_sum
+            turning2 = (p_sum2.dot(leftmost_end.v) <= 0) or (p_sum2.dot(rightmost_end.v) <= 0)
+            turning = (turning | turning1 | turning2)
 
-        return diverging, (turning | turning1 | turning2)
+        return diverging, turning
 
     def _single_step(self, left, epsilon):
         """Perform a leapfrog step and handle error cases."""
@@ -336,7 +339,7 @@ class _Tree:
         if not (diverging or turning):
             p_sum = tree1.p_sum + tree2.p_sum
             turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
-            # Additional U turn check only when depth > 1 (to avoid redundant work).
+            # Additional U turn check only when depth > 1 to avoid redundant work.
             if depth - 1 > 0:
                 p_sum1 = tree1.p_sum + tree2.left.p
                 turning1 = (p_sum1.dot(tree1.left.v) <= 0) or (p_sum1.dot(tree2.left.v) <= 0)
