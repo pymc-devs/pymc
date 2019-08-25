@@ -29,7 +29,7 @@ class DifferentialEquation(theano.Op):
 
     .. code-block:: python
 
-        def odefunc(y,t,p):
+        def odefunc(y, t, p):
             #Logistic differential equation
             return p[0]*y[0]*(1-y[0])
        
