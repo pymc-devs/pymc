@@ -91,6 +91,22 @@ class TestDrawValues:
                     np.all(val1 != val4), np.all(val2 != val3),
                     np.all(val2 != val4), np.all(val3 != val4)])
 
+    def test_gof_constant(self):
+        # Issue 3595 pointed out that slice(None) can introduce
+        # theano.gof.graph.Constant into the compute graph, which wasn't
+        # handled correctly by draw_values
+        n_d = 500
+        n_x = 2
+        n_y = 1
+        n_g = 10
+        g = np.random.randint(0, n_g, (n_d,))  # group
+        x = np.random.randint(0, n_x, (n_d,))  # x factor
+        with pm.Model():
+            multi_dim_rv = pm.Normal('multi_dim_rv', mu=0, sd=1, shape=(n_x, n_g, n_y))
+            indexed_rv = multi_dim_rv[x, g, :]
+            i = draw_values([indexed_rv])
+            assert i is not None
+
 
 class TestJointDistributionDrawValues(SeededTest):
     def test_joint_distribution(self):
