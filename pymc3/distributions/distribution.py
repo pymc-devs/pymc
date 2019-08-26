@@ -9,7 +9,7 @@ from ..model import (
     Model, get_named_nodes_and_relations, FreeRV,
     ObservedRV, MultiObservedRV, Context, InitContextMeta
 )
-from ..vartypes import string_types
+from ..vartypes import string_types, theano_constant
 from .shape_utils import (
     to_tuple,
     get_broadcastable_dist_samples,
@@ -92,7 +92,7 @@ class Distribution:
         if isinstance(val, tt.TensorVariable):
             return val.tag.test_value
 
-        if isinstance(val, (tt.TensorConstant, theano.gof.graph.Constant)):
+        if isinstance(val, theano_constant):
             return val.value
 
         return val
@@ -502,8 +502,7 @@ class _DrawValuesContextBlocker(_DrawValuesContext, metaclass=InitContextMeta):
 def is_fast_drawable(var):
     return isinstance(var, (numbers.Number,
                             np.ndarray,
-                            tt.TensorConstant,
-                            theano.gof.graph.Constant,
+                            theano_constant,
                             tt.sharedvar.SharedVariable))
 
 
@@ -593,8 +592,7 @@ def draw_values(params, point=None, size=None):
             if (next_, size) in drawn:
                 # If the node already has a givens value, skip it
                 continue
-            elif isinstance(next_, (tt.TensorConstant,
-                                    theano.gof.graph.Constant,
+            elif isinstance(next_, (theano_constant,
                                     tt.sharedvar.SharedVariable)):
                 # If the node is a theano.tensor.TensorConstant or a
                 # theano.tensor.sharedvar.SharedVariable, its value will be
@@ -785,7 +783,7 @@ def _draw_value(param, point=None, givens=None, size=None):
     """
     if isinstance(param, (numbers.Number, np.ndarray)):
         return param
-    elif isinstance(param, (tt.TensorConstant, theano.gof.graph.Constant)):
+    elif isinstance(param, theano_constant):
         return param.value
     elif isinstance(param, tt.sharedvar.SharedVariable):
         return param.get_value()
