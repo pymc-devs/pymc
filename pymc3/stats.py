@@ -987,8 +987,9 @@ def summary(trace, var_names=None, transform=lambda x: x, stat_funcs=None,
                                varnames=var_names,
                                include_transformed=include_transformed)
         rhat_pd = dict2pd(rhat, 'Rhat')
-        return pd.concat([dforg, n_eff_pd, rhat_pd],
-                         axis=1, join_axes=[dforg.index])
+        return pd.concat(
+            [dforg, n_eff_pd, rhat_pd], axis=1
+        ).reindex(dforg.index)
 
 
 def _calculate_stats(sample, batches, alpha):
