@@ -19,7 +19,6 @@ from .vartypes import *
 from .exceptions import *
 from . import sampling
 
-from .diagnostics import *
 from .backends.tracetab import *
 from .backends import save_trace, load_trace
 

@@ -40,8 +40,8 @@ class SamplerReport:
     def __init__(self):
         self._chain_warnings = {}
         self._global_warnings = []
-        self._effective_n = None
-        self._gelman_rubin = None
+        self._ess = None
+        self._rhat = None
 
     @property
     def _warnings(self):
@@ -69,7 +69,7 @@ class SamplerReport:
             self._add_warnings([warn])
             return
 
-        from pymc3 import diagnostics
+        from pymc3 import rhat, ess
 
         valid_name = [rv.name for rv in model.free_RVs + model.deterministics]
         varnames = []
@@ -81,50 +81,50 @@ class SamplerReport:
             if rv_name in trace.varnames:
                 varnames.append(rv_name)
 
-        self._effective_n = effective_n = diagnostics.effective_n(trace, varnames)
-        self._gelman_rubin = gelman_rubin = diagnostics.gelman_rubin(trace, varnames)
+        self._ess = ess = ess(trace, var_names=varnames)
+        self._rhat = rhat = rhat(trace, var_names=varnames)
 
         warnings = []
-        rhat_max = max(val.max() for val in gelman_rubin.values())
+        rhat_max = max(val.max() for val in rhat.values())
         if rhat_max > 1.4:
-            msg = ("The gelman-rubin statistic is larger than 1.4 for some "
+            msg = ("The rhat statistic is larger than 1.4 for some "
                    "parameters. The sampler did not converge.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'error', None, None, gelman_rubin)
+                WarningType.CONVERGENCE, msg, 'error', None, None, rhat)
             warnings.append(warn)
         elif rhat_max > 1.2:
-            msg = ("The gelman-rubin statistic is larger than 1.2 for some "
+            msg = ("The rhat statistic is larger than 1.2 for some "
                    "parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'warn', None, None, gelman_rubin)
+                WarningType.CONVERGENCE, msg, 'warn', None, None, rhat)
             warnings.append(warn)
         elif rhat_max > 1.05:
-            msg = ("The gelman-rubin statistic is larger than 1.05 for some "
+            msg = ("The rhat statistic is larger than 1.05 for some "
                    "parameters. This indicates slight problems during "
                    "sampling.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'info', None, None, gelman_rubin)
+                WarningType.CONVERGENCE, msg, 'info', None, None, rhat)
             warnings.append(warn)
 
-        eff_min = min(val.min() for val in effective_n.values())
+        eff_min = min(val.min() for val in ess.values())
         n_samples = len(trace) * trace.nchains
         if eff_min < 200 and n_samples >= 500:
             msg = ("The estimated number of effective samples is smaller than "
                    "200 for some parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'error', None, None, effective_n)
+                WarningType.CONVERGENCE, msg, 'error', None, None, ess)
             warnings.append(warn)
         elif eff_min / n_samples < 0.1:
             msg = ("The number of effective samples is smaller than "
                    "10% for some parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'warn', None, None, effective_n)
+                WarningType.CONVERGENCE, msg, 'warn', None, None, ess)
             warnings.append(warn)
         elif eff_min / n_samples < 0.25:
             msg = ("The number of effective samples is smaller than "
                    "25% for some parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'info', None, None, effective_n)
+                WarningType.CONVERGENCE, msg, 'info', None, None, ess)
             warnings.append(warn)
 
         self._add_warnings(warnings)
