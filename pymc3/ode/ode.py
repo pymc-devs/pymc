@@ -70,16 +70,21 @@ class DifferentialEquation(theano.Op):
         self._grad_op = ODEGradop(self._numpy_vsp)
 
     def _make_sens_ic(self):
-        # The sensitivity matrix will always have consistent form.
-        # If the first n_odeparams entries of the parameters vector in the simulate call
-        # correspond to ode paramaters, then the first n_odeparams columns in
-        # the sensitivity matrix will be 0
+        """The sensitivity matrix will always have consistent form.
+        If the first n_odeparams entries of the parameters vector in the simulate call
+        correspond to ode paramaters, then the first n_odeparams columns in
+        the sensitivity matrix will be 0 
+
+        If the last n_states entries of the paramters vector in the simulate call
+        correspond to initial conditions of the system,
+        then the last n_states columns of the sensitivity matrix should form
+        an identity matrix
+        """
+
+        # Initialize the sensitivity matrix to be 0 everywhere
         sens_matrix = np.zeros((self._n, self._m))
 
-        # If the last n_states entrues of the paramters vector in the simulate call
-        # correspond to initial conditions of the system,
-        # then the last n_states columns of the sensitivity matrix should form
-        # an identity matrix
+        # Slip in the identity matrix in the appropirate place
         sens_matrix[:, -self.n_states :] = np.eye(self.n_states)
 
         # We need the sensitivity matrix to be a vector (see augmented_function)
@@ -89,8 +94,7 @@ class DifferentialEquation(theano.Op):
         return dydp
 
     def _system(self, Y, t, p):
-        """
-        This is the function that will be passed to odeint.
+        """This is the function that will be passed to odeint.
         Solves both ODE and sensitivities
         Args:
             Y (vector): current state and current gradient state
