@@ -31,7 +31,7 @@ class DifferentialEquation(theano.Op):
 
         def odefunc(y, t, p):
             #Logistic differential equation
-            return p[0]*y[0]*(1-y[0])
+            return p[0] * y[0] * (1 - y[0])
        
         times=np.arange(0.5, 5, 0.5)
 
