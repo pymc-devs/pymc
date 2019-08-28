@@ -2,7 +2,6 @@
 from codecs import open
 from os.path import realpath, dirname, join
 from setuptools import setup, find_packages
-import sys
 import re
 
 DISTNAME = 'pymc3'
@@ -17,6 +16,7 @@ classifiers = ['Development Status :: 5 - Production/Stable',
                'Programming Language :: Python :: 3',
                'Programming Language :: Python :: 3.5',
                'Programming Language :: Python :: 3.6',
+               'Programming Language :: Python :: 3.7',
                'License :: OSI Approved :: Apache Software License',
                'Intended Audience :: Science/Research',
                'Topic :: Scientific/Engineering',
@@ -61,8 +61,5 @@ if __name__ == "__main__":
           classifiers=classifiers,
           python_requires=">=3.5.4",
           install_requires=install_reqs,
-          extras_require={
-              "plots": ["arviz"],
-          },
           tests_require=test_reqs,
           test_suite='nose.collector')
