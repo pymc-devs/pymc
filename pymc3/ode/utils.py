@@ -4,7 +4,8 @@ import theano.tensor as tt
 
 
 def augment_system(ode_func, n, m):
-    """Function to create augmented system.
+    """
+    Function to create augmented system.
 
     Take a function which specifies a set of differential equations and return
     a compiled function which allows for computation of gradients of the

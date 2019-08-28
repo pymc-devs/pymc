@@ -70,7 +70,8 @@ class DifferentialEquation(theano.Op):
         self._grad_op = ODEGradop(self._numpy_vsp)
 
     def _make_sens_ic(self):
-        """The sensitivity matrix will always have consistent form.
+        """
+        The sensitivity matrix will always have consistent form.
         If the first n_odeparams entries of the parameters vector in the simulate call
         correspond to ode paramaters, then the first n_odeparams columns in
         the sensitivity matrix will be 0 
@@ -94,14 +95,8 @@ class DifferentialEquation(theano.Op):
         return dydp
 
     def _system(self, Y, t, p):
-        """This is the function that will be passed to odeint.
-        Solves both ODE and sensitivities
-        Args:
-            Y (vector): current state and current gradient state
-            t (scalar): current time
-            p (vector): parameters
-        Returns:
-            derivatives (vector): derivatives of state and gradient
+        """This is the function that will be passed to odeint. Solves both ODE and sensitivities
+
         """
 
         dydt, ddt_dydp = self._augmented_func(Y[: self._n], t, p, Y[self._n :])
