@@ -33,7 +33,7 @@ class DifferentialEquation(theano.Op):
             #Logistic differential equation
             return p[0] * y[0] * (1 - y[0])
        
-        times=np.arange(0.5, 5, 0.5)
+        times = np.arange(0.5, 5, 0.5)
 
         ode_model = DifferentialEquation(func=odefunc, t0=0, times=times, n_states=1, n_odeparams=1)
     """
