@@ -11,14 +11,19 @@ import theano.sparse as sparse
 
 
 class TestHelperFunc:
-    def test_pandas_to_array(self):
+    def test_pandas_to_array_casting(self):
         """
         Ensure that pandas_to_array returns the dense array, masked array,
-        graph variable, TensorVariable, or sparse matrix as appropriate.
+        graph variable, TensorVariable, or sparse matrix as appropriate
+        when it has to cast the variable.
         """
+        # Force cast of input
+        input_type = 'float32' if theano.config.floatX is 'float64' else 'float64'
+
         # Create the various inputs to the function
-        sparse_input = sps.csr_matrix(np.eye(3))
-        dense_input = np.arange(9, dtype=float).reshape((3, 3))
+        sparse_input = sps.csr_matrix(np.eye(3), dtype=input_type)
+
+        dense_input = np.arange(9, dtype=input_type).reshape((3, 3))
 
         input_name = 'input_variable'
         theano_graph_input = tt.as_tensor(dense_input, name=input_name)
@@ -28,13 +33,87 @@ class TestHelperFunc:
         # All the even numbers are replaced with NaN
         missing_pandas_input = pd.DataFrame(np.array([[np.nan, 1, np.nan],
                                                       [3, np.nan, 5],
-                                                      [np.nan, 7, np.nan]]))
+                                                      [np.nan, 7, np.nan]], dtype=input_type))
         masked_array_input = ma.array(dense_input,
                                       mask=(np.mod(dense_input, 2) == 0))
 
         # Create a generator object. Apparently the generator object needs to
         # yield numpy arrays.
-        square_generator = (np.array([i**2], dtype=int) for i in range(100))
+        square_generator = (np.array([i**2], dtype=input_type) for i in range(100))
+
+        # Alias the function to be tested
+        func = pm.model.pandas_to_array
+
+        #####
+        # Perform the various tests
+        #####
+        # Check function behavior with dense arrays and pandas dataframes
+        # without missing values
+        for input_value in [dense_input, pandas_input]:
+            func_output = func(input_value)
+            assert isinstance(func_output, np.ndarray)
+            assert func_output.shape == input_value.shape
+            npt.assert_allclose(func_output, dense_input)
+
+        # Check function behavior with sparse matrix inputs
+        sparse_output = func(sparse_input)
+        assert sps.issparse(sparse_output)
+        assert sparse_output.shape == sparse_input.shape
+        npt.assert_allclose(sparse_output.toarray(),
+                            sparse_input.toarray())
+
+        # Check function behavior when using masked array inputs and pandas
+        # objects with missing data
+        for input_value in [masked_array_input, missing_pandas_input]:
+            func_output = func(input_value)
+            assert isinstance(func_output, ma.core.MaskedArray)
+            assert func_output.shape == input_value.shape
+            npt.assert_allclose(func_output, masked_array_input)
+
+        # Check function behavior with Theano graph variable
+        theano_output = func(theano_graph_input)
+        assert isinstance(theano_output, theano.gof.graph.Variable)
+        assert theano_output.owner.inputs[0].name == input_name
+
+        # Check function behavior with generator data
+        generator_output = func(square_generator)
+
+        # Make sure the returned object has .set_gen and .set_default methods
+        assert hasattr(generator_output, "set_gen")
+        assert hasattr(generator_output, "set_default")
+        # Make sure the returned object is a Theano TensorVariable
+        assert isinstance(generator_output, tt.TensorVariable)
+
+    def test_pandas_to_array_not_casting(self):
+        """
+        Ensure that pandas_to_array returns the dense array, masked array,
+        graph variable, TensorVariable, or sparse matrix as appropriate
+        when it does not have to cast the variable.
+        """
+        # Input type to force the function not to cast.
+        # It could also have been int64 but for the missing values variable would have been invalid
+        input_type = theano.config.floatX
+
+        # Create the various inputs to the function
+        sparse_input = sps.csr_matrix(np.eye(3), dtype=input_type)
+
+        dense_input = np.arange(9, dtype=input_type).reshape((3, 3))
+
+        input_name = 'input_variable'
+        theano_graph_input = tt.as_tensor(dense_input, name=input_name)
+
+        pandas_input = pd.DataFrame(dense_input)
+
+        # All the even numbers are replaced with NaN
+        missing_pandas_input = pd.DataFrame(np.array([[np.nan, 1, np.nan],
+                                                      [3, np.nan, 5],
+                                                      [np.nan, 7, np.nan]], dtype=input_type))
+        masked_array_input = ma.array(dense_input,
+                                      mask=(np.mod(dense_input, 2) == 0))
+
+        # Create a generator object. Apparently the generator object needs to
+        # yield numpy arrays.
+        square_generator = (np.array([i**2], dtype=input_type) for i in range(100))
 
         # Alias the function to be tested
         func = pm.model.pandas_to_array

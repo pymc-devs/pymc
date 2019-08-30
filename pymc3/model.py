@@ -1302,6 +1302,11 @@ class FreeRV(Factor, TensorVariable):
 
 
 def pandas_to_array(data):
+    '''
+    If the data is already of dtype equal to theano.config.floatX or
+    other not-floating point type, the function will not cast the output.
+    Otherwise, the function will cast the output to theano.config.floatX
+    '''
     if hasattr(data, 'values'):  # pandas
         if data.isnull().any().any():  # missing values
             ret = np.ma.MaskedArray(data.values, data.isnull().values)
