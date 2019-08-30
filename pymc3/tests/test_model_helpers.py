@@ -18,7 +18,7 @@ class TestHelperFunc:
         """
         # Create the various inputs to the function
         sparse_input = sps.csr_matrix(np.eye(3))
-        dense_input = np.arange(9, dtype='float32').reshape((3, 3))
+        dense_input = np.arange(9, dtype=float).reshape((3, 3))
 
         input_name = 'input_variable'
         theano_graph_input = tt.as_tensor(dense_input, name=input_name)
@@ -68,7 +68,7 @@ class TestHelperFunc:
         # Check function behavior with Theano graph variable
         theano_output = func(theano_graph_input)
         assert isinstance(theano_output, theano.gof.graph.Variable)
-        assert theano_output.owner.inputs[0].name == input_name
+        assert theano_output.name == input_name
 
         # Check function behavior with generator data
         generator_output = func(square_generator)
