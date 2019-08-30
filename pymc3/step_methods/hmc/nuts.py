@@ -259,7 +259,7 @@ class _Tree:
         else:
             tree, diverging, turning = self._build_subtree(
                 self.left, self.depth, floatX(np.asarray(-self.step_size)))
-            leftmost_begin, leftmost_end = tree.left, tree.right
+            leftmost_begin, leftmost_end = tree.right, tree.left
             rightmost_begin, rightmost_end = self.left, self.right
             leftmost_p_sum = tree.p_sum
             rightmost_p_sum = self.p_sum
