@@ -13,7 +13,7 @@ from theano import theano, tensor as tt
 from theano.tensor.var import TensorVariable
 from theano.compile import SharedVariable
 
-from pymc3.theanof import set_theano_conf, floatX
+from pymc3.theanof import set_theano_conf, floatX, smartfloatX
 import pymc3 as pm
 from pymc3.math import flatten_list
 from .memoize import memoize, WithMemoization
@@ -1320,7 +1320,7 @@ def pandas_to_array(data):
         ret = generator(data)
     else:
         ret = np.asarray(data)
-    return pm.floatX(ret)
+    return smartfloatX(ret)
 
 
 def as_tensor(data, name, model, distribution):
