@@ -59,7 +59,7 @@ class DifferentialEquation(theano.Op):
         self._n = n_states
         self._m = n_odeparams + n_states
 
-        self._augmented_times = np.insert(times, t0, 0)
+        self._augmented_times = np.insert(times, 0, t0)
         self._augmented_func = augment_system(func, self._n, self._m)
         self._sens_ic = self._make_sens_ic()
 
