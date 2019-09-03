@@ -3,7 +3,7 @@
 ## PyMC3 3.8 (on deck)
 
 ### New features
-
+- Add capabilities to do inference on parameters in a differential equation with `DifferentialEquation`. See [#3590](https://github.com/pymc-devs/pymc3/pull/3590).
 - Distinguish between `Data` and `Deterministic` variables when graphing models with graphviz. PR [#3491](https://github.com/pymc-devs/pymc3/pull/3491).
 - Sequential Monte Carlo - Approximate Bayesian Computation step method is now available. The implementation is in an experimental stage and will be further improved.
 - Added `Matern12` covariance function for Gaussian processes. This is the Matern kernel with nu=1/2.
