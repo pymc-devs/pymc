@@ -566,7 +566,7 @@ def merge_traces(mtraces: List[MultiTrace]) -> MultiTrace:
     base_mtrace = mtraces[0]
     chain_len = len(base_mtrace)
     # check base trace
-    if any((len(st) != chain_len for _, st in base_mtrace._straces.items())):
+    if any(len(st) != chain_len for _, st in base_mtrace._straces.items()):  # pylint: disable=line-too-long
         raise ValueError("Chains are of different lengths.")
     for new_mtrace in mtraces[1:]:
         for new_chain, strace in new_mtrace._straces.items():
