@@ -5,6 +5,7 @@ creating custom backends).
 """
 import itertools as itl
 import logging
+from typing import List
 
 import numpy as np
 import warnings
@@ -92,7 +93,8 @@ class BaseTrace:
 
         self.sampler_vars = sampler_vars
 
-    def setup(self, draws, chain, sampler_vars=None):
+    # pylint: disable=unused-argument
+    def setup(self, draws, chain, sampler_vars=None) -> None: 
         """Perform chain-specific setup.
 
         Parameters
@@ -542,7 +544,7 @@ class MultiTrace:
         return itl.chain.from_iterable(self._straces[chain] for chain in chains)
 
 
-def merge_traces(mtraces):
+def merge_traces(mtraces: List[MultiTrace]) -> MultiTrace:
     """Merge MultiTrace objects.
 
     Parameters
@@ -552,17 +554,26 @@ def merge_traces(mtraces):
 
     Raises
     ------
-    A ValueError is raised if any traces have overlapping chain numbers.
+    A ValueError is raised if any traces have overlapping chain numbers,
+    or if chains are of different lengths.
 
     Returns
     -------
     A MultiTrace instance with merged chains
     """
+    if len(mtraces) == 0:
+        raise ValueError("Cannot merge an empty set of traces.")
     base_mtrace = mtraces[0]
+    chain_len = len(base_mtrace)
+    # check base trace
+    if any((len(st) != chain_len for _, st in base_mtrace._straces.items())):
+        raise ValueError("Chains are of different lengths.")
     for new_mtrace in mtraces[1:]:
         for new_chain, strace in new_mtrace._straces.items():
             if new_chain in base_mtrace._straces:
                 raise ValueError("Chains are not unique.")
+            if len(strace) != chain_len:
+                raise ValueError("Chains are of different lengths.")
             base_mtrace._straces[new_chain] = strace
     base_mtrace._report = merge_reports([trace.report for trace in mtraces])
     return base_mtrace
