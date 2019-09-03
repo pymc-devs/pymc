@@ -11,14 +11,19 @@ def augment_system(ode_func, n, m):
     a compiled function which allows for computation of gradients of the
     differential equation's solition with repsect to the parameters.
 
-    Args:
-        ode_func (function): Differential equation.  Returns array-like
-        n: Number of rows of the sensitivity matrix
-        m: Number of columns of the sensitivity matrix
+    Parameters
+    ----------
+    ode_func : function
+        Differential equation.  Returns array-like.
+    n : int
+        Number of rows of the sensitivity matrix.
+    m : int
+        Number of columns of the sensitivity matrix.
 
-    Returns:
-        system (function): Augemted system of differential equations.
-
+    Returns
+    -------
+    system : function
+        Augemted system of differential equations.
     """
 
     # Present state of the system
