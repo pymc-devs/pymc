@@ -32,10 +32,10 @@ class TestData(SeededTest):
 
         x_pred = np.linspace(-3, 3, 200, dtype='float32')
 
-        with pm.Model():
+        with pm.Model() as model:
             x_shared = pm.Data('x_shared', x)
             b = pm.Normal('b', 0., 10.)
-            pm.Normal('obs', b * x_shared, np.sqrt(1e-2), observed=y)
+            obsvar = pm.Normal('obs', b * x_shared, np.sqrt(1e-2), observed=y)
             prior_trace0 = pm.sample_prior_predictive(1000)
 
             trace = pm.sample(1000, init=None, tune=1000, chains=1)
@@ -49,11 +49,17 @@ class TestData(SeededTest):
 
         assert prior_trace0['b'].shape == (1000,)
         assert prior_trace0['obs'].shape == (1000, 100)
+        assert prior_trace1['obs'].shape == (1000, 200)
+
+        assert pp_trace0['obs'].shape == (1000, 100)
+        assert pp_trace01['obs'].shape == (1000, 100)
+       
         np.testing.assert_allclose(x, pp_trace0['obs'].mean(axis=0), atol=1e-1)
         np.testing.assert_allclose(x, pp_trace01['obs'].mean(axis=0), atol=1e-1)
 
-        assert prior_trace1['b'].shape == (1000,)
-        assert prior_trace1['obs'].shape == (1000, 200)
+        assert pp_trace1['obs'].shape == (1000, 200)
+        assert pp_trace11['obs'].shape == (1000, 200)
+
         np.testing.assert_allclose(x_pred, pp_trace1['obs'].mean(axis=0),
                                    atol=1e-1)
         np.testing.assert_allclose(x_pred, pp_trace11['obs'].mean(axis=0),
