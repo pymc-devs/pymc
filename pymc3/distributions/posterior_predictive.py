@@ -1,5 +1,5 @@
 import numbers
-from typing import List, Dict, Any, Optional, Tuple, Union, cast, TYPE_CHECKING, Callable
+from typing import List, Dict, Any, Optional, Tuple, Union, cast, TYPE_CHECKING, Callable, overload
 import warnings
 import logging
 from collections import UserDict
@@ -17,6 +17,7 @@ from ..backends.base import MultiTrace #, TraceLike, TraceDict
 from .distribution import _DrawValuesContext, _DrawValuesContextBlocker, is_fast_drawable, _compile_theano_function, vectorized_ppc
 from ..model import Model, get_named_nodes_and_relations, ObservedRV, MultiObservedRV, modelcontext
 from ..exceptions import IncorrectArgumentsError
+from ..vartypes import theano_constant
 # Failing tests:
 #    test_mixture_random_shape::test_mixture_random_shape
 #
@@ -106,7 +107,13 @@ class _TraceDict(_TraceDictParent):
             sliced_dict[vn] = apply_slice(arr)
         return _TraceDict(dict=sliced_dict)
 
-    def __getitem__(self, item: Union[str, slice, int, HasName]) -> Union['_TraceDict', np.ndarray]:
+    @overload
+    def __getitem__(self, item: Union[str, HasName]) -> np.ndarray: ...
+
+    @overload
+    def __getitem__(self, item: Union[slice, int]) -> '_TraceDict': ...
+
+    def __getitem__(self, item):
         if isinstance(item, str):
             return super(_TraceDict, self).__getitem__(item)
         elif isinstance(item, slice):
@@ -304,8 +311,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                 if (next_, samples) in drawn:
                     # If the node already has a givens value, skip it
                     continue
-                elif isinstance(next_, (tt.TensorConstant,
-                                        theano.gof.graph.Constant,
+                elif isinstance(next_, (theano_constant,
                                         tt.sharedvar.SharedVariable)):
                     # If the node is a theano.tensor.TensorConstant or a
                     # theano.tensor.sharedvar.SharedVariable, its value will be
@@ -412,7 +418,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                                 # We filter out Deterministics by checking for `model` attribute
                 elif name is not None and hasattr(var, 'model') and name in trace.varnames:
                     # param.name is in point
-                    evaluated[i] = drawn[(var, samples)] = trace[name].reshape(-1)
+                    drawn[(var, samples)] = evaluated[i] = trace[cast(str, name)].reshape(-1)
                 else:
                     # param still needs to be drawn
                     symbolic_params.append((i, var))
@@ -468,6 +474,8 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
         samples = self.samples
 
         def random_sample(meth: Callable[..., np.ndarray], param, point: _TraceDict, size: int, shape: Tuple[int, ...]) -> np.ndarray:
+            # if hasattr(param, 'name') and param.name == 'obs':
+            #     import pdb; pdb.set_trace()
             val = meth(point=point, size=size)
             if size == 1:
                 val = np.expand_dims(val, axis=0)
@@ -485,7 +493,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
 
         if isinstance(param, (numbers.Number, np.ndarray)):
             return param
-        elif isinstance(param, (tt.TensorConstant, theano.gof.graph.Constant)):
+        elif isinstance(param, theano_constant):
             return param.value
         elif isinstance(param, tt.sharedvar.SharedVariable):
             return param.get_value()
@@ -519,7 +527,20 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                         with _DrawValuesContextBlocker():
                             point = trace[0] if trace else None
                             temp_val = np.atleast_1d(dist_tmp.random(point=point, size=None))
-                            dist_tmp.shape = tuple(temp_val.shape)
+                        # if hasattr(param, 'name') and param.name == 'obs':
+                        #     import pdb; pdb.set_trace()
+                        # Sometimes point may change the size of val but not the
+                        # distribution's shape
+                        if point and samples is not None:
+                            temp_size = np.atleast_1d(samples)
+                            if all(temp_val.shape[:len(temp_size)] == temp_size):
+                                dist_tmp.shape = tuple(temp_val.shape[len(temp_size):])
+                            else:
+                                dist_tmp.shape = tuple(temp_val.shape)
+                        # I am not sure why I need to do this, but I do in order to trim off a
+                        # degenerate dimension [2019/09/05:rpg]
+                        if dist_tmp.shape[0] == 1 and len(dist_tmp.shape) > 1:
+                            dist_tmp.shape = dist_tmp.shape[1:]
                         return random_sample(dist_tmp.random, point=trace, size=samples, param=param, shape=tuple(dist_tmp.shape))
                 else: # has a distribution, but no observations
                     distshape = tuple(param.distribution.shape)
