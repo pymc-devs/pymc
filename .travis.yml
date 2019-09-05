@@ -35,7 +35,6 @@ env:
 
 script:
   - . ./scripts/test.sh $TESTCMD
-  - . ./scripts/confirm_mpl_optional.sh
 
 after_success:
   - coveralls
