@@ -9,6 +9,7 @@
 - Added `Matern12` covariance function for Gaussian processes. This is the Matern kernel with nu=1/2.
 - Progressbar reports number of divergences in real time, when available [#3547](https://github.com/pymc-devs/pymc3/pull/3547).
 - Sampling from variational approximation now allows for alternative trace backends [#3550].
+- Infix `@` operator now works with random variables and deterministics [#3619](https://github.com/pymc-devs/pymc3/pull/3619).
 - [ArviZ](https://arviz-devs.github.io/arviz/) is now a requirement, and handles plotting, diagnostics, and statistical checks.
 
 ### Maintenance

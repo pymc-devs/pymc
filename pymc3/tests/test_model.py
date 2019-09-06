@@ -157,6 +157,34 @@ class TestTheanoConfig:
                 assert theano.config.compute_test_value == 'ignore'
             assert theano.config.compute_test_value == 'off'
 
+def test_matrix_multiplication():
+    # Check matrix multiplication works between RVs, transformed RVs,
+    # Deterministics, and numpy arrays
+    with pm.Model() as linear_model:
+        matrix = pm.Normal('matrix', shape=(2, 2))
+        transformed = pm.Gamma('transformed', alpha=2, beta=1, shape=2)
+        rv_rv = pm.Deterministic('rv_rv', matrix @ transformed)
+        np_rv = pm.Deterministic('np_rv', np.ones((2, 2)) @ transformed)
+        rv_np = pm.Deterministic('rv_np', matrix @ np.ones(2))
+        rv_det = pm.Deterministic('rv_det', matrix @ rv_rv)
+        det_rv = pm.Deterministic('det_rv', rv_rv @ transformed)
+
+        posterior = pm.sample(10,
+                              tune=0,
+                              compute_convergence_checks=False,
+                              progressbar=False)
+        for point in posterior.points():
+            npt.assert_almost_equal(point['matrix'] @ point['transformed'],
+                                    point['rv_rv'])
+            npt.assert_almost_equal(np.ones((2, 2)) @ point['transformed'],
+                                    point['np_rv'])
+            npt.assert_almost_equal(point['matrix'] @ np.ones(2),
+                                    point['rv_np'])
+            npt.assert_almost_equal(point['matrix'] @ point['rv_rv'],
+                                    point['rv_det'])
+            npt.assert_almost_equal(point['rv_rv'] @ point['transformed'],
+                                    point['det_rv'])
+
 
 def test_duplicate_vars():
     with pytest.raises(ValueError) as err:
