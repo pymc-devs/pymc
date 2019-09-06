@@ -476,9 +476,9 @@ class StickBreaking(Transform):
     def jacobian_det(self, x_):
         x = x_.T
         n = x.shape[0]
-        # stable according to: http://deeplearning.net/software/theano_versions/0.9.X/NEWS.html
-        lse = tt.log(tt.sum(tt.exp(x), 0, keepdims=True))
-        d = tt.log(n) - (n*lse)
+        sx = tt.sum(x, 0, keepdims=True)
+        r = tt.log(floatX(1) + tt.sum(tt.exp(x + sx), 0,keepdims=True))
+        d = tt.log(n) + (n*sx) - (n*r)
         return d.T
 
 stick_breaking = StickBreaking()
