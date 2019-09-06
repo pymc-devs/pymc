@@ -277,4 +277,4 @@ class TestSaveLoad:
             assert (value == ppc2[key]).all()
 
         for key, value in ppcf.items():
-            assert (value == ppc2[key]).all()
+            assert (value == ppc2f[key]).all()

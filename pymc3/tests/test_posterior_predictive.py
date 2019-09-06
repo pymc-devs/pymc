@@ -1,7 +1,7 @@
 import pymc3 as pm
 import pytest
 from pymc3.distributions.posterior_predictive import _TraceDict
-from numpy import array_equal
+import numpy as np
 
 from pymc3.backends.ndarray import point_list_to_multitrace
 
@@ -22,7 +22,7 @@ def test_build_TraceDict():
       dict = _TraceDict(multi_trace=trace)
       assert isinstance(dict, _TraceDict)
       assert len(dict) == 1000
-      assert array_equal(trace['mu'], dict['mu'])
+      np.testing.assert_array_equal(trace['mu'], dict['mu'])
       assert set(trace.varnames) == set(dict.varnames) == set(["mu"])
 
 
