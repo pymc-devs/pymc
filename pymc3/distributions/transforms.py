@@ -469,7 +469,7 @@ class StickBreaking(Transform):
 
     def backward_val(self, y_):
         y = y_.T
-        y = np.append(y, -np.sum(y, 0, keepdims=True))
+        y = np.concatenate([y, -np.sum(y, 0, keepdims=True)])
         x = np.exp(y)/np.sum(np.exp(y), 0, keepdims=True)
         return floatX(x.T)
 
@@ -477,8 +477,10 @@ class StickBreaking(Transform):
         x = x_.T
         n = x.shape[0]
         sx = tt.sum(x, 0, keepdims=True)
-        r = tt.log(floatX(1) + tt.sum(tt.exp(x + sx), 0,keepdims=True))
-        d = tt.log(n) + (n*sx) - (n*r)
+        r = tt.concatenate([x+sx, tt.zeros(sx.shape)])
+        # stable according to: http://deeplearning.net/software/theano_versions/0.9.X/NEWS.html
+        sr = tt.log(tt.sum(tt.exp(r), 0, keepdims=True))
+        d = tt.log(n) + (n*sx) - (n*sr)
         return d.T
 
 stick_breaking = StickBreaking()
