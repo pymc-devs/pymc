@@ -1,3 +1,5 @@
+import warnings
+
 import theano
 import theano.tensor as tt
 
@@ -89,7 +91,8 @@ class Transform:
         raise NotImplementedError
 
     def jacobian_det(self, x):
-        """Calculates logarithm of the absolute value of the Jacobian determinant for input `x`.
+        """Calculates logarithm of the absolute value of the Jacobian determinant
+        of the backward transformation for input `x`.
 
         Parameters
         ----------
@@ -431,77 +434,52 @@ sum_to_1 = SumTo1()
 class StickBreaking(Transform):
     """
     Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of real values.
-    Primarily borrowed from the STAN implementation.
-
-    Parameters
-    ----------
-    eps : float, positive value
-        A small value for numerical stability in invlogit.
     """
 
     name = "stickbreaking"
 
-    def __init__(self, eps=floatX(np.finfo(theano.config.floatX).eps)):
-        self.eps = eps
+    def __init__(self, eps=None):
+        if eps is not None:
+            warnings.warn("The argument `eps` is depricated and will not be used.",
+                          DeprecationWarning)
 
     def forward(self, x_):
         x = x_.T
-        # reverse cumsum
-        x0 = x[:-1]
-        s = tt.extra_ops.cumsum(x0[::-1], 0)[::-1] + x[-1]
-        z = x0 / s
-        Km1 = x.shape[0] - 1
-        k = tt.arange(Km1)[(slice(None),) + (None,) * (x.ndim - 1)]
-        eq_share = logit(1.0 / (Km1 + 1 - k).astype(str(x_.dtype)))
-        y = logit(z) - eq_share
+        n = x.shape[0]
+        lx = tt.log(x)
+        shift = tt.sum(lx, 0, keepdims=True) / n
+        y = lx[:-1] - shift
         return floatX(y.T)
 
-    def forward_val(self, x_, point=None):
+    def forward_val(self, x_):
         x = x_.T
-        # reverse cumsum
-        x0 = x[:-1]
-        s = np.cumsum(x0[::-1], 0)[::-1] + x[-1]
-        z = x0 / s
-        Km1 = x.shape[0] - 1
-        k = np.arange(Km1)[(slice(None),) + (None,) * (x.ndim - 1)]
-        eq_share = nplogit(1.0 / (Km1 + 1 - k).astype(str(x_.dtype)))
-        y = nplogit(z) - eq_share
+        n = x.shape[0]
+        lx = np.log(x)
+        shift = np.sum(lx, 0, keepdims=True) / n
+        y = lx[:-1] - shift
         return floatX(y.T)
 
     def backward(self, y_):
         y = y_.T
-        Km1 = y.shape[0]
-        k = tt.arange(Km1)[(slice(None),) + (None,) * (y.ndim - 1)]
-        eq_share = logit(1.0 / (Km1 + 1 - k).astype(str(y_.dtype)))
-        z = invlogit(y + eq_share, self.eps)
-        yl = tt.concatenate([z, tt.ones(y[:1].shape)])
-        yu = tt.concatenate([tt.ones(y[:1].shape), 1 - z])
-        S = tt.extra_ops.cumprod(yu, 0)
-        x = S * yl
+        y = tt.concatenate([y, -tt.sum(y, 0, keepdims=True)])
+        # "softmax" with vector support and no deprication warning:
+        e_y = tt.exp(y - tt.max(y, 0, keepdims=True))
+        x = e_y / tt.sum(e_y, 0, keepdims=True)
         return floatX(x.T)
 
     def backward_val(self, y_):
         y = y_.T
-        Km1 = y.shape[0]
-        k = np.arange(Km1)[(slice(None),) + (None,) * (y.ndim - 1)]
-        eq_share = nplogit(1.0 / (Km1 + 1 - k).astype(str(y_.dtype)))
-        z = expit(y + eq_share)
-        yl = np.concatenate([z, np.ones(y[:1].shape)])
-        yu = np.concatenate([np.ones(y[:1].shape), 1 - z])
-        S = np.cumprod(yu, 0)
-        x = S * yl
+        y = np.append(y, -np.sum(y, 0, keepdims=True))
+        x = np.exp(y)/np.sum(np.exp(y), 0, keepdims=True)
         return floatX(x.T)
 
-    def jacobian_det(self, y_):
-        y = y_.T
-        Km1 = y.shape[0]
-        k = tt.arange(Km1)[(slice(None),) + (None,) * (y.ndim - 1)]
-        eq_share = logit(1.0 / (Km1 + 1 - k).astype(str(y_.dtype)))
-        yl = y + eq_share
-        yu = tt.concatenate([tt.ones(y[:1].shape), 1 - invlogit(yl, self.eps)])
-        S = tt.extra_ops.cumprod(yu, 0)
-        return tt.sum(tt.log(S[:-1]) - tt.log1p(tt.exp(yl)) - tt.log1p(tt.exp(-yl)), 0).T
-
+    def jacobian_det(self, x_):
+        x = x_.T
+        n = x.shape[0]
+        # stable according to: http://deeplearning.net/software/theano_versions/0.9.X/NEWS.html
+        lse = tt.log(tt.sum(tt.exp(x), 0, keepdims=True))
+        d = tt.log(n) - (n*lse)
+        return d.T
 
 stick_breaking = StickBreaking()
 
