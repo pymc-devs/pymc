@@ -30,6 +30,16 @@ __all__ = [
 FlatView = collections.namedtuple('FlatView', 'input, replacements, view')
 
 
+class PyMC3Variable(TensorVariable):
+    """Class to wrap Theano TensorVariable for custom behavior."""
+
+    # Implement matrix multiplication infix operator: X @ w
+    __matmul__ = tt.dot
+
+    def __rmatmul__(self, other):
+        return tt.dot(other, self)
+
+
 class InstanceMethod:
     """Class for hiding references to instance methods so they can be pickled.
 
@@ -1245,7 +1255,7 @@ def _get_scaling(total_size, shape, ndim):
     return tt.as_tensor(floatX(coef))
 
 
-class FreeRV(Factor, TensorVariable):
+class FreeRV(Factor, PyMC3Variable):
     """Unobserved random variable that a model is specified in terms of."""
 
     def __init__(self, type=None, owner=None, index=None, name=None,
@@ -1354,7 +1364,7 @@ def as_tensor(data, name, model, distribution):
         return data
 
 
-class ObservedRV(Factor, TensorVariable):
+class ObservedRV(Factor, PyMC3Variable):
     """Observed random variable that a model is specified in terms of.
     Potentially partially observed.
     """
@@ -1525,7 +1535,7 @@ def Potential(name, var, model=None):
     return var
 
 
-class TransformedRV(TensorVariable):
+class TransformedRV(PyMC3Variable):
     """
     Parameters
     ----------
