@@ -481,7 +481,7 @@ class StickBreaking(Transform):
         # stable according to: http://deeplearning.net/software/theano_versions/0.9.X/NEWS.html
         sr = tt.log(tt.sum(tt.exp(r), 0, keepdims=True))
         d = tt.log(Km1) + (Km1*sy) - (Km1*sr)
-        return d.T
+        return tt.sum(d, 0).T
 
 stick_breaking = StickBreaking()
 
