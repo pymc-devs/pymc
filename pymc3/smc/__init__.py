@@ -1,1 +1,1 @@
-from .smc import sample_smc
+from .sample_smc import sample_smc
