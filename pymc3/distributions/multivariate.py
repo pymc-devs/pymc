@@ -107,8 +107,6 @@ class _QuadFormBase(Continuous):
 
     def _quaddist_chol(self, delta):
         chol_cov = self.chol_cov
-        _, k = delta.shape
-        k = pm.floatX(k)
         diag = tt.nlinalg.diag(chol_cov)
         # Check if the covariance matrix is positive definite.
         ok = tt.all(diag > 0)
@@ -126,14 +124,13 @@ class _QuadFormBase(Continuous):
 
     def _quaddist_tau(self, delta):
         chol_tau = self.chol_tau
-        _, k = delta.shape
-        k = pm.floatX(k)
-
         diag = tt.nlinalg.diag(chol_tau)
+        # Check if the precision matrix is positive definite.
         ok = tt.all(diag > 0)
-
+        # If not, replace the diagonal. We return -inf later, but
+        # need to prevent solve_lower from throwing an exception.
         chol_tau = tt.switch(ok, chol_tau, 1)
-        diag = tt.nlinalg.diag(chol_tau)
+
         delta_trans = tt.dot(delta, chol_tau)
         quaddist = (delta_trans ** 2).sum(axis=-1)
         logdet = -tt.sum(tt.log(diag))
@@ -174,7 +171,7 @@ class MvNormal(_QuadFormBase):
     mu : array
         Vector of means.
     cov : array
-        Covariance matrix. Exactly one of cov, tau, or chol is needed.
+        Covariance matriex. Exactly one of cov, tau, or chol is needed.
     tau : array
         Precision matrix. Exactly one of cov, tau, or chol is needed.
     chol : array
