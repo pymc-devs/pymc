@@ -171,7 +171,7 @@ class MvNormal(_QuadFormBase):
     mu : array
         Vector of means.
     cov : array
-        Covariance matriex. Exactly one of cov, tau, or chol is needed.
+        Covariance matrix. Exactly one of cov, tau, or chol is needed.
     tau : array
         Precision matrix. Exactly one of cov, tau, or chol is needed.
     chol : array
