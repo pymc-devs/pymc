@@ -282,6 +282,10 @@ class TestErrors(object):
     condition=(theano.config.floatX == "float32"), reason="Fails on float32"
 )
 class TestDiffEqModel(object):
+    def test_op_equality(self):
+        raise NotImplementedError()
+        return
+
     def test_scalar_ode_1_param(self):
         """Test running model for a scalar ODE with 1 parameter"""
 
