@@ -6,8 +6,6 @@ import multiprocessing as mp
 import warnings
 from theano import function as theano_function
 
-# from arviz import psislw
-
 from ..model import modelcontext, Point
 from ..parallel_sampling import _cpu_count
 from ..theanof import inputvars, make_shared_replacements
@@ -177,13 +175,6 @@ class SMC:
             weights = weights_un / np.sum(weights_un)
 
         sj = np.exp((new_beta - old_beta) * self.likelihoods)
-
-        # if psis:
-        # lw, ks = psislw(np.log(weights))
-        # print(ks)
-        # if np.any(ks > 0.5):
-        #    print('help', ks)
-        # weights = np.exp(lw)
 
         self.model.marginal_likelihood *= np.mean(sj)
         self.beta = new_beta
