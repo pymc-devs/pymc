@@ -690,6 +690,75 @@ class Multinomial(Discrete):
         )
 
 
+class DirichletMultinomial(pm.Discrete):
+    R"""Dirichlet Multinomial log-likelihood.
+
+    Dirichlet mixture of multinomials distribution, with a marginalized PMF.
+
+    .. math::
+
+    f(x \mid n, \alpha) = \frac{\Gamma(n + 1)\Gamma(\sum\alpha_k)}
+                              {\Gamma(\n + \sum\alpha_k)}
+                         \prod_{k=1}^K
+                         \frac{\Gamma(x_k + \alpha_k)}
+                              {\Gamma(x_k + 1)\Gamma(alpha_k)}
+
+    ==========  ===========================================
+    Support     :math:`x \in \{0, 1, \ldots, n\}` such that
+                :math:`\sum x_i = n`
+    Mean        :math:`n \frac{\alpha_i}{\sum{\alpha_k}}`
+    ==========  ===========================================
+
+    Parameters
+    ----------
+    alpha : one- or two-dimensional array
+        Dirichlet parameter.  Elements must be non-negative.
+        Dimension of each element of the distribution is the length
+        of the last dimension of alpha.
+    n     : one-dimensional array
+        Number of items sampled.
+
+    """
+
+    def __init__(self, alpha, n, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.alpha = tt.as_tensor_variable(alpha)
+        self.n = tt.as_tensor_variable(n)
+
+    def logp(self, x):
+        alpha = self.alpha
+        n = self.n
+        sum_alpha = alpha.sum(axis=-1)
+
+        const = (gammaln(n + 1) + gammaln(sum_alpha)) - gammaln(n + sum_alpha)
+        series = gammaln(x + alpha) - (gammaln(x + 1) + gammaln(alpha))
+        result = const + series.sum(axis=-1)
+        return bound(result,
+                     tt.all(tt.ge(x, 0)),
+                     tt.all(tt.gt(alpha, 0)),
+                     tt.all(tt.ge(n, 0)),
+                     tt.all(tt.eq(x.sum(axis=-1), n)),
+                     broadcast_conditions=False)
+
+    def random(self, point=None, size=None, repeat=None):
+        alpha, n = draw_values([self.alpha, self.n], point=point)
+        out = np.empty_like(alpha)
+        for i in range(len(n)):
+            p = np.random.dirichlet(alpha[i, :])
+            x = np.random.dirichlet(n[i], p)
+            out[i, :] = x
+        return out
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        n = dist.n
+        alpha = dist.alpha
+        return (r'${} \sim \text{{DirichletMultinomial}}('
+                r'\matit{{n}}={} \mathit{{\alpha}}={})$'
+                ).format(name, get_variable_name(n), get_variable_name(alpha))
+
+
 def posdef(AA):
     try:
         linalg.cholesky(AA)
