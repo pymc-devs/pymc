@@ -10,7 +10,6 @@ from ..math import logit, invlogit
 from .distribution import draw_values
 import numpy as np
 from scipy.special import logit as nplogit
-from scipy.special import expit
 
 
 __all__ = [
