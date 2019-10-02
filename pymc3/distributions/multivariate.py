@@ -27,7 +27,8 @@ from ..math import kron_dot, kron_diag, kron_solve_lower, kronecker
 
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
-           'Multinomial', 'Wishart', 'WishartBartlett',
+           'Multinomial', 'DirichletMultinomial',
+           'Wishart', 'WishartBartlett',
            'LKJCorr', 'LKJCholeskyCov', 'MatrixNormal',
            'KroneckerNormal']
 
