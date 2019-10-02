@@ -723,7 +723,7 @@ class Multinomial(Discrete):
                                                 get_variable_name(p))
 
 
-class DirichletMultinomial(pm.Discrete):
+class DirichletMultinomial(Discrete):
     R"""Dirichlet Multinomial log-likelihood.
 
     Dirichlet mixture of multinomials distribution, with a marginalized PMF.
