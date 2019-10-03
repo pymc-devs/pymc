@@ -118,6 +118,8 @@ class SMC:
 
         if self.kernel.lower() == "abc":
             warnings.warn(EXPERIMENTAL_WARNING)
+            if len(self.model.observed_RVs) != 1:
+                warnings.warn("SMC-ABC only works properly with models with one observed variable")
             simulator = self.model.observed_RVs[0]
             self.likelihood_logp = PseudoLikelihood(
                 self.epsilon,
@@ -148,7 +150,7 @@ class SMC:
         self.priors = np.array(priors).squeeze()
         self.likelihoods = np.array(likelihoods).squeeze()
 
-    def update_weights_beta(self, psis):
+    def update_weights_beta(self):
         """
         Calculate the next inverse temperature (beta), the importance weights based on current beta
         and tempered likelihood and updates the marginal likelihood estimation
@@ -207,7 +209,7 @@ class SMC:
 
     def tune(self):
         """
-        Tune scaling and/or n_steps based on the acceptance rate.
+        Tune scaling and n_steps based on the acceptance rate.
         """
         ave_scaling = np.exp(np.log(self.scalings.mean()) + (self.acc_per_chain.mean() - 0.234))
         self.scalings = 0.5 * (

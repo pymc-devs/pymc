@@ -18,7 +18,6 @@ def sample_smc(
     progressbar=False,
     model=None,
     random_seed=-1,
-    psis=True,
 ):
     """
     Sequential Monte Carlo based sampling
@@ -139,7 +138,7 @@ def sample_smc(
     smc.initialize_logp()
 
     while smc.beta < 1:
-        smc.update_weights_beta(psis=psis)
+        smc.update_weights_beta()
         _log.info(
             "Stage: {:3d} Beta: {:.3f} Steps: {:3d} Acce: {:.3f}".format(
                 stage, smc.beta, smc.n_steps, smc.acc_rate
