@@ -584,11 +584,11 @@ def draw_values(params, point=None, size=None):
                         named_nodes_children[k] = nnc[k]
                     else:
                         named_nodes_children[k].update(nnc[k])
+        stack = [k for k, v in named_nodes_children.items() if len(v) == 0]
 
         # Init givens and the stack of nodes to try to `_draw_value` from
         givens = {p.name: (p, v) for (p, size), v in drawn.items()
                   if getattr(p, 'name', None) is not None}
-        stack = list(leaf_nodes.values())  # A queue would be more appropriate
         while stack:
             next_ = stack.pop(0)
             if (next_, size) in drawn:
