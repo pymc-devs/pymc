@@ -415,6 +415,28 @@ class TestSamplePPC(SeededTest):
             rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3
             assert np.allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
+    def test_var_name_order_invariance(self):
+        obs_a = theano.shared(np.array([10., 20., 30.]))
+        with pm.Model() as m:
+            pm.Normal('mu', 3, 5)
+            a = pm.Normal('a', 20, 10, observed=obs_a)
+            pm.Deterministic('b', a * 2)
+            trace = pm.sample(10)
+
+        np.random.seed(123)
+        var_names = ['b', 'a']
+        ppc1 = pm.sample_posterior_predictive(
+            trace, model=m, var_names=var_names
+        )
+        np.random.seed(123)
+        var_names = ['a', 'b']
+        ppc2 = pm.sample_posterior_predictive(
+            trace, model=m, var_names=var_names
+        )
+        assert np.all(ppc1["a"] == ppc2["a"])
+        assert np.all(ppc1["b"] == ppc2["b"])
+        assert np.allclose(ppc1["b"], (2 * ppc1["a"]))
+
 
     def test_deterministic_of_observed_modified_interface(self):
         meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(100))
