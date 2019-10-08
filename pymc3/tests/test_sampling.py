@@ -416,7 +416,7 @@ class TestSamplePPC(SeededTest):
             assert np.allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
     def test_var_name_order_invariance(self):
-        obs_a = theano.shared(np.array([10., 20., 30.]))
+        obs_a = theano.shared(pm.theanof.floatX(np.array([10., 20., 30.])))
         with pm.Model() as m:
             pm.Normal('mu', 3, 5)
             a = pm.Normal('a', 20, 10, observed=obs_a)
@@ -436,7 +436,6 @@ class TestSamplePPC(SeededTest):
         assert np.all(ppc1["a"] == ppc2["a"])
         assert np.all(ppc1["b"] == ppc2["b"])
         assert np.allclose(ppc1["b"], (2 * ppc1["a"]))
-
 
     def test_deterministic_of_observed_modified_interface(self):
         meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(100))
