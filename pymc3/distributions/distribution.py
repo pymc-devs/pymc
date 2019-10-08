@@ -565,30 +565,30 @@ def draw_values(params, point=None, size=None):
         # specified in the point. Need to find the node-inputs, their
         # parents and children to replace them.
         leaf_nodes = {}
-        named_nodes_parents = {}
-        named_nodes_children = {}
+        named_nodes_descendents = {}
+        named_nodes_ancestors = {}
         for _, param in symbolic_params:
             if hasattr(param, 'name'):
                 # Get the named nodes under the `param` node
-                nn, nnp, nnc = get_named_nodes_and_relations(param)
+                nn, nnd, nna = get_named_nodes_and_relations(param)
                 leaf_nodes.update(nn)
                 # Update the discovered parental relationships
-                for k in nnp.keys():
-                    if k not in named_nodes_parents.keys():
-                        named_nodes_parents[k] = nnp[k]
+                for k in nnd.keys():
+                    if k not in named_nodes_descendents.keys():
+                        named_nodes_descendents[k] = nnd[k]
                     else:
-                        named_nodes_parents[k].update(nnp[k])
+                        named_nodes_descendents[k].update(nnd[k])
                 # Update the discovered child relationships
-                for k in nnc.keys():
-                    if k not in named_nodes_children.keys():
-                        named_nodes_children[k] = nnc[k]
+                for k in nna.keys():
+                    if k not in named_nodes_ancestors.keys():
+                        named_nodes_ancestors[k] = nna[k]
                     else:
-                        named_nodes_children[k].update(nnc[k])
-        stack = [k for k, v in named_nodes_children.items() if len(v) == 0]
+                        named_nodes_ancestors[k].update(nna[k])
 
         # Init givens and the stack of nodes to try to `_draw_value` from
         givens = {p.name: (p, v) for (p, size), v in drawn.items()
                   if getattr(p, 'name', None) is not None}
+        stack = list(leaf_nodes.values())
         while stack:
             next_ = stack.pop(0)
             if (next_, size) in drawn:
@@ -609,7 +609,7 @@ def draw_values(params, point=None, size=None):
                 # of TensorConstants or SharedVariables, we must add them
                 # to the stack or risk evaluating deterministics with the
                 # wrong values (issue #3354)
-                stack.extend([node for node in named_nodes_parents[next_]
+                stack.extend([node for node in named_nodes_descendents[next_]
                               if isinstance(node, (ObservedRV,
                                                    MultiObservedRV))
                               and (node, size) not in drawn])
@@ -618,7 +618,7 @@ def draw_values(params, point=None, size=None):
                 # If the node does not have a givens value, try to draw it.
                 # The named node's children givens values must also be taken
                 # into account.
-                children = named_nodes_children[next_]
+                children = named_nodes_ancestors[next_]
                 temp_givens = [givens[k] for k in givens if k in children]
                 try:
                     # This may fail for autotransformed RVs, which don't
@@ -633,7 +633,7 @@ def draw_values(params, point=None, size=None):
                     # The node failed, so we must add the node's parents to
                     # the stack of nodes to try to draw from. We exclude the
                     # nodes in the `params` list.
-                    stack.extend([node for node in named_nodes_parents[next_]
+                    stack.extend([node for node in named_nodes_descendents[next_]
                                   if node is not None and
                                   (node, size) not in drawn])
 
@@ -657,8 +657,8 @@ def draw_values(params, point=None, size=None):
                         # This may set values for certain nodes in the drawn
                         # dictionary, but they don't get added to the givens
                         # dictionary. Here, we try to fix that.
-                        if param in named_nodes_children:
-                            for node in named_nodes_children[param]:
+                        if param in named_nodes_ancestors:
+                            for node in named_nodes_ancestors[param]:
                                 if (
                                     node.name not in givens and
                                     (node, size) in drawn
