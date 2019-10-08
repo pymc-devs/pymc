@@ -238,9 +238,11 @@ class DensityDist(Distribution):
             The behavior of this callable can be altered with the
             ``wrap_random_with_dist_shape`` parameter.
             The supplied callable must have the following signature:
-            ``random(size=None, **kwargs)``, where ``size`` is the number of
-            IID draws to take from the distribution. Any extra keyword
-            argument can be added as required.
+            ``random(point=None, size=None, **kwargs)``, where ``point`` is a
+            ``None`` or a dictionary of random variable names and their
+            corresponding values (similar to what ``MultiTrace.get_point``
+            returns). ``size`` is the number of IID draws to take from the
+            distribution. Any extra keyword argument can be added as required.
         wrap_random_with_dist_shape: bool (Optional)
             If ``True``, the provided ``random`` callable is passed through
             ``generate_samples`` to make the random number generator aware of
