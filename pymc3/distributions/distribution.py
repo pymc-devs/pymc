@@ -456,7 +456,7 @@ class _DrawValuesContext(Context, metaclass=InitContextMeta):
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
         instance = super().__new__(cls)
-        instance._parent = cls.get_context()
+        instance._parent = cls.get_context(error_if_none=False)
         return instance
 
     def __init__(self):

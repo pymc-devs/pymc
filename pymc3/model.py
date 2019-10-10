@@ -192,14 +192,16 @@ class Context:
         return cls.contexts.stack
 
     @classmethod
-    def get_context(cls: Type[T]) -> Optional[T]:
+    def get_context(cls: Type[T], error_if_none=True) -> Optional[T]:
         """Return the most recently pushed context object of type ``cls``
         on the stack, or ``None``."""
         idx = -1
         while True:
             try:
                 candidate = cls.get_contexts()[idx]
-            except IndexError:
+            except IndexError as e:
+                if error_if_none:
+                    raise e
                 return None
             if isinstance(candidate, cls):
                 return candidate
@@ -210,7 +212,7 @@ def modelcontext(model: Optional['Model']) -> Optional['Model']:
     none supplied.
     """
     if model is None:
-        found: Optional['Model'] = Model.get_context()
+        found: Optional['Model'] = Model.get_context(error_if_none=False)
         if found is None:
             raise ValueError("No pymc3 model object on context stack.")
         return found
