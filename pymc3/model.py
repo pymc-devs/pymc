@@ -3,7 +3,7 @@ import functools
 import itertools
 import threading
 import warnings
-from typing import Optional
+from typing import Optional, Tuple, TypeVar, Type, List
 
 import numpy as np
 from pandas import Series
@@ -162,6 +162,7 @@ def _get_named_nodes_and_relations(graph, parent, leaf_nodes,
             node_children.update(temp_tree)
     return leaf_nodes, node_parents, node_children
 
+T = TypeVar('T', bound='Context')
 
 class Context:
     """Functionality for objects that put themselves in a context using
@@ -183,7 +184,7 @@ class Context:
             set_theano_conf(self._old_theano_config)
 
     @classmethod
-    def get_contexts(cls):
+    def get_contexts(cls: Type[T]) -> List[T]:
         # no race-condition here, cls.contexts is a thread-local object
         # be sure not to override contexts in a subclass however!
         if not hasattr(cls.contexts, 'stack'):
@@ -191,20 +192,28 @@ class Context:
         return cls.contexts.stack
 
     @classmethod
-    def get_context(cls):
-        """Return the deepest context on the stack."""
-        try:
-            return cls.get_contexts()[-1]
-        except IndexError:
-            raise TypeError("No context on context stack")
+    def get_context(cls: Type[T]) -> Optional[T]:
+        """Return the most recently pushed context object of type ``cls``
+        on the stack, or ``None``."""
+        idx = -1
+        while True:
+            try:
+                candidate = cls.get_contexts()[idx]
+            except IndexError:
+                return None
+            if isinstance(candidate, cls):
+                return candidate
+            idx = idx - 1
 
-
-def modelcontext(model: Optional['Model']) -> 'Model':
+def modelcontext(model: Optional['Model']) -> Optional['Model']:
     """return the given model or try to find it in the context if there was
     none supplied.
     """
     if model is None:
-        return Model.get_context()
+        found: Optional['Model'] = Model.get_context()
+        if found is None:
+            raise ValueError("No pymc3 model object on context stack.")
+        return found
     return model
 
 
@@ -648,10 +657,8 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
         instance = super().__new__(cls)
         if kwargs.get('model') is not None:
             instance._parent = kwargs.get('model')
-        elif cls.get_contexts():
-            instance._parent = cls.get_contexts()[-1]
         else:
-            instance._parent = None
+            instance._parent = cls.get_context()
         theano_config = kwargs.get('theano_config', None)
         if theano_config is None or 'compute_test_value' not in theano_config:
             theano_config = {'compute_test_value': 'raise'}
