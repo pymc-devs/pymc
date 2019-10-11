@@ -283,7 +283,7 @@ def modelcontext(model: Optional['Model']) -> Optional['Model']:
     none supplied.
     """
     if model is None:
-        found: Optional['Model'] = Model.get_context(error_if_none=False)
+        found = Model.get_context(error_if_none=False) # type: Optional['Model']
         if found is None:
             raise ValueError("No model on context stack.")
         return found
