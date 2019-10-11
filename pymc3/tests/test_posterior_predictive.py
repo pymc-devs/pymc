@@ -1,5 +1,4 @@
 import pymc3 as pm
-import pytest
 from pymc3.distributions.posterior_predictive import _TraceDict
 import numpy as np
 

@@ -32,10 +32,10 @@ class TestData(SeededTest):
 
         x_pred = np.linspace(-3, 3, 200, dtype='float32')
 
-        with pm.Model() as model:
+        with pm.Model():
             x_shared = pm.Data('x_shared', x)
             b = pm.Normal('b', 0., 10.)
-            obsvar = pm.Normal('obs', b * x_shared, np.sqrt(1e-2), observed=y)
+            pm.Normal('obs', b * x_shared, np.sqrt(1e-2), observed=y)
             prior_trace0 = pm.sample_prior_predictive(1000)
 
             trace = pm.sample(1000, init=None, tune=1000, chains=1)
@@ -53,7 +53,7 @@ class TestData(SeededTest):
 
         assert pp_trace0['obs'].shape == (1000, 100)
         assert pp_trace01['obs'].shape == (1000, 100)
-       
+
         np.testing.assert_allclose(x, pp_trace0['obs'].mean(axis=0), atol=1e-1)
         np.testing.assert_allclose(x, pp_trace01['obs'].mean(axis=0), atol=1e-1)
 
@@ -108,7 +108,6 @@ class TestData(SeededTest):
                                    atol=1e-1)
         np.testing.assert_allclose(new_y, pp_tracef['obs'].mean(axis=0),
                                    atol=1e-1)
-        
 
     def test_creation_of_data_outside_model_context(self):
         with pytest.raises((IndexError, TypeError)) as error:

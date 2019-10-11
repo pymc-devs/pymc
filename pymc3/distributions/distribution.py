@@ -538,7 +538,7 @@ def draw_values(params, point=None, size=None):
     # The following check intercepts and redirects calls to
     # draw_values in the context of sample_posterior_predictive
     ppc_sampler = vectorized_ppc.get(None)
-    if ppc_sampler:
+    if ppc_sampler is not None:
         # this is being done inside new, vectorized sample_posterior_predictive
         return ppc_sampler(params, trace=point, samples=size)
 

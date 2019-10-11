@@ -310,6 +310,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
             givens = {p.name: (p, v) for (p, samples), v in drawn.items()
                       if getattr(p, 'name', None) is not None}
             stack = list(self.leaf_nodes.values())  # A queue would be more appropriate
+
             while stack:
                 next_ = stack.pop(0)
                 if (next_, samples) in drawn:
@@ -364,6 +365,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
             # The remaining params that must be drawn are all hashable
             to_eval = set() # type: Set[int]
             missing_inputs = set([j for j, p in self.symbolic_params]) # type: Set[int]
+
             while to_eval or missing_inputs:
                 if to_eval == missing_inputs:
                     raise ValueError('Cannot resolve inputs for {}'.format([str(trace.varnames[j]) for j in to_eval]))
@@ -479,8 +481,6 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
         samples = self.samples
 
         def random_sample(meth: Callable[..., np.ndarray], param, point: _TraceDict, size: int, shape: Tuple[int, ...]) -> np.ndarray:
-            # if hasattr(param, 'name') and param.name == 'obs':
-            #     import pdb; pdb.set_trace()
             val = meth(point=point, size=size)
             if size == 1:
                 val = np.expand_dims(val, axis=0)
@@ -575,8 +575,8 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                 if not input_vars:
                     assert input_vals == []  # AFAICT if there are now vars, there can't be vals
                     output = func(*input_vals)
-                    if hasattr(output, 'shape', None):
-                        val = np.ndarray(output * samples)
+                    if hasattr(output, 'shape'):
+                        val = np.repeat(np.expand_dims(output, 0), samples, axis=0)
                     else:
                         val = np.full(samples, output)
 

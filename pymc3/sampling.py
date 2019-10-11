@@ -1475,52 +1475,54 @@ class _DefaultTrace:
             self.trace_dict[k][idx, :] = v
 
 
-def sample_posterior_predictive(trace,
-                                samples: Optional[int]=None,
-                                model: Optional[Model]=None,
-                                vars: Optional[TIterable[Tensor]]=None,
-                                var_names: Optional[List[str]]=None,
-                                size: Optional[int]=None,
-                                keep_size: Optional[bool]=False,
-                                random_seed=None,
-                                progressbar: bool=True) -> Dict[str, np.ndarray]:
+def sample_posterior_predictive(
+    trace,
+    samples: Optional[int] = None,
+    model: Optional[Model] = None,
+    vars: Optional[TIterable[Tensor]] = None,
+    var_names: Optional[List[str]] = None,
+    size: Optional[int] = None,
+    keep_size: Optional[bool] = False,
+    random_seed=None,
+    progressbar: bool = True,
+) -> Dict[str, np.ndarray]:
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
     ----------
-    trace : backend, list, or MultiTrace
+    trace: backend, list, or MultiTrace
         Trace generated from MCMC sampling. Or a list containing dicts from
         find_MAP() or points
-    samples : int
+    samples: int
         Number of posterior predictive samples to generate. Defaults to one posterior predictive
         sample per posterior sample, that is, the number of draws times the number of chains. It
         is not recommended to modify this value; when modified, some chains may not be represented
         in the posterior predictive sample.
-    model : Model (optional if in ``with`` context)
+    model: Model (optional if in ``with`` context)
         Model used to generate ``trace``
-    vars : iterable
+    vars: iterable
         Variables for which to compute the posterior predictive samples.
         Deprecated: please use ``var_names`` instead.
-    var_names : Iterable[str]
+    var_names: Iterable[str]
         Alternative way to specify vars to sample, to make this function orthogonal with
         others.
-    size : int
+    size: int
         The number of random draws from the distribution specified by the parameters in each
         sample of the trace. Not recommended unless more than ndraws times nchains posterior
         predictive samples are needed.
-    keep_size : bool, optional
+    keep_size: bool, optional
         Force posterior predictive sample to have the same shape as posterior and sample stats
         data: ``(nchains, ndraws, ...)``. Overrides samples and size parameters.
-    random_seed : int
+    random_seed: int
         Seed for the random number generator.
-    progressbar : bool
+    progressbar: bool
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
 
     Returns
     -------
-    samples : dict
+    samples: dict
         Dictionary with the variable names as keys, and values numpy arrays containing
         posterior predictive samples.
     """
@@ -1539,9 +1541,11 @@ def sample_posterior_predictive(trace,
         samples = sum(len(v) for v in trace._straces.values())
 
     if samples < len_trace * nchain:
-        warnings.warn("samples parameter is smaller than nchains times ndraws, some draws "
-                     "and/or chains may not be represented in the returned posterior "
-                     "predictive sample")
+        warnings.warn(
+            "samples parameter is smaller than nchains times ndraws, some draws "
+            "and/or chains may not be represented in the returned posterior "
+            "predictive sample"
+        )
 
     model = modelcontext(model)
 
@@ -1561,9 +1565,8 @@ def sample_posterior_predictive(trace,
 
     indices = np.arange(samples)
 
-    
     if progressbar:
-        indices = tqdm(indices, total=samples)
+        indices = progress_bar(indices, total=samples, display=progressbar)
 
     ppc_trace_t = _DefaultTrace(samples)
     try:
@@ -1580,10 +1583,6 @@ def sample_posterior_predictive(trace,
 
     except KeyboardInterrupt:
         pass
-
-    finally:
-        if progressbar:
-            indices.close()
 
     ppc_trace = ppc_trace_t.trace_dict
     if keep_size:

@@ -18,6 +18,8 @@ from ..distributions.timeseries import EulerMaruyama, AR1, AR, GARCH11
 from ..sampling import sample, sample_posterior_predictive, fast_sample_posterior_predictive
 from ..theanof import floatX
 
+import numpy as np
+import pytest
 from .helpers import select_by_precision
 
 pytestmark = pytest.mark.usefixtures('seeded_test')
