@@ -170,20 +170,22 @@ class ContextMeta(type):
     """Functionality for objects that put themselves in a context using
     the `with` statement.
     """
-    _context_class = None # type: Union[Type, str]
 
     def __new__(cls, name, bases, dct,  **kargs):
+        # this serves only to strip off keyword args, per the warning from
+        # StackExchange:
         # DO NOT send "**kargs" to "type.__new__".  It won't catch them and
         # you'll get a "TypeError: type() takes 1 or 3 arguments" exception.   
-        # dct['get_context'] = classmethod(_get_context)
-        # dct['get_contexts'] = classmethod(_get_contexts)
         return super().__new__(cls, name, bases, dct)
 
+    # FIXME: is there a more elegant way to automatically add methods to the class that
+    # are instance methods instead of class methods?
     def __init__(cls, name, bases, nmspc, context_class: Optional[Type]=None, **kwargs):
+        """Add ``__enter__`` and ``__exit__`` methods to the new class automatically."""
         if context_class is not None:
             cls._context_class = context_class
         super().__init__(name, bases, nmspc)
-        cls.contexts = threading.local()
+        
         def __enter__(self):
             self.__class__.context_class.get_contexts().append(self)
             # self._theano_config is set in Model.__new__
@@ -200,9 +202,11 @@ class ContextMeta(type):
         cls.__enter__ = __enter__
         cls.__exit__ = __exit__
 
+
     def get_context(cls, error_if_none=True) -> Optional[T]:
         """Return the most recently pushed context object of type ``cls``
-        on the stack, or ``None``."""
+        on the stack, or ``None``. If ``error_if_none`` is True (default),
+        raise a ``TypeError`` instead of returning ``None``."""
         idx = -1
         while True:
             try:
@@ -217,12 +221,32 @@ class ContextMeta(type):
             idx = idx - 1
 
     def get_contexts(cls) -> List[T]:
-        # no race-condition here, cls.contexts is a thread-local object
+        """Return a stack of context instances for the ``context_class``
+        of ``cls``."""
+        # This lazily creates the context class's contexts
+        # thread-local object, as needed. This seems inelegant to me,
+        # but since the context class is not guaranteed to exist when
+        # the metaclass is being instantiated, I couldn't figure out a
+        # better way. [2019/10/11:rpg]
+        
+        # no race-condition here, contexts is a thread-local object
         # be sure not to override contexts in a subclass however!
-        if not hasattr(cls.context_class, 'stack'):
-            cls.context_class.stack = []
-        return cls.context_class.stack
+        context_class = cls.context_class
+        assert isinstance(context_class, type), \
+            "Name of context class, %s was not resolvable to a class"%context_class
+        if not hasattr(context_class, 'contexts'):
+            context_class.contexts = threading.local()
 
+        contexts = context_class.contexts
+
+        if not hasattr(contexts, 'stack'):
+            contexts.stack = []
+        return contexts.stack
+
+    # the following complex property accessor is necessary because the
+    # context_class may not have been created at the point it is
+    # specified, so the context_class may be a class *name* rather
+    # than a class.
     @property
     def context_class(cls) -> Type:
         def resolve_type(c: Union[Type, str]) -> Type:
@@ -239,11 +263,13 @@ class ContextMeta(type):
                              (cls.__name__, cls._context_class))
         return cls._context_class
 
+    # Inherit context class from parent
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         cls.context_class = super().context_class
 
     # Initialize object in its own context...
+    # Merged from InitContextMeta in the original.
     def __call__(cls, *args, **kwargs):
         instance = cls.__new__(cls, *args, **kwargs)
         with instance:  # appends context
