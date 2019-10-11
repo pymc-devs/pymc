@@ -65,14 +65,18 @@ def test_mixed_contexts():
                     assert _DrawValuesContext.get_context() == dvcb
                     assert _DrawValuesContextBlocker.get_context() == dvcb
                 assert _DrawValuesContext.get_context() == dvc
-                assert _DrawValuesContextBlocker.get_context() is None
+                assert _DrawValuesContextBlocker.get_context() is dvc
                 assert Model.get_context() == modelB
                 assert modelcontext(None) == modelB
-            assert _DrawValuesContext.get_context() is None
+            assert _DrawValuesContext.get_context(error_if_none=False) is None
+            with raises(TypeError):
+                _DrawValuesContext.get_context()
             assert Model.get_context() == modelB
             assert modelcontext(None) == modelB
         assert Model.get_context() == modelA
         assert modelcontext(None) == modelA
-    assert Model.get_context() is None
+    assert Model.get_context(error_if_none=False) is None
+    with raises(TypeError):
+        Model.get_context(error_if_none=True)
     with raises((ValueError, TypeError)):
         modelcontext(None)

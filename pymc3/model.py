@@ -3,7 +3,8 @@ import functools
 import itertools
 import threading
 import warnings
-from typing import Optional, Tuple, TypeVar, Type, List
+from typing import Optional, Tuple, TypeVar, Type, List, Union
+from sys import modules
 
 import numpy as np
 from pandas import Series
@@ -162,50 +163,94 @@ def _get_named_nodes_and_relations(graph, parent, leaf_nodes,
             node_children.update(temp_tree)
     return leaf_nodes, node_parents, node_children
 
-T = TypeVar('T', bound='Context')
+T = TypeVar('T', bound='ContextMeta')
 
-class Context:
+
+class ContextMeta(type):
     """Functionality for objects that put themselves in a context using
     the `with` statement.
     """
-    contexts = threading.local()
+    _context_class = None # type: Union[Type, str]
 
-    def __enter__(self):
-        type(self).get_contexts().append(self)
-        # self._theano_config is set in Model.__new__
-        if hasattr(self, '_theano_config'):
-            self._old_theano_config = set_theano_conf(self._theano_config)
-        return self
+    def __new__(cls, name, bases, dct,  **kargs):
+        # DO NOT send "**kargs" to "type.__new__".  It won't catch them and
+        # you'll get a "TypeError: type() takes 1 or 3 arguments" exception.   
+        # dct['get_context'] = classmethod(_get_context)
+        # dct['get_contexts'] = classmethod(_get_contexts)
+        return super().__new__(cls, name, bases, dct)
 
-    def __exit__(self, typ, value, traceback):
-        type(self).get_contexts().pop()
-        # self._theano_config is set in Model.__new__
-        if hasattr(self, '_old_theano_config'):
-            set_theano_conf(self._old_theano_config)
+    def __init__(cls, name, bases, nmspc, context_class: Optional[Type]=None, **kwargs):
+        if context_class is not None:
+            cls._context_class = context_class
+        super().__init__(name, bases, nmspc)
+        cls.contexts = threading.local()
+        def __enter__(self):
+            self.__class__.context_class.get_contexts().append(self)
+            # self._theano_config is set in Model.__new__
+            if hasattr(self, '_theano_config'):
+                self._old_theano_config = set_theano_conf(self._theano_config)
+            return self
 
-    @classmethod
-    def get_contexts(cls: Type[T]) -> List[T]:
-        # no race-condition here, cls.contexts is a thread-local object
-        # be sure not to override contexts in a subclass however!
-        if not hasattr(cls.contexts, 'stack'):
-            cls.contexts.stack = []
-        return cls.contexts.stack
+        def __exit__(self, typ, value, traceback):
+            self.__class__.context_class.get_contexts().pop()
+            # self._theano_config is set in Model.__new__
+            if hasattr(self, '_old_theano_config'):
+                set_theano_conf(self._old_theano_config)
 
-    @classmethod
-    def get_context(cls: Type[T], error_if_none=True) -> Optional[T]:
+        cls.__enter__ = __enter__
+        cls.__exit__ = __exit__
+
+    def get_context(cls, error_if_none=True) -> Optional[T]:
         """Return the most recently pushed context object of type ``cls``
         on the stack, or ``None``."""
         idx = -1
         while True:
             try:
-                candidate = cls.get_contexts()[idx]
+                candidate = cls.get_contexts()[idx] # type: Optional[T]
             except IndexError as e:
+                # Calling code expects to get a TypeError if the entity
+                # is unfound, and there's too much to fix.
                 if error_if_none:
-                    raise e
+                    raise TypeError("No %s on context stack"%str(cls))
                 return None
-            if isinstance(candidate, cls):
-                return candidate
+            return candidate
             idx = idx - 1
+
+    def get_contexts(cls) -> List[T]:
+        # no race-condition here, cls.contexts is a thread-local object
+        # be sure not to override contexts in a subclass however!
+        if not hasattr(cls.context_class, 'stack'):
+            cls.context_class.stack = []
+        return cls.context_class.stack
+
+    @property
+    def context_class(cls) -> Type:
+        def resolve_type(c: Union[Type, str]) -> Type:
+            if isinstance(c, str):
+                c = getattr(modules[cls.__module__], c)
+            if isinstance(c, type):
+                return c
+            raise ValueError("Cannot resolve context class %s"%c)
+        assert cls is not None
+        if isinstance(cls._context_class, str):
+            cls._context_class = resolve_type(cls._context_class)
+        if not isinstance(cls._context_class, (str, type)):
+            raise ValueError("Context class for %s, %s, is not of the right type"%\
+                             (cls.__name__, cls._context_class))
+        return cls._context_class
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls.context_class = super().context_class
+
+    # Initialize object in its own context...
+    def __call__(cls, *args, **kwargs):
+        instance = cls.__new__(cls, *args, **kwargs)
+        with instance:  # appends context
+            instance.__init__(*args, **kwargs)
+        return instance
+
+
 
 def modelcontext(model: Optional['Model']) -> Optional['Model']:
     """return the given model or try to find it in the context if there was
@@ -214,7 +259,7 @@ def modelcontext(model: Optional['Model']) -> Optional['Model']:
     if model is None:
         found: Optional['Model'] = Model.get_context(error_if_none=False)
         if found is None:
-            raise ValueError("No pymc3 model object on context stack.")
+            raise ValueError("No model on context stack.")
         return found
     return model
 
@@ -301,15 +346,6 @@ class Factor:
         if self.name is not None:
             logp.name = '__logp_%s' % self.name
         return logp
-
-
-class InitContextMeta(type):
-    """Metaclass that executes `__init__` of instance in it's context"""
-    def __call__(cls, *args, **kwargs):
-        instance = cls.__new__(cls, *args, **kwargs)
-        with instance:  # appends context
-            instance.__init__(*args, **kwargs)
-        return instance
 
 
 def withparent(meth):
@@ -566,7 +602,7 @@ class ValueGradFunction:
         return args_joined, theano.clone(cost, replace=replace)
 
 
-class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
+class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model'):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
@@ -660,7 +696,7 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
         if kwargs.get('model') is not None:
             instance._parent = kwargs.get('model')
         else:
-            instance._parent = cls.get_context()
+            instance._parent = cls.get_context(error_if_none=False)
         theano_config = kwargs.get('theano_config', None)
         if theano_config is None or 'compute_test_value' not in theano_config:
             theano_config = {'compute_test_value': 'raise'}
