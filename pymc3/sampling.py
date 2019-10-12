@@ -605,6 +605,8 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     try:
         step.tune = bool(tune)
         for i in range(draws):
+            if i == 0 and hasattr(step, 'iter_count'):
+                step.iter_count = 0
             if i == tune:
                 step = stop_tuning(step)
             if step.generates_stats:
