@@ -277,16 +277,15 @@ class ContextMeta(type):
         return instance
 
 
-
 def modelcontext(model: Optional['Model']) -> Optional['Model']:
-    """return the given model or try to find it in the context if there was
-    none supplied.
+    """
+    Return the given model or, if none was supplied, try to find one in
+    the context stack.
     """
     if model is None:
-        found = Model.get_context(error_if_none=False) # type: Optional['Model']
-        if found is None:
+        model = Model.get_context(error_if_none=False)
+        if model is None:
             raise ValueError("No model on context stack.")
-        return found
     return model
 
 
