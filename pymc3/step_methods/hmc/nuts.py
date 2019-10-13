@@ -259,7 +259,6 @@ class _Tree:
             self.left = tree.right
 
         self.depth += 1
-        self.log_accept_sum = np.logaddexp(self.log_accept_sum, tree.log_accept_sum)
         self.n_proposals += tree.n_proposals
 
         if diverging or turning:
@@ -270,6 +269,7 @@ class _Tree:
             self.proposal = tree.proposal
 
         self.log_size = np.logaddexp(self.log_size, tree.log_size)
+        self.log_accept_sum = np.logaddexp(self.log_accept_sum, tree.log_accept_sum)
         self.p_sum[:] += tree.p_sum
 
         left, right = self.left, self.right
@@ -330,7 +330,8 @@ class _Tree:
             turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
 
             log_size = np.logaddexp(tree1.log_size, tree2.log_size)
-            log_accept_sum = np.logaddexp(tree1.log_accept_sum, tree2.log_accept_sum)
+            log_accept_sum = np.logaddexp(tree1.log_accept_sum,
+                                          tree2.log_accept_sum)
             if logbern(tree2.log_size - log_size):
                 proposal = tree2.proposal
             else:
@@ -351,7 +352,7 @@ class _Tree:
         # Update accept stat if any subtrees were accepted
         if self.log_size > 0:
             # Remove contribution from initial state which is always a perfect accept
-            sum_weight = np.exp(self.log_size) - 1.
+            sum_weight = np.expm1(self.log_size)
             self.mean_tree_accept = np.exp(self.log_accept_sum) / sum_weight
         return {
             'depth': self.depth,
