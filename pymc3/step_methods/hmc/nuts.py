@@ -307,7 +307,7 @@ class _Tree:
                 error_msg = ("Energy change in leapfrog step is too large: %s."
                              % energy_change)
                 error = None
-        tree = Subtree(None, None, None, None, -np.inf, 0, 1)
+        tree = Subtree(None, None, None, None, -np.inf, -np.inf, 1)
         divergance_info = DivergenceInfo(error_msg, error, left)
         return tree, divergance_info, False
 
