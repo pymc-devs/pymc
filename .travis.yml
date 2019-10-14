@@ -37,4 +37,4 @@ script:
   - . ./scripts/test.sh $TESTCMD
 
 after_success:
-  - COVERALLS_PARALLEL=true coveralls
+  - coveralls
