@@ -19,7 +19,7 @@ services:
 
 install:
   - . ./scripts/create_testenv.sh
-  - pip install coveralls
+  - pip install codecov
   - conda list && pip freeze
 
 env:
@@ -37,4 +37,4 @@ script:
   - . ./scripts/test.sh $TESTCMD
 
 after_success:
-  - coveralls
+  - codecov

@@ -190,8 +190,8 @@ Sponsors
    :target: https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks
 .. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.svg?branch=master
    :target: https://travis-ci.org/pymc-devs/pymc3
-.. |Coverage| image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master
-   :target: https://coveralls.io/github/pymc-devs/pymc3?branch=master
+.. |Coverage| image:: https://codecov.io/gh/pymc-devs/pymc3/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/pymc-devs/pymc3
 .. |NumFOCUS| image:: https://www.numfocus.org/wp-content/uploads/2017/03/1457562110.png
    :target: http://www.numfocus.org/
 .. |Quantopian| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg
