@@ -252,10 +252,18 @@ class _Tree:
         if direction > 0:
             tree, diverging, turning = self._build_subtree(
                 self.right, self.depth, floatX(np.asarray(self.step_size)))
+            leftmost_begin, leftmost_end = self.left, self.right
+            rightmost_begin, rightmost_end = tree.left, tree.right
+            leftmost_p_sum = self.p_sum
+            rightmost_p_sum = tree.p_sum
             self.right = tree.right
         else:
             tree, diverging, turning = self._build_subtree(
                 self.left, self.depth, floatX(np.asarray(-self.step_size)))
+            leftmost_begin, leftmost_end = tree.right, tree.left
+            rightmost_begin, rightmost_end = self.left, self.right
+            leftmost_p_sum = tree.p_sum
+            rightmost_p_sum = self.p_sum
             self.left = tree.right
 
         self.depth += 1
@@ -273,9 +281,16 @@ class _Tree:
 					   tree.log_accept_sum)
         self.p_sum[:] += tree.p_sum
 
-        left, right = self.left, self.right
-        p_sum = self.p_sum
-        turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
+        # Additional turning check only when tree depth > 0 to avoid redundant work
+        if self.depth > 0:
+            left, right = self.left, self.right
+            p_sum = self.p_sum
+            turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
+            p_sum1 = leftmost_p_sum + rightmost_begin.p
+            turning1 = (p_sum1.dot(leftmost_begin.v) <= 0) or (p_sum1.dot(rightmost_begin.v) <= 0)
+            p_sum2 = leftmost_end.p + rightmost_p_sum
+            turning2 = (p_sum2.dot(leftmost_end.v) <= 0) or (p_sum2.dot(rightmost_end.v) <= 0)
+            turning = (turning | turning1 | turning2)
 
         return diverging, turning
 
@@ -332,6 +347,13 @@ class _Tree:
         if not (diverging or turning):
             p_sum = tree1.p_sum + tree2.p_sum
             turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
+            # Additional U turn check only when depth > 1 to avoid redundant work.
+            if depth - 1 > 0:
+                p_sum1 = tree1.p_sum + tree2.left.p
+                turning1 = (p_sum1.dot(tree1.left.v) <= 0) or (p_sum1.dot(tree2.left.v) <= 0)
+                p_sum2 = tree1.right.p + tree2.p_sum
+                turning2 = (p_sum2.dot(tree1.right.v) <= 0) or (p_sum2.dot(tree2.right.v) <= 0)
+                turning = (turning | turning1 | turning2)
 
             log_size = np.logaddexp(tree1.log_size, tree2.log_size)
             log_accept_sum = np.logaddexp(tree1.log_accept_sum,
