@@ -269,7 +269,8 @@ class _Tree:
             self.proposal = tree.proposal
 
         self.log_size = np.logaddexp(self.log_size, tree.log_size)
-        self.log_accept_sum = np.logaddexp(self.log_accept_sum, tree.log_accept_sum)
+        self.log_accept_sum = np.logaddexp(self.log_accept_sum, 
+					   tree.log_accept_sum)
         self.p_sum[:] += tree.p_sum
 
         left, right = self.left, self.right
@@ -294,12 +295,15 @@ class _Tree:
             if np.abs(energy_change) > np.abs(self.max_energy_change):
                 self.max_energy_change = energy_change
             if np.abs(energy_change) < self.Emax:
-                # Acceptance statistic e^{-H(q_n, p_n)} max(1, e^{H(q_0 - p_0) - H(q_n, p_n)})
-                # Saturated Metropolis accept probability with Boltzmann weight if h - H0 < 0
+                # Acceptance statistic 
+		# e^{H(q_0, p_0) - H(q_n, p_n)} max(1, e^{H(q_0, p_0) - H(q_n, p_n)})
+                # Saturated Metropolis accept probability with Boltzmann weight 
+		# if h - H0 < 0
                 log_p_accept = -energy_change + min(0., -energy_change)
                 log_size = -energy_change
                 proposal = Proposal(
-                    right.q, right.q_grad, right.energy, log_p_accept, right.model_logp)
+                    right.q, right.q_grad, right.energy, log_p_accept, 
+		    right.model_logp)
                 tree = Subtree(right, right, right.p,
                                proposal, log_size, log_p_accept, 1)
                 return tree, None, False
@@ -351,7 +355,8 @@ class _Tree:
     def stats(self):
         # Update accept stat if any subtrees were accepted
         if self.log_size > 0:
-            # Remove contribution from initial state which is always a perfect accept
+            # Remove contribution from initial state which is always a perfect 
+	    # accept
             sum_weight = np.expm1(self.log_size)
             self.mean_tree_accept = np.exp(self.log_accept_sum) / sum_weight
         return {
