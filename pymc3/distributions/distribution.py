@@ -6,7 +6,7 @@ from theano import function
 import theano
 from ..memoize import memoize
 from ..model import (
-    Model, get_named_nodes_and_relations, FreeRV,
+    Model, build_named_node_tree, FreeRV,
     ObservedRV, MultiObservedRV, Context, InitContextMeta
 )
 from ..vartypes import string_types, theano_constant
@@ -564,26 +564,9 @@ def draw_values(params, point=None, size=None):
         # Distribution parameters may be nodes which have named node-inputs
         # specified in the point. Need to find the node-inputs, their
         # parents and children to replace them.
-        leaf_nodes = {}
-        named_nodes_descendents = {}
-        named_nodes_ancestors = {}
-        for _, param in symbolic_params:
-            if hasattr(param, 'name'):
-                # Get the named nodes under the `param` node
-                nn, nnd, nna = get_named_nodes_and_relations(param)
-                leaf_nodes.update(nn)
-                # Update the discovered parental relationships
-                for k in nnd.keys():
-                    if k not in named_nodes_descendents.keys():
-                        named_nodes_descendents[k] = nnd[k]
-                    else:
-                        named_nodes_descendents[k].update(nnd[k])
-                # Update the discovered child relationships
-                for k in nna.keys():
-                    if k not in named_nodes_ancestors.keys():
-                        named_nodes_ancestors[k] = nna[k]
-                    else:
-                        named_nodes_ancestors[k].update(nna[k])
+        leaf_nodes, named_nodes_descendents, named_nodes_ancestors = (
+            build_named_node_tree((param for _, param in symbolic_params))
+        )
 
         # Init givens and the stack of nodes to try to `_draw_value` from
         givens = {p.name: (p, v) for (p, size), v in drawn.items()

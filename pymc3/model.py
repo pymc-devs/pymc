@@ -103,19 +103,22 @@ def get_named_nodes_and_relations(graph):
     graph - a theano node
 
     Returns:
-    leafs: A dictionary of name:node pairs, of the named nodes that
+    leaves: A dictionary of name:node pairs, of the named nodes that
         have no named ancestors in the provided theano graph.
     descendents: A dictionary of node:set([parents]) pairs. Each key is
         a theano named node, and the corresponding value is the set of
-        theano named nodes that are direct descendents of the node in the
-        supplied ``graph``. These relations skip unnamed intermediate nodes.
+        theano named nodes that are descendents with no intervening named
+        nodes in the supplied ``graph``.
     ancestors: A dictionary of node:set([ancestors]) pairs. Each key
         is a theano named node, and the corresponding value is the set
-        of theano named nodes that are direct ancestors in the of the node in
-        the supplied ``graph``. These relations skip unnamed intermediate
-        nodes.
+        of theano named nodes that are ancestors with no intervening named
+        nodes in the supplied ``graph``.
 
     """
+    # We don't enforce distribution parameters to have a name but we may
+    # attempt to get_named_nodes_and_relations from them anyway in
+    # distributions.draw_values. This means that must take care only to add
+    # graph to the ancestors and descendents dictionaries if it has a name.
     if graph.name is not None:
         ancestors = {graph: set()}
         descendents = {graph: set()}
@@ -167,6 +170,53 @@ def _get_named_nodes_and_relations(graph, descendent, descendents, ancestors):
             descendents.update(temp_desc)
             ancestors.update(temp_ances)
     return descendents, ancestors
+
+
+def build_named_node_tree(graphs):
+    """Build the combined descence/ancestry tree of named nodes (i.e., nodes
+    whose name attribute is not None) in a list (or iterable) of theano graphs.
+    The relationship tree does not include unnamed intermediate nodes present
+    in the supplied graphs.
+
+    Parameters
+    ----------
+    graphs - iterable of theano graphs
+
+    Returns:
+    leaves: A dictionary of name:node pairs, of the named nodes that
+        have no named ancestors in the provided theano graphs.
+    descendents: A dictionary of node:set([parents]) pairs. Each key is
+        a theano named node, and the corresponding value is the set of
+        theano named nodes that are descendents with no intervening named
+        nodes in the supplied ``graphs``.
+    ancestors: A dictionary of node:set([ancestors]) pairs. Each key
+        is a theano named node, and the corresponding value is the set
+        of theano named nodes that are ancestors with no intervening named
+        nodes in the supplied ``graphs``.
+
+    """
+    leaf_nodes = {}
+    named_nodes_descendents = {}
+    named_nodes_ancestors = {}
+    for graph in graphs:
+        if getattr(graph, "name", None) is None:
+            continue
+        # Get the named nodes under the `param` node
+        nn, nnd, nna = get_named_nodes_and_relations(graph)
+        leaf_nodes.update(nn)
+        # Update the discovered parental relationships
+        for k in nnd.keys():
+            if k not in named_nodes_descendents.keys():
+                named_nodes_descendents[k] = nnd[k]
+            else:
+                named_nodes_descendents[k].update(nnd[k])
+        # Update the discovered child relationships
+        for k in nna.keys():
+            if k not in named_nodes_ancestors.keys():
+                named_nodes_ancestors[k] = nna[k]
+            else:
+                named_nodes_ancestors[k].update(nna[k])
+    return leaf_nodes, named_nodes_descendents, named_nodes_ancestors
 
 
 class Context:

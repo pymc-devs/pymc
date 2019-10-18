@@ -416,6 +416,10 @@ class TestSamplePPC(SeededTest):
             assert np.allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
     def test_var_name_order_invariance(self):
+        # Issue #3643 exposed a bug in sample_posterior_predictive, which made
+        # it return incorrect values depending on the order of the supplied
+        # var_names. This tests that sample_posterior_predictive is robust
+        # to different var_names orders.
         obs_a = theano.shared(pm.theanof.floatX(np.array([10., 20., 30.])))
         with pm.Model() as m:
             pm.Normal('mu', 3, 5)
