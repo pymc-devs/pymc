@@ -199,8 +199,6 @@ def build_named_node_tree(graphs):
     named_nodes_descendents = {}
     named_nodes_ancestors = {}
     for graph in graphs:
-        if getattr(graph, "name", None) is None:
-            continue
         # Get the named nodes under the `param` node
         nn, nnd, nna = get_named_nodes_and_relations(graph)
         leaf_nodes.update(nn)

@@ -565,7 +565,12 @@ def draw_values(params, point=None, size=None):
         # specified in the point. Need to find the node-inputs, their
         # parents and children to replace them.
         leaf_nodes, named_nodes_descendents, named_nodes_ancestors = (
-            build_named_node_tree((param for _, param in symbolic_params))
+            build_named_node_tree(
+                (
+                    param for _, param in symbolic_params
+                    if hasattr(param, "name")
+                )
+            )
         )
 
         # Init givens and the stack of nodes to try to `_draw_value` from
