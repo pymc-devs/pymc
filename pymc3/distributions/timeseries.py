@@ -206,7 +206,6 @@ class GaussianRandomWalk(distribution.Continuous):
         -------
         TensorVariable
         """
-        tau = self.tau
         sigma = self.sigma
         mu = self.mu
         init = self.init
