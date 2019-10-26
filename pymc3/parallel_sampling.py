@@ -17,28 +17,31 @@ logger = logging.getLogger("pymc3")
 
 def _get_broken_pipe_exception():
     import sys
-    if sys.platform == 'win32':
-        return RuntimeError("The communication pipe between the main process "
-                            "and its spawned children is broken.\n"
-                            "In Windows OS, this usually means that the child "
-                            "process raised an exception while it was being "
-                            "spawned, before it was setup to communicate to "
-                            "the main process.\n"
-                            "The exceptions raised by the child process while "
-                            "spawning cannot be caught or handled from the "
-                            "main process, and when running from an IPython or "
-                            "jupyter notebook interactive kernel, the child's "
-                            "exception and traceback appears to be lost.\n"
-                            "A known way to see the child's error, and try to "
-                            "fix or handle it, is to run the problematic code "
-                            "as a batch script from a system's Command Prompt. "
-                            "The child's exception will be printed to the "
-                            "Command Promt's stderr, and it should be visible "
-                            "above this error and traceback.\n"
-                            "Note that if running a jupyter notebook that was "
-                            "invoked from a Command Prompt, the child's "
-                            "exception should have been printed to the Command "
-                            "Prompt on which the notebook is running.")
+
+    if sys.platform == "win32":
+        return RuntimeError(
+            "The communication pipe between the main process "
+            "and its spawned children is broken.\n"
+            "In Windows OS, this usually means that the child "
+            "process raised an exception while it was being "
+            "spawned, before it was setup to communicate to "
+            "the main process.\n"
+            "The exceptions raised by the child process while "
+            "spawning cannot be caught or handled from the "
+            "main process, and when running from an IPython or "
+            "jupyter notebook interactive kernel, the child's "
+            "exception and traceback appears to be lost.\n"
+            "A known way to see the child's error, and try to "
+            "fix or handle it, is to run the problematic code "
+            "as a batch script from a system's Command Prompt. "
+            "The child's exception will be printed to the "
+            "Command Promt's stderr, and it should be visible "
+            "above this error and traceback.\n"
+            "Note that if running a jupyter notebook that was "
+            "invoked from a Command Prompt, the child's "
+            "exception should have been printed to the Command "
+            "Prompt on which the notebook is running."
+        )
     else:
         return None
 
@@ -370,9 +373,9 @@ class ParallelSampler:
         self._total_draws = 0
         self._desc = "Sampling {0._chains:d} chains, {0._divergences:,d} divergences"
         self._chains = chains
-        self._progress = progress_bar(range(chains * (draws + tune)),
-                                    display=progressbar,
-                                    auto_update=False)
+        self._progress = progress_bar(
+            range(chains * (draws + tune)), display=progressbar, auto_update=False
+        )
         self._progress.comment = self._desc.format(self)
 
     def _make_active(self):
@@ -391,7 +394,7 @@ class ParallelSampler:
             draw = ProcessAdapter.recv_draw(self._active)
             proc, is_last, draw, tuning, stats, warns = draw
             self._total_draws += 1
-            if not tuning and stats and stats[0].get('diverging'):
+            if not tuning and stats and stats[0].get("diverging"):
                 self._divergences += 1
                 self._progress.comment = self._desc.format(self)
             self._progress.update(self._total_draws)
@@ -420,6 +423,7 @@ class ParallelSampler:
 
     def __exit__(self, *args):
         ProcessAdapter.terminate_all(self._samplers)
+
 
 def _cpu_count():
     """Try to guess the number of CPUs in the system.
