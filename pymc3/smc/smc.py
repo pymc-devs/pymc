@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 import numpy as np
-from tqdm import tqdm
+from fastprogress import progress_bar
 import multiprocessing as mp
 import warnings
 from theano import function as theano_function
@@ -264,7 +264,7 @@ class SMC:
                     draw,
                     *parameters
                 )
-                for draw in tqdm(range(self.draws), disable=not self.progressbar)
+                for draw in progress_bar(range(self.draws), display=self.progressbar)
             ]
         posterior, acc_list, priors, likelihoods = zip(*results)
         self.posterior = np.array(posterior)

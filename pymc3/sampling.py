@@ -26,7 +26,7 @@ from .exceptions import IncorrectArgumentsError
 from .parallel_sampling import _cpu_count
 from pymc3.step_methods.hmc import quadpotential
 import pymc3 as pm
-from tqdm import tqdm
+from fastprogress import progress_bar
 
 
 import sys
@@ -494,8 +494,7 @@ def _sample_population(draws, chain, chains, start, random_seed, step, tune,
     sampling = _prepare_iter_population(draws, chains, step, start, parallelize,
                                         tune=tune, model=model, random_seed=random_seed)
 
-    if progressbar:
-        sampling = tqdm(sampling, total=draws)
+    sampling = progress_bar(sampling, total=draws, display=progressbar)
 
     latest_traces = None
     for it, traces in enumerate(sampling):
@@ -510,10 +509,10 @@ def _sample(chain, progressbar, random_seed, start, draws=None, step=None,
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
     _pbar_data = None
-    if progressbar:
-        _pbar_data = {"chain": chain, "divergences": 0}
-        _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
-        sampling = tqdm(sampling, total=draws, desc=_desc.format(**_pbar_data))
+    _pbar_data = {"chain": chain, "divergences": 0}
+    _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
+    sampling = progress_bar(sampling, total=draws, display=progressbar)
+    sampling.comment = _desc.format(**_pbar_data)
     try:
         strace = None
         for it, (strace, diverging) in enumerate(sampling):
@@ -521,12 +520,9 @@ def _sample(chain, progressbar, random_seed, start, draws=None, step=None,
                 trace = MultiTrace([strace])
                 if diverging and _pbar_data is not None:
                     _pbar_data["divergences"] += 1
-                    sampling.set_description(_desc.format(**_pbar_data))
+                    sampling.comment = _desc.format(**_pbar_data)
     except KeyboardInterrupt:
         pass
-    finally:
-        if progressbar:
-            sampling.close()
     return strace
 
 
@@ -663,7 +659,7 @@ class PopulationStepper:
                 # configure a child process for each stepper
                 _log.info('Attempting to parallelize chains to all cores. You can turn this off with `pm.sample(cores=1)`.')
                 import multiprocessing
-                for c, stepper in enumerate(tqdm(steppers)):
+                for c, stepper in enumerate(progress_bar(steppers)):
                     slave_end, master_end = multiprocessing.Pipe()
                     stepper_dumps = pickle.dumps(stepper, protocol=4)
                     process = multiprocessing.Process(
@@ -1154,8 +1150,7 @@ def sample_posterior_predictive(trace,
     indices = np.arange(samples)
 
     
-    if progressbar:
-        indices = tqdm(indices, total=samples)
+    indices = progress_bar(indices, total=samples, display=progressbar)
 
     ppc_trace_t = _DefaultTrace(samples)
     try:
@@ -1172,10 +1167,6 @@ def sample_posterior_predictive(trace,
 
     except KeyboardInterrupt:
         pass
-
-    finally:
-        if progressbar:
-            indices.close()
 
     ppc_trace = ppc_trace_t.trace_dict
     if keep_size:
@@ -1299,8 +1290,7 @@ def sample_posterior_predictive_w(traces, samples=None, models=None, weights=Non
 
     indices = np.random.randint(0, len_trace, samples)
 
-    if progressbar:
-        indices = tqdm(indices, total=samples)
+    indices = progress_bar(indices, total=samples, display=progressbar)
 
     try:
         ppc = defaultdict(list)
@@ -1316,10 +1306,6 @@ def sample_posterior_predictive_w(traces, samples=None, models=None, weights=Non
 
     except KeyboardInterrupt:
         pass
-
-    finally:
-        if progressbar:
-            indices.close()
 
     return {k: np.asarray(v) for k, v in ppc.items()}
 

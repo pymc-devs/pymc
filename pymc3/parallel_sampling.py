@@ -237,7 +237,6 @@ class ProcessAdapter:
             tune,
             seed,
         )
-        # We fork right away, so that the main process can start tqdm threads
         try:
             self._process.start()
         except IOError as e:
@@ -346,8 +345,7 @@ class ParallelSampler:
         start_chain_num=0,
         progressbar=True,
     ):
-        if progressbar:
-            from tqdm import tqdm
+        from fastprogress import progress_bar
 
         if any(len(arg) != chains for arg in [seeds, start_points]):
             raise ValueError("Number of seeds and start_points must be %s." % chains)
@@ -369,14 +367,13 @@ class ParallelSampler:
 
         self._progress = None
         self._divergences = 0
+        self._total_draws = 0
         self._desc = "Sampling {0._chains:d} chains, {0._divergences:,d} divergences"
         self._chains = chains
-        if progressbar:
-            self._progress = tqdm(
-                total=chains * (draws + tune),
-                unit="draws",
-                desc=self._desc.format(self)
-            )
+        self._progress = progress_bar(range(chains * (draws + tune)),
+                                    display=progressbar,
+                                    auto_update=False)
+        self._progress.comment = self._desc.format(self)
 
     def _make_active(self):
         while self._inactive and len(self._active) < self._max_active:
@@ -393,11 +390,11 @@ class ParallelSampler:
         while self._active:
             draw = ProcessAdapter.recv_draw(self._active)
             proc, is_last, draw, tuning, stats, warns = draw
-            if self._progress is not None:
-                if not tuning and stats and stats[0].get('diverging'):
-                    self._divergences += 1
-                    self._progress.set_description(self._desc.format(self))
-                self._progress.update()
+            self._total_draws += 1
+            if not tuning and stats and stats[0].get('diverging'):
+                self._divergences += 1
+                self._progress.comment = self._desc.format(self)
+            self._progress.update(self._total_draws)
 
             if is_last:
                 proc.join()
@@ -423,8 +420,6 @@ class ParallelSampler:
 
     def __exit__(self, *args):
         ProcessAdapter.terminate_all(self._samplers)
-        if self._progress is not None:
-            self._progress.close()
 
 def _cpu_count():
     """Try to guess the number of CPUs in the system.

@@ -3,7 +3,7 @@ import warnings
 import collections
 
 import numpy as np
-import tqdm
+from fastprogress import progress_bar
 
 import pymc3 as pm
 from pymc3.variational import test_functions
@@ -73,14 +73,12 @@ class Inference:
             score=score, fn_kwargs=fn_kwargs,
             **kwargs
         )
-        progress = tqdm.trange(n)
+        progress = progress_bar(n)
         try:
             for _ in progress:
                 step_func()
         except KeyboardInterrupt:
             pass
-        finally:
-            progress.close()
         return step_func.profile
 
     def fit(self, n=10000, score=None, callbacks=None, progressbar=True,
@@ -129,11 +127,11 @@ class Inference:
             callbacks = []
         score = self._maybe_score(score)
         step_func = self.objective.step_function(score=score, **kwargs)
-        with tqdm.trange(n, disable=not progressbar) as progress:
-            if score:
-                state = self._iterate_with_loss(0, n, step_func, progress, callbacks)
-            else:
-                state = self._iterate_without_loss(0, n, step_func, progress, callbacks)
+        progress = progress_bar(n, display=progressbar)
+        if score:
+            state = self._iterate_with_loss(0, n, step_func, progress, callbacks)
+        else:
+            state = self._iterate_without_loss(0, n, step_func, progress, callbacks)
 
         # hack to allow pm.fit() access to loss hist
         self.approx.hist = self.hist
@@ -170,11 +168,8 @@ class Inference:
                 for callback in callbacks:
                     callback(self.approx, None, i+s+1)
         except (KeyboardInterrupt, StopIteration) as e:
-            progress.close()
             if isinstance(e, StopIteration):
                 logger.info(str(e))
-        finally:
-            progress.close()
         return State(i+s, step=step_func,
                      callbacks=callbacks,
                      score=False)
@@ -219,15 +214,13 @@ class Inference:
                 scores[i] = e
                 if i % 10 == 0:
                     avg_loss = _infmean(scores[max(0, i - 1000):i + 1])
-                    progress.set_description('Average Loss = {:,.5g}'.format(avg_loss))
+                    progress.comment = 'Average Loss = {:,.5g}'.format(avg_loss)
                     avg_loss = scores[max(0, i - 1000):i + 1].mean()
-                    progress.set_description(
-                        'Average Loss = {:,.5g}'.format(avg_loss))
+                    progress.comment = 'Average Loss = {:,.5g}'.format(avg_loss)
                 for callback in callbacks:
                     callback(self.approx, scores[:i + 1], i+s+1)
         except (KeyboardInterrupt, StopIteration) as e:  # pragma: no cover
             # do not print log on the same line
-            progress.close()
             scores = scores[:i]
             if isinstance(e, StopIteration):
                 logger.info(str(e))
@@ -246,8 +239,6 @@ class Inference:
                 avg_loss = _infmean(scores[max(0, i - 1000):i + 1])
                 logger.info(
                     'Finished [100%]: Average Loss = {:,.5g}'.format(avg_loss))
-        finally:
-            progress.close()
         self.hist = np.concatenate([self.hist, scores])
         return State(i+s, step=step_func,
                      callbacks=callbacks,
@@ -259,11 +250,11 @@ class Inference:
         if self.state is None:
             raise TypeError('Need to call `.fit` first')
         i, step, callbacks, score = self.state
-        with tqdm.trange(n, disable=not progressbar) as progress:
-            if score:
-                state = self._iterate_with_loss(i, n, step, progress, callbacks)
-            else:
-                state = self._iterate_without_loss(i, n, step, progress, callbacks)
+        progress = progress_bar(n, display=progressbar)
+        if score:
+            state = self._iterate_with_loss(i, n, step, progress, callbacks)
+        else:
+            state = self._iterate_without_loss(i, n, step, progress, callbacks)
         self.state = state
 
 

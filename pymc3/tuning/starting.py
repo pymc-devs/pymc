@@ -6,7 +6,7 @@ Created on Mar 12, 2011
 from scipy.optimize import minimize
 import numpy as np
 from numpy import isfinite, nan_to_num
-from tqdm import tqdm
+from fastprogress import progress_bar
 import pymc3 as pm
 from ..vartypes import discrete_types, typefilter
 from ..model import modelcontext, Point
@@ -177,8 +177,8 @@ class CostFuncWrapper:
             self.use_gradient = True
             self.desc = 'logp = {:,.5g}, ||grad|| = {:,.5g}'
         self.previous_x = None
-        self.progress = tqdm(total=maxeval, disable=not progressbar)
-        self.progress.n = 0
+        self.progress = progress_bar(total=maxeval, display=progressbar)
+        self.progress.update(0)
 
     def __call__(self, x):
         neg_value = np.float64(self.logp_func(pm.floatX(x)))
@@ -198,7 +198,6 @@ class CostFuncWrapper:
 
         if self.n_eval > self.maxeval:
             self.update_progress_desc(neg_value, grad)
-            self.progress.close()
             raise StopIteration
 
         self.n_eval += 1
@@ -211,7 +210,7 @@ class CostFuncWrapper:
 
     def update_progress_desc(self, neg_value, grad=None):
         if grad is None:
-            self.progress.set_description(self.desc.format(neg_value))
+            self.progress.comment = self.desc.format(neg_value)
         else:
             norm_grad = np.linalg.norm(grad)
-            self.progress.set_description(self.desc.format(neg_value, norm_grad))
+            self.progress.comment = self.desc.format(neg_value, norm_grad)
