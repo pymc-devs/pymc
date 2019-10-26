@@ -38,3 +38,19 @@ script:
 
 after_success:
   - codecov
+
+stages:
+  - test
+  - name: binder
+    if: (branch = master) AND (NOT (type IN (pull_request)))
+
+jobs:
+  include:
+  - stage: binder
+    before_install: skip
+    install: skip
+    script:
+    # Use Binder build API to trigger repo2docker to build image on GKE and OVH Binder Federation clusters
+    - bash binder/trigger_binder.sh https://gke.mybinder.org/build/gh/pymc-devs/pymc3/"${TRAVIS_BRANCH}"
+    - bash binder/trigger_binder.sh https://ovh.mybinder.org/build/gh/pymc-devs/pymc3/"${TRAVIS_BRANCH}"
+    after_success: skip
