@@ -21,6 +21,7 @@ from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
 from .util import get_transformed_name
+from .exceptions import ImputationWarning
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -1341,7 +1342,7 @@ def as_tensor(data, name, model, distribution):
         impute_message = ('Data in {name} contains missing values and'
                           ' will be automatically imputed from the'
                           ' sampling distribution.'.format(name=name))
-        warnings.warn(impute_message, UserWarning)
+        warnings.warn(impute_message, ImputationWarning)
         from .distributions import NoDistribution
         testval = np.broadcast_to(distribution.default(), data.shape)[data.mask]
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,
