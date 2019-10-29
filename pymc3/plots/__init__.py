@@ -7,27 +7,8 @@ for details on plots.
 import functools
 import sys
 import warnings
-try:
-    import arviz as az
-except ImportError:  # arviz is optional, throw exception when used
 
-    class _ImportWarner:
-        __all__ = []
-
-        def __init__(self, attr):
-            self.attr = attr
-
-        def __call__(self, *args, **kwargs):
-            raise ImportError(
-                "ArviZ is not installed. In order to use `{0.attr}`:\npip install arviz".format(self)
-            )
-
-    class _ArviZ:
-        def __getattr__(self, attr):
-            return _ImportWarner(attr)
-
-
-    az = _ArviZ()
+import arviz as az
 
 def map_args(func):
     swaps = [

@@ -8,6 +8,7 @@ from . import gp
 from .math import logaddexp, logsumexp, logit, invlogit, expand_packed_triangular, probit, invprobit
 from .model import *
 from .model_graph import model_to_graphviz
+from . import ode
 from .stats import *
 from .sampling import *
 from .step_methods import *
@@ -19,7 +20,6 @@ from .vartypes import *
 from .exceptions import *
 from . import sampling
 
-from .diagnostics import *
 from .backends.tracetab import *
 from .backends import save_trace, load_trace
 

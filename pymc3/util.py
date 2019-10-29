@@ -50,7 +50,7 @@ def get_transformed_name(name, transform):
 
 def is_transformed_name(name):
     """
-    Quickly check if a name was transformed with `get_transormed_name`
+    Quickly check if a name was transformed with `get_transformed_name`
 
     Parameters
     ----------
@@ -60,7 +60,7 @@ def is_transformed_name(name):
     Returns
     -------
     bool
-        Boolean, whether the string could have been produced by `get_transormed_name`
+        Boolean, whether the string could have been produced by `get_transformed_name`
     """
     return name.endswith('__') and name.count('_') >= 3
 

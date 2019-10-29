@@ -485,7 +485,7 @@ class StickBreaking(Transform):
         Km1 = y.shape[0]
         k = np.arange(Km1)[(slice(None),) + (None,) * (y.ndim - 1)]
         eq_share = nplogit(1.0 / (Km1 + 1 - k).astype(str(y_.dtype)))
-        z = expit(y + eq_share, self.eps)
+        z = expit(y + eq_share)
         yl = np.concatenate([z, np.ones(y[:1].shape)])
         yu = np.concatenate([np.ones(y[:1].shape), 1 - z])
         S = np.cumprod(yu, 0)

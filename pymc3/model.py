@@ -21,6 +21,7 @@ from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
 from .util import get_transformed_name
+from .exceptions import ImputationWarning
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -28,6 +29,16 @@ __all__ = [
 ]
 
 FlatView = collections.namedtuple('FlatView', 'input, replacements, view')
+
+
+class PyMC3Variable(TensorVariable):
+    """Class to wrap Theano TensorVariable for custom behavior."""
+
+    # Implement matrix multiplication infix operator: X @ w
+    __matmul__ = tt.dot
+
+    def __rmatmul__(self, other):
+        return tt.dot(other, self)
 
 
 class InstanceMethod:
@@ -1245,7 +1256,7 @@ def _get_scaling(total_size, shape, ndim):
     return tt.as_tensor(floatX(coef))
 
 
-class FreeRV(Factor, TensorVariable):
+class FreeRV(Factor, PyMC3Variable):
     """Unobserved random variable that a model is specified in terms of."""
 
     def __init__(self, type=None, owner=None, index=None, name=None,
@@ -1331,7 +1342,7 @@ def as_tensor(data, name, model, distribution):
         impute_message = ('Data in {name} contains missing values and'
                           ' will be automatically imputed from the'
                           ' sampling distribution.'.format(name=name))
-        warnings.warn(impute_message, UserWarning)
+        warnings.warn(impute_message, ImputationWarning)
         from .distributions import NoDistribution
         testval = np.broadcast_to(distribution.default(), data.shape)[data.mask]
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,
@@ -1354,7 +1365,7 @@ def as_tensor(data, name, model, distribution):
         return data
 
 
-class ObservedRV(Factor, TensorVariable):
+class ObservedRV(Factor, PyMC3Variable):
     """Observed random variable that a model is specified in terms of.
     Potentially partially observed.
     """
@@ -1525,7 +1536,7 @@ def Potential(name, var, model=None):
     return var
 
 
-class TransformedRV(TensorVariable):
+class TransformedRV(PyMC3Variable):
     """
     Parameters
     ----------
