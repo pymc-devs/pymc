@@ -4,6 +4,7 @@ Gallery.contents = {
     "stochastic_volatility": "Case Studies",
     "rugby_analytics": "Case Studies",
     "multilevel_modeling": "Case Studies",
+    "putting_workflow": "Case Studies",
     "Diagnosing_biased_Inference_with_Divergences": "Diagnostics and Model Criticism",
     "model_comparison": "Diagnostics and Model Criticism",
     "posterior_predictive": "Diagnostics and Model Criticism",
@@ -54,5 +55,5 @@ Gallery.contents = {
     "gaussian-mixture-model-advi": "Variational Inference",
     "GLM-hierarchical-advi-minibatch": "Variational Inference",
     "ODE_parameter_estimation": "Inference in ODE models",
-    "ODE_API_parameter_estimation": "Inference in ODE models with DifferentialEquation"
+    "ODE_API_parameter_estimation": "Inference in ODE models"
 }
