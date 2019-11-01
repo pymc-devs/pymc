@@ -1,7 +1,6 @@
 import pymc3 as pm
 import numpy as np
 import theano.tensor as tt
-
 from .helpers import SeededTest
 
 
@@ -80,3 +79,24 @@ class TestSMC(SeededTest):
                 "b_log__": np.abs(np.random.normal(0, 10, size=500)),
             }
             trace = pm.sample_smc(500, start=start)
+
+
+class TestSMCABC(SeededTest):
+    def setup_class(self):
+        super().setup_class()
+        self.data = np.sort(np.random.normal(loc=0, scale=1, size=1000))
+
+        def normal_sim(a, b):
+            return np.sort(np.random.normal(a, b, 1000))
+
+        with pm.Model() as self.SMABC_test:
+            a = pm.Normal("a", mu=0, sd=5)
+            b = pm.HalfNormal("b", sd=2)
+            s = pm.Simulator("s", normal_sim, observed=self.data)
+
+    def test_one_gaussian(self):
+        with self.SMABC_test:
+            trace = pm.sample_smc(draws=2000, kernel="ABC", epsilon=0.1)
+
+        np.testing.assert_almost_equal(self.data.mean(), trace["a"].mean(), decimal=2)
+        np.testing.assert_almost_equal(self.data.std(), trace["b"].mean(), decimal=1)
