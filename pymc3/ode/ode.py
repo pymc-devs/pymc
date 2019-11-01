@@ -126,7 +126,7 @@ class DifferentialEquation(theano.Op):
 
     def make_node(self, y0, theta):
         inputs = (y0, theta)
-        _log.debug(f'make_node for inputs {hash(inputs)}')
+        _log.debug('make_node for inputs {}'.format(hash(inputs)))
         states = self._otypes[0]()
         sens = self._otypes[1]()
 
@@ -140,7 +140,7 @@ class DifferentialEquation(theano.Op):
         theta = tt.cast(tt.unbroadcast(tt.as_tensor_variable(theta), 0), theano.config.floatX)
         inputs = [y0, theta]
         for i, (input, itype) in enumerate(zip(inputs, self._itypes)):
-            assert input.type == itype, f'Input {i} of type {input.type} does not have the expected type of {itype}'
+            assert input.type == itype, 'Input {} of type {} does not have the expected type of {}'.format(i, input.type, itype)
 
         # use default implementation to prepare symbolic outputs (via make_node)
         states, sens = super(theano.Op, self).__call__(y0, theta, **kwargs)
@@ -159,8 +159,8 @@ class DifferentialEquation(theano.Op):
             # check shapes of simulation result
             expected_states_shape = (self.n_times, self.n_states)
             expected_sens_shape = (self.n_times, self.n_states, self.n_p)
-            assert test_states.shape == expected_states_shape, f'States were simulated with shape {test_states.shape} but expected as {expected_states_shape}'
-            assert test_sens.shape == expected_sens_shape, f'Sensitivities were simulated with shape {test_sens.shape} but expected as {expected_sens_shape}'
+            assert test_states.shape == expected_states_shape, 'States were simulated with shape {} but expected as {}'.format(test_states.shape, expected_states_shape)
+            assert test_sens.shape == expected_sens_shape, 'Sensitivities were simulated with shape {} but expected as {}'.format(test_sens.shape, expected_sens_shape)
 
             # attach results as test values to the outputs
             states.tag.test_value = test_states
@@ -181,7 +181,7 @@ class DifferentialEquation(theano.Op):
         return output_shapes
 
     def grad(self, inputs, output_grads):
-        _log.debug(f'grad w.r.t. inputs {hash(tuple(inputs))}')
+        _log.debug('grad w.r.t. inputs {}'.format(hash(tuple(inputs))))
         
         # fetch symbolic sensitivity output node from cache
         ihash = hash(tuple(inputs))
