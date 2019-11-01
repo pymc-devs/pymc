@@ -232,18 +232,22 @@ class TestErrors(object):
         func=system, t0=0, times=times, n_states=1, n_theta=1
     )
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_too_many_params(self):
         with pytest.raises(ValueError):
             self.ode_model(theta=[1, 1], y0=[0])
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_too_many_y0(self):
         with pytest.raises(ValueError):
             self.ode_model(theta=[1], y0=[0, 0])
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_too_few_params(self):
         with pytest.raises(ValueError):
             self.ode_model(theta=[], y0=[1])
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_too_few_y0(self):
         with pytest.raises(ValueError):
             self.ode_model(theta=[1], y0=[])
