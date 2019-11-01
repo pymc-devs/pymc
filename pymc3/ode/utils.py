@@ -65,21 +65,3 @@ def augment_system(ode_func, n, m):
     )
 
     return system
-
-
-class ODEGradop(theano.Op):
-    def __init__(self, numpy_vsp):
-        self._numpy_vsp = numpy_vsp
-
-    def make_node(self, x, g):
-
-        x = theano.tensor.as_tensor_variable(x)
-        g = theano.tensor.as_tensor_variable(g)
-        node = theano.Apply(self, [x, g], [g.type()])
-        return node
-
-    def perform(self, node, inputs_storage, output_storage):
-        x = inputs_storage[0]
-        g = inputs_storage[1]
-        out = output_storage[0]
-        out[0] = self._numpy_vsp(x, g)  # get the numerical VSP

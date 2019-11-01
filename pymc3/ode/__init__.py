@@ -1,2 +1,2 @@
 from . import utils
-from .ode import DifferentialEquation, NewDifferentialEquation
+from .ode import DifferentialEquation
