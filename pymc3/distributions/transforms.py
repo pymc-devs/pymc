@@ -518,7 +518,7 @@ class StickBreaking2(Transform):
     Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of real values.
     """
 
-    name = "stickbreaking2"
+    name = "stickbreaking"
 
     def __init__(self, eps=None):
         if eps is not None:
