@@ -41,7 +41,7 @@ class DifferentialEquation(theano.Op):
         ode_model = DifferentialEquation(func=odefunc, times=times, n_states=1, n_theta=1, t0=0)
     """
     _itypes = [
-        tt.TensorType(theano.config.floatX, (False,)),                  # y0 as 1D flloatX vector
+        tt.TensorType(theano.config.floatX, (False,)),                  # y0 as 1D floatX vector
         tt.TensorType(theano.config.floatX, (False,))                   # theta as 1D floatX vector
     ]
     _otypes = [
@@ -136,8 +136,8 @@ class DifferentialEquation(theano.Op):
 
     def __call__(self, y0, theta, return_sens=False, **kwargs):
         # convert inputs to tensors (and check their types)
-        y0 = tt.unbroadcast(tt.as_tensor_variable(y0), 0)
-        theta = tt.unbroadcast(tt.as_tensor_variable(theta), 0)
+        y0 = tt.cast(tt.unbroadcast(tt.as_tensor_variable(y0), 0), theano.config.floatX)
+        theta = tt.cast(tt.unbroadcast(tt.as_tensor_variable(theta), 0), theano.config.floatX)
         inputs = [y0, theta]
         for i, (input, itype) in enumerate(zip(inputs, self._itypes)):
             assert input.type == itype, f'Input {i} of type {input.type} does not have the expected type of {itype}'
