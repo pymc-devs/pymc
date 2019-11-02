@@ -1,2 +1,2 @@
 from . import utils
-from .ode import DifferentialEquation
+from .ode import DifferentialEquation, ShapeError

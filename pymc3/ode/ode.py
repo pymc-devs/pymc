@@ -8,6 +8,14 @@ from ..ode.utils import augment_system
 _log = logging.getLogger('pymc3')
 
 
+class ShapeError(Exception):
+    def __init__(self, message, actual=None, expected=None):
+        if expected and actual:
+            super().__init__('{} (actual {} != expected {})'.format(message, actual, expected))
+        else:
+            super().__init__(message)
+
+
 class DifferentialEquation(theano.Op):
     """
     Specify an ordinary differential equation
@@ -140,7 +148,8 @@ class DifferentialEquation(theano.Op):
         theta = tt.cast(tt.unbroadcast(tt.as_tensor_variable(theta), 0), theano.config.floatX)
         inputs = [y0, theta]
         for i, (input, itype) in enumerate(zip(inputs, self._itypes)):
-            assert input.type == itype, 'Input {} of type {} does not have the expected type of {}'.format(i, input.type, itype)
+            if not input.type == itype:
+                raise ValueError('Input {} of type {} does not have the expected type of {}'.format(i, input.type, itype))
 
         # use default implementation to prepare symbolic outputs (via make_node)
         states, sens = super(theano.Op, self).__call__(y0, theta, **kwargs)
@@ -153,14 +162,18 @@ class DifferentialEquation(theano.Op):
             )
 
             # check types of simulation result
-            assert test_states.dtype == self._otypes[0].dtype, 'Simulated states have the wrong type'
-            assert test_sens.dtype == self._otypes[1].dtype, 'Simulated sensitivities have the wrong type'
+            if not test_states.dtype == self._otypes[0].dtype:
+                raise TypeError('Simulated states have the wrong type')
+            if not test_sens.dtype == self._otypes[1].dtype:
+                raise TypeError('Simulated sensitivities have the wrong type')
 
             # check shapes of simulation result
             expected_states_shape = (self.n_times, self.n_states)
             expected_sens_shape = (self.n_times, self.n_states, self.n_p)
-            assert test_states.shape == expected_states_shape, 'States were simulated with shape {} but expected as {}'.format(test_states.shape, expected_states_shape)
-            assert test_sens.shape == expected_sens_shape, 'Sensitivities were simulated with shape {} but expected as {}'.format(test_sens.shape, expected_sens_shape)
+            if not test_states.shape == expected_states_shape:
+                raise ShapeError('Simulated states have the wrong shape.', test_states.shape, expected_states_shape)
+            if not test_sens.shape == expected_sens_shape:
+                raise ShapeError('Simulated sensitivities have the wrong shape.', test_sens.shape, expected_sens_shape)
 
             # attach results as test values to the outputs
             states.tag.test_value = test_states
