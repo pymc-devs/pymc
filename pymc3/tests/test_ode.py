@@ -1,4 +1,4 @@
-from ..ode import DifferentialEquation, ShapeError
+from ..ode import DifferentialEquation
 from ..ode.utils import augment_system
 import numpy as np
 from scipy.integrate import odeint
@@ -270,18 +270,6 @@ class TestErrors(object):
                 func=self.system, t0=0, times=self.times, n_states=1, n_theta=0
             )
 
-    def test_shape_error(self):
-        err = ShapeError('Without shapes.')
-        with pytest.raises(ShapeError):
-            raise err
-
-        err = ShapeError('With shapes.', (4,3), (5,3))
-        assert 'actual (4, 3)' in err.args[0]
-        assert 'expected (5, 3)' in err.args[0]
-        with pytest.raises(ShapeError):
-            raise err
-        
-        return
 
 @pytest.mark.xfail(
     condition=(theano.config.floatX == "float32"), reason="Fails on float32"

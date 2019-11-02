@@ -4,16 +4,9 @@ import scipy
 import theano
 import theano.tensor as tt
 from ..ode.utils import augment_system
+from ..exceptions import ShapeError
 
 _log = logging.getLogger('pymc3')
-
-
-class ShapeError(Exception):
-    def __init__(self, message, actual=None, expected=None):
-        if expected and actual:
-            super().__init__('{} (actual {} != expected {})'.format(message, actual, expected))
-        else:
-            super().__init__(message)
 
 
 class DifferentialEquation(theano.Op):
