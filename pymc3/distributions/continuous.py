@@ -2856,8 +2856,7 @@ class Weibull(PositiveContinuous):
         self.beta = beta = tt.as_tensor_variable(floatX(beta))
         self.mean = beta * tt.exp(gammaln(1 + 1. / alpha))
         self.median = beta * tt.exp(gammaln(tt.log(2)))**(1. / alpha)
-        self.variance = (beta**2) * \
-            tt.exp(gammaln(1 + 2. / alpha - self.mean**2))
+        self.variance = beta**2 * tt.exp(gammaln(1 + 2. / alpha)) - self.mean**2
         self.mode = tt.switch(alpha >= 1,
                               beta * ((alpha - 1)/alpha) ** (1 / alpha),
                               0)  # Reference: https://en.wikipedia.org/wiki/Weibull_distribution

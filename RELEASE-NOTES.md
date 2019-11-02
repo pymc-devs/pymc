@@ -3,6 +3,7 @@
 ## PyMC3 3.8 (on deck)
 
 ### New features
+- Implemented robust u turn check in NUTS (similar to stan-dev/stan#2800). See PR [#3605]
 - Add capabilities to do inference on parameters in a differential equation with `DifferentialEquation`. See [#3590](https://github.com/pymc-devs/pymc3/pull/3590) and [#3634](https://github.com/pymc-devs/pymc3/pull/3634).
 - Distinguish between `Data` and `Deterministic` variables when graphing models with graphviz. PR [#3491](https://github.com/pymc-devs/pymc3/pull/3491).
 - Sequential Monte Carlo - Approximate Bayesian Computation step method is now available. The implementation is in an experimental stage and will be further improved.
@@ -18,9 +19,10 @@
 - Fixed a bug in `Categorical.logp`. In the case of multidimensional `p`'s, the indexing was done wrong leading to incorrectly shaped tensors that consumed `O(n**2)` memory instead of `O(n)`. This fixes issue [#3535](https://github.com/pymc-devs/pymc3/issues/3535)
 - Fixed a defect in `OrderedLogistic.__init__` that unnecessarily increased the dimensionality of the underlying `p`. Related to issue issue [#3535](https://github.com/pymc-devs/pymc3/issues/3535) but was not the true cause of it.
 - SMC: stabilize covariance matrix [3573](https://github.com/pymc-devs/pymc3/pull/3573)
-- SMC is no longer a step method of `pm.sample` now it should be called using `pm.sample_smc` [3579](https://github.com/pymc-devs/pymc3/pull/3579)
-- SMC: improve computation of the proposal scaling factor [3594](https://github.com/pymc-devs/pymc3/pull/3594)
+- SMC: is no longer a step method of `pm.sample` now it should be called using `pm.sample_smc` [3579](https://github.com/pymc-devs/pymc3/pull/3579)
+- SMC: improve computation of the proposal scaling factor [3594](https://github.com/pymc-devs/pymc3/pull/3594) and [3625](https://github.com/pymc-devs/pymc3/pull/3625)
 - SMC: reduce number of logp evaluations [3600](https://github.com/pymc-devs/pymc3/pull/3600)
+- SMC: remove `scaling` and `tune_scaling` arguments as is a better idea to always allow SMC to automatically compute the scaling factor [3625](https://github.com/pymc-devs/pymc3/pull/3625)
 - Now uses `multiprocessong` rather than `psutil` to count CPUs, which results in reliable core counts on Chromebooks.
 - `sample_posterior_predictive` now preallocates the memory required for its output to improve memory usage. Addresses problems raised in this [discourse thread](https://discourse.pymc.io/t/memory-error-with-posterior-predictive-sample/2891/4).
 - Fixed a bug in `Categorical.logp`. In the case of multidimensional `p`'s, the indexing was done wrong leading to incorrectly shaped tensors that consumed `O(n**2)` memory instead of `O(n)`. This fixes issue [#3535](https://github.com/pymc-devs/pymc3/issues/3535)

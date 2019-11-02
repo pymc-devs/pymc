@@ -151,20 +151,23 @@ explicit about the conversion. For example:
     with pm.Model() as model:
         z = pm.Normal('z', mu=0., sigma=5.)             # ==> pymc3.model.FreeRV, or theano.tensor with logp
         x = pm.Normal('x', mu=z, sigma=1., observed=5.) # ==> pymc3.model.ObservedRV, also has logp properties
-    x.logp({'z': 2.5})                               # ==> -4.0439386
-    model.logp({'z': 2.5})                           # ==> -6.6973152
+    x.logp({'z': 2.5})                                  # ==> -4.0439386
+    model.logp({'z': 2.5})                              # ==> -6.6973152
 
 **TFP**
 
 .. code:: python
 
-    z_dist = tfd.Normal(loc=0., scale=5.)            # ==> <class 'tfp.python.distributions.normal.Normal'>
-    z = z_dist.sample()                              # ==> <class 'tensorflow.python.framework.ops.Tensor'>
-    x = tfd.Normal(loc=z, scale=1.).log_prob(5.)     # ==> <class 'tensorflow.python.framework.ops.Tensor'>
-    model_logp = z_dist.log_prob(z) + x
-    sess = tf.Session()
-    sess.run(x, feed_dict={z: 2.5})                  # ==> -4.0439386
-    sess.run(model_logp, feed_dict={z: 2.5})         # ==> -6.6973152
+    import tensorflow.compat.v1 as tf
+    from tensorflow_probability import distributions as tfd
+
+    with tf.Session() as sess:
+        z_dist = tfd.Normal(loc=0., scale=5.)            # ==> <class 'tfp.python.distributions.normal.Normal'>
+        z = z_dist.sample()                              # ==> <class 'tensorflow.python.framework.ops.Tensor'>
+        x = tfd.Normal(loc=z, scale=1.).log_prob(5.)     # ==> <class 'tensorflow.python.framework.ops.Tensor'>
+        model_logp = z_dist.log_prob(z) + x
+        print(sess.run(x, feed_dict={z: 2.5}))           # ==> -4.0439386
+        print(sess.run(model_logp, feed_dict={z: 2.5}))  # ==> -6.6973152
 
 **pyro**
 
@@ -1046,7 +1049,10 @@ edge case especially in high dimensions. The biggest pain point is the
 automatic broadcasting. As in the batch random generation, we want to
 generate (n\_sample, ) + RV.shape random samples. In some cases, where
 we broadcast RV1 and RV2 to create a RV3 that has one more batch shape,
-we get error (even worse, wrong answer with silent error):
+we get error (even worse, wrong answer with silent error).
+
+The good news is, we are fixing these errors with the amazing works from [lucianopaz](https://github.com/lucianopaz) and
+others. The challenge and some summary of the solution could be found in Luciano's [blog post](https://lucianopaz.github.io/2019/08/19/pymc3-shape-handling/)
 
 .. code:: python
 
@@ -1056,11 +1062,11 @@ we get error (even worse, wrong answer with silent error):
         pm.Normal('x', mu=mu, sigma=sd, observed=np.random.randn(2, 5, 10))
         trace = pm.sample_prior_predictive(100)
 
-    trace['x'].shape # ==> should be (100, 2, 5, 10), but get (100, 5, 10)
+    trace['x'].shape # ==> should be (100, 2, 5, 10)
 
 .. code:: python
 
-    pm.Normal.dist(mu=np.zeros(2), sigma=1).random(size=(10, 4)) # ==> ERROR
+    pm.Normal.dist(mu=np.zeros(2), sigma=1).random(size=(10, 4))
 
 There are also other error related random sample generation (e.g.,
 `Mixture is currently
