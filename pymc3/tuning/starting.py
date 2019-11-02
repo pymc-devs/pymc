@@ -27,6 +27,8 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
     """
     Finds the local maximum a posteriori point given a model.
 
+    find_MAP should not be used to initialize the NUTS sampler. Simply call pymc3.sample() and it will automatically initialize NUTS in a better way.
+
     Parameters
     ----------
     start : `dict` of parameter values (Defaults to `model.test_point`)
@@ -53,12 +55,10 @@ def find_MAP(start=None, vars=None, method="L-BFGS-B",
     Notes
     -----
     Older code examples used find_MAP() to initialize the NUTS sampler,
-    this turned out to be a rather inefficient method.
-    Since then, we have greatly enhanced the initialization of NUTS and
+    but this is not an effective way of choosing starting values for sampling.
+    As a result, we have greatly enhanced the initialization of NUTS and
     wrapped it inside pymc3.sample() and you should thus avoid this method.
     """
-
-    warnings.warn('find_MAP should not be used to initialize the NUTS sampler, simply call pymc3.sample() and it will automatically initialize NUTS in a better way.')
 
     model = modelcontext(model)
     if start is None:
