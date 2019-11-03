@@ -12,7 +12,6 @@ import pytest
     condition=(theano.config.floatX == "float32"), reason="Fails on float32"
 )
 def test_gradients():
-
     """Tests the computation of the sensitivities from the theano computation graph"""
 
     # ODE system for which to compute gradients
@@ -24,7 +23,6 @@ def test_gradients():
 
     # This is the new system, ODE + Sensitivities, which will be integrated
     def augmented_system(Y, t, p):
-
         dydt, ddt_dydp = augmented_ode_func(Y[:1], t, p, Y[1:])
         derivatives = np.concatenate([dydt, ddt_dydp])
         return derivatives
@@ -73,11 +71,13 @@ def test_simulate():
 
     # Instantiate ODE model
     ode_model = DifferentialEquation(
-        func=ode_func, t0=0, times=t, n_states=1, n_odeparams=1
+        func=ode_func, t0=0, times=t, n_states=1, n_theta=1
     )
 
-    simulated_y, *_ = ode_model._simulate([a, y0])
-
+    simulated_y, sens = ode_model._simulate([y0], [a])
+    
+    assert simulated_y.shape == (len(t),1)
+    assert sens.shape == (len(t), 1, 1+1)
     np.testing.assert_allclose(y, simulated_y, rtol=1e-5)
 
 
@@ -98,7 +98,7 @@ class TestSensitivityInitialCondition(object):
         # Instantiate ODE model
         # Instantiate ODE model
         model1 = DifferentialEquation(
-            func=ode_func_1, t0=0, times=self.t, n_states=1, n_odeparams=1
+            func=ode_func_1, t0=0, times=self.t, n_states=1, n_theta=1
         )
 
         # Sensitivity initial condition for this model should be 1 by 2
@@ -113,7 +113,7 @@ class TestSensitivityInitialCondition(object):
 
         # Instantiate ODE model
         model2 = DifferentialEquation(
-            func=ode_func_2, t0=0, times=self.t, n_states=1, n_odeparams=2
+            func=ode_func_2, t0=0, times=self.t, n_states=1, n_theta=2
         )
 
         model2_sens_ic = np.array([0, 0, 1])
@@ -130,7 +130,7 @@ class TestSensitivityInitialCondition(object):
 
         # Instantiate ODE model
         model3 = DifferentialEquation(
-            func=ode_func_3, t0=0, times=self.t, n_states=2, n_odeparams=1
+            func=ode_func_3, t0=0, times=self.t, n_states=2, n_theta=1
         )
 
         model3_sens_ic = np.array([0, 1, 0, 0, 0, 1])
@@ -147,7 +147,7 @@ class TestSensitivityInitialCondition(object):
 
         # Instantiate ODE model
         model4 = DifferentialEquation(
-            func=ode_func_4, t0=0, times=self.t, n_states=2, n_odeparams=2
+            func=ode_func_4, t0=0, times=self.t, n_states=2, n_theta=2
         )
 
         model4_sens_ic = np.array([0, 0, 1, 0, 0, 0, 0, 1])
@@ -165,7 +165,7 @@ class TestSensitivityInitialCondition(object):
 
         # Instantiate ODE model
         model5 = DifferentialEquation(
-            func=ode_func_5, t0=0, times=self.t, n_states=3, n_odeparams=3
+            func=ode_func_5, t0=0, times=self.t, n_states=3, n_theta=3
         )
 
         # First three columns are derivatives with respect to ode parameters
@@ -182,7 +182,6 @@ class TestSensitivityInitialCondition(object):
     condition=(theano.config.floatX == "float32"), reason="Fails on float32"
 )
 def test_logp_scalar_ode():
-
     """Test the computation of the log probability for these models"""
 
     # Differential equation
@@ -194,36 +193,27 @@ def test_logp_scalar_ode():
     y0 = 0.0
     times = np.arange(0.5, 8, 0.5)
 
-    yobs = np.array(
-        [
-            0.30,
-            0.56,
-            0.51,
-            0.55,
-            0.47,
-            0.42,
-            0.38,
-            0.30,
-            0.26,
-            0.21,
-            0.22,
-            0.13,
-            0.13,
-            0.09,
-            0.09,
-        ]
-    ).reshape(-1, 1)
+    yobs = np.array([
+        0.30, 0.56, 0.51, 0.55, 0.47, 0.42, 0.38, 0.30,
+        0.26, 0.21, 0.22, 0.13, 0.13, 0.09, 0.09
+    ])[:,np.newaxis]
 
     ode_model = DifferentialEquation(
-        func=system_1, t0=0, times=times, n_odeparams=1, n_states=1
+        func=system_1, t0=0, times=times, n_theta=1, n_states=1
     )
 
-    integrated_solution, *_ = ode_model._simulate([alpha, y0])
+    integrated_solution, *_ = ode_model._simulate([y0], [alpha])
+
+    assert integrated_solution.shape == yobs.shape
+
+    # compare automatic and manual logp values
     manual_logp = norm.logpdf(
-        x=np.ravel(yobs), loc=np.ravel(integrated_solution), scale=1
+        x=np.ravel(yobs),
+        loc=np.ravel(integrated_solution),
+        scale=1
     ).sum()
     with pm.Model() as model_1:
-        forward = ode_model(odeparams=[alpha], y0=[y0]).reshape(yobs.shape)
+        forward = ode_model(theta=[alpha], y0=[y0])
         y = pm.Normal("y", mu=forward, sd=1, observed=yobs)
     pymc3_logp = model_1.logp()
 
@@ -231,7 +221,6 @@ def test_logp_scalar_ode():
 
 
 class TestErrors(object):
-
     """Test running model for a scalar ODE with 1 parameter"""
 
     def system(y, t, p):
@@ -240,41 +229,45 @@ class TestErrors(object):
     times = np.arange(0, 9)
 
     ode_model = DifferentialEquation(
-        func=system, t0=0, times=times, n_states=1, n_odeparams=1
+        func=system, t0=0, times=times, n_states=1, n_theta=1
     )
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_too_many_params(self):
         with pytest.raises(ValueError):
-            self.ode_model(odeparams=[1, 1], y0=[0])
+            self.ode_model(theta=[1, 1], y0=[0])
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_too_many_y0(self):
         with pytest.raises(ValueError):
-            self.ode_model(odeparams=[1], y0=[0, 0])
+            self.ode_model(theta=[1], y0=[0, 0])
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_too_few_params(self):
         with pytest.raises(ValueError):
-            self.ode_model(odeparams=[], y0=[1])
+            self.ode_model(theta=[], y0=[1])
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_too_few_y0(self):
         with pytest.raises(ValueError):
-            self.ode_model(odeparams=[1], y0=[])
+            self.ode_model(theta=[1], y0=[])
 
     def test_func_callable(self):
         with pytest.raises(ValueError):
             DifferentialEquation(
-                func=1, t0=0, times=self.times, n_states=1, n_odeparams=1
+                func=1, t0=0, times=self.times, n_states=1, n_theta=1
             )
 
     def test_number_of_states(self):
         with pytest.raises(ValueError):
             DifferentialEquation(
-                func=self.system, t0=0, times=self.times, n_states=0, n_odeparams=1
+                func=self.system, t0=0, times=self.times, n_states=0, n_theta=1
             )
 
     def test_number_of_params(self):
         with pytest.raises(ValueError):
             DifferentialEquation(
-                func=self.system, t0=0, times=self.times, n_states=1, n_odeparams=0
+                func=self.system, t0=0, times=self.times, n_states=1, n_theta=0
             )
 
 
@@ -282,6 +275,24 @@ class TestErrors(object):
     condition=(theano.config.floatX == "float32"), reason="Fails on float32"
 )
 class TestDiffEqModel(object):
+    def test_op_equality(self):
+        """Tests that the equality of mathematically identical Ops evaluates True"""
+
+        # Create ODE to test with
+        def ode_func(y, t, p):
+            return np.exp(-t) - p[0] * y[0]
+
+        t = np.linspace(0, 2, 12)
+
+        # Instantiate two Ops
+        op_1 = DifferentialEquation(func=ode_func, t0=0, times=t, n_states=1, n_theta=1)
+        op_2 = DifferentialEquation(func=ode_func, t0=0, times=t, n_states=1, n_theta=1)
+        op_other = DifferentialEquation(func=ode_func, t0=0, times=np.linspace(0, 2, 16), n_states=1, n_theta=1)
+
+        assert op_1 == op_2
+        assert op_1 != op_other
+        return
+
     def test_scalar_ode_1_param(self):
         """Test running model for a scalar ODE with 1 parameter"""
 
@@ -292,36 +303,20 @@ class TestDiffEqModel(object):
             [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5]
         )
 
-        yobs = np.array(
-            [
-                0.31,
-                0.57,
-                0.51,
-                0.55,
-                0.47,
-                0.42,
-                0.38,
-                0.3,
-                0.26,
-                0.22,
-                0.22,
-                0.14,
-                0.14,
-                0.09,
-                0.1,
-            ]
-        ).reshape(-1, 1)
+        yobs = np.array([
+                0.31, 0.57, 0.51, 0.55, 0.47, 0.42, 0.38, 0.3,
+                0.26, 0.22, 0.22, 0.14, 0.14, 0.09, 0.1
+        ])[:,np.newaxis]
 
         ode_model = DifferentialEquation(
-            func=system, t0=0, times=times, n_states=1, n_odeparams=1
+            func=system, t0=0, times=times, n_states=1, n_theta=1
         )
 
         with pm.Model() as model:
-
             alpha = pm.HalfCauchy("alpha", 1)
             y0 = pm.Lognormal("y0", 0, 1)
             sigma = pm.HalfCauchy("sigma", 1)
-            forward = ode_model(odeparams=[alpha], y0=[y0]).reshape(yobs.shape)
+            forward = ode_model(theta=[alpha], y0=[y0])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
             trace = pm.sample(100, tune=0, chains=1)
 
@@ -339,28 +334,13 @@ class TestDiffEqModel(object):
             [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5]
         )
 
-        yobs = np.array(
-            [
-                0.31,
-                0.57,
-                0.51,
-                0.55,
-                0.47,
-                0.42,
-                0.38,
-                0.3,
-                0.26,
-                0.22,
-                0.22,
-                0.14,
-                0.14,
-                0.09,
-                0.1,
-            ]
-        ).reshape(-1, 1)
+        yobs = np.array([
+                0.31, 0.57, 0.51, 0.55, 0.47, 0.42, 0.38, 0.3,
+                0.26, 0.22, 0.22, 0.14, 0.14, 0.09, 0.1
+        ])[:,np.newaxis]
 
         ode_model = DifferentialEquation(
-            func=system, t0=0, times=times, n_states=1, n_odeparams=2
+            func=system, t0=0, times=times, n_states=1, n_theta=2
         )
 
         with pm.Model() as model:
@@ -368,7 +348,7 @@ class TestDiffEqModel(object):
             beta = pm.HalfCauchy("beta", 1)
             y0 = pm.Lognormal("y0", 0, 1)
             sigma = pm.HalfCauchy("sigma", 1)
-            forward = ode_model(odeparams=[alpha, beta], y0=[y0]).reshape(yobs.shape)
+            forward = ode_model(theta=[alpha, beta], y0=[y0])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
             trace = pm.sample(100, tune=0, chains=1)
@@ -384,35 +364,32 @@ class TestDiffEqModel(object):
         def system(y, t, p):
             ds = -p[0] * y[0] * y[1]
             di = p[0] * y[0] * y[1] - y[1]
-
             return [ds, di]
 
         times = np.array([0.0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6, 6.4, 7.2, 8.0])
 
-        yobs = np.array(
-            [
-                [1.02, 0.02],
-                [0.86, 0.12],
-                [0.43, 0.37],
-                [0.14, 0.42],
-                [0.05, 0.43],
-                [0.03, 0.14],
-                [0.02, 0.08],
-                [0.02, 0.04],
-                [0.02, 0.01],
-                [0.02, 0.01],
-                [0.02, 0.01],
-            ]
-        )
+        yobs = np.array([
+            [1.02, 0.02],
+            [0.86, 0.12],
+            [0.43, 0.37],
+            [0.14, 0.42],
+            [0.05, 0.43],
+            [0.03, 0.14],
+            [0.02, 0.08],
+            [0.02, 0.04],
+            [0.02, 0.01],
+            [0.02, 0.01],
+            [0.02, 0.01],
+        ])
 
         ode_model = DifferentialEquation(
-            func=system, t0=0, times=times, n_states=2, n_odeparams=1
+            func=system, t0=0, times=times, n_states=2, n_theta=1
         )
 
         with pm.Model() as model:
             R = pm.Lognormal("R", 1, 5)
             sigma = pm.HalfCauchy("sigma", 1, shape=2)
-            forward = ode_model(odeparams=[R], y0=[0.99, 0.01]).reshape(yobs.shape)
+            forward = ode_model(theta=[R], y0=[0.99, 0.01])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
             trace = pm.sample(100, tune=0, chains=1)
@@ -426,38 +403,33 @@ class TestDiffEqModel(object):
         def system(y, t, p):
             ds = -p[0] * y[0] * y[1]
             di = p[0] * y[0] * y[1] - p[1] * y[1]
-
             return [ds, di]
 
         times = np.array([0.0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6, 6.4, 7.2, 8.0])
-
-        yobs = np.array(
-            [
-                [1.02, 0.02],
-                [0.86, 0.12],
-                [0.43, 0.37],
-                [0.14, 0.42],
-                [0.05, 0.43],
-                [0.03, 0.14],
-                [0.02, 0.08],
-                [0.02, 0.04],
-                [0.02, 0.01],
-                [0.02, 0.01],
-                [0.02, 0.01],
-            ]
-        )
+        
+        yobs = np.array([
+            [1.02, 0.02],
+            [0.86, 0.12],
+            [0.43, 0.37],
+            [0.14, 0.42],
+            [0.05, 0.43],
+            [0.03, 0.14],
+            [0.02, 0.08],
+            [0.02, 0.04],
+            [0.02, 0.01],
+            [0.02, 0.01],
+            [0.02, 0.01],
+        ])
 
         ode_model = DifferentialEquation(
-            func=system, t0=0, times=times, n_states=2, n_odeparams=2
+            func=system, t0=0, times=times, n_states=2, n_theta=2
         )
 
         with pm.Model() as model:
             beta = pm.HalfCauchy("beta", 1)
             gamma = pm.HalfCauchy("gamma", 1)
             sigma = pm.HalfCauchy("sigma", 1, shape=2)
-            forward = ode_model(odeparams=[beta, gamma], y0=[0.99, 0.01]).reshape(
-                yobs.shape
-            )
+            forward = ode_model(theta=[beta, gamma], y0=[0.99, 0.01])
             y = pm.Lognormal("y", mu=pm.math.log(forward), sd=sigma, observed=yobs)
 
             trace = pm.sample(100, tune=0, chains=1)

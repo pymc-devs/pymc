@@ -45,41 +45,26 @@ def augment_system(ode_func, n, m):
 
     dydp = dydp_vec.reshape((n, m))
 
-    # Stack the results of the ode_func
-    f_tensor = tt.stack(ode_func(t_y, t_t, t_p))
+    # Stack the results of the ode_func into a single tensor variable
+    yhat = ode_func(t_y, t_t, t_p)
+    if not isinstance(yhat, (list, tuple)):
+        yhat = (yhat,)
+    t_yhat = tt.stack(yhat, axis=0)
 
     # Now compute gradients
-    J = tt.jacobian(f_tensor, t_y)
+    J = tt.jacobian(t_yhat, t_y)
 
     Jdfdy = tt.dot(J, dydp)
 
-    grad_f = tt.jacobian(f_tensor, t_p)
+    grad_f = tt.jacobian(t_yhat, t_p)
 
     # This is the time derivative of dydp
     ddt_dydp = (Jdfdy + grad_f).flatten()
 
     system = theano.function(
         inputs=[t_y, t_t, t_p, dydp_vec],
-        outputs=[f_tensor, ddt_dydp],
+        outputs=[t_yhat, ddt_dydp],
         on_unused_input="ignore",
     )
 
     return system
-
-
-class ODEGradop(theano.Op):
-    def __init__(self, numpy_vsp):
-        self._numpy_vsp = numpy_vsp
-
-    def make_node(self, x, g):
-
-        x = theano.tensor.as_tensor_variable(x)
-        g = theano.tensor.as_tensor_variable(g)
-        node = theano.Apply(self, [x, g], [g.type()])
-        return node
-
-    def perform(self, node, inputs_storage, output_storage):
-        x = inputs_storage[0]
-        g = inputs_storage[1]
-        out = output_storage[0]
-        out[0] = self._numpy_vsp(x, g)  # get the numerical VSP

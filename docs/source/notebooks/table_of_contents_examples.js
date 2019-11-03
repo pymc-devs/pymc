@@ -54,6 +54,7 @@ Gallery.contents = {
     "normalizing_flows_overview": "Variational Inference",
     "gaussian-mixture-model-advi": "Variational Inference",
     "GLM-hierarchical-advi-minibatch": "Variational Inference",
-    "ODE_parameter_estimation": "Inference in ODE models",
-    "ODE_API_parameter_estimation": "Inference in ODE models"
+    "ODE_with_manual_gradients": "Inference in ODE models",
+    "ODE_API_introduction": "Inference in ODE models",
+    "ODE_API_shapes_and_benchmarking": "Inference in ODE models"
 }
