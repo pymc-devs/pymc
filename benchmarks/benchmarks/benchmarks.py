@@ -151,7 +151,7 @@ class NUTSInitSuite:
                               start=start, random_seed=100, progressbar=False,
                               compute_convergence_checks=False)
             tot = time.time() - t0
-        ess = pm.effective_n(trace, ('mu_a',))['mu_a']
+        ess = float(pm.ess(trace, var_names=['mu_a'])['mu_a'].values)
         return ess / tot
 
     def track_marginal_mixture_model_ess(self, init):
@@ -165,7 +165,7 @@ class NUTSInitSuite:
                               start=start, random_seed=100, progressbar=False,
                               compute_convergence_checks=False)
             tot = time.time() - t0
-        ess = pm.effective_n(trace, ('mu',))['mu'].min()  # worst case
+        ess = pm.ess(trace, var_names=['mu'])['mu'].values.min()  # worst case
         return ess / tot
 
 
@@ -190,7 +190,7 @@ class CompareMetropolisNUTSSuite:
                               random_seed=100, progressbar=False,
                               compute_convergence_checks=False)
             tot = time.time() - t0
-        ess = pm.effective_n(trace, ('mu_a',))['mu_a']
+        ess = float(pm.ess(trace, var_names=['mu_a'])['mu_a'].values)
         return ess / tot
 
 
