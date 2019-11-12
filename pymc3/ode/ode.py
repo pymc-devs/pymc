@@ -4,7 +4,7 @@ import scipy
 import theano
 import theano.tensor as tt
 from ..ode.utils import augment_system
-from ..exceptions import ShapeError
+from ..exceptions import ShapeError, DtypeError
 
 _log = logging.getLogger('pymc3')
 
@@ -156,9 +156,9 @@ class DifferentialEquation(theano.Op):
 
             # check types of simulation result
             if not test_states.dtype == self._otypes[0].dtype:
-                raise TypeError('Simulated states have the wrong type')
+                raise DtypeError('Simulated states have the wrong type.', actual=test_states.dtype, expected=self._otypes[0].dtype)
             if not test_sens.dtype == self._otypes[1].dtype:
-                raise TypeError('Simulated sensitivities have the wrong type')
+                raise DtypeError('Simulated sensitivities have the wrong type.', actual=test_sens.dtype, expected=self._otypes[1].dtype)
 
             # check shapes of simulation result
             expected_states_shape = (self.n_times, self.n_states)
