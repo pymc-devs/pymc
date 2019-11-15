@@ -11,6 +11,8 @@ def augment_system(ode_func, n, m):
     a compiled function which allows for computation of gradients of the
     differential equation's solition with repsect to the parameters.
 
+    Uses float64 even if floatX=float32, because the scipy integrator always uses float64.
+
     Parameters
     ----------
     ode_func : function
@@ -27,21 +29,21 @@ def augment_system(ode_func, n, m):
     """
 
     # Present state of the system
-    t_y = tt.vector("y", dtype=theano.config.floatX)
-    t_y.tag.test_value = np.zeros((n,))
+    t_y = tt.vector("y", dtype='float64')
+    t_y.tag.test_value = np.zeros((n,), dtype='float64')
     # Parameter(s).  Should be vector to allow for generaliztion to multiparameter
     # systems of ODEs.  Is m dimensional because it includes all ode parameters as well as initical conditions
-    t_p = tt.vector("p", dtype=theano.config.floatX)
-    t_p.tag.test_value = np.zeros((m,))
+    t_p = tt.vector("p", dtype='float64')
+    t_p.tag.test_value = np.zeros((m,), dtype='float64')
     # Time.  Allow for non-automonous systems of ODEs to be analyzed
-    t_t = tt.scalar("t", dtype=theano.config.floatX)
+    t_t = tt.scalar("t", dtype='float64')
     t_t.tag.test_value = 2.459
 
     # Present state of the gradients:
     # Will always be 0 unless the parameter is the inital condition
     # Entry i,j is partial of y[i] wrt to p[j]
-    dydp_vec = tt.vector("dydp", dtype=theano.config.floatX)
-    dydp_vec.tag.test_value = np.zeros(n * m)
+    dydp_vec = tt.vector("dydp", dtype='float64')
+    dydp_vec.tag.test_value = np.zeros(n * m, dtype='float64')
 
     dydp = dydp_vec.reshape((n, m))
 
@@ -64,7 +66,7 @@ def augment_system(ode_func, n, m):
     system = theano.function(
         inputs=[t_y, t_t, t_p, dydp_vec],
         outputs=[t_yhat, ddt_dydp],
-        on_unused_input="ignore",
+        on_unused_input="ignore"
     )
 
     return system
