@@ -7,6 +7,7 @@ from ..ode.utils import augment_system
 from ..exceptions import ShapeError, DtypeError
 
 _log = logging.getLogger('pymc3')
+floatX = theano.config.floatX
 
 
 class DifferentialEquation(theano.Op):
@@ -42,12 +43,12 @@ class DifferentialEquation(theano.Op):
         ode_model = DifferentialEquation(func=odefunc, times=times, n_states=1, n_theta=1, t0=0)
     """
     _itypes = [
-        tt.TensorType(theano.config.floatX, (False,)),                  # y0 as 1D floatX vector
-        tt.TensorType(theano.config.floatX, (False,))                   # theta as 1D floatX vector
+        tt.TensorType(floatX, (False,)),                  # y0 as 1D floatX vector
+        tt.TensorType(floatX, (False,))                   # theta as 1D floatX vector
     ]
     _otypes = [
-        tt.TensorType(theano.config.floatX, (False, False)),            # model states as floatX of shape (T, S)
-        tt.TensorType(theano.config.floatX, (False, False, False)),     # sensitivities as floatX of shape (T, S, len(y0) + len(theta))
+        tt.TensorType(floatX, (False, False)),            # model states as floatX of shape (T, S)
+        tt.TensorType(floatX, (False, False, False)),     # sensitivities as floatX of shape (T, S, len(y0) + len(theta))
     ]
     __props__ = ("func", "times", "n_states", "n_theta", "t0")
 
@@ -69,7 +70,7 @@ class DifferentialEquation(theano.Op):
         self.n_p = n_states + n_theta
 
         # Private
-        self._augmented_times = np.insert(times, 0, t0)
+        self._augmented_times = np.insert(times, 0, t0).astype(floatX)
         self._augmented_func = augment_system(func, self.n_states, self.n_p)
         self._sens_ic = self._make_sens_ic()
 
@@ -91,10 +92,10 @@ class DifferentialEquation(theano.Op):
         """
 
         # Initialize the sensitivity matrix to be 0 everywhere
-        sens_matrix = np.zeros((self.n_states, self.n_p))
+        sens_matrix = np.zeros((self.n_states, self.n_p), dtype=floatX)
 
         # Slip in the identity matrix in the appropirate place
-        sens_matrix[:, -self.n_states :] = np.eye(self.n_states)
+        sens_matrix[:, -self.n_states :] = np.eye(self.n_states, dtype=floatX)
 
         # We need the sensitivity matrix to be a vector (see augmented_function)
         # Ravel and return
@@ -116,7 +117,7 @@ class DifferentialEquation(theano.Op):
         # perform the integration
         sol = scipy.integrate.odeint(
             func=self._system, y0=s0, t=self._augmented_times, args=(np.concatenate([theta, y0]),)
-        )
+        ).astype(floatX)
         # The solution
         y = sol[1:, :self.n_states]
 
@@ -137,8 +138,8 @@ class DifferentialEquation(theano.Op):
 
     def __call__(self, y0, theta, return_sens=False, **kwargs):
         # convert inputs to tensors (and check their types)
-        y0 = tt.cast(tt.unbroadcast(tt.as_tensor_variable(y0), 0), theano.config.floatX)
-        theta = tt.cast(tt.unbroadcast(tt.as_tensor_variable(theta), 0), theano.config.floatX)
+        y0 = tt.cast(tt.unbroadcast(tt.as_tensor_variable(y0), 0), floatX)
+        theta = tt.cast(tt.unbroadcast(tt.as_tensor_variable(theta), 0), floatX)
         inputs = [y0, theta]
         for i, (input, itype) in enumerate(zip(inputs, self._itypes)):
             if not input.type == itype:
