@@ -251,6 +251,14 @@ class BaseTestCases:
                 assert e == a
 
 
+class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
+    distribution = pm.GaussianRandomWalk
+    params = {'mu': 1., 'sigma': 1.}
+
+    @pytest.mark.xfail(reason="Supporting this makes a nasty API")
+    def test_broadcast_shape(self):
+        super().test_broadcast_shape()
+
 class TestNormal(BaseTestCases.BaseTestCase):
     distribution = pm.Normal
     params = {'mu': 0., 'tau': 1.}
@@ -1006,7 +1014,7 @@ class TestDensityDist():
             normal_dist = pm.Normal.dist(mu, 1)
             pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100))
             trace = pm.sample(100)
-    
+
         samples = 500
         with pytest.raises(ValueError):
             pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)

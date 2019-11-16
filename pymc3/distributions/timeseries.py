@@ -1,3 +1,4 @@
+from scipy import stats
 import theano.tensor as tt
 from theano import scan
 
@@ -5,6 +6,7 @@ from pymc3.util import get_variable_name
 from .continuous import get_tau_sigma, Normal, Flat
 from . import multivariate
 from . import distribution
+from .shape_utils import to_tuple
 
 
 __all__ = [
@@ -166,17 +168,22 @@ class AR(distribution.Continuous):
 
 
 class GaussianRandomWalk(distribution.Continuous):
-    R"""
-    Random Walk with Normal innovations
+    R"""Random Walk with Normal innovations
 
     Parameters
     ----------
     mu: tensor
         innovation drift, defaults to 0.0
+        For vector valued mu, first dimension must match shape of the random walk, and
+        the first element will be discarded (since there is no innovation in the first timestep)
     sigma : tensor
         sigma > 0, innovation standard deviation (only required if tau is not specified)
+        For vector valued sigma, first dimension must match shape of the random walk, and
+        the first element will be discarded (since there is no innovation in the first timestep)
     tau : tensor
         tau > 0, innovation precision (only required if sigma is not specified)
+        For vector valued tau, first dimension must match shape of the random walk, and
+        the first element will be discarded (since there is no innovation in the first timestep)
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
@@ -187,9 +194,14 @@ class GaussianRandomWalk(distribution.Continuous):
         if sd is not None:
             sigma = sd
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.tau = tau = tt.as_tensor_variable(tau)
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
-        self.mu = mu = tt.as_tensor_variable(mu)
+        self.tau = tt.as_tensor_variable(tau)
+        sigma = tt.as_tensor_variable(sigma)
+        if sigma.ndim > 0:
+            sigma = sigma[:-1]
+        self.sigma = self.sd = sigma
+        self.mu = tt.as_tensor_variable(mu)
+        if self.mu.ndim > 0:
+            self.mu = self.mu[:-1]
         self.init = init
         self.mean = tt.as_tensor_variable(0.)
 
@@ -206,15 +218,41 @@ class GaussianRandomWalk(distribution.Continuous):
         -------
         TensorVariable
         """
-        sigma = self.sigma
-        mu = self.mu
-        init = self.init
+        if x.ndim > 0:
+            x_im1 = x[:-1]
+            x_i = x[1:]
 
-        x_im1 = x[:-1]
-        x_i = x[1:]
+            sigma = self.sigma
+            mu = self.mu
 
-        innov_like = Normal.dist(mu=x_im1 + mu, sigma=sigma).logp(x_i)
-        return init.logp(x[0]) + tt.sum(innov_like)
+            innov_like = Normal.dist(mu=x_im1 + mu, sigma=sigma).logp(x_i)
+            return self.init.logp(x[0]) + tt.sum(innov_like)
+        return self.init.logp(x)
+
+    def random(self, point=None, size=None):
+        """Draw random values from GaussianRandomWalk.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        sigma, mu = distribution.draw_values([self.sigma, self.mu], point=point, size=size)
+        return distribution.generate_samples(self._random, sigma=sigma, mu=mu, size=size,
+                                             dist_shape=self.shape)
+
+    def _random(self, sigma, mu, size):
+        """Implement a Gaussian random walk as a cumulative sum of normals."""
+        rv = stats.norm(mu, sigma)
+        return rv.rvs(size).cumsum(axis=0)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
