@@ -196,12 +196,8 @@ class GaussianRandomWalk(distribution.Continuous):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.tau = tt.as_tensor_variable(tau)
         sigma = tt.as_tensor_variable(sigma)
-        if sigma.ndim > 0:
-            sigma = sigma[:-1]
         self.sigma = self.sd = sigma
         self.mu = tt.as_tensor_variable(mu)
-        if self.mu.ndim > 0:
-            self.mu = self.mu[:-1]
         self.init = init
         self.mean = tt.as_tensor_variable(0.)
 
@@ -221,9 +217,14 @@ class GaussianRandomWalk(distribution.Continuous):
         if x.ndim > 0:
             x_im1 = x[:-1]
             x_i = x[1:]
-
-            sigma = self.sigma
-            mu = self.mu
+            if self.sigma.ndim > 0:
+                sigma = self.sigma[:-1]
+            else:
+                sigma = self.sigma
+            if self.mu.ndim > 0:
+                mu = self.mu[:-1]
+            else:
+                mu = self.mu
 
             innov_like = Normal.dist(mu=x_im1 + mu, sigma=sigma).logp(x_i)
             return self.init.logp(x[0]) + tt.sum(innov_like)
