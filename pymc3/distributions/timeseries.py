@@ -200,6 +200,14 @@ class GaussianRandomWalk(distribution.Continuous):
         self.init = init
         self.mean = tt.as_tensor_variable(0.)
 
+    def _mu_and_sigma(self, mu, sigma):
+        """Helper to get mu and sigma if they are high dimensional."""
+        if sigma.ndim > 0:
+            sigma = sigma[1:]
+        if mu.ndim > 0:
+            mu = mu[1:]
+        return mu, sigma
+
     def logp(self, x):
         """
         Calculate log-probability of Gaussian Random Walk distribution at specified value.
@@ -216,15 +224,7 @@ class GaussianRandomWalk(distribution.Continuous):
         if x.ndim > 0:
             x_im1 = x[:-1]
             x_i = x[1:]
-            if self.sigma.ndim > 0:
-                sigma = self.sigma[:-1]
-            else:
-                sigma = self.sigma
-            if self.mu.ndim > 0:
-                mu = self.mu[:-1]
-            else:
-                mu = self.mu
-
+            mu, sigma = self._mu_and_sigma(self.mu, self.sigma)
             innov_like = Normal.dist(mu=x_im1 + mu, sigma=sigma).logp(x_i)
             return self.init.logp(x[0]) + tt.sum(innov_like)
         return self.init.logp(x)
@@ -252,7 +252,9 @@ class GaussianRandomWalk(distribution.Continuous):
     def _random(self, sigma, mu, size):
         """Implement a Gaussian random walk as a cumulative sum of normals."""
         rv = stats.norm(mu, sigma)
-        return rv.rvs(size).cumsum(axis=0)
+        data = rv.rvs(size).cumsum(axis=0)
+        data = data - data[0]  # TODO: this should be a draw from `init`, if available
+        return data
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:

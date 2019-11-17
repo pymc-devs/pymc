@@ -12,7 +12,7 @@
 - Sampling from variational approximation now allows for alternative trace backends [#3550].
 - Infix `@` operator now works with random variables and deterministics [#3619](https://github.com/pymc-devs/pymc3/pull/3619).
 - [ArviZ](https://arviz-devs.github.io/arviz/) is now a requirement, and handles plotting, diagnostics, and statistical checks.
-- Can use GaussianRandomWalk in sample_prior_predictive [#3682](https://github.com/pymc-devs/pymc3/pull/3682)
+- Can use GaussianRandomWalk in sample_prior_predictive and sample_prior_predictive [#3682](https://github.com/pymc-devs/pymc3/pull/3682)
 - Now 11 years of S&P returns in data set[#3682](https://github.com/pymc-devs/pymc3/pull/3682)
 
 ### Maintenance
