@@ -6,7 +6,6 @@ from pymc3.util import get_variable_name
 from .continuous import get_tau_sigma, Normal, Flat
 from . import multivariate
 from . import distribution
-from .shape_utils import to_tuple
 
 
 __all__ = [
