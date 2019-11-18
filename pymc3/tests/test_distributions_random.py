@@ -174,7 +174,12 @@ class BaseTestCases:
                 if shape is None:
                     return self.distribution(name, transform=None, **params)
                 else:
-                    return self.distribution(name, shape=shape, transform=None, **params)
+                    try:
+                        return self.distribution(name, shape=shape, transform=None, **params)
+                    except TypeError:
+                        if np.sum(np.atleast_1d(shape)) == 0:
+                            pytest.skip("Timeseries must have positive shape")
+                        raise
 
         @staticmethod
         def sample_random_variable(random_variable, size):
@@ -250,6 +255,14 @@ class BaseTestCases:
                 a = self.sample_random_variable(rv, size).shape
                 assert e == a
 
+
+class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
+    distribution = pm.GaussianRandomWalk
+    params = {'mu': 1., 'sigma': 1.}
+
+    @pytest.mark.xfail(reason="Supporting this makes a nasty API")
+    def test_broadcast_shape(self):
+        super().test_broadcast_shape()
 
 class TestNormal(BaseTestCases.BaseTestCase):
     distribution = pm.Normal
@@ -1006,7 +1019,7 @@ class TestDensityDist():
             normal_dist = pm.Normal.dist(mu, 1)
             pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100))
             trace = pm.sample(100)
-    
+
         samples = 500
         with pytest.raises(ValueError):
             pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)

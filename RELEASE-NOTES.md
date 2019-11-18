@@ -12,6 +12,8 @@
 - Sampling from variational approximation now allows for alternative trace backends [#3550].
 - Infix `@` operator now works with random variables and deterministics [#3619](https://github.com/pymc-devs/pymc3/pull/3619).
 - [ArviZ](https://arviz-devs.github.io/arviz/) is now a requirement, and handles plotting, diagnostics, and statistical checks.
+- Can use GaussianRandomWalk in sample_prior_predictive and sample_prior_predictive [#3682](https://github.com/pymc-devs/pymc3/pull/3682)
+- Now 11 years of S&P returns in data set[#3682](https://github.com/pymc-devs/pymc3/pull/3682)
 
 ### Maintenance
 - Moved math operations out of `Rice`, `TruncatedNormal`, `Triangular` and `ZeroInflatedNegativeBinomial` `random` methods. Math operations on values returned by `draw_values` might not broadcast well, and all the `size` aware broadcasting is left to `generate_samples`. Fixes [#3481](https://github.com/pymc-devs/pymc3/issues/3481) and [#3508](https://github.com/pymc-devs/pymc3/issues/3508)
