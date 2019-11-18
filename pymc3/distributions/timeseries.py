@@ -4,6 +4,7 @@ from theano import scan
 
 from pymc3.util import get_variable_name
 from .continuous import get_tau_sigma, Normal, Flat
+from .shape_utils import to_tuple
 from . import multivariate
 from . import distribution
 
@@ -189,7 +190,10 @@ class GaussianRandomWalk(distribution.Continuous):
 
     def __init__(self, tau=None, init=Flat.dist(), sigma=None, mu=0.,
                  sd=None, *args, **kwargs):
+        kwargs.setdefault('shape', 1)
         super().__init__(*args, **kwargs)
+        if sum(self.shape) == 0:
+            raise TypeError("GaussianRandomWalk must be supplied a non-zero shape argument!")
         if sd is not None:
             sigma = sd
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
@@ -247,12 +251,17 @@ class GaussianRandomWalk(distribution.Continuous):
         """
         sigma, mu = distribution.draw_values([self.sigma, self.mu], point=point, size=size)
         return distribution.generate_samples(self._random, sigma=sigma, mu=mu, size=size,
-                                             dist_shape=self.shape)
+                                             dist_shape=self.shape,
+                                             not_broadcast_kwargs={"sample_shape": to_tuple(size)})
 
-    def _random(self, sigma, mu, size):
+    def _random(self, sigma, mu, size, sample_shape):
         """Implement a Gaussian random walk as a cumulative sum of normals."""
+        if size[len(sample_shape)] == sample_shape:
+            axis = len(sample_shape)
+        else:
+            axis = 0
         rv = stats.norm(mu, sigma)
-        data = rv.rvs(size).cumsum(axis=0)
+        data = rv.rvs(size).cumsum(axis=axis)
         data = data - data[0]  # TODO: this should be a draw from `init`, if available
         return data
 

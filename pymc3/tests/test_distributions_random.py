@@ -174,7 +174,12 @@ class BaseTestCases:
                 if shape is None:
                     return self.distribution(name, transform=None, **params)
                 else:
-                    return self.distribution(name, shape=shape, transform=None, **params)
+                    try:
+                        return self.distribution(name, shape=shape, transform=None, **params)
+                    except TypeError:
+                        if np.sum(np.atleast_1d(shape)) == 0:
+                            pytest.skip("Timeseries must have positive shape")
+                        raise
 
         @staticmethod
         def sample_random_variable(random_variable, size):
