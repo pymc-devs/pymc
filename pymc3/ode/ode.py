@@ -21,7 +21,7 @@ class DifferentialEquation(theano.Op):
     ----------
 
     func : callable
-        Function specifying the differential equation
+        Function specifying the differential equation. Must take arguments y (n_states,), t (scalar), p (n_theta,)
     times : array
         Array of times at which to evaluate the solution of the differential equation.
     n_states : int
@@ -101,11 +101,15 @@ class DifferentialEquation(theano.Op):
         # We need the sensitivity matrix to be a vector (see augmented_function)
         # Ravel and return
         dydp = sens_matrix.ravel()
-
         return dydp
 
     def _system(self, Y, t, p):
         """This is the function that will be passed to odeint. Solves both ODE and sensitivities.
+
+        Args:
+            Y: augmented state vector (n_states + n_states + n_theta)
+            t: current time
+            p: parameter vector (y0, theta)
         """
         dydt, ddt_dydp = self._augmented_func(Y[:self.n_states], t, p, Y[self.n_states:])
         derivatives = np.concatenate([dydt, ddt_dydp])
