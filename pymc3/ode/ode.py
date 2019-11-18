@@ -80,22 +80,23 @@ class DifferentialEquation(theano.Op):
     
     def _make_sens_ic(self):
         """
-        The sensitivity matrix will always have consistent form.
-        If the first n_theta entries of the parameters vector in the simulate call
-        correspond to ode paramaters, then the first n_theta columns in
-        the sensitivity matrix will be 0 
+        The sensitivity matrix will always have consistent form. (n_states, n_states + n_theta)
 
-        If the last n_states entries of the paramters vector in the simulate call
+        If the first n_states entries of the parameters vector in the simulate call
         correspond to initial conditions of the system,
-        then the last n_states columns of the sensitivity matrix should form
-        an identity matrix
+        then the first n_states columns of the sensitivity matrix should form
+        an identity matrix.
+
+        If the last n_theta entries of the parameters vector in the simulate call
+        correspond to ode paramaters, then the last n_theta columns in
+        the sensitivity matrix will be 0.        
         """
 
         # Initialize the sensitivity matrix to be 0 everywhere
-        sens_matrix = np.zeros((self.n_states, self.n_p), dtype=floatX)
+        sens_matrix = np.zeros((self.n_states, self.n_states + self.n_theta), dtype=floatX)
 
         # Slip in the identity matrix in the appropirate place
-        sens_matrix[:, -self.n_states :] = np.eye(self.n_states, dtype=floatX)
+        sens_matrix[:,:self.n_states] = np.eye(self.n_states, dtype=floatX)
 
         # We need the sensitivity matrix to be a vector (see augmented_function)
         # Ravel and return
@@ -116,7 +117,7 @@ class DifferentialEquation(theano.Op):
 
         # perform the integration
         sol = scipy.integrate.odeint(
-            func=self._system, y0=s0, t=self._augmented_times, args=(np.concatenate([theta, y0]),)
+            func=self._system, y0=s0, t=self._augmented_times, args=(np.concatenate([y0, theta]),)
         ).astype(floatX)
         # The solution
         y = sol[1:, :self.n_states]
@@ -137,6 +138,11 @@ class DifferentialEquation(theano.Op):
         return theano.Apply(self, inputs, (states, sens))
 
     def __call__(self, y0, theta, return_sens=False, **kwargs):
+        if isinstance(y0, (list, tuple)) and not len(y0) == self.n_states:
+            raise ShapeError('Length of y0 is wrong.', actual=(len(y0),), expected=(self.n_states,))
+        if isinstance(theta, (list, tuple)) and not len(theta) == self.n_theta:
+            raise ShapeError('Length of theta is wrong.', actual=(len(theta),), expected=(self.n_theta,))
+            
         # convert inputs to tensors (and check their types)
         y0 = tt.cast(tt.unbroadcast(tt.as_tensor_variable(y0), 0), floatX)
         theta = tt.cast(tt.unbroadcast(tt.as_tensor_variable(theta), 0), floatX)

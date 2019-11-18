@@ -18,9 +18,9 @@ def augment_system(ode_func, n, m):
     ode_func : function
         Differential equation.  Returns array-like.
     n : int
-        Number of rows of the sensitivity matrix.
+        Number of rows of the sensitivity matrix. (n_states)
     m : int
-        Number of columns of the sensitivity matrix.
+        Number of columns of the sensitivity matrix. (n_states + n_theta)
 
     Returns
     -------
@@ -32,7 +32,7 @@ def augment_system(ode_func, n, m):
     t_y = tt.vector("y", dtype='float64')
     t_y.tag.test_value = np.zeros((n,), dtype='float64')
     # Parameter(s).  Should be vector to allow for generaliztion to multiparameter
-    # systems of ODEs.  Is m dimensional because it includes all ode parameters as well as initical conditions
+    # systems of ODEs.  Is m dimensional because it includes all initial conditions as well as ode parameters
     t_p = tt.vector("p", dtype='float64')
     t_p.tag.test_value = np.zeros((m,), dtype='float64')
     # Time.  Allow for non-automonous systems of ODEs to be analyzed
@@ -47,8 +47,9 @@ def augment_system(ode_func, n, m):
 
     dydp = dydp_vec.reshape((n, m))
 
+    # Get symbolic representation of the ODEs by passing tensors for y, t and theta
+    yhat = ode_func(t_y, t_t, t_p[n:])
     # Stack the results of the ode_func into a single tensor variable
-    yhat = ode_func(t_y, t_t, t_p)
     if not isinstance(yhat, (list, tuple)):
         yhat = (yhat,)
     t_yhat = tt.stack(yhat, axis=0)
