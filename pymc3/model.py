@@ -3,7 +3,7 @@ import functools
 import itertools
 import threading
 import warnings
-from typing import Optional, Tuple, TypeVar, Type, List, Union
+from typing import Optional, TypeVar, Type, List, Union, TYPE_CHECKING, Any, cast
 from sys import modules
 
 import numpy as np
@@ -180,7 +180,7 @@ class ContextMeta(type):
 
     # FIXME: is there a more elegant way to automatically add methods to the class that
     # are instance methods instead of class methods?
-    def __init__(cls, name, bases, nmspc, context_class: Optional[Type]=None, **kwargs):
+    def __init__(cls, name, bases, nmspc, context_class: Optional[Type]=None, **kwargs): # pylint: disable=unused-variable
         """Add ``__enter__`` and ``__exit__`` methods to the new class automatically."""
         if context_class is not None:
             cls._context_class = context_class
@@ -193,7 +193,7 @@ class ContextMeta(type):
                 self._old_theano_config = set_theano_conf(self._theano_config)
             return self
 
-        def __exit__(self, typ, value, traceback):
+        def __exit__(self, typ, value, traceback): # pylint: disable=unused-variable
             self.__class__.context_class.get_contexts().pop()
             # self._theano_config is set in Model.__new__
             if hasattr(self, '_old_theano_config'):
@@ -277,7 +277,7 @@ class ContextMeta(type):
         return instance
 
 
-def modelcontext(model: Optional['Model']) -> Optional['Model']:
+def modelcontext(model: Optional['Model']) -> 'Model':
     """
     Return the given model or, if none was supplied, try to find one in
     the context stack.
@@ -418,11 +418,18 @@ class treelist(list):
                                   ' able to determine '
                                   'appropriate logic for it')
 
-    def __imul__(self, other):
+    # Added this because mypy didn't like having __imul__ without __mul__
+    # This is my best guess about what this should do.  I might be happier
+    # to kill both of these if they are not used.
+    def __mul__ (self, other) -> 'treelist':
+        return cast('treelist', list.__mul__(self, other))
+
+    def __imul__(self, other) -> 'treelist':
         t0 = len(self)
         list.__imul__(self, other)
         if self.parent is not None:
             self.parent.extend(self[t0:])
+        return self # python spec says should return the result.
 
 
 class treedict(dict):
@@ -715,6 +722,11 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model
             CustomModel(mean=1, name='first')
             CustomModel(mean=2, name='second')
     """
+
+    if TYPE_CHECKING:
+        def __enter__(self: 'Model') -> 'Model': ...
+        def __exit__(self: 'Model', *exc: Any) -> bool: ...
+
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
         instance = super().__new__(cls)
@@ -764,7 +776,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model
     def isroot(self):
         return self.parent is None
 
-    @property
+    @property # type: ignore -- mypy can't handle decorated types.
     @memoize(bound=True)
     def bijection(self):
         vars = inputvars(self.vars)
