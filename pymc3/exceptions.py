@@ -34,3 +34,12 @@ class ShapeError(Exception):
             super().__init__('{} (actual {} != expected {})'.format(message, actual, expected))
         else:
             super().__init__(message)
+
+
+class DtypeError(TypeError):
+    """Error that the dtype of a variable is incorrect."""
+    def __init__(self, message, actual=None, expected=None):
+        if expected and actual:
+            super().__init__('{} (actual {} != expected {})'.format(message, actual, expected))
+        else:
+            super().__init__(message)
