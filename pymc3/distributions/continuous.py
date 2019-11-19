@@ -855,7 +855,7 @@ class HalfNormal(PositiveContinuous):
         -------
         array
         """
-        sigma = draw_values([self.sigma], point=point)[0]
+        sigma = draw_values([self.sigma], point=point, size=size)[0]
         return generate_samples(stats.halfnorm.rvs, loc=0., scale=sigma,
                                 dist_shape=self.shape,
                                 size=size)
