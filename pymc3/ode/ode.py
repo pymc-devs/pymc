@@ -71,7 +71,7 @@ class DifferentialEquation(theano.Op):
 
         # Private
         self._augmented_times = np.insert(times, 0, t0).astype(floatX)
-        self._augmented_func = utils.augment_system(func, self.n_states, self.n_p)
+        self._augmented_func = utils.augment_system(func, self.n_states, self.n_theta)
         self._sens_ic = utils.make_sens_ic(self.n_states, self.n_theta, floatX)
 
         # Cache symbolic sensitivities by the hash of inputs
