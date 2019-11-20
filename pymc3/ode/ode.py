@@ -151,9 +151,9 @@ class DifferentialEquation(theano.Op):
         y0 = tt.cast(tt.unbroadcast(tt.as_tensor_variable(y0), 0), floatX)
         theta = tt.cast(tt.unbroadcast(tt.as_tensor_variable(theta), 0), floatX)
         inputs = [y0, theta]
-        for i, (input, itype) in enumerate(zip(inputs, self._itypes)):
-            if not input.type == itype:
-                raise ValueError('Input {} of type {} does not have the expected type of {}'.format(i, input.type, itype))
+        for i, (input_val, itype) in enumerate(zip(inputs, self._itypes)):
+            if not input_val.type == itype:
+                raise ValueError('Input {} of type {} does not have the expected type of {}'.format(i, input_val.type, itype))
 
         # use default implementation to prepare symbolic outputs (via make_node)
         states, sens = super(theano.Op, self).__call__(y0, theta, **kwargs)
