@@ -28,7 +28,7 @@ def make_sens_ic(n_states, n_theta, floatX):
         Returns
         -------
         dydp : array
-            1D-array of shape (n_states * n_theta,), representing the initial condition of the sensitivities
+            1D-array of shape (n_states * (n_states + n_theta),), representing the initial condition of the sensitivities
         """
 
         # Initialize the sensitivity matrix to be 0 everywhere
