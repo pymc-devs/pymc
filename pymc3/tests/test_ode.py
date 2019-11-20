@@ -104,7 +104,7 @@ class TestSensitivityInitialCondition(object):
         # Sensitivity initial condition for this model should be 1 by 2
         model1_sens_ic = np.array([1, 0])
 
-        np.testing.assert_array_equal(model1_sens_ic, model1._make_sens_ic())
+        np.testing.assert_array_equal(model1_sens_ic, model1._sens_ic)
 
     def test_sens_ic_scalar_2_param(self):
         # Scalar ODE 2 Param
@@ -118,7 +118,7 @@ class TestSensitivityInitialCondition(object):
 
         model2_sens_ic = np.array([1, 0, 0])
 
-        np.testing.assert_array_equal(model2_sens_ic, model2._make_sens_ic())
+        np.testing.assert_array_equal(model2_sens_ic, model2._sens_ic)
 
     def test_sens_ic_vector_1_param(self):
         # Vector ODE 1 Param
@@ -138,7 +138,7 @@ class TestSensitivityInitialCondition(object):
             0, 1, 0
         ])
 
-        np.testing.assert_array_equal(model3_sens_ic, model3._make_sens_ic())
+        np.testing.assert_array_equal(model3_sens_ic, model3._sens_ic)
 
     def test_sens_ic_vector_2_param(self):
         # Vector ODE 2 Param
@@ -158,7 +158,7 @@ class TestSensitivityInitialCondition(object):
             0, 1, 0, 0
         ])
 
-        np.testing.assert_array_equal(model4_sens_ic, model4._make_sens_ic())
+        np.testing.assert_array_equal(model4_sens_ic, model4._sens_ic)
 
     def test_sens_ic_vector_3_params(self):
         # Big System with Many Parameters
@@ -183,7 +183,7 @@ class TestSensitivityInitialCondition(object):
             [0, 0, 1, 0, 0, 0]
         ])
 
-        np.testing.assert_array_equal(np.ravel(model5_sens_ic), model5._make_sens_ic())
+        np.testing.assert_array_equal(np.ravel(model5_sens_ic), model5._sens_ic)
 
 
 @pytest.mark.xfail(

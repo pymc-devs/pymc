@@ -3,7 +3,7 @@ import numpy as np
 import scipy
 import theano
 import theano.tensor as tt
-from ..ode.utils import augment_system
+from ..ode import utils
 from ..exceptions import ShapeError, DtypeError
 
 _log = logging.getLogger('pymc3')
@@ -71,38 +71,13 @@ class DifferentialEquation(theano.Op):
 
         # Private
         self._augmented_times = np.insert(times, 0, t0).astype(floatX)
-        self._augmented_func = augment_system(func, self.n_states, self.n_p)
-        self._sens_ic = self._make_sens_ic()
+        self._augmented_func = utils.augment_system(func, self.n_states, self.n_p)
+        self._sens_ic = utils.make_sens_ic(self.n_states, self.n_theta, floatX)
 
         # Cache symbolic sensitivities by the hash of inputs
         self._apply_nodes = {}
         self._output_sensitivities = {}
     
-    def _make_sens_ic(self):
-        """
-        The sensitivity matrix will always have consistent form. (n_states, n_states + n_theta)
-
-        If the first n_states entries of the parameters vector in the simulate call
-        correspond to initial conditions of the system,
-        then the first n_states columns of the sensitivity matrix should form
-        an identity matrix.
-
-        If the last n_theta entries of the parameters vector in the simulate call
-        correspond to ode paramaters, then the last n_theta columns in
-        the sensitivity matrix will be 0.        
-        """
-
-        # Initialize the sensitivity matrix to be 0 everywhere
-        sens_matrix = np.zeros((self.n_states, self.n_states + self.n_theta), dtype=floatX)
-
-        # Slip in the identity matrix in the appropirate place
-        sens_matrix[:,:self.n_states] = np.eye(self.n_states, dtype=floatX)
-
-        # We need the sensitivity matrix to be a vector (see augmented_function)
-        # Ravel and return
-        dydp = sens_matrix.ravel()
-        return dydp
-
     def _system(self, Y, t, p):
         """This is the function that will be passed to odeint. Solves both ODE and sensitivities.
 
@@ -154,7 +129,7 @@ class DifferentialEquation(theano.Op):
         for i, (input_val, itype) in enumerate(zip(inputs, self._itypes)):
             if not input_val.type == itype:
                 raise ValueError('Input {} of type {} does not have the expected type of {}'.format(i, input_val.type, itype))
-
+        
         # use default implementation to prepare symbolic outputs (via make_node)
         states, sens = super(theano.Op, self).__call__(y0, theta, **kwargs)
 
