@@ -8,9 +8,6 @@ import theano
 import pytest
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
 def test_gradients():
     """Tests the computation of the sensitivities from the theano computation graph"""
 
@@ -53,9 +50,6 @@ def test_gradients():
     np.testing.assert_allclose(sensitivity, simulated_sensitivity, rtol=1e-5)
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
 def test_simulate():
     """Tests the integration in DifferentialEquation"""
 
@@ -81,9 +75,6 @@ def test_simulate():
     np.testing.assert_allclose(y, simulated_y, rtol=1e-5)
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
 class TestSensitivityInitialCondition(object):
 
     t = np.arange(0, 12, 0.25).reshape(-1, 1)
@@ -186,9 +177,6 @@ class TestSensitivityInitialCondition(object):
         np.testing.assert_array_equal(np.ravel(model5_sens_ic), model5._sens_ic)
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
 def test_logp_scalar_ode():
     """Test the computation of the log probability for these models"""
 
@@ -279,9 +267,6 @@ class TestErrors(object):
             )
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
 class TestDiffEqModel(object):
     def test_op_equality(self):
         """Tests that the equality of mathematically identical Ops evaluates True"""
