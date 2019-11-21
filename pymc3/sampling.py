@@ -1168,7 +1168,7 @@ class _DefaultTrace:
         # initialize if necessary
         if k not in self.trace_dict:
             array_shape = (self._len,) + value_shape
-            self.trace_dict[k] = np.zeros(array_shape, dtype=np.array(v).dtype)
+            self.trace_dict[k] = np.empty(array_shape, dtype=np.array(v).dtype)
 
         # do the actual insertion
         if value_shape == ():
