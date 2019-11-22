@@ -23,6 +23,9 @@ __all__ = [
     "log",
     "sum_to_1",
     "t_stick_breaking",
+    "circular",
+    "CholeskyCovPacked",
+    "Chain",
 ]
 
 
@@ -557,7 +560,6 @@ class CholeskyCovPacked(Transform):
 
     def jacobian_det(self, y):
         return tt.sum(y[self.diag_idxs])
-
 
 class Chain(Transform):
     def __init__(self, transform_list):
