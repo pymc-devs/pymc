@@ -378,11 +378,13 @@ https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8
         self.add_random_variable(var)
         return var
 
-In general, if there is observed, the RV is defined as a ``ObservedRV``,
-otherwise if it has a transformed method, it is a ``TransformedRV``, otherwise, it returns the
-most elementary form: a ``FreeRV``.
+In general, if a variable has observations (``observed`` parameter), the RV is defined as an ``ObservedRV``,
+otherwise if it has a ``transformed`` (``transform`` parameter) attribute, it is a
+``TransformedRV``, otherwise, it will be the most elementary form: a
+``FreeRV``.  Note that this means that random variables with
+observations cannot be transformed.
 
-Below, I will take a deeper look into ``TransformedRV``, a normal user
+Below, I will take a deeper look into ``TransformedRV``. A normal user
 might not necessary come in contact with the concept, as
 ``TransformedRV`` and ``TransformedDistribution`` are intentionally not
 user facing.
@@ -390,13 +392,13 @@ user facing.
 Because in PyMC3 there is no bijector class like in TFP or pyro, we only
 have a partial implementation called ``Transform``, which implements
 Jacobian correction for forward mapping only (there is no Jacobian
-correction for inverse mapping). The use case we considered are limited
+correction for inverse mapping). The uses case we considered are limited
 to the set of distributions that are bounded, and the transformation
 maps the bounded set to the real line - see
 `doc <https://docs.pymc.io/notebooks/api_quickstart.html#Automatic-transforms-of-bounded-RVs>`__.
 In general, PyMC3 does not provide explicit functionality to transform
 one distribution to another. Instead, a dedicated distribution is
-usually created in consideration of optimising performance. But getting a
+usually created in order to optimise performance. But getting a
 ``TransformedDistribution`` is also possible (see also in
 `doc <https://docs.pymc.io/notebooks/api_quickstart.html#Transformed-distributions-and-changes-of-variables>`__):
 
