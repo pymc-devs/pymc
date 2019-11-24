@@ -12,6 +12,7 @@ from scipy.special import expit
 
 
 __all__ = [
+    "Transform",
     "transform",
     "stick_breaking",
     "logodds",
@@ -234,6 +235,7 @@ class LogExpM1(ElemwiseTransform):
 log_exp_m1 = LogExpM1()
 
 
+
 class LogOdds(ElemwiseTransform):
     name = "logodds"
 
@@ -251,6 +253,7 @@ class LogOdds(ElemwiseTransform):
 
 
 logodds = LogOdds()
+
 
 
 class Interval(ElemwiseTransform):
@@ -328,6 +331,10 @@ class LowerBound(ElemwiseTransform):
 
 
 lowerbound = LowerBound
+'''
+Alias for ``LowerBound`` (:class: LowerBound) Transform (:class: Transform) class
+for use in the ``transform`` argument of a random variable.
+'''
 
 
 class UpperBound(ElemwiseTransform):
@@ -365,6 +372,11 @@ class UpperBound(ElemwiseTransform):
 
 
 upperbound = UpperBound
+'''
+Alias for ``UpperBound`` (:class: UpperBound) Transform (:class: Transform) class
+for use in the ``transform`` argument of a random variable.
+'''
+
 
 
 class Ordered(Transform):
@@ -399,6 +411,10 @@ class Ordered(Transform):
 
 
 ordered = Ordered()
+'''
+Instantiation of ``Ordered`` (:class: Ordered) Transform (:class: Transform) class
+for use in the ``transform`` argument of a random variable.
+'''
 
 
 class SumTo1(Transform):
@@ -509,6 +525,7 @@ class StickBreaking(Transform):
 stick_breaking = StickBreaking()
 
 
+
 def t_stick_breaking(eps):
     return StickBreaking(eps)
 
@@ -536,7 +553,6 @@ class Circular(ElemwiseTransform):
 
 
 circular = Circular()
-
 
 class CholeskyCovPacked(Transform):
     name = "cholesky-cov-packed"

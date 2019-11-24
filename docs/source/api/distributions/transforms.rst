@@ -1,6 +1,10 @@
-*******************************************
+****************************************************************
 Transformations of a random variable from one space to another.
-*******************************************
+****************************************************************
+
+Note that for convenience these entities can be addressed as
+``pm.transforms.``\ *X* for any name *X*, although they are actually
+implemented as ``pm.distributions.transforms.``\*X*.
 
 .. currentmodule:: pymc3.distributions.transforms
 .. autosummary::
@@ -20,25 +24,72 @@ circular
 CholeskyCovPacked
 Chain
 
+
+
 Transform Instances
 ~~~~~~~~~~~~~~~~~~~
 
 Transform instances are the entities that should be used in the
-`transform` parameter to a random variable constructor.  These are
+``transform`` parameter to a random variable constructor.  These are
 initialized instances of the Transform Classes, which are described
 below.
 
-.. autodata::  stick_breaking
-.. autodata::  logodds
-.. autodata::  interval
-.. autodata::  log_exp_m1
-.. autodata::  lowerbound
-.. autodata::  upperbound
-.. autodata::  ordered
-.. autodata::  log
-.. autodata::  sum_to_1
-.. autodata::  t_stick_breaking 
-.. autodata::  circular
+.. glossary::
+``stick_breaking``
+    Instantiation of :class:`~pymc3.distributions.transforms.StickBreaking`
+    :class:`~pymc3.distributions.transforms.Transform` class for use in the ``transform``
+    argument of a random variable.
+
+``logodds``
+    Instantiation of
+    :class:`~pymc3.distributions.transforms.LogOdds` :class:`~pymc3.distributions.transforms.Transform` class
+    for use in the ``transform`` argument of a random variable.
+
+``interval``
+    Alias of
+    :class:`~pymc3.distributions.transforms.Interval` :class:`~pymc3.distributions.transforms.Transform` class
+    for use in the ``transform`` argument of a random variable.
+
+``log_exp_m1``
+    Instantiation of
+    :class:`~pymc3.distributions.transforms.LogExpM1` :class:`~pymc3.distributions.transforms.Transform` class
+    for use in the ``transform`` argument of a random variable.
+
+``lowerbound``
+    Alias of
+    :class:`~pymc3.distributions.transforms.LowerBound` :class:`~pymc3.distributions.transforms.Transform` class
+    for use in the ``transform`` argument of a random variable.
+
+``upperbound``
+    Alias of
+    :class:`~pymc3.distributions.transforms.UpperBound` :class:`~pymc3.distributions.transforms.Transform` class
+    for use in the ``transform`` argument of a random variable.
+
+``ordered``
+    Instantiation of
+    :class:`~pymc3.distributions.transforms.Ordered` :class:`~pymc3.distributions.transforms.Transform` class
+    for use in the ``transform`` argument of a random variable.
+
+``log``
+    Instantiation of
+    :class:`~pymc3.distributions.transforms.Log` :class:`~pymc3.distributions.transforms.Transform` class
+    for use in the ``transform`` argument of a random variable.
+
+
+``sum_to_1``
+    Instantiation of
+    :class:`~pymc3.distributions.transforms.SumTo1` :class:`~pymc3.distributions.transforms.Transform` class
+    for use in the ``transform`` argument of a random variable.
+
+
+``circular``
+    Instantiation of
+    :class:`~pymc3.distributions.transforms.Circular` :class:`~pymc3.distributions.transforms.Transform` class
+    for use in the ``transform`` argument of a random variable.
+
+
+.. autofunction::  t_stick_breaking 
+
 
 Transform Base Classes
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -59,10 +110,11 @@ Transform Composition Classes
 .. autoclass:: Chain
     :members:
 .. autoclass:: CholeskyCovPacked
+    :members:
 
 
 Specific Transform Classes
-~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass::  Log
     :members:
@@ -84,10 +136,3 @@ Specific Transform Classes
     :members:
 .. autoclass::  Circular
     :members:
-
-
-
-
-
-
-
