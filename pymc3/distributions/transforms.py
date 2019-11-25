@@ -35,7 +35,7 @@ class Transform:
 
     Attributes
     ----------
-    name : str
+    name: str
     """
 
     name = ""
@@ -47,7 +47,7 @@ class Transform:
 
         Parameters
         ----------
-        x : tensor
+        x: tensor
             Input tensor to be transformed.
 
         Returns
@@ -63,9 +63,9 @@ class Transform:
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Input array to be transformed.
-        point : array_like, optional
+        point: array_like, optional
             Test value used to draw (fix) bounds-like transformations
 
         Returns
@@ -82,7 +82,7 @@ class Transform:
 
         Parameters
         ----------
-        z : tensor
+        z: tensor
             Input tensor to be inverse transformed.
 
         Returns
@@ -97,7 +97,7 @@ class Transform:
 
         Parameters
         ----------
-        x : tensor
+        x: tensor
             Input to calculate Jacobian determinant of.
 
         Returns
@@ -128,8 +128,8 @@ class TransformedDistribution(distribution.Distribution):
         """
         Parameters
         ----------
-        dist : Distribution
-        transform : Transform
+        dist: Distribution
+        transform: Transform
         args, kwargs
             arguments to Distribution"""
         forward = transform.forward
@@ -154,7 +154,7 @@ class TransformedDistribution(distribution.Distribution):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -174,7 +174,7 @@ class TransformedDistribution(distribution.Distribution):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -454,7 +454,7 @@ class StickBreaking(Transform):
 
     Parameters
     ----------
-    eps : float, positive value
+    eps: float, positive value
         A small value for numerical stability in invlogit.
     """
 
