@@ -84,3 +84,27 @@ class TestUpdateStartVals(SeededTest):
                             test_point['interv_interval__'])
 
 
+class TestExceptions:
+    def test_shape_error(self):
+        err = pm.exceptions.ShapeError('Without shapes.')
+        with pytest.raises(pm.exceptions.ShapeError):
+            raise err
+
+        err = pm.exceptions.ShapeError('With shapes.', (4,3), (5,3))
+        assert 'actual (4, 3)' in err.args[0]
+        assert 'expected (5, 3)' in err.args[0]
+        with pytest.raises(pm.exceptions.ShapeError):
+            raise err
+        pass
+
+    def test_dtype_error(self):
+        err = pm.exceptions.DtypeError('Without dtypes.')
+        with pytest.raises(pm.exceptions.DtypeError):
+            raise err
+
+        err = pm.exceptions.DtypeError('With shapes.', np.float64, np.float32)
+        assert 'float64' in err.args[0]
+        assert 'float32' in err.args[0]
+        with pytest.raises(pm.exceptions.DtypeError):
+            raise err
+        pass
