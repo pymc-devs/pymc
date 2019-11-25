@@ -526,7 +526,9 @@ stick_breaking = StickBreaking()
 
 
 
-def t_stick_breaking(eps):
+def t_stick_breaking(eps: float) -> StickBreaking:
+    '''Return a new :class:`StickBreaking` transform with specified eps(ilon),
+    instead of the default.'''
     return StickBreaking(eps)
 
 
