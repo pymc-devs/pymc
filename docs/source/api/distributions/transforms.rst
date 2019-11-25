@@ -7,22 +7,27 @@ Note that for convenience these entities can be addressed as
 implemented as ``pm.distributions.transforms.``\*X*.
 
 .. currentmodule:: pymc3.distributions.transforms
-.. autosummary::
 
-transform
-stick_breaking
-logodds
-interval
-log_exp_m1
-lowerbound
-upperbound
-ordered
-log
-sum_to_1
-t_stick_breaking
-circular
-CholeskyCovPacked
-Chain
+
+.. contents ::
+
+..
+   .. autosummary::
+
+   transform
+   stick_breaking
+   logodds
+   interval
+   log_exp_m1
+   lowerbound
+   upperbound
+   ordered
+   log
+   sum_to_1
+   t_stick_breaking
+   circular
+   CholeskyCovPacked
+   Chain
 
 
 
