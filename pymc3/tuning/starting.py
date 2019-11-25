@@ -199,7 +199,7 @@ class CostFuncWrapper:
             self.use_gradient = True
             self.desc = "logp = {:,.5g}, ||grad|| = {:,.5g}"
         self.previous_x = None
-        self.progress = progress_bar(total=maxeval, display=progressbar)
+        self.progress = progress_bar(total=range(maxeval), display=progressbar)
         self.progress.update(0)
 
     def __call__(self, x):
