@@ -20,6 +20,7 @@ API Reference
    api/data
    api/model
    api/model_graph
+   api/variables
    api/shape_utils
 
 
