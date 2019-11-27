@@ -56,10 +56,10 @@ class InstanceMethod:
         return getattr(self.obj, self.method_name)(*args, **kwargs)
 
 
-def incorporate_methods(source, destination, methods, default=None,
+def incorporate_methods(source, destination, methods,
                         wrapper=None, override=False):
     """
-    Add attributes to a destination object which points to
+    Add attributes to a destination object which point to
     methods from from a source object.
 
     Parameters
@@ -70,8 +70,6 @@ def incorporate_methods(source, destination, methods, default=None,
         The destination object for the methods.
     methods : list of str
         Names of methods to incorporate.
-    default : object
-        The value used if the source does not have one of the listed methods.
     wrapper : function
         An optional function to allow the source method to be
         wrapped. Should take the form my_wrapper(source, method_name)
