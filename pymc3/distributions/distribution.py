@@ -7,7 +7,7 @@ import theano
 from ..memoize import memoize
 from ..model import (
     Model, get_named_nodes_and_relations, FreeRV,
-    ObservedRV, MultiObservedRV, Context, InitContextMeta
+    ObservedRV, MultiObservedRV, ContextMeta
 )
 from ..vartypes import string_types, theano_constant
 from .shape_utils import (
@@ -449,23 +449,14 @@ class DensityDist(Distribution):
                             "Define a custom random method and pass it as kwarg random")
 
 
-class _DrawValuesContext(Context, metaclass=InitContextMeta):
+class _DrawValuesContext(metaclass=ContextMeta, context_class='_DrawValuesContext'):
     """ A context manager class used while drawing values with draw_values
     """
 
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
         instance = super().__new__(cls)
-        if cls.get_contexts():
-            potential_parent = cls.get_contexts()[-1]
-            # We have to make sure that the context is a _DrawValuesContext
-            # and not a Model
-            if isinstance(potential_parent, _DrawValuesContext):
-                instance._parent = potential_parent
-            else:
-                instance._parent = None
-        else:
-            instance._parent = None
+        instance._parent = cls.get_context(error_if_none=False)
         return instance
 
     def __init__(self):
@@ -485,7 +476,7 @@ class _DrawValuesContext(Context, metaclass=InitContextMeta):
         return self._parent
 
 
-class _DrawValuesContextBlocker(_DrawValuesContext, metaclass=InitContextMeta):
+class _DrawValuesContextBlocker(_DrawValuesContext):
     """
     Context manager that starts a new drawn variables context disregarding all
     parent contexts. This can be used inside a random method to ensure that
