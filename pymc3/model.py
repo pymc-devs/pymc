@@ -169,21 +169,8 @@ class ContextMeta(type):
     the `with` statement.
     """
 
-    def __new__(cls, name, bases, dct,  **kargs):
-        # this serves only to strip off keyword args, per the warning from
-        # StackExchange:
-        # DO NOT send "**kargs" to "type.__new__".  It won't catch them and
-        # you'll get a "TypeError: type() takes 1 or 3 arguments" exception.   
-        return super().__new__(cls, name, bases, dct)
-
-    # FIXME: is there a more elegant way to automatically add methods to the class that
-    # are instance methods instead of class methods?
-    def __init__(cls, name, bases, nmspc, context_class: Optional[Type]=None, **kwargs): # pylint: disable=unused-variable
-        """Add ``__enter__`` and ``__exit__`` methods to the new class automatically."""
-        if context_class is not None:
-            cls._context_class = context_class
-        super().__init__(name, bases, nmspc)
-        
+    def __new__(cls, name, bases, dct,  **kargs): # pylint: disable=unused-argument
+        "Add __enter__ and __exit__ methods to the class."
         def __enter__(self):
             self.__class__.context_class.get_contexts().append(self)
             # self._theano_config is set in Model.__new__
@@ -191,14 +178,29 @@ class ContextMeta(type):
                 self._old_theano_config = set_theano_conf(self._theano_config)
             return self
 
-        def __exit__(self, typ, value, traceback): # pylint: disable=unused-variable
+        def __exit__(self, typ, value, traceback): # pylint: disable=unused-argument
             self.__class__.context_class.get_contexts().pop()
             # self._theano_config is set in Model.__new__
             if hasattr(self, '_old_theano_config'):
                 set_theano_conf(self._old_theano_config)
 
-        cls.__enter__ = __enter__
-        cls.__exit__ = __exit__
+        dct[__enter__.__name__] = __enter__
+        dct[__exit__.__name__] = __exit__
+
+        # We strip off keyword args, per the warning from
+        # StackExchange:
+        # DO NOT send "**kargs" to "type.__new__".  It won't catch them and
+        # you'll get a "TypeError: type() takes 1 or 3 arguments" exception.   
+        return super().__new__(cls, name, bases, dct)
+
+    # FIXME: is there a more elegant way to automatically add methods to the class that
+    # are instance methods instead of class methods?
+    def __init__(cls, name, bases, nmspc, context_class: Optional[Type]=None, **kwargs): # pylint: disable=unused-argument
+        """Add ``__enter__`` and ``__exit__`` methods to the new class automatically."""
+        if context_class is not None:
+            cls._context_class = context_class
+        super().__init__(name, bases, nmspc)
+        
 
 
     def get_context(cls, error_if_none=True) -> Optional[T]:
