@@ -190,7 +190,7 @@ class ContextMeta(type):
         # We strip off keyword args, per the warning from
         # StackExchange:
         # DO NOT send "**kargs" to "type.__new__".  It won't catch them and
-        # you'll get a "TypeError: type() takes 1 or 3 arguments" exception.   
+        # you'll get a "TypeError: type() takes 1 or 3 arguments" exception.
         return super().__new__(cls, name, bases, dct)
 
     # FIXME: is there a more elegant way to automatically add methods to the class that
@@ -200,7 +200,7 @@ class ContextMeta(type):
         if context_class is not None:
             cls._context_class = context_class
         super().__init__(name, bases, nmspc)
-        
+
 
 
     def get_context(cls, error_if_none=True) -> Optional[T]:
@@ -228,7 +228,7 @@ class ContextMeta(type):
         # but since the context class is not guaranteed to exist when
         # the metaclass is being instantiated, I couldn't figure out a
         # better way. [2019/10/11:rpg]
-        
+
         # no race-condition here, contexts is a thread-local object
         # be sure not to override contexts in a subclass however!
         context_class = cls.context_class
@@ -283,9 +283,7 @@ def modelcontext(model: Optional['Model']) -> 'Model':
     the context stack.
     """
     if model is None:
-        model = Model.get_context(error_if_none=False)
-        if model is None:
-            raise ValueError("No model on context stack.")
+        return Model.get_context(error_if_none=True)
     return model
 
 
