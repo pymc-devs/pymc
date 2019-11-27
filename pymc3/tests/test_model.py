@@ -52,10 +52,15 @@ class TestBaseModel:
 
     def test_context_passes_vars_to_parent_model(self):
         with pm.Model() as model:
+            assert pm.model.modelcontext(None) == model
+            assert pm.Model.get_context() == model
             # a set of variables is created
-            NewModel()
+            nm = NewModel()
+            assert pm.Model.get_context() == model
             # another set of variables are created but with prefix 'another'
             usermodel2 = NewModel(name='another')
+            assert pm.Model.get_context() == model
+            assert usermodel2._parent == model
             # you can enter in a context with submodel
             with usermodel2:
                 usermodel2.Var('v3', pm.Normal.dist())

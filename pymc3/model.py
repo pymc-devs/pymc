@@ -3,7 +3,8 @@ import functools
 import itertools
 import threading
 import warnings
-from typing import Optional
+from typing import Optional, TypeVar, Type, List, Union, TYPE_CHECKING, Any, cast
+from sys import modules
 
 import numpy as np
 from pandas import Series
@@ -21,6 +22,7 @@ from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
 from .util import get_transformed_name
+from .exceptions import ImputationWarning
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -54,10 +56,10 @@ class InstanceMethod:
         return getattr(self.obj, self.method_name)(*args, **kwargs)
 
 
-def incorporate_methods(source, destination, methods, default=None,
+def incorporate_methods(source, destination, methods,
                         wrapper=None, override=False):
     """
-    Add attributes to a destination object which points to
+    Add attributes to a destination object which point to
     methods from from a source object.
 
     Parameters
@@ -68,8 +70,6 @@ def incorporate_methods(source, destination, methods, default=None,
         The destination object for the methods.
     methods : list of str
         Names of methods to incorporate.
-    default : object
-        The value used if the source does not have one of the listed methods.
     wrapper : function
         An optional function to allow the source method to be
         wrapped. Should take the form my_wrapper(source, method_name)
@@ -216,49 +216,131 @@ def build_named_node_tree(graphs):
                 named_nodes_ancestors[k].update(nna[k])
     return leaf_nodes, named_nodes_descendents, named_nodes_ancestors
 
+T = TypeVar('T', bound='ContextMeta')
 
-class Context:
+
+class ContextMeta(type):
     """Functionality for objects that put themselves in a context using
     the `with` statement.
     """
-    contexts = threading.local()
 
-    def __enter__(self):
-        type(self).get_contexts().append(self)
-        # self._theano_config is set in Model.__new__
-        if hasattr(self, '_theano_config'):
-            self._old_theano_config = set_theano_conf(self._theano_config)
-        return self
+    def __new__(cls, name, bases, dct,  **kargs): # pylint: disable=unused-argument
+        "Add __enter__ and __exit__ methods to the class."
+        def __enter__(self):
+            self.__class__.context_class.get_contexts().append(self)
+            # self._theano_config is set in Model.__new__
+            if hasattr(self, '_theano_config'):
+                self._old_theano_config = set_theano_conf(self._theano_config)
+            return self
 
-    def __exit__(self, typ, value, traceback):
-        type(self).get_contexts().pop()
-        # self._theano_config is set in Model.__new__
-        if hasattr(self, '_old_theano_config'):
-            set_theano_conf(self._old_theano_config)
+        def __exit__(self, typ, value, traceback): # pylint: disable=unused-argument
+            self.__class__.context_class.get_contexts().pop()
+            # self._theano_config is set in Model.__new__
+            if hasattr(self, '_old_theano_config'):
+                set_theano_conf(self._old_theano_config)
 
-    @classmethod
-    def get_contexts(cls):
-        # no race-condition here, cls.contexts is a thread-local object
+        dct[__enter__.__name__] = __enter__
+        dct[__exit__.__name__] = __exit__
+
+        # We strip off keyword args, per the warning from
+        # StackExchange:
+        # DO NOT send "**kargs" to "type.__new__".  It won't catch them and
+        # you'll get a "TypeError: type() takes 1 or 3 arguments" exception.   
+        return super().__new__(cls, name, bases, dct)
+
+    # FIXME: is there a more elegant way to automatically add methods to the class that
+    # are instance methods instead of class methods?
+    def __init__(cls, name, bases, nmspc, context_class: Optional[Type]=None, **kwargs): # pylint: disable=unused-argument
+        """Add ``__enter__`` and ``__exit__`` methods to the new class automatically."""
+        if context_class is not None:
+            cls._context_class = context_class
+        super().__init__(name, bases, nmspc)
+        
+
+
+    def get_context(cls, error_if_none=True) -> Optional[T]:
+        """Return the most recently pushed context object of type ``cls``
+        on the stack, or ``None``. If ``error_if_none`` is True (default),
+        raise a ``TypeError`` instead of returning ``None``."""
+        idx = -1
+        while True:
+            try:
+                candidate = cls.get_contexts()[idx] # type: Optional[T]
+            except IndexError as e:
+                # Calling code expects to get a TypeError if the entity
+                # is unfound, and there's too much to fix.
+                if error_if_none:
+                    raise TypeError("No %s on context stack"%str(cls))
+                return None
+            return candidate
+            idx = idx - 1
+
+    def get_contexts(cls) -> List[T]:
+        """Return a stack of context instances for the ``context_class``
+        of ``cls``."""
+        # This lazily creates the context class's contexts
+        # thread-local object, as needed. This seems inelegant to me,
+        # but since the context class is not guaranteed to exist when
+        # the metaclass is being instantiated, I couldn't figure out a
+        # better way. [2019/10/11:rpg]
+        
+        # no race-condition here, contexts is a thread-local object
         # be sure not to override contexts in a subclass however!
-        if not hasattr(cls.contexts, 'stack'):
-            cls.contexts.stack = []
-        return cls.contexts.stack
+        context_class = cls.context_class
+        assert isinstance(context_class, type), \
+            "Name of context class, %s was not resolvable to a class"%context_class
+        if not hasattr(context_class, 'contexts'):
+            context_class.contexts = threading.local()
 
-    @classmethod
-    def get_context(cls):
-        """Return the deepest context on the stack."""
-        try:
-            return cls.get_contexts()[-1]
-        except IndexError:
-            raise TypeError("No context on context stack")
+        contexts = context_class.contexts
+
+        if not hasattr(contexts, 'stack'):
+            contexts.stack = []
+        return contexts.stack
+
+    # the following complex property accessor is necessary because the
+    # context_class may not have been created at the point it is
+    # specified, so the context_class may be a class *name* rather
+    # than a class.
+    @property
+    def context_class(cls) -> Type:
+        def resolve_type(c: Union[Type, str]) -> Type:
+            if isinstance(c, str):
+                c = getattr(modules[cls.__module__], c)
+            if isinstance(c, type):
+                return c
+            raise ValueError("Cannot resolve context class %s"%c)
+        assert cls is not None
+        if isinstance(cls._context_class, str):
+            cls._context_class = resolve_type(cls._context_class)
+        if not isinstance(cls._context_class, (str, type)):
+            raise ValueError("Context class for %s, %s, is not of the right type"%\
+                             (cls.__name__, cls._context_class))
+        return cls._context_class
+
+    # Inherit context class from parent
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls.context_class = super().context_class
+
+    # Initialize object in its own context...
+    # Merged from InitContextMeta in the original.
+    def __call__(cls, *args, **kwargs):
+        instance = cls.__new__(cls, *args, **kwargs)
+        with instance:  # appends context
+            instance.__init__(*args, **kwargs)
+        return instance
 
 
 def modelcontext(model: Optional['Model']) -> 'Model':
-    """return the given model or try to find it in the context if there was
-    none supplied.
+    """
+    Return the given model or, if none was supplied, try to find one in
+    the context stack.
     """
     if model is None:
-        return Model.get_context()
+        model = Model.get_context(error_if_none=False)
+        if model is None:
+            raise ValueError("No model on context stack.")
     return model
 
 
@@ -346,15 +428,6 @@ class Factor:
         return logp
 
 
-class InitContextMeta(type):
-    """Metaclass that executes `__init__` of instance in it's context"""
-    def __call__(cls, *args, **kwargs):
-        instance = cls.__new__(cls, *args, **kwargs)
-        with instance:  # appends context
-            instance.__init__(*args, **kwargs)
-        return instance
-
-
 def withparent(meth):
     """Helper wrapper that passes calls to parent's instance"""
     def wrapped(self, *args, **kwargs):
@@ -400,11 +473,18 @@ class treelist(list):
                                   ' able to determine '
                                   'appropriate logic for it')
 
-    def __imul__(self, other):
+    # Added this because mypy didn't like having __imul__ without __mul__
+    # This is my best guess about what this should do.  I might be happier
+    # to kill both of these if they are not used.
+    def __mul__ (self, other) -> 'treelist':
+        return cast('treelist', list.__mul__(self, other))
+
+    def __imul__(self, other) -> 'treelist':
         t0 = len(self)
         list.__imul__(self, other)
         if self.parent is not None:
             self.parent.extend(self[t0:])
+        return self # python spec says should return the result.
 
 
 class treedict(dict):
@@ -609,7 +689,7 @@ class ValueGradFunction:
         return args_joined, theano.clone(cost, replace=replace)
 
 
-class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
+class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model'):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
@@ -697,15 +777,18 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
             CustomModel(mean=1, name='first')
             CustomModel(mean=2, name='second')
     """
+
+    if TYPE_CHECKING:
+        def __enter__(self: 'Model') -> 'Model': ...
+        def __exit__(self: 'Model', *exc: Any) -> bool: ...
+
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
         instance = super().__new__(cls)
         if kwargs.get('model') is not None:
             instance._parent = kwargs.get('model')
-        elif cls.get_contexts():
-            instance._parent = cls.get_contexts()[-1]
         else:
-            instance._parent = None
+            instance._parent = cls.get_context(error_if_none=False)
         theano_config = kwargs.get('theano_config', None)
         if theano_config is None or 'compute_test_value' not in theano_config:
             theano_config = {'compute_test_value': 'raise'}
@@ -748,7 +831,7 @@ class Model(Context, Factor, WithMemoization, metaclass=InitContextMeta):
     def isroot(self):
         return self.parent is None
 
-    @property
+    @property # type: ignore -- mypy can't handle decorated types.
     @memoize(bound=True)
     def bijection(self):
         vars = inputvars(self.vars)
@@ -1396,7 +1479,7 @@ def as_tensor(data, name, model, distribution):
         impute_message = ('Data in {name} contains missing values and'
                           ' will be automatically imputed from the'
                           ' sampling distribution.'.format(name=name))
-        warnings.warn(impute_message, UserWarning)
+        warnings.warn(impute_message, ImputationWarning)
         from .distributions import NoDistribution
         testval = np.broadcast_to(distribution.default(), data.shape)[data.mask]
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,

@@ -3,6 +3,7 @@ __version__ = "3.7"
 
 from .blocking import *
 from .distributions import *
+from .distributions import transforms
 from .glm import *
 from . import gp
 from .math import logaddexp, logsumexp, logit, invlogit, expand_packed_triangular, probit, invprobit
