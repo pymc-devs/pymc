@@ -283,7 +283,12 @@ def modelcontext(model: Optional['Model']) -> 'Model':
     the context stack.
     """
     if model is None:
-        return Model.get_context(error_if_none=True)
+        model = Model.get_context(error_if_none=False)
+
+        if model is None:
+            # TODO: This should be a ValueError, but that breaks
+            # ArviZ (and others?), so might need a deprecation.
+            raise TypeError("No model on context stack.")
     return model
 
 
