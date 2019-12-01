@@ -18,9 +18,7 @@ from scipy import stats
 import pytest
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestSample(SeededTest):
     def setup_method(self):
         super().setup_method()
@@ -61,22 +59,14 @@ class TestSample(SeededTest):
             for cores in test_cores:
                 for steps in [1, 10, 300]:
                     pm.sample(
-                        steps,
-                        tune=0,
-                        step=self.step,
-                        cores=cores,
-                        random_seed=self.random_seed,
+                        steps, tune=0, step=self.step, cores=cores, random_seed=self.random_seed,
                     )
 
     def test_sample_init(self):
         with self.model:
             for init in ("advi", "advi_map", "map", "nuts"):
                 pm.sample(
-                    init=init,
-                    tune=0,
-                    n_init=1000,
-                    draws=50,
-                    random_seed=self.random_seed,
+                    init=init, tune=0, n_init=1000, draws=50, random_seed=self.random_seed,
                 )
 
     def test_sample_args(self):
@@ -96,11 +86,7 @@ class TestSample(SeededTest):
     def test_iter_sample(self):
         with self.model:
             samps = pm.sampling.iter_sample(
-                draws=5,
-                step=self.step,
-                start=self.start,
-                tune=0,
-                random_seed=self.random_seed,
+                draws=5, step=self.step, start=self.start, tune=0, random_seed=self.random_seed,
             )
             for i, trace in enumerate(samps):
                 assert i == len(trace) - 1, "Trace does not have correct length."
@@ -140,9 +126,7 @@ class TestSample(SeededTest):
         with pytest.raises(error):
             pm.sampling._check_start_shape(self.model, start)
 
-    @pytest.mark.parametrize(
-        "start", [{"x": np.array([1, 1])}, {"x": [10, 10]}, {"x": [-10, -10]}]
-    )
+    @pytest.mark.parametrize("start", [{"x": np.array([1, 1])}, {"x": [10, 10]}, {"x": [-10, -10]}])
     def test_sample_start_good_shape(self, start):
         pm.sampling._check_start_shape(self.model, start)
 
@@ -162,9 +146,7 @@ def test_partial_trace_sample():
         trace = pm.sample(trace=[a])
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNamedSampling(SeededTest):
     def test_shared_named(self):
         G_var = shared(value=np.atleast_2d(1.0), broadcastable=(True, False), name="G")
@@ -380,9 +362,7 @@ class TestSamplePPC(SeededTest):
                 trace, samples=samples, var_names=["p", "obs"]
             )
 
-        expected_p = np.array(
-            [logistic.eval({coeff: val}) for val in trace["x"][:samples]]
-        )
+        expected_p = np.array([logistic.eval({coeff: val}) for val in trace["x"][:samples]])
         assert post_pred["obs"].shape == (samples, 3)
         assert np.allclose(post_pred["p"], expected_p)
 
@@ -409,12 +389,11 @@ class TestSamplePPC(SeededTest):
                     model=model,
                     trace=ppc_trace,
                     samples=len(ppc_trace),
-                    vars=(model.deterministics + model.basic_RVs)
+                    vars=(model.deterministics + model.basic_RVs),
                 )
 
             rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3
             assert np.allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
-
 
     def test_deterministic_of_observed_modified_interface(self):
         meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(100))
@@ -443,6 +422,18 @@ class TestSamplePPC(SeededTest):
 
             rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3
             assert np.allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
+
+    def test_variable_type(self):
+        with pm.Model() as model:
+            mu = pm.HalfNormal("mu", 1)
+            a = pm.Normal("a", mu=mu, sigma=2, observed=np.array([1, 2]))
+            b = pm.Poisson("b", mu, observed=np.array([1, 2]))
+            trace = pm.sample()
+
+        with model:
+            ppc = pm.sample_posterior_predictive(trace, samples=1)
+            assert ppc["a"].dtype.kind == "f"
+            assert ppc["b"].dtype.kind == "i"
 
 
 class TestSamplePPCW(SeededTest):
@@ -517,9 +508,7 @@ class TestSamplePriorPredictive(SeededTest):
         assert (prior["positive_mu"] > 90).all()
         assert (prior["x_obs"] < 90).all()
         assert prior["x_obs"].shape == (500, 200)
-        npt.assert_array_almost_equal(
-            prior["positive_mu"], np.abs(prior["mu"]), decimal=4
-        )
+        npt.assert_array_almost_equal(prior["positive_mu"], np.abs(prior["mu"]), decimal=4)
 
     def test_respects_shape(self):
         for shape in (2, (2,), (10, 2), (10, 10)):
@@ -527,8 +516,8 @@ class TestSamplePriorPredictive(SeededTest):
                 mu = pm.Gamma("mu", 3, 1, shape=1)
                 goals = pm.Poisson("goals", mu, shape=shape)
                 with pytest.warns(DeprecationWarning):
-                    trace1 = pm.sample_prior_predictive(10, vars=['mu', 'goals'])
-                    trace2 = pm.sample_prior_predictive(10, var_names=['mu', 'goals'])
+                    trace1 = pm.sample_prior_predictive(10, vars=["mu", "goals"])
+                    trace2 = pm.sample_prior_predictive(10, var_names=["mu", "goals"])
             if shape == 2:  # want to test shape as an int
                 shape = (2,)
             assert trace1["goals"].shape == (10,) + shape
@@ -549,14 +538,11 @@ class TestSamplePriorPredictive(SeededTest):
             probs = pm.Dirichlet("probs", a=np.ones(6), shape=6)
             obs = pm.Multinomial("obs", n=100, p=probs, observed=mn_data)
             burned_trace = pm.sample(20, tune=10, cores=1)
-        sim_priors = pm.sample_prior_predictive(samples=20,
-                                                model=dm_model)
-        sim_ppc = pm.sample_posterior_predictive(burned_trace,
-                                                 samples=20,
-                                                 model=dm_model)
-        assert sim_priors['probs'].shape == (20, 6)
-        assert sim_priors['obs'].shape == (20,) + obs.distribution.shape
-        assert sim_ppc['obs'].shape == (20,) + obs.distribution.shape
+        sim_priors = pm.sample_prior_predictive(samples=20, model=dm_model)
+        sim_ppc = pm.sample_posterior_predictive(burned_trace, samples=20, model=dm_model)
+        assert sim_priors["probs"].shape == (20, 6)
+        assert sim_priors["obs"].shape == (20,) + obs.distribution.shape
+        assert sim_ppc["obs"].shape == (20,) + obs.distribution.shape
 
     def test_layers(self):
         with pm.Model() as model:
@@ -578,9 +564,7 @@ class TestSamplePriorPredictive(SeededTest):
             kappa_log = pm.Exponential("logkappa", lam=5.0)
             kappa = pm.Deterministic("kappa", tt.exp(kappa_log))
 
-            thetas = pm.Beta(
-                "thetas", alpha=phi * kappa, beta=(1.0 - phi) * kappa, shape=n
-            )
+            thetas = pm.Beta("thetas", alpha=phi * kappa, beta=(1.0 - phi) * kappa, shape=n)
 
             y = pm.Binomial("y", n=at_bats, p=thetas, observed=hits)
             gen = pm.sample_prior_predictive(draws)
@@ -645,9 +629,7 @@ class TestSamplePriorPredictive(SeededTest):
     def test_bounded_dist(self):
         with pm.Model() as model:
             BoundedNormal = pm.Bound(pm.Normal, lower=0.0)
-            x = BoundedNormal(
-                "x", mu=tt.zeros((3, 1)), sd=1 * tt.ones((3, 1)), shape=(3, 1)
-            )
+            x = BoundedNormal("x", mu=tt.zeros((3, 1)), sd=1 * tt.ones((3, 1)), shape=(3, 1))
 
         with model:
             prior_trace = pm.sample_prior_predictive(5)

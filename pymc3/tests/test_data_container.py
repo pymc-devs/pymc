@@ -77,7 +77,7 @@ class TestData(SeededTest):
                                    atol=1e-1)
 
     def test_creation_of_data_outside_model_context(self):
-        with pytest.raises(TypeError) as error:
+        with pytest.raises((IndexError, TypeError)) as error:
             pm.Data('data', [1.1, 2.2, 3.3])
         error.match('No model on context stack')
 
