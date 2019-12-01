@@ -14,7 +14,6 @@ API Reference
    api/gp
    api/plots
    api/stats
-   api/diagnostics
    api/backends
    api/math
    api/data

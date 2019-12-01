@@ -219,9 +219,10 @@ class LogExpM1(ElemwiseTransform):
         return np.log(1 + np.exp(-np.abs(x))) + np.max([x, 0])
 
     def forward(self, x):
-        """Inverse operation of softplus
-        y = Log(Exp(x) - 1)
-          = Log(1 - Exp(-x)) + x
+        """Inverse operation of softplus.
+
+            y = Log(Exp(x) - 1)
+              = Log(1 - Exp(-x)) + x
         """
         return tt.log(1.0 - tt.exp(-x)) + x
 
