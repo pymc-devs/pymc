@@ -54,9 +54,9 @@ Hamiltonian Monte Carlo
 Sequential Monte Carlo
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: pymc3.step_methods.smc
+.. currentmodule:: pymc3.step_methods.smc.smc
 
-.. autoclass:: pymc3.step_methods.smc.SMC
+.. autoclass:: pymc3.smc.smc.SMC
    :members:
 
 

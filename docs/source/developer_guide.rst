@@ -906,7 +906,7 @@ TFP, which is a tenor in tensor out function. Moreover, transition
 kernels in TFP do not flatten the tensors, see eg docstring of
 `tensorflow\_probability/python/mcmc/random\_walk\_metropolis.py <https://github.com/tensorflow/probability/blob/master/tensorflow_probability/python/mcmc/random_walk_metropolis.py>`__:
 
-.. code:: python
+.. code::
 
           new_state_fn: Python callable which takes a list of state parts and a
             seed; returns a same-type `list` of `Tensor`s, each being a perturbation
@@ -945,7 +945,7 @@ where it builds the objective function by calling:
 
 Where:
 
-.. code:: python
+.. code::
 
         op     : Operator class
         approx : Approximation class or instance
