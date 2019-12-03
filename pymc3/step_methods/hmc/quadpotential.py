@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 from numpy.random import normal
 import scipy.linalg
@@ -471,9 +472,12 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         initial_cov=None,
         initial_weight=0,
         adaptation_window=101,
+        update_window=1,
         doubling=True,
         dtype=None,
     ):
+        warnings.warn("QuadPotentialFullAdapt is an experimental feature")
+
         if initial_cov is not None and initial_cov.ndim != 2:
             raise ValueError("Initial covariance must be two-dimensional.")
         if initial_mean.ndim != 1:
@@ -499,7 +503,6 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         self.dtype = dtype
         self._n = n
         self._cov = np.array(initial_cov, dtype=self.dtype, copy=True)
-        self._cov_theano = theano.shared(self._cov)
         self._chol = scipy.linalg.cholesky(self._cov, lower=True)
         self._chol_error = None
         self._foreground_cov = _WeightedCovariance(
@@ -510,26 +513,32 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
 
         self._doubling = doubling
         self._adaptation_window = int(adaptation_window)
+        self._update_window = int(update_window)
         self._previous_update = 0
 
     def _update_from_weightvar(self, weightvar):
         weightvar.current_covariance(out=self._cov)
         try:
             self._chol = scipy.linalg.cholesky(self._cov, lower=True)
-        except scipy.linalg.LinAlgError as error:
+        except (scipy.linalg.LinAlgError, ValueError) as error:
             self._chol_error = error
-        self._cov_theano.set_value(self._cov)
 
     def update(self, sample, grad, tune):
         if not tune:
             return
 
-        self._foreground_cov.add_sample(sample, weight=1)
-        self._background_cov.add_sample(sample, weight=1)
-        self._update_from_weightvar(self._foreground_cov)
-
         # Steps since previous update
         delta = self._n_samples - self._previous_update
+
+        self._foreground_cov.add_sample(sample, weight=1)
+        self._background_cov.add_sample(sample, weight=1)
+
+        # Update the covariance matrix and recompute the Cholesky factorization
+        # every "update_window" steps
+        if (delta + 1) % self._update_window == 0:
+            self._update_from_weightvar(self._foreground_cov)
+
+        # Reset the background model if the
         if delta >= self._adaptation_window:
             self._foreground_cov = self._background_cov
             self._background_cov = _WeightedCovariance(

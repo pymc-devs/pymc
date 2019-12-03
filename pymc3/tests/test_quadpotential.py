@@ -38,16 +38,16 @@ def test_equal_diag():
         x = floatX(np.random.randn(5))
         pots = [
             quadpotential.quad_potential(diag, False),
-            quadpotential.quad_potential(1. / diag, True),
+            quadpotential.quad_potential(1.0 / diag, True),
             quadpotential.quad_potential(np.diag(diag), False),
-            quadpotential.quad_potential(np.diag(1. / diag), True),
+            quadpotential.quad_potential(np.diag(1.0 / diag), True),
         ]
         if quadpotential.chol_available:
-            diag_ = scipy.sparse.csc_matrix(np.diag(1. / diag))
+            diag_ = scipy.sparse.csc_matrix(np.diag(1.0 / diag))
             pots.append(quadpotential.quad_potential(diag_, True))
 
-        v = np.diag(1. / diag).dot(x)
-        e = x.dot(np.diag(1. / diag).dot(x)) / 2
+        v = np.diag(1.0 / diag).dot(x)
+        e = x.dot(np.diag(1.0 / diag).dot(x)) / 2
         for pot in pots:
             v_ = pot.velocity(x)
             e_ = pot.energy(x)
@@ -85,9 +85,9 @@ def test_random_diag():
     np.random.seed(42)
     pots = [
         quadpotential.quad_potential(d, True),
-        quadpotential.quad_potential(1./d, False),
+        quadpotential.quad_potential(1.0 / d, False),
         quadpotential.quad_potential(np.diag(d), True),
-        quadpotential.quad_potential(np.diag(1./d), False),
+        quadpotential.quad_potential(np.diag(1.0 / d), False),
     ]
     if quadpotential.chol_available:
         d_ = scipy.sparse.csc_matrix(np.diag(d))
@@ -95,7 +95,7 @@ def test_random_diag():
         pots.append(pot)
     for pot in pots:
         vals = np.array([pot.random() for _ in range(1000)])
-        npt.assert_allclose(vals.std(0), np.sqrt(1./d), atol=0.1)
+        npt.assert_allclose(vals.std(0), np.sqrt(1.0 / d), atol=0.1)
 
 
 def test_random_dense():
@@ -112,7 +112,9 @@ def test_random_dense():
             quadpotential.QuadPotentialFullInv(inv),
         ]
         if quadpotential.chol_available:
-            pot = quadpotential.QuadPotential_Sparse(scipy.sparse.csc_matrix(cov))
+            pot = quadpotential.QuadPotential_Sparse(
+                scipy.sparse.csc_matrix(cov)
+            )
             pots.append(pot)
         for pot in pots:
             cov_ = np.cov(np.array([pot.random() for _ in range(1000)]).T)
@@ -198,3 +200,53 @@ def test_full_adapt_sample_p(seed=4566):
     # Covariance matrix within 5 sigma of expected value
     # (comes from a Wishart distribution)
     assert np.all(np.abs(m - sample_cov) < 5 * np.sqrt(var / n_samples))
+
+
+def test_full_adapt_update_window(seed=1123):
+    np.random.seed(seed)
+    init_cov = np.array([[1.0, 0.02], [0.02, 0.8]])
+    pot = quadpotential.QuadPotentialFullAdapt(
+        2, np.zeros(2), init_cov, 1, update_window=50
+    )
+    assert np.allclose(pot._cov, init_cov)
+    for i in range(49):
+        pot.update(np.random.randn(2), None, True)
+    assert np.allclose(pot._cov, init_cov)
+    pot.update(np.random.randn(2), None, True)
+    assert not np.allclose(pot._cov, init_cov)
+
+
+def test_full_adapt_adaptation_window(seed=8978):
+    np.random.seed(seed)
+    window = 10
+    pot = quadpotential.QuadPotentialFullAdapt(
+        2, np.zeros(2), np.eye(2), 1, adaptation_window=window
+    )
+    for i in range(window + 1):
+        pot.update(np.random.randn(2), None, True)
+    assert pot._previous_update == window
+    assert pot._adaptation_window == window * 2
+
+    pot = quadpotential.QuadPotentialFullAdapt(
+        2, np.zeros(2), np.eye(2), 1, adaptation_window=window, doubling=False
+    )
+    for i in range(window + 1):
+        pot.update(np.random.randn(2), None, True)
+    assert pot._previous_update == window
+    assert pot._adaptation_window == window
+
+
+def test_full_adapt_not_invertible():
+    window = 10
+    pot = quadpotential.QuadPotentialFullAdapt(
+        2, np.zeros(2), np.eye(2), 0, adaptation_window=window
+    )
+    for i in range(window + 1):
+        pot.update(np.ones(2), None, True)
+    with pytest.raises(ValueError):
+        pot.raise_ok(None)
+
+
+def test_full_adapt_warn():
+    with pytest.warns(UserWarning):
+        quadpotential.QuadPotentialFullAdapt(2, np.zeros(2), np.eye(2), 0)
