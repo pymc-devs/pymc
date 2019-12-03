@@ -7,9 +7,9 @@ import theano
 from ..memoize import memoize
 from ..model import (
     Model, get_named_nodes_and_relations, FreeRV,
-    ObservedRV, MultiObservedRV, Context, InitContextMeta
+    ObservedRV, MultiObservedRV, ContextMeta
 )
-from ..vartypes import string_types
+from ..vartypes import string_types, theano_constant
 from .shape_utils import (
     to_tuple,
     get_broadcastable_dist_samples,
@@ -92,7 +92,7 @@ class Distribution:
         if isinstance(val, tt.TensorVariable):
             return val.tag.test_value
 
-        if isinstance(val, tt.TensorConstant):
+        if isinstance(val, theano_constant):
             return val.value
 
         return val
@@ -238,9 +238,11 @@ class DensityDist(Distribution):
             The behavior of this callable can be altered with the
             ``wrap_random_with_dist_shape`` parameter.
             The supplied callable must have the following signature:
-            ``random(size=None, **kwargs)``, where ``size`` is the number of
-            IID draws to take from the distribution. Any extra keyword
-            argument can be added as required.
+            ``random(point=None, size=None, **kwargs)``, where ``point`` is a
+            ``None`` or a dictionary of random variable names and their
+            corresponding values (similar to what ``MultiTrace.get_point``
+            returns). ``size`` is the number of IID draws to take from the
+            distribution. Any extra keyword argument can be added as required.
         wrap_random_with_dist_shape: bool (Optional)
             If ``True``, the provided ``random`` callable is passed through
             ``generate_samples`` to make the random number generator aware of
@@ -447,23 +449,14 @@ class DensityDist(Distribution):
                             "Define a custom random method and pass it as kwarg random")
 
 
-class _DrawValuesContext(Context, metaclass=InitContextMeta):
+class _DrawValuesContext(metaclass=ContextMeta, context_class='_DrawValuesContext'):
     """ A context manager class used while drawing values with draw_values
     """
 
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
         instance = super().__new__(cls)
-        if cls.get_contexts():
-            potential_parent = cls.get_contexts()[-1]
-            # We have to make sure that the context is a _DrawValuesContext
-            # and not a Model
-            if isinstance(potential_parent, _DrawValuesContext):
-                instance._parent = potential_parent
-            else:
-                instance._parent = None
-        else:
-            instance._parent = None
+        instance._parent = cls.get_context(error_if_none=False)
         return instance
 
     def __init__(self):
@@ -483,7 +476,7 @@ class _DrawValuesContext(Context, metaclass=InitContextMeta):
         return self._parent
 
 
-class _DrawValuesContextBlocker(_DrawValuesContext, metaclass=InitContextMeta):
+class _DrawValuesContextBlocker(_DrawValuesContext):
     """
     Context manager that starts a new drawn variables context disregarding all
     parent contexts. This can be used inside a random method to ensure that
@@ -502,7 +495,7 @@ class _DrawValuesContextBlocker(_DrawValuesContext, metaclass=InitContextMeta):
 def is_fast_drawable(var):
     return isinstance(var, (numbers.Number,
                             np.ndarray,
-                            tt.TensorConstant,
+                            theano_constant,
                             tt.sharedvar.SharedVariable))
 
 
@@ -592,7 +585,7 @@ def draw_values(params, point=None, size=None):
             if (next_, size) in drawn:
                 # If the node already has a givens value, skip it
                 continue
-            elif isinstance(next_, (tt.TensorConstant,
+            elif isinstance(next_, (theano_constant,
                                     tt.sharedvar.SharedVariable)):
                 # If the node is a theano.tensor.TensorConstant or a
                 # theano.tensor.sharedvar.SharedVariable, its value will be
@@ -783,7 +776,7 @@ def _draw_value(param, point=None, givens=None, size=None):
     """
     if isinstance(param, (numbers.Number, np.ndarray)):
         return param
-    elif isinstance(param, tt.TensorConstant):
+    elif isinstance(param, theano_constant):
         return param.value
     elif isinstance(param, tt.sharedvar.SharedVariable):
         return param.get_value()
