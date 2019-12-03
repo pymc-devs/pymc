@@ -12,6 +12,7 @@ from scipy.special import expit
 
 
 __all__ = [
+    "Transform",
     "transform",
     "stick_breaking",
     "logodds",
@@ -23,6 +24,9 @@ __all__ = [
     "log",
     "sum_to_1",
     "t_stick_breaking",
+    "circular",
+    "CholeskyCovPacked",
+    "Chain",
 ]
 
 
@@ -31,7 +35,7 @@ class Transform:
 
     Attributes
     ----------
-    name : str
+    name: str
     """
 
     name = ""
@@ -43,7 +47,7 @@ class Transform:
 
         Parameters
         ----------
-        x : tensor
+        x: tensor
             Input tensor to be transformed.
 
         Returns
@@ -59,9 +63,9 @@ class Transform:
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Input array to be transformed.
-        point : array_like, optional
+        point: array_like, optional
             Test value used to draw (fix) bounds-like transformations
 
         Returns
@@ -78,7 +82,7 @@ class Transform:
 
         Parameters
         ----------
-        z : tensor
+        z: tensor
             Input tensor to be inverse transformed.
 
         Returns
@@ -93,7 +97,7 @@ class Transform:
 
         Parameters
         ----------
-        x : tensor
+        x: tensor
             Input to calculate Jacobian determinant of.
 
         Returns
@@ -124,8 +128,8 @@ class TransformedDistribution(distribution.Distribution):
         """
         Parameters
         ----------
-        dist : Distribution
-        transform : Transform
+        dist: Distribution
+        transform: Transform
         args, kwargs
             arguments to Distribution"""
         forward = transform.forward
@@ -150,7 +154,7 @@ class TransformedDistribution(distribution.Distribution):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -170,7 +174,7 @@ class TransformedDistribution(distribution.Distribution):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -215,9 +219,10 @@ class LogExpM1(ElemwiseTransform):
         return np.log(1 + np.exp(-np.abs(x))) + np.max([x, 0])
 
     def forward(self, x):
-        """Inverse operation of softplus
-        y = Log(Exp(x) - 1)
-          = Log(1 - Exp(-x)) + x
+        """Inverse operation of softplus.
+
+            y = Log(Exp(x) - 1)
+              = Log(1 - Exp(-x)) + x
         """
         return tt.log(1.0 - tt.exp(-x)) + x
 
@@ -229,6 +234,7 @@ class LogExpM1(ElemwiseTransform):
 
 
 log_exp_m1 = LogExpM1()
+
 
 
 class LogOdds(ElemwiseTransform):
@@ -248,6 +254,7 @@ class LogOdds(ElemwiseTransform):
 
 
 logodds = LogOdds()
+
 
 
 class Interval(ElemwiseTransform):
@@ -325,6 +332,10 @@ class LowerBound(ElemwiseTransform):
 
 
 lowerbound = LowerBound
+'''
+Alias for ``LowerBound`` (:class: LowerBound) Transform (:class: Transform) class
+for use in the ``transform`` argument of a random variable.
+'''
 
 
 class UpperBound(ElemwiseTransform):
@@ -362,6 +373,11 @@ class UpperBound(ElemwiseTransform):
 
 
 upperbound = UpperBound
+'''
+Alias for ``UpperBound`` (:class: UpperBound) Transform (:class: Transform) class
+for use in the ``transform`` argument of a random variable.
+'''
+
 
 
 class Ordered(Transform):
@@ -396,6 +412,10 @@ class Ordered(Transform):
 
 
 ordered = Ordered()
+'''
+Instantiation of ``Ordered`` (:class: Ordered) Transform (:class: Transform) class
+for use in the ``transform`` argument of a random variable.
+'''
 
 
 class SumTo1(Transform):
@@ -435,7 +455,7 @@ class StickBreaking(Transform):
 
     Parameters
     ----------
-    eps : float, positive value
+    eps: float, positive value
         A small value for numerical stability in invlogit.
     """
 
@@ -506,7 +526,10 @@ class StickBreaking(Transform):
 stick_breaking = StickBreaking()
 
 
-def t_stick_breaking(eps):
+
+def t_stick_breaking(eps: float) -> StickBreaking:
+    '''Return a new :class:`StickBreaking` transform with specified eps(ilon),
+    instead of the default.'''
     return StickBreaking(eps)
 
 
@@ -534,7 +557,6 @@ class Circular(ElemwiseTransform):
 
 circular = Circular()
 
-
 class CholeskyCovPacked(Transform):
     name = "cholesky-cov-packed"
 
@@ -557,7 +579,6 @@ class CholeskyCovPacked(Transform):
 
     def jacobian_det(self, y):
         return tt.sum(y[self.diag_idxs])
-
 
 class Chain(Transform):
     def __init__(self, transform_list):

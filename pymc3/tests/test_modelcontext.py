@@ -1,5 +1,8 @@
 import threading
+from pytest import raises
 from pymc3 import Model, Normal
+from pymc3.distributions.distribution import _DrawValuesContext, _DrawValuesContextBlocker
+from pymc3.model import modelcontext
 
 
 class TestModelContext:
@@ -42,3 +45,38 @@ class TestModelContext:
                 list(modelA.named_vars),
                 list(modelB.named_vars),
             ) == (['a'],['b'])
+
+def test_mixed_contexts():
+    modelA = Model()
+    modelB = Model()
+    with raises((ValueError, TypeError)):
+        modelcontext(None)
+    with modelA:
+        with modelB:
+            assert Model.get_context() == modelB
+            assert modelcontext(None) == modelB
+            dvc = _DrawValuesContext()
+            with dvc:
+                assert Model.get_context() == modelB
+                assert modelcontext(None) == modelB
+                assert _DrawValuesContext.get_context() == dvc
+                dvcb = _DrawValuesContextBlocker()
+                with dvcb:
+                    assert _DrawValuesContext.get_context() == dvcb
+                    assert _DrawValuesContextBlocker.get_context() == dvcb
+                assert _DrawValuesContext.get_context() == dvc
+                assert _DrawValuesContextBlocker.get_context() is dvc
+                assert Model.get_context() == modelB
+                assert modelcontext(None) == modelB
+            assert _DrawValuesContext.get_context(error_if_none=False) is None
+            with raises(TypeError):
+                _DrawValuesContext.get_context()
+            assert Model.get_context() == modelB
+            assert modelcontext(None) == modelB
+        assert Model.get_context() == modelA
+        assert modelcontext(None) == modelA
+    assert Model.get_context(error_if_none=False) is None
+    with raises(TypeError):
+        Model.get_context(error_if_none=True)
+    with raises((ValueError, TypeError)):
+        modelcontext(None)
