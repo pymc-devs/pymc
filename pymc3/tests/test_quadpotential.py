@@ -250,3 +250,22 @@ def test_full_adapt_not_invertible():
 def test_full_adapt_warn():
     with pytest.warns(UserWarning):
         quadpotential.QuadPotentialFullAdapt(2, np.zeros(2), np.eye(2), 0)
+
+
+def test_full_adapt_sampling(seed=289586):
+    np.random.seed(seed)
+
+    L = np.random.randn(5, 5)
+    L[np.diag_indices_from(L)] = np.exp(L[np.diag_indices_from(L)])
+    L[np.triu_indices_from(L, 1)] = 0.0
+
+    with pymc3.Model() as model:
+        pymc3.MvNormal("a", mu=np.zeros(len(L)), chol=L, shape=len(L))
+
+        pot = quadpotential.QuadPotentialFullAdapt(
+            model.ndim, np.zeros(model.ndim)
+        )
+        step = pymc3.NUTS(model=model, potential=pot)
+        pymc3.sample(
+            draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1
+        )
