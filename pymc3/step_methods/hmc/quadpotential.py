@@ -199,13 +199,11 @@ class QuadPotentialDiagAdapt(QuadPotential):
         if not tune:
             return
 
-        window = self.adaptation_window
-
         self._foreground_var.add_sample(sample, weight=1)
         self._background_var.add_sample(sample, weight=1)
         self._update_from_weightvar(self._foreground_var)
 
-        if self._n_samples > 0 and self._n_samples % window == 0:
+        if self._n_samples > 0 and self._n_samples % self.adaptation_window == 0:
             self._foreground_var = self._background_var
             self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
             self.adaptation_window *= self.adaptation_window_multiplier
