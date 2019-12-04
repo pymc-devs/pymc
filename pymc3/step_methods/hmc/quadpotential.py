@@ -126,8 +126,16 @@ def isquadpotential(value):
 class QuadPotentialDiagAdapt(QuadPotential):
     """Adapt a diagonal mass matrix from the sample variances."""
 
-    def __init__(self, n, initial_mean, initial_diag=None, initial_weight=0,
-                 adaptation_window=101, dtype=None):
+    def __init__(
+        self,
+        n,
+        initial_mean,
+        initial_diag=None,
+        initial_weight=0,
+        adaptation_window=101,
+        adaptation_window_multiplier=1,
+        dtype=None,
+    ):
         """Set up a diagonal mass matrix."""
         if initial_diag is not None and initial_diag.ndim != 1:
             raise ValueError('Initial diagonal must be one-dimensional.')
@@ -158,6 +166,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
         self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
         self._n_samples = 0
         self.adaptation_window = adaptation_window
+        self.adaptation_window_multiplier = float(adaptation_window_multiplier)
 
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
@@ -190,15 +199,14 @@ class QuadPotentialDiagAdapt(QuadPotential):
         if not tune:
             return
 
-        window = self.adaptation_window
-
         self._foreground_var.add_sample(sample, weight=1)
         self._background_var.add_sample(sample, weight=1)
         self._update_from_weightvar(self._foreground_var)
 
-        if self._n_samples > 0 and self._n_samples % window == 0:
+        if self._n_samples > 0 and self._n_samples % self.adaptation_window == 0:
             self._foreground_var = self._background_var
             self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
+            self.adaptation_window = int(self.adaptation_window * self.adaptation_window_multiplier)
 
         self._n_samples += 1
 
@@ -458,13 +466,7 @@ class QuadPotentialFull(QuadPotential):
 
 
 class QuadPotentialFullAdapt(QuadPotentialFull):
-    """Adapt a dense mass matrix using the sample covariances
-
-    If the parameter ``doubling`` is true, the adaptation window is doubled
-    every time it is passed. This can lead to better convergence of the mass
-    matrix estimation.
-
-    """
+    """Adapt a dense mass matrix using the sample covariances."""
     def __init__(
         self,
         n,
@@ -472,8 +474,8 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         initial_cov=None,
         initial_weight=0,
         adaptation_window=101,
+        adaptation_window_multiplier=2,
         update_window=1,
-        doubling=True,
         dtype=None,
     ):
         warnings.warn("QuadPotentialFullAdapt is an experimental feature")
@@ -511,8 +513,8 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         self._background_cov = _WeightedCovariance(self._n, dtype=self.dtype)
         self._n_samples = 0
 
-        self._doubling = doubling
         self._adaptation_window = int(adaptation_window)
+        self._adaptation_window_multiplier = float(adaptation_window_multiplier)
         self._update_window = int(update_window)
         self._previous_update = 0
 
@@ -538,7 +540,8 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         if (delta + 1) % self._update_window == 0:
             self._update_from_weightvar(self._foreground_cov)
 
-        # Reset the background covariance if we are at the end of the adaptation window.
+        # Reset the background covariance if we are at the end of the adaptation
+        # window.
         if delta >= self._adaptation_window:
             self._foreground_cov = self._background_cov
             self._background_cov = _WeightedCovariance(
@@ -546,8 +549,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
             )
 
             self._previous_update = self._n_samples
-            if self._doubling:
-                self._adaptation_window *= 2
+            self._adaptation_window = int(self._adaptation_window * self._adaptation_window_multiplier)
 
         self._n_samples += 1
 
