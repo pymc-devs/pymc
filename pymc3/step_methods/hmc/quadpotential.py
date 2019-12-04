@@ -166,7 +166,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
         self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
         self._n_samples = 0
         self.adaptation_window = adaptation_window
-        self.adaptation_window_multiplier = int(adaptation_window_multiplier)
+        self.adaptation_window_multiplier = float(adaptation_window_multiplier)
 
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
@@ -206,7 +206,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
         if self._n_samples > 0 and self._n_samples % self.adaptation_window == 0:
             self._foreground_var = self._background_var
             self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
-            self.adaptation_window *= self.adaptation_window_multiplier
+            self.adaptation_window = int(self.adaptation_window * self.adaptation_window_multiplier)
 
         self._n_samples += 1
 
@@ -514,7 +514,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         self._n_samples = 0
 
         self._adaptation_window = int(adaptation_window)
-        self._adaptation_window_multiplier = int(adaptation_window_multiplier)
+        self._adaptation_window_multiplier = float(adaptation_window_multiplier)
         self._update_window = int(update_window)
         self._previous_update = 0
 
@@ -549,7 +549,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
             )
 
             self._previous_update = self._n_samples
-            self._adaptation_window *= self._adaptation_window_multiplier
+            self._adaptation_window = int(self._adaptation_window * self._adaptation_window_multiplier)
 
         self._n_samples += 1
 
