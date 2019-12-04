@@ -466,13 +466,7 @@ class QuadPotentialFull(QuadPotential):
 
 
 class QuadPotentialFullAdapt(QuadPotentialFull):
-    """Adapt a dense mass matrix using the sample covariances
-
-    If the parameter ``doubling`` is true, the adaptation window is doubled
-    every time it is passed. This can lead to better convergence of the mass
-    matrix estimation.
-
-    """
+    """Adapt a dense mass matrix using the sample covariances."""
     def __init__(
         self,
         n,
@@ -480,9 +474,8 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         initial_cov=None,
         initial_weight=0,
         adaptation_window=101,
-        adaptation_window_multiplier=1,
+        adaptation_window_multiplier=2,
         update_window=1,
-        doubling=True,
         dtype=None,
     ):
         warnings.warn("QuadPotentialFullAdapt is an experimental feature")
@@ -520,7 +513,6 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         self._background_cov = _WeightedCovariance(self._n, dtype=self.dtype)
         self._n_samples = 0
 
-        self._doubling = doubling
         self._adaptation_window = int(adaptation_window)
         self._adaptation_window_multiplier = int(adaptation_window_multiplier)
         self._update_window = int(update_window)
