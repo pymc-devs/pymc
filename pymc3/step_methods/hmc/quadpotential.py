@@ -549,8 +549,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
             )
 
             self._previous_update = self._n_samples
-            if self._doubling:
-                self._adaptation_window *= self._adaptation_window_multiplier
+            self._adaptation_window *= self._adaptation_window_multiplier
 
         self._n_samples += 1
 
