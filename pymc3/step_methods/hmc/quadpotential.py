@@ -472,6 +472,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         initial_cov=None,
         initial_weight=0,
         adaptation_window=101,
+        adaptation_window_multiplier=1.0,
         update_window=1,
         doubling=True,
         dtype=None,
@@ -513,6 +514,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
 
         self._doubling = doubling
         self._adaptation_window = int(adaptation_window)
+        self._adaptation_window_multiplier = int(adaptation_window_multiplier)
         self._update_window = int(update_window)
         self._previous_update = 0
 
@@ -538,7 +540,8 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         if (delta + 1) % self._update_window == 0:
             self._update_from_weightvar(self._foreground_cov)
 
-        # Reset the background covariance if we are at the end of the adaptation window.
+        # Reset the background covariance if we are at the end of the adaptation
+        # window.
         if delta >= self._adaptation_window:
             self._foreground_cov = self._background_cov
             self._background_cov = _WeightedCovariance(
@@ -547,7 +550,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
 
             self._previous_update = self._n_samples
             if self._doubling:
-                self._adaptation_window *= 2
+                self._adaptation_window *= self._adaptation_window_multiplier
 
         self._n_samples += 1
 
