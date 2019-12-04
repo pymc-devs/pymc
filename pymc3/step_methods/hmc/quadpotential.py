@@ -538,7 +538,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         if (delta + 1) % self._update_window == 0:
             self._update_from_weightvar(self._foreground_cov)
 
-        # Reset the background model if the
+        # Reset the background covariance if we are at the end of the adaptation window.
         if delta >= self._adaptation_window:
             self._foreground_cov = self._background_cov
             self._background_cov = _WeightedCovariance(
