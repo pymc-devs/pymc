@@ -1770,7 +1770,8 @@ class Lognormal(PositiveContinuous):
             x = pm.Lognormal('x', mu=2, tau=1/100)
     """
 
-    def __init__(self, mu=0, sigma=None, tau=None, sd=None, *args, **kwargs):
+ 
+    def __init__(self, mu=0, sigma=None, tau=None, theta=None , sd=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
@@ -1779,24 +1780,25 @@ class Lognormal(PositiveContinuous):
 
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
         self.tau = tau = tt.as_tensor_variable(tau)
+        self.theta = theta = tt.as_tensor_variable(theta)
         self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
 
-        self.mean = tt.exp(self.mu + 1. / (2 * self.tau))
-        self.median = tt.exp(self.mu)
-        self.mode = tt.exp(self.mu - 1. / self.tau)
+        self.mean = tt.exp(self.mu + 1. / (2 * self.tau)) + self.theta
+        self.median = tt.exp(self.mu) + self.theta
+        self.mode = tt.exp(self.mu - 1. / self.tau) + self.theta
         self.variance = (tt.exp(1. / self.tau) - 1) * tt.exp(2 * self.mu + 1. / self.tau)
 
         assert_negative_support(tau, 'tau', 'Lognormal')
+        assert_negative_support(theta, 'theta', 'Lognormal')
         assert_negative_support(sigma, 'sigma', 'Lognormal')
 
-    def _random(self, mu, tau, size=None):
+    def _random(self, mu, tau, theta , size=None):
         samples = np.random.normal(size=size)
-        return np.exp(mu + (tau**-0.5) * samples)
+        return np.exp(mu + (tau**-0.5) * samples) + theta
 
     def random(self, point=None, size=None):
         """
         Draw random values from Lognormal distribution.
-
         Parameters
         ----------
         point: dict, optional
@@ -1805,68 +1807,66 @@ class Lognormal(PositiveContinuous):
         size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
-
         Returns
         -------
         array
         """
-        mu, tau = draw_values([self.mu, self.tau], point=point, size=size)
-        return generate_samples(self._random, mu, tau,
+        mu, tau, theta = draw_values([self.mu, self.tau, self.theta], point=point, size=size)
+        return generate_samples(self._random, mu, tau, theta,
                                 dist_shape=self.shape,
                                 size=size)
 
     def logp(self, value):
         """
         Calculate log-probability of Lognormal distribution at specified value.
-
         Parameters
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
-
         Returns
         -------
         TensorVariable
         """
         mu = self.mu
         tau = self.tau
-        return bound(-0.5 * tau * (tt.log(value) - mu)**2
+        theta = self.theta
+        return bound(-0.5 * tau * (tt.log(value-theta) - mu)**2
                      + 0.5 * tt.log(tau / (2. * np.pi))
-                     - tt.log(value),
-                     tau > 0)
+                     - tt.log(value-theta),
+                     tau > 0, value > theta)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
         tau = dist.tau
         mu = dist.mu
+        theta = dist.theta
         name = r'\text{%s}' % name
-        return r'${} \sim \text{{Lognormal}}(\mathit{{mu}}={},~\mathit{{tau}}={})$'.format(name,
+        return r'${} \sim \text{{Lognormal}}(\mathit{{mu}}={},~\mathit{{tau}}={},~\mathit{{theta}}={})$'.format(name,
                                                                 get_variable_name(mu),
-                                                                get_variable_name(tau))
+                                                                get_variable_name(tau), get_variable_name(theta))
 
     def logcdf(self, value):
         """
         Compute the log of the cumulative distribution function for Lognormal distribution
         at the specified value.
-
         Parameters
         ----------
         value: numeric
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
-
         Returns
         -------
         TensorVariable
         """
         mu = self.mu
         sigma = self.sigma
-        z = zvalue(tt.log(value), mu=mu, sigma=sigma)
+        theta = self.theta
+        z = zvalue(tt.log(value-theta), mu=mu, sigma=sigma)
 
         return tt.switch(
-            tt.le(value, 0),
+            tt.le(value-theta, 0),
             -np.inf,
             tt.switch(
                 tt.lt(z, -1.0),
@@ -1876,7 +1876,7 @@ class Lognormal(PositiveContinuous):
             )
         )
 
-
+    
 class StudentT(Continuous):
     R"""
     Student's T log-likelihood.
