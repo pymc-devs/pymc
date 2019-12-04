@@ -126,8 +126,16 @@ def isquadpotential(value):
 class QuadPotentialDiagAdapt(QuadPotential):
     """Adapt a diagonal mass matrix from the sample variances."""
 
-    def __init__(self, n, initial_mean, initial_diag=None, initial_weight=0,
-                 adaptation_window=101, dtype=None):
+    def __init__(
+        self,
+        n,
+        initial_mean,
+        initial_diag=None,
+        initial_weight=0,
+        adaptation_window=101,
+        adaptation_window_multiplier=1,
+        dtype=None,
+    ):
         """Set up a diagonal mass matrix."""
         if initial_diag is not None and initial_diag.ndim != 1:
             raise ValueError('Initial diagonal must be one-dimensional.')
@@ -158,6 +166,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
         self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
         self._n_samples = 0
         self.adaptation_window = adaptation_window
+        self.adaptation_window_multiplier = int(adaptation_window_multiplier)
 
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
@@ -199,6 +208,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
         if self._n_samples > 0 and self._n_samples % window == 0:
             self._foreground_var = self._background_var
             self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
+            self.adaptation_window *= self.adaptation_window_multiplier
 
         self._n_samples += 1
 
