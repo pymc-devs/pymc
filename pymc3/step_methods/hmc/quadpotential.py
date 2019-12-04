@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 from numpy.random import normal
 import scipy.linalg
@@ -8,7 +9,8 @@ from pymc3.theanof import floatX
 
 
 __all__ = ['quad_potential', 'QuadPotentialDiag', 'QuadPotentialFull',
-           'QuadPotentialFullInv', 'QuadPotentialDiagAdapt', 'isquadpotential']
+           'QuadPotentialFullInv', 'QuadPotentialDiagAdapt',
+           'QuadPotentialFullAdapt', 'isquadpotential']
 
 
 def quad_potential(C, is_cov):
@@ -416,7 +418,7 @@ class QuadPotentialFullInv(QuadPotential):
 class QuadPotentialFull(QuadPotential):
     """Basic QuadPotential object for Hamiltonian calculations."""
 
-    def __init__(self, A, dtype=None):
+    def __init__(self, cov, dtype=None):
         """Compute the lower cholesky decomposition of the potential.
 
         Parameters
@@ -427,30 +429,187 @@ class QuadPotentialFull(QuadPotential):
         if dtype is None:
             dtype = theano.config.floatX
         self.dtype = dtype
-        self.A = A.astype(self.dtype)
-        self.L = scipy.linalg.cholesky(A, lower=True)
+        self._cov = np.array(cov, dtype=self.dtype, copy=True)
+        self._chol = scipy.linalg.cholesky(self._cov, lower=True)
+        self._n = len(self._cov)
 
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
-        return np.dot(self.A, x, out=out)
+        return np.dot(self._cov, x, out=out)
 
     def random(self):
         """Draw random value from QuadPotential."""
-        n = floatX(normal(size=self.L.shape[0]))
-        return scipy.linalg.solve_triangular(self.L.T, n)
+        vals = np.random.normal(size=self._n).astype(self.dtype)
+        return scipy.linalg.solve_triangular(self._chol.T, vals,
+                                             overwrite_b=True)
 
     def energy(self, x, velocity=None):
         """Compute kinetic energy at a position in parameter space."""
         if velocity is None:
             velocity = self.velocity(x)
-        return .5 * x.dot(velocity)
+        return 0.5 * np.dot(x, velocity)
 
     def velocity_energy(self, x, v_out):
         """Compute velocity and return kinetic energy at a position in parameter space."""
         self.velocity(x, out=v_out)
-        return 0.5 * np.dot(x, v_out)
+        return self.energy(x, v_out)
 
     __call__ = random
+
+
+class QuadPotentialFullAdapt(QuadPotentialFull):
+    """Adapt a dense mass matrix using the sample covariances
+
+    If the parameter ``doubling`` is true, the adaptation window is doubled
+    every time it is passed. This can lead to better convergence of the mass
+    matrix estimation.
+
+    """
+    def __init__(
+        self,
+        n,
+        initial_mean,
+        initial_cov=None,
+        initial_weight=0,
+        adaptation_window=101,
+        update_window=1,
+        doubling=True,
+        dtype=None,
+    ):
+        warnings.warn("QuadPotentialFullAdapt is an experimental feature")
+
+        if initial_cov is not None and initial_cov.ndim != 2:
+            raise ValueError("Initial covariance must be two-dimensional.")
+        if initial_mean.ndim != 1:
+            raise ValueError("Initial mean must be one-dimensional.")
+        if initial_cov is not None and initial_cov.shape != (n, n):
+            raise ValueError(
+                "Wrong shape for initial_cov: expected %s got %s"
+                % (n, initial_cov.shape)
+            )
+        if len(initial_mean) != n:
+            raise ValueError(
+                "Wrong shape for initial_mean: expected %s got %s"
+                % (n, len(initial_mean))
+            )
+
+        if dtype is None:
+            dtype = theano.config.floatX
+
+        if initial_cov is None:
+            initial_cov = np.eye(n, dtype=dtype)
+            initial_weight = 1
+
+        self.dtype = dtype
+        self._n = n
+        self._cov = np.array(initial_cov, dtype=self.dtype, copy=True)
+        self._chol = scipy.linalg.cholesky(self._cov, lower=True)
+        self._chol_error = None
+        self._foreground_cov = _WeightedCovariance(
+            self._n, initial_mean, initial_cov, initial_weight, self.dtype
+        )
+        self._background_cov = _WeightedCovariance(self._n, dtype=self.dtype)
+        self._n_samples = 0
+
+        self._doubling = doubling
+        self._adaptation_window = int(adaptation_window)
+        self._update_window = int(update_window)
+        self._previous_update = 0
+
+    def _update_from_weightvar(self, weightvar):
+        weightvar.current_covariance(out=self._cov)
+        try:
+            self._chol = scipy.linalg.cholesky(self._cov, lower=True)
+        except (scipy.linalg.LinAlgError, ValueError) as error:
+            self._chol_error = error
+
+    def update(self, sample, grad, tune):
+        if not tune:
+            return
+
+        # Steps since previous update
+        delta = self._n_samples - self._previous_update
+
+        self._foreground_cov.add_sample(sample, weight=1)
+        self._background_cov.add_sample(sample, weight=1)
+
+        # Update the covariance matrix and recompute the Cholesky factorization
+        # every "update_window" steps
+        if (delta + 1) % self._update_window == 0:
+            self._update_from_weightvar(self._foreground_cov)
+
+        # Reset the background covariance if we are at the end of the adaptation window.
+        if delta >= self._adaptation_window:
+            self._foreground_cov = self._background_cov
+            self._background_cov = _WeightedCovariance(
+                self._n, dtype=self.dtype
+            )
+
+            self._previous_update = self._n_samples
+            if self._doubling:
+                self._adaptation_window *= 2
+
+        self._n_samples += 1
+
+    def raise_ok(self, vmap):
+        if self._chol_error is not None:
+            raise ValueError("{0}".format(self._chol_error))
+
+
+class _WeightedCovariance:
+    """Online algorithm for computing mean and covariance
+
+    This implements the `Welford's algorithm
+    <https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance>`_ based
+    on the implementation in `the Stan math library
+    <https://github.com/stan-dev/math>`_.
+
+    """
+
+    def __init__(
+        self,
+        nelem,
+        initial_mean=None,
+        initial_covariance=None,
+        initial_weight=0,
+        dtype="d",
+    ):
+        self._dtype = dtype
+        self.n_samples = float(initial_weight)
+        if initial_mean is None:
+            self.mean = np.zeros(nelem, dtype="d")
+        else:
+            self.mean = np.array(initial_mean, dtype="d", copy=True)
+        if initial_covariance is None:
+            self.raw_cov = np.eye(nelem, dtype="d")
+        else:
+            self.raw_cov = np.array(initial_covariance, dtype="d", copy=True)
+
+        self.raw_cov[:] *= self.n_samples
+
+        if self.raw_cov.shape != (nelem, nelem):
+            raise ValueError("Invalid shape for initial covariance.")
+        if self.mean.shape != (nelem,):
+            raise ValueError("Invalid shape for initial mean.")
+
+    def add_sample(self, x, weight):
+        x = np.asarray(x)
+        self.n_samples += 1
+        old_diff = x - self.mean
+        self.mean[:] += old_diff / self.n_samples
+        new_diff = x - self.mean
+        self.raw_cov[:] += weight * new_diff[:, None] * old_diff[None, :]
+
+    def current_covariance(self, out=None):
+        if self.n_samples == 0:
+            raise ValueError("Can not compute covariance without samples.")
+        if out is not None:
+            return np.divide(self.raw_cov, self.n_samples - 1, out=out)
+        else:
+            return (self.raw_cov / (self.n_samples - 1)).astype(self._dtype)
+
+    def current_mean(self):
+        return np.array(self.mean, dtype=self._dtype)
 
 
 try:
