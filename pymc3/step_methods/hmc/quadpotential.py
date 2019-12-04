@@ -482,7 +482,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         initial_cov=None,
         initial_weight=0,
         adaptation_window=101,
-        adaptation_window_multiplier=1.0,
+        adaptation_window_multiplier=1,
         update_window=1,
         doubling=True,
         dtype=None,
