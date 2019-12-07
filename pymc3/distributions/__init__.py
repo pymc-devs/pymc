@@ -154,6 +154,7 @@ __all__ = [
     "MvStudentT",
     "Dirichlet",
     "Multinomial",
+    "DirichletMultinomial",
     "Wishart",
     "WishartBartlett",
     "LKJCholeskyCov",
