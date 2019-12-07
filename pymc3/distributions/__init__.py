@@ -69,6 +69,7 @@ from .multivariate import KroneckerNormal
 from .multivariate import MvStudentT
 from .multivariate import Dirichlet
 from .multivariate import Multinomial
+from .multivariate import DirichletMultinomial
 from .multivariate import Wishart
 from .multivariate import WishartBartlett
 from .multivariate import LKJCholeskyCov
@@ -133,6 +134,7 @@ __all__ = ['Uniform',
            'MvStudentT',
            'Dirichlet',
            'Multinomial',
+           'DirichletMultinomial',
            'Wishart',
            'WishartBartlett',
            'LKJCholeskyCov',
