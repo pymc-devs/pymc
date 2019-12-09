@@ -40,7 +40,7 @@ from .exceptions import IncorrectArgumentsError
 from .parallel_sampling import _cpu_count
 from pymc3.step_methods.hmc import quadpotential
 import pymc3 as pm
-from tqdm import tqdm
+from fastprogress import progress_bar
 
 
 import sys
@@ -568,11 +568,17 @@ def _sample_population(
     # create the generator that iterates all chains in parallel
     chains = [chain + c for c in range(chains)]
     sampling = _prepare_iter_population(
-        draws, chains, step, start, parallelize, tune=tune, model=model, random_seed=random_seed
+        draws,
+        chains,
+        step,
+        start,
+        parallelize,
+        tune=tune,
+        model=model,
+        random_seed=random_seed,
     )
 
-    if progressbar:
-        sampling = tqdm(sampling, total=draws)
+    sampling = progress_bar(sampling, total=draws, display=progressbar)
 
     latest_traces = None
     for it, traces in enumerate(sampling):
@@ -596,10 +602,10 @@ def _sample(
 
     sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed)
     _pbar_data = None
-    if progressbar:
-        _pbar_data = {"chain": chain, "divergences": 0}
-        _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
-        sampling = tqdm(sampling, total=draws, desc=_desc.format(**_pbar_data))
+    _pbar_data = {"chain": chain, "divergences": 0}
+    _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
+    sampling = progress_bar(sampling, total=draws, display=progressbar)
+    sampling.comment = _desc.format(**_pbar_data)
     try:
         strace = None
         for it, (strace, diverging) in enumerate(sampling):
@@ -607,12 +613,9 @@ def _sample(
                 trace = MultiTrace([strace])
                 if diverging and _pbar_data is not None:
                     _pbar_data["divergences"] += 1
-                    sampling.set_description(_desc.format(**_pbar_data))
+                    sampling.comment = _desc.format(**_pbar_data)
     except KeyboardInterrupt:
         pass
-    finally:
-        if progressbar:
-            sampling.close()
     return strace
 
 
@@ -753,7 +756,7 @@ class PopulationStepper:
                 )
                 import multiprocessing
 
-                for c, stepper in enumerate(tqdm(steppers)):
+                for c, stepper in enumerate(progress_bar(steppers)):
                     slave_end, master_end = multiprocessing.Pipe()
                     stepper_dumps = pickle.dumps(stepper, protocol=4)
                     process = multiprocessing.Process(
@@ -1235,9 +1238,13 @@ def sample_posterior_predictive(
         nchain = 1
 
     if keep_size and samples is not None:
-        raise IncorrectArgumentsError("Should not specify both keep_size and samples argukments")
+        raise IncorrectArgumentsError(
+            "Should not specify both keep_size and samples argukments"
+        )
     if keep_size and size is not None:
-        raise IncorrectArgumentsError("Should not specify both keep_size and size argukments")
+        raise IncorrectArgumentsError(
+            "Should not specify both keep_size and size argukments"
+        )
 
     if samples is None:
         samples = sum(len(v) for v in trace._straces.values())
@@ -1253,7 +1260,9 @@ def sample_posterior_predictive(
 
     if var_names is not None:
         if vars is not None:
-            raise IncorrectArgumentsError("Should not specify both vars and var_names arguments.")
+            raise IncorrectArgumentsError(
+                "Should not specify both vars and var_names arguments."
+            )
         else:
             vars = [model[x] for x in var_names]
     elif vars is not None:  # var_names is None, and vars is not.
@@ -1266,8 +1275,7 @@ def sample_posterior_predictive(
 
     indices = np.arange(samples)
 
-    if progressbar:
-        indices = tqdm(indices, total=samples)
+    indices = progress_bar(indices, total=samples, display=progressbar)
 
     ppc_trace_t = _DefaultTrace(samples)
     try:
@@ -1284,10 +1292,6 @@ def sample_posterior_predictive(
 
     except KeyboardInterrupt:
         pass
-
-    finally:
-        if progressbar:
-            indices.close()
 
     ppc_trace = ppc_trace_t.trace_dict
     if keep_size:
@@ -1411,8 +1415,7 @@ def sample_posterior_predictive_w(
 
     indices = np.random.randint(0, len_trace, samples)
 
-    if progressbar:
-        indices = tqdm(indices, total=samples)
+    indices = progress_bar(indices, total=samples, display=progressbar)
 
     try:
         ppc = defaultdict(list)
@@ -1425,10 +1428,6 @@ def sample_posterior_predictive_w(
 
     except KeyboardInterrupt:
         pass
-
-    finally:
-        if progressbar:
-            indices.close()
 
     return {k: np.asarray(v) for k, v in ppc.items()}
 

@@ -1,6 +1,11 @@
 # Release Notes
 
-## PyMC3 3.8 (on deck)
+## PyMC3 3.9 (On deck)
+
+### New features
+- use [fastprogress](https://github.com/fastai/fastprogress) instead of tqdm [#3693](https://github.com/pymc-devs/pymc3/pull/3693)
+
+## PyMC3 3.8 (November 29 2019)
 
 ### New features
 - Implemented robust u turn check in NUTS (similar to stan-dev/stan#2800). See PR [#3605]
