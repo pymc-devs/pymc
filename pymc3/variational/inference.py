@@ -73,7 +73,9 @@ class Inference:
         score = self._maybe_score(score)
         fn_kwargs = kwargs.pop("fn_kwargs", dict())
         fn_kwargs["profile"] = True
-        step_func = self.objective.step_function(score=score, fn_kwargs=fn_kwargs, **kwargs)
+        step_func = self.objective.step_function(
+            score=score, fn_kwargs=fn_kwargs, **kwargs
+        )
         progress = progress_bar(range(n))
         try:
             for _ in progress:
@@ -555,12 +557,16 @@ class SVGD(ImplicitGradient):
         random_seed=None,
         estimator=KSD,
         kernel=test_functions.rbf,
-        **kwargs
+        **kwargs,
     ):
         if kwargs.get("local_rv") is not None:
             raise opvi.AEVBInferenceError("SVGD does not support local groups")
         empirical = Empirical(
-            size=n_particles, jitter=jitter, start=start, model=model, random_seed=random_seed,
+            size=n_particles,
+            jitter=jitter,
+            start=start,
+            model=model,
+            random_seed=random_seed,
         )
         super().__init__(approx=empirical, estimator=estimator, kernel=kernel, **kwargs)
 
@@ -626,14 +632,22 @@ class ASVGD(ImplicitGradient):
             )
         super().__init__(estimator=estimator, approx=approx, kernel=kernel, **kwargs)
 
-    def fit(self, n=10000, score=None, callbacks=None, progressbar=True, obj_n_mc=500, **kwargs):
+    def fit(
+        self,
+        n=10000,
+        score=None,
+        callbacks=None,
+        progressbar=True,
+        obj_n_mc=500,
+        **kwargs,
+    ):
         return super().fit(
             n=n,
             score=score,
             callbacks=callbacks,
             progressbar=progressbar,
             obj_n_mc=obj_n_mc,
-            **kwargs
+            **kwargs,
         )
 
     def run_profiling(self, n=1000, score=None, obj_n_mc=500, **kwargs):
@@ -703,7 +717,7 @@ def fit(
     random_seed=None,
     start=None,
     inf_kwargs=None,
-    **kwargs
+    **kwargs,
 ):
     r"""Handy shortcut for using inference methods in functional way
 
@@ -780,7 +794,9 @@ def fit(
         inf_kwargs["start"] = start
     if model is None:
         model = pm.modelcontext(model)
-    _select = dict(advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD, asvgd=ASVGD, nfvi=NFVI)
+    _select = dict(
+        advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD, asvgd=ASVGD, nfvi=NFVI
+    )
     if isinstance(method, str):
         method = method.lower()
         if method.startswith("nfvi="):
@@ -791,10 +807,12 @@ def fit(
             inference = _select[method](model=model, **inf_kwargs)
         else:
             raise KeyError(
-                "method should be one of %s " "or Inference instance" % set(_select.keys())
+                f"method should be one of {set(_select.keys())} or Inference instance"
             )
     elif isinstance(method, Inference):
         inference = method
     else:
-        raise TypeError("method should be one of %s " "or Inference instance" % set(_select.keys()))
+        raise TypeError(
+            f"method should be one of {set(_select.keys())} or Inference instance"
+        )
     return inference.fit(n, **kwargs)

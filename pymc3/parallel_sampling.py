@@ -9,6 +9,7 @@ from pymc3.exceptions import SamplingError
 import errno
 
 import numpy as np
+from fastprogress import progress_bar
 
 from . import theanof
 
@@ -348,7 +349,6 @@ class ParallelSampler:
         start_chain_num=0,
         progressbar=True,
     ):
-        from fastprogress import progress_bar
 
         if any(len(arg) != chains for arg in [seeds, start_points]):
             raise ValueError("Number of seeds and start_points must be %s." % chains)
