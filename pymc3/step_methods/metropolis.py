@@ -2,7 +2,6 @@ import numpy as np
 import numpy.random as nr
 import theano
 import scipy.linalg
-import warnings
 
 from ..distributions import draw_values
 from .arraystep import ArrayStepShared, PopulationArrayStepShared, ArrayStep, metrop_select, Competence
@@ -537,8 +536,6 @@ class DEMetropolis(PopulationArrayStepShared):
 
     def __init__(self, vars=None, S=None, proposal_dist=None, lamb=None, scaling=0.001,
                  tune=True, tune_interval=100, model=None, mode=None, **kwargs):
-        warnings.warn('Population based sampling methods such as DEMetropolis are experimental.' \
-            ' Use carefully and be extra critical about their results!')
 
         model = pm.modelcontext(model)
 
