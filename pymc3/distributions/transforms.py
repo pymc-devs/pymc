@@ -216,7 +216,7 @@ class LogExpM1(ElemwiseTransform):
         return tt.nnet.softplus(x)
 
     def backward_val(self, x):
-        return np.log(1 + np.exp(-np.abs(x))) + np.max([x, 0])
+        return np.log1p(np.exp(-np.abs(x))) + np.max([x, 0])
 
     def forward(self, x):
         """Inverse operation of softplus.
@@ -236,7 +236,6 @@ class LogExpM1(ElemwiseTransform):
 log_exp_m1 = LogExpM1()
 
 
-
 class LogOdds(ElemwiseTransform):
     name = "logodds"
 
@@ -244,7 +243,7 @@ class LogOdds(ElemwiseTransform):
         return invlogit(x, 0.0)
 
     def backward_val(self, x):
-        return invlogit(x, 0.0)
+        return 1.0 / (1.0 + np.exp(-x))
 
     def forward(self, x):
         return logit(x)
@@ -256,7 +255,6 @@ class LogOdds(ElemwiseTransform):
 logodds = LogOdds()
 
 
-
 class Interval(ElemwiseTransform):
     """Transform from real line interval [a,b] to whole real line."""
 
@@ -265,8 +263,8 @@ class Interval(ElemwiseTransform):
     def __init__(self, a, b):
         self.a = tt.as_tensor_variable(a)
         self.b = tt.as_tensor_variable(b)
-        self.a_ = a
-        self.b_ = b
+        self.a_ = self.a.eval()
+        self.b_ = self.b.eval()
 
     def backward(self, x):
         a, b = self.a, self.b
@@ -304,15 +302,15 @@ class LowerBound(ElemwiseTransform):
 
     def __init__(self, a):
         self.a = tt.as_tensor_variable(a)
-        self.a_ = a
+        self.a_ = self.a.eval()
 
     def backward(self, x):
-        a = self.a_
+        a = self.a
         r = tt.exp(x) + a
         return r
 
     def backward_val(self, x):
-        a = self.a
+        a = self.a_
         r = np.exp(x) + a
         return r
 
@@ -332,10 +330,10 @@ class LowerBound(ElemwiseTransform):
 
 
 lowerbound = LowerBound
-'''
+"""
 Alias for ``LowerBound`` (:class: LowerBound) Transform (:class: Transform) class
 for use in the ``transform`` argument of a random variable.
-'''
+"""
 
 
 class UpperBound(ElemwiseTransform):
@@ -345,7 +343,7 @@ class UpperBound(ElemwiseTransform):
 
     def __init__(self, b):
         self.b = tt.as_tensor_variable(b)
-        self.b_ = b
+        self.b_ = self.b.eval()
 
     def backward(self, x):
         b = self.b
@@ -373,11 +371,10 @@ class UpperBound(ElemwiseTransform):
 
 
 upperbound = UpperBound
-'''
+"""
 Alias for ``UpperBound`` (:class: UpperBound) Transform (:class: Transform) class
 for use in the ``transform`` argument of a random variable.
-'''
-
+"""
 
 
 class Ordered(Transform):
@@ -412,10 +409,10 @@ class Ordered(Transform):
 
 
 ordered = Ordered()
-'''
+"""
 Instantiation of ``Ordered`` (:class: Ordered) Transform (:class: Transform) class
 for use in the ``transform`` argument of a random variable.
-'''
+"""
 
 
 class SumTo1(Transform):
@@ -526,10 +523,9 @@ class StickBreaking(Transform):
 stick_breaking = StickBreaking()
 
 
-
 def t_stick_breaking(eps: float) -> StickBreaking:
-    '''Return a new :class:`StickBreaking` transform with specified eps(ilon),
-    instead of the default.'''
+    """Return a new :class:`StickBreaking` transform with specified eps(ilon),
+    instead of the default."""
     return StickBreaking(eps)
 
 
@@ -557,6 +553,7 @@ class Circular(ElemwiseTransform):
 
 circular = Circular()
 
+
 class CholeskyCovPacked(Transform):
     name = "cholesky-cov-packed"
 
@@ -579,6 +576,7 @@ class CholeskyCovPacked(Transform):
 
     def jacobian_det(self, y):
         return tt.sum(y[self.diag_idxs])
+
 
 class Chain(Transform):
     def __init__(self, transform_list):
