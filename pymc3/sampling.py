@@ -17,7 +17,7 @@ from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .distributions.distribution import draw_values
 from .model import modelcontext, Point, all_continuous, Model
-from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
+from .step_methods import (NUTS, HamiltonianMC, Metropolis, DEMetropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                            Slice, CompoundStep, arraystep)
 from .util import update_start_vals, get_untransformed_name, is_transformed_name, get_default_varnames
@@ -420,7 +420,16 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
                 raise
     if not parallel:
         if has_population_samplers:
+            has_demcmc = np.any([
+                isinstance(m, DEMetropolis)
+                for m in (step.methods if isinstance(step, CompoundStep) else [step])
+            ])
             _log.info('Population sampling ({} chains)'.format(chains))
+            if has_demcmc and chains <= model.ndim:                
+                warnings.warn(
+                    'DEMetropolis should be used with more chains than dimensions! '
+                    '(The model has {} dimensions.)'.format(model.ndim), UserWarning
+                )
             _print_step_hierarchy(step)
             trace = _sample_population(**sample_args, parallelize=cores > 1)
         else:
