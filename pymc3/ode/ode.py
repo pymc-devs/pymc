@@ -3,10 +3,11 @@ import numpy as np
 import scipy
 import theano
 import theano.tensor as tt
-from ..ode.utils import augment_system
-from ..exceptions import ShapeError
+from ..ode import utils
+from ..exceptions import ShapeError, DtypeError
 
 _log = logging.getLogger('pymc3')
+floatX = theano.config.floatX
 
 
 class DifferentialEquation(theano.Op):
@@ -20,7 +21,7 @@ class DifferentialEquation(theano.Op):
     ----------
 
     func : callable
-        Function specifying the differential equation
+        Function specifying the differential equation. Must take arguments y (n_states,), t (scalar), p (n_theta,)
     times : array
         Array of times at which to evaluate the solution of the differential equation.
     n_states : int
@@ -42,12 +43,12 @@ class DifferentialEquation(theano.Op):
         ode_model = DifferentialEquation(func=odefunc, times=times, n_states=1, n_theta=1, t0=0)
     """
     _itypes = [
-        tt.TensorType(theano.config.floatX, (False,)),                  # y0 as 1D floatX vector
-        tt.TensorType(theano.config.floatX, (False,))                   # theta as 1D floatX vector
+        tt.TensorType(floatX, (False,)),                  # y0 as 1D floatX vector
+        tt.TensorType(floatX, (False,))                   # theta as 1D floatX vector
     ]
     _otypes = [
-        tt.TensorType(theano.config.floatX, (False, False)),            # model states as floatX of shape (T, S)
-        tt.TensorType(theano.config.floatX, (False, False, False)),     # sensitivities as floatX of shape (T, S, len(y0) + len(theta))
+        tt.TensorType(floatX, (False, False)),            # model states as floatX of shape (T, S)
+        tt.TensorType(floatX, (False, False, False)),     # sensitivities as floatX of shape (T, S, len(y0) + len(theta))
     ]
     __props__ = ("func", "times", "n_states", "n_theta", "t0")
 
@@ -69,41 +70,21 @@ class DifferentialEquation(theano.Op):
         self.n_p = n_states + n_theta
 
         # Private
-        self._augmented_times = np.insert(times, 0, t0)
-        self._augmented_func = augment_system(func, self.n_states, self.n_p)
-        self._sens_ic = self._make_sens_ic()
+        self._augmented_times = np.insert(times, 0, t0).astype(floatX)
+        self._augmented_func = utils.augment_system(func, self.n_states, self.n_theta)
+        self._sens_ic = utils.make_sens_ic(self.n_states, self.n_theta, floatX)
 
         # Cache symbolic sensitivities by the hash of inputs
         self._apply_nodes = {}
         self._output_sensitivities = {}
     
-    def _make_sens_ic(self):
-        """
-        The sensitivity matrix will always have consistent form.
-        If the first n_theta entries of the parameters vector in the simulate call
-        correspond to ode paramaters, then the first n_theta columns in
-        the sensitivity matrix will be 0 
-
-        If the last n_states entries of the paramters vector in the simulate call
-        correspond to initial conditions of the system,
-        then the last n_states columns of the sensitivity matrix should form
-        an identity matrix
-        """
-
-        # Initialize the sensitivity matrix to be 0 everywhere
-        sens_matrix = np.zeros((self.n_states, self.n_p))
-
-        # Slip in the identity matrix in the appropirate place
-        sens_matrix[:, -self.n_states :] = np.eye(self.n_states)
-
-        # We need the sensitivity matrix to be a vector (see augmented_function)
-        # Ravel and return
-        dydp = sens_matrix.ravel()
-
-        return dydp
-
     def _system(self, Y, t, p):
         """This is the function that will be passed to odeint. Solves both ODE and sensitivities.
+
+        Args:
+            Y: augmented state vector (n_states + n_states + n_theta)
+            t: current time
+            p: parameter vector (y0, theta)
         """
         dydt, ddt_dydp = self._augmented_func(Y[:self.n_states], t, p, Y[self.n_states:])
         derivatives = np.concatenate([dydt, ddt_dydp])
@@ -115,8 +96,8 @@ class DifferentialEquation(theano.Op):
 
         # perform the integration
         sol = scipy.integrate.odeint(
-            func=self._system, y0=s0, t=self._augmented_times, args=(np.concatenate([theta, y0]),)
-        )
+            func=self._system, y0=s0, t=self._augmented_times, args=(np.concatenate([y0, theta]),)
+        ).astype(floatX)
         # The solution
         y = sol[1:, :self.n_states]
 
@@ -136,14 +117,19 @@ class DifferentialEquation(theano.Op):
         return theano.Apply(self, inputs, (states, sens))
 
     def __call__(self, y0, theta, return_sens=False, **kwargs):
+        if isinstance(y0, (list, tuple)) and not len(y0) == self.n_states:
+            raise ShapeError('Length of y0 is wrong.', actual=(len(y0),), expected=(self.n_states,))
+        if isinstance(theta, (list, tuple)) and not len(theta) == self.n_theta:
+            raise ShapeError('Length of theta is wrong.', actual=(len(theta),), expected=(self.n_theta,))
+            
         # convert inputs to tensors (and check their types)
-        y0 = tt.cast(tt.unbroadcast(tt.as_tensor_variable(y0), 0), theano.config.floatX)
-        theta = tt.cast(tt.unbroadcast(tt.as_tensor_variable(theta), 0), theano.config.floatX)
+        y0 = tt.cast(tt.unbroadcast(tt.as_tensor_variable(y0), 0), floatX)
+        theta = tt.cast(tt.unbroadcast(tt.as_tensor_variable(theta), 0), floatX)
         inputs = [y0, theta]
-        for i, (input, itype) in enumerate(zip(inputs, self._itypes)):
-            if not input.type == itype:
-                raise ValueError('Input {} of type {} does not have the expected type of {}'.format(i, input.type, itype))
-
+        for i, (input_val, itype) in enumerate(zip(inputs, self._itypes)):
+            if not input_val.type == itype:
+                raise ValueError('Input {} of type {} does not have the expected type of {}'.format(i, input_val.type, itype))
+        
         # use default implementation to prepare symbolic outputs (via make_node)
         states, sens = super(theano.Op, self).__call__(y0, theta, **kwargs)
 
@@ -156,9 +142,9 @@ class DifferentialEquation(theano.Op):
 
             # check types of simulation result
             if not test_states.dtype == self._otypes[0].dtype:
-                raise TypeError('Simulated states have the wrong type')
+                raise DtypeError('Simulated states have the wrong type.', actual=test_states.dtype, expected=self._otypes[0].dtype)
             if not test_sens.dtype == self._otypes[1].dtype:
-                raise TypeError('Simulated sensitivities have the wrong type')
+                raise DtypeError('Simulated sensitivities have the wrong type.', actual=test_sens.dtype, expected=self._otypes[1].dtype)
 
             # check shapes of simulation result
             expected_states_shape = (self.n_times, self.n_states)

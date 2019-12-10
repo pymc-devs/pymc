@@ -3,7 +3,47 @@ import theano
 import theano.tensor as tt
 
 
-def augment_system(ode_func, n, m):
+def make_sens_ic(n_states, n_theta, floatX):
+        """
+        The sensitivity matrix will always have consistent form. (n_states, n_states + n_theta)
+
+        If the first n_states entries of the parameters vector in the simulate call
+        correspond to initial conditions of the system,
+        then the first n_states columns of the sensitivity matrix should form
+        an identity matrix.
+
+        If the last n_theta entries of the parameters vector in the simulate call
+        correspond to ode paramaters, then the last n_theta columns in
+        the sensitivity matrix will be 0.
+
+        Parameters
+        ----------
+        n_states : int
+            Number of state variables in the ODE
+        n_theta : int
+            Number of ODE parameters
+        floatX : str
+            dtype to be used for the array
+
+        Returns
+        -------
+        dydp : array
+            1D-array of shape (n_states * (n_states + n_theta),), representing the initial condition of the sensitivities
+        """
+
+        # Initialize the sensitivity matrix to be 0 everywhere
+        sens_matrix = np.zeros((n_states, n_states + n_theta), dtype=floatX)
+
+        # Slip in the identity matrix in the appropirate place
+        sens_matrix[:,:n_states] = np.eye(n_states, dtype=floatX)
+
+        # We need the sensitivity matrix to be a vector (see augmented_function)
+        # Ravel and return
+        dydp = sens_matrix.ravel()
+        return dydp
+
+
+def augment_system(ode_func, n_states, n_theta):
     """
     Function to create augmented system.
 
@@ -11,14 +51,16 @@ def augment_system(ode_func, n, m):
     a compiled function which allows for computation of gradients of the
     differential equation's solition with repsect to the parameters.
 
+    Uses float64 even if floatX=float32, because the scipy integrator always uses float64.
+
     Parameters
     ----------
     ode_func : function
         Differential equation.  Returns array-like.
-    n : int
-        Number of rows of the sensitivity matrix.
-    m : int
-        Number of columns of the sensitivity matrix.
+    n_states : int
+        Number of rows of the sensitivity matrix. (n_states)
+    n_theta : int
+        Number of ODE parameters
 
     Returns
     -------
@@ -27,26 +69,27 @@ def augment_system(ode_func, n, m):
     """
 
     # Present state of the system
-    t_y = tt.vector("y", dtype=theano.config.floatX)
-    t_y.tag.test_value = np.zeros((n,))
+    t_y = tt.vector("y", dtype='float64')
+    t_y.tag.test_value = np.ones((n_states,), dtype='float64')
     # Parameter(s).  Should be vector to allow for generaliztion to multiparameter
-    # systems of ODEs.  Is m dimensional because it includes all ode parameters as well as initical conditions
-    t_p = tt.vector("p", dtype=theano.config.floatX)
-    t_p.tag.test_value = np.zeros((m,))
+    # systems of ODEs.  Is m dimensional because it includes all initial conditions as well as ode parameters
+    t_p = tt.vector("p", dtype='float64')
+    t_p.tag.test_value = np.ones((n_states + n_theta,), dtype='float64')
     # Time.  Allow for non-automonous systems of ODEs to be analyzed
-    t_t = tt.scalar("t", dtype=theano.config.floatX)
+    t_t = tt.scalar("t", dtype='float64')
     t_t.tag.test_value = 2.459
 
     # Present state of the gradients:
     # Will always be 0 unless the parameter is the inital condition
     # Entry i,j is partial of y[i] wrt to p[j]
-    dydp_vec = tt.vector("dydp", dtype=theano.config.floatX)
-    dydp_vec.tag.test_value = np.zeros(n * m)
+    dydp_vec = tt.vector("dydp", dtype='float64')
+    dydp_vec.tag.test_value = make_sens_ic(n_states, n_theta, 'float64')
 
-    dydp = dydp_vec.reshape((n, m))
+    dydp = dydp_vec.reshape((n_states, n_states + n_theta))
 
+    # Get symbolic representation of the ODEs by passing tensors for y, t and theta
+    yhat = ode_func(t_y, t_t, t_p[n_states:])
     # Stack the results of the ode_func into a single tensor variable
-    yhat = ode_func(t_y, t_t, t_p)
     if not isinstance(yhat, (list, tuple)):
         yhat = (yhat,)
     t_yhat = tt.stack(yhat, axis=0)
@@ -64,7 +107,7 @@ def augment_system(ode_func, n, m):
     system = theano.function(
         inputs=[t_y, t_t, t_p, dydp_vec],
         outputs=[t_yhat, ddt_dydp],
-        on_unused_input="ignore",
+        on_unused_input="ignore"
     )
 
     return system
