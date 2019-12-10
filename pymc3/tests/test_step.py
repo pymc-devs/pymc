@@ -702,8 +702,21 @@ class TestPopulationSamplers:
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
                 with pytest.raises(ValueError):
-                    trace = sample(draws=100, chains=1, step=step)
-                trace = sample(draws=100, chains=4, step=step)
+                    sample(draws=10, tune=10, chains=1, cores=1, step=step)
+                # don't parallelize to make test faster
+                sample(draws=10, tune=10, chains=4, cores=1, step=step)
+        pass
+
+    def test_demcmc_warning_on_small_populations(self):
+        """Test that a warning is raised when n_chains <= n_dims"""
+        with Model() as model:
+            Normal("n", mu=0, sigma=1, shape=(2,3))
+            with pytest.warns(UserWarning) as record:
+                sample(
+                    draws=5, tune=5, chains=6, step=DEMetropolis(),
+                    # make tests faster by not parallelizing; disable convergence warning
+                    cores=1, compute_convergence_checks=False
+                )
         pass
 
     def test_nonparallelized_chains_are_random(self):
