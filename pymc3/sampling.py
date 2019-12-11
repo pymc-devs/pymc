@@ -25,6 +25,7 @@ from .step_methods import (
     BinaryMetropolis,
     BinaryGibbsMetropolis,
     CategoricalGibbsMetropolis,
+    DEMetropolis,
     Slice,
     CompoundStep,
     arraystep,
@@ -480,7 +481,21 @@ def sample(
                 raise
     if not parallel:
         if has_population_samplers:
-            _log.info("Population sampling ({} chains)".format(chains))
+            has_demcmc = np.any([
+                isinstance(m, DEMetropolis)
+                for m in (step.methods if isinstance(step, CompoundStep) else [step])
+            ])
+            _log.info('Population sampling ({} chains)'.format(chains))
+            if has_demcmc and chains < 3:
+                raise ValueError(
+                    'DEMetropolis requires at least 3 chains. ' \
+                    'For this {}-dimensional model you should use ≥{} chains'.format(model.ndim, model.ndim + 1)
+                )
+            if has_demcmc and chains <= model.ndim:                
+                warnings.warn(
+                    'DEMetropolis should be used with more chains than dimensions! '
+                    '(The model has {} dimensions.)'.format(model.ndim), UserWarning
+                )
             _print_step_hierarchy(step)
             trace = _sample_population(**sample_args, parallelize=cores > 1)
         else:
