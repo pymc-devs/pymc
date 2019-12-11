@@ -212,8 +212,10 @@ class PopulationArrayStepShared(ArrayStepShared):
         self.this_chain = chain_index
         self.other_chains = [c for c in range(len(population)) if c != chain_index]
         if not len(self.other_chains) > 1:
-            raise ValueError('Population is just {} + {}. This is too small. You should ' \
-                'increase the number of chains.'.format(self.this_chain, self.other_chains))
+            raise ValueError(
+                'Population is just {} + {}. ' \
+                'This is too small and the error should have been raised earlier.'.format(self.this_chain, self.other_chains)
+            )
         return
 
 

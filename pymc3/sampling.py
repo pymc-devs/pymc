@@ -425,6 +425,11 @@ def sample(draws=500, step=None, init='auto', n_init=200000, start=None, trace=N
                 for m in (step.methods if isinstance(step, CompoundStep) else [step])
             ])
             _log.info('Population sampling ({} chains)'.format(chains))
+            if has_demcmc and chains < 3:
+                raise ValueError(
+                    'DEMetropolis requires at least 3 chains. ' \
+                    'For this {}-dimensional model you should use ≥{} chains'.format(model.ndim, model.ndim + 1)
+                )
             if has_demcmc and chains <= model.ndim:                
                 warnings.warn(
                     'DEMetropolis should be used with more chains than dimensions! '
