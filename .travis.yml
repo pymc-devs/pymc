@@ -31,7 +31,6 @@ env:
   - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py pymc3/tests/test_smc.py pymc3/tests/test_sampling.py pymc3/tests/test_parallel_sampling.py pymc3/tests/test_dist_math.py pymc3/tests/test_distribution_defaults.py pymc3/tests/test_distributions_timeseries.py pymc3/tests/test_random.py"
   - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py pymc3/tests/test_gp.py"
   - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py pymc3/tests/test_updates.py pymc3/tests/test_shape_handling.py"
-  - PYTHON_VERSION=3.5 FLOATX='float64' ENVNAME="py35_testenv" TESTCMD="--cov-append pymc3/tests/test_sampling.py pymc3/tests/test_model_graph.py"
 
 script:
   - . ./scripts/test.sh $TESTCMD

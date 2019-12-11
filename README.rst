@@ -3,7 +3,7 @@
     :alt: PyMC3 logo
     :align: center
 
-|Build Status| |Coverage| |NumFOCUS_badge| |Binder|
+|Build Status| |Coverage| |NumFOCUS_badge| |Binder| |Dockerhub|
 
 PyMC3 is a Python package for Bayesian statistical modeling and Probabilistic Machine Learning
 focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (VI)
@@ -192,6 +192,8 @@ Sponsors
    :target: https://travis-ci.org/pymc-devs/pymc3
 .. |Coverage| image:: https://codecov.io/gh/pymc-devs/pymc3/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/pymc-devs/pymc3
+.. |Dockerhub| image:: https://img.shields.io/docker/automated/pymc/pymc3.svg
+  :target: https://hub.docker.com/r/pymc/pymc3
 .. |NumFOCUS| image:: https://www.numfocus.org/wp-content/uploads/2017/03/1457562110.png
    :target: http://www.numfocus.org/
 .. |Quantopian| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg

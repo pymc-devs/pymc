@@ -6,7 +6,7 @@ Created on Mar 12, 2011
 from scipy.optimize import minimize
 import numpy as np
 from numpy import isfinite, nan_to_num
-from tqdm import tqdm
+from fastprogress import progress_bar
 import pymc3 as pm
 from ..vartypes import discrete_types, typefilter
 from ..model import modelcontext, Point
@@ -68,7 +68,6 @@ def find_MAP(
     As a result, we have greatly enhanced the initialization of NUTS and
     wrapped it inside pymc3.sample() and you should thus avoid this method.
     """
-
     model = modelcontext(model)
     if start is None:
         start = model.test_point
@@ -126,9 +125,7 @@ def find_MAP(
             def grad_logp(point):
                 return nan_to_num(-dlogp_func(point))
 
-            opt_result = fmin(
-                cost_func, bij.map(start), fprime=grad_logp, *args, **kwargs
-            )
+            opt_result = fmin(cost_func, bij.map(start), fprime=grad_logp, *args, **kwargs)
         else:
             # Check to see if minimization function uses a starting value
             if "x0" in getargspec(fmin).args:
@@ -152,20 +149,17 @@ def find_MAP(
                 cost_func, x0, method=method, jac=compute_gradient, *args, **kwargs
             )
             mx0 = opt_result["x"]  # r -> opt_result
-            cost_func.progress.total = cost_func.progress.n + 1
-            cost_func.progress.update()
         except (KeyboardInterrupt, StopIteration) as e:
             mx0, opt_result = cost_func.previous_x, None
-            cost_func.progress.close()
             if isinstance(e, StopIteration):
                 pm._log.info(e)
         finally:
-            cost_func.progress.close()
+            last_v = cost_func.n_eval
+            cost_func.progress.total = last_v
+            cost_func.progress.update(last_v)
 
     vars = get_default_varnames(model.unobserved_RVs, include_transformed)
-    mx = {
-        var.name: value for var, value in zip(vars, model.fastfn(vars)(bij.rmap(mx0)))
-    }
+    mx = {var.name: value for var, value in zip(vars, model.fastfn(vars)(bij.rmap(mx0)))}
 
     if return_raw:
         return mx, opt_result
@@ -200,8 +194,8 @@ class CostFuncWrapper:
             self.use_gradient = True
             self.desc = "logp = {:,.5g}, ||grad|| = {:,.5g}"
         self.previous_x = None
-        self.progress = tqdm(total=maxeval, disable=not progressbar)
-        self.progress.n = 0
+        self.progress = progress_bar(range(maxeval), total=maxeval, display=progressbar)
+        self.progress.update(0)
 
     def __call__(self, x):
         neg_value = np.float64(self.logp_func(pm.floatX(x)))
@@ -221,11 +215,10 @@ class CostFuncWrapper:
 
         if self.n_eval > self.maxeval:
             self.update_progress_desc(neg_value, grad)
-            self.progress.close()
             raise StopIteration
 
         self.n_eval += 1
-        self.progress.update(1)
+        self.progress.update_bar(self.n_eval)
 
         if self.use_gradient:
             return value, grad
@@ -234,7 +227,7 @@ class CostFuncWrapper:
 
     def update_progress_desc(self, neg_value, grad=None):
         if grad is None:
-            self.progress.set_description(self.desc.format(neg_value))
+            self.progress.comment = self.desc.format(neg_value)
         else:
             norm_grad = np.linalg.norm(grad)
-            self.progress.set_description(self.desc.format(neg_value, norm_grad))
+            self.progress.comment = self.desc.format(neg_value, norm_grad)

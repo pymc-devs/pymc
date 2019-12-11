@@ -8,9 +8,6 @@ import theano
 import pytest
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
 def test_gradients():
     """Tests the computation of the sensitivities from the theano computation graph"""
 
@@ -31,7 +28,7 @@ def test_gradients():
     y0 = 0.0
     t = np.arange(0, 12, 0.25).reshape(-1, 1)
     a = 0.472
-    p = np.array([a, y0])
+    p = np.array([y0, a])
 
     # Derivatives of the analytic solution with respect to y0 and alpha
     # Treat y0 like a parameter and solve analytically.  Then differentiate.
@@ -43,19 +40,16 @@ def test_gradients():
         / (a - 1) ** 2
     )
 
-    sensitivity = np.c_[a_sensitivity, y0_sensitivity]
+    sensitivity = np.c_[y0_sensitivity, a_sensitivity]
 
     integrated_solutions = odeint(
-        func=augmented_system, y0=[y0, 0, 1], t=t.ravel(), args=tuple([p])
+        func=augmented_system, y0=[y0, 1, 0], t=t.ravel(), args=(p,)
     )
     simulated_sensitivity = integrated_solutions[:, 1:]
 
     np.testing.assert_allclose(sensitivity, simulated_sensitivity, rtol=1e-5)
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
 def test_simulate():
     """Tests the integration in DifferentialEquation"""
 
@@ -81,9 +75,6 @@ def test_simulate():
     np.testing.assert_allclose(y, simulated_y, rtol=1e-5)
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
 class TestSensitivityInitialCondition(object):
 
     t = np.arange(0, 12, 0.25).reshape(-1, 1)
@@ -102,9 +93,9 @@ class TestSensitivityInitialCondition(object):
         )
 
         # Sensitivity initial condition for this model should be 1 by 2
-        model1_sens_ic = np.array([0, 1])
+        model1_sens_ic = np.array([1, 0])
 
-        np.testing.assert_array_equal(model1_sens_ic, model1._make_sens_ic())
+        np.testing.assert_array_equal(model1_sens_ic, model1._sens_ic)
 
     def test_sens_ic_scalar_2_param(self):
         # Scalar ODE 2 Param
@@ -116,9 +107,9 @@ class TestSensitivityInitialCondition(object):
             func=ode_func_2, t0=0, times=self.t, n_states=1, n_theta=2
         )
 
-        model2_sens_ic = np.array([0, 0, 1])
+        model2_sens_ic = np.array([1, 0, 0])
 
-        np.testing.assert_array_equal(model2_sens_ic, model2._make_sens_ic())
+        np.testing.assert_array_equal(model2_sens_ic, model2._sens_ic)
 
     def test_sens_ic_vector_1_param(self):
         # Vector ODE 1 Param
@@ -133,9 +124,12 @@ class TestSensitivityInitialCondition(object):
             func=ode_func_3, t0=0, times=self.t, n_states=2, n_theta=1
         )
 
-        model3_sens_ic = np.array([0, 1, 0, 0, 0, 1])
+        model3_sens_ic = np.array([
+            1, 0, 0,
+            0, 1, 0
+        ])
 
-        np.testing.assert_array_equal(model3_sens_ic, model3._make_sens_ic())
+        np.testing.assert_array_equal(model3_sens_ic, model3._sens_ic)
 
     def test_sens_ic_vector_2_param(self):
         # Vector ODE 2 Param
@@ -150,9 +144,12 @@ class TestSensitivityInitialCondition(object):
             func=ode_func_4, t0=0, times=self.t, n_states=2, n_theta=2
         )
 
-        model4_sens_ic = np.array([0, 0, 1, 0, 0, 0, 0, 1])
+        model4_sens_ic = np.array([
+            1, 0, 0, 0,
+            0, 1, 0, 0
+        ])
 
-        np.testing.assert_array_equal(model4_sens_ic, model4._make_sens_ic())
+        np.testing.assert_array_equal(model4_sens_ic, model4._sens_ic)
 
     def test_sens_ic_vector_3_params(self):
         # Big System with Many Parameters
@@ -171,16 +168,15 @@ class TestSensitivityInitialCondition(object):
         # First three columns are derivatives with respect to ode parameters
         # Last three coluimns are derivatives with repsect to initial condition
         # So identity matrix should appear in last 3 columns
-        model5_sens_ic = np.array(
-            [[0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1]]
-        )
+        model5_sens_ic = np.array([
+            [1, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0]
+        ])
 
-        np.testing.assert_array_equal(np.ravel(model5_sens_ic), model5._make_sens_ic())
+        np.testing.assert_array_equal(np.ravel(model5_sens_ic), model5._sens_ic)
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
 def test_logp_scalar_ode():
     """Test the computation of the log probability for these models"""
 
@@ -234,22 +230,22 @@ class TestErrors(object):
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_too_many_params(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(pm.ShapeError):
             self.ode_model(theta=[1, 1], y0=[0])
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_too_many_y0(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(pm.ShapeError):
             self.ode_model(theta=[1], y0=[0, 0])
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_too_few_params(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(pm.ShapeError):
             self.ode_model(theta=[], y0=[1])
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_too_few_y0(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(pm.ShapeError):
             self.ode_model(theta=[1], y0=[])
 
     def test_func_callable(self):
@@ -271,9 +267,6 @@ class TestErrors(object):
             )
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
 class TestDiffEqModel(object):
     def test_op_equality(self):
         """Tests that the equality of mathematically identical Ops evaluates True"""

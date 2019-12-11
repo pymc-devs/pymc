@@ -96,3 +96,15 @@ class TestExceptions:
         with pytest.raises(pm.exceptions.ShapeError):
             raise err
         pass
+
+    def test_dtype_error(self):
+        err = pm.exceptions.DtypeError('Without dtypes.')
+        with pytest.raises(pm.exceptions.DtypeError):
+            raise err
+
+        err = pm.exceptions.DtypeError('With shapes.', np.float64, np.float32)
+        assert 'float64' in err.args[0]
+        assert 'float32' in err.args[0]
+        with pytest.raises(pm.exceptions.DtypeError):
+            raise err
+        pass

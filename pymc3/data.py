@@ -1,3 +1,4 @@
+from typing import Dict, List, Any
 from copy import copy
 import io
 import os
@@ -232,7 +233,7 @@ class Minibatch(tt.TensorVariable):
     >>> assert x.eval().shape == (2, 20, 20, 40, 10)
     """
 
-    RNG = collections.defaultdict(list)
+    RNG = collections.defaultdict(list) # type: Dict[str, List[Any]]
 
     @theano.configparser.change_flags(compute_test_value='raise')
     def __init__(self, data, batch_size=128, dtype=None, broadcastable=None, name='Minibatch',
