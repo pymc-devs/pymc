@@ -997,12 +997,12 @@ class LKJCholeskyCov(Continuous):
 
     Parameters
     ----------
-    n : int
-        Dimension of the covariance matrix (n > 1).
     eta : float
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
+    n : int
+        Dimension of the covariance matrix (n > 1).
     sd_dist : pm.Distribution
         A distribution for the standard deviations.
 
