@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 import numpy as np
+from scipy.special import logsumexp
 from fastprogress import progress_bar
 import multiprocessing as mp
 import warnings
@@ -73,7 +74,7 @@ class SMC:
         self.proposed = draws * n_steps
         self.acc_rate = 1
         self.acc_per_chain = np.ones(self.draws)
-        self.model.marginal_likelihood = 1
+        self.model.marginal_log_likelihood = 0
         self.variables = inputvars(self.model.vars)
         dimension = sum(v.dsize for v in self.variables)
         self.scalings = np.ones(self.draws) * min(1, 2.38 ** 2 / dimension)
@@ -91,9 +92,7 @@ class SMC:
         var_info = OrderedDict()
         if self.start is None:
             init_rnd = sample_prior_predictive(
-                self.draws,
-                var_names=[v.name for v in self.model.unobserved_RVs],
-                model=self.model,
+                self.draws, var_names=[v.name for v in self.model.unobserved_RVs], model=self.model,
             )
         else:
             init_rnd = self.start
@@ -105,9 +104,7 @@ class SMC:
 
         for i in range(self.draws):
 
-            point = Point(
-                {v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model
-            )
+            point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
             population.append(self.model.dict_to_array(point))
 
         self.posterior = np.array(floatX(population))
@@ -123,9 +120,7 @@ class SMC:
         if self.kernel.lower() == "abc":
             warnings.warn(EXPERIMENTAL_WARNING)
             if len(self.model.observed_RVs) != 1:
-                warnings.warn(
-                    "SMC-ABC only works properly with models with one observed variable"
-                )
+                warnings.warn("SMC-ABC only works properly with models with one observed variable")
             simulator = self.model.observed_RVs[0]
             self.likelihood_logp = PseudoLikelihood(
                 self.epsilon,
@@ -137,9 +132,7 @@ class SMC:
                 self.sum_stat,
             )
         elif self.kernel.lower() == "metropolis":
-            self.likelihood_logp = logp_forw(
-                [self.model.datalogpt], self.variables, shared
-            )
+            self.likelihood_logp = logp_forw([self.model.datalogpt], self.variables, shared)
 
     def initialize_logp(self):
         """
@@ -147,9 +140,7 @@ class SMC:
         """
         if self.parallel and self.cores > 1:
             self.pool = mp.Pool(processes=self.cores)
-            priors = self.pool.starmap(
-                self.prior_logp, [(sample,) for sample in self.posterior]
-            )
+            priors = self.pool.starmap(self.prior_logp, [(sample,) for sample in self.posterior])
             likelihoods = self.pool.starmap(
                 self.likelihood_logp, [(sample,) for sample in self.posterior]
             )
@@ -169,12 +160,11 @@ class SMC:
         up_beta = 2.0
         rN = int(len(self.likelihoods) * self.threshold)
 
-        ll_diff = self.likelihoods - self.likelihoods.max()
         while up_beta - low_beta > 1e-6:
             new_beta = (low_beta + up_beta) / 2.0
-            weights_un = np.exp((new_beta - old_beta) * ll_diff)
-            weights = weights_un / np.sum(weights_un)
-            ESS = int(1 / np.sum(weights ** 2))
+            log_weights_un = (new_beta - old_beta) * self.likelihoods
+            log_weights = log_weights_un - logsumexp(log_weights_un)
+            ESS = int(np.exp(-logsumexp(log_weights * 2)))
             if ESS == rN:
                 break
             elif ESS < rN:
@@ -183,14 +173,15 @@ class SMC:
                 low_beta = new_beta
         if new_beta >= 1:
             new_beta = 1
-            weights_un = np.exp((new_beta - old_beta) * ll_diff)
-            weights = weights_un / np.sum(weights_un)
+            log_weights_un = (new_beta - old_beta) * self.likelihoods
+            log_weights = log_weights_un - logsumexp(log_weights_un)
 
-        sj = np.exp((new_beta - old_beta) * self.likelihoods)
-
-        self.model.marginal_likelihood *= np.mean(sj)
+        ll_max = np.max(self.likelihoods)
+        self.model.marginal_log_likelihood += ll_max + np.log(
+            np.exp(log_weights_un - ll_max).mean()
+        )
         self.beta = new_beta
-        self.weights = weights
+        self.weights = np.exp(log_weights)
 
     def resample(self):
         """
@@ -214,18 +205,14 @@ class SMC:
         cov = np.atleast_2d(cov)
         cov += 1e-6 * np.eye(cov.shape[0])
         if np.isnan(cov).any() or np.isinf(cov).any():
-            raise ValueError(
-                'Sample covariances not valid! Likely "draws" is too small!'
-            )
+            raise ValueError('Sample covariances not valid! Likely "draws" is too small!')
         self.proposal = MultivariateNormalProposal(cov)
 
     def tune(self):
         """
         Tune scaling and n_steps based on the acceptance rate.
         """
-        ave_scaling = np.exp(
-            np.log(self.scalings.mean()) + (self.acc_per_chain.mean() - 0.234)
-        )
+        ave_scaling = np.exp(np.log(self.scalings.mean()) + (self.acc_per_chain.mean() - 0.234))
         self.scalings = 0.5 * (
             ave_scaling + np.exp(np.log(self.scalings) + (self.acc_per_chain - 0.234))
         )
@@ -233,8 +220,7 @@ class SMC:
         if self.tune_steps:
             acc_rate = max(1.0 / self.proposed, self.acc_rate)
             self.n_steps = min(
-                self.max_steps,
-                max(2, int(np.log(1 - self.p_acc_rate) / np.log(1 - acc_rate))),
+                self.max_steps, max(2, int(np.log(1 - self.p_acc_rate) / np.log(1 - acc_rate))),
             )
 
         self.proposed = self.draws * self.n_steps
@@ -350,9 +336,7 @@ def metrop_kernel(
 
         new_tempered_logp = pl + ll * beta
 
-        q_old, accept = metrop_select(
-            new_tempered_logp - old_tempered_logp, q_new, q_old
-        )
+        q_old, accept = metrop_select(new_tempered_logp - old_tempered_logp, q_new, q_old)
 
         if accept:
             accepted += 1
@@ -386,9 +370,7 @@ class PseudoLikelihood:
     Pseudo Likelihood
     """
 
-    def __init__(
-        self, epsilon, observations, function, model, var_info, distance, sum_stat
-    ):
+    def __init__(self, epsilon, observations, function, model, var_info, distance, sum_stat):
         """
         epsilon : float
             Standard deviation of the gaussian pseudo likelihood.
@@ -438,9 +420,7 @@ class PseudoLikelihood:
 
     def gauss_kernel(self, value):
         epsilon = self.epsilon
-        return (
-            -(value ** 2) / epsilon ** 2 + np.log(1 / (2 * np.pi * epsilon ** 2))
-        ) / 2.0
+        return (-(value ** 2) / epsilon ** 2 + np.log(1 / (2 * np.pi * epsilon ** 2))) / 2.0
 
     def absolute_error(self, a, b):
         if self.sum_stat:
