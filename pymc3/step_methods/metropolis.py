@@ -191,26 +191,24 @@ def tune(scale, acc_rate):
     >0.95         x 10
 
     """
-
-    # Switch statement
     if acc_rate < 0.001:
         # reduce by 90 percent
-        scale *= 0.1
+        return scale * 0.1
     elif acc_rate < 0.05:
         # reduce by 50 percent
-        scale *= 0.5
+        return scale * 0.5
     elif acc_rate < 0.2:
         # reduce by ten percent
-        scale *= 0.9
+        return scale * 0.9
     elif acc_rate > 0.95:
         # increase by factor of ten
-        scale *= 10.0
+        return scale * 10.0
     elif acc_rate > 0.75:
         # increase by double
-        scale *= 2.0
+        return scale * 2.0
     elif acc_rate > 0.5:
         # increase by ten percent
-        scale *= 1.1
+        return scale * 1.1
 
     return scale
 
