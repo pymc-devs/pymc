@@ -923,9 +923,11 @@ We love NUTS, or to be more precise Dynamic HMC with complex stoping
 rules. This part is actually all done outside of Theano, for NUTS, it
 includes: the leapfrog, dual averaging, tunning of mass matrix and step
 size, the tree building, sampler related statistics like divergence and
-energy checking. We actually have a Theano version of HMC:
-https://github.com/pymc-devs/pymc3/blob/master/pymc3/step\_methods/hmc/trajectory.py
-but it is never been used.
+energy checking. We actually have a Theano version of HMC, but it has never
+been used, and has been removed from the main repository. It can still be
+found in the `git history
+<https://github.com/pymc-devs/pymc3/pull/3734/commits/0fdae8207fd14f66635f3673ef267b2b8817aa68>`__,
+though.
 
 Variational Inference (VI)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
