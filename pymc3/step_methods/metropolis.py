@@ -93,7 +93,9 @@ class Metropolis(ArrayStepShared):
     generates_stats = True
     stats_dtypes = [{
         'accept': np.float64,
+        'accepted': np.bool,
         'tune': np.bool,
+        'scaling': np.float64,
     }]
 
     def __init__(self, vars=None, S=None, proposal_dist=None, scaling=1.,
@@ -166,7 +168,9 @@ class Metropolis(ArrayStepShared):
 
         stats = {
             'tune': self.tune,
+            'scaling': self.scaling,
             'accept': np.exp(accept),
+            'accepted': accepted,
         }
 
         return q_new, [stats]
@@ -529,7 +533,9 @@ class DEMetropolis(PopulationArrayStepShared):
     generates_stats = True
     stats_dtypes = [{
         'accept': np.float64,
+        'accepted': np.bool,
         'tune': np.bool,
+        'scaling': np.float64,
     }]
 
     def __init__(self, vars=None, S=None, proposal_dist=None, lamb=None, scaling=0.001,
@@ -591,7 +597,9 @@ class DEMetropolis(PopulationArrayStepShared):
 
         stats = {
             'tune': self.tune,
+            'scaling': self.scaling,
             'accept': np.exp(accept),
+            'accepted': accepted
         }
 
         return q_new, [stats]
