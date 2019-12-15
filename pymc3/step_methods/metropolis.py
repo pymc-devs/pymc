@@ -548,7 +548,7 @@ class DEMetropolis(PopulationArrayStepShared):
         vars = pm.inputvars(vars)
 
         if S is None:
-            S = np.ones(sum(v.dsize for v in vars))
+            S = np.ones(model.ndim)
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
@@ -557,7 +557,7 @@ class DEMetropolis(PopulationArrayStepShared):
 
         self.scaling = np.atleast_1d(scaling).astype('d')
         if lamb is None:
-            lamb = 2.38 / np.sqrt(2 * S.size)
+            lamb = 2.38 / np.sqrt(2 * model.ndim)
         self.lamb = float(lamb)
         self.tune = tune
         self.tune_interval = tune_interval
