@@ -1065,6 +1065,22 @@ class TestMatchesScipy(SeededTest):
                                      shape=alpha.shape)
         assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
 
+    @pytest.mark.parametrize('alpha,n,enum', [
+        [[[.25, .25, .25, .25]], [1], [[1, 0, 0, 0],
+                                       [0, 1, 0, 0],
+                                       [0, 0, 1, 0],
+                                       [0, 0, 0, 1]]]
+    ])
+    def test_dirichlet_multinomial_pmf(self, alpha, n, enum):
+        alpha = np.array(alpha)
+        n = np.array(n)
+        with Model() as model:
+            m = DirichletMultinomial('m', n=n, alpha=alpha,
+                                     shape=alpha.shape)
+        logp = lambda x: m.distribution.logp(np.array([x])).eval()
+        p_all_poss = [np.exp(logp(x)) for x in enum]
+        assert_almost_equal(np.sum(p_all_poss), 1)
+
     @pytest.mark.parametrize('alpha,n', [
         [[[.25, .25, .25, .25]], [1]],
         [[[.3, .6, .05, .05]], [2]],
