@@ -727,10 +727,10 @@ class DirichletMultinomial(Discrete):
         self.n = tt.as_tensor_variable(n)
 
         p = self.alpha / self.alpha.sum(-1, keepdims=True)
-        self.mean = self.n * p
+        self.mean = tt.shape_padright(self.n) * p
 
         mode = tt.cast(tt.round(self.mean), 'int32')
-        diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
+        diff = tt.shape_padright(self.n) - tt.sum(mode, axis=-1, keepdims=True)
         inc_bool_arr = tt.abs_(diff) > 0
         mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()],
                                 diff[inc_bool_arr.nonzero()])
