@@ -1,4 +1,5 @@
 bokeh>=0.12.13
+coverage<5.0
 graphviz>=0.8.3
 ipython
 Keras>=2.0.8
