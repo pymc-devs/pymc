@@ -200,7 +200,7 @@ CompareMetropolisNUTSSuite.track_glm_hierarchical_ess.unit = 'Effective samples 
 class DifferentialEquationSuite:
     """Implements ode examples to keep up with benchmarking them."""
 
-    timeout = 360
+    timeout = 600
     timer = timeit.default_timer
 
     def track_1var_2par_ode_ess(self):
