@@ -93,7 +93,9 @@ class Metropolis(ArrayStepShared):
     generates_stats = True
     stats_dtypes = [{
         'accept': np.float64,
+        'accepted': np.bool,
         'tune': np.bool,
+        'scaling': np.float64,
     }]
 
     def __init__(self, vars=None, S=None, proposal_dist=None, scaling=1.,
@@ -166,7 +168,9 @@ class Metropolis(ArrayStepShared):
 
         stats = {
             'tune': self.tune,
+            'scaling': self.scaling,
             'accept': np.exp(accept),
+            'accepted': accepted,
         }
 
         return q_new, [stats]
@@ -191,26 +195,24 @@ def tune(scale, acc_rate):
     >0.95         x 10
 
     """
-
-    # Switch statement
     if acc_rate < 0.001:
         # reduce by 90 percent
-        scale *= 0.1
+        return scale * 0.1
     elif acc_rate < 0.05:
         # reduce by 50 percent
-        scale *= 0.5
+        return scale * 0.5
     elif acc_rate < 0.2:
         # reduce by ten percent
-        scale *= 0.9
+        return scale * 0.9
     elif acc_rate > 0.95:
         # increase by factor of ten
-        scale *= 10.0
+        return scale * 10.0
     elif acc_rate > 0.75:
         # increase by double
-        scale *= 2.0
+        return scale * 2.0
     elif acc_rate > 0.5:
         # increase by ten percent
-        scale *= 1.1
+        return scale * 1.1
 
     return scale
 
@@ -531,7 +533,9 @@ class DEMetropolis(PopulationArrayStepShared):
     generates_stats = True
     stats_dtypes = [{
         'accept': np.float64,
+        'accepted': np.bool,
         'tune': np.bool,
+        'scaling': np.float64,
     }]
 
     def __init__(self, vars=None, S=None, proposal_dist=None, lamb=None, scaling=0.001,
@@ -544,7 +548,7 @@ class DEMetropolis(PopulationArrayStepShared):
         vars = pm.inputvars(vars)
 
         if S is None:
-            S = np.ones(sum(v.dsize for v in vars))
+            S = np.ones(model.ndim)
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
@@ -553,7 +557,7 @@ class DEMetropolis(PopulationArrayStepShared):
 
         self.scaling = np.atleast_1d(scaling).astype('d')
         if lamb is None:
-            lamb = 2.38 / np.sqrt(2 * S.size)
+            lamb = 2.38 / np.sqrt(2 * model.ndim)
         self.lamb = float(lamb)
         self.tune = tune
         self.tune_interval = tune_interval
@@ -593,7 +597,9 @@ class DEMetropolis(PopulationArrayStepShared):
 
         stats = {
             'tune': self.tune,
+            'scaling': self.scaling,
             'accept': np.exp(accept),
+            'accepted': accepted
         }
 
         return q_new, [stats]

@@ -1,5 +1,6 @@
 import numpy as np
 from numpy import inf
+from pymc3.step_methods.metropolis import tune
 from pymc3.tuning import scaling, find_MAP
 from . import models
 
@@ -32,3 +33,11 @@ def test_mle_jacobian():
         map_estimate = find_MAP(method="BFGS", model=model)
 
     np.testing.assert_allclose(map_estimate["mu_i"], truth, rtol=rtol)
+
+
+def test_tune_not_inplace():
+    orig_scaling = np.array([0.001, 0.1])
+    returned_scaling = tune(orig_scaling, acc_rate=0.6)
+    assert not returned_scaling is orig_scaling
+    assert np.all(orig_scaling == np.array([0.001, 0.1]))
+    pass
