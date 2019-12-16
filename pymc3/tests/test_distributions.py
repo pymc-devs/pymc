@@ -44,6 +44,7 @@ from pymc3.distributions import (
     Constant,
     DensityDist,
     Dirichlet,
+    DirichletMultinomial,
     DiscreteUniform,
     DiscreteWeibull,
     ExGaussian,
