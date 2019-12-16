@@ -1051,15 +1051,6 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize('alpha,n', [
         [[[.25, .25, .25, .25]], [1]],
-    ])
-    def test_dirichlet_multinomial_init(self, alpha, n):
-        alpha = np.array(alpha)
-        n = np.array(n)
-        with Model() as model:
-            m = DirichletMultinomial('m', n=n, alpha=alpha)
-
-    @pytest.mark.parametrize('alpha,n', [
-        [[[.25, .25, .25, .25]], [1]],
         [[[.3, .6, .05, .05]], [2]],
         [[[.3, .6, .05, .05]], [10]],
         [[[.3, .6, .05, .05],
