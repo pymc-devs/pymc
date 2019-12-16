@@ -1354,7 +1354,11 @@ def _mp_sample(
                             trace._add_warnings(draw.warnings)
 
                     if callback is not None:
-                        if callback(trace=trace, diverging=trace.get_sampler_stats('diverging')[-1]) == False:
+                        try:
+                            diverging = trace.get_sampler_stats('diverging')[-1]
+                        except KeyError:
+                            diverging = None
+                        if callback(trace=trace, diverging=diverging) == False:
                             raise KeyboardInterrupt()
         except ps.ParallelSamplingError as error:
             trace = traces[error._chain - chain]
