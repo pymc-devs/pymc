@@ -712,19 +712,29 @@ class DirichletMultinomial(Discrete):
 
     Parameters
     ----------
-    alpha : one- or two-dimensional array
+    alpha : two-dimensional array
         Dirichlet parameter.  Elements must be non-negative.
         Dimension of each element of the distribution is the length
-        of the last dimension of alpha.
+        of the second dimension of alpha.
     n     : one-dimensional array
-        Number of items sampled.
+        Total counts in each replicate.
 
     """
 
-    def __init__(self, alpha, n, *args, **kwargs):
+    def __init__(self, n, alpha, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.alpha = tt.as_tensor_variable(alpha)
         self.n = tt.as_tensor_variable(n)
+
+        p = self.alpha / self.alpha.sum(-1, keepdims=True)
+        self.mean = self.n * p
+
+        mode = tt.cast(tt.round(self.mean), 'int32')
+        diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
+        inc_bool_arr = tt.abs_(diff) > 0
+        mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()],
+                                diff[inc_bool_arr.nonzero()])
+        self.mode = mode
 
     def logp(self, x):
         alpha = self.alpha
