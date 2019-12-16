@@ -1070,8 +1070,9 @@ class TestMatchesScipy(SeededTest):
         alpha = np.array(alpha)
         n = np.array(n)
         with Model() as model:
-            m = DirichletMultinomial('m', n, alpha)
-        assert_allclose(m.distribution.mode.eval().sum(), n)
+            m = DirichletMultinomial('m', n, alpha,
+                                     shape=alpha.shape)
+        assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
 
     @pytest.mark.parametrize('alpha,n', [
         [[[.25, .25, .25, .25]], [1]],
@@ -1082,10 +1083,11 @@ class TestMatchesScipy(SeededTest):
          [10, 2]],
     ])
     def test_dirichlet_multinomial_random(self, alpha, n):
-        alpha = np.asarray(alpha)
-        n = np.asarray(n)
+        alpha = np.array(alpha)
+        n = np.array(n)
         with Model() as model:
-            m = DirichletMultinomial('m', n=n, alpha=alpha)
+            m = DirichletMultinomial('m', n=n, alpha=alpha,
+                                     shape=alpha.shape)
         m.random()
 
     def test_categorical_bounds(self):
