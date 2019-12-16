@@ -7,6 +7,7 @@ from ..model import Model, Point, Deterministic
 from ..blocking import DictToVarBijection
 from ..distributions import (
     DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
+    DirichletMultinomial,
     MvStudentT, MvNormal, MatrixNormal, ZeroInflatedPoisson,
     ZeroInflatedNegativeBinomial, Constant, Poisson, Bernoulli, Beta,
     BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto,
@@ -1047,6 +1048,45 @@ class TestMatchesScipy(SeededTest):
         assert_almost_equal(sum([multinomial_logpdf(val, n, p) for val, p in zip(vals, ps)]),
                             model.fastlogp({'m': vals}),
                             decimal=4)
+
+    @pytest.mark.parametrize('alpha,n', [
+        [[[.25, .25, .25, .25]], [1]],
+    ])
+    def test_dirichlet_multinomial_init(self, alpha, n):
+        alpha = np.array(alpha)
+        n = np.array(n)
+        with Model() as model:
+            m = DirichletMultinomial('m', n=n, alpha=alpha)
+
+    @pytest.mark.parametrize('alpha,n', [
+        [[[.25, .25, .25, .25]], [1]],
+        [[[.3, .6, .05, .05]], [2]],
+        [[[.3, .6, .05, .05]], [10]],
+        [[[.3, .6, .05, .05],
+          [.25, .25, .25, .25]],
+         [10, 2]],
+    ])
+    def test_dirichlet_multinomial_mode(self, alpha, n):
+        alpha = np.array(alpha)
+        n = np.array(n)
+        with Model() as model:
+            m = DirichletMultinomial('m', n, alpha)
+        assert_allclose(m.distribution.mode.eval().sum(), n)
+
+    @pytest.mark.parametrize('alpha,n', [
+        [[[.25, .25, .25, .25]], [1]],
+        [[[.3, .6, .05, .05]], [2]],
+        [[[.3, .6, .05, .05]], [10]],
+        [[[.3, .6, .05, .05],
+          [.25, .25, .25, .25]],
+         [10, 2]],
+    ])
+    def test_dirichlet_multinomial_random(self, alpha, n):
+        alpha = np.asarray(alpha)
+        n = np.asarray(n)
+        with Model() as model:
+            m = DirichletMultinomial('m', n=n, alpha=alpha)
+        m.random()
 
     def test_categorical_bounds(self):
         with Model():
