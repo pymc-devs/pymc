@@ -756,7 +756,7 @@ class DirichletMultinomial(Discrete):
         out = np.empty_like(alpha)
         for i in range(len(n)):
             p = np.random.dirichlet(alpha[i, :])
-            x = np.random.dirichlet(n[i], p)
+            x = np.random.multinomial(n[i], p)
             out[i, :] = x
         return out
 
