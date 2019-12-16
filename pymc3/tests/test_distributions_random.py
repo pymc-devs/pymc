@@ -405,6 +405,11 @@ class TestBetaBinomial(BaseTestCases.BaseTestCase):
     params = {'n': 5, 'alpha': 1., 'beta': 1.}
 
 
+class TestDirichletMultinomial(BaseTestCases.BaseTestCase):
+    distribution = pm.DirichletMultinomial
+    params = {'n': [5], 'alpha': [[1., 1., 1., 1.]]}
+
+
 class TestBernoulli(BaseTestCases.BaseTestCase):
     distribution = pm.Bernoulli
     params = {'p': 0.5}
