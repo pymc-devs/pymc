@@ -373,10 +373,11 @@ class ParallelSampler:
         self._total_draws = 0
         self._desc = "Sampling {0._chains:d} chains, {0._divergences:,d} divergences"
         self._chains = chains
-        self._progress = progress_bar(
-            range(chains * (draws + tune)), display=progressbar, auto_update=False
-        )
-        self._progress.comment = self._desc.format(self)
+        if progressbar:
+            self._progress = progress_bar(
+                range(chains * (draws + tune)), display=progressbar, auto_update=False
+            )
+            self._progress.comment = self._desc.format(self)
 
     def _make_active(self):
         while self._inactive and len(self._active) < self._max_active:
@@ -396,8 +397,10 @@ class ParallelSampler:
             self._total_draws += 1
             if not tuning and stats and stats[0].get("diverging"):
                 self._divergences += 1
-                self._progress.comment = self._desc.format(self)
-            self._progress.update(self._total_draws)
+                if self._progress:
+                    self._progress.comment = self._desc.format(self)
+            if self._progress:
+                self._progress.update(self._total_draws)
 
             if is_last:
                 proc.join()

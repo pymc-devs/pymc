@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, TYPE_CHECKING, cast
+from typing import Dict, List, Optional, TYPE_CHECKING, cast, Union
 
 if TYPE_CHECKING:
     from typing import Any, Tuple
@@ -69,6 +69,7 @@ STEP_METHODS = (
     CategoricalGibbsMetropolis,
 )
 
+ArrayLike = Union[np.ndarray, List[float]]
 
 _log = logging.getLogger("pymc3")
 
@@ -81,20 +82,20 @@ def instantiate_steppers(model, steps, selected_steps, step_kwargs=None):
 
     Parameters
     ----------
-    model : Model object
+    model: Model object
         A fully-specified model object
-    step : step function or vector of step functions
+    steps: step function or vector of step functions
         One or more step functions that have been assigned to some subset of
         the model's parameters. Defaults to None (no assigned variables).
     selected_steps: dictionary of step methods and variables
         The step methods and the variables that have were assigned to them.
-    step_kwargs : dict
+    step_kwargs: dict
         Parameters for the samplers. Keys are the lower case names of
         the step method, values a dict of arguments.
 
     Returns
     -------
-    methods : list
+    methods: list
         List of step methods associated with the model's variables.
     """
     if step_kwargs is None:
@@ -288,7 +289,7 @@ def sample(
         similar during tuning. Tuning samples will be drawn in addition to the number specified in
         the ``draws`` argument, and will be discarded unless ``discard_tuned_samples`` is set to
         False.
-    progressbar : bool
+    progressbar : bool, optional default=True
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
@@ -576,7 +577,7 @@ def _sample_population(
     step,
     tune,
     model,
-    progressbar=None,
+    progressbar: bool=True,
     parallelize=False,
     **kwargs
 ):
@@ -591,9 +592,11 @@ def _sample_population(
         tune=tune,
         model=model,
         random_seed=random_seed,
+        progressbar=progressbar,
     )
 
-    sampling = progress_bar(sampling, total=draws, display=progressbar)
+    if progressbar:
+        sampling = progress_bar(sampling, total=draws, display=progressbar)
 
     latest_traces = None
     for it, traces in enumerate(sampling):
@@ -743,7 +746,7 @@ def _iter_sample(
 
 
 class PopulationStepper:
-    def __init__(self, steppers, parallelize):
+    def __init__(self, steppers, parallelize, progressbar=True):
         """Tries to use multiprocessing to parallelize chains.
 
         Falls back to sequential evaluation if multiprocessing fails.
@@ -753,10 +756,12 @@ class PopulationStepper:
 
         Parameters
         ----------
-        steppers : list
+        steppers: list
             A collection of independent step methods, one for each chain.
-        parallelize : bool
+        parallelize: bool
             Indicates if chain parallelization is desired
+        progressbar: bool
+            Should we display a progress bar showing relative progress?
         """
         self.nchains = len(steppers)
         self.is_parallelized = False
@@ -771,7 +776,7 @@ class PopulationStepper:
                 )
                 import multiprocessing
 
-                for c, stepper in enumerate(progress_bar(steppers)):
+                for c, stepper in enumerate(progress_bar(steppers)) if progressbar else enumerate(steppers):
                     slave_end, master_end = multiprocessing.Pipe()
                     stepper_dumps = pickle.dumps(stepper, protocol=4)
                     process = multiprocessing.Process(
@@ -890,7 +895,8 @@ class PopulationStepper:
 
 
 def _prepare_iter_population(
-    draws, chains, step, start, parallelize, tune=None, model=None, random_seed=None
+    draws, chains, step, start, parallelize, tune=None, model=None, random_seed=None,
+        progressbar=True
 ):
     """Prepares a PopulationStepper and traces for population sampling.
 
@@ -951,7 +957,7 @@ def _prepare_iter_population(
             traces[c].setup(draws, c)
 
     # 5. configure the PopulationStepper (expensive call)
-    popstep = PopulationStepper(steppers, parallelize)
+    popstep = PopulationStepper(steppers, parallelize, progressbar=progressbar)
 
     # Because the preparations above are expensive, the actual iterator is
     # in another method. This way the progbar will not be disturbed.
@@ -1042,7 +1048,7 @@ def _mp_sample(
     chain,
     random_seed,
     start,
-    progressbar,
+    progressbar=True,
     trace=None,
     model=None,
     **kwargs
@@ -1210,32 +1216,32 @@ def sample_posterior_predictive(
 
     Parameters
     ----------
-    trace : backend, list, or MultiTrace
+    trace: backend, list, or MultiTrace
         Trace generated from MCMC sampling. Or a list containing dicts from
         find_MAP() or points
-    samples : int
+    samples: int
         Number of posterior predictive samples to generate. Defaults to one posterior predictive
         sample per posterior sample, that is, the number of draws times the number of chains. It
         is not recommended to modify this value; when modified, some chains may not be represented
         in the posterior predictive sample.
-    model : Model (optional if in ``with`` context)
+    model: Model (optional if in ``with`` context)
         Model used to generate ``trace``
-    vars : iterable
+    vars: iterable
         Variables for which to compute the posterior predictive samples.
         Deprecated: please use ``var_names`` instead.
-    var_names : Iterable[str]
+    var_names: Iterable[str]
         Alternative way to specify vars to sample, to make this function orthogonal with
         others.
-    size : int
+    size: int
         The number of random draws from the distribution specified by the parameters in each
         sample of the trace. Not recommended unless more than ndraws times nchains posterior
         predictive samples are needed.
-    keep_size : bool, optional
+    keep_size: bool, optional
         Force posterior predictive sample to have the same shape as posterior and sample stats
         data: ``(nchains, ndraws, ...)``. Overrides samples and size parameters.
-    random_seed : int
+    random_seed: int
         Seed for the random number generator.
-    progressbar : bool
+    progressbar: bool
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
@@ -1290,7 +1296,8 @@ def sample_posterior_predictive(
 
     indices = np.arange(samples)
 
-    indices = progress_bar(indices, total=samples, display=progressbar)
+    if progressbar:
+        indices = progress_bar(indices, total=samples, display=progressbar)
 
     ppc_trace_t = _DefaultTrace(samples)
     try:
@@ -1324,30 +1331,32 @@ def sample_ppc(*args, **kwargs):
 
 
 def sample_posterior_predictive_w(
-    traces, samples=None, models=None, weights=None, random_seed=None, progressbar=True
+    traces, samples: Optional[int]=None, models: Optional[List[Model]]=None,
+        weights: Optional[ArrayLike]=None, random_seed: Optional[int]=None,
+        progressbar: bool=True
 ):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.
 
     Parameters
     ----------
-    traces : list or list of lists
+    traces: list or list of lists
         List of traces generated from MCMC sampling, or a list of list
         containing dicts from find_MAP() or points. The number of traces should
         be equal to the number of weights.
-    samples : int
+    samples: int, optional
         Number of posterior predictive samples to generate. Defaults to the
         length of the shorter trace in traces.
-    models : list
+    models: list of Model
         List of models used to generate the list of traces. The number of models should be equal to
         the number of weights and the number of observed RVs should be the same for all models.
         By default a single model will be inferred from ``with`` context, in this case results will
         only be meaningful if all models share the same distributions for the observed RVs.
-    weights: array-like
+    weights: array-like, optional
         Individual weights for each trace. Default, same weight for each model.
-    random_seed : int
+    random_seed: int, optional
         Seed for the random number generator.
-    progressbar : bool
+    progressbar: bool, optional default True
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
@@ -1430,7 +1439,8 @@ def sample_posterior_predictive_w(
 
     indices = np.random.randint(0, len_trace, samples)
 
-    indices = progress_bar(indices, total=samples, display=progressbar)
+    if progressbar:
+        indices = progress_bar(indices, total=samples, display=progressbar)
 
     try:
         ppc = defaultdict(list)
@@ -1536,7 +1546,7 @@ def init_nuts(
 
     Parameters
     ----------
-    init : str
+    init: str
         Initialization method to use.
 
         * auto : Choose a default initialization method automatically.
@@ -1557,22 +1567,22 @@ def init_nuts(
         * map : Use the MAP as starting point. This is discouraged.
         * nuts : Run NUTS and estimate posterior mean and mass matrix from
           the trace.
-    chains : int
+    chains: int
         Number of jobs to start.
-    n_init : int
+    n_init: int
         Number of iterations of initializer
         If 'ADVI', number of iterations, if 'nuts', number of draws.
-    model : Model (optional if in ``with`` context)
-    progressbar : bool
+    model: Model (optional if in ``with`` context)
+    progressbar: bool
         Whether or not to display a progressbar for advi sampling.
-    **kwargs : keyword arguments
+    **kwargs: keyword arguments
         Extra keyword arguments are forwarded to pymc3.NUTS.
 
     Returns
     -------
-    start : pymc3.model.Point
+    start: pymc3.model.Point
         Starting point for sampler
-    nuts_sampler : pymc3.step_methods.NUTS
+    nuts_sampler: pymc3.step_methods.NUTS
         Instantiated and initialized NUTS sampler object
     """
     model = modelcontext(model)

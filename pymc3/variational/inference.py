@@ -129,7 +129,10 @@ class Inference:
             callbacks = []
         score = self._maybe_score(score)
         step_func = self.objective.step_function(score=score, **kwargs)
-        progress = progress_bar(range(n), display=progressbar)
+        if progressbar:
+            progress = progress_bar(range(n), display=progressbar)
+        else:
+            progress = range(n)
         if score:
             state = self._iterate_with_loss(0, n, step_func, progress, callbacks)
         else:
@@ -153,8 +156,8 @@ class Inference:
                     vmap = self.approx.groups[0].bij.ordering.vmap
                     for vmap_ in vmap:
                         slclen = len(tmp_hold[vmap_.slc])
-                        for i in range(slclen):
-                            name_slc.append((vmap_.var, i))
+                        for j in range(slclen):
+                            name_slc.append((vmap_.var, j))
                     index = np.where(np.isnan(current_param))[0]
                     errmsg = ["NaN occurred in optimization. "]
                     suggest_solution = (
@@ -202,8 +205,8 @@ class Inference:
                     vmap = self.approx.groups[0].bij.ordering.vmap
                     for vmap_ in vmap:
                         slclen = len(tmp_hold[vmap_.slc])
-                        for i in range(slclen):
-                            name_slc.append((vmap_.var, i))
+                        for j in range(slclen):
+                            name_slc.append((vmap_.var, j))
                     index = np.where(np.isnan(current_param))[0]
                     errmsg = ["NaN occurred in optimization. "]
                     suggest_solution = (
@@ -222,10 +225,12 @@ class Inference:
                     raise FloatingPointError("\n".join(errmsg))
                 scores[i] = e
                 if i % 10 == 0:
-                    avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
-                    progress.comment = "Average Loss = {:,.5g}".format(avg_loss)
-                    avg_loss = scores[max(0, i - 1000) : i + 1].mean()
-                    progress.comment = "Average Loss = {:,.5g}".format(avg_loss)
+                    avg_loss = _infmean(scores[max(0, i - 1000): i + 1])
+                    if hasattr(progress, 'comment'):
+                        progress.comment = "Average Loss = {:,.5g}".format(avg_loss)
+                    avg_loss = scores[max(0, i - 1000): i + 1].mean()
+                    if hasattr(progress, 'comment'):
+                        progress.comment = "Average Loss = {:,.5g}".format(avg_loss)
                 for callback in callbacks:
                     callback(self.approx, scores[: i + 1], i + s + 1)
         except (KeyboardInterrupt, StopIteration) as e:  # pragma: no cover
@@ -240,7 +245,7 @@ class Inference:
                     )
                 )
             else:
-                avg_loss = _infmean(scores[min(0, i - 1000) : i + 1])
+                avg_loss = _infmean(scores[min(0, i - 1000): i + 1])
                 logger.info(
                     "Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}".format(
                         i, 100 * i // n, avg_loss
@@ -250,7 +255,7 @@ class Inference:
             if n < 10:
                 logger.info("Finished [100%]: Loss = {:,.5g}".format(scores[-1]))
             else:
-                avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
+                avg_loss = _infmean(scores[max(0, i - 1000): i + 1])
                 logger.info("Finished [100%]: Average Loss = {:,.5g}".format(avg_loss))
         self.hist = np.concatenate([self.hist, scores])
         return State(i + s, step=step_func, callbacks=callbacks, score=True)
@@ -261,7 +266,10 @@ class Inference:
         if self.state is None:
             raise TypeError("Need to call `.fit` first")
         i, step, callbacks, score = self.state
-        progress = progress_bar(n, display=progressbar)
+        if progressbar:
+            progress = progress_bar(n, display=progressbar)
+        else:
+            progress = range(n)  # This is a guess at what progress_bar(n) does.
         if score:
             state = self._iterate_with_loss(i, n, step, progress, callbacks)
         else:
@@ -755,7 +763,7 @@ def fit(
             evaluate loss on each iteration or not
     callbacks : list[function : (Approximation, losses, i) -> None]
         calls provided functions after each iteration step
-    progressbar : bool
+    progressbar: bool
         whether to show progressbar or not
     obj_n_mc : `int`
         Number of monte carlo samples used for approximation of objective gradients

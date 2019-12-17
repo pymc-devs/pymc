@@ -256,6 +256,9 @@ class SMC:
                 ],
             )
         else:
+            iterator = range(self.draws)
+            if self.progressbar:
+                iterator = progress_bar(iterator, display=self.progressbar)
             results = [
                 metrop_kernel(
                     self.posterior[draw],
@@ -265,7 +268,7 @@ class SMC:
                     draw,
                     *parameters
                 )
-                for draw in progress_bar(range(self.draws), display=self.progressbar)
+                for draw in iterator
             ]
         posterior, acc_list, priors, likelihoods = zip(*results)
         self.posterior = np.array(posterior)
