@@ -70,7 +70,7 @@ def check_jacobian_det(transform, domain,
             computed_ljd(yval), tol)
 
 
-def test_simplex():
+def test_stickbreaking():
     check_vector_transform(tr.stick_breaking, Simplex(2))
     check_vector_transform(tr.stick_breaking, Simplex(4))
 
@@ -78,7 +78,7 @@ def test_simplex():
         3, 2), constructor=tt.dmatrix, test=np.zeros((2, 2)))
 
 
-def test_simplex_bounds():
+def test_stickbreaking_bounds():
     vals = get_values(tr.stick_breaking, Vector(R, 2),
                       tt.dvector, np.array([0, 0]))
 
@@ -88,6 +88,27 @@ def test_simplex_bounds():
 
     check_jacobian_det(tr.stick_breaking, Vector(
         R, 2), tt.dvector, np.array([0, 0]), lambda x: x[:-1])
+
+
+def test_stickbreaking2():
+    check_vector_transform(tr.stick_breaking2, Simplex(2))
+    check_vector_transform(tr.stick_breaking2, Simplex(4))
+
+    check_transform(tr.stick_breaking2, MultiSimplex(
+        3, 2), constructor=tt.dmatrix, test=np.zeros((2, 2)))
+
+
+def test_stickbreaking2_bounds():
+    vals = get_values(tr.stick_breaking2, Vector(R, 2),
+                      tt.dvector, np.array([0, 0]))
+
+    close_to(vals.sum(axis=1), 1, tol)
+    close_to_logical(vals > 0, True, tol)
+    close_to_logical(vals < 1, True, tol)
+
+    check_jacobian_det(tr.stick_breaking2, Vector(R, 2),
+                       tt.dvector, np.array([0, 0]),
+                       lambda x: x[:-1])
 
 
 def test_sum_to_1():
