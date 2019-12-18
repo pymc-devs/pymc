@@ -427,7 +427,7 @@ class PseudoLikelihood:
 
     def absolute_error(self, a, b):
         if self.sum_stat:
-            return np.atleast_2d(np.abs(a.mean() - b.mean()))
+            return np.abs(a.mean() - b.mean())
         else:
             return np.mean(np.atleast_2d(np.abs(a - b)))
 
