@@ -719,6 +719,24 @@ class TestPopulationSamplers:
                 )
         pass
 
+    def test_demcmc_tune_parameter(self):
+        """Tests that validity of the tune setting is checked"""
+        with Model() as model:
+            Normal("n", mu=0, sigma=1, shape=(2,3))
+            
+            step = DEMetropolis()
+            assert step.tune is None
+
+            step = DEMetropolis(tune='scaling')
+            assert step.tune == 'scaling'
+
+            step = DEMetropolis(tune='lambda')
+            assert step.tune == 'lambda'
+
+            with pytest.raises(ValueError):
+                DEMetropolis(tune='foo')
+        pass
+
     def test_nonparallelized_chains_are_random(self):
         with Model() as model:
             x = Normal("x", 0, 1)
