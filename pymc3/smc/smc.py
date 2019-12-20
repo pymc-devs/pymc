@@ -17,7 +17,7 @@ from ..step_methods.arraystep import metrop_select
 from ..step_methods.metropolis import MultivariateNormalProposal
 from ..backends.ndarray import NDArray
 from ..backends.base import MultiTrace
-from ..util import get_untransformed_name, is_transformed_name
+from ..util import is_transformed_name
 
 EXPERIMENTAL_WARNING = (
     "Warning: SMC-ABC methods are experimental step methods and not yet"
@@ -128,6 +128,7 @@ class SMC:
                 simulator.distribution.function,
                 self.model,
                 self.var_info,
+                self.variables,
                 self.dist_func,
                 self.sum_stat,
             )
@@ -373,7 +374,9 @@ class PseudoLikelihood:
     Pseudo Likelihood
     """
 
-    def __init__(self, epsilon, observations, function, model, var_info, distance, sum_stat):
+    def __init__(
+        self, epsilon, observations, function, model, var_info, variables, distance, sum_stat
+    ):
         """
         epsilon : float
             Standard deviation of the gaussian pseudo likelihood.
@@ -395,9 +398,13 @@ class PseudoLikelihood:
         self.function = function
         self.model = model
         self.var_info = var_info
+        self.variables = variables
+        self.varnames = [v.name for v in self.variables]
+        self.unobserved_RVs = [v.name for v in self.model.unobserved_RVs]
         self.kernel = self.gauss_kernel
         self.dist_func = distance
         self.sum_stat = sum_stat
+        self.get_unobserved_fn = self.model.fastfn(self.model.unobserved_RVs)
 
         if distance == "absolute_error":
             self.dist_func = self.absolute_error
@@ -409,17 +416,19 @@ class PseudoLikelihood:
     def posterior_to_function(self, posterior):
         model = self.model
         var_info = self.var_info
-        parameters = {}
+
+        varvalues = []
+        samples = {}
         size = 0
-        for var, values in var_info.items():
-            shape, new_size = values
-            value = posterior[size : size + new_size].reshape(shape)
-            if is_transformed_name(var):
-                var = get_untransformed_name(var)
-                value = model[var].transformation.backward_val(value)
-            parameters[var] = value
+        for var in self.variables:
+            shape, new_size = var_info[var.name]
+            varvalues.append(posterior[size : size + new_size].reshape(shape))
             size += new_size
-        return parameters
+        point = {k: v for k, v in zip(self.varnames, varvalues)}
+        for varname, value in zip(self.unobserved_RVs, self.get_unobserved_fn(point)):
+            if not is_transformed_name(varname):
+                samples[varname] = value
+        return samples
 
     def gauss_kernel(self, value):
         epsilon = self.epsilon
