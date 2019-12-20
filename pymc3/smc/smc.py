@@ -404,7 +404,7 @@ class PseudoLikelihood:
         self.kernel = self.gauss_kernel
         self.dist_func = distance
         self.sum_stat = sum_stat
-        self.fn = self.model.fastfn(self.model.unobserved_RVs)
+        self.get_unobserved_fn = self.model.fastfn(self.model.unobserved_RVs)
 
         if distance == "absolute_error":
             self.dist_func = self.absolute_error
@@ -425,7 +425,7 @@ class PseudoLikelihood:
             varvalues.append(posterior[size : size + new_size].reshape(shape))
             size += new_size
         point = {k: v for k, v in zip(self.varnames, varvalues)}
-        for varname, value in zip(self.unobserved_RVs, self.fn(point)):
+        for varname, value in zip(self.unobserved_RVs, self.get_unobserved_fn(point)):
             if not is_transformed_name(varname):
                 samples[varname] = value
         return samples
