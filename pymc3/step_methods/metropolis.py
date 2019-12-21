@@ -510,8 +510,8 @@ class DEMetropolis(PopulationArrayStepShared):
         S (and n). Defaults to Uniform(-S,+S).
     scaling : scalar or array
         Initial scale factor for epsilon. Defaults to 0.001
-    tune : bool
-        Flag for tuning the scaling. Defaults to True.
+    tune : str
+        Which hyperparameter to tune. Defaults to None, but can also be 'scaling' or 'lambda'.
     tune_interval : int
         The frequency of tuning. Defaults to 100 iterations.
     model : PyMC Model
@@ -536,10 +536,11 @@ class DEMetropolis(PopulationArrayStepShared):
         'accepted': np.bool,
         'tune': np.bool,
         'scaling': np.float64,
+        'lambda': np.float64,
     }]
 
     def __init__(self, vars=None, S=None, proposal_dist=None, lamb=None, scaling=0.001,
-                 tune=True, tune_interval=100, model=None, mode=None, **kwargs):
+                 tune=None, tune_interval=100, model=None, mode=None, **kwargs):
 
         model = pm.modelcontext(model)
 
@@ -549,7 +550,7 @@ class DEMetropolis(PopulationArrayStepShared):
 
         if S is None:
             S = np.ones(model.ndim)
-
+        
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
         else:
@@ -559,6 +560,8 @@ class DEMetropolis(PopulationArrayStepShared):
         if lamb is None:
             lamb = 2.38 / np.sqrt(2 * model.ndim)
         self.lamb = float(lamb)
+        if not tune in {None, 'scaling', 'lambda'}:
+            raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')
         self.tune = tune
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
@@ -572,9 +575,10 @@ class DEMetropolis(PopulationArrayStepShared):
 
     def astep(self, q0):
         if not self.steps_until_tune and self.tune:
-            # Tune scaling parameter
-            self.scaling = tune(
-                self.scaling, self.accepted / float(self.tune_interval))
+            if self.tune == 'scaling':
+                self.scaling = tune(self.scaling, self.accepted / float(self.tune_interval))
+            elif self.tune == 'lambda':
+                self.lamb = tune(self.lamb, self.accepted / float(self.tune_interval))
             # Reset counter
             self.steps_until_tune = self.tune_interval
             self.accepted = 0
@@ -598,6 +602,7 @@ class DEMetropolis(PopulationArrayStepShared):
         stats = {
             'tune': self.tune,
             'scaling': self.scaling,
+            'lambda': self.lamb,
             'accept': np.exp(accept),
             'accepted': accepted
         }
