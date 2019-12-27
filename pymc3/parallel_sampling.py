@@ -9,7 +9,7 @@ from pymc3.exceptions import SamplingError
 import errno
 
 import numpy as np
-from fastprogress import progress_bar
+from fastprogress.fastprogress import progress_bar
 
 from . import theanof
 

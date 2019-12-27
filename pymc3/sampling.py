@@ -41,7 +41,7 @@ from .exceptions import IncorrectArgumentsError
 from .parallel_sampling import _cpu_count
 from pymc3.step_methods.hmc import quadpotential
 import pymc3 as pm
-from fastprogress import progress_bar
+from fastprogress.fastprogress import progress_bar
 
 
 import sys
