@@ -375,7 +375,7 @@ class ParallelSampler:
         self._chains = chains
         if progressbar:
             self._progress = progress_bar(
-                range(chains * (draws + tune)), display=progressbar, auto_update=False
+                range(chains * (draws + tune)), display=progressbar
             )
             self._progress.comment = self._desc.format(self)
 
