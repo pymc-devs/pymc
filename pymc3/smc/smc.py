@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import numpy as np
 from scipy.special import logsumexp
-from fastprogress import progress_bar
+from fastprogress.fastprogress import progress_bar
 import multiprocessing as mp
 import warnings
 from theano import function as theano_function

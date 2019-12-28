@@ -3,7 +3,7 @@ import warnings
 import collections
 
 import numpy as np
-from fastprogress import progress_bar
+from fastprogress.fastprogress import progress_bar
 
 import pymc3 as pm
 from pymc3.variational import test_functions

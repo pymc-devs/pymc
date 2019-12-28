@@ -6,7 +6,7 @@ Created on Mar 12, 2011
 from scipy.optimize import minimize
 import numpy as np
 from numpy import isfinite, nan_to_num
-from fastprogress import progress_bar
+from fastprogress.fastprogress import progress_bar
 from fastprogress.fastprogress import ProgressBar
 import pymc3 as pm
 from ..vartypes import discrete_types, typefilter

@@ -9,7 +9,7 @@ from pymc3.exceptions import SamplingError
 import errno
 
 import numpy as np
-from fastprogress import progress_bar
+from fastprogress.fastprogress import progress_bar
 
 from . import theanof
 
@@ -375,7 +375,7 @@ class ParallelSampler:
         self._chains = chains
         if progressbar:
             self._progress = progress_bar(
-                range(chains * (draws + tune)), display=progressbar, auto_update=False
+                range(chains * (draws + tune)), display=progressbar
             )
             self._progress.comment = self._desc.format(self)
 
@@ -390,6 +390,9 @@ class ParallelSampler:
         if not self._in_context:
             raise ValueError("Use ParallelSampler as context manager.")
         self._make_active()
+
+        if self._active and self._progress:
+            self._progress.update(self._total_draws)
 
         while self._active:
             draw = ProcessAdapter.recv_draw(self._active)
