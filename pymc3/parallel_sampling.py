@@ -391,6 +391,9 @@ class ParallelSampler:
             raise ValueError("Use ParallelSampler as context manager.")
         self._make_active()
 
+        if self._active and self._progress:
+            self._progress.update(self._total_draws)
+
         while self._active:
             draw = ProcessAdapter.recv_draw(self._active)
             proc, is_last, draw, tuning, stats, warns = draw
