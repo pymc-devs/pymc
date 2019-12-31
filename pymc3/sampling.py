@@ -622,8 +622,9 @@ def _sample(
     _pbar_data = None
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
-    sampling = progress_bar(sampling, total=draws, display=progressbar)
-    sampling.comment = _desc.format(**_pbar_data)
+    if progressbar:
+        sampling = progress_bar(sampling, total=draws, display=progressbar)
+        sampling.comment = _desc.format(**_pbar_data)
     try:
         strace = None
         for it, (strace, diverging) in enumerate(sampling):
@@ -631,7 +632,8 @@ def _sample(
                 trace = MultiTrace([strace])
                 if diverging and _pbar_data is not None:
                     _pbar_data["divergences"] += 1
-                    sampling.comment = _desc.format(**_pbar_data)
+                    if progressbar:
+                        sampling.comment = _desc.format(**_pbar_data)
     except KeyboardInterrupt:
         pass
     return strace
