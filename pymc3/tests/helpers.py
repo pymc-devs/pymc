@@ -76,7 +76,7 @@ class Matcher:
         """
         if isinstance(v, type(dv)):
             result = False
-        elif not isinstance(df, str) or k not in self._partial_matches:
+        elif not isinstance(dv, str) or k not in self._partial_matches:
             result = (v == dv)
         else:
             result = dv.find(v) >= 0
