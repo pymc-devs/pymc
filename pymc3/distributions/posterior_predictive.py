@@ -424,8 +424,8 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     evaluated[i] = drawn[(var, samples)]
                                 # We filter out Deterministics by checking for `model` attribute
                 elif name is not None and hasattr(var, 'model') and name in trace.varnames:
-                    # param.name is in point
-                    drawn[(var, samples)] = evaluated[i] = trace[cast(str, name)].reshape(-1)
+                    # param.name is in the trace.  Record it as drawn and evaluated
+                    drawn[(var, samples)] = evaluated[i] = trace[cast(str, name)]
                 else:
                     # param still needs to be drawn
                     symbolic_params.append((i, var))
