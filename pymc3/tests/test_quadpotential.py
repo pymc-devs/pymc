@@ -225,7 +225,7 @@ def test_full_adapt_adaptation_window(seed=8978):
     for i in range(window + 1):
         pot.update(np.random.randn(2), None, True)
     assert pot._previous_update == window
-    assert pot._adaptation_window == window * pot._adaptation_window_multiplier
+    assert pot.adaptation_window == window * pot.adaptation_window_multiplier
 
     pot = quadpotential.QuadPotentialFullAdapt(
         2, np.zeros(2), np.eye(2), 1, adaptation_window=window
@@ -233,7 +233,7 @@ def test_full_adapt_adaptation_window(seed=8978):
     for i in range(window + 1):
         pot.update(np.random.randn(2), None, True)
     assert pot._previous_update == window
-    assert pot._adaptation_window == window * pot._adaptation_window_multiplier
+    assert pot.adaptation_window == window * pot.adaptation_window_multiplier
 
 
 def test_full_adapt_not_invertible():
