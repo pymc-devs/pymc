@@ -513,8 +513,8 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         self._background_cov = _WeightedCovariance(self._n, dtype=self.dtype)
         self._n_samples = 0
 
-        self._adaptation_window = int(adaptation_window)
-        self._adaptation_window_multiplier = float(adaptation_window_multiplier)
+        self.adaptation_window = int(adaptation_window)
+        self.adaptation_window_multiplier = float(adaptation_window_multiplier)
         self._update_window = int(update_window)
         self._previous_update = 0
 
@@ -542,14 +542,14 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
 
         # Reset the background covariance if we are at the end of the adaptation
         # window.
-        if delta >= self._adaptation_window:
+        if delta >= self.adaptation_window:
             self._foreground_cov = self._background_cov
             self._background_cov = _WeightedCovariance(
                 self._n, dtype=self.dtype
             )
 
             self._previous_update = self._n_samples
-            self._adaptation_window = int(self._adaptation_window * self._adaptation_window_multiplier)
+            self.adaptation_window = int(self.adaptation_window * self.adaptation_window_multiplier)
 
         self._n_samples += 1
 
