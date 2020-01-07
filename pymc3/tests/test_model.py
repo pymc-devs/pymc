@@ -334,3 +334,17 @@ class TestValueGradFunction(unittest.TestCase):
         gf = m.logp_dlogp_function()
 
         assert m['x2_missing'].type == gf._extra_vars_shared['x2_missing'].type
+
+def test_multiple_observed_rv():
+    "Test previously buggy MultiObservedRV comparison code."
+    y1_data = np.random.randn(10)
+    y2_data = np.random.randn(100)
+    with pm.Model() as model:
+        mu = pm.Normal("mu")
+        x = pm.DensityDist(  # pylint: disable=unused-variable
+            "x", pm.Normal.dist(mu, 1.0).logp, observed={"value": 0.1}
+        )
+    assert not model['x'] == model['mu']
+    assert model['x'] == model['x']
+    assert  model['x'] in model.observed_RVs
+    assert not model['x'] in model.vars
