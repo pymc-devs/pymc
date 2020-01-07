@@ -1555,7 +1555,9 @@ class MultiObservedRV(Factor):
         return id(self)
 
     def __eq__(self, other):
-        return self.id == other.id
+        "Use object identity for MultiObservedRV equality."
+        # This is likely a Bad Thing, but changing it would break a lot of code.
+        return self is other
 
     def __ne__(self, other):
         return not self == other
