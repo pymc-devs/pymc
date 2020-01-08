@@ -253,23 +253,12 @@ class MvNormal(_QuadFormBase):
                 except TypeError:
                     size = (size,)
 
-        if self._cov_type == "cov":
-            mu, cov = draw_values([self.mu, self.cov], point=point, size=size)
-            if mu.shape[-1] != cov.shape[-1]:
-                raise ValueError("Shapes for mu and cov don't match")
-
-            try:
-                dist = stats.multivariate_normal(mean=None, cov=cov, allow_singular=True)
-            except ValueError:
-                size += (mu.shape[-1],)
-                return np.nan * np.zeros(size)
-            return dist.rvs(size) + mu
-        elif self._cov_type == "chol":
+        if self._cov_type in ["chol", "cov"]:
             mu, chol = draw_values([self.mu, self.chol_cov], point=point, size=size)
             if size and mu.ndim == len(size) and mu.shape == size:
                 mu = mu[..., np.newaxis]
             if mu.shape[-1] != chol.shape[-1] and mu.shape[-1] != 1:
-                raise ValueError("Shapes for mu and chol don't match")
+                raise ValueError(f"Shapes for mu and {self._cov_type} don't match")
             broadcast_shape = np.broadcast(np.empty(mu.shape[:-1]), np.empty(chol.shape[:-2])).shape
 
             mu = np.broadcast_to(mu, broadcast_shape + (chol.shape[-1],))
