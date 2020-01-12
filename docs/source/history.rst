@@ -102,6 +102,9 @@ Models are defined using a context manager (``with`` statement). The model is sp
 
 ::
 
+    # Set style
+    az.style.use("arviz-darkgrid")
+
     # Data
     n = np.ones(4)*5
     y = np.array([0, 1, 3, 5])
@@ -125,23 +128,22 @@ Save this file, then from a python shell (or another file in the same directory)
 
     with bioassay_model:
 
-        # Draw wamples
+        # Draw samples
         trace = pm.sample(1000, tune=2000, cores=2)
         # Plot two parameters
-        az.plot_forest(trace, var_names=['alpha', 'beta'])
+        az.plot_forest(trace, var_names=['alpha', 'beta'], r_hat=True)
 
 This example will generate 1000 posterior samples on each of two cores using the NUTS algorithm, preceded by 2000 tuning samples (these are good default numbers for most models).
 
 ::
 
     Auto-assigning NUTS sampler...
-    Initializing NUTS using ADVI...
-    Average Loss = 12.562:   6%|▌         | 11412/200000 [00:00<00:14, 12815.82it/s]
-    Convergence archived at 11900
-    Interrupted at 11,900 [5%]: Average Loss = 15.168
-    100%|██████████████████████████████████████| 1500/1500 [00:01<00:00, 787.56it/s]
+    Initializing NUTS using jitter+adapt_diag...
+    Multiprocess sampling (2 chains in 2 jobs)
+    NUTS: [beta, alpha]
+    |██████████████████████████████████████| 100.00% [6000/6000 00:04<00:00 Sampling 2 chains, 0 divergences]
 
-The sample is returned as arrays inside of a ``MultiTrace`` object, which is then passed to a plotting function. The resulting graphic shows a forest plot of the random variables in the model, along with a convergence diagnostic (R-hat) that indicates our model has converged.
+The sample is returned as arrays inside a ``MultiTrace`` object, which is then passed to the plotting function. The resulting graph shows a forest plot of the random variables in the model, along with a convergence diagnostic (R-hat) that indicates our model has converged.
 
 .. image:: ./images/forestplot.png
 
