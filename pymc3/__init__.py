@@ -36,14 +36,21 @@ from .plots import *
 from .tests import test
 
 from .data import *
-import theano
-import platform
 
-system = platform.system()
-if system == "Windows":
-    theano.config.mode = "FAST_COMPILE"
-elif system == "Darwin":
-    theano.config.gcc.cxxflags = "-Wno-c++11-narrowing"
+
+def __set_compiler_flags():
+    # Workarounds for Theano compiler problems on various platforms
+    import platform
+    import theano
+
+    system = platform.system()
+    if system == "Windows":
+        theano.config.mode = "FAST_COMPILE"
+    elif system == "Darwin":
+        theano.config.gcc.cxxflags = "-Wno-c++11-narrowing"
+
+
+__set_compiler_flags()
 
 import logging
 
