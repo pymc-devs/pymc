@@ -159,7 +159,11 @@ class TestSample(SeededTest):
 
     def test_callback_can_cancel(self):
         trace_cancel_length = 5
-        callback = lambda strace, diverging: len(strace) < trace_cancel_length
+
+        def callback(strace, draw):
+            if len(strace) >= trace_cancel_length:
+                raise KeyboardInterrupt()
+
         with self.model:
             trace = pm.sample(
                         10, tune=0, chains=1, step=self.step, cores=1, random_seed=self.random_seed,

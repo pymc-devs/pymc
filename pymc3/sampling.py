@@ -54,7 +54,7 @@ from .util import (
 )
 from .vartypes import discrete_types
 from .exceptions import IncorrectArgumentsError
-from .parallel_sampling import _cpu_count
+from .parallel_sampling import _cpu_count, Draw
 from pymc3.step_methods.hmc import quadpotential
 import pymc3 as pm
 from fastprogress.fastprogress import progress_bar
@@ -318,7 +318,12 @@ def sample(
     compute_convergence_checks: bool, default=True
         Whether to compute sampler statistics like Gelman-Rubin and ``effective_n``.
     callback : function, default=None
-        TODO
+        A function which gets called for every sample from the trace of a chain. The function is
+        called with the trace and the current draw and will contain all samples for a single trace.
+        the ``draw.chain`` argument can be used to determine which of the active chains the sample
+        is drawn from.
+
+        Sampling can be interruptec by throwing a ``KeyboardInterrupt`` in the callback.
     Returns
     -------
     trace: pymc3.backends.base.MultiTrace
@@ -875,6 +880,8 @@ def _iter_sample(
     try:
         step.tune = bool(tune)
         for i in range(draws):
+            stats = None
+
             if i == 0 and hasattr(step, "iter_count"):
                 step.iter_count = 0
             if i == tune:
@@ -891,8 +898,9 @@ def _iter_sample(
                 strace.record(point)
                 diverging = False
             if callback is not None:
-                if callback(strace=strace, diverging=diverging) == False:
-                    raise KeyboardInterrupt()
+                warns = getattr(step, "warnings", None)
+                callback(trace=strace, draw=Draw(chain, i == draws, i, i < tune, stats, point, warns))
+
             yield strace, diverging
     except KeyboardInterrupt:
         strace.close()
@@ -1354,12 +1362,8 @@ def _mp_sample(
                             trace._add_warnings(draw.warnings)
 
                     if callback is not None:
-                        try:
-                            diverging = trace.get_sampler_stats('diverging')[-1]
-                        except KeyError:
-                            diverging = None
-                        if callback(trace=trace, diverging=diverging) == False:
-                            raise KeyboardInterrupt()
+                        callback(trace=trace, draw=draw)
+
         except ps.ParallelSamplingError as error:
             trace = traces[error._chain - chain]
             trace._add_warnings(error._warnings)
