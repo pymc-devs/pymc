@@ -323,7 +323,7 @@ def sample(
         the ``draw.chain`` argument can be used to determine which of the active chains the sample
         is drawn from.
 
-        Sampling can be interruptec by throwing a ``KeyboardInterrupt`` in the callback.
+        Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
     Returns
     -------
     trace: pymc3.backends.base.MultiTrace
