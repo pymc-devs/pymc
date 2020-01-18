@@ -101,16 +101,21 @@ class SerializeNDArray:
         """Extract ndarray metadata into json-serializable content"""
         if ndarray._stats is None:
             stats = ndarray._stats
+            sampler_vars = None
         else:
             stats = []
+            sampler_vars = []
             for stat in ndarray._stats:
                 stats.append({key: value.tolist() for key, value in stat.items()})
+                sampler_vars.append({key: str(value.dtype) for key, value in stat.items()})
+
 
         metadata = {
             'draw_idx': ndarray.draw_idx,
             'draws': ndarray.draws,
             '_stats': stats,
             'chain': ndarray.chain,
+            'sampler_vars': sampler_vars
         }
         return metadata
 
@@ -144,6 +149,9 @@ class SerializeNDArray:
             metadata = json.load(buff)
 
         metadata['_stats'] = [{k: np.array(v) for k, v in stat.items()} for stat in metadata['_stats']]
+
+        sampler_vars = metadata.pop('sampler_vars')
+        new_trace._set_sampler_vars(sampler_vars)
 
         for key, value in metadata.items():
             setattr(new_trace, key, value)
