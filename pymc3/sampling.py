@@ -1044,6 +1044,27 @@ def _iter_population(draws, tune, popstep, steppers, traces, points):
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
+    """Selects or creates a trace for a particular chain.
+
+    Parameters
+    ----------
+    trace : backend, list, or MultiTrace
+        This should be a BaseTrace, backend name (e.g. text, sqlite, or hdf5),
+        list of variables to track, or a MultiTrace object with past values.
+        If a MultiTrace object is given, it must contain samples for the chain number ``chain``.
+        If None or a list of variables, the NDArray backend is used.
+    chain : int
+        Number of the chain of interest.
+    shortcuts : dict, optional
+        maps backend names to a dict of backend class and name (defaults to pm.backends._shortcuts)
+    **kwds
+        keyword arguments to forward to the backend creation
+
+    Returns 
+    -------
+    trace : BaseTrace
+        A trace object for the selected chain
+    """
     if isinstance(trace, BaseTrace):
         return trace
     if isinstance(trace, MultiTrace):
