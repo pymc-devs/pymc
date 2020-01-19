@@ -35,3 +35,6 @@ def seeded_test():
     # TODO: use this instead of SeededTest
     np.random.seed(42)
     pm.set_tt_rng(42)
+
+
+collect_ignore = ["test_variational_inference.py"]

@@ -685,7 +685,6 @@ def fit_kwargs(inference, use_minibatch):
         key = 'full'
     return _select[(type(inference), key)]
 
-
 @pytest.mark.run('first')
 def test_fit_oo(inference,
                 fit_kwargs,
