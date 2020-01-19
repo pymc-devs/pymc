@@ -1016,8 +1016,8 @@ class PopulationStepper:
 
         Returns
         -------
-        update : Point
-            The new positions of the chains
+        update : list
+            List of (Point, stats) tuples for all chains
         """
         updates = [None] * self.nchains
         if self.is_parallelized:
@@ -1158,6 +1158,8 @@ def _iter_population(draws, tune, popstep, steppers, traces, points):
         with popstep:
             # iterate draws of all chains
             for i in range(draws):
+                # this call steps all chains and returns a list of (point, stats)
+                # the `popstep` may interact with subprocesses internally
                 updates = popstep.step(i == tune, points)
 
                 # apply the update to the points and record to the traces
