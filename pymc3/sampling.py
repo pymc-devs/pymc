@@ -598,9 +598,9 @@ def _sample_many(draws, chain:int, chains:int, start:list, random_seed:list, ste
 
 
 def _sample_population(
-    draws,
-    chain,
-    chains,
+    draws:int,
+    chain:int,
+    chains:int,
     start,
     random_seed,
     step,
@@ -610,6 +610,35 @@ def _sample_population(
     parallelize=False,
     **kwargs
 ):
+    """Performs sampling of a population of chains using the ``PopulationStepper``.
+
+    Parameters
+    ----------
+    draws : int
+        The number of samples to draw
+    chain : int
+        The number of the first chain in the population
+    chains : int
+        The total number of chains in the population
+    step : function
+        Step function (should be or contain a population step method)
+    start : list
+        Start points for each chain
+    parallelize : bool
+        Setting for multiprocess parallelization
+    tune: int, optional
+        Number of iterations to tune, if applicable (defaults to None)
+    model: Model (optional if in ``with`` context)
+    random_seed: int or list of ints, optional
+        A list is accepted if more if ``cores`` is greater than one.
+    progressbar : bool
+        Show progress bars? (defaults to True)
+
+    Returns
+    -------
+    trace : MultiTrace
+        Contains samples of all chains
+    """
     # create the generator that iterates all chains in parallel
     chains = [chain + c for c in range(chains)]
     sampling = _prepare_iter_population(
@@ -854,6 +883,7 @@ def _iter_sample(
 
 
 class PopulationStepper:
+    """Wraps population of step methods to step them in parallel with single or multiprocessing."""
     def __init__(self, steppers, parallelize, progressbar=True):
         """Use multiprocessing to parallelize chains.
 
@@ -867,7 +897,7 @@ class PopulationStepper:
         steppers: list
             A collection of independent step methods, one for each chain.
         parallelize: bool
-            Indicates if chain parallelization is desired
+            Indicates if parallelization via multiprocessing is desired.
         progressbar: bool
             Should we display a progress bar showing relative progress?
         """
@@ -1005,11 +1035,11 @@ class PopulationStepper:
 
 
 def _prepare_iter_population(
-    draws,
-    chains,
+    draws:int,
+    chains:list,
     step,
-    start,
-    parallelize,
+    start:list,
+    parallelize:bool,
     tune=None,
     model=None,
     random_seed=None,
@@ -1017,10 +1047,30 @@ def _prepare_iter_population(
 ):
     """Prepare a PopulationStepper and traces for population sampling.
 
+    Parameters
+    ----------
+    draws : int
+        The number of samples to draw
+    chains : list
+        The chain numbers in the population
+    step : function
+        Step function (should be or contain a population step method)
+    start : list
+        Start points for each chain
+    parallelize : bool
+        Setting for multiprocess parallelization
+    tune: int, optional
+        Number of iterations to tune, if applicable (defaults to None)
+    model: Model (optional if in ``with`` context)
+    random_seed: int or list of ints, optional
+        A list is accepted if more if ``cores`` is greater than one.
+    progressbar : bool
+        ``progressbar`` argument for the ``PopulationStepper``, (defaults to True)
+    
     Returns
     -------
     _iter_population : generator
-        The generator the yields traces of all chains at the same time
+        Yields traces of all chains at the same time
     """
     # chains contains the chain numbers, but for indexing we need indices...
     nchains = len(chains)
@@ -1098,6 +1148,11 @@ def _iter_population(draws, tune, popstep, steppers, traces, points):
         Traces for each chain
     points : list
         population of chain states
+
+    Yields
+    ------
+    traces : list
+        List of trace objects of the individual chains
     """
     try:
         with popstep:
