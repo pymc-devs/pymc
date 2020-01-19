@@ -550,7 +550,29 @@ def _check_start_shape(model, start):
         raise ValueError("Bad shape for start argument:{}".format(e))
 
 
-def _sample_many(draws, chain, chains, start, random_seed, step, **kwargs):
+def _sample_many(draws, chain:int, chains:int, start:list, random_seed:list, step, **kwargs):
+    """Samples all chains sequentially.
+
+    Parameters
+    ----------
+    draws: int
+        The number of samples to draw
+    chain: int
+        Number of the first chain in the sequence.
+    chains: int
+        Total number of chains to sample.
+    start: list
+        Starting points for each chain
+    random_seed: list
+        A list of seeds, one for each chain
+    step: function
+        Step function
+
+    Returns
+    -------
+    trace : MultiTrace
+        Contains samples of all chains
+    """
     traces = []
     for i in range(chains):
         trace = _sample(
@@ -616,13 +638,46 @@ def _sample(
     progressbar: bool,
     random_seed,
     start,
-    draws: Optional[int] = None,
+    draws: int,
     step=None,
     trace=None,
     tune=None,
     model: Optional[Model] = None,
     **kwargs
 ):
+    """Main iteration for singleprocess sampling.
+
+    Multiple step methods are supported via compound step methods.
+
+    Parameters
+    ----------
+    chain : int
+        Number of the chain that the samples will belong to.
+    progressbar: bool
+        Whether or not to display a progress bar in the command line. The bar shows the percentage
+        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
+        time until completion ("expected time of arrival"; ETA).
+    random_seed: int or list of ints
+        A list is accepted if ``cores`` is greater than one.
+    start: dict
+        Starting point in parameter space (or partial point)
+    draws: int
+        The number of samples to draw
+    step: function
+        Step function
+    trace: backend, list, or MultiTrace
+        This should be a backend instance, a list of variables to track, or a MultiTrace object
+        with past values. If a MultiTrace object is given, it must contain samples for the chain
+        number ``chain``. If None or a list of variables, the NDArray backend is used.
+    tune: int, optional
+        Number of iterations to tune, if applicable (defaults to None)
+    model: Model (optional if in ``with`` context)
+
+    Returns
+    -------
+    strace: pymc3.backends.base.BaseTrace
+        A ``BaseTrace`` object that contains the samples for this chain.
+    """
     skip_first = kwargs.get("skip_first", 0)
 
     sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed)
@@ -635,6 +690,7 @@ def _sample(
         strace = None
         for it, (strace, diverging) in enumerate(sampling):
             if it >= skip_first:
+                # TODO: unused variable - unnecessary creation of MultiTrace
                 trace = MultiTrace([strace])
                 if diverging:
                     _pbar_data["divergences"] += 1
@@ -682,6 +738,11 @@ def iter_sample(
     random_seed: int or list of ints, optional
         A list is accepted if more if ``cores`` is greater than one.
 
+    Yields
+    ------
+    trace : MultiTrace
+        Contains all samples up to the current iteration
+
     Examples
     --------
     ::
@@ -697,6 +758,37 @@ def iter_sample(
 def _iter_sample(
     draws, step, start=None, trace=None, chain=0, tune=None, model=None, random_seed=None
 ):
+    """Generator for sampling one chain. (Used in singleprocess sampling.)
+
+    Parameters
+    ----------
+    draws: int
+        The number of samples to draw
+    step: function
+        Step function
+    start: dict, optional
+        Starting point in parameter space (or partial point). Defaults to trace.point(-1)) if
+        there is a trace provided and model.test_point if not (defaults to empty dict)
+    trace: backend, list, MultiTrace, or None
+        This should be a backend instance, a list of variables to track, or a MultiTrace object
+        with past values. If a MultiTrace object is given, it must contain samples for the chain
+        number ``chain``. If None or a list of variables, the NDArray backend is used.
+    chain: int, optional
+        Chain number used to store sample in backend. If ``cores`` is greater than one, chain numbers
+        will start here.
+    tune: int, optional
+        Number of iterations to tune, if applicable (defaults to None)
+    model: Model (optional if in ``with`` context)
+    random_seed: int or list of ints, optional
+        A list is accepted if more if ``cores`` is greater than one.
+
+    Yields
+    ------
+    strace : BaseTrace
+        The trace object containing the samples for this chain
+    diverging : bool
+        Indicates if the draw is divergent. Only available with some samplers.
+    """
     model = modelcontext(model)
     draws = int(draws)
     if random_seed is not None:
@@ -1048,7 +1140,7 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
 
     Parameters
     ----------
-    trace : backend, list, or MultiTrace
+    trace : backend, list, MultiTrace, or None
         This should be a BaseTrace, backend name (e.g. text, sqlite, or hdf5),
         list of variables to track, or a MultiTrace object with past values.
         If a MultiTrace object is given, it must contain samples for the chain number ``chain``.
