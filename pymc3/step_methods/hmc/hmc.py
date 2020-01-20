@@ -31,7 +31,6 @@ class HamiltonianMC(BaseHMC):
         'diverging': np.bool,
         'energy_error': np.float64,
         'energy': np.float64,
-        'max_energy_error': np.float64,
         'path_length': np.float64,
         'accepted': np.bool,
         'model_logp': np.float64,
