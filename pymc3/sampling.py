@@ -620,19 +620,19 @@ def _sample_population(
         The number of the first chain in the population
     chains : int
         The total number of chains in the population
-    step : function
-        Step function (should be or contain a population step method)
     start : list
         Start points for each chain
-    parallelize : bool
-        Setting for multiprocess parallelization
+    random_seed: int or list of ints, optional
+        A list is accepted if more if ``cores`` is greater than one.
+    step : function
+        Step function (should be or contain a population step method)
     tune: int, optional
         Number of iterations to tune, if applicable (defaults to None)
     model: Model (optional if in ``with`` context)
-    random_seed: int or list of ints, optional
-        A list is accepted if more if ``cores`` is greater than one.
     progressbar : bool
         Show progress bars? (defaults to True)
+    parallelize : bool
+        Setting for multiprocess parallelization
 
     Returns
     -------
