@@ -633,7 +633,7 @@ def _sample_population(
         Show progress bars? (defaults to True)
     parallelize : bool
         Setting for multiprocess parallelization
-
+    
     Returns
     -------
     trace : MultiTrace
@@ -718,13 +718,10 @@ def _sample(
     try:
         strace = None
         for it, (strace, diverging) in enumerate(sampling):
-            if it >= skip_first:
-                # TODO: unused variable - unnecessary creation of MultiTrace
-                trace = MultiTrace([strace])
-                if diverging:
-                    _pbar_data["divergences"] += 1
-                    if progressbar:
-                        sampling.comment = _desc.format(**_pbar_data)
+            if it >= skip_first and diverging:
+                _pbar_data["divergences"] += 1
+                if progressbar:
+                    sampling.comment = _desc.format(**_pbar_data)
     except KeyboardInterrupt:
         pass
     return strace
