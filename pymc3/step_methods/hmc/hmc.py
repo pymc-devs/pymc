@@ -107,6 +107,8 @@ class HamiltonianMC(BaseHMC):
                 div_info = DivergenceInfo(
                     'Divergence encountered, bad energy.', None, state)
             energy_change = start.energy - state.energy
+            if np.isnan(energy_change):
+                energy_change = -np.inf
             if np.abs(energy_change) > self.Emax:
                 div_info = DivergenceInfo(
                     'Divergence encountered, large integration error.',
