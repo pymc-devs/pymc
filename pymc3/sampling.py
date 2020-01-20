@@ -135,21 +135,21 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
 
     Parameters
     ----------
-    model : Model object
+    model: Model object
         A fully-specified model object
-    step : step function or vector of step functions
+    step: step function or vector of step functions
         One or more step functions that have been assigned to some subset of
         the model's parameters. Defaults to ``None`` (no assigned variables).
-    methods : vector of step method classes
+    methods: vector of step method classes
         The set of step methods from which the function may choose. Defaults
         to the main step methods provided by PyMC3.
-    step_kwargs : dict
+    step_kwargs: dict
         Parameters for the samplers. Keys are the lower case names of
         the step method, values a dict of arguments.
 
     Returns
     -------
-    methods : list
+    methods: list
         List of step methods associated with the model's variables.
     """
     steps = []
@@ -550,7 +550,29 @@ def _check_start_shape(model, start):
         raise ValueError("Bad shape for start argument:{}".format(e))
 
 
-def _sample_many(draws, chain, chains, start, random_seed, step, **kwargs):
+def _sample_many(draws, chain:int, chains:int, start:list, random_seed:list, step, **kwargs):
+    """Samples all chains sequentially.
+
+    Parameters
+    ----------
+    draws: int
+        The number of samples to draw
+    chain: int
+        Number of the first chain in the sequence.
+    chains: int
+        Total number of chains to sample.
+    start: list
+        Starting points for each chain
+    random_seed: list
+        A list of seeds, one for each chain
+    step: function
+        Step function
+
+    Returns
+    -------
+    trace: MultiTrace
+        Contains samples of all chains
+    """
     traces = []
     for i in range(chains):
         trace = _sample(
@@ -576,9 +598,9 @@ def _sample_many(draws, chain, chains, start, random_seed, step, **kwargs):
 
 
 def _sample_population(
-    draws,
-    chain,
-    chains,
+    draws:int,
+    chain:int,
+    chains:int,
     start,
     random_seed,
     step,
@@ -588,6 +610,35 @@ def _sample_population(
     parallelize=False,
     **kwargs
 ):
+    """Performs sampling of a population of chains using the ``PopulationStepper``.
+
+    Parameters
+    ----------
+    draws: int
+        The number of samples to draw
+    chain: int
+        The number of the first chain in the population
+    chains: int
+        The total number of chains in the population
+    start: list
+        Start points for each chain
+    random_seed: int or list of ints, optional
+        A list is accepted if more if ``cores`` is greater than one.
+    step: function
+        Step function (should be or contain a population step method)
+    tune: int, optional
+        Number of iterations to tune, if applicable (defaults to None)
+    model: Model (optional if in ``with`` context)
+    progressbar: bool
+        Show progress bars? (defaults to True)
+    parallelize: bool
+        Setting for multiprocess parallelization
+    
+    Returns
+    -------
+    trace: MultiTrace
+        Contains samples of all chains
+    """
     # create the generator that iterates all chains in parallel
     chains = [chain + c for c in range(chains)]
     sampling = _prepare_iter_population(
@@ -616,13 +667,46 @@ def _sample(
     progressbar: bool,
     random_seed,
     start,
-    draws: Optional[int] = None,
+    draws: int,
     step=None,
     trace=None,
     tune=None,
     model: Optional[Model] = None,
     **kwargs
 ):
+    """Main iteration for singleprocess sampling.
+
+    Multiple step methods are supported via compound step methods.
+
+    Parameters
+    ----------
+    chain: int
+        Number of the chain that the samples will belong to.
+    progressbar: bool
+        Whether or not to display a progress bar in the command line. The bar shows the percentage
+        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
+        time until completion ("expected time of arrival"; ETA).
+    random_seed: int or list of ints
+        A list is accepted if ``cores`` is greater than one.
+    start: dict
+        Starting point in parameter space (or partial point)
+    draws: int
+        The number of samples to draw
+    step: function
+        Step function
+    trace: backend, list, or MultiTrace
+        This should be a backend instance, a list of variables to track, or a MultiTrace object
+        with past values. If a MultiTrace object is given, it must contain samples for the chain
+        number ``chain``. If None or a list of variables, the NDArray backend is used.
+    tune: int, optional
+        Number of iterations to tune, if applicable (defaults to None)
+    model: Model (optional if in ``with`` context)
+
+    Returns
+    -------
+    strace: pymc3.backends.base.BaseTrace
+        A ``BaseTrace`` object that contains the samples for this chain.
+    """
     skip_first = kwargs.get("skip_first", 0)
 
     sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed)
@@ -634,12 +718,10 @@ def _sample(
     try:
         strace = None
         for it, (strace, diverging) in enumerate(sampling):
-            if it >= skip_first:
-                trace = MultiTrace([strace])
-                if diverging:
-                    _pbar_data["divergences"] += 1
-                    if progressbar:
-                        sampling.comment = _desc.format(**_pbar_data)
+            if it >= skip_first and diverging:
+                _pbar_data["divergences"] += 1
+                if progressbar:
+                    sampling.comment = _desc.format(**_pbar_data)
     except KeyboardInterrupt:
         pass
     return strace
@@ -682,6 +764,11 @@ def iter_sample(
     random_seed: int or list of ints, optional
         A list is accepted if more if ``cores`` is greater than one.
 
+    Yields
+    ------
+    trace: MultiTrace
+        Contains all samples up to the current iteration
+
     Examples
     --------
     ::
@@ -697,6 +784,37 @@ def iter_sample(
 def _iter_sample(
     draws, step, start=None, trace=None, chain=0, tune=None, model=None, random_seed=None
 ):
+    """Generator for sampling one chain. (Used in singleprocess sampling.)
+
+    Parameters
+    ----------
+    draws: int
+        The number of samples to draw
+    step: function
+        Step function
+    start: dict, optional
+        Starting point in parameter space (or partial point). Defaults to trace.point(-1)) if
+        there is a trace provided and model.test_point if not (defaults to empty dict)
+    trace: backend, list, MultiTrace, or None
+        This should be a backend instance, a list of variables to track, or a MultiTrace object
+        with past values. If a MultiTrace object is given, it must contain samples for the chain
+        number ``chain``. If None or a list of variables, the NDArray backend is used.
+    chain: int, optional
+        Chain number used to store sample in backend. If ``cores`` is greater than one, chain numbers
+        will start here.
+    tune: int, optional
+        Number of iterations to tune, if applicable (defaults to None)
+    model: Model (optional if in ``with`` context)
+    random_seed: int or list of ints, optional
+        A list is accepted if more if ``cores`` is greater than one.
+
+    Yields
+    ------
+    strace: BaseTrace
+        The trace object containing the samples for this chain
+    diverging: bool
+        Indicates if the draw is divergent. Only available with some samplers.
+    """
     model = modelcontext(model)
     draws = int(draws)
     if random_seed is not None:
@@ -762,6 +880,7 @@ def _iter_sample(
 
 
 class PopulationStepper:
+    """Wraps population of step methods to step them in parallel with single or multiprocessing."""
     def __init__(self, steppers, parallelize, progressbar=True):
         """Use multiprocessing to parallelize chains.
 
@@ -775,7 +894,7 @@ class PopulationStepper:
         steppers: list
             A collection of independent step methods, one for each chain.
         parallelize: bool
-            Indicates if chain parallelization is desired
+            Indicates if parallelization via multiprocessing is desired.
         progressbar: bool
             Should we display a progress bar showing relative progress?
         """
@@ -845,11 +964,11 @@ class PopulationStepper:
 
         Parameters
         ----------
-        c : int
+        c: int
             number of this chain
-        stepper : BlockedStep
+        stepper: BlockedStep
             a step method such as CompoundStep
-        slave_end : multiprocessing.connection.PipeConnection
+        slave_end: multiprocessing.connection.PipeConnection
             This is our connection to the main process
         """
         # re-seed each child process to make them unique
@@ -887,15 +1006,15 @@ class PopulationStepper:
 
         Parameters
         ----------
-        tune_stop : bool
+        tune_stop: bool
             Indicates if the condition (i == tune) is fulfilled
-        population : list
+        population: list
             Current Points of all chains
 
         Returns
         -------
-        update : Point
-            The new positions of the chains
+        update: list
+            List of (Point, stats) tuples for all chains
         """
         updates = [None] * self.nchains
         if self.is_parallelized:
@@ -913,11 +1032,11 @@ class PopulationStepper:
 
 
 def _prepare_iter_population(
-    draws,
-    chains,
+    draws:int,
+    chains:list,
     step,
-    start,
-    parallelize,
+    start:list,
+    parallelize:bool,
     tune=None,
     model=None,
     random_seed=None,
@@ -925,10 +1044,30 @@ def _prepare_iter_population(
 ):
     """Prepare a PopulationStepper and traces for population sampling.
 
+    Parameters
+    ----------
+    draws: int
+        The number of samples to draw
+    chains: list
+        The chain numbers in the population
+    step: function
+        Step function (should be or contain a population step method)
+    start: list
+        Start points for each chain
+    parallelize: bool
+        Setting for multiprocess parallelization
+    tune: int, optional
+        Number of iterations to tune, if applicable (defaults to None)
+    model: Model (optional if in ``with`` context)
+    random_seed: int or list of ints, optional
+        A list is accepted if more if ``cores`` is greater than one.
+    progressbar: bool
+        ``progressbar`` argument for the ``PopulationStepper``, (defaults to True)
+    
     Returns
     -------
-    _iter_population : generator
-        The generator the yields traces of all chains at the same time
+    _iter_population: generator
+        Yields traces of all chains at the same time
     """
     # chains contains the chain numbers, but for indexing we need indices...
     nchains = len(chains)
@@ -994,23 +1133,30 @@ def _iter_population(draws, tune, popstep, steppers, traces, points):
 
     Parameters
     ----------
-    draws : int
+    draws: int
         number of draws per chain
-    tune : int
+    tune: int
         number of tuning steps
-    popstep : PopulationStepper
+    popstep: PopulationStepper
         the helper object for (parallelized) stepping of chains
-    steppers : list
+    steppers: list
         The step methods for each chain
-    traces : list
+    traces: list
         Traces for each chain
-    points : list
+    points: list
         population of chain states
+
+    Yields
+    ------
+    traces: list
+        List of trace objects of the individual chains
     """
     try:
         with popstep:
             # iterate draws of all chains
             for i in range(draws):
+                # this call steps all chains and returns a list of (point, stats)
+                # the `popstep` may interact with subprocesses internally
                 updates = popstep.step(i == tune, points)
 
                 # apply the update to the points and record to the traces
@@ -1044,6 +1190,27 @@ def _iter_population(draws, tune, popstep, steppers, traces, points):
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
+    """Selects or creates a trace backend (NDArray, Text, etc) for a particular chain.
+
+    Parameters
+    ----------
+    trace: backend, list, MultiTrace, or None
+        This should be a BaseTrace, backend name (e.g. text, sqlite, or hdf5),
+        list of variables to track, or a MultiTrace object with past values.
+        If a MultiTrace object is given, it must contain samples for the chain number ``chain``.
+        If None or a list of variables, the NDArray backend is used.
+    chain: int
+        Number of the chain of interest.
+    shortcuts: dict, optional
+        maps backend names to a dict of backend class and name (defaults to pm.backends._shortcuts)
+    **kwds
+        keyword arguments to forward to the backend creation
+
+    Returns 
+    -------
+    trace: BaseTrace
+        A trace object for the selected chain
+    """
     if isinstance(trace, BaseTrace):
         return trace
     if isinstance(trace, MultiTrace):
@@ -1065,20 +1232,52 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
 
 
 def _mp_sample(
-    draws,
-    tune,
+    draws:int,
+    tune:int,
     step,
-    chains,
-    cores,
-    chain,
-    random_seed,
-    start,
+    chains:int,
+    cores:int,
+    chain:int,
+    random_seed:list,
+    start:list,
     progressbar=True,
     trace=None,
     model=None,
     **kwargs
 ):
+    """Main iteration for multiprocess sampling.
 
+    Parameters
+    ----------
+    draws: int
+        The number of samples to draw
+    tune: int, optional
+        Number of iterations to tune, if applicable (defaults to None)
+    step: function
+        Step function
+    chains: int
+        The number of chains to sample.
+    cores: int
+        The number of chains to run in parallel.
+    chain: int
+        Number of the first chain.
+    random_seed: list of ints
+        Random seeds for each chain.
+    start: list
+        Starting points for each chain.
+    progressbar: bool
+        Whether or not to display a progress bar in the command line.
+    trace: backend, list, MultiTrace or None
+        This should be a backend instance, a list of variables to track, or a MultiTrace object
+        with past values. If a MultiTrace object is given, it must contain samples for the chain
+        number ``chain``. If None or a list of variables, the NDArray backend is used.
+    model: Model (optional if in ``with`` context)
+
+    Returns
+    -------
+    trace: pymc3.backends.base.MultiTrace
+        A ``MultiTrace`` object that contains the samples for all chains.
+    """
     import pymc3.parallel_sampling as ps
 
     # We did draws += tune in pm.sample
@@ -1202,11 +1401,11 @@ class _DefaultTrace:
 
         Parameters
         ----------
-        k : str
+        k: str
             Name of the variable.
-        v : anything that can go into a numpy array (including a numpy array)
+        v: anything that can go into a numpy array (including a numpy array)
             The value of the `idx`th sample from variable `k`
-        ids : int
+        ids: int
             The index of the sample we are inserting into the trace.
         """
         if hasattr(v, "shape"):
@@ -1273,7 +1472,7 @@ def sample_posterior_predictive(
 
     Returns
     -------
-    samples : dict
+    samples: dict
         Dictionary with the variable names as keys, and values numpy arrays containing
         posterior predictive samples.
     """
@@ -1385,7 +1584,7 @@ def sample_posterior_predictive_w(
 
     Returns
     -------
-    samples : dict
+    samples: dict
         Dictionary with the variables as keys. The values corresponding to the
         posterior predictive samples from the weighted models.
     """
@@ -1497,16 +1696,16 @@ def sample_prior_predictive(
 
     Parameters
     ----------
-    samples : int
+    samples: int
         Number of samples from the prior predictive to generate. Defaults to 500.
-    model : Model (optional if in ``with`` context)
-    vars : Iterable[str]
+    model: Model (optional if in ``with`` context)
+    vars: Iterable[str]
         A list of names of variables for which to compute the posterior predictive
         samples.  *DEPRECATED* - Use ``var_names`` argument instead.
-    var_names : Iterable[str]
+    var_names: Iterable[str]
         A list of names of variables for which to compute the posterior predictive
         samples. Defaults to both observed and unobserved RVs.
-    random_seed : int
+    random_seed: int
         Seed for the random number generator.
 
     Returns
@@ -1571,23 +1770,23 @@ def init_nuts(
     init: str
         Initialization method to use.
 
-        * auto : Choose a default initialization method automatically.
+        * auto: Choose a default initialization method automatically.
           Currently, this is `'jitter+adapt_diag'`, but this can change in the future. If you
           depend on the exact behaviour, choose an initialization method explicitly.
-        * adapt_diag : Start with a identity mass matrix and then adapt a diagonal based on the
+        * adapt_diag: Start with a identity mass matrix and then adapt a diagonal based on the
           variance of the tuning samples. All chains use the test value (usually the prior mean)
           as starting point.
-        * jitter+adapt_diag : Same as ``adapt_diag``, but use uniform jitter in [-1, 1] as starting
+        * jitter+adapt_diag: Same as ``adapt_diag``, but use uniform jitter in [-1, 1] as starting
           point in each chain.
-        * advi+adapt_diag : Run ADVI and then adapt the resulting diagonal mass matrix based on the
+        * advi+adapt_diag: Run ADVI and then adapt the resulting diagonal mass matrix based on the
           sample variance of the tuning samples.
-        * advi+adapt_diag_grad : Run ADVI and then adapt the resulting diagonal mass matrix based
+        * advi+adapt_diag_grad: Run ADVI and then adapt the resulting diagonal mass matrix based
           on the variance of the gradients during tuning. This is **experimental** and might be
           removed in a future release.
-        * advi : Run ADVI to estimate posterior mean and diagonal mass matrix.
+        * advi: Run ADVI to estimate posterior mean and diagonal mass matrix.
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
-        * map : Use the MAP as starting point. This is discouraged.
-        * nuts : Run NUTS and estimate posterior mean and mass matrix from
+        * map: Use the MAP as starting point. This is discouraged.
+        * nuts: Run NUTS and estimate posterior mean and mass matrix from
           the trace.
     chains: int
         Number of jobs to start.
