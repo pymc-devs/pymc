@@ -37,7 +37,7 @@ class HamiltonianMC(BaseHMC):
         'model_logp': np.float64,
     }]
 
-    def __init__(self, vars=None, path_length=2., **kwargs):
+    def __init__(self, vars=None, path_length=2., max_steps=1024, **kwargs):
         """Set up the Hamiltonian Monte Carlo sampler.
 
         Parameters
@@ -82,6 +82,8 @@ class HamiltonianMC(BaseHMC):
         adapt_step_size : bool, default=True
             Whether step size adaptation should be enabled. If this is
             disabled, `k`, `t0`, `gamma` and `target_accept` are ignored.
+        max_steps : int
+            The maximum number of leapfrog steps.
         model : pymc3.Model
             The model
         **kwargs : passed to BaseHMC
@@ -90,9 +92,11 @@ class HamiltonianMC(BaseHMC):
         kwargs.setdefault('target_accept', 0.65)
         super().__init__(vars, **kwargs)
         self.path_length = path_length
+        self.max_steps = max_steps
 
     def _hamiltonian_step(self, start, p0, step_size):
         n_steps = max(1, int(self.path_length / step_size))
+        n_steps = min(self.max_steps, n_steps)
 
         energy_change = -np.inf
         state = start
