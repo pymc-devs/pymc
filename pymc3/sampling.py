@@ -1232,20 +1232,52 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
 
 
 def _mp_sample(
-    draws,
-    tune,
+    draws:int,
+    tune:int,
     step,
-    chains,
-    cores,
-    chain,
-    random_seed,
-    start,
+    chains:int,
+    cores:int,
+    chain:int,
+    random_seed:list,
+    start:list,
     progressbar=True,
     trace=None,
     model=None,
     **kwargs
 ):
+    """Main iteration for multiprocess sampling.
 
+    Parameters
+    ----------
+    draws: int
+        The number of samples to draw
+    tune: int, optional
+        Number of iterations to tune, if applicable (defaults to None)
+    step: function
+        Step function
+    chains: int
+        The number of chains to sample.
+    cores: int
+        The number of chains to run in parallel.
+    chain : int
+        Number of the first chain.
+    random_seed: list of ints
+        Random seeds for each chain.
+    start: list
+        Starting points for each chain.
+    progressbar: bool
+        Whether or not to display a progress bar in the command line.
+    trace: backend, list, MultiTrace or None
+        This should be a backend instance, a list of variables to track, or a MultiTrace object
+        with past values. If a MultiTrace object is given, it must contain samples for the chain
+        number ``chain``. If None or a list of variables, the NDArray backend is used.
+    model: Model (optional if in ``with`` context)
+
+    Returns
+    -------
+    trace: pymc3.backends.base.MultiTrace
+        A ``MultiTrace`` object that contains the samples for all chains.
+    """
     import pymc3.parallel_sampling as ps
 
     # We did draws += tune in pm.sample
