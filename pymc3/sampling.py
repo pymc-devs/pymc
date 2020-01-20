@@ -1190,7 +1190,7 @@ def _iter_population(draws, tune, popstep, steppers, traces, points):
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
-    """Selects or creates a trace for a particular chain.
+    """Selects or creates a trace backend (NDArray, Text, etc) for a particular chain.
 
     Parameters
     ----------
