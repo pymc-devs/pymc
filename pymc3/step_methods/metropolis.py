@@ -8,7 +8,7 @@ from .arraystep import ArrayStepShared, PopulationArrayStepShared, ArrayStep, me
 import pymc3 as pm
 from pymc3.theanof import floatX
 
-__all__ = ['Metropolis', 'DEMetropolis', 'BinaryMetropolis', 'BinaryGibbsMetropolis',
+__all__ = ['Metropolis', 'DEMetropolis', 'DEMetropolisZ', 'BinaryMetropolis', 'BinaryGibbsMetropolis',
            'CategoricalGibbsMetropolis', 'NormalProposal', 'CauchyProposal',
            'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal']
 
@@ -596,6 +596,145 @@ class DEMetropolis(PopulationArrayStepShared):
         accept = self.delta_logp(q, q0)
         q_new, accepted = metrop_select(accept, q, q0)
         self.accepted += accepted
+
+        self.steps_until_tune -= 1
+
+        stats = {
+            'tune': self.tune,
+            'scaling': self.scaling,
+            'lambda': self.lamb,
+            'accept': np.exp(accept),
+            'accepted': accepted
+        }
+
+        return q_new, [stats]
+
+    @staticmethod
+    def competence(var, has_grad):
+        if var.dtype in pm.discrete_types:
+            return Competence.INCOMPATIBLE
+        return Competence.COMPATIBLE
+
+
+class DEMetropolisZ(ArrayStepShared):
+    """
+    Adaptive Differential Evolution Metropolis sampling step that uses the past to inform jumps.
+
+    Parameters
+    ----------
+    lamb : float
+        Lambda parameter of the DE proposal mechanism. Defaults to 2.38 / sqrt(2 * ndim)
+    vars : list
+        List of variables for sampler
+    S : standard deviation or covariance matrix
+        Some measure of variance to parameterize proposal distribution
+    proposal_dist : function
+        Function that returns zero-mean deviates when parameterized with
+        S (and n). Defaults to Uniform(-S,+S).
+    scaling : scalar or array
+        Initial scale factor for epsilon. Defaults to 0.001
+    tune : str
+        Which hyperparameter to tune. Defaults to None, but can also be 'scaling' or 'lambda'.
+    tune_interval : int
+        The frequency of tuning. Defaults to 100 iterations.
+    model : PyMC Model
+        Optional model for sampling step. Defaults to None (taken from context).
+    mode :  string or `Mode` instance.
+        compilation mode passed to Theano functions
+
+    References
+    ----------
+    .. [Braak2006] Cajo C.F. ter Braak (2006).
+        Differential Evolution Markov Chain with snooker updater and fewer chains.
+        Statistics and Computing
+        `link <https://doi.org/10.1007/s11222-008-9104-9>`__
+    """
+    name = 'DEMetropolisZ'
+
+    default_blocked = True
+    generates_stats = True
+    stats_dtypes = [{
+        'accept': np.float64,
+        'accepted': np.bool,
+        'tune': np.bool,
+        'scaling': np.float64,
+        'lambda': np.float64,
+    }]
+
+    def __init__(self, vars=None, S=None, proposal_dist=None, lamb=None, scaling=0.001,
+                 tune=None, tune_interval=100, model=None, mode=None, **kwargs):
+
+        model = pm.modelcontext(model)
+
+        if vars is None:
+            vars = model.cont_vars
+        vars = pm.inputvars(vars)
+
+        if S is None:
+            S = np.ones(model.ndim)
+        
+        if proposal_dist is not None:
+            self.proposal_dist = proposal_dist(S)
+        else:
+            self.proposal_dist = UniformProposal(S)
+
+        self.scaling = np.atleast_1d(scaling).astype('d')
+        if lamb is None:
+            lamb = 2.38 / np.sqrt(2 * model.ndim)
+        self.lamb = float(lamb)
+        if not tune in {None, 'scaling', 'lambda'}:
+            raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')
+        self.tune = tune
+        self.tune_interval = tune_interval
+        self.steps_until_tune = tune_interval
+        self.accepted = 0
+
+        # cache local history for the Z-proposals
+        self._history = []
+        self._it = 0
+
+        self.mode = mode
+
+        shared = pm.make_shared_replacements(vars, model)
+        self.delta_logp = delta_logp(model.logpt, vars, shared)
+        super().__init__(vars, shared)
+
+    def astep(self, q0):
+        # same tuning scheme as DEMetropolis
+        if not self.steps_until_tune and self.tune:
+            if self.tune == 'scaling':
+                self.scaling = tune(self.scaling, self.accepted / float(self.tune_interval))
+            elif self.tune == 'lambda':
+                self.lamb = tune(self.lamb, self.accepted / float(self.tune_interval))
+            # Reset counter
+            self.steps_until_tune = self.tune_interval
+            self.accepted = 0
+
+        epsilon = self.proposal_dist() * self.scaling
+
+        it = self._it
+        # use the DE-MCMC-Z proposal scheme as soon as the history has 2 entries
+        if it > 1:
+            # differential evolution proposal
+            # select two other chains
+            iz1 = np.random.randint(it)
+            iz2 = np.random.randint(it)
+            while iz2 == iz1:
+                iz2 = np.random.randint(it)
+            
+            z1 = self._history[iz1]
+            z2 = self._history[iz2]
+            # propose a jump
+            q = floatX(q0 + self.lamb * (z1 - z2) + epsilon)
+        else:
+            # propose just with noise in the first 2 iterations
+            q = floatX(q0 + epsilon)
+
+        accept = self.delta_logp(q, q0)
+        q_new, accepted = metrop_select(accept, q, q0)
+        self.accepted += accepted
+        self._history.append(q_new)
+        self._it += 1
 
         self.steps_until_tune -= 1
 
