@@ -691,7 +691,6 @@ class DEMetropolisZ(ArrayStepShared):
 
         # cache local history for the Z-proposals
         self._history = []
-        self._it = 0
 
         self.mode = mode
 
@@ -712,7 +711,7 @@ class DEMetropolisZ(ArrayStepShared):
 
         epsilon = self.proposal_dist() * self.scaling
 
-        it = self._it
+        it = len(self._history)
         # use the DE-MCMC-Z proposal scheme as soon as the history has 2 entries
         if it > 1:
             # differential evolution proposal
@@ -734,7 +733,6 @@ class DEMetropolisZ(ArrayStepShared):
         q_new, accepted = metrop_select(accept, q, q0)
         self.accepted += accepted
         self._history.append(q_new)
-        self._it += 1
 
         self.steps_until_tune -= 1
 
