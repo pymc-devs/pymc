@@ -502,6 +502,7 @@ def sample(
         "random_seed": random_seed,
         "cores": cores,
         "callback": callback,
+        "discard_tuned_samples": discard_tuned_samples,
     }
 
     sample_args.update(kwargs)
@@ -1347,6 +1348,7 @@ def _mp_sample(
     trace=None,
     model=None,
     callback=None,
+    discard_tuned_samples=True,
     **kwargs
 ):
     """Main iteration for multiprocess sampling.
@@ -1439,7 +1441,10 @@ def _mp_sample(
             raise
         return MultiTrace(traces)
     except KeyboardInterrupt:
-        traces, length = _choose_chains(traces, tune)
+        if discard_tuned_samples:
+            traces, length = _choose_chains(traces, tune)
+        else:
+            traces, length = _choose_chains(traces, 0)
         return MultiTrace(traces)[:length]
     finally:
         for trace in traces:
