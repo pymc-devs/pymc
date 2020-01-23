@@ -165,6 +165,7 @@ def three_var_approx(three_var_model, three_var_groups):
 def three_var_approx_single_group_mf(three_var_model):
     return MeanField(model=three_var_model)
 
+
 @pytest.fixture(
     params = [
         ('ndarray', None),
@@ -580,7 +581,7 @@ def use_minibatch(request):
     return request.param
 
 
-@pytest.fixture('module')
+@pytest.fixture
 def simple_model_data(use_minibatch):
     n = 1000
     sigma0 = 2.
@@ -604,7 +605,7 @@ def simple_model_data(use_minibatch):
     )
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def simple_model(simple_model_data):
     with pm.Model() as model:
         mu_ = pm.Normal(
