@@ -637,6 +637,10 @@ class DEMetropolisZ(ArrayStepShared):
         Which hyperparameter to tune. Defaults to None, but can also be 'scaling' or 'lambda'.
     tune_interval : int
         The frequency of tuning. Defaults to 100 iterations.
+    tune_drop_fraction : float
+        Fraction of tuning steps that will be removed from the samplers history when the tuning ends.
+        Defaults to 0.9 - keeping the last 10% of tuning steps for good mixing while removing 90% of
+        potentially unconverged tuning positions.
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
     mode :  string or `Mode` instance.
@@ -662,7 +666,7 @@ class DEMetropolisZ(ArrayStepShared):
     }]
 
     def __init__(self, vars=None, S=None, proposal_dist=None, lamb=None, scaling=0.001,
-                 tune=None, tune_interval=100, model=None, mode=None, **kwargs):
+                 tune=None, tune_interval=100, tune_drop_fraction:float=0.9, model=None, mode=None, **kwargs):
 
         model = pm.modelcontext(model)
 
@@ -686,6 +690,7 @@ class DEMetropolisZ(ArrayStepShared):
             raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')
         self.tune = tune
         self.tune_interval = tune_interval
+        self.tune_drop_fraction = tune_drop_fraction
         self.steps_until_tune = tune_interval
         self.accepted = 0
 
@@ -745,6 +750,14 @@ class DEMetropolisZ(ArrayStepShared):
         }
 
         return q_new, [stats]
+
+    def stop_tuning(self):
+        # remove the first x% of the tuning phase so future steps are not
+        # informed by bad unconverged tuning iterations
+        it = len(self._history)
+        n_drop = int(self.tune_drop_fraction * it)
+        self._history = self._history[n_drop:]
+        return super().stop_tuning()
 
     @staticmethod
     def competence(var, has_grad):
