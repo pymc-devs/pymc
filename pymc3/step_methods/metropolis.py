@@ -634,7 +634,7 @@ class DEMetropolisZ(ArrayStepShared):
     scaling : scalar or array
         Initial scale factor for epsilon. Defaults to 0.001
     tune : str
-        Which hyperparameter to tune. Defaults to None, but can also be 'scaling' or 'lambda'.
+        Which hyperparameter to tune. Defaults to 'lambda', but can also be 'scaling' or None.
     tune_interval : int
         The frequency of tuning. Defaults to 100 iterations.
     tune_drop_fraction : float
@@ -666,7 +666,7 @@ class DEMetropolisZ(ArrayStepShared):
     }]
 
     def __init__(self, vars=None, S=None, proposal_dist=None, lamb=None, scaling=0.001,
-                 tune=None, tune_interval=100, tune_drop_fraction:float=0.9, model=None, mode=None, **kwargs):
+                 tune='lambda', tune_interval=100, tune_drop_fraction:float=0.9, model=None, mode=None, **kwargs):
 
         model = pm.modelcontext(model)
 
