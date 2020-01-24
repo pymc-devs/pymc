@@ -846,6 +846,8 @@ def _iter_sample(
 
     try:
         step.tune = bool(tune)
+        if hasattr(step, 'reset_tuning'):
+            step.reset_tuning()
         for i in range(draws):
             if i == 0 and hasattr(step, "iter_count"):
                 step.iter_count = 0

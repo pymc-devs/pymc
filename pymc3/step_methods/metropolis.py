@@ -696,12 +696,25 @@ class DEMetropolisZ(ArrayStepShared):
 
         # cache local history for the Z-proposals
         self._history = []
+        # remember initial settings before tuning so they can be reset
+        self._untuned_settings = dict(
+            scaling=self.scaling,
+            lamb=self.lamb,
+            _history=self._history,
+            steps_until_tune=self.steps_until_tune,
+            accepted=self.accepted
+        )
 
         self.mode = mode
 
         shared = pm.make_shared_replacements(vars, model)
         self.delta_logp = delta_logp(model.logpt, vars, shared)
         super().__init__(vars, shared)
+
+    def reset_tuning(self):
+        for attr, initial_value in self._untuned_settings.items():
+            setattr(self, attr, initial_value)
+        return
 
     def astep(self, q0):
         # same tuning scheme as DEMetropolis
