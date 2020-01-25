@@ -700,7 +700,6 @@ class DEMetropolisZ(ArrayStepShared):
         self._untuned_settings = dict(
             scaling=self.scaling,
             lamb=self.lamb,
-            _history=self._history,
             steps_until_tune=self.steps_until_tune,
             accepted=self.accepted
         )
@@ -712,6 +711,8 @@ class DEMetropolisZ(ArrayStepShared):
         super().__init__(vars, shared)
 
     def reset_tuning(self):
+        # history can't be reset via the _untuned_settings dict because it's a list
+        self._history = []
         for attr, initial_value in self._untuned_settings.items():
             setattr(self, attr, initial_value)
         return
