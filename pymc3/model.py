@@ -1144,11 +1144,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         elif isinstance(data, dict):
             with self:
                 var = MultiObservedRV(
-                    name=name,
-                    data=data,
-                    distribution=dist,
-                    total_size=total_size,
-                    model=self,
+                    name=name, data=data, distribution=dist, total_size=total_size, model=self,
                 )
             self.observed_RVs.append(var)
             if var.missing_values:
@@ -1159,11 +1155,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         else:
             with self:
                 var = ObservedRV(
-                    name=name,
-                    data=data,
-                    distribution=dist,
-                    total_size=total_size,
-                    model=self,
+                    name=name, data=data, distribution=dist, total_size=total_size, model=self,
                 )
             self.observed_RVs.append(var)
             if var.missing_values:
@@ -1662,10 +1654,7 @@ class FreeRV(Factor, PyMC3Variable):
             self.scaling = _get_scaling(total_size, self.shape, self.ndim)
 
             incorporate_methods(
-                source=distribution,
-                destination=self,
-                methods=["random"],
-                wrapper=InstanceMethod,
+                source=distribution, destination=self, methods=["random"], wrapper=InstanceMethod,
             )
 
     @property
@@ -1721,10 +1710,7 @@ def as_tensor(data, name, model, distribution):
 
         testval = np.broadcast_to(distribution.default(), data.shape)[data.mask]
         fakedist = NoDistribution.dist(
-            shape=data.mask.sum(),
-            dtype=dtype,
-            testval=testval,
-            parent_dist=distribution,
+            shape=data.mask.sum(), dtype=dtype, testval=testval, parent_dist=distribution,
         )
         missing_values = FreeRV(name=name + "_missing", distribution=fakedist, model=model)
         constant = tt.as_tensor_variable(data.filled())
@@ -1977,10 +1963,7 @@ class TransformedRV(PyMC3Variable):
             self.tag.test_value = normalRV.tag.test_value
             self.scaling = _get_scaling(total_size, self.shape, self.ndim)
             incorporate_methods(
-                source=distribution,
-                destination=self,
-                methods=["random"],
-                wrapper=InstanceMethod,
+                source=distribution, destination=self, methods=["random"], wrapper=InstanceMethod,
             )
 
     @property
@@ -1997,10 +1980,12 @@ def as_iterargs(data):
 
 
 def all_continuous(vars):
-    """Check that vars not include discrete variables, excepting
-    ObservedRVs."""
+    """Check that vars not include discrete variables or BART variables, excepting ObservedRVs."""
+
     vars_ = [var for var in vars if not isinstance(var, pm.model.ObservedRV)]
-    if any([var.dtype in pm.discrete_types for var in vars_]):
+    if any(
+        [(var.dtype in pm.discrete_types or isinstance(var.distribution, pm.BART)) for var in vars_]
+    ):
         return False
     else:
         return True
