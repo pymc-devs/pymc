@@ -160,8 +160,8 @@ class TestSample(SeededTest):
     def test_callback_can_cancel(self):
         trace_cancel_length = 5
 
-        def callback(strace, draw):
-            if len(strace) >= trace_cancel_length:
+        def callback(trace, draw):
+            if len(trace) >= trace_cancel_length:
                 raise KeyboardInterrupt()
 
         with self.model:

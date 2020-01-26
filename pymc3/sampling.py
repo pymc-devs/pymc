@@ -631,7 +631,6 @@ def _sample_population(
     model,
     progressbar: bool = True,
     parallelize=False,
-    callback=None,
     **kwargs
 ):
     """Performs sampling of a population of chains using the ``PopulationStepper``.
@@ -674,7 +673,6 @@ def _sample_population(
         tune=tune,
         model=model,
         random_seed=random_seed,
-        callback=callback,
         progressbar=progressbar,
     )
 
