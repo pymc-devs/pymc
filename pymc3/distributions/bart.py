@@ -253,11 +253,9 @@ class BART(BaseBART):
         R_j = self.get_residuals(tree)
         node_responses = R_j[idx_data_points]
 
-        data_mean = (
-            node_responses.mean() / self.m
-        )  # for skewed distribution use median or sample from data-points?
+        data_mean = node_responses.mean() # for skewed distribution use median or sample from data-points?
         data_std_scaled = node_responses.std() / self.m
 
-        draw = data_mean  # (data_mean + self._normal_dist_sampler.sample()) * data_std_scaled
+        draw = (data_mean + self._normal_dist_sampler.sample() * data_std_scaled)
 
         return draw

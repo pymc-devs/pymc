@@ -5,7 +5,7 @@ from ..distributions import BART
 from ..distributions.tree import Tree
 from ..model import modelcontext
 from ..theanof import inputvars, make_shared_replacements, floatX
-from ..smc.smc_utils import logp_forw
+from ..smc.smc import logp_forw
 
 
 class PGBART(ArrayStepShared):

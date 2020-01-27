@@ -392,3 +392,4 @@ class PseudoLikelihood:
         if self.save_log_pseudolikelihood:
             self.save_lpl(elemwise)
         return elemwise.sum()
+
