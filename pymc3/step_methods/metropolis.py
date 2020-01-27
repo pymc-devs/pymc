@@ -688,7 +688,7 @@ class DEMetropolisZ(ArrayStepShared):
         self.lamb = float(lamb)
         if not tune in {None, 'scaling', 'lambda'}:
             raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')
-        self.tune = tune
+        self.tune_target = tune
         self.tune_interval = tune_interval
         self.tune_drop_fraction = tune_drop_fraction
         self.steps_until_tune = tune_interval
@@ -700,7 +700,7 @@ class DEMetropolisZ(ArrayStepShared):
         self._untuned_settings = dict(
             scaling=self.scaling,
             lamb=self.lamb,
-            steps_until_tune=self.steps_until_tune,
+            steps_until_tune=tune_interval,
             accepted=self.accepted
         )
 
@@ -720,9 +720,9 @@ class DEMetropolisZ(ArrayStepShared):
     def astep(self, q0):
         # same tuning scheme as DEMetropolis
         if not self.steps_until_tune and self.tune:
-            if self.tune == 'scaling':
+            if self.tune_target == 'scaling':
                 self.scaling = tune(self.scaling, self.accepted / float(self.tune_interval))
-            elif self.tune == 'lambda':
+            elif self.tune_target == 'lambda':
                 self.lamb = tune(self.lamb, self.accepted / float(self.tune_interval))
             # Reset counter
             self.steps_until_tune = self.tune_interval
