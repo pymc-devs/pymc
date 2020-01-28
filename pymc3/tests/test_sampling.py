@@ -21,6 +21,7 @@ from typing import Tuple
 import arviz as az
 import numpy as np
 import numpy.testing as npt
+import pandas as pd
 import pytest
 import theano
 import theano.tensor as tt
@@ -56,7 +57,7 @@ class TestSample(SeededTest):
         random_numbers = []
         draws = []
         for _ in range(2):
-            np.random.seed(1)  # seeds in other processes don't effect main process
+            np.random.seed(1)  # seeds in other processes don't affect main process
             with self.model:
                 trace = pm.sample(100, tune=0, cores=cores, return_inferencedata=False)
             # numpy thread mentioned race condition.  might as well check none are equal
@@ -1106,6 +1107,38 @@ class TestSamplePriorPredictive(SeededTest):
         with m:
             with pytest.warns(UserWarning, match=warning_msg):
                 pm.sample_prior_predictive(samples=5)
+
+
+def test_prior_sampling_mixture():
+    """
+    Added this test because the NormalMixture distribution did not support
+    component shape identification, causing prior predictive sampling to error out.
+    """
+    old_faithful_df = pd.read_csv(pm.get_data("old_faithful.csv"))
+    old_faithful_df["std_waiting"] = (
+        old_faithful_df.waiting - old_faithful_df.waiting.mean()
+    ) / old_faithful_df.waiting.std()
+    N = old_faithful_df.shape[0]
+    K = 30
+
+    def stick_breaking(beta):
+        portion_remaining = tt.concatenate([[1], tt.extra_ops.cumprod(1 - beta)[:-1]])
+        result = beta * portion_remaining
+        return result / tt.sum(result, axis=-1, keepdims=True)
+
+    with pm.Model() as model:
+        alpha = pm.Gamma("alpha", 1.0, 1.0)
+        beta = pm.Beta("beta", 1.0, alpha, shape=K)
+        w = pm.Deterministic("w", stick_breaking(beta))
+
+        tau = pm.Gamma("tau", 1.0, 1.0, shape=K)
+        lambda_ = pm.Gamma("lambda_", 10.0, 1.0, shape=K)
+        mu = pm.Normal("mu", 0, tau=lambda_ * tau, shape=K)
+        obs = pm.NormalMixture(
+            "obs", w, mu, tau=lambda_ * tau, observed=old_faithful_df.std_waiting.values
+        )
+
+        pm.sample_prior_predictive()
 
 
 class TestSamplePosteriorPredictive:

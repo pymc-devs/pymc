@@ -754,8 +754,8 @@ def draw_values(params, point=None, size=None):
         while stack:
             next_ = stack.pop(0)
             if (next_, size) in drawn:
-                # If the node already has a givens value, skip it
-                continue
+                # If the node already has a givens value, add it to givens
+                givens[next_.name] = (next_, drawn[(next_, size)])
             elif isinstance(next_, (theano_constant, tt.sharedvar.SharedVariable)):
                 # If the node is a theano.tensor.TensorConstant or a
                 # theano.tensor.sharedvar.SharedVariable, its value will be
@@ -798,8 +798,8 @@ def draw_values(params, point=None, size=None):
                     stack.extend(
                         [
                             node
-                            for node in named_nodes_descendents[next_]
-                            if node is not None and (node, size) not in drawn
+                            for node in named_nodes_parents[next_]
+                            if node is not None and getattr(node, "name", None) not in givens
                         ]
                     )
 
@@ -823,14 +823,6 @@ def draw_values(params, point=None, size=None):
                     evaluated[param_idx] = drawn[(param, size)]
                 else:
                     try:  # might evaluate in a bad order,
-                        # Sometimes _draw_value recurrently calls draw_values.
-                        # This may set values for certain nodes in the drawn
-                        # dictionary, but they don't get added to the givens
-                        # dictionary. Here, we try to fix that.
-                        if param in named_nodes_ancestors:
-                            for node in named_nodes_ancestors[param]:
-                                if node.name not in givens and (node, size) in drawn:
-                                    givens[node.name] = (node, drawn[(node, size)])
                         value = _draw_value(param, point=point, givens=givens.values(), size=size)
                         evaluated[param_idx] = drawn[(param, size)] = value
                         givens[param.name] = (param, value)
