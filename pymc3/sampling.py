@@ -71,8 +71,6 @@ __all__ = [
     "sample_posterior_predictive_w",
     "init_nuts",
     "sample_prior_predictive",
-    "sample_ppc",
-    "sample_ppc_w",
 ]
 
 STEP_METHODS = (
@@ -1555,13 +1553,6 @@ def sample_posterior_predictive(
     return ppc_trace
 
 
-def sample_ppc(*args, **kwargs):
-    """Deprecated: use :func:`~sampling.sample_posterior_predictive`."""
-    message = "sample_ppc() is deprecated.  Please use sample_posterior_predictive()"
-    warnings.warn(message, DeprecationWarning, stacklevel=2)
-    return sample_posterior_predictive(*args, **kwargs)
-
-
 def sample_posterior_predictive_w(
     traces,
     samples: Optional[int] = None,
@@ -1690,13 +1681,6 @@ def sample_posterior_predictive_w(
         pass
 
     return {k: np.asarray(v) for k, v in ppc.items()}
-
-
-def sample_ppc_w(*args, **kwargs):
-    """Deprecated: use :func:`~sampling.sample_posterior_predictive_w`."""
-    message = "sample_ppc() is deprecated.  Please use sample_posterior_predictive_w()"
-    warnings.warn(message, DeprecationWarning, stacklevel=2)
-    return sample_posterior_predictive_w(*args, **kwargs)
 
 
 def sample_prior_predictive(
