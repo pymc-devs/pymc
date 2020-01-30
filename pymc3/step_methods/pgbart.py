@@ -10,12 +10,26 @@ from ..smc.smc import logp_forw
 
 class PGBART(ArrayStepShared):
     """
-    """
+    Write me!!!
 
+    References
+    ----------
+    .. [Lakshminarayanan2015] Lakshminarayanan, B. and Roy, D.M. and Teh, Y. W., (2015),
+        Particle Gibbs for Bayesian Additive Regression Trees.
+        ArviX,
+        `link <https://arxiv.org/abs/1502.04622>`__
+
+    Parameters
+    ----------
+    lower: float
+        Lower limit.
+    upper: float
+        Upper limit.
+    """
     name = "bartsampler"
     default_blocked = False
 
-    def __init__(self, vars=None, m=2, num_particles=10, max_stages=5000, model=None):
+    def __init__(self, vars=None, num_particles=10, max_stages=5000, model=None):
         model = modelcontext(model)
         vars = inputvars(vars)
         self.bart = vars[0].distribution
@@ -59,32 +73,26 @@ class PGBART(ArrayStepShared):
             log_weights -= log_num_particles
 
             for p_idx, p in enumerate(list_of_particles):
-                p.weight = log_weights[p_idx]
+                p.log_weight = log_weights[p_idx]
 
             for t in range(1, self.max_stages + 2):
                 # Step 7 of algorithm
                 list_of_particles[0] = self.get_previous_tree_particle(tree.tree_id, t)
-                for c in range(
-                    1, self.num_particles
-                ):  # This should be embarrassingly parallelizable
+                # This should be embarrassingly parallelizable
+                for c in range(1, self.num_particles):
                     # Step 9 of algorithm
                     list_of_particles[c].sample_tree_sequential(bart)
-                # for c in range(self.num_particles):
-                # list_of_particles[c].update_weight()
 
                 # Step 12 of algorithm
                 for p_idx, p in enumerate(list_of_particles):
                     new_likelihood = likelihood_logp(p.tree.predict_output(num_observations))
-                    # p.weight is actually log_weight
-                    # print(new_likelihood - old_likelihoods[p_idx])
-                    p.weight += new_likelihood - old_likelihoods[p_idx]
+                    p.log_weight += new_likelihood - old_likelihoods[p_idx]
                     old_likelihoods[p_idx] = new_likelihood
-                    log_weights[p_idx] = p.weight
+                    log_weights[p_idx] = p.log_weight
 
                 W, normalized_weights = self._normalize(log_weights)
 
                 # Step 15 of algorithm
-                # list_of_particles = self.resample(list_of_particles, normalized_weights)
                 # resample all but first particle
                 re_n_w = normalized_weights[1:] / normalized_weights[1:].sum()
                 indices = range(1, len(list_of_particles))
@@ -95,16 +103,17 @@ class PGBART(ArrayStepShared):
                 # Step 16 of algorithm
                 w_t = W - log_num_particles
                 for c in range(self.num_particles):
-                    list_of_particles[c].weight = w_t
+                    list_of_particles[c].log_weight = w_t
 
-                #                ### XXX Revisar esto!!!!
-                #                # Step 17 of algorithm
-                #                non_available_nodes_for_expansion  = np.ones(self.num_particles)
-                #                for c in range(self.num_particles):
-                #                    if len(list_of_particles[c].expansion_nodes) != 0:
-                #                        non_available_nodes_for_expansion[c] = 0
-                #                if np.all(non_available_nodes_for_expansion):
-                #                    break
+                ### Should we used this one!!!
+                # Step 17 of algorithm
+                # non_available_nodes_for_expansion = np.ones(self.num_particles)
+                # for c in range(self.num_particles):
+                #     if len(list_of_particles[c].expansion_nodes) != 0:
+                #         non_available_nodes_for_expansion[c] = 0
+                # if np.all(non_available_nodes_for_expansion):
+                #     break
+                ### Or this one !!!
                 non_available_nodes_for_expansion = True
                 for c in range(self.num_particles):
                     if len(list_of_particles[c].expansion_nodes) != 0:
@@ -113,7 +122,6 @@ class PGBART(ArrayStepShared):
                 if non_available_nodes_for_expansion:
                     break
 
-            # print(idx, t, normalized_weights)
             new_tree = np.random.choice(list_of_particles, p=normalized_weights)
             self.previous_trees_particles_list[tree.tree_id] = new_tree
             bart.trees[idx] = new_tree.tree
@@ -134,7 +142,7 @@ class PGBART(ArrayStepShared):
 
     def _normalize(self, log_w):  # this function needs a home sweet home
         """
-        use logsumexp trick to get W and softmax to get normalized_weights
+        Use logsumexp trick to get W and softmax to get normalized_weights
         """
         log_w_max = log_w.max()
         log_w_ = log_w - log_w_max
@@ -155,7 +163,7 @@ class PGBART(ArrayStepShared):
     def init_particles(self, tree_id, R_j, num_observations):
         list_of_particles = []
         initial_value_leaf_nodes = R_j.mean()
-        initial_idx_data_points_leaf_nodes = np.array(range(num_observations), dtype="int32")
+        initial_idx_data_points_leaf_nodes = np.arange(num_observations, dtype="int32")
         new_tree = Tree.init_tree(
             tree_id=tree_id,
             leaf_node_value=initial_value_leaf_nodes,
@@ -179,7 +187,7 @@ class Particle:
         self.expansion_nodes = self.tree.idx_leaf_nodes.copy()  # This should be the array [0]
         self.tree_history = [self.tree.copy()]
         self.expansion_nodes_history = [self.expansion_nodes.copy()]
-        self.weight = 0.0
+        self.log_weight = 0.0
 
     def sample_tree_sequential(self, bart):
         if self.expansion_nodes:
