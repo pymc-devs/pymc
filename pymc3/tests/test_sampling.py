@@ -144,6 +144,33 @@ class TestSample(SeededTest):
     def test_sample_start_good_shape(self, start):
         pm.sampling._check_start_shape(self.model, start)
 
+    def test_sample_callback(self):
+        callback = mock.Mock()
+        test_cores = [1, 2]
+        test_chains = [1, 2]
+        with self.model:
+            for cores in test_cores:
+                for chain in test_chains:
+                    pm.sample(
+                        10, tune=0, chains=chain, step=self.step, cores=cores, random_seed=self.random_seed,
+                        callback=callback
+                    )
+                    assert callback.called
+
+    def test_callback_can_cancel(self):
+        trace_cancel_length = 5
+
+        def callback(trace, draw):
+            if len(trace) >= trace_cancel_length:
+                raise KeyboardInterrupt()
+
+        with self.model:
+            trace = pm.sample(
+                        10, tune=0, chains=1, step=self.step, cores=1, random_seed=self.random_seed,
+                        callback=callback
+                    )
+            assert len(trace) == trace_cancel_length
+
 
 def test_empty_model():
     with pm.Model():
