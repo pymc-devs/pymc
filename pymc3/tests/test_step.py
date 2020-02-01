@@ -26,6 +26,7 @@ from pymc3.step_methods import (
     HamiltonianMC,
     EllipticalSlice,
     DEMetropolis,
+    DEMetropolisZ,
 )
 from pymc3.theanof import floatX
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal
@@ -761,6 +762,112 @@ class TestPopulationSamplers:
                 assert len(set(samples)) == 4, "Parallelized {} " "chains are identical.".format(
                     stepper
                 )
+        pass
+
+
+class TestDEMetropolisZ:
+    def test_tuning_lambda_sequential(self):
+        with Model() as pmodel:
+            Normal('n', 0, 2, shape=(3,))
+            trace = sample(
+                tune=1000,
+                draws=500,
+                step=DEMetropolisZ(tune='lambda', lamb=0.92),
+                cores=1,
+                chains=3,
+                discard_tuned_samples=False
+            )
+        for c in range(trace.nchains):
+            # check that the tuned settings changed and were reset
+            assert trace.get_sampler_stats('lambda', chains=c)[0] == 0.92
+            assert trace.get_sampler_stats('lambda', chains=c)[-1] != 0.92
+            assert set(trace.get_sampler_stats('tune', chains=c)) == {True, False}
+        pass
+
+    def test_tuning_epsilon_parallel(self):
+        with Model() as pmodel:
+            Normal('n', 0, 2, shape=(3,))
+            trace = sample(
+                tune=1000,
+                draws=500,
+                step=DEMetropolisZ(tune='scaling', scaling=0.002),
+                cores=2,
+                chains=2,
+                discard_tuned_samples=False
+            )
+        for c in range(trace.nchains):
+            # check that the tuned settings changed and were reset
+            assert trace.get_sampler_stats('scaling', chains=c)[0] == 0.002
+            assert trace.get_sampler_stats('scaling', chains=c)[-1] != 0.002
+            assert set(trace.get_sampler_stats('tune', chains=c)) == {True, False}
+        pass
+
+    def test_tuning_none(self):
+        with Model() as pmodel:
+            Normal('n', 0, 2, shape=(3,))
+            trace = sample(
+                tune=1000,
+                draws=500,
+                step=DEMetropolisZ(tune=None),
+                cores=1,
+                chains=2,
+                discard_tuned_samples=False
+            )
+        for c in range(trace.nchains):
+            # check that all tunable parameters remained constant
+            assert len(set(trace.get_sampler_stats('lambda', chains=c))) == 1
+            assert len(set(trace.get_sampler_stats('scaling', chains=c))) == 1
+            assert set(trace.get_sampler_stats('tune', chains=c)) == {True, False}
+        pass
+
+    def test_tuning_reset(self):
+        """Re-use of the step method instance with cores=1 must not leak tuning information between chains."""
+        with Model() as pmodel:
+            D = 3
+            Normal('n', 0, 2, shape=(D,))
+            trace = sample(
+                tune=1000,
+                draws=500,
+                step=DEMetropolisZ(tune='scaling', scaling=0.002),
+                cores=1,
+                chains=3,
+                discard_tuned_samples=False
+            )
+        for c in range(trace.nchains):
+            # check that the tuned settings changed and were reset
+            assert trace.get_sampler_stats('scaling', chains=c)[0] == 0.002
+            assert trace.get_sampler_stats('scaling', chains=c)[-1] != 0.002
+            # check that the variance of the first 50 iterations is much lower than the last 100
+            for d in range(D):
+                var_start = np.var(trace.get_values('n', chains=c)[:50,d])
+                var_end = np.var(trace.get_values('n', chains=c)[-100:,d])
+                assert var_start < 0.1 * var_end
+        pass
+
+    def test_tune_drop_fraction(self):
+        with Model() as pmodel:
+            Normal('n', 0, 2, shape=(3,))
+            step = DEMetropolisZ(tune_drop_fraction=0.85)
+            trace = sample(
+                tune=300,
+                draws=200,
+                step=step,
+                cores=1,
+                chains=1,
+                discard_tuned_samples=False
+            )
+            assert len(trace) == 500
+            assert len(step._history) == (300 - 300 * 0.85) + 200
+        pass
+
+    def test_competence(self):
+        with Model() as pmodel:
+            n = Normal('n', 0, 2, shape=(3,))
+            b = Binomial('b', n=2, p=0.3)
+        assert DEMetropolisZ.competence(n, has_grad=True) == 1
+        assert DEMetropolisZ.competence(n, has_grad=False) == 1
+        assert DEMetropolisZ.competence(b, has_grad=True) == 0
+        assert DEMetropolisZ.competence(b, has_grad=False) == 0
         pass
 
 
