@@ -48,7 +48,7 @@ def any_to_tensor_and_labels(x, labels=None):
     if isinstance(x, pd.DataFrame):
         if not labels:
             labels = x.columns
-        x = x.as_matrix()
+        x = x.to_numpy()
 
     # pandas.Series
     # there can still be a label
@@ -56,7 +56,7 @@ def any_to_tensor_and_labels(x, labels=None):
     elif isinstance(x, pd.Series):
         if not labels:
             labels = [x.name]
-        x = x.as_matrix()[:, None]
+        x = x.to_numpy()[:, None]
 
     # dict
     # labels are keys,
@@ -66,7 +66,7 @@ def any_to_tensor_and_labels(x, labels=None):
         try:
             x = pd.DataFrame.from_dict(x)
             labels = x.columns
-            x = x.as_matrix()
+            x = x.to_numpy()
         # some types fail there
         # another approach is to construct
         # variable by hand

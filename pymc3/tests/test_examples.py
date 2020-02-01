@@ -72,11 +72,11 @@ class TestARM12_6(SeededTest):
     def build_model(self):
         data = get_city_data()
 
-        self.obs_means = data.groupby('fips').lradon.mean().as_matrix()
+        self.obs_means = data.groupby('fips').lradon.mean().to_numpy()
 
-        lradon = data.lradon.as_matrix()
-        floor = data.floor.as_matrix()
-        group = data.group.as_matrix()
+        lradon = data.lradon.to_numpy()
+        floor = data.floor.to_numpy()
+        group = data.group.to_numpy()
 
         with pm.Model() as model:
             groupmean = pm.Normal('groupmean', 0, 10. ** -2.)
@@ -107,10 +107,10 @@ class TestARM12_6Uranium(SeededTest):
         data = get_city_data()
         self.obs_means = data.groupby('fips').lradon.mean()
 
-        lradon = data.lradon.as_matrix()
-        floor = data.floor.as_matrix()
-        group = data.group.as_matrix()
-        ufull = data.Uppm.as_matrix()
+        lradon = data.lradon.to_numpy()
+        floor = data.floor.to_numpy()
+        group = data.group.to_numpy()
+        ufull = data.Uppm.to_numpy()
 
         with pm.Model() as model:
             groupmean = pm.Normal('groupmean', 0, 10. ** -2.)
