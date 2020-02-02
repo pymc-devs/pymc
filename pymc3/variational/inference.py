@@ -281,7 +281,7 @@ class Inference:
             raise TypeError("Need to call `.fit` first")
         i, step, callbacks, score = self.state
         if progressbar:
-            progress = progress_bar(n, display=progressbar)
+            progress = progress_bar(range(n), display=progressbar)
         else:
             progress = range(n)  # This is a guess at what progress_bar(n) does.
         if score:
