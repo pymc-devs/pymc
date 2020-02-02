@@ -100,16 +100,19 @@ def get_named_nodes_and_relations(graph):
 
     Parameters
     ----------
-    graph - a theano node
+    graph: a theano node
 
     Returns:
-    leaves: A dictionary of name:node pairs, of the named nodes that
+    --------
+    leaves: Dict[str, node]
+        A dictionary of name:node pairs, of the named nodes that
         have no named ancestors in the provided theano graph.
-    descendents: A dictionary of node:set([parents]) pairs. Each key is
-        a theano named node, and the corresponding value is the set of
-        theano named nodes that are descendents with no intervening named
-        nodes in the supplied ``graph``.
-    ancestors: A dictionary of node:set([ancestors]) pairs. Each key
+    descendents: Dict[node, Set[node]]
+        Each key is a theano named node, and the corresponding value
+        is the set of theano named nodes that are descendents with no
+        intervening named nodes in the supplied ``graph``.
+    ancestors: Dict[node, Set[node]]
+        A dictionary of node:set([ancestors]) pairs. Each key
         is a theano named node, and the corresponding value is the set
         of theano named nodes that are ancestors with no intervening named
         nodes in the supplied ``graph``.
@@ -183,13 +186,17 @@ def build_named_node_tree(graphs):
     graphs - iterable of theano graphs
 
     Returns:
-    leaves: A dictionary of name:node pairs, of the named nodes that
+    --------
+    leaves: Dict[str, node]
+        A dictionary of name:node pairs, of the named nodes that
         have no named ancestors in the provided theano graphs.
-    descendents: A dictionary of node:set([parents]) pairs. Each key is
+    descendents: Dict[node, Set[node]]
+        A dictionary of node:set([parents]) pairs. Each key is
         a theano named node, and the corresponding value is the set of
         theano named nodes that are descendents with no intervening named
         nodes in the supplied ``graphs``.
-    ancestors: A dictionary of node:set([ancestors]) pairs. Each key
+    ancestors: Dict[node, Set[node]]
+        A dictionary of node:set([ancestors]) pairs. Each key
         is a theano named node, and the corresponding value is the set
         of theano named nodes that are ancestors with no intervening named
         nodes in the supplied ``graphs``.
