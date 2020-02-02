@@ -870,6 +870,31 @@ class TestDEMetropolisZ:
         assert DEMetropolisZ.competence(b, has_grad=False) == 0
         pass
 
+    def test_invalid_tune(self):
+        with Model() as pmodel:
+            Normal('n', 0, 2, shape=(3,))
+            with pytest.raises(ValueError):
+                DEMetropolisZ(tune='foo')
+            with pytest.raises(ValueError):
+                DEMetropolisZ(tune=True)
+            with pytest.raises(ValueError):
+                DEMetropolisZ(tune=False)
+        pass
+
+    def test_custom_proposal_dist(self):
+        with Model() as pmodel:
+            D = 3
+            Normal('n', 0, 2, shape=(D,))
+            trace = sample(
+                tune=100,
+                draws=50,
+                step=DEMetropolisZ(proposal_dist=NormalProposal),
+                cores=1,
+                chains=3,
+                discard_tuned_samples=False
+            )
+        pass
+
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNutsCheckTrace:
