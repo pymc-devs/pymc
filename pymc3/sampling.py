@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 """Functions for MCMC sampling."""
 
 from typing import Dict, List, Optional, TYPE_CHECKING, cast, Union, Any
@@ -40,7 +54,7 @@ from .util import (
 )
 from .vartypes import discrete_types
 from .exceptions import IncorrectArgumentsError
-from .parallel_sampling import _cpu_count
+from .parallel_sampling import _cpu_count, Draw
 from pymc3.step_methods.hmc import quadpotential
 import pymc3 as pm
 from fastprogress.fastprogress import progress_bar
@@ -57,8 +71,6 @@ __all__ = [
     "sample_posterior_predictive_w",
     "init_nuts",
     "sample_prior_predictive",
-    "sample_ppc",
-    "sample_ppc_w",
 ]
 
 STEP_METHODS = (
@@ -226,6 +238,7 @@ def sample(
     random_seed=None,
     discard_tuned_samples=True,
     compute_convergence_checks=True,
+    callback=None,
     **kwargs
 ):
     """Draw samples from the posterior using the given step methods.
@@ -302,7 +315,13 @@ def sample(
         Whether to discard posterior samples of the tune interval.
     compute_convergence_checks: bool, default=True
         Whether to compute sampler statistics like Gelman-Rubin and ``effective_n``.
+    callback : function, default=None
+        A function which gets called for every sample from the trace of a chain. The function is
+        called with the trace and the current draw and will contain all samples for a single trace.
+        the ``draw.chain`` argument can be used to determine which of the active chains the sample
+        is drawn from.
 
+        Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
     Returns
     -------
     trace: pymc3.backends.base.MultiTrace
@@ -454,6 +473,7 @@ def sample(
         "model": model,
         "random_seed": random_seed,
         "cores": cores,
+        "callback": callback,
     }
 
     sample_args.update(kwargs)
@@ -550,7 +570,7 @@ def _check_start_shape(model, start):
         raise ValueError("Bad shape for start argument:{}".format(e))
 
 
-def _sample_many(draws, chain:int, chains:int, start:list, random_seed:list, step, **kwargs):
+def _sample_many(draws, chain:int, chains:int, start:list, random_seed:list, step, callback=None, **kwargs):
     """Samples all chains sequentially.
 
     Parameters
@@ -581,6 +601,7 @@ def _sample_many(draws, chain:int, chains:int, start:list, random_seed:list, ste
             start=start[i],
             step=step,
             random_seed=random_seed[i],
+            callback=callback,
             **kwargs
         )
         if trace is None:
@@ -633,7 +654,7 @@ def _sample_population(
         Show progress bars? (defaults to True)
     parallelize: bool
         Setting for multiprocess parallelization
-    
+
     Returns
     -------
     trace: MultiTrace
@@ -672,6 +693,7 @@ def _sample(
     trace=None,
     tune=None,
     model: Optional[Model] = None,
+    callback=None,
     **kwargs
 ):
     """Main iteration for singleprocess sampling.
@@ -709,7 +731,7 @@ def _sample(
     """
     skip_first = kwargs.get("skip_first", 0)
 
-    sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed)
+    sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed, callback)
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
     if progressbar:
@@ -736,6 +758,7 @@ def iter_sample(
     tune: Optional[int] = None,
     model: Optional[Model] = None,
     random_seed: Optional[Union[int, List[int]]] = None,
+    callback=None,
 ):
     """Generate a trace on each iteration using the given step method.
 
@@ -763,6 +786,12 @@ def iter_sample(
     model: Model (optional if in ``with`` context)
     random_seed: int or list of ints, optional
         A list is accepted if more if ``cores`` is greater than one.
+    callback:
+        A function which gets called for every sample from the trace of a chain. The function is
+        called with the trace and the current draw and will contain all samples for a single trace.
+        the ``draw.chain`` argument can be used to determine which of the active chains the sample
+        is drawn from.
+        Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
 
     Yields
     ------
@@ -776,13 +805,13 @@ def iter_sample(
         for trace in iter_sample(500, step):
             ...
     """
-    sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed)
+    sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed, callback)
     for i, (strace, _) in enumerate(sampling):
         yield MultiTrace([strace[: i + 1]])
 
 
 def _iter_sample(
-    draws, step, start=None, trace=None, chain=0, tune=None, model=None, random_seed=None
+    draws, step, start=None, trace=None, chain=0, tune=None, model=None, random_seed=None, callback=None
 ):
     """Generator for sampling one chain. (Used in singleprocess sampling.)
 
@@ -849,6 +878,8 @@ def _iter_sample(
         if hasattr(step, 'reset_tuning'):
             step.reset_tuning()
         for i in range(draws):
+            stats = None
+
             if i == 0 and hasattr(step, "iter_count"):
                 step.iter_count = 0
             if i == tune:
@@ -864,6 +895,10 @@ def _iter_sample(
                 point = step.step(point)
                 strace.record(point)
                 diverging = False
+            if callback is not None:
+                warns = getattr(step, "warnings", None)
+                callback(trace=strace, draw=Draw(chain, i == draws, i, i < tune, stats, point, warns))
+
             yield strace, diverging
     except KeyboardInterrupt:
         strace.close()
@@ -1065,7 +1100,7 @@ def _prepare_iter_population(
         A list is accepted if more if ``cores`` is greater than one.
     progressbar: bool
         ``progressbar`` argument for the ``PopulationStepper``, (defaults to True)
-    
+
     Returns
     -------
     _iter_population: generator
@@ -1208,7 +1243,7 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
     **kwds
         keyword arguments to forward to the backend creation
 
-    Returns 
+    Returns
     -------
     trace: BaseTrace
         A trace object for the selected chain
@@ -1245,6 +1280,7 @@ def _mp_sample(
     progressbar=True,
     trace=None,
     model=None,
+    callback=None,
     **kwargs
 ):
     """Main iteration for multiprocess sampling.
@@ -1274,6 +1310,12 @@ def _mp_sample(
         with past values. If a MultiTrace object is given, it must contain samples for the chain
         number ``chain``. If None or a list of variables, the NDArray backend is used.
     model: Model (optional if in ``with`` context)
+    callback:
+        A function which gets called for every sample from the trace of a chain. The function is
+        called with the trace and the current draw and will contain all samples for a single trace.
+        the ``draw.chain`` argument can be used to determine which of the active chains the sample
+        is drawn from.
+        Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
 
     Returns
     -------
@@ -1316,6 +1358,10 @@ def _mp_sample(
                         trace.close()
                         if draw.warnings is not None:
                             trace._add_warnings(draw.warnings)
+
+                    if callback is not None:
+                        callback(trace=trace, draw=draw)
+
         except ps.ParallelSamplingError as error:
             trace = traces[error._chain - chain]
             trace._add_warnings(error._warnings)
@@ -1543,13 +1589,6 @@ def sample_posterior_predictive(
     return ppc_trace
 
 
-def sample_ppc(*args, **kwargs):
-    """Deprecated: use :func:`~sampling.sample_posterior_predictive`."""
-    message = "sample_ppc() is deprecated.  Please use sample_posterior_predictive()"
-    warnings.warn(message, DeprecationWarning, stacklevel=2)
-    return sample_posterior_predictive(*args, **kwargs)
-
-
 def sample_posterior_predictive_w(
     traces,
     samples: Optional[int] = None,
@@ -1678,13 +1717,6 @@ def sample_posterior_predictive_w(
         pass
 
     return {k: np.asarray(v) for k, v in ppc.items()}
-
-
-def sample_ppc_w(*args, **kwargs):
-    """Deprecated: use :func:`~sampling.sample_posterior_predictive_w`."""
-    message = "sample_ppc() is deprecated.  Please use sample_posterior_predictive_w()"
-    warnings.warn(message, DeprecationWarning, stacklevel=2)
-    return sample_posterior_predictive_w(*args, **kwargs)
 
 
 def sample_prior_predictive(

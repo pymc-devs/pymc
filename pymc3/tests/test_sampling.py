@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from itertools import combinations
 import numpy as np
 
@@ -129,6 +143,33 @@ class TestSample(SeededTest):
     @pytest.mark.parametrize("start", [{"x": np.array([1, 1])}, {"x": [10, 10]}, {"x": [-10, -10]}])
     def test_sample_start_good_shape(self, start):
         pm.sampling._check_start_shape(self.model, start)
+
+    def test_sample_callback(self):
+        callback = mock.Mock()
+        test_cores = [1, 2]
+        test_chains = [1, 2]
+        with self.model:
+            for cores in test_cores:
+                for chain in test_chains:
+                    pm.sample(
+                        10, tune=0, chains=chain, step=self.step, cores=cores, random_seed=self.random_seed,
+                        callback=callback
+                    )
+                    assert callback.called
+
+    def test_callback_can_cancel(self):
+        trace_cancel_length = 5
+
+        def callback(trace, draw):
+            if len(trace) >= trace_cancel_length:
+                raise KeyboardInterrupt()
+
+        with self.model:
+            trace = pm.sample(
+                        10, tune=0, chains=1, step=self.step, cores=1, random_seed=self.random_seed,
+                        callback=callback
+                    )
+            assert len(trace) == trace_cancel_length
 
 
 def test_empty_model():
