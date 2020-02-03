@@ -104,7 +104,7 @@ def get_named_nodes_and_relations(graph):
 
     Returns:
     --------
-    leaves: Dict[str, node]
+    leaf_dict: Dict[str, node]
         A dictionary of name:node pairs, of the named nodes that
         have no named ancestors in the provided theano graph.
     descendents: Dict[node, Set[node]]
@@ -131,11 +131,11 @@ def get_named_nodes_and_relations(graph):
     descendents, ancestors = _get_named_nodes_and_relations(
         graph, None, ancestors, descendents
     )
-    leafs = {
+    leaf_dict = {
         node.name: node for node, ancestor in ancestors.items()
         if len(ancestor) == 0
     }
-    return leafs, descendents, ancestors
+    return leaf_dict, descendents, ancestors
 
 
 def _get_named_nodes_and_relations(graph, descendent, descendents, ancestors):
@@ -187,7 +187,7 @@ def build_named_node_tree(graphs):
 
     Returns:
     --------
-    leaves: Dict[str, node]
+    leaf_dict: Dict[str, node]
         A dictionary of name:node pairs, of the named nodes that
         have no named ancestors in the provided theano graphs.
     descendents: Dict[node, Set[node]]
@@ -202,13 +202,13 @@ def build_named_node_tree(graphs):
         nodes in the supplied ``graphs``.
 
     """
-    leaf_nodes = {}
+    leaf_dict = {}
     named_nodes_descendents = {}
     named_nodes_ancestors = {}
     for graph in graphs:
         # Get the named nodes under the `param` node
         nn, nnd, nna = get_named_nodes_and_relations(graph)
-        leaf_nodes.update(nn)
+        leaf_dict.update(nn)
         # Update the discovered parental relationships
         for k in nnd.keys():
             if k not in named_nodes_descendents.keys():
@@ -221,7 +221,7 @@ def build_named_node_tree(graphs):
                 named_nodes_ancestors[k] = nna[k]
             else:
                 named_nodes_ancestors[k].update(nna[k])
-    return leaf_nodes, named_nodes_descendents, named_nodes_ancestors
+    return leaf_dict, named_nodes_descendents, named_nodes_ancestors
 
 T = TypeVar('T', bound='ContextMeta')
 
