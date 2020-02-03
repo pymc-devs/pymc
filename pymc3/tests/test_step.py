@@ -859,40 +859,38 @@ class TestDEMetropolisZ:
         pass
 
     def test_tune_drop_fraction(self):
+        tune = 300
+        tune_drop_fraction = 0.85
+        draws = 200
         with Model() as pmodel:
             Normal('n', 0, 2, shape=(3,))
-            step = DEMetropolisZ(tune_drop_fraction=0.85)
+            step = DEMetropolisZ(tune_drop_fraction=tune_drop_fraction)
             trace = sample(
-                tune=300,
-                draws=200,
+                tune=tune,
+                draws=draws,
                 step=step,
                 cores=1,
                 chains=1,
                 discard_tuned_samples=False
             )
-            assert len(trace) == 500
-            assert len(step._history) == (300 - 300 * 0.85) + 200
+            assert len(trace) == tune + draws
+            assert len(step._history) == (tune - tune * tune_drop_fraction) + draws
         pass
 
-    def test_competence(self):
+    @pytest.mark.parametrize('variable,has_grad,outcome', [('n', True, 1),('n', False, 1),('b', True, 0),('b', False, 0)])
+    def test_competence(self, variable, has_grad, outcome):
         with Model() as pmodel:
-            n = Normal('n', 0, 2, shape=(3,))
-            b = Binomial('b', n=2, p=0.3)
-        assert DEMetropolisZ.competence(n, has_grad=True) == 1
-        assert DEMetropolisZ.competence(n, has_grad=False) == 1
-        assert DEMetropolisZ.competence(b, has_grad=True) == 0
-        assert DEMetropolisZ.competence(b, has_grad=False) == 0
+            Normal('n', 0, 2, shape=(3,))
+            Binomial('b', n=2, p=0.3)
+        assert DEMetropolisZ.competence(pmodel[variable], has_grad=has_grad) == outcome
         pass
 
-    def test_invalid_tune(self):
+    @pytest.mark.parametrize('tune_setting', ['foo', True, False])
+    def test_invalid_tune(self, tune_setting):
         with Model() as pmodel:
             Normal('n', 0, 2, shape=(3,))
             with pytest.raises(ValueError):
-                DEMetropolisZ(tune='foo')
-            with pytest.raises(ValueError):
-                DEMetropolisZ(tune=True)
-            with pytest.raises(ValueError):
-                DEMetropolisZ(tune=False)
+                DEMetropolisZ(tune=tune_setting)
         pass
 
     def test_custom_proposal_dist(self):

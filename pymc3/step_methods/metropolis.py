@@ -573,9 +573,10 @@ class DEMetropolis(PopulationArrayStepShared):
 
         self.scaling = np.atleast_1d(scaling).astype('d')
         if lamb is None:
+            # default to the optimal lambda for normally distributed targets
             lamb = 2.38 / np.sqrt(2 * model.ndim)
         self.lamb = float(lamb)
-        if not tune in {None, 'scaling', 'lambda'}:
+        if tune not in {None, 'scaling', 'lambda'}:
             raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')
         self.tune = tune
         self.tune_interval = tune_interval
@@ -704,9 +705,10 @@ class DEMetropolisZ(ArrayStepShared):
 
         self.scaling = np.atleast_1d(scaling).astype('d')
         if lamb is None:
+            # default to the optimal lambda for normally distributed targets
             lamb = 2.38 / np.sqrt(2 * model.ndim)
         self.lamb = float(lamb)
-        if not tune in {None, 'scaling', 'lambda'}:
+        if tune not in {None, 'scaling', 'lambda'}:
             raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')
         self.tune = True
         self.tune_target = tune
@@ -732,6 +734,7 @@ class DEMetropolisZ(ArrayStepShared):
         super().__init__(vars, shared)
 
     def reset_tuning(self):
+        """Resets the tuned sampler parameters and history to their initial values."""
         # history can't be reset via the _untuned_settings dict because it's a list
         self._history = []
         for attr, initial_value in self._untuned_settings.items():
@@ -787,8 +790,9 @@ class DEMetropolisZ(ArrayStepShared):
         return q_new, [stats]
 
     def stop_tuning(self):
-        # remove the first x% of the tuning phase so future steps are not
-        # informed by bad unconverged tuning iterations
+        """At the end of the tuning phase, this method removes the first x% of the history
+        so future proposals are not informed by unconverged tuning iterations.
+        """
         it = len(self._history)
         n_drop = int(self.tune_drop_fraction * it)
         self._history = self._history[n_drop:]
