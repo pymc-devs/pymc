@@ -779,6 +779,27 @@ class TestPopulationSamplers:
         pass
 
 
+class TestMetropolis:
+    def test_tuning_reset(self):
+        """Re-use of the step method instance with cores=1 must not leak tuning information between chains."""
+        with Model() as pmodel:
+            D = 3
+            Normal('n', 0, 2, shape=(D,))
+            trace = sample(
+                tune=600,
+                draws=500,
+                step=Metropolis(tune=True, scaling=0.1),
+                cores=1,
+                chains=3,
+                discard_tuned_samples=False
+            )
+        for c in range(trace.nchains):
+            # check that the tuned settings changed and were reset
+            assert trace.get_sampler_stats('scaling', chains=c)[0] == 0.1
+            assert trace.get_sampler_stats('scaling', chains=c)[-1] != 0.1
+        pass
+
+
 class TestDEMetropolisZ:
     def test_tuning_lambda_sequential(self):
         with Model() as pmodel:
