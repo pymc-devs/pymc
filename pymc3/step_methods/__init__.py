@@ -17,7 +17,7 @@ from .compound import CompoundStep
 from .hmc import HamiltonianMC, NUTS
 
 from .metropolis import Metropolis
-from .metropolis import DEMetropolis
+from .metropolis import DEMetropolis, DEMetropolisZ
 from .metropolis import BinaryMetropolis
 from .metropolis import BinaryGibbsMetropolis
 from .metropolis import CategoricalGibbsMetropolis
