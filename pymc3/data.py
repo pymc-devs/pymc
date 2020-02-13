@@ -39,6 +39,7 @@ def get_data(filename):
     ----------
     filename : str
         file to load
+
     Returns
     -------
     BytesIO of the data
@@ -112,7 +113,7 @@ class Minibatch(tt.TensorVariable):
 
     Parameters
     ----------
-    data : :class:`ndarray`
+    data : np.ndarray
         initial data
     batch_size : ``int`` or ``List[int|tuple(size, random_seed)]``
         batch size for inference, random seed is needed
@@ -131,7 +132,7 @@ class Minibatch(tt.TensorVariable):
         you can use it to change source of
         minibatches programmatically
     in_memory_size : ``int`` or ``List[int|slice|Ellipsis]``
-        data size for storing in theano.shared
+        data size for storing in ``theano.shared``
 
     Attributes
     ----------
@@ -142,109 +143,144 @@ class Minibatch(tt.TensorVariable):
 
     Notes
     -----
-    Below is a common use case of Minibatch within the variational inference.
-    Importantly, we need to make PyMC3 "aware" of minibatch being used in inference.
+    Below is a common use case of Minibatch with variational inference.
+    Importantly, we need to make PyMC3 "aware" that a minibatch is being used in inference.
     Otherwise, we will get the wrong :math:`logp` for the model.
+    the density of the model ``logp`` that is affected by Minibatch. See more in the examples below.
     To do so, we need to pass the ``total_size`` parameter to the observed node, which correctly scales
-    the density of the model logp that is affected by Minibatch. See more in examples below.
+    the density of the model ``logp`` that is affected by Minibatch. See more in the examples below.
 
     Examples
     --------
-    Consider we have data
+    Consider we have `data` as follows:
+    
     >>> data = np.random.rand(100, 100)
+    
+    if we want a 1d slice of size 10 we do
 
-    if we want 1d slice of size 10 we do
     >>> x = Minibatch(data, batch_size=10)
 
     Note that your data is cast to ``floatX`` if it is not integer type
     But you still can add the ``dtype`` kwarg for :class:`Minibatch`
+    if you need more control.
 
-    in case we want 10 sampled rows and columns
-    ``[(size, seed), (size, seed)]`` it is
+    If we want 10 sampled rows and columns
+    ``[(size, seed), (size, seed)]`` we can use
+
     >>> x = Minibatch(data, batch_size=[(10, 42), (10, 42)], dtype='int32')
     >>> assert str(x.dtype) == 'int32'
 
-    or simpler with default random seed = 42
+
+    Or, more simply, we can use the default random seed = 42
     ``[size, size]``
+
     >>> x = Minibatch(data, batch_size=[10, 10])
 
-    x is a regular :class:`TensorVariable` that supports any math
+
+    In the above, `x` is a regular :class:`TensorVariable` that supports any math operations:
+
+
     >>> assert x.eval().shape == (10, 10)
 
-    You can pass it to your desired model
+    
+    You can pass the Minibatch `x` to your desired model:
+
     >>> with pm.Model() as model:
     ...     mu = pm.Flat('mu')
     ...     sd = pm.HalfNormal('sd')
     ...     lik = pm.Normal('lik', mu, sd, observed=x, total_size=(100, 100))
 
+
     Then you can perform regular Variational Inference out of the box
+    
+
     >>> with model:
     ...     approx = pm.fit()
 
-    Notable thing is that :class:`Minibatch` has ``shared``, ``minibatch``, attributes
-    you can call later
+
+    Important note: :class:``Minibatch`` has ``shared``, and ``minibatch`` attributes
+    you can call later:
+
     >>> x.set_value(np.random.laplace(size=(100, 100)))
 
     and minibatches will be then from new storage
     it directly affects ``x.shared``.
-    the same thing would be but less convenient
+    A less convenient convenient, but more explicit, way to achieve the same
+    thing:
+
     >>> x.shared.set_value(pm.floatX(np.random.laplace(size=(100, 100))))
 
-    programmatic way to change storage is as follows
+    The programmatic way to change storage is as follows
     I import ``partial`` for simplicity
     >>> from functools import partial
     >>> datagen = partial(np.random.laplace, size=(100, 100))
     >>> x = Minibatch(datagen(), batch_size=10, update_shared_f=datagen)
     >>> x.update_shared()
 
-    To be more concrete about how we get minibatch, here is a demo
-    1) create shared variable
-    >>> shared = theano.shared(data)
+    To be more concrete about how we create a minibatch, here is a demo:
+    1. create a shared variable
 
-    2) create random slice of size 10
-    >>> ridx = pm.tt_rng().uniform(size=(10,), low=0, high=data.shape[0]-1e-10).astype('int64')
+        >>> shared = theano.shared(data)
 
-    3) take that slice
-    >>> minibatch = shared[ridx]
+    2. take a random slice of size 10:
 
-    That's done. Next you can use this minibatch somewhere else.
-    You can see that implementation does not require fixed shape
-    for shared variable. Feel free to use that if needed.
+        >>> ridx = pm.tt_rng().uniform(size=(10,), low=0, high=data.shape[0]-1e-10).astype('int64')
 
-    Suppose you need some replacements in the graph, e.g. change minibatch to testdata
-    >>> node = x ** 2  # arbitrary expressions on minibatch ``x``
+    3) take the resulting slice:
+
+        >>> minibatch = shared[ridx]
+
+    That's done. Now you can use this minibatch somewhere else.
+    You can see that the implementation does not require a fixed shape
+    for the shared variable. Feel free to use that if needed.
+    *FIXME: What is "that" which we can use here?  A fixed shape?  Should this say
+    "but feel free to put a fixed shape on the shared variable, if appropriate?"*
+
+    Suppose you need to make some replacements in the graph, e.g. change the minibatch to testdata
+
+    >>> node = x ** 2  # arbitrary expressions on minibatch `x`
     >>> testdata = pm.floatX(np.random.laplace(size=(1000, 10)))
 
-    Then you should create a dict with replacements
+    Then you should create a `dict` with replacements:
+
     >>> replacements = {x: testdata}
     >>> rnode = theano.clone(node, replacements)
     >>> assert (testdata ** 2 == rnode.eval()).all()
 
-    To replace minibatch with it's shared variable you should do
-    the same things. Minibatch variable is accessible as an attribute
-    as well as shared, associated with minibatch
+    *FIXME: In the following, what is the **reason** to replace the Minibatch variable with
+    its shared variable?  And in the following, the `rnode` is a **new** node, not a modification
+    of a previously existing node, correct?*
+    To replace a minibatch with its shared variable you should do
+    the same things. The Minibatch variable is accessible through the `minibatch` attribute.
+    For example
+
     >>> replacements = {x.minibatch: x.shared}
     >>> rnode = theano.clone(node, replacements)
 
     For more complex slices some more code is needed that can seem not so clear
+
     >>> moredata = np.random.rand(10, 20, 30, 40, 50)
 
-    default ``total_size`` that can be passed to ``PyMC3`` random node
+    The default ``total_size`` that can be passed to ``PyMC3`` random node
     is then ``(10, 20, 30, 40, 50)`` but can be less verbose in some cases
 
-    1) Advanced indexing, ``total_size = (10, Ellipsis, 50)``
-    >>> x = Minibatch(moredata, [2, Ellipsis, 10])
+    1. Advanced indexing, ``total_size = (10, Ellipsis, 50)``
 
-    We take slice only for the first and last dimension
-    >>> assert x.eval().shape == (2, 20, 30, 40, 10)
+        >>> x = Minibatch(moredata, [2, Ellipsis, 10])
 
-    2) Skipping particular dimension, ``total_size = (10, None, 30)``
-    >>> x = Minibatch(moredata, [2, None, 20])
-    >>> assert x.eval().shape == (2, 20, 20, 40, 50)
+        We take the slice only for the first and last dimension
 
-    3) Mixing that all, ``total_size = (10, None, 30, Ellipsis, 50)``
-    >>> x = Minibatch(moredata, [2, None, 20, Ellipsis, 10])
-    >>> assert x.eval().shape == (2, 20, 20, 40, 10)
+        >>> assert x.eval().shape == (2, 20, 30, 40, 10)
+
+    2. Skipping a particular dimension, ``total_size = (10, None, 30)``:
+
+        >>> x = Minibatch(moredata, [2, None, 20])
+        >>> assert x.eval().shape == (2, 20, 20, 40, 50)
+
+    3. Mixing both of these together, ``total_size = (10, None, 30, Ellipsis, 50)``:
+
+        >>> x = Minibatch(moredata, [2, None, 20, Ellipsis, 10])
+        >>> assert x.eval().shape == (2, 20, 20, 40, 10)
     """
 
     RNG = collections.defaultdict(list) # type: Dict[str, List[Any]]
@@ -404,7 +440,7 @@ def align_minibatches(batches=None):
 
 
 class Data:
-    """Data container class that wraps the theano SharedVariable class
+    """Data container class that wraps the theano ``SharedVariable`` class
     and lets the model be aware of its inputs and outputs.
 
     Parameters
@@ -417,28 +453,24 @@ class Data:
     Examples
     --------
 
-    .. code:: ipython
+    >>> import pymc3 as pm
+    >>> import numpy as np
+    >>> # We generate 10 datasets
+    >>> true_mu = [np.random.randn() for _ in range(10)]
+    >>> observed_data = [mu + np.random.randn(20) for mu in true_mu]
 
-        >>> import pymc3 as pm
-        >>> import numpy as np
-        >>> # We generate 10 datasets
-        >>> true_mu = [np.random.randn() for _ in range(10)]
-        >>> observed_data = [mu + np.random.randn(20) for mu in true_mu]
+    >>> with pm.Model() as model:
+    ...     data = pm.Data('data', observed_data[0])
+    ...     mu = pm.Normal('mu', 0, 10)
+    ...     pm.Normal('y', mu=mu, sigma=1, observed=data)
 
-        >>> with pm.Model() as model:
-        ...     data = pm.Data('data', observed_data[0])
-        ...     mu = pm.Normal('mu', 0, 10)
-        ...     pm.Normal('y', mu=mu, sigma=1, observed=data)
-
-    .. code:: ipython
-
-        >>> # Generate one trace for each dataset
-        >>> traces = []
-        >>> for data_vals in observed_data:
-        ...     with model:
-        ...         # Switch out the observed dataset
-        ...         pm.set_data({'data': data_vals})
-        ...         traces.append(pm.sample())
+    >>> # Generate one trace for each dataset
+    >>> traces = []
+    >>> for data_vals in observed_data:
+    ...     with model:
+    ...         # Switch out the observed dataset
+    ...         pm.set_data({'data': data_vals})
+    ...         traces.append(pm.sample())
 
     To set the value of the data container variable, check out
     :func:`pymc3.model.set_data()`.
