@@ -66,7 +66,7 @@ class Latent(Base):
     R"""
     Latent Gaussian process.
 
-    The `gp.Latent` class is a direct implementation of a GP.  No addiive
+    The `gp.Latent` class is a direct implementation of a GP.  No additive
     noise is assumed.  It is called "Latent" because the underlying function
     values are treated as latent variables.  It has a `prior` method and a
     `conditional` method.  Given a mean and covariance function the
