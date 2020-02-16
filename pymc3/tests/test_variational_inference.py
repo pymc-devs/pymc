@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pytest
 import functools
 import io
@@ -150,6 +164,7 @@ def three_var_approx(three_var_model, three_var_groups):
 @pytest.fixture
 def three_var_approx_single_group_mf(three_var_model):
     return MeanField(model=three_var_model)
+
 
 @pytest.fixture(
     params = [
@@ -566,7 +581,7 @@ def use_minibatch(request):
     return request.param
 
 
-@pytest.fixture('module')
+@pytest.fixture
 def simple_model_data(use_minibatch):
     n = 1000
     sigma0 = 2.
@@ -590,7 +605,7 @@ def simple_model_data(use_minibatch):
     )
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def simple_model(simple_model_data):
     with pm.Model() as model:
         mu_ = pm.Normal(

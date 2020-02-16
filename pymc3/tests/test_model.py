@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pytest
 from theano import theano, tensor as tt
 import numpy as np
@@ -334,3 +348,17 @@ class TestValueGradFunction(unittest.TestCase):
         gf = m.logp_dlogp_function()
 
         assert m['x2_missing'].type == gf._extra_vars_shared['x2_missing'].type
+
+def test_multiple_observed_rv():
+    "Test previously buggy MultiObservedRV comparison code."
+    y1_data = np.random.randn(10)
+    y2_data = np.random.randn(100)
+    with pm.Model() as model:
+        mu = pm.Normal("mu")
+        x = pm.DensityDist(  # pylint: disable=unused-variable
+            "x", pm.Normal.dist(mu, 1.0).logp, observed={"value": 0.1}
+        )
+    assert not model['x'] == model['mu']
+    assert model['x'] == model['x']
+    assert  model['x'] in model.observed_RVs
+    assert not model['x'] in model.vars

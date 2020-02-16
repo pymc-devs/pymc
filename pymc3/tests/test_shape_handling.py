@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pytest
 import numpy as np
 from theano import tensor as tt
@@ -41,22 +55,22 @@ test_sizes = [
 test_to_shapes = [None, tuple(), (10, 5, 4), (10, 1, 1, 5, 1)]
 
 
-@pytest.fixture(scope="module", params=test_sizes, ids=str)
+@pytest.fixture(params=test_sizes, ids=str)
 def fixture_sizes(request):
     return request.param
 
 
-@pytest.fixture(scope="module", params=test_shapes, ids=str)
+@pytest.fixture(params=test_shapes, ids=str)
 def fixture_shapes(request):
     return request.param
 
 
-@pytest.fixture(scope="module", params=[False, True], ids=str)
+@pytest.fixture(params=[False, True], ids=str)
 def fixture_exception_handling(request):
     return request.param
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def samples_to_broadcast(fixture_sizes, fixture_shapes):
     samples = [np.empty(s) for s in fixture_shapes]
     try:
@@ -68,7 +82,7 @@ def samples_to_broadcast(fixture_sizes, fixture_shapes):
     return fixture_sizes, samples, broadcast_shape
 
 
-@pytest.fixture(scope="module", params=test_to_shapes, ids=str)
+@pytest.fixture(params=test_to_shapes, ids=str)
 def samples_to_broadcast_to(request, samples_to_broadcast):
     to_shape = request.param
     size, samples, broadcast_shape = samples_to_broadcast
@@ -82,7 +96,7 @@ def samples_to_broadcast_to(request, samples_to_broadcast):
     return to_shape, size, samples, broadcast_shape
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def fixture_model():
     with pm.Model() as model:
         n = 5

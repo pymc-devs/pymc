@@ -39,7 +39,7 @@ PyMC3 strives to make Bayesian modeling as simple and painless as possible,  all
 What's new in version 3
 =======================
 
-The third major version of PyMC has benefitted from being re-written from scratch. Substantial improvements in the user interface and performance have resulted from this. While PyMC2 relied on Fortran extensions (via f2py) for most of the computational heavy-lifting, PyMC3 leverages Theano, a library from the Montréal Institute for Learning Algorithms (MILA), for array-based expression evaluation, to perform its computation. What this provides, above all else, is fast automatic differentiation, which is at the heart of the gradient-based sampling and optimization methods currently providing inference for probabilistic programming. 
+The third major version of PyMC has benefitted from being re-written from scratch. Substantial improvements in the user interface and performance have resulted from this. While PyMC2 relied on Fortran extensions (via f2py) for most of the computational heavy-lifting, PyMC3 leverages Theano, a library from the Montréal Institute for Learning Algorithms (MILA), for array-based expression evaluation, to perform its computation. What this provides, above all else, is fast automatic differentiation, which is at the heart of the gradient-based sampling and optimization methods currently providing inference for probabilistic programming.
 
 Major changes from previous versions:
 
@@ -47,7 +47,7 @@ Major changes from previous versions:
 
 * Gradient-based MCMC methods, including Hamiltonian Monte Carlo (HMC), the No U-turn Sampler (NUTS), and Stein Variational Gradient Descent.
 
-* Variational inference methods, including automatic differentiation variational inference (ADVI) and operator variational inference (OPVI). 
+* Variational inference methods, including automatic differentiation variational inference (ADVI) and operator variational inference (OPVI).
 
 * An interface for easy formula-based specification of generalized linear models (GLM).
 
@@ -59,7 +59,7 @@ Major changes from previous versions:
 
 * Much more!
 
-While the addition of Theano adds a level of complexity to the development of PyMC, fundamentally altering how the underlying computation is performed, we have worked hard to maintain the elegant simplicity of the original PyMC model specification syntax. 
+While the addition of Theano adds a level of complexity to the development of PyMC, fundamentally altering how the underlying computation is performed, we have worked hard to maintain the elegant simplicity of the original PyMC model specification syntax.
 
 
 History
@@ -81,10 +81,10 @@ better performance and a better end-user experience than any previous version
 of PyMC. PyMC 2.2 was released in April 2012. It contained numerous bugfixes and
 optimizations, as well as a few new features, including improved output
 plotting, csv table output, improved imputation syntax, and posterior
-predictive check plots. PyMC 2.3 was released on October 31, 2013. It included 
+predictive check plots. PyMC 2.3 was released on October 31, 2013. It included
 Python 3 compatibility, improved summary plots, and some important bug fixes.
 
-In 2011, John Salvatier began thinking about implementing gradient-based MCMC samplers, and developed the ``mcex`` package to experiment with his ideas. The following year, John was invited by the team to re-engineer PyMC to accomodate Hamiltonian Monte Carlo sampling. This led to the adoption of Theano as the computational back end, and marked the beginning of PyMC3's development. The first alpha version of PyMC3 was released in June 2015. Over the following 2 years, the core development team grew to 12 members, and the first release, PyMC3 3.0, was launched in January 2017. 
+In 2011, John Salvatier began thinking about implementing gradient-based MCMC samplers, and developed the ``mcex`` package to experiment with his ideas. The following year, John was invited by the team to re-engineer PyMC to accomodate Hamiltonian Monte Carlo sampling. This led to the adoption of Theano as the computational back end, and marked the beginning of PyMC3's development. The first alpha version of PyMC3 was released in June 2015. Over the following 2 years, the core development team grew to 12 members, and the first release, PyMC3 3.0, was launched in January 2017.
 
 
 Usage Overview
@@ -92,55 +92,58 @@ Usage Overview
 
 For a detailed overview of building models in PyMC3, please read the appropriate sections in the rest of the documentation. For a flavor of what PyMC3 models look like, here is a quick example.
 
-First, import the PyMC3 functions and classes you will need for building your model. You can import the entire module via ``import pymc3 as pm``, or just bring in what you need::
+First, let's import PyMC3 and `ArviZ <https://arviz-devs.github.io/arviz/>`__ (which handles plotting and diagnostics):
 
-    from pymc3 import Model, Normal, invlogit, Binomial, sample, forestplot
+    import arviz as az
     import numpy as np
+    import pymc3 as pm
 
-Models are defined using a context manager (``with`` statement). The model is specified declaratively inside the context manager, instantiating model variables and transforming them as necessary. Here is an example of a model for a bioassay experiment.
+Models are defined using a context manager (``with`` statement). The model is specified declaratively inside the context manager, instantiating model variables and transforming them as necessary. Here is an example of a model for a bioassay experiment:
 
 ::
+
+    # Set style
+    az.style.use("arviz-darkgrid")
 
     # Data
     n = np.ones(4)*5
     y = np.array([0, 1, 3, 5])
     dose = np.array([-.86,-.3,-.05,.73])
 
-    with Model() as bioassay_model:
+    with pm.Model() as bioassay_model:
 
         # Prior distributions for latent variables
-        alpha = Normal('alpha', 0, sigma=100)
-        beta = Normal('beta', 0, sigma=100)
+        alpha = pm.Normal('alpha', 0, sigma=10)
+        beta = pm.Normal('beta', 0, sigma=1)
 
-        # Linear combinations of parameters
-        theta = invlogit(alpha + beta*dose)
+        # Linear combination of parameters
+        theta = pm.invlogit(alpha + beta * dose)
 
         # Model likelihood
-        deaths = Binomial('deaths', n=n, p=theta, observed=y)
+        deaths = pm.Binomial('deaths', n=n, p=theta, observed=y)
 
-Save this file, then from a python shell (or another file in the same directory), call.
+Save this file, then from a python shell (or another file in the same directory), call:
 
 ::
 
     with bioassay_model:
-    
-        # Draw wamples
-        trace = sample(1000, njobs=2)
-        # Plot two parameters
-        forestplot(trace, varnames=['alpha', 'beta'])
 
-This example will generate 1000 posterior samples on each of two cores using the NUTS algorithm, preceded by 500 tuning samples (the default number). The sampler is also initialized using variational inference.
+        # Draw samples
+        trace = pm.sample(1000, tune=2000, cores=2)
+        # Plot two parameters
+        az.plot_forest(trace, var_names=['alpha', 'beta'], r_hat=True)
+
+This example will generate 1000 posterior samples on each of two cores using the NUTS algorithm, preceded by 2000 tuning samples (these are good default numbers for most models).
 
 ::
 
     Auto-assigning NUTS sampler...
-    Initializing NUTS using ADVI...
-    Average Loss = 12.562:   6%|▌         | 11412/200000 [00:00<00:14, 12815.82it/s]
-    Convergence archived at 11900
-    Interrupted at 11,900 [5%]: Average Loss = 15.168
-    100%|██████████████████████████████████████| 1500/1500 [00:01<00:00, 787.56it/s]
+    Initializing NUTS using jitter+adapt_diag...
+    Multiprocess sampling (2 chains in 2 jobs)
+    NUTS: [beta, alpha]
+    |██████████████████████████████████████| 100.00% [6000/6000 00:04<00:00 Sampling 2 chains, 0 divergences]
 
-The sample is returned as arrays inside of a ``MultiTrace`` object, which is then passed to a plotting function. The resulting graphic shows a forest plot of the random variables in the model, along with a convergence diagnostic (R-hat) that indicates our model has converged.
+The sample is returned as arrays inside a ``MultiTrace`` object, which is then passed to the plotting function. The resulting graph shows a forest plot of the random variables in the model, along with a convergence diagnostic (R-hat) that indicates our model has converged.
 
 .. image:: ./images/forestplot.png
 

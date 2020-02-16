@@ -40,6 +40,7 @@ initialized instances of the Transform Classes, which are described
 below.
 
 .. glossary::
+
 ``stick_breaking``
     Instantiation of :class:`~pymc3.distributions.transforms.StickBreaking`
     :class:`~pymc3.distributions.transforms.Transform` class for use in the ``transform``
@@ -93,7 +94,7 @@ below.
     for use in the ``transform`` argument of a random variable.
 
 
-.. autofunction::  t_stick_breaking 
+.. autofunction::  t_stick_breaking
 
 
 Transform Base Classes

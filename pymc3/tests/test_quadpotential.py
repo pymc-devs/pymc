@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import scipy.sparse
 
@@ -38,16 +52,16 @@ def test_equal_diag():
         x = floatX(np.random.randn(5))
         pots = [
             quadpotential.quad_potential(diag, False),
-            quadpotential.quad_potential(1. / diag, True),
+            quadpotential.quad_potential(1.0 / diag, True),
             quadpotential.quad_potential(np.diag(diag), False),
-            quadpotential.quad_potential(np.diag(1. / diag), True),
+            quadpotential.quad_potential(np.diag(1.0 / diag), True),
         ]
         if quadpotential.chol_available:
-            diag_ = scipy.sparse.csc_matrix(np.diag(1. / diag))
+            diag_ = scipy.sparse.csc_matrix(np.diag(1.0 / diag))
             pots.append(quadpotential.quad_potential(diag_, True))
 
-        v = np.diag(1. / diag).dot(x)
-        e = x.dot(np.diag(1. / diag).dot(x)) / 2
+        v = np.diag(1.0 / diag).dot(x)
+        e = x.dot(np.diag(1.0 / diag).dot(x)) / 2
         for pot in pots:
             v_ = pot.velocity(x)
             e_ = pot.energy(x)
@@ -85,9 +99,9 @@ def test_random_diag():
     np.random.seed(42)
     pots = [
         quadpotential.quad_potential(d, True),
-        quadpotential.quad_potential(1./d, False),
+        quadpotential.quad_potential(1.0 / d, False),
         quadpotential.quad_potential(np.diag(d), True),
-        quadpotential.quad_potential(np.diag(1./d), False),
+        quadpotential.quad_potential(np.diag(1.0 / d), False),
     ]
     if quadpotential.chol_available:
         d_ = scipy.sparse.csc_matrix(np.diag(d))
@@ -95,7 +109,7 @@ def test_random_diag():
         pots.append(pot)
     for pot in pots:
         vals = np.array([pot.random() for _ in range(1000)])
-        npt.assert_allclose(vals.std(0), np.sqrt(1./d), atol=0.1)
+        npt.assert_allclose(vals.std(0), np.sqrt(1.0 / d), atol=0.1)
 
 
 def test_random_dense():
@@ -112,7 +126,9 @@ def test_random_dense():
             quadpotential.QuadPotentialFullInv(inv),
         ]
         if quadpotential.chol_available:
-            pot = quadpotential.QuadPotential_Sparse(scipy.sparse.csc_matrix(cov))
+            pot = quadpotential.QuadPotential_Sparse(
+                scipy.sparse.csc_matrix(cov)
+            )
             pots.append(pot)
         for pot in pots:
             cov_ = np.cov(np.array([pot.random() for _ in range(1000)]).T)
@@ -137,3 +153,133 @@ def test_user_potential():
         step = pymc3.NUTS(potential=pot)
         pymc3.sample(10, init=None, step=step, chains=1)
     assert called
+
+
+def test_weighted_covariance(ndim=10, seed=5432):
+    np.random.seed(seed)
+
+    L = np.random.randn(ndim, ndim)
+    L[np.triu_indices_from(L, 1)] = 0.0
+    L[np.diag_indices_from(L)] = np.exp(L[np.diag_indices_from(L)])
+    cov = np.dot(L, L.T)
+    mean = np.random.randn(ndim)
+
+    samples = np.random.multivariate_normal(mean, cov, size=100)
+    mu_est0 = np.mean(samples, axis=0)
+    cov_est0 = np.cov(samples, rowvar=0)
+
+    est = quadpotential._WeightedCovariance(ndim)
+    for sample in samples:
+        est.add_sample(sample, 1)
+    mu_est = est.current_mean()
+    cov_est = est.current_covariance()
+
+    assert np.allclose(mu_est, mu_est0)
+    assert np.allclose(cov_est, cov_est0)
+
+    # Make sure that the weighted estimate also works
+    est2 = quadpotential._WeightedCovariance(
+        ndim,
+        np.mean(samples[:10], axis=0),
+        np.cov(samples[:10], rowvar=0, bias=True),
+        10,
+    )
+    for sample in samples[10:]:
+        est2.add_sample(sample, 1)
+    mu_est2 = est2.current_mean()
+    cov_est2 = est2.current_covariance()
+
+    assert np.allclose(mu_est2, mu_est0)
+    assert np.allclose(cov_est2, cov_est0)
+
+
+def test_full_adapt_sample_p(seed=4566):
+    # ref: https://github.com/stan-dev/stan/pull/2672
+    np.random.seed(seed)
+    m = np.array([[3.0, -2.0], [-2.0, 4.0]])
+    m_inv = np.linalg.inv(m)
+
+    var = np.array(
+        [
+            [2 * m[0, 0], m[1, 0] * m[1, 0] + m[1, 1] * m[0, 0]],
+            [m[0, 1] * m[0, 1] + m[1, 1] * m[0, 0], 2 * m[1, 1]],
+        ]
+    )
+
+    n_samples = 1000
+    pot = quadpotential.QuadPotentialFullAdapt(2, np.zeros(2), m_inv, 1)
+    samples = [pot.random() for n in range(n_samples)]
+    sample_cov = np.cov(samples, rowvar=0)
+
+    # Covariance matrix within 5 sigma of expected value
+    # (comes from a Wishart distribution)
+    assert np.all(np.abs(m - sample_cov) < 5 * np.sqrt(var / n_samples))
+
+
+def test_full_adapt_update_window(seed=1123):
+    np.random.seed(seed)
+    init_cov = np.array([[1.0, 0.02], [0.02, 0.8]])
+    pot = quadpotential.QuadPotentialFullAdapt(
+        2, np.zeros(2), init_cov, 1, update_window=50
+    )
+    assert np.allclose(pot._cov, init_cov)
+    for i in range(49):
+        pot.update(np.random.randn(2), None, True)
+    assert np.allclose(pot._cov, init_cov)
+    pot.update(np.random.randn(2), None, True)
+    assert not np.allclose(pot._cov, init_cov)
+
+
+def test_full_adapt_adaptation_window(seed=8978):
+    np.random.seed(seed)
+    window = 10
+    pot = quadpotential.QuadPotentialFullAdapt(
+        2, np.zeros(2), np.eye(2), 1, adaptation_window=window
+    )
+    for i in range(window + 1):
+        pot.update(np.random.randn(2), None, True)
+    assert pot._previous_update == window
+    assert pot.adaptation_window == window * pot.adaptation_window_multiplier
+
+    pot = quadpotential.QuadPotentialFullAdapt(
+        2, np.zeros(2), np.eye(2), 1, adaptation_window=window
+    )
+    for i in range(window + 1):
+        pot.update(np.random.randn(2), None, True)
+    assert pot._previous_update == window
+    assert pot.adaptation_window == window * pot.adaptation_window_multiplier
+
+
+def test_full_adapt_not_invertible():
+    window = 10
+    pot = quadpotential.QuadPotentialFullAdapt(
+        2, np.zeros(2), np.eye(2), 0, adaptation_window=window
+    )
+    for i in range(window + 1):
+        pot.update(np.ones(2), None, True)
+    with pytest.raises(ValueError):
+        pot.raise_ok(None)
+
+
+def test_full_adapt_warn():
+    with pytest.warns(UserWarning):
+        quadpotential.QuadPotentialFullAdapt(2, np.zeros(2), np.eye(2), 0)
+
+
+def test_full_adapt_sampling(seed=289586):
+    np.random.seed(seed)
+
+    L = np.random.randn(5, 5)
+    L[np.diag_indices_from(L)] = np.exp(L[np.diag_indices_from(L)])
+    L[np.triu_indices_from(L, 1)] = 0.0
+
+    with pymc3.Model() as model:
+        pymc3.MvNormal("a", mu=np.zeros(len(L)), chol=L, shape=len(L))
+
+        pot = quadpotential.QuadPotentialFullAdapt(
+            model.ndim, np.zeros(model.ndim)
+        )
+        step = pymc3.NUTS(model=model, potential=pot)
+        pymc3.sample(
+            draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1
+        )

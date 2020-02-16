@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import numpy.testing as npt
 from pymc3.tests import backend_fixtures as bf
@@ -6,17 +20,9 @@ import pymc3 as pm
 import pytest
 
 
-STATS1 = [{
-    'a': np.float64,
-    'b': np.bool
-}]
+STATS1 = [{"a": np.float64, "b": np.bool}]
 
-STATS2 = [{
-    'a': np.float64
-}, {
-    'a': np.float64,
-    'b': np.int64,
-}]
+STATS2 = [{"a": np.float64}, {"a": np.float64, "b": np.int64,}]
 
 
 class TestNDArray0dSampling(bf.SamplingTestCase):
@@ -152,7 +158,7 @@ class TestMultiTrace_add_remove_values(bf.ModelBackendSampledTestCase):
     def test_add_values(self):
         mtrace = self.mtrace
         orig_varnames = list(mtrace.varnames)
-        name = 'new_var'
+        name = "new_var"
         vals = mtrace[orig_varnames[0]]
         mtrace.add_values({name: vals})
         assert len(orig_varnames) == len(mtrace.varnames) - 1
@@ -164,7 +170,6 @@ class TestMultiTrace_add_remove_values(bf.ModelBackendSampledTestCase):
 
 
 class TestSqueezeCat:
-
     def setup_method(self):
         self.x = np.arange(10)
         self.y = np.arange(10, 20)
@@ -194,13 +199,14 @@ class TestSqueezeCat:
         result = base._squeeze_cat([self.x, self.y], True, True)
         npt.assert_equal(result, expected)
 
+
 class TestSaveLoad:
     @staticmethod
     def model():
         with pm.Model() as model:
-            x = pm.Normal('x', 0, 1)
-            y = pm.Normal('y', x, 1, observed=2)
-            z = pm.Normal('z', x + y, 1)
+            x = pm.Normal("x", 0, 1)
+            y = pm.Normal("y", x, 1, observed=2)
+            z = pm.Normal("z", x + y, 1)
         return model
 
     @classmethod
@@ -209,12 +215,12 @@ class TestSaveLoad:
             cls.trace = pm.sample()
 
     def test_save_new_model(self, tmpdir_factory):
-        directory = str(tmpdir_factory.mktemp('data'))
+        directory = str(tmpdir_factory.mktemp("data"))
         save_dir = pm.save_trace(self.trace, directory, overwrite=True)
 
         assert save_dir == directory
         with pm.Model() as model:
-            w = pm.Normal('w', 0, 1)
+            w = pm.Normal("w", 0, 1)
             new_trace = pm.sample()
 
         with pytest.raises(OSError):
@@ -224,26 +230,32 @@ class TestSaveLoad:
         with model:
             new_trace_copy = pm.load_trace(directory)
 
-        assert (new_trace['w'] == new_trace_copy['w']).all()
+        assert (new_trace["w"] == new_trace_copy["w"]).all()
 
     def test_save_and_load(self, tmpdir_factory):
-        directory = str(tmpdir_factory.mktemp('data'))
+        directory = str(tmpdir_factory.mktemp("data"))
         save_dir = pm.save_trace(self.trace, directory, overwrite=True)
 
         assert save_dir == directory
 
         trace2 = pm.load_trace(directory, model=TestSaveLoad.model())
 
-        for var in ('x', 'z'):
+        for var in ("x", "z"):
             assert (self.trace[var] == trace2[var]).all()
 
+        assert self.trace.stat_names == trace2.stat_names
+        for stat in self.trace.stat_names:
+            assert all(self.trace[stat] == trace2[stat]), (
+                "Restored value of statistic %s does not match stored value" % stat
+            )
+
     def test_bad_load(self, tmpdir_factory):
-        directory = str(tmpdir_factory.mktemp('data'))
+        directory = str(tmpdir_factory.mktemp("data"))
         with pytest.raises(pm.TraceDirectoryError):
             pm.load_trace(directory, model=TestSaveLoad.model())
 
     def test_sample_posterior_predictive(self, tmpdir_factory):
-        directory = str(tmpdir_factory.mktemp('data'))
+        directory = str(tmpdir_factory.mktemp("data"))
         save_dir = pm.save_trace(self.trace, directory, overwrite=True)
 
         assert save_dir == directory

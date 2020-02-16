@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from .compound import CompoundStep
 from ..model import modelcontext
 from ..theanof import inputvars
@@ -212,8 +226,10 @@ class PopulationArrayStepShared(ArrayStepShared):
         self.this_chain = chain_index
         self.other_chains = [c for c in range(len(population)) if c != chain_index]
         if not len(self.other_chains) > 1:
-            raise ValueError('Population is just {} + {}. This is too small. You should ' \
-                'increase the number of chains.'.format(self.this_chain, self.other_chains))
+            raise ValueError(
+                'Population is just {} + {}. ' \
+                'This is too small and the error should have been raised earlier.'.format(self.this_chain, self.other_chains)
+            )
         return
 
 

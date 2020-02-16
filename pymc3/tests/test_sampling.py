@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from itertools import combinations
 import numpy as np
 
@@ -129,6 +143,33 @@ class TestSample(SeededTest):
     @pytest.mark.parametrize("start", [{"x": np.array([1, 1])}, {"x": [10, 10]}, {"x": [-10, -10]}])
     def test_sample_start_good_shape(self, start):
         pm.sampling._check_start_shape(self.model, start)
+
+    def test_sample_callback(self):
+        callback = mock.Mock()
+        test_cores = [1, 2]
+        test_chains = [1, 2]
+        with self.model:
+            for cores in test_cores:
+                for chain in test_chains:
+                    pm.sample(
+                        10, tune=0, chains=chain, step=self.step, cores=cores, random_seed=self.random_seed,
+                        callback=callback
+                    )
+                    assert callback.called
+
+    def test_callback_can_cancel(self):
+        trace_cancel_length = 5
+
+        def callback(trace, draw):
+            if len(trace) >= trace_cancel_length:
+                raise KeyboardInterrupt()
+
+        with self.model:
+            trace = pm.sample(
+                        10, tune=0, chains=1, step=self.step, cores=1, random_seed=self.random_seed,
+                        callback=callback
+                    )
+            assert len(trace) == trace_cancel_length
 
 
 def test_empty_model():
@@ -394,6 +435,32 @@ class TestSamplePPC(SeededTest):
 
             rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3
             assert np.allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
+
+    def test_var_name_order_invariance(self):
+        # Issue #3643 exposed a bug in sample_posterior_predictive, which made
+        # it return incorrect values depending on the order of the supplied
+        # var_names. This tests that sample_posterior_predictive is robust
+        # to different var_names orders.
+        obs_a = theano.shared(pm.theanof.floatX(np.array([10., 20., 30.])))
+        with pm.Model() as m:
+            pm.Normal('mu', 3, 5)
+            a = pm.Normal('a', 20, 10, observed=obs_a)
+            pm.Deterministic('b', a * 2)
+            trace = pm.sample(10)
+
+        np.random.seed(123)
+        var_names = ['b', 'a']
+        ppc1 = pm.sample_posterior_predictive(
+            trace, model=m, var_names=var_names
+        )
+        np.random.seed(123)
+        var_names = ['a', 'b']
+        ppc2 = pm.sample_posterior_predictive(
+            trace, model=m, var_names=var_names
+        )
+        assert np.all(ppc1["a"] == ppc2["a"])
+        assert np.all(ppc1["b"] == ppc2["b"])
+        assert np.allclose(ppc1["b"], (2 * ppc1["a"]))
 
     def test_deterministic_of_observed_modified_interface(self):
         meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(100))

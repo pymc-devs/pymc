@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import matplotlib
 import numpy as np
 import pandas as pd
@@ -58,11 +72,11 @@ class TestARM12_6(SeededTest):
     def build_model(self):
         data = get_city_data()
 
-        self.obs_means = data.groupby('fips').lradon.mean().as_matrix()
+        self.obs_means = data.groupby('fips').lradon.mean().to_numpy()
 
-        lradon = data.lradon.as_matrix()
-        floor = data.floor.as_matrix()
-        group = data.group.as_matrix()
+        lradon = data.lradon.to_numpy()
+        floor = data.floor.to_numpy()
+        group = data.group.to_numpy()
 
         with pm.Model() as model:
             groupmean = pm.Normal('groupmean', 0, 10. ** -2.)
@@ -93,10 +107,10 @@ class TestARM12_6Uranium(SeededTest):
         data = get_city_data()
         self.obs_means = data.groupby('fips').lradon.mean()
 
-        lradon = data.lradon.as_matrix()
-        floor = data.floor.as_matrix()
-        group = data.group.as_matrix()
-        ufull = data.Uppm.as_matrix()
+        lradon = data.lradon.to_numpy()
+        floor = data.floor.to_numpy()
+        group = data.group.to_numpy()
+        ufull = data.Uppm.to_numpy()
 
         with pm.Model() as model:
             groupmean = pm.Normal('groupmean', 0, 10. ** -2.)
@@ -165,7 +179,7 @@ class TestDisasterModel(SeededTest):
         with model:
             # Initial values for stochastic nodes
             start = {'early_mean': 2., 'late_mean': 3.}
-            # Use slice sampler for means (other varibles auto-selected)
+            # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
             pm.summary(tr)
@@ -175,7 +189,7 @@ class TestDisasterModel(SeededTest):
         with model:
             # Initial values for stochastic nodes
             start = {'early_mean': 2., 'late_mean': 3.}
-            # Use slice sampler for means (other varibles auto-selected)
+            # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
             pm.summary(tr)

@@ -1,7 +1,22 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from collections import OrderedDict
 
 import numpy as np
-from tqdm import tqdm
+from scipy.special import logsumexp
+from fastprogress.fastprogress import progress_bar
 import multiprocessing as mp
 import warnings
 from theano import function as theano_function
@@ -16,7 +31,7 @@ from ..step_methods.arraystep import metrop_select
 from ..step_methods.metropolis import MultivariateNormalProposal
 from ..backends.ndarray import NDArray
 from ..backends.base import MultiTrace
-from ..util import get_untransformed_name, is_transformed_name
+from ..util import is_transformed_name
 
 EXPERIMENTAL_WARNING = (
     "Warning: SMC-ABC methods are experimental step methods and not yet"
@@ -73,7 +88,7 @@ class SMC:
         self.proposed = draws * n_steps
         self.acc_rate = 1
         self.acc_per_chain = np.ones(self.draws)
-        self.model.marginal_likelihood = 1
+        self.model.marginal_log_likelihood = 0
         self.variables = inputvars(self.model.vars)
         dimension = sum(v.dsize for v in self.variables)
         self.scalings = np.ones(self.draws) * min(1, 2.38 ** 2 / dimension)
@@ -91,7 +106,7 @@ class SMC:
         var_info = OrderedDict()
         if self.start is None:
             init_rnd = sample_prior_predictive(
-                self.draws, var_names=[v.name for v in self.model.unobserved_RVs], model=self.model
+                self.draws, var_names=[v.name for v in self.model.unobserved_RVs], model=self.model,
             )
         else:
             init_rnd = self.start
@@ -127,6 +142,7 @@ class SMC:
                 simulator.distribution.function,
                 self.model,
                 self.var_info,
+                self.variables,
                 self.dist_func,
                 self.sum_stat,
             )
@@ -159,12 +175,11 @@ class SMC:
         up_beta = 2.0
         rN = int(len(self.likelihoods) * self.threshold)
 
-        ll_diff = self.likelihoods - self.likelihoods.max()
         while up_beta - low_beta > 1e-6:
             new_beta = (low_beta + up_beta) / 2.0
-            weights_un = np.exp((new_beta - old_beta) * ll_diff)
-            weights = weights_un / np.sum(weights_un)
-            ESS = int(1 / np.sum(weights ** 2))
+            log_weights_un = (new_beta - old_beta) * self.likelihoods
+            log_weights = log_weights_un - logsumexp(log_weights_un)
+            ESS = int(np.exp(-logsumexp(log_weights * 2)))
             if ESS == rN:
                 break
             elif ESS < rN:
@@ -173,14 +188,15 @@ class SMC:
                 low_beta = new_beta
         if new_beta >= 1:
             new_beta = 1
-            weights_un = np.exp((new_beta - old_beta) * ll_diff)
-            weights = weights_un / np.sum(weights_un)
+            log_weights_un = (new_beta - old_beta) * self.likelihoods
+            log_weights = log_weights_un - logsumexp(log_weights_un)
 
-        sj = np.exp((new_beta - old_beta) * self.likelihoods)
-
-        self.model.marginal_likelihood *= np.mean(sj)
+        ll_max = np.max(self.likelihoods)
+        self.model.marginal_log_likelihood += ll_max + np.log(
+            np.exp(log_weights_un - ll_max).mean()
+        )
         self.beta = new_beta
-        self.weights = weights
+        self.weights = np.exp(log_weights)
 
     def resample(self):
         """
@@ -219,7 +235,7 @@ class SMC:
         if self.tune_steps:
             acc_rate = max(1.0 / self.proposed, self.acc_rate)
             self.n_steps = min(
-                self.max_steps, max(2, int(np.log(1 - self.p_acc_rate) / np.log(1 - acc_rate)))
+                self.max_steps, max(2, int(np.log(1 - self.p_acc_rate) / np.log(1 - acc_rate))),
             )
 
         self.proposed = self.draws * self.n_steps
@@ -255,6 +271,9 @@ class SMC:
                 ],
             )
         else:
+            iterator = range(self.draws)
+            if self.progressbar:
+                iterator = progress_bar(iterator, display=self.progressbar)
             results = [
                 metrop_kernel(
                     self.posterior[draw],
@@ -264,7 +283,7 @@ class SMC:
                     draw,
                     *parameters
                 )
-                for draw in tqdm(range(self.draws), disable=not self.progressbar)
+                for draw in iterator
             ]
         posterior, acc_list, priors, likelihoods = zip(*results)
         self.posterior = np.array(posterior)
@@ -369,7 +388,9 @@ class PseudoLikelihood:
     Pseudo Likelihood
     """
 
-    def __init__(self, epsilon, observations, function, model, var_info, distance, sum_stat):
+    def __init__(
+        self, epsilon, observations, function, model, var_info, variables, distance, sum_stat
+    ):
         """
         epsilon : float
             Standard deviation of the gaussian pseudo likelihood.
@@ -391,9 +412,13 @@ class PseudoLikelihood:
         self.function = function
         self.model = model
         self.var_info = var_info
+        self.variables = variables
+        self.varnames = [v.name for v in self.variables]
+        self.unobserved_RVs = [v.name for v in self.model.unobserved_RVs]
         self.kernel = self.gauss_kernel
         self.dist_func = distance
         self.sum_stat = sum_stat
+        self.get_unobserved_fn = self.model.fastfn(self.model.unobserved_RVs)
 
         if distance == "absolute_error":
             self.dist_func = self.absolute_error
@@ -405,17 +430,19 @@ class PseudoLikelihood:
     def posterior_to_function(self, posterior):
         model = self.model
         var_info = self.var_info
-        parameters = {}
+
+        varvalues = []
+        samples = {}
         size = 0
-        for var, values in var_info.items():
-            shape, new_size = values
-            value = posterior[size : size + new_size].reshape(shape)
-            if is_transformed_name(var):
-                var = get_untransformed_name(var)
-                value = model[var].transformation.backward_val(value)
-            parameters[var] = value
+        for var in self.variables:
+            shape, new_size = var_info[var.name]
+            varvalues.append(posterior[size : size + new_size].reshape(shape))
             size += new_size
-        return parameters
+        point = {k: v for k, v in zip(self.varnames, varvalues)}
+        for varname, value in zip(self.unobserved_RVs, self.get_unobserved_fn(point)):
+            if not is_transformed_name(varname):
+                samples[varname] = value
+        return samples
 
     def gauss_kernel(self, value):
         epsilon = self.epsilon
@@ -423,7 +450,7 @@ class PseudoLikelihood:
 
     def absolute_error(self, a, b):
         if self.sum_stat:
-            return np.atleast_2d(np.abs(a.mean() - b.mean()))
+            return np.abs(a.mean() - b.mean())
         else:
             return np.mean(np.atleast_2d(np.abs(a - b)))
 

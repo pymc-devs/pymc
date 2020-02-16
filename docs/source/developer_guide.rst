@@ -906,7 +906,7 @@ TFP, which is a tenor in tensor out function. Moreover, transition
 kernels in TFP do not flatten the tensors, see eg docstring of
 `tensorflow\_probability/python/mcmc/random\_walk\_metropolis.py <https://github.com/tensorflow/probability/blob/master/tensorflow_probability/python/mcmc/random_walk_metropolis.py>`__:
 
-.. code:: python
+.. code::
 
           new_state_fn: Python callable which takes a list of state parts and a
             seed; returns a same-type `list` of `Tensor`s, each being a perturbation
@@ -923,9 +923,11 @@ We love NUTS, or to be more precise Dynamic HMC with complex stoping
 rules. This part is actually all done outside of Theano, for NUTS, it
 includes: the leapfrog, dual averaging, tunning of mass matrix and step
 size, the tree building, sampler related statistics like divergence and
-energy checking. We actually have a Theano version of HMC:
-https://github.com/pymc-devs/pymc3/blob/master/pymc3/step\_methods/hmc/trajectory.py
-but it is never been used.
+energy checking. We actually have a Theano version of HMC, but it has never
+been used, and has been removed from the main repository. It can still be
+found in the `git history
+<https://github.com/pymc-devs/pymc3/pull/3734/commits/0fdae8207fd14f66635f3673ef267b2b8817aa68>`__,
+though.
 
 Variational Inference (VI)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -945,7 +947,7 @@ where it builds the objective function by calling:
 
 Where:
 
-.. code:: python
+.. code::
 
         op     : Operator class
         approx : Approximation class or instance
