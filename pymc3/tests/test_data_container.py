@@ -38,7 +38,7 @@ class TestData(SeededTest):
             pm.Normal('obs', b * x_shared, np.sqrt(1e-2), observed=y)
             prior_trace0 = pm.sample_prior_predictive(1000)
 
-            trace = pm.sample(1000, init=None, progressbar=False)
+            trace = pm.sample(1000, init=None, tune=1000, chains=1)
             pp_trace0 = pm.sample_posterior_predictive(trace, 1000)
 
             x_shared.set_value(x_pred)
@@ -79,11 +79,11 @@ class TestData(SeededTest):
             pm.Normal('obs', beta * x, np.sqrt(1e-2), observed=y)
             pm.sample(1000, init=None, tune=1000, chains=1)
         # Predict on new data.
-        new_x = [5, 6, 9]
-        new_y = [5, 6, 9]
+        new_x = [5., 6., 9.]
+        new_y = [5., 6., 9.]
         with model:
             pm.set_data(new_data={'x': new_x, 'y': new_y})
-            new_trace = pm.sample()
+            new_trace = pm.sample(1000, init=None, tune=1000, chains=1)
             pp_trace = pm.sample_posterior_predictive(new_trace, 1000)
 
         assert pp_trace['obs'].shape == (1000, 3)
