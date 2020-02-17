@@ -191,7 +191,7 @@ class SMC:
             log_weights_un = (new_beta - old_beta) * self.likelihoods
             log_weights = log_weights_un - logsumexp(log_weights_un)
 
-        ll_max = np.max(self.likelihoods)
+        ll_max = np.max(log_weights_un)
         self.model.marginal_log_likelihood += ll_max + np.log(
             np.exp(log_weights_un - ll_max).mean()
         )
