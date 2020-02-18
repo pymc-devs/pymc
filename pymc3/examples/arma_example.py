@@ -4,12 +4,12 @@ from theano import scan, shared
 import numpy as np
 """
 ARMA example
-It is interesting to note just how much more compact this is than the original STAN example
+It is interesting to note just how much more compact this is than the original Stan example
 
-The original implementation is in the STAN documentation by Gelman et al and is reproduced below
+The original implementation is in the Stan documentation by Gelman et al and is reproduced below
 
 
-Example from STAN- slightly altered
+Example from Stan- slightly altered
 
 data {
   int<lower=1> T;

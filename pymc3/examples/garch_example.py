@@ -3,7 +3,7 @@ import theano.tensor as tt
 import numpy as np
 
 """
-Example from STAN - slightly altered
+Example from Stan - slightly altered
 // GARCH(1,1)
 
 data {

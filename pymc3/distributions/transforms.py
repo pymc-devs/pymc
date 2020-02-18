@@ -423,7 +423,7 @@ sum_to_1 = SumTo1()
 class StickBreaking(Transform):
     """
     Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of real values.
-    Primarily borrowed from the STAN implementation.
+    Primarily borrowed from the Stan implementation.
 
     Parameters
     ----------
