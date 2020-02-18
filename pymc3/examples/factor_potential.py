@@ -1,10 +1,10 @@
 import pymc3 as pm
 
 """
-You can add an arbitrary factor potential to the model likelihood using 
+You can add an arbitrary factor potential to the model likelihood using
 pm.Potential. For example you can added Jacobian Adjustment using pm.Potential
-when you do model reparameterization. It's similar to `increment_log_prob` in 
-STAN.
+when you do model reparameterization. It's similar to `target += u;` in
+Stan.
 """
 
 def build_model():
