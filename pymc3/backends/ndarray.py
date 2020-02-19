@@ -164,8 +164,12 @@ class SerializeNDArray:
 
         metadata['_stats'] = [{k: np.array(v) for k, v in stat.items()} for stat in metadata['_stats']]
 
-        sampler_vars = metadata.pop('sampler_vars')
-        new_trace._set_sampler_vars(sampler_vars)
+        # it seems like at least some old traces don't have 'sampler_vars'
+        try:
+            sampler_vars = metadata.pop('sampler_vars')
+            new_trace._set_sampler_vars(sampler_vars)
+        except KeyError:
+            pass
 
         for key, value in metadata.items():
             setattr(new_trace, key, value)
