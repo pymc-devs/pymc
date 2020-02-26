@@ -1496,6 +1496,8 @@ def pandas_to_array(data, dtype = float):
         return pm.floatX(ret)
     elif dtype in [int, np.int32, np.int64]:
         return pm.intX(ret)
+    else:
+        raise ValueError('Unsupported type for pandas_to_array: %s' % str(dtype))
 
 def as_tensor(data, name, model, distribution):
     dtype = distribution.dtype
