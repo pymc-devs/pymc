@@ -110,7 +110,7 @@ class _Process(multiprocessing.Process):
     and send finished samples using shared memory.
     """
 
-    def __init__(self, name, msg_pipe, step_method, shared_point, draws, tune, seed):
+    def __init__(self, name:str, msg_pipe, step_method, shared_point, draws:int, tune:int, seed):
         super().__init__(daemon=True, name=name)
         self._msg_pipe = msg_pipe
         self._step_method = step_method
@@ -173,6 +173,10 @@ class _Process(multiprocessing.Process):
             raise ValueError("Unexpected msg " + msg[0])
 
         while True:
+            if draw == self._tune:
+                self._step_method.stop_tuning()
+                tuning = False
+
             if draw < self._draws + self._tune:
                 try:
                     point, stats = self._compute_point()
@@ -182,10 +186,6 @@ class _Process(multiprocessing.Process):
                     self._msg_pipe.send(("error", warns, e))
             else:
                 return
-
-            if draw == self._tune:
-                self._step_method.stop_tuning()
-                tuning = False
 
             msg = self._recv_msg()
             if msg[0] == "abort":
@@ -222,7 +222,7 @@ class _Process(multiprocessing.Process):
 class ProcessAdapter:
     """Control a Chain process from the main thread."""
 
-    def __init__(self, draws, tune, step_method, chain, seed, start):
+    def __init__(self, draws:int, tune:int, step_method, chain:int, seed, start):
         self.chain = chain
         process_name = "worker_chain_%s" % chain
         self._msg_pipe, remote_conn = multiprocessing.Pipe()
@@ -353,15 +353,15 @@ Draw = namedtuple(
 class ParallelSampler:
     def __init__(
         self,
-        draws,
-        tune,
-        chains,
-        cores,
-        seeds,
-        start_points,
+        draws:int,
+        tune:int,
+        chains:int,
+        cores:int,
+        seeds:list,
+        start_points:list,
         step_method,
-        start_chain_num=0,
-        progressbar=True,
+        start_chain_num:int=0,
+        progressbar:bool=True,
     ):
 
         if any(len(arg) != chains for arg in [seeds, start_points]):
