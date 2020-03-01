@@ -173,6 +173,10 @@ class _Process(multiprocessing.Process):
             raise ValueError("Unexpected msg " + msg[0])
 
         while True:
+            if draw == self._tune:
+                self._step_method.stop_tuning()
+                tuning = False
+
             if draw < self._draws + self._tune:
                 try:
                     point, stats = self._compute_point()
@@ -182,10 +186,6 @@ class _Process(multiprocessing.Process):
                     self._msg_pipe.send(("error", warns, e))
             else:
                 return
-
-            if draw == self._tune:
-                self._step_method.stop_tuning()
-                tuning = False
 
             msg = self._recv_msg()
             if msg[0] == "abort":
