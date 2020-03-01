@@ -127,6 +127,18 @@ class TestSample(SeededTest):
             trace = pm.sample(draws=100, tune=50, cores=4)
             assert len(trace) == 100
 
+    @pytest.mark.parametrize('cores', [1, 2])
+    def test_sampler_stat_tune(self, cores):
+        with self.model:
+            tune_stat = pm.sample(
+                tune=5, draws=7, cores=cores,
+                discard_tuned_samples=False,
+                step=pm.Metropolis()
+            ).get_sampler_stats('tune', chains=1)
+            assert list(tune_stat).count(True) == 5
+            assert list(tune_stat).count(False) == 7
+        pass
+
     @pytest.mark.parametrize(
         "start, error",
         [
