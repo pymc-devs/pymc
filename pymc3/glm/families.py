@@ -59,7 +59,7 @@ class Family:
 
         Returns
         -------
-        dict : mapping name -> pymc3 distribution
+        dict: mapping name -> pymc3 distribution
         """
         if name:
             name = '{}_'.format(name)
@@ -78,9 +78,9 @@ class Family:
 
         Parameters
         ----------
-        y_est : theano.tensor
+        y_est: theano.tensor
             Estimate of dependent variable
-        y_data : array
+        y_data: array
             Observed dependent variable
         """
         priors = self._get_priors(model=model, name=name)
@@ -92,8 +92,8 @@ class Family:
 
     def __repr__(self):
         return """Family {klass}:
-    Likelihood   : {likelihood}({parent})
-    Priors       : {priors}
+    Likelihood  : {likelihood}({parent})
+    Priors      : {priors}
     Link function: {link}.""".format(klass=self.__class__, likelihood=self.likelihood.__name__, parent=self.parent, priors=self.priors, link=self.link)
 
 

@@ -34,16 +34,16 @@ class DifferentialEquation(theano.Op):
     Parameters
     ----------
 
-    func : callable
+    func: callable
         Function specifying the differential equation. Must take arguments y (n_states,), t (scalar), p (n_theta,)
-    times : array
+    times: array
         Array of times at which to evaluate the solution of the differential equation.
-    n_states : int
+    n_states: int
         Dimension of the differential equation.  For scalar differential equations, n_states=1.
         For vector valued differential equations, n_states = number of differential equations in the system.
-    n_theta : int
+    n_theta: int
         Number of parameters in the differential equation.
-    t0 : float
+    t0: float
         Time corresponding to the initial condition
     
     .. code-block:: python

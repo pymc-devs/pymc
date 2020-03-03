@@ -61,18 +61,18 @@ class BaseHMC(arraystep.GradientSharedStep):
 
         Parameters
         ----------
-        vars : list of theano variables
-        scaling : array_like, ndim = {1,2}
+        vars: list of theano variables
+        scaling: array_like, ndim = {1,2}
             Scaling for momentum distribution. 1d arrays interpreted matrix
             diagonal.
-        step_scale : float, default=0.25
+        step_scale: float, default=0.25
             Size of steps to take, automatically scaled down by 1/n**(1/4)
-        is_cov : bool, default=False
+        is_cov: bool, default=False
             Treat scaling as a covariance matrix/vector if True, else treat
             it as a precision matrix/vector
-        model : pymc3 Model instance
+        model: pymc3 Model instance
         blocked: bool, default=True
-        potential : Potential, optional
+        potential: Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods.
         **theano_kwargs: passed to theano functions

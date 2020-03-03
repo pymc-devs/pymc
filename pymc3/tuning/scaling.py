@@ -27,9 +27,9 @@ def fixed_hessian(point, vars=None, model=None):
 
     Parameters
     ----------
-    model : Model (optional if in `with` context)
-    point : dict
-    vars : list
+    model: Model (optional if in `with` context)
+    point: dict
+    vars: list
         Variables for which Hessian is to be calculated.
     """
 
@@ -51,9 +51,9 @@ def find_hessian(point, vars=None, model=None):
 
     Parameters
     ----------
-    model : Model (optional if in `with` context)
-    point : dict
-    vars : list
+    model: Model (optional if in `with` context)
+    point: dict
+    vars: list
         Variables for which Hessian is to be calculated.
     """
     model = modelcontext(model)
@@ -67,9 +67,9 @@ def find_hessian_diag(point, vars=None, model=None):
 
     Parameters
     ----------
-    model : Model (optional if in `with` context)
-    point : dict
-    vars : list
+    model: Model (optional if in `with` context)
+    point: dict
+    vars: list
         Variables for which Hessian is to be calculated.
     """
     model = modelcontext(model)
@@ -118,13 +118,13 @@ def trace_cov(trace, vars=None, model=None):
 
     Parameters
     ----------
-    trace : Trace
-    vars : list
+    trace: Trace
+    vars: list
         variables for which to calculate covariance matrix
 
     Returns
     -------
-    r : array (n,n)
+    r: array (n,n)
         covariance matrix
     """
     model = modelcontext(model)

@@ -48,11 +48,11 @@ def inputvars(a):
 
     Parameters
     ----------
-        a : theano variable
+        a: theano variable
 
     Returns
     -------
-        r : list of tensor variables that are inputs
+        r: list of tensor variables that are inputs
     """
     return [v for v in inputs(makeiter(a)) if isinstance(v, tt.TensorVariable)]
 
@@ -63,11 +63,11 @@ def cont_inputs(f):
 
     Parameters
     ----------
-        a : theano variable
+        a: theano variable
 
     Returns
     -------
-        r : list of tensor variables that are continuous inputs
+        r: list of tensor variables that are continuous inputs
     """
     return typefilter(inputvars(f), continuous_types)
 
@@ -229,8 +229,8 @@ def make_shared_replacements(vars, model):
 
     Parameters
     ----------
-    vars : list of variables not to make shared
-    model : model
+    vars: list of variables not to make shared
+    model: model
 
     Returns
     -------
@@ -246,14 +246,14 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
 
     Parameters
     ----------
-    xs : list of theano tensors
-    vars : list of variables to join
+    xs: list of theano tensors
+    vars: list of variables to join
 
     Returns
     -------
     tensors, inarray
-    tensors : list of same tensors but with inarray as input
-    inarray : vector of inputs
+    tensors: list of same tensors but with inarray as input
+    inarray: vector of inputs
     """
     if not vars:
         raise ValueError('Empty list of variables.')
@@ -301,7 +301,7 @@ class CallableTensor:
 
         Parameters
         ----------
-        input : TensorVariable
+        input: TensorVariable
         """
         oldinput, = inputvars(self.tensor)
         return theano.clone(self.tensor, {oldinput: input}, strict=False)
@@ -317,17 +317,17 @@ class GeneratorOp(Op):
 
     __call__ creates TensorVariable
         It has 2 new methods
-        - var.set_gen(gen) : sets new generator
-        - var.set_default(value) : sets new default value (None erases default value)
+        - var.set_gen(gen): sets new generator
+        - var.set_default(value): sets new default value (None erases default value)
 
     If generator is exhausted, variable will produce default value if it is not None,
     else raises `StopIteration` exception that can be caught on runtime.
 
     Parameters
     ----------
-    gen : generator that implements __next__ (py3) or next (py2) method
+    gen: generator that implements __next__ (py3) or next (py2) method
         and yields np.arrays with same types
-    default : np.array with the same type as generator produces
+    default: np.array with the same type as generator produces
     """
     __props__ = ('generator',)
 
@@ -381,16 +381,16 @@ def generator(gen, default=None):
 
     Parameters
     ----------
-    gen : generator that implements __next__ (py3) or next (py2) method
+    gen: generator that implements __next__ (py3) or next (py2) method
         and yields np.arrays with same types
-    default : np.array with the same type as generator produces
+    default: np.array with the same type as generator produces
 
     Returns
     -------
     TensorVariable
         It has 2 new methods
-        - var.set_gen(gen) : sets new generator
-        - var.set_default(value) : sets new default value (None erases default value)
+        - var.set_gen(gen): sets new generator
+        - var.set_default(value): sets new default value (None erases default value)
     """
     return GeneratorOp(gen, default)()
 
@@ -404,7 +404,7 @@ def tt_rng(random_seed=None):
 
     Parameters
     ----------
-    random_seed : int
+    random_seed: int
         If not None
         returns *new* theano random generator without replacing package global one
 
@@ -427,7 +427,7 @@ def set_tt_rng(new_rng):
 
     Parameters
     ----------
-    new_rng : `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
+    new_rng: `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
         The random number generator to use.
     """
     # pylint: disable=global-statement

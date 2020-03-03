@@ -47,13 +47,13 @@ class CheckParametersConvergence(Callback):
 
     Parameters
     ----------
-    every : int
+    every: int
         check frequency
-    tolerance : float
-        if diff norm < tolerance : break
-    diff : str
+    tolerance: float
+        if diff norm < tolerance: break
+    diff: str
         difference type one of {'absolute', 'relative'}
-    ord : {non-zero int, inf, -inf, 'fro', 'nuc'}, optional
+    ord: {non-zero int, inf, -inf, 'fro', 'nuc'}, optional
         see more info in :func:`numpy.linalg.norm`
 
     Examples
@@ -105,7 +105,7 @@ class Tracker(Callback):
 
     Parameters
     ----------
-    kwargs : key word arguments
+    kwargs: key word arguments
         keys mapping statname to callable that records the stat
 
     Examples

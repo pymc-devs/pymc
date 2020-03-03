@@ -23,9 +23,9 @@ class Simulator(NoDistribution):
         """
         This class stores a function defined by the user in python language.
         
-        function : function
+        function: function
             Simulation function defined by the user.
-        *args and **kwargs : 
+        *args and **kwargs: 
             Arguments and keywords arguments that the function takes.
         """
 
@@ -38,10 +38,10 @@ class Simulator(NoDistribution):
         Draw random values from Simulator
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
         Returns

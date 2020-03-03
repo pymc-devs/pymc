@@ -82,7 +82,7 @@ class DictToArrayBijection:
 
         Parameters
         ----------
-        dpt : dict
+        dpt: dict
         """
         apt = np.empty(self.ordering.size, dtype=self.array_dtype)
         for var, slc, _, _ in self.ordering.vmap:
@@ -95,7 +95,7 @@ class DictToArrayBijection:
 
         Parameters
         ----------
-        apt : array
+        apt: array
         """
         dpt = self.dpt.copy()
 
@@ -106,16 +106,16 @@ class DictToArrayBijection:
 
     def mapf(self, f):
         """
-         function f : DictSpace -> T to ArraySpace -> T
+         function f: DictSpace -> T to ArraySpace -> T
 
         Parameters
         ----------
 
-        f : dict -> T
+        f: dict -> T
 
         Returns
         -------
-        f : array -> T
+        f: array -> T
         """
         return Compose(f, self.rmap)
 
@@ -127,9 +127,9 @@ class ListArrayOrdering:
 
     Parameters
     ----------
-    list_arrays : list
+    list_arrays: list
         :class:`numpy.ndarray` or :class:`theano.tensor.Tensor`
-    intype : str
+    intype: str
         defining the input type 'tensor' or 'numpy'
     """
 
@@ -158,8 +158,8 @@ class ListToArrayBijection:
 
     Parameters
     ----------
-    ordering : :class:`ListArrayOrdering`
-    list_arrays : list
+    ordering: :class:`ListArrayOrdering`
+    list_arrays: list
         of :class:`numpy.ndarray`
     """
 
@@ -173,12 +173,12 @@ class ListToArrayBijection:
 
         Parameters
         ----------
-        list_arrays : list
+        list_arrays: list
             of :class:`numpy.ndarray`
 
         Returns
         -------
-        array : :class:`numpy.ndarray`
+        array: :class:`numpy.ndarray`
             single array comprising all the input arrays
         """
 
@@ -193,7 +193,7 @@ class ListToArrayBijection:
 
         Parameters
         ----------
-        list_arrays : list
+        list_arrays: list
             of :class:`numpy.ndarray`
 
         Returns
@@ -214,11 +214,11 @@ class ListToArrayBijection:
 
         Parameters
         ----------
-        array : :class:`numpy.ndarray`
+        array: :class:`numpy.ndarray`
 
         Returns
         -------
-        a_list : list
+        a_list: list
             of :class:`numpy.ndarray`
         """
 

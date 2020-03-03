@@ -78,17 +78,17 @@ def incorporate_methods(source, destination, methods,
 
     Parameters
     ----------
-    source : object
+    source: object
         The source object containing the methods.
-    destination : object
+    destination: object
         The destination object for the methods.
-    methods : list of str
+    methods: list of str
         Names of methods to incorporate.
-    wrapper : function
+    wrapper: function
         An optional function to allow the source method to be
         wrapped. Should take the form my_wrapper(source, method_name)
         and return a single value.
-    override : bool
+    override: bool
         If the destination object already has a method/attribute
         an AttributeError will be raised if override is False (the default).
     """
@@ -543,17 +543,17 @@ class ValueGradFunction:
 
     Parameters
     ----------
-    cost : theano variable
+    cost: theano variable
         The value that we compute with its gradient.
-    grad_vars : list of named theano variables or None
+    grad_vars: list of named theano variables or None
         The arguments with respect to which the gradient is computed.
-    extra_vars : list of named theano variables or None
+    extra_vars: list of named theano variables or None
         Other arguments of the function that are assumed constant. They
         are stored in shared variables and can be set using
         `set_extra_values`.
-    dtype : str, default=theano.config.floatX
+    dtype: str, default=theano.config.floatX
         The dtype of the arrays.
-    casting : {'no', 'equiv', 'save', 'same_kind', 'unsafe'}, default='no'
+    casting: {'no', 'equiv', 'save', 'same_kind', 'unsafe'}, default='no'
         Casting rule for casting `grad_args` to the array dtype.
         See `numpy.can_cast` for a description of the options.
         Keep in mind that we cast the variables to the array *and*
@@ -563,9 +563,9 @@ class ValueGradFunction:
 
     Attributes
     ----------
-    size : int
+    size: int
         The number of elements in the parameter array.
-    profile : theano profiling object or None
+    profile: theano profiling object or None
         The profiling object of the theano function that computes value and
         gradient. This is None unless `profile=True` was set in the
         kwargs.
@@ -723,16 +723,16 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model
 
     Parameters
     ----------
-    name : str
+    name: str
         name that will be used as prefix for names of all random
         variables defined within model
-    model : Model
+    model: Model
         instance of Model that is supposed to be a parent for the new
         instance. If ``None``, context will be used. All variables
         defined within instance will be passed to the parent instance.
         So that 'nested' model contributes to the variables and
         likelihood factors of parent model.
-    theano_config : dict
+    theano_config: dict
         A dictionary of theano config values that should be set
         temporarily in the model context. See the documentation
         of theano for a complete list. Set config key
@@ -978,12 +978,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model
 
         Parameters
         ----------
-        name : str
-        dist : distribution for the random variable
-        data : array_like (optional)
+        name: str
+        dist: distribution for the random variable
+        data: array_like (optional)
            If data is provided, the variable is observed. If None,
            the variable is unobserved.
-        total_size : scalar
+        total_size: scalar
             upscales logp of variable with ``coef = total_size/var.shape[0]``
 
         Returns
@@ -1084,8 +1084,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model
 
         Parameters
         ----------
-        outs : Theano variable or iterable of Theano variables
-        mode : Theano compilation mode
+        outs: Theano variable or iterable of Theano variables
+        mode: Theano compilation mode
 
         Returns
         -------
@@ -1104,8 +1104,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model
 
         Parameters
         ----------
-        outs : Theano variable or iterable of Theano variables
-        mode : Theano compilation mode
+        outs: Theano variable or iterable of Theano variables
+        mode: Theano compilation mode
 
         Returns
         -------
@@ -1119,8 +1119,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model
 
         Parameters
         ----------
-        outs : Theano variable or iterable of Theano variables
-        mode : Theano compilation mode
+        outs: Theano variable or iterable of Theano variables
+        mode: Theano compilation mode
 
         Returns
         -------
@@ -1135,12 +1135,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model
 
         Parameters
         ----------
-        outs : Theano variable or iterable of Theano variables
-        n : int, default 1000
+        outs: Theano variable or iterable of Theano variables
+        n: int, default 1000
             Number of iterations to run
-        point : point
+        point: point
             Point to pass to the function
-        profile : True or ProfileStats
+        profile: True or ProfileStats
         args, kwargs
             Compilation args
 
@@ -1168,11 +1168,11 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model
 
         Parameters
         ----------
-        vars : list of variables or None
+        vars: list of variables or None
             if None, then all model.free_RVs are used for flattening input
-        order : ArrayOrdering
+        order: ArrayOrdering
             Optional, use predefined ordering
-        inputvar : tt.vector
+        inputvar: tt.vector
             Optional, use predefined inputvar
 
         Returns
@@ -1201,10 +1201,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model
 
         Parameters
         ----------
-        test_point : Point
+        test_point: Point
             Point to be evaluated.
             if None, then all model.test_point is used
-        round_vals : int
+        round_vals: int
             Number of decimals to round log-probabilities
 
         Returns
@@ -1238,11 +1238,11 @@ def set_data(new_data, model=None):
 
     Parameters
     ----------
-    new_data : dict
+    new_data: dict
         New values for the data containers. The keys of the dictionary are
         the  variables names in the model and the values are the objects
         with which to update.
-    model : Model (optional if in `with` context)
+    model: Model (optional if in `with` context)
 
     Examples
     --------
@@ -1287,8 +1287,8 @@ def fn(outs, mode=None, model=None, *args, **kwargs):
 
     Parameters
     ----------
-    outs : Theano variable or iterable of Theano variables
-    mode : Theano compilation mode
+    outs: Theano variable or iterable of Theano variables
+    mode: Theano compilation mode
 
     Returns
     -------
@@ -1304,8 +1304,8 @@ def fastfn(outs, mode=None, model=None):
 
     Parameters
     ----------
-    outs : Theano variable or iterable of Theano variables
-    mode : Theano compilation mode
+    outs: Theano variable or iterable of Theano variables
+    mode: Theano compilation mode
 
     Returns
     -------
@@ -1366,10 +1366,10 @@ def _get_scaling(total_size, shape, ndim):
 
     Parameters
     ----------
-    total_size : int or list[int]
-    shape : shape
+    total_size: int or list[int]
+    shape: shape
         shape to scale
-    ndim : int
+    ndim: int
         ndim hint
 
     Returns
@@ -1425,12 +1425,12 @@ class FreeRV(Factor, PyMC3Variable):
         """
         Parameters
         ----------
-        type : theano type (optional)
-        owner : theano owner (optional)
-        name : str
-        distribution : Distribution
-        model : Model
-        total_size : scalar Tensor (optional)
+        type: theano type (optional)
+        owner: theano owner (optional)
+        name: str
+        distribution: Distribution
+        model: Model
+        total_size: scalar Tensor (optional)
             needed for upscaling logp
         """
         if type is None:
@@ -1536,12 +1536,12 @@ class ObservedRV(Factor, PyMC3Variable):
         """
         Parameters
         ----------
-        type : theano type (optional)
-        owner : theano owner (optional)
-        name : str
-        distribution : Distribution
-        model : Model
-        total_size : scalar Tensor (optional)
+        type: theano type (optional)
+        owner: theano owner (optional)
+        name: str
+        distribution: Distribution
+        model: Model
+        total_size: scalar Tensor (optional)
             needed for upscaling logp
         """
         from .distributions import TensorType
@@ -1602,12 +1602,12 @@ class MultiObservedRV(Factor):
         """
         Parameters
         ----------
-        type : theano type (optional)
-        owner : theano owner (optional)
-        name : str
-        distribution : Distribution
-        model : Model
-        total_size : scalar Tensor (optional)
+        type: theano type (optional)
+        owner: theano owner (optional)
+        name: str
+        distribution: Distribution
+        model: Model
+        total_size: scalar Tensor (optional)
             needed for upscaling logp
         """
         self.name = name
@@ -1664,12 +1664,12 @@ def Deterministic(name, var, model=None):
 
     Parameters
     ----------
-    name : str
-    var : theano variables
+    name: str
+    var: theano variables
 
     Returns
     -------
-    var : var, with name attribute
+    var: var, with name attribute
     """
     model = modelcontext(model)
     var = var.copy(model.name_for(name))
@@ -1685,12 +1685,12 @@ def Potential(name, var, model=None):
 
     Parameters
     ----------
-    name : str
-    var : theano variables
+    name: str
+    var: theano variables
 
     Returns
     -------
-    var : var, with name attribute
+    var: var, with name attribute
     """
     model = modelcontext(model)
     var.name = model.name_for(name)
@@ -1704,12 +1704,12 @@ class TransformedRV(PyMC3Variable):
     Parameters
     ----------
 
-    type : theano type (optional)
-    owner : theano owner (optional)
-    name : str
-    distribution : Distribution
-    model : Model
-    total_size : scalar Tensor (optional)
+    type: theano type (optional)
+    owner: theano owner (optional)
+    name: str
+    distribution: Distribution
+    model: Model
+    total_size: scalar Tensor (optional)
         needed for upscaling logp
     """
 

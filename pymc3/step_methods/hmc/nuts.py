@@ -108,48 +108,48 @@ class NUTS(BaseHMC):
 
         Parameters
         ----------
-        vars : list of Theano variables, default all continuous vars
-        Emax : float, default 1000
+        vars: list of Theano variables, default all continuous vars
+        Emax: float, default 1000
             Maximum energy change allowed during leapfrog steps. Larger
             deviations will abort the integration.
-        target_accept : float, default .8
+        target_accept: float, default .8
             Adapt the step size such that the average acceptance
             probability across the trajectories are close to target_accept.
             Higher values for target_accept lead to smaller step sizes.
             Setting this to higher values like 0.9 or 0.99 can help
             with sampling from difficult posteriors. Valid values are
             between 0 and 1 (exclusive).
-        step_scale : float, default 0.25
+        step_scale: float, default 0.25
             Size of steps to take, automatically scaled down by `1/n**(1/4)`.
             If step size adaptation is switched off, the resulting step size
             is used. If adaptation is enabled, it is used as initial guess.
-        gamma : float, default .05
-        k : float, default .75
+        gamma: float, default .05
+        k: float, default .75
             Parameter for dual averaging for step size adaptation. Values
             between 0.5 and 1 (exclusive) are admissible. Higher values
             correspond to slower adaptation.
-        t0 : int, default 10
+        t0: int, default 10
             Parameter for dual averaging. Higher values slow initial
             adaptation.
-        adapt_step_size : bool, default=True
+        adapt_step_size: bool, default=True
             Whether step size adaptation should be enabled. If this is
             disabled, `k`, `t0`, `gamma` and `target_accept` are ignored.
-        max_treedepth : int, default=10
+        max_treedepth: int, default=10
             The maximum tree depth. Trajectories are stopped when this
             depth is reached.
-        early_max_treedepth : int, default=8
+        early_max_treedepth: int, default=8
             The maximum tree depth during the first 200 tuning samples.
-        scaling : array_like, ndim = {1,2}
+        scaling: array_like, ndim = {1,2}
             The inverse mass, or precision matrix. One dimensional arrays are
             interpreted as diagonal matrices. If `is_cov` is set to True,
             this will be interpreded as the mass or covariance matrix.
-        is_cov : bool, default=False
+        is_cov: bool, default=False
             Treat the scaling as mass or covariance matrix.
-        potential : Potential, optional
+        potential: Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods. It can be specified instead
             of the scaling matrix.
-        model : pymc3.Model
+        model: pymc3.Model
             The model
         kwargs: passed to BaseHMC
 
@@ -223,13 +223,13 @@ class _Tree:
 
         Parameters
         ----------
-        leapfrog : function
+        leapfrog: function
             A function that performs a single leapfrog step.
-        start : integration.State
+        start: integration.State
             The starting point of the trajectory.
-        step_size : float
+        step_size: float
             The step size to use in this tree
-        Emax : float
+        Emax: float
             The maximum energy change to accept before aborting the
             transition as diverging.
         """

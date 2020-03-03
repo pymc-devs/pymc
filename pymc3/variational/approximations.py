@@ -522,16 +522,16 @@ def sample_approx(approx, draws=100, include_transformed=True):
 
     Parameters
     ----------
-    approx : :class:`Approximation`
+    approx: :class:`Approximation`
         Approximation to sample from
-    draws : `int`
+    draws: `int`
         Number of random samples.
-    include_transformed : `bool`
+    include_transformed: `bool`
         If True, transformed variables are also sampled. Default is True.
 
     Returns
     -------
-    trace : class:`pymc3.backends.base.MultiTrace`
+    trace: class:`pymc3.backends.base.MultiTrace`
         Samples drawn from variational posterior.
     """
     return approx.sample(draws=draws, include_transformed=include_transformed)
@@ -590,7 +590,7 @@ class Empirical(SingleGroupApproximation):
 
         Parameters
         ----------
-        node : Theano Variables (or Theano expressions)
+        node: Theano Variables (or Theano expressions)
 
         Returns
         -------

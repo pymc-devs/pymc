@@ -45,14 +45,14 @@ class Text(base.BaseTrace):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of directory to store text files
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
-    vars : list of variables
+    vars: list of variables
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
-    test_point : dict
+    test_point: dict
         use different test point that might be with changed variables shapes
     """
 
@@ -75,9 +75,9 @@ class Text(base.BaseTrace):
 
         Parameters
         ----------
-        draws : int
+        draws: int
             Expected number of draws
-        chain : int
+        chain: int
             Chain number
         """
         if self._fh is not None:
@@ -105,7 +105,7 @@ class Text(base.BaseTrace):
 
         Parameters
         ----------
-        point : dict
+        point: dict
             Values mapped to variable names
         """
         vals = {}
@@ -139,9 +139,9 @@ class Text(base.BaseTrace):
 
         Parameters
         ----------
-        varname : str
-        burn : int
-        thin : int
+        varname: str
+        burn: int
+        thin: int
 
         Returns
         -------
@@ -176,9 +176,9 @@ def load(name, model=None):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of directory with files (one per chain)
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
 
     Returns
@@ -217,11 +217,11 @@ def dump(name, trace, chains=None):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of directory to store CSV files in
-    trace : MultiTrace of NDArray traces
+    trace: MultiTrace of NDArray traces
         Result of MCMC run with default NDArray backend
-    chains : list
+    chains: list
         Chains to dump. If None, all chains are dumped.
     """
     if not os.path.exists(name):

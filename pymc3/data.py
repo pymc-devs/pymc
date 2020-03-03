@@ -37,7 +37,7 @@ def get_data(filename):
 
     Parameters
     ----------
-    filename : str
+    filename: str
         file to load
 
     Returns
@@ -113,32 +113,32 @@ class Minibatch(tt.TensorVariable):
 
     Parameters
     ----------
-    data : np.ndarray
+    data: np.ndarray
         initial data
-    batch_size : ``int`` or ``List[int|tuple(size, random_seed)]``
+    batch_size: ``int`` or ``List[int|tuple(size, random_seed)]``
         batch size for inference, random seed is needed
         for child random generators
-    dtype : ``str``
+    dtype: ``str``
         cast data to specific type
-    broadcastable : tuple[bool]
+    broadcastable: tuple[bool]
         change broadcastable pattern that defaults to ``(False, ) * ndim``
-    name : ``str``
+    name: ``str``
         name for tensor, defaults to "Minibatch"
-    random_seed : ``int``
+    random_seed: ``int``
         random seed that is used by default
-    update_shared_f : ``callable``
+    update_shared_f: ``callable``
         returns :class:`ndarray` that will be carefully
         stored to underlying shared variable
         you can use it to change source of
         minibatches programmatically
-    in_memory_size : ``int`` or ``List[int|slice|Ellipsis]``
+    in_memory_size: ``int`` or ``List[int|slice|Ellipsis]``
         data size for storing in ``theano.shared``
 
     Attributes
     ----------
-    shared : shared tensor
+    shared: shared tensor
         Used for storing data
-    minibatch : minibatch tensor
+    minibatch: minibatch tensor
         Used for training
 
     Notes
@@ -445,7 +445,7 @@ class Data:
 
     Parameters
     ----------
-    name : str
+    name: str
         The name for this variable
     value
         A value to associate with this variable

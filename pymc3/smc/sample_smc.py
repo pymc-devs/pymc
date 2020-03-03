@@ -38,47 +38,47 @@ def sample_smc(
 
     Parameters
     ----------
-    draws : int
+    draws: int
         The number of samples to draw from the posterior (i.e. last stage). And also the number of
         independent chains. Defaults to 1000.
-    kernel : str
+    kernel: str
         Kernel method for the SMC sampler. Available option are ``metropolis`` (default) and `ABC`.
         Use `ABC` for likelihood free inference togheter with a ``pm.Simulator``.
-    n_steps : int
+    n_steps: int
         The number of steps of each Markov Chain. If ``tune_steps == True`` ``n_steps`` will be used
         for the first stage and for the others it will be determined automatically based on the
         acceptance rate and `p_acc_rate`, the max number of steps is ``n_steps``.
-    parallel : bool
+    parallel: bool
         Distribute computations across cores if the number of cores is larger than 1.
         Defaults to False.
-    start : dict, or array of dict
+    start: dict, or array of dict
         Starting point in parameter space. It should be a list of dict with length `chains`.
         When None (default) the starting point is sampled from the prior distribution. 
-    cores : int
+    cores: int
         The number of chains to run in parallel. If ``None`` (default), it will be automatically
         set to the number of CPUs in the system.
-    tune_steps : bool
+    tune_steps: bool
         Whether to compute the number of steps automatically or not. Defaults to True
-    p_acc_rate : float
+    p_acc_rate: float
         Used to compute ``n_steps`` when ``tune_steps == True``. The higher the value of
         ``p_acc_rate`` the higher the number of steps computed automatically. Defaults to 0.99.
         It should be between 0 and 1.
-    threshold : float
+    threshold: float
         Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
         the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
         It should be between 0 and 1.
-    epsilon : float
+    epsilon: float
         Standard deviation of the gaussian pseudo likelihood. Only works with `kernel = ABC`
-    dist_func : str
+    dist_func: str
         Distance function. Available options are ``absolute_error`` (default) and
         ``sum_of_squared_distance``. Only works with ``kernel = ABC``
-    sum_stat : bool
+    sum_stat: bool
         Whether to use or not a summary statistics. Defaults to False. Only works with
         ``kernel = ABC``
-    progressbar : bool
+    progressbar: bool
         Flag for displaying a progress bar. Defaults to False.
-    model : Model (optional if in ``with`` context)).
-    random_seed : int
+    model: Model (optional if in ``with`` context)).
+    random_seed: int
         random seed
 
     Notes

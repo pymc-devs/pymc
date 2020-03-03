@@ -30,7 +30,7 @@ def escape_latex(strng):
 
     Parameters
     ----------
-    strng : str
+    strng: str
         string to escape LaTeX characters
 
     Returns
@@ -49,9 +49,9 @@ def get_transformed_name(name, transform):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name to transform
-    transform : transforms.Transform
+    transform: transforms.Transform
         Should be a subclass of `transforms.Transform`
 
     Returns
@@ -68,7 +68,7 @@ def is_transformed_name(name):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name to check
 
     Returns
@@ -85,7 +85,7 @@ def get_untransformed_name(name):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name to untransform
 
     Returns
@@ -103,9 +103,9 @@ def get_default_varnames(var_iterator, include_transformed):
 
     Parameters
     ----------
-    varname_iterator : iterator
+    varname_iterator: iterator
         Elements will be cast to string to check whether it is transformed, and optionally filtered
-    include_transformed : boolean
+    include_transformed: boolean
         Should transformed variable names be included in return value
 
     Returns

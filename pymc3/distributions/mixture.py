@@ -53,10 +53,10 @@ class Mixture(Distribution):
 
     Parameters
     ----------
-    w : array of floats
+    w: array of floats
         w >= 0 and w <= 1
         the mixture weights
-    comp_dists : multidimensional PyMC3 distribution (e.g. `pm.Poisson.dist(...)`)
+    comp_dists: multidimensional PyMC3 distribution (e.g. `pm.Poisson.dist(...)`)
         or iterable of PyMC3 distributions the component distributions
         :math:`f_1, \ldots, f_n`
 
@@ -416,7 +416,7 @@ class Mixture(Distribution):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -436,10 +436,10 @@ class Mixture(Distribution):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -590,16 +590,16 @@ class NormalMixture(Mixture):
 
     Parameters
     ----------
-    w : array of floats
+    w: array of floats
         w >= 0 and w <= 1
         the mixture weights
-    mu : array of floats
+    mu: array of floats
         the component means
-    sigma : array of floats
+    sigma: array of floats
         the component standard deviations
-    tau : array of floats
+    tau: array of floats
         the component precisions
-    comp_shape : shape of the Normal component
+    comp_shape: shape of the Normal component
         notice that it should be different than the shape
         of the mixture distribution, with one axis being
         the number of components.

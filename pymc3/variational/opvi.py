@@ -164,9 +164,9 @@ class ObjectiveFunction:
 
     Parameters
     ----------
-    op : :class:`Operator`
+    op: :class:`Operator`
         OPVI Functional operator
-    tf : :class:`TestFunction`
+    tf: :class:`TestFunction`
         OPVI TestFunction
     """
 
@@ -186,23 +186,23 @@ class ObjectiveFunction:
 
         Parameters
         ----------
-        obj_n_mc : `int`
+        obj_n_mc: `int`
             Number of monte carlo samples used for approximation of objective gradients
-        tf_n_mc : `int`
+        tf_n_mc: `int`
             Number of monte carlo samples used for approximation of test function gradients
-        obj_optimizer : function (loss, params) -> updates
+        obj_optimizer: function (loss, params) -> updates
             Optimizer that is used for objective params
-        test_optimizer : function (loss, params) -> updates
+        test_optimizer: function (loss, params) -> updates
             Optimizer that is used for test function params
-        more_obj_params : `list`
+        more_obj_params: `list`
             Add custom params for objective optimizer
-        more_tf_params : `list`
+        more_tf_params: `list`
             Add custom params for test function optimizer
-        more_updates : `dict`
+        more_updates: `dict`
             Add custom updates to resulting updates
-        more_replacements : `dict`
+        more_replacements: `dict`
             Apply custom replacements before calculating gradients
-        total_grad_norm_constraint : `float`
+        total_grad_norm_constraint: `float`
             Bounds gradient norm, prevents exploding gradient problem
 
         Returns
@@ -290,27 +290,27 @@ class ObjectiveFunction:
 
         Parameters
         ----------
-        obj_n_mc : `int`
+        obj_n_mc: `int`
             Number of monte carlo samples used for approximation of objective gradients
-        tf_n_mc : `int`
+        tf_n_mc: `int`
             Number of monte carlo samples used for approximation of test function gradients
-        obj_optimizer : function (grads, params) -> updates
+        obj_optimizer: function (grads, params) -> updates
             Optimizer that is used for objective params
-        test_optimizer : function (grads, params) -> updates
+        test_optimizer: function (grads, params) -> updates
             Optimizer that is used for test function params
-        more_obj_params : `list`
+        more_obj_params: `list`
             Add custom params for objective optimizer
-        more_tf_params : `list`
+        more_tf_params: `list`
             Add custom params for test function optimizer
-        more_updates : `dict`
+        more_updates: `dict`
             Add custom updates to resulting updates
-        total_grad_norm_constraint : `float`
+        total_grad_norm_constraint: `float`
             Bounds gradient norm, prevents exploding gradient problem
-        score : `bool`
+        score: `bool`
             calculate loss on each step? Defaults to False for speed
-        fn_kwargs : `dict`
+        fn_kwargs: `dict`
             Add kwargs to theano.function (e.g. `{'profile': True}`)
-        more_replacements : `dict`
+        more_replacements: `dict`
             Apply custom replacements before calculating gradients
 
         Returns
@@ -342,7 +342,7 @@ class ObjectiveFunction:
 
         Parameters
         ----------
-        sc_n_mc : `int`
+        sc_n_mc: `int`
             number of scoring MC samples
         more_replacements:
             Apply custom replacements before compiling a function
@@ -378,7 +378,7 @@ class Operator:
 
     Parameters
     ----------
-    approx : :class:`Approximation`
+    approx: :class:`Approximation`
         an approximation instance
 
     Notes
@@ -422,7 +422,7 @@ class Operator:
 
         Parameters
         ----------
-        f : :class:`TestFunction` or None
+        f: :class:`TestFunction` or None
             function that takes `z = self.input` and returns
             same dimensional output
 
@@ -462,7 +462,7 @@ def collect_shared_to_list(params):
 
     Parameters
     ----------
-    params : {dict|None}
+    params: {dict|None}
 
     Returns
     -------
@@ -512,27 +512,27 @@ class Group(WithMemoization):
 
     Parameters
     ----------
-    group : list
+    group: list
         List of PyMC3 variables or None indicating that group takes all the rest variables
-    vfam : str
+    vfam: str
         String that marks the corresponding variational family for the group.
         Cannot be passed both with `params`
-    params : dict
+    params: dict
         Dict with variational family parameters, full description can be found below.
         Cannot be passed both with `vfam`
-    random_seed : int
+    random_seed: int
         Random seed for underlying random generator
     model :
         PyMC3 Model
-    local : bool
+    local: bool
         Indicates whether this group is local. Cannot be passed without `params`.
         Such group should have only one variable
-    rowwise : bool
+    rowwise: bool
         Indicates whether this group is independently parametrized over first dim.
         Such group should have only one variable
-    options : dict
+    options: dict
         Special options for the group
-    kwargs : Other kwargs for the group
+    kwargs: Other kwargs for the group
 
     Notes
     -----
@@ -828,7 +828,7 @@ class Group(WithMemoization):
 
         Parameters
         ----------
-        kwargs : special kwargs needed sometimes
+        kwargs: special kwargs needed sometimes
 
         Returns
         -------
@@ -862,7 +862,7 @@ class Group(WithMemoization):
 
         Parameters
         ----------
-        name : str
+        name: str
             name for tensor
         Returns
         -------
@@ -878,7 +878,7 @@ class Group(WithMemoization):
 
         Parameters
         ----------
-        name : str
+        name: str
             name for tensor
         Returns
         -------
@@ -969,11 +969,11 @@ class Group(WithMemoization):
 
         Parameters
         ----------
-        size : scalar
+        size: scalar
             sample size
-        dim : scalar
+        dim: scalar
             latent fixed dim
-        more_replacements : dict
+        more_replacements: dict
             replacements for latent batch shape
 
         Returns
@@ -1010,11 +1010,11 @@ class Group(WithMemoization):
 
         Parameters
         ----------
-        size : scalar
+        size: scalar
             sample size
-        deterministic : bool or scalar
+        deterministic: bool or scalar
             whether to sample in deterministic manner
-        more_replacements : dict
+        more_replacements: dict
             more replacements passed to shape
 
         Notes
@@ -1087,13 +1087,13 @@ class Group(WithMemoization):
 
         Parameters
         ----------
-        node : :class:`Variable`
+        node: :class:`Variable`
             Theano node with symbolically applied VI replacements
-        s : scalar
+        s: scalar
             desired number of samples
-        d : bool or int
+        d: bool or int
             whether sampling is done deterministically
-        more_replacements : dict
+        more_replacements: dict
             more replacements to apply
 
         Returns
@@ -1143,11 +1143,11 @@ class Group(WithMemoization):
 
         Parameters
         ----------
-        s : scalar
+        s: scalar
             sample size
-        d : bool or scalar
+        d: bool or scalar
             whether sampling is done deterministically
-        more_replacements : dict
+        more_replacements: dict
             replacements for shape and initial
 
         Returns
@@ -1235,9 +1235,9 @@ class Approximation(WithMemoization):
 
     Parameters
     ----------
-    groups : list[Group]
+    groups: list[Group]
         List of :class:`Group` instances. They should have all model variables
-    model : Model
+    model: Model
 
     Notes
     -----
@@ -1430,11 +1430,11 @@ class Approximation(WithMemoization):
 
         Parameters
         ----------
-        s : scalar
+        s: scalar
             sample size
-        d : bool
+        d: bool
             whether sampling is done deterministically
-        more_replacements : dict
+        more_replacements: dict
             replacements for shape and initial
 
         Returns
@@ -1456,13 +1456,13 @@ class Approximation(WithMemoization):
 
         Parameters
         ----------
-        node : :class:`Variable`
+        node: :class:`Variable`
             Theano node with symbolically applied VI replacements
-        s : scalar
+        s: scalar
             desired number of samples
-        d : bool or int
+        d: bool or int
             whether sampling is done deterministically
-        more_replacements : dict
+        more_replacements: dict
             more replacements to apply
 
         Returns
@@ -1526,12 +1526,12 @@ class Approximation(WithMemoization):
 
         Parameters
         ----------
-        node : Theano Variables (or Theano expressions)
-        size : None or scalar
+        node: Theano Variables (or Theano expressions)
+        size: None or scalar
             number of samples
-        more_replacements : `dict`
+        more_replacements: `dict`
             add custom replacements to graph, e.g. change input source
-        deterministic : bool
+        deterministic: bool
             whether to use zeros as initial distribution
             if True - zero initial point will produce constant latent variables
 
@@ -1590,19 +1590,19 @@ class Approximation(WithMemoization):
 
         Parameters
         ----------
-        draws : `int`
+        draws: `int`
             Number of random samples.
-        include_transformed : `bool`
+        include_transformed: `bool`
             If True, transformed variables are also sampled. Default is False.
-        backend : `str`
+        backend: `str`
             Trace backend type to use. Valid entries include: 'ndarray' (default),
             'text', 'sqlite', 'hdf5'.
-        name : `str`
+        name: `str`
             Name for backend (required for non-NDArray backends). Default is None.
 
         Returns
         -------
-        trace : :class:`pymc3.backends.base.MultiTrace`
+        trace: :class:`pymc3.backends.base.MultiTrace`
             Samples drawn from variational posterior.
         """
         vars_sampled = get_default_varnames(self.model.unobserved_RVs,

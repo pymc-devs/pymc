@@ -83,21 +83,21 @@ class BaseStochasticGradient(ArrayStepShared):
 
     Parameters
     ----------
-    vars : list
+    vars: list
         List of variables for sampler
     batch_size`: int
         Batch Size for each step
-    total_size : int
+    total_size: int
         Total size of the training data
-    step_size : float
+    step_size: float
         Step size for the parameter update
-    model : PyMC Model
+    model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context)
-    random_seed : int
+    random_seed: int
         The seed to initialize the Random Stream
-    minibatches : iterator
+    minibatches: iterator
         If the ObservedRV.observed is not a GeneratorOp then this parameter must not be None
-    minibatch_tensor : list of tensors
+    minibatch_tensor: list of tensors
         If the ObservedRV.observed is not a GeneratorOp then this parameter must not be None
         The length of this tensor should be the same as the next(minibatches)
 

@@ -41,11 +41,11 @@ def save_trace(trace: MultiTrace, directory: Optional[str]=None, overwrite=False
 
     Parameters
     ----------
-    trace : pm.MultiTrace
+    trace: pm.MultiTrace
         trace to save to disk
-    directory : str (optional)
+    directory: str (optional)
         path to a directory to save the trace
-    overwrite : bool (default False)
+    overwrite: bool (default False)
         whether to overwrite an existing directory.
 
     Returns
@@ -80,9 +80,9 @@ def load_trace(directory: str, model=None) -> MultiTrace:
 
     Parameters
     ----------
-    directory : str
+    directory: str
         Path to a pymc3 serialized trace
-    model : pm.Model (optional)
+    model: pm.Model (optional)
         Model used to create the trace.  Can also be inferred from context
 
     Returns
@@ -182,11 +182,11 @@ class NDArray(base.BaseTrace):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of backend. This has no meaning for the NDArray backend.
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
-    vars : list of variables
+    vars: list of variables
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
     """
@@ -207,11 +207,11 @@ class NDArray(base.BaseTrace):
 
         Parameters
         ----------
-        draws : int
+        draws: int
             Expected number of draws
-        chain : int
+        chain: int
             Chain number
-        sampler_vars : list of dicts
+        sampler_vars: list of dicts
             Names and dtypes of the variables that are
             exported by the samplers.
         """
@@ -260,7 +260,7 @@ class NDArray(base.BaseTrace):
 
         Parameters
         ----------
-        point : dict
+        point: dict
             Values mapped to variable names
         """
         for varname, value in zip(self.varnames, self.fn(point)):
@@ -303,9 +303,9 @@ class NDArray(base.BaseTrace):
 
         Parameters
         ----------
-        varname : str
-        burn : int
-        thin : int
+        varname: str
+        burn: int
+        thin: int
 
         Returns
         -------

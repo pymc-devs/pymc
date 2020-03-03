@@ -59,7 +59,7 @@ class _Bounded(Distribution):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -107,10 +107,10 @@ class _Bounded(Distribution):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -179,13 +179,13 @@ class _ContinuousBounded(_Bounded, Continuous):
 
     Parameters
     ----------
-    distribution : pymc3 distribution
+    distribution: pymc3 distribution
         Distribution to be transformed into a bounded distribution
-    lower : float (optional)
+    lower: float (optional)
         Lower bound of the distribution, set to -inf to disable.
-    upper : float (optional)
+    upper: float (optional)
         Upper bound of the distribibution, set to inf to disable.
-    tranform : 'infer' or object
+    tranform: 'infer' or object
         If 'infer', infers the right transform to apply from the supplied bounds.
         If transform object, has to supply .forward() and .backward() methods.
         See pymc3.distributions.transforms for more information.
@@ -234,11 +234,11 @@ class Bound:
 
     Parameters
     ----------
-    distribution : pymc3 distribution
+    distribution: pymc3 distribution
         Distribution to be transformed into a bounded distribution.
-    lower : float or array like, optional
+    lower: float or array like, optional
         Lower bound of the distribution.
-    upper : float or array like, optional
+    upper: float or array like, optional
         Upper bound of the distribution.
 
     Examples

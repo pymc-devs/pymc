@@ -33,15 +33,15 @@ def quad_potential(C, is_cov):
 
     Parameters
     ----------
-    C : arraylike, 0 <= ndim <= 2
+    C: arraylike, 0 <= ndim <= 2
         scaling matrix for the potential
         vector treated as diagonal matrix.
-    is_cov : Boolean
+    is_cov: Boolean
         whether C is provided as a covariance matrix or hessian
 
     Returns
     -------
-    q : Quadpotential
+    q: Quadpotential
     """
     if issparse(C):
         if not chol_available:
@@ -115,7 +115,7 @@ class QuadPotential:
 
         Parameters
         ----------
-        vmap : blocking.ArrayOrdering.vmap
+        vmap: blocking.ArrayOrdering.vmap
             List of `VarMap`s, which are namedtuples with var, slc, shp, dtyp
 
         Raises
@@ -229,7 +229,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
         Parameters
         ----------
-        vmap : blocking.ArrayOrdering.vmap
+        vmap: blocking.ArrayOrdering.vmap
             List of `VarMap`s, which are namedtuples with var, slc, shp, dtyp
 
         Raises
@@ -361,7 +361,7 @@ class QuadPotentialDiag(QuadPotential):
 
         Parameters
         ----------
-        v : vector, 0 <= ndim <= 1
+        v: vector, 0 <= ndim <= 1
            Diagonal of covariance matrix for the potential vector
         """
         if dtype is None:
@@ -405,7 +405,7 @@ class QuadPotentialFullInv(QuadPotential):
 
         Parameters
         ----------
-        A : matrix, ndim = 2
+        A: matrix, ndim = 2
            Inverse of covariance matrix for the potential vector
         """
         if dtype is None:
@@ -445,7 +445,7 @@ class QuadPotentialFull(QuadPotential):
 
         Parameters
         ----------
-        A : matrix, ndim = 2
+        A: matrix, ndim = 2
             scaling matrix for the potential vector
         """
         if dtype is None:
@@ -645,7 +645,7 @@ if chol_available:
 
             Parameters
             ----------
-            A : matrix, ndim = 2
+            A: matrix, ndim = 2
                 scaling matrix for the potential vector
             """
             self.A = A

@@ -200,7 +200,7 @@ def aevb_initial():
         (NormalizingFlowGroup, {'flow': 'radial'}),
         (NormalizingFlowGroup, {'flow': 'radial-loc'})
     ],
-    ids=lambda t: '{c} : {d}'.format(c=t[0].__name__, d=t[1])
+    ids=lambda t: '{c}: {d}'.format(c=t[0].__name__, d=t[1])
 )
 def parametric_grouped_approxes(request):
     return request.param

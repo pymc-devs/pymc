@@ -33,8 +33,8 @@ def any_to_tensor_and_labels(x, labels=None):
 
     Parameters
     ----------
-    x : np.ndarray | pd.DataFrame | tt.Variable | dict | list
-    labels : list - names for columns of output tensor
+    x: np.ndarray | pd.DataFrame | tt.Variable | dict | list
+    labels: list - names for columns of output tensor
 
     Returns
     -------

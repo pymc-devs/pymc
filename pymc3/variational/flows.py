@@ -39,7 +39,7 @@ class Formula:
 
     Parameters
     ----------
-    formula : str
+    formula: str
         string representing normalizing flow
         e.g. 'planar', 'planar*4', 'planar*4-radial*3', 'planar-radial-planar'
         Yet simple pattern is supported:
@@ -387,8 +387,8 @@ class PlanarFlow(LinearFlow):
 
     def make_uw(self, u, w):
         if not self.batched:
-            # u_ : d
-            # w_ : d
+            # u_: d
+            # w_: d
             wu = u.dot(w)  # .
             mwu = -1. + tt.nnet.softplus(wu)  # .
             # d + (. - .) * d / .
@@ -398,8 +398,8 @@ class PlanarFlow(LinearFlow):
             )
             return u_h, w
         else:
-            # u_ : bxd
-            # w_ : bxd
+            # u_: bxd
+            # w_: bxd
             wu = (u*w).sum(-1, keepdims=True)  # bx-
             mwu = -1. + tt.nnet.softplus(wu)  # bx-
             # bxd + (bx- - bx-) * bxd / bx- = bxd

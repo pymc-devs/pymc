@@ -128,7 +128,7 @@ class ArrayStep(BlockedStep):
 
     Parameters
     ----------
-    vars : list
+    vars: list
         List of variables for sampler.
     fs: list of logp theano functions
     allvars: Boolean (default False)
@@ -169,9 +169,9 @@ class ArrayStepShared(BlockedStep):
         """
         Parameters
         ----------
-        vars : list of sampling variables
-        shared : dict of theano variable -> shared variable
-        blocked : Boolean (default True)
+        vars: list of sampling variables
+        shared: dict of theano variable -> shared variable
+        blocked: Boolean (default True)
         """
         self.vars = vars
         self.ordering = ArrayOrdering(vars)
@@ -204,9 +204,9 @@ class PopulationArrayStepShared(ArrayStepShared):
         """
         Parameters
         ----------
-        vars : list of sampling variables
-        shared : dict of theano variable -> shared variable
-        blocked : Boolean (default True)
+        vars: list of sampling variables
+        shared: dict of theano variable -> shared variable
+        blocked: Boolean (default True)
         """
         self.population = None
         self.this_chain = None
@@ -218,9 +218,9 @@ class PopulationArrayStepShared(ArrayStepShared):
 
         Parameters
         ----------
-        population : list of Points. (The elements of this list must be
+        population: list of Points. (The elements of this list must be
             replaced with current chain states in every iteration.)
-        chain_index : int of the index of this sampler in the population
+        chain_index: int of the index of this sampler in the population
         """
         self.population = population
         self.this_chain = chain_index
@@ -278,9 +278,9 @@ def metrop_select(mr, q, q0):
 
     Parameters
     ----------
-    mr : float, Metropolis acceptance rate
-    q : proposed sample
-    q0 : current sample
+    mr: float, Metropolis acceptance rate
+    q: proposed sample
+    q0: current sample
 
     Returns
     -------
