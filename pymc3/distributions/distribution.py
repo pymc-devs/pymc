@@ -167,7 +167,7 @@ class NoDistribution(Distribution):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -682,9 +682,9 @@ def _compile_theano_function(param, vars, givens=None):
 
     Parameters
     ----------
-    param : Model variable from which to draw value
-    vars : Children variables of `param`
-    givens : Variables to be replaced in the Theano graph
+    param: Model variable from which to draw value
+    vars: Children variables of `param`
+    givens: Variables to be replaced in the Theano graph
 
     Returns
     -------
@@ -716,9 +716,9 @@ def vectorize_theano_function(f, inputs, output):
 
     Parameters
     ----------
-    f : theano compiled function
-    inputs : list of theano variables used as inputs for the function
-    givens : theano variable which is the output of the function
+    f: theano compiled function
+    inputs: list of theano variables used as inputs for the function
+    givens: theano variable which is the output of the function
 
     Notes
     -----
@@ -762,18 +762,18 @@ def _draw_value(param, point=None, givens=None, size=None):
 
     Parameters
     ----------
-    param : number, array like, theano variable or pymc3 random variable
+    param: number, array like, theano variable or pymc3 random variable
         The value or distribution. Constants or shared variables
         will be converted to an array and returned. Theano variables
         are evaluated. If `param` is a pymc3 random variables, draw
         a new value from it and return that, unless a value is specified
         in `point`.
-    point : dict, optional
+    point: dict, optional
         A dictionary from pymc3 variable names to their values.
-    givens : dict, optional
+    givens: dict, optional
         A dictionary from theano variables to their values. These values
         are used to evaluate `param` if it is a theano variable.
-    size : int, optional
+    size: int, optional
         Number of samples
     """
     if isinstance(param, (numbers.Number, np.ndarray)):
@@ -859,7 +859,7 @@ def generate_samples(generator, *args, **kwargs):
 
     Parameters
     ----------
-    generator : function
+    generator: function
         Function to generate the random samples. The function is
         expected take parameters for generating samples and
         a keyword argument ``size`` which determines the shape
@@ -870,9 +870,9 @@ def generate_samples(generator, *args, **kwargs):
     keyword arguments
     ~~~~~~~~~~~~~~~~~
 
-    dist_shape : int or tuple of int
+    dist_shape: int or tuple of int
         The shape of the random variable (i.e., the shape attribute).
-    size : int or tuple of int
+    size: int or tuple of int
         The required shape of the samples.
     broadcast_shape: tuple of int or None
         The shape resulting from the broadcasting of the parameters.

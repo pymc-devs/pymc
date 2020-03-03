@@ -64,11 +64,11 @@ def kron_matrix_op(krons, m, op):
 
     Parameters
     -----------
-    krons : list of square 2D array-like objects
+    krons: list of square 2D array-like objects
             D square matrices :math:`[A_1, A_2, ..., A_D]` to be Kronecker'ed
             :math:`A = A_1 \otimes A_2 \otimes ... \otimes A_D`
             Product of column dimensions must be :math:`N`
-    m    : NxM array or 1D array (treated as Nx1)
+    m   : NxM array or 1D array (treated as Nx1)
            Object that krons act upon
     """
     def flat_matrix_op(flat_mat, mat):
@@ -230,13 +230,13 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
 
     Parameters
     ----------
-    n : int
+    n: int
         The number of rows of the triangular matrix.
-    packed : theano.vector
+    packed: theano.vector
         The matrix in packed format.
-    lower : bool, default=True
+    lower: bool, default=True
         If true, assume that the matrix is lower triangular.
-    diagonal_only : bool
+    diagonal_only: bool
         If true, return only the diagonal of the matrix.
     """
     if packed.ndim != 1:
@@ -358,10 +358,10 @@ def block_diagonal(matrices, sparse=False, format='csr'):
 
     Parameters
     ----------
-    matrices : tensors
-    format : str (default 'csr')
+    matrices: tensors
+    format: str (default 'csr')
         must be one of: 'csr', 'csc'
-    sparse : bool (default False)
+    sparse: bool (default False)
         if True return sparse format
 
     Returns

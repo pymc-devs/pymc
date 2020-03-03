@@ -33,9 +33,9 @@ def get_chol(cov, chol):
 
     Parameters
     ----------
-    cov : array, optional
+    cov: array, optional
         Covariance matrix of the multivariate Gaussian prior.
-    chol : array, optional
+    chol: array, optional
         Cholesky decomposition of the covariance matrix of the
         multivariate Gaussian prior.
     """
@@ -62,14 +62,14 @@ class EllipticalSlice(ArrayStep):
 
     Parameters
     ----------
-    vars : list
+    vars: list
         List of variables for sampler.
-    prior_cov : array, optional
+    prior_cov: array, optional
         Covariance matrix of the multivariate Gaussian prior.
-    prior_chol : array, optional
+    prior_chol: array, optional
         Cholesky decomposition of the covariance matrix of the
         multivariate Gaussian prior.
-    model : PyMC Model
+    model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from
         context).
 
@@ -96,8 +96,8 @@ class EllipticalSlice(ArrayStep):
         super().__init__(vars, [self.model.fastlogp], **kwargs)
 
     def astep(self, q0, logp):
-        """q0 : current state
-        logp : log probability function
+        """q0: current state
+        logp: log probability function
         """
 
         # Draw from the normal prior by multiplying the Cholesky decomposition

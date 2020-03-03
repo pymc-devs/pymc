@@ -31,18 +31,18 @@ class LinearComponent(Model):
 
     Parameters
     ----------
-    name : str - name, associated with the linear component
-    x : pd.DataFrame or np.ndarray
-    y : pd.Series or np.array
-    intercept : bool - fit with intercept or not?
-    labels : list - replace variable names with these labels
-    priors : dict - priors for coefficients
+    name: str - name, associated with the linear component
+    x: pd.DataFrame or np.ndarray
+    y: pd.Series or np.array
+    intercept: bool - fit with intercept or not?
+    labels: list - replace variable names with these labels
+    priors: dict - priors for coefficients
         use `Intercept` key for defining Intercept prior
             defaults to Flat.dist()
         use `Regressor` key for defining default prior for all regressors
             defaults to Normal.dist(mu=0, tau=1.0E-6)
-    vars : dict - random variables instead of creating new ones
-    offset : scalar, or numpy/theano array with the same shape as y
+    vars: dict - random variables instead of creating new ones
+    offset: scalar, or numpy/theano array with the same shape as y
         this can be used to specify an a priori known component to be
         included in the linear predictor during fitting.
     """
@@ -107,10 +107,10 @@ class LinearComponent(Model):
 
         Parameters
         ----------
-        formula : str - a patsy formula
-        data : a dict-like object that can be used to look up variables referenced
+        formula: str - a patsy formula
+        data: a dict-like object that can be used to look up variables referenced
             in `formula`
-        eval_env : either a `patsy.EvalEnvironment` or else a depth represented as
+        eval_env: either a `patsy.EvalEnvironment` or else a depth represented as
             an integer which will be passed to `patsy.EvalEnvironment.capture()`.
             See `patsy.dmatrix` and `patsy.EvalEnvironment` for details.
         Other arguments are documented in the constructor.
@@ -129,20 +129,20 @@ class GLM(LinearComponent):
 
     Parameters
     ----------
-    name : str - name, associated with the linear component
-    x : pd.DataFrame or np.ndarray
-    y : pd.Series or np.array
-    intercept : bool - fit with intercept or not?
-    labels : list - replace variable names with these labels
-    priors : dict - priors for coefficients
+    name: str - name, associated with the linear component
+    x: pd.DataFrame or np.ndarray
+    y: pd.Series or np.array
+    intercept: bool - fit with intercept or not?
+    labels: list - replace variable names with these labels
+    priors: dict - priors for coefficients
         use `Intercept` key for defining Intercept prior
             defaults to Flat.dist()
         use `Regressor` key for defining default prior for all regressors
             defaults to Normal.dist(mu=0, tau=1.0E-6)
-    init : dict - test_vals for coefficients
-    vars : dict - random variables instead of creating new ones
-    family : pymc3..families object
-    offset : scalar, or numpy/theano array with the same shape as y
+    init: dict - test_vals for coefficients
+    vars: dict - random variables instead of creating new ones
+    family: pymc3..families object
+    offset: scalar, or numpy/theano array with the same shape as y
         this can be used to specify an a priori known component to be
         included in the linear predictor during fitting.
     """
@@ -177,10 +177,10 @@ class GLM(LinearComponent):
 
         Parameters
         ----------
-        formula : str - a `patsy` formula
-        data : a dict-like object that can be used to look up variables referenced
+        formula: str - a `patsy` formula
+        data: a dict-like object that can be used to look up variables referenced
             in `formula`
-        eval_env : either a `patsy.EvalEnvironment` or else a depth represented as
+        eval_env: either a `patsy.EvalEnvironment` or else a depth represented as
             an integer which will be passed to `patsy.EvalEnvironment.capture()`.
             See `patsy.dmatrix` and `patsy.EvalEnvironment` for details.
         Other arguments are documented in the constructor.

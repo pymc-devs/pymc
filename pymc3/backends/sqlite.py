@@ -77,14 +77,14 @@ class SQLite(base.BaseTrace):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of database file
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
-    vars : list of variables
+    vars: list of variables
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
-    test_point : dict
+    test_point: dict
         use different test point that might be with changed variables shapes
     """
 
@@ -110,9 +110,9 @@ class SQLite(base.BaseTrace):
 
         Parameters
         ----------
-        draws : int
+        draws: int
             Expected number of draws
-        chain : int
+        chain: int
             Chain number
         """
         self.db.connect()
@@ -158,7 +158,7 @@ class SQLite(base.BaseTrace):
 
         Parameters
         ----------
-        point : dict
+        point: dict
             Values mapped to variable names
         """
         for varname, value in zip(self.varnames, self.fn(point)):
@@ -219,9 +219,9 @@ class SQLite(base.BaseTrace):
 
         Parameters
         ----------
-        varname : str
-        burn : int
-        thin : int
+        varname: str
+        burn: int
+        thin: int
 
         Returns
         -------
@@ -313,9 +313,9 @@ def load(name, model=None):
 
     Parameters
     ----------
-    name : str
+    name: str
         Path to SQLite database file
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
 
     Returns

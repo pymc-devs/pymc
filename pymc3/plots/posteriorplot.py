@@ -21,16 +21,16 @@ import numpy as np
 def plot_posterior_predictive_glm(trace, eval=None, lm=None, samples=30, **kwargs):
     """Plot posterior predictive of a linear model.
     :Arguments:
-        trace : <array>
+        trace: <array>
             Array of posterior samples with columns
-        eval : <array>
+        eval: <array>
             Array over which to evaluate lm
-        lm : function <default: linear function>
+        lm: function <default: linear function>
             Function mapping parameters at different points
             to their respective outputs.
             input: point, sample
             output: estimated value
-        samples : int <default=30>
+        samples: int <default=30>
             How many posterior samples to draw.
     Additional keyword arguments are passed to pylab.plot().
     """

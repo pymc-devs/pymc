@@ -34,14 +34,14 @@ class HDF5(base.BaseTrace):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of backend. This has no meaning for the HDF5 backend.
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
-    vars : list of variables
+    vars: list of variables
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
-    test_point : dict
+    test_point: dict
         use different test point that might be with changed variables shapes
         """
 
@@ -148,11 +148,11 @@ class HDF5(base.BaseTrace):
 
         Parameters
         ----------
-        draws : int
+        draws: int
             Expected number of draws
-        chain : int
+        chain: int
             Chain number
-        sampler_vars : list of dicts
+        sampler_vars: list of dicts
             Names and dtypes of the variables that are
             exported by the samplers.
         """
@@ -228,9 +228,9 @@ def load(name, model=None):
 
     Parameters
     ----------
-    name : str
+    name: str
         Path to HDF5 arrays file
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
 
     Returns

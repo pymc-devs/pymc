@@ -32,16 +32,16 @@ def make_sens_ic(n_states, n_theta, floatX):
 
         Parameters
         ----------
-        n_states : int
+        n_states: int
             Number of state variables in the ODE
-        n_theta : int
+        n_theta: int
             Number of ODE parameters
-        floatX : str
+        floatX: str
             dtype to be used for the array
 
         Returns
         -------
-        dydp : array
+        dydp: array
             1D-array of shape (n_states * (n_states + n_theta),), representing the initial condition of the sensitivities
         """
 
@@ -69,16 +69,16 @@ def augment_system(ode_func, n_states, n_theta):
 
     Parameters
     ----------
-    ode_func : function
+    ode_func: function
         Differential equation.  Returns array-like.
-    n_states : int
+    n_states: int
         Number of rows of the sensitivity matrix. (n_states)
-    n_theta : int
+    n_theta: int
         Number of ODE parameters
 
     Returns
     -------
-    system : function
+    system: function
         Augemted system of differential equations.
     """
 

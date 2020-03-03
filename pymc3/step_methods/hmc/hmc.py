@@ -55,26 +55,26 @@ class HamiltonianMC(BaseHMC):
 
         Parameters
         ----------
-        vars : list of theano variables
-        path_length : float, default=2
+        vars: list of theano variables
+        path_length: float, default=2
             total length to travel
-        step_rand : function float -> float, default=unif
+        step_rand: function float -> float, default=unif
             A function which takes the step size and returns an new one used to
             randomize the step size at each iteration.
-        step_scale : float, default=0.25
+        step_scale: float, default=0.25
             Initial size of steps to take, automatically scaled down
             by 1/n**(1/4).
-        scaling : array_like, ndim = {1,2}
+        scaling: array_like, ndim = {1,2}
             The inverse mass, or precision matrix. One dimensional arrays are
             interpreted as diagonal matrices. If `is_cov` is set to True,
             this will be interpreded as the mass or covariance matrix.
-        is_cov : bool, default=False
+        is_cov: bool, default=False
             Treat the scaling as mass or covariance matrix.
-        potential : Potential, optional
+        potential: Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods. It can be specified instead
             of the scaling matrix.
-        target_accept : float, default 0.65
+        target_accept: float, default 0.65
             Adapt the step size such that the average acceptance
             probability across the trajectories are close to target_accept.
             Higher values for target_accept lead to smaller step sizes.
@@ -84,22 +84,22 @@ class HamiltonianMC(BaseHMC):
             al. 2010, Neal 2011). See Hoffman and Gelman's "The No-U-Turn
             Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte
             Carlo" section 3.2 for details.
-        gamma : float, default .05
-        k : float, default .75
+        gamma: float, default .05
+        k: float, default .75
             Parameter for dual averaging for step size adaptation. Values
             between 0.5 and 1 (exclusive) are admissible. Higher values
             correspond to slower adaptation.
-        t0 : float > 0, default 10
+        t0: float > 0, default 10
             Parameter for dual averaging. Higher values slow initial
             adaptation.
-        adapt_step_size : bool, default=True
+        adapt_step_size: bool, default=True
             Whether step size adaptation should be enabled. If this is
             disabled, `k`, `t0`, `gamma` and `target_accept` are ignored.
-        max_steps : int
+        max_steps: int
             The maximum number of leapfrog steps.
-        model : pymc3.Model
+        model: pymc3.Model
             The model
-        **kwargs : passed to BaseHMC
+        **kwargs: passed to BaseHMC
         """
         kwargs.setdefault('step_rand', unif)
         kwargs.setdefault('target_accept', 0.65)

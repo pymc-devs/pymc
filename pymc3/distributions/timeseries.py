@@ -40,9 +40,9 @@ class AR1(distribution.Continuous):
 
     Parameters
     ----------
-    k : tensor
+    k: tensor
        effect of lagged value on current value
-    tau_e : tensor
+    tau_e: tensor
        precision for innovations
     """
 
@@ -59,7 +59,7 @@ class AR1(distribution.Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -105,15 +105,15 @@ class AR(distribution.Continuous):
 
     Parameters
     ----------
-    rho : tensor
+    rho: tensor
         Tensor of autoregressive coefficients. The first dimension is the p lag.
-    sigma : float
+    sigma: float
         Standard deviation of innovation (sigma > 0). (only required if tau is not specified)
-    tau : float
+    tau: float
         Precision of innovation (tau > 0). (only required if sigma is not specified)
     constant: bool (optional, default = False)
         Whether to include a constant.
-    init : distribution
+    init: distribution
         distribution for initial values (Defaults to Flat())
     """
 
@@ -158,7 +158,7 @@ class AR(distribution.Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -190,15 +190,15 @@ class GaussianRandomWalk(distribution.Continuous):
         innovation drift, defaults to 0.0
         For vector valued mu, first dimension must match shape of the random walk, and
         the first element will be discarded (since there is no innovation in the first timestep)
-    sigma : tensor
+    sigma: tensor
         sigma > 0, innovation standard deviation (only required if tau is not specified)
         For vector valued sigma, first dimension must match shape of the random walk, and
         the first element will be discarded (since there is no innovation in the first timestep)
-    tau : tensor
+    tau: tensor
         tau > 0, innovation precision (only required if sigma is not specified)
         For vector valued tau, first dimension must match shape of the random walk, and
         the first element will be discarded (since there is no innovation in the first timestep)
-    init : distribution
+    init: distribution
         distribution for initial value (Defaults to Flat())
     """
 
@@ -232,7 +232,7 @@ class GaussianRandomWalk(distribution.Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -252,10 +252,10 @@ class GaussianRandomWalk(distribution.Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -304,13 +304,13 @@ class GARCH11(distribution.Continuous):
 
     Parameters
     ----------
-    omega : tensor
+    omega: tensor
         omega > 0, mean variance
-    alpha_1 : tensor
+    alpha_1: tensor
         alpha_1 >= 0, autoregressive term coefficient
-    beta_1 : tensor
+    beta_1: tensor
         beta_1 >= 0, alpha_1 + beta_1 < 1, moving average term coefficient
-    initial_vol : tensor
+    initial_vol: tensor
         initial_vol >= 0, initial volatility, sigma_0
     """
 
@@ -343,7 +343,7 @@ class GARCH11(distribution.Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -373,11 +373,11 @@ class EulerMaruyama(distribution.Continuous):
 
     Parameters
     ----------
-    dt : float
+    dt: float
         time step of discretization
-    sde_fn : callable
+    sde_fn: callable
         function returning the drift and diffusion coefficients of SDE
-    sde_pars : tuple
+    sde_pars: tuple
         parameters of the SDE, passed as ``*args`` to ``sde_fn``
     """
     def __init__(self, dt, sde_fn, sde_pars, *args, **kwds):
@@ -392,7 +392,7 @@ class EulerMaruyama(distribution.Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -421,15 +421,15 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
     Parameters
     ----------
-    mu : tensor
+    mu: tensor
         innovation drift, defaults to 0.0
-    cov : tensor
+    cov: tensor
         pos def matrix, innovation covariance matrix
-    tau : tensor
+    tau: tensor
         pos def matrix, inverse covariance matrix
-    chol : tensor
+    chol: tensor
         Cholesky decomposition of covariance matrix
-    init : distribution
+    init: distribution
         distribution for initial value (Defaults to Flat())
 
     Notes
@@ -453,7 +453,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -482,16 +482,16 @@ class MvStudentTRandomWalk(MvGaussianRandomWalk):
 
     Parameters
     ----------
-    nu : degrees of freedom
-    mu : tensor
+    nu: degrees of freedom
+    mu: tensor
         innovation drift, defaults to 0.0
-    cov : tensor
+    cov: tensor
         pos def matrix, innovation covariance matrix
-    tau : tensor
+    tau: tensor
         pos def matrix, inverse covariance matrix
-    chol : tensor
+    chol: tensor
         Cholesky decomposition of covariance matrix
-    init : distribution
+    init: distribution
         distribution for initial value (Defaults to Flat())
     """
     def __init__(self, nu, *args, **kwargs):

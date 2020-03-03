@@ -41,9 +41,9 @@ def bound(logp, *conditions, **kwargs):
 
     Parameters
     ----------
-    logp : float
-    *conditions : booleans
-    broadcast_conditions : bool (optional, default=True)
+    logp: float
+    *conditions: booleans
+    broadcast_conditions: bool (optional, default=True)
         If True, broadcasts logp to match the largest shape of the conditions.
         This is used e.g. in DiscreteUniform where logp is a scalar constant and the shape
         is specified via the conditions.
@@ -144,11 +144,11 @@ def log_normal(x, mean, **kwargs):
 
     Parameters
     ----------
-    x : Tensor
+    x: Tensor
         point of evaluation
-    mean : Tensor
+    mean: Tensor
         mean of normal distribution
-    kwargs : one of parameters `{sigma, tau, w, rho}`
+    kwargs: one of parameters `{sigma, tau, w, rho}`
 
     Notes
     -----
@@ -189,9 +189,9 @@ def MvNormalLogp():
 
     Parameters
     ----------
-    cov : tt.matrix
+    cov: tt.matrix
         The covariance matrix.
-    delta : tt.matrix
+    delta: tt.matrix
         Array of deviations from the mean.
     """
     cov = tt.matrix('cov')

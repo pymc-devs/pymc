@@ -40,14 +40,14 @@ class BaseTrace:
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of backend
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
-    vars : list of variables
+    vars: list of variables
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
-    test_point : dict
+    test_point: dict
         use different test point that might be with changed variables shapes
     """
 
@@ -113,11 +113,11 @@ class BaseTrace:
 
         Parameters
         ----------
-        draws : int
+        draws: int
             Expected number of draws
-        chain : int
+        chain: int
             Chain number
-        sampler_vars : list of dictionaries (name -> dtype), optional
+        sampler_vars: list of dictionaries (name -> dtype), optional
             Diagnostics / statistics for each sampler. Before passing this
             to a backend, you should check, that the `supports_sampler_state`
             flag is set.
@@ -130,9 +130,9 @@ class BaseTrace:
 
         Parameters
         ----------
-        point : dict
+        point: dict
             Values mapped to variable names
-        sampler_states : list of dicts
+        sampler_states: list of dicts
             The diagnostic values for each sampler
         """
         raise NotImplementedError
@@ -163,9 +163,9 @@ class BaseTrace:
 
         Parameters
         ----------
-        varname : str
-        burn : int
-        thin : int
+        varname: str
+        burn: int
+        thin: int
 
         Returns
         -------
@@ -178,10 +178,10 @@ class BaseTrace:
 
         Parameters
         ----------
-        stat_name : str
-        sampler_idx : int or None
-        burn : int
-        thin : int
+        stat_name: str
+        sampler_idx: int or None
+        burn: int
+        thin: int
 
         Returns
         -------
@@ -275,13 +275,13 @@ class MultiTrace:
 
     Attributes
     ----------
-        nchains : int
+        nchains: int
             Number of chains in the `MultiTrace`.
-        chains : `List[int]`
+        chains: `List[int]`
             List of chain indices
-        report : str
+        report: str
             Report on the sampling process.
-        varnames : `List[str]`
+        varnames: `List[str]`
             List of variable names in the trace(s)
     """
 
@@ -395,12 +395,12 @@ class MultiTrace:
 
         Parameters
         ----------
-        vals : dict (str: array-like)
+        vals: dict (str: array-like)
              The keys should be the names of the new variables. The values are expected to be
              array-like objects. For traces with more than one chain the length of each value
              should match the number of total samples already in the trace `(chains * iterations)`,
              otherwise a warning is raised.
-        overwrite : bool
+        overwrite: bool
             If `False` (default) a ValueError is raised if the variable already exists.
             Change to `True` to overwrite the values of variables
 
@@ -441,7 +441,7 @@ class MultiTrace:
 
         Parameters
         ----------
-        name : str
+        name: str
             Name of the variable to remove. Raises KeyError if the variable is not present
         """
         varnames = self.varnames
@@ -461,15 +461,15 @@ class MultiTrace:
 
         Parameters
         ----------
-        varname : str
-        burn : int
-        thin : int
-        combine : bool
+        varname: str
+        burn: int
+        thin: int
+        combine: bool
             If True, results from `chains` will be concatenated.
-        chains : int or list of ints
+        chains: int or list of ints
             Chains to retrieve. If None, all chains are used. A single
             chain value can also be given.
-        squeeze : bool
+        squeeze: bool
             Return a single array element if the resulting list of
             values only has one element. If False, the result will
             always be a list of arrays, even if `combine` is True.
@@ -495,10 +495,10 @@ class MultiTrace:
 
         Parameters
         ----------
-        stat_name : str
-        sampler_idx : int or None
-        burn : int
-        thin : int
+        stat_name: str
+        sampler_idx: int or None
+        burn: int
+        thin: int
 
         Returns
         -------
@@ -535,8 +535,8 @@ class MultiTrace:
 
         Parameters
         ----------
-        idx : int
-        chain : int
+        idx: int
+        chain: int
             If a chain is not given, the highest chain number is used.
         """
         if chain is None:
@@ -548,7 +548,7 @@ class MultiTrace:
 
         Parameters
         ----------
-        chains : list of int or N
+        chains: list of int or N
             The chains whose points should be inlcuded in the iterator.  If
             chains is not given, include points from all chains.
         """
@@ -563,7 +563,7 @@ def merge_traces(mtraces: List[MultiTrace]) -> MultiTrace:
 
     Parameters
     ----------
-    mtraces : list of MultiTraces
+    mtraces: list of MultiTraces
         Each instance should have unique chain numbers.
 
     Raises

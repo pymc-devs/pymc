@@ -67,9 +67,9 @@ class Binomial(Discrete):
 
     Parameters
     ----------
-    n : int
+    n: int
         Number of Bernoulli trials (n >= 0).
-    p : float
+    p: float
         Probability of success in each trial (0 < p < 1).
     """
 
@@ -85,10 +85,10 @@ class Binomial(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -107,7 +107,7 @@ class Binomial(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -180,11 +180,11 @@ class BetaBinomial(Discrete):
 
     Parameters
     ----------
-    n : int
+    n: int
         Number of Bernoulli trials (n >= 0).
-    alpha : float
+    alpha: float
         alpha > 0.
-    beta : float
+    beta: float
         beta > 0.
     """
 
@@ -220,10 +220,10 @@ class BetaBinomial(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -243,7 +243,7 @@ class BetaBinomial(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -303,9 +303,9 @@ class Bernoulli(Discrete):
 
     Parameters
     ----------
-    p : float
+    p: float
         Probability of success (0 < p < 1).
-    logit_p : float
+    logit_p: float
         Logit of success probability. Only one of `p` and `logit_p`
         can be specified.
     """
@@ -331,10 +331,10 @@ class Bernoulli(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -353,7 +353,7 @@ class Bernoulli(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -432,7 +432,7 @@ class DiscreteWeibull(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -469,10 +469,10 @@ class DiscreteWeibull(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -531,7 +531,7 @@ class Poisson(Discrete):
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Expected number of occurrences during the given interval
         (mu >= 0).
 
@@ -552,10 +552,10 @@ class Poisson(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -574,7 +574,7 @@ class Poisson(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -643,9 +643,9 @@ class NegativeBinomial(Discrete):
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Poission distribution parameter (mu > 0).
-    alpha : float
+    alpha: float
         Gamma distribution parameter (alpha > 0).
     """
 
@@ -661,10 +661,10 @@ class NegativeBinomial(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -685,7 +685,7 @@ class NegativeBinomial(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -749,7 +749,7 @@ class Geometric(Discrete):
 
     Parameters
     ----------
-    p : float
+    p: float
         Probability of success on an individual trial (0 < p <= 1).
     """
 
@@ -764,10 +764,10 @@ class Geometric(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -786,7 +786,7 @@ class Geometric(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -840,9 +840,9 @@ class DiscreteUniform(Discrete):
 
     Parameters
     ----------
-    lower : int
+    lower: int
         Lower limit.
-    upper : int
+    upper: int
         Upper limit (upper > lower).
     """
 
@@ -865,10 +865,10 @@ class DiscreteUniform(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -888,7 +888,7 @@ class DiscreteUniform(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -942,7 +942,7 @@ class Categorical(Discrete):
 
     Parameters
     ----------
-    p : array of floats
+    p: array of floats
         p > 0 and the elements of p must sum to 1. They will be automatically
         rescaled otherwise.
     """
@@ -968,10 +968,10 @@ class Categorical(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -994,7 +994,7 @@ class Categorical(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1047,7 +1047,7 @@ class Constant(Discrete):
 
     Parameters
     ----------
-    value : float or int
+    value: float or int
         Constant parameter.
     """
 
@@ -1063,10 +1063,10 @@ class Constant(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1089,7 +1089,7 @@ class Constant(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1153,9 +1153,9 @@ class ZeroInflatedPoisson(Discrete):
 
     Parameters
     ----------
-    psi : float
+    psi: float
         Expected proportion of Poisson variates (0 < psi < 1)
-    theta : float
+    theta: float
         Expected number of occurrences during the given interval
         (theta >= 0).
     """
@@ -1173,10 +1173,10 @@ class ZeroInflatedPoisson(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1197,7 +1197,7 @@ class ZeroInflatedPoisson(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1272,11 +1272,11 @@ class ZeroInflatedBinomial(Discrete):
 
     Parameters
     ----------
-    psi : float
+    psi: float
         Expected proportion of Binomial variates (0 < psi < 1)
-    n : int
+    n: int
         Number of Bernoulli trials (n >= 0).
-    p : float
+    p: float
         Probability of success in each trial (0 < p < 1).
 
     """
@@ -1295,10 +1295,10 @@ class ZeroInflatedBinomial(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1319,7 +1319,7 @@ class ZeroInflatedBinomial(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1418,11 +1418,11 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     Parameters
     ----------
-    psi : float
+    psi: float
         Expected proportion of NegativeBinomial variates (0 < psi < 1)
-    mu : float
+    mu: float
         Poission distribution parameter (mu > 0).
-    alpha : float
+    alpha: float
         Gamma distribution parameter (alpha > 0).
 
     """
@@ -1441,10 +1441,10 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1483,7 +1483,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1555,9 +1555,9 @@ class OrderedLogistic(Categorical):
 
     Parameters
     ----------
-    eta : float
+    eta: float
         The predictor.
-    c : array
+    c: array
         The length K - 1 array of cutpoints which break :math:`\eta` into
         ranges.  Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.

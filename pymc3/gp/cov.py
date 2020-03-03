@@ -43,10 +43,10 @@ class Covariance:
 
     Parameters
     ----------
-    input_dim : integer
+    input_dim: integer
         The number of input dimensions, or columns of X (or Xs)
         the kernel will operate on.
-    active_dims : List of integers
+    active_dims: List of integers
         Indicate which dimension or column of X the covariance
         function operates on.
     """
@@ -64,8 +64,8 @@ class Covariance:
 
         Parameters
         ----------
-        X : The training inputs to the kernel.
-        Xs : The optional prediction set of inputs the kernel.
+        X: The training inputs to the kernel.
+        Xs: The optional prediction set of inputs the kernel.
             If Xs is None, Xs = X.
         diag: bool
             Return only the diagonal of the covariance function.
@@ -263,9 +263,9 @@ class Stationary(Covariance):
 
     Parameters
     ----------
-    ls : Lengthscale.  If input_dim > 1, a list or array of scalars or PyMC3 random
+    ls: Lengthscale.  If input_dim > 1, a list or array of scalars or PyMC3 random
     variables.  If input_dim == 1, a scalar or PyMC3 random variable.
-    ls_inv : Inverse lengthscale.  1 / ls.  One of ls or ls_inv must be provided.
+    ls_inv: Inverse lengthscale.  1 / ls.  One of ls or ls_inv must be provided.
     """
 
     def __init__(self, input_dim, ls=None, ls_inv=None, active_dims=None):
@@ -501,10 +501,10 @@ class WarpedInput(Covariance):
 
     Parameters
     ----------
-    cov_func : Covariance
-    warp_func : callable
+    cov_func: Covariance
+    warp_func: callable
         Theano function of X and additional optional arguments.
-    args : optional, tuple or list of scalars or PyMC3 variables
+    args: optional, tuple or list of scalars or PyMC3 variables
         Additional inputs (besides X or Xs) to warp_func.
     """
 
@@ -542,9 +542,9 @@ class Gibbs(Covariance):
 
     Parameters
     ----------
-    lengthscale_func : callable
+    lengthscale_func: callable
         Theano function of X and additional optional arguments.
-    args : optional, tuple or list of scalars or PyMC3 variables
+    args: optional, tuple or list of scalars or PyMC3 variables
         Additional inputs (besides X or Xs) to lengthscale_func.
     """
 
@@ -610,9 +610,9 @@ class ScaledCov(Covariance):
     ----------
     cov_func: Covariance
         Base kernel or covariance function
-    scaling_func : callable
+    scaling_func: callable
         Theano function of X and additional optional arguments.
-    args : optional, tuple or list of scalars or PyMC3 variables
+    args: optional, tuple or list of scalars or PyMC3 variables
         Additional inputs (besides X or Xs) to lengthscale_func.
     """
 
@@ -661,12 +661,12 @@ class Coregion(Covariance):
 
     Parameters
     ----------
-    W : 2D array of shape (num_outputs, rank)
+    W: 2D array of shape (num_outputs, rank)
         a low rank matrix that determines the correlations between
         the different outputs (rows)
-    kappa : 1D array of shape (num_outputs, )
+    kappa: 1D array of shape (num_outputs, )
         a vector which allows the outputs to behave independently
-    B : 2D array of shape (num_outputs, rank)
+    B: 2D array of shape (num_outputs, rank)
         the total matrix, exactly one of (W, kappa) and B must be provided
 
     Notes

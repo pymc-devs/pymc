@@ -28,8 +28,8 @@ def multigammaln(a, p):
 
     Parameters
     ----------
-    a : tensor like
-    p : int
+    a: tensor like
+    p: int
        degrees of freedom. p > 0
     """
     i = tt.arange(1, p + 1)

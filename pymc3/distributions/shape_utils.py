@@ -35,7 +35,7 @@ def to_tuple(shape):
 
     Parameters
     ----------
-    shape : None, int or array-like
+    shape: None, int or array-like
         Represents the shape to convert to tuple.
 
     Returns
@@ -76,7 +76,7 @@ def shapes_broadcasting(*args, raise_exception=False):
 
     Parameters
     ----------
-    *args : array-like of int
+    *args: array-like of int
         Tuples or arrays or lists representing the shapes of arrays to be
         broadcast.
     raise_exception: bool (optional)

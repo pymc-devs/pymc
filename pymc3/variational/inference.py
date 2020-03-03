@@ -54,12 +54,12 @@ class Inference:
 
     Parameters
     ----------
-    op : Operator class
-    approx : Approximation class or instance
-    tf : TestFunction instance
-    model : Model
+    op: Operator class
+    approx: Approximation class or instance
+    tf: TestFunction instance
+    model: Model
         PyMC3 Model
-    kwargs : kwargs passed to :class:`Operator`
+    kwargs: kwargs passed to :class:`Operator`
     """
 
     def __init__(self, op, approx, tf, **kwargs):
@@ -103,36 +103,36 @@ class Inference:
 
         Parameters
         ----------
-        n : int
+        n: int
             number of iterations
-        score : bool
+        score: bool
             evaluate loss on each iteration or not
-        callbacks : list[function : (Approximation, losses, i) -> None]
+        callbacks: list[function: (Approximation, losses, i) -> None]
             calls provided functions after each iteration step
-        progressbar : bool
+        progressbar: bool
             whether to show progressbar or not
 
         Other Parameters
         ----------------
-        obj_n_mc : `int`
+        obj_n_mc: `int`
             Number of monte carlo samples used for approximation of objective gradients
-        tf_n_mc : `int`
+        tf_n_mc: `int`
             Number of monte carlo samples used for approximation of test function gradients
-        obj_optimizer : function (grads, params) -> updates
+        obj_optimizer: function (grads, params) -> updates
             Optimizer that is used for objective params
-        test_optimizer : function (grads, params) -> updates
+        test_optimizer: function (grads, params) -> updates
             Optimizer that is used for test function params
-        more_obj_params : `list`
+        more_obj_params: `list`
             Add custom params for objective optimizer
-        more_tf_params : `list`
+        more_tf_params: `list`
             Add custom params for test function optimizer
-        more_updates : `dict`
+        more_updates: `dict`
             Add custom updates to resulting updates
-        total_grad_norm_constraint : `float`
+        total_grad_norm_constraint: `float`
             Bounds gradient norm, prevents exploding gradient problem
-        fn_kwargs : `dict`
+        fn_kwargs: `dict`
             Add kwargs to theano.function (e.g. `{'profile': True}`)
-        more_replacements : `dict`
+        more_replacements: `dict`
             Apply custom replacements before calculating gradients
 
         Returns
@@ -304,9 +304,9 @@ class KLqp(Inference):
 
     Parameters
     ----------
-    approx : :class:`Approximation`
+    approx: :class:`Approximation`
         Approximation to fit, it is required to have `logQ`
-    beta : float
+    beta: float
         Scales the regularization term in ELBO (see Christopher P. Burgess et al., 2017)
 
     References
@@ -438,16 +438,16 @@ class ADVI(KLqp):
 
     Parameters
     ----------
-    local_rv : dict[var->tuple]
+    local_rv: dict[var->tuple]
         mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`pymc3.Model`
+    model: :class:`pymc3.Model`
         PyMC3 model for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start : `Point`
+    start: `Point`
         starting point for inference
 
     References
@@ -473,16 +473,16 @@ class FullRankADVI(KLqp):
 
     Parameters
     ----------
-    local_rv : dict[var->tuple]
+    local_rv: dict[var->tuple]
         mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`pymc3.Model`
+    model: :class:`pymc3.Model`
         PyMC3 model for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start : `Point`
+    start: `Point`
         starting point for inference
 
     References
@@ -540,24 +540,24 @@ class SVGD(ImplicitGradient):
 
     Parameters
     ----------
-    n_particles : `int`
+    n_particles: `int`
         number of particles to use for approximation
-    jitter : `float`
+    jitter: `float`
         noise sd for initial point
-    model : :class:`pymc3.Model`
+    model: :class:`pymc3.Model`
         PyMC3 model for inference
-    kernel : `callable`
+    kernel: `callable`
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
-    temperature : float
+    temperature: float
         parameter responsible for exploration, higher temperature gives more broad posterior estimate
-    start : `dict`
+    start: `dict`
         initial point for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start : `Point`
+    start: `Point`
         starting point for inference
-    kwargs : other keyword arguments passed to estimator
+    kwargs: other keyword arguments passed to estimator
 
     References
     ----------
@@ -616,12 +616,12 @@ class ASVGD(ImplicitGradient):
 
     Parameters
     ----------
-    approx : :class:`Approximation`
+    approx: :class:`Approximation`
         default is :class:`FullRank` but can be any
-    kernel : `callable`
+    kernel: `callable`
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
-    model : :class:`Model`
-    kwargs : kwargs for gradient estimator
+    model: :class:`Model`
+    kwargs: kwargs for gradient estimator
 
     References
     ----------
@@ -717,12 +717,12 @@ class NFVI(KLqp):
 
     Parameters
     ----------
-    flow : str|AbstractFlow
+    flow: str|AbstractFlow
         formula or initialized Flow, default is `'scale-loc'` that
         is identical to MeanField
-    model : :class:`pymc3.Model`
+    model: :class:`pymc3.Model`
         PyMC3 model for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
     """
@@ -745,13 +745,13 @@ def fit(
 
     Parameters
     ----------
-    n : `int`
+    n: `int`
         number of iterations
-    local_rv : dict[var->tuple]
+    local_rv: dict[var->tuple]
         mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    method : str or :class:`Inference`
+    method: str or :class:`Inference`
         string name is case insensitive in:
 
         -   'advi'  for ADVI
@@ -761,43 +761,43 @@ def fit(
         -   'nfvi'  for Normalizing Flow with default `scale-loc` flow
         -   'nfvi=<formula>'  for Normalizing Flow using formula
 
-    model : :class:`Model`
+    model: :class:`Model`
         PyMC3 model for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    inf_kwargs : dict
+    inf_kwargs: dict
         additional kwargs passed to :class:`Inference`
-    start : `Point`
+    start: `Point`
         starting point for inference
 
     Other Parameters
     ----------------
-    score : bool
+    score: bool
             evaluate loss on each iteration or not
-    callbacks : list[function : (Approximation, losses, i) -> None]
+    callbacks: list[function: (Approximation, losses, i) -> None]
         calls provided functions after each iteration step
     progressbar: bool
         whether to show progressbar or not
-    obj_n_mc : `int`
+    obj_n_mc: `int`
         Number of monte carlo samples used for approximation of objective gradients
-    tf_n_mc : `int`
+    tf_n_mc: `int`
         Number of monte carlo samples used for approximation of test function gradients
-    obj_optimizer : function (grads, params) -> updates
+    obj_optimizer: function (grads, params) -> updates
         Optimizer that is used for objective params
-    test_optimizer : function (grads, params) -> updates
+    test_optimizer: function (grads, params) -> updates
         Optimizer that is used for test function params
-    more_obj_params : `list`
+    more_obj_params: `list`
         Add custom params for objective optimizer
-    more_tf_params : `list`
+    more_tf_params: `list`
         Add custom params for test function optimizer
-    more_updates : `dict`
+    more_updates: `dict`
         Add custom updates to resulting updates
-    total_grad_norm_constraint : `float`
+    total_grad_norm_constraint: `float`
         Bounds gradient norm, prevents exploding gradient problem
-    fn_kwargs : `dict`
+    fn_kwargs: `dict`
         Add kwargs to theano.function (e.g. `{'profile': True}`)
-    more_replacements : `dict`
+    more_replacements: `dict`
         Apply custom replacements before calculating gradients
 
     Returns

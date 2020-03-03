@@ -28,11 +28,11 @@ def trace_to_dataframe(trace, chains=None, varnames=None, include_transformed=Fa
 
     Parameters
     ----------
-    trace : NDarray trace
-    chains : int or list of ints
+    trace: NDarray trace
+    chains: int or list of ints
         Chains to include. If None, all chains are used. A single
         chain value can also be given.
-    varnames : list of variable names
+    varnames: list of variable names
         Variables to be included in the DataFrame, if None all variable are
         included.
     include_transformed: boolean

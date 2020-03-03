@@ -28,7 +28,7 @@ class Mean:
 
         Parameters
         ----------
-        X : The training inputs to the mean function.
+        X: The training inputs to the mean function.
         """
         raise NotImplementedError
 
@@ -54,7 +54,7 @@ class Constant(Mean):
 
     Parameters
     ----------
-    c : variable, array or integer
+    c: variable, array or integer
         Constant mean value
     """
 
@@ -72,9 +72,9 @@ class Linear(Mean):
 
     Parameters
     ----------
-    coeffs : variables
+    coeffs: variables
         Linear coefficients
-    intercept : variable, array or integer
+    intercept: variable, array or integer
         Intercept for linear function (Defaults to zero)
     """
 

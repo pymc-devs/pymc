@@ -84,22 +84,22 @@ class Metropolis(ArrayStepShared):
 
     Parameters
     ----------
-    vars : list
+    vars: list
         List of variables for sampler
-    S : standard deviation or covariance matrix
+    S: standard deviation or covariance matrix
         Some measure of variance to parameterize proposal distribution
-    proposal_dist : function
+    proposal_dist: function
         Function that returns zero-mean deviates when parameterized with
         S (and n). Defaults to normal.
-    scaling : scalar or array
+    scaling: scalar or array
         Initial scale factor for proposal. Defaults to 1.
-    tune : bool
+    tune: bool
         Flag for tuning. Defaults to True.
-    tune_interval : int
+    tune_interval: int
         The frequency of tuning. Defaults to 100 iterations.
-    model : PyMC Model
+    model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
-    mode :  string or `Mode` instance.
+    mode:  string or `Mode` instance.
         compilation mode passed to Theano functions
     """
     name = 'metropolis'
@@ -250,15 +250,15 @@ class BinaryMetropolis(ArrayStep):
 
     Parameters
     ----------
-    vars : list
+    vars: list
         List of variables for sampler
-    scaling : scalar or array
+    scaling: scalar or array
         Initial scale factor for proposal. Defaults to 1.
-    tune : bool
+    tune: bool
         Flag for tuning. Defaults to True.
-    tune_interval : int
+    tune_interval: int
         The frequency of tuning. Defaults to 100 iterations.
-    model : PyMC Model
+    model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
 
     """
@@ -330,15 +330,15 @@ class BinaryGibbsMetropolis(ArrayStep):
 
     Parameters
     ----------
-    vars : list
+    vars: list
         List of variables for sampler
-    order : list or 'random'
+    order: list or 'random'
         List of integers indicating the Gibbs update order
         e.g., [0, 2, 1, ...]. Default is random
-    transit_p : float
+    transit_p: float
         The diagonal of the transition kernel. A value > .5 gives anticorrelated proposals,
         which resulting in more efficient antithetical sampling.
-    model : PyMC Model
+    model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
 
     """
@@ -527,24 +527,24 @@ class DEMetropolis(PopulationArrayStepShared):
 
     Parameters
     ----------
-    lamb : float
+    lamb: float
         Lambda parameter of the DE proposal mechanism. Defaults to 2.38 / sqrt(2 * ndim)
-    vars : list
+    vars: list
         List of variables for sampler
-    S : standard deviation or covariance matrix
+    S: standard deviation or covariance matrix
         Some measure of variance to parameterize proposal distribution
-    proposal_dist : function
+    proposal_dist: function
         Function that returns zero-mean deviates when parameterized with
         S (and n). Defaults to Uniform(-S,+S).
-    scaling : scalar or array
+    scaling: scalar or array
         Initial scale factor for epsilon. Defaults to 0.001
-    tune : str
+    tune: str
         Which hyperparameter to tune. Defaults to None, but can also be 'scaling' or 'lambda'.
-    tune_interval : int
+    tune_interval: int
         The frequency of tuning. Defaults to 100 iterations.
-    model : PyMC Model
+    model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
-    mode :  string or `Mode` instance.
+    mode:  string or `Mode` instance.
         compilation mode passed to Theano functions
 
     References
@@ -651,28 +651,28 @@ class DEMetropolisZ(ArrayStepShared):
 
     Parameters
     ----------
-    lamb : float
+    lamb: float
         Lambda parameter of the DE proposal mechanism. Defaults to 2.38 / sqrt(2 * ndim)
-    vars : list
+    vars: list
         List of variables for sampler
-    S : standard deviation or covariance matrix
+    S: standard deviation or covariance matrix
         Some measure of variance to parameterize proposal distribution
-    proposal_dist : function
+    proposal_dist: function
         Function that returns zero-mean deviates when parameterized with
         S (and n). Defaults to Uniform(-S,+S).
-    scaling : scalar or array
+    scaling: scalar or array
         Initial scale factor for epsilon. Defaults to 0.001
-    tune : str
+    tune: str
         Which hyperparameter to tune. Defaults to 'lambda', but can also be 'scaling' or None.
-    tune_interval : int
+    tune_interval: int
         The frequency of tuning. Defaults to 100 iterations.
-    tune_drop_fraction : float
+    tune_drop_fraction: float
         Fraction of tuning steps that will be removed from the samplers history when the tuning ends.
         Defaults to 0.9 - keeping the last 10% of tuning steps for good mixing while removing 90% of
         potentially unconverged tuning positions.
-    model : PyMC Model
+    model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
-    mode :  string or `Mode` instance.
+    mode:  string or `Mode` instance.
         compilation mode passed to Theano functions
 
     References

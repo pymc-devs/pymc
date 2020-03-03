@@ -315,7 +315,7 @@ def sample(
         Whether to discard posterior samples of the tune interval.
     compute_convergence_checks: bool, default=True
         Whether to compute sampler statistics like Gelman-Rubin and ``effective_n``.
-    callback : function, default=None
+    callback: function, default=None
         A function which gets called for every sample from the trace of a chain. The function is
         called with the trace and the current draw and will contain all samples for a single trace.
         the ``draw.chain`` argument can be used to determine which of the active chains the sample

@@ -43,9 +43,9 @@ class KL(Operator):
 
     Parameters
     ----------
-    approx : :class:`Approximation`
+    approx: :class:`Approximation`
         Approximation used for inference
-    beta : float
+    beta: float
         Beta parameter for KL divergence, scales the regularization term.
     """
 
@@ -64,9 +64,9 @@ class KSDObjective(ObjectiveFunction):
 
     Parameters
     ----------
-    op : :class:`KSD`
+    op: :class:`KSD`
         OPVI Functional operator
-    tf : :class:`TestFunction`
+    tf: :class:`TestFunction`
         OPVI TestFunction
     """
 
@@ -108,7 +108,7 @@ class KSD(Operator):
 
     Parameters
     ----------
-    approx : :class:`Approximation`
+    approx: :class:`Approximation`
         Approximation used for inference
     temperature: float
         Temperature for Stein gradient

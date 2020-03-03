@@ -182,16 +182,16 @@ class MvNormal(_QuadFormBase):
 
     Parameters
     ----------
-    mu : array
+    mu: array
         Vector of means.
-    cov : array
+    cov: array
         Covariance matrix. Exactly one of cov, tau, or chol is needed.
-    tau : array
+    tau: array
         Precision matrix. Exactly one of cov, tau, or chol is needed.
-    chol : array
+    chol: array
         Cholesky decomposition of covariance matrix. Exactly one of cov,
         tau, or chol is needed.
-    lower : bool, default=True
+    lower: bool, default=True
         Whether chol is the lower tridiagonal cholesky factor.
 
     Examples
@@ -242,10 +242,10 @@ class MvNormal(_QuadFormBase):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -319,7 +319,7 @@ class MvNormal(_QuadFormBase):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -366,19 +366,19 @@ class MvStudentT(_QuadFormBase):
 
     Parameters
     ----------
-    nu : int
+    nu: int
         Degrees of freedom.
-    Sigma : matrix
+    Sigma: matrix
         Covariance matrix. Use `cov` in new code.
-    mu : array
+    mu: array
         Vector of means.
-    cov : matrix
+    cov: matrix
         The covariance matrix.
-    tau : matrix
+    tau: matrix
         The precision matrix.
-    chol : matrix
+    chol: matrix
         The cholesky factor of the covariance matrix.
-    lower : bool, default=True
+    lower: bool, default=True
         Whether the cholesky fatcor is given as a lower triangular matrix.
     """
 
@@ -398,10 +398,10 @@ class MvStudentT(_QuadFormBase):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -433,7 +433,7 @@ class MvStudentT(_QuadFormBase):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -482,7 +482,7 @@ class Dirichlet(Continuous):
 
     Parameters
     ----------
-    a : array
+    a: array
         Concentration parameters (a > 0).
     """
 
@@ -529,10 +529,10 @@ class Dirichlet(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -554,7 +554,7 @@ class Dirichlet(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -603,10 +603,10 @@ class Multinomial(Discrete):
 
     Parameters
     ----------
-    n : int or array
+    n: int or array
         Number of trials (n > 0). If n is an array its shape must be (N,) with
         N = p.shape[0]
-    p : one- or two-dimensional array
+    p: one- or two-dimensional array
         Probability of each one of the different outcomes. Elements must
         be non-negative and sum to 1 along the last axis. They will be
         automatically rescaled otherwise.
@@ -681,10 +681,10 @@ class Multinomial(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -706,7 +706,7 @@ class Multinomial(Discrete):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -811,9 +811,9 @@ class Wishart(Continuous):
 
     Parameters
     ----------
-    nu : int
+    nu: int
         Degrees of freedom, > 0.
-    V : array
+    V: array
         p x p positive definite matrix.
 
     Notes
@@ -845,10 +845,10 @@ class Wishart(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -868,7 +868,7 @@ class Wishart(Continuous):
 
         Parameters
         ----------
-        X : numeric
+        X: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -925,18 +925,18 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
 
     Parameters
     ----------
-    S : ndarray
+    S: ndarray
         p x p positive definite matrix
         Or:
         p x p lower-triangular matrix that is the Cholesky factor
         of the covariance matrix.
-    nu : int
+    nu: int
         Degrees of freedom, > dim(S).
-    is_cholesky : bool (default=False)
+    is_cholesky: bool (default=False)
         Input matrix S is already Cholesky decomposed as S.T * S
-    return_cholesky : bool (default=False)
+    return_cholesky: bool (default=False)
         Only return the Cholesky decomposed matrix.
-    testval : ndarray
+    testval: ndarray
         p x p positive definite matrix used to initialize
 
     Notes
@@ -1011,13 +1011,13 @@ class LKJCholeskyCov(Continuous):
 
     Parameters
     ----------
-    eta : float
+    eta: float
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
-    n : int
+    n: int
         Dimension of the covariance matrix (n > 1).
-    sd_dist : pm.Distribution
+    sd_dist: pm.Distribution
         A distribution for the standard deviations.
 
     Notes
@@ -1142,7 +1142,7 @@ class LKJCholeskyCov(Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -1227,10 +1227,10 @@ class LKJCholeskyCov(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1293,9 +1293,9 @@ class LKJCorr(Continuous):
 
     Parameters
     ----------
-    n : int
+    n: int
         Dimension of the covariance matrix (n > 1).
-    eta : float
+    eta: float
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
@@ -1378,10 +1378,10 @@ class LKJCorr(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1402,7 +1402,7 @@ class LKJCorr(Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -1445,20 +1445,20 @@ class MatrixNormal(Continuous):
 
     Parameters
     ----------
-    mu : array
+    mu: array
         Array of means. Must be broadcastable with the random variable X such
         that the shape of mu + X is (m,n).
-    rowcov : mxm array
+    rowcov: mxm array
         Among-row covariance matrix. Defines variance within
         columns. Exactly one of rowcov or rowchol is needed.
-    rowchol : mxm array
+    rowchol: mxm array
         Cholesky decomposition of among-row covariance matrix. Exactly one of
         rowcov or rowchol is needed.
-    colcov : nxn array
+    colcov: nxn array
         Among-column covariance matrix. If rowcov is the identity matrix,
         this functions as `cov` in MvNormal.
         Exactly one of colcov or colchol is needed.
-    colchol : nxn array
+    colchol: nxn array
         Cholesky decomposition of among-column covariance matrix. Exactly one
         of colcov or colchol is needed.
 
@@ -1595,10 +1595,10 @@ class MatrixNormal(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1660,7 +1660,7 @@ class MatrixNormal(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -1692,22 +1692,22 @@ class KroneckerNormal(Continuous):
 
     Parameters
     ----------
-    mu : array
+    mu: array
         Vector of means, just as in `MvNormal`.
-    covs : list of arrays
+    covs: list of arrays
         The set of covariance matrices :math:`[K_1, K_2, ...]` to be
         Kroneckered in the order provided :math:`\bigotimes K_i`.
-    chols : list of arrays
+    chols: list of arrays
         The set of lower cholesky matrices :math:`[L_1, L_2, ...]` such that
         :math:`K_i = L_i L_i'`.
-    evds : list of tuples
+    evds: list of tuples
         The set of eigenvalue-vector, eigenvector-matrix pairs
         :math:`[(v_1, Q_1), (v_2, Q_2), ...]` such that
         :math:`K_i = Q_i \text{diag}(v_i) Q_i'`. For example::
 
             v_i, Q_i = tt.nlinalg.eigh(K_i)
 
-    sigma : scalar, variable
+    sigma: scalar, variable
         Standard deviation of the Gaussian white noise.
 
     Examples
@@ -1859,10 +1859,10 @@ class KroneckerNormal(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1909,7 +1909,7 @@ class KroneckerNormal(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
