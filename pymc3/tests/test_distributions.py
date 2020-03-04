@@ -463,12 +463,12 @@ class TestMatchesScipy(SeededTest):
                 decimal = select_by_precision(float64=6, float32=3)
             assert_almost_equal(logp(pt), logp_reference(pt), decimal=decimal, err_msg=str(pt))
 
-    def check_logcdf(self, pymc3_dist, domain, paramdomains, scipy_logcdf, decimal=None):
+    def check_logcdf(self, pymc3_dist, domain, paramdomains, scipy_logcdf, decimal=None, n_samples=100):
         domains = paramdomains.copy()
         domains['value'] = domain
         if decimal is None:
             decimal = select_by_precision(float64=6, float32=3)
-        for pt in product(domains, n_samples=100):
+        for pt in product(domains, n_samples=n_samples):
             params = dict(pt)
             scipy_cdf = scipy_logcdf(**params)
             value = params.pop('value')
@@ -656,7 +656,7 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(StudentT, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
                                  lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-0.5))
         self.check_logcdf(StudentT, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
-                          lambda value, nu, mu, lam: sp.t.logcdf(value, nu, mu, lam**-0.5))
+                          lambda value, nu, mu, lam: sp.t.logcdf(value, nu, mu, lam**-0.5), n_samples=10)
 
     def test_cauchy(self):
         self.pymc3_matches_scipy(Cauchy, R, {'alpha': R, 'beta': Rplusbig},
