@@ -75,7 +75,7 @@ class TestMixture(SeededTest):
                     [Normal.dist(mu[0], tau=tau[0]), Normal.dist(mu[1], tau=tau[1])],
                     observed=self.norm_x)
             step = Metropolis()
-            trace = sample(5000, step, random_seed=self.random_seed,
+            trace = sample(3500, step, random_seed=self.random_seed,
                            progressbar=False, chains=1)
 
         assert_allclose(np.sort(trace['w'].mean(axis=0)),

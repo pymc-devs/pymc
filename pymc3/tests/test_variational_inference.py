@@ -651,45 +651,45 @@ def inference(inference_spec, simple_model):
 @pytest.fixture('function')
 def fit_kwargs(inference, use_minibatch):
     _select = {
-        (ADVI, 'full'): dict(
+        (ADVI, 'full'): (dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.02, n_win=50),
-            n=5000
+            n=5000), 10000
         ),
-        (ADVI, 'mini'): dict(
+        (ADVI, 'mini'): (dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
-            n=12000
+            n=12000), 10000
         ),
-        (NFVI, 'full'): dict(
+        (NFVI, 'full'): (dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
-            n=12000
+            n=12000), 10000
         ),
-        (NFVI, 'mini'): dict(
+        (NFVI, 'mini'): (dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50),
-            n=12000
+            n=12000), 10000
         ),
-        (FullRankADVI, 'full'): dict(
+        (FullRankADVI, 'full'): (dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.007, n_win=50),
-            n=6000
+            n=6000), 10000
         ),
-        (FullRankADVI, 'mini'): dict(
+        (FullRankADVI, 'mini'): (dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.007, n_win=50),
-            n=12000
+            n=12000), 10000
         ),
-        (SVGD, 'full'): dict(
+        (SVGD, 'full'): (dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.0942, n_win=7),
+            n=300), 400
+        ),
+        (SVGD, 'mini'): (dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.075, n_win=7),
-            n=300
+            n=300), 10000
         ),
-        (SVGD, 'mini'): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.075, n_win=7),
-            n=300
+        (ASVGD, 'full'): (dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.0628, n_win=10),
+            n=500, obj_n_mc=300), 8900
         ),
-        (ASVGD, 'full'): dict(
+        (ASVGD, 'mini'): (dict(
             obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=10),
-            n=500, obj_n_mc=300
-        ),
-        (ASVGD, 'mini'): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=10),
-            n=500, obj_n_mc=300
+            n=500, obj_n_mc=300), 10000
         )
     }
     if use_minibatch:
@@ -705,7 +705,7 @@ def fit_kwargs(inference, use_minibatch):
 def test_fit_oo(inference,
                 fit_kwargs,
                 simple_model_data):
-    trace = inference.fit(**fit_kwargs).sample(10000)
+    trace = inference.fit(**fit_kwargs[0]).sample(fit_kwargs[1])
     mu_post = simple_model_data['mu_post']
     d = simple_model_data['d']
     np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
