@@ -386,9 +386,6 @@ class Marginal(Base):
             fcond = gp.conditional("fcond", Xnew=Xnew)
     """
 
-    def __init__(self, mean_func=Zero(), cov_func=Constant(0.0)):
-        super().__init__(mean_func, cov_func)
-
     def _build_marginal_likelihood(self, X, noise):
         mu = self.mean_func(X)
         Kxx = self.cov_func(X)
