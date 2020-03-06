@@ -24,6 +24,7 @@ from collections import defaultdict
 from copy import copy
 import pickle
 import logging
+import time
 import warnings
 
 import numpy as np
@@ -486,6 +487,7 @@ def sample(
     )
 
     parallel = cores > 1 and chains > 1 and not has_population_samplers
+    t_start = time.time()
     if parallel:
         _log.info("Multiprocess sampling ({} chains in {} jobs)".format(chains, cores))
         _print_step_hierarchy(step)
@@ -533,6 +535,9 @@ def sample(
 
     discard = tune if discard_tuned_samples else 0
     trace = trace[discard:]
+    trace.report._n_tune = tune
+    trace.report._n_draws = draws
+    trace.report._t_sampling = time.time() - t_start
 
     if compute_convergence_checks:
         if draws - tune < 100:
