@@ -135,6 +135,12 @@ def fast_sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.
                                 random_seed=None) -> Dict[str, np.ndarray]:
     """Generate posterior predictive samples from a model given a trace.
 
+    This is a vectorized alternative to the standard ``sample_posterior_predictive`` function.
+    It aims to be as compatible as possible with the original API, and is significantly
+    faster.  Both posterior predictive sampling functions have some remaining issues, and
+    we encourage users to verify agreement across the results of both functions for the time
+    being.
+
     Parameters
     ----------
     trace : MultiTrace or List of points
