@@ -23,15 +23,7 @@ from ..vartypes import theano_constant
 #
 
 PosteriorPredictiveTrace = Dict[str, np.ndarray]
-# TraceIsh = Union[MultiTrace, Dict[str, np.ndarray], List['TraceIsh']]
 Point = Dict[str, np.ndarray]
-
-# def _canonicalize_traceish(trace: TraceIsh) -> Union[MultiTrace, Dict[str, np.ndarray]]:
-#     '''Transform a traceish thing into either a dictionary of variables to values, or
-# leave it alone (if it's a MultiTrace).'''
-#     if isinstance(trace, MultiTrace):
-#         return trace
-#     if isinstance(trace, list) and all((isinstance(x, MultiTrace) for x in trace)):
 
 class HasName(Protocol):
     name = None                 # type: str
