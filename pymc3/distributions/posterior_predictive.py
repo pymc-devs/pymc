@@ -458,7 +458,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     else:
                         self.named_nodes_children[k].update(nnc[k])
 
-    def draw_value(self, param, trace: Optional[_TraceDict]=None, givens = None):
+    def draw_value(self, param, trace: Optional[_TraceDict]=None, givens=None):
         """Draw a set of random values from a distribution or return a constant.
 
         Parameters
