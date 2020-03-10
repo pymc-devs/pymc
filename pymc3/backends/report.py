@@ -175,8 +175,6 @@ class SamplerReport:
         warn_list.extend(warnings)
 
     def _log_summary(self):
-        if self._n_tune is not None and self._n_draws is not None and self._t_sampling is not None:
-            logger.info(f'Sampling {self.n_tune} tune and {self.n_draws} draw iterations took {self.t_sampling:.0f} seconds.')
         def log_warning(warn):
             level = _LEVELS[warn.level]
             logger.log(level, warn.message)

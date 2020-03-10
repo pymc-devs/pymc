@@ -533,11 +533,19 @@ def sample(
             _print_step_hierarchy(step)
             trace = _sample_many(**sample_args)
 
-    discard = tune if discard_tuned_samples else 0
-    trace = trace[discard:]
-    trace.report._n_tune = tune if discard_tuned_samples else list(trace.get_sampler_stats('tune', chains=0)).count(True)
-    trace.report._n_draws = list(trace.get_sampler_stats('tune', chains=0)).count(False)
+    n_tune = list(trace.get_sampler_stats('tune', chains=0)).count(True)
+    n_draws = list(trace.get_sampler_stats('tune', chains=0)).count(False)
+    if discard_tuned_samples:
+        trace = trace[n_tune:]
+        
+    # save metadata in SamplerReport
+    trace.report._n_tune = n_tune
+    trace.report._n_draws = n_draws
     trace.report._t_sampling = time.time() - t_start
+    _log.info(
+        f'Sampling {chains} chains for {n_tune:_d} tune and {n_draws:_d} draw iterations '
+        f'({n_tune*chains:_d} + {n_draws*chains:_d} draws total) took {trace.report.t_sampling:.0f} seconds.'
+    )
 
     if compute_convergence_checks:
         if draws - tune < 100:
