@@ -44,7 +44,7 @@ from .exceptions import *
 from . import sampling
 
 from .backends.tracetab import *
-from .backends import save_trace, load_trace
+from .backends import save_trace, load_trace, point_list_to_multitrace
 
 from .plots import *
 from .tests import test
