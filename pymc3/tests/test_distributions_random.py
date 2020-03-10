@@ -948,6 +948,64 @@ def test_mixture_random_shape():
     assert ppc['like2'].shape == (200, 20)
     assert ppc['like3'].shape == (200, 20)
 
+@pytest.mark.xfail
+def test_mixture_random_shape_fast():
+    # test the shape broadcasting in mixture random
+    y = np.concatenate([nr.poisson(5, size=10),
+                        nr.poisson(9, size=10)])
+    with pm.Model() as m:
+        comp0 = pm.Poisson.dist(mu=np.ones(2))
+        w0 = pm.Dirichlet('w0', a=np.ones(2))
+        like0 = pm.Mixture('like0',
+                           w=w0,
+                           comp_dists=comp0,
+                           observed=y)
+
+        comp1 = pm.Poisson.dist(mu=np.ones((20, 2)),
+                                shape=(20, 2))
+        w1 = pm.Dirichlet('w1', a=np.ones(2))
+        like1 = pm.Mixture('like1',
+                           w=w1,
+                           comp_dists=comp1,
+                           observed=y)
+
+        comp2 = pm.Poisson.dist(mu=np.ones(2))
+        w2 = pm.Dirichlet('w2',
+                          a=np.ones(2),
+                          shape=(20, 2))
+        like2 = pm.Mixture('like2',
+                           w=w2,
+                           comp_dists=comp2,
+                           observed=y)
+
+        comp3 = pm.Poisson.dist(mu=np.ones(2),
+                                shape=(20, 2))
+        w3 = pm.Dirichlet('w3',
+                          a=np.ones(2),
+                          shape=(20, 2))
+        like3 = pm.Mixture('like3',
+                           w=w3,
+                           comp_dists=comp3,
+                           observed=y)
+
+    rand0, rand1, rand2, rand3 = draw_values([like0, like1, like2, like3],
+                                             point=m.test_point,
+                                             size=100)
+    assert rand0.shape == (100, 20)
+    assert rand1.shape == (100, 20)
+    assert rand2.shape == (100, 20)
+    assert rand3.shape == (100, 20)
+
+    # I *think* that the mixture means that this is not going to work,
+    # but I could be wrong. [2019/08/22:rpg]
+    with m:
+        ppc = pm.fast_sample_posterior_predictive([m.test_point], samples=200)
+    assert ppc['like0'].shape == (200, 20)
+    assert ppc['like1'].shape == (200, 20)
+    assert ppc['like2'].shape == (200, 20)
+    assert ppc['like3'].shape == (200, 20)
+
+
 
 class TestDensityDist():
     @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
@@ -968,6 +1026,10 @@ class TestDensityDist():
         ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model, size=size)
         assert ppc['density_dist'].shape == (samples, size) + obs.distribution.shape
 
+        # ppc = pm.fast_sample_posterior_predictive(trace, samples=samples, model=model, size=size)
+        # assert ppc['density_dist'].shape == (samples, size) + obs.distribution.shape
+
+
     @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
     def test_density_dist_with_random_sampleable_failure(self, shape):
         with pm.Model() as model:
@@ -986,6 +1048,10 @@ class TestDensityDist():
         samples = 500
         with pytest.raises(RuntimeError):
             pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
+
+        with pytest.raises((TypeError, RuntimeError)):
+            pm.fast_sample_posterior_predictive(trace, samples=samples, model=model, size=100)
+
 
     @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
     def test_density_dist_with_random_sampleable_hidden_error(self, shape):
@@ -1008,6 +1074,11 @@ class TestDensityDist():
         assert len(ppc['density_dist']) == samples
         assert ((samples,) + obs.distribution.shape) != ppc['density_dist'].shape
 
+        ppc = pm.fast_sample_posterior_predictive(trace, samples=samples, model=model)
+        assert len(ppc['density_dist']) == samples
+        assert ((samples,) + obs.distribution.shape) != ppc['density_dist'].shape
+
+
     def test_density_dist_with_random_sampleable_handcrafted_success(self):
         with pm.Model() as model:
             mu = pm.Normal('mu', 0, 1)
@@ -1027,6 +1098,28 @@ class TestDensityDist():
         ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model, size=size)
         assert ppc['density_dist'].shape == (samples, size) + obs.distribution.shape
 
+    @pytest.mark.xfail
+    def test_density_dist_with_random_sampleable_handcrafted_success_fast(self):
+        with pm.Model() as model:
+            mu = pm.Normal('mu', 0, 1)
+            normal_dist = pm.Normal.dist(mu, 1)
+            rvs = pm.Normal.dist(mu, 1, shape=100).random
+            obs = pm.DensityDist(
+                'density_dist',
+                normal_dist.logp,
+                observed=np.random.randn(100),
+                random=rvs,
+                wrap_random_with_dist_shape=False
+            )
+            trace = pm.sample(100)
+
+        samples = 500
+        size = 100
+
+        ppc = pm.fast_sample_posterior_predictive(trace, samples=samples, model=model, size=size)
+        assert ppc['density_dist'].shape == (samples, size) + obs.distribution.shape
+
+
     def test_density_dist_without_random_not_sampleable(self):
         with pm.Model() as model:
             mu = pm.Normal('mu', 0, 1)
@@ -1037,6 +1130,9 @@ class TestDensityDist():
         samples = 500
         with pytest.raises(ValueError):
             pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
+
+        with pytest.raises((TypeError, ValueError)):
+            pm.fast_sample_posterior_predictive(trace, samples=samples, model=model, size=100)
 
 
 class TestNestedRandom(SeededTest):

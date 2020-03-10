@@ -1420,6 +1420,11 @@ def _get_scaling(total_size, shape, ndim):
 class FreeRV(Factor, PyMC3Variable):
     """Unobserved random variable that a model is specified in terms of."""
 
+    dshape = None               # type: Tuple[int, ...]
+    size = None                 # type: int
+    distribution = None         # type: Optional[Distribution]
+    model = None                # type: Optional[Model]
+
     def __init__(self, type=None, owner=None, index=None, name=None,
                  distribution=None, total_size=None, model=None):
         """

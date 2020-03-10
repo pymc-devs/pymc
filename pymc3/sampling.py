@@ -33,6 +33,7 @@ from theano.tensor import Tensor
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .distributions.distribution import draw_values
+from .distributions.posterior_predictive import fast_sample_posterior_predictive
 from .model import modelcontext, Point, all_continuous, Model
 from .step_methods import (
     NUTS,
@@ -71,6 +72,7 @@ __all__ = [
     "sample_posterior_predictive_w",
     "init_nuts",
     "sample_prior_predictive",
+    "fast_sample_posterior_predictive",
 ]
 
 STEP_METHODS = (
@@ -1552,8 +1554,9 @@ def sample_posterior_predictive(
             raise IncorrectArgumentsError("Should not specify both vars and var_names arguments.")
         else:
             vars = [model[x] for x in var_names]
-    elif vars is not None:  # var_names is None, and vars is not.
-        warnings.warn("vars argument is deprecated in favor of var_names.", DeprecationWarning)
+    elif vars is not None: # var_names is None, and vars is not.
+        warnings.warn("vars argument is deprecated in favor of var_names.",
+                      DeprecationWarning)
     if vars is None:
         vars = model.observed_RVs
 

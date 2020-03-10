@@ -40,18 +40,29 @@ class TestData(SeededTest):
 
             trace = pm.sample(1000, init=None, tune=1000, chains=1)
             pp_trace0 = pm.sample_posterior_predictive(trace, 1000)
+            pp_trace01 = pm.fast_sample_posterior_predictive(trace, 1000)
 
             x_shared.set_value(x_pred)
             pp_trace1 = pm.sample_posterior_predictive(trace, samples=1000)
+            pp_trace11 = pm.fast_sample_posterior_predictive(trace, samples=1000)
             prior_trace1 = pm.sample_prior_predictive(1000)
 
         assert prior_trace0['b'].shape == (1000,)
         assert prior_trace0['obs'].shape == (1000, 100)
-        np.testing.assert_allclose(x, pp_trace0['obs'].mean(axis=0), atol=1e-1)
-
-        assert prior_trace1['b'].shape == (1000,)
         assert prior_trace1['obs'].shape == (1000, 200)
+
+        assert pp_trace0['obs'].shape == (1000, 100)
+        assert pp_trace01['obs'].shape == (1000, 100)
+
+        np.testing.assert_allclose(x, pp_trace0['obs'].mean(axis=0), atol=1e-1)
+        np.testing.assert_allclose(x, pp_trace01['obs'].mean(axis=0), atol=1e-1)
+
+        assert pp_trace1['obs'].shape == (1000, 200)
+        assert pp_trace11['obs'].shape == (1000, 200)
+
         np.testing.assert_allclose(x_pred, pp_trace1['obs'].mean(axis=0),
+                                   atol=1e-1)
+        np.testing.assert_allclose(x_pred, pp_trace11['obs'].mean(axis=0),
                                    atol=1e-1)
 
     def test_sample_posterior_predictive_after_set_data(self):
@@ -66,9 +77,13 @@ class TestData(SeededTest):
             x_test = [5, 6, 9]
             pm.set_data(new_data={'x': x_test})
             y_test = pm.sample_posterior_predictive(trace)
+            y_test1 = pm.fast_sample_posterior_predictive(trace)
 
         assert y_test['obs'].shape == (1000, 3)
+        assert y_test1['obs'].shape == (1000, 3)
         np.testing.assert_allclose(x_test, y_test['obs'].mean(axis=0),
+                                   atol=1e-1)
+        np.testing.assert_allclose(x_test, y_test1['obs'].mean(axis=0),
                                    atol=1e-1)
 
     def test_sample_after_set_data(self):
@@ -85,9 +100,13 @@ class TestData(SeededTest):
             pm.set_data(new_data={'x': new_x, 'y': new_y})
             new_trace = pm.sample(1000, init=None, tune=1000, chains=1)
             pp_trace = pm.sample_posterior_predictive(new_trace, 1000)
+            pp_tracef = pm.fast_sample_posterior_predictive(new_trace, 1000)
 
         assert pp_trace['obs'].shape == (1000, 3)
+        assert pp_tracef['obs'].shape == (1000, 3)
         np.testing.assert_allclose(new_y, pp_trace['obs'].mean(axis=0),
+                                   atol=1e-1)
+        np.testing.assert_allclose(new_y, pp_tracef['obs'].mean(axis=0),
                                    atol=1e-1)
 
     def test_creation_of_data_outside_model_context(self):

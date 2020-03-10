@@ -19,13 +19,14 @@ creating custom backends).
 """
 import itertools as itl
 import logging
-from typing import List
+from typing import Dict, List, Optional
+from abc import ABC
 
 import numpy as np
 import warnings
 import theano.tensor as tt
 
-from ..model import modelcontext
+from ..model import modelcontext, Model
 from .report import SamplerReport, merge_reports
 
 logger = logging.getLogger('pymc3')
@@ -35,7 +36,7 @@ class BackendError(Exception):
     pass
 
 
-class BaseTrace:
+class BaseTrace(ABC):
     """Base trace object
 
     Parameters

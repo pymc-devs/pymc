@@ -36,3 +36,7 @@ benchmarks/results/
 # VSCode
 .vscode/
 .mypy_cache
+
+pytestdebug.log
+.dir-locals.el
+.pycheckers
