@@ -127,6 +127,16 @@ class TestSample(SeededTest):
             trace = pm.sample(draws=100, tune=50, cores=4)
             assert len(trace) == 100
 
+    @pytest.mark.parametrize("discard", [True, False])
+    def test_trace_report(self, discard):
+        with self.model:
+            # make sure that n_tune is correct, regardless of the discard_tuned_samples setting
+            trace = pm.sample(draws=100, tune=50, cores=1, discard_tuned_samples=discard)
+            assert trace.report.n_tune == 50
+            assert trace.report.n_draws == 100
+            assert isinstance(trace.report.t_sampling, float)
+        pass
+
     @pytest.mark.parametrize('cores', [1, 2])
     def test_sampler_stat_tune(self, cores):
         with self.model:

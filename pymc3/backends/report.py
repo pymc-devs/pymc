@@ -75,7 +75,7 @@ class SamplerReport:
 
     @property
     def n_tune(self) -> typing.Optional[int]:
-        """Number of tune iterations."""
+        """Number of tune iterations - not necessarily kept in trace!"""
         return self._n_tune
 
     @property
