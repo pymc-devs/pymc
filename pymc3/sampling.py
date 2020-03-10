@@ -533,8 +533,15 @@ def sample(
             _print_step_hierarchy(step)
             trace = _sample_many(**sample_args)
 
-    n_tune = list(trace.get_sampler_stats('tune', chains=0)).count(True)
-    n_draws = list(trace.get_sampler_stats('tune', chains=0)).count(False)
+    # not all samplers record the 'tune' statistic!
+    if 'tune' in trace.stat_names:
+        n_tune = list(trace.get_sampler_stats('tune', chains=0)).count(True)
+        n_draws = list(trace.get_sampler_stats('tune', chains=0)).count(False)
+    else:
+        # these may be wrong when KeyboardInterrupt happened, but they're better than nothing
+        n_tune = tune
+        n_draws = len(trace) if discard_tuned_samples else max(0, len(trace) - n_tune)
+
     if discard_tuned_samples:
         trace = trace[n_tune:]
 
