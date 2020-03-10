@@ -535,8 +535,8 @@ def sample(
 
     discard = tune if discard_tuned_samples else 0
     trace = trace[discard:]
-    trace.report._n_tune = tune
-    trace.report._n_draws = draws
+    trace.report._n_tune = tune if discard_tuned_samples else list(trace.get_sampler_stats('tune', chains=0)).count(True)
+    trace.report._n_draws = list(trace.get_sampler_stats('tune', chains=0)).count(False)
     trace.report._t_sampling = time.time() - t_start
 
     if compute_convergence_checks:
