@@ -6,3 +6,5 @@ pandas>=0.18.0
 patsy>=0.5.1
 fastprogress>=0.2.0
 h5py>=2.7.0
+typing-extensions>=3.7.4
+contextvars; python_version < '3.7' 

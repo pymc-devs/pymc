@@ -20,12 +20,12 @@ import glob
 import json
 import os
 import shutil
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 import numpy as np
 from pymc3.backends import base
 from pymc3.backends.base import MultiTrace
-from pymc3.model import Model
+from pymc3.model import Model, modelcontext
 from pymc3.exceptions import TraceDirectoryError
 
 
@@ -366,3 +366,19 @@ def _slice_as_ndarray(strace, idx):
         sliced.draw_idx = (stop - start) // step
 
     return sliced
+
+def point_list_to_multitrace(point_list: List[Dict[str, np.ndarray]], model: Optional[Model]=None) -> MultiTrace:
+    '''transform point list into MultiTrace'''
+    _model = modelcontext(model)
+    varnames = list(point_list[0].keys())
+    with _model:
+        chain = NDArray(model=_model, vars=[_model[vn] for vn in varnames])
+        chain.setup(draws=len(point_list), chain=0)
+        # since we are simply loading a trace by hand, we need only a vacuous function for
+        # chain.record() to use. This crushes the default.
+        def point_fun(point):
+            return [point[vn] for vn in varnames]
+        chain.fn = point_fun
+        for point in point_list:
+            chain.record(point)
+    return MultiTrace([chain])

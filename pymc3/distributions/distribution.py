@@ -13,6 +13,10 @@
 #   limitations under the License.
 
 import numbers
+import contextvars
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Optional, Callable
 
 import numpy as np
 import theano.tensor as tt
@@ -33,6 +37,7 @@ from .shape_utils import (
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
            'NoDistribution', 'TensorType', 'draw_values', 'generate_samples']
 
+vectorized_ppc = contextvars.ContextVar('vectorized_ppc', default=None) # type: contextvars.ContextVar[Optional[Callable]]
 
 class _Unpickling:
     pass
@@ -530,11 +535,18 @@ def draw_values(params, point=None, size=None):
             a) are named parameters in the point
             b) are RVs with a random method
     """
+    # The following check intercepts and redirects calls to
+    # draw_values in the context of sample_posterior_predictive
+    ppc_sampler = vectorized_ppc.get(None)
+    if ppc_sampler is not None:
+        # this is being done inside new, vectorized sample_posterior_predictive
+        return ppc_sampler(params, trace=point, samples=size)
+
+    if point is None:
+        point = {}
     # Get fast drawable values (i.e. things in point or numbers, arrays,
     # constants or shares, or things that were already drawn in related
     # contexts)
-    if point is None:
-        point = {}
     with _DrawValuesContext() as context:
         params = dict(enumerate(params))
         drawn = context.drawn_vars
