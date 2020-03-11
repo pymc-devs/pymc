@@ -142,6 +142,22 @@ class TestSample(SeededTest):
             trace = pm.sample(draws=100, tune=50, cores=4)
             assert len(trace) == 100
 
+    @pytest.mark.parametrize("step_cls", [pm.NUTS, pm.Metropolis, pm.Slice])
+    @pytest.mark.parametrize("discard", [True, False])
+    def test_trace_report(self, step_cls, discard):
+        with self.model:
+            # add more variables, because stats are 2D with CompoundStep!
+            pm.Uniform('uni')
+            trace = pm.sample(
+                draws=100, tune=50, cores=1,
+                discard_tuned_samples=discard,
+                step=step_cls()
+            )
+            assert trace.report.n_tune == 50
+            assert trace.report.n_draws == 100
+            assert isinstance(trace.report.t_sampling, float)
+        pass
+
     @pytest.mark.parametrize('cores', [1, 2])
     def test_sampler_stat_tune(self, cores):
         with self.model:

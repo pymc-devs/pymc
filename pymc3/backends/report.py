@@ -15,6 +15,7 @@
 from collections import namedtuple
 import logging
 import enum
+import typing
 from ..util import is_transformed_name, get_untransformed_name
 
 
@@ -51,11 +52,15 @@ _LEVELS = {
 
 
 class SamplerReport:
+    """This object bundles warnings, convergence statistics and metadata of a sampling run."""
     def __init__(self):
         self._chain_warnings = {}
         self._global_warnings = []
         self._ess = None
         self._rhat = None
+        self._n_tune = None
+        self._n_draws = None
+        self._t_sampling = None
 
     @property
     def _warnings(self):
@@ -67,6 +72,25 @@ class SamplerReport:
         """Whether the automatic convergence checks found serious problems."""
         return all(_LEVELS[warn.level] < _LEVELS['warn']
                    for warn in self._warnings)
+
+    @property
+    def n_tune(self) -> typing.Optional[int]:
+        """Number of tune iterations - not necessarily kept in trace!"""
+        return self._n_tune
+
+    @property
+    def n_draws(self) -> typing.Optional[int]:
+        """Number of draw iterations."""
+        return self._n_draws
+
+    @property
+    def t_sampling(self) -> typing.Optional[float]:
+        """
+        Number of seconds that the sampling procedure took.
+        
+        (Includes parallelization overhead.)
+        """
+        return self._t_sampling
 
     def raise_ok(self, level='error'):
         errors = [warn for warn in self._warnings
@@ -151,7 +175,6 @@ class SamplerReport:
         warn_list.extend(warnings)
 
     def _log_summary(self):
-
         def log_warning(warn):
             level = _LEVELS[warn.level]
             logger.log(level, warn.message)

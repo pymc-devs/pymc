@@ -24,6 +24,7 @@ from collections import defaultdict
 from copy import copy
 import pickle
 import logging
+import time
 import warnings
 
 import numpy as np
@@ -488,6 +489,7 @@ def sample(
     )
 
     parallel = cores > 1 and chains > 1 and not has_population_samplers
+    t_start = time.time()
     if parallel:
         _log.info("Multiprocess sampling ({} chains in {} jobs)".format(chains, cores))
         _print_step_hierarchy(step)
@@ -533,8 +535,36 @@ def sample(
             _print_step_hierarchy(step)
             trace = _sample_many(**sample_args)
 
-    discard = tune if discard_tuned_samples else 0
-    trace = trace[discard:]
+    t_sampling = time.time() - t_start
+    # count the number of tune/draw iterations that happened
+    # ideally via the "tune" statistic, but not all samplers record it!
+    if 'tune' in trace.stat_names:
+        stat = trace.get_sampler_stats('tune', chains=0)
+        # when CompoundStep is used, the stat is 2 dimensional!
+        if len(stat.shape) == 2:
+            stat = stat[:,0]
+        stat = tuple(stat)
+        n_tune = stat.count(True)
+        n_draws = stat.count(False)
+    else:
+        # these may be wrong when KeyboardInterrupt happened, but they're better than nothing
+        n_tune = min(tune, len(trace))
+        n_draws = max(0, len(trace) - n_tune)
+
+    if discard_tuned_samples:
+        trace = trace[n_tune:]
+
+    # save metadata in SamplerReport
+    trace.report._n_tune = n_tune
+    trace.report._n_draws = n_draws
+    trace.report._t_sampling = t_sampling
+
+    n_chains = len(trace.chains)
+    _log.info(
+        f'Sampling {n_chains} chain{"s" if n_chains > 1 else ""} for {n_tune:_d} tune and {n_draws:_d} draw iterations '
+        f'({n_tune*n_chains:_d} + {n_draws*n_chains:_d} draws total) '
+        f'took {trace.report.t_sampling:.0f} seconds.'
+    )
 
     if compute_convergence_checks:
         if draws - tune < 100:
