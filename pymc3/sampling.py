@@ -535,6 +535,7 @@ def sample(
             _print_step_hierarchy(step)
             trace = _sample_many(**sample_args)
 
+    t_sampling = time.time() - t_start
     # count the number of tune/draw iterations that happened
     # ideally via the "tune" statistic, but not all samplers record it!
     if 'tune' in trace.stat_names:
@@ -556,7 +557,7 @@ def sample(
     # save metadata in SamplerReport
     trace.report._n_tune = n_tune
     trace.report._n_draws = n_draws
-    trace.report._t_sampling = time.time() - t_start
+    trace.report._t_sampling = t_sampling
 
     n_chains = len(trace.chains)
     _log.info(
