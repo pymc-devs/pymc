@@ -533,14 +533,20 @@ def sample(
             _print_step_hierarchy(step)
             trace = _sample_many(**sample_args)
 
-    # not all samplers record the 'tune' statistic!
+    # count the number of tune/draw iterations that happened
+    # ideally via the "tune" statistic, but not all samplers record it!
     if 'tune' in trace.stat_names:
-        n_tune = list(trace.get_sampler_stats('tune', chains=0)).count(True)
-        n_draws = list(trace.get_sampler_stats('tune', chains=0)).count(False)
+        stat = trace.get_sampler_stats('tune', chains=0)
+        # when CompoundStep is used, the stat is 2 dimensional!
+        if len(stat.shape) == 2:
+            stat = stat[:,0]
+        stat = tuple(stat)
+        n_tune = stat.count(True)
+        n_draws = stat.count(False)
     else:
         # these may be wrong when KeyboardInterrupt happened, but they're better than nothing
-        n_tune = tune
-        n_draws = len(trace) if discard_tuned_samples else max(0, len(trace) - n_tune)
+        n_tune = min(tune, len(trace))
+        n_draws = max(0, len(trace) - n_tune)
 
     if discard_tuned_samples:
         trace = trace[n_tune:]
