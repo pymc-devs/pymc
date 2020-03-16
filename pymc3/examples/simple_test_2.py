@@ -48,7 +48,7 @@ with pm.Model() as model:  # model specifications in PyMC3 are wrapped in a with
     # Inference!
     # trace = pm.sample(1000, cores=2, **{"ml_models": [1, 2, 3]}) # draw 3000 posterior samples using NUTS sampling
     # step_temp = pm.MLDA(subsampling_rate=2, **{"coarse_models": coarse_models})
-    step_temp = pm.MLDA(subsampling_rate=10, **{"coarse_models": coarse_models})
+    step_temp = pm.MLDA(subsampling_rate=10, coarse_models=coarse_models)
     trace = pm.sample(50, chains=1, cores=1, tune=20, step=step_temp, random_seed=seed)
     trace2 = pm.sample(50, chains=1, cores=1, tune=20, random_seed=seed)
 
