@@ -899,7 +899,8 @@ class MLDA(ArrayStepShared):
         Some measure of variance to parameterize proposal distribution
     base_proposal_dist : function
         Function that returns zero-mean deviates when parameterized with
-        S (and n). Defaults to normal.
+        S (and n). Defaults to normal. This is the proposal used in the
+        coarsest chain (level=0).
     scaling : scalar or array
         Initial scale factor for proposal. Defaults to 1.
     tune : bool
@@ -908,11 +909,17 @@ class MLDA(ArrayStepShared):
         The frequency of tuning. Defaults to 100 iterations.
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
+        This model should be the finest of all multilevel models.
     mode :  string or `Mode` instance.
         Compilation mode passed to Theano functions
     subsampling_rate : int
         Number of samples generated in level l-1 to propose a sample for level l
         (applies to all l=0 where the base algorithm and proposal are used)
+    coarse_models : list
+        List of coarse (multi-level) models, where the first model is the coarsest
+        one (level=0) and the last model is the second finest one (level=L-1 where L is
+        the number of levels). Note this list excludes the model passed to the model
+        argument above, which is the finest available).
     """
     name = 'mlda'
 
@@ -963,7 +970,6 @@ class MLDA(ArrayStepShared):
         self.delta_logp = delta_logp(model.logpt, vars, shared)
 
         # construct theano function for next-level model likelihood (for use in acceptance)
-
         if coarse_models is None:
             sys.exit('MLDA method was not given a set of coarse models!')
         next_model = coarse_models[-1]
