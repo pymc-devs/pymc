@@ -16,6 +16,9 @@ import numpy as np
 import numpy.random as nr
 import theano
 import scipy.linalg
+import warnings
+import sys
+import logging
 
 from ..distributions import draw_values
 from .arraystep import ArrayStepShared, PopulationArrayStepShared, ArrayStep, metrop_select, Competence
@@ -24,7 +27,7 @@ from pymc3.theanof import floatX
 
 __all__ = ['Metropolis', 'DEMetropolis', 'DEMetropolisZ', 'BinaryMetropolis', 'BinaryGibbsMetropolis',
            'CategoricalGibbsMetropolis', 'NormalProposal', 'CauchyProposal',
-           'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal']
+           'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal', 'MLDA']
 
 # Available proposal distributions for Metropolis
 
@@ -75,6 +78,71 @@ class MultivariateNormalProposal(Proposal):
         else:
             b = np.random.randn(self.n)
             return np.dot(self.chol, b)
+
+
+class RecursiveDAProposal(Proposal):
+    def __init__(self, vars=None, S=None, base_proposal_dist=None, scaling=1.,
+                 tune=True, tune_interval=100, model=None, mode=None, subsampling_rate=2, **kwargs):
+        # check that num_levels is compatible with model levels
+
+        self.coarse_models = kwargs.pop("coarse_models", None)
+        if self.coarse_models is None:
+            sys.exit('MLDA proposal was not given a set of coarse models!')
+
+        self.num_levels = len(self.coarse_models) + 1
+
+        # assign internal state
+        self.S = S
+        self.vars = vars
+        self.base_proposal_dist = base_proposal_dist
+        self.scaling = scaling
+        self.tune = tune
+        self.tune_interval = tune_interval
+        self.model = model
+        self.mode = mode
+        self.subsampling_rate = subsampling_rate
+
+    def __call__(self, q0_dict):
+
+        """
+        # Base proposal used in level 0
+        if base_proposal_dist is not None:
+            self.base_proposal_dist = base_proposal_dist(S)
+        elif S.ndim == 1:
+            self.base_proposal_dist = NormalProposal(S)
+        elif S.ndim == 2:
+            self.base_proposal_dist = MultivariateNormalProposal(S)
+        else:
+            raise ValueError("Invalid rank for variance: %s" % S.ndim)
+        """
+
+        _log = logging.getLogger('pymc3')
+        _log.setLevel(logging.ERROR)
+
+        if self.num_levels == 2:
+            next_model = self.coarse_models[-1]
+            with next_model as model:
+                #next_coarse_models = None
+                next_step_method = pm.Metropolis(proposal_dist=self.base_proposal_dist)
+                output = pm.sample(draws=self.subsampling_rate, step=next_step_method,
+                                 start=q0_dict, tune=0, cores=1, chains=1, progressbar=False,
+                                 compute_convergence_checks=False, discard_tuned_samples=False).point(-1)
+        else:
+            next_model = self.coarse_models[-1]
+            next_coarse_models = self.coarse_models[:-1]
+            with next_model as model:
+                next_step_method = pm.MLDA(base_proposal_dist=self.base_proposal_dist,
+                                           subsampling_rate=self.subsampling_rate,
+                                           **{"coarse_models": next_coarse_models})
+                output = pm.sample(draws=self.subsampling_rate, step=next_step_method,
+                                 start=q0_dict, tune=0, cores=1, chains=1, progressbar=False,
+                                 compute_convergence_checks=False, discard_tuned_samples=False).point(-1)
+
+        _log.setLevel(logging.NOTSET)
+
+        return output
+
+
 
 
 class Metropolis(ArrayStepShared):
@@ -644,6 +712,7 @@ class DEMetropolis(PopulationArrayStepShared):
         return Competence.COMPATIBLE
 
 
+
 class DEMetropolisZ(ArrayStepShared):
     """
     Adaptive Differential Evolution Metropolis sampling step that uses the past to inform jumps.
@@ -754,6 +823,7 @@ class DEMetropolisZ(ArrayStepShared):
                 self.scaling = tune(self.scaling, self.accepted / float(self.tune_interval))
             elif self.tune_target == 'lambda':
                 self.lamb = tune(self.lamb, self.accepted / float(self.tune_interval))
+
             # Reset counter
             self.steps_until_tune = self.tune_interval
             self.accepted = 0
@@ -782,7 +852,6 @@ class DEMetropolisZ(ArrayStepShared):
         q_new, accepted = metrop_select(accept, q, q0)
         self.accepted += accepted
         self._history.append(q_new)
-
         self.steps_until_tune -= 1
 
         stats = {
@@ -816,6 +885,132 @@ def sample_except(limit, excluded):
     if candidate >= excluded:
         candidate += 1
     return candidate
+
+
+class MLDA(ArrayStepShared):
+    """
+    Multi-level Delayed Acceptance sampling step.
+    Parameters
+    ----------
+    vars : list
+        List of variables for sampler
+    S : standard deviation or covariance matrix
+        Some measure of variance to parameterize proposal distribution
+    proposal_dist : function
+        Function that returns zero-mean deviates when parameterized with
+        S (and n). Defaults to normal.
+    scaling : scalar or array
+        Initial scale factor for proposal. Defaults to 1.
+    tune : bool
+        Flag for tuning. Defaults to True.
+    tune_interval : int
+        The frequency of tuning. Defaults to 100 iterations.
+    model : PyMC Model
+        Optional model for sampling step. Defaults to None (taken from context).
+    mode :  string or `Mode` instance.
+        compilation mode passed to Theano functions
+    """
+    name = 'mlda'
+
+    default_blocked = False
+    generates_stats = True
+    stats_dtypes = [{
+        'accept': np.float64,
+        'accepted': np.bool,
+        'tune': np.bool,
+        'scaling': np.float64,
+    }]
+
+    def __init__(self, vars=None, S=None, base_proposal_dist=None, scaling=1.,
+                 tune=True, tune_interval=100, model=None, mode=None, subsampling_rate=10, **kwargs):
+
+        # This is the main proposal used for all levels (Recursive Delayed Acceptance) except for level 0
+        self.proposal_dist = RecursiveDAProposal(vars, S, base_proposal_dist, scaling,
+                                                 tune, tune_interval, model, mode,
+                                                 subsampling_rate, **kwargs)
+
+        model = pm.modelcontext(model)
+
+        if vars is None:
+            vars = model.vars
+        vars = pm.inputvars(vars)
+
+        if S is None:
+            S = np.ones(sum(v.dsize for v in vars))
+
+        self.scaling = np.atleast_1d(scaling).astype('d')
+        self.tune = tune
+        self.tune_interval = tune_interval
+        self.steps_until_tune = tune_interval
+        self.accepted = 0
+
+        # Determine type of variables
+        self.discrete = np.concatenate(
+            [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in vars])
+        self.any_discrete = self.discrete.any()
+        self.all_discrete = self.discrete.all()
+
+        self.mode = mode
+
+        shared = pm.make_shared_replacements(vars, model)
+        self.delta_logp = delta_logp(model.logpt, vars, shared)
+
+        # construct next-level model likelihood for use in acceptance
+        next_models = kwargs.get("coarse_models", None)
+        if next_models is None:
+            sys.exit('MLDA method was not given a set of coarse models!')
+        next_model = next_models[-1]
+        vars_next = next_model.vars
+        vars_next = pm.inputvars(vars_next)
+        shared_next = pm.make_shared_replacements(vars_next, next_model)
+        self.delta_logp_next = delta_logp(next_model.logpt, vars_next, shared_next)
+
+        super().__init__(vars, shared)
+
+    def astep(self, q0):
+        if not self.steps_until_tune and self.tune:
+            # Tune scaling parameter
+            self.scaling = tune(
+                self.scaling, self.accepted / float(self.tune_interval))
+            # Reset counter
+            self.steps_until_tune = self.tune_interval
+            self.accepted = 0
+
+        q0_dict = self.bij.rmap(q0)
+        q = self.bij.map(self.proposal_dist(q0_dict))  # + self.scaling
+
+        """
+        if self.any_discrete:
+            if self.all_discrete:
+                delta = np.round(delta, 0).astype('int64')
+                q0 = q0.astype('int64')
+                q = (q0 + delta).astype('int64')
+            else:
+                delta[self.discrete] = np.round(
+                    delta[self.discrete], 0)
+                q = (q0 + delta)
+        else:
+            q = floatX(q0 + delta)
+        """
+
+        accept = self.delta_logp(q, q0) + self.delta_logp_next(q0, q)
+        q_new, accepted = metrop_select(accept, q, q0)
+        self.accepted += accepted
+
+        self.steps_until_tune -= 1
+
+        stats = {
+            'tune': self.tune,
+            'scaling': self.scaling,
+            'accept': np.exp(accept),
+            'accepted': accepted,
+        }
+
+        return q_new, [stats]
+
+    @staticmethod
+    def competence(var, has_grad):
+        return Competence.COMPATIBLE
 
 
 def softmax(x):
