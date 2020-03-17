@@ -151,7 +151,7 @@ We can now use `scipy.optimize.newton` to find the root::
         return jac
 
     def mu_from_theta(theta):
-        return optimize.newton(func, 1, fprime=jac, args=(0.4,))
+        return optimize.newton(func, 1, fprime=jac, args=(theta,))
 
 We could wrap `mu_from_theta` with `tt.as_op` and use gradient-free
 methods like Metropolis, but to get NUTS and ADVI working, we also
