@@ -1568,7 +1568,13 @@ def sample_posterior_predictive(
         raise IncorrectArgumentsError("Should not specify both keep_size and size argukments")
 
     if samples is None:
-        samples = sum(len(v) for v in trace._straces.values())
+        if isinstance(trace, MultiTrace):
+            samples = sum(len(v) for v in trace._straces.values())
+        elif isinstance(trace, list) and all((isinstance(x, dict) for x in trace)):
+            # this is a list of points
+            samples = len(trace)
+        else:
+            raise ValueError("Do not know how to compute number of samples for trace argument of type %s"%type(trace))
 
     if samples < len_trace * nchain:
         warnings.warn(
