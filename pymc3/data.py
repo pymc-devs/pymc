@@ -479,13 +479,6 @@ class Data:
     https://docs.pymc.io/notebooks/data_container.html
     """
     def __new__(self, name, value):
-        # `pm.model.pandas_to_array` takes care of parameter `value` and
-        # transforms it to something digestible for pymc3
-        shared_object = theano.shared(pm.model.pandas_to_array(value), name)
-
-        # To draw the node for this variable in the graphviz Digraph we need
-        # its shape.
-        shared_object.dshape = tuple(shared_object.shape.eval())
 
         # Add data container to the named variables of the model.
         try:
@@ -494,6 +487,18 @@ class Data:
             raise TypeError("No model on context stack, which is needed to "
                             "instantiate a data container. Add variable "
                             "inside a 'with model:' block.")
+
+        name = model.name_for(name)
+
+        # `pm.model.pandas_to_array` takes care of parameter `value` and
+        # transforms it to something digestible for pymc3
+        shared_object = theano.shared(pm.model.pandas_to_array(value), name)
+
+        # To draw the node for this variable in the graphviz Digraph we need
+        # its shape.
+        shared_object.dshape = tuple(shared_object.shape.eval())
+
+
         model.add_random_variable(shared_object)
 
         return shared_object
