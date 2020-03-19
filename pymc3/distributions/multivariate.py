@@ -27,7 +27,7 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
 from theano.tensor.slinalg import Cholesky
 import pymc3 as pm
 
-from pymc3.theanof import floatX
+from pymc3.theanof import floatX, intX
 from . import transforms
 from pymc3.util import get_variable_name
 from .distribution import (Continuous, Discrete, draw_values, generate_samples,
@@ -327,7 +327,7 @@ class MvNormal(_QuadFormBase):
         TensorVariable
         """
         quaddist, logdet, ok = self._quaddist(value)
-        k = value.shape[-1].astype(theano.config.floatX)
+        k = intX(value.shape[-1]).astype(theano.config.floatX)
         norm = - 0.5 * k * pm.floatX(np.log(2 * np.pi))
         return bound(norm - 0.5 * quaddist - logdet, ok)
 
@@ -441,7 +441,7 @@ class MvStudentT(_QuadFormBase):
         TensorVariable
         """
         quaddist, logdet, ok = self._quaddist(value)
-        k = value.shape[-1].astype(theano.config.floatX)
+        k = intX(value.shape[-1]).astype(theano.config.floatX)
 
         norm = (gammaln((self.nu + k) / 2.)
                 - gammaln(self.nu / 2.)
