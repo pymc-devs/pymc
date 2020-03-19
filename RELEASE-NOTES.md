@@ -13,6 +13,7 @@
 ### Maintenance
 - Remove `sample_ppc` and `sample_ppc_w` that were deprecated in 3.6.
 - Tuning results no longer leak into sequentially sampled `Metropolis` chains (see #3733 and #3796).
+- Deprecated `sd` in version 3.7 has been replaced by `sigma` now raises `DepreciationWarning` on using `sg` in continuous, mixed and timeseries distributions. (see #3837 and #3688).
 
 ## PyMC3 3.8 (November 29 2019)
 
