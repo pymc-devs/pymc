@@ -550,7 +550,7 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            trace = pm.sample(100)
+            trace = pm.sample(100, init='adapt_diag')
             ppc_trace = pm.trace_to_dataframe(
                 trace, varnames=[n for n in trace.varnames if n != "out"]
             ).to_dict("records")
@@ -602,7 +602,7 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            trace = pm.sample(100)
+            trace = pm.sample(100, init='adapt_diag')
             ppc_trace = pm.trace_to_dataframe(
                 trace, varnames=[n for n in trace.varnames if n != "out"]
             ).to_dict("records")
@@ -910,3 +910,60 @@ class TestSamplePosteriorPredictive:
                 idat.posterior,
                 var_names=['d']
             )
+
+
+@pytest.fixture(scope="class")
+def issue_3762_fixture():
+    x = np.random.randn(123, 2)
+    y = x[:,0] + x[:,1] > 0
+
+    with pm.Model() as model:
+        x_shared = pm.Data('x_shared', x)
+        coeff = pm.Normal('x', mu=0, sigma=1, shape=(2,))
+        print(coeff.shape)
+        logistic = pm.math.sigmoid(coeff[0] * x_shared[:,0] + coeff[1] * x_shared[:,1])
+        pm.Bernoulli('obs', p=logistic, observed=y)
+
+        # fit the model
+        trace = pm.sample()
+    return model, trace
+
+class TestIssue3762:
+    """Issue 3762 is unpredictable posterior predictive sample shapes
+    with a singleton pm.Data."""
+    def test_sampling(self, issue_3762_fixture):
+        _, trace = issue_3762_fixture
+        assert trace
+
+    def test_ppc_orig(self, issue_3762_fixture):
+        model, trace = issue_3762_fixture
+        
+        good_values = np.array([[0,0],
+                        [0,1],
+                        [1,1]])
+
+        with model:
+            # For good
+            pm.set_data({'x_shared': good_values})
+            post_pred = pm.sample_posterior_predictive(trace, samples=500)
+            assert post_pred['obs'].shape == (500, 3)
+
+    def test_ppc_degenerate(self, issue_3762_fixture):
+        """Testing for only 1 sample."""
+        model, trace = issue_3762_fixture
+        bad_values = np.array([[1,2],])
+        with model:
+            # For bad
+            pm.set_data({'x_shared': bad_values})
+            post_pred = pm.sample_posterior_predictive(trace, samples=500)
+            assert post_pred['obs'].shape == (500, 1)
+
+    def test_fast_ppc_degenerate(self, issue_3762_fixture):
+        """Testing for only 1 sample."""
+        model, trace = issue_3762_fixture
+        bad_values = np.array([[1,2],])
+        with model:
+            # For bad
+            pm.set_data({'x_shared': bad_values})
+            post_pred = pm.fast_sample_posterior_predictive(trace, samples=500)
+            assert post_pred['obs'].shape == (500, 1)
