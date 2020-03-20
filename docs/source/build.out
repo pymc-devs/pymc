@@ -1,0 +1,1059 @@
+sphinx-build -b html -d _build/doctrees   . _build/html
+Running Sphinx v2.0.1
+loading pickled environment... done
+building [mo]: targets for 0 po files that are out of date
+building [html]: targets for 109 source files that are out of date
+updating environment: 109 added, 0 changed, 0 removed
+reading sources... [  0%] Advanced_usage_of_Theano_in_PyMC3
+reading sources... [  1%] Gaussian_Processes
+reading sources... [  2%] Probability_Distributions
+reading sources... [  3%] PyMC3_and_Theano
+reading sources... [  4%] api
+reading sources... [  5%] api/backends
+reading sources... [  6%] api/bounds
+reading sources... [  7%] api/data
+reading sources... [  8%] api/distributions
+reading sources... [  9%] api/distributions/continuous
+reading sources... [ 10%] api/distributions/discrete
+reading sources... [ 11%] api/distributions/mixture
+reading sources... [ 11%] api/distributions/multivariate
+reading sources... [ 12%] api/distributions/timeseries
+reading sources... [ 13%] api/distributions/transforms
+reading sources... [ 14%] api/distributions/utilities
+reading sources... [ 15%] api/glm
+reading sources... [ 16%] api/gp
+reading sources... [ 17%] api/gp/cov
+reading sources... [ 18%] api/gp/implementations
+reading sources... [ 19%] api/gp/mean
+reading sources... [ 20%] api/inference
+reading sources... [ 21%] api/math
+reading sources... [ 22%] api/model
+reading sources... [ 22%] api/model_graph
+reading sources... [ 23%] api/plots
+reading sources... [ 24%] api/shape_utils
+reading sources... [ 25%] api/stats
+reading sources... [ 26%] api/variables
+reading sources... [ 27%] developer_guide
+reading sources... [ 28%] history
+reading sources... [ 29%] index
+reading sources... [ 30%] learn
+reading sources... [ 31%] nb_examples/index
+reading sources... [ 32%] nb_tutorials/index
+reading sources... [ 33%] notebooks/AR
+reading sources... [ 33%] notebooks/BEST
+reading sources... [ 34%] notebooks/Bayes_factor
+reading sources... [ 35%] notebooks/DEMetropolisZ_EfficiencyComparison
+reading sources... [ 36%] notebooks/DEMetropolisZ_tune_drop_fraction
+reading sources... [ 37%] notebooks/Diagnosing_biased_Inference_with_Divergences
+reading sources... [ 38%] notebooks/Euler-Maruyama_and_SDEs
+reading sources... [ 39%] notebooks/GLM
+reading sources... [ 40%] notebooks/GLM-hierarchical
+reading sources... [ 41%] notebooks/GLM-hierarchical-advi-minibatch
+reading sources... [ 42%] notebooks/GLM-hierarchical-binominal-model
+reading sources... [ 43%] notebooks/GLM-linear
+reading sources... [ 44%] notebooks/GLM-logistic
+reading sources... [ 44%] notebooks/GLM-model-selection
+reading sources... [ 45%] notebooks/GLM-negative-binomial-regression
+reading sources... [ 46%] notebooks/GLM-poisson-regression
+reading sources... [ 47%] notebooks/GLM-robust
+reading sources... [ 48%] notebooks/GLM-robust-with-outlier-detection
+reading sources... [ 49%] notebooks/GLM-rolling-regression
+reading sources... [ 50%] notebooks/GP-Kron
+reading sources... [ 51%] notebooks/GP-Latent
+reading sources... [ 52%] notebooks/GP-Marginal
+reading sources... [ 53%] notebooks/GP-MaunaLoa
+reading sources... [ 54%] notebooks/GP-MaunaLoa2
+reading sources... [ 55%] notebooks/GP-MeansAndCovs
+reading sources... [ 55%] notebooks/GP-SparseApprox
+reading sources... [ 56%] notebooks/GP-TProcess
+reading sources... [ 57%] notebooks/GP-smoothing
+reading sources... [ 58%] notebooks/LKJ
+reading sources... [ 59%] notebooks/MvGaussianRandomWalk_demo
+reading sources... [ 60%] notebooks/ODE_API_introduction
+reading sources... [ 61%] notebooks/ODE_API_shapes_and_benchmarking
+reading sources... [ 62%] notebooks/ODE_with_manual_gradients
+reading sources... [ 63%] notebooks/PyMC3_tips_and_heuristic
+reading sources... [ 64%] notebooks/SMC-ABC_Lotka-Volterra_example
+reading sources... [ 65%] notebooks/SMC2_gaussians
+reading sources... [ 66%] notebooks/api_quickstart
+reading sources... [ 66%] notebooks/bayes_param_survival_pymc3
+reading sources... [ 67%] notebooks/bayesian_neural_network_advi
+reading sources... [ 68%] notebooks/blackbox_external_likelihood
+reading sources... [ 69%] notebooks/censored_data
+reading sources... [ 70%] notebooks/convolutional_vae_keras_advi
+reading sources... [ 71%] notebooks/cox_model
+reading sources... [ 72%] notebooks/data_container
+reading sources... [ 73%] notebooks/dependent_density_regression
+reading sources... [ 74%] notebooks/dp_mix
+reading sources... [ 75%] notebooks/empirical-approx-overview
+reading sources... [ 76%] notebooks/factor_analysis
+reading sources... [ 77%] notebooks/gaussian-mixture-model-advi
+reading sources... [ 77%] notebooks/gaussian_mixture_model
+reading sources... [ 78%] notebooks/gaussian_process
+reading sources... [ 79%] notebooks/getting_started
+reading sources... [ 80%] notebooks/hierarchical_partial_pooling
+reading sources... [ 81%] notebooks/howto_debugging
+reading sources... [ 82%] notebooks/lasso_block_update
+reading sources... [ 83%] notebooks/lda-advi-aevb
+reading sources... [ 84%] notebooks/marginalized_gaussian_mixture_model
+reading sources... [ 85%] notebooks/model_averaging
+reading sources... [ 86%] notebooks/model_comparison
+reading sources... [ 87%] notebooks/multilevel_modeling
+reading sources... [ 88%] notebooks/normalizing_flows_overview
+reading sources... [ 88%] notebooks/posterior_predictive
+reading sources... [ 89%] notebooks/probabilistic_matrix_factorization
+reading sources... [ 90%] notebooks/profiling
+reading sources... [ 91%] notebooks/putting_workflow
+reading sources... [ 92%] notebooks/rugby_analytics
+reading sources... [ 93%] notebooks/sampler-stats
+reading sources... [ 94%] notebooks/sampling_callback
+reading sources... [ 95%] notebooks/sampling_compound_step
+reading sources... [ 96%] notebooks/stochastic_volatility
+reading sources... [ 97%] notebooks/survival_analysis
+reading sources... [ 98%] notebooks/updating_priors
+reading sources... [ 99%] notebooks/variational_api_quickstart
+reading sources... [100%] notebooks/weibull_aft
+
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/sphinx/util/docutils.py:311: RemovedInSphinx30Warning: function based directive support is now deprecated. Use class based directive instead.
+  RemovedInSphinx30Warning)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of <class 'pymc3.distributions.distribution.DensityDist'> in /Users/rpg/src/pymc3/pymc3/distributions/distribution.py.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of <class 'pymc3.distributions.distribution.DensityDist'> in /Users/rpg/src/pymc3/pymc3/distributions/distribution.py.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of <function constant at 0x12be96710> in /usr/local/lib/python3.7/site-packages/theano/tensor/basic.py.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{lt,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{gt,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{le,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{ge,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{eq,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{neq,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{switch,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{clip,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{switch,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{and_,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{or_,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{abs_,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{exp,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{log,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{cos,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{sin,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{tan,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{cosh,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{sinh,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{tanh,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{sqr,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{sqrt,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{erf,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{erfinv,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{maximum,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{minimum,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{sgn,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{ceil,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of Elemwise{floor,no_inplace} in None.
+  warn(msg)
+/Users/rpg/Library/Python/3.7/lib/python/site-packages/numpydoc/docscrape.py:424: UserWarning: Unknown section Note in the docstring of sigmoid in None.
+  warn(msg)
+/Users/rpg/src/pymc3/docs/source/Gaussian_Processes.rst:62: WARNING: duplicate label mean and covariance functions, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GP-MeansAndCovs.ipynb
+/Users/rpg/src/pymc3/docs/source/api/data.rst:3: WARNING: duplicate label data, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/probabilistic_matrix_factorization.ipynb
+/Users/rpg/src/pymc3/docs/source/api/glm.rst:3: WARNING: duplicate label generalized linear models, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb
+/Users/rpg/src/pymc3/docs/source/api/gp/cov.rst:3: WARNING: duplicate label covariance functions, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GP-MeansAndCovs.ipynb
+/Users/rpg/src/pymc3/docs/source/api/gp/mean.rst:3: WARNING: duplicate label mean functions, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GP-MeansAndCovs.ipynb
+/Users/rpg/src/pymc3/pymc3/sampling.py:docstring of pymc3.sampling.sample:119: WARNING: Inline literal start-string without end-string.
+/Users/rpg/src/pymc3/pymc3/backends/base.py:docstring of pymc3.backends.base.MultiTrace:56: WARNING: Block quote ends without a blank line; unexpected unindent.
+/Users/rpg/src/pymc3/docs/source/api/inference.rst:3: WARNING: duplicate label inference, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/convolutional_vae_keras_advi.ipynb
+/Users/rpg/src/pymc3/docs/source/api/inference.rst:6: WARNING: duplicate label sampling, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/censored_data.ipynb
+/Users/rpg/src/pymc3/docs/source/api/inference.rst:23: WARNING: duplicate label nuts, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/normalizing_flows_overview.ipynb
+/Users/rpg/src/pymc3/docs/source/api/inference.rst:55: WARNING: duplicate label sequential monte carlo, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/Bayes_factor.ipynb
+/Users/rpg/src/pymc3/docs/source/api/math.rst:61:<autosummary>:1: WARNING: Inline interpreted text or phrase reference start-string without end-string.
+/Users/rpg/src/pymc3/docs/source/api/math.rst:61:<autosummary>:1: WARNING: Inline emphasis start-string without end-string.
+/Users/rpg/src/pymc3/docs/source/api/math.rst:61:<autosummary>:1: WARNING: Undefined substitution referenced: "`a`".
+/Users/rpg/src/pymc3/docs/source/developer_guide.rst:861: WARNING: duplicate label inference, other instance in /Users/rpg/src/pymc3/docs/source/api/inference.rst
+/Users/rpg/src/pymc3/docs/source/history.rst:5: WARNING: duplicate label introduction, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/BEST.ipynb:494: WARNING: duplicate label references, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/stochastic_volatility.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/Bayes_factor.ipynb:343: WARNING: duplicate label sequential monte carlo, other instance in /Users/rpg/src/pymc3/docs/source/api/inference.rst
+/Users/rpg/src/pymc3/docs/source/notebooks/DEMetropolisZ_EfficiencyComparison.ipynb:1416: WARNING: duplicate label inspecting the sampler stats, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/DEMetropolisZ_tune_drop_fraction.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/DEMetropolisZ_EfficiencyComparison.ipynb:1476: WARNING: duplicate label conclusion, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GP-MaunaLoa2.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/DEMetropolisZ_tune_drop_fraction.ipynb:2077: WARNING: duplicate label inspecting the sampler stats, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/DEMetropolisZ_EfficiencyComparison.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM.ipynb:37: WARNING: duplicate label linear regression, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-linear.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical.ipynb:329: WARNING: duplicate label hierarchical model, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/model_comparison.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical.ipynb:612: WARNING: duplicate label summary, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/probabilistic_matrix_factorization.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical.ipynb:620: WARNING: duplicate label references, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/BEST.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical.ipynb:632: WARNING: duplicate label acknowledgements, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/bayesian_neural_network_advi.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical-binominal-model.ipynb:474: WARNING: duplicate label conclusion, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/DEMetropolisZ_EfficiencyComparison.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical-binominal-model.ipynb:484: WARNING: duplicate label references, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-linear.ipynb:46: WARNING: duplicate label linear regression, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-linear.ipynb:101: WARNING: duplicate label generating data, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/updating_priors.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-linear.ipynb:431: WARNING: duplicate label summary, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-logistic.ipynb:716: WARNING: Inline interpreted text or phrase reference start-string without end-string.
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-logistic.ipynb:716: WARNING: Inline interpreted text or phrase reference start-string without end-string.
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-logistic.ipynb:708: WARNING: duplicate label the model, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-model-selection.ipynb:83: WARNING: duplicate label local functions, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-poisson-regression.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-model-selection.ipynb:2346: WARNING: duplicate label reference, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/model_comparison.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-negative-binomial-regression.ipynb:427: WARNING: Title level inconsistent:
+
+Negative Binomial Regression
+----------------------------
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-negative-binomial-regression.ipynb:121: WARNING: duplicate label generate data, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-poisson-regression.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-poisson-regression.ipynb:92: WARNING: duplicate label local functions, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-model-selection.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-poisson-regression.ipynb:131: WARNING: duplicate label generate data, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-negative-binomial-regression.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust.ipynb:324: WARNING: duplicate label summary, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-linear.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust-with-outlier-detection.ipynb:391: WARNING: duplicate label define model, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust-with-outlier-detection.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust-with-outlier-detection.ipynb:426: WARNING: duplicate label sample, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust-with-outlier-detection.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust-with-outlier-detection.ipynb:487: WARNING: duplicate label view traces, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust-with-outlier-detection.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust-with-outlier-detection.ipynb:553: WARNING: duplicate label define model, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust-with-outlier-detection.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust-with-outlier-detection.ipynb:597: WARNING: duplicate label sample, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust-with-outlier-detection.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust-with-outlier-detection.ipynb:668: WARNING: duplicate label view traces, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust-with-outlier-detection.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-rolling-regression.ipynb:255: WARNING: duplicate label rolling regression, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-rolling-regression.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-Latent.ipynb:264: WARNING: duplicate label results, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/rugby_analytics.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-Latent.ipynb:323: WARNING: duplicate label using ``.conditional``, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GP-Marginal.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-Marginal.ipynb:369: WARNING: duplicate label using ``.conditional``, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GP-Latent.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MaunaLoa2.ipynb:770: WARNING: Title level inconsistent:
+
+Heaviside step function
+~~~~~~~~~~~~~~~~~~~~~~~
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MaunaLoa2.ipynb:924: WARNING: Title level inconsistent:
+
+A gradual change with a sigmoid function
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MaunaLoa2.ipynb:1029: WARNING: Title level inconsistent:
+
+Changepoint covariance model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MaunaLoa2.ipynb:1153: WARNING: Title level inconsistent:
+
+Predictions
+~~~~~~~~~~~
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MaunaLoa2.ipynb:669: WARNING: duplicate label predictions, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GP-MaunaLoa2.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MaunaLoa2.ipynb:1962: WARNING: duplicate label conclusion, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical-binominal-model.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MeansAndCovs.ipynb:65: WARNING: duplicate label mean and covariance functions, other instance in /Users/rpg/src/pymc3/docs/source/Gaussian_Processes.rst
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MeansAndCovs.ipynb:70: WARNING: duplicate label mean functions, other instance in /Users/rpg/src/pymc3/docs/source/api/gp/mean.rst
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MeansAndCovs.ipynb:316: WARNING: duplicate label covariance functions, other instance in /Users/rpg/src/pymc3/docs/source/api/gp/cov.rst
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MeansAndCovs.ipynb:492: WARNING: duplicate label constant, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GP-MeansAndCovs.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MeansAndCovs.ipynb:721: WARNING: duplicate label linear, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GP-MeansAndCovs.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/ODE_API_introduction.ipynb:594: WARNING: duplicate label references, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical-binominal-model.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/ODE_with_manual_gradients.ipynb:1147: WARNING: Title level inconsistent:
+
+Using some other ODE models
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/rpg/src/pymc3/docs/source/notebooks/ODE_with_manual_gradients.ipynb:1152: WARNING: Title level inconsistent:
+
+Other forms of differential equation (DDE, DAE, PDE)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/rpg/src/pymc3/docs/source/notebooks/ODE_with_manual_gradients.ipynb:1158: WARNING: Title level inconsistent:
+
+Stan already supports ODEs
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/rpg/src/pymc3/docs/source/notebooks/ODE_with_manual_gradients.ipynb:1163: WARNING: Title level inconsistent:
+
+Model selection
+~~~~~~~~~~~~~~~
+/Users/rpg/src/pymc3/docs/source/notebooks/ODE_with_manual_gradients.ipynb:1171: WARNING: Title level inconsistent:
+
+Other AD packages
+~~~~~~~~~~~~~~~~~
+/Users/rpg/src/pymc3/docs/source/notebooks/ODE_with_manual_gradients.ipynb:980: WARNING: duplicate label generative model, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/convolutional_vae_keras_advi.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/bayes_param_survival_pymc3.ipynb:1296: WARNING: duplicate label authors, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/weibull_aft.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/bayesian_neural_network_advi.ipynb:75: WARNING: duplicate label generating data, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-linear.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/bayesian_neural_network_advi.ipynb:138: WARNING: duplicate label model specification, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/updating_priors.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/bayesian_neural_network_advi.ipynb:765: WARNING: duplicate label summary, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/bayesian_neural_network_advi.ipynb:784: WARNING: duplicate label acknowledgements, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/blackbox_external_likelihood.ipynb:833: WARNING: duplicate label authors, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/bayes_param_survival_pymc3.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/censored_data.ipynb:253: WARNING: duplicate label sampling, other instance in /Users/rpg/src/pymc3/docs/source/api/inference.rst
+/Users/rpg/src/pymc3/docs/source/notebooks/censored_data.ipynb:458: WARNING: duplicate label discussion, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/censored_data.ipynb:468: WARNING: duplicate label authors, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/blackbox_external_likelihood.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/convolutional_vae_keras_advi.ipynb:525: WARNING: duplicate label generative model, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/ODE_with_manual_gradients.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/convolutional_vae_keras_advi.ipynb:771: WARNING: duplicate label inference, other instance in /Users/rpg/src/pymc3/docs/source/developer_guide.rst
+/Users/rpg/src/pymc3/docs/source/notebooks/convolutional_vae_keras_advi.ipynb:843: WARNING: duplicate label results, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GP-Latent.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/data_container.ipynb:346: WARNING: File not found: 'Advanced_usage_of_Theano_in_PyMC3.html#using-shared-variables'
+/Users/rpg/src/pymc3/docs/source/notebooks/data_container.ipynb:629: WARNING: File not found: 'notebooks/bayesian_neural_network_advi.html'
+/Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb:26: WARNING: duplicate label introduction, other instance in /Users/rpg/src/pymc3/docs/source/history.rst
+/Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb:99: WARNING: duplicate label generating data, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/bayesian_neural_network_advi.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb:162: WARNING: duplicate label model specification, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/bayesian_neural_network_advi.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb:820: WARNING: duplicate label the model, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-logistic.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb:886: WARNING: duplicate label model specification, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb:1443: WARNING: duplicate label generalized linear models, other instance in /Users/rpg/src/pymc3/docs/source/api/glm.rst
+/Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb:1555: WARNING: duplicate label discussion, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/censored_data.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb:1573: WARNING: duplicate label references, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/ODE_API_introduction.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/hierarchical_partial_pooling.ipynb:27: WARNING: duplicate label data, other instance in /Users/rpg/src/pymc3/docs/source/api/data.rst
+/Users/rpg/src/pymc3/docs/source/notebooks/lda-advi-aevb.ipynb:323: WARNING: Inline interpreted text or phrase reference start-string without end-string.
+/Users/rpg/src/pymc3/docs/source/notebooks/lda-advi-aevb.ipynb:325: WARNING: Definition list ends without a blank line; unexpected unindent.
+/Users/rpg/src/pymc3/docs/source/notebooks/lda-advi-aevb.ipynb:127: WARNING: duplicate label dataset, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/weibull_aft.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/lda-advi-aevb.ipynb:1042: WARNING: duplicate label summary, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/bayesian_neural_network_advi.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/lda-advi-aevb.ipynb:1055: WARNING: duplicate label references, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/model_comparison.ipynb:128: WARNING: duplicate label hierarchical model, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/model_comparison.ipynb:652: WARNING: duplicate label reference, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/GLM-model-selection.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/multilevel_modeling.ipynb:2914: WARNING: duplicate label prediction, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/posterior_predictive.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/multilevel_modeling.ipynb:3066: WARNING: duplicate label references, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/lda-advi-aevb.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/normalizing_flows_overview.ipynb:378: WARNING: duplicate label nuts, other instance in /Users/rpg/src/pymc3/docs/source/api/inference.rst
+/Users/rpg/src/pymc3/docs/source/notebooks/posterior_predictive.ipynb:263: WARNING: duplicate label prediction, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/multilevel_modeling.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/probabilistic_matrix_factorization.ipynb:68: WARNING: duplicate label motivation, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/rugby_analytics.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/probabilistic_matrix_factorization.ipynb:111: WARNING: duplicate label data, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/hierarchical_partial_pooling.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/probabilistic_matrix_factorization.ipynb:1092: WARNING: duplicate label results, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/convolutional_vae_keras_advi.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/probabilistic_matrix_factorization.ipynb:1684: WARNING: duplicate label summary, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/lda-advi-aevb.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/probabilistic_matrix_factorization.ipynb:1704: WARNING: duplicate label references, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/multilevel_modeling.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/rugby_analytics.ipynb:32: WARNING: duplicate label motivation, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/probabilistic_matrix_factorization.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/rugby_analytics.ipynb:887: WARNING: duplicate label results, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/probabilistic_matrix_factorization.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/stochastic_volatility.ipynb:478: WARNING: duplicate label references, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/probabilistic_matrix_factorization.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/updating_priors.ipynb:82: WARNING: duplicate label generating data, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/updating_priors.ipynb:114: WARNING: duplicate label model specification, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/weibull_aft.ipynb:71: WARNING: duplicate label dataset, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/lda-advi-aevb.ipynb
+/Users/rpg/src/pymc3/docs/source/notebooks/weibull_aft.ipynb:807: WARNING: duplicate label authors, other instance in /Users/rpg/src/pymc3/docs/source/notebooks/censored_data.ipynb
+looking for now-outdated files... none found
+pickling environment... done
+checking consistency... /Users/rpg/src/pymc3/docs/source/Advanced_usage_of_Theano_in_PyMC3.rst: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/Gaussian_Processes.rst: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/Probability_Distributions.rst: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/PyMC3_and_Theano.rst: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/api.rst: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/developer_guide.rst: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/history.rst: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/learn.rst: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/nb_examples/index.rst: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/nb_tutorials/index.rst: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/AR.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/BEST.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/Bayes_factor.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/DEMetropolisZ_EfficiencyComparison.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/DEMetropolisZ_tune_drop_fraction.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/Diagnosing_biased_Inference_with_Divergences.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/Euler-Maruyama_and_SDEs.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical-advi-minibatch.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-hierarchical-binominal-model.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-linear.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-logistic.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-model-selection.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-negative-binomial-regression.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-poisson-regression.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-robust-with-outlier-detection.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GLM-rolling-regression.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-Kron.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-Latent.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-Marginal.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MaunaLoa.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MaunaLoa2.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-MeansAndCovs.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-SparseApprox.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-TProcess.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/GP-smoothing.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/LKJ.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/MvGaussianRandomWalk_demo.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/ODE_API_introduction.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/ODE_API_shapes_and_benchmarking.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/ODE_with_manual_gradients.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/PyMC3_tips_and_heuristic.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/SMC-ABC_Lotka-Volterra_example.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/SMC2_gaussians.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/api_quickstart.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/bayes_param_survival_pymc3.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/bayesian_neural_network_advi.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/blackbox_external_likelihood.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/censored_data.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/convolutional_vae_keras_advi.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/cox_model.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/data_container.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/dependent_density_regression.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/dp_mix.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/empirical-approx-overview.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/factor_analysis.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/gaussian-mixture-model-advi.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/gaussian_mixture_model.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/gaussian_process.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/getting_started.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/hierarchical_partial_pooling.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/howto_debugging.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/lasso_block_update.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/lda-advi-aevb.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/marginalized_gaussian_mixture_model.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/model_averaging.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/model_comparison.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/multilevel_modeling.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/normalizing_flows_overview.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/posterior_predictive.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/probabilistic_matrix_factorization.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/profiling.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/putting_workflow.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/rugby_analytics.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/sampler-stats.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/sampling_callback.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/sampling_compound_step.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/stochastic_volatility.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/survival_analysis.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/updating_priors.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/variational_api_quickstart.ipynb: WARNING: document isn't included in any toctree
+/Users/rpg/src/pymc3/docs/source/notebooks/weibull_aft.ipynb: WARNING: document isn't included in any toctree
+done
+preparing documents... done
+writing output... [  0%] Advanced_usage_of_Theano_in_PyMC3
+writing output... [  1%] Gaussian_Processes
+writing output... [  2%] Probability_Distributions
+writing output... [  3%] PyMC3_and_Theano
+writing output... [  4%] api
+writing output... [  5%] api/backends
+writing output... [  6%] api/bounds
+writing output... [  7%] api/data
+writing output... [  8%] api/distributions
+writing output... [  9%] api/distributions/continuous
+writing output... [ 10%] api/distributions/discrete
+writing output... [ 11%] api/distributions/mixture
+writing output... [ 11%] api/distributions/multivariate
+writing output... [ 12%] api/distributions/timeseries
+writing output... [ 13%] api/distributions/transforms
+writing output... [ 14%] api/distributions/utilities
+writing output... [ 15%] api/glm
+writing output... [ 16%] api/gp
+writing output... [ 17%] api/gp/cov
+writing output... [ 18%] api/gp/implementations
+writing output... [ 19%] api/gp/mean
+writing output... [ 20%] api/inference
+writing output... [ 21%] api/math
+writing output... [ 22%] api/model
+writing output... [ 22%] api/model_graph
+writing output... [ 23%] api/plots
+writing output... [ 24%] api/shape_utils
+writing output... [ 25%] api/stats
+writing output... [ 26%] api/variables
+writing output... [ 27%] developer_guide
+writing output... [ 28%] history
+writing output... [ 29%] index
+writing output... [ 30%] learn
+writing output... [ 31%] nb_examples/index
+writing output... [ 32%] nb_tutorials/index
+writing output... [ 33%] notebooks/AR
+writing output... [ 33%] notebooks/BEST
+writing output... [ 34%] notebooks/Bayes_factor
+writing output... [ 35%] notebooks/DEMetropolisZ_EfficiencyComparison
+writing output... [ 36%] notebooks/DEMetropolisZ_tune_drop_fraction
+writing output... [ 37%] notebooks/Diagnosing_biased_Inference_with_Divergences
+writing output... [ 38%] notebooks/Euler-Maruyama_and_SDEs
+writing output... [ 39%] notebooks/GLM
+writing output... [ 40%] notebooks/GLM-hierarchical
+writing output... [ 41%] notebooks/GLM-hierarchical-advi-minibatch
+writing output... [ 42%] notebooks/GLM-hierarchical-binominal-model
+writing output... [ 43%] notebooks/GLM-linear
+writing output... [ 44%] notebooks/GLM-logistic
+writing output... [ 44%] notebooks/GLM-model-selection
+writing output... [ 45%] notebooks/GLM-negative-binomial-regression
+writing output... [ 46%] notebooks/GLM-poisson-regression
+writing output... [ 47%] notebooks/GLM-robust
+writing output... [ 48%] notebooks/GLM-robust-with-outlier-detection
+writing output... [ 49%] notebooks/GLM-rolling-regression
+writing output... [ 50%] notebooks/GP-Kron
+writing output... [ 51%] notebooks/GP-Latent
+writing output... [ 52%] notebooks/GP-Marginal
+writing output... [ 53%] notebooks/GP-MaunaLoa
+writing output... [ 54%] notebooks/GP-MaunaLoa2
+writing output... [ 55%] notebooks/GP-MeansAndCovs
+writing output... [ 55%] notebooks/GP-SparseApprox
+writing output... [ 56%] notebooks/GP-TProcess
+writing output... [ 57%] notebooks/GP-smoothing
+writing output... [ 58%] notebooks/LKJ
+writing output... [ 59%] notebooks/MvGaussianRandomWalk_demo
+writing output... [ 60%] notebooks/ODE_API_introduction
+writing output... [ 61%] notebooks/ODE_API_shapes_and_benchmarking
+writing output... [ 62%] notebooks/ODE_with_manual_gradients
+writing output... [ 63%] notebooks/PyMC3_tips_and_heuristic
+writing output... [ 64%] notebooks/SMC-ABC_Lotka-Volterra_example
+writing output... [ 65%] notebooks/SMC2_gaussians
+writing output... [ 66%] notebooks/api_quickstart
+writing output... [ 66%] notebooks/bayes_param_survival_pymc3
+writing output... [ 67%] notebooks/bayesian_neural_network_advi
+writing output... [ 68%] notebooks/blackbox_external_likelihood
+writing output... [ 69%] notebooks/censored_data
+writing output... [ 70%] notebooks/convolutional_vae_keras_advi
+writing output... [ 71%] notebooks/cox_model
+writing output... [ 72%] notebooks/data_container
+writing output... [ 73%] notebooks/dependent_density_regression
+writing output... [ 74%] notebooks/dp_mix
+writing output... [ 75%] notebooks/empirical-approx-overview
+writing output... [ 76%] notebooks/factor_analysis
+writing output... [ 77%] notebooks/gaussian-mixture-model-advi
+writing output... [ 77%] notebooks/gaussian_mixture_model
+writing output... [ 78%] notebooks/gaussian_process
+writing output... [ 79%] notebooks/getting_started
+writing output... [ 80%] notebooks/hierarchical_partial_pooling
+writing output... [ 81%] notebooks/howto_debugging
+writing output... [ 82%] notebooks/lasso_block_update
+writing output... [ 83%] notebooks/lda-advi-aevb
+writing output... [ 84%] notebooks/marginalized_gaussian_mixture_model
+writing output... [ 85%] notebooks/model_averaging
+writing output... [ 86%] notebooks/model_comparison
+writing output... [ 87%] notebooks/multilevel_modeling
+writing output... [ 88%] notebooks/normalizing_flows_overview
+writing output... [ 88%] notebooks/posterior_predictive
+writing output... [ 89%] notebooks/probabilistic_matrix_factorization
+writing output... [ 90%] notebooks/profiling
+writing output... [ 91%] notebooks/putting_workflow
+writing output... [ 92%] notebooks/rugby_analytics
+writing output... [ 93%] notebooks/sampler-stats
+writing output... [ 94%] notebooks/sampling_callback
+writing output... [ 95%] notebooks/sampling_compound_step
+writing output... [ 96%] notebooks/stochastic_volatility
+writing output... [ 97%] notebooks/survival_analysis
+writing output... [ 98%] notebooks/updating_priors
+writing output... [ 99%] notebooks/variational_api_quickstart
+writing output... [100%] notebooks/weibull_aft
+
+/Users/rpg/src/pymc3/docs/source/semantic_sphinx/layout.html:16: RemovedInSphinx30Warning: To modify script_files in the theme is deprecated. Please insert a <script> tag directly in your theme instead.
+  <script>hljs.initHighlightingOnLoad();</script>
+/Users/rpg/src/pymc3/docs/source/semantic_sphinx/layout.html:21: RemovedInSphinx30Warning: To modify script_files in the theme is deprecated. Please insert a <script> tag directly in your theme instead.
+  {% if pagename == 'nb_tutorials/index' %}
+/Users/rpg/src/pymc3/docs/source/index.rst:20: WARNING: Could not lex literal_block as "python". Highlighting skipped.
+generating indices... genindex py-modindex
+writing additional pages... search
+copying images... [  0%] api/distributions/../../_build/plot_directive/api/distributions/continuous-1.png
+copying images... [  0%] api/distributions/../../_build/plot_directive/api/distributions/continuous-2.png
+copying images... [  0%] api/distributions/../../_build/plot_directive/api/distributions/continuous-3.png
+copying images... [  0%] api/distributions/../../_build/plot_directive/api/distributions/continuous-4.png
+copying images... [  0%] api/distributions/../../_build/plot_directive/api/distributions/continuous-5.png
+copying images... [  1%] api/distributions/../../_build/plot_directive/api/distributions/continuous-6.png
+copying images... [  1%] api/distributions/../../_build/plot_directive/api/distributions/continuous-7.png
+copying images... [  1%] api/distributions/../../_build/plot_directive/api/distributions/continuous-8.png
+copying images... [  1%] api/distributions/../../_build/plot_directive/api/distributions/continuous-9.png
+copying images... [  1%] api/distributions/../../_build/plot_directive/api/distributions/continuous-10.png
+copying images... [  2%] api/distributions/../../_build/plot_directive/api/distributions/continuous-11.png
+copying images... [  2%] api/distributions/../../_build/plot_directive/api/distributions/continuous-12.png
+copying images... [  2%] api/distributions/../../_build/plot_directive/api/distributions/continuous-13.png
+copying images... [  2%] api/distributions/../../_build/plot_directive/api/distributions/continuous-14.png
+copying images... [  2%] api/distributions/../../_build/plot_directive/api/distributions/continuous-15.png
+copying images... [  3%] api/distributions/../../_build/plot_directive/api/distributions/continuous-16.png
+copying images... [  3%] api/distributions/../../_build/plot_directive/api/distributions/continuous-17.png
+copying images... [  3%] api/distributions/../../_build/plot_directive/api/distributions/continuous-18.png
+copying images... [  3%] api/distributions/../../_build/plot_directive/api/distributions/continuous-19.png
+copying images... [  3%] api/distributions/../../_build/plot_directive/api/distributions/continuous-20.png
+copying images... [  4%] api/distributions/../../_build/plot_directive/api/distributions/continuous-21.png
+copying images... [  4%] api/distributions/../../_build/plot_directive/api/distributions/continuous-22.png
+copying images... [  4%] api/distributions/../../_build/plot_directive/api/distributions/continuous-23.png
+copying images... [  4%] api/distributions/../../_build/plot_directive/api/distributions/continuous-24.png
+copying images... [  4%] api/distributions/../../_build/plot_directive/api/distributions/continuous-25.png
+copying images... [  5%] api/distributions/../../_build/plot_directive/api/distributions/continuous-26.png
+copying images... [  5%] api/distributions/../../_build/plot_directive/api/distributions/discrete-1.png
+copying images... [  5%] api/distributions/../../_build/plot_directive/api/distributions/discrete-2.png
+copying images... [  5%] api/distributions/../../_build/plot_directive/api/distributions/discrete-3.png
+copying images... [  5%] api/distributions/../../_build/plot_directive/api/distributions/discrete-4.png
+copying images... [  6%] api/distributions/../../_build/plot_directive/api/distributions/discrete-5.png
+copying images... [  6%] api/distributions/../../_build/plot_directive/api/distributions/discrete-6.png
+copying images... [  6%] api/distributions/../../_build/plot_directive/api/distributions/discrete-7.png
+copying images... [  6%] api/distributions/../../_build/plot_directive/api/distributions/discrete-8.png
+copying images... [  6%] api/distributions/../../_build/plot_directive/api/distributions/discrete-9.png
+copying images... [  7%] api/distributions/../../_build/plot_directive/api/distributions/discrete-10.png
+copying images... [  7%] api/distributions/../../_build/plot_directive/api/distributions/discrete-11.png
+copying images... [  7%] api/distributions/../../_build/plot_directive/api/distributions/discrete-12.png
+copying images... [  7%] api/../_build/plot_directive/api/plots-1.png
+copying images... [  7%] api/../_build/plot_directive/api/plots-2.png
+copying images... [  7%] api/../_build/plot_directive/api/plots-3.png
+copying images... [  8%] api/../_build/plot_directive/api/plots-4.png
+copying images... [  8%] api/../_build/plot_directive/api/plots-5.png
+copying images... [  8%] api/../_build/plot_directive/api/plots-6.png
+copying images... [  8%] api/../_build/plot_directive/api/plots-7.png
+copying images... [  8%] api/../_build/plot_directive/api/plots-8.png
+copying images... [  9%] api/../_build/plot_directive/api/plots-9.png
+copying images... [  9%] api/../_build/plot_directive/api/plots-10.png
+copying images... [  9%] api/../_build/plot_directive/api/plots-11.png
+copying images... [  9%] api/../_build/plot_directive/api/plots-12.png
+copying images... [  9%] api/../_build/plot_directive/api/plots-13.png
+copying images... [ 10%] api/../_build/plot_directive/api/plots-14.png
+copying images... [ 10%] api/../_build/plot_directive/api/plots-15.png
+copying images... [ 10%] api/../_build/plot_directive/api/plots-16.png
+copying images... [ 10%] api/../_build/plot_directive/api/plots-17.png
+copying images... [ 10%] api/../_build/plot_directive/api/plots-18.png
+copying images... [ 11%] api/../_build/plot_directive/api/plots-19.png
+copying images... [ 11%] api/../_build/plot_directive/api/plots-20.png
+copying images... [ 11%] api/../_build/plot_directive/api/plots-21.png
+copying images... [ 11%] api/../_build/plot_directive/api/plots-22.png
+copying images... [ 11%] api/../_build/plot_directive/api/plots-23.png
+copying images... [ 12%] api/../_build/plot_directive/api/plots-24.png
+copying images... [ 12%] api/../_build/plot_directive/api/plots-25.png
+copying images... [ 12%] api/../_build/plot_directive/api/plots-26.png
+copying images... [ 12%] api/../_build/plot_directive/api/plots-27.png
+copying images... [ 12%] api/../_build/plot_directive/api/plots-28.png
+copying images... [ 13%] api/../_build/plot_directive/api/plots-29.png
+copying images... [ 13%] api/../_build/plot_directive/api/plots-30.png
+copying images... [ 13%] api/../_build/plot_directive/api/plots-31.png
+copying images... [ 13%] api/../_build/plot_directive/api/plots-32.png
+copying images... [ 13%] api/../_build/plot_directive/api/plots-33.png
+copying images... [ 14%] api/../_build/plot_directive/api/plots-34.png
+copying images... [ 14%] api/../_build/plot_directive/api/plots-35.png
+copying images... [ 14%] api/../_build/plot_directive/api/plots-36.png
+copying images... [ 14%] api/../_build/plot_directive/api/plots-37.png
+copying images... [ 14%] api/../_build/plot_directive/api/plots-38.png
+copying images... [ 15%] api/../_build/plot_directive/api/plots-39.png
+copying images... [ 15%] api/../_build/plot_directive/api/plots-40.png
+copying images... [ 15%] ./images/forestplot.png
+copying images... [ 15%] notebooks/../_build/doctrees/nbsphinx/notebooks_AR_3_0.png
+copying images... [ 15%] notebooks/../_build/doctrees/nbsphinx/notebooks_AR_7_0.png
+copying images... [ 15%] notebooks/../_build/doctrees/nbsphinx/notebooks_AR_12_0.png
+copying images... [ 16%] notebooks/../_build/doctrees/nbsphinx/notebooks_AR_16_0.png
+copying images... [ 16%] notebooks/../_build/doctrees/nbsphinx/notebooks_BEST_5_0.png
+copying images... [ 16%] notebooks/../_build/doctrees/nbsphinx/notebooks_BEST_11_0.png
+copying images... [ 16%] notebooks/../_build/doctrees/nbsphinx/notebooks_BEST_19_0.png
+copying images... [ 16%] notebooks/../_build/doctrees/nbsphinx/notebooks_BEST_21_0.png
+copying images... [ 17%] notebooks/../_build/doctrees/nbsphinx/notebooks_BEST_23_0.png
+copying images... [ 17%] notebooks/../_build/doctrees/nbsphinx/notebooks_BEST_24_0.png
+copying images... [ 17%] notebooks/../_build/doctrees/nbsphinx/notebooks_Bayes_factor_13_0.png
+copying images... [ 17%] notebooks/../_build/doctrees/nbsphinx/notebooks_Bayes_factor_25_3.png
+copying images... [ 17%] notebooks/../_build/doctrees/nbsphinx/notebooks_DEMetropolisZ_EfficiencyComparison_11_0.png
+copying images... [ 18%] notebooks/../_build/doctrees/nbsphinx/notebooks_DEMetropolisZ_EfficiencyComparison_13_0.png
+copying images... [ 18%] notebooks/../_build/doctrees/nbsphinx/notebooks_DEMetropolisZ_tune_drop_fraction_9_0.png
+copying images... [ 18%] notebooks/../_build/doctrees/nbsphinx/notebooks_DEMetropolisZ_tune_drop_fraction_11_0.png
+copying images... [ 18%] notebooks/../_build/doctrees/nbsphinx/notebooks_DEMetropolisZ_tune_drop_fraction_13_0.png
+copying images... [ 18%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_14_0.png
+copying images... [ 19%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_16_0.png
+copying images... [ 19%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_20_0.png
+copying images... [ 19%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_23_0.png
+copying images... [ 19%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_25_0.png
+copying images... [ 19%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_29_0.png
+copying images... [ 20%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_29_1.png
+copying images... [ 20%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_29_3.png
+copying images... [ 20%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_40_0.png
+copying images... [ 20%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_41_0.png
+copying images... [ 20%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_47_0.png
+copying images... [ 21%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_47_1.png
+copying images... [ 21%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_47_3.png
+copying images... [ 21%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_51_0.png
+copying images... [ 21%] notebooks/../_build/doctrees/nbsphinx/notebooks_Diagnosing_biased_Inference_with_Divergences_52_0.png
+copying images... [ 21%] notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-Maruyama_and_SDEs_4_0.png
+copying images... [ 22%] notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-Maruyama_and_SDEs_13_0.png
+copying images... [ 22%] notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-Maruyama_and_SDEs_15_2.png
+copying images... [ 22%] notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-Maruyama_and_SDEs_18_1.png
+copying images... [ 22%] notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-Maruyama_and_SDEs_26_0.png
+copying images... [ 22%] notebooks/../_build/doctrees/nbsphinx/notebooks_Euler-Maruyama_and_SDEs_28_2.png
+copying images... [ 23%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_5_1.png
+copying images... [ 23%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_7_1.png
+copying images... [ 23%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_10_1.png
+copying images... [ 23%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_12_1.png
+copying images... [ 23%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_16_0.png
+copying images... [ 23%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_18_0.png
+copying images... [ 24%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_20_0.png
+copying images... [ 24%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_25_1.png
+copying images... [ 24%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_27_0.png
+copying images... [ 24%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_28_2.png
+copying images... [ 24%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical_15_0.png
+copying images... [ 25%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical_16_0.png
+copying images... [ 25%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical_19_0.png
+copying images... [ 25%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical_23_0.png
+copying images... [ 25%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical-advi-minibatch_16_0.png
+copying images... [ 25%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical-advi-minibatch_19_1.png
+copying images... [ 26%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical-binominal-model_6_0.png
+copying images... [ 26%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical-binominal-model_12_0.png
+copying images... [ 26%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical-binominal-model_14_1.png
+copying images... [ 26%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical-binominal-model_16_0.png
+copying images... [ 26%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-linear_6_0.png
+copying images... [ 27%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-linear_15_2.png
+copying images... [ 27%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-linear_18_0.png
+copying images... [ 27%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-logistic_13_0.png
+copying images... [ 27%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-logistic_14_0.png
+copying images... [ 27%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-logistic_18_0.png
+copying images... [ 28%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-logistic_20_1.png
+copying images... [ 28%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-logistic_24_0.png
+copying images... [ 28%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-logistic_25_0.png
+copying images... [ 28%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-logistic_30_1.png
+copying images... [ 28%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-model-selection_12_0.png
+copying images... [ 29%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-model-selection_21_0.png
+copying images... [ 29%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-model-selection_25_0.png
+copying images... [ 29%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-model-selection_33_0.png
+copying images... [ 29%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-model-selection_41_0.png
+copying images... [ 29%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-model-selection_44_0.png
+copying images... [ 30%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-negative-binomial-regression_14_0.png
+copying images... [ 30%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-negative-binomial-regression_19_0.png
+copying images... [ 30%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-poisson-regression_12_1.png
+copying images... [ 30%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-poisson-regression_29_0.png
+copying images... [ 30%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-poisson-regression_41_0.png
+copying images... [ 30%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust_6_0.png
+copying images... [ 31%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust_10_0.png
+copying images... [ 31%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust_12_0.png
+copying images... [ 31%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust_14_1.png
+copying images... [ 31%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_6_0.png
+copying images... [ 31%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_15_0.png
+copying images... [ 32%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_24_0.png
+copying images... [ 32%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_34_0.png
+copying images... [ 32%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_39_0.png
+copying images... [ 32%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_44_0.png
+copying images... [ 32%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-rolling-regression_5_0.png
+copying images... [ 33%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-rolling-regression_9_0.png
+copying images... [ 33%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-rolling-regression_20_0.png
+copying images... [ 33%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-rolling-regression_22_0.png
+copying images... [ 33%] notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-rolling-regression_24_0.png
+copying images... [ 33%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Kron_6_0.png
+copying images... [ 34%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Kron_14_0.png
+copying images... [ 34%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Kron_19_0.png
+copying images... [ 34%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Kron_22_0.png
+copying images... [ 34%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Kron_24_1.png
+copying images... [ 34%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Latent_5_0.png
+copying images... [ 35%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Latent_9_0.png
+copying images... [ 35%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Latent_10_0.png
+copying images... [ 35%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Latent_13_0.png
+copying images... [ 35%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Latent_16_0.png
+copying images... [ 35%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Latent_18_0.png
+copying images... [ 36%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Latent_20_0.png
+copying images... [ 36%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Marginal_6_0.png
+copying images... [ 36%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Marginal_12_0.png
+copying images... [ 36%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Marginal_15_0.png
+copying images... [ 36%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-Marginal_18_1.png
+copying images... [ 37%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_5_0.png
+copying images... [ 37%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_8_0.png
+copying images... [ 37%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_11_0.png
+copying images... [ 37%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_15_0.png
+copying images... [ 37%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_17_0.png
+copying images... [ 38%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_20_0.png
+copying images... [ 38%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_30_0.png
+copying images... [ 38%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_34_0.png
+copying images... [ 38%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_37_0.png
+copying images... [ 38%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_40_0.png
+copying images... [ 38%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_49_0.png
+copying images... [ 39%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_51_0.png
+copying images... [ 39%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_53_0.png
+copying images... [ 39%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_55_0.png
+copying images... [ 39%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_58_0.png
+copying images... [ 39%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_60_0.png
+copying images... [ 40%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_65_0.png
+copying images... [ 40%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_68_0.png
+copying images... [ 40%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_75_0.png
+copying images... [ 40%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_77_0.png
+copying images... [ 40%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_86_0.png
+copying images... [ 41%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_90_0.png
+copying images... [ 41%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_92_0.png
+copying images... [ 41%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_96_0.png
+copying images... [ 41%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MaunaLoa2_100_0.png
+copying images... [ 41%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_12_0.png
+copying images... [ 42%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_14_0.png
+copying images... [ 42%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_16_0.png
+copying images... [ 42%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_18_0.png
+copying images... [ 42%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_20_0.png
+copying images... [ 42%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_22_0.png
+copying images... [ 43%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_24_0.png
+copying images... [ 43%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_26_0.png
+copying images... [ 43%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_28_0.png
+copying images... [ 43%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_30_0.png
+copying images... [ 43%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_32_0.png
+copying images... [ 44%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_34_0.png
+copying images... [ 44%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_36_0.png
+copying images... [ 44%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_38_0.png
+copying images... [ 44%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_40_0.png
+copying images... [ 44%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_40_1.png
+copying images... [ 45%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_42_0.png
+copying images... [ 45%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_44_0.png
+copying images... [ 45%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_46_0.png
+copying images... [ 45%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_46_1.png
+copying images... [ 45%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_48_0.png
+copying images... [ 46%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_48_1.png
+copying images... [ 46%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_50_0.png
+copying images... [ 46%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-MeansAndCovs_50_1.png
+copying images... [ 46%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-SparseApprox_3_0.png
+copying images... [ 46%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-SparseApprox_7_0.png
+copying images... [ 46%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-SparseApprox_10_0.png
+copying images... [ 47%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-TProcess_3_0.png
+copying images... [ 47%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-TProcess_3_1.png
+copying images... [ 47%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-TProcess_5_0.png
+copying images... [ 47%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-TProcess_7_0.png
+copying images... [ 47%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-TProcess_9_0.png
+copying images... [ 48%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_2_0.png
+copying images... [ 48%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_4_0.png
+copying images... [ 48%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_14_1.png
+copying images... [ 48%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_16_1.png
+copying images... [ 48%] notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_18_1.png
+copying images... [ 49%] notebooks/../_build/doctrees/nbsphinx/notebooks_LKJ_9_0.png
+copying images... [ 49%] notebooks/../_build/doctrees/nbsphinx/notebooks_LKJ_22_1.png
+copying images... [ 49%] notebooks/../_build/doctrees/nbsphinx/notebooks_LKJ_29_0.png
+copying images... [ 49%] notebooks/../_build/doctrees/nbsphinx/notebooks_MvGaussianRandomWalk_demo_4_0.png
+copying images... [ 49%] notebooks/../_build/doctrees/nbsphinx/notebooks_MvGaussianRandomWalk_demo_10_0.png
+copying images... [ 50%] notebooks/../_build/doctrees/nbsphinx/notebooks_ODE_API_introduction_2_0.png
+copying images... [ 50%] notebooks/../_build/doctrees/nbsphinx/notebooks_ODE_API_introduction_5_0.png
+copying images... [ 50%] notebooks/../_build/doctrees/nbsphinx/notebooks_ODE_API_introduction_8_0.png
+copying images... [ 50%] notebooks/../_build/doctrees/nbsphinx/notebooks_ODE_API_introduction_11_0.png
+copying images... [ 50%] notebooks/../_build/doctrees/nbsphinx/notebooks_ODE_API_introduction_14_0.png
+copying images... [ 51%] notebooks/../_build/doctrees/nbsphinx/notebooks_ODE_API_introduction_16_0.png
+copying images... [ 51%] notebooks/../_build/doctrees/nbsphinx/notebooks_ODE_API_shapes_and_benchmarking_5_0.png
+copying images... [ 51%] notebooks/../_build/doctrees/nbsphinx/notebooks_ODE_API_shapes_and_benchmarking_10_2.png
+copying images... [ 51%] notebooks/../_build/doctrees/nbsphinx/notebooks_ODE_with_manual_gradients_15_0.png
+copying images... [ 51%] notebooks/../_build/doctrees/nbsphinx/notebooks_ODE_with_manual_gradients_18_0.png
+copying images... [ 52%] notebooks/../_build/doctrees/nbsphinx/notebooks_ODE_with_manual_gradients_22_0.png
+copying images... [ 52%] notebooks/../_build/doctrees/nbsphinx/notebooks_ODE_with_manual_gradients_27_0.png
+copying images... [ 52%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_14_0.png
+copying images... [ 52%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_17_0.png
+copying images... [ 52%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_18_0.png
+copying images... [ 53%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_27_0.png
+copying images... [ 53%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_28_0.png
+copying images... [ 53%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_29_0.png
+copying images... [ 53%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_34_0.png
+copying images... [ 53%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_35_0.png
+copying images... [ 53%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_41_0.png
+copying images... [ 54%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_42_0.png
+copying images... [ 54%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_46_0.png
+copying images... [ 54%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_47_0.png
+copying images... [ 54%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_48_0.png
+copying images... [ 54%] notebooks/../_build/doctrees/nbsphinx/notebooks_PyMC3_tips_and_heuristic_49_0.png
+copying images... [ 55%] notebooks/../_build/doctrees/nbsphinx/notebooks_SMC-ABC_Lotka-Volterra_example_8_0.png
+copying images... [ 55%] notebooks/../_build/doctrees/nbsphinx/notebooks_SMC-ABC_Lotka-Volterra_example_10_0.png
+copying images... [ 55%] notebooks/../_build/doctrees/nbsphinx/notebooks_SMC-ABC_Lotka-Volterra_example_19_0.png
+copying images... [ 55%] notebooks/../_build/doctrees/nbsphinx/notebooks_SMC-ABC_Lotka-Volterra_example_22_0.png
+copying images... [ 55%] notebooks/../_build/doctrees/nbsphinx/notebooks_SMC-ABC_Lotka-Volterra_example_23_0.png
+copying images... [ 56%] notebooks/../_build/doctrees/nbsphinx/notebooks_SMC-ABC_Lotka-Volterra_example_24_0.png
+copying images... [ 56%] notebooks/../_build/doctrees/nbsphinx/notebooks_SMC2_gaussians_8_0.png
+copying images... [ 56%] notebooks/../_build/doctrees/nbsphinx/notebooks_api_quickstart_42_0.png
+copying images... [ 56%] notebooks/../_build/doctrees/nbsphinx/notebooks_api_quickstart_44_1.png
+copying images... [ 56%] notebooks/../_build/doctrees/nbsphinx/notebooks_api_quickstart_72_1.png
+copying images... [ 57%] notebooks/../_build/doctrees/nbsphinx/notebooks_api_quickstart_76_1.png
+copying images... [ 57%] notebooks/../_build/doctrees/nbsphinx/notebooks_api_quickstart_78_0.png
+copying images... [ 57%] notebooks/../_build/doctrees/nbsphinx/notebooks_api_quickstart_80_1.png
+copying images... [ 57%] notebooks/../_build/doctrees/nbsphinx/notebooks_api_quickstart_90_1.png
+copying images... [ 57%] notebooks/../_build/doctrees/nbsphinx/notebooks_api_quickstart_93_0.png
+copying images... [ 58%] notebooks/../_build/doctrees/nbsphinx/notebooks_api_quickstart_100_0.png
+copying images... [ 58%] notebooks/../_build/doctrees/nbsphinx/notebooks_bayes_param_survival_pymc3_9_0.png
+copying images... [ 58%] notebooks/../_build/doctrees/nbsphinx/notebooks_bayes_param_survival_pymc3_33_1.png
+copying images... [ 58%] notebooks/../_build/doctrees/nbsphinx/notebooks_bayes_param_survival_pymc3_38_0.png
+copying images... [ 58%] notebooks/../_build/doctrees/nbsphinx/notebooks_bayes_param_survival_pymc3_44_0.png
+copying images... [ 59%] notebooks/../_build/doctrees/nbsphinx/notebooks_bayes_param_survival_pymc3_53_1.png
+copying images... [ 59%] notebooks/../_build/doctrees/nbsphinx/notebooks_bayes_param_survival_pymc3_59_0.png
+copying images... [ 59%] notebooks/../_build/doctrees/nbsphinx/notebooks_bayesian_neural_network_advi_6_0.png
+copying images... [ 59%] notebooks/../_build/doctrees/nbsphinx/notebooks_bayesian_neural_network_advi_14_0.png
+copying images... [ 59%] notebooks/../_build/doctrees/nbsphinx/notebooks_bayesian_neural_network_advi_24_0.png
+copying images... [ 60%] notebooks/../_build/doctrees/nbsphinx/notebooks_bayesian_neural_network_advi_31_0.png
+copying images... [ 60%] notebooks/../_build/doctrees/nbsphinx/notebooks_bayesian_neural_network_advi_33_0.png
+copying images... [ 60%] notebooks/../_build/doctrees/nbsphinx/notebooks_bayesian_neural_network_advi_37_0.png
+copying images... [ 60%] notebooks/../_build/doctrees/nbsphinx/notebooks_bayesian_neural_network_advi_39_0.png
+copying images... [ 60%] notebooks/../_build/doctrees/nbsphinx/notebooks_censored_data_4_0.png
+copying images... [ 61%] notebooks/../_build/doctrees/nbsphinx/notebooks_censored_data_13_1.png
+copying images... [ 61%] notebooks/../_build/doctrees/nbsphinx/notebooks_censored_data_14_1.png
+copying images... [ 61%] notebooks/../_build/doctrees/nbsphinx/notebooks_censored_data_15_1.png
+copying images... [ 61%] notebooks/../_build/doctrees/nbsphinx/notebooks_convolutional_vae_keras_advi_34_0.png
+copying images... [ 61%] notebooks/../_build/doctrees/nbsphinx/notebooks_convolutional_vae_keras_advi_36_0.png
+copying images... [ 61%] notebooks/../_build/doctrees/nbsphinx/notebooks_cox_model_10_0.png
+copying images... [ 62%] notebooks/../_build/doctrees/nbsphinx/notebooks_cox_model_11_0.png
+copying images... [ 62%] notebooks/../_build/doctrees/nbsphinx/notebooks_data_container_4_0.png
+copying images... [ 62%] notebooks/../_build/doctrees/nbsphinx/notebooks_data_container_10_0.svg
+copying images... [ 62%] notebooks/../_build/doctrees/nbsphinx/notebooks_data_container_22_0.png
+copying images... [ 62%] notebooks/../_build/doctrees/nbsphinx/notebooks_data_container_26_0.png
+copying images... [ 63%] notebooks/../_build/doctrees/nbsphinx/notebooks_data_container_30_0.png
+copying images... [ 63%] notebooks/../_build/doctrees/nbsphinx/notebooks_dependent_density_regression_8_0.png
+copying images... [ 63%] notebooks/../_build/doctrees/nbsphinx/notebooks_dependent_density_regression_22_0.png
+copying images... [ 63%] notebooks/../_build/doctrees/nbsphinx/notebooks_dependent_density_regression_26_0.png
+copying images... [ 63%] notebooks/../_build/doctrees/nbsphinx/notebooks_dp_mix_10_0.png
+copying images... [ 64%] notebooks/../_build/doctrees/nbsphinx/notebooks_dp_mix_12_0.png
+copying images... [ 64%] notebooks/../_build/doctrees/nbsphinx/notebooks_dp_mix_16_0.png
+copying images... [ 64%] notebooks/../_build/doctrees/nbsphinx/notebooks_dp_mix_18_0.png
+copying images... [ 64%] notebooks/../_build/doctrees/nbsphinx/notebooks_dp_mix_24_0.png
+copying images... [ 64%] notebooks/../_build/doctrees/nbsphinx/notebooks_dp_mix_32_0.png
+copying images... [ 65%] notebooks/../_build/doctrees/nbsphinx/notebooks_dp_mix_34_0.png
+copying images... [ 65%] notebooks/../_build/doctrees/nbsphinx/notebooks_dp_mix_37_0.png
+copying images... [ 65%] notebooks/../_build/doctrees/nbsphinx/notebooks_dp_mix_39_0.png
+copying images... [ 65%] notebooks/../_build/doctrees/nbsphinx/notebooks_dp_mix_48_0.png
+copying images... [ 65%] notebooks/../_build/doctrees/nbsphinx/notebooks_dp_mix_50_0.png
+copying images... [ 66%] notebooks/../_build/doctrees/nbsphinx/notebooks_dp_mix_54_0.png
+copying images... [ 66%] notebooks/../_build/doctrees/nbsphinx/notebooks_dp_mix_56_0.png
+copying images... [ 66%] notebooks/../_build/doctrees/nbsphinx/notebooks_empirical-approx-overview_4_0.png
+copying images... [ 66%] notebooks/../_build/doctrees/nbsphinx/notebooks_empirical-approx-overview_19_0.png
+copying images... [ 66%] notebooks/../_build/doctrees/nbsphinx/notebooks_empirical-approx-overview_23_0.png
+copying images... [ 67%] notebooks/../_build/doctrees/nbsphinx/notebooks_empirical-approx-overview_25_2.png
+copying images... [ 67%] notebooks/../_build/doctrees/nbsphinx/notebooks_factor_analysis_2_1.png
+copying images... [ 67%] notebooks/../_build/doctrees/nbsphinx/notebooks_factor_analysis_4_1.png
+copying images... [ 67%] notebooks/../_build/doctrees/nbsphinx/notebooks_factor_analysis_6_1.png
+copying images... [ 67%] notebooks/../_build/doctrees/nbsphinx/notebooks_factor_analysis_8_0.png
+copying images... [ 68%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_2_2.png
+copying images... [ 68%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_8_1.png
+copying images... [ 68%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_9_1.png
+copying images... [ 68%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_13_1.png
+copying images... [ 68%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_16_1.png
+copying images... [ 69%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_18_1.png
+copying images... [ 69%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_22_1.png
+copying images... [ 69%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_28_1.png
+copying images... [ 69%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_30_0.png
+copying images... [ 69%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian_mixture_model_3_0.png
+copying images... [ 69%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian_mixture_model_7_0.png
+copying images... [ 70%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian_mixture_model_9_0.png
+copying images... [ 70%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian_mixture_model_10_1.png
+copying images... [ 70%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian_mixture_model_12_1.png
+copying images... [ 70%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian_mixture_model_13_1.png
+copying images... [ 70%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian_process_8_1.png
+copying images... [ 71%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian_process_13_0.png
+copying images... [ 71%] notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian_process_16_1.png
+copying images... [ 71%] notebooks/../_build/doctrees/nbsphinx/notebooks_getting_started_5_0.png
+copying images... [ 71%] notebooks/../_build/doctrees/nbsphinx/notebooks_getting_started_25_0.png
+copying images... [ 71%] notebooks/../_build/doctrees/nbsphinx/notebooks_getting_started_31_0.png
+copying images... [ 72%] notebooks/../_build/doctrees/nbsphinx/notebooks_getting_started_38_1.png
+copying images... [ 72%] notebooks/../_build/doctrees/nbsphinx/notebooks_getting_started_40_0.png
+copying images... [ 72%] notebooks/../_build/doctrees/nbsphinx/notebooks_getting_started_43_0.png
+copying images... [ 72%] notebooks/../_build/doctrees/nbsphinx/notebooks_getting_started_50_0.png
+copying images... [ 72%] notebooks/../_build/doctrees/nbsphinx/notebooks_getting_started_52_0.png
+copying images... [ 73%] notebooks/../_build/doctrees/nbsphinx/notebooks_hierarchical_partial_pooling_13_0.png
+copying images... [ 73%] notebooks/../_build/doctrees/nbsphinx/notebooks_hierarchical_partial_pooling_15_0.png
+copying images... [ 73%] notebooks/../_build/doctrees/nbsphinx/notebooks_hierarchical_partial_pooling_17_0.png
+copying images... [ 73%] notebooks/../_build/doctrees/nbsphinx/notebooks_howto_debugging_6_1.png
+copying images... [ 73%] notebooks/../_build/doctrees/nbsphinx/notebooks_lasso_block_update_6_0.png
+copying images... [ 74%] notebooks/../_build/doctrees/nbsphinx/notebooks_lasso_block_update_7_0.png
+copying images... [ 74%] notebooks/../_build/doctrees/nbsphinx/notebooks_lda-advi-aevb_5_0.png
+copying images... [ 74%] notebooks/../_build/doctrees/nbsphinx/notebooks_lda-advi-aevb_22_0.png
+copying images... [ 74%] notebooks/../_build/doctrees/nbsphinx/notebooks_marginalized_gaussian_mixture_model_7_1.png
+copying images... [ 74%] notebooks/../_build/doctrees/nbsphinx/notebooks_marginalized_gaussian_mixture_model_12_0.png
+copying images... [ 75%] notebooks/../_build/doctrees/nbsphinx/notebooks_marginalized_gaussian_mixture_model_13_0.png
+copying images... [ 75%] notebooks/../_build/doctrees/nbsphinx/notebooks_marginalized_gaussian_mixture_model_17_0.png
+copying images... [ 75%] notebooks/../_build/doctrees/nbsphinx/notebooks_model_averaging_10_0.png
+copying images... [ 75%] notebooks/../_build/doctrees/nbsphinx/notebooks_model_averaging_12_0.png
+copying images... [ 75%] notebooks/../_build/doctrees/nbsphinx/notebooks_model_averaging_20_0.png
+copying images... [ 76%] notebooks/../_build/doctrees/nbsphinx/notebooks_model_comparison_6_0.png
+copying images... [ 76%] notebooks/../_build/doctrees/nbsphinx/notebooks_model_comparison_9_1.png
+copying images... [ 76%] notebooks/../_build/doctrees/nbsphinx/notebooks_model_comparison_10_1.png
+copying images... [ 76%] notebooks/../_build/doctrees/nbsphinx/notebooks_model_comparison_19_0.png
+copying images... [ 76%] notebooks/../_build/doctrees/nbsphinx/notebooks_model_comparison_27_0.png
+copying images... [ 76%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_17_0.png
+copying images... [ 77%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_20_0.svg
+copying images... [ 77%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_22_0.png
+copying images... [ 77%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_28_0.png
+copying images... [ 77%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_30_0.svg
+copying images... [ 77%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_33_0.png
+copying images... [ 78%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_36_0.png
+copying images... [ 78%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_38_0.png
+copying images... [ 78%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_40_0.png
+copying images... [ 78%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_44_0.svg
+copying images... [ 78%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_49_0.png
+copying images... [ 79%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_52_0.svg
+copying images... [ 79%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_55_0.png
+copying images... [ 79%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_56_0.png
+copying images... [ 79%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_59_0.png
+copying images... [ 79%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_61_0.png
+copying images... [ 80%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_64_0.svg
+copying images... [ 80%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_68_0.png
+copying images... [ 80%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_70_0.png
+copying images... [ 80%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_72_0.svg
+copying images... [ 80%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_74_3.png
+copying images... [ 81%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_76_0.png
+copying images... [ 81%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_78_0.png
+copying images... [ 81%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_81_0.svg
+copying images... [ 81%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_84_0.png
+copying images... [ 81%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_86_0.png
+copying images... [ 82%] notebooks/../_build/doctrees/nbsphinx/notebooks_multilevel_modeling_94_2.png
+copying images... [ 82%] notebooks/../_build/doctrees/nbsphinx/notebooks_normalizing_flows_overview_23_0.png
+copying images... [ 82%] notebooks/../_build/doctrees/nbsphinx/notebooks_normalizing_flows_overview_28_1.png
+copying images... [ 82%] notebooks/../_build/doctrees/nbsphinx/notebooks_normalizing_flows_overview_30_0.png
+copying images... [ 82%] notebooks/../_build/doctrees/nbsphinx/notebooks_normalizing_flows_overview_41_1.png
+copying images... [ 83%] notebooks/../_build/doctrees/nbsphinx/notebooks_normalizing_flows_overview_42_0.png
+copying images... [ 83%] notebooks/../_build/doctrees/nbsphinx/notebooks_normalizing_flows_overview_45_0.png
+copying images... [ 83%] notebooks/../_build/doctrees/nbsphinx/notebooks_normalizing_flows_overview_48_0.png
+copying images... [ 83%] notebooks/../_build/doctrees/nbsphinx/notebooks_normalizing_flows_overview_51_1.png
+copying images... [ 83%] notebooks/../_build/doctrees/nbsphinx/notebooks_normalizing_flows_overview_57_0.png
+copying images... [ 84%] notebooks/../_build/doctrees/nbsphinx/notebooks_posterior_predictive_4_0.png
+copying images... [ 84%] notebooks/../_build/doctrees/nbsphinx/notebooks_posterior_predictive_10_0.png
+copying images... [ 84%] notebooks/../_build/doctrees/nbsphinx/notebooks_posterior_predictive_21_0.png
+copying images... [ 84%] notebooks/../_build/doctrees/nbsphinx/notebooks_probabilistic_matrix_factorization_7_0.png
+copying images... [ 84%] notebooks/../_build/doctrees/nbsphinx/notebooks_probabilistic_matrix_factorization_10_0.png
+copying images... [ 84%] notebooks/../_build/doctrees/nbsphinx/notebooks_probabilistic_matrix_factorization_12_0.png
+copying images... [ 85%] notebooks/../_build/doctrees/nbsphinx/notebooks_probabilistic_matrix_factorization_14_0.png
+copying images... [ 85%] notebooks/../_build/doctrees/nbsphinx/notebooks_probabilistic_matrix_factorization_46_0.png
+copying images... [ 85%] notebooks/../_build/doctrees/nbsphinx/notebooks_probabilistic_matrix_factorization_49_0.png
+copying images... [ 85%] notebooks/../_build/doctrees/nbsphinx/notebooks_probabilistic_matrix_factorization_55_0.png
+copying images... [ 85%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_4_0.png
+copying images... [ 86%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_7_0.svg
+copying images... [ 86%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_11_1.png
+copying images... [ 86%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_15_0.png
+copying images... [ 86%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_18_0.png
+copying images... [ 86%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_20_0.svg
+copying images... [ 87%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_22_0.png
+copying images... [ 87%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_25_0.png
+copying images... [ 87%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_29_0.png
+copying images... [ 87%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_32_0.png
+copying images... [ 87%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_36_0.png
+copying images... [ 88%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_38_0.svg
+copying images... [ 88%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_42_0.png
+copying images... [ 88%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_44_1.png
+copying images... [ 88%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_46_0.svg
+copying images... [ 88%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_48_0.png
+copying images... [ 89%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_50_0.png
+copying images... [ 89%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_52_0.png
+copying images... [ 89%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_53_0.png
+copying images... [ 89%] notebooks/../_build/doctrees/nbsphinx/notebooks_putting_workflow_56_0.png
+copying images... [ 89%] notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_12_0.png
+copying images... [ 90%] notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_18_0.png
+copying images... [ 90%] notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_20_0.png
+copying images... [ 90%] notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_23_0.png
+copying images... [ 90%] notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_24_0.png
+copying images... [ 90%] notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_35_1.png
+copying images... [ 91%] notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_38_0.png
+copying images... [ 91%] notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_44_0.png
+copying images... [ 91%] notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_46_0.png
+copying images... [ 91%] notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_47_0.png
+copying images... [ 91%] notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_52_0.png
+copying images... [ 92%] notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_59_0.png
+copying images... [ 92%] notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_64_0.png
+copying images... [ 92%] notebooks/../_build/doctrees/nbsphinx/notebooks_sampler-stats_9_1.png
+copying images... [ 92%] notebooks/../_build/doctrees/nbsphinx/notebooks_sampler-stats_11_1.png
+copying images... [ 92%] notebooks/../_build/doctrees/nbsphinx/notebooks_sampler-stats_12_2.png
+copying images... [ 92%] notebooks/../_build/doctrees/nbsphinx/notebooks_sampler-stats_17_2.png
+copying images... [ 93%] notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_8_0.png
+copying images... [ 93%] notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_12_0.svg
+copying images... [ 93%] notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_15_0.png
+copying images... [ 93%] notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_21_0.png
+copying images... [ 93%] notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_23_0.png
+copying images... [ 94%] notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_25_0.png
+copying images... [ 94%] notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_10_0.png
+copying images... [ 94%] notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_15_0.png
+copying images... [ 94%] notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_28_0.png
+copying images... [ 94%] notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_29_0.png
+copying images... [ 95%] notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_34_0.png
+copying images... [ 95%] notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_40_0.png
+copying images... [ 95%] notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_42_1.png
+copying images... [ 95%] notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_45_0.png
+copying images... [ 95%] notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_46_0.png
+copying images... [ 96%] notebooks/../_build/doctrees/nbsphinx/notebooks_updating_priors_8_0.png
+copying images... [ 96%] notebooks/../_build/doctrees/nbsphinx/notebooks_updating_priors_14_1.png
+copying images... [ 96%] notebooks/../_build/doctrees/nbsphinx/notebooks_updating_priors_14_2.png
+copying images... [ 96%] notebooks/../_build/doctrees/nbsphinx/notebooks_updating_priors_14_3.png
+copying images... [ 96%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_7_0.png
+copying images... [ 97%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_12_0.png
+copying images... [ 97%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_18_0.png
+copying images... [ 97%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_21_0.png
+copying images... [ 97%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_36_0.png
+copying images... [ 97%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_40_0.png
+copying images... [ 98%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_42_0.png
+copying images... [ 98%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_45_0.png
+copying images... [ 98%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_54_0.png
+copying images... [ 98%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_57_0.png
+copying images... [ 98%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_69_0.png
+copying images... [ 99%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_83_0.png
+copying images... [ 99%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_86_0.png
+copying images... [ 99%] notebooks/../_build/doctrees/nbsphinx/notebooks_variational_api_quickstart_100_0.png
+copying images... [ 99%] notebooks/../_build/doctrees/nbsphinx/notebooks_weibull_aft_12_0.png
+copying images... [ 99%] notebooks/../_build/doctrees/nbsphinx/notebooks_weibull_aft_17_0.png
+copying images... [100%] notebooks/../_build/doctrees/nbsphinx/notebooks_weibull_aft_23_0.png
+
+copying static files... done
+copying extra files... done
+dumping search index in English (code: en) ... done
+dumping object inventory... done
+build succeeded, 200 warnings.
+
+The HTML pages are in _build/html.
+/Users/rpg/src/pymc3/docs/source/semantic_sphinx/search.html:20: RemovedInSphinx30Warning: To modify script_files in the theme is deprecated. Please insert a <script> tag directly in your theme instead.
+  {{ super() }}
+
+Build finished. The HTML pages are in _build/html.

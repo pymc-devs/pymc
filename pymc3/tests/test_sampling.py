@@ -901,3 +901,12 @@ class TestSamplePosteriorPredictive:
                 idat.posterior,
                 var_names=['d']
             )
+
+    def test_sample_from_xarray_posterior_fast(self, point_list_arg_bug_fixture):
+        pmodel, trace = point_list_arg_bug_fixture
+        idat = az.from_pymc3(trace)
+        with pmodel:
+            pp = pm.fast_sample_posterior_predictive(
+                idat.posterior,
+                var_names=['d']
+            )

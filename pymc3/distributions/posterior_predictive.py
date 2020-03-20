@@ -12,12 +12,14 @@ from typing_extensions import Protocol
 import numpy as np
 import theano
 import theano.tensor as tt
+from xarray import Dataset
 
 from ..backends.base import MultiTrace #, TraceLike, TraceDict
 from .distribution import _DrawValuesContext, _DrawValuesContextBlocker, is_fast_drawable, _compile_theano_function, vectorized_ppc
 from ..model import Model, get_named_nodes_and_relations, ObservedRV, MultiObservedRV, modelcontext
 from ..exceptions import IncorrectArgumentsError
 from ..vartypes import theano_constant
+from ..util import dataset_to_point_dict
 # Failing tests:
 #    test_mixture_random_shape::test_mixture_random_shape
 #
@@ -119,7 +121,7 @@ class _TraceDict(_TraceDictParent):
 
 
 
-def fast_sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.ndarray]]],
+def fast_sample_posterior_predictive(trace: Union[MultiTrace, Dataset, List[Dict[str, np.ndarray]]],
                                 samples: Optional[int]=None,
                                 model: Optional[Model]=None,
                                 var_names: Optional[List[str]]=None,
@@ -135,7 +137,7 @@ def fast_sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.
 
     Parameters
     ----------
-    trace : MultiTrace or List of points
+    trace : MultiTrace, xarray.Dataset, or List of points (dictionary)
         Trace generated from MCMC sampling.
     samples : int, optional
         Number of posterior predictive samples to generate. Defaults to one posterior predictive
@@ -167,6 +169,9 @@ def fast_sample_posterior_predictive(trace: Union[MultiTrace, List[Dict[str, np.
     ### the same as the number of samples. So if the number of samples requested is
     ### greater than the number of samples in the trace parameter, we sample repeatedly.  This
     ### makes the shape issues just a little easier to deal with.
+
+    if isinstance(trace, Dataset):
+        trace = dataset_to_point_dict(trace)
 
     model = modelcontext(model)
     assert model is not None

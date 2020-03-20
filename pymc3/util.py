@@ -14,7 +14,11 @@
 
 import re
 import functools
-from numpy import asscalar
+from typing import List, Dict
+
+import xarray
+from numpy import asscalar, ndarray
+
 
 LATEX_ESCAPE_RE = re.compile(r'(%|_|\$|#|&)', re.MULTILINE)
 
@@ -179,3 +183,21 @@ def biwrap(wrapper):
             newwrapper = functools.partial(wrapper, *args, **kwargs)
             return newwrapper
     return enhanced
+
+def dataset_to_point_dict(ds: xarray.Dataset) -> List[Dict[str, ndarray]]:
+    # grab posterior samples for each variable
+    _samples = {
+        vn : ds[vn].values
+        for vn in ds.keys()
+    }
+    # make dicts
+    points = []
+    for c in ds.chain:
+        for d in ds.draw:
+            points.append({
+                vn : s[c, d]
+                for vn, s in _samples.items()
+            })
+    # use the list of points
+    ds = points
+    return ds

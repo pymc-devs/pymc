@@ -54,6 +54,7 @@ from .util import (
     get_untransformed_name,
     is_transformed_name,
     get_default_varnames,
+    dataset_to_point_dict,
 )
 from .vartypes import discrete_types
 from .exceptions import IncorrectArgumentsError
@@ -1558,21 +1559,7 @@ def sample_posterior_predictive(
         posterior predictive samples.
     """
     if isinstance(trace, xarray.Dataset):
-        # grab posterior samples for each variable
-        _samples = {
-            vn : trace[vn].values
-            for vn in trace.keys()
-        }
-        # make dicts
-        points = []
-        for c in trace.chain:
-            for d in trace.draw:
-                points.append({
-                    vn : s[c, d]
-                    for vn, s in _samples.items()
-                })
-        # use the list of points
-        trace = points
+        trace = dataset_to_point_dict(trace)
 
     len_trace = len(trace)
     try:
