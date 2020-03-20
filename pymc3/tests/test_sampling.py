@@ -22,6 +22,7 @@ except ImportError:
     import mock
 
 import numpy.testing as npt
+import arviz as az
 import pymc3 as pm
 import theano.tensor as tt
 from theano import shared
@@ -880,3 +881,23 @@ class TestSamplePosteriorPredictive:
                 var_names=['d']
             )
 
+    def test_sample_from_xarray_prior(self, point_list_arg_bug_fixture):
+        pmodel, trace = point_list_arg_bug_fixture
+
+        with pmodel:
+            prior = pm.sample_prior_predictive(samples=20)
+        idat = az.from_pymc3(trace, prior=prior)
+        with pmodel:
+            pp = pm.sample_posterior_predictive(
+                idat.prior,
+                var_names=['d']
+            )
+
+    def test_sample_from_xarray_posterior(self, point_list_arg_bug_fixture):
+        pmodel, trace = point_list_arg_bug_fixture
+        idat = az.from_pymc3(trace)
+        with pmodel:
+            pp = pm.sample_posterior_predictive(
+                idat.posterior,
+                var_names=['d']
+            )
