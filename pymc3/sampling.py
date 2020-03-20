@@ -30,6 +30,7 @@ import warnings
 import numpy as np
 import theano.gradient as tg
 from theano.tensor import Tensor
+import xarray
 
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
@@ -53,6 +54,7 @@ from .util import (
     get_untransformed_name,
     is_transformed_name,
     get_default_varnames,
+    dataset_to_point_dict,
 )
 from .vartypes import discrete_types
 from .exceptions import IncorrectArgumentsError
@@ -1520,9 +1522,9 @@ def sample_posterior_predictive(
 
     Parameters
     ----------
-    trace: backend, list, or MultiTrace
-        Trace generated from MCMC sampling. Or a list containing dicts from
-        find_MAP() or points
+    trace: backend, list, xarray.Dataset, or MultiTrace
+        Trace generated from MCMC sampling, or a list of dicts (eg. points or from find_MAP()),
+        or xarray.Dataset (eg. InferenceData.posterior or InferenceData.prior)
     samples: int
         Number of posterior predictive samples to generate. Defaults to one posterior predictive
         sample per posterior sample, that is, the number of draws times the number of chains. It
@@ -1556,6 +1558,9 @@ def sample_posterior_predictive(
         Dictionary with the variable names as keys, and values numpy arrays containing
         posterior predictive samples.
     """
+    if isinstance(trace, xarray.Dataset):
+        trace = dataset_to_point_dict(trace)
+
     len_trace = len(trace)
     try:
         nchain = trace.nchains
