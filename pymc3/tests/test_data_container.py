@@ -144,9 +144,12 @@ class TestData(SeededTest):
         text = 'obs [label="obs ~ Normal" style=filled]'
         assert text in g.source
 
-# this is a test for issue 3793 -- `Data` objects in named models are 
-# not given model-relative names.
+
 def test_data_naming():
+    """
+    This is a test for issue #3793 -- `Data` objects in named models are 
+    not given model-relative names.
+    """
     with pm.Model("named_model") as model:
         x = pm.Data("x", [1.0, 2.0, 3.0])
         y = pm.Normal("y")
