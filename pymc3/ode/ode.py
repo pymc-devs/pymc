@@ -45,6 +45,9 @@ class DifferentialEquation(theano.Op):
         Number of parameters in the differential equation.
     t0: float
         Time corresponding to the initial condition
+
+    Examples
+    --------
     
     .. code-block:: python
 

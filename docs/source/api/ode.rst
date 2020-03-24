@@ -8,6 +8,5 @@ This submodule contains tools used to perform inference on ordinary differential
 
 .. autosummary::
 
-
 .. automodule:: pymc3.ode
    :members: DifferentialEquation
