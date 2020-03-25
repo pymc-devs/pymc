@@ -110,10 +110,10 @@ class Covariance:
         ):
             other = tt.squeeze(other)
             return Exponentiated(self, other)
+        elif isinstance(other, Number):
+            return Exponentiated(self, other)
         elif np.asarray(other).squeeze().shape == ():
             other = np.squeeze(other)
-            return Exponentiated(self, other)
-        elif isinstance(other, Number):
             return Exponentiated(self, other)
 
         raise ValueError("A covariance function can only be exponentiated by a scalar value")
