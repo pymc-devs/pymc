@@ -275,6 +275,7 @@ def sample(
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
         * map: Use the MAP as starting point. This is discouraged.
         * nuts: Run NUTS and estimate posterior mean and mass matrix from the trace.
+        * adapt_full: Adapt a dense mass matrix using the sample covariances
     step: function or iterable of functions
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically.  By default the NUTS step
@@ -1866,6 +1867,7 @@ def init_nuts(
         * map: Use the MAP as starting point. This is discouraged.
         * nuts: Run NUTS and estimate posterior mean and mass matrix from
           the trace.
+        * adapt_full: Adapt a dense mass matrix using the sample covariances
     chains: int
         Number of jobs to start.
     n_init: int
@@ -2006,6 +2008,11 @@ def init_nuts(
         cov = np.atleast_1d(pm.trace_cov(init_trace))
         start = list(np.random.choice(init_trace, chains))
         potential = quadpotential.QuadPotentialFull(cov)
+    elif init == "adapt_full":
+        start = [model.test_point] * chains
+        mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
+        cov = np.ones((model.ndim, model.ndim))
+        potential = quadpotential.QuadPotentialFullAdapt(model.ndim, mean, cov, 10)
     else:
         raise ValueError("Unknown initializer: {}.".format(init))
 
