@@ -488,7 +488,7 @@ class Dirichlet(Continuous):
 
     def __init__(self, a, transform=transforms.stick_breaking,
                  *args, **kwargs):
-        if (a <= 0).any():
+        if (np.asarray(a) <= 0).any():
             raise ValueError("All concentration parameters must be > 0.")
         shape = np.atleast_1d(a.shape)[-1]
 
