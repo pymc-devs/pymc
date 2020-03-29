@@ -237,7 +237,7 @@ def sample(
     chain_idx=0,
     chains=None,
     cores=None,
-    tune=2000,
+    tune=1000,
     progressbar=True,
     model=None,
     random_seed=None,
@@ -305,7 +305,7 @@ def sample(
         The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
         system, but at most 4.
     tune: int
-        Number of iterations to tune, defaults to 2000. Samplers adjust the step sizes, scalings or
+        Number of iterations to tune, defaults to 1000. Samplers adjust the step sizes, scalings or
         similar during tuning. Tuning samples will be drawn in addition to the number specified in
         the ``draws`` argument, and will be discarded unless ``discard_tuned_samples`` is set to
         False.
