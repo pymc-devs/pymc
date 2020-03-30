@@ -228,7 +228,7 @@ def _print_step_hierarchy(s, level=0):
 
 
 def sample(
-    draws=500,
+    draws=1000,
     step=None,
     init="auto",
     n_init=200000,
@@ -237,7 +237,7 @@ def sample(
     chain_idx=0,
     chains=None,
     cores=None,
-    tune=500,
+    tune=1000,
     progressbar=True,
     model=None,
     random_seed=None,
@@ -253,7 +253,7 @@ def sample(
     Parameters
     ----------
     draws: int
-        The number of samples to draw. Defaults to 500. The number of tuned samples are discarded
+        The number of samples to draw. Defaults to 1000. The number of tuned samples are discarded
         by default. See ``discard_tuned_samples``.
     init: str
         Initialization method to use for auto-assigned NUTS samplers.
@@ -306,7 +306,7 @@ def sample(
         The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
         system, but at most 4.
     tune: int
-        Number of iterations to tune, defaults to 500. Samplers adjust the step sizes, scalings or
+        Number of iterations to tune, defaults to 1000. Samplers adjust the step sizes, scalings or
         similar during tuning. Tuning samples will be drawn in addition to the number specified in
         the ``draws`` argument, and will be discarded unless ``discard_tuned_samples`` is set to
         False.
@@ -363,7 +363,7 @@ def sample(
         >>> with pm.Model() as model: # context management
         ...     p = pm.Beta('p', alpha=alpha, beta=beta)
         ...     y = pm.Binomial('y', n=n, p=p, observed=h)
-        ...     trace = pm.sample(2000, tune=1000, cores=4)
+        ...     trace = pm.sample()
         >>> pm.summary(trace)
                mean        sd  mc_error   hpd_2.5  hpd_97.5
         p  0.604625  0.047086   0.00078  0.510498  0.694774
@@ -1104,10 +1104,10 @@ class PopulationStepper:
 
 
 def _prepare_iter_population(
-    draws:int,
-    chains:list,
+    draws: int,
+    chains: list,
     step,
-    start:list,
+    start: list,
     parallelize:bool,
     tune=None,
     model=None,
@@ -1304,14 +1304,14 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
 
 
 def _mp_sample(
-    draws:int,
-    tune:int,
+    draws: int,
+    tune: int,
     step,
-    chains:int,
-    cores:int,
-    chain:int,
-    random_seed:list,
-    start:list,
+    chains: int,
+    cores: int,
+    chain: int,
+    random_seed: list,
+    start: list,
     progressbar=True,
     trace=None,
     model=None,
