@@ -3,7 +3,6 @@
 ## PyMC3 3.9 (On deck)
 
 ### New features
-- `pm.sample` now takes 1000 draws and 1000 tuning samples by default, instead of 500 previously (see [#3855](https://github.com/pymc-devs/pymc3/pull/3855)).
 - use [fastprogress](https://github.com/fastai/fastprogress) instead of tqdm [#3693](https://github.com/pymc-devs/pymc3/pull/3693)
 - `DEMetropolis` can now tune both `lambda` and `scaling` parameters, but by default neither of them are tuned. See [#3743](https://github.com/pymc-devs/pymc3/pull/3743) for more info.
 - `DEMetropolisZ`, an improved variant of `DEMetropolis` brings better parallelization and higher efficiency with fewer chains with a slower initial convergence. This implementation is experimental. See [#3784](https://github.com/pymc-devs/pymc3/pull/3784) for more info.
@@ -16,7 +15,8 @@
 - Remove `sample_ppc` and `sample_ppc_w` that were deprecated in 3.6.
 - Tuning results no longer leak into sequentially sampled `Metropolis` chains (see #3733 and #3796).
 - Deprecated `sd` in version 3.7 has been replaced by `sigma` now raises `DepreciationWarning` on using `sd` in continuous, mixed and timeseries distributions. (see #3837 and #3688).
-- In named models, `pm.Data` objects now get model-relative names (see [#3843](https://github.com/pymc-devs/pymc3/pull/3843))
+- In named models, `pm.Data` objects now get model-relative names (see [#3843](https://github.com/pymc-devs/pymc3/pull/3843)).
+- `pm.sample` now takes 1000 draws and 1000 tuning samples by default, instead of 500 previously (see [#3855](https://github.com/pymc-devs/pymc3/pull/3855)).
 
 ## PyMC3 3.8 (November 29 2019)
 
