@@ -281,8 +281,7 @@ def sample(
         method will be used, if appropriate to the model; this is a good default for beginning
         users.
     n_init: int
-        Number of iterations of initializer. Only works for 'nuts' and 'ADVI'.
-        If 'ADVI', number of iterations, if 'nuts', number of draws.
+        Number of iterations of initializer. Only works for 'ADVI' init methods.
     start: dict, or array of dict
         Starting point in parameter space (or partial point)
         Defaults to ``trace.point(-1))`` if there is a trace provided and model.test_point if not
@@ -1868,8 +1867,7 @@ def init_nuts(
     chains: int
         Number of jobs to start.
     n_init: int
-        Number of iterations of initializer
-        If 'ADVI', number of iterations.
+        Number of iterations of initializer. Only works for 'ADVI' init methods.
     model: Model (optional if in ``with`` context)
     progressbar: bool
         Whether or not to display a progressbar for advi sampling.
