@@ -87,7 +87,7 @@ class TestSample(SeededTest):
 
     def test_sample_init(self):
         with self.model:
-            for init in ("advi", "advi_map", "map", "nuts"):
+            for init in ("advi", "advi_map", "map"):
                 pm.sample(
                     init=init,
                     tune=0,
@@ -675,7 +675,6 @@ class TestSamplePPCW(SeededTest):
         "advi+adapt_diag_grad",
         "map",
         "advi_map",
-        "nuts",
     ],
 )
 def test_exec_nuts_init(method):
