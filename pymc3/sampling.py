@@ -1569,9 +1569,9 @@ def sample_posterior_predictive(
         nchain = 1
 
     if keep_size and samples is not None:
-        raise IncorrectArgumentsError("Should not specify both keep_size and samples argukments")
+        raise IncorrectArgumentsError("Should not specify both keep_size and samples arguments")
     if keep_size and size is not None:
-        raise IncorrectArgumentsError("Should not specify both keep_size and size argukments")
+        raise IncorrectArgumentsError("Should not specify both keep_size and size arguments")
 
     if samples is None:
         if isinstance(trace, MultiTrace):
