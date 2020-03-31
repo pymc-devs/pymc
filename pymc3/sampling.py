@@ -274,7 +274,6 @@ def sample(
         * advi: Run ADVI to estimate posterior mean and diagonal mass matrix.
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
         * map: Use the MAP as starting point. This is discouraged.
-        * nuts: Run NUTS and estimate posterior mean and mass matrix from the trace.
         * adapt_full: Adapt a dense mass matrix using the sample covariances
     step: function or iterable of functions
         A step function or collection of functions. If there are variables without step methods,
@@ -1865,14 +1864,12 @@ def init_nuts(
         * advi: Run ADVI to estimate posterior mean and diagonal mass matrix.
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
         * map: Use the MAP as starting point. This is discouraged.
-        * nuts: Run NUTS and estimate posterior mean and mass matrix from
-          the trace.
         * adapt_full: Adapt a dense mass matrix using the sample covariances
     chains: int
         Number of jobs to start.
     n_init: int
         Number of iterations of initializer
-        If 'ADVI', number of iterations, if 'nuts', number of draws.
+        If 'ADVI', number of iterations.
     model: Model (optional if in ``with`` context)
     progressbar: bool
         Whether or not to display a progressbar for advi sampling.
@@ -2000,13 +1997,6 @@ def init_nuts(
         start = pm.find_MAP(include_transformed=True)
         cov = pm.find_hessian(point=start)
         start = [start] * chains
-        potential = quadpotential.QuadPotentialFull(cov)
-    elif init == "nuts":
-        init_trace = pm.sample(
-            draws=n_init, step=pm.NUTS(), tune=n_init // 2, random_seed=random_seed
-        )
-        cov = np.atleast_1d(pm.trace_cov(init_trace))
-        start = list(np.random.choice(init_trace, chains))
         potential = quadpotential.QuadPotentialFull(cov)
     elif init == "adapt_full":
         start = [model.test_point] * chains
