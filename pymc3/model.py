@@ -713,7 +713,7 @@ class ValueGradFunction:
         return args_joined, theano.clone(cost, replace=replace)
 
 
-class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model'):
+class Model(Factor, WithMemoization, metaclass=ContextMeta):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
@@ -855,7 +855,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model
     def isroot(self):
         return self.parent is None
 
-    @property # type: ignore -- mypy can't handle decorated types.
+    @property # type: ignore
     @memoize(bound=True)
     def bijection(self):
         vars = inputvars(self.vars)
@@ -1231,6 +1231,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta, context_class='Model
             $$'''.format('\\\\'.join(tex_vars))
 
     __latex__ = _repr_latex_
+
+# this is really disgusting, but it breaks a self-loop: I can't pass Model
+# itself as context class init arg.
+Model._context_class = Model
 
 
 def set_data(new_data, model=None):

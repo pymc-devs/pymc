@@ -1177,6 +1177,31 @@ class TestNestedRandom(SeededTest):
             return pm.sample_prior_predictive(prior_samples)
 
     @pytest.mark.parametrize(
+        ["prior_samples", "shape", "mu", "alpha"],
+        [
+            [10, (3,), (None, tuple()), (None, (3,))],
+            [10, (3,), (None, (3,)), (None, tuple())],
+            [10, (4, 3,), (None, (3,)), (None, (3,))],
+            [10, (4, 3,), (None, (3,)), (None, (4, 3))],
+        ],
+        ids=str,
+    )
+    def test_NegativeBinomial(
+        self,
+        prior_samples,
+        shape,
+        mu,
+        alpha,
+    ):
+        prior = self.sample_prior(
+            distribution=pm.NegativeBinomial,
+            shape=shape,
+            nested_rvs_info=dict(mu=mu, alpha=alpha),
+            prior_samples=prior_samples,
+        )
+        assert prior["target"].shape == (prior_samples,) + shape
+
+    @pytest.mark.parametrize(
         ["prior_samples", "shape", "psi", "mu", "alpha"],
         [
             [10, (3,), (0.5, tuple()), (None, tuple()), (None, (3,))],
