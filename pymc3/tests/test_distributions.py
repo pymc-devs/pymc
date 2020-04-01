@@ -954,12 +954,16 @@ class TestMatchesScipy(SeededTest):
     @pytest.mark.parametrize('n', [3, 4])
     def test_dirichlet_init_fail(self, n):
         with Model():
-            with pytest.raises(ValueError) as err:
+            with pytest.raises(
+                    ValueError,
+                    match=r"All concentration parameters \(a\) must be > 0."
+            ):
                 _ = Dirichlet('x', a=np.zeros(n), shape=n)
-            err.match("All concentration parameters (a) must be > 0.")
-            with pytest.raises(ValueError) as err:
+            with pytest.raises(
+                    ValueError,
+                    match=r"All concentration parameters \(a\) must be > 0."
+            ):
                 _ = Dirichlet('x', a=np.array([-1.] * n), shape=n)
-            err.match("All concentration parameters (a) must be > 0.")
 
     def test_dirichlet_2D(self):
         self.pymc3_matches_scipy(
