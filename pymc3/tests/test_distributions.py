@@ -944,17 +944,43 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize('n', [2, 3])
     def test_dirichlet(self, n):
-        self.pymc3_matches_scipy(Dirichlet, Simplex(
-            n), {'a': Vector(Rplus, n)}, dirichlet_logpdf)
+        self.pymc3_matches_scipy(
+            Dirichlet,
+            Simplex(n),
+            {'a': Vector(Rplus, n)},
+            dirichlet_logpdf
+        )
+
+    @pytest.mark.parametrize('n', [3, 4])
+    def test_dirichlet_init_fail(self, n):
+        with Model():
+            with pytest.raises(
+                    ValueError,
+                    match=r"All concentration parameters \(a\) must be > 0."
+            ):
+                _ = Dirichlet('x', a=np.zeros(n), shape=n)
+            with pytest.raises(
+                    ValueError,
+                    match=r"All concentration parameters \(a\) must be > 0."
+            ):
+                _ = Dirichlet('x', a=np.array([-1.] * n), shape=n)
 
     def test_dirichlet_2D(self):
-        self.pymc3_matches_scipy(Dirichlet, MultiSimplex(2, 2),
-                                 {'a': Vector(Vector(Rplus, 2), 2)}, dirichlet_logpdf)
+        self.pymc3_matches_scipy(
+            Dirichlet,
+            MultiSimplex(2, 2),
+            {'a': Vector(Vector(Rplus, 2), 2)},
+            dirichlet_logpdf
+        )
 
     @pytest.mark.parametrize('n', [2, 3])
     def test_multinomial(self, n):
-        self.pymc3_matches_scipy(Multinomial, Vector(Nat, n), {'p': Simplex(n), 'n': Nat},
-                                 multinomial_logpdf)
+        self.pymc3_matches_scipy(
+            Multinomial,
+            Vector(Nat, n),
+            {'p': Simplex(n), 'n': Nat},
+            multinomial_logpdf
+        )
 
     @pytest.mark.parametrize('p,n', [
         [[.25, .25, .25, .25], 1],
