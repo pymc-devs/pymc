@@ -36,7 +36,6 @@ __all__ = [
     "Coregion",
     "ScaledCov",
     "Kron",
-    "Exponentiated",
 ]
 
 
@@ -136,19 +135,6 @@ class Covariance:
             raise RuntimeError
 
 
-class Exponentiated(Covariance):
-    def __init__(self, kernel, power):
-        self.kernel = kernel
-        self.power = power
-        super().__init__(
-            input_dim=self.kernel.input_dim,
-            active_dims=self.kernel.active_dims
-        )
-
-    def __call__(self, X, Xs=None, diag=False):
-        return self.kernel(X, Xs, diag=diag) ** self.power
-
-
 class Combination(Covariance):
     def __init__(self, factor_list):
         input_dim = max(
@@ -202,6 +188,19 @@ class Add(Combination):
 class Prod(Combination):
     def __call__(self, X, Xs=None, diag=False):
         return reduce(mul, self.merge_factors(X, Xs, diag))
+
+
+class Exponentiated(Covariance):
+    def __init__(self, kernel, power):
+        self.kernel = kernel
+        self.power = power
+        super().__init__(
+            input_dim=self.kernel.input_dim,
+            active_dims=self.kernel.active_dims
+        )
+
+    def __call__(self, X, Xs=None, diag=False):
+        return self.kernel(X, Xs, diag=diag) ** self.power
 
 
 class Kron(Covariance):
