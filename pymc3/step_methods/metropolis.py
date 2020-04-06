@@ -910,7 +910,7 @@ class MLDA(ArrayStepShared):
     """
     name = 'mlda'
 
-    default_blocked = False
+    default_blocked = True
     generates_stats = True
     stats_dtypes = [{
         'accept': np.float64,
