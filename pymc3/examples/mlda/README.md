@@ -58,6 +58,8 @@ The pipeline in `example.py` contains the following steps:
    theta)
    - `ndraws`: The number of MCMC samples to be drawn from the finest posteerior.
    - `nburn`: The number of burn-in samples.
+   - `nchains`: The number of independent MCMC chains.
+   - `nsub`: The subsampling rate for MLDA
  - **Generate models and data**: This section instantiates the set of multi-level
  models and the data for inference (from the finest model). It also creates
  the necessary Theano Ops.
