@@ -920,6 +920,12 @@ class TestMatchesScipy(SeededTest):
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.invgamma.logpdf(value, alpha, scale=beta),
         )
+        self.check_logcdf(
+            InverseGamma,
+            Rplus,
+            {'alpha': Rplusbig, 'beta': Rplusbig},
+            lambda value, alpha, beta: sp.invgamma.logcdf(value, alpha, scale=beta),
+        )
 
     @pytest.mark.xfail(
         condition=(theano.config.floatX == "float32"),
