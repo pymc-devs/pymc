@@ -48,7 +48,8 @@ The pipeline in `example.py` contains the following steps:
    - `resolutions`: This is a list of different model resolutions. Each
     resolution added to the list will add one level to the multi-level
     inference. Each element is a tuple (x,y) where x, y are the number of 
-     points in each dimension.
+     points in each dimension. For example, setting `resolutions = 
+     [(2,2), (4,4)]` creates a coarse 2x2 model and a fine 4x4 model.
    - `mkl`: The number of unknown parameters in the model (i.e. dimension of
    theta)
    - `ndraws`: The number of MCMC samples to be drawn from the finest posteerior.
