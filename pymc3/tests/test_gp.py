@@ -237,6 +237,61 @@ class TestCovProd:
         npt.assert_allclose(np.diag(K1), K2d, atol=1e-5)
         npt.assert_allclose(np.diag(K2), K1d, atol=1e-5)
 
+class TestCovExponentiation:
+    def test_symexp_cov(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model() as model:
+            cov1 = pm.gp.cov.ExpQuad(1, 0.1)
+            cov = cov1 ** 2
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_covexp_numpy(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model() as model:
+            a = np.array([[2]])
+            cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_covexp_theano(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model() as model:
+            a = tt.alloc(2.0, 1, 1)
+            cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_covexp_shared(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model() as model:
+            a = theano.shared(2.0)
+            cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_invalid_covexp(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pytest.raises(
+            ValueError,
+            match=r"can only be exponentiated by a scalar value"
+        ):
+            with pm.Model() as model:
+                a = np.array([[1.0, 2.0]])
+                cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
+
 
 class TestCovKron:
     def test_symprod_cov(self):
