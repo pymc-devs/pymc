@@ -2789,6 +2789,29 @@ class InverseGamma(PositiveContinuous):
                      + logpow(value, -alpha - 1),
                      value > 0, alpha > 0, beta > 0)
 
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Inverse Gamma distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        alpha = self.alpha
+        beta = self.beta
+        return bound(
+            tt.log(tt.gammaincc(alpha, beta / value)),
+            value >= 0,
+            alpha > 0,
+            beta > 0)
+
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
