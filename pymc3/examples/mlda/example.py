@@ -171,8 +171,8 @@ with pm.Model():
     step_temp = pm.MLDA(subsampling_rate=5, coarse_models=coarse_models)
 
     # inference
-    trace = pm.sample(ndraws, chains=1, cores=1, tune=nburn, step=step_temp, random_seed=1234)
-    trace2 = pm.sample(ndraws, step=pm.Metropolis(), chains=1, cores=1, tune=nburn, random_seed=1234)
+    trace = pm.sample(draws=ndraws, chains=2, tune=nburn, step=step_temp, random_seed=1234)
+    trace2 = pm.sample(draws=ndraws, step=pm.Metropolis(), chains=2, tune=nburn, random_seed=1234)
 
     # print true theta values and pymc3 sampling summary
     print(true_parameters)
