@@ -910,7 +910,7 @@ class MLDA(ArrayStepShared):
     """
     name = 'mlda'
 
-    default_blocked = True  # All dimensions are sampled in on block
+    default_blocked = False  # All dimensions are sampled in on block
     generates_stats = True
     stats_dtypes = [{
         'accept': np.float64,

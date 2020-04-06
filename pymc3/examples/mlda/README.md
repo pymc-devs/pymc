@@ -55,11 +55,13 @@ The pipeline in `example.py` contains the following steps:
      points in each dimension. For example, setting `resolutions = 
      [(2,2), (4,4)]` creates a coarse 2x2 model and a fine 4x4 model.
    - `mkl`: The number of unknown parameters in the model (i.e. dimension of
-   theta)
+   theta). Note at the moment this has to be set to 1 as the compound step
+   is not implemented yet in MLDA and block sampling is too inefficient.
    - `ndraws`: The number of MCMC samples to be drawn from the finest posteerior.
    - `nburn`: The number of burn-in samples.
    - `nchains`: The number of independent MCMC chains.
-   - `nsub`: The subsampling rate for MLDA
+   - `nsub`: The subsampling rate for MLDA.
+   - `points_list`: The datapoints list.
  - **Generate models and data**: This section instantiates the set of multi-level
  models and the data for inference (from the finest model). It also creates
  the necessary Theano Ops.
@@ -78,8 +80,7 @@ The pipeline in `example.py` contains the following steps:
  help(pm.MLDA)` to see the docstring of the class.
     - After inference, the code in `example.py` also samples from 
     the same posterior using a standard Metropolis algorithm for 
-    comparison purposes and prints out some summary information and plots.
- - **Validate the output**: The last section does a very basic validation
- of the output by finding the sample mean for each theta dimension and
- using it to solve the model PDE and print out a visualisation of the 
- solution.
+    comparison purposes and prints out some summary information (e.g. ESS) and plots. 
+    The true parameters are printed to allow the user to see if the sampler
+    converged to the correct area.
+ 

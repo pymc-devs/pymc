@@ -88,22 +88,28 @@ class LogLike(tt.Op):
 # PART 1: PARAMETERS
 # Set the resolution of the multi-level models (from coarsest to finest)
 # and the random field parameters.
-resolutions = [(2, 2), (4, 4)]
+resolutions = [(10, 10), (30, 30)]
 field_mean = 0
 field_stdev = 1
 lamb_cov = 0.1
 # Set the number of unknown parameters
-mkl = 8
+mkl = 1
 # Number of draws from the distribution
-ndraws = 50
+ndraws = 500
 # Number of "burn-in points" (which we'll discard)
-nburn = 20
+nburn = False
 # Number of independent chains
-nchains = 1
+nchains = 2
 # Subsampling rate for MLDA
 nsub = 5
 # Set the sigma for inference
 sigma = 0.01
+# Data generation seed
+data_seed = 1234567
+# Sampling seed
+sampling_seed = 1234567
+# Datapoints list
+points_list = [0.1, 0.3, 0.5, 0.7, 0.9]
 
 # PART 2: GENERATE MODELS AND DATA
 # Initialise model objects for all levels
@@ -112,7 +118,7 @@ for r in resolutions:
     my_models.append(Model(r, field_mean, field_stdev, mkl, lamb_cov))
 
 # Solve finest model and plot transmissivity field and solution
-np.random.seed(16643)
+np.random.seed(data_seed)
 my_models[-1].solve()
 my_models[-1].plot(transform_field=True)
 
@@ -120,7 +126,7 @@ my_models[-1].plot(transform_field=True)
 true_parameters = my_models[-1].random_process.parameters
 
 # Define the sampling points.
-x_data = y_data = np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+x_data = y_data = np.array(points_list)
 datapoints = np.array(list(product(x_data, y_data)))
 
 # Get data from the sampling points and perturb it with some noise.
@@ -175,11 +181,11 @@ with pm.Model():
     step_temp = pm.MLDA(subsampling_rate=nsub, coarse_models=coarse_models)
 
     # inference
-    trace = pm.sample(draws=ndraws, chains=nchains, tune=nburn, step=step_temp, random_seed=1234)
-    trace2 = pm.sample(draws=ndraws, step=pm.Metropolis(), chains=nchains, tune=nburn, random_seed=1234)
+    trace = pm.sample(draws=ndraws, chains=nchains, tune=nburn, step=step_temp, random_seed=sampling_seed)
+    trace2 = pm.sample(draws=ndraws, step=pm.Metropolis(tune_interval=10000), chains=nchains, tune=nburn, random_seed=sampling_seed)
 
     # print true theta values and pymc3 sampling summary
-    print(true_parameters)
+    print(f"True parameters: {true_parameters}")
     print(pm.stats.summary(trace))
     print(pm.stats.summary(trace2))
 
@@ -189,6 +195,7 @@ with pm.Model():
     plt.show()
 
 
+'''
 # PART 4: VALIDATION
 # Evaluate MCMC sample mean for each unknown parameter (theta)
 samples_mean = []
@@ -201,3 +208,4 @@ my_models[-1].solve(true_parameters)
 my_models[-1].plot(transform_field=True)
 my_models[-1].solve(samples_mean)
 my_models[-1].plot(transform_field=True)
+'''
