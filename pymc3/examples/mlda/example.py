@@ -98,6 +98,10 @@ mkl = 8
 ndraws = 100
 # Number of "burn-in points" (which we'll discard)
 nburn = 20
+# Number of independent chains
+nchains = 2
+# Subsampling rate for MLDA
+nsub = 5
 # Set the sigma for inference
 sigma = 0.01
 
@@ -168,11 +172,11 @@ with pm.Model():
 
     # initialise an MLDA step method object, passing the subsampling rate and
     # coarse models list
-    step_temp = pm.MLDA(subsampling_rate=5, coarse_models=coarse_models)
+    step_temp = pm.MLDA(subsampling_rate=nsub, coarse_models=coarse_models)
 
     # inference
-    trace = pm.sample(draws=ndraws, chains=2, tune=nburn, step=step_temp, random_seed=1234)
-    trace2 = pm.sample(draws=ndraws, step=pm.Metropolis(), chains=2, tune=nburn, random_seed=1234)
+    trace = pm.sample(draws=ndraws, chains=nchains, tune=nburn, step=step_temp, random_seed=1234)
+    trace2 = pm.sample(draws=ndraws, step=pm.Metropolis(), chains=nchains, tune=nburn, random_seed=1234)
 
     # print true theta values and pymc3 sampling summary
     print(true_parameters)

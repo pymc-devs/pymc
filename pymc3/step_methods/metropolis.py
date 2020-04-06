@@ -910,7 +910,7 @@ class MLDA(ArrayStepShared):
     """
     name = 'mlda'
 
-    default_blocked = True
+    default_blocked = True  # All dimensions are sampled in on block
     generates_stats = True
     stats_dtypes = [{
         'accept': np.float64,
@@ -921,6 +921,7 @@ class MLDA(ArrayStepShared):
                  tune=True, tune_interval=100, model=None, mode=None,
                  subsampling_rate=10, coarse_models=None, **kwargs):
 
+        # Instantiate the recursive DA proposal.
         # This is the main proposal used for all levels (Recursive Delayed Acceptance) except for level 0
         self.proposal_dist = RecursiveDAProposal(vars, S, base_proposal_dist, scaling,
                                                  tune, tune_interval, model, mode,
