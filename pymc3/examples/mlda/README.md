@@ -42,6 +42,10 @@ The examples/mlda folder contains the following files:
  
 ## The pipeline
 
+In order to run the pipeline, go to directory `pymc3/pymc3/examples/mlda` and run in bash:
+`python example.py`.
+
+
 The pipeline in `example.py` contains the following steps:
  - **Set parameters**: The user can various parameters, the most important of which
  are:
