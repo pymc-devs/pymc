@@ -95,11 +95,11 @@ lamb_cov = 0.1
 # Set the number of unknown parameters
 mkl = 8
 # Number of draws from the distribution
-ndraws = 100
+ndraws = 50
 # Number of "burn-in points" (which we'll discard)
 nburn = 20
 # Number of independent chains
-nchains = 2
+nchains = 1
 # Subsampling rate for MLDA
 nsub = 5
 # Set the sigma for inference
