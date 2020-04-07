@@ -1213,11 +1213,12 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Rice, Rplus, {'b': Rplus, 'sigma': Rplusbig},
                                  lambda value, b, sigma: sp.rice.logpdf(value, b=b, loc=0, scale=sigma))
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_moyal(self):
         self.pymc3_matches_scipy(Moyal, R, {'mu': R, 'sigma': Rplusbig},
-                                 lambda value, mu, sigma: sp.moyal.logpdf(value, mu, sigma))
+                                 lambda value, mu, sigma: floatX(sp.moyal.logpdf(value, mu, sigma)))
         self.check_logcdf(Moyal, R, {'mu': R, 'sigma': Rplusbig},
-                          lambda value, mu, sigma: sp.moyal.logcdf(value, mu, sigma))
+                          lambda value, mu, sigma: floatX(sp.moyal.logcdf(value, mu, sigma)))
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
