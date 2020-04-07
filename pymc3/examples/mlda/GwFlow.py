@@ -26,7 +26,8 @@ class GwFlowSolver:
         self.ny = resolution[1]
         self.mesh = UnitSquareMesh(self.nx, self.ny)
 
-        self.V = FunctionSpace(self.mesh, 'CG', 1)
+        self.V = FunctionSpace(self.mesh, 'Lagrange', 1)
+        self.K = Function(self.V)
         self.n = FacetNormal(self.mesh)
         self.d2v = dof_to_vertex_map(self.V)
         
@@ -35,7 +36,7 @@ class GwFlowSolver:
         self.v = TestFunction(self.V)
         
         # Define the subdomains.
-        sub_domains = MeshFunction("size_t", self.mesh, self.mesh.topology().dim() - 1)
+        sub_domains = MeshFunction('size_t', self.mesh, self.mesh.topology().dim() - 1)
         sub_domains.set_all(0)
 
         # Sub domain for no-flow (mark whole boundary, inflow and outflow will later be overwritten)
@@ -71,6 +72,15 @@ class GwFlowSolver:
         bc_right = DirichletBC(self.V, self.h_out, outflow)
         self.bcs = [bc_left, bc_right]
         
+        # Define the variational problem and create an assembler.
+        F = inner(grad(self.v), self.K*grad(self.u))*dx - self.v*self.q_0*self.ds(0)
+        a, l = lhs(F), rhs(F)
+        self._A = PETScMatrix()
+        self._b = PETScVector()
+        self._assembler = SystemAssembler(a, l, self.bcs)
+        self._solver = PETScKrylovSolver('gmres', 'ilu')
+        self._solver.set_operator(self._A)
+        
     def plot_mesh(self):
         
         # This method plots the mesh
@@ -80,32 +90,30 @@ class GwFlowSolver:
         
     def set_conductivity(self, random_field = False):
         
+        self.conductivity = Function(self.V)
+        
         # Set the conductivity
         if np.any(random_field):
-            
             # Make it exponential
-            self.conductivity = np.exp(self.field_mean + self.field_stdev*random_field)
+            self.conductivity.vector()[:] = np.exp(self.field_mean + self.field_stdev*random_field)
 
         # If no field is given, just set the flow-field to the mean.
         else:
-            self.conductivity = np.exp(self.field_mean*np.ones(self.mesh.coordinates().shape[0]))
+            self.conductivity.vector()[:] = np.exp(self.field_mean*np.ones(self.mesh.coordinates().shape[0]))
             
         # Map the random field vector to the domain.
-        self.K = Function(self.V)
-        self.K.vector().set_local(self.conductivity[self.d2v])
+        self.K.assign(self.conductivity)
     
     def solve(self):
         
         # Solve the variational problem
-        F = inner(grad(self.v), self.K*grad(self.u))*dx - self.v*self.q_0*self.ds(0)
-        a, L = lhs(F), rhs(F)
         self.h = Function(self.V)
-        
-        solve(a == L, self.h, self.bcs)
+        self._assembler.assemble(self._A, self._b)
+        self._solver.solve(self.h.vector(), self._b)
         
     def compute_flow(self):
         
-        self.Q = VectorFunctionSpace(self.mesh, "CG", 1)
+        self.Q = VectorFunctionSpace(self.mesh, 'Lagrange', 1)
         self.q = project(-self.K*grad(self.h), self.Q)
         
     def get_data(self, datapoints):
@@ -123,4 +131,4 @@ class GwFlowSolver:
         
         # Plot the solution.
         plt.figure(figsize = (12,10))
-        p = plot(self.h, cmap = 'magma'); plt.colorbar(p); plt.show()
+        p = plot(self.h, cmap = 'plasma'); plt.colorbar(p); plt.show()

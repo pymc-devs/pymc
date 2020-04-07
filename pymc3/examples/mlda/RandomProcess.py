@@ -8,8 +8,8 @@ from scipy.linalg import eigh
 from scipy.spatial import distance_matrix
 
 
-class RandomProcess:
-    def __init__(self, dolfin_mesh, mkl, lamb):
+class SquaredExponential:
+    def __init__(self, coords, mkl, lamb):
         
         '''
         This class sets up a random process on a grid and generates
@@ -17,18 +17,15 @@ class RandomProcess:
         '''
         
         # Internalise the grid and set number of vertices.
-        self.mesh = dolfin_mesh
-        self.n_points = self.mesh.num_vertices()
-        
-        # Save the coordinates in some vectors.
-        self.x = self.mesh.coordinates()[:,0]; self.y = self.mesh.coordinates()[:,1]
+        self.coords = coords
+        self.n_points = self.coords.shape[0]
         
         # Set some random field parameters.
         self.mkl = mkl
         self.lamb = lamb
         
         # Create a snazzy distance-matrix for rapid computation of the covariance matrix.
-        dist = distance_matrix(self.mesh.coordinates(), self.mesh.coordinates())
+        dist = distance_matrix(self.coords, self.coords)
         
         # Compute the covariance between all points in the space.
         self.cov =  np.exp(-0.5*dist**2/self.lamb**2)
@@ -42,7 +39,6 @@ class RandomProcess:
         
         # Find eigenvalues and eigenvectors using Arnoldi iteration.
         eigvals, eigvecs = eigh(self.cov, eigvals = (self.n_points - self.mkl, self.n_points - 1))
-        #eigvals, eigvecs = eigsh(self.cov, self.mkl, which = 'LM')
         
         order = np.flip(np.argsort(eigvals))
         self.eigenvalues = eigvals[order]
@@ -65,17 +61,17 @@ class RandomProcess:
                                                  np.sqrt(np.diag(self.eigenvalues)), 
                                                  self.parameters))
 
-    def plot(self, lognormal = False):
+    def plot(self, lognormal = True):
         
         # Plot the random field.
         if lognormal:
-            random_field = np.exp(self.random_field)
+            random_field = self.random_field
             contour_levels = np.linspace(min(random_field), max(random_field), 20)
         else:
-            random_field = self.random_field
+            random_field = np.exp(self.random_field)
             contour_levels = np.linspace(min(random_field), max(random_field), 20)
 
         plt.figure(figsize = (12,10))
-        plt.tricontourf(self.x, self.y, random_field, levels = contour_levels, cmap = 'magma'); 
+        plt.tricontourf(self.coords[:,0], self.coords[:,1], random_field, levels = contour_levels, cmap = 'plasma'); 
         plt.colorbar()
         plt.show()

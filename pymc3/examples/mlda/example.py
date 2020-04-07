@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pymc3 as pm
 import theano.tensor as tt
-from model import Model
+from Model import Model
 from itertools import product
 import matplotlib.pyplot as plt
 os.environ['OPENBLAS_NUM_THREADS'] = '1'  # Set environmental variable
@@ -120,7 +120,7 @@ for r in resolutions:
 # Solve finest model and plot transmissivity field and solution
 np.random.seed(data_seed)
 my_models[-1].solve()
-my_models[-1].plot(transform_field=True)
+my_models[-1].plot(lognormal=False)
 
 # Save true parameters of finest model
 true_parameters = my_models[-1].random_process.parameters

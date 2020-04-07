@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from GwFlow import GwFlowSolver
-from random_process import RandomProcess
+from RandomProcess import SquaredExponential
 
 class Model:
     def __init__(self, resolution, field_mean, field_stdev, mkl, lamb):
@@ -21,10 +21,12 @@ class Model:
         
         # Initialise a solver.
         self.solver = GwFlowSolver(self.resolution, self.field_mean, self.field_stdev)
-        self.x = self.solver.mesh.coordinates()[:,0]; self.y = self.solver.mesh.coordinates()[:,1]
+        _dof_coords = self.solver.V.tabulate_dof_coordinates().reshape((-1, 2))
+        _dof_indices = self.solver.V.dofmap().dofs()
+        self.coords = _dof_coords[_dof_indices, :] 
         
         # initialise a random process given the solver mesh.
-        self.random_process = RandomProcess(self.solver.mesh, self.mkl, self.lamb)
+        self.random_process = SquaredExponential(self.coords, self.mkl, self.lamb)
         
         # Compute the eigenpairs of the covariance matrix in the random process.
         self.random_process.compute_eigenpairs()
@@ -37,9 +39,6 @@ class Model:
         self.solver.set_conductivity(self.random_process.random_field)
         self.solver.solve()
         
-    def get_solution(self):
-        return np.fromiter(map(self.solver.h, self.x, self.y), dtype=float)
-        
     def get_data(self, datapoints):
         
         # Get data from a list of coordinates.
@@ -48,15 +47,15 @@ class Model:
     def get_outflow(self):
         return self.solver.get_outflow()
         
-    def plot(self, limits = [0,0], transform_field = False):
+    def plot(self, limits = [0,0], lognormal = True):
         
         # This method plots both the random firld and the solution.
         
         # First, contruct a random field, given the field parameters.
-        if transform_field:
-            random_field = np.exp(self.field_mean + self.field_stdev*self.random_process.random_field)
-        else:
+        if lognormal:
             random_field = self.field_mean + self.field_stdev*self.random_process.random_field
+        else:
+            random_field = np.exp(self.field_mean + self.field_stdev*self.random_process.random_field)
         
         # Set contour levels.
         if any(limits):
@@ -65,7 +64,7 @@ class Model:
             contour_levels_field = np.linspace(min(random_field), max(random_field), 100)
         
         # Then extract the solution from every node in the solver.
-        solution = self.get_solution()
+        solution = self.solver.h.vector()[:]
             
         # Set the contour levels.
         contour_levels_solution = np.linspace(min(solution), max(solution), 100)
@@ -75,8 +74,8 @@ class Model:
         
         axes[0].set_title('Transmissivity Field', fontdict = {'fontsize': 24})
         axes[0].tick_params(labelsize=16)
-        field = axes[0].tricontourf(self.x, 
-                                    self.y, 
+        field = axes[0].tricontourf(self.coords[:,0], 
+                                    self.coords[:,1], 
                                     random_field, 
                                     levels = contour_levels_field, 
                                     cmap = 'plasma');  
@@ -84,8 +83,8 @@ class Model:
         
         axes[1].set_title('Solution', fontdict = {'fontsize': 24})
         axes[1].tick_params(labelsize=16)
-        solution = axes[1].tricontourf(self.x, 
-                                       self.y, 
+        solution = axes[1].tricontourf(self.coords[:,0], 
+                                       self.coords[:,1], 
                                        solution, 
                                        levels = contour_levels_solution, 
                                        cmap = 'plasma');  
