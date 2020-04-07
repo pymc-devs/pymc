@@ -64,7 +64,8 @@ The pipeline in `example.py` contains the following steps:
    - `points_list`: The datapoints list.
  - **Generate models and data**: This section instantiates the set of multi-level
  models and the data for inference (from the finest model). It also creates
- the necessary Theano Ops.
+ the necessary Theano Ops and preforms eigenpairs projection between the fine
+ model and the coarse models.
  - **Inference with PyMC3 using MLDA**: This section instantiates the models
  in PyMC3 and draws samples from the posterior. In order to use MLDA, the user
  needs to:
