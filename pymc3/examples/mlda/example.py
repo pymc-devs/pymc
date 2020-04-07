@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pymc3 as pm
 import theano.tensor as tt
+import fenics as fn
 from Model import Model
 from itertools import product
 import matplotlib.pyplot as plt
@@ -85,23 +86,33 @@ class LogLike(tt.Op):
         outputs[0][0] = np.array(logl) # output the log-likelihood
 
 
+def project_eigenpairs(model_fine, model_coarse):
+    model_coarse.random_process.eigenvalues[:] = model_fine.random_process.eigenvalues
+    for i in range(model_coarse.mkl):
+        psi_fine = fn.Function(model_fine.solver.V)
+        psi_fine.vector()[:] = model_fine.random_process.eigenvectors[:, i]
+        psi_coarse = fn.project(psi_fine, model_coarse.solver.V)
+        model_coarse.random_process.eigenvectors[:, i] = psi_coarse.vector()[:]
+
+
+
 # PART 1: PARAMETERS
 # Set the resolution of the multi-level models (from coarsest to finest)
 # and the random field parameters.
-resolutions = [(10, 10), (30, 30)]
+resolutions = [(10, 10), (50, 50), (100, 100)]
 field_mean = 0
 field_stdev = 1
 lamb_cov = 0.1
 # Set the number of unknown parameters
 mkl = 1
 # Number of draws from the distribution
-ndraws = 500
+ndraws = 300
 # Number of "burn-in points" (which we'll discard)
 nburn = False
 # Number of independent chains
 nchains = 2
 # Subsampling rate for MLDA
-nsub = 5
+nsub = 2
 # Set the sigma for inference
 sigma = 0.01
 # Data generation seed
@@ -116,6 +127,10 @@ points_list = [0.1, 0.3, 0.5, 0.7, 0.9]
 my_models = []
 for r in resolutions:
     my_models.append(Model(r, field_mean, field_stdev, mkl, lamb_cov))
+
+# Project eignevactors from fine model to all coarse models
+for i in range(len(my_models[:-1])):
+    project_eigenpairs(my_models[-1], my_models[i])
 
 # Solve finest model and plot transmissivity field and solution
 np.random.seed(data_seed)
