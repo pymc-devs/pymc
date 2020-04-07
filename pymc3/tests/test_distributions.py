@@ -30,7 +30,7 @@ from ..distributions import (
     Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
     Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
     ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal, Rice,
-    Kumaraswamy
+    Kumaraswamy, Moyal
 )
 
 from ..distributions import continuous
@@ -1212,6 +1212,13 @@ class TestMatchesScipy(SeededTest):
                                  lambda value, nu, sigma: sp.rice.logpdf(value, b=nu / sigma, loc=0, scale=sigma))
         self.pymc3_matches_scipy(Rice, Rplus, {'b': Rplus, 'sigma': Rplusbig},
                                  lambda value, b, sigma: sp.rice.logpdf(value, b=b, loc=0, scale=sigma))
+
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    def test_moyal(self):
+        self.pymc3_matches_scipy(Moyal, R, {'mu': R, 'sigma': Rplusbig},
+                                 lambda value, mu, sigma: floatX(sp.moyal.logpdf(value, mu, sigma)))
+        self.check_logcdf(Moyal, R, {'mu': R, 'sigma': Rplusbig},
+                          lambda value, mu, sigma: floatX(sp.moyal.logcdf(value, mu, sigma)))
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):

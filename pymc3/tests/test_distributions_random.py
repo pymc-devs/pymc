@@ -466,7 +466,12 @@ class TestGeometric(BaseTestCases.BaseTestCase):
     distribution = pm.Geometric
     params = {'p': 0.5}
 
+    
+class TestMoyal(BaseTestCases.BaseTestCase):
+    distribution = pm.Moyal
+    params = {'mu': 0., 'sigma': 1.}
 
+    
 class TestCategorical(BaseTestCases.BaseTestCase):
     distribution = pm.Categorical
     params = {'p': np.ones(BaseTestCases.BaseTestCase.shape)}
@@ -821,6 +826,12 @@ class TestScalarParameterSamples(SeededTest):
             return expit(st.norm.rvs(loc=mu, scale=sigma, size=size))
         pymc3_random(pm.LogitNormal, {'mu': R, 'sigma': Rplus}, ref_rand=ref_rand)
 
+    def test_moyal(self):
+        def ref_rand(size, mu, sigma):
+            return st.moyal.rvs(loc=mu, scale=sigma, size=size)
+        pymc3_random(pm.Moyal, {'mu': R, 'sigma': Rplus}, ref_rand=ref_rand)
+
+        
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
