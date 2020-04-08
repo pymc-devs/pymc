@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import time
 import pymc3 as pm
 import theano.tensor as tt
 import fenics as fn
@@ -95,75 +96,101 @@ def project_eigenpairs(model_fine, model_coarse):
         model_coarse.random_process.eigenvectors[:, i] = psi_coarse.vector()[:]
 
 
+def main():
+    # PART 1: PARAMETERS
+    # Set the resolution of the multi-level models (from coarsest to finest)
+    # and the random field parameters.
+    resolutions = [(60, 60), (120, 120)]
+    field_mean = 0
+    field_stdev = 1
+    lamb_cov = 0.1
+    # Set the number of unknown parameters
+    mkl = 2
+    # Number of draws from the distribution
+    ndraws = 200
+    # Number of "burn-in points" (which we'll discard)
+    nburn = False
+    tune_interval = 10000  # big to prevent tuning
+    # Number of independent chains
+    nchains = 2
+    # Subsampling rate for MLDA
+    nsub = 2
+    # Set the sigma for inference
+    sigma = 0.01
+    # Data generation seed
+    data_seed = 12345
+    # Sampling seed
+    sampling_seed = 12345
+    # Datapoints list
+    points_list = [0.1, 0.3, 0.5, 0.7, 0.9]
 
-# PART 1: PARAMETERS
-# Set the resolution of the multi-level models (from coarsest to finest)
-# and the random field parameters.
-resolutions = [(10, 10), (50, 50), (100, 100)]
-field_mean = 0
-field_stdev = 1
-lamb_cov = 0.1
-# Set the number of unknown parameters
-mkl = 1
-# Number of draws from the distribution
-ndraws = 300
-# Number of "burn-in points" (which we'll discard)
-nburn = False
-# Number of independent chains
-nchains = 2
-# Subsampling rate for MLDA
-nsub = 2
-# Set the sigma for inference
-sigma = 0.01
-# Data generation seed
-data_seed = 1234567
-# Sampling seed
-sampling_seed = 1234567
-# Datapoints list
-points_list = [0.1, 0.3, 0.5, 0.7, 0.9]
+    # PART 2: GENERATE MODELS AND DATA
+    # Note this can take minutes for large resolutions
+    # Initialise model objects for all levels
+    my_models = []
+    for r in resolutions:
+        my_models.append(Model(r, field_mean, field_stdev, mkl, lamb_cov))
 
-# PART 2: GENERATE MODELS AND DATA
-# Initialise model objects for all levels
-my_models = []
-for r in resolutions:
-    my_models.append(Model(r, field_mean, field_stdev, mkl, lamb_cov))
+    # Project eignevactors from fine model to all coarse models
+    for i in range(len(my_models[:-1])):
+        project_eigenpairs(my_models[-1], my_models[i])
 
-# Project eignevactors from fine model to all coarse models
-for i in range(len(my_models[:-1])):
-    project_eigenpairs(my_models[-1], my_models[i])
+    # Solve finest model and plot transmissivity field and solution
+    np.random.seed(data_seed)
+    my_models[-1].solve()
+    my_models[-1].plot(lognormal=False)
 
-# Solve finest model and plot transmissivity field and solution
-np.random.seed(data_seed)
-my_models[-1].solve()
-my_models[-1].plot(lognormal=False)
+    # Save true parameters of finest model
+    true_parameters = my_models[-1].random_process.parameters
 
-# Save true parameters of finest model
-true_parameters = my_models[-1].random_process.parameters
+    # Define the sampling points.
+    x_data = y_data = np.array(points_list)
+    datapoints = np.array(list(product(x_data, y_data)))
 
-# Define the sampling points.
-x_data = y_data = np.array(points_list)
-datapoints = np.array(list(product(x_data, y_data)))
+    # Get data from the sampling points and perturb it with some noise.
+    noise = np.random.normal(0, 0.001, len(datapoints))
 
-# Get data from the sampling points and perturb it with some noise.
-noise = np.random.normal(0, 0.001, len(datapoints))
+    # Generate data from the finest model for use in pymc3 inference
+    data = model_wrapper(my_models[-1], true_parameters, datapoints) + noise
 
-# Generate data from the finest model for use in pymc3 inference
-data = model_wrapper(my_models[-1], true_parameters, datapoints) + noise
+    # Test the log-likelihood function with the finest model
+    my_loglik(my_models[-1], true_parameters, datapoints, data, sigma)
 
-# Test the log-likelihood function with the finest model
-my_loglik(my_models[-1], true_parameters, datapoints, data, sigma)
-
-# create Theano Ops to wrap likelihoods of all model levels and store them in list
-logl = []
-for m in my_models:
-    logl.append(LogLike(m, my_loglik, data, datapoints, sigma))
+    # create Theano Ops to wrap likelihoods of all model levels and store them in list
+    logl = []
+    for m in my_models:
+        logl.append(LogLike(m, my_loglik, data, datapoints, sigma))
 
 
-# PART 3: INFERENCE IN PYMC3
-# Set up models in PyMC3 for each level - excluding finest model level
-coarse_models = []
-for j in range(len(my_models) - 1):
-    with pm.Model() as model:
+    # PART 3: INFERENCE IN PYMC3
+    # Set up models in PyMC3 for each level - excluding finest model level
+    coarse_models = []
+    for j in range(len(my_models) - 1):
+        with pm.Model() as model:
+            # uniform priors on parameters
+            parameters = []
+            for i in range(mkl):
+                parameters.append(pm.Uniform('theta_' + str(i), lower=-3., upper=3.))
+
+            # convert m and c to a tensor vector
+            theta = tt.as_tensor_variable(parameters)
+
+            # use a DensityDist (use a lamdba function to "call" the Op)
+            pm.DensityDist('likelihood', lambda v: logl[j](v), observed={'v': theta})
+
+        coarse_models.append(model)
+
+    # Set up finest model and perform inference with PyMC3, using the MLDA algorithm
+    # and passing the coarse_models list created above.
+    method_names = []
+    traces = []
+    runtimes = []
+    acc = []
+    ess = []
+    ess_n = []
+    performances = []
+
+    with pm.Model():
         # uniform priors on parameters
         parameters = []
         for i in range(mkl):
@@ -173,54 +200,68 @@ for j in range(len(my_models) - 1):
         theta = tt.as_tensor_variable(parameters)
 
         # use a DensityDist (use a lamdba function to "call" the Op)
-        pm.DensityDist('likelihood', lambda v: logl[j](v), observed={'v': theta})
+        pm.DensityDist('likelihood', lambda v: logl[-1](v), observed={'v': theta})
 
-    coarse_models.append(model)
+        # Initialise an MLDA step method object, passing the subsampling rate and
+        # coarse models list
+        # Also initialise a Metropolis step method object
+        step_metropolis = pm.Metropolis(tune_interval=tune_interval)
+        step_mlda = pm.MLDA(subsampling_rate=nsub, coarse_models=coarse_models)
 
-# Set up finest model and perform inference with PyMC3, using the MLDA algorithm
-# and passing the coarse_models list created above.
-with pm.Model():
-    # uniform priors on parameters
-    parameters = []
+        # inference
+        # Metropolis
+        t_start = time.time()
+        method_names.append("Metropolis")
+        traces.append(pm.sample(draws=ndraws, step=step_metropolis,
+                                chains=nchains, tune=nburn,
+                                random_seed=sampling_seed))
+        runtimes.append(time.time() - t_start)
+
+        # MLDA
+        t_start = time.time()
+        method_names.append("MLDA")
+        traces.append(pm.sample(draws=ndraws, step=step_mlda,
+                                chains=nchains, tune=nburn,
+                                random_seed=sampling_seed))
+        runtimes.append(time.time() - t_start)
+
+        for i, trace in enumerate(traces):
+            acc.append(trace.get_sampler_stats('accepted').mean())
+            ess.append(np.array(pm.ess(trace).to_array()))
+            ess_n.append(ess[i] / len(trace) / trace.nchains)
+            performances.append(ess[i] / runtimes[i])
+            print(f'\nSampler {method_names[i]}: {len(trace)} samples across '
+                  f'{trace.nchains} chains.'
+                  f'\nRuntime: {runtimes[i]} seconds'
+                  f'\nAcceptance rate: {acc[i]}'
+                  f'\nESS list: {ess[i]}'
+                  f'\nNormalised ESS list: {ess_n[i]}'
+                  f'\nESS/sec: {performances[i]}')
+
+        # print true theta values and pymc3 sampling summary
+        print(f"\nDetailed summaries and plots:\nTrue parameters: {true_parameters}")
+        for i, trace in enumerate(traces):
+            print(f"Sampler {method_names[i]}:\n", pm.stats.summary(trace))
+            pm.plots.traceplot(trace)
+
+        plt.show()
+
+
+    '''
+    # PART 4: VALIDATION
+    # Evaluate MCMC sample mean for each unknown parameter (theta)
+    samples_mean = []
     for i in range(mkl):
-        parameters.append(pm.Uniform('theta_' + str(i), lower=-3., upper=3.))
-
-    # convert m and c to a tensor vector
-    theta = tt.as_tensor_variable(parameters)
-
-    # use a DensityDist (use a lamdba function to "call" the Op)
-    pm.DensityDist('likelihood', lambda v: logl[-1](v), observed={'v': theta})
-
-    # initialise an MLDA step method object, passing the subsampling rate and
-    # coarse models list
-    step_temp = pm.MLDA(subsampling_rate=nsub, coarse_models=coarse_models)
-
-    # inference
-    trace = pm.sample(draws=ndraws, chains=nchains, tune=nburn, step=step_temp, random_seed=sampling_seed)
-    trace2 = pm.sample(draws=ndraws, step=pm.Metropolis(tune_interval=10000), chains=nchains, tune=nburn, random_seed=sampling_seed)
-
-    # print true theta values and pymc3 sampling summary
-    print(f"True parameters: {true_parameters}")
-    print(pm.stats.summary(trace))
-    print(pm.stats.summary(trace2))
-
-    # generate pymc3 traceplot
-    pm.plots.traceplot(trace)
-    pm.plots.traceplot(trace2)
-    plt.show()
+        samples_mean.append(trace['theta_'+str(i)].mean())
+    
+    # Solve the finest model using the inferred theta means
+    # and plot transmissivity field and solution
+    my_models[-1].solve(true_parameters)
+    my_models[-1].plot(transform_field=True)
+    my_models[-1].solve(samples_mean)
+    my_models[-1].plot(transform_field=True)
+    '''
 
 
-'''
-# PART 4: VALIDATION
-# Evaluate MCMC sample mean for each unknown parameter (theta)
-samples_mean = []
-for i in range(mkl):
-    samples_mean.append(trace['theta_'+str(i)].mean())
-
-# Solve the finest model using the inferred theta means
-# and plot transmissivity field and solution
-my_models[-1].solve(true_parameters)
-my_models[-1].plot(transform_field=True)
-my_models[-1].solve(samples_mean)
-my_models[-1].plot(transform_field=True)
-'''
+if __name__ == '__main__':
+    main()
