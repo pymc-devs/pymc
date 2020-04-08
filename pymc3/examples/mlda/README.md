@@ -55,9 +55,8 @@ The pipeline in `example.py` contains the following steps:
      points in each dimension. For example, setting `resolutions = 
      [(2,2), (4,4)]` creates a coarse 2x2 model and a fine 4x4 model.
    - `mkl`: The number of unknown parameters in the model (i.e. dimension of
-   theta). Note at the moment this has to be set to 1 as the compound step
-   is not implemented yet in MLDA and block sampling is too inefficient.
-   - `ndraws`: The number of MCMC samples to be drawn from the finest posteerior.
+   theta).
+   - `ndraws`: The number of MCMC samples to be drawn from the finest posterior.
    - `nburn`: The number of burn-in samples.
    - `nchains`: The number of independent MCMC chains.
    - `nsub`: The subsampling rate for MLDA.
@@ -73,13 +72,13 @@ The pipeline in `example.py` contains the following steps:
  other parameters they want. For example, if you want to set up an MLDA 
  sampler that use the list `coarse_models` of multi-level models and a 
  subsampling rate of 5, you need to type:
- `step_temp = pm.MLDA(subsampling_rate=5, coarse_models=coarse_models)`. 
+ `step_mlda = pm.MLDA(subsampling_rate=5, coarse_models=coarse_models)`. 
     - Sample from the posterior using 
- `trace = pm.sample(step=step_temp, ...)`.
+ `trace = pm.sample(step=step_mlda, ...)`.
     - For more information on MLDA, you can have a look at its implementation within
  `pymc3/step_methods/metropolis.py`. Or in a python shell, type `import pymc3 as pm; 
  help(pm.MLDA)` to see the docstring of the class.
-    - After inference, the code in `example.py` also samples from 
+    - The code in `example.py` also samples from 
     the same posterior using a standard Metropolis algorithm for 
     comparison purposes and prints out some summary information (e.g. ESS) and plots. 
     The true parameters are printed to allow the user to see if the sampler
