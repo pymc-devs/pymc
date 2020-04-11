@@ -681,22 +681,22 @@ def rmsprop(loss_or_grads=None, params=None,
 
 def adadelta(loss_or_grads=None, params=None,
              learning_rate=1.0, rho=0.95, epsilon=1e-6):
-    """ Adadelta updates
+    r""" Adadelta updates
 
     Scale learning rates by the ratio of accumulated gradients to accumulated
     updates, see [1]_ and notes for further description.
 
     Parameters
     ----------
-    loss_or_grads: symbolic expression or list of expressions
+    loss_or_grads : symbolic expression or list of expressions
         A scalar loss expression, or a list of gradient expressions
-    params: list of shared variables
+    params : list of shared variables
         The variables to generate update expressions for
-    learning_rate: float or symbolic scalar
+    learning_rate : float or symbolic scalar
         The learning rate controlling the size of update steps
-    rho: float or symbolic scalar
+    rho : float or symbolic scalar
         Squared gradient moving average decay factor
-    epsilon: float or symbolic scalar
+    epsilon : float or symbolic scalar
         Small value added for numerical stability
 
     Returns

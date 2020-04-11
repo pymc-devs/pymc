@@ -33,7 +33,7 @@ def sample_smc(
     model=None,
     random_seed=-1,
 ):
-    """
+    r"""
     Sequential Monte Carlo based sampling
 
     Parameters

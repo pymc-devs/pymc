@@ -292,7 +292,7 @@ class Inference:
 
 
 class KLqp(Inference):
-    """**Kullback Leibler Divergence Inference**
+    r"""**Kullback Leibler Divergence Inference**
 
     General approach to fit Approximations that define :math:`logq`
     by maximizing ELBO (Evidence Lower Bound). In some cases

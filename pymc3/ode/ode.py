@@ -25,7 +25,7 @@ floatX = theano.config.floatX
 
 
 class DifferentialEquation(theano.Op):
-    """
+    r"""
     Specify an ordinary differential equation
 
     .. math::
@@ -94,14 +94,20 @@ class DifferentialEquation(theano.Op):
         # Cache symbolic sensitivities by the hash of inputs
         self._apply_nodes = {}
         self._output_sensitivities = {}
-    
-    def _system(self, Y, t, p):
-        """This is the function that will be passed to odeint. Solves both ODE and sensitivities.
 
-        Args:
-            Y: augmented state vector (n_states + n_states + n_theta)
-            t: current time
-            p: parameter vector (y0, theta)
+    # FIXME: what are the types of these arguments? Couldn't guess when I was reformatting the
+    # docstring. [2020/04/11:rpg]
+    def _system(self, Y, t, p):
+        r"""This is the function that will be passed to odeint. Solves both ODE and sensitivities.
+
+        Parameters
+        ----------
+        Y :
+            augmented state vector (n_states + n_states + n_theta)
+        t :
+            current time
+        p :
+            parameter vector (y0, theta)
         """
         dydt, ddt_dydp = self._augmented_func(Y[:self.n_states], t, p, Y[self.n_states:])
         derivatives = np.concatenate([dydt, ddt_dydp])

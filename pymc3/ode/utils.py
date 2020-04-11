@@ -18,7 +18,7 @@ import theano.tensor as tt
 
 
 def make_sens_ic(n_states, n_theta, floatX):
-        """
+        r"""
         The sensitivity matrix will always have consistent form. (n_states, n_states + n_theta)
 
         If the first n_states entries of the parameters vector in the simulate call
@@ -32,16 +32,16 @@ def make_sens_ic(n_states, n_theta, floatX):
 
         Parameters
         ----------
-        n_states: int
+        n_states : int
             Number of state variables in the ODE
-        n_theta: int
+        n_theta : int
             Number of ODE parameters
-        floatX: str
+        floatX : str
             dtype to be used for the array
 
         Returns
         -------
-        dydp: array
+        dydp : array
             1D-array of shape (n_states * (n_states + n_theta),), representing the initial condition of the sensitivities
         """
 

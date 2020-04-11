@@ -80,7 +80,7 @@ class Binomial(Discrete):
         self.mode = tt.cast(tround(n * p), self.dtype)
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from Binomial distribution.
 
         Parameters
@@ -102,7 +102,7 @@ class Binomial(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of Binomial distribution at specified value.
 
         Parameters
@@ -215,7 +215,7 @@ class BetaBinomial(Discrete):
         return samples
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from BetaBinomial distribution.
 
         Parameters
@@ -238,7 +238,7 @@ class BetaBinomial(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of BetaBinomial distribution at specified value.
 
         Parameters
@@ -326,7 +326,7 @@ class Bernoulli(Discrete):
         self.mode = tt.cast(tround(self.p), 'int8')
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from Bernoulli distribution.
 
         Parameters
@@ -348,7 +348,7 @@ class Bernoulli(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of Bernoulli distribution at specified value.
 
         Parameters
@@ -427,7 +427,7 @@ class DiscreteWeibull(Discrete):
         self.median = self._ppf(0.5)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of DiscreteWeibull distribution at specified value.
 
         Parameters
@@ -449,7 +449,7 @@ class DiscreteWeibull(Discrete):
                      0 < beta)
 
     def _ppf(self, p):
-        """
+        r"""
         The percentile point function (the inverse of the cumulative
         distribution function) of the discrete Weibull distribution.
         """
@@ -464,7 +464,7 @@ class DiscreteWeibull(Discrete):
         return np.ceil(np.power(np.log(1 - p) / np.log(q), 1. / beta)) - 1
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from DiscreteWeibull distribution.
 
         Parameters
@@ -547,7 +547,7 @@ class Poisson(Discrete):
         self.mode = intX(tt.floor(mu))
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from Poisson distribution.
 
         Parameters
@@ -569,7 +569,7 @@ class Poisson(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of Poisson distribution at specified value.
 
         Parameters
@@ -656,7 +656,7 @@ class NegativeBinomial(Discrete):
         self.mode = intX(tt.floor(mu))
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from NegativeBinomial distribution.
 
         Parameters
@@ -680,7 +680,7 @@ class NegativeBinomial(Discrete):
         return np.asarray(stats.poisson.rvs(g)).reshape(g.shape)
 
     def _random(self, mu, alpha, size):
-        """ Wrapper around stats.gamma.rvs that converts NegativeBinomial's
+        r""" Wrapper around stats.gamma.rvs that converts NegativeBinomial's
         parametrization to scipy.gamma. All parameter arrays should have
         been broadcasted properly by generate_samples at this point and size is
         the scipy.rvs representation.
@@ -692,7 +692,7 @@ class NegativeBinomial(Discrete):
         )
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of NegativeBinomial distribution at specified value.
 
         Parameters
@@ -771,7 +771,7 @@ class Geometric(Discrete):
         self.mode = 1
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from Geometric distribution.
 
         Parameters
@@ -793,7 +793,7 @@ class Geometric(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of Geometric distribution at specified value.
 
         Parameters
@@ -872,7 +872,7 @@ class DiscreteUniform(Discrete):
         return samples
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from DiscreteUniform distribution.
 
         Parameters
@@ -895,7 +895,7 @@ class DiscreteUniform(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of DiscreteUniform distribution at specified value.
 
         Parameters
@@ -975,7 +975,7 @@ class Categorical(Discrete):
             self.mode = tt.squeeze(self.mode)
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from Categorical distribution.
 
         Parameters
@@ -1001,7 +1001,7 @@ class Categorical(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of Categorical distribution at specified value.
 
         Parameters
@@ -1054,7 +1054,7 @@ class Categorical(Discrete):
 
 
 class Constant(Discrete):
-    """
+    r"""
     Constant log-likelihood.
 
     Parameters
@@ -1070,7 +1070,7 @@ class Constant(Discrete):
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from Constant distribution.
 
         Parameters
@@ -1096,7 +1096,7 @@ class Constant(Discrete):
                                 size=size).astype(dtype)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of Constant distribution at specified value.
 
         Parameters
@@ -1180,7 +1180,7 @@ class ZeroInflatedPoisson(Discrete):
         self.mode = self.pois.mode
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from ZeroInflatedPoisson distribution.
 
         Parameters
@@ -1204,7 +1204,7 @@ class ZeroInflatedPoisson(Discrete):
         return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of ZeroInflatedPoisson distribution at specified value.
 
         Parameters
@@ -1302,7 +1302,7 @@ class ZeroInflatedBinomial(Discrete):
         self.mode = self.bin.mode
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from ZeroInflatedBinomial distribution.
 
         Parameters
@@ -1326,7 +1326,7 @@ class ZeroInflatedBinomial(Discrete):
         return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of ZeroInflatedBinomial distribution at specified value.
 
         Parameters
@@ -1448,7 +1448,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         self.mode = self.nb.mode
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from ZeroInflatedNegativeBinomial distribution.
 
         Parameters
@@ -1478,7 +1478,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         return stats.poisson.rvs(g) * (np.random.random(g.shape) < psi)
 
     def _random(self, mu, alpha, size):
-        """ Wrapper around stats.gamma.rvs that converts NegativeBinomial's
+        r""" Wrapper around stats.gamma.rvs that converts NegativeBinomial's
         parametrization to scipy.gamma. All parameter arrays should have
         been broadcasted properly by generate_samples at this point and size is
         the scipy.rvs representation.
@@ -1490,7 +1490,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         )
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of ZeroInflatedNegativeBinomial distribution at specified value.
 
         Parameters

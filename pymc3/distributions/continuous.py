@@ -103,7 +103,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
 
 
 def get_tau_sigma(tau=None, sigma=None):
-    """
+    r"""
     Find precision and standard deviation. The link between the two
     parameterizations is given by the inverse relationship:
 
@@ -770,7 +770,7 @@ class TruncatedNormal(BoundedContinuous):
         name = r'\text{%s}' % name
         return (
             r'${} \sim \text{{TruncatedNormal}}('
-            '\mathit{{mu}}={},~\mathit{{sigma}}={},a={},b={})$'
+            r'\mathit{{mu}}={},~\mathit{{sigma}}={},a={},b={})$'
             .format(
                 name,
                 get_variable_name(self.mu),
@@ -2968,7 +2968,7 @@ class Weibull(PositiveContinuous):
                                                                 get_variable_name(beta))
 
     def logcdf(self, value):
-        """
+        r"""
         Compute the log of the cumulative distribution function for Weibull distribution
         at the specified value.
 
@@ -4130,7 +4130,7 @@ class Logistic(Continuous):
                                                                 get_variable_name(s))
 
     def logcdf(self, value):
-        """
+        r"""
         Compute the log of the cumulative distribution function for Logistic distribution
         at the specified value.
 
