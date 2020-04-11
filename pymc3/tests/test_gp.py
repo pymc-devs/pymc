@@ -165,6 +165,11 @@ class TestCovAdd:
         K_true = theano.function([], cov_true(X))()
         assert np.allclose(K, K_true)
 
+    def test_inv_rightadd(self):
+        M = np.random.randn(2, 2, 2)
+        with pytest.raises(ValueError, match=r"cannot combine"):
+            cov = M + pm.gp.cov.ExpQuad(1, 1.)
+
 
 class TestCovProd:
     def test_symprod_cov(self):
@@ -236,6 +241,11 @@ class TestCovProd:
         K2d = theano.function([], cov2(X, diag=True))()
         npt.assert_allclose(np.diag(K1), K2d, atol=1e-5)
         npt.assert_allclose(np.diag(K2), K1d, atol=1e-5)
+
+    def test_inv_rightprod(self):
+        M = np.random.randn(2, 2, 2)
+        with pytest.raises(ValueError, match=r"cannot combine"):
+            cov = M + pm.gp.cov.ExpQuad(1, 1.)
 
 class TestCovExponentiation:
     def test_symexp_cov(self):

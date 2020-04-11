@@ -116,12 +116,17 @@ class Covariance:
             return Exponentiated(self, other)
 
         raise ValueError("A covariance function can only be exponentiated by a scalar value")
-        
+
 
     def __array_wrap__(self, result):
         """
         Required to allow radd/rmul by numpy arrays.
         """
+        result = np.squeeze(result)
+        if len(result.shape) <= 1:
+            result = result.reshape(1, 1)
+        elif len(result.shape) > 2:
+            raise ValueError(f"cannot combine a covariance function with array of shape {result.shape}")
         r, c = result.shape
         A = np.zeros((r, c))
         for i in range(r):
