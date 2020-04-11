@@ -24,7 +24,7 @@ LATEX_ESCAPE_RE = re.compile(r'(%|_|\$|#|&)', re.MULTILINE)
 
 
 def escape_latex(strng):
-    """Consistently escape LaTeX special characters for _repr_latex_ in IPython
+    r"""Consistently escape LaTeX special characters for _repr_latex_ in IPython
 
     Implementation taken from the IPython magic `format_latex`
 
@@ -48,7 +48,7 @@ def escape_latex(strng):
 
 
 def get_transformed_name(name, transform):
-    """
+    r"""
     Consistent way of transforming names
 
     Parameters
@@ -67,7 +67,7 @@ def get_transformed_name(name, transform):
 
 
 def is_transformed_name(name):
-    """
+    r"""
     Quickly check if a name was transformed with `get_transformed_name`
 
     Parameters
@@ -84,7 +84,7 @@ def is_transformed_name(name):
 
 
 def get_untransformed_name(name):
-    """
+    r"""
     Undo transformation in `get_transformed_name`. Throws ValueError if name wasn't transformed
 
     Parameters
@@ -103,7 +103,7 @@ def get_untransformed_name(name):
 
 
 def get_default_varnames(var_iterator, include_transformed):
-    """Helper to extract default varnames from a trace.
+    r"""Helper to extract default varnames from a trace.
 
     Parameters
     ----------
@@ -124,7 +124,7 @@ def get_default_varnames(var_iterator, include_transformed):
 
 
 def get_variable_name(variable):
-    """Returns the variable data type if it is a constant, otherwise
+    r"""Returns the variable data type if it is a constant, otherwise
     returns the argument name.
     """
     name = variable.name
@@ -145,7 +145,7 @@ def get_variable_name(variable):
 
 
 def update_start_vals(a, b, model):
-    """Update a with b, without overwriting existing keys. Values specified for
+    r"""Update a with b, without overwriting existing keys. Values specified for
     transformed variables on the original scale are also transformed and inserted.
     """
     if model is not None:

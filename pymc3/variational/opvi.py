@@ -164,9 +164,9 @@ class ObjectiveFunction:
 
     Parameters
     ----------
-    op: :class:`Operator`
+    op : :class:`Operator`
         OPVI Functional operator
-    tf: :class:`TestFunction`
+    tf : :class:`TestFunction`
         OPVI TestFunction
     """
 
@@ -186,23 +186,23 @@ class ObjectiveFunction:
 
         Parameters
         ----------
-        obj_n_mc: `int`
+        obj_n_mc : int
             Number of monte carlo samples used for approximation of objective gradients
-        tf_n_mc: `int`
+        tf_n_mc : int
             Number of monte carlo samples used for approximation of test function gradients
-        obj_optimizer: function (loss, params) -> updates
+        obj_optimizer : function (loss, params) -> updates
             Optimizer that is used for objective params
-        test_optimizer: function (loss, params) -> updates
+        test_optimizer : function (loss, params) -> updates
             Optimizer that is used for test function params
-        more_obj_params: `list`
+        more_obj_params : list
             Add custom params for objective optimizer
-        more_tf_params: `list`
+        more_tf_params : list
             Add custom params for test function optimizer
-        more_updates: `dict`
+        more_updates : dict
             Add custom updates to resulting updates
-        more_replacements: `dict`
+        more_replacements : dict
             Apply custom replacements before calculating gradients
-        total_grad_norm_constraint: `float`
+        total_grad_norm_constraint : float
             Bounds gradient norm, prevents exploding gradient problem
 
         Returns

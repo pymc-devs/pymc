@@ -37,12 +37,18 @@ from functools import reduce, partial
 
 
 def kronecker(*Ks):
-    """Return the Kronecker product of arguments:
+    r"""Return the Kronecker product of arguments:
           :math:`K_1 \otimes K_2 \otimes ... \otimes K_D`
 
     Parameters
     ----------
-    Ks: 2D array-like
+    Ks : Iterable of 2D array-like
+        Arrays of which to take the product.
+
+    Returns
+    -------
+    np.ndarray :
+        Block matrix Kroncker product of the argument matrices.
     """
     return reduce(tt.slinalg.kron, Ks)
 
@@ -60,16 +66,20 @@ def cartesian(*arrays):
 
 
 def kron_matrix_op(krons, m, op):
-    """Apply op to krons and m in a way that reproduces ``op(kronecker(*krons), m)``
+    r"""Apply op to krons and m in a way that reproduces ``op(kronecker(*krons), m)``
 
     Parameters
     -----------
-    krons: list of square 2D array-like objects
-            D square matrices :math:`[A_1, A_2, ..., A_D]` to be Kronecker'ed
-            :math:`A = A_1 \otimes A_2 \otimes ... \otimes A_D`
-            Product of column dimensions must be :math:`N`
-    m   : NxM array or 1D array (treated as Nx1)
-           Object that krons act upon
+    krons : list of square 2D array-like objects
+        D square matrices :math:`[A_1, A_2, ..., A_D]` to be Kronecker'ed
+        :math:`A = A_1 \otimes A_2 \otimes ... \otimes A_D`
+        Product of column dimensions must be :math:`N`
+    m : NxM array or 1D array (treated as Nx1)
+        Object that krons act upon
+
+    Returns
+    -------
+    numpy array
     """
     def flat_matrix_op(flat_mat, mat):
         Nmat = mat.shape[1]
