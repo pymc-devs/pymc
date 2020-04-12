@@ -34,16 +34,16 @@ class DifferentialEquation(theano.Op):
     Parameters
     ----------
 
-    func: callable
+    func : callable
         Function specifying the differential equation. Must take arguments y (n_states,), t (scalar), p (n_theta,)
-    times: array
+    times : array
         Array of times at which to evaluate the solution of the differential equation.
-    n_states: int
+    n_states : int
         Dimension of the differential equation.  For scalar differential equations, n_states=1.
         For vector valued differential equations, n_states = number of differential equations in the system.
-    n_theta: int
+    n_theta : int
         Number of parameters in the differential equation.
-    t0: float
+    t0 : float
         Time corresponding to the initial condition
 
     Examples
@@ -95,18 +95,16 @@ class DifferentialEquation(theano.Op):
         self._apply_nodes = {}
         self._output_sensitivities = {}
 
-    # FIXME: what are the types of these arguments? Couldn't guess when I was reformatting the
-    # docstring. [2020/04/11:rpg]
     def _system(self, Y, t, p):
         r"""This is the function that will be passed to odeint. Solves both ODE and sensitivities.
 
         Parameters
         ----------
-        Y :
+        Y : array
             augmented state vector (n_states + n_states + n_theta)
-        t :
+        t : float
             current time
-        p :
+        p : array
             parameter vector (y0, theta)
         """
         dydt, ddt_dydp = self._augmented_func(Y[:self.n_states], t, p, Y[self.n_states:])
