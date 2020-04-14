@@ -285,7 +285,6 @@ class TestLatentOccupancy(SeededTest):
             pm.sample(50, step=[step_one, step_two], start=start, chains=1)
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32 due to starting inf at starting logP")
 class TestRSV(SeededTest):
     '''
     This model estimates the population prevalence of respiratory syncytial virus
@@ -322,3 +321,45 @@ class TestRSV(SeededTest):
     def test_run(self):
         with self.build_model():
             pm.sample(50, step=[pm.NUTS(), pm.Metropolis()])
+
+class TestMultilevelNormal(SeededTest):
+    """
+    Toy multi-level normal model sampled using MLDA.
+    """
+
+    def build_models(self):
+
+        np.random.seed(1234)
+        true_mean = 11.0
+        y = np.array([true_mean])
+
+        with pm.Model() as model_coarse_0:
+            sigma = 1.0
+            x_coeff = pm.Normal('x', true_mean, sigma=100.0)
+            likelihood = pm.Normal('y', mu=x_coeff,
+                                   sigma=sigma, observed=y + 1.0)
+
+        with pm.Model() as model_coarse_1:
+            sigma = 1.0
+            x_coeff = pm.Normal('x', true_mean, sigma=100.0)
+            likelihood = pm.Normal('y', mu=x_coeff,
+                                   sigma=sigma, observed=y + 0.5)
+
+        coarse_models = [model_coarse_0, model_coarse_1]
+
+        with pm.Model() as model:
+            sigma = 1.0
+            x_coeff = pm.Normal('x', true_mean, sigma=100.0)
+            likelihood = pm.Normal('y', mu=x_coeff,
+                                   sigma=sigma, observed=y)
+
+        return model, coarse_models
+
+    def test_run(self):
+        model, coarse_models = self.build_models()
+
+        with model:
+            step = pm.MLDA(subsampling_rate=2, coarse_models=coarse_models)
+            trace = pm.sample(draws=50, chains=2, tune=False, step=step, random_seed=1234)
+            print(pm.stats.summary(trace))
+

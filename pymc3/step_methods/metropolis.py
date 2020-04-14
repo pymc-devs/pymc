@@ -27,7 +27,8 @@ from pymc3.theanof import floatX
 
 __all__ = ['Metropolis', 'DEMetropolis', 'DEMetropolisZ', 'BinaryMetropolis', 'BinaryGibbsMetropolis',
            'CategoricalGibbsMetropolis', 'NormalProposal', 'CauchyProposal',
-           'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal', 'MLDA']
+           'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal',
+           'RecursiveDAProposal', 'MLDA']
 
 # Available proposal distributions for Metropolis
 
@@ -119,11 +120,11 @@ class RecursiveDAProposal(Proposal):
             next_model = self.coarse_models[-1]
             with next_model as model:
                 if self.var_names is None:
-                    next_step_method = pm.Metropolis(proposal_dist=self.base_proposal_dist)
+                    next_step_method = pm.Metropolis(proposal_dist=self.base_proposal_dist, S=self.S)
                 else:
                     vars_next = [var for var in next_model.vars if var.name in self.var_names]
                     next_step_method = pm.Metropolis(proposal_dist=self.base_proposal_dist,
-                                                     vars=vars_next)
+                                                     vars=vars_next, S=self.S)
 
                 output = pm.sample(draws=self.subsampling_rate, step=next_step_method,
                                    start=q0_dict, tune=self.tune, cores=1, chains=1, progressbar=False,
@@ -936,7 +937,7 @@ class MLDA(ArrayStepShared):
 
     def __init__(self, vars=None, S=None, base_proposal_dist=None, scaling=1.,
                  tune=True, tune_interval=100, model=None, mode=None,
-                 subsampling_rate=10, coarse_models=None, **kwargs):
+                 subsampling_rate=2, coarse_models=None, **kwargs):
 
         # Instantiate the recursive DA proposal.
         # This is the main proposal used for all levels (Recursive Delayed Acceptance) except for level 0
@@ -970,6 +971,8 @@ class MLDA(ArrayStepShared):
         # Construct theano function for next-level model likelihood (for use in acceptance)
         if coarse_models is None:
             sys.exit('MLDA method was not given a set of coarse models!')
+            #warnings.warn("this is not here", UserWarning)
+
         next_model = coarse_models[-1]
         next_model = pm.modelcontext(next_model)
         vars_next = [var for var in next_model.vars if var.name in var_names]

@@ -20,6 +20,8 @@ from .checks import close_to
 from .models import (
     simple_categorical,
     mv_simple,
+    mv_simple_coarse,
+    mv_simple_very_coarse,
     mv_simple_discrete,
     mv_prior_simple,
     simple_2model_continuous,
@@ -37,10 +39,12 @@ from pymc3.step_methods import (
     CompoundStep,
     NormalProposal,
     MultivariateNormalProposal,
+    RecursiveDAProposal,
     HamiltonianMC,
     EllipticalSlice,
     DEMetropolis,
     DEMetropolisZ,
+    MLDA
 )
 from pymc3.theanof import floatX
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal
@@ -472,6 +476,110 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                 1.3328478
             ]
         ),
+        MLDA: np.array(
+            [
+                0.10233528,
+                0.40458486,
+                0.17329217,
+                0.46281232,
+                0.22556278,
+                1.52632836,
+                -0.27823807,
+                0.02539625,
+                1.02711735,
+                0.03686346,
+                -0.62841281,
+                -0.27125083,
+                0.31989505,
+                0.84031155,
+                -0.18949138,
+                1.60550262,
+                1.01375291,
+                -0.29742941,
+                0.35312738,
+                0.43363622,
+                1.18898078,
+                0.80063888,
+                0.38445644,
+                0.90184395,
+                1.69150017,
+                2.05452171,
+                -0.13334755,
+                1.61265408,
+                1.36579345,
+                1.3216292,
+                -0.59487037,
+                -0.34648927,
+                1.05107285,
+                0.42870305,
+                0.61552257,
+                0.55239884,
+                0.13929271,
+                0.26213809,
+                -0.2316028,
+                0.19711046,
+                1.42832629,
+                1.93641434,
+                -0.81142379,
+                -0.31059485,
+                -0.3189694,
+                1.43542534,
+                0.40311093,
+                1.63103768,
+                0.24034874,
+                0.33924866,
+                0.94951616,
+                0.71700185,
+                0.79273056,
+                -0.44569146,
+                1.91974783,
+                0.84673795,
+                1.12411833,
+                -0.83123811,
+                -0.54310095,
+                -0.00721347,
+                0.9925055,
+                1.04015058,
+                -0.34958074,
+                -0.14926302,
+                -0.47990225,
+                -0.75629446,
+                -0.95942067,
+                1.68179204,
+                1.20598073,
+                1.39675733,
+                1.22755935,
+                0.06728757,
+                1.05184231,
+                1.01126791,
+                -0.67327093,
+                0.21429651,
+                1.33730461,
+                -1.56174184,
+                -0.64348764,
+                0.98050636,
+                0.25923049,
+                0.58622631,
+                0.46589069,
+                1.44367347,
+                -0.43141573,
+                1.08293374,
+                -0.5563204,
+                1.46287904,
+                1.26019815,
+                0.52972104,
+                1.08792687,
+                1.10064358,
+                1.84881549,
+                0.91179647,
+                0.69316592,
+                -0.47657064,
+                2.22747063,
+                0.83388935,
+                0.84680716,
+                -0.10556406,
+            ]
+        )
     }
 
     def setup_class(self):
@@ -483,7 +591,14 @@ class TestStepMethods:  # yield test doesn't work subclassing object
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_sample_exact(self):
         for step_method in self.master_samples:
-            self.check_trace(step_method)
+            if step_method != MLDA:
+                self.check_trace(step_method)
+
+    @pytest.mark.xfail(reason="Adaptive MLDA version is not finalised yet")
+    def test_sample_exact_mlda(self):
+        for step_method in self.master_samples:
+            if step_method == MLDA:
+                self.check_trace(step_method)
 
     def check_trace(self, step_method):
         """Tests whether the trace for step methods is exactly the same as on master.
@@ -502,6 +617,11 @@ class TestStepMethods:  # yield test doesn't work subclassing object
         on multiple commits.
         """
         n_steps = 100
+        if step_method.__name__ == "MLDA":
+            with Model() as model_coarse:
+                x = Normal("x", mu=0, sigma=1)
+                y = Normal("y", mu=x, sigma=1, observed=1)
+
         with Model() as model:
             x = Normal("x", mu=0, sigma=1)
             y = Normal("y", mu=x, sigma=1, observed=1)
@@ -510,6 +630,11 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                 trace = sample(
                     0, tune=n_steps, discard_tuned_samples=False, step=step, random_seed=1, chains=1
                 )
+            elif step_method.__name__ == "MLDA":
+                coarse_models = [model_coarse]
+                step = step_method(subsampling_rate=2, coarse_models=coarse_models)
+                trace = sample(0, tune=n_steps, discard_tuned_samples=False,
+                               step=step, random_seed=1, chains=1)
             else:
                 trace = sample(
                     0,
@@ -535,6 +660,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
         start, model, (mu, C) = mv_simple()
         unc = np.diag(C) ** 0.5
         check = (("x", np.mean, mu, unc / 10.0), ("x", np.std, unc, unc / 10.0))
+        start_coarse, model_coarse, (mu_coarse, C_coarse) = mv_simple_coarse()
         with model:
             steps = (
                 Slice(),
@@ -550,6 +676,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                         HamiltonianMC(scaling=C, is_cov=True, blocked=False),
                     ]
                 ),
+                MLDA(coarse_models=[model_coarse], S=C, base_proposal_dist=MultivariateNormalProposal)
             )
         for step in steps:
             trace = sample(
@@ -628,7 +755,7 @@ class TestMetropolisProposal:
 
 
 class TestCompoundStep:
-    samplers = (Metropolis, Slice, HamiltonianMC, NUTS, DEMetropolis)
+    samplers = (Metropolis, Slice, HamiltonianMC, NUTS, DEMetropolis, MLDA)
 
     @pytest.mark.skipif(
         theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues"
@@ -1010,3 +1137,145 @@ class TestNutsCheckTrace:
             for c in trace.chains for i in range(len(trace))
         ])
         assert (trace.model_logp == model_logp_).all()
+
+
+class TestMLDA:
+    steppers = [MLDA]
+
+    def test_proposal_and_base_proposal_choice(self):
+        """Test that proposal_dist and base_proposal_dist are set as
+        expected by MLDA"""
+        _, model, _ = mv_simple()
+        _, model_coarse, _ = mv_simple_coarse()
+        with model:
+            sampler = MLDA()
+            assert isinstance(sampler.proposal_dist, NormalProposal)
+            assert sampler.base_proposal_dist is None
+            sampler = MLDA(coarse_models=[model_coarse])
+            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
+            assert isinstance(sampler.base_proposal_dist, NormalProposal)
+
+            s = np.ones(model.ndim)
+            sampler = MLDA(S=s)
+            assert isinstance(sampler.proposal_dist, NormalProposal)
+            assert sampler.base_proposal_dist is None
+            sampler = MLDA(coarse_models=[model_coarse], S=s)
+            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
+            assert isinstance(sampler.base_proposal_dist, NormalProposal)
+            assert sampler.next_step_method.proposal_dist.s == s
+
+            s = np.diag(s)
+            sampler = MLDA(S=s)
+            assert isinstance(sampler.proposal_dist, MultivariateNormalProposal)
+            assert sampler.base_proposal_dist is None
+            sampler = MLDA(coarse_models=[model_coarse], S=s)
+            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
+            assert isinstance(sampler.base_proposal_dist, MultivariateNormalProposal)
+            assert sampler.next_step_method.proposal_dist.s == s
+
+            s[0, 0] = -s[0, 0]
+            with pytest.raises(np.linalg.LinAlgError):
+                sampler = MLDA(S=s)
+            with pytest.raises(np.linalg.LinAlgError):
+                sampler = MLDA(coarse_models=[model_coarse], S=s)
+
+    def test_step_methods_in_each_level(self):
+        """Test that MLDA creates the correct hierarchy of step methods when no
+        coarse models are passed and when two coarse models are passed."""
+        _, model, _ = mv_simple()
+        _, model_coarse, _ = mv_simple_coarse()
+        _, model_very_coarse, _ = mv_simple_very_coarse()
+        with model:
+            sampler = MLDA()
+            assert sampler.next_step_method is None
+            s = np.ones(model.ndim)
+            sampler = MLDA(coarse_models=[model_very_coarse, model_coarse], S=s)
+            assert isinstance(sampler.next_step_method, MLDA)
+            assert isinstance(sampler.next_step_method.next_step_method, Metropolis)
+            assert sampler.next_step_method.next_step_method.proposal_dist.s == s
+
+    def test_warning_no_coarse_models(self):
+        """Test that MLDA generates warning when no coarse models are passed"""
+        with pytest.warns(UserWarning, match='MLDA method was not given a set of coarse models. '
+                                             'Falling back to using a Metropolis sampler.'):
+            _, model, _ = mv_simple()
+            with model:
+                MLDA()
+
+    def test_nonparallelized_chains_are_random(self):
+        """Test that parallel chain are not identical when no parallelisation
+        is applied"""
+        with Model() as coarse_model:
+            x = Normal("x", 0.3, 1)
+
+        with Model() as model:
+            x = Normal("x", 0, 1)
+            for stepper in TestMLDA.steppers:
+                step = stepper(coarse_models=[coarse_model])
+                trace = sample(chains=2, cores=1, draws=20, tune=0, step=step)
+                samples = np.array(trace.get_values("x", combine=False))[:, 5]
+                assert len(set(samples)) == 2, "Non parallelized {} " "chains are identical.".format(
+                    stepper
+                )
+        pass
+
+    def test_parallelized_chains_are_random(self):
+        """Test that parallel chain are not identical when parallelisation
+        is applied"""
+        with Model() as coarse_model:
+            x = Normal("x", 0.3, 1)
+
+        with Model() as model:
+            x = Normal("x", 0, 1)
+            for stepper in TestMLDA.steppers:
+                step = stepper(coarse_models=[coarse_model])
+                trace = sample(chains=2, cores=2, draws=20, tune=0, step=step)
+                samples = np.array(trace.get_values("x", combine=False))[:, 5]
+                assert len(set(samples)) == 2, "Parallelized {} " "chains are identical.".format(
+                    stepper
+                )
+        pass
+
+    """
+    def test_internal_variables(self):
+        
+        with Model() as coarse_model:
+            Normal("n", mu=0.5, sigma=1.5, shape=(2, 3))
+
+        with Model() as model:
+            Normal("n", mu=0, sigma=1, shape=(2, 3))
+
+            step = MLDA(vars=None, S=2.0, base_proposal_dist=Normal, scaling=2.,
+                        tune=False, tune_interval=200, subsampling_rate=4,
+                        coarse_models=[coarse_model])
+            assert step.vars == ['x']
+            assert step.S == 2.0
+            assert step.base_proposal_dist == Normal
+            assert step.scaling == 2.
+            assert step.tune == False
+            assert step.tune_interval == 200
+            assert step.subsampling_rate == 4
+            assert step.coarse_models == [coarse_model]
+            assert step.accepted == 0
+            assert not step.any_discrete
+            assert not step.all_discrete
+            assert step.proposal_dist.coarse_models == [coarse_model]
+            self.num_levels = len(self.coarse_models) + 1
+
+            # assign internal state
+            assert step.proposal_dist.S == 2.0
+            self.vars = vars
+            if vars is None:
+                self.var_names = None
+            else:
+                self.var_names = [var.name for var in vars]
+            self.base_proposal_dist = base_proposal_dist
+            self.scaling = scaling
+            self.tune = tune
+            self.tune_interval = tune_interval
+            self.model = model
+            self.mode = mode
+            self.subsampling_rate = subsampling_rate
+            
+        pass
+    """

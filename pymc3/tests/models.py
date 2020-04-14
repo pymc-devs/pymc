@@ -108,6 +108,36 @@ def mv_simple():
     return model.test_point, model, (mu, C)
 
 
+def mv_simple_coarse():
+    mu = floatX_array([-.2, .6, 1.2])
+    p = floatX_array([
+        [2., 0, 0],
+        [.05, .1, 0],
+        [1., -0.05, 5.5]])
+    tau = np.dot(p, p.T)
+    with pm.Model() as model:
+        pm.MvNormal('x', tt.constant(mu), tau=tt.constant(tau),
+                    shape=3, testval=floatX_array([.1, 1., .8]))
+    H = tau
+    C = np.linalg.inv(H)
+    return model.test_point, model, (mu, C)
+
+
+def mv_simple_very_coarse():
+    mu = floatX_array([-.3, .7, 1.3])
+    p = floatX_array([
+        [2., 0, 0],
+        [.05, .1, 0],
+        [1., -0.05, 5.5]])
+    tau = np.dot(p, p.T)
+    with pm.Model() as model:
+        pm.MvNormal('x', tt.constant(mu), tau=tt.constant(tau),
+                    shape=3, testval=floatX_array([.1, 1., .8]))
+    H = tau
+    C = np.linalg.inv(H)
+    return model.test_point, model, (mu, C)
+
+
 def mv_simple_discrete():
     d = 2
     n = 5
