@@ -40,7 +40,7 @@ class TestType:
     def test_float64(self):
         data = np.random.randn(5)
 
-        with Model as coarse_model:
+        with Model() as coarse_model:
             x = Normal('x', testval=np.array(1., dtype='float64'))
             obs = Normal('obs', mu=x, sigma=1., observed=data + 0.5)
 
@@ -62,7 +62,7 @@ class TestType:
     def test_float32(self):
         data = np.random.randn(5).astype('float32')
 
-        with Model as coarse_model:
+        with Model() as coarse_model:
             x = Normal('x', testval=np.array(1., dtype='float32'))
             obs = Normal('obs', mu=x, sigma=1., observed=data + 0.5)
 
