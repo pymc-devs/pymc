@@ -1196,11 +1196,16 @@ class TestMLDA:
 
     def test_warning_no_coarse_models(self):
         """Test that MLDA generates warning when no coarse models are passed"""
-        with pytest.warns(UserWarning, match='MLDA method was not given a set of coarse models. '
-                                             'Falling back to using a Metropolis sampler.'):
+        with pytest.raises(SystemExit) as pytest_wrapped_e:
             _, model, _ = mv_simple()
             with model:
                 MLDA()
+        assert pytest_wrapped_e.type == SystemExit
+        assert pytest_wrapped_e.value.code == 'MLDA step method was not given a ' \
+                                              'set of multi-level coarse models. ' \
+                                              'Either provide a list of models ' \
+                                              'using argument coarse_modelsor use ' \
+                                              'another step method.'
 
     def test_nonparallelized_chains_are_random(self):
         """Test that parallel chain are not identical when no parallelisation

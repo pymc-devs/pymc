@@ -19,6 +19,7 @@ import scipy.linalg
 import warnings
 import sys
 import logging
+import warnings
 
 from ..distributions import draw_values
 from .arraystep import ArrayStepShared, PopulationArrayStepShared, ArrayStep, metrop_select, Competence
@@ -82,31 +83,13 @@ class MultivariateNormalProposal(Proposal):
 
 
 class RecursiveDAProposal(Proposal):
-    def __init__(self, vars, S, base_proposal_dist, scaling,
-                 tune, tune_interval, model, mode,
-                 subsampling_rate, coarse_models, **kwargs):
+    def __init__(self, next_step_method, next_model,
+                 tune, tune_interval, subsampling_rate):
 
-        # check that num_levels is compatible with model levels
-
-        self.coarse_models = coarse_models
-        if self.coarse_models is None:
-            sys.exit('MLDA proposal was not given a set of coarse models!')
-
-        self.num_levels = len(self.coarse_models) + 1
-
-        # assign internal state
-        self.S = S
-        self.vars = vars
-        if vars is None:
-            self.var_names = None
-        else:
-            self.var_names = [var.name for var in vars]
-        self.base_proposal_dist = base_proposal_dist
-        self.scaling = scaling
+        self.next_step_method = next_step_method
+        self.next_model = next_model
         self.tune = tune
         self.tune_interval = tune_interval
-        self.model = model
-        self.mode = mode
         self.subsampling_rate = subsampling_rate
 
     def __call__(self, q0_dict):
@@ -116,36 +99,10 @@ class RecursiveDAProposal(Proposal):
         _log = logging.getLogger('pymc3')
         _log.setLevel(logging.ERROR)
 
-        if self.num_levels == 2:
-            next_model = self.coarse_models[-1]
-            with next_model as model:
-                if self.var_names is None:
-                    next_step_method = pm.Metropolis(proposal_dist=self.base_proposal_dist, S=self.S)
-                else:
-                    vars_next = [var for var in next_model.vars if var.name in self.var_names]
-                    next_step_method = pm.Metropolis(proposal_dist=self.base_proposal_dist,
-                                                     vars=vars_next, S=self.S)
-
-                output = pm.sample(draws=self.subsampling_rate, step=next_step_method,
-                                   start=q0_dict, tune=self.tune, cores=1, chains=1, progressbar=False,
-                                   compute_convergence_checks=False, discard_tuned_samples=False).point(-1)
-        else:
-            next_model = self.coarse_models[-1]
-            next_coarse_models = self.coarse_models[:-1]
-            with next_model as model:
-                if self.var_names is None:
-                    next_step_method = pm.MLDA(base_proposal_dist=self.base_proposal_dist,
-                                               subsampling_rate=self.subsampling_rate,
-                                               coarse_models=next_coarse_models)
-                else:
-                    vars_next = [var for var in next_model.vars if var.name in self.var_names]
-                    next_step_method = pm.MLDA(base_proposal_dist=self.base_proposal_dist,
-                                               subsampling_rate=self.subsampling_rate,
-                                               coarse_models=next_coarse_models,
-                                               vars=vars_next)
-                output = pm.sample(draws=self.subsampling_rate, step=next_step_method,
-                                   start=q0_dict, tune=self.tune, cores=1, chains=1, progressbar=False,
-                                   compute_convergence_checks=False, discard_tuned_samples=False).point(-1)
+        with self.next_model:
+            output = pm.sample(draws=self.subsampling_rate, step=self.next_step_method,
+                               start=q0_dict, tune=self.tune, chains=1, progressbar=False,
+                               compute_convergence_checks=False, discard_tuned_samples=False).point(-1)
 
         _log.setLevel(logging.NOTSET)
 
@@ -939,20 +896,36 @@ class MLDA(ArrayStepShared):
                  tune=True, tune_interval=100, model=None, mode=None,
                  subsampling_rate=2, coarse_models=None, **kwargs):
 
-        # Instantiate the recursive DA proposal.
-        # This is the main proposal used for all levels (Recursive Delayed Acceptance) except for level 0
-        self.proposal_dist = RecursiveDAProposal(vars, S, base_proposal_dist, scaling,
-                                                 tune, tune_interval, model, mode,
-                                                 subsampling_rate, coarse_models,
-                                                 **kwargs)
-
         model = pm.modelcontext(model)
+
+        # assign internal state
+        self.coarse_models = coarse_models
+        if self.coarse_models is None:
+            sys.exit('MLDA step method was not given a set of multi-level coarse models. '
+                     'Either provide a list of models using argument coarse_models'
+                     'or use another step method.')
+        self.num_levels = len(self.coarse_models) + 1
+        self.S = S
+        self.base_proposal_dist = base_proposal_dist
+        self.scaling = scaling
+        self.tune = tune
+        self.tune_interval = tune_interval
+        self.model = model
+        self.next_model = self.coarse_models[-1]
+        self.mode = mode
+        self.subsampling_rate = subsampling_rate
 
         # Process model variables
         if vars is None:
             vars = model.vars
         vars = pm.inputvars(vars)
         var_names = [var.name for var in vars]
+
+        self.vars = vars
+        if vars is None:
+            self.var_names = None
+        else:
+            self.var_names = [var.name for var in vars]
 
         self.accepted = 0
 
@@ -962,25 +935,58 @@ class MLDA(ArrayStepShared):
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
 
-        self.mode = mode
-
         # Construct theano function for current-level model likelihood (for use in acceptance)
         shared = pm.make_shared_replacements(vars, model)
         self.delta_logp = delta_logp(model.logpt, vars, shared)
 
         # Construct theano function for next-level model likelihood (for use in acceptance)
-        if coarse_models is None:
-            sys.exit('MLDA method was not given a set of coarse models!')
-            #warnings.warn("this is not here", UserWarning)
-
-        next_model = coarse_models[-1]
-        next_model = pm.modelcontext(next_model)
+        next_model = pm.modelcontext(self.next_model)
         vars_next = [var for var in next_model.vars if var.name in var_names]
         vars_next = pm.inputvars(vars_next)
         shared_next = pm.make_shared_replacements(vars_next, next_model)
         self.delta_logp_next = delta_logp(next_model.logpt, vars_next, shared_next)
 
         super().__init__(vars, shared)
+
+        # initialise complete step method hierarchy
+        if self.num_levels == 2:
+            with self.next_model:
+                if self.var_names is None:
+                    self.next_step_method = pm.Metropolis(proposal_dist=self.base_proposal_dist, S=self.S)
+                else:
+                    vars_next = [var for var in self.next_model.vars if var.name in self.var_names]
+                    self.next_step_method = pm.Metropolis(proposal_dist=self.base_proposal_dist,
+                                                          vars=vars_next, S=self.S)
+        else:
+            next_coarse_models = self.coarse_models[:-1]
+            with self.next_model:
+                if self.var_names is None:
+                    self.next_step_method = pm.MLDA(vars=None, S=self.S,
+                                                    base_proposal_dist=self.base_proposal_dist,
+                                                    scaling=self.scaling,
+                                                    tune=self.tune,
+                                                    tune_interval=self.tune_interval,
+                                                    model=None, mode=self.mode,
+                                                    subsampling_rate=self.subsampling_rate,
+                                                    coarse_models=next_coarse_models, **kwargs)
+
+                else:
+                    vars_next = [var for var in self.next_model.vars if var.name in self.var_names]
+                    self.next_step_method = pm.MLDA(vars=vars_next, S=self.S,
+                                                    base_proposal_dist=self.base_proposal_dist,
+                                                    scaling=self.scaling,
+                                                    tune=self.tune,
+                                                    tune_interval=self.tune_interval,
+                                                    model=None, mode=self.mode,
+                                                    subsampling_rate=self.subsampling_rate,
+                                                    coarse_models=next_coarse_models, **kwargs)
+
+        # instantiate the recursive DA proposal.
+        # this is the main proposal used for all levels (Recursive Delayed Acceptance)
+        # (except for level 0 where the step method is Metropolis and not MLDA)
+        self.proposal_dist = RecursiveDAProposal(self.next_step_method, self.next_model,
+                                                 self.tune, self.tune_interval,
+                                                 self.subsampling_rate)
 
     def astep(self, q0):
 
@@ -1006,7 +1012,10 @@ class MLDA(ArrayStepShared):
         """
 
         # Evaluate MLDA acceptance log-ratio
-        accept = self.delta_logp(q, q0) + self.delta_logp_next(q0, q)
+        if (q == q0).all():
+            accept = np.float(0.0)
+        else:
+            accept = self.delta_logp(q, q0) + self.delta_logp_next(q0, q)
 
         # Accept/reject sample - next sample is stored in q_new
         q_new, accepted = metrop_select(accept, q, q0)
