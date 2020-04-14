@@ -31,9 +31,9 @@ def infer_shape(X, n_points=None):
     return n_points
 
 
-def stabilize(K):
+def stabilize(K, jitter=1e-6):
     """ adds small diagonal to a covariance matrix """
-    return K + 1e-6 * tt.identity_like(K)
+    return K + jitter * tt.identity_like(K)
 
 
 def kmeans_inducing_points(n_inducing, X):

@@ -22,13 +22,13 @@ import pymc3 as pm
 from pymc3.gp.cov import Covariance, Constant
 from pymc3.gp.mean import Zero
 from pymc3.gp.util import (conditioned_vars, infer_shape,
-                           stabilize, cholesky, solve_lower, solve_upper)
+                           stabilize, cholesky, solve_lower, solve_upper, solve)
 from pymc3.distributions import draw_values
 from theano.tensor.nlinalg import eigh
 from ..math import (cartesian, kron_dot, kron_diag,
                     kron_solve_lower, kron_solve_upper)
 
-__all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse', 'LatentKron', 'MarginalKron']
+__all__ = ['Latent', 'Marginal', 'TP', 'MarginalSparse', 'LatentKron', 'MarginalKron', 'VariationalClassifier']
 
 
 class Base:
@@ -566,6 +566,101 @@ class Marginal(Base):
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, diag, *givens)
         return mu, cov
+
+
+class VariationalClassifier(Marginal):
+    """Variational Gaussian Process for classification.
+
+    References
+    ----------
+    [1]: Mark N. Gibbs and David J.C. MacKay,
+    Variational Gaussian Process Classiers, 2000
+    https://ieeexplore.ieee.org/document/883477
+    """
+
+    def __init__(self, nu=None, mu=None, cov_func=Constant(0.0)):
+        self.nu = nu
+        self.mu = mu
+        super().__init__(mean_func=Zero(), cov_func=cov_func)
+
+    def __add__(self, other):
+        raise NotImplementedError("VariationalClassifier doesn't support addition")
+
+    def _sigmoid(self, x):
+        return 1./(1. + tt.exp(-x))
+
+    def _get_delta(self, nu):
+        return (self._sigmoid(nu) - 0.5) / (2. * nu)
+
+    def _tau(self, s):
+        return 1. / tt.sqrt(1 + np.pi * s / 8.)
+
+    def _build_lower_bound_conditional(self, Xnew, pred_noise, diag, X, y, noise,
+                                       cov_total, mean_total):
+        N = X.shape[0]
+        M = Xnew.shape[0]
+        Knp1 = cov_total(X, Xnew) # N x M
+        Cn = cov_total(X) # N x N
+        k = cov_total(Xnew) # M x M
+        Deltan = tt.diag(tt.squeeze(self._get_delta(self.nu))) # N x N
+        d = 0.5 * (-1.) ** (y + 1.) # N x 1
+        Hn = 2. * tt.dot(Deltan, Cn) + tt.eye(N) # N x N
+        LHn = cholesky(Hn) # N x N
+        LHn_Knp1_T = tt.transpose(solve_lower(LHn, Knp1)) # M x N
+        LHn_d = tt.dot(LHn, d) # N x 1
+        mul = tt.dot(LHn_Knp1_T, LHn_d) # M x 1
+        sl = k + 2. * tt.dot(LHn_Knp1_T, tt.dot(tt.dot(LHn, Deltan), Knp1)) # M x M
+        return tt.squeeze(mul), stabilize(sl)
+
+    def _build_upper_bound_conditional(self, Xnew, pred_noise, diag, X, y, noise,
+                                       cov_total, mean_total):
+        N = X.shape[0]
+        M = Xnew.shape[0]
+        Knp1 = cov_total(X, Xnew) # N x M
+        k = cov_total(Xnew) # M x M
+        Cn = cov_total(X) # N x N
+        LCn = cholesky(Cn) # N x N
+        LCn_Knp1_T = tt.transpose(solve_lower(LCn, Knp1)) # M x N
+        LCn_Knp1 = tt.dot(LCn, Knp1) # N x M
+        su_inv = k + tt.dot(LCn_Knp1_T, LCn_Knp1) # M x M
+        su_LCn_Knp1_T = solve(su_inv, LCn_Knp1_T) # M x N
+        b = tt.reshape(self.mu, [N, 1]) * (-1.) ** (y + 1.) # N x 1
+        LCn_b = tt.dot(LCn, b) # N x 1
+        muu = -tt.dot(su_LCn_Knp1_T, LCn_b)  # M x 1
+        su = solve(su_inv, tt.eye(M)) # M x M
+        return tt.squeeze(muu), stabilize(su)
+
+    def conditional(self, name, Xnew, bound='lower', pred_noise=False, given=None, **kwargs):
+        givens = self._get_given_vals(given)
+        if bound == 'lower':
+            mu, cov = self._build_lower_bound_conditional(Xnew, pred_noise, False, *givens)
+        elif bound == 'upper':
+            mu, cov = self._build_upper_bound_conditional(Xnew, pred_noise, False, *givens)
+        else:
+            raise ValueError(f"invalid bound for conditional: {bound}")
+        shape = infer_shape(Xnew, kwargs.pop("shape", None))
+        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
+
+    def predict(self, Xnew, bound='lower', point=None, diag=False, pred_noise=False, given=None):
+        raise NotImplementedError("cannot draw from the predictive distribution"
+                                  "variational gaussian process.")
+
+    def predictt(self, Xnew, bound='lower', diag=False, pred_noise=False, given=None):
+        if given is None:
+            given = {}
+
+        probs = self.predictt_proba(Xnew, bound, diag, pred_noise, given)
+        return 1. * (probs > 0.5)
+
+    def predictt_proba(self, Xnew, bound='lower', diag=False, pred_noise=False, given=None):
+        givens = self._get_given_vals(given)
+        if bound == 'lower':
+            mu, cov = self._build_lower_bound_conditional(Xnew, pred_noise, False, *givens)
+        elif bound == 'upper':
+            mu, cov = self._build_upper_bound_conditional(Xnew, pred_noise, False, *givens)
+        else:
+            raise ValueError(f"invalid bound for conditional: {bound}")
+        return self._sigmoid(tt.dot(self._tau(cov), mu))
 
 
 @conditioned_vars(["X", "Xu", "y", "sigma"])
