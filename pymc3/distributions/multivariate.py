@@ -214,19 +214,17 @@ class MvNormal(_QuadFormBase):
                              [0.1, 0.2, 1.0]])
         data = np.random.multivariate_normal(mu, true_cov, 10)
 
-        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
-        chol_packed = pm.LKJCholeskyCov('chol_packed',
-            n=3, eta=2, sd_dist=sd_dist)
-        chol = pm.expand_packed_triangular(3, chol_packed)
+        sd_dist = pm.Exponential.dist(1.0, shape=3)
+        chol, corr, stds = pm.LKJCholeskyCov('chol_cov', n=3, eta=2,
+            sd_dist=sd_dist, compute_corr=True)
         vals = pm.MvNormal('vals', mu=mu, chol=chol, observed=data)
 
     For unobserved values it can be better to use a non-centered
     parametrization::
 
-        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
-        chol_packed = pm.LKJCholeskyCov('chol_packed',
-            n=3, eta=2, sd_dist=sd_dist)
-        chol = pm.expand_packed_triangular(3, chol_packed)
+        sd_dist = pm.Exponential.dist(1.0, shape=3)
+        chol, _, _ = pm.LKJCholeskyCov('chol_cov', n=3, eta=2,
+            sd_dist=sd_dist, compute_corr=True)
         vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=(5, 3))
         vals = pm.Deterministic('vals', tt.dot(chol, vals_raw.T).T)
     """
