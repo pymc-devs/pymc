@@ -1289,7 +1289,9 @@ class _LKJCholeskyCov(Continuous):
         return samples
 
 
-def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False):
+def LKJCholeskyCov(
+        name, eta, n, sd_dist, compute_corr=False, name_stds="stds", name_rho="Rho"
+):
 
     # compute Cholesky decomposition
     packed_chol = _LKJCholeskyCov(name, eta=eta, n=n, sd_dist=sd_dist)
@@ -1301,9 +1303,9 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False):
         # compute covariance matrix
         cov = tt.dot(chol, chol.T)
         # extract standard deviations and rho
-        stds = pm.Deterministic("stds", tt.sqrt(tt.diag(cov)))
+        stds = pm.Deterministic(name_stds, tt.sqrt(tt.diag(cov)))
         corr = tt.diag(stds ** -1).dot(cov.dot(tt.diag(stds ** -1)))
-        r = pm.Deterministic("Rho", corr[np.triu_indices(n, k=1)])
+        r = pm.Deterministic(name_rho, corr[np.triu_indices(n, k=1)])
 
         return chol, r, stds
 
