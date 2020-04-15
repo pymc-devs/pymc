@@ -1011,7 +1011,7 @@ def _lkj_normalizing_constant(eta, n):
     return result
 
 
-class LKJCholeskyCov(Continuous):
+class _LKJCholeskyCov(Continuous):
     R"""Covariance matrix with LKJ distributed correlations.
 
     This defines a distribution over cholesky decomposed covariance
@@ -1033,7 +1033,7 @@ class LKJCholeskyCov(Continuous):
     Notes
     -----
     Since the cholesky factor is a lower triangular matrix, we use
-    packed storge for the matrix: We store and return the values of
+    packed storage for the matrix: We store and return the values of
     the lower triangular matrix in a one-dimensional array, numbered
     by row::
 
@@ -1287,6 +1287,25 @@ class LKJCholeskyCov(Continuous):
         else:
             samples = np.reshape(samples, size + sample_shape)
         return samples
+
+
+def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False):
+
+    # compute Cholesky decomposition
+    packed_chol = _LKJCholeskyCov(name, eta=eta, n=n, sd_dist=sd_dist)
+    if not compute_corr:
+        return packed_chol
+
+    else:
+        chol = pm.expand_packed_triangular(n, packed_chol, lower=True)
+        # compute covariance matrix
+        cov = tt.dot(chol, chol.T)
+        # extract standard deviations and rho
+        stds = pm.Deterministic("stds", tt.sqrt(tt.diag(cov)))
+        corr = tt.diag(stds ** -1).dot(cov.dot(tt.diag(stds ** -1)))
+        r = pm.Deterministic("Rho", corr[np.triu_indices(n, k=1)])
+
+        return chol, r, stds
 
 
 class LKJCorr(Continuous):
