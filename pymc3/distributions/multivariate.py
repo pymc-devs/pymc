@@ -1184,8 +1184,7 @@ class _LKJCholeskyCov(Continuous):
 
 
 def LKJCholeskyCov(
-        name, eta, n, sd_dist, compute_corr=False, name_stds="stds", name_rho="Rho",
-        *args, **kwargs
+        name, eta, n, sd_dist, compute_corr=False, store_in_trace=True, *args, **kwargs
 ):
     R"""Wrapper function for covariance matrix with LKJ distributed correlations.
 
@@ -1330,9 +1329,12 @@ def LKJCholeskyCov(
         # compute covariance matrix
         cov = tt.dot(chol, chol.T)
         # extract standard deviations and rho
-        stds = pm.Deterministic(name_stds, tt.sqrt(tt.diag(cov)))
+        stds = tt.sqrt(tt.diag(cov))
         inv_stds = 1 / stds
-        corr = pm.Deterministic(name_rho, inv_stds[None, :] * cov * inv_stds[:, None])
+        corr = inv_stds[None, :] * cov * inv_stds[:, None]
+        if store_in_trace:
+            stds = pm.Deterministic(f"{name}_stds", stds)
+            corr = pm.Deterministic(f"{name}_corr", corr)
 
         return chol, corr, stds
 
