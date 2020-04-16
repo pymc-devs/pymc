@@ -1207,15 +1207,14 @@ def LKJCholeskyCov(
         A distribution for the standard deviations.
     compute_corr: bool, default=False
         If `True`, returns three values: the Cholesky decomposition, the correlations
-        and the standard deviations of the covariance matrix. These will be included
-        in the posterior trace. Otherwise, only returns the packed Cholesky
-        decomposition. Defaults to `False` to ensure backwards compatibility.
-    name_stds: str, optional, default="stds"
-        Specify only when `compute_corr=True`. The name to give to the posterior
-        standard deviations in the trace.
-    name_rho: str, optional, default="Rho"
-        Specify only when `compute_corr=True`. The name to give to the posterior matrix
-        of correlations in the trace.
+        and the standard deviations of the covariance matrix. Otherwise, only returns
+        the packed Cholesky decomposition. Defaults to `False` to ensure backwards
+        compatibility.
+    store_in_trace: bool, default=True
+        Whether to store the correlations and standard deviations of the covariance
+        matrix in the posterior trace. If `True`, they will automatically be named as
+        `{name}_corr` and `{name}_stds` respectively. Effective only when
+        `compute_corr=True`.
 
     Returns
     -------
