@@ -1,4 +1,4 @@
-arviz>=0.4.1
+arviz>=0.7.0
 theano>=1.0.4
 numpy>=1.13.0
 scipy>=0.18.1
@@ -7,4 +7,4 @@ patsy>=0.5.1
 fastprogress>=0.2.0
 h5py>=2.7.0
 typing-extensions>=3.7.4
-contextvars; python_version < '3.7' 
+contextvars; python_version < '3.7'
