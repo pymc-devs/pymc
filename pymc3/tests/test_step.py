@@ -660,7 +660,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
         start, model, (mu, C) = mv_simple()
         unc = np.diag(C) ** 0.5
         check = (("x", np.mean, mu, unc / 10.0), ("x", np.std, unc, unc / 10.0))
-        start_coarse, model_coarse, (mu_coarse, C_coarse) = mv_simple_coarse()
+        _, model_coarse, _ = mv_simple_coarse()
         with model:
             steps = (
                 Slice(),
@@ -1194,7 +1194,7 @@ class TestMLDA:
             assert isinstance(sampler.next_step_method.next_step_method, Metropolis)
             assert sampler.next_step_method.next_step_method.proposal_dist.s == s
 
-    def test_warning_no_coarse_models(self):
+    def test_exit_on_no_coarse_models(self):
         """Test that MLDA generates warning when no coarse models are passed"""
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             _, model, _ = mv_simple()
@@ -1240,6 +1240,32 @@ class TestMLDA:
                     stepper
                 )
         pass
+
+    def test_acceptance_rate_against_coarseness(self):
+        """Test that the acceptance rate increases when the coarse model is closer to
+        the fine model."""
+        with Model() as coarse_model_0:
+            x = Normal("x", 5.0, 1.0)
+
+        with Model() as coarse_model_1:
+            x = Normal("x", 5.5, 1.5)
+
+        with Model() as coarse_model_2:
+            x = Normal("x", 6.0, 2.0)
+
+        possible_coarse_models = [coarse_model_0, coarse_model_1, coarse_model_2]
+        acc = []
+
+        with Model() as model:
+            x = Normal("x", 5.0, 1.0)
+            for coarse_model in possible_coarse_models:
+                step = MLDA(coarse_models=[coarse_model], subsampling_rate=1, tune=False)
+                trace = sample(chains=1, draws=500, tune=0, step=step)
+                acc.append(trace.get_sampler_stats('accepted').mean())
+                assert acc[0] > acc[1] > acc[2], "Acceptance rate is not strictly increasing when" \
+                                                 "coarse model is closer to fine model. Acceptance rates" \
+                                                 "were: {}".format(acc)
+
 
     """
     def test_internal_variables(self):
