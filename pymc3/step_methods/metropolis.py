@@ -952,11 +952,15 @@ class MLDA(ArrayStepShared):
         if self.num_levels == 2:
             with self.next_model:
                 if self.var_names is None:
-                    self.next_step_method = pm.Metropolis(proposal_dist=self.base_proposal_dist, S=self.S)
+                    self.next_step_method = pm.Metropolis(proposal_dist=self.base_proposal_dist, S=self.S,
+                                                          scaling=self.scaling, tune=self.tune,
+                                                          tune_interval=self.tune_interval)
                 else:
                     vars_next = [var for var in self.next_model.vars if var.name in self.var_names]
-                    self.next_step_method = pm.Metropolis(proposal_dist=self.base_proposal_dist,
-                                                          vars=vars_next, S=self.S)
+                    self.next_step_method = pm.Metropolis(vars=vars_next,
+                                                          proposal_dist=self.base_proposal_dist, S=self.S,
+                                                          scaling=self.scaling, tune=self.tune,
+                                                          tune_interval=self.tune_interval)
         else:
             next_coarse_models = self.coarse_models[:-1]
             with self.next_model:
