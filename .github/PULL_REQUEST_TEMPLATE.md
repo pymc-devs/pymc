@@ -6,4 +6,4 @@ Depending on what your PR does, here are a few things you might want to address 
 + [ ] important background, or a details about the implementation
 + [ ] are the changes covered by tests? 
 + [ ] are example-notebooks affected in a relevant way?
-+ [ ] right before it's ready to merge, mention the PR in the RELEASE-NOTES.md
++ [ ] describe the change and link to the PR in the RELEASE-NOTES.md
