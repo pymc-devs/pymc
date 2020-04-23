@@ -87,7 +87,7 @@ class SamplerReport:
     def t_sampling(self) -> typing.Optional[float]:
         """
         Number of seconds that the sampling procedure took.
-        
+
         (Includes parallelization overhead.)
         """
         return self._t_sampling
@@ -108,6 +108,7 @@ class SamplerReport:
             return
 
         from pymc3 import rhat, ess
+        from arviz import from_pymc3
 
         valid_name = [rv.name for rv in model.free_RVs + model.deterministics]
         varnames = []
@@ -119,8 +120,9 @@ class SamplerReport:
             if rv_name in trace.varnames:
                 varnames.append(rv_name)
 
-        self._ess = ess = ess(trace, var_names=varnames)
-        self._rhat = rhat = rhat(trace, var_names=varnames)
+        idata = from_pymc3(trace, log_likelihood=False)
+        self._ess = ess = ess(idata, var_names=varnames)
+        self._rhat = rhat = rhat(idata, var_names=varnames)
 
         warnings = []
         rhat_max = max(val.max() for val in rhat.values())
