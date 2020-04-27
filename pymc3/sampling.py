@@ -1999,7 +1999,7 @@ def init_nuts(
     elif init == "adapt_full":
         start = [model.test_point] * chains
         mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
-        cov = np.ones((model.ndim, model.ndim))
+        cov = np.eye(model.ndim)
         potential = quadpotential.QuadPotentialFullAdapt(model.ndim, mean, cov, 10)
     else:
         raise ValueError("Unknown initializer: {}.".format(init))
