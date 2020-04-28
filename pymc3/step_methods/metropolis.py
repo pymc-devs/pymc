@@ -91,6 +91,8 @@ class RecursiveDAProposal(Proposal):
         self.tune = tune
         self.tune_interval = tune_interval
         self.subsampling_rate = subsampling_rate
+        self.counter_tune = 0
+        self.counter_normal = 0
 
     def __call__(self, q0_dict):
         """Returns proposed sample given the current sample in dictionary form (q0_dict).
@@ -100,9 +102,16 @@ class RecursiveDAProposal(Proposal):
         _log.setLevel(logging.ERROR)
 
         with self.next_model:
-            output = pm.sample(draws=self.subsampling_rate, step=self.next_step_method,
-                               start=q0_dict, tune=self.tune, chains=1, progressbar=False,
-                               compute_convergence_checks=False, discard_tuned_samples=False).point(-1)
+            if self.tune:
+                output = pm.sample(draws=0, step=self.next_step_method,
+                                   start=q0_dict, tune=self.subsampling_rate, chains=1, progressbar=False,
+                                   compute_convergence_checks=False, discard_tuned_samples=False).point(-1)
+                self.counter_tune += 1
+            else:
+                output = pm.sample(draws=self.subsampling_rate, step=self.next_step_method,
+                                   start=q0_dict, tune=0, chains=1, progressbar=False,
+                                   compute_convergence_checks=False, discard_tuned_samples=False).point(-1)
+                self.counter_normal += 1
 
         _log.setLevel(logging.NOTSET)
 
@@ -885,7 +894,7 @@ class MLDA(ArrayStepShared):
     """
     name = 'mlda'
 
-    default_blocked = True  # All dimensions are sampled in on block
+    default_blocked = True  # All levels use block sampling, except level 0 where the user can choose
     generates_stats = True
     stats_dtypes = [{
         'accept': np.float64,
@@ -894,7 +903,7 @@ class MLDA(ArrayStepShared):
 
     def __init__(self, vars=None, S=None, base_proposal_dist=None, scaling=1.,
                  tune=True, tune_interval=100, model=None, mode=None,
-                 subsampling_rate=2, coarse_models=None, **kwargs):
+                 subsampling_rate=2, coarse_models=None, base_blocked=False, **kwargs):
 
         model = pm.modelcontext(model)
 
@@ -914,12 +923,13 @@ class MLDA(ArrayStepShared):
         self.next_model = self.coarse_models[-1]
         self.mode = mode
         self.subsampling_rate = subsampling_rate
+        self.base_blocked = base_blocked
 
         # Process model variables
         if vars is None:
             vars = model.vars
         vars = pm.inputvars(vars)
-        var_names = [var.name for var in vars]
+        #var_names = [var.name for var in vars]
 
         self.vars = vars
         if vars is None:
@@ -941,7 +951,7 @@ class MLDA(ArrayStepShared):
 
         # Construct theano function for next-level model likelihood (for use in acceptance)
         next_model = pm.modelcontext(self.next_model)
-        vars_next = [var for var in next_model.vars if var.name in var_names]
+        vars_next = [var for var in next_model.vars if var.name in self.var_names]
         vars_next = pm.inputvars(vars_next)
         shared_next = pm.make_shared_replacements(vars_next, next_model)
         self.delta_logp_next = delta_logp(next_model.logpt, vars_next, shared_next)
@@ -954,13 +964,15 @@ class MLDA(ArrayStepShared):
                 if self.var_names is None:
                     self.next_step_method = pm.Metropolis(proposal_dist=self.base_proposal_dist, S=self.S,
                                                           scaling=self.scaling, tune=self.tune,
-                                                          tune_interval=self.tune_interval)
+                                                          tune_interval=self.tune_interval,
+                                                          model=None, blocked=self.base_blocked)
                 else:
                     vars_next = [var for var in self.next_model.vars if var.name in self.var_names]
                     self.next_step_method = pm.Metropolis(vars=vars_next,
                                                           proposal_dist=self.base_proposal_dist, S=self.S,
                                                           scaling=self.scaling, tune=self.tune,
-                                                          tune_interval=self.tune_interval)
+                                                          tune_interval=self.tune_interval,
+                                                          model=None, blocked=self.base_blocked)
         else:
             next_coarse_models = self.coarse_models[:-1]
             with self.next_model:
@@ -972,7 +984,8 @@ class MLDA(ArrayStepShared):
                                                     tune_interval=self.tune_interval,
                                                     model=None, mode=self.mode,
                                                     subsampling_rate=self.subsampling_rate,
-                                                    coarse_models=next_coarse_models, **kwargs)
+                                                    coarse_models=next_coarse_models,
+                                                    base_blocked=self.base_blocked, **kwargs)
 
                 else:
                     vars_next = [var for var in self.next_model.vars if var.name in self.var_names]
@@ -983,7 +996,8 @@ class MLDA(ArrayStepShared):
                                                     tune_interval=self.tune_interval,
                                                     model=None, mode=self.mode,
                                                     subsampling_rate=self.subsampling_rate,
-                                                    coarse_models=next_coarse_models, **kwargs)
+                                                    coarse_models=next_coarse_models,
+                                                    base_blocked=self.base_blocked, **kwargs)
 
         # instantiate the recursive DA proposal.
         # this is the main proposal used for all levels (Recursive Delayed Acceptance)
@@ -993,6 +1007,17 @@ class MLDA(ArrayStepShared):
                                                  self.subsampling_rate)
 
     def astep(self, q0):
+
+        if self.proposal_dist.tune != self.tune:
+            self.proposal_dist.tune = self.tune
+            self.accepted = 0
+            #if self.next_step_method.__class__.__name__ == 'MLDA':
+            #    self.accepted = 0
+            #else:
+            #    if
+            #    self.next_step_method.methods[0].accepted = 0
+            #    self.next_step_method.methods[1].accepted = 0
+
 
         # Convert current sample from numpy array -> dict before feeding to proposal
         q0_dict = self.bij.rmap(q0)

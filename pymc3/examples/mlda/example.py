@@ -100,21 +100,21 @@ def main():
     # PART 1: PARAMETERS
     # Set the resolution of the multi-level models (from coarsest to finest)
     # and the random field parameters.
-    resolutions = [(60, 60), (120, 120)]
+    resolutions = [(40, 40), (70, 70), (100, 100)]
     field_mean = 0
     field_stdev = 1
     lamb_cov = 0.1
     # Set the number of unknown parameters
     mkl = 2
     # Number of draws from the distribution
-    ndraws = 200
+    ndraws = 500
     # Number of "burn-in points" (which we'll discard)
-    nburn = False
-    tune_interval = 10000  # big to prevent tuning
+    nburn = 500
+    tune_interval = 100
     # Number of independent chains
     nchains = 2
     # Subsampling rate for MLDA
-    nsub = 2
+    nsub = 3
     # Set the sigma for inference
     sigma = 0.01
     # Data generation seed
@@ -123,6 +123,7 @@ def main():
     sampling_seed = 12345
     # Datapoints list
     points_list = [0.1, 0.3, 0.5, 0.7, 0.9]
+    blocked = False
 
     # PART 2: GENERATE MODELS AND DATA
     # Note this can take minutes for large resolutions
@@ -205,10 +206,19 @@ def main():
         # Initialise an MLDA step method object, passing the subsampling rate and
         # coarse models list
         # Also initialise a Metropolis step method object
-        step_metropolis = pm.Metropolis(tune_interval=tune_interval)
-        step_mlda = pm.MLDA(subsampling_rate=nsub, coarse_models=coarse_models)
+        step_metropolis = pm.Metropolis(tune_interval=tune_interval, blocked=blocked)
+        step_mlda = pm.MLDA(subsampling_rate=nsub, coarse_models=coarse_models,
+                            tune=True, tune_interval=tune_interval, base_blocked=blocked)
 
         # inference
+        # MLDA
+        t_start = time.time()
+        method_names.append("MLDA")
+        traces.append(pm.sample(draws=ndraws, step=step_mlda,
+                                chains=nchains, tune=nburn,
+                                random_seed=sampling_seed))
+        runtimes.append(time.time() - t_start)
+
         # Metropolis
         t_start = time.time()
         method_names.append("Metropolis")
@@ -217,13 +227,7 @@ def main():
                                 random_seed=sampling_seed))
         runtimes.append(time.time() - t_start)
 
-        # MLDA
-        t_start = time.time()
-        method_names.append("MLDA")
-        traces.append(pm.sample(draws=ndraws, step=step_mlda,
-                                chains=nchains, tune=nburn,
-                                random_seed=sampling_seed))
-        runtimes.append(time.time() - t_start)
+
 
         for i, trace in enumerate(traces):
             acc.append(trace.get_sampler_stats('accepted').mean())
