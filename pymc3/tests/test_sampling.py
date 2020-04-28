@@ -675,6 +675,8 @@ class TestSamplePPCW(SeededTest):
         "advi+adapt_diag_grad",
         "map",
         "advi_map",
+        "adapt_full",
+        "jitter+adapt_full",
     ],
 )
 def test_exec_nuts_init(method):

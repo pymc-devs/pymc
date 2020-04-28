@@ -1853,8 +1853,8 @@ def init_nuts(
         * adapt_diag: Start with a identity mass matrix and then adapt a diagonal based on the
           variance of the tuning samples. All chains use the test value (usually the prior mean)
           as starting point.
-        * jitter+adapt_diag: Same as ``adapt_diag``, but use uniform jitter in [-1, 1] as starting
-          point in each chain.
+        * jitter+adapt_diag: Same as ``adapt_diag``, but use test value plus a uniform jitter in
+          [-1, 1] as starting point in each chain.
         * advi+adapt_diag: Run ADVI and then adapt the resulting diagonal mass matrix based on the
           sample variance of the tuning samples.
         * advi+adapt_diag_grad: Run ADVI and then adapt the resulting diagonal mass matrix based
@@ -1863,7 +1863,10 @@ def init_nuts(
         * advi: Run ADVI to estimate posterior mean and diagonal mass matrix.
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
         * map: Use the MAP as starting point. This is discouraged.
-        * adapt_full: Adapt a dense mass matrix using the sample covariances
+        * adapt_full: Adapt a dense mass matrix using the sample covariances. All chains use the
+          test value (usually the prior mean) as starting point.
+        * jitter+adapt_full: Same as ``adapt_full`, but use test value plus a uniform jitter in
+          [-1, 1] as starting point in each chain.
     chains: int
         Number of jobs to start.
     n_init: int
@@ -1998,6 +2001,16 @@ def init_nuts(
         potential = quadpotential.QuadPotentialFull(cov)
     elif init == "adapt_full":
         start = [model.test_point] * chains
+        mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
+        cov = np.eye(model.ndim)
+        potential = quadpotential.QuadPotentialFullAdapt(model.ndim, mean, cov, 10)
+    elif init == 'jitter+adapt_full':
+        start = []
+        for _ in range(chains):
+            mean = {var: val.copy() for var, val in model.test_point.items()}
+            for val in mean.values():
+                val[...] += 2 * np.random.rand(*val.shape) - 1
+            start.append(mean)
         mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
         cov = np.eye(model.ndim)
         potential = quadpotential.QuadPotentialFullAdapt(model.ndim, mean, cov, 10)
