@@ -100,16 +100,16 @@ def main():
     # PART 1: PARAMETERS
     # Set the resolution of the multi-level models (from coarsest to finest)
     # and the random field parameters.
-    resolutions = [(40, 40), (70, 70), (100, 100)]
+    resolutions = [(50, 50), (100, 100)]
     field_mean = 0
     field_stdev = 1
     lamb_cov = 0.1
     # Set the number of unknown parameters
     mkl = 2
     # Number of draws from the distribution
-    ndraws = 500
+    ndraws = 1000
     # Number of "burn-in points" (which we'll discard)
-    nburn = 500
+    nburn = 1000
     tune_interval = 100
     # Number of independent chains
     nchains = 2
