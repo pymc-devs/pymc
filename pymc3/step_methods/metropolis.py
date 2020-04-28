@@ -91,8 +91,6 @@ class RecursiveDAProposal(Proposal):
         self.tune = tune
         self.tune_interval = tune_interval
         self.subsampling_rate = subsampling_rate
-        self.counter_tune = 0
-        self.counter_normal = 0
 
     def __call__(self, q0_dict):
         """Returns proposed sample given the current sample in dictionary form (q0_dict).
@@ -106,12 +104,10 @@ class RecursiveDAProposal(Proposal):
                 output = pm.sample(draws=0, step=self.next_step_method,
                                    start=q0_dict, tune=self.subsampling_rate, chains=1, progressbar=False,
                                    compute_convergence_checks=False, discard_tuned_samples=False).point(-1)
-                self.counter_tune += 1
             else:
                 output = pm.sample(draws=self.subsampling_rate, step=self.next_step_method,
                                    start=q0_dict, tune=0, chains=1, progressbar=False,
                                    compute_convergence_checks=False, discard_tuned_samples=False).point(-1)
-                self.counter_normal += 1
 
         _log.setLevel(logging.NOTSET)
 
@@ -929,13 +925,8 @@ class MLDA(ArrayStepShared):
         if vars is None:
             vars = model.vars
         vars = pm.inputvars(vars)
-        #var_names = [var.name for var in vars]
-
         self.vars = vars
-        if vars is None:
-            self.var_names = None
-        else:
-            self.var_names = [var.name for var in vars]
+        self.var_names = [var.name for var in self.vars]
 
         self.accepted = 0
 
@@ -961,43 +952,25 @@ class MLDA(ArrayStepShared):
         # initialise complete step method hierarchy
         if self.num_levels == 2:
             with self.next_model:
-                if self.var_names is None:
-                    self.next_step_method = pm.Metropolis(proposal_dist=self.base_proposal_dist, S=self.S,
-                                                          scaling=self.scaling, tune=self.tune,
-                                                          tune_interval=self.tune_interval,
-                                                          model=None, blocked=self.base_blocked)
-                else:
-                    vars_next = [var for var in self.next_model.vars if var.name in self.var_names]
-                    self.next_step_method = pm.Metropolis(vars=vars_next,
-                                                          proposal_dist=self.base_proposal_dist, S=self.S,
-                                                          scaling=self.scaling, tune=self.tune,
-                                                          tune_interval=self.tune_interval,
-                                                          model=None, blocked=self.base_blocked)
+                vars_next = [var for var in self.next_model.vars if var.name in self.var_names]
+                self.next_step_method = pm.Metropolis(vars=vars_next,
+                                                      proposal_dist=self.base_proposal_dist, S=self.S,
+                                                      scaling=self.scaling, tune=self.tune,
+                                                      tune_interval=self.tune_interval,
+                                                      model=None, blocked=self.base_blocked)
         else:
             next_coarse_models = self.coarse_models[:-1]
             with self.next_model:
-                if self.var_names is None:
-                    self.next_step_method = pm.MLDA(vars=None, S=self.S,
-                                                    base_proposal_dist=self.base_proposal_dist,
-                                                    scaling=self.scaling,
-                                                    tune=self.tune,
-                                                    tune_interval=self.tune_interval,
-                                                    model=None, mode=self.mode,
-                                                    subsampling_rate=self.subsampling_rate,
-                                                    coarse_models=next_coarse_models,
-                                                    base_blocked=self.base_blocked, **kwargs)
-
-                else:
-                    vars_next = [var for var in self.next_model.vars if var.name in self.var_names]
-                    self.next_step_method = pm.MLDA(vars=vars_next, S=self.S,
-                                                    base_proposal_dist=self.base_proposal_dist,
-                                                    scaling=self.scaling,
-                                                    tune=self.tune,
-                                                    tune_interval=self.tune_interval,
-                                                    model=None, mode=self.mode,
-                                                    subsampling_rate=self.subsampling_rate,
-                                                    coarse_models=next_coarse_models,
-                                                    base_blocked=self.base_blocked, **kwargs)
+                vars_next = [var for var in self.next_model.vars if var.name in self.var_names]
+                self.next_step_method = pm.MLDA(vars=vars_next, S=self.S,
+                                                base_proposal_dist=self.base_proposal_dist,
+                                                scaling=self.scaling,
+                                                tune=self.tune,
+                                                tune_interval=self.tune_interval,
+                                                model=None, mode=self.mode,
+                                                subsampling_rate=self.subsampling_rate,
+                                                coarse_models=next_coarse_models,
+                                                base_blocked=self.base_blocked, **kwargs)
 
         # instantiate the recursive DA proposal.
         # this is the main proposal used for all levels (Recursive Delayed Acceptance)
