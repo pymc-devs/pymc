@@ -13,6 +13,7 @@
 - `SamplerReport` (`MultiTrace.report`) now has properties `n_tune`, `n_draws`, `t_sampling` for increased convenience (see [#3827](https://github.com/pymc-devs/pymc3/pull/3827))
 - `pm.sample` now has support for adapting dense mass matrix using `QuadPotentialFullAdapt` (see [#3596](https://github.com/pymc-devs/pymc3/pull/3596), [#3705](https://github.com/pymc-devs/pymc3/pull/3705) and [#3858](https://github.com/pymc-devs/pymc3/pull/3858))
 - `Moyal` distribution added (see [#3870](https://github.com/pymc-devs/pymc3/pull/3870)).
+- `pm.LKJCholeskyCov` now automatically computes and returns the unpacked Cholesky decomposition, the correlations and the standard deviations of the covariance matrix (see [#3881](https://github.com/pymc-devs/pymc3/pull/3881)).
 
 ### Maintenance
 - Remove `sample_ppc` and `sample_ppc_w` that were deprecated in 3.6.
