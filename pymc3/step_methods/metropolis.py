@@ -100,6 +100,7 @@ class RecursiveDAProposal(Proposal):
         _log.setLevel(logging.ERROR)
 
         with self.next_model:
+            # Check if the tuning flag has been set to False - in which case tuning is stopped.
             if self.tune:
                 output = pm.sample(draws=0, step=self.next_step_method,
                                    start=q0_dict, tune=self.subsampling_rate, chains=1, progressbar=False,
@@ -863,12 +864,12 @@ class MLDA(ArrayStepShared):
     ----------
     vars : list
         List of variables for sampler
-    S : standard deviation or covariance matrix
+    S : standard deviation or base proposal covariance matrix
         Some measure of variance to parameterize base proposal distribution
     base_proposal_dist : function
         Function that returns zero-mean deviates when parameterized with
         S (and n). Defaults to normal. This is the proposal used in the
-        coarsest chain (level=0).
+        coarsest (base) chain, i.e. level=0.
     scaling : scalar or array
         Initial scale factor for base proposal. Defaults to 1.
     tune : bool
@@ -887,6 +888,9 @@ class MLDA(ArrayStepShared):
         one (level=0) and the last model is the second finest one (level=L-1 where L is
         the number of levels). Note this list excludes the model passed to the model
         argument above, which is the finest available).
+    base_blocked : bool
+        To flag to choose whether base sampler (level=0) is a Compound Metropolis step (base_blocked=False)
+        or a blocked Metropolis step (base_blocked=True).
     """
     name = 'mlda'
 
@@ -984,12 +988,6 @@ class MLDA(ArrayStepShared):
         if self.proposal_dist.tune != self.tune:
             self.proposal_dist.tune = self.tune
             self.accepted = 0
-            #if self.next_step_method.__class__.__name__ == 'MLDA':
-            #    self.accepted = 0
-            #else:
-            #    if
-            #    self.next_step_method.methods[0].accepted = 0
-            #    self.next_step_method.methods[1].accepted = 0
 
 
         # Convert current sample from numpy array -> dict before feeding to proposal
