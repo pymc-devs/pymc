@@ -17,6 +17,7 @@ import pandas as pd
 import theano.tensor as tt
 from pymc3.glm import utils
 import pytest
+from packaging import version
 
 
 class TestUtils:
@@ -38,6 +39,7 @@ class TestUtils:
         m, l = utils.any_to_tensor_and_labels(self.data.values, labels=['x2', 'x3'])
         self.assertMatrixLabels(m, l, lt=['x2', 'x3'])
 
+    @pytest.mark.skipif(version.parse(pd.__version__) >= version.parse('0.23'), reason='requires pandas before 0.23')
     def test_pandas_init(self):
         m, l = utils.any_to_tensor_and_labels(self.data)
         self.assertMatrixLabels(m, l)
