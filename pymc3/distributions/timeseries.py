@@ -73,9 +73,12 @@ class AR1(distribution.Continuous):
 
         x_im1 = x[:-1]
         x_i = x[1:]
-        boundary = Normal.dist(0., tau=tau_e).logp
 
-        innov_like = Normal.dist(k * x_im1, tau=tau_e).logp(x_i)
+        var_ar1 = 1 / ((1-k**2)*tau_e) #the variance of an AR(1) process
+        sd_ar1 = tt.sqrt(var_ar1) #the standard deviation of an AR(1) process
+        boundary = Normal.dist(0., sigma=sd_ar1).logp #likelihood of the first observation
+
+        innov_like = Normal.dist(k * x_im1, tau=tau_e).logp(x_i) #likelihood of all adjacent pairs of observations
         return boundary(x[0]) + tt.sum(innov_like)
 
     def _repr_latex_(self, name=None, dist=None):
