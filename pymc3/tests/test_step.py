@@ -490,12 +490,6 @@ class TestStepMethods:  # yield test doesn't work subclassing object
             if step_method != MLDA:
                 self.check_trace(step_method)
 
-    @pytest.mark.xfail(reason="Adaptive MLDA version is not finalised yet")
-    def test_sample_exact_mlda(self):
-        for step_method in self.master_samples:
-            if step_method == MLDA:
-                self.check_trace(step_method)
-
     def check_trace(self, step_method):
         """Tests whether the trace for step methods is exactly the same as on master.
 
