@@ -324,7 +324,12 @@ class TestRSV(SeededTest):
 
 class TestMultilevelNormal(SeededTest):
     """
-    Toy three-level normal model sampled using MLDA.
+    Toy three-level normal model sampled using MLDA. The finest model is a
+    Normal distribution with unknown mean and sigma=1.0 where we have only one
+    observed datum (y = 11.0). The coarse models are the same but with the observed
+    datum changed to y = 11.5 and y = 12.0. This is a very simple way to create
+    a 3-level system of "approximate" coarse models.
+    Normals with
     """
 
     def build_models(self):
@@ -360,6 +365,6 @@ class TestMultilevelNormal(SeededTest):
 
         with model:
             step = pm.MLDA(subsampling_rate=2, coarse_models=coarse_models)
-            trace = pm.sample(draws=50, chains=2, tune=50, step=step, random_seed=1234)
+            trace = pm.sample(draws=50, chains=2, tune=50, step=step)
 
 
