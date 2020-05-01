@@ -28,6 +28,11 @@ class TestTextSampling:
             db = text.Text(self.name)
             pm.sample(20, tune=10, init=None, trace=db, cores=2)
 
+    def test_supports_sampler_stats_diverging(self):
+        with pm.Model():
+            pm.Normal("mu", mu=0, sigma=1, shape=2)
+            pm.sample(20, tune=10, init=None, trace='text', cores=1)
+
     def teardown_method(self):
         bf.remove_file_or_directory(self.name)
 

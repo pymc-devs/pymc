@@ -912,6 +912,7 @@ def _iter_sample(
             step.reset_tuning()
         for i in range(draws):
             stats = None
+            diverging = False
 
             if i == 0 and hasattr(step, "iter_count"):
                 step.iter_count = 0
@@ -927,7 +928,6 @@ def _iter_sample(
             else:
                 point = step.step(point)
                 strace.record(point)
-                diverging = False
             if callback is not None:
                 warns = getattr(step, "warnings", None)
                 callback(trace=strace, draw=Draw(chain, i == draws, i, i < tune, stats, point, warns))
