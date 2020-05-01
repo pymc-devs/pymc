@@ -69,11 +69,12 @@ class AR1(distribution.Continuous):
         TensorVariable
         """
         k = self.k
-        tau_e = self.tau_e
+        tau_e = self.tau_e #innovation precision
+        tau = self.tau #ar1 precision
 
         x_im1 = x[:-1]
         x_i = x[1:]
-        boundary = Normal.dist(0., tau=tau_e).logp
+        boundary = Normal.dist(0., tau=tau).logp
 
         innov_like = Normal.dist(k * x_im1, tau=tau_e).logp(x_i)
         return boundary(x[0]) + tt.sum(innov_like)
