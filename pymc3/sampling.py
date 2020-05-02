@@ -334,8 +334,28 @@ def sample(
     Notes
     -----
     Optional keyword arguments can be passed to ``sample`` to be delivered to the
-    ``step_method``s used during sampling. In particular, the NUTS step method accepts
-    a number of arguments. Common options are:
+    ``step_method``s used during sampling.
+
+    If you let ``sample()`` automatically assign the ``step_method``(s), and you
+    can correctly anticipate what they will be, then you can address them here
+    with keys that are (usually) the snakey_lowercase names of the step method.
+    e.g. to address:
+        1. ``target_accept`` to NUTS: nuts={'target_accept':0.9}
+        2. ``transit_p`` to BinaryGibbsMetropolis: binary_gibbs_metropolis={'transit_p':.7}
+
+    Available names are:
+        ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
+        ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
+        ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
+
+    Alternatively if you manually declare the ``step_method``(s), within the
+    ``step`` kwarg, then you can address the ``step_method`` kwargs directly.
+    e.g. a compound step might look like:
+        step=[pm.NUTS([freeRV1, freeRV2], target_accept=0.9),
+              pm.BinaryGibbsMetropolis([freeRV3], transit_p=.7)]
+
+    In particular, the NUTS step method accepts a number of arguments.
+    Common options are:
 
         * target_accept: float in [0, 1]. The step size is tuned such that we approximate this
           acceptance rate. Higher values like 0.9 or 0.95 often work better for problematic
