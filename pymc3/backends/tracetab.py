@@ -17,6 +17,7 @@
 
 import numpy as np
 import pandas as pd
+import warnings
 
 from ..util import get_default_varnames
 
@@ -39,6 +40,12 @@ def trace_to_dataframe(trace, chains=None, varnames=None, include_transformed=Fa
         If true transformed variables will be included in the resulting
         DataFrame.
     """
+    warnings.warn(
+        'The `trace_to_dataframe` function will soon be removed. '
+        'Please use ArviZ to save traces. '
+        'If you have good reasons for using the `trace_to_dataframe` function, file an issue and tell us about them. ',
+        DeprecationWarning,
+    )
     var_shapes = trace._straces[0].var_shapes
 
     if varnames is None:
