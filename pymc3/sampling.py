@@ -336,33 +336,39 @@ def sample(
     Optional keyword arguments can be passed to ``sample`` to be delivered to the
     ``step_method``s used during sampling.
 
-    If you let ``sample()`` automatically assign the ``step_method``(s), and you
-    can correctly anticipate what they will be, then you can address them here
-    with keys that are (usually) the snakey_lowercase names of the step method.
-    e.g. to address:
-        1. ``target_accept`` to NUTS: nuts={'target_accept':0.9}
-        2. ``transit_p`` to BinaryGibbsMetropolis: binary_gibbs_metropolis={'transit_p':.7}
+    If your model uses only one step method, you can address step method kwargs
+    directly. In particular, the NUTS step method has several options including:
 
-    Available names are:
-        ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
-        ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
-        ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
-
-    Alternatively if you manually declare the ``step_method``(s), within the
-    ``step`` kwarg, then you can address the ``step_method`` kwargs directly.
-    e.g. a compound step might look like:
-        step=[pm.NUTS([freeRV1, freeRV2], target_accept=0.9),
-              pm.BinaryGibbsMetropolis([freeRV3], transit_p=.7)]
-
-    In particular, the NUTS step method accepts a number of arguments.
-    Common options are:
-
-        * target_accept: float in [0, 1]. The step size is tuned such that we approximate this
-          acceptance rate. Higher values like 0.9 or 0.95 often work better for problematic
-          posteriors.
-        * max_treedepth: The maximum depth of the trajectory tree.
+        * target_accept: float in [0, 1]. The step size is tuned such that we
+          approximate this acceptance rate. Higher values like 0.9 or 0.95 often
+          work better for problematic posteriors
+        * max_treedepth: The maximum depth of the trajectory tree
         * step_scale: float, default 0.25
           The initial guess for the step size scaled down by :math:`1/n**(1/4)`
+
+    If your model uses multiple step methods, aka a Compound Step, then you have
+    two ways to address arguments to each step method:
+
+        A: If you let ``sample()`` automatically assign the ``step_method``s,
+         and you can correctly anticipate what they will be, then you can wrap
+         step method kwargs in a dict and pass that to sample() with a kwarg set
+         to the name of the step method.
+         e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
+         you could send:
+            1. ``target_accept`` to NUTS: nuts={'target_accept':0.9}
+            2. ``transit_p`` to BinaryGibbsMetropolis: binary_gibbs_metropolis={'transit_p':.7}
+
+         Note that available names are:
+            ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
+            ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
+            ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
+
+        B: If you manually declare the ``step_method``s, within the ``step``
+         kwarg, then you can address the ``step_method`` kwargs directly.
+         e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
+         you could send:
+            step=[pm.NUTS([freeRV1, freeRV2], target_accept=0.9),
+                  pm.BinaryGibbsMetropolis([freeRV3], transit_p=.7)]
 
     You can find a full list of arguments in the docstring of the step methods.
 
