@@ -368,36 +368,9 @@ def sample(
     """
     model = modelcontext(model)
 
-    nuts_kwargs = kwargs.pop("nuts_kwargs", None)
-    if nuts_kwargs is not None:
-        warnings.warn(
-            "The nuts_kwargs argument has been deprecated. Pass step "
-            "method arguments directly to sample instead",
-            DeprecationWarning,
-        )
-        kwargs.update(nuts_kwargs)
-    step_kwargs = kwargs.pop("step_kwargs", None)
-    if step_kwargs is not None:
-        warnings.warn(
-            "The step_kwargs argument has been deprecated. Pass step "
-            "method arguments directly to sample instead",
-            DeprecationWarning,
-        )
-        kwargs.update(step_kwargs)
-
     if cores is None:
         cores = min(4, _cpu_count())
 
-    if "njobs" in kwargs:
-        cores = kwargs["njobs"]
-        warnings.warn(
-            "The njobs argument has been deprecated. Use cores instead.", DeprecationWarning
-        )
-    if "nchains" in kwargs:
-        chains = kwargs["nchains"]
-        warnings.warn(
-            "The nchains argument has been deprecated. Use chains instead.", DeprecationWarning
-        )
     if chains is None:
         chains = max(2, cores)
     if isinstance(start, dict):
@@ -412,11 +385,6 @@ def sample(
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
     if not isinstance(random_seed, Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
-    if "chain" in kwargs:
-        chain_idx = kwargs["chain"]
-        warnings.warn(
-            "The chain argument has been deprecated. Use chain_idx instead.", DeprecationWarning
-        )
 
     if start is not None:
         for start_vals in start:
