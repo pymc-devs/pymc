@@ -115,7 +115,7 @@ class SamplerReport:
             if is_transformed_name(rv_name):
                 rv_name2 = get_untransformed_name(rv_name)
                 rv_name = rv_name2 if rv_name2 in valid_name else rv_name
-            if rv_name in trace.varnames:
+            if rv_name in idata.posterior:
                 varnames.append(rv_name)
 
         self._ess = ess = arviz.ess(idata, var_names=varnames)
@@ -144,7 +144,7 @@ class SamplerReport:
             warnings.append(warn)
 
         eff_min = min(val.min() for val in ess.values())
-        n_samples = len(trace) * trace.nchains
+        n_samples = idata.posterior.sizes['chain'] * idata.posterior.sizes['draw']
         if eff_min < 200 and n_samples >= 500:
             msg = ("The estimated number of effective samples is smaller than "
                    "200 for some parameters.")
