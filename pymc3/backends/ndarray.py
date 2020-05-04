@@ -55,7 +55,7 @@ def save_trace(trace: MultiTrace, directory: Optional[str]=None, overwrite=False
     """
     warnings.warn(
         'The `save_trace` function will soon be removed.'
-        'Instead, use ArviZ to save/load traces.',
+        'Instead, use `arviz.to_netcdf` to save traces.',
         DeprecationWarning,
     )
 
@@ -98,7 +98,7 @@ def load_trace(directory: str, model=None) -> MultiTrace:
     """
     warnings.warn(
         'The `load_trace` function will soon be removed.'
-        'Instead, use ArviZ to save/load traces.',
+        'Instead, use `arviz.from_netcdf` to load traces.',
         DeprecationWarning,
     )
     straces = []

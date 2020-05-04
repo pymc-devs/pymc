@@ -194,7 +194,7 @@ def load(name, model=None):
     """
     warnings.warn(
         'The `load` function will soon be removed. '
-        'Please use ArviZ to save traces. '
+        'Please use `arviz.from_netcdf` to load traces. '
         'If you have good reasons for using the `load` function, file an issue and tell us about them. ',
         DeprecationWarning,
     )
@@ -239,7 +239,7 @@ def dump(name, trace, chains=None):
     """
     warnings.warn(
         'The `dump` function will soon be removed. '
-        'Please use ArviZ to save traces. '
+        'Please use `arviz.to_netcdf` to save traces. '
         'If you have good reasons for using the `dump` function, file an issue and tell us about them. ',
         DeprecationWarning,
     )
