@@ -537,16 +537,16 @@ def sample(
     )
 
     if compute_convergence_checks:
-    # convert trace to InferenceData, with awareness of warmup!
+        # convert trace to InferenceData, with awareness of warmup!
         # arviz 0.7.0 doesn't ignore warmup draws if they are in the trace! (see arviz #1146)
         # that's why here, we make sure to only put actual posterior samples into idata.posterior
         trace_warmup = trace[:-n_draws]   # <-- may result in len(trace_warmup) == 0
         trace_posterior = trace[-n_draws:]
-    idata = arviz.from_pymc3(trace_posterior, log_likelihood=False)
+        idata = arviz.from_pymc3(trace_posterior, log_likelihood=False)
         # save additional sampling metadata
-    idata.posterior.attrs['n_tune'] = n_tune
-    idata.posterior.attrs['n_draws'] = n_draws
-    idata.posterior.attrs['t_sampling'] = t_sampling
+        idata.posterior.attrs['n_tune'] = n_tune
+        idata.posterior.attrs['n_draws'] = n_draws
+        idata.posterior.attrs['t_sampling'] = t_sampling
 
         if draws - tune < 100:
             warnings.warn("The number of samples is too small to check convergence reliably.")
