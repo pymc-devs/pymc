@@ -30,7 +30,7 @@ from ..distributions import (
     Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
     Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
     ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal, Rice,
-    Kumaraswamy
+    Kumaraswamy, Moyal
 )
 
 from ..distributions import continuous
@@ -944,17 +944,43 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize('n', [2, 3])
     def test_dirichlet(self, n):
-        self.pymc3_matches_scipy(Dirichlet, Simplex(
-            n), {'a': Vector(Rplus, n)}, dirichlet_logpdf)
+        self.pymc3_matches_scipy(
+            Dirichlet,
+            Simplex(n),
+            {'a': Vector(Rplus, n)},
+            dirichlet_logpdf
+        )
+
+    @pytest.mark.parametrize('n', [3, 4])
+    def test_dirichlet_init_fail(self, n):
+        with Model():
+            with pytest.raises(
+                    ValueError,
+                    match=r"All concentration parameters \(a\) must be > 0."
+            ):
+                _ = Dirichlet('x', a=np.zeros(n), shape=n)
+            with pytest.raises(
+                    ValueError,
+                    match=r"All concentration parameters \(a\) must be > 0."
+            ):
+                _ = Dirichlet('x', a=np.array([-1.] * n), shape=n)
 
     def test_dirichlet_2D(self):
-        self.pymc3_matches_scipy(Dirichlet, MultiSimplex(2, 2),
-                                 {'a': Vector(Vector(Rplus, 2), 2)}, dirichlet_logpdf)
+        self.pymc3_matches_scipy(
+            Dirichlet,
+            MultiSimplex(2, 2),
+            {'a': Vector(Vector(Rplus, 2), 2)},
+            dirichlet_logpdf
+        )
 
     @pytest.mark.parametrize('n', [2, 3])
     def test_multinomial(self, n):
-        self.pymc3_matches_scipy(Multinomial, Vector(Nat, n), {'p': Simplex(n), 'n': Nat},
-                                 multinomial_logpdf)
+        self.pymc3_matches_scipy(
+            Multinomial,
+            Vector(Nat, n),
+            {'p': Simplex(n), 'n': Nat},
+            multinomial_logpdf
+        )
 
     @pytest.mark.parametrize('p,n', [
         [[.25, .25, .25, .25], 1],
@@ -1186,6 +1212,13 @@ class TestMatchesScipy(SeededTest):
                                  lambda value, nu, sigma: sp.rice.logpdf(value, b=nu / sigma, loc=0, scale=sigma))
         self.pymc3_matches_scipy(Rice, Rplus, {'b': Rplus, 'sigma': Rplusbig},
                                  lambda value, b, sigma: sp.rice.logpdf(value, b=b, loc=0, scale=sigma))
+
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    def test_moyal(self):
+        self.pymc3_matches_scipy(Moyal, R, {'mu': R, 'sigma': Rplusbig},
+                                 lambda value, mu, sigma: floatX(sp.moyal.logpdf(value, mu, sigma)))
+        self.check_logcdf(Moyal, R, {'mu': R, 'sigma': Rplusbig},
+                          lambda value, mu, sigma: floatX(sp.moyal.logcdf(value, mu, sigma)))
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):

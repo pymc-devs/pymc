@@ -21,6 +21,7 @@ import json
 import os
 import shutil
 from typing import Optional, Dict, Any, List
+import warnings
 
 import numpy as np
 from pymc3.backends import base
@@ -52,6 +53,12 @@ def save_trace(trace: MultiTrace, directory: Optional[str]=None, overwrite=False
     -------
     str, path to the directory where the trace was saved
     """
+    warnings.warn(
+        'The `save_trace` function will soon be removed.'
+        'Instead, use ArviZ to save/load traces.',
+        DeprecationWarning,
+    )
+
     if directory is None:
         directory = '.pymc_{}.trace'
         idx = 1
@@ -89,6 +96,11 @@ def load_trace(directory: str, model=None) -> MultiTrace:
     -------
     pm.Multitrace that was saved in the directory
     """
+    warnings.warn(
+        'The `load_trace` function will soon be removed.'
+        'Instead, use ArviZ to save/load traces.',
+        DeprecationWarning,
+    )
     straces = []
     for subdir in glob.glob(os.path.join(directory, '*')):
         if os.path.isdir(subdir):
@@ -106,6 +118,11 @@ class SerializeNDArray:
 
     def __init__(self, directory: str):
         """Helper to save and load NDArray objects"""
+        warnings.warn(
+            'The `SerializeNDArray` class will soon be removed. '
+            'Instead, use ArviZ to save/load traces.',
+            DeprecationWarning,
+        )
         self.directory = directory
         self.metadata_path = os.path.join(self.directory, self.metadata_file)
         self.samples_path = os.path.join(self.directory, self.samples_file)
@@ -366,6 +383,7 @@ def _slice_as_ndarray(strace, idx):
         sliced.draw_idx = (stop - start) // step
 
     return sliced
+
 
 def point_list_to_multitrace(point_list: List[Dict[str, np.ndarray]], model: Optional[Model]=None) -> MultiTrace:
     '''transform point list into MultiTrace'''

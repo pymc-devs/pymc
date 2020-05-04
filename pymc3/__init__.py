@@ -15,6 +15,31 @@
 # pylint: disable=wildcard-import
 __version__ = "3.8"
 
+import logging
+
+_log = logging.getLogger("pymc3")
+
+if not logging.root.handlers:
+    _log.setLevel(logging.INFO)
+    if len(_log.handlers) == 0:
+        handler = logging.StreamHandler()
+        _log.addHandler(handler)
+
+
+def __set_compiler_flags():
+    # Workarounds for Theano compiler problems on various platforms
+    import platform
+    import theano
+
+    system = platform.system()
+    if system == "Windows":
+        theano.config.mode = "FAST_COMPILE"
+    elif system == "Darwin":
+        theano.config.gcc.cxxflags = "-Wno-c++11-narrowing"
+
+
+__set_compiler_flags()
+
 from .blocking import *
 from .distributions import *
 from .distributions import transforms
@@ -50,27 +75,3 @@ from .plots import *
 from .tests import test
 
 from .data import *
-
-
-def __set_compiler_flags():
-    # Workarounds for Theano compiler problems on various platforms
-    import platform
-    import theano
-
-    system = platform.system()
-    if system == "Windows":
-        theano.config.mode = "FAST_COMPILE"
-    elif system == "Darwin":
-        theano.config.gcc.cxxflags = "-Wno-c++11-narrowing"
-
-
-__set_compiler_flags()
-
-import logging
-
-_log = logging.getLogger("pymc3")
-if not logging.root.handlers:
-    _log.setLevel(logging.INFO)
-    if len(_log.handlers) == 0:
-        handler = logging.StreamHandler()
-        _log.addHandler(handler)

@@ -13,9 +13,11 @@
 #   limitations under the License.
 
 import numpy as np
+import theano
 import theano.tensor as tt
 from functools import reduce
 from operator import mul, add
+from numbers import Number
 
 __all__ = [
     "Constant",
@@ -100,10 +102,31 @@ class Covariance:
     def __rmul__(self, other):
         return self.__mul__(other)
 
+    def __pow__(self, other):
+        if(
+            isinstance(other, theano.compile.SharedVariable) and
+            other.get_value().squeeze().shape == ()
+        ):
+            other = tt.squeeze(other)
+            return Exponentiated(self, other)
+        elif isinstance(other, Number):
+            return Exponentiated(self, other)
+        elif np.asarray(other).squeeze().shape == ():
+            other = np.squeeze(other)
+            return Exponentiated(self, other)
+
+        raise ValueError("A covariance function can only be exponentiated by a scalar value")
+
+
     def __array_wrap__(self, result):
         """
         Required to allow radd/rmul by numpy arrays.
         """
+        result = np.squeeze(result)
+        if len(result.shape) <= 1:
+            result = result.reshape(1, 1)
+        elif len(result.shape) > 2:
+            raise ValueError(f"cannot combine a covariance function with array of shape {result.shape}")
         r, c = result.shape
         A = np.zeros((r, c))
         for i in range(r):
@@ -170,6 +193,19 @@ class Add(Combination):
 class Prod(Combination):
     def __call__(self, X, Xs=None, diag=False):
         return reduce(mul, self.merge_factors(X, Xs, diag))
+
+
+class Exponentiated(Covariance):
+    def __init__(self, kernel, power):
+        self.kernel = kernel
+        self.power = power
+        super().__init__(
+            input_dim=self.kernel.input_dim,
+            active_dims=self.kernel.active_dims
+        )
+
+    def __call__(self, X, Xs=None, diag=False):
+        return self.kernel(X, Xs, diag=diag) ** self.power
 
 
 class Kron(Covariance):

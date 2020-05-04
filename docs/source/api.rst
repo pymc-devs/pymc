@@ -21,6 +21,7 @@ API Reference
    api/model_graph
    api/variables
    api/shape_utils
+   api/ode
 
 
 Indices and tables

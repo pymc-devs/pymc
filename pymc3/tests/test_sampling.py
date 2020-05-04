@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 from itertools import combinations
+from typing import Tuple
 import numpy as np
 
 try:
@@ -21,6 +22,7 @@ except ImportError:
     import mock
 
 import numpy.testing as npt
+import arviz as az
 import pymc3 as pm
 import theano.tensor as tt
 from theano import shared
@@ -85,7 +87,7 @@ class TestSample(SeededTest):
 
     def test_sample_init(self):
         with self.model:
-            for init in ("advi", "advi_map", "map", "nuts"):
+            for init in ("advi", "advi_map", "map"):
                 pm.sample(
                     init=init,
                     tune=0,
@@ -101,7 +103,7 @@ class TestSample(SeededTest):
             assert "'foo'" in str(excinfo.value)
 
             with pytest.raises(ValueError) as excinfo:
-                pm.sample(50, tune=0, init=None, step_kwargs={"foo": {}})
+                pm.sample(50, tune=0, init=None, foo={})
             assert "foo" in str(excinfo.value)
 
             with pytest.raises(ValueError) as excinfo:
@@ -673,7 +675,8 @@ class TestSamplePPCW(SeededTest):
         "advi+adapt_diag_grad",
         "map",
         "advi_map",
-        "nuts",
+        "adapt_full",
+        "jitter+adapt_full",
     ],
 )
 def test_exec_nuts_init(method):
@@ -692,6 +695,16 @@ def test_exec_nuts_init(method):
         assert isinstance(start[0], dict)
         assert "a" in start[0] and "b_log__" in start[0]
 
+
+@pytest.fixture(scope="class")
+def point_list_arg_bug_fixture() -> Tuple[pm.Model, pm.backends.base.MultiTrace]:
+    with pm.Model() as pmodel:
+        n = pm.Normal('n')
+        trace = pm.sample()
+
+    with pmodel:
+        d = pm.Deterministic('d', n * 4)
+    return pmodel, trace
 
 class TestSamplePriorPredictive(SeededTest):
     def test_ignores_observed(self):
@@ -851,3 +864,50 @@ class TestSamplePriorPredictive(SeededTest):
         with model:
             prior_trace = pm.sample_prior_predictive(5)
             assert prior_trace["x"].shape == (5, 3, 1)
+
+class TestSamplePosteriorPredictive:
+    def test_point_list_arg_bug_fspp(self, point_list_arg_bug_fixture):
+        pmodel, trace = point_list_arg_bug_fixture
+        with pmodel:
+            pp = pm.fast_sample_posterior_predictive(
+                [trace[15]],
+                var_names=['d']
+            )
+
+    def test_point_list_arg_bug_spp(self, point_list_arg_bug_fixture):
+        pmodel, trace = point_list_arg_bug_fixture
+        with pmodel:
+            pp = pm.sample_posterior_predictive(
+                [trace[15]],
+                var_names=['d']
+            )
+
+    def test_sample_from_xarray_prior(self, point_list_arg_bug_fixture):
+        pmodel, trace = point_list_arg_bug_fixture
+
+        with pmodel:
+            prior = pm.sample_prior_predictive(samples=20)
+        idat = az.from_pymc3(trace, prior=prior)
+        with pmodel:
+            pp = pm.sample_posterior_predictive(
+                idat.prior,
+                var_names=['d']
+            )
+
+    def test_sample_from_xarray_posterior(self, point_list_arg_bug_fixture):
+        pmodel, trace = point_list_arg_bug_fixture
+        idat = az.from_pymc3(trace)
+        with pmodel:
+            pp = pm.sample_posterior_predictive(
+                idat.posterior,
+                var_names=['d']
+            )
+
+    def test_sample_from_xarray_posterior_fast(self, point_list_arg_bug_fixture):
+        pmodel, trace = point_list_arg_bug_fixture
+        idat = az.from_pymc3(trace)
+        with pmodel:
+            pp = pm.fast_sample_posterior_predictive(
+                idat.posterior,
+                var_names=['d']
+            )

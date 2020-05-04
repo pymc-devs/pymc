@@ -16,6 +16,7 @@ from collections.abc import Iterable
 import numpy as np
 import theano
 import theano.tensor as tt
+import warnings
 
 from pymc3.util import get_variable_name
 from ..math import logsumexp
@@ -47,7 +48,7 @@ class Mixture(Distribution):
     .. math:: f(x \mid w, \theta) = \sum_{i = 1}^n w_i f_i(x \mid \theta_i)
 
     ========  ============================================
-    Support   :math:`\cap_{i = 1}^n \textrm{support}(f_i)`
+    Support   :math:`\cup_{i = 1}^n \textrm{support}(f_i)`
     Mean      :math:`\sum_{i = 1}^n w_i \mu_i`
     ========  ============================================
 
@@ -610,6 +611,10 @@ class NormalMixture(Mixture):
     def __init__(self, w, mu, sigma=None, tau=None, sd=None, comp_shape=(), *args, **kwargs):
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
         self.mu = mu = tt.as_tensor_variable(mu)
