@@ -245,6 +245,8 @@ def sample(
     discard_tuned_samples=True,
     compute_convergence_checks=True,
     callback=None,
+    *,
+    return_inferencedata=None,
     **kwargs
 ):
     """Draw samples from the posterior using the given step methods.
@@ -327,6 +329,10 @@ def sample(
         is drawn from.
 
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
+    return_inferencedata: bool
+        Whether to return the trace as an `arviz.InferenceData` (True) object or a `MultiTrace` (False)
+        Defaults to `False`, but we'll switch to `True` in version 4.0.0.
+
     Returns
     -------
     trace: pymc3.backends.base.MultiTrace
@@ -386,6 +392,20 @@ def sample(
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
     if not isinstance(random_seed, Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
+
+    if return_inferencedata is None:
+        warnings.warn(
+            "In v4.0.0, pm.sample will return an `arviz.InferenceData` object instead of a `MultiTrace` by default. "
+            "You can pass return_inferencedata=True or return_inferencedata=False to be safe and silence this warning.",
+            FutureWarning
+        )
+        # set the default
+        return_inferencedata = False
+    if return_inferencedata and not discard_tuned_samples:
+        raise NotImplementedError(
+            'arviz.from_pymc3 does not handle warmups yet. See ArviZ issue #1146.'
+            'For this reason, we can not return InferenceData tat includes warmup draws right now.'
+        )
 
     if start is not None:
         for start_vals in start:
@@ -554,7 +574,10 @@ def sample(
             trace.report._run_convergence_checks(idata, model)
     trace.report._log_summary()
 
-    return trace
+    if return_inferencedata:
+        return idata
+    else:
+        return trace
 
 
 def _check_start_shape(model, start):
