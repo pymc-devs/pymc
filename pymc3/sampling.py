@@ -27,6 +27,7 @@ import logging
 import time
 import warnings
 
+import arviz
 import numpy as np
 import theano.gradient as tg
 from theano.tensor import Tensor
@@ -535,12 +536,18 @@ def sample(
         f'took {trace.report.t_sampling:.0f} seconds.'
     )
 
+    # convert trace to InferenceData, with awareness of warmup!
+    trace_warmup = trace[:-trace.report.n_draws]   # <-- may result in len(trace_warmup) == 0
+    trace_posterior = trace[-trace.report.n_draws:]
+    idata = arviz.from_pymc3(trace_posterior, log_likelihood=False)
+    idata.posterior.attrs['n_tune'] = n_tune
+    idata.posterior.attrs['n_draws'] = n_draws
+    idata.posterior.attrs['t_sampling'] = t_sampling
     if compute_convergence_checks:
         if draws - tune < 100:
             warnings.warn("The number of samples is too small to check convergence reliably.")
         else:
-            trace.report._run_convergence_checks(trace, model)
-
+            trace.report._run_convergence_checks(idata, model)
     trace.report._log_summary()
 
     return trace
