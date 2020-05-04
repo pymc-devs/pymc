@@ -19,7 +19,6 @@ import scipy.linalg
 import warnings
 import sys
 import logging
-import warnings
 
 from ..distributions import draw_values
 from .arraystep import ArrayStepShared, PopulationArrayStepShared, ArrayStep, metrop_select, Competence

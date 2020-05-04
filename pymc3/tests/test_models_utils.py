@@ -17,7 +17,6 @@ import pandas as pd
 import theano.tensor as tt
 from pymc3.glm import utils
 import pytest
-from packaging import version
 
 
 class TestUtils:
