@@ -393,6 +393,16 @@ def sample(
     if not isinstance(random_seed, Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
 
+    if not discard_tuned_samples and not return_inferencedata:
+        warnings.warn(
+            "Tuning samples will be included in the returned `MultiTrace` object. "
+            "To avoid complications with downstream analysis, you should slice them out:\n"
+            "trace_warmup = trace[: -trace.report.n_draws]\n"
+            "trace_posterior = trace[-trace.report.n_draws :]\n"
+            "Alternatively, you can use InferenceData: `pm.sample(..., return_inferencedata=True)`",
+            UserWarning
+        )
+
     if return_inferencedata is None:
         warnings.warn(
             "In v4.0.0, pm.sample will return an `arviz.InferenceData` object instead of a `MultiTrace` by default. "
