@@ -27,7 +27,8 @@
 - Moved argument division out of `NegativeBinomial` `random` method. Fixes [#3864](https://github.com/pymc-devs/pymc3/issues/3864) in the style of [#3509](https://github.com/pymc-devs/pymc3/pull/3509).
 - The Dirichlet distribution now raises a ValueError when it's initialized with <= 0 values (see [#3853](https://github.com/pymc-devs/pymc3/pull/3853)).
 - End of sampling report now uses `arviz.InferenceData` internally and avoids storing
-  pointwise log likelihood (see [#3883](https://github.com/pymc-devs/pymc3/pull/3883))
+  pointwise log likelihood (see [#3883](https://github.com/pymc-devs/pymc3/pull/3883)).
+- To avoid crashing multiprocessing on MacOS, matplotlib dependency is pinned to versions < 3.1.1 until [the issue](https://github.com/matplotlib/matplotlib/issues/15410) is resolved (see [#3849](https://github.com/pymc-devs/pymc3/issues/3849)).
 
 ## PyMC3 3.8 (November 29 2019)
 
