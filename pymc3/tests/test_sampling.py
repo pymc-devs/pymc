@@ -160,6 +160,27 @@ class TestSample(SeededTest):
             assert isinstance(trace.report.t_sampling, float)
         pass
 
+    def test_return_inferencedata(self):
+        with self.model:
+            kwargs = dict(
+                draws=100, tune=50, cores=1,
+                chains=2, step=pm.Metropolis()
+            )
+            with pytest.warns(FutureWarning):
+                result = pm.sample(**kwargs)
+            with pytest.raises(NotImplementedError):
+                pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=False)
+
+            result = pm.sample(**kwargs, return_inferencedata=False, discard_tuned_samples=False)
+            assert isinstance(result, pm.backends.base.MultiTrace)
+            assert len(result) == 150
+
+            result = pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=True)
+            assert isinstance(result, az.InferenceData)
+            assert result.posterior.sizes['draw'] == 100
+            assert result.posterior.sizes['chain'] == 2
+        pass
+
     @pytest.mark.parametrize('cores', [1, 2])
     def test_sampler_stat_tune(self, cores):
         with self.model:
