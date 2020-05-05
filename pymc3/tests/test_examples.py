@@ -501,7 +501,7 @@ class TestSineWave(SeededTest):
         noise = np.random.normal(0, 0.001)
 
         # Generate data from the finest model for use in pymc3 inference
-        data = sin_function(self.datapoints, true_parameters[0]) + noise
+        data = sin_function(self.datapoints, true_parameters) + noise
 
         # Create Theano Ops to wrap likelihoods of all model levels and store them in list
         logl = []
