@@ -36,7 +36,7 @@ conda install --yes mkl-service
 conda install --yes -c conda-forge python-graphviz
 
 # Pin MPL until https://github.com/matplotlib/matplotlib/issues/15410 is resolved
-pip uninstall matplotlib
+pip uninstall matplotlib --yes
 pip install "matplotlib==3.1.0"
 
 # Travis env is unable to import cached mpl sometimes https://github.com/pymc-devs/pymc3/issues/3423
