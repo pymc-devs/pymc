@@ -35,18 +35,17 @@ pip install --upgrade pip
 conda install --yes mkl-service
 conda install --yes -c conda-forge python-graphviz
 
-#  Install editable using the setup.py
+# Pin MPL until https://github.com/matplotlib/matplotlib/issues/15410 is resolved
+pip install --no-cache-dir --force-reinstall "matplotlib<3.1.1"
 
 # Travis env is unable to import cached mpl sometimes https://github.com/pymc-devs/pymc3/issues/3423
 pip install --no-cache-dir --ignore-installed -e .
 pip install --no-cache-dir --ignore-installed -r requirements-dev.txt
 
-# Pin MPL until https://github.com/matplotlib/matplotlib/issues/15410 is resolved
-pip install --no-cache-dir --force-reinstall "matplotlib<3.1.1"
-
 # Install untested, non-required code (linter fails without them)
 pip install ipython ipywidgets
 
+#  Install editable using the setup.py
 if [ -z ${NO_SETUP} ]; then
   python setup.py build_ext --inplace
 fi
