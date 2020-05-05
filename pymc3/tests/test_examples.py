@@ -285,6 +285,7 @@ class TestLatentOccupancy(SeededTest):
             pm.sample(50, step=[step_one, step_two], start=start, chains=1)
 
 
+@pytest.mark.skip(reason="Unknown issue in initialisation")
 class TestRSV(SeededTest):
     '''
     This model estimates the population prevalence of respiratory syncytial virus
