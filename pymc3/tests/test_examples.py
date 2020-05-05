@@ -343,22 +343,19 @@ class TestMultilevelNormal(SeededTest):
         with pm.Model() as model_coarse_0:
             sigma = 1.0
             x_coeff = pm.Normal('x', true_mean, sigma=10.0)
-            likelihood = pm.Normal('y', mu=x_coeff,
-                                   sigma=sigma, observed=y + 1.0)
+            pm.Normal('y', mu=x_coeff, sigma=sigma, observed=y + 1.0)
 
         with pm.Model() as model_coarse_1:
             sigma = 1.0
             x_coeff = pm.Normal('x', true_mean, sigma=10.0)
-            likelihood = pm.Normal('y', mu=x_coeff,
-                                   sigma=sigma, observed=y + 0.5)
+            pm.Normal('y', mu=x_coeff, sigma=sigma, observed=y + 0.5)
 
         coarse_models = [model_coarse_0, model_coarse_1]
 
         with pm.Model() as model:
             sigma = 1.0
             x_coeff = pm.Normal('x', true_mean, sigma=10.0)
-            likelihood = pm.Normal('y', mu=x_coeff,
-                                   sigma=sigma, observed=y)
+            pm.Normal('y', mu=x_coeff, sigma=sigma, observed=y)
 
         return model, coarse_models
 
@@ -367,4 +364,4 @@ class TestMultilevelNormal(SeededTest):
 
         with model:
             step = pm.MLDA(subsampling_rate=2, coarse_models=coarse_models)
-            trace = pm.sample(draws=50, chains=2, tune=50, step=step)
+            pm.sample(draws=50, chains=2, tune=50, step=step)

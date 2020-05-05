@@ -1028,25 +1028,31 @@ class TestMLDA:
         _, model_coarse, _ = mv_simple_coarse()
         with model:
             sampler = MLDA(coarse_models=[model_coarse])
-            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
+            assert isinstance(sampler.proposal_dist,
+                              RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(sampler.next_step_method.proposal_dist, NormalProposal)
+            assert isinstance(sampler.next_step_method.proposal_dist,
+                              NormalProposal)
 
             s = np.ones(model.ndim)
             sampler = MLDA(coarse_models=[model_coarse], S=s)
-            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
+            assert isinstance(sampler.proposal_dist,
+                              RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(sampler.next_step_method.proposal_dist, NormalProposal)
+            assert isinstance(sampler.next_step_method.proposal_dist,
+                              NormalProposal)
 
             s = np.diag(s)
             sampler = MLDA(coarse_models=[model_coarse], S=s)
-            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
+            assert isinstance(sampler.proposal_dist,
+                              RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(sampler.next_step_method.proposal_dist, MultivariateNormalProposal)
+            assert isinstance(sampler.next_step_method.proposal_dist,
+                              MultivariateNormalProposal)
 
             s[0, 0] = -s[0, 0]
             with pytest.raises(np.linalg.LinAlgError):
-                sampler = MLDA(coarse_models=[model_coarse], S=s)
+                MLDA(coarse_models=[model_coarse], S=s)
 
     def test_step_methods_in_each_level(self):
         """Test that MLDA creates the correct hierarchy of step methods when no
@@ -1078,82 +1084,101 @@ class TestMLDA:
         """Test that parallel chain are not identical when no parallelisation
         is applied"""
         with Model() as coarse_model:
-            x = Normal("x", 0.3, 1)
+            Normal("x", 0.3, 1)
 
-        with Model() as model:
-            x = Normal("x", 0, 1)
+        with Model():
+            Normal("x", 0, 1)
             for stepper in TestMLDA.steppers:
                 step = stepper(coarse_models=[coarse_model])
                 trace = sample(chains=2, cores=1, draws=20, tune=0, step=step)
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
-                assert len(set(samples)) == 2, "Non parallelized {} " "chains are identical.".format(
+                assert len(set(samples)) == 2, \
+                    "Non parallelized {} " "chains are identical.".format(
                     stepper
                 )
         pass
 
     def test_parallelized_chains_are_random(self):
-        """Test that parallel chain are not identical when parallelisation
+        """Test that parallel chain are
+        not identical when parallelisation
         is applied"""
         with Model() as coarse_model:
-            x = Normal("x", 0.3, 1)
+            Normal("x", 0.3, 1)
 
-        with Model() as model:
-            x = Normal("x", 0, 1)
+        with Model():
+            Normal("x", 0, 1)
             for stepper in TestMLDA.steppers:
                 step = stepper(coarse_models=[coarse_model])
-                trace = sample(chains=2, cores=2, draws=20, tune=0, step=step)
+                trace = sample(chains=2, cores=2,
+                               draws=20, tune=0,
+                               step=step)
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
-                assert len(set(samples)) == 2, "Parallelized {} " "chains are identical.".format(
+                assert len(set(samples)) == 2, \
+                    "Parallelized {} " "chains are identical.".format(
                     stepper
                 )
         pass
 
     def test_acceptance_rate_against_coarseness(self):
-        """Test that the acceptance rate increases when the coarse model is closer to
+        """Test that the acceptance rate increases
+        when the coarse model is closer to
         the fine model."""
         with Model() as coarse_model_0:
-            x = Normal("x", 5.0, 1.0)
+            Normal("x", 5.0, 1.0)
 
         with Model() as coarse_model_1:
-            x = Normal("x", 5.5, 1.5)
+            Normal("x", 5.5, 1.5)
 
         with Model() as coarse_model_2:
-            x = Normal("x", 6.0, 2.0)
+            Normal("x", 6.0, 2.0)
 
-        possible_coarse_models = [coarse_model_0, coarse_model_1, coarse_model_2]
+        possible_coarse_models = [coarse_model_0,
+                                  coarse_model_1,
+                                  coarse_model_2]
         acc = []
 
-        with Model() as model:
-            x = Normal("x", 5.0, 1.0)
+        with Model():
+            Normal("x", 5.0, 1.0)
             for coarse_model in possible_coarse_models:
-                step = MLDA(coarse_models=[coarse_model], subsampling_rate=1, tune=False)
+                step = MLDA(coarse_models=[coarse_model], subsampling_rate=1,
+                            tune=False)
                 trace = sample(chains=1, draws=500, tune=0, step=step)
                 acc.append(trace.get_sampler_stats('accepted').mean())
-            assert acc[0] > acc[1] > acc[2], "Acceptance rate is not strictly increasing when" \
-                                             "coarse model is closer to fine model. Acceptance rates" \
+            assert acc[0] > acc[1] > acc[2], "Acceptance rate is not " \
+                                             "strictly increasing when" \
+                                             "coarse model is closer to " \
+                                             "fine model. Acceptance rates" \
                                              "were: {}".format(acc)
 
     @pytest.mark.skipif(
-        theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues"
+        theano.config.floatX == "float32", reason="Test fails on "
+                                                  "32 bit due to "
+                                                  "linalg issues"
     )
     def test_mlda_non_blocked(self):
-        """Test that MLDA correctly creates non-blocked compound steps in level 0."""
+        """Test that MLDA correctly creates non-blocked
+        compound steps in level 0."""
         _, model = simple_2model_continuous()
         _, model_coarse = simple_2model_continuous()
         with model:
             for stepper in self.steppers:
-                assert isinstance(stepper(coarse_models=[model_coarse], base_blocked=False).next_step_method,
+                assert isinstance(stepper(coarse_models=[model_coarse],
+                                          base_blocked=False).next_step_method,
                                   CompoundStep)
 
     @pytest.mark.skipif(
-        theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues"
+        theano.config.floatX == "float32", reason="Test fails on "
+                                                  "32 bit due to "
+                                                  "linalg issues"
     )
     def test_blocked(self):
         _, model = simple_2model_continuous()
         _, model_coarse = simple_2model_continuous()
         with model:
             for stepper in self.steppers:
-                assert not isinstance(stepper(coarse_models=[model_coarse], base_blocked=True).next_step_method,
+                assert not isinstance(stepper(coarse_models=[model_coarse],
+                                              base_blocked=True).next_step_method,
                                       CompoundStep)
-                assert isinstance(stepper(coarse_models=[model_coarse], base_blocked=True).next_step_method,
+                assert isinstance(stepper(coarse_models=[model_coarse],
+                                          base_blocked=True).next_step_method,
                                   Metropolis)
