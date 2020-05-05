@@ -14,7 +14,6 @@
 
 import matplotlib
 import numpy as np
-from numpy import interp
 import pandas as pd
 import pymc3 as pm
 import theano.tensor as tt
