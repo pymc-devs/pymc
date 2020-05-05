@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from abc import ABC
 
 import matplotlib
 import numpy as np
@@ -521,7 +520,8 @@ class TestSineWave(SeededTest):
                 theta = tt.as_tensor_variable(parameters)
 
                 # use a DensityDist (use a lamdba function to "call" the Op)
-                pm.DensityDist('likelihood', lambda v: logl[j](v), observed={'v': theta})
+                ll = logl[j]
+                pm.DensityDist('likelihood', lambda v: ll(v), observed={'v': theta})
 
             coarse_models.append(model)
 
