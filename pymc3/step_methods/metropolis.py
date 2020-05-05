@@ -1041,6 +1041,13 @@ class MLDA(ArrayStepShared):
         return Competence.COMPATIBLE
 
 
+def sample_except(limit, excluded):
+    candidate = nr.choice(limit - 1)
+    if candidate >= excluded:
+        candidate += 1
+    return candidate
+
+
 def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / np.sum(e_x, axis = 0)

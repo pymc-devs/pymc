@@ -475,7 +475,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                 0.90228003,
                 1.3328478
             ]
-        )
+        ),
     }
 
     def setup_class(self):
@@ -487,7 +487,6 @@ class TestStepMethods:  # yield test doesn't work subclassing object
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_sample_exact(self):
         for step_method in self.master_samples:
-            if step_method != MLDA:
                 self.check_trace(step_method)
 
     def check_trace(self, step_method):
@@ -507,7 +506,6 @@ class TestStepMethods:  # yield test doesn't work subclassing object
         on multiple commits.
         """
         n_steps = 100
-
         with Model() as model:
             x = Normal("x", mu=0, sigma=1)
             y = Normal("y", mu=x, sigma=1, observed=1)
@@ -586,7 +584,6 @@ class TestStepMethods:  # yield test doesn't work subclassing object
             )
             self.check_stat(check, trace, step.__class__.__name__)
 
-    @pytest.mark.skip(reason="Unknown issue with unavailable library")
     def test_step_categorical(self):
         start, model, (mu, C) = simple_categorical()
         unc = C ** 0.5
@@ -716,6 +713,7 @@ class TestAssignStepMethods:
 
 
 class TestPopulationSamplers:
+
     steppers = [DEMetropolis]
 
     def test_checks_population_size(self):
@@ -733,7 +731,7 @@ class TestPopulationSamplers:
     def test_demcmc_warning_on_small_populations(self):
         """Test that a warning is raised when n_chains <= n_dims"""
         with Model() as model:
-            Normal("n", mu=0, sigma=1, shape=(2, 3))
+            Normal("n", mu=0, sigma=1, shape=(2,3))
             with pytest.warns(UserWarning) as record:
                 sample(
                     draws=5, tune=5, chains=6, step=DEMetropolis(),
@@ -745,7 +743,7 @@ class TestPopulationSamplers:
     def test_demcmc_tune_parameter(self):
         """Tests that validity of the tune setting is checked"""
         with Model() as model:
-            Normal("n", mu=0, sigma=1, shape=(2, 3))
+            Normal("n", mu=0, sigma=1, shape=(2,3))
 
             step = DEMetropolis()
             assert step.tune is None
@@ -974,9 +972,9 @@ class TestNutsCheckTrace:
             warns = [msg.msg for msg in caplog.records]
             assert np.any(trace["diverging"])
             assert (
-                    any("divergence after tuning" in warn for warn in warns)
-                    or any("divergences after tuning" in warn for warn in warns)
-                    or any("only diverging samples" in warn for warn in warns)
+                any("divergence after tuning" in warn for warn in warns)
+                or any("divergences after tuning" in warn for warn in warns)
+                or any("only diverging samples" in warn for warn in warns)
             )
 
             with pytest.raises(ValueError) as error:

@@ -285,7 +285,7 @@ class TestLatentOccupancy(SeededTest):
             pm.sample(50, step=[step_one, step_two], start=start, chains=1)
 
 
-@pytest.mark.skip(reason="Unknown issue in initialisation")
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32 due to starting inf at starting logP")
 class TestRSV(SeededTest):
     '''
     This model estimates the population prevalence of respiratory syncytial virus
