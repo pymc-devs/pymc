@@ -82,6 +82,12 @@ class MultivariateNormalProposal(Proposal):
 
 
 class RecursiveDAProposal(Proposal):
+    """
+    Recursive Delayed Acceptance proposal to be used with MLDA step sampler.
+    Recursively calls an MLDA sampler if level > 0 and calls Metropolis
+    sampler if level = 0. Results in a hierarchy of chains each of which is
+    used to propose samples to the chain above.
+    """
     def __init__(self, next_step_method, next_model,
                  tune, tune_interval, subsampling_rate):
 
@@ -93,7 +99,7 @@ class RecursiveDAProposal(Proposal):
 
     def __call__(self, q0_dict):
         """Returns proposed sample given the current sample in dictionary form (q0_dict).
-        Recursively calls an MLDA sampler if level > 0 and calls Matropolis sampler if level = 0"""
+        """
 
         _log = logging.getLogger('pymc3')
         _log.setLevel(logging.ERROR)
@@ -858,7 +864,9 @@ def sample_except(limit, excluded):
 
 class MLDA(ArrayStepShared):
     """
-    Multi-level Delayed Acceptance sampling step.
+    Multi-level Delayed Acceptance sampling step that uses coarse approximations of a fine model
+    to construct proposals in multiple levels.
+
     Parameters
     ----------
     vars : list
@@ -890,6 +898,20 @@ class MLDA(ArrayStepShared):
     base_blocked : bool
         To flag to choose whether base sampler (level=0) is a Compound Metropolis step (base_blocked=False)
         or a blocked Metropolis step (base_blocked=True).
+
+    Example
+    ----------
+    An example of how to use MLDA can be found in:
+    docs/source/notebooks/multi-level_groundwater_flow_with_MLDA.ipynb
+    under the pymc3 installation directory.
+
+    References
+    ----------
+    .. [Dodwell2019] Dodwell, T. J., Ketelsen, C., Scheichl, R., & Teckentrup, A. L. (2015).
+    A hierarchical multilevel Markov chain Monte Carlo algorithm with applications to
+    uncertainty quantification in subsurface flow.
+    SIAM/ASA Journal on Uncertainty Quantification, 3(1), 1075-1108.
+        `link <https://doi.org/10.1137/130915005>`__
     """
     name = 'mlda'
 
@@ -988,27 +1010,12 @@ class MLDA(ArrayStepShared):
             self.proposal_dist.tune = self.tune
             self.accepted = 0
 
-
         # Convert current sample from numpy array -> dict before feeding to proposal
         q0_dict = self.bij.rmap(q0)
 
         # Call the recursive DA proposal to get proposed sample
         # and convert dict -> numpy array
         q = self.bij.map(self.proposal_dist(q0_dict))  # + self.scaling
-
-        """
-        if self.any_discrete:
-            if self.all_discrete:
-                delta = np.round(delta, 0).astype('int64')
-                q0 = q0.astype('int64')
-                q = (q0 + delta).astype('int64')
-            else:
-                delta[self.discrete] = np.round(
-                    delta[self.discrete], 0)
-                q = (q0 + delta)
-        else:
-            q = floatX(q0 + delta)
-        """
 
         # Evaluate MLDA acceptance log-ratio
         if (q == q0).all():
