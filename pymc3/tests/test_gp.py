@@ -247,6 +247,7 @@ class TestCovProd:
         with pytest.raises(ValueError, match=r"cannot combine"):
             cov = M + pm.gp.cov.ExpQuad(1, 1.)
 
+
 class TestCovExponentiation:
     def test_symexp_cov(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -538,6 +539,7 @@ class TestMatern12:
         npt.assert_allclose(K[0, 1], 0.32919, atol=1e-3)
         Kd = theano.function([],cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
 
 class TestCosine:
     def test_1d(self):
@@ -1142,3 +1144,19 @@ class TestMarginalKron:
                                      cov_funcs=self.cov_funcs)
         with pytest.raises(TypeError):
             gp1 + gp2
+
+
+class TestUtil:
+    def test_plot_gp_dist(self):
+        """Test that the plotting helper works with the stated input shapes."""
+        import matplotlib.pyplot as plt
+        X = 100
+        S = 500
+        fig, ax = plt.subplots()
+        pm.gp.util.plot_gp_dist(
+            ax,
+            x=np.linspace(0, 50, X),
+            samples=np.random.normal(np.arange(X), size=(S, X))
+        )
+        plt.close()
+        pass

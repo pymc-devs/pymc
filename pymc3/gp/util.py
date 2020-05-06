@@ -83,17 +83,19 @@ def conditioned_vars(varnames):
     return gp_wrapper
 
 
-def plot_gp_dist(ax, samples, x, plot_samples=True, palette="Reds", fill_alpha=0.8, samples_alpha=0.1, fill_kwargs=None, samples_kwargs=None):
+def plot_gp_dist(ax, samples:np.ndarray, x:np.ndarray, plot_samples=True, palette="Reds", fill_alpha=0.8, samples_alpha=0.1, fill_kwargs=None, samples_kwargs=None):
     """ A helper function for plotting 1D GP posteriors from trace 
     
         Parameters
     ----------
     ax: axes
         Matplotlib axes.
-    samples: trace or list of traces
-        Trace(s) or posterior predictive sample from a GP.
-    x: array
+    samples: numpy.ndarray
+        Array of S posterior predictive sample from a GP.
+        Expected shape: (S, X)
+    x: numpy.ndarray
         Grid of X values corresponding to the samples. 
+        Expected shape: (X,) or (X, 1), or (1, X)
     plot_samples: bool
         Plot the GP samples along with posterior (defaults True).
     palette: str
