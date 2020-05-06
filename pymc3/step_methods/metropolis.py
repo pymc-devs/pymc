@@ -912,20 +912,40 @@ class MLDA(ArrayStepShared):
         Compound Metropolis step (base_blocked=False)
         or a blocked Metropolis step (base_blocked=True).
 
-    Example
+    Examples
     ----------
-    An example of how to use MLDA can be found in:
-    docs/source/notebooks/multi-level_groundwater_flow_with_MLDA.ipynb
-    under the pymc3 installation directory.
+    .. code:: ipython
+
+        >>> import pymc3 as pm
+        ... datum = 1
+        ...
+        ... with pm.Model() as coarse_model:
+        ...     x = Normal("x", mu=0, sigma=10)
+        ...     y = Normal("y", mu=x, sigma=1, observed=datum - 0.1)
+        ...
+        ... with pm.Model():
+        ...     x = Normal("x", mu=0, sigma=10)
+        ...     y = Normal("y", mu=x, sigma=1, observed=datum)
+        ...     step_method = pm.MLDA(subsampling_rate=5,
+        ...                           coarse_models=[coarse_model])
+        ...     trace = pm.sample(ndraws=500, chains=2,
+        ...                       tune=100, step=step_method)
+        ...
+        ... pm.summary(trace)
+            mean     sd	     hpd_3%	   hpd_97%
+        x	0.989	 0.984	 -0.896	   2.761
+
+    A more complete example of how to use MLDA in a realistic
+    multilevel problem can be found in:
+    pymc3/docs/source/notebooks/multi-level_groundwater_flow_with_MLDA.ipynb
 
     References
     ----------
-    .. [Dodwell2019] Dodwell, T. J., Ketelsen, C.,
-    Scheichl, R., & Teckentrup, A. L. (2015).
-    A hierarchical multilevel Markov chain Monte Carlo algorithm
-    with applications to uncertainty quantification in subsurface flow.
-    SIAM/ASA Journal on Uncertainty Quantification, 3(1), 1075-1108.
-        `link <https://doi.org/10.1137/130915005>`__
+    .. [Dodwell2019] Dodwell, Tim & Ketelsen, Chris & Scheichl,
+    Robert & Teckentrup, Aretha. (2019).
+    Multilevel Markov Chain Monte Carlo.
+    SIAM Review. 61. 509-545.
+        `link <https://doi.org/10.1137/19M126966X>`__
     """
     name = 'mlda'
 
