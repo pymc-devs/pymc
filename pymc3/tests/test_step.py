@@ -1035,7 +1035,7 @@ class TestMLDA:
                               NormalProposal)
 
             s = np.ones(model.ndim)
-            sampler = MLDA(coarse_models=[model_coarse], S=s)
+            sampler = MLDA(coarse_models=[model_coarse], base_S=s)
             assert isinstance(sampler.proposal_dist,
                               RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
@@ -1043,7 +1043,7 @@ class TestMLDA:
                               NormalProposal)
 
             s = np.diag(s)
-            sampler = MLDA(coarse_models=[model_coarse], S=s)
+            sampler = MLDA(coarse_models=[model_coarse], base_S=s)
             assert isinstance(sampler.proposal_dist,
                               RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
@@ -1052,7 +1052,7 @@ class TestMLDA:
 
             s[0, 0] = -s[0, 0]
             with pytest.raises(np.linalg.LinAlgError):
-                MLDA(coarse_models=[model_coarse], S=s)
+                MLDA(coarse_models=[model_coarse], base_S=s)
 
     def test_step_methods_in_each_level(self):
         """Test that MLDA creates the correct hierarchy of step methods when no
@@ -1061,8 +1061,8 @@ class TestMLDA:
         _, model_coarse, _ = mv_simple_coarse()
         _, model_very_coarse, _ = mv_simple_very_coarse()
         with model:
-            s = np.ones(model.ndim)
-            sampler = MLDA(coarse_models=[model_very_coarse, model_coarse], S=s)
+            s = np.ones(model.ndim) + 2.0
+            sampler = MLDA(coarse_models=[model_very_coarse, model_coarse], base_S=s)
             assert isinstance(sampler.next_step_method, MLDA)
             assert isinstance(sampler.next_step_method.next_step_method, Metropolis)
             assert np.all(sampler.next_step_method.next_step_method.proposal_dist.s == s)
@@ -1070,28 +1070,20 @@ class TestMLDA:
     def test_exceptions_coarse_models(self):
         """Test that MLDA generates the expected exceptions when no coarse_models arg
         is passed, an empty list is passed or when coarse_models is not a list"""
-        with pytest.raises(TypeError) as pytest_wrapped_e:
+        with pytest.raises(TypeError):
             _, model, _ = mv_simple()
             with model:
                 MLDA()
-        assert pytest_wrapped_e.type == TypeError
 
-        with pytest.raises(ValueError) as pytest_wrapped_e:
+        with pytest.raises(ValueError):
             _, model, _ = mv_simple()
             with model:
                 MLDA(coarse_models=[])
-        assert pytest_wrapped_e.type == ValueError
-        assert pytest_wrapped_e.value.args[0] == "MLDA step method was given an empty " \
-                                              "list of coarse models. Give at least " \
-                                              "one coarse model."
 
-        with pytest.raises(ValueError) as pytest_wrapped_e:
+        with pytest.raises(ValueError):
             _, model, _ = mv_simple()
             with model:
                 MLDA(coarse_models=(model, model))
-        assert pytest_wrapped_e.type == ValueError
-        assert pytest_wrapped_e.value.args[0] == "MLDA step method cannot use " \
-                                              "coarse_models if it is not a list"
 
     def test_nonparallelized_chains_are_random(self):
         """Test that parallel chain are not identical when no parallelisation
@@ -1161,11 +1153,6 @@ class TestMLDA:
                                              "fine model. Acceptance rates" \
                                              "were: {}".format(acc)
 
-    @pytest.mark.skipif(
-        theano.config.floatX == "float32", reason="Test fails on "
-                                                  "32 bit due to "
-                                                  "linalg issues"
-    )
     def test_mlda_non_blocked(self):
         """Test that MLDA correctly creates non-blocked
         compound steps in level 0."""
@@ -1177,11 +1164,6 @@ class TestMLDA:
                                           base_blocked=False).next_step_method,
                                   CompoundStep)
 
-    @pytest.mark.skipif(
-        theano.config.floatX == "float32", reason="Test fails on "
-                                                  "32 bit due to "
-                                                  "linalg issues"
-    )
     def test_blocked(self):
         """Test the type of base sampler instantiated when switching base_blocked flag"""
         _, model = simple_2model_continuous()
@@ -1194,3 +1176,4 @@ class TestMLDA:
                 assert isinstance(stepper(coarse_models=[model_coarse],
                                           base_blocked=True).next_step_method,
                                   Metropolis)
+

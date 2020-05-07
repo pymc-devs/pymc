@@ -89,12 +89,11 @@ class RecursiveDAProposal(Proposal):
     each of which is used to propose samples to the chain above.
     """
     def __init__(self, next_step_method, next_model,
-                 tune, tune_interval, subsampling_rate):
+                 tune, subsampling_rate):
 
         self.next_step_method = next_step_method
         self.next_model = next_model
         self.tune = tune
-        self.tune_interval = tune_interval
         self.subsampling_rate = subsampling_rate
 
     def __call__(self, q0_dict):
@@ -906,17 +905,17 @@ class MLDA(ArrayStepShared):
         argument above, which is the finest available.
     vars : list
         List of variables for sampler
-    S : standard deviation or base proposal covariance matrix
+    base_S : standard deviation of base proposal covariance matrix
         Some measure of variance to parameterize base proposal distribution
     base_proposal_dist : function
         Function that returns zero-mean deviates when parameterized with
         S (and n). Defaults to normal. This is the proposal used in the
         coarsest (base) chain, i.e. level=0.
-    scaling : scalar or array
+    base_scaling : scalar or array
         Initial scale factor for base proposal. Defaults to 1.
     tune : bool
         Flag for tuning for the base proposal. Defaults to True.
-    tune_interval : int
+    base_tune_interval : int
         The frequency of tuning for the base proposal. Defaults to 100
         iterations.
     model : PyMC Model
@@ -975,13 +974,16 @@ class MLDA(ArrayStepShared):
     # except level 0 where the user can choose
     default_blocked = True
     generates_stats = True
+
+    # These stats are extended within __init__
     stats_dtypes = [{
         'accept': np.float64,
-        'accepted': np.bool
+        'accepted': np.bool,
+        'tune': np.bool
     }]
 
-    def __init__(self, coarse_models, vars=None, S=None, base_proposal_dist=None,
-                 scaling=1., tune=True, tune_interval=100, model=None, mode=None,
+    def __init__(self, coarse_models, vars=None, base_S=None, base_proposal_dist=None,
+                 base_scaling=1., tune=True, base_tune_interval=100, model=None, mode=None,
                  subsampling_rate=5, base_blocked=False, **kwargs):
 
         warnings.warn(
@@ -1001,16 +1003,17 @@ class MLDA(ArrayStepShared):
                              "list of coarse models. Give at least "
                              "one coarse model.")
         self.num_levels = len(self.coarse_models) + 1
-        self.S = S
+        self.base_S = base_S
         self.base_proposal_dist = base_proposal_dist
-        self.scaling = scaling
+        self.base_scaling = base_scaling
         self.tune = tune
-        self.tune_interval = tune_interval
+        self.base_tune_interval = base_tune_interval
         self.model = model
         self.next_model = self.coarse_models[-1]
         self.mode = mode
         self.subsampling_rate = subsampling_rate
         self.base_blocked = base_blocked
+        self.base_scaling_stats = None
 
         # Process model variables
         if vars is None:
@@ -1055,9 +1058,9 @@ class MLDA(ArrayStepShared):
                 # (see issue #3733 in GitHub) will not appear here
                 self.next_step_method = pm.Metropolis(vars=vars_next,
                                                       proposal_dist=self.base_proposal_dist,
-                                                      S=self.S,
-                                                      scaling=self.scaling, tune=self.tune,
-                                                      tune_interval=self.tune_interval,
+                                                      S=self.base_S,
+                                                      scaling=self.base_scaling, tune=self.tune,
+                                                      tune_interval=self.base_tune_interval,
                                                       model=None,
                                                       blocked=self.base_blocked,
                                                       **{"is_mlda_base": True})
@@ -1069,11 +1072,11 @@ class MLDA(ArrayStepShared):
                 vars_next = [var for var in self.next_model.vars
                              if var.name in self.var_names]
                 # MLDA sampler in some intermediate level, targeting self.next_model
-                self.next_step_method = pm.MLDA(vars=vars_next, S=self.S,
+                self.next_step_method = pm.MLDA(vars=vars_next, base_S=self.base_S,
                                                 base_proposal_dist=self.base_proposal_dist,
-                                                scaling=self.scaling,
+                                                base_scaling=self.base_scaling,
                                                 tune=self.tune,
-                                                tune_interval=self.tune_interval,
+                                                base_tune_interval=self.base_tune_interval,
                                                 model=None, mode=self.mode,
                                                 subsampling_rate=self.subsampling_rate,
                                                 coarse_models=next_coarse_models,
@@ -1087,8 +1090,14 @@ class MLDA(ArrayStepShared):
         self.proposal_dist = RecursiveDAProposal(self.next_step_method,
                                                  self.next_model,
                                                  self.tune,
-                                                 self.tune_interval,
                                                  self.subsampling_rate)
+
+        # Update stats data types dictionary given vars and base_blocked
+        if self.base_blocked or len(self.vars) == 1:
+            self.stats_dtypes[0]['base_scaling'] = np.float64
+        else:
+            for name in self.var_names:
+                self.stats_dtypes[0]['base_scaling_' + name] = np.float64
 
     def astep(self, q0):
         """One MLDA step, given current sample q0"""
@@ -1106,7 +1115,7 @@ class MLDA(ArrayStepShared):
 
         # Call the recursive DA proposal to get proposed sample
         # and convert dict -> numpy array
-        q = self.bij.map(self.proposal_dist(q0_dict))  # + self.scaling
+        q = self.bij.map(self.proposal_dist(q0_dict))
 
         # Evaluate MLDA acceptance log-ratio
         # If proposed sample from lower levels is the same as current one,
@@ -1123,9 +1132,22 @@ class MLDA(ArrayStepShared):
         self.accepted += accepted
 
         stats = {
+            'tune': self.tune,
             'accept': np.exp(accept),
-            'accepted': accepted,
+            'accepted': accepted
         }
+
+        # Capture latest base chain scaling stats from next step method
+        self.base_scaling_stats = {}
+        if self.next_step_method.__class__.__name__ == "CompoundStep":
+            for method in self.next_step_method.methods:
+                self.base_scaling_stats["base_scaling_" + method.vars[0].name] = method.scaling
+        elif self.next_step_method.__class__.__name__ == "Metropolis":
+            self.base_scaling_stats["base_scaling"] = self.next_step_method.scaling
+        else:
+            # next method is MLDA
+            self.base_scaling_stats = self.next_step_method.base_scaling_stats
+        stats = {**stats, **self.base_scaling_stats}
 
         return q_new, [stats]
 
