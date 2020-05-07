@@ -971,8 +971,19 @@ def _iter_sample(
 
     try:
         step.tune = bool(tune)
-        if hasattr(step, "reset_tuning"):
-            step.reset_tuning()
+        if hasattr(step, 'reset_tuning'):
+            if step.__class__.__name__ == 'CompoundStep':
+                if hasattr(step.methods[0], 'is_mlda_base'):
+                    if not step.methods[0].is_mlda_base:
+                        step.reset_tuning()
+                else:
+                    step.reset_tuning()
+            else:
+                if hasattr(step, 'is_mlda_base'):
+                    if not step.is_mlda_base:
+                        step.reset_tuning()
+                else:
+                    step.reset_tuning()
         for i in range(draws):
             stats = None
             diverging = False

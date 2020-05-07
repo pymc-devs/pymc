@@ -17,7 +17,6 @@ import numpy.random as nr
 import theano
 import scipy.linalg
 import warnings
-import sys
 import logging
 
 from ..distributions import draw_values
@@ -212,6 +211,10 @@ class Metropolis(ArrayStepShared):
         )
 
         self.mode = mode
+
+        # flag to indicate this stepper was instantiated within an MLDA stepper
+        # used to decide if the tuning parameters are reset when iter_sample() is called
+        self.is_mlda_base = kwargs.pop("is_mlda_base", False)
 
         shared = pm.make_shared_replacements(vars, model)
         self.delta_logp = delta_logp(model.logpt, vars, shared)
@@ -1036,13 +1039,18 @@ class MLDA(ArrayStepShared):
                 vars_next = [var for var in self.next_model.vars
                              if var.name in self.var_names]
                 # Metropolis sampler in base level (level=0), targeting self.next_model
+                # is_mlda_base is set to True to prevent tuning reset
+                # between MLDA iterations - note that Metropolis is used
+                # with only one chain and therefore the scaling reset issue
+                # (see issue #3733 in GitHub) will not appear here
                 self.next_step_method = pm.Metropolis(vars=vars_next,
                                                       proposal_dist=self.base_proposal_dist,
                                                       S=self.S,
                                                       scaling=self.scaling, tune=self.tune,
                                                       tune_interval=self.tune_interval,
                                                       model=None,
-                                                      blocked=self.base_blocked)
+                                                      blocked=self.base_blocked,
+                                                      **{"is_mlda_base": True})
         else:
             # drop the last coarse model
             next_coarse_models = self.coarse_models[:-1]
