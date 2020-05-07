@@ -960,8 +960,12 @@ class MLDA(ArrayStepShared):
 
     def __init__(self, vars=None, S=None, base_proposal_dist=None, scaling=1.,
                  tune=True, tune_interval=100, model=None, mode=None,
-                 subsampling_rate=2, coarse_models=None, base_blocked=False,
+                 subsampling_rate=5, coarse_models=None, base_blocked=False,
                  **kwargs):
+
+        warnings.warn(
+            'The MLDA implementation in PyMC3 is very young. You should be extra critical about its results.'
+        )
 
         model = pm.modelcontext(model)
 
