@@ -103,19 +103,26 @@ class RecursiveDAProposal(Proposal):
         in dictionary form (q0_dict).
         """
 
+        # Logging is reduced to avoid extensive console output
+        # during multiple recursive calls of sample()
         _log = logging.getLogger('pymc3')
         _log.setLevel(logging.ERROR)
 
         with self.next_model:
             # Check if the tuning flag has been set to False
-            # - in which case tuning is stopped.
+            # in which case tuning is stopped. The flag is set
+            # to False (by MLDA's astep) when the burn-in
+            # iterations of the highest-level MLDA sampler run out.
+            # The change propagates to all levels.
             if self.tune:
+                # Sample in tuning mode
                 output = pm.sample(draws=0, step=self.next_step_method,
                                    start=q0_dict, tune=self.subsampling_rate,
                                    chains=1, progressbar=False,
                                    compute_convergence_checks=False,
                                    discard_tuned_samples=False).point(-1)
             else:
+                # Sample in normal mode without tuning
                 output = pm.sample(draws=self.subsampling_rate,
                                    step=self.next_step_method,
                                    start=q0_dict, tune=0, chains=1,
@@ -123,6 +130,7 @@ class RecursiveDAProposal(Proposal):
                                    compute_convergence_checks=False,
                                    discard_tuned_samples=False).point(-1)
 
+        # set logging back to normal
         _log.setLevel(logging.NOTSET)
 
         return output
@@ -877,6 +885,12 @@ class MLDA(ArrayStepShared):
 
     Parameters
     ----------
+    coarse_models : list
+        List of coarse (multi-level) models, where the first model
+        is the coarsest one (level=0) and the last model is the
+        second finest one (level=L-1 where L is the number of levels).
+        Note this list excludes the model passed to the model
+        argument above, which is the finest available.
     vars : list
         List of variables for sampler
     S : standard deviation or base proposal covariance matrix
@@ -901,12 +915,6 @@ class MLDA(ArrayStepShared):
     subsampling_rate : int
         Number of samples generated in level l-1 to propose a sample
         for level l.
-    coarse_models : list
-        List of coarse (multi-level) models, where the first model
-        is the coarsest one (level=0) and the last model is the
-        second finest one (level=L-1 where L is the number of levels).
-        Note this list excludes the model passed to the model
-        argument above, which is the finest available).
     base_blocked : bool
         To flag to choose whether base sampler (level=0) is a
         Compound Metropolis step (base_blocked=False)
@@ -926,14 +934,15 @@ class MLDA(ArrayStepShared):
         ... with pm.Model():
         ...     x = Normal("x", mu=0, sigma=10)
         ...     y = Normal("y", mu=x, sigma=1, observed=datum)
-        ...     step_method = pm.MLDA(subsampling_rate=5,
-        ...                           coarse_models=[coarse_model])
+        ...     step_method = pm.MLDA(coarse_models=[coarse_model]
+        ...                           subsampling_rate=5)
         ...     trace = pm.sample(ndraws=500, chains=2,
-        ...                       tune=100, step=step_method)
+        ...                       tune=100, step=step_method,
+        ...                       random_seed=123)
         ...
         ... pm.summary(trace)
             mean     sd	     hpd_3%	   hpd_97%
-        x	0.989	 0.984	 -0.896	   2.761
+        x	1.011	 0.975	 -0.925	   2.824
 
     A more complete example of how to use MLDA in a realistic
     multilevel problem can be found in:
@@ -958,26 +967,26 @@ class MLDA(ArrayStepShared):
         'accepted': np.bool
     }]
 
-    def __init__(self, vars=None, S=None, base_proposal_dist=None, scaling=1.,
-                 tune=True, tune_interval=100, model=None, mode=None,
-                 subsampling_rate=5, coarse_models=None, base_blocked=False,
-                 **kwargs):
+    def __init__(self, coarse_models, vars=None, S=None, base_proposal_dist=None,
+                 scaling=1., tune=True, tune_interval=100, model=None, mode=None,
+                 subsampling_rate=5, base_blocked=False, **kwargs):
 
         warnings.warn(
-            'The MLDA implementation in PyMC3 is very young. You should be extra critical about its results.'
+            'The MLDA implementation in PyMC3 is very young. '
+            'You should be extra critical about its results.'
         )
 
         model = pm.modelcontext(model)
 
         # assign internal state
         self.coarse_models = coarse_models
-        if self.coarse_models is None:
-            sys.exit('MLDA step method was not given a '
-                     'set of multi-level '
-                     'coarse models. '
-                     'Either provide a list of models using '
-                     'argument coarse_models'
-                     'or use another step method.')
+        if not isinstance(coarse_models, list):
+            raise ValueError("MLDA step method cannot use "
+                             "coarse_models if it is not a list")
+        if len(self.coarse_models) == 0:
+            raise ValueError("MLDA step method was given an empty "
+                             "list of coarse models. Give at least "
+                             "one coarse model.")
         self.num_levels = len(self.coarse_models) + 1
         self.S = S
         self.base_proposal_dist = base_proposal_dist
@@ -1023,8 +1032,10 @@ class MLDA(ArrayStepShared):
         # initialise complete step method hierarchy
         if self.num_levels == 2:
             with self.next_model:
+                # make sure the correct variables are selected from next_model
                 vars_next = [var for var in self.next_model.vars
                              if var.name in self.var_names]
+                # Metropolis sampler in base level (level=0), targeting self.next_model
                 self.next_step_method = pm.Metropolis(vars=vars_next,
                                                       proposal_dist=self.base_proposal_dist,
                                                       S=self.S,
@@ -1033,10 +1044,13 @@ class MLDA(ArrayStepShared):
                                                       model=None,
                                                       blocked=self.base_blocked)
         else:
+            # drop the last coarse model
             next_coarse_models = self.coarse_models[:-1]
             with self.next_model:
+                # make sure the correct variables are selected from next_model
                 vars_next = [var for var in self.next_model.vars
                              if var.name in self.var_names]
+                # MLDA sampler in some intermediate level, targeting self.next_model
                 self.next_step_method = pm.MLDA(vars=vars_next, S=self.S,
                                                 base_proposal_dist=self.base_proposal_dist,
                                                 scaling=self.scaling,
@@ -1059,7 +1073,11 @@ class MLDA(ArrayStepShared):
                                                  self.subsampling_rate)
 
     def astep(self, q0):
-
+        """One MLDA step, given current sample q0"""
+        # Check if tuning has been deactivated and if yes,
+        # change the proposal's tuning flag and reset self.accepted
+        # This is initially triggered in the highest-level MLDA step
+        # method (within iter_sample) and then propagates to all levels.
         if self.proposal_dist.tune != self.tune:
             self.proposal_dist.tune = self.tune
             self.accepted = 0
@@ -1073,6 +1091,8 @@ class MLDA(ArrayStepShared):
         q = self.bij.map(self.proposal_dist(q0_dict))  # + self.scaling
 
         # Evaluate MLDA acceptance log-ratio
+        # If proposed sample from lower levels is the same as current one,
+        # do not calculate likelihood, just set accept to 0.0
         if (q == q0).all():
             accept = np.float(0.0)
         else:
@@ -1093,6 +1113,8 @@ class MLDA(ArrayStepShared):
 
     @staticmethod
     def competence(var, has_grad):
+        """Return MLDA competence for given var/has_grad. MLDA currently works
+        only with continuous variables."""
         if var.dtype in pm.discrete_types:
             return Competence.INCOMPATIBLE
         return Competence.COMPATIBLE
