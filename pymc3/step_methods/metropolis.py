@@ -84,8 +84,9 @@ class RecursiveDAProposal(Proposal):
     """
     Recursive Delayed Acceptance proposal to be used with MLDA step sampler.
     Recursively calls an MLDA sampler if level > 0 and calls Metropolis
-    sampler if level = 0. Results in a hierarchy of chains each of which is
-    used to propose samples to the chain above.
+    sampler if level = 0. The sampler generates subsampling_rate samples and
+    the last one is used as a proposal. Results in a hierarchy of chains
+    each of which is used to propose samples to the chain above.
     """
     def __init__(self, next_step_method, next_model,
                  tune, tune_interval, subsampling_rate):
@@ -97,8 +98,7 @@ class RecursiveDAProposal(Proposal):
         self.subsampling_rate = subsampling_rate
 
     def __call__(self, q0_dict):
-        """Returns proposed sample
-        given the current sample
+        """Returns proposed sample  given the current sample
         in dictionary form (q0_dict).
         """
 
@@ -883,8 +883,18 @@ def sample_except(limit, excluded):
 
 class MLDA(ArrayStepShared):
     """
-    Multi-level Delayed Acceptance sampling step that uses coarse
+    Multi-Level Delayed Acceptance (MLDA) sampling step that uses coarse
     approximations of a fine model to construct proposals in multiple levels.
+
+    MLDA creates a hierarchy of MCMC chains. Chains sample from different
+    posteriors that ideally should be approximations of the fine (top-level)
+    posterior and require less computational effort to evaluate their likelihood.
+
+    Each chain runs for a fixed number of iterations (subsampling_rate) and then
+    the last sample generated is used as a proposal for the chain in the level
+    above. The bottom-level chain is a Metropolis sampler. The algorithm achieves
+    much higher acceptance rate and effective sample sizes than other samplers
+    if the coarse models are sufficiently good approximations of the fine one.
 
     Parameters
     ----------
