@@ -15,6 +15,7 @@
 from scipy.cluster.vq import kmeans
 import numpy as np
 import theano.tensor as tt
+import warnings
 
 cholesky = tt.slinalg.cholesky
 solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
@@ -120,6 +121,12 @@ def plot_gp_dist(ax, samples:np.ndarray, x:np.ndarray, plot_samples=True, palett
         fill_kwargs = {}
     if samples_kwargs is None:
         samples_kwargs = {}
+    if np.any(np.isnan(samples)):
+        warnings.warn(
+            'There are `nan` entries in the [samples] arguments. '
+            'The plot will not contain a band!',
+            UserWarning
+        )
 
     cmap = plt.get_cmap(palette)
     percs = np.linspace(51, 99, 40)
