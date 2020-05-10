@@ -1160,3 +1160,20 @@ class TestUtil:
         )
         plt.close()
         pass
+
+    def test_plot_gp_dist_warn_nan(self):
+        """Test that the plotting helper works with the stated input shapes."""
+        import matplotlib.pyplot as plt
+        X = 100
+        S = 500
+        samples = np.random.normal(np.arange(X), size=(S, X))
+        samples[15, 3] = np.nan
+        fig, ax = plt.subplots()
+        with pytest.warns(UserWarning):
+            pm.gp.util.plot_gp_dist(
+                ax,
+                x=np.linspace(0, 50, X),
+                samples=samples
+            )
+        plt.close()
+        pass
