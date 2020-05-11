@@ -16,6 +16,8 @@
 __version__ = "3.8"
 
 import logging
+import multiprocessing as mp
+import platform
 
 _log = logging.getLogger("pymc3")
 
@@ -25,10 +27,13 @@ if not logging.root.handlers:
         handler = logging.StreamHandler()
         _log.addHandler(handler)
 
+sys = platform.system()
+if sys == "Darwin":
+    _ = mp.get_context("forkserver")
+
 
 def __set_compiler_flags():
     # Workarounds for Theano compiler problems on various platforms
-    import platform
     import theano
 
     system = platform.system()
