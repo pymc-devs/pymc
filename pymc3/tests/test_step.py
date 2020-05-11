@@ -555,7 +555,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                         HamiltonianMC(scaling=C, is_cov=True, blocked=False),
                     ]
                 ),
-                MLDA(coarse_models=[model_coarse], S=C, base_proposal_dist=MultivariateNormalProposal)
+                MLDA(coarse_models=[model_coarse], base_S=C, base_proposal_dist=MultivariateNormalProposal)
             )
         for step in steps:
             trace = sample(

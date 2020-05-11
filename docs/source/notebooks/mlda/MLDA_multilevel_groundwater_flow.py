@@ -2,10 +2,10 @@
 #
 # NOTE: This script has been converted from the python notebook in
 # pymc3/docs/source/notebooks/MLDA_multilevel_groundwater_flow.ipynb.
-# Supporting code is located in pymc3/docs/source/notebooks/mlda.
+# Supporting utility code for the forward model is located in pymc3/docs/source/notebooks/mlda.
 #
 #
-# ### The MLDA sampler
+# The MLDA sampler
 # This notebook (along with the utility code within the `./mlda` folder) is designed to
 # demonstrate the Multi-Level Delayed Acceptance MCMC algorithm (MLDA) proposed in [1], as implemented within pymc3.
 # 
@@ -27,7 +27,7 @@
 # Please note that the MLDA sampler is new in pymc3. The user should be extra critical about the results and report
 # any problems as issues in the pymc3's github repository.
 # 
-# ### The model
+# The model
 # Within this notebook, a simple MLDA sampler is compared to pymc3's Metropolis MCMC sampler. The
 # target posterior is defined within the context of a Bayesian inverse problem for groundwater flow modeling,
 # where we solve a PDE in each likelihood evaluation and we are able to do this in different coarseness levels.
@@ -38,7 +38,7 @@
 # since the ones used here are moderate to avoid long runtimes. Note that the likelihood in this example cannot be
 # automatically differentiated therefore NUTS cannot be used.
 # 
-# ### PDE solver details
+# PDE solver details
 # The code within the `./mlda` folder solves the steady state groundwater flow problem for a
 # random hydraulic conductivity field [2]. This solution acts as the forward model in the context of a Bayesian
 # Inverse problem. In conjunction with MCMC, this setup allows for sampling from the posterior distribution of model
@@ -68,12 +68,12 @@
 # user can then extract hydraulic heads at datapoints using the get_data-method.
 # 
 # 
-# ### Dependencies
+# Dependencies
 # The code has been developed and tested with Python 3.6. You will need to have pymc3 installed and
 # also install [FEniCS](https://fenicsproject.org/) for your system.
 #
 #
-# ### References
+# References
 # [1] Dodwell, Tim & Ketelsen, Chris & Scheichl, Robert & Teckentrup, Aretha. (2019). Multilevel
 # Markov Chain Monte Carlo. SIAM Review. 61. 509-545. https://doi.org/10.1137/19M126966X
 # 
@@ -85,33 +85,21 @@
 # C. Richardson, J. Ring, M. E. Rognes and G. N. Wells, Archive of Numerical Software, vol. 3, 2015
 # 
 
-# ### Import modules
-
-# In[1]:
-
+# Import modules
 
 # Import groundwater flow model utils
-import sys
-sys.path.insert(1, '../../docs/source/notebooks/mlda/')
-
-
-# In[2]:
-
-
 import os
 import numpy as np
 import time
 import pymc3 as pm
 import theano.tensor as tt
-from Model import Model, model_wrapper, project_eigenpairs
 from itertools import product
 import matplotlib.pyplot as plt
+from Model import Model, model_wrapper, project_eigenpairs
 os.environ['OPENBLAS_NUM_THREADS'] = '1'  # Set environmental variable
 
-# ### Set parameters
 
-# In[ ]:
-
+# Set parameters
 
 # Set the resolution of the multi-level models (from coarsest to finest)
 # This is a list of different model resolutions. Each
@@ -165,13 +153,9 @@ sampling_seed = 12345
 points_list = [0.1, 0.3, 0.5, 0.7, 0.9]
 
 
-# ### Define the likelihood
-
-# In[4]:
-
+# Define the likelihood
 
 # Use a Theano Op along with the code within ./mlda to construct the likelihood
-
 def my_loglik(my_model, theta, datapoints, data, sigma):
     """
     This returns the log-likelihood of my_model given theta,
@@ -180,6 +164,7 @@ def my_loglik(my_model, theta, datapoints, data, sigma):
     """
     output = model_wrapper(my_model, theta, datapoints)
     return - (0.5 / sigma ** 2) * np.sum((output - data) ** 2)
+
 
 class LogLike(tt.Op):
     """
@@ -238,10 +223,7 @@ class LogLike(tt.Op):
         outputs[0][0] = np.array(logl) # output the log-likelihood
 
 
-# ### Instantiate Model objects and data
-
-# In[5]:
-
+# Instantiate Model objects and data
 
 # Note this can take several minutes for large resolutions
 my_models = []
@@ -252,10 +234,6 @@ for r in resolutions:
 for i in range(len(my_models[:-1])):
     project_eigenpairs(my_models[-1], my_models[i])
 
-
-# In[6]:
-
-
 # Solve finest model as a test and plot transmissivity field and solution
 np.random.seed(data_seed)
 my_models[-1].solve()
@@ -263,10 +241,6 @@ my_models[-1].plot(lognormal=False)
 
 # Save true parameters of finest model
 true_parameters = my_models[-1].random_process.parameters
-
-
-# In[7]:
-
 
 # Define the sampling points.
 x_data = y_data = np.array(points_list)
@@ -278,22 +252,14 @@ noise = np.random.normal(0, 0.001, len(datapoints))
 # Generate data from the finest model for use in pymc3 inference - these data are used in all levels
 data = model_wrapper(my_models[-1], true_parameters, datapoints) + noise
 
-
-# ### Instantiate LogLik objects
-
-# In[8]:
-
+# Instantiate LogLik objects
 
 # create Theano Ops to wrap likelihoods of all model levels and store them in list
 logl = []
 for m in my_models:
     logl.append(LogLike(m, my_loglik, data, datapoints, sigma))
 
-
-# ### Construct pymc3 model objects for coarse models
-
-# In[9]:
-
+# Construct pymc3 model objects for coarse models
 
 # Set up models in pymc3 for each level - excluding finest model level
 coarse_models = []
@@ -308,16 +274,12 @@ for j in range(len(my_models) - 1):
         theta = tt.as_tensor_variable(parameters)
 
         # use a DensityDist (use a lamdba function to "call" the Op)
-        ll = logl[j]
-        pm.DensityDist('likelihood', lambda v: ll(v), observed={'v': theta})
+        temp = logl[j]
+        pm.DensityDist('likelihood', lambda v, ll=temp: ll(v), observed={'v': theta})
 
     coarse_models.append(model)
 
-
-# ### Perform inference using MLDA and Metropolis
-
-# In[10]:
-
+# Perform inference using MLDA and Metropolis
 
 # Set up finest model and perform inference with PyMC3, using the MLDA algorithm
 # and passing the coarse_models list created above.
@@ -367,12 +329,7 @@ with pm.Model():
                             random_seed=sampling_seed))
     runtimes.append(time.time() - t_start)
 
-
-# ### Print performance metrics
-
-# In[11]:
-
-
+# Print performance metrics
 for i, trace in enumerate(traces):
     acc.append(trace.get_sampler_stats('accepted').mean())
     ess.append(np.array(pm.ess(trace).to_array()))
@@ -388,22 +345,14 @@ for i, trace in enumerate(traces):
 
 print(f"\nMLDA vs. Metropolis performance speedup in all dimensions (performance measured by ES/sec):\n{np.array(performances[1]) / np.array(performances[0])}")
 
-
-# ### Show stats summary
-
-# In[22]:
-
+# Show stats summary
 
 # Print true theta values and pymc3 sampling summary
 print(f"\nDetailed summaries and plots:\nTrue parameters: {true_parameters}")
 for i, trace in enumerate(traces):
     print(f"\nSampler {method_names[i]}:\n", pm.stats.summary(trace))
 
-
-# ### Show traceplots
-
-# In[ ]:
-
+# Show traceplots
 
 # Print true theta values and pymc3 sampling summary
 for i, trace in enumerate(traces):
