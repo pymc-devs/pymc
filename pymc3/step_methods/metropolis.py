@@ -21,6 +21,7 @@ import logging
 
 from ..distributions import draw_values
 from .arraystep import ArrayStepShared, PopulationArrayStepShared, ArrayStep, metrop_select, Competence
+from .compound import CompoundStep
 import pymc3 as pm
 from pymc3.theanof import floatX
 
@@ -1139,10 +1140,10 @@ class MLDA(ArrayStepShared):
 
         # Capture latest base chain scaling stats from next step method
         self.base_scaling_stats = {}
-        if self.next_step_method.__class__.__name__ == "CompoundStep":
+        if isinstance(self.next_step_method, CompoundStep):
             for method in self.next_step_method.methods:
                 self.base_scaling_stats["base_scaling_" + method.vars[0].name] = method.scaling
-        elif self.next_step_method.__class__.__name__ == "Metropolis":
+        elif isinstance(self.next_step_method, Metropolis):
             self.base_scaling_stats["base_scaling"] = self.next_step_method.scaling
         else:
             # next method is MLDA
