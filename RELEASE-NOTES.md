@@ -21,9 +21,10 @@
 - `pm.sample` now takes 1000 draws and 1000 tuning samples by default, instead of 500 previously (see [#3855](https://github.com/pymc-devs/pymc3/pull/3855)).
 - Moved argument division out of `NegativeBinomial` `random` method. Fixes [#3864](https://github.com/pymc-devs/pymc3/issues/3864) in the style of [#3509](https://github.com/pymc-devs/pymc3/pull/3509).
 - The Dirichlet distribution now raises a ValueError when it's initialized with <= 0 values (see [#3853](https://github.com/pymc-devs/pymc3/pull/3853)).
-- Dtype bugfix in `MvNormal` and `MvStudentT` (see [3836](https://github.com/pymc-devs/pymc3/pull/3836))
+- Dtype bugfix in `MvNormal` and `MvStudentT` (see [3836](https://github.com/pymc-devs/pymc3/pull/3836)).
 - End of sampling report now uses `arviz.InferenceData` internally and avoids storing
-  pointwise log likelihood (see [#3883](https://github.com/pymc-devs/pymc3/pull/3883))
+  pointwise log likelihood (see [#3883](https://github.com/pymc-devs/pymc3/pull/3883)).
+- The multiprocessing start method on MacOS is now set to "forkserver", to avoid crashes (see issue [#3849](https://github.com/pymc-devs/pymc3/issues/3849), solved by [#3919](https://github.com/pymc-devs/pymc3/pull/3919)).
 
 ### Deprecations
 - Remove `sample_ppc` and `sample_ppc_w` that were deprecated in 3.6.
