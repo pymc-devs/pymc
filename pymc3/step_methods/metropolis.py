@@ -915,7 +915,10 @@ class MLDA(ArrayStepShared):
     base_scaling : scalar or array
         Initial scale factor for base proposal. Defaults to 1.
     tune : bool
-        Flag for tuning for the base proposal. Defaults to True.
+        Flag for tuning for the base proposal. Defaults to True. Note that
+        this is overidden by the tune parameter in sample(), i.e. when calling
+        step=MLDA(tune=False, ...) and then sample(step=step, tune=200, ...),
+        tuning will be activated for the first 200 steps.
     base_tune_interval : int
         The frequency of tuning for the base proposal. Defaults to 100
         iterations.
@@ -1102,12 +1105,17 @@ class MLDA(ArrayStepShared):
 
     def astep(self, q0):
         """One MLDA step, given current sample q0"""
-        # Check if tuning has been deactivated and if yes,
+        # Check if the tuning flag has been changed and if yes,
         # change the proposal's tuning flag and reset self.accepted
-        # This is initially triggered in the highest-level MLDA step
-        # method (within iter_sample) and then propagates to all levels.
+        # This is triggered by iter_sample while the highest-level MLDA step
+        # method is running. It then propagates to all levels.
         if self.proposal_dist.tune != self.tune:
             self.proposal_dist.tune = self.tune
+            # set tune in sub-methods of compound stepper explicitly because
+            # it is not set within sample() (only the CompoundStep's tune flag is)
+            if isinstance(self.next_step_method, CompoundStep):
+                for method in self.next_step_method.methods:
+                    method.tune = self.tune
             self.accepted = 0
 
         # Convert current sample from numpy array ->

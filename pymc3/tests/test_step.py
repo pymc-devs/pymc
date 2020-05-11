@@ -1099,8 +1099,8 @@ class TestMLDA:
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
                 assert len(set(samples)) == 2, \
                     "Non parallelized {} " "chains are identical.".format(
-                    stepper
-                )
+                        stepper
+                    )
 
     def test_parallelized_chains_are_random(self):
         """Test that parallel chain are
@@ -1119,8 +1119,8 @@ class TestMLDA:
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
                 assert len(set(samples)) == 2, \
                     "Parallelized {} " "chains are identical.".format(
-                    stepper
-                )
+                        stepper
+                    )
 
     def test_acceptance_rate_against_coarseness(self):
         """Test that the acceptance rate increases
@@ -1164,8 +1164,9 @@ class TestMLDA:
                                           base_blocked=False).next_step_method,
                                   CompoundStep)
 
-    def test_blocked(self):
-        """Test the type of base sampler instantiated when switching base_blocked flag"""
+    def test_mlda_blocked(self):
+        """Test the type of base sampler instantiated
+        when switching base_blocked flag"""
         _, model = simple_2model_continuous()
         _, model_coarse = simple_2model_continuous()
         with model:
@@ -1177,3 +1178,108 @@ class TestMLDA:
                                           base_blocked=True).next_step_method,
                                   Metropolis)
 
+    def test_tuning_and_scaling_on(self):
+        """Test that tune and base_scaling change as expected when
+        tuning is on."""
+        np.random.seed(1234)
+        ts = 100
+        _, model = simple_2model_continuous()
+        _, model_coarse = simple_2model_continuous()
+        with model:
+            trace = sample(
+                tune=ts,
+                draws=20,
+                step=MLDA(coarse_models=[model_coarse],
+                          base_tune_interval=50,
+                          base_scaling=100.),
+                chains=1,
+                discard_tuned_samples=False,
+                random_seed=1234
+            )
+
+        assert trace.get_sampler_stats('tune', chains=0)[0]
+        assert trace.get_sampler_stats('tune', chains=0)[ts - 1]
+        assert not trace.get_sampler_stats('tune', chains=0)[ts]
+        assert not trace.get_sampler_stats('tune', chains=0)[-1]
+        assert trace.get_sampler_stats('base_scaling_x', chains=0)[0] == 100.
+        assert trace.get_sampler_stats('base_scaling_y_logodds__', chains=0)[0] == 100.
+        assert trace.get_sampler_stats('base_scaling_x', chains=0)[-1] < 100.
+        assert trace.get_sampler_stats('base_scaling_y_logodds__', chains=0)[-1] < 100.
+
+    def test_tuning_and_scaling_off(self):
+        """Test that tuning is deactivated when sample()'s tune=0 and that
+        MLDA's tune=False is overridden by sample()'s tune."""
+        np.random.seed(12345)
+        _, model = simple_2model_continuous()
+        _, model_coarse = simple_2model_continuous()
+
+        ts_0 = 0
+        with model:
+            trace_0 = sample(
+                tune=ts_0,
+                draws=100,
+                step=MLDA(coarse_models=[model_coarse],
+                          base_tune_interval=50,
+                          base_scaling=100.,
+                          tune=False),
+                chains=1,
+                discard_tuned_samples=False,
+                random_seed=12345
+            )
+
+        ts_1 = 100
+        with model:
+            trace_1 = sample(
+                tune=ts_1,
+                draws=20,
+                step=MLDA(coarse_models=[model_coarse],
+                          base_tune_interval=50,
+                          base_scaling=100.,
+                          tune=False),
+                chains=1,
+                discard_tuned_samples=False,
+                random_seed=12345
+            )
+
+        assert not trace_0.get_sampler_stats('tune', chains=0)[0]
+        assert not trace_0.get_sampler_stats('tune', chains=0)[-1]
+        assert trace_0.get_sampler_stats('base_scaling_x', chains=0)[0] == \
+               trace_0.get_sampler_stats('base_scaling_x', chains=0)[-1] == 100.
+
+        assert trace_1.get_sampler_stats('tune', chains=0)[0]
+        assert trace_1.get_sampler_stats('tune', chains=0)[ts_1 - 1]
+        assert not trace_1.get_sampler_stats('tune', chains=0)[ts_1]
+        assert not trace_1.get_sampler_stats('tune', chains=0)[-1]
+        assert trace_1.get_sampler_stats('base_scaling_x', chains=0)[0] == 100.
+        assert trace_1.get_sampler_stats('base_scaling_y_logodds__', chains=0)[0] == 100.
+        assert trace_1.get_sampler_stats('base_scaling_x', chains=0)[-1] < 100.
+        assert trace_1.get_sampler_stats('base_scaling_y_logodds__', chains=0)[-1] < 100.
+
+    def test_trace_length(self):
+        """Check if trace length is as expected."""
+        tune = 100
+        draws = 50
+        with Model() as coarse_model:
+            Normal('n', 0, 2.2, shape=(3,))
+        with Model():
+            Normal('n', 0, 2, shape=(3,))
+            step = MLDA(coarse_models=[coarse_model])
+            trace = sample(
+                tune=tune,
+                draws=draws,
+                step=step,
+                chains=1,
+                discard_tuned_samples=False
+            )
+            assert len(trace) == tune + draws
+
+    @pytest.mark.parametrize('variable,has_grad,outcome',
+                             [('n', True, 1), ('n', False, 1), ('b', True, 0), ('b', False, 0)])
+    def test_competence(self, variable, has_grad, outcome):
+        """Test if competence function returns expected
+        results for different models"""
+        with Model() as pmodel:
+            Normal('n', 0, 2, shape=(3,))
+            Binomial('b', n=2, p=0.3)
+        assert MLDA.competence(pmodel[variable], has_grad=has_grad) == outcome
+        pass
