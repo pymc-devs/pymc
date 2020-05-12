@@ -70,7 +70,7 @@ class AR1(distribution.Continuous):
         """
         k = self.k
         tau_e = self.tau_e #innovation precision
-        tau = self.tau #ar1 precision
+        tau = tau_e * (1 - k ** 2) #ar1 precision
 
         x_im1 = x[:-1]
         x_i = x[1:]
