@@ -351,7 +351,8 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
     logp = norm - logdet - (nu + d) / 2. * np.log1p((trafo * trafo).sum(-1) / nu)
     return logp.sum()
 
-def AR1_logpdf(value, k, tau, tau_e):
+def AR1_logpdf(value, k, tau_e):
+    tau = tau_e * (1 - k ** 2)
     return (sp.norm(loc=0, scale=1/np.sqrt(tau)).logpdf(value[0]) +
             sp.norm(loc=k*value[:-1], scale=1/np.sqrt(tau_e)).logpdf(value[1:]).sum())
 
@@ -918,7 +919,7 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize('n', [2, 3, 4])
     def test_AR1(self, n):
-        self.pymc3_matches_scipy(AR1, Vector(R, n), {'k': Unit, 'tau': Rplus, 'tau_e': Rplus}, AR1_logpdf)
+        self.pymc3_matches_scipy(AR1, Vector(R, n), {'k': Unit, 'tau_e': Rplus}, AR1_logpdf)
 
 
     @pytest.mark.parametrize('n', [2, 3])
