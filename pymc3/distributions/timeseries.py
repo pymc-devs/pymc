@@ -69,7 +69,7 @@ class AR1(distribution.Continuous):
         TensorVariable
         """
         k = self.k
-        tau_e = self.tau_e #innovation precision
+        tau_e = self.tau_e # innovation precision
         tau = tau_e * (1 - k ** 2) #ar1 precision
 
         x_im1 = x[:-1]
