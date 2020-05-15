@@ -32,6 +32,7 @@ The chain column denotes the chain index and starts at 0.
 """
 import numpy as np
 import sqlite3
+import warnings
 
 from ..backends import base, ndarray
 from . import tracetab as ttab
@@ -89,6 +90,12 @@ class SQLite(base.BaseTrace):
     """
 
     def __init__(self, name, model=None, vars=None, test_point=None):
+        warnings.warn(
+            'The `SQLite` backend will soon be removed. '
+            'Please switch to a different backend. '
+            'If you have good reasons for using the SQLite backend, file an issue and tell us about them.',
+            DeprecationWarning,
+        )
         super().__init__(name, model, vars, test_point)
         self._var_cols = {}
         self.var_inserts = {}  # varname -> insert statement
@@ -322,6 +329,12 @@ def load(name, model=None):
     -------
     A MultiTrace instance
     """
+    warnings.warn(
+        'The `sqlite.load` function will soon be removed. '
+        'Please use ArviZ to save traces. '
+        'If you have good reasons for using the `load` function, file an issue and tell us about them. ',
+        DeprecationWarning,
+    )
     db = _SQLiteDB(name)
     db.connect()
     varnames = _get_table_list(db.cursor)

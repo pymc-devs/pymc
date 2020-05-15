@@ -53,19 +53,6 @@ summary = map_args(az.summary)
 waic = map_args(az.waic)
 
 
-def gelman_rubin(*args, **kwargs):
-    warnings.warn("gelman_rubin has been deprecated. In the future, use rhat instead.")
-    return rhat(*args, **kwargs)
-
-gelman_rubin.__doc__ = rhat.__doc__
-
-
-def effective_n(*args, **kwargs):
-    warnings.warn("effective_n has been deprecated. In the future, use ess instead.")
-    return ess(*args, **kwargs)
-
-effective_n.__doc__ = ess.__doc__
-
 __all__ = [
     "bfmi",
     "compare",
@@ -78,6 +65,4 @@ __all__ = [
     "rhat",
     "summary",
     "waic",
-    "gelman_rubin",  # deprecated, remove after 3.8
-    "effective_n",  # deprecated, remove after 3.8
 ]

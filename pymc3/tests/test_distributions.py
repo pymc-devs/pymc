@@ -1415,3 +1415,21 @@ def test_orderedlogistic_dimensions(shape):
     assert np.allclose(clogp, expected)
     assert ol.distribution.p.ndim == (len(shape) + 1)
     assert np.allclose(ologp, expected)
+
+
+class TestBugfixes:
+    @pytest.mark.parametrize('dist_cls,kwargs', [
+        (MvNormal, dict(mu=0)),
+        (MvStudentT, dict(mu=0, nu=2))
+    ])
+    @pytest.mark.parametrize('dims', [1,2,4])
+    def test_issue_3051(self, dims, dist_cls, kwargs):
+        d = dist_cls.dist(**kwargs, cov=np.eye(dims), shape=(dims,))
+        
+        X = np.random.normal(size=(20,dims))
+        actual_t = d.logp(X)
+        assert isinstance(actual_t, tt.TensorVariable)
+        actual_a = actual_t.eval()
+        assert isinstance(actual_a, np.ndarray)
+        assert actual_a.shape == (X.shape[0],)
+        pass

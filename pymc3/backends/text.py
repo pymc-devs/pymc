@@ -33,6 +33,7 @@ from glob import glob
 import os
 import re
 import pandas as pd
+import warnings
 
 from ..backends import base, ndarray
 from . import tracetab as ttab
@@ -57,6 +58,12 @@ class Text(base.BaseTrace):
     """
 
     def __init__(self, name, model=None, vars=None, test_point=None):
+        warnings.warn(
+            'The `Text` backend will soon be removed. '
+            'Please switch to a different backend. '
+            'If you have good reasons for using the Text backend, file an issue and tell us about them. ',
+            DeprecationWarning,
+        )
         if not os.path.exists(name):
             os.mkdir(name)
         super().__init__(name, model, vars, test_point)
@@ -185,6 +192,12 @@ def load(name, model=None):
     -------
     A MultiTrace instance
     """
+    warnings.warn(
+        'The `load` function will soon be removed. '
+        'Please use ArviZ to save traces. '
+        'If you have good reasons for using the `load` function, file an issue and tell us about them. ',
+        DeprecationWarning,
+    )
     files = glob(os.path.join(name, 'chain-*.csv'))
 
     if len(files) == 0:
@@ -224,6 +237,12 @@ def dump(name, trace, chains=None):
     chains: list
         Chains to dump. If None, all chains are dumped.
     """
+    warnings.warn(
+        'The `dump` function will soon be removed. '
+        'Please use ArviZ to save traces. '
+        'If you have good reasons for using the `dump` function, file an issue and tell us about them. ',
+        DeprecationWarning,
+    )
     if not os.path.exists(name):
         os.mkdir(name)
     if chains is None:

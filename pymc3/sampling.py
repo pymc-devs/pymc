@@ -334,15 +334,41 @@ def sample(
     Notes
     -----
     Optional keyword arguments can be passed to ``sample`` to be delivered to the
-    ``step_method``s used during sampling. In particular, the NUTS step method accepts
-    a number of arguments. Common options are:
+    ``step_method``s used during sampling.
 
-        * target_accept: float in [0, 1]. The step size is tuned such that we approximate this
-          acceptance rate. Higher values like 0.9 or 0.95 often work better for problematic
-          posteriors.
-        * max_treedepth: The maximum depth of the trajectory tree.
+    If your model uses only one step method, you can address step method kwargs
+    directly. In particular, the NUTS step method has several options including:
+
+        * target_accept: float in [0, 1]. The step size is tuned such that we
+          approximate this acceptance rate. Higher values like 0.9 or 0.95 often
+          work better for problematic posteriors
+        * max_treedepth: The maximum depth of the trajectory tree
         * step_scale: float, default 0.25
           The initial guess for the step size scaled down by :math:`1/n**(1/4)`
+
+    If your model uses multiple step methods, aka a Compound Step, then you have
+    two ways to address arguments to each step method:
+
+        A: If you let ``sample()`` automatically assign the ``step_method``s,
+         and you can correctly anticipate what they will be, then you can wrap
+         step method kwargs in a dict and pass that to sample() with a kwarg set
+         to the name of the step method.
+         e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
+         you could send:
+            1. ``target_accept`` to NUTS: nuts={'target_accept':0.9}
+            2. ``transit_p`` to BinaryGibbsMetropolis: binary_gibbs_metropolis={'transit_p':.7}
+
+         Note that available names are:
+            ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
+            ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
+            ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
+
+        B: If you manually declare the ``step_method``s, within the ``step``
+         kwarg, then you can address the ``step_method`` kwargs directly.
+         e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
+         you could send:
+            step=[pm.NUTS([freeRV1, freeRV2], target_accept=0.9),
+                  pm.BinaryGibbsMetropolis([freeRV3], transit_p=.7)]
 
     You can find a full list of arguments in the docstring of the step methods.
 
@@ -368,36 +394,9 @@ def sample(
     """
     model = modelcontext(model)
 
-    nuts_kwargs = kwargs.pop("nuts_kwargs", None)
-    if nuts_kwargs is not None:
-        warnings.warn(
-            "The nuts_kwargs argument has been deprecated. Pass step "
-            "method arguments directly to sample instead",
-            DeprecationWarning,
-        )
-        kwargs.update(nuts_kwargs)
-    step_kwargs = kwargs.pop("step_kwargs", None)
-    if step_kwargs is not None:
-        warnings.warn(
-            "The step_kwargs argument has been deprecated. Pass step "
-            "method arguments directly to sample instead",
-            DeprecationWarning,
-        )
-        kwargs.update(step_kwargs)
-
     if cores is None:
         cores = min(4, _cpu_count())
 
-    if "njobs" in kwargs:
-        cores = kwargs["njobs"]
-        warnings.warn(
-            "The njobs argument has been deprecated. Use cores instead.", DeprecationWarning
-        )
-    if "nchains" in kwargs:
-        chains = kwargs["nchains"]
-        warnings.warn(
-            "The nchains argument has been deprecated. Use chains instead.", DeprecationWarning
-        )
     if chains is None:
         chains = max(2, cores)
     if isinstance(start, dict):
@@ -412,11 +411,6 @@ def sample(
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
     if not isinstance(random_seed, Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
-    if "chain" in kwargs:
-        chain_idx = kwargs["chain"]
-        warnings.warn(
-            "The chain argument has been deprecated. Use chain_idx instead.", DeprecationWarning
-        )
 
     if start is not None:
         for start_vals in start:
@@ -912,6 +906,7 @@ def _iter_sample(
             step.reset_tuning()
         for i in range(draws):
             stats = None
+            diverging = False
 
             if i == 0 and hasattr(step, "iter_count"):
                 step.iter_count = 0
@@ -927,7 +922,6 @@ def _iter_sample(
             else:
                 point = step.step(point)
                 strace.record(point)
-                diverging = False
             if callback is not None:
                 warns = getattr(step, "warnings", None)
                 callback(trace=strace, draw=Draw(chain, i == draws, i, i < tune, stats, point, warns))
