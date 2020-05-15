@@ -33,6 +33,11 @@ from pymc3.theanof import floatX
 
 f = floatX
 c = - .5 * np.log(2. * np.pi)
+_beta_clip_values = {
+    dtype: (np.nextafter(0, 1, dtype=dtype), np.nextafter(1, 0, dtype=dtype))
+    for dtype in ["float16", "float32", "float64", "float128"]
+}
+
 
 
 def bound(logp, *conditions, **kwargs):
@@ -548,3 +553,45 @@ def incomplete_beta(a, b, value):
             tt.and_(tt.le(b * value, one), tt.le(value, 0.95)),
             ps,
             t))
+
+
+def clipped_beta_rvs(a, b, size=None, dtype="float64"):
+    """Draw beta distributed random samples in the open :math:`(0, 1)` interval.
+
+    The samples are generated with ``numpy.random.beta``, but any value that
+    is equal to 0 or 1 will be shifted towards the next floating point in the
+    interval :math:`[0, 1]`, depending on the floating point precision that is
+    given by ``dtype``.
+
+    Parameters
+    ----------
+    a : float or array_like of floats
+        Alpha, positive (>0).
+    b : float or array_like of floats
+        Beta, positive (>0).
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``a`` and ``b`` are both scalars.
+        Otherwise, ``np.broadcast(a, b).size`` samples are drawn.
+    dtype : str or dtype instance
+        The floating point precision that the samples should have. This also
+        determines the value that will be used to shift any samples returned
+        by the numpy random number generator that are zero or one.
+    
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized beta distribution. The numpy
+        implementation can yield values that are equal to zero or one. We
+        assume the support of the Beta distribution to be in the open interval
+        :math:`(0, 1)`, so we shift any sample that is equal to 0 to
+        ``np.nextafter(0, 1, dtype=dtype)`` and any sample that is equal to 1
+        if shifted to ``np.nextafter(1, 0, dtype=dtype)``.
+
+    """
+    out = np.random.beta(a, b, size=size).astype(dtype)
+    lower, upper = _beta_clip_values[dtype]
+    out[out == 0] = lower
+    out[out == 1] = upper
+    return out
