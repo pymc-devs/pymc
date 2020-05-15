@@ -25,6 +25,7 @@
 - End of sampling report now uses `arviz.InferenceData` internally and avoids storing
   pointwise log likelihood (see [#3883](https://github.com/pymc-devs/pymc3/pull/3883)).
 - The multiprocessing start method on MacOS is now set to "forkserver", to avoid crashes (see issue [#3849](https://github.com/pymc-devs/pymc3/issues/3849), solved by [#3919](https://github.com/pymc-devs/pymc3/pull/3919)).
+- Forced the `Beta` distribution's `random` method to generate samples that are in the open interval $(0, 1)$, i.e. no value can be equal to zero or equal to one (issue [#3898](https://github.com/pymc-devs/pymc3/issues/3898) fixed by [#3922](https://github.com/pymc-devs/pymc3/pull/3919)).
 
 ### Deprecations
 - Remove `sample_ppc` and `sample_ppc_w` that were deprecated in 3.6.
