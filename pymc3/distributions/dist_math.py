@@ -593,6 +593,4 @@ def clipped_beta_rvs(a, b, size=None, dtype="float64"):
     """
     out = scipy.stats.beta.rvs(a, b, size=size).astype(dtype)
     lower, upper = _beta_clip_values[dtype]
-    out[out == 0] = lower
-    out[out == 1] = upper
-    return out
+    return np.maximum(np.minimum(out, upper), lower)
