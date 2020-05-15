@@ -22,6 +22,7 @@ import numpy.random as nr
 import theano
 
 import pymc3 as pm
+from pymc3.distributions.dist_math import clipped_beta_rvs
 from pymc3.distributions.distribution import (draw_values,
                                               _DrawValuesContext,
                                               _DrawValuesContextBlocker)
@@ -548,7 +549,7 @@ class TestScalarParameterSamples(SeededTest):
 
     def test_beta(self):
         def ref_rand(size, alpha, beta):
-            return st.beta.rvs(a=alpha, b=beta, size=size)
+            return clipped_beta_rvs(a=alpha, b=beta, size=size)
         pymc3_random(pm.Beta, {'alpha': Rplus, 'beta': Rplus}, ref_rand=ref_rand)
 
     def test_exponential(self):
