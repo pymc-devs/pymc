@@ -111,6 +111,9 @@ class Distribution:
         if isinstance(val, tt.TensorVariable):
             return val.tag.test_value
 
+        if isinstance(val, tt.sharedvar.TensorSharedVariable):
+            return val.get_value()
+
         if isinstance(val, theano_constant):
             return val.value
 
