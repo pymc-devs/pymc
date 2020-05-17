@@ -479,10 +479,10 @@ class Data:
     https://docs.pymc.io/notebooks/data_container.html
     """
 
-    def __new__(self, name, value, dtype = None):
-        if dtype is None:
-            if hasattr(value, 'dtype'):
-                # if no dtype given, but available as attr of value, use that as dtype
+    def __new__(self, name, value, dtype=None):
+        if not dtype:
+            if hasattr(value, "dtype"):
+                # if no dtype given but available as attr of value, use that as dtype
                 dtype = value.dtype
             elif isinstance(value, int):
                 dtype = int
@@ -490,32 +490,23 @@ class Data:
                 # otherwise, assume float
                 dtype = float
 
-        # `pm.model.pandas_to_array` takes care of parameter `value` and
-        # transforms it to something digestible for pymc3
-        shared_object = theano.shared(pm.model.pandas_to_array(value, dtype = dtype), name)
-
-        # To draw the node for this variable in the graphviz Digraph we need
-        # its shape.
-        shared_object.dshape = tuple(shared_object.shape.eval())
-
         # Add data container to the named variables of the model.
         try:
             model = pm.Model.get_context()
         except TypeError:
-            raise TypeError("No model on context stack, which is needed to "
-                            "instantiate a data container. Add variable "
-                            "inside a 'with model:' block.")
-
+            raise TypeError(
+                "No model on context stack, which is needed to instantiate a data container. "
+                "Add variable inside a 'with model:' block."
+            )
         name = model.name_for(name)
 
         # `pm.model.pandas_to_array` takes care of parameter `value` and
         # transforms it to something digestible for pymc3
-        shared_object = theano.shared(pm.model.pandas_to_array(value), name)
+        shared_object = theano.shared(pm.model.pandas_to_array(value, dtype=dtype), name)
 
         # To draw the node for this variable in the graphviz Digraph we need
         # its shape.
         shared_object.dshape = tuple(shared_object.shape.eval())
-
 
         model.add_random_variable(shared_object)
 
