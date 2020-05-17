@@ -36,16 +36,16 @@ class TestData(SeededTest):
             x_shared = pm.Data('x_shared', x)
             b = pm.Normal('b', 0., 10.)
             pm.Normal('obs', b * x_shared, np.sqrt(1e-2), observed=y)
-            prior_trace0 = pm.sample_prior_predictive(1000)
 
+            prior_trace0 = pm.sample_prior_predictive(1000)
             trace = pm.sample(1000, init=None, tune=1000, chains=1)
             pp_trace0 = pm.sample_posterior_predictive(trace, 1000)
             pp_trace01 = pm.fast_sample_posterior_predictive(trace, 1000)
 
             x_shared.set_value(x_pred)
+            prior_trace1 = pm.sample_prior_predictive(1000)
             pp_trace1 = pm.sample_posterior_predictive(trace, samples=1000)
             pp_trace11 = pm.fast_sample_posterior_predictive(trace, samples=1000)
-            prior_trace1 = pm.sample_prior_predictive(1000)
 
         assert prior_trace0['b'].shape == (1000,)
         assert prior_trace0['obs'].shape == (1000, 100)
@@ -109,6 +109,36 @@ class TestData(SeededTest):
         np.testing.assert_allclose(new_y, pp_tracef['obs'].mean(axis=0),
                                    atol=1e-1)
 
+    def test_shared_data_as_index(self):
+        """
+        Allow pm.Data to be used for index variables, i.e with integers as well as floats.
+        See https://github.com/pymc-devs/pymc3/issues/3813
+        """
+        with pm.Model() as model:
+            index = pm.Data('index', [2, 0, 1, 0, 2], dtype=int)
+            y = pm.Data('y', [1., 2., 3., 2., 1.])
+            alpha = pm.Normal('alpha', 0, 1.5, shape=3)
+            pm.Normal('obs', alpha[index], np.sqrt(1e-2), observed=y)
+
+            prior_trace = pm.sample_prior_predictive(1000, var_names=["alpha"])
+            trace = pm.sample(1000, init=None, tune=1000, chains=1)
+
+        # Predict on new data
+        new_index = np.array([0, 1, 2])
+        new_y = [5., 6., 9.]
+        with model:
+            pm.set_data(new_data={'index': new_index, 'y': new_y})
+            pp_trace = pm.sample_posterior_predictive(trace, 1000, var_names=["alpha", "obs"])
+            pp_tracef = pm.fast_sample_posterior_predictive(trace, 1000, var_names=["alpha", "obs"])
+
+        assert prior_trace['alpha'].shape == (1000, 3)
+        assert trace['alpha'].shape == (1000, 3)
+        assert pp_trace['alpha'].shape == (1000, 3)
+        assert pp_trace['obs'].shape == (1000, 3)
+        assert pp_tracef['alpha'].shape == (1000, 3)
+        assert pp_tracef['obs'].shape == (1000, 3)
+
+
     def test_creation_of_data_outside_model_context(self):
         with pytest.raises((IndexError, TypeError)) as error:
             pm.Data('data', [1.1, 2.2, 3.3])
@@ -147,7 +177,7 @@ class TestData(SeededTest):
 
 def test_data_naming():
     """
-    This is a test for issue #3793 -- `Data` objects in named models are 
+    This is a test for issue #3793 -- `Data` objects in named models are
     not given model-relative names.
     """
     with pm.Model("named_model") as model:
