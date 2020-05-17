@@ -1482,7 +1482,7 @@ class FreeRV(Factor, PyMC3Variable):
         return self.tag.test_value
 
 
-def pandas_to_array(data):
+def pandas_to_array(data, dtype = float):
     if hasattr(data, 'values'):  # pandas
         if data.isnull().any().any():  # missing values
             ret = np.ma.MaskedArray(data.values, data.isnull().values)
@@ -1501,8 +1501,12 @@ def pandas_to_array(data):
         ret = generator(data)
     else:
         ret = np.asarray(data)
-    return pm.floatX(ret)
-
+    if dtype in [float, np.float32, np.float64]:
+        return pm.floatX(ret)
+    elif dtype in [int, np.int32, np.int64]:
+        return pm.intX(ret)
+    else:
+        raise ValueError('Unsupported type for pandas_to_array: %s' % str(dtype))
 
 def as_tensor(data, name, model, distribution):
     dtype = distribution.dtype

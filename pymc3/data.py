@@ -153,9 +153,9 @@ class Minibatch(tt.TensorVariable):
     Examples
     --------
     Consider we have `data` as follows:
-    
+
     >>> data = np.random.rand(100, 100)
-    
+
     if we want a 1d slice of size 10 we do
 
     >>> x = Minibatch(data, batch_size=10)
@@ -182,7 +182,7 @@ class Minibatch(tt.TensorVariable):
 
     >>> assert x.eval().shape == (10, 10)
 
-    
+
     You can pass the Minibatch `x` to your desired model:
 
     >>> with pm.Model() as model:
@@ -192,7 +192,7 @@ class Minibatch(tt.TensorVariable):
 
 
     Then you can perform regular Variational Inference out of the box
-    
+
 
     >>> with model:
     ...     approx = pm.fit()
@@ -478,7 +478,25 @@ class Data:
     For more information, take a look at this example notebook
     https://docs.pymc.io/notebooks/data_container.html
     """
-    def __new__(self, name, value):
+
+    def __new__(self, name, value, dtype = None):
+        if dtype is None:
+            if hasattr(value, 'dtype'):
+                # if no dtype given, but available as attr of value, use that as dtype
+                dtype = value.dtype
+            elif isinstance(value, int):
+                dtype = int
+            else:
+                # otherwise, assume float
+                dtype = float
+
+        # `pm.model.pandas_to_array` takes care of parameter `value` and
+        # transforms it to something digestible for pymc3
+        shared_object = theano.shared(pm.model.pandas_to_array(value, dtype = dtype), name)
+
+        # To draw the node for this variable in the graphviz Digraph we need
+        # its shape.
+        shared_object.dshape = tuple(shared_object.shape.eval())
 
         # Add data container to the named variables of the model.
         try:
