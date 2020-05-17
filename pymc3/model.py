@@ -1244,7 +1244,7 @@ def set_data(new_data, model=None):
     ----------
     new_data: dict
         New values for the data containers. The keys of the dictionary are
-        the  variables names in the model and the values are the objects
+        the variables' names in the model and the values are the objects
         with which to update.
     model: Model (optional if in `with` context)
 
@@ -1266,7 +1266,7 @@ def set_data(new_data, model=None):
     .. code:: ipython
 
         >>> with model:
-        ...     pm.set_data({'x': [5,6,9]})
+        ...     pm.set_data({'x': [5., 6., 9.]})
         ...     y_test = pm.sample_posterior_predictive(trace)
         >>> y_test['obs'].mean(axis=0)
         array([4.6088569 , 5.54128318, 8.32953844])
@@ -1275,7 +1275,15 @@ def set_data(new_data, model=None):
 
     for variable_name, new_value in new_data.items():
         if isinstance(model[variable_name], SharedVariable):
-            model[variable_name].set_value(pandas_to_array(new_value))
+            if hasattr(new_value, "dtype"):
+                # if no dtype given but available as attr of value, use that as dtype
+                dtype = new_value.dtype
+            elif isinstance(new_value, int):
+                dtype = int
+            else:
+                # otherwise, assume float
+                dtype = float
+            model[variable_name].set_value(pandas_to_array(new_value, dtype=dtype))
         else:
             message = 'The variable `{}` must be defined as `pymc3.' \
                       'Data` inside the model to allow updating. The ' \
