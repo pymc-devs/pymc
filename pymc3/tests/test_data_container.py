@@ -139,6 +139,31 @@ class TestData(SeededTest):
         assert pp_tracef['obs'].shape == (1000, 3)
 
 
+    def test_shared_data_as_rv_input(self):
+        """
+        Allow pm.Data to be used as input for other RVs.
+        See https://github.com/pymc-devs/pymc3/issues/3842
+        """
+        with pm.Model() as m:
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            _ = pm.Normal("y", mu=x, shape=3)
+            trace = pm.sample(chains=1)
+
+        np.testing.assert_allclose(np.array([1.0, 2.0, 3.0]), x.get_value(),
+                                   atol=1e-1)
+        np.testing.assert_allclose(np.array([1.0, 2.0, 3.0]), trace["y"].mean(0),
+                                  atol=1e-1)
+
+        with m:
+            pm.set_data({"x": np.array([2.0, 4.0, 6.0])})
+            trace = pm.sample(chains=1)
+
+        np.testing.assert_allclose(np.array([2.0, 4.0, 6.0]), x.get_value(),
+                                   atol=1e-1)
+        np.testing.assert_allclose(np.array([2.0, 4.0, 6.0]), trace["y"].mean(0),
+                                  atol=1e-1)
+
+
     def test_creation_of_data_outside_model_context(self):
         with pytest.raises((IndexError, TypeError)) as error:
             pm.Data('data', [1.1, 2.2, 3.3])
