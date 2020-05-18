@@ -480,6 +480,21 @@ class Data:
     """
 
     def __new__(self, name, value):
+        if isinstance(value, list):
+            print(value, type(value))
+            value = np.array(value)
+            print("Converted list to np: ", value, type(value), value.dtype)
+
+        # Type handling to enable index variables
+        # set int type when appropriate:
+        if "int" in str(value.dtype):
+            dtype = pm.intX(value).dtype
+            print(value, ": ", dtype)
+        # otherwise, assume float
+        else:
+            dtype = theano.config.floatX
+            print(value, ": ", dtype)
+
         # Add data container to the named variables of the model.
         try:
             model = pm.Model.get_context()
@@ -492,7 +507,7 @@ class Data:
 
         # `pm.model.pandas_to_array` takes care of parameter `value` and
         # transforms it to something digestible for pymc3
-        shared_object = theano.shared(pm.model.pandas_to_array(value), name)
+        shared_object = theano.shared(pm.model.pandas_to_array(value, dtype=dtype), name)
 
         # To draw the node for this variable in the graphviz Digraph we need
         # its shape.

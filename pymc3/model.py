@@ -1275,7 +1275,20 @@ def set_data(new_data, model=None):
 
     for variable_name, new_value in new_data.items():
         if isinstance(model[variable_name], SharedVariable):
-            model[variable_name].set_value(pandas_to_array(new_value))
+            if isinstance(new_value, list):
+                print(new_value, type(new_value))
+                new_value = np.array(new_value)
+                print("Converted list to np: ", new_value, type(new_value), new_value.dtype)
+            # Type handling to enable index variables
+            # set int type when appropriate:
+            if "int" in str(new_value.dtype):
+                dtype = pm.intX(new_value).dtype
+                print(new_value, ": ", dtype)
+            # otherwise, assume float
+            else:
+                dtype = theano.config.floatX
+                print(new_value, ": ", dtype)
+            model[variable_name].set_value(pandas_to_array(new_value, dtype=dtype))
         else:
             message = 'The variable `{}` must be defined as `pymc3.' \
                       'Data` inside the model to allow updating. The ' \
@@ -1482,7 +1495,7 @@ class FreeRV(Factor, PyMC3Variable):
         return self.tag.test_value
 
 
-def pandas_to_array(data):
+def pandas_to_array(data, dtype=theano.config.floatX):
     if hasattr(data, 'values'):  # pandas
         if data.isnull().any().any():  # missing values
             ret = np.ma.MaskedArray(data.values, data.isnull().values)
@@ -1502,7 +1515,12 @@ def pandas_to_array(data):
     else:
         ret = np.asarray(data)
 
-    return ret
+    if "int" in str(dtype):
+        print("in pandas function, int boucle: ", ret, str(dtype))
+        return pm.intX(ret)
+    else:
+        print("in pandas function, float boucle: ", ret, str(dtype))
+        return pm.floatX(ret)
 
 
 def as_tensor(data, name, model, distribution):
