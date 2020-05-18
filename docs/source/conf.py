@@ -37,6 +37,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.mathjax",
+    "sphinx.ext.intersphinx",
     "nbsphinx",
     "numpydoc",
     "IPython.sphinxext.ipython_console_highlighting",
@@ -129,6 +130,11 @@ pygments_style = "friendly"
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
+
+# intersphinx configuration to ease linking arviz docs
+intersphinx_mapping = {
+    "arviz": ("https://arviz-devs.github.io/arviz/", None),
+}
 
 
 # -- Options for HTML output ----------------------------------------------
