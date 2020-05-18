@@ -3,7 +3,7 @@
 ## PyMC3 3.9 (On deck)
 
 ### New features
-- use [fastprogress](https://github.com/fastai/fastprogress) instead of tqdm [#3693](https://github.com/pymc-devs/pymc3/pull/3693)
+- Use [fastprogress](https://github.com/fastai/fastprogress) instead of tqdm [#3693](https://github.com/pymc-devs/pymc3/pull/3693).
 - `DEMetropolis` can now tune both `lambda` and `scaling` parameters, but by default neither of them are tuned. See [#3743](https://github.com/pymc-devs/pymc3/pull/3743) for more info.
 - `DEMetropolisZ`, an improved variant of `DEMetropolis` brings better parallelization and higher efficiency with fewer chains with a slower initial convergence. This implementation is experimental. See [#3784](https://github.com/pymc-devs/pymc3/pull/3784) for more info.
 - Notebooks that give insight into `DEMetropolis`, `DEMetropolisZ` and the `DifferentialEquation` interface are now located in the [Tutorials/Deep Dive](https://docs.pymc.io/nb_tutorials/index.html) section.
@@ -14,6 +14,8 @@
 - `pm.sample` now has support for adapting dense mass matrix using `QuadPotentialFullAdapt` (see [#3596](https://github.com/pymc-devs/pymc3/pull/3596), [#3705](https://github.com/pymc-devs/pymc3/pull/3705), [#3858](https://github.com/pymc-devs/pymc3/pull/3858), and [#3893](https://github.com/pymc-devs/pymc3/pull/3893)). Use `init="adapt_full"` or `init="jitter+adapt_full"` to use.
 - `Moyal` distribution added (see [#3870](https://github.com/pymc-devs/pymc3/pull/3870)).
 - `pm.LKJCholeskyCov` now automatically computes and returns the unpacked Cholesky decomposition, the correlations and the standard deviations of the covariance matrix (see [#3881](https://github.com/pymc-devs/pymc3/pull/3881)).
+- `pm.Data` container can now be used for index variables, i.e with integer data and not only floats (issue [#3813](https://github.com/pymc-devs/pymc3/issues/3813), fixed by [#3925](https://github.com/pymc-devs/pymc3/pull/3925)).
+- `pm.Data` container can now be used as input for other random variables (issue [#3842](https://github.com/pymc-devs/pymc3/issues/3842), fixed by [#3925](https://github.com/pymc-devs/pymc3/pull/3925)).
 
 ### Maintenance
 - Tuning results no longer leak into sequentially sampled `Metropolis` chains (see #3733 and #3796).
