@@ -1505,9 +1505,13 @@ def pandas_to_array(data):
         ret = np.asarray(data)
 
     # type handling to enable index variables when data is int:
-    if "int" in str(data.dtype):
-        return pm.intX(ret)
-    # otherwise, assume float:
+    if hasattr(data, "dtype"):
+        if "int" in str(data.dtype):
+            return pm.intX(ret)
+        # otherwise, assume float:
+        else:
+            return pm.floatX(ret)
+    # needed for uses of this function other than with pm.Data:
     else:
         return pm.floatX(ret)
 
