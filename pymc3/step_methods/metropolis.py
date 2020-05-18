@@ -874,13 +874,6 @@ class DEMetropolisZ(ArrayStepShared):
         return Competence.COMPATIBLE
 
 
-def sample_except(limit, excluded):
-    candidate = nr.choice(limit - 1)
-    if candidate >= excluded:
-        candidate += 1
-    return candidate
-
-
 class MLDA(ArrayStepShared):
     """
     Multi-Level Delayed Acceptance (MLDA) sampling step that uses coarse
