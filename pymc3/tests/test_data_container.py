@@ -109,7 +109,7 @@ class TestData(SeededTest):
         See https://github.com/pymc-devs/pymc3/issues/3813
         """
         with pm.Model() as model:
-            index = pm.Data("index", [2, 0, 1, 0, 2], dtype=int)
+            index = pm.Data("index", [2, 0, 1, 0, 2])
             y = pm.Data("y", [1.0, 2.0, 3.0, 2.0, 1.0])
             alpha = pm.Normal("alpha", 0, 1.5, shape=3)
             pm.Normal("obs", alpha[index], np.sqrt(1e-2), observed=y)

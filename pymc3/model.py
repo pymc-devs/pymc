@@ -1275,15 +1275,7 @@ def set_data(new_data, model=None):
 
     for variable_name, new_value in new_data.items():
         if isinstance(model[variable_name], SharedVariable):
-            if hasattr(new_value, "dtype"):
-                # if no dtype given but available as attr of value, use that as dtype
-                dtype = new_value.dtype
-            elif isinstance(new_value, int):
-                dtype = int
-            else:
-                # otherwise, assume float
-                dtype = float
-            model[variable_name].set_value(pandas_to_array(new_value, dtype=dtype))
+            model[variable_name].set_value(pandas_to_array(new_value))
         else:
             message = 'The variable `{}` must be defined as `pymc3.' \
                       'Data` inside the model to allow updating. The ' \
@@ -1490,7 +1482,7 @@ class FreeRV(Factor, PyMC3Variable):
         return self.tag.test_value
 
 
-def pandas_to_array(data, dtype=float):
+def pandas_to_array(data):
     if hasattr(data, 'values'):  # pandas
         if data.isnull().any().any():  # missing values
             ret = np.ma.MaskedArray(data.values, data.isnull().values)
@@ -1510,12 +1502,7 @@ def pandas_to_array(data, dtype=float):
     else:
         ret = np.asarray(data)
 
-    if dtype in [int, np.int8, np.int16, np.int32, np.int64]:
-        return pm.intX(ret)
-    elif dtype in [float, np.float16,  np.float32, np.float64]:
-        return pm.floatX(ret)
-    else:
-        raise ValueError('Unsupported type for pandas_to_array: %s' % str(dtype))
+    return ret
 
 
 def as_tensor(data, name, model, distribution):
