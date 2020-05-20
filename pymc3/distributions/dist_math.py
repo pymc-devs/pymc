@@ -17,6 +17,7 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
+import platform
 import numpy as np
 import scipy.linalg
 import scipy.stats
@@ -36,8 +37,13 @@ f = floatX
 c = - .5 * np.log(2. * np.pi)
 _beta_clip_values = {
     dtype: (np.nextafter(0, 1, dtype=dtype), np.nextafter(1, 0, dtype=dtype))
-    for dtype in ["float16", "float32", "float64", "float128"]
+    for dtype in ["float16", "float32", "float64"]
 }
+if platform.system() in ["Linux", "Darwin"]:
+    _beta_clip_values["float128"] = (
+        np.nextafter(0, 1, dtype="float128"),
+        np.nextafter(1, 0, dtype="float128")
+    )
 
 
 
