@@ -213,7 +213,7 @@ class Metropolis(ArrayStepShared):
         self.mode = mode
 
         # flag to indicate this stepper was instantiated within an MLDA stepper
-        # used to decide if the tuning parameters are reset when iter_sample() is called
+        # if not, tuning parameters are reset when _iter_sample() is called
         self.is_mlda_base = kwargs.pop("is_mlda_base", False)
 
         shared = pm.make_shared_replacements(vars, model)
@@ -221,9 +221,11 @@ class Metropolis(ArrayStepShared):
         super().__init__(vars, shared)
 
     def reset_tuning(self):
-        """Resets the tuned sampler parameters to their initial values."""
-        for attr, initial_value in self._untuned_settings.items():
-            setattr(self, attr, initial_value)
+        """Resets the tuned sampler parameters to their initial values.
+           Skipped if stepper is a bottom-level stepper in MLDA."""
+        if not self.is_mlda_base:
+            for attr, initial_value in self._untuned_settings.items():
+                setattr(self, attr, initial_value)
         return
 
     def astep(self, q0):
@@ -1100,12 +1102,12 @@ class MLDA(ArrayStepShared):
         """One MLDA step, given current sample q0"""
         # Check if the tuning flag has been changed and if yes,
         # change the proposal's tuning flag and reset self.accepted
-        # This is triggered by iter_sample while the highest-level MLDA step
+        # This is triggered by _iter_sample while the highest-level MLDA step
         # method is running. It then propagates to all levels.
         if self.proposal_dist.tune != self.tune:
             self.proposal_dist.tune = self.tune
             # set tune in sub-methods of compound stepper explicitly because
-            # it is not set within sample() (only the CompoundStep's tune flag is)
+            # it is not set within sample.py (only the CompoundStep's tune flag is)
             if isinstance(self.next_step_method, CompoundStep):
                 for method in self.next_step_method.methods:
                     method.tune = self.tune
