@@ -28,7 +28,7 @@
   pointwise log likelihood (see [#3883](https://github.com/pymc-devs/pymc3/pull/3883)).
 - The multiprocessing start method on MacOS is now set to "forkserver", to avoid crashes (see issue [#3849](https://github.com/pymc-devs/pymc3/issues/3849), solved by [#3919](https://github.com/pymc-devs/pymc3/pull/3919)).
 - Forced the `Beta` distribution's `random` method to generate samples that are in the open interval $(0, 1)$, i.e. no value can be equal to zero or equal to one (issue [#3898](https://github.com/pymc-devs/pymc3/issues/3898) fixed by [#3924](https://github.com/pymc-devs/pymc3/pull/3924)).
-- Fixed issue with clipped beta distribution rvs dtype. Removed support for `float128` on platforms that aren't Linux or Darwin (see issue [#3929](https://github.com/pymc-devs/pymc3/issues/3849) fixed by [#3930](https://github.com/pymc-devs/pymc3/pull/3930))
+- Fixed an issue that happened on Windows, that was introduced by the clipped beta distribution rvs function ([#3924](https://github.com/pymc-devs/pymc3/pull/3924)). Windows does not support the `float128` dtype, but we had assumed that it had to be available. The solution was to only support `float128` on Linux and Darwin systems (see issue [#3929](https://github.com/pymc-devs/pymc3/issues/3849) fixed by [#3930](https://github.com/pymc-devs/pymc3/pull/3930)).
 
 ### Deprecations
 - Remove `sample_ppc` and `sample_ppc_w` that were deprecated in 3.6.
