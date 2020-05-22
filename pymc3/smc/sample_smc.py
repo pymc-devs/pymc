@@ -12,8 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from .smc import SMC
+import time
 import logging
+from .smc import SMC
 
 
 def sample_smc(
@@ -144,6 +145,7 @@ def sample_smc(
         random_seed=random_seed,
     )
 
+    t1 = time.time()
     _log = logging.getLogger("pymc3")
     _log.info("Sample initial stage: ...")
     stage = 0
@@ -170,5 +172,6 @@ def sample_smc(
         smc.pool.join()
 
     trace = smc.posterior_to_trace()
-
+    trace.report._n_draws = smc.draws
+    trace.report._t_sampling = time.time() - t1
     return trace
