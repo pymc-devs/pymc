@@ -591,7 +591,7 @@ def sample(
     if compute_convergence_checks or return_inferencedata:
         if 'data.save_log_likelihood' in arviz.rcParams:
             # if the user change the arviz default, use it
-            save_ll = arviz.rcparams['data.save_log_likelihood']
+            save_ll = arviz.rcParams['data.save_log_likelihood']
         else:
             # otherwise, use the arviz default, which is True as of v0.8.0
             save_ll = True
