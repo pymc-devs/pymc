@@ -32,6 +32,7 @@ from ..math import invlogit, logit, logdiffexp
 from .dist_math import (
     alltrue_elemwise, betaln, bound, gammaln, i0e, incomplete_beta, logpow,
     normal_lccdf, normal_lcdf, SplineWrapper, std_cdf, zvalue,
+    clipped_beta_rvs,
 )
 from .distribution import (Continuous, draw_values, generate_samples)
 
@@ -1290,7 +1291,7 @@ class Beta(UnitContinuous):
         """
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point, size=size)
-        return generate_samples(stats.beta.rvs, alpha, beta,
+        return generate_samples(clipped_beta_rvs, alpha, beta,
                                 dist_shape=self.shape,
                                 size=size)
 
