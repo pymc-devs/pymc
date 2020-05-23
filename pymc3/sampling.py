@@ -247,6 +247,7 @@ def sample(
     callback=None,
     *,
     return_inferencedata=None,
+    idata_kwargs:dict=None,
     **kwargs
 ):
     """Draw samples from the posterior using the given step methods.
@@ -332,6 +333,8 @@ def sample(
     return_inferencedata : bool, optional
         Whether to return the trace as an `arviz.InferenceData` (True) object or a `MultiTrace` (False)
         Defaults to `False`, but we'll switch to `True` in version 4.0.0.
+    idata_kwargs : dict, optional
+        Keyword arguments for `arviz.from_pymc3`
 
     Returns
     -------
@@ -589,13 +592,10 @@ def sample(
 
     idata = None
     if compute_convergence_checks or return_inferencedata:
-        if 'data.save_log_likelihood' in arviz.rcParams:
-            # if the user change the arviz default, use it
-            save_ll = arviz.rcParams['data.save_log_likelihood']
-        else:
-            # otherwise, use the arviz default, which is True as of v0.8.0
-            save_ll = True
-        idata = arviz.from_pymc3(trace, log_likelihood=save_ll, model=model)
+        ikwargs = dict(model=model)
+        if idata_kwargs:
+            ikwargs.update(idata_kwargs)
+        idata = arviz.from_pymc3(trace, **ikwargs)
 
     if compute_convergence_checks:
         if draws - tune < 100:
