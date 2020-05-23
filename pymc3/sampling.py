@@ -330,9 +330,9 @@ def sample(
         is drawn from.
 
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
-    return_inferencedata : bool, optional
+    return_inferencedata : bool, optional, default=False
         Whether to return the trace as an `arviz.InferenceData` (True) object or a `MultiTrace` (False)
-        Defaults to `False`, but we'll switch to `True` in version 4.0.0.
+        Defaults to `False`, but we'll switch to `True` in an upcoming release.
     idata_kwargs : dict, optional
         Keyword arguments for `arviz.from_pymc3`
 
@@ -434,7 +434,7 @@ def sample(
 
     if return_inferencedata is None:
         warnings.warn(
-            "In v4.0.0, pm.sample will return an `arviz.InferenceData` object instead of a `MultiTrace` by default. "
+            "In an upcoming release, pm.sample will return an `arviz.InferenceData` object instead of a `MultiTrace` by default. "
             "You can pass return_inferencedata=True or return_inferencedata=False to be safe and silence this warning.",
             FutureWarning
         )
