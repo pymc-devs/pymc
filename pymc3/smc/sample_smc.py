@@ -173,5 +173,6 @@ def sample_smc(
 
     trace = smc.posterior_to_trace()
     trace.report._n_draws = smc.draws
+    trace.report._n_tune = 0
     trace.report._t_sampling = time.time() - t1
     return trace
