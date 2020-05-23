@@ -24,7 +24,9 @@ import pytest
 from ..theanof import floatX
 from ..distributions import Discrete
 from ..distributions.dist_math import (
-    bound, factln, alltrue_scalar, MvNormalLogp, SplineWrapper, i0e)
+    bound, factln, alltrue_scalar, MvNormalLogp, SplineWrapper, i0e,
+    clipped_beta_rvs,
+)
 
 
 def test_bound():
@@ -216,3 +218,11 @@ class TestI0e:
         utt.verify_grad(i0e, [-2.])
         utt.verify_grad(i0e, [[0.5, -2.]])
         utt.verify_grad(i0e, [[[0.5, -2.]]])
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "float128"])
+def test_clipped_beta_rvs(dtype):
+    # Verify that the samples drawn from the beta distribution are never
+    # equal to zero or one (issue #3898)
+    values = clipped_beta_rvs(0.01, 0.01, size=1000000, dtype=dtype)
+    assert not (np.any(values == 0) or np.any(values == 1))
