@@ -21,6 +21,7 @@
 - Tuning results no longer leak into sequentially sampled `Metropolis` chains (see #3733 and #3796).
 - Deprecated `sd` in version 3.7 has been replaced by `sigma` now raises `DeprecationWarning` on using `sd` in continuous, mixed and timeseries distributions. (see #3837 and #3688).
 - We'll deprecate the `Text` and `SQLite` backends and the `save_trace`/`load_trace` functions, since this is now done with ArviZ. (see [#3902](https://github.com/pymc-devs/pymc3/pull/3902))
+- ArviZ `v0.8.0` is now the minimum required version
 - In named models, `pm.Data` objects now get model-relative names (see [#3843](https://github.com/pymc-devs/pymc3/pull/3843)).
 - `pm.sample` now takes 1000 draws and 1000 tuning samples by default, instead of 500 previously (see [#3855](https://github.com/pymc-devs/pymc3/pull/3855)).
 - Dropped some deprecated kwargs and functions (see [#3906](https://github.com/pymc-devs/pymc3/pull/3906))

@@ -437,11 +437,6 @@ def sample(
         )
         # set the default
         return_inferencedata = False
-    if return_inferencedata and not discard_tuned_samples:
-        raise NotImplementedError(
-            'arviz.from_pymc3 does not handle warmups yet. See ArviZ issue #1146.'
-            'For this reason, we can not return InferenceData that includes warmup draws right now.'
-        )
 
     if start is not None:
         for start_vals in start:
@@ -592,18 +587,17 @@ def sample(
         f'took {trace.report.t_sampling:.0f} seconds.'
     )
 
-    if compute_convergence_checks:
-        # convert trace to InferenceData, with awareness of warmup!
-        # arviz 0.7.0 doesn't ignore warmup draws if they are in the trace! (see arviz #1146)
-        # that's why here, we make sure to only put actual posterior samples into idata.posterior
-        trace_warmup = trace[:-n_draws]   # <-- may result in len(trace_warmup) == 0
-        trace_posterior = trace[-n_draws:]
-        idata = arviz.from_pymc3(trace_posterior, log_likelihood=False, model=model)
-        # save additional sampling metadata
-        idata.posterior.attrs['n_tune'] = n_tune
-        idata.posterior.attrs['n_draws'] = n_draws
-        idata.posterior.attrs['t_sampling'] = t_sampling
+    idata = None
+    if compute_convergence_checks or return_inferencedata:
+        if 'data.save_log_likelihood' in arviz.rcParams:
+            # if the user change the arviz default, use it
+            save_ll = arviz.rcparams['data.save_log_likelihood']
+        else:
+            # otherwise, use the arviz default, which is True as of v0.8.0
+            save_ll = True
+        idata = arviz.from_pymc3(trace, log_likelihood=save_ll, model=model)
 
+    if compute_convergence_checks:
         if draws - tune < 100:
             warnings.warn("The number of samples is too small to check convergence reliably.")
         else:
