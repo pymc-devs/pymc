@@ -54,7 +54,7 @@ def save_trace(trace: MultiTrace, directory: Optional[str] = None, overwrite=Fal
     str, path to the directory where the trace was saved
     """
     warnings.warn(
-        "The `save_trace` function will soon be removed." "Instead, use ArviZ to save/load traces.",
+        "The `save_trace` function will soon be removed. Instead, use ArviZ to save/load traces.",
         DeprecationWarning,
     )
 
@@ -98,7 +98,7 @@ def load_trace(directory: str, model=None) -> MultiTrace:
     pm.Multitrace that was saved in the directory
     """
     warnings.warn(
-        "The `load_trace` function will soon be removed." "Instead, use ArviZ to save/load traces.",
+        "The `load_trace` function will soon be removed. Instead, use ArviZ to save/load traces.",
         DeprecationWarning,
     )
     straces = []
