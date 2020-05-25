@@ -528,6 +528,7 @@ class MultiTrace:
         new_traces = [trace._slice(slice) for trace in self._straces.values()]
         trace = MultiTrace(new_traces)
         idxs = slice.indices(len(self))
+        trace.report._chain_warnings = self.report._chain_warnings
         trace.report._n_draws = len(trace)
         return trace
 
