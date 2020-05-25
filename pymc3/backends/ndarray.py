@@ -26,7 +26,6 @@ import warnings
 import numpy as np
 from pymc3.backends import base
 from pymc3.backends.base import MultiTrace
-from pymc3.backends.report import SamplerReport
 from pymc3.model import Model, modelcontext
 from pymc3.exceptions import TraceDirectoryError
 
