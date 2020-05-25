@@ -342,9 +342,6 @@ class NDArray(base.BaseTrace):
         sliced.sampler_vars = self.sampler_vars
         sliced.draw_idx = (idx.stop - idx.start) // idx.step
 
-        sliced.report = SamplerReport()
-        sliced.report._n_draws = len(sliced)
-
         if self._stats is not None:
             sliced._stats = []
             for vars in self._stats:
