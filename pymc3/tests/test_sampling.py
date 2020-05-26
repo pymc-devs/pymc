@@ -166,19 +166,28 @@ class TestSample(SeededTest):
                 draws=100, tune=50, cores=1,
                 chains=2, step=pm.Metropolis()
             )
-            with pytest.warns(FutureWarning):
+            with pytest.warns(FutureWarning, match="pass return_inferencedata"):
                 result = pm.sample(**kwargs)
-            with pytest.raises(NotImplementedError):
-                pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=False)
 
-            result = pm.sample(**kwargs, return_inferencedata=False, discard_tuned_samples=False)
+            # trace with tuning
+            with pytest.warns(UserWarning, match="will be included"):
+                result = pm.sample(**kwargs, return_inferencedata=False, discard_tuned_samples=False)
             assert isinstance(result, pm.backends.base.MultiTrace)
             assert len(result) == 150
 
+            # inferencedata with tuning
+            result = pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=False)
+            assert isinstance(result, az.InferenceData)
+            assert result.posterior.sizes["draw"] == 100
+            assert result.posterior.sizes["chain"] == 2
+            assert len(result._groups_warmup) > 0
+
+            # inferencedata without tuning
             result = pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=True)
             assert isinstance(result, az.InferenceData)
-            assert result.posterior.sizes['draw'] == 100
-            assert result.posterior.sizes['chain'] == 2
+            assert result.posterior.sizes["draw"] == 100
+            assert result.posterior.sizes["chain"] == 2
+            assert len(result._groups_warmup) == 0
         pass
 
     @pytest.mark.parametrize('cores', [1, 2])

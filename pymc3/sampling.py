@@ -592,7 +592,7 @@ def sample(
 
     idata = None
     if compute_convergence_checks or return_inferencedata:
-        ikwargs = dict(model=model)
+        ikwargs = dict(model=model, save_warmup=not discard_tuned_samples)
         if idata_kwargs:
             ikwargs.update(idata_kwargs)
         idata = arviz.from_pymc3(trace, **ikwargs)
