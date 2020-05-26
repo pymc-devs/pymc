@@ -305,6 +305,9 @@ class ProcessAdapter:
         )
         try:
             self._process.start()
+            # Close the remote pipe, so that we get notified if the other
+            # end is closed.
+            remote_conn.close()
         except IOError as e:
             # Something may have gone wrong during the fork / spawn
             if e.errno == errno.EPIPE:
