@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 from itertools import combinations
+import packaging
 from typing import Tuple
 import numpy as np
 
@@ -166,8 +167,10 @@ class TestSample(SeededTest):
                 draws=100, tune=50, cores=1,
                 chains=2, step=pm.Metropolis()
             )
-            with pytest.warns(FutureWarning, match="pass return_inferencedata"):
-                result = pm.sample(**kwargs)
+            v = packaging.version.parse(pm.__version__)
+            if v.major > 3 or v.minor >= 10:
+                with pytest.warns(FutureWarning, match="pass return_inferencedata"):
+                    result = pm.sample(**kwargs)
 
             # trace with tuning
             with pytest.warns(UserWarning, match="will be included"):

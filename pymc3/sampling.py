@@ -22,6 +22,7 @@ from typing import Iterable as TIterable
 from collections.abc import Iterable
 from collections import defaultdict
 from copy import copy
+import packaging
 import pickle
 import logging
 import time
@@ -431,11 +432,13 @@ def sample(
         )
 
     if return_inferencedata is None:
-        warnings.warn(
-            "In an upcoming release, pm.sample will return an `arviz.InferenceData` object instead of a `MultiTrace` by default. "
-            "You can pass return_inferencedata=True or return_inferencedata=False to be safe and silence this warning.",
-            FutureWarning
-        )
+        v = packaging.version.parse(pm.__version__)
+        if v.major > 3 or v.minor >= 10:
+            warnings.warn(
+                "In an upcoming release, pm.sample will return an `arviz.InferenceData` object instead of a `MultiTrace` by default. "
+                "You can pass return_inferencedata=True or return_inferencedata=False to be safe and silence this warning.",
+                FutureWarning
+            )
         # set the default
         return_inferencedata = False
 
