@@ -1,4 +1,4 @@
-arviz>=0.8.1
+arviz>=0.8.2
 theano>=1.0.4
 numpy>=1.13.0
 scipy>=0.18.1
