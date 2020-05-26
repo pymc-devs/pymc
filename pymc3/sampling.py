@@ -424,11 +424,9 @@ def sample(
 
     if not discard_tuned_samples and not return_inferencedata:
         warnings.warn(
-            "Tuning samples will be included in the returned `MultiTrace` object. "
-            "To avoid complications with downstream analysis, you should slice them out:\n"
-            "trace_warmup = trace[: -trace.report.n_draws]\n"
-            "trace_posterior = trace[-trace.report.n_draws :]\n"
-            "Alternatively, you can use InferenceData: `pm.sample(..., return_inferencedata=True)`",
+            "Tuning samples will be included in the returned `MultiTrace` object, which can lead to"
+            " complications in your downstream analysis. Please consider to switch to `InferenceData`:\n"
+            "`pm.sample(..., return_inferencedata=True)`",
             UserWarning
         )
 
