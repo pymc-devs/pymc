@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 from itertools import combinations
+import packaging
 from typing import Tuple
 import numpy as np
 
@@ -158,6 +159,38 @@ class TestSample(SeededTest):
             assert trace.report.n_tune == 50
             assert trace.report.n_draws == 100
             assert isinstance(trace.report.t_sampling, float)
+        pass
+
+    def test_return_inferencedata(self):
+        with self.model:
+            kwargs = dict(
+                draws=100, tune=50, cores=1,
+                chains=2, step=pm.Metropolis()
+            )
+            v = packaging.version.parse(pm.__version__)
+            if v.major > 3 or v.minor >= 10:
+                with pytest.warns(FutureWarning, match="pass return_inferencedata"):
+                    result = pm.sample(**kwargs)
+
+            # trace with tuning
+            with pytest.warns(UserWarning, match="will be included"):
+                result = pm.sample(**kwargs, return_inferencedata=False, discard_tuned_samples=False)
+            assert isinstance(result, pm.backends.base.MultiTrace)
+            assert len(result) == 150
+
+            # inferencedata with tuning
+            result = pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=False)
+            assert isinstance(result, az.InferenceData)
+            assert result.posterior.sizes["draw"] == 100
+            assert result.posterior.sizes["chain"] == 2
+            assert len(result._groups_warmup) > 0
+
+            # inferencedata without tuning
+            result = pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=True)
+            assert isinstance(result, az.InferenceData)
+            assert result.posterior.sizes["draw"] == 100
+            assert result.posterior.sizes["chain"] == 2
+            assert len(result._groups_warmup) == 0
         pass
 
     @pytest.mark.parametrize('cores', [1, 2])
