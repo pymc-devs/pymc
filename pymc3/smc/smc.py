@@ -440,7 +440,7 @@ class PseudoLikelihood:
         elif hasattr(sum_stat, "__call__"):
             self.sum_stat = sum_stat
         else:
-            raise NotImplementedError(f"The summary statistics {sum_stat} is not implemented")
+            raise ValueError(f"The summary statistics {sum_stat} is not implemented")
 
         self.observations = self.sum_stat(observations)
 
@@ -449,7 +449,7 @@ class PseudoLikelihood:
         elif hasattr(distance, "__call__"):
             self.distance = distance
         else:
-            raise NotImplementedError(f"The distance metric {distance} is not implemented")
+            raise ValueError(f"The distance metric {distance} is not implemented")
 
     def posterior_to_function(self, posterior):
         model = self.model
@@ -466,7 +466,6 @@ class PseudoLikelihood:
         for varname, value in zip(self.unobserved_RVs, self.get_unobserved_fn(point)):
             if varname in self.params:
                 samples[varname] = value
-                # if not is_transformed_name(varname):
         return samples
 
     def gaussian_kernel(self, obs_data, sim_data):
