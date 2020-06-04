@@ -20,15 +20,19 @@ from pymc3.backends.report import SamplerWarning, WarningType
 
 class DualAverageAdaptation:
     def __init__(self, initial_step, target, gamma, k, t0):
-        self._log_step = np.log(initial_step)
-        self._log_bar = self._log_step
+        self._initial_step = initial_step
         self._target = target
-        self._hbar = 0.
         self._k = k
         self._t0 = t0
-        self._count = 1
-        self._mu = np.log(10 * initial_step)
         self._gamma = gamma
+        self.reset()
+
+    def reset(self):
+        self._log_step = np.log(self._initial_step)
+        self._log_bar = self._log_step
+        self._hbar = 0.
+        self._count = 1
+        self._mu = np.log(10 * self._initial_step)
         self._tuned_stats = []
 
     def current(self, tune):

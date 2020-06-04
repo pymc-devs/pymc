@@ -145,6 +145,15 @@ class TestSample(SeededTest):
             trace = pm.sample(draws=100, tune=50, cores=4)
             assert len(trace) == 100
 
+    def test_reset_tuning(self):
+        with self.model:
+            tune = 50
+            chains = 2
+            start, step = pm.sampling.init_nuts(chains=chains)
+            pm.sample(draws=2, tune=tune, chains=chains, step=step, start=start, cores=1)
+            assert step.potential._n_samples == tune
+            assert step.step_adapt._count == tune + 1
+
     @pytest.mark.parametrize("step_cls", [pm.NUTS, pm.Metropolis, pm.Slice])
     @pytest.mark.parametrize("discard", [True, False])
     def test_trace_report(self, step_cls, discard):
