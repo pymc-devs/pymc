@@ -534,6 +534,8 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         self.adaptation_window_multiplier = float(adaptation_window_multiplier)
         self._update_window = int(update_window)
 
+        self.reset()
+
     def reset(self):
         self._previous_update = 0
         self._cov = np.array(self._initial_cov, dtype=self.dtype, copy=True)
