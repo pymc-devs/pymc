@@ -31,7 +31,6 @@ from ..step_methods.arraystep import metrop_select
 from ..step_methods.metropolis import MultivariateNormalProposal
 from ..backends.ndarray import NDArray
 from ..backends.base import MultiTrace
-from ..util import is_transformed_name
 
 EXPERIMENTAL_WARNING = (
     "Warning: SMC-ABC methods are experimental step methods and not yet"

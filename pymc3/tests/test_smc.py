@@ -98,19 +98,19 @@ class TestSMC(SeededTest):
 class TestSMCABC(SeededTest):
     def setup_class(self):
         super().setup_class()
-        self.data = np.sort(np.random.normal(loc=0, scale=1, size=1000))
+        self.data = np.random.normal(loc=0, scale=1, size=1000)
 
         def normal_sim(a, b):
-            return np.sort(np.random.normal(a, b, 1000))
+            return np.random.normal(a, b, 1000)
 
         with pm.Model() as self.SMABC_test:
             a = pm.Normal("a", mu=0, sd=5)
             b = pm.HalfNormal("b", sd=2)
-            s = pm.Simulator("s", normal_sim, observed=self.data)
+            s = pm.Simulator("s", normal_sim, params=(a, b), observed=self.data)
 
     def test_one_gaussian(self):
         with self.SMABC_test:
-            trace = pm.sample_smc(draws=2000, kernel="ABC", epsilon=0.1)
+            trace = pm.sample_smc(draws=1000, kernel="ABC", sum_stat="sorted", epsilon=1)
 
         np.testing.assert_almost_equal(self.data.mean(), trace["a"].mean(), decimal=2)
         np.testing.assert_almost_equal(self.data.std(), trace["b"].mean(), decimal=1)
