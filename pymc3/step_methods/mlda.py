@@ -475,7 +475,9 @@ class MLDA(ArrayStepShared):
                                 "variable.")
 
         self.next_model = self.coarse_models[-1]
+
         self.adaptive_error_model = adaptive_error_model
+
         # check that certain requirements hold
         # for the adaptive error model feature to work
         if self.adaptive_error_model:
@@ -532,6 +534,7 @@ class MLDA(ArrayStepShared):
             # this is the subsampling rate applied to the current level
             # it is stored in the level above and transferred here
             self.subsampling_rate_above = kwargs.get("subsampling_rate_above", None)
+
         self.num_levels = len(self.coarse_models) + 1
         self.base_sampler = base_sampler
 
@@ -621,7 +624,7 @@ class MLDA(ArrayStepShared):
                                                               model=None,
                                                               mode=self.mode,
                                                               blocked=self.base_blocked,
-                                                              **base_kwargs)
+                                                              ** base_kwargs)
                 else:
                     # DEMetropolisZMLDA sampler in base level (level=0), targeting self.next_model
                     self.next_step_method = pm.DEMetropolisZMLDA(vars=vars_next,
@@ -634,7 +637,7 @@ class MLDA(ArrayStepShared):
                                                                  tune_drop_fraction=self.base_tune_drop_fraction,
                                                                  model=None,
                                                                  mode=self.mode,
-                                                                 **base_kwargs)
+                                                                 ** base_kwargs)
         else:
             # drop the last coarse model
             next_coarse_models = self.coarse_models[:-1]

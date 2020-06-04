@@ -30,10 +30,14 @@ from pymc3.sampling import assign_step_methods, sample
 from pymc3.parallel_sampling import ParallelSamplingError
 from pymc3.exceptions import SamplingError
 <<<<<<< HEAD
+<<<<<<< HEAD
 from pymc3.model import Model, Potential, set_data
 =======
 from pymc3.model import Model, Potential
 >>>>>>> Add variance reduction feature to MLDA
+=======
+from pymc3.model import Model, Potential, set_data
+>>>>>>> Add adaptive error model to MLDA
 from pymc3.step_methods import (
     NUTS,
     BinaryGibbsMetropolis,
@@ -52,11 +56,7 @@ from pymc3.step_methods import (
     MLDA,
 )
 from pymc3.theanof import floatX
-<<<<<<< HEAD
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal, MvNormal
-=======
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal
->>>>>>> Add variance reduction feature to MLDA
 from pymc3.data import Data
 
 from numpy.testing import assert_array_almost_equal
@@ -1712,3 +1712,128 @@ class TestMLDA:
                     if isinstance(f, Likelihood1):
                         assert Q_1_0.mean(axis=1) == 0.0
                         assert Q_2_1.mean(axis=1) == 0.0
+
+    def test_aem_mu_sigma(self):
+        """Test that AEM estimates mu_B and Sigma_B in
+        the coarse models of a 3-level LR example correctly"""
+        # create data for linear regression
+        if theano.config.floatX == "float32":
+            p = "float32"
+        else:
+            p = "float64"
+        np.random.seed(123456)
+        size = 200
+        true_intercept = 1
+        true_slope = 2
+        sigma = 1
+        x = np.linspace(0, 1, size, dtype=p)
+        # y = a + b*x
+        true_regression_line = true_intercept + true_slope * x
+        # add noise
+        y = true_regression_line + np.random.normal(0, sigma ** 2, size)
+        s = np.identity(y.shape[0], dtype=p)
+        np.fill_diagonal(s, sigma ** 2)
+
+        # forward model Op - here, just the regression equation
+        class ForwardModel(tt.Op):
+            if theano.config.floatX == "float32":
+                itypes = [tt.fvector]
+                otypes = [tt.fvector]
+            else:
+                itypes = [tt.dvector]
+                otypes = [tt.dvector]
+
+            def __init__(self, x, pymc3_model):
+                self.x = x
+                self.pymc3_model = pymc3_model
+
+            def perform(self, node, inputs, outputs):
+                intercept = inputs[0][0]
+                x_coeff = inputs[0][1]
+
+                temp = intercept + x_coeff * x + self.pymc3_model.bias.get_value()
+                with self.pymc3_model:
+                    set_data({'model_output': temp})
+                outputs[0][0] = np.array(temp)
+
+        # create the coarse models with separate biases
+        mout = []
+        coarse_models = []
+
+        with Model() as coarse_model_0:
+            mu_B = Data('mu_B', np.zeros(y.shape, dtype=p))
+            bias = Data('bias', 3.5 * np.ones(y.shape, dtype=p))
+            Sigma_B = Data('Sigma_B', np.zeros((y.shape[0], y.shape[0]), dtype=p))
+            model_output = Data('model_output', np.zeros(y.shape, dtype=p))
+            Sigma_e = Data('Sigma_e', s)
+
+            # Define priors
+            intercept = Normal('Intercept', 0, sigma=20)
+            x_coeff = Normal('x', 0, sigma=20)
+
+            theta = tt.as_tensor_variable([intercept, x_coeff])
+
+            mout.append(ForwardModel(x, coarse_model_0))
+
+            # Define likelihood
+            likelihood = MvNormal('y', mu=mout[0](theta) + mu_B,
+                                  cov=Sigma_e, observed=y)
+
+            coarse_models.append(coarse_model_0)
+
+        with Model() as coarse_model_1:
+            mu_B = Data('mu_B', np.zeros(y.shape, dtype=p))
+            bias = Data('bias', 2.2 * np.ones(y.shape, dtype=p))
+            Sigma_B = Data('Sigma_B', np.zeros((y.shape[0], y.shape[0]), dtype=p))
+            model_output = Data('model_output', np.zeros(y.shape, dtype=p))
+            Sigma_e = Data('Sigma_e', s)
+
+            # Define priors
+            intercept = Normal('Intercept', 0, sigma=20)
+            x_coeff = Normal('x', 0, sigma=20)
+
+            theta = tt.as_tensor_variable([intercept, x_coeff])
+
+            mout.append(ForwardModel(x, coarse_model_1))
+
+            # Define likelihood
+            likelihood = MvNormal('y', mu=mout[1](theta) + mu_B,
+                                  cov=Sigma_e, observed=y)
+
+            coarse_models.append(coarse_model_1)
+
+        # fine model and inference
+        with Model() as model:
+            bias = Data('bias', np.zeros(y.shape, dtype=p))
+            model_output = Data('model_output', np.zeros(y.shape, dtype=p))
+            Sigma_e = Data('Sigma_e', s)
+
+            # Define priors
+            intercept = Normal('Intercept', 0, sigma=20)
+            x_coeff = Normal('x', 0, sigma=20)
+
+            theta = tt.as_tensor_variable([intercept, x_coeff])
+
+            mout.append(ForwardModel(x, model))
+
+            # Define likelihood
+            likelihood = MvNormal('y', mu=mout[-1](theta),
+                                  cov=Sigma_e, observed=y)
+
+            step_mlda = MLDA(coarse_models=coarse_models,
+                             adaptive_error_model=True)
+
+            trace_mlda = sample(draws=100, step=step_mlda,
+                                chains=1, tune=200,
+                                discard_tuned_samples=True,
+                                random_seed=84759238)
+
+            m0 = step_mlda.next_step_method.next_model.mu_B.get_value()
+            s0 = step_mlda.next_step_method.next_model.Sigma_B.get_value()
+            m1 = step_mlda.next_model.mu_B.get_value()
+            s1 = step_mlda.next_model.Sigma_B.get_value()
+
+            assert np.all(np.abs(m0 + 3.5 * np.ones(y.shape, dtype=p)) < 1e-1)
+            assert np.all(np.abs(m1 + 2.2 * np.ones(y.shape, dtype=p)) < 1e-1)
+            assert np.all(np.abs(s0 < 1e-1))
+            assert np.all(np.abs(s1 < 1e-1))
