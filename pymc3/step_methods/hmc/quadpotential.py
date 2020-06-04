@@ -171,16 +171,24 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
         self.dtype = dtype
         self._n = n
-        self._var = np.array(initial_diag, dtype=self.dtype, copy=True)
-        self._var_theano = theano.shared(self._var)
-        self._stds = np.sqrt(initial_diag)
-        self._inv_stds = floatX(1.) / self._stds
-        self._foreground_var = _WeightedVariance(
-            self._n, initial_mean, initial_diag, initial_weight, self.dtype)
-        self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
-        self._n_samples = 0
+
+        self._initial_mean = initial_mean
+        self._initial_diag = initial_diag
+        self._initial_weight = initial_weight
         self.adaptation_window = adaptation_window
         self.adaptation_window_multiplier = float(adaptation_window_multiplier)
+
+        self.reset()
+
+    def reset(self):
+        self._var = np.array(self._initial_diag, dtype=self.dtype, copy=True)
+        self._var_theano = theano.shared(self._var)
+        self._stds = np.sqrt(self._initial_diag)
+        self._inv_stds = floatX(1.) / self._stds
+        self._foreground_var = _WeightedVariance(
+            self._n, self._initial_mean, self._initial_diag, self._initial_weight, self.dtype)
+        self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
+        self._n_samples = 0
 
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
@@ -275,8 +283,8 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
     This is experimental, and may be removed without prior deprication.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def reset(self):
+        super().reset()
         self._grads1 = np.zeros(self._n, dtype=self.dtype)
         self._ngrads1 = 0
         self._grads2 = np.zeros(self._n, dtype=self.dtype)
@@ -518,19 +526,24 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
 
         self.dtype = dtype
         self._n = n
-        self._cov = np.array(initial_cov, dtype=self.dtype, copy=True)
-        self._chol = scipy.linalg.cholesky(self._cov, lower=True)
-        self._chol_error = None
-        self._foreground_cov = _WeightedCovariance(
-            self._n, initial_mean, initial_cov, initial_weight, self.dtype
-        )
-        self._background_cov = _WeightedCovariance(self._n, dtype=self.dtype)
-        self._n_samples = 0
+        self._initial_mean = initial_mean
+        self._initial_cov = initial_cov
+        self._initial_weight = initial_weight
 
         self.adaptation_window = int(adaptation_window)
         self.adaptation_window_multiplier = float(adaptation_window_multiplier)
         self._update_window = int(update_window)
+
+    def reset(self):
         self._previous_update = 0
+        self._cov = np.array(self._initial_cov, dtype=self.dtype, copy=True)
+        self._chol = scipy.linalg.cholesky(self._cov, lower=True)
+        self._chol_error = None
+        self._foreground_cov = _WeightedCovariance(
+            self._n, self._initial_mean, self._initial_cov, self._initial_weight, self.dtype
+        )
+        self._background_cov = _WeightedCovariance(self._n, dtype=self.dtype)
+        self._n_samples = 0
 
     def _update_from_weightvar(self, weightvar):
         weightvar.current_covariance(out=self._cov)
