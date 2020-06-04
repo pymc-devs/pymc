@@ -15,6 +15,38 @@
 # pylint: disable=wildcard-import
 __version__ = "3.8"
 
+import logging
+import multiprocessing as mp
+import platform
+
+_log = logging.getLogger("pymc3")
+
+if not logging.root.handlers:
+    _log.setLevel(logging.INFO)
+    if len(_log.handlers) == 0:
+        handler = logging.StreamHandler()
+        _log.addHandler(handler)
+
+# Set start method to forkserver for MacOS to enable multiprocessing
+# Closes issue https://github.com/pymc-devs/pymc3/issues/3849
+sys = platform.system()
+if sys == "Darwin":
+    new_context = mp.get_context("forkserver")
+
+
+def __set_compiler_flags():
+    # Workarounds for Theano compiler problems on various platforms
+    import theano
+
+    system = platform.system()
+    if system == "Windows":
+        theano.config.mode = "FAST_COMPILE"
+    elif system == "Darwin":
+        theano.config.gcc.cxxflags = "-Wno-c++11-narrowing"
+
+
+__set_compiler_flags()
+
 from .blocking import *
 from .distributions import *
 from .distributions import transforms
@@ -50,27 +82,3 @@ from .plots import *
 from .tests import test
 
 from .data import *
-
-
-def __set_compiler_flags():
-    # Workarounds for Theano compiler problems on various platforms
-    import platform
-    import theano
-
-    system = platform.system()
-    if system == "Windows":
-        theano.config.mode = "FAST_COMPILE"
-    elif system == "Darwin":
-        theano.config.gcc.cxxflags = "-Wno-c++11-narrowing"
-
-
-__set_compiler_flags()
-
-import logging
-
-_log = logging.getLogger("pymc3")
-if not logging.root.handlers:
-    _log.setLevel(logging.INFO)
-    if len(_log.handlers) == 0:
-        handler = logging.StreamHandler()
-        _log.addHandler(handler)

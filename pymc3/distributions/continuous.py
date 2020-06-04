@@ -32,6 +32,7 @@ from ..math import invlogit, logit, logdiffexp
 from .dist_math import (
     alltrue_elemwise, betaln, bound, gammaln, i0e, incomplete_beta, logpow,
     normal_lccdf, normal_lcdf, SplineWrapper, std_cdf, zvalue,
+    clipped_beta_rvs,
 )
 from .distribution import (Continuous, draw_values, generate_samples)
 
@@ -40,7 +41,7 @@ __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'TruncatedNormal', 'Beta',
            'HalfCauchy', 'Gamma', 'Weibull', 'HalfStudentT', 'Lognormal',
            'ChiSquared', 'HalfNormal', 'Wald', 'Pareto', 'InverseGamma',
            'ExGaussian', 'VonMises', 'SkewNormal', 'Triangular', 'Gumbel',
-           'Logistic', 'LogitNormal', 'Interpolated', 'Rice']
+           'Logistic', 'LogitNormal', 'Interpolated', 'Rice', 'Moyal']
 
 
 class PositiveContinuous(Continuous):
@@ -103,7 +104,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
 
 
 def get_tau_sigma(tau=None, sigma=None):
-    """
+    r"""
     Find precision and standard deviation. The link between the two
     parameterizations is given by the inverse relationship:
 
@@ -770,7 +771,7 @@ class TruncatedNormal(BoundedContinuous):
         name = r'\text{%s}' % name
         return (
             r'${} \sim \text{{TruncatedNormal}}('
-            '\mathit{{mu}}={},~\mathit{{sigma}}={},a={},b={})$'
+            r'\mathit{{mu}}={},~\mathit{{sigma}}={},a={},b={})$'
             .format(
                 name,
                 get_variable_name(self.mu),
@@ -1290,7 +1291,7 @@ class Beta(UnitContinuous):
         """
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point, size=size)
-        return generate_samples(stats.beta.rvs, alpha, beta,
+        return generate_samples(clipped_beta_rvs, alpha, beta,
                                 dist_shape=self.shape,
                                 size=size)
 
@@ -1946,7 +1947,7 @@ class StudentT(Continuous):
         plt.show()
 
     ========  ========================
-    Support   :math:``x \in \mathbb{R}``
+    Support   :math:`x \in \mathbb{R}`
     ========  ========================
 
     Parameters
@@ -2991,7 +2992,7 @@ class Weibull(PositiveContinuous):
                                                                 get_variable_name(beta))
 
     def logcdf(self, value):
-        """
+        r"""
         Compute the log of the cumulative distribution function for Weibull distribution
         at the specified value.
 
@@ -4153,7 +4154,7 @@ class Logistic(Continuous):
                                                                 get_variable_name(s))
 
     def logcdf(self, value):
-        """
+        r"""
         Compute the log of the cumulative distribution function for Logistic distribution
         at the specified value.
 
@@ -4404,3 +4405,133 @@ class Interpolated(BoundedContinuous):
         TensorVariable
         """
         return tt.log(self.interp_op(value) / self.Z)
+
+
+class Moyal(Continuous):
+    R"""
+    Moyal log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \mu,\sigma) = \frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{1}{2}\left(z + e^{-z}\right)},
+
+    where
+
+    .. math::
+
+       z = \frac{x-\mu}{\sigma}.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-10, 20, 200)
+        mus = [-1., 0., 4.]
+        sigmas = [2., 2., 4.]
+        for mu, sigma in zip(mus, sigmas):
+            pdf = st.moyal.pdf(x, loc=mu, scale=sigma)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sigma))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==============================================================
+    Support   :math:`x \in (-\infty, \infty)`
+    Mean      :math:`\mu + \sigma\left(\gamma + \log 2\right)`, where :math:`\gamma` is the Euler-Mascheroni constant
+    Variance  :math:`\frac{\pi^{2}}{2}\sigma^{2}`
+    ========  ==============================================================
+
+    Parameters
+    ----------
+    mu: float
+        Location parameter.
+    sigma: float
+        Scale parameter (sigma > 0).
+    """
+
+    def __init__(self, mu=0, sigma=1., *args, **kwargs):
+        self.mu = tt.as_tensor_variable(floatX(mu))
+        self.sigma = tt.as_tensor_variable(floatX(sigma))
+
+        assert_negative_support(sigma, 'sigma', 'Moyal')
+
+        self.mean = self.mu + self.sigma * (np.euler_gamma + tt.log(2))
+        self.median = self.mu - self.sigma * tt.log(2 * tt.erfcinv(1 / 2)**2)
+        self.mode = self.mu
+        self.variance = (np.pi**2 / 2.0) * self.sigma**2
+
+        super().__init__(*args, **kwargs)
+
+    def random(self, point=None, size=None):
+        """
+        Draw random values from Moyal distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        mu, sigma = draw_values([self.mu, self.sigma], point=point, size=size)
+        return generate_samples(stats.moyal.rvs, loc=mu, scale=sigma,
+                                dist_shape=self.shape,
+                                size=size)
+
+    def logp(self, value):
+        """
+        Calculate log-probability of Moyal distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        scaled = (value - self.mu) / self.sigma
+        return bound((-(1 / 2) * (scaled + tt.exp(-scaled))
+                      - tt.log(self.sigma)
+                      - (1 / 2) * tt.log(2 * np.pi)), self.sigma > 0)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        sigma = dist.sigma
+        mu = dist.mu
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Moyal}}(\mathit{{mu}}={},~\mathit{{sigma}}={})$'.format(name,
+                                                                                         get_variable_name(mu),
+                                                                                         get_variable_name(sigma))
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Moyal distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        scaled = (value - self.mu) / self.sigma
+        return tt.log(tt.erfc(tt.exp(-scaled / 2) * (2**-0.5)))

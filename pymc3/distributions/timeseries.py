@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 from scipy import stats
 import theano.tensor as tt
 from theano import scan

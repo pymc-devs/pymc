@@ -48,6 +48,7 @@ from .continuous import Logistic
 from .continuous import LogitNormal
 from .continuous import Interpolated
 from .continuous import Rice
+from .continuous import Moyal
 
 from .discrete import Binomial
 from .discrete import BetaBinomial
@@ -170,6 +171,7 @@ __all__ = ['Uniform',
            'Interpolated',
            'Bound',
            'Rice',
+           'Moyal',
            'Simulator',
            'fast_sample_posterior_predictive'
            ]

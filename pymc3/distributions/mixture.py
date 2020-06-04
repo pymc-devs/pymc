@@ -48,7 +48,7 @@ class Mixture(Distribution):
     .. math:: f(x \mid w, \theta) = \sum_{i = 1}^n w_i f_i(x \mid \theta_i)
 
     ========  ============================================
-    Support   :math:`\cap_{i = 1}^n \textrm{support}(f_i)`
+    Support   :math:`\cup_{i = 1}^n \textrm{support}(f_i)`
     Mean      :math:`\sum_{i = 1}^n w_i \mu_i`
     ========  ============================================
 

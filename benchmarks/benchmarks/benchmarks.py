@@ -146,7 +146,7 @@ class NUTSInitSuite:
     """Tests initializations for NUTS sampler on models
     """
     timeout = 360.0
-    params = ('adapt_diag', 'jitter+adapt_diag', 'advi+adapt_diag_grad')
+    params = ('adapt_diag', 'jitter+adapt_diag', 'jitter+adapt_full', 'adapt_full')
     number = 1
     repeat = 1
     draws = 10000
@@ -245,7 +245,7 @@ class DifferentialEquationSuite:
             46.48,
             48.18
         ]).reshape(-1, 1)
-        
+
         ode_model = pm.ode.DifferentialEquation(func=freefall, times=times, n_states=1, n_theta=2, t0=0)
         with pm.Model() as model:
             # Specify prior distributions for some of our model parameters
@@ -255,12 +255,12 @@ class DifferentialEquationSuite:
             ode_solution = ode_model(y0=[0], theta=[gamma, 9.8])
             # The ode_solution has a shape of (n_times, n_states)
             Y = pm.Normal("Y", mu=ode_solution, sd=sigma, observed=y)
-            
+
             t0 = time.time()
             trace = pm.sample(500, tune=1000, chains=2, cores=2, random_seed=0)
             tot = time.time() - t0
         ess = pm.ess(trace)
         return np.mean([ess.sigma, ess.gamma]) / tot
 
-    
+
 DifferentialEquationSuite.track_1var_2par_ode_ess.unit = 'Effective samples per second'

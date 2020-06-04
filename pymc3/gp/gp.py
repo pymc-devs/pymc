@@ -224,7 +224,7 @@ class Latent(Base):
 
 @conditioned_vars(["X", "f", "nu"])
 class TP(Latent):
-    """
+    r"""
     Student's T process prior.
 
     The usage is nearly identical to that of `gp.Latent`.  The differences
@@ -239,11 +239,11 @@ class TP(Latent):
 
     Parameters
     ----------
-    cov_func: None, 2D array, or instance of Covariance
+    cov_func : None, 2D array, or instance of Covariance
         The covariance function.  Defaults to zero.
-    mean_func: None, instance of Mean
+    mean_func : None, instance of Mean
         The mean function.  Defaults to zero.
-    nu: float
+    nu : float
         The degrees of freedom
 
     References

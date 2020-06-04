@@ -25,7 +25,7 @@ floatX = theano.config.floatX
 
 
 class DifferentialEquation(theano.Op):
-    """
+    r"""
     Specify an ordinary differential equation
 
     .. math::
@@ -34,16 +34,16 @@ class DifferentialEquation(theano.Op):
     Parameters
     ----------
 
-    func: callable
+    func : callable
         Function specifying the differential equation. Must take arguments y (n_states,), t (scalar), p (n_theta,)
-    times: array
+    times : array
         Array of times at which to evaluate the solution of the differential equation.
-    n_states: int
+    n_states : int
         Dimension of the differential equation.  For scalar differential equations, n_states=1.
         For vector valued differential equations, n_states = number of differential equations in the system.
-    n_theta: int
+    n_theta : int
         Number of parameters in the differential equation.
-    t0: float
+    t0 : float
         Time corresponding to the initial condition
 
     Examples
@@ -94,14 +94,18 @@ class DifferentialEquation(theano.Op):
         # Cache symbolic sensitivities by the hash of inputs
         self._apply_nodes = {}
         self._output_sensitivities = {}
-    
-    def _system(self, Y, t, p):
-        """This is the function that will be passed to odeint. Solves both ODE and sensitivities.
 
-        Args:
-            Y: augmented state vector (n_states + n_states + n_theta)
-            t: current time
-            p: parameter vector (y0, theta)
+    def _system(self, Y, t, p):
+        r"""This is the function that will be passed to odeint. Solves both ODE and sensitivities.
+
+        Parameters
+        ----------
+        Y : array
+            augmented state vector (n_states + n_states + n_theta)
+        t : float
+            current time
+        p : array
+            parameter vector (y0, theta)
         """
         dydt, ddt_dydp = self._augmented_func(Y[:self.n_states], t, p, Y[self.n_states:])
         derivatives = np.concatenate([dydt, ddt_dydp])

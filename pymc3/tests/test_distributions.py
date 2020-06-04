@@ -30,7 +30,7 @@ from ..distributions import (
     Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
     Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
     ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal, Rice,
-    Kumaraswamy
+    Kumaraswamy, Moyal
 )
 
 from ..distributions import continuous
@@ -1218,6 +1218,13 @@ class TestMatchesScipy(SeededTest):
                                  lambda value, b, sigma: sp.rice.logpdf(value, b=b, loc=0, scale=sigma))
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    def test_moyal(self):
+        self.pymc3_matches_scipy(Moyal, R, {'mu': R, 'sigma': Rplusbig},
+                                 lambda value, mu, sigma: floatX(sp.moyal.logpdf(value, mu, sigma)))
+        self.check_logcdf(Moyal, R, {'mu': R, 'sigma': Rplusbig},
+                          lambda value, mu, sigma: floatX(sp.moyal.logcdf(value, mu, sigma)))
+
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
@@ -1411,3 +1418,21 @@ def test_orderedlogistic_dimensions(shape):
     assert np.allclose(clogp, expected)
     assert ol.distribution.p.ndim == (len(shape) + 1)
     assert np.allclose(ologp, expected)
+
+
+class TestBugfixes:
+    @pytest.mark.parametrize('dist_cls,kwargs', [
+        (MvNormal, dict(mu=0)),
+        (MvStudentT, dict(mu=0, nu=2))
+    ])
+    @pytest.mark.parametrize('dims', [1,2,4])
+    def test_issue_3051(self, dims, dist_cls, kwargs):
+        d = dist_cls.dist(**kwargs, cov=np.eye(dims), shape=(dims,))
+        
+        X = np.random.normal(size=(20,dims))
+        actual_t = d.logp(X)
+        assert isinstance(actual_t, tt.TensorVariable)
+        actual_a = actual_t.eval()
+        assert isinstance(actual_a, np.ndarray)
+        assert actual_a.shape == (X.shape[0],)
+        pass
