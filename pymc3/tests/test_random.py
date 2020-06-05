@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pymc3 as pm
 import numpy as np
 from numpy import random as nr
@@ -90,6 +104,22 @@ class TestDrawValues:
         assert all([np.all(val1 != val2), np.all(val1 != val3),
                     np.all(val1 != val4), np.all(val2 != val3),
                     np.all(val2 != val4), np.all(val3 != val4)])
+
+    def test_gof_constant(self):
+        # Issue 3595 pointed out that slice(None) can introduce
+        # theano.gof.graph.Constant into the compute graph, which wasn't
+        # handled correctly by draw_values
+        n_d = 500
+        n_x = 2
+        n_y = 1
+        n_g = 10
+        g = np.random.randint(0, n_g, (n_d,))  # group
+        x = np.random.randint(0, n_x, (n_d,))  # x factor
+        with pm.Model():
+            multi_dim_rv = pm.Normal('multi_dim_rv', mu=0, sd=1, shape=(n_x, n_g, n_y))
+            indexed_rv = multi_dim_rv[x, g, :]
+            i = draw_values([indexed_rv])
+            assert i is not None
 
 
 class TestJointDistributionDrawValues(SeededTest):

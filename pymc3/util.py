@@ -1,12 +1,30 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import re
 import functools
-from numpy import asscalar
+from typing import List, Dict
+
+import xarray
+from numpy import asscalar, ndarray
+
 
 LATEX_ESCAPE_RE = re.compile(r'(%|_|\$|#|&)', re.MULTILINE)
 
 
 def escape_latex(strng):
-    """Consistently escape LaTeX special characters for _repr_latex_ in IPython
+    r"""Consistently escape LaTeX special characters for _repr_latex_ in IPython
 
     Implementation taken from the IPython magic `format_latex`
 
@@ -16,7 +34,7 @@ def escape_latex(strng):
 
     Parameters
     ----------
-    strng : str
+    strng: str
         string to escape LaTeX characters
 
     Returns
@@ -30,14 +48,14 @@ def escape_latex(strng):
 
 
 def get_transformed_name(name, transform):
-    """
+    r"""
     Consistent way of transforming names
 
     Parameters
     ----------
-    name : str
+    name: str
         Name to transform
-    transform : transforms.Transform
+    transform: transforms.Transform
         Should be a subclass of `transforms.Transform`
 
     Returns
@@ -49,29 +67,29 @@ def get_transformed_name(name, transform):
 
 
 def is_transformed_name(name):
-    """
-    Quickly check if a name was transformed with `get_transormed_name`
+    r"""
+    Quickly check if a name was transformed with `get_transformed_name`
 
     Parameters
     ----------
-    name : str
+    name: str
         Name to check
 
     Returns
     -------
     bool
-        Boolean, whether the string could have been produced by `get_transormed_name`
+        Boolean, whether the string could have been produced by `get_transformed_name`
     """
     return name.endswith('__') and name.count('_') >= 3
 
 
 def get_untransformed_name(name):
-    """
+    r"""
     Undo transformation in `get_transformed_name`. Throws ValueError if name wasn't transformed
 
     Parameters
     ----------
-    name : str
+    name: str
         Name to untransform
 
     Returns
@@ -85,13 +103,13 @@ def get_untransformed_name(name):
 
 
 def get_default_varnames(var_iterator, include_transformed):
-    """Helper to extract default varnames from a trace.
+    r"""Helper to extract default varnames from a trace.
 
     Parameters
     ----------
-    varname_iterator : iterator
+    varname_iterator: iterator
         Elements will be cast to string to check whether it is transformed, and optionally filtered
-    include_transformed : boolean
+    include_transformed: boolean
         Should transformed variable names be included in return value
 
     Returns
@@ -106,7 +124,7 @@ def get_default_varnames(var_iterator, include_transformed):
 
 
 def get_variable_name(variable):
-    """Returns the variable data type if it is a constant, otherwise
+    r"""Returns the variable data type if it is a constant, otherwise
     returns the argument name.
     """
     name = variable.name
@@ -127,7 +145,7 @@ def get_variable_name(variable):
 
 
 def update_start_vals(a, b, model):
-    """Update a with b, without overwriting existing keys. Values specified for
+    r"""Update a with b, without overwriting existing keys. Values specified for
     transformed variables on the original scale are also transformed and inserted.
     """
     if model is not None:
@@ -165,3 +183,21 @@ def biwrap(wrapper):
             newwrapper = functools.partial(wrapper, *args, **kwargs)
             return newwrapper
     return enhanced
+
+def dataset_to_point_dict(ds: xarray.Dataset) -> List[Dict[str, ndarray]]:
+    # grab posterior samples for each variable
+    _samples = {
+        vn : ds[vn].values
+        for vn in ds.keys()
+    }
+    # make dicts
+    points = []
+    for c in ds.chain:
+        for d in ds.draw:
+            points.append({
+                vn : s[c, d]
+                for vn, s in _samples.items()
+            })
+    # use the list of points
+    ds = points
+    return ds

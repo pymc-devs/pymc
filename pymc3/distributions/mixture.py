@@ -1,7 +1,22 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from collections.abc import Iterable
 import numpy as np
 import theano
 import theano.tensor as tt
+import warnings
 
 from pymc3.util import get_variable_name
 from ..math import logsumexp
@@ -33,16 +48,16 @@ class Mixture(Distribution):
     .. math:: f(x \mid w, \theta) = \sum_{i = 1}^n w_i f_i(x \mid \theta_i)
 
     ========  ============================================
-    Support   :math:`\cap_{i = 1}^n \textrm{support}(f_i)`
+    Support   :math:`\cup_{i = 1}^n \textrm{support}(f_i)`
     Mean      :math:`\sum_{i = 1}^n w_i \mu_i`
     ========  ============================================
 
     Parameters
     ----------
-    w : array of floats
+    w: array of floats
         w >= 0 and w <= 1
         the mixture weights
-    comp_dists : multidimensional PyMC3 distribution (e.g. `pm.Poisson.dist(...)`)
+    comp_dists: multidimensional PyMC3 distribution (e.g. `pm.Poisson.dist(...)`)
         or iterable of PyMC3 distributions the component distributions
         :math:`f_1, \ldots, f_n`
 
@@ -402,7 +417,7 @@ class Mixture(Distribution):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -422,10 +437,10 @@ class Mixture(Distribution):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -576,16 +591,16 @@ class NormalMixture(Mixture):
 
     Parameters
     ----------
-    w : array of floats
+    w: array of floats
         w >= 0 and w <= 1
         the mixture weights
-    mu : array of floats
+    mu: array of floats
         the component means
-    sigma : array of floats
+    sigma: array of floats
         the component standard deviations
-    tau : array of floats
+    tau: array of floats
         the component precisions
-    comp_shape : shape of the Normal component
+    comp_shape: shape of the Normal component
         notice that it should be different than the shape
         of the mixture distribution, with one axis being
         the number of components.
@@ -596,6 +611,10 @@ class NormalMixture(Mixture):
     def __init__(self, w, mu, sigma=None, tau=None, sd=None, comp_shape=(), *args, **kwargs):
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
         self.mu = mu = tt.as_tensor_variable(mu)

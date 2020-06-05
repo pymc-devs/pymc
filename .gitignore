@@ -33,6 +33,11 @@ benchmarks/html/
 benchmarks/results/
 .pytest_cache/
 
-# VSCode
+# Visual Studio / VSCode
+.vs/
 .vscode/
 .mypy_cache
+
+pytestdebug.log
+.dir-locals.el
+.pycheckers

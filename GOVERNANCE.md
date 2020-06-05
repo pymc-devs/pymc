@@ -20,10 +20,10 @@ documentation, designs or other work to one or more Project repositories.
 Anyone can be a Contributor. Contributors can be affiliated with any legal
 entity or none. Contributors participate in the project by submitting,
 reviewing and discussing GitHub Pull Requests and Issues and participating in
-open and public Project discussions on GitHub, Google+, Slack, Hackpad, Gitter chat rooms and mailing lists. The foundation of Project participation is openness
+open and public Project discussions on GitHub, Slack, Gitter chat rooms and mailing lists. The foundation of Project participation is openness
 and transparency.
 
-There have been over 100 Contributors to the Project, whose contributions are listed in the logs of other repositories of the PyMC and projects.
+There have been over 100 Contributors to the Project, their contributions are listed in the logs of the PyMC repositories as well as those of associated projects.
 
 The Project Community consists of all Contributors and Users of the Project.
 Contributors work on behalf of and are responsible to the larger Project

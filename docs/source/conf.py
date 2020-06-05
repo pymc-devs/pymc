@@ -37,11 +37,15 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.mathjax",
+    "sphinx.ext.intersphinx",
     "nbsphinx",
     "numpydoc",
     "IPython.sphinxext.ipython_console_highlighting",
+    "IPython.sphinxext.ipython_directive",
     "sphinx.ext.autosectionlabel",
+    "sphinx.ext.napoleon",
     "gallery_generator",
+    "recommonmark",
 ]
 
 # Don't auto-generate summary for class members.
@@ -59,7 +63,6 @@ templates_path = ["_templates"]
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 # source_suffix = ['.rst', '.md']
-source_parsers = {".md": "recommonmark.parser.CommonMarkParser"}
 source_suffix = [".rst", ".md"]
 
 # The encoding of source files.
@@ -127,6 +130,11 @@ pygments_style = "friendly"
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
+
+# intersphinx configuration to ease linking arviz docs
+intersphinx_mapping = {
+    "arviz": ("https://arviz-devs.github.io/arviz/", None),
+}
 
 
 # -- Options for HTML output ----------------------------------------------

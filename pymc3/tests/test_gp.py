@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 #  pylint:disable=unused-variable
 from functools import reduce
 from ..math import cartesian, kronecker
@@ -151,6 +165,11 @@ class TestCovAdd:
         K_true = theano.function([], cov_true(X))()
         assert np.allclose(K, K_true)
 
+    def test_inv_rightadd(self):
+        M = np.random.randn(2, 2, 2)
+        with pytest.raises(ValueError, match=r"cannot combine"):
+            cov = M + pm.gp.cov.ExpQuad(1, 1.)
+
 
 class TestCovProd:
     def test_symprod_cov(self):
@@ -222,6 +241,67 @@ class TestCovProd:
         K2d = theano.function([], cov2(X, diag=True))()
         npt.assert_allclose(np.diag(K1), K2d, atol=1e-5)
         npt.assert_allclose(np.diag(K2), K1d, atol=1e-5)
+
+    def test_inv_rightprod(self):
+        M = np.random.randn(2, 2, 2)
+        with pytest.raises(ValueError, match=r"cannot combine"):
+            cov = M + pm.gp.cov.ExpQuad(1, 1.)
+
+
+class TestCovExponentiation:
+    def test_symexp_cov(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model() as model:
+            cov1 = pm.gp.cov.ExpQuad(1, 0.1)
+            cov = cov1 ** 2
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_covexp_numpy(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model() as model:
+            a = np.array([[2]])
+            cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_covexp_theano(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model() as model:
+            a = tt.alloc(2.0, 1, 1)
+            cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_covexp_shared(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model() as model:
+            a = theano.shared(2.0)
+            cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_invalid_covexp(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pytest.raises(
+            ValueError,
+            match=r"can only be exponentiated by a scalar value"
+        ):
+            with pm.Model() as model:
+                a = np.array([[1.0, 2.0]])
+                cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
 
 
 class TestCovKron:
@@ -459,6 +539,7 @@ class TestMatern12:
         npt.assert_allclose(K[0, 1], 0.32919, atol=1e-3)
         Kd = theano.function([],cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
 
 class TestCosine:
     def test_1d(self):
@@ -1063,3 +1144,36 @@ class TestMarginalKron:
                                      cov_funcs=self.cov_funcs)
         with pytest.raises(TypeError):
             gp1 + gp2
+
+
+class TestUtil:
+    def test_plot_gp_dist(self):
+        """Test that the plotting helper works with the stated input shapes."""
+        import matplotlib.pyplot as plt
+        X = 100
+        S = 500
+        fig, ax = plt.subplots()
+        pm.gp.util.plot_gp_dist(
+            ax,
+            x=np.linspace(0, 50, X),
+            samples=np.random.normal(np.arange(X), size=(S, X))
+        )
+        plt.close()
+        pass
+
+    def test_plot_gp_dist_warn_nan(self):
+        """Test that the plotting helper works with the stated input shapes."""
+        import matplotlib.pyplot as plt
+        X = 100
+        S = 500
+        samples = np.random.normal(np.arange(X), size=(S, X))
+        samples[15, 3] = np.nan
+        fig, ax = plt.subplots()
+        with pytest.warns(UserWarning):
+            pm.gp.util.plot_gp_dist(
+                ax,
+                x=np.linspace(0, 50, X),
+                samples=samples
+            )
+        plt.close()
+        pass

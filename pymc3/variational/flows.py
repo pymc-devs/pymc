@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import theano
 from theano import tensor as tt
@@ -25,7 +39,7 @@ class Formula:
 
     Parameters
     ----------
-    formula : str
+    formula: str
         string representing normalizing flow
         e.g. 'planar', 'planar*4', 'planar*4-radial*3', 'planar-radial-planar'
         Yet simple pattern is supported:
@@ -373,8 +387,8 @@ class PlanarFlow(LinearFlow):
 
     def make_uw(self, u, w):
         if not self.batched:
-            # u_ : d
-            # w_ : d
+            # u_: d
+            # w_: d
             wu = u.dot(w)  # .
             mwu = -1. + tt.nnet.softplus(wu)  # .
             # d + (. - .) * d / .
@@ -384,8 +398,8 @@ class PlanarFlow(LinearFlow):
             )
             return u_h, w
         else:
-            # u_ : bxd
-            # w_ : bxd
+            # u_: bxd
+            # w_: bxd
             wu = (u*w).sum(-1, keepdims=True)  # bx-
             mwu = -1. + tt.nnet.softplus(wu)  # bx-
             # bxd + (bx- - bx-) * bxd / bx- = bxd

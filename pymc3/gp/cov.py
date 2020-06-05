@@ -1,7 +1,23 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
+import theano
 import theano.tensor as tt
 from functools import reduce
 from operator import mul, add
+from numbers import Number
 
 __all__ = [
     "Constant",
@@ -29,10 +45,10 @@ class Covariance:
 
     Parameters
     ----------
-    input_dim : integer
+    input_dim: integer
         The number of input dimensions, or columns of X (or Xs)
         the kernel will operate on.
-    active_dims : List of integers
+    active_dims: List of integers
         Indicate which dimension or column of X the covariance
         function operates on.
     """
@@ -50,8 +66,8 @@ class Covariance:
 
         Parameters
         ----------
-        X : The training inputs to the kernel.
-        Xs : The optional prediction set of inputs the kernel.
+        X: The training inputs to the kernel.
+        Xs: The optional prediction set of inputs the kernel.
             If Xs is None, Xs = X.
         diag: bool
             Return only the diagonal of the covariance function.
@@ -86,10 +102,31 @@ class Covariance:
     def __rmul__(self, other):
         return self.__mul__(other)
 
+    def __pow__(self, other):
+        if(
+            isinstance(other, theano.compile.SharedVariable) and
+            other.get_value().squeeze().shape == ()
+        ):
+            other = tt.squeeze(other)
+            return Exponentiated(self, other)
+        elif isinstance(other, Number):
+            return Exponentiated(self, other)
+        elif np.asarray(other).squeeze().shape == ():
+            other = np.squeeze(other)
+            return Exponentiated(self, other)
+
+        raise ValueError("A covariance function can only be exponentiated by a scalar value")
+
+
     def __array_wrap__(self, result):
         """
         Required to allow radd/rmul by numpy arrays.
         """
+        result = np.squeeze(result)
+        if len(result.shape) <= 1:
+            result = result.reshape(1, 1)
+        elif len(result.shape) > 2:
+            raise ValueError(f"cannot combine a covariance function with array of shape {result.shape}")
         r, c = result.shape
         A = np.zeros((r, c))
         for i in range(r):
@@ -156,6 +193,19 @@ class Add(Combination):
 class Prod(Combination):
     def __call__(self, X, Xs=None, diag=False):
         return reduce(mul, self.merge_factors(X, Xs, diag))
+
+
+class Exponentiated(Covariance):
+    def __init__(self, kernel, power):
+        self.kernel = kernel
+        self.power = power
+        super().__init__(
+            input_dim=self.kernel.input_dim,
+            active_dims=self.kernel.active_dims
+        )
+
+    def __call__(self, X, Xs=None, diag=False):
+        return self.kernel(X, Xs, diag=diag) ** self.power
 
 
 class Kron(Covariance):
@@ -249,9 +299,9 @@ class Stationary(Covariance):
 
     Parameters
     ----------
-    ls : Lengthscale.  If input_dim > 1, a list or array of scalars or PyMC3 random
+    ls: Lengthscale.  If input_dim > 1, a list or array of scalars or PyMC3 random
     variables.  If input_dim == 1, a scalar or PyMC3 random variable.
-    ls_inv : Inverse lengthscale.  1 / ls.  One of ls or ls_inv must be provided.
+    ls_inv: Inverse lengthscale.  1 / ls.  One of ls or ls_inv must be provided.
     """
 
     def __init__(self, input_dim, ls=None, ls_inv=None, active_dims=None):
@@ -487,10 +537,10 @@ class WarpedInput(Covariance):
 
     Parameters
     ----------
-    cov_func : Covariance
-    warp_func : callable
+    cov_func: Covariance
+    warp_func: callable
         Theano function of X and additional optional arguments.
-    args : optional, tuple or list of scalars or PyMC3 variables
+    args: optional, tuple or list of scalars or PyMC3 variables
         Additional inputs (besides X or Xs) to warp_func.
     """
 
@@ -528,9 +578,9 @@ class Gibbs(Covariance):
 
     Parameters
     ----------
-    lengthscale_func : callable
+    lengthscale_func: callable
         Theano function of X and additional optional arguments.
-    args : optional, tuple or list of scalars or PyMC3 variables
+    args: optional, tuple or list of scalars or PyMC3 variables
         Additional inputs (besides X or Xs) to lengthscale_func.
     """
 
@@ -596,9 +646,9 @@ class ScaledCov(Covariance):
     ----------
     cov_func: Covariance
         Base kernel or covariance function
-    scaling_func : callable
+    scaling_func: callable
         Theano function of X and additional optional arguments.
-    args : optional, tuple or list of scalars or PyMC3 variables
+    args: optional, tuple or list of scalars or PyMC3 variables
         Additional inputs (besides X or Xs) to lengthscale_func.
     """
 
@@ -647,12 +697,12 @@ class Coregion(Covariance):
 
     Parameters
     ----------
-    W : 2D array of shape (num_outputs, rank)
+    W: 2D array of shape (num_outputs, rank)
         a low rank matrix that determines the correlations between
         the different outputs (rows)
-    kappa : 1D array of shape (num_outputs, )
+    kappa: 1D array of shape (num_outputs, )
         a vector which allows the outputs to behave independently
-    B : 2D array of shape (num_outputs, rank)
+    B: 2D array of shape (num_outputs, rank)
         the total matrix, exactly one of (W, kappa) and B must be provided
 
     Notes

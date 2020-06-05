@@ -14,6 +14,11 @@ Sampling
 Step-methods
 ^^^^^^^^^^^^
 
+.. currentmodule:: pymc3.sampling
+
+.. autofunction:: pymc3.sampling.assign_step_methods
+
+
 NUTS
 ~~~~
 
@@ -49,14 +54,14 @@ Hamiltonian Monte Carlo
 Sequential Monte Carlo
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: pymc3.step_methods.smc
+.. currentmodule:: pymc3.step_methods.smc.smc
 
-.. autoclass:: pymc3.step_methods.smc.SMC
+.. autoclass:: pymc3.smc.smc.SMC
    :members:
 
 
 MultiTrace
-^^^^^^^^
+^^^^^^^^^^
 
 .. currentmodule:: pymc3.backends.base
 .. autoclass:: pymc3.backends.base.MultiTrace
@@ -65,7 +70,7 @@ MultiTrace
 .. autoclass:: pymc3.backends.base.BaseTrace
 
 Variational Inference
-----------------
+---------------------
 
 OPVI
 ^^^^
@@ -75,8 +80,8 @@ OPVI
 .. automodule:: pymc3.variational.opvi
    :members:
 
-Inference
-^^^^^^^^^
+VI Inference API
+^^^^^^^^^^^^^^^^
 
 .. currentmodule:: pymc3.variational.inference
 

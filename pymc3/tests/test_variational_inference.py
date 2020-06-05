@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pytest
 import functools
 import io
@@ -152,13 +166,22 @@ def three_var_approx_single_group_mf(three_var_model):
     return MeanField(model=three_var_model)
 
 
-def test_sample_simple(three_var_approx):
-    trace = three_var_approx.sample(500)
-    assert set(trace.varnames) == {'one', 'one_log__', 'three', 'two'}
-    assert len(trace) == 500
-    assert trace[0]['one'].shape == (10, 2)
-    assert trace[0]['two'].shape == (10, )
-    assert trace[0]['three'].shape == (10, 1, 2)
+@pytest.fixture(
+    params = [
+        ('ndarray', None),
+        ('text', 'test'),
+        ('sqlite', 'test.sqlite'),
+        ('hdf5', 'test.h5')
+    ]
+)
+def test_sample_simple(three_var_approx, request):
+        backend, name = request.param
+        trace = three_var_approx.sample(100, backend=backend, name=name)
+        assert set(trace.varnames) == {'one', 'one_log__', 'three', 'two'}
+        assert len(trace) == 100
+        assert trace[0]['one'].shape == (10, 2)
+        assert trace[0]['two'].shape == (10, )
+        assert trace[0]['three'].shape == (10, 1, 2)
 
 
 @pytest.fixture
@@ -177,7 +200,7 @@ def aevb_initial():
         (NormalizingFlowGroup, {'flow': 'radial'}),
         (NormalizingFlowGroup, {'flow': 'radial-loc'})
     ],
-    ids=lambda t: '{c} : {d}'.format(c=t[0].__name__, d=t[1])
+    ids=lambda t: '{c}: {d}'.format(c=t[0].__name__, d=t[1])
 )
 def parametric_grouped_approxes(request):
     return request.param
@@ -558,7 +581,7 @@ def use_minibatch(request):
     return request.param
 
 
-@pytest.fixture('module')
+@pytest.fixture
 def simple_model_data(use_minibatch):
     n = 1000
     sigma0 = 2.
@@ -582,7 +605,7 @@ def simple_model_data(use_minibatch):
     )
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def simple_model(simple_model_data):
     with pm.Model() as model:
         mu_ = pm.Normal(

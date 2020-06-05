@@ -26,7 +26,7 @@
         weights = pm.Normal('weights', mu=0, sigma=1)
         noise = pm.Gamma('noise', alpha=2, beta=1)
         y_observed = pm.Normal('y_observed',
-                    mu=X.dot(weights),
+                    mu=X @ weights,
                     sigma=noise,
                     observed=y)
 

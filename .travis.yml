@@ -1,5 +1,4 @@
 language: python
-sudo: required
 
 cache:
   directories:
@@ -12,29 +11,44 @@ addons:
 
 before_install:
   - . ./scripts/install_miniconda.sh
-  - sh -e /etc/init.d/xvfb start
-  - export DISPLAY=":99.0"
   - export MKL_THREADING_LAYER=GNU
+
+services:
+  - xvfb
 
 install:
   - . ./scripts/create_testenv.sh
-  - pip install coveralls
+  - pip install codecov
   - conda list && pip freeze
 
 env:
-  - FLOATX='float32' TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py --ignore=pymc3/tests/test_parallel_sampling.py --ignore=pymc3/tests/test_dist_math.py --ignore=pymc3/tests/test_distribution_defaults.py --ignore=pymc3/tests/test_distributions_timeseries.py --ignore=pymc3/tests/test_random.py --ignore=pymc3/tests/test_gp.py --ignore=pymc3/tests/test_shape_handling.py"
+  - FLOATX='float32' TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py --ignore=pymc3/tests/test_parallel_sampling.py --ignore=pymc3/tests/test_dist_math.py --ignore=pymc3/tests/test_distribution_defaults.py --ignore=pymc3/tests/test_distributions_timeseries.py --ignore=pymc3/tests/test_random.py --ignore=pymc3/tests/test_gp.py --ignore=pymc3/tests/test_shape_handling.py --ignore=pymc3/tests/test_quadpotential.py"
   - FLOATX='float32' RUN_PYLINT="true" TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py pymc3/tests/test_smc.py pymc3/tests/test_sampling.py pymc3/tests/test_parallel_sampling.py pymc3/tests/test_dist_math.py pymc3/tests/test_distribution_defaults.py pymc3/tests/test_distributions_timeseries.py pymc3/tests/test_random.py"
-  - FLOATX='float32' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py pymc3/tests/test_gp.py"
+  - FLOATX='float32' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py pymc3/tests/test_gp.py pymc3/tests/test_quadpotential.py"
   - FLOATX='float32' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py pymc3/tests/test_updates.py pymc3/tests/test_shape_handling.py"
-  - FLOATX='float64' TESTCMD="--durations=10 --cov-append --ignore=pymc3/tests/test_examples.py --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py --ignore=pymc3/tests/test_parallel_sampling.py --ignore=pymc3/tests/test_dist_math.py --ignore=pymc3/tests/test_distribution_defaults.py --ignore=pymc3/tests/test_distributions_timeseries.py --ignore=pymc3/tests/test_random.py --ignore=pymc3/tests/test_gp.py --ignore=pymc3/tests/test_shape_handling.py"
+  - FLOATX='float64' TESTCMD="--durations=10 --cov-append --ignore=pymc3/tests/test_examples.py --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py --ignore=pymc3/tests/test_parallel_sampling.py --ignore=pymc3/tests/test_dist_math.py --ignore=pymc3/tests/test_distribution_defaults.py --ignore=pymc3/tests/test_distributions_timeseries.py --ignore=pymc3/tests/test_random.py --ignore=pymc3/tests/test_gp.py --ignore=pymc3/tests/test_shape_handling.py --ignore=pymc3/tests/test_quadpotential.py"
   - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py pymc3/tests/test_smc.py pymc3/tests/test_sampling.py pymc3/tests/test_parallel_sampling.py pymc3/tests/test_dist_math.py pymc3/tests/test_distribution_defaults.py pymc3/tests/test_distributions_timeseries.py pymc3/tests/test_random.py"
-  - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py pymc3/tests/test_gp.py"
+  - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py pymc3/tests/test_gp.py pymc3/tests/test_quadpotential.py"
   - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py pymc3/tests/test_updates.py pymc3/tests/test_shape_handling.py"
-  - PYTHON_VERSION=3.5 FLOATX='float64' ENVNAME="py35_testenv" TESTCMD="--cov-append pymc3/tests/test_sampling.py pymc3/tests/test_model_graph.py"
 
 script:
   - . ./scripts/test.sh $TESTCMD
-  - . ./scripts/confirm_mpl_optional.sh
 
 after_success:
-  - coveralls
+  - codecov
+
+stages:
+  - test
+  - name: binder
+    if: (branch = master) AND (NOT (type IN (pull_request)))
+
+jobs:
+  include:
+  - stage: binder
+    before_install: skip
+    install: skip
+    script:
+    # Use Binder build API to trigger repo2docker to build image on GKE and OVH Binder Federation clusters
+    - bash binder/trigger_binder.sh https://gke.mybinder.org/build/gh/pymc-devs/pymc3/"${TRAVIS_BRANCH}"
+    - bash binder/trigger_binder.sh https://ovh.mybinder.org/build/gh/pymc-devs/pymc3/"${TRAVIS_BRANCH}"
+    after_success: skip

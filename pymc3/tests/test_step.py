@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import shutil
 import tempfile
 import sys
@@ -25,8 +39,8 @@ from pymc3.step_methods import (
     MultivariateNormalProposal,
     HamiltonianMC,
     EllipticalSlice,
-    SMC,
     DEMetropolis,
+    DEMetropolisZ,
 )
 from pymc3.theanof import floatX
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal
@@ -247,7 +261,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                 0.81375848,
                 0.81375848,
                 0.81375848,
-                1.91238675
+                1.91238675,
             ]
         ),
         Metropolis: np.array(
@@ -358,308 +372,104 @@ class TestStepMethods:  # yield test doesn't work subclassing object
             [
                 0.550575,
                 0.550575,
-                0.80046332,
-                0.91590059,
-                1.34621916,
-                1.34621916,
-                -0.63917773,
-                -0.65770809,
-                -0.65770809,
-                -0.64512868,
-                -1.05448153,
-                -0.5225666,
-                0.14335153,
-                -0.0034499,
-                -0.0034499,
-                0.05309212,
-                -0.53186371,
-                0.29325825,
-                0.43210854,
-                0.56284837,
-                0.56284837,
-                0.38041767,
-                0.47322034,
-                0.49937368,
-                0.49937368,
-                0.44424258,
-                0.44424258,
-                -0.02790848,
-                -0.40470145,
-                -0.35725567,
-                -0.43744228,
-                0.41955432,
-                0.31099421,
-                0.31099421,
-                0.65811717,
-                0.66649398,
-                0.38493786,
-                0.54114658,
-                0.54114658,
-                0.68222408,
-                0.66404942,
-                1.44143108,
-                1.15638799,
-                -0.06775775,
-                -0.06775775,
-                0.30418561,
-                0.23543403,
-                0.57934404,
-                -0.5435111,
-                -0.47938915,
-                -0.23816662,
-                0.36793792,
-                0.36793792,
-                0.64980016,
-                0.52150456,
-                0.64643321,
-                0.26130179,
-                1.10569077,
-                1.10569077,
-                1.23662797,
-                -0.36928735,
-                -0.14303069,
-                0.85298904,
-                0.85298904,
-                0.31422085,
-                0.32113762,
-                0.32113762,
-                1.0692238,
-                1.0692238,
-                1.60127576,
-                1.49249738,
-                1.09065107,
-                0.84264371,
-                0.84264371,
-                -0.08832343,
-                0.04868027,
-                -0.02679449,
-                -0.02679449,
-                0.91989101,
-                0.65754478,
-                -0.39220625,
-                0.08379492,
-                1.03055634,
-                1.03055634,
-                1.71071332,
-                1.58740483,
-                1.67905741,
-                0.77744868,
-                0.15050587,
-                0.15050587,
-                0.73979127,
-                0.15445515,
-                0.13134717,
-                0.85068974,
-                0.85068974,
-                0.6974799,
-                0.16170472,
-                0.86405959,
-                0.86405959,
-                -0.22032854,
-            ]
-        ),
-        SMC: np.array(
-            [
-                0.85565708,
-                -0.20703928,
-                0.60432641,
-                0.82409514,
-                0.66956453,
-                1.8112792,
-                0.50997512,
-                0.01190834,
-                0.11877327,
-                1.04616417,
-                0.35542005,
-                0.97711504,
-                1.08273637,
-                0.12254235,
-                -0.2125738,
-                1.90683646,
-                0.76584362,
-                1.61601695,
-                1.26496703,
-                0.72605833,
-                0.27710235,
-                0.59466026,
-                1.48847988,
-                1.48383337,
-                0.85487674,
-                0.40339276,
-                1.11378016,
-                -0.01154067,
-                -0.24933179,
-                0.04855045,
-                0.44408864,
-                1.07009531,
-                0.71832419,
-                -0.02224457,
-                0.15732459,
-                0.74732395,
-                -0.55976656,
-                1.83476589,
-                1.13464886,
-                1.04477015,
-                -0.8829041,
-                0.68610315,
-                -0.51600577,
-                1.06577114,
-                0.72533608,
-                0.26181788,
-                0.37045769,
-                0.49110905,
-                0.95187097,
-                0.57052924,
-                1.18390833,
-                -0.28470992,
-                0.5143004,
-                0.36340091,
-                0.26524336,
-                0.91352757,
-                -0.16906895,
-                0.02671801,
-                -0.62018961,
-                0.13845522,
-                0.69578158,
-                0.82213017,
-                0.95565383,
-                0.57201004,
-                0.66751355,
-                0.74662892,
-                -0.18802906,
-                -0.16424007,
-                0.67661192,
-                0.986151,
-                1.11037246,
-                0.53367584,
-                0.81646283,
-                0.69093199,
-                1.30967566,
-                0.58455688,
-                -0.10754191,
-                -0.66843656,
-                0.61473792,
-                0.11205418,
-                1.50795552,
-                1.61304845,
-                0.97329021,
-                0.80782701,
-                1.83144593,
-                0.34256428,
-                0.49090154,
-                1.85297793,
-                0.44832949,
-                1.35766813,
-                0.48916332,
-                0.410038,
-                -0.69870943,
-                0.06616812,
-                -0.17685433,
-                -0.0487383,
-                1.92862324,
-                0.47539572,
-                1.19401681,
-                0.3670901,
-                2.11504383,
-                1.16863035,
-                0.74908135,
-                0.90147245,
-                0.6291441,
-                0.96889664,
-                0.93871964,
-                0.74575969,
-                0.06810336,
-                0.45469347,
-                0.29787682,
-                0.73557892,
-                -0.3388827,
-                -0.0991328,
-                1.12325585,
-                0.87397644,
-                -1.14737408,
-                -0.78658091,
-                0.67716022,
-                0.20961362,
-                0.11759984,
-                0.72748548,
-                -0.29959649,
-                -0.09436443,
-                0.42100225,
-                0.04656646,
-                1.21211555,
-                0.04060845,
-                1.38031545,
-                0.58429818,
-                0.33843531,
-                0.82207289,
-                0.96509587,
-                1.00370899,
-                1.23734919,
-                -0.01960951,
-                0.7721088,
-                0.04627471,
-                -0.62058523,
-                0.21093904,
-                -0.15935501,
-                0.83237845,
-                0.10157936,
-                -0.45885173,
-                1.26206955,
-                1.07601436,
-                1.23736132,
-                0.28618097,
-                -0.14328022,
-                -0.13158901,
-                0.74308368,
-                0.26291343,
-                0.17504558,
-                0.55601578,
-                1.46900503,
-                0.65131007,
-                0.89596352,
-                0.32536798,
-                -0.25504495,
-                0.07563569,
-                1.48775514,
-                0.28519783,
-                0.58513482,
-                -0.63672688,
-                1.59324146,
-                0.53826815,
-                0.41792749,
-                0.76583018,
-                0.87290581,
-                0.89110704,
-                0.27282461,
-                -0.20300455,
-                1.01058543,
-                0.68072852,
-                -0.21073928,
-                1.19114065,
-                0.6372328,
-                0.33444015,
-                1.05599084,
-                0.78372828,
-                1.0127235,
-                -0.19460124,
-                1.31807913,
-                0.58658129,
-                -0.34218648,
-                0.68725616,
-                0.37484537,
-                2.48875271,
-                -0.06424102,
-                0.22162396,
-                -0.21623175,
-                0.25998439,
-                0.37801803,
-                -0.51312636,
-                -0.35024508,
-                1.90460979,
-                0.02214471,
-                -0.59132265,
-                0.42870423,
-                0.88951751,
+                0.80031201,
+                0.91580544,
+                1.34622953,
+                1.34622953,
+                -0.63861533,
+                -0.62101385,
+                -0.62101385,
+                -0.60250375,
+                -1.04753424,
+                -0.34850626,
+                0.35882649,
+                -0.20339408,
+                -0.18077466,
+                -0.18077466,
+                0.1242007,
+                -0.48708213,
+                0.01216292,
+                0.01216292,
+                -0.15991487,
+                0.0118306,
+                0.0118306,
+                0.02512962,
+                -0.06002705,
+                0.61278464,
+                -0.45991609,
+                -0.45991609,
+                -0.45991609,
+                -0.3067988,
+                -0.3067988,
+                -0.30830273,
+                -0.62877494,
+                -0.5896293,
+                0.32740518,
+                0.32740518,
+                0.55321326,
+                0.34885231,
+                0.34885231,
+                0.35304997,
+                1.20016133,
+                1.20016133,
+                1.26432486,
+                1.22481613,
+                1.46040499,
+                1.2251786,
+                0.29954482,
+                0.29954482,
+                0.5713582,
+                0.5755183,
+                0.26968846,
+                0.68253483,
+                0.68253483,
+                0.69418724,
+                1.4172782,
+                1.4172782,
+                0.85063608,
+                0.23409974,
+                -0.65012501,
+                1.16211157,
+                -0.04844954,
+                1.34390994,
+                -0.44058335,
+                -0.44058335,
+                0.85096033,
+                0.98734074,
+                1.31200906,
+                1.2751574,
+                1.2751574,
+                0.04377635,
+                0.08244824,
+                0.6342471,
+                -0.31243596,
+                1.0165907,
+                -0.19025897,
+                -0.19025897,
+                0.02133041,
+                -0.02335463,
+                0.43923434,
+                -0.45033488,
+                0.05985518,
+                -0.10019701,
+                1.34229104,
+                1.28571862,
+                0.59557205,
+                0.63730268,
+                0.63730268,
+                0.54269992,
+                0.54269992,
+                -0.48334519,
+                1.02199273,
+                -0.17367903,
+                -0.17367903,
+                0.8470911,
+                -0.12868214,
+                1.8986946,
+                1.55412619,
+                1.55412619,
+                0.90228003,
+                1.3328478
             ]
         ),
     }
@@ -695,11 +505,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
         with Model() as model:
             x = Normal("x", mu=0, sigma=1)
             y = Normal("y", mu=x, sigma=1, observed=1)
-            if step_method.__name__ == "SMC":
-                trace = sample(
-                    draws=200, random_seed=1, progressbar=False, step=step_method(parallel=False)
-                )
-            elif step_method.__name__ == "NUTS":
+            if step_method.__name__ == "NUTS":
                 step = step_method(scaling=model.test_point)
                 trace = sample(
                     0, tune=n_steps, discard_tuned_samples=False, step=step, random_seed=1, chains=1
@@ -911,8 +717,52 @@ class TestPopulationSamplers:
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
                 with pytest.raises(ValueError):
-                    trace = sample(draws=100, chains=1, step=step)
-                trace = sample(draws=100, chains=4, step=step)
+                    sample(draws=10, tune=10, chains=1, cores=1, step=step)
+                # don't parallelize to make test faster
+                sample(draws=10, tune=10, chains=4, cores=1, step=step)
+        pass
+
+    def test_demcmc_warning_on_small_populations(self):
+        """Test that a warning is raised when n_chains <= n_dims"""
+        with Model() as model:
+            Normal("n", mu=0, sigma=1, shape=(2,3))
+            with pytest.warns(UserWarning) as record:
+                sample(
+                    draws=5, tune=5, chains=6, step=DEMetropolis(),
+                    # make tests faster by not parallelizing; disable convergence warning
+                    cores=1, compute_convergence_checks=False
+                )
+        pass
+
+    def test_demcmc_tune_parameter(self):
+        """Tests that validity of the tune setting is checked"""
+        with Model() as model:
+            Normal("n", mu=0, sigma=1, shape=(2,3))
+            
+            step = DEMetropolis()
+            assert step.tune is None
+
+            step = DEMetropolis(tune='scaling')
+            assert step.tune == 'scaling'
+
+            step = DEMetropolis(tune='lambda')
+            assert step.tune == 'lambda'
+
+            with pytest.raises(ValueError):
+                DEMetropolis(tune='foo')
+        pass
+
+    def test_nonparallelized_chains_are_random(self):
+        with Model() as model:
+            x = Normal("x", 0, 1)
+            for stepper in TestPopulationSamplers.steppers:
+                step = stepper()
+                trace = sample(chains=4, cores=1, draws=20, tune=0, step=DEMetropolis())
+                samples = np.array(trace.get_values("x", combine=False))[:, 5]
+
+                assert len(set(samples)) == 4, "Parallelized {} " "chains are identical.".format(
+                    stepper
+                )
         pass
 
     def test_parallelized_chains_are_random(self):
@@ -920,12 +770,162 @@ class TestPopulationSamplers:
             x = Normal("x", 0, 1)
             for stepper in TestPopulationSamplers.steppers:
                 step = stepper()
-                trace = sample(chains=4, draws=20, tune=0, step=DEMetropolis())
+                trace = sample(chains=4, cores=4, draws=20, tune=0, step=DEMetropolis())
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
 
                 assert len(set(samples)) == 4, "Parallelized {} " "chains are identical.".format(
                     stepper
                 )
+        pass
+
+
+class TestMetropolis:
+    def test_tuning_reset(self):
+        """Re-use of the step method instance with cores=1 must not leak tuning information between chains."""
+        with Model() as pmodel:
+            D = 3
+            Normal('n', 0, 2, shape=(D,))
+            trace = sample(
+                tune=600,
+                draws=500,
+                step=Metropolis(tune=True, scaling=0.1),
+                cores=1,
+                chains=3,
+                discard_tuned_samples=False
+            )
+        for c in range(trace.nchains):
+            # check that the tuned settings changed and were reset
+            assert trace.get_sampler_stats('scaling', chains=c)[0] == 0.1
+            assert trace.get_sampler_stats('scaling', chains=c)[-1] != 0.1
+        pass
+
+
+class TestDEMetropolisZ:
+    def test_tuning_lambda_sequential(self):
+        with Model() as pmodel:
+            Normal('n', 0, 2, shape=(3,))
+            trace = sample(
+                tune=1000,
+                draws=500,
+                step=DEMetropolisZ(tune='lambda', lamb=0.92),
+                cores=1,
+                chains=3,
+                discard_tuned_samples=False
+            )
+        for c in range(trace.nchains):
+            # check that the tuned settings changed and were reset
+            assert trace.get_sampler_stats('lambda', chains=c)[0] == 0.92
+            assert trace.get_sampler_stats('lambda', chains=c)[-1] != 0.92
+            assert set(trace.get_sampler_stats('tune', chains=c)) == {True, False}
+        pass
+
+    def test_tuning_epsilon_parallel(self):
+        with Model() as pmodel:
+            Normal('n', 0, 2, shape=(3,))
+            trace = sample(
+                tune=1000,
+                draws=500,
+                step=DEMetropolisZ(tune='scaling', scaling=0.002),
+                cores=2,
+                chains=2,
+                discard_tuned_samples=False
+            )
+        for c in range(trace.nchains):
+            # check that the tuned settings changed and were reset
+            assert trace.get_sampler_stats('scaling', chains=c)[0] == 0.002
+            assert trace.get_sampler_stats('scaling', chains=c)[-1] != 0.002
+            assert set(trace.get_sampler_stats('tune', chains=c)) == {True, False}
+        pass
+
+    def test_tuning_none(self):
+        with Model() as pmodel:
+            Normal('n', 0, 2, shape=(3,))
+            trace = sample(
+                tune=1000,
+                draws=500,
+                step=DEMetropolisZ(tune=None),
+                cores=1,
+                chains=2,
+                discard_tuned_samples=False
+            )
+        for c in range(trace.nchains):
+            # check that all tunable parameters remained constant
+            assert len(set(trace.get_sampler_stats('lambda', chains=c))) == 1
+            assert len(set(trace.get_sampler_stats('scaling', chains=c))) == 1
+            assert set(trace.get_sampler_stats('tune', chains=c)) == {True, False}
+        pass
+
+    def test_tuning_reset(self):
+        """Re-use of the step method instance with cores=1 must not leak tuning information between chains."""
+        with Model() as pmodel:
+            D = 3
+            Normal('n', 0, 2, shape=(D,))
+            trace = sample(
+                tune=1000,
+                draws=500,
+                step=DEMetropolisZ(tune='scaling', scaling=0.002),
+                cores=1,
+                chains=3,
+                discard_tuned_samples=False
+            )
+        for c in range(trace.nchains):
+            # check that the tuned settings changed and were reset
+            assert trace.get_sampler_stats('scaling', chains=c)[0] == 0.002
+            assert trace.get_sampler_stats('scaling', chains=c)[-1] != 0.002
+            # check that the variance of the first 50 iterations is much lower than the last 100
+            for d in range(D):
+                var_start = np.var(trace.get_values('n', chains=c)[:50,d])
+                var_end = np.var(trace.get_values('n', chains=c)[-100:,d])
+                assert var_start < 0.1 * var_end
+        pass
+
+    def test_tune_drop_fraction(self):
+        tune = 300
+        tune_drop_fraction = 0.85
+        draws = 200
+        with Model() as pmodel:
+            Normal('n', 0, 2, shape=(3,))
+            step = DEMetropolisZ(tune_drop_fraction=tune_drop_fraction)
+            trace = sample(
+                tune=tune,
+                draws=draws,
+                step=step,
+                cores=1,
+                chains=1,
+                discard_tuned_samples=False
+            )
+            assert len(trace) == tune + draws
+            assert len(step._history) == (tune - tune * tune_drop_fraction) + draws
+        pass
+
+    @pytest.mark.parametrize('variable,has_grad,outcome', [('n', True, 1),('n', False, 1),('b', True, 0),('b', False, 0)])
+    def test_competence(self, variable, has_grad, outcome):
+        with Model() as pmodel:
+            Normal('n', 0, 2, shape=(3,))
+            Binomial('b', n=2, p=0.3)
+        assert DEMetropolisZ.competence(pmodel[variable], has_grad=has_grad) == outcome
+        pass
+
+    @pytest.mark.parametrize('tune_setting', ['foo', True, False])
+    def test_invalid_tune(self, tune_setting):
+        with Model() as pmodel:
+            Normal('n', 0, 2, shape=(3,))
+            with pytest.raises(ValueError):
+                DEMetropolisZ(tune=tune_setting)
+        pass
+
+    def test_custom_proposal_dist(self):
+        with Model() as pmodel:
+            D = 3
+            Normal('n', 0, 2, shape=(D,))
+            trace = sample(
+                tune=100,
+                draws=50,
+                step=DEMetropolisZ(proposal_dist=NormalProposal),
+                cores=1,
+                chains=3,
+                discard_tuned_samples=False
+            )
         pass
 
 

@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import sys
 import theano.tensor as tt
 # pylint: disable=unused-import
@@ -23,12 +37,18 @@ from functools import reduce, partial
 
 
 def kronecker(*Ks):
-    """Return the Kronecker product of arguments:
+    r"""Return the Kronecker product of arguments:
           :math:`K_1 \otimes K_2 \otimes ... \otimes K_D`
 
     Parameters
     ----------
-    Ks: 2D array-like
+    Ks : Iterable of 2D array-like
+        Arrays of which to take the product.
+
+    Returns
+    -------
+    np.ndarray :
+        Block matrix Kroncker product of the argument matrices.
     """
     return reduce(tt.slinalg.kron, Ks)
 
@@ -46,16 +66,20 @@ def cartesian(*arrays):
 
 
 def kron_matrix_op(krons, m, op):
-    """Apply op to krons and m in a way that reproduces ``op(kronecker(*krons), m)``
+    r"""Apply op to krons and m in a way that reproduces ``op(kronecker(*krons), m)``
 
     Parameters
     -----------
-    krons: list of square 2D array-like objects
-           D square matrices [A_1, A_2, ..., A_D] to be Kronecker'ed:
-              A = A_1 \otimes A_2 \otimes ... \otimes A_D
-           Product of column dimensions must be N
-    m    : NxM array or 1D array (treated as Nx1)
-           Object that krons act upon
+    krons : list of square 2D array-like objects
+        D square matrices :math:`[A_1, A_2, ..., A_D]` to be Kronecker'ed
+        :math:`A = A_1 \otimes A_2 \otimes ... \otimes A_D`
+        Product of column dimensions must be :math:`N`
+    m : NxM array or 1D array (treated as Nx1)
+        Object that krons act upon
+
+    Returns
+    -------
+    numpy array
     """
     def flat_matrix_op(flat_mat, mat):
         Nmat = mat.shape[1]
@@ -69,7 +93,7 @@ def kron_matrix_op(krons, m, op):
     if m.ndim == 1:
         m = m[:, None]  # Treat 1D array as Nx1 matrix
     if m.ndim != 2:  # Has not been tested otherwise
-        raise ValueError('m must have ndim <= 2, not {}'.format(mat.ndim))
+        raise ValueError('m must have ndim <= 2, not {}'.format(m.ndim))
     res = kron_vector_op(m)
     res_shape = res.shape
     return tt.reshape(res, (res_shape[1], res_shape[0])).T
@@ -216,13 +240,13 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
 
     Parameters
     ----------
-    n : int
+    n: int
         The number of rows of the triangular matrix.
-    packed : theano.vector
+    packed: theano.vector
         The matrix in packed format.
-    lower : bool, default=True
+    lower: bool, default=True
         If true, assume that the matrix is lower triangular.
-    diagonal_only : bool
+    diagonal_only: bool
         If true, return only the diagonal of the matrix.
     """
     if packed.ndim != 1:
@@ -344,10 +368,10 @@ def block_diagonal(matrices, sparse=False, format='csr'):
 
     Parameters
     ----------
-    matrices : tensors
-    format : str (default 'csr')
+    matrices: tensors
+    format: str (default 'csr')
         must be one of: 'csr', 'csc'
-    sparse : bool (default False)
+    sparse: bool (default False)
         if True return sparse format
 
     Returns

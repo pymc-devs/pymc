@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from .compound import CompoundStep
 from ..model import modelcontext
 from ..theanof import inputvars
@@ -114,7 +128,7 @@ class ArrayStep(BlockedStep):
 
     Parameters
     ----------
-    vars : list
+    vars: list
         List of variables for sampler.
     fs: list of logp theano functions
     allvars: Boolean (default False)
@@ -155,9 +169,9 @@ class ArrayStepShared(BlockedStep):
         """
         Parameters
         ----------
-        vars : list of sampling variables
-        shared : dict of theano variable -> shared variable
-        blocked : Boolean (default True)
+        vars: list of sampling variables
+        shared: dict of theano variable -> shared variable
+        blocked: Boolean (default True)
         """
         self.vars = vars
         self.ordering = ArrayOrdering(vars)
@@ -190,9 +204,9 @@ class PopulationArrayStepShared(ArrayStepShared):
         """
         Parameters
         ----------
-        vars : list of sampling variables
-        shared : dict of theano variable -> shared variable
-        blocked : Boolean (default True)
+        vars: list of sampling variables
+        shared: dict of theano variable -> shared variable
+        blocked: Boolean (default True)
         """
         self.population = None
         self.this_chain = None
@@ -204,16 +218,18 @@ class PopulationArrayStepShared(ArrayStepShared):
 
         Parameters
         ----------
-        population : list of Points. (The elements of this list must be
+        population: list of Points. (The elements of this list must be
             replaced with current chain states in every iteration.)
-        chain_index : int of the index of this sampler in the population
+        chain_index: int of the index of this sampler in the population
         """
         self.population = population
         self.this_chain = chain_index
         self.other_chains = [c for c in range(len(population)) if c != chain_index]
         if not len(self.other_chains) > 1:
-            raise ValueError('Population is just {} + {}. This is too small. You should ' \
-                'increase the number of chains.'.format(self.this_chain, self.other_chains))
+            raise ValueError(
+                'Population is just {} + {}. ' \
+                'This is too small and the error should have been raised earlier.'.format(self.this_chain, self.other_chains)
+            )
         return
 
 
@@ -262,9 +278,9 @@ def metrop_select(mr, q, q0):
 
     Parameters
     ----------
-    mr : float, Metropolis acceptance rate
-    q : proposed sample
-    q0 : current sample
+    mr: float, Metropolis acceptance rate
+    q: proposed sample
+    q0: current sample
 
     Returns
     -------

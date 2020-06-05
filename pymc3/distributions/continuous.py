@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 # coding: utf-8
 """
 A collection of common probability distributions for stochastic
@@ -18,6 +32,7 @@ from ..math import invlogit, logit, logdiffexp
 from .dist_math import (
     alltrue_elemwise, betaln, bound, gammaln, i0e, incomplete_beta, logpow,
     normal_lccdf, normal_lcdf, SplineWrapper, std_cdf, zvalue,
+    clipped_beta_rvs,
 )
 from .distribution import (Continuous, draw_values, generate_samples)
 
@@ -26,7 +41,7 @@ __all__ = ['Uniform', 'Flat', 'HalfFlat', 'Normal', 'TruncatedNormal', 'Beta',
            'HalfCauchy', 'Gamma', 'Weibull', 'HalfStudentT', 'Lognormal',
            'ChiSquared', 'HalfNormal', 'Wald', 'Pareto', 'InverseGamma',
            'ExGaussian', 'VonMises', 'SkewNormal', 'Triangular', 'Gumbel',
-           'Logistic', 'LogitNormal', 'Interpolated', 'Rice']
+           'Logistic', 'LogitNormal', 'Interpolated', 'Rice', 'Moyal']
 
 
 class PositiveContinuous(Continuous):
@@ -89,7 +104,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
 
 
 def get_tau_sigma(tau=None, sigma=None):
-    """
+    r"""
     Find precision and standard deviation. The link between the two
     parameterizations is given by the inverse relationship:
 
@@ -98,8 +113,8 @@ def get_tau_sigma(tau=None, sigma=None):
 
     Parameters
     ----------
-    tau : array-like, optional
-    sigma : array-like, optional
+    tau: array-like, optional
+    sigma: array-like, optional
 
     Results
     -------
@@ -166,9 +181,9 @@ class Uniform(BoundedContinuous):
 
     Parameters
     ----------
-    lower : float
+    lower: float
         Lower limit.
-    upper : float
+    upper: float
         Upper limit.
     """
 
@@ -186,10 +201,10 @@ class Uniform(BoundedContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -211,7 +226,7 @@ class Uniform(BoundedContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -274,8 +289,8 @@ class Flat(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
-        size : int, optional
+        point: dict, optional
+        size: int, optional
 
         Raises
         -------
@@ -289,7 +304,7 @@ class Flat(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -341,8 +356,8 @@ class HalfFlat(PositiveContinuous):
 
         Parameters
         ----------
-        point : dict, optional
-        size : int, optional
+        point: dict, optional
+        size: int, optional
 
         Raises
         -------
@@ -356,7 +371,7 @@ class HalfFlat(PositiveContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -441,11 +456,11 @@ class Normal(Continuous):
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Mean.
-    sigma : float
+    sigma: float
         Standard deviation (sigma > 0) (only required if tau is not specified).
-    tau : float
+    tau: float
         Precision (tau > 0) (only required if sigma is not specified).
 
     Examples
@@ -462,6 +477,10 @@ class Normal(Continuous):
     def __init__(self, mu=0, sigma=None, tau=None, sd=None, **kwargs):
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
         self.tau = tt.as_tensor_variable(tau)
@@ -480,10 +499,10 @@ class Normal(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -503,7 +522,7 @@ class Normal(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -589,19 +608,18 @@ class TruncatedNormal(BoundedContinuous):
     ========  ==========================================
     Support   :math:`x \in [a, b]`
     Mean      :math:`\mu +{\frac {\phi (\alpha )-\phi (\beta )}{Z}}\sigma`
-    Variance  :math:`\sigma ^{2}\left[1+{\frac {\alpha \phi (\alpha )-\beta \phi (\beta )}{Z}}-
-    \left({\frac {\phi (\alpha )-\phi (\beta )}{Z}}\right)^{2}\right]`
+    Variance  :math:`\sigma ^{2}\left[1+{\frac {\alpha \phi (\alpha )-\beta \phi (\beta )}{Z}}-\left({\frac {\phi (\alpha )-\phi (\beta )}{Z}}\right)^{2}\right]`
     ========  ==========================================
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Mean.
-    sigma : float
+    sigma: float
         Standard deviation (sigma > 0).
-    lower : float (optional)
+    lower: float (optional)
         Left bound.
-    upper : float (optional)
+    upper: float (optional)
         Right bound.
 
     Examples
@@ -623,6 +641,10 @@ class TruncatedNormal(BoundedContinuous):
                  transform='auto', sd=None, *args, **kwargs):
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
         self.tau = tt.as_tensor_variable(tau)
@@ -653,10 +675,10 @@ class TruncatedNormal(BoundedContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -699,7 +721,7 @@ class TruncatedNormal(BoundedContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -749,7 +771,7 @@ class TruncatedNormal(BoundedContinuous):
         name = r'\text{%s}' % name
         return (
             r'${} \sim \text{{TruncatedNormal}}('
-            '\mathit{{mu}}={},~\mathit{{sigma}}={},a={},b={})$'
+            r'\mathit{{mu}}={},~\mathit{{sigma}}={},a={},b={})$'
             .format(
                 name,
                 get_variable_name(self.mu),
@@ -807,9 +829,9 @@ class HalfNormal(PositiveContinuous):
 
     Parameters
     ----------
-    sigma : float
+    sigma: float
         Scale parameter :math:`sigma` (``sigma`` > 0) (only required if ``tau`` is not specified).
-    tau : float
+    tau: float
         Precision :math:`tau` (tau > 0) (only required if sigma is not specified).
 
     Examples
@@ -826,7 +848,10 @@ class HalfNormal(PositiveContinuous):
     def __init__(self, sigma=None, tau=None, sd=None, *args, **kwargs):
         if sd is not None:
             sigma = sd
-
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
         super().__init__(*args, **kwargs)
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
@@ -845,10 +870,10 @@ class HalfNormal(PositiveContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -856,7 +881,7 @@ class HalfNormal(PositiveContinuous):
         -------
         array
         """
-        sigma = draw_values([self.sigma], point=point)[0]
+        sigma = draw_values([self.sigma], point=point, size=size)[0]
         return generate_samples(stats.halfnorm.rvs, loc=0., scale=sigma,
                                 dist_shape=self.shape,
                                 size=size)
@@ -867,7 +892,7 @@ class HalfNormal(PositiveContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -959,13 +984,13 @@ class Wald(PositiveContinuous):
 
     Parameters
     ----------
-    mu : float, optional
+    mu: float, optional
         Mean of the distribution (mu > 0).
-    lam : float, optional
+    lam: float, optional
         Relative precision (lam > 0).
-    phi : float, optional
+    phi: float, optional
         Alternative shape parameter (phi > 0).
-    alpha : float, optional
+    alpha: float, optional
         Shift/location parameter (alpha >= 0).
 
     Notes
@@ -1040,10 +1065,10 @@ class Wald(PositiveContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1064,7 +1089,7 @@ class Wald(PositiveContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1199,13 +1224,13 @@ class Beta(UnitContinuous):
 
     Parameters
     ----------
-    alpha : float
+    alpha: float
         alpha > 0.
-    beta : float
+    beta: float
         beta > 0.
-    mu : float
+    mu: float
         Alternative mean (0 < mu < 1).
-    sigma : float
+    sigma: float
         Alternative standard deviation (0 < sigma < sqrt(mu * (1 - mu))).
 
     Notes
@@ -1219,6 +1244,10 @@ class Beta(UnitContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sigma)
         self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
         self.beta = beta = tt.as_tensor_variable(floatX(beta))
@@ -1249,10 +1278,10 @@ class Beta(UnitContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1262,7 +1291,7 @@ class Beta(UnitContinuous):
         """
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point, size=size)
-        return generate_samples(stats.beta.rvs, alpha, beta,
+        return generate_samples(clipped_beta_rvs, alpha, beta,
                                 dist_shape=self.shape,
                                 size=size)
 
@@ -1272,7 +1301,7 @@ class Beta(UnitContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1367,9 +1396,9 @@ class Kumaraswamy(UnitContinuous):
 
     Parameters
     ----------
-    a : float
+    a: float
         a > 0.
-    b : float
+    b: float
         b > 0.
     """
 
@@ -1397,10 +1426,10 @@ class Kumaraswamy(UnitContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1420,7 +1449,7 @@ class Kumaraswamy(UnitContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1481,7 +1510,7 @@ class Exponential(PositiveContinuous):
 
     Parameters
     ----------
-    lam : float
+    lam: float
         Rate or inverse scale (lam > 0)
     """
 
@@ -1502,10 +1531,10 @@ class Exponential(PositiveContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1524,7 +1553,7 @@ class Exponential(PositiveContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1544,14 +1573,14 @@ class Exponential(PositiveContinuous):
                                                                 get_variable_name(lam))
 
     def logcdf(self, value):
-        """
+        r"""
         Compute the log of cumulative distribution function for the Exponential distribution
         at the specified value.
 
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            "Accurately computing :math:`\log(1-\exp(-\mid a \mid))` Assessed by the Rmpfr
             package"
 
         Parameters
@@ -1614,9 +1643,9 @@ class Laplace(Continuous):
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Location parameter.
-    b : float
+    b: float
         Scale parameter (b > 0).
     """
 
@@ -1635,10 +1664,10 @@ class Laplace(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1657,7 +1686,7 @@ class Laplace(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1751,18 +1780,19 @@ class Lognormal(PositiveContinuous):
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Location parameter.
-    sigma : float
+    sigma: float
         Standard deviation. (sigma > 0). (only required if tau is not specified).
-    tau : float
+    tau: float
         Scale parameter (tau > 0). (only required if sigma is not specified).
 
-    Example
-    -------
+    Examples
+    --------
+
     .. code-block:: python
 
-        # Example to show that we pass in only `sigma` or `tau` but not both.
+        # Example to show that we pass in only ``sigma`` or ``tau`` but not both.
         with pm.Model():
             x = pm.Lognormal('x', mu=2, sigma=30)
 
@@ -1774,6 +1804,10 @@ class Lognormal(PositiveContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
@@ -1799,10 +1833,10 @@ class Lognormal(PositiveContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1821,7 +1855,7 @@ class Lognormal(PositiveContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1918,14 +1952,14 @@ class StudentT(Continuous):
 
     Parameters
     ----------
-    nu : float
+    nu: float
         Degrees of freedom, also known as normality parameter (nu > 0).
-    mu : float
+    mu: float
         Location parameter.
-    sigma : float
+    sigma: float
         Scale parameter (sigma > 0). Converges to the standard deviation as nu
         increases. (only required if lam is not specified)
-    lam : float
+    lam: float
         Scale parameter (lam > 0). Converges to the precision as nu
         increases. (only required if sigma is not specified)
 
@@ -1945,6 +1979,10 @@ class StudentT(Continuous):
         super(StudentT, self).__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
         self.nu = nu = tt.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
         self.lam = lam = tt.as_tensor_variable(lam)
@@ -1964,10 +2002,10 @@ class StudentT(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1987,7 +2025,7 @@ class StudentT(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -2081,9 +2119,9 @@ class Pareto(Continuous):
 
     Parameters
     ----------
-    alpha : float
+    alpha: float
         Shape parameter (alpha > 0).
-    m : float
+    m: float
         Scale parameter (m > 0).
     """
 
@@ -2116,10 +2154,10 @@ class Pareto(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -2139,7 +2177,7 @@ class Pareto(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -2231,9 +2269,9 @@ class Cauchy(Continuous):
 
     Parameters
     ----------
-    alpha : float
+    alpha: float
         Location parameter
-    beta : float
+    beta: float
         Scale parameter > 0
     """
 
@@ -2254,10 +2292,10 @@ class Cauchy(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -2277,7 +2315,7 @@ class Cauchy(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -2355,7 +2393,7 @@ class HalfCauchy(PositiveContinuous):
 
     Parameters
     ----------
-    beta : float
+    beta: float
         Scale parameter (beta > 0).
     """
 
@@ -2376,10 +2414,10 @@ class HalfCauchy(PositiveContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -2398,7 +2436,7 @@ class HalfCauchy(PositiveContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -2490,13 +2528,13 @@ class Gamma(PositiveContinuous):
 
     Parameters
     ----------
-    alpha : float
+    alpha: float
         Shape parameter (alpha > 0).
-    beta : float
+    beta: float
         Rate parameter (beta > 0).
-    mu : float
+    mu: float
         Alternative shape parameter (mu > 0).
-    sigma : float
+    sigma: float
         Alternative scale parameter (sigma > 0).
     """
 
@@ -2505,6 +2543,10 @@ class Gamma(PositiveContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
 
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sigma)
         self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
@@ -2535,10 +2577,10 @@ class Gamma(PositiveContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -2558,7 +2600,7 @@ class Gamma(PositiveContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -2647,13 +2689,13 @@ class InverseGamma(PositiveContinuous):
 
     Parameters
     ----------
-    alpha : float
+    alpha: float
         Shape parameter (alpha > 0).
-    beta : float
+    beta: float
         Scale parameter (beta > 0).
-    mu : float
+    mu: float
         Alternative shape parameter (mu > 0).
-    sigma : float
+    sigma: float
         Alternative scale parameter (sigma > 0).
     """
 
@@ -2663,6 +2705,10 @@ class InverseGamma(PositiveContinuous):
 
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
 
         alpha, beta = InverseGamma._get_alpha_beta(alpha, beta, mu, sigma)
         self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
@@ -2707,10 +2753,10 @@ class InverseGamma(PositiveContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -2730,7 +2776,7 @@ class InverseGamma(PositiveContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -2789,7 +2835,7 @@ class ChiSquared(Gamma):
 
     Parameters
     ----------
-    nu : int
+    nu: int
         Degrees of freedom (nu > 0).
     """
 
@@ -2844,9 +2890,9 @@ class Weibull(PositiveContinuous):
 
     Parameters
     ----------
-    alpha : float
+    alpha: float
         Shape parameter (alpha > 0).
-    beta : float
+    beta: float
         Scale parameter (beta > 0).
     """
 
@@ -2856,8 +2902,7 @@ class Weibull(PositiveContinuous):
         self.beta = beta = tt.as_tensor_variable(floatX(beta))
         self.mean = beta * tt.exp(gammaln(1 + 1. / alpha))
         self.median = beta * tt.exp(gammaln(tt.log(2)))**(1. / alpha)
-        self.variance = (beta**2) * \
-            tt.exp(gammaln(1 + 2. / alpha - self.mean**2))
+        self.variance = beta**2 * tt.exp(gammaln(1 + 2. / alpha)) - self.mean**2
         self.mode = tt.switch(alpha >= 1,
                               beta * ((alpha - 1)/alpha) ** (1 / alpha),
                               0)  # Reference: https://en.wikipedia.org/wiki/Weibull_distribution
@@ -2871,10 +2916,10 @@ class Weibull(PositiveContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -2898,7 +2943,7 @@ class Weibull(PositiveContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -2924,14 +2969,14 @@ class Weibull(PositiveContinuous):
                                                                 get_variable_name(beta))
 
     def logcdf(self, value):
-        """
+        r"""
         Compute the log of the cumulative distribution function for Weibull distribution
         at the specified value.
 
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            "Accurately computing `\log(1-\exp(- \mid a \mid))` Assessed by the Rmpfr
             package"
 
         Parameters
@@ -2993,12 +3038,12 @@ class HalfStudentT(PositiveContinuous):
 
     Parameters
     ----------
-    nu : float
+    nu: float
         Degrees of freedom, also known as normality parameter (nu > 0).
-    sigma : float
+    sigma: float
         Scale parameter (sigma > 0). Converges to the standard deviation as nu
         increases. (only required if lam is not specified)
-    lam : float
+    lam: float
         Scale parameter (lam > 0). Converges to the precision as nu
         increases. (only required if sigma is not specified)
 
@@ -3019,6 +3064,10 @@ class HalfStudentT(PositiveContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
 
         self.mode = tt.as_tensor_variable(0)
         lam, sigma = get_tau_sigma(lam, sigma)
@@ -3037,10 +3086,10 @@ class HalfStudentT(PositiveContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -3059,7 +3108,7 @@ class HalfStudentT(PositiveContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -3133,11 +3182,11 @@ class ExGaussian(Continuous):
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Mean of the normal distribution.
-    sigma : float
+    sigma: float
         Standard deviation of the normal distribution (sigma > 0).
-    nu : float
+    nu: float
         Mean of the exponential distribution (nu > 0).
 
     References
@@ -3159,6 +3208,10 @@ class ExGaussian(Continuous):
 
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
 
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
         self.sigma = self.sd = sigma = tt.as_tensor_variable(floatX(sigma))
@@ -3175,10 +3228,10 @@ class ExGaussian(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -3203,7 +3256,7 @@ class ExGaussian(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -3309,9 +3362,9 @@ class VonMises(Continuous):
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Mean.
-    kappa : float
+    kappa: float
         Concentration (\frac{1}{kappa} is analogous to \sigma^2).
     """
 
@@ -3331,10 +3384,10 @@ class VonMises(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -3354,7 +3407,7 @@ class VonMises(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -3420,13 +3473,13 @@ class SkewNormal(Continuous):
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Location parameter.
-    sigma : float
+    sigma: float
         Scale parameter (sigma > 0).
-    tau : float
+    tau: float
         Alternative scale parameter (tau > 0).
-    alpha : float
+    alpha: float
         Skewness parameter.
 
     Notes
@@ -3443,6 +3496,10 @@ class SkewNormal(Continuous):
 
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
@@ -3463,10 +3520,10 @@ class SkewNormal(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -3487,7 +3544,7 @@ class SkewNormal(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -3565,11 +3622,11 @@ class Triangular(BoundedContinuous):
 
     Parameters
     ----------
-    lower : float
+    lower: float
         Lower limit.
     c: float
         mode
-    upper : float
+    upper: float
         Upper limit.
     """
 
@@ -3587,10 +3644,10 @@ class Triangular(BoundedContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -3623,7 +3680,7 @@ class Triangular(BoundedContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -3723,15 +3780,15 @@ class Gumbel(Continuous):
 
     ========  ==========================================
     Support   :math:`x \in \mathbb{R}`
-    Mean      :math:`\mu + \beta\gamma`, where \gamma is the Euler-Mascheroni constant
+    Mean      :math:`\mu + \beta\gamma`, where :math:`\gamma` is the Euler-Mascheroni constant
     Variance  :math:`\frac{\pi^2}{6} \beta^2`
     ========  ==========================================
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Location parameter.
-    beta : float
+    beta: float
         Scale parameter (beta > 0).
     """
 
@@ -3754,10 +3811,10 @@ class Gumbel(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -3776,7 +3833,7 @@ class Gumbel(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -3828,6 +3885,23 @@ class Rice(PositiveContinuous):
        {\frac  {x}{\sigma ^{2}}}\exp
        \left({\frac  {-(x^{2}+\nu ^{2})}{2\sigma ^{2}}}\right)I_{0}\left({\frac  {x\nu }{\sigma ^{2}}}\right),
 
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 8, 500)
+        nus = [0., 0., 4., 4.]
+        sigmas = [1., 2., 1., 2.]
+        for nu, sigma in  zip(nus, sigmas):
+            pdf = st.rice.pdf(x, nu / sigma, scale=sigma)
+            plt.plot(x, pdf, label=r'$\nu$ = {}, $\sigma$ = {}'.format(nu, sigma))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
     ========  ==============================================================
     Support   :math:`x \in (0, \infty)`
     Mean      :math:`\sigma {\sqrt  {\pi /2}}\,\,L_{{1/2}}(-\nu ^{2}/2\sigma ^{2})`
@@ -3837,11 +3911,11 @@ class Rice(PositiveContinuous):
 
     Parameters
     ----------
-    nu : float
+    nu: float
         noncentrality parameter.
-    sigma : float
+    sigma: float
         scale parameter.
-    b : float
+    b: float
         shape parameter (alternative to nu).
 
     Notes
@@ -3864,6 +3938,10 @@ class Rice(PositiveContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
 
         nu, b, sigma = self.get_nu_b(nu, b, sigma)
         self.nu = nu = tt.as_tensor_variable(floatX(nu))
@@ -3892,10 +3970,10 @@ class Rice(PositiveContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -3926,7 +4004,7 @@ class Rice(PositiveContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -3982,9 +4060,9 @@ class Logistic(Continuous):
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Mean.
-    s : float
+    s: float
         Scale (s > 0).
     """
 
@@ -4003,7 +4081,7 @@ class Logistic(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -4023,10 +4101,10 @@ class Logistic(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -4053,14 +4131,14 @@ class Logistic(Continuous):
                                                                 get_variable_name(s))
 
     def logcdf(self, value):
-        """
+        r"""
         Compute the log of the cumulative distribution function for Logistic distribution
         at the specified value.
 
         References
         ----------
         .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing log(1-exp(-|a|)) Assessed by the Rmpfr
+            "Accurately computing :math:  `\log(1-\exp(- \mid a \mid<))` Assessed by the Rmpfr
             package"
 
         Parameters
@@ -4124,17 +4202,21 @@ class LogitNormal(UnitContinuous):
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Location parameter.
-    sigma : float
+    sigma: float
         Scale parameter (sigma > 0).
-    tau : float
+    tau: float
         Scale parameter (tau > 0).
     """
 
     def __init__(self, mu=0, sigma=None, tau=None, sd=None, **kwargs):
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
@@ -4152,10 +4234,10 @@ class LogitNormal(UnitContinuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -4174,7 +4256,7 @@ class LogitNormal(UnitContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -4213,7 +4295,7 @@ class Interpolated(BoundedContinuous):
     interpolated density is any way normalized to make the total probability
     equal to $1$.
 
-    Both parameters `x_points` and values `pdf_points` are not variables, but
+    Both parameters ``x_points`` and values ``pdf_points`` are not variables, but
     plain array-like objects, so they are constant and cannot be sampled.
 
     ========  ===========================================
@@ -4222,10 +4304,10 @@ class Interpolated(BoundedContinuous):
 
     Parameters
     ----------
-    x_points : array-like
+    x_points: array-like
         A monotonically growing list of values
-    pdf_points : array-like
-        Probability density function evaluated on lattice `x_points`
+    pdf_points: array-like
+        Probability density function evaluated on lattice ``x_points``
     """
 
     def __init__(self, x_points, pdf_points, *args, **kwargs):
@@ -4273,7 +4355,7 @@ class Interpolated(BoundedContinuous):
 
         Parameters
         ----------
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -4291,7 +4373,7 @@ class Interpolated(BoundedContinuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -4300,3 +4382,133 @@ class Interpolated(BoundedContinuous):
         TensorVariable
         """
         return tt.log(self.interp_op(value) / self.Z)
+
+
+class Moyal(Continuous):
+    R"""
+    Moyal log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \mu,\sigma) = \frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{1}{2}\left(z + e^{-z}\right)},
+
+    where
+
+    .. math::
+
+       z = \frac{x-\mu}{\sigma}.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-10, 20, 200)
+        mus = [-1., 0., 4.]
+        sigmas = [2., 2., 4.]
+        for mu, sigma in zip(mus, sigmas):
+            pdf = st.moyal.pdf(x, loc=mu, scale=sigma)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sigma))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==============================================================
+    Support   :math:`x \in (-\infty, \infty)`
+    Mean      :math:`\mu + \sigma\left(\gamma + \log 2\right)`, where :math:`\gamma` is the Euler-Mascheroni constant
+    Variance  :math:`\frac{\pi^{2}}{2}\sigma^{2}`
+    ========  ==============================================================
+
+    Parameters
+    ----------
+    mu: float
+        Location parameter.
+    sigma: float
+        Scale parameter (sigma > 0).
+    """
+
+    def __init__(self, mu=0, sigma=1., *args, **kwargs):
+        self.mu = tt.as_tensor_variable(floatX(mu))
+        self.sigma = tt.as_tensor_variable(floatX(sigma))
+
+        assert_negative_support(sigma, 'sigma', 'Moyal')
+
+        self.mean = self.mu + self.sigma * (np.euler_gamma + tt.log(2))
+        self.median = self.mu - self.sigma * tt.log(2 * tt.erfcinv(1 / 2)**2)
+        self.mode = self.mu
+        self.variance = (np.pi**2 / 2.0) * self.sigma**2
+
+        super().__init__(*args, **kwargs)
+
+    def random(self, point=None, size=None):
+        """
+        Draw random values from Moyal distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        mu, sigma = draw_values([self.mu, self.sigma], point=point, size=size)
+        return generate_samples(stats.moyal.rvs, loc=mu, scale=sigma,
+                                dist_shape=self.shape,
+                                size=size)
+
+    def logp(self, value):
+        """
+        Calculate log-probability of Moyal distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        scaled = (value - self.mu) / self.sigma
+        return bound((-(1 / 2) * (scaled + tt.exp(-scaled))
+                      - tt.log(self.sigma)
+                      - (1 / 2) * tt.log(2 * np.pi)), self.sigma > 0)
+
+    def _repr_latex_(self, name=None, dist=None):
+        if dist is None:
+            dist = self
+        sigma = dist.sigma
+        mu = dist.mu
+        name = r'\text{%s}' % name
+        return r'${} \sim \text{{Moyal}}(\mathit{{mu}}={},~\mathit{{sigma}}={})$'.format(name,
+                                                                                         get_variable_name(mu),
+                                                                                         get_variable_name(sigma))
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Moyal distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        scaled = (value - self.mu) / self.sigma
+        return tt.log(tt.erfc(tt.exp(-scaled / 2) * (2**-0.5)))

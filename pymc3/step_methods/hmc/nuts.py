@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from collections import namedtuple
 
 import numpy as np
@@ -94,52 +108,48 @@ class NUTS(BaseHMC):
 
         Parameters
         ----------
-        vars : list of Theano variables, default all continuous vars
-        Emax : float, default 1000
+        vars: list of Theano variables, default all continuous vars
+        Emax: float, default 1000
             Maximum energy change allowed during leapfrog steps. Larger
             deviations will abort the integration.
-        target_accept : float, default .8
+        target_accept: float, default .8
             Adapt the step size such that the average acceptance
             probability across the trajectories are close to target_accept.
             Higher values for target_accept lead to smaller step sizes.
             Setting this to higher values like 0.9 or 0.99 can help
             with sampling from difficult posteriors. Valid values are
             between 0 and 1 (exclusive).
-        step_scale : float, default 0.25
+        step_scale: float, default 0.25
             Size of steps to take, automatically scaled down by `1/n**(1/4)`.
             If step size adaptation is switched off, the resulting step size
             is used. If adaptation is enabled, it is used as initial guess.
-        gamma : float, default .05
-        k : float, default .75
+        gamma: float, default .05
+        k: float, default .75
             Parameter for dual averaging for step size adaptation. Values
             between 0.5 and 1 (exclusive) are admissible. Higher values
             correspond to slower adaptation.
-        t0 : int, default 10
+        t0: int, default 10
             Parameter for dual averaging. Higher values slow initial
             adaptation.
-        adapt_step_size : bool, default=True
+        adapt_step_size: bool, default=True
             Whether step size adaptation should be enabled. If this is
             disabled, `k`, `t0`, `gamma` and `target_accept` are ignored.
-        max_treedepth : int, default=10
-            The maximum tree depth. Trajectories are stoped when this
+        max_treedepth: int, default=10
+            The maximum tree depth. Trajectories are stopped when this
             depth is reached.
-        early_max_treedepth : int, default=8
+        early_max_treedepth: int, default=8
             The maximum tree depth during the first 200 tuning samples.
-        integrator : str, default "leapfrog"
-            The integrator to use for the trajectories. One of "leapfrog",
-            "two-stage" or "three-stage". The second two can increase
-            sampling speed for some high dimensional problems.
-        scaling : array_like, ndim = {1,2}
+        scaling: array_like, ndim = {1,2}
             The inverse mass, or precision matrix. One dimensional arrays are
             interpreted as diagonal matrices. If `is_cov` is set to True,
             this will be interpreded as the mass or covariance matrix.
-        is_cov : bool, default=False
+        is_cov: bool, default=False
             Treat the scaling as mass or covariance matrix.
-        potential : Potential, optional
+        potential: Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods. It can be specified instead
             of the scaling matrix.
-        model : pymc3.Model
+        model: pymc3.Model
             The model
         kwargs: passed to BaseHMC
 
@@ -199,12 +209,12 @@ class NUTS(BaseHMC):
 
 
 # A proposal for the next position
-Proposal = namedtuple("Proposal", "q, q_grad, energy, p_accept, logp")
+Proposal = namedtuple("Proposal", "q, q_grad, energy, log_p_accept, logp")
 
 # A subtree of the binary tree built by nuts.
 Subtree = namedtuple(
     "Subtree",
-    "left, right, p_sum, proposal, log_size, accept_sum, n_proposals")
+    "left, right, p_sum, proposal, log_size, log_accept_sum, n_proposals")
 
 
 class _Tree:
@@ -213,13 +223,13 @@ class _Tree:
 
         Parameters
         ----------
-        leapfrog : function
+        leapfrog: function
             A function that performs a single leapfrog step.
-        start : integration.State
+        start: integration.State
             The starting point of the trajectory.
-        step_size : float
+        step_size: float
             The step size to use in this tree
-        Emax : float
+        Emax: float
             The maximum energy change to accept before aborting the
             transition as diverging.
         """
@@ -235,7 +245,8 @@ class _Tree:
             start.q, start.q_grad, start.energy, 1.0, start.model_logp)
         self.depth = 0
         self.log_size = 0
-        self.accept_sum = 0
+        self.log_accept_sum = -np.inf
+        self.mean_tree_accept = 0.
         self.n_proposals = 0
         self.p_sum = start.p.copy()
         self.max_energy_change = 0
@@ -255,14 +266,21 @@ class _Tree:
         if direction > 0:
             tree, diverging, turning = self._build_subtree(
                 self.right, self.depth, floatX(np.asarray(self.step_size)))
+            leftmost_begin, leftmost_end = self.left, self.right
+            rightmost_begin, rightmost_end = tree.left, tree.right
+            leftmost_p_sum = self.p_sum
+            rightmost_p_sum = tree.p_sum
             self.right = tree.right
         else:
             tree, diverging, turning = self._build_subtree(
                 self.left, self.depth, floatX(np.asarray(-self.step_size)))
+            leftmost_begin, leftmost_end = tree.right, tree.left
+            rightmost_begin, rightmost_end = self.left, self.right
+            leftmost_p_sum = tree.p_sum
+            rightmost_p_sum = self.p_sum
             self.left = tree.right
 
         self.depth += 1
-        self.accept_sum += tree.accept_sum
         self.n_proposals += tree.n_proposals
 
         if diverging or turning:
@@ -273,11 +291,20 @@ class _Tree:
             self.proposal = tree.proposal
 
         self.log_size = np.logaddexp(self.log_size, tree.log_size)
+        self.log_accept_sum = np.logaddexp(self.log_accept_sum, 
+					   tree.log_accept_sum)
         self.p_sum[:] += tree.p_sum
 
-        left, right = self.left, self.right
-        p_sum = self.p_sum
-        turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
+        # Additional turning check only when tree depth > 0 to avoid redundant work
+        if self.depth > 0:
+            left, right = self.left, self.right
+            p_sum = self.p_sum
+            turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
+            p_sum1 = leftmost_p_sum + rightmost_begin.p
+            turning1 = (p_sum1.dot(leftmost_begin.v) <= 0) or (p_sum1.dot(rightmost_begin.v) <= 0)
+            p_sum2 = leftmost_end.p + rightmost_p_sum
+            turning2 = (p_sum2.dot(leftmost_end.v) <= 0) or (p_sum2.dot(rightmost_end.v) <= 0)
+            turning = (turning | turning1 | turning2)
 
         return diverging, turning
 
@@ -289,6 +316,7 @@ class _Tree:
             error_msg = str(err)
             error = err
         else:
+            # h - H0
             energy_change = right.energy - self.start_energy
             if np.isnan(energy_change):
                 energy_change = np.inf
@@ -296,18 +324,23 @@ class _Tree:
             if np.abs(energy_change) > np.abs(self.max_energy_change):
                 self.max_energy_change = energy_change
             if np.abs(energy_change) < self.Emax:
-                p_accept = min(1, np.exp(-energy_change))
+                # Acceptance statistic 
+		# e^{H(q_0, p_0) - H(q_n, p_n)} max(1, e^{H(q_0, p_0) - H(q_n, p_n)})
+                # Saturated Metropolis accept probability with Boltzmann weight 
+		# if h - H0 < 0
+                log_p_accept = -energy_change + min(0., -energy_change)
                 log_size = -energy_change
                 proposal = Proposal(
-                    right.q, right.q_grad, right.energy, p_accept, right.model_logp)
+                    right.q, right.q_grad, right.energy, log_p_accept, 
+		    right.model_logp)
                 tree = Subtree(right, right, right.p,
-                               proposal, log_size, p_accept, 1)
+                               proposal, log_size, log_p_accept, 1)
                 return tree, None, False
             else:
                 error_msg = ("Energy change in leapfrog step is too large: %s."
                              % energy_change)
                 error = None
-        tree = Subtree(None, None, None, None, -np.inf, 0, 1)
+        tree = Subtree(None, None, None, None, -np.inf, -np.inf, 1)
         divergance_info = DivergenceInfo(error_msg, error, left)
         return tree, divergance_info, False
 
@@ -328,8 +361,17 @@ class _Tree:
         if not (diverging or turning):
             p_sum = tree1.p_sum + tree2.p_sum
             turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
+            # Additional U turn check only when depth > 1 to avoid redundant work.
+            if depth - 1 > 0:
+                p_sum1 = tree1.p_sum + tree2.left.p
+                turning1 = (p_sum1.dot(tree1.left.v) <= 0) or (p_sum1.dot(tree2.left.v) <= 0)
+                p_sum2 = tree1.right.p + tree2.p_sum
+                turning2 = (p_sum2.dot(tree1.right.v) <= 0) or (p_sum2.dot(tree2.right.v) <= 0)
+                turning = (turning | turning1 | turning2)
 
             log_size = np.logaddexp(tree1.log_size, tree2.log_size)
+            log_accept_sum = np.logaddexp(tree1.log_accept_sum,
+                                          tree2.log_accept_sum)
             if logbern(tree2.log_size - log_size):
                 proposal = tree2.proposal
             else:
@@ -337,19 +379,25 @@ class _Tree:
         else:
             p_sum = tree1.p_sum
             log_size = tree1.log_size
+            log_accept_sum = tree1.log_accept_sum
             proposal = tree1.proposal
 
-        accept_sum = tree1.accept_sum + tree2.accept_sum
         n_proposals = tree1.n_proposals + tree2.n_proposals
 
         tree = Subtree(left, right, p_sum, proposal,
-                       log_size, accept_sum, n_proposals)
+                       log_size, log_accept_sum, n_proposals)
         return tree, diverging, turning
 
     def stats(self):
+        # Update accept stat if any subtrees were accepted
+        if self.log_size > 0:
+            # Remove contribution from initial state which is always a perfect 
+	    # accept
+            sum_weight = np.expm1(self.log_size)
+            self.mean_tree_accept = np.exp(self.log_accept_sum) / sum_weight
         return {
             'depth': self.depth,
-            'mean_tree_accept': self.accept_sum / self.n_proposals,
+            'mean_tree_accept': self.mean_tree_accept,
             'energy_error': self.proposal.energy - self.start.energy,
             'energy': self.proposal.energy,
             'tree_size': self.n_proposals,

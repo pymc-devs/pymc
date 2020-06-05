@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 """SQLite trace backend
 
 Store and retrieve sampling values in SQLite database file.
@@ -18,6 +32,7 @@ The chain column denotes the chain index and starts at 0.
 """
 import numpy as np
 import sqlite3
+import warnings
 
 from ..backends import base, ndarray
 from . import tracetab as ttab
@@ -63,18 +78,24 @@ class SQLite(base.BaseTrace):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of database file
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
-    vars : list of variables
+    vars: list of variables
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
-    test_point : dict
+    test_point: dict
         use different test point that might be with changed variables shapes
     """
 
     def __init__(self, name, model=None, vars=None, test_point=None):
+        warnings.warn(
+            'The `SQLite` backend will soon be removed. '
+            'Please switch to a different backend. '
+            'If you have good reasons for using the SQLite backend, file an issue and tell us about them.',
+            DeprecationWarning,
+        )
         super().__init__(name, model, vars, test_point)
         self._var_cols = {}
         self.var_inserts = {}  # varname -> insert statement
@@ -96,9 +117,9 @@ class SQLite(base.BaseTrace):
 
         Parameters
         ----------
-        draws : int
+        draws: int
             Expected number of draws
-        chain : int
+        chain: int
             Chain number
         """
         self.db.connect()
@@ -144,7 +165,7 @@ class SQLite(base.BaseTrace):
 
         Parameters
         ----------
-        point : dict
+        point: dict
             Values mapped to variable names
         """
         for varname, value in zip(self.varnames, self.fn(point)):
@@ -205,9 +226,9 @@ class SQLite(base.BaseTrace):
 
         Parameters
         ----------
-        varname : str
-        burn : int
-        thin : int
+        varname: str
+        burn: int
+        thin: int
 
         Returns
         -------
@@ -299,15 +320,21 @@ def load(name, model=None):
 
     Parameters
     ----------
-    name : str
+    name: str
         Path to SQLite database file
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
 
     Returns
     -------
     A MultiTrace instance
     """
+    warnings.warn(
+        'The `sqlite.load` function will soon be removed. '
+        'Please use ArviZ to save traces. '
+        'If you have good reasons for using the `load` function, file an issue and tell us about them. ',
+        DeprecationWarning,
+    )
     db = _SQLiteDB(name)
     db.connect()
     varnames = _get_table_list(db.cursor)

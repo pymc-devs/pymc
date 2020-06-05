@@ -3,7 +3,7 @@
     :alt: PyMC3 logo
     :align: center
 
-|Build Status| |Coverage| |NumFOCUS_badge| |Binder|
+|Build Status| |Coverage| |NumFOCUS_badge| |Binder| |Dockerhub|
 
 PyMC3 is a Python package for Bayesian statistical modeling and Probabilistic Machine Learning
 focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (VI)
@@ -158,7 +158,6 @@ Software using PyMC3
 - `sampled <https://github.com/ColCarroll/sampled>`__: Decorator for PyMC3 models.
 - `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
 - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
-- `BayesFit <https://github.com/Slugocm/BayesFit>`__: Bayesian Psychometric Curve Fitting Tool.
 
 Please contact us if your software is not listed here.
 
@@ -187,12 +186,14 @@ Sponsors
 
 |ODSC|
 
-.. |Binder| image:: https://mybinder.org/badge.svg
+.. |Binder| image:: https://mybinder.org/badge_logo.svg
    :target: https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks
 .. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.svg?branch=master
    :target: https://travis-ci.org/pymc-devs/pymc3
-.. |Coverage| image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master
-   :target: https://coveralls.io/github/pymc-devs/pymc3?branch=master
+.. |Coverage| image:: https://codecov.io/gh/pymc-devs/pymc3/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/pymc-devs/pymc3
+.. |Dockerhub| image:: https://img.shields.io/docker/automated/pymc/pymc3.svg
+  :target: https://hub.docker.com/r/pymc/pymc3
 .. |NumFOCUS| image:: https://www.numfocus.org/wp-content/uploads/2017/03/1457562110.png
    :target: http://www.numfocus.org/
 .. |Quantopian| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg

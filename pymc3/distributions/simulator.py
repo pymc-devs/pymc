@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 from .distribution import NoDistribution
 
@@ -9,9 +23,9 @@ class Simulator(NoDistribution):
         """
         This class stores a function defined by the user in python language.
         
-        function : function
+        function: function
             Simulation function defined by the user.
-        *args and **kwargs : 
+        *args and **kwargs: 
             Arguments and keywords arguments that the function takes.
         """
 
@@ -24,10 +38,10 @@ class Simulator(NoDistribution):
         Draw random values from Simulator
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
         Returns

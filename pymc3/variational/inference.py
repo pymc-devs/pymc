@@ -1,14 +1,31 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import logging
 import warnings
 import collections
 
 import numpy as np
-import tqdm
+from fastprogress.fastprogress import progress_bar
 
 import pymc3 as pm
 from pymc3.variational import test_functions
 from pymc3.variational.approximations import (
-    MeanField, FullRank, Empirical, NormalizingFlow
+    MeanField,
+    FullRank,
+    Empirical,
+    NormalizingFlow,
 )
 from pymc3.variational.operators import KL, KSD
 from . import opvi
@@ -16,33 +33,33 @@ from . import opvi
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    'ADVI',
-    'FullRankADVI',
-    'SVGD',
-    'ASVGD',
-    'NFVI',
-    'Inference',
-    'ImplicitGradient',
-    'KLqp',
-    'fit'
+    "ADVI",
+    "FullRankADVI",
+    "SVGD",
+    "ASVGD",
+    "NFVI",
+    "Inference",
+    "ImplicitGradient",
+    "KLqp",
+    "fit",
 ]
 
-State = collections.namedtuple('State', 'i,step,callbacks,score')
+State = collections.namedtuple("State", "i,step,callbacks,score")
 
 
 class Inference:
-    R"""**Base class for Variational Inference**
+    r"""**Base class for Variational Inference**
 
     Communicates Operator, Approximation and Test Function to build Objective Function
 
     Parameters
     ----------
-    op : Operator class
-    approx : Approximation class or instance
-    tf : TestFunction instance
-    model : Model
+    op: Operator class
+    approx: Approximation class or instance
+    tf: TestFunction instance
+    model: Model
         PyMC3 Model
-    kwargs : kwargs passed to :class:`Operator`
+    kwargs: kwargs passed to :class:`Operator`
     """
 
     def __init__(self, op, approx, tf, **kwargs):
@@ -57,9 +74,10 @@ class Inference:
         if score is None:
             score = returns_loss
         elif score and not returns_loss:
-            warnings.warn('method `fit` got `score == True` but %s '
-                          'does not return loss. Ignoring `score` argument'
-                          % self.objective.op)
+            warnings.warn(
+                "method `fit` got `score == True` but %s "
+                "does not return loss. Ignoring `score` argument" % self.objective.op
+            )
             score = False
         else:
             pass
@@ -67,58 +85,54 @@ class Inference:
 
     def run_profiling(self, n=1000, score=None, **kwargs):
         score = self._maybe_score(score)
-        fn_kwargs = kwargs.pop('fn_kwargs', dict())
-        fn_kwargs['profile'] = True
+        fn_kwargs = kwargs.pop("fn_kwargs", dict())
+        fn_kwargs["profile"] = True
         step_func = self.objective.step_function(
-            score=score, fn_kwargs=fn_kwargs,
-            **kwargs
+            score=score, fn_kwargs=fn_kwargs, **kwargs
         )
-        progress = tqdm.trange(n)
+        progress = progress_bar(range(n))
         try:
             for _ in progress:
                 step_func()
         except KeyboardInterrupt:
             pass
-        finally:
-            progress.close()
         return step_func.profile
 
-    def fit(self, n=10000, score=None, callbacks=None, progressbar=True,
-            **kwargs):
+    def fit(self, n=10000, score=None, callbacks=None, progressbar=True, **kwargs):
         """Perform Operator Variational Inference
 
         Parameters
         ----------
-        n : int
+        n: int
             number of iterations
-        score : bool
+        score: bool
             evaluate loss on each iteration or not
-        callbacks : list[function : (Approximation, losses, i) -> None]
+        callbacks: list[function: (Approximation, losses, i) -> None]
             calls provided functions after each iteration step
-        progressbar : bool
+        progressbar: bool
             whether to show progressbar or not
 
         Other Parameters
         ----------------
-        obj_n_mc : `int`
+        obj_n_mc: `int`
             Number of monte carlo samples used for approximation of objective gradients
-        tf_n_mc : `int`
+        tf_n_mc: `int`
             Number of monte carlo samples used for approximation of test function gradients
-        obj_optimizer : function (grads, params) -> updates
+        obj_optimizer: function (grads, params) -> updates
             Optimizer that is used for objective params
-        test_optimizer : function (grads, params) -> updates
+        test_optimizer: function (grads, params) -> updates
             Optimizer that is used for test function params
-        more_obj_params : `list`
+        more_obj_params: `list`
             Add custom params for objective optimizer
-        more_tf_params : `list`
+        more_tf_params: `list`
             Add custom params for test function optimizer
-        more_updates : `dict`
+        more_updates: `dict`
             Add custom updates to resulting updates
-        total_grad_norm_constraint : `float`
+        total_grad_norm_constraint: `float`
             Bounds gradient norm, prevents exploding gradient problem
-        fn_kwargs : `dict`
+        fn_kwargs: `dict`
             Add kwargs to theano.function (e.g. `{'profile': True}`)
-        more_replacements : `dict`
+        more_replacements: `dict`
             Apply custom replacements before calculating gradients
 
         Returns
@@ -129,11 +143,14 @@ class Inference:
             callbacks = []
         score = self._maybe_score(score)
         step_func = self.objective.step_function(score=score, **kwargs)
-        with tqdm.trange(n, disable=not progressbar) as progress:
-            if score:
-                state = self._iterate_with_loss(0, n, step_func, progress, callbacks)
-            else:
-                state = self._iterate_without_loss(0, n, step_func, progress, callbacks)
+        if progressbar:
+            progress = progress_bar(range(n), display=progressbar)
+        else:
+            progress = range(n)
+        if score:
+            state = self._iterate_with_loss(0, n, step_func, progress, callbacks)
+        else:
+            state = self._iterate_without_loss(0, n, step_func, progress, callbacks)
 
         # hack to allow pm.fit() access to loss hist
         self.approx.hist = self.hist
@@ -153,40 +170,40 @@ class Inference:
                     vmap = self.approx.groups[0].bij.ordering.vmap
                     for vmap_ in vmap:
                         slclen = len(tmp_hold[vmap_.slc])
-                        for i in range(slclen):
-                            name_slc.append((vmap_.var, i))
+                        for j in range(slclen):
+                            name_slc.append((vmap_.var, j))
                     index = np.where(np.isnan(current_param))[0]
-                    errmsg = ['NaN occurred in optimization. ']
-                    suggest_solution = 'Try tracking this parameter: ' \
-                                       'http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters'
+                    errmsg = ["NaN occurred in optimization. "]
+                    suggest_solution = (
+                        "Try tracking this parameter: "
+                        "http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters"
+                    )
                     try:
                         for ii in index:
-                            errmsg.append('The current approximation of RV `{}`.ravel()[{}]'
-                                          ' is NaN.'.format(*name_slc[ii]))
+                            errmsg.append(
+                                "The current approximation of RV `{}`.ravel()[{}]"
+                                " is NaN.".format(*name_slc[ii])
+                            )
                         errmsg.append(suggest_solution)
                     except IndexError:
                         pass
-                    raise FloatingPointError('\n'.join(errmsg))
+                    raise FloatingPointError("\n".join(errmsg))
                 for callback in callbacks:
-                    callback(self.approx, None, i+s+1)
+                    callback(self.approx, None, i + s + 1)
         except (KeyboardInterrupt, StopIteration) as e:
-            progress.close()
             if isinstance(e, StopIteration):
                 logger.info(str(e))
-        finally:
-            progress.close()
-        return State(i+s, step=step_func,
-                     callbacks=callbacks,
-                     score=False)
+        return State(i + s, step=step_func, callbacks=callbacks, score=False)
 
     def _iterate_with_loss(self, s, n, step_func, progress, callbacks):
         def _infmean(input_array):
             """Return the mean of the finite values of the array"""
-            input_array = input_array[np.isfinite(input_array)].astype('float64')
+            input_array = input_array[np.isfinite(input_array)].astype("float64")
             if len(input_array) == 0:
                 return np.nan
             else:
                 return np.mean(input_array)
+
         scores = np.empty(n)
         scores[:] = np.nan
         i = 0
@@ -202,73 +219,80 @@ class Inference:
                     vmap = self.approx.groups[0].bij.ordering.vmap
                     for vmap_ in vmap:
                         slclen = len(tmp_hold[vmap_.slc])
-                        for i in range(slclen):
-                            name_slc.append((vmap_.var, i))
+                        for j in range(slclen):
+                            name_slc.append((vmap_.var, j))
                     index = np.where(np.isnan(current_param))[0]
-                    errmsg = ['NaN occurred in optimization. ']
-                    suggest_solution = 'Try tracking this parameter: ' \
-                                       'http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters'
+                    errmsg = ["NaN occurred in optimization. "]
+                    suggest_solution = (
+                        "Try tracking this parameter: "
+                        "http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters"
+                    )
                     try:
                         for ii in index:
-                            errmsg.append('The current approximation of RV `{}`.ravel()[{}]'
-                                          ' is NaN.'.format(*name_slc[ii]))
+                            errmsg.append(
+                                "The current approximation of RV `{}`.ravel()[{}]"
+                                " is NaN.".format(*name_slc[ii])
+                            )
                         errmsg.append(suggest_solution)
                     except IndexError:
                         pass
-                    raise FloatingPointError('\n'.join(errmsg))
+                    raise FloatingPointError("\n".join(errmsg))
                 scores[i] = e
                 if i % 10 == 0:
-                    avg_loss = _infmean(scores[max(0, i - 1000):i + 1])
-                    progress.set_description('Average Loss = {:,.5g}'.format(avg_loss))
-                    avg_loss = scores[max(0, i - 1000):i + 1].mean()
-                    progress.set_description(
-                        'Average Loss = {:,.5g}'.format(avg_loss))
+                    avg_loss = _infmean(scores[max(0, i - 1000): i + 1])
+                    if hasattr(progress, 'comment'):
+                        progress.comment = "Average Loss = {:,.5g}".format(avg_loss)
+                    avg_loss = scores[max(0, i - 1000): i + 1].mean()
+                    if hasattr(progress, 'comment'):
+                        progress.comment = "Average Loss = {:,.5g}".format(avg_loss)
                 for callback in callbacks:
-                    callback(self.approx, scores[:i + 1], i+s+1)
+                    callback(self.approx, scores[: i + 1], i + s + 1)
         except (KeyboardInterrupt, StopIteration) as e:  # pragma: no cover
             # do not print log on the same line
-            progress.close()
             scores = scores[:i]
             if isinstance(e, StopIteration):
                 logger.info(str(e))
             if n < 10:
-                logger.info('Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}'.format(
-                    i, 100 * i // n, scores[i]))
+                logger.info(
+                    "Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}".format(
+                        i, 100 * i // n, scores[i]
+                    )
+                )
             else:
-                avg_loss = _infmean(scores[min(0, i - 1000):i + 1])
-                logger.info('Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}'.format(
-                    i, 100 * i // n, avg_loss))
+                avg_loss = _infmean(scores[min(0, i - 1000): i + 1])
+                logger.info(
+                    "Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}".format(
+                        i, 100 * i // n, avg_loss
+                    )
+                )
         else:
             if n < 10:
-                logger.info(
-                    'Finished [100%]: Loss = {:,.5g}'.format(scores[-1]))
+                logger.info("Finished [100%]: Loss = {:,.5g}".format(scores[-1]))
             else:
-                avg_loss = _infmean(scores[max(0, i - 1000):i + 1])
-                logger.info(
-                    'Finished [100%]: Average Loss = {:,.5g}'.format(avg_loss))
-        finally:
-            progress.close()
+                avg_loss = _infmean(scores[max(0, i - 1000): i + 1])
+                logger.info("Finished [100%]: Average Loss = {:,.5g}".format(avg_loss))
         self.hist = np.concatenate([self.hist, scores])
-        return State(i+s, step=step_func,
-                     callbacks=callbacks,
-                     score=True)
+        return State(i + s, step=step_func, callbacks=callbacks, score=True)
 
     def refine(self, n, progressbar=True):
         """Refine the solution using the last compiled step function
         """
         if self.state is None:
-            raise TypeError('Need to call `.fit` first')
+            raise TypeError("Need to call `.fit` first")
         i, step, callbacks, score = self.state
-        with tqdm.trange(n, disable=not progressbar) as progress:
-            if score:
-                state = self._iterate_with_loss(i, n, step, progress, callbacks)
-            else:
-                state = self._iterate_without_loss(i, n, step, progress, callbacks)
+        if progressbar:
+            progress = progress_bar(range(n), display=progressbar)
+        else:
+            progress = range(n)  # This is a guess at what progress_bar(n) does.
+        if score:
+            state = self._iterate_with_loss(i, n, step, progress, callbacks)
+        else:
+            state = self._iterate_without_loss(i, n, step, progress, callbacks)
         self.state = state
 
 
 class KLqp(Inference):
-    """**Kullback Leibler Divergence Inference**
+    r"""**Kullback Leibler Divergence Inference**
 
     General approach to fit Approximations that define :math:`logq`
     by maximizing ELBO (Evidence Lower Bound). In some cases
@@ -280,9 +304,9 @@ class KLqp(Inference):
 
     Parameters
     ----------
-    approx : :class:`Approximation`
+    approx: :class:`Approximation`
         Approximation to fit, it is required to have `logQ`
-    beta : float
+    beta: float
         Scales the regularization term in ELBO (see Christopher P. Burgess et al., 2017)
 
     References
@@ -291,12 +315,13 @@ class KLqp(Inference):
         Understanding disentangling in :math:`\beta`-VAE
         arXiv preprint 1804.03599
     """
-    def __init__(self, approx, beta=1.):
+
+    def __init__(self, approx, beta=1.0):
         super().__init__(KL, approx, None, beta=beta)
 
 
 class ADVI(KLqp):
-    R"""**Automatic Differentiation Variational Inference (ADVI)**
+    r"""**Automatic Differentiation Variational Inference (ADVI)**
 
     This class implements the meanfield ADVI, where the variational
     posterior distribution is assumed to be spherical Gaussian without
@@ -413,16 +438,16 @@ class ADVI(KLqp):
 
     Parameters
     ----------
-    local_rv : dict[var->tuple]
+    local_rv: dict[var->tuple]
         mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`pymc3.Model`
+    model: :class:`pymc3.Model`
         PyMC3 model for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start : `Point`
+    start: `Point`
         starting point for inference
 
     References
@@ -444,20 +469,20 @@ class ADVI(KLqp):
 
 
 class FullRankADVI(KLqp):
-    R"""**Full Rank Automatic Differentiation Variational Inference (ADVI)**
+    r"""**Full Rank Automatic Differentiation Variational Inference (ADVI)**
 
     Parameters
     ----------
-    local_rv : dict[var->tuple]
+    local_rv: dict[var->tuple]
         mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`pymc3.Model`
+    model: :class:`pymc3.Model`
         PyMC3 model for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start : `Point`
+    start: `Point`
         starting point for inference
 
     References
@@ -489,12 +514,13 @@ class ImplicitGradient(Inference):
     only for large number of samples. Larger temperature is needed for small number of
     samples but there is no theoretical approach to choose the best one in such case.
     """
+
     def __init__(self, approx, estimator=KSD, kernel=test_functions.rbf, **kwargs):
         super().__init__(op=estimator, approx=approx, tf=kernel, **kwargs)
 
 
 class SVGD(ImplicitGradient):
-    R"""**Stein Variational Gradient Descent**
+    r"""**Stein Variational Gradient Descent**
 
     This inference is based on Kernelized Stein Discrepancy
     it's main idea is to move initial noisy particles so that
@@ -514,24 +540,24 @@ class SVGD(ImplicitGradient):
 
     Parameters
     ----------
-    n_particles : `int`
+    n_particles: `int`
         number of particles to use for approximation
-    jitter : `float`
+    jitter: `float`
         noise sd for initial point
-    model : :class:`pymc3.Model`
+    model: :class:`pymc3.Model`
         PyMC3 model for inference
-    kernel : `callable`
+    kernel: `callable`
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
-    temperature : float
+    temperature: float
         parameter responsible for exploration, higher temperature gives more broad posterior estimate
-    start : `dict`
+    start: `dict`
         initial point for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start : `Point`
+    start: `Point`
         starting point for inference
-    kwargs : other keyword arguments passed to estimator
+    kwargs: other keyword arguments passed to estimator
 
     References
     ----------
@@ -544,18 +570,31 @@ class SVGD(ImplicitGradient):
         arXiv:1704.02399
     """
 
-    def __init__(self, n_particles=100, jitter=1, model=None, start=None,
-                 random_seed=None, estimator=KSD, kernel=test_functions.rbf, **kwargs):
-        if kwargs.get('local_rv') is not None:
-            raise opvi.AEVBInferenceError('SVGD does not support local groups')
+    def __init__(
+        self,
+        n_particles=100,
+        jitter=1,
+        model=None,
+        start=None,
+        random_seed=None,
+        estimator=KSD,
+        kernel=test_functions.rbf,
+        **kwargs,
+    ):
+        if kwargs.get("local_rv") is not None:
+            raise opvi.AEVBInferenceError("SVGD does not support local groups")
         empirical = Empirical(
-            size=n_particles, jitter=jitter,
-            start=start, model=model, random_seed=random_seed)
+            size=n_particles,
+            jitter=jitter,
+            start=start,
+            model=model,
+            random_seed=random_seed,
+        )
         super().__init__(approx=empirical, estimator=estimator, kernel=kernel, **kwargs)
 
 
 class ASVGD(ImplicitGradient):
-    R"""**Amortized Stein Variational Gradient Descent**
+    r"""**Amortized Stein Variational Gradient Descent**
 
     **not suggested to use**
 
@@ -577,12 +616,12 @@ class ASVGD(ImplicitGradient):
 
     Parameters
     ----------
-    approx : :class:`Approximation`
+    approx: :class:`Approximation`
         default is :class:`FullRank` but can be any
-    kernel : `callable`
+    kernel: `callable`
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
-    model : :class:`Model`
-    kwargs : kwargs for gradient estimator
+    model: :class:`Model`
+    kwargs: kwargs for gradient estimator
 
     References
     ----------
@@ -600,32 +639,45 @@ class ASVGD(ImplicitGradient):
     """
 
     def __init__(self, approx=None, estimator=KSD, kernel=test_functions.rbf, **kwargs):
-        warnings.warn('You are using experimental inference Operator. '
-                      'It requires careful choice of temperature, default is 1. '
-                      'Default temperature works well for low dimensional problems and '
-                      'for significant `n_obj_mc`. Temperature > 1 gives more exploration '
-                      'power to algorithm, < 1 leads to undesirable results. Please take '
-                      'it in account when looking at inference result. Posterior variance '
-                      'is often **underestimated** when using temperature = 1.')
+        warnings.warn(
+            "You are using experimental inference Operator. "
+            "It requires careful choice of temperature, default is 1. "
+            "Default temperature works well for low dimensional problems and "
+            "for significant `n_obj_mc`. Temperature > 1 gives more exploration "
+            "power to algorithm, < 1 leads to undesirable results. Please take "
+            "it in account when looking at inference result. Posterior variance "
+            "is often **underestimated** when using temperature = 1."
+        )
         if approx is None:
             approx = FullRank(
-                model=kwargs.pop('model', None),
-                local_rv=kwargs.pop('local_rv', None)
+                model=kwargs.pop("model", None), local_rv=kwargs.pop("local_rv", None)
             )
         super().__init__(estimator=estimator, approx=approx, kernel=kernel, **kwargs)
 
-    def fit(self, n=10000, score=None, callbacks=None, progressbar=True,
-            obj_n_mc=500, **kwargs):
+    def fit(
+        self,
+        n=10000,
+        score=None,
+        callbacks=None,
+        progressbar=True,
+        obj_n_mc=500,
+        **kwargs,
+    ):
         return super().fit(
-            n=n, score=score, callbacks=callbacks,
-            progressbar=progressbar, obj_n_mc=obj_n_mc, **kwargs)
+            n=n,
+            score=score,
+            callbacks=callbacks,
+            progressbar=progressbar,
+            obj_n_mc=obj_n_mc,
+            **kwargs,
+        )
 
     def run_profiling(self, n=1000, score=None, obj_n_mc=500, **kwargs):
         return super().run_profiling(n=n, score=score, obj_n_mc=obj_n_mc, **kwargs)
 
 
 class NFVI(KLqp):
-    R"""**Normalizing Flow based :class:`KLqp` inference**
+    r"""**Normalizing Flow based :class:`KLqp` inference**
 
     Normalizing flow is a series of invertible transformations on initial distribution.
 
@@ -665,12 +717,12 @@ class NFVI(KLqp):
 
     Parameters
     ----------
-    flow : str|AbstractFlow
+    flow: str|AbstractFlow
         formula or initialized Flow, default is `'scale-loc'` that
         is identical to MeanField
-    model : :class:`pymc3.Model`
+    model: :class:`pymc3.Model`
         PyMC3 model for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
     """
@@ -679,19 +731,27 @@ class NFVI(KLqp):
         super().__init__(NormalizingFlow(*args, **kwargs))
 
 
-def fit(n=10000, local_rv=None, method='advi', model=None,
-        random_seed=None, start=None, inf_kwargs=None, **kwargs):
-    R"""Handy shortcut for using inference methods in functional way
+def fit(
+    n=10000,
+    local_rv=None,
+    method="advi",
+    model=None,
+    random_seed=None,
+    start=None,
+    inf_kwargs=None,
+    **kwargs,
+):
+    r"""Handy shortcut for using inference methods in functional way
 
     Parameters
     ----------
-    n : `int`
+    n: `int`
         number of iterations
-    local_rv : dict[var->tuple]
+    local_rv: dict[var->tuple]
         mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    method : str or :class:`Inference`
+    method: str or :class:`Inference`
         string name is case insensitive in:
 
         -   'advi'  for ADVI
@@ -701,43 +761,43 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
         -   'nfvi'  for Normalizing Flow with default `scale-loc` flow
         -   'nfvi=<formula>'  for Normalizing Flow using formula
 
-    model : :class:`Model`
+    model: :class:`Model`
         PyMC3 model for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    inf_kwargs : dict
+    inf_kwargs: dict
         additional kwargs passed to :class:`Inference`
-    start : `Point`
+    start: `Point`
         starting point for inference
 
     Other Parameters
     ----------------
-    score : bool
+    score: bool
             evaluate loss on each iteration or not
-    callbacks : list[function : (Approximation, losses, i) -> None]
+    callbacks: list[function: (Approximation, losses, i) -> None]
         calls provided functions after each iteration step
-    progressbar : bool
+    progressbar: bool
         whether to show progressbar or not
-    obj_n_mc : `int`
+    obj_n_mc: `int`
         Number of monte carlo samples used for approximation of objective gradients
-    tf_n_mc : `int`
+    tf_n_mc: `int`
         Number of monte carlo samples used for approximation of test function gradients
-    obj_optimizer : function (grads, params) -> updates
+    obj_optimizer: function (grads, params) -> updates
         Optimizer that is used for objective params
-    test_optimizer : function (grads, params) -> updates
+    test_optimizer: function (grads, params) -> updates
         Optimizer that is used for test function params
-    more_obj_params : `list`
+    more_obj_params: `list`
         Add custom params for objective optimizer
-    more_tf_params : `list`
+    more_tf_params: `list`
         Add custom params for test function optimizer
-    more_updates : `dict`
+    more_updates: `dict`
         Add custom updates to resulting updates
-    total_grad_norm_constraint : `float`
+    total_grad_norm_constraint: `float`
         Bounds gradient norm, prevents exploding gradient problem
-    fn_kwargs : `dict`
+    fn_kwargs: `dict`
         Add kwargs to theano.function (e.g. `{'profile': True}`)
-    more_replacements : `dict`
+    more_replacements: `dict`
         Apply custom replacements before calculating gradients
 
     Returns
@@ -749,42 +809,32 @@ def fit(n=10000, local_rv=None, method='advi', model=None,
     else:
         inf_kwargs = inf_kwargs.copy()
     if local_rv is not None:
-        inf_kwargs['local_rv'] = local_rv
+        inf_kwargs["local_rv"] = local_rv
     if random_seed is not None:
-        inf_kwargs['random_seed'] = random_seed
+        inf_kwargs["random_seed"] = random_seed
     if start is not None:
-        inf_kwargs['start'] = start
+        inf_kwargs["start"] = start
     if model is None:
         model = pm.modelcontext(model)
     _select = dict(
-        advi=ADVI,
-        fullrank_advi=FullRankADVI,
-        svgd=SVGD,
-        asvgd=ASVGD,
-        nfvi=NFVI
+        advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD, asvgd=ASVGD, nfvi=NFVI
     )
     if isinstance(method, str):
         method = method.lower()
-        if method.startswith('nfvi='):
+        if method.startswith("nfvi="):
             formula = method[5:]
-            inference = NFVI(
-                formula,
-                **inf_kwargs
-                )
+            inference = NFVI(formula, **inf_kwargs)
         elif method in _select:
 
-            inference = _select[method](
-                model=model,
-                **inf_kwargs
-            )
+            inference = _select[method](model=model, **inf_kwargs)
         else:
-            raise KeyError('method should be one of %s '
-                           'or Inference instance' %
-                           set(_select.keys()))
+            raise KeyError(
+                f"method should be one of {set(_select.keys())} or Inference instance"
+            )
     elif isinstance(method, Inference):
         inference = method
     else:
-        raise TypeError('method should be one of %s '
-                        'or Inference instance' %
-                        set(_select.keys()))
+        raise TypeError(
+            f"method should be one of {set(_select.keys())} or Inference instance"
+        )
     return inference.fit(n, **kwargs)

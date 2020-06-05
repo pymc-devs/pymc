@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import itertools
 import sys
 
@@ -16,7 +30,7 @@ from ..distributions import (
     Bound, Uniform, Triangular, Binomial, SkewNormal, DiscreteWeibull,
     Gumbel, Logistic, OrderedLogistic, LogitNormal, Interpolated,
     ZeroInflatedBinomial, HalfFlat, AR1, KroneckerNormal, Rice,
-    Kumaraswamy
+    Kumaraswamy, Moyal
 )
 
 from ..distributions import continuous
@@ -449,12 +463,12 @@ class TestMatchesScipy(SeededTest):
                 decimal = select_by_precision(float64=6, float32=3)
             assert_almost_equal(logp(pt), logp_reference(pt), decimal=decimal, err_msg=str(pt))
 
-    def check_logcdf(self, pymc3_dist, domain, paramdomains, scipy_logcdf, decimal=None):
+    def check_logcdf(self, pymc3_dist, domain, paramdomains, scipy_logcdf, decimal=None, n_samples=100):
         domains = paramdomains.copy()
         domains['value'] = domain
         if decimal is None:
             decimal = select_by_precision(float64=6, float32=3)
-        for pt in product(domains, n_samples=100):
+        for pt in product(domains, n_samples=n_samples):
             params = dict(pt)
             scipy_cdf = scipy_logcdf(**params)
             value = params.pop('value')
@@ -642,7 +656,7 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(StudentT, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
                                  lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-0.5))
         self.check_logcdf(StudentT, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
-                          lambda value, nu, mu, lam: sp.t.logcdf(value, nu, mu, lam**-0.5))
+                          lambda value, nu, mu, lam: sp.t.logcdf(value, nu, mu, lam**-0.5), n_samples=10)
 
     def test_cauchy(self):
         self.pymc3_matches_scipy(Cauchy, R, {'alpha': R, 'beta': Rplusbig},
@@ -930,17 +944,43 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize('n', [2, 3])
     def test_dirichlet(self, n):
-        self.pymc3_matches_scipy(Dirichlet, Simplex(
-            n), {'a': Vector(Rplus, n)}, dirichlet_logpdf)
+        self.pymc3_matches_scipy(
+            Dirichlet,
+            Simplex(n),
+            {'a': Vector(Rplus, n)},
+            dirichlet_logpdf
+        )
+
+    @pytest.mark.parametrize('n', [3, 4])
+    def test_dirichlet_init_fail(self, n):
+        with Model():
+            with pytest.raises(
+                    ValueError,
+                    match=r"All concentration parameters \(a\) must be > 0."
+            ):
+                _ = Dirichlet('x', a=np.zeros(n), shape=n)
+            with pytest.raises(
+                    ValueError,
+                    match=r"All concentration parameters \(a\) must be > 0."
+            ):
+                _ = Dirichlet('x', a=np.array([-1.] * n), shape=n)
 
     def test_dirichlet_2D(self):
-        self.pymc3_matches_scipy(Dirichlet, MultiSimplex(2, 2),
-                                 {'a': Vector(Vector(Rplus, 2), 2)}, dirichlet_logpdf)
+        self.pymc3_matches_scipy(
+            Dirichlet,
+            MultiSimplex(2, 2),
+            {'a': Vector(Vector(Rplus, 2), 2)},
+            dirichlet_logpdf
+        )
 
     @pytest.mark.parametrize('n', [2, 3])
     def test_multinomial(self, n):
-        self.pymc3_matches_scipy(Multinomial, Vector(Nat, n), {'p': Simplex(n), 'n': Nat},
-                                 multinomial_logpdf)
+        self.pymc3_matches_scipy(
+            Multinomial,
+            Vector(Nat, n),
+            {'p': Simplex(n), 'n': Nat},
+            multinomial_logpdf
+        )
 
     @pytest.mark.parametrize('p,n', [
         [[.25, .25, .25, .25], 1],
@@ -1174,6 +1214,13 @@ class TestMatchesScipy(SeededTest):
                                  lambda value, b, sigma: sp.rice.logpdf(value, b=b, loc=0, scale=sigma))
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    def test_moyal(self):
+        self.pymc3_matches_scipy(Moyal, R, {'mu': R, 'sigma': Rplusbig},
+                                 lambda value, mu, sigma: floatX(sp.moyal.logpdf(value, mu, sigma)))
+        self.check_logcdf(Moyal, R, {'mu': R, 'sigma': Rplusbig},
+                          lambda value, mu, sigma: floatX(sp.moyal.logcdf(value, mu, sigma)))
+
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
@@ -1335,3 +1382,53 @@ def test_discrete_trafo():
         with pytest.raises(ValueError) as err:
             Binomial('a', n=5, p=0.5, transform='log')
         err.match('Transformations for discrete distributions')
+
+
+@pytest.mark.parametrize("shape", [tuple(), (1,), (3, 1), (3, 2)], ids=str)
+def test_orderedlogistic_dimensions(shape):
+    # Test for issue #3535
+    loge = np.log10(np.exp(1))
+    size = 7
+    p = np.ones(shape + (10,)) / 10
+    cutpoints = np.tile(logit(np.linspace(0, 1, 11)[1:-1]), shape + (1,))
+    obs = np.random.randint(0, 1, size=(size,) + shape)
+    with Model():
+        ol = OrderedLogistic(
+            "ol",
+            eta=np.zeros(shape),
+            cutpoints=cutpoints,
+            shape=shape,
+            observed=obs
+        )
+        c = Categorical(
+            "c",
+            p=p,
+            shape=shape,
+            observed=obs
+        )
+    ologp = ol.logp({"ol": 1}) * loge
+    clogp = c.logp({"c": 1}) * loge
+    expected = -np.prod((size,) + shape)
+
+    assert c.distribution.p.ndim == (len(shape) + 1)
+    assert np.allclose(clogp, expected)
+    assert ol.distribution.p.ndim == (len(shape) + 1)
+    assert np.allclose(ologp, expected)
+
+
+class TestBugfixes:
+    @pytest.mark.parametrize('dist_cls,kwargs', [
+        (MvNormal, dict(mu=0)),
+        (MvStudentT, dict(mu=0, nu=2))
+    ])
+    @pytest.mark.parametrize('dims', [1,2,4])
+    def test_issue_3051(self, dims, dist_cls, kwargs):
+        d = dist_cls.dist(**kwargs, cov=np.eye(dims), shape=(dims,))
+        
+        X = np.random.normal(size=(20,dims))
+        actual_t = d.logp(X)
+        assert isinstance(actual_t, tt.TensorVariable)
+        actual_a = actual_t.eval()
+        assert isinstance(actual_a, np.ndarray)
+        assert actual_a.shape == (X.shape[0],)
+        pass

@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from collections import namedtuple
 
 import numpy as np
@@ -47,18 +61,18 @@ class BaseHMC(arraystep.GradientSharedStep):
 
         Parameters
         ----------
-        vars : list of theano variables
-        scaling : array_like, ndim = {1,2}
+        vars: list of theano variables
+        scaling: array_like, ndim = {1,2}
             Scaling for momentum distribution. 1d arrays interpreted matrix
             diagonal.
-        step_scale : float, default=0.25
+        step_scale: float, default=0.25
             Size of steps to take, automatically scaled down by 1/n**(1/4)
-        is_cov : bool, default=False
+        is_cov: bool, default=False
             Treat scaling as a covariance matrix/vector if True, else treat
             it as a precision matrix/vector
-        model : pymc3 Model instance
+        model: pymc3 Model instance
         blocked: bool, default=True
-        potential : Potential, optional
+        potential: Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods.
         **theano_kwargs: passed to theano functions
@@ -183,6 +197,10 @@ class BaseHMC(arraystep.GradientSharedStep):
         stats.update(self.step_adapt.stats())
 
         return hmc_step.end.q, [stats]
+
+    def reset_tuning(self, start=None):
+        self.step_adapt.reset()
+        self.reset(start=None)
 
     def reset(self, start=None):
         self.tune = True

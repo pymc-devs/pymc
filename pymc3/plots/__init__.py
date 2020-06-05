@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 """PyMC3 Plotting.
 
 Plots are delegated to the ArviZ library, a general purpose library for
@@ -7,27 +21,8 @@ for details on plots.
 import functools
 import sys
 import warnings
-try:
-    import arviz as az
-except ImportError:  # arviz is optional, throw exception when used
 
-    class _ImportWarner:
-        __all__ = []
-
-        def __init__(self, attr):
-            self.attr = attr
-
-        def __call__(self, *args, **kwargs):
-            raise ImportError(
-                "ArviZ is not installed. In order to use `{0.attr}`:\npip install arviz".format(self)
-            )
-
-    class _ArviZ:
-        def __getattr__(self, attr):
-            return _ImportWarner(attr)
-
-
-    az = _ArviZ()
+import arviz as az
 
 def map_args(func):
     swaps = [

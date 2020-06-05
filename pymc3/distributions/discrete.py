@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import theano.tensor as tt
 from scipy import stats
@@ -8,7 +22,7 @@ from .dist_math import bound, factln, binomln, betaln, logpow, random_choice
 from .distribution import Discrete, draw_values, generate_samples
 from .shape_utils import broadcast_distribution_samples
 from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
-from ..theanof import floatX, intX
+from ..theanof import floatX, intX, take_along_axis
 
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'DiscreteWeibull',
@@ -53,9 +67,9 @@ class Binomial(Discrete):
 
     Parameters
     ----------
-    n : int
+    n: int
         Number of Bernoulli trials (n >= 0).
-    p : float
+    p: float
         Probability of success in each trial (0 < p < 1).
     """
 
@@ -66,15 +80,15 @@ class Binomial(Discrete):
         self.mode = tt.cast(tround(n * p), self.dtype)
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from Binomial distribution.
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -88,12 +102,12 @@ class Binomial(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of Binomial distribution at specified value.
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -166,11 +180,11 @@ class BetaBinomial(Discrete):
 
     Parameters
     ----------
-    n : int
+    n: int
         Number of Bernoulli trials (n >= 0).
-    alpha : float
+    alpha: float
         alpha > 0.
-    beta : float
+    beta: float
         beta > 0.
     """
 
@@ -201,15 +215,15 @@ class BetaBinomial(Discrete):
         return samples
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from BetaBinomial distribution.
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -224,12 +238,12 @@ class BetaBinomial(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of BetaBinomial distribution at specified value.
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -289,9 +303,9 @@ class Bernoulli(Discrete):
 
     Parameters
     ----------
-    p : float
+    p: float
         Probability of success (0 < p < 1).
-    logit_p : float
+    logit_p: float
         Logit of success probability. Only one of `p` and `logit_p`
         can be specified.
     """
@@ -312,15 +326,15 @@ class Bernoulli(Discrete):
         self.mode = tt.cast(tround(self.p), 'int8')
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from Bernoulli distribution.
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -334,12 +348,12 @@ class Bernoulli(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of Bernoulli distribution at specified value.
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -413,12 +427,12 @@ class DiscreteWeibull(Discrete):
         self.median = self._ppf(0.5)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of DiscreteWeibull distribution at specified value.
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -435,7 +449,7 @@ class DiscreteWeibull(Discrete):
                      0 < beta)
 
     def _ppf(self, p):
-        """
+        r"""
         The percentile point function (the inverse of the cumulative
         distribution function) of the discrete Weibull distribution.
         """
@@ -450,15 +464,15 @@ class DiscreteWeibull(Discrete):
         return np.ceil(np.power(np.log(1 - p) / np.log(q), 1. / beta)) - 1
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from DiscreteWeibull distribution.
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -517,7 +531,7 @@ class Poisson(Discrete):
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Expected number of occurrences during the given interval
         (mu >= 0).
 
@@ -533,15 +547,15 @@ class Poisson(Discrete):
         self.mode = intX(tt.floor(mu))
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from Poisson distribution.
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -555,12 +569,12 @@ class Poisson(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of Poisson distribution at specified value.
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -629,9 +643,9 @@ class NegativeBinomial(Discrete):
 
     Parameters
     ----------
-    mu : float
+    mu: float
         Poission distribution parameter (mu > 0).
-    alpha : float
+    alpha: float
         Gamma distribution parameter (alpha > 0).
     """
 
@@ -642,15 +656,15 @@ class NegativeBinomial(Discrete):
         self.mode = intX(tt.floor(mu))
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from NegativeBinomial distribution.
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -659,19 +673,31 @@ class NegativeBinomial(Discrete):
         array
         """
         mu, alpha = draw_values([self.mu, self.alpha], point=point, size=size)
-        g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
+        g = generate_samples(self._random, mu=mu, alpha=alpha,
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
         return np.asarray(stats.poisson.rvs(g)).reshape(g.shape)
 
-    def logp(self, value):
+    def _random(self, mu, alpha, size):
+        r""" Wrapper around stats.gamma.rvs that converts NegativeBinomial's
+        parametrization to scipy.gamma. All parameter arrays should have
+        been broadcasted properly by generate_samples at this point and size is
+        the scipy.rvs representation.
         """
+        return stats.gamma.rvs(
+            a=alpha,
+            scale=mu / alpha,
+            size=size,
+        )
+
+    def logp(self, value):
+        r"""
         Calculate log-probability of NegativeBinomial distribution at specified value.
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -735,7 +761,7 @@ class Geometric(Discrete):
 
     Parameters
     ----------
-    p : float
+    p: float
         Probability of success on an individual trial (0 < p <= 1).
     """
 
@@ -745,15 +771,15 @@ class Geometric(Discrete):
         self.mode = 1
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from Geometric distribution.
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -767,12 +793,12 @@ class Geometric(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of Geometric distribution at specified value.
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -826,9 +852,9 @@ class DiscreteUniform(Discrete):
 
     Parameters
     ----------
-    lower : int
+    lower: int
         Lower limit.
-    upper : int
+    upper: int
         Upper limit (upper > lower).
     """
 
@@ -846,15 +872,15 @@ class DiscreteUniform(Discrete):
         return samples
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from DiscreteUniform distribution.
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -869,12 +895,12 @@ class DiscreteUniform(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of DiscreteUniform distribution at specified value.
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -928,7 +954,7 @@ class Categorical(Discrete):
 
     Parameters
     ----------
-    p : array of floats
+    p: array of floats
         p > 0 and the elements of p must sum to 1. They will be automatically
         rescaled otherwise.
     """
@@ -949,15 +975,15 @@ class Categorical(Discrete):
             self.mode = tt.squeeze(self.mode)
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from Categorical distribution.
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -975,12 +1001,12 @@ class Categorical(Discrete):
                                 size=size)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of Categorical distribution at specified value.
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -997,8 +1023,21 @@ class Categorical(Discrete):
         p = p_ / tt.sum(p_, axis=-1, keepdims=True)
 
         if p.ndim > 1:
+            if p.ndim > value_clip.ndim:
+                value_clip = tt.shape_padleft(
+                    value_clip, p_.ndim - value_clip.ndim
+                )
+            elif p.ndim < value_clip.ndim:
+                p = tt.shape_padleft(
+                    p, value_clip.ndim - p_.ndim
+                )
             pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
-            a = tt.log(p.dimshuffle(pattern)[value_clip])
+            a = tt.log(
+                take_along_axis(
+                    p.dimshuffle(pattern),
+                    value_clip,
+                )
+            )
         else:
             a = tt.log(p[value_clip])
 
@@ -1015,12 +1054,12 @@ class Categorical(Discrete):
 
 
 class Constant(Discrete):
-    """
+    r"""
     Constant log-likelihood.
 
     Parameters
     ----------
-    value : float or int
+    value: float or int
         Constant parameter.
     """
 
@@ -1031,15 +1070,15 @@ class Constant(Discrete):
         self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from Constant distribution.
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1057,12 +1096,12 @@ class Constant(Discrete):
                                 size=size).astype(dtype)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of Constant distribution at specified value.
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1126,9 +1165,9 @@ class ZeroInflatedPoisson(Discrete):
 
     Parameters
     ----------
-    psi : float
+    psi: float
         Expected proportion of Poisson variates (0 < psi < 1)
-    theta : float
+    theta: float
         Expected number of occurrences during the given interval
         (theta >= 0).
     """
@@ -1141,15 +1180,15 @@ class ZeroInflatedPoisson(Discrete):
         self.mode = self.pois.mode
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from ZeroInflatedPoisson distribution.
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1165,12 +1204,12 @@ class ZeroInflatedPoisson(Discrete):
         return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of ZeroInflatedPoisson distribution at specified value.
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1245,11 +1284,11 @@ class ZeroInflatedBinomial(Discrete):
 
     Parameters
     ----------
-    psi : float
+    psi: float
         Expected proportion of Binomial variates (0 < psi < 1)
-    n : int
+    n: int
         Number of Bernoulli trials (n >= 0).
-    p : float
+    p: float
         Probability of success in each trial (0 < p < 1).
 
     """
@@ -1263,15 +1302,15 @@ class ZeroInflatedBinomial(Discrete):
         self.mode = self.bin.mode
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from ZeroInflatedBinomial distribution.
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1287,12 +1326,12 @@ class ZeroInflatedBinomial(Discrete):
         return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of ZeroInflatedBinomial distribution at specified value.
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1391,11 +1430,11 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     Parameters
     ----------
-    psi : float
+    psi: float
         Expected proportion of NegativeBinomial variates (0 < psi < 1)
-    mu : float
+    mu: float
         Poission distribution parameter (mu > 0).
-    alpha : float
+    alpha: float
         Gamma distribution parameter (alpha > 0).
 
     """
@@ -1409,15 +1448,15 @@ class ZeroInflatedNegativeBinomial(Discrete):
         self.mode = self.nb.mode
 
     def random(self, point=None, size=None):
-        """
+        r"""
         Draw random values from ZeroInflatedNegativeBinomial distribution.
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1439,7 +1478,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         return stats.poisson.rvs(g) * (np.random.random(g.shape) < psi)
 
     def _random(self, mu, alpha, size):
-        """ Wrapper around stats.gamma.rvs that converts NegativeBinomial's
+        r""" Wrapper around stats.gamma.rvs that converts NegativeBinomial's
         parametrization to scipy.gamma. All parameter arrays should have
         been broadcasted properly by generate_samples at this point and size is
         the scipy.rvs representation.
@@ -1451,12 +1490,12 @@ class ZeroInflatedNegativeBinomial(Discrete):
         )
 
     def logp(self, value):
-        """
+        r"""
         Calculate log-probability of ZeroInflatedNegativeBinomial distribution at specified value.
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -1528,16 +1567,17 @@ class OrderedLogistic(Categorical):
 
     Parameters
     ----------
-    eta : float
+    eta: float
         The predictor.
-    c : array
+    c: array
         The length K - 1 array of cutpoints which break :math:`\eta` into
         ranges.  Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
 
-    Example
+    Examples
     --------
-    .. code:: python
+
+    .. code-block:: python
 
         # Generate data for a simple 1 dimensional example problem
         n1_c = 300; n2_c = 300; n3_c = 300
@@ -1570,13 +1610,13 @@ class OrderedLogistic(Categorical):
         self.eta = tt.as_tensor_variable(floatX(eta))
         self.cutpoints = tt.as_tensor_variable(cutpoints)
 
-        pa = sigmoid(tt.shape_padleft(self.cutpoints) - tt.shape_padright(self.eta))
+        pa = sigmoid(self.cutpoints - tt.shape_padright(self.eta))
         p_cum = tt.concatenate([
-            tt.zeros_like(tt.shape_padright(pa[:, 0])),
+            tt.zeros_like(tt.shape_padright(pa[..., 0])),
             pa,
-            tt.ones_like(tt.shape_padright(pa[:, 0]))
+            tt.ones_like(tt.shape_padright(pa[..., 0]))
         ], axis=-1)
-        p = p_cum[:, 1:] - p_cum[:, :-1]
+        p = p_cum[..., 1:] - p_cum[..., :-1]
 
         super().__init__(p=p, *args, **kwargs)
 

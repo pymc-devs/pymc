@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 """
 pymc3.blocking
 
@@ -68,7 +82,7 @@ class DictToArrayBijection:
 
         Parameters
         ----------
-        dpt : dict
+        dpt: dict
         """
         apt = np.empty(self.ordering.size, dtype=self.array_dtype)
         for var, slc, _, _ in self.ordering.vmap:
@@ -81,7 +95,7 @@ class DictToArrayBijection:
 
         Parameters
         ----------
-        apt : array
+        apt: array
         """
         dpt = self.dpt.copy()
 
@@ -92,16 +106,16 @@ class DictToArrayBijection:
 
     def mapf(self, f):
         """
-         function f : DictSpace -> T to ArraySpace -> T
+         function f: DictSpace -> T to ArraySpace -> T
 
         Parameters
         ----------
 
-        f : dict -> T
+        f: dict -> T
 
         Returns
         -------
-        f : array -> T
+        f: array -> T
         """
         return Compose(f, self.rmap)
 
@@ -113,9 +127,9 @@ class ListArrayOrdering:
 
     Parameters
     ----------
-    list_arrays : list
+    list_arrays: list
         :class:`numpy.ndarray` or :class:`theano.tensor.Tensor`
-    intype : str
+    intype: str
         defining the input type 'tensor' or 'numpy'
     """
 
@@ -144,8 +158,8 @@ class ListToArrayBijection:
 
     Parameters
     ----------
-    ordering : :class:`ListArrayOrdering`
-    list_arrays : list
+    ordering: :class:`ListArrayOrdering`
+    list_arrays: list
         of :class:`numpy.ndarray`
     """
 
@@ -159,12 +173,12 @@ class ListToArrayBijection:
 
         Parameters
         ----------
-        list_arrays : list
+        list_arrays: list
             of :class:`numpy.ndarray`
 
         Returns
         -------
-        array : :class:`numpy.ndarray`
+        array: :class:`numpy.ndarray`
             single array comprising all the input arrays
         """
 
@@ -179,7 +193,7 @@ class ListToArrayBijection:
 
         Parameters
         ----------
-        list_arrays : list
+        list_arrays: list
             of :class:`numpy.ndarray`
 
         Returns
@@ -200,11 +214,11 @@ class ListToArrayBijection:
 
         Parameters
         ----------
-        array : :class:`numpy.ndarray`
+        array: :class:`numpy.ndarray`
 
         Returns
         -------
-        a_list : list
+        a_list: list
             of :class:`numpy.ndarray`
         """
 

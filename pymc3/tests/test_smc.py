@@ -1,7 +1,20 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pymc3 as pm
 import numpy as np
 import theano.tensor as tt
-
 from .helpers import SeededTest
 
 
@@ -42,7 +55,7 @@ class TestSMC(SeededTest):
 
     def test_sample(self):
         with self.SMC_test:
-            mtrace = pm.sample(draws=self.samples, step=pm.SMC())
+            mtrace = pm.sample_smc(draws=self.samples)
 
         x = mtrace["X"]
         mu1d = np.abs(x).mean(axis=0)
@@ -53,7 +66,7 @@ class TestSMC(SeededTest):
             a = pm.Poisson("a", 5)
             b = pm.HalfNormal("b", 10)
             y = pm.Normal("y", a, b, observed=[1, 2, 3, 4])
-            trace = pm.sample(step=pm.SMC())
+            trace = pm.sample_smc()
 
     def test_ml(self):
         data = np.repeat([1, 0], [50, 50])
@@ -65,10 +78,10 @@ class TestSMC(SeededTest):
             with pm.Model() as model:
                 a = pm.Beta("a", alpha, beta)
                 y = pm.Bernoulli("y", a, observed=data)
-                trace = pm.sample(2000, step=pm.SMC())
-                marginals.append(model.marginal_likelihood)
+                trace = pm.sample_smc(2000)
+                marginals.append(model.marginal_log_likelihood)
         # compare to the analytical result
-        assert abs((marginals[1] / marginals[0]) - 4.0) <= 1
+        assert abs(np.exp(marginals[1] - marginals[0]) - 4.0) <= 1
 
     def test_start(self):
         with pm.Model() as model:
@@ -79,4 +92,25 @@ class TestSMC(SeededTest):
                 "a": np.random.poisson(5, size=500),
                 "b_log__": np.abs(np.random.normal(0, 10, size=500)),
             }
-            trace = pm.sample(500, start=start, step=pm.SMC())
+            trace = pm.sample_smc(500, start=start)
+
+
+class TestSMCABC(SeededTest):
+    def setup_class(self):
+        super().setup_class()
+        self.data = np.sort(np.random.normal(loc=0, scale=1, size=1000))
+
+        def normal_sim(a, b):
+            return np.sort(np.random.normal(a, b, 1000))
+
+        with pm.Model() as self.SMABC_test:
+            a = pm.Normal("a", mu=0, sd=5)
+            b = pm.HalfNormal("b", sd=2)
+            s = pm.Simulator("s", normal_sim, observed=self.data)
+
+    def test_one_gaussian(self):
+        with self.SMABC_test:
+            trace = pm.sample_smc(draws=2000, kernel="ABC", epsilon=0.1)
+
+        np.testing.assert_almost_equal(self.data.mean(), trace["a"].mean(), decimal=2)
+        np.testing.assert_almost_equal(self.data.std(), trace["b"].mean(), decimal=1)

@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pytest
 from theano import theano, tensor as tt
 import numpy as np
@@ -52,10 +66,15 @@ class TestBaseModel:
 
     def test_context_passes_vars_to_parent_model(self):
         with pm.Model() as model:
+            assert pm.model.modelcontext(None) == model
+            assert pm.Model.get_context() == model
             # a set of variables is created
-            NewModel()
+            nm = NewModel()
+            assert pm.Model.get_context() == model
             # another set of variables are created but with prefix 'another'
             usermodel2 = NewModel(name='another')
+            assert pm.Model.get_context() == model
+            assert usermodel2._parent == model
             # you can enter in a context with submodel
             with usermodel2:
                 usermodel2.Var('v3', pm.Normal.dist())
@@ -156,6 +175,34 @@ class TestTheanoConfig:
                     assert theano.config.compute_test_value == 'warn'
                 assert theano.config.compute_test_value == 'ignore'
             assert theano.config.compute_test_value == 'off'
+
+def test_matrix_multiplication():
+    # Check matrix multiplication works between RVs, transformed RVs,
+    # Deterministics, and numpy arrays
+    with pm.Model() as linear_model:
+        matrix = pm.Normal('matrix', shape=(2, 2))
+        transformed = pm.Gamma('transformed', alpha=2, beta=1, shape=2)
+        rv_rv = pm.Deterministic('rv_rv', matrix @ transformed)
+        np_rv = pm.Deterministic('np_rv', np.ones((2, 2)) @ transformed)
+        rv_np = pm.Deterministic('rv_np', matrix @ np.ones(2))
+        rv_det = pm.Deterministic('rv_det', matrix @ rv_rv)
+        det_rv = pm.Deterministic('det_rv', rv_rv @ transformed)
+
+        posterior = pm.sample(10,
+                              tune=0,
+                              compute_convergence_checks=False,
+                              progressbar=False)
+        for point in posterior.points():
+            npt.assert_almost_equal(point['matrix'] @ point['transformed'],
+                                    point['rv_rv'])
+            npt.assert_almost_equal(np.ones((2, 2)) @ point['transformed'],
+                                    point['np_rv'])
+            npt.assert_almost_equal(point['matrix'] @ np.ones(2),
+                                    point['rv_np'])
+            npt.assert_almost_equal(point['matrix'] @ point['rv_rv'],
+                                    point['rv_det'])
+            npt.assert_almost_equal(point['rv_rv'] @ point['transformed'],
+                                    point['det_rv'])
 
 
 def test_duplicate_vars():
@@ -301,3 +348,17 @@ class TestValueGradFunction(unittest.TestCase):
         gf = m.logp_dlogp_function()
 
         assert m['x2_missing'].type == gf._extra_vars_shared['x2_missing'].type
+
+def test_multiple_observed_rv():
+    "Test previously buggy MultiObservedRV comparison code."
+    y1_data = np.random.randn(10)
+    y2_data = np.random.randn(100)
+    with pm.Model() as model:
+        mu = pm.Normal("mu")
+        x = pm.DensityDist(  # pylint: disable=unused-variable
+            "x", pm.Normal.dist(mu, 1.0).logp, observed={"value": 0.1}
+        )
+    assert not model['x'] == model['mu']
+    assert model['x'] == model['x']
+    assert  model['x'] in model.observed_RVs
+    assert not model['x'] in model.vars

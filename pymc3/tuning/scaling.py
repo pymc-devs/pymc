@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 from numpy import exp, log, sqrt
 from ..model import modelcontext, Point
@@ -13,9 +27,9 @@ def fixed_hessian(point, vars=None, model=None):
 
     Parameters
     ----------
-    model : Model (optional if in `with` context)
-    point : dict
-    vars : list
+    model: Model (optional if in `with` context)
+    point: dict
+    vars: list
         Variables for which Hessian is to be calculated.
     """
 
@@ -37,9 +51,9 @@ def find_hessian(point, vars=None, model=None):
 
     Parameters
     ----------
-    model : Model (optional if in `with` context)
-    point : dict
-    vars : list
+    model: Model (optional if in `with` context)
+    point: dict
+    vars: list
         Variables for which Hessian is to be calculated.
     """
     model = modelcontext(model)
@@ -53,9 +67,9 @@ def find_hessian_diag(point, vars=None, model=None):
 
     Parameters
     ----------
-    model : Model (optional if in `with` context)
-    point : dict
-    vars : list
+    model: Model (optional if in `with` context)
+    point: dict
+    vars: list
         Variables for which Hessian is to be calculated.
     """
     model = modelcontext(model)
@@ -104,13 +118,13 @@ def trace_cov(trace, vars=None, model=None):
 
     Parameters
     ----------
-    trace : Trace
-    vars : list
+    trace: Trace
+    vars: list
         variables for which to calculate covariance matrix
 
     Returns
     -------
-    r : array (n,n)
+    r: array (n,n)
         covariance matrix
     """
     model = modelcontext(model)

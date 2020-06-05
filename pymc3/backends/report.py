@@ -1,8 +1,24 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from collections import namedtuple
 import logging
 import enum
+import typing
 from ..util import is_transformed_name, get_untransformed_name
 
+import arviz
 
 logger = logging.getLogger('pymc3')
 
@@ -37,11 +53,15 @@ _LEVELS = {
 
 
 class SamplerReport:
+    """This object bundles warnings, convergence statistics and metadata of a sampling run."""
     def __init__(self):
         self._chain_warnings = {}
         self._global_warnings = []
-        self._effective_n = None
-        self._gelman_rubin = None
+        self._ess = None
+        self._rhat = None
+        self._n_tune = None
+        self._n_draws = None
+        self._t_sampling = None
 
     @property
     def _warnings(self):
@@ -54,22 +74,39 @@ class SamplerReport:
         return all(_LEVELS[warn.level] < _LEVELS['warn']
                    for warn in self._warnings)
 
+    @property
+    def n_tune(self) -> typing.Optional[int]:
+        """Number of tune iterations - not necessarily kept in trace!"""
+        return self._n_tune
+
+    @property
+    def n_draws(self) -> typing.Optional[int]:
+        """Number of draw iterations."""
+        return self._n_draws
+
+    @property
+    def t_sampling(self) -> typing.Optional[float]:
+        """
+        Number of seconds that the sampling procedure took.
+
+        (Includes parallelization overhead.)
+        """
+        return self._t_sampling
+
     def raise_ok(self, level='error'):
         errors = [warn for warn in self._warnings
                   if _LEVELS[warn.level] >= _LEVELS[level]]
         if errors:
             raise ValueError('Serious convergence issues during sampling.')
 
-    def _run_convergence_checks(self, trace, model):
-        if trace.nchains == 1:
+    def _run_convergence_checks(self, idata:arviz.InferenceData, model):
+        if idata.posterior.sizes['chain'] == 1:
             msg = ("Only one chain was sampled, this makes it impossible to "
                    "run some convergence checks")
             warn = SamplerWarning(WarningType.BAD_PARAMS, msg, 'info',
                                   None, None, None)
             self._add_warnings([warn])
             return
-
-        from pymc3 import diagnostics
 
         valid_name = [rv.name for rv in model.free_RVs + model.deterministics]
         varnames = []
@@ -78,53 +115,53 @@ class SamplerReport:
             if is_transformed_name(rv_name):
                 rv_name2 = get_untransformed_name(rv_name)
                 rv_name = rv_name2 if rv_name2 in valid_name else rv_name
-            if rv_name in trace.varnames:
+            if rv_name in idata.posterior:
                 varnames.append(rv_name)
 
-        self._effective_n = effective_n = diagnostics.effective_n(trace, varnames)
-        self._gelman_rubin = gelman_rubin = diagnostics.gelman_rubin(trace, varnames)
+        self._ess = ess = arviz.ess(idata, var_names=varnames)
+        self._rhat = rhat = arviz.rhat(idata, var_names=varnames)
 
         warnings = []
-        rhat_max = max(val.max() for val in gelman_rubin.values())
+        rhat_max = max(val.max() for val in rhat.values())
         if rhat_max > 1.4:
-            msg = ("The gelman-rubin statistic is larger than 1.4 for some "
+            msg = ("The rhat statistic is larger than 1.4 for some "
                    "parameters. The sampler did not converge.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'error', None, None, gelman_rubin)
+                WarningType.CONVERGENCE, msg, 'error', None, None, rhat)
             warnings.append(warn)
         elif rhat_max > 1.2:
-            msg = ("The gelman-rubin statistic is larger than 1.2 for some "
+            msg = ("The rhat statistic is larger than 1.2 for some "
                    "parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'warn', None, None, gelman_rubin)
+                WarningType.CONVERGENCE, msg, 'warn', None, None, rhat)
             warnings.append(warn)
         elif rhat_max > 1.05:
-            msg = ("The gelman-rubin statistic is larger than 1.05 for some "
+            msg = ("The rhat statistic is larger than 1.05 for some "
                    "parameters. This indicates slight problems during "
                    "sampling.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'info', None, None, gelman_rubin)
+                WarningType.CONVERGENCE, msg, 'info', None, None, rhat)
             warnings.append(warn)
 
-        eff_min = min(val.min() for val in effective_n.values())
-        n_samples = len(trace) * trace.nchains
+        eff_min = min(val.min() for val in ess.values())
+        n_samples = idata.posterior.sizes['chain'] * idata.posterior.sizes['draw']
         if eff_min < 200 and n_samples >= 500:
             msg = ("The estimated number of effective samples is smaller than "
                    "200 for some parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'error', None, None, effective_n)
+                WarningType.CONVERGENCE, msg, 'error', None, None, ess)
             warnings.append(warn)
         elif eff_min / n_samples < 0.1:
             msg = ("The number of effective samples is smaller than "
                    "10% for some parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'warn', None, None, effective_n)
+                WarningType.CONVERGENCE, msg, 'warn', None, None, ess)
             warnings.append(warn)
         elif eff_min / n_samples < 0.25:
             msg = ("The number of effective samples is smaller than "
                    "25% for some parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'info', None, None, effective_n)
+                WarningType.CONVERGENCE, msg, 'info', None, None, ess)
             warnings.append(warn)
 
         self._add_warnings(warnings)
@@ -137,7 +174,6 @@ class SamplerReport:
         warn_list.extend(warnings)
 
     def _log_summary(self):
-
         def log_warning(warn):
             level = _LEVELS[warn.level]
             logger.log(level, warn.message)

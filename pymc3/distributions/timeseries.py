@@ -1,8 +1,26 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+import warnings
+
+from scipy import stats
 import theano.tensor as tt
 from theano import scan
 
 from pymc3.util import get_variable_name
 from .continuous import get_tau_sigma, Normal, Flat
+from .shape_utils import to_tuple
 from . import multivariate
 from . import distribution
 
@@ -24,9 +42,9 @@ class AR1(distribution.Continuous):
 
     Parameters
     ----------
-    k : tensor
+    k: tensor
        effect of lagged value on current value
-    tau_e : tensor
+    tau_e: tensor
        precision for innovations
     """
 
@@ -43,7 +61,7 @@ class AR1(distribution.Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -89,15 +107,15 @@ class AR(distribution.Continuous):
 
     Parameters
     ----------
-    rho : tensor
+    rho: tensor
         Tensor of autoregressive coefficients. The first dimension is the p lag.
-    sigma : float
+    sigma: float
         Standard deviation of innovation (sigma > 0). (only required if tau is not specified)
-    tau : float
+    tau: float
         Precision of innovation (tau > 0). (only required if sigma is not specified)
     constant: bool (optional, default = False)
         Whether to include a constant.
-    init : distribution
+    init: distribution
         distribution for initial values (Defaults to Flat())
     """
 
@@ -107,6 +125,10 @@ class AR(distribution.Continuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
@@ -142,7 +164,7 @@ class AR(distribution.Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -166,32 +188,53 @@ class AR(distribution.Continuous):
 
 
 class GaussianRandomWalk(distribution.Continuous):
-    R"""
-    Random Walk with Normal innovations
+    R"""Random Walk with Normal innovations
 
     Parameters
     ----------
     mu: tensor
         innovation drift, defaults to 0.0
-    sigma : tensor
+        For vector valued mu, first dimension must match shape of the random walk, and
+        the first element will be discarded (since there is no innovation in the first timestep)
+    sigma: tensor
         sigma > 0, innovation standard deviation (only required if tau is not specified)
-    tau : tensor
+        For vector valued sigma, first dimension must match shape of the random walk, and
+        the first element will be discarded (since there is no innovation in the first timestep)
+    tau: tensor
         tau > 0, innovation precision (only required if sigma is not specified)
-    init : distribution
+        For vector valued tau, first dimension must match shape of the random walk, and
+        the first element will be discarded (since there is no innovation in the first timestep)
+    init: distribution
         distribution for initial value (Defaults to Flat())
     """
 
     def __init__(self, tau=None, init=Flat.dist(), sigma=None, mu=0.,
                  sd=None, *args, **kwargs):
+        kwargs.setdefault('shape', 1)
         super().__init__(*args, **kwargs)
+        if sum(self.shape) == 0:
+            raise TypeError("GaussianRandomWalk must be supplied a non-zero shape argument!")
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.tau = tau = tt.as_tensor_variable(tau)
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
-        self.mu = mu = tt.as_tensor_variable(mu)
+        self.tau = tt.as_tensor_variable(tau)
+        sigma = tt.as_tensor_variable(sigma)
+        self.sigma = self.sd = sigma
+        self.mu = tt.as_tensor_variable(mu)
         self.init = init
         self.mean = tt.as_tensor_variable(0.)
+
+    def _mu_and_sigma(self, mu, sigma):
+        """Helper to get mu and sigma if they are high dimensional."""
+        if sigma.ndim > 0:
+            sigma = sigma[1:]
+        if mu.ndim > 0:
+            mu = mu[1:]
+        return mu, sigma
 
     def logp(self, x):
         """
@@ -199,23 +242,52 @@ class GaussianRandomWalk(distribution.Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
         -------
         TensorVariable
         """
-        tau = self.tau
-        sigma = self.sigma
-        mu = self.mu
-        init = self.init
+        if x.ndim > 0:
+            x_im1 = x[:-1]
+            x_i = x[1:]
+            mu, sigma = self._mu_and_sigma(self.mu, self.sigma)
+            innov_like = Normal.dist(mu=x_im1 + mu, sigma=sigma).logp(x_i)
+            return self.init.logp(x[0]) + tt.sum(innov_like)
+        return self.init.logp(x)
 
-        x_im1 = x[:-1]
-        x_i = x[1:]
+    def random(self, point=None, size=None):
+        """Draw random values from GaussianRandomWalk.
 
-        innov_like = Normal.dist(mu=x_im1 + mu, sigma=sigma).logp(x_i)
-        return init.logp(x[0]) + tt.sum(innov_like)
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        sigma, mu = distribution.draw_values([self.sigma, self.mu], point=point, size=size)
+        return distribution.generate_samples(self._random, sigma=sigma, mu=mu, size=size,
+                                             dist_shape=self.shape,
+                                             not_broadcast_kwargs={"sample_shape": to_tuple(size)})
+
+    def _random(self, sigma, mu, size, sample_shape):
+        """Implement a Gaussian random walk as a cumulative sum of normals."""
+        if size[len(sample_shape)] == sample_shape:
+            axis = len(sample_shape)
+        else:
+            axis = 0
+        rv = stats.norm(mu, sigma)
+        data = rv.rvs(size).cumsum(axis=axis)
+        data = data - data[0]  # TODO: this should be a draw from `init`, if available
+        return data
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -242,13 +314,13 @@ class GARCH11(distribution.Continuous):
 
     Parameters
     ----------
-    omega : tensor
+    omega: tensor
         omega > 0, mean variance
-    alpha_1 : tensor
+    alpha_1: tensor
         alpha_1 >= 0, autoregressive term coefficient
-    beta_1 : tensor
+    beta_1: tensor
         beta_1 >= 0, alpha_1 + beta_1 < 1, moving average term coefficient
-    initial_vol : tensor
+    initial_vol: tensor
         initial_vol >= 0, initial volatility, sigma_0
     """
 
@@ -281,7 +353,7 @@ class GARCH11(distribution.Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -311,12 +383,12 @@ class EulerMaruyama(distribution.Continuous):
 
     Parameters
     ----------
-    dt : float
+    dt: float
         time step of discretization
-    sde_fn : callable
+    sde_fn: callable
         function returning the drift and diffusion coefficients of SDE
-    sde_pars : tuple
-        parameters of the SDE, passed as *args to sde_fn
+    sde_pars: tuple
+        parameters of the SDE, passed as ``*args`` to ``sde_fn``
     """
     def __init__(self, dt, sde_fn, sde_pars, *args, **kwds):
         super().__init__(*args, **kwds)
@@ -330,7 +402,7 @@ class EulerMaruyama(distribution.Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -359,15 +431,15 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
     Parameters
     ----------
-    mu : tensor
+    mu: tensor
         innovation drift, defaults to 0.0
-    cov : tensor
+    cov: tensor
         pos def matrix, innovation covariance matrix
-    tau : tensor
+    tau: tensor
         pos def matrix, inverse covariance matrix
-    chol : tensor
+    chol: tensor
         Cholesky decomposition of covariance matrix
-    init : distribution
+    init: distribution
         distribution for initial value (Defaults to Flat())
 
     Notes
@@ -391,7 +463,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -420,16 +492,16 @@ class MvStudentTRandomWalk(MvGaussianRandomWalk):
 
     Parameters
     ----------
-    nu : degrees of freedom
-    mu : tensor
+    nu: degrees of freedom
+    mu: tensor
         innovation drift, defaults to 0.0
-    cov : tensor
+    cov: tensor
         pos def matrix, innovation covariance matrix
-    tau : tensor
+    tau: tensor
         pos def matrix, inverse covariance matrix
-    chol : tensor
+    chol: tensor
         Cholesky decomposition of covariance matrix
-    init : distribution
+    init: distribution
         distribution for initial value (Defaults to Flat())
     """
     def __init__(self, nu, *args, **kwargs):

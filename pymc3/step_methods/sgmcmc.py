@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from collections import OrderedDict
 import warnings
 
@@ -69,21 +83,21 @@ class BaseStochasticGradient(ArrayStepShared):
 
     Parameters
     ----------
-    vars : list
+    vars: list
         List of variables for sampler
     batch_size`: int
         Batch Size for each step
-    total_size : int
+    total_size: int
         Total size of the training data
-    step_size : float
+    step_size: float
         Step size for the parameter update
-    model : PyMC Model
+    model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context)
-    random_seed : int
+    random_seed: int
         The seed to initialize the Random Stream
-    minibatches : iterator
+    minibatches: iterator
         If the ObservedRV.observed is not a GeneratorOp then this parameter must not be None
-    minibatch_tensor : list of tensors
+    minibatch_tensor: list of tensors
         If the ObservedRV.observed is not a GeneratorOp then this parameter must not be None
         The length of this tensor should be the same as the next(minibatches)
 
