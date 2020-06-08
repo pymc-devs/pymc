@@ -528,7 +528,7 @@ class Data:
             )
 
         coords = {}
-        if isinstance(value, (pd.Series, pd.DataFrame)):
+        if isinstance(value, pd.Series):
             name = None
             if dims is not None:
                 name = dims[0]

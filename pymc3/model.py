@@ -155,9 +155,7 @@ def get_named_nodes_and_relations(graph):
         graph, None, ancestors, descendents
     )
     leaf_dict = {
-        node.name: node
-        for node, ancestor in ancestors.items()
-        if len(ancestor) == 0
+        node.name: node for node, ancestor in ancestors.items() if len(ancestor) == 0
     }
     return leaf_dict, descendents, ancestors
 
@@ -1020,7 +1018,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         for dim in dims:
             if dim not in self.coords:
                 raise ValueError(
-                    "Unknown dimension name %s. All dimension "
+                    "Unknown dimension name '%s'. All dimension "
                     "names must be specified in the `coords` "
                     "argument of the model or through a pm.Data "
                     "variable." % dim
@@ -1035,9 +1033,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         for name in coords:
             if not name.isidentifier():
                 raise ValueError(
-                    "Invalid dimension name. Must be a python " "identifier: %s" % name
+                    "Dimension names should be Python identifiers (alphanumeric with underscores, not starting with a number)."
+                    " The passed value was: %s" % name
                 )
-            if name == "draw" or name == "chain":
+            if name in { "draw", "chain" }:
                 raise ValueError(
                     "Dimensions can not be named `draw` or `chain`, as they are reserved for the sampler's outputs."
                 )
