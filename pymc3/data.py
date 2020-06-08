@@ -25,12 +25,12 @@ import theano
 import pandas as pd
 
 __all__ = [
-    'get_data',
-    'GeneratorAdapter',
-    'Minibatch',
-    'align_minibatches',
-    'Data',
-    'TidyData',
+    "get_data",
+    "GeneratorAdapter",
+    "Minibatch",
+    "align_minibatches",
+    "Data",
+    "TidyData",
 ]
 
 
@@ -46,8 +46,8 @@ def get_data(filename):
     -------
     BytesIO of the data
     """
-    data_pkg = 'pymc3.examples'
-    return io.BytesIO(pkgutil.get_data(data_pkg, os.path.join('data', filename)))
+    data_pkg = "pymc3.examples"
+    return io.BytesIO(pkgutil.get_data(data_pkg, os.path.join("data", filename)))
 
 
 class GenTensorVariable(tt.TensorVariable):
@@ -80,14 +80,14 @@ class GeneratorAdapter:
 
     def __init__(self, generator):
         if not pm.vartypes.isgenerator(generator):
-            raise TypeError('Object should be generator like')
+            raise TypeError("Object should be generator like")
         self.test_value = pm.smartfloatX(copy(next(generator)))
         # make pickling potentially possible
         self._yielded_test_value = False
         self.gen = generator
         self.tensortype = tt.TensorType(
-            self.test_value.dtype,
-            ((False, ) * self.test_value.ndim))
+            self.test_value.dtype, ((False,) * self.test_value.ndim)
+        )
 
     # python3 generator
     def __next__(self):
@@ -285,11 +285,20 @@ class Minibatch(tt.TensorVariable):
         >>> assert x.eval().shape == (2, 20, 20, 40, 10)
     """
 
-    RNG = collections.defaultdict(list) # type: Dict[str, List[Any]]
+    RNG = collections.defaultdict(list)  # type: Dict[str, List[Any]]
 
-    @theano.configparser.change_flags(compute_test_value='raise')
-    def __init__(self, data, batch_size=128, dtype=None, broadcastable=None, name='Minibatch',
-                 random_seed=42, update_shared_f=None, in_memory_size=None):
+    @theano.configparser.change_flags(compute_test_value="raise")
+    def __init__(
+        self,
+        data,
+        batch_size=128,
+        dtype=None,
+        broadcastable=None,
+        name="Minibatch",
+        random_seed=42,
+        update_shared_f=None,
+        in_memory_size=None,
+    ):
         if dtype is None:
             data = pm.smartfloatX(np.asarray(data))
         else:
@@ -297,16 +306,16 @@ class Minibatch(tt.TensorVariable):
         in_memory_slc = self.make_static_slices(in_memory_size)
         self.shared = theano.shared(data[in_memory_slc])
         self.update_shared_f = update_shared_f
-        self.random_slc = self.make_random_slices(self.shared.shape, batch_size, random_seed)
+        self.random_slc = self.make_random_slices(
+            self.shared.shape, batch_size, random_seed
+        )
         minibatch = self.shared[self.random_slc]
         if broadcastable is None:
-            broadcastable = (False, ) * minibatch.ndim
+            broadcastable = (False,) * minibatch.ndim
         minibatch = tt.patternbroadcast(minibatch, broadcastable)
         self.minibatch = minibatch
         super().__init__(self.minibatch.type, None, None, name=name)
-        theano.Apply(
-            theano.compile.view_op,
-            inputs=[self.minibatch], outputs=[self])
+        theano.Apply(theano.compile.view_op, inputs=[self.minibatch], outputs=[self])
         self.tag.test_value = copy(self.minibatch.tag.test_value)
 
     def rslice(self, total, size, seed):
@@ -315,11 +324,11 @@ class Minibatch(tt.TensorVariable):
         elif isinstance(size, int):
             rng = pm.tt_rng(seed)
             Minibatch.RNG[id(self)].append(rng)
-            return (rng
-                    .uniform(size=(size, ), low=0.0, high=pm.floatX(total) - 1e-16)
-                    .astype('int64'))
+            return rng.uniform(
+                size=(size,), low=0.0, high=pm.floatX(total) - 1e-16
+            ).astype("int64")
         else:
-            raise TypeError('Unrecognized size type, %r' % size)
+            raise TypeError("Unrecognized size type, %r" % size)
 
     def __del__(self):
         del Minibatch.RNG[id(self)]
@@ -342,10 +351,10 @@ class Minibatch(tt.TensorVariable):
                 elif isinstance(i, slice):
                     slc.append(i)
                 else:
-                    raise TypeError('Unrecognized size type, %r' % user_size)
+                    raise TypeError("Unrecognized size type, %r" % user_size)
             return slc
         else:
-            raise TypeError('Unrecognized size type, %r' % user_size)
+            raise TypeError("Unrecognized size type, %r" % user_size)
 
     def make_random_slices(self, in_memory_shape, batch_size, default_random_seed):
         if batch_size is None:
@@ -353,6 +362,7 @@ class Minibatch(tt.TensorVariable):
         elif isinstance(batch_size, int):
             slc = [self.rslice(in_memory_shape[0], batch_size, default_random_seed)]
         elif isinstance(batch_size, (list, tuple)):
+
             def check(t):
                 if t is Ellipsis or t is None:
                     return True
@@ -366,12 +376,14 @@ class Minibatch(tt.TensorVariable):
                         return True
                     else:
                         return False
+
             # end check definition
             if not all(check(t) for t in batch_size):
-                raise TypeError('Unrecognized `batch_size` type, expected '
-                                'int or List[int|tuple(size, random_seed)] where '
-                                'size and random seed are both ints, got %r' %
-                                batch_size)
+                raise TypeError(
+                    "Unrecognized `batch_size` type, expected "
+                    "int or List[int|tuple(size, random_seed)] where "
+                    "size and random seed are both ints, got %r" % batch_size
+                )
             batch_size = [
                 (i, default_random_seed) if isinstance(i, int) else i
                 for i in batch_size
@@ -380,12 +392,14 @@ class Minibatch(tt.TensorVariable):
             if Ellipsis in batch_size:
                 sep = batch_size.index(Ellipsis)
                 begin = batch_size[:sep]
-                end = batch_size[sep + 1:]
+                end = batch_size[sep + 1 :]
                 if Ellipsis in end:
-                    raise ValueError('Double Ellipsis in `batch_size` is restricted, got %r' %
-                                     batch_size)
+                    raise ValueError(
+                        "Double Ellipsis in `batch_size` is restricted, got %r"
+                        % batch_size
+                    )
                 if len(end) > 0:
-                    shp_mid = shape[sep:-len(end)]
+                    shp_mid = shape[sep : -len(end)]
                     mid = [tt.arange(s) for s in shp_mid]
                 else:
                     mid = []
@@ -394,23 +408,30 @@ class Minibatch(tt.TensorVariable):
                 end = []
                 mid = []
             if (len(begin) + len(end)) > len(in_memory_shape.eval()):
-                raise ValueError('Length of `batch_size` is too big, '
-                                 'number of ints is bigger that ndim, got %r'
-                                 % batch_size)
+                raise ValueError(
+                    "Length of `batch_size` is too big, "
+                    "number of ints is bigger that ndim, got %r" % batch_size
+                )
             if len(end) > 0:
-                shp_end = shape[-len(end):]
+                shp_end = shape[-len(end) :]
             else:
                 shp_end = np.asarray([])
-            shp_begin = shape[:len(begin)]
-            slc_begin = [self.rslice(shp_begin[i], t[0], t[1])
-                         if t is not None else tt.arange(shp_begin[i])
-                         for i, t in enumerate(begin)]
-            slc_end = [self.rslice(shp_end[i], t[0], t[1])
-                       if t is not None else tt.arange(shp_end[i])
-                       for i, t in enumerate(end)]
+            shp_begin = shape[: len(begin)]
+            slc_begin = [
+                self.rslice(shp_begin[i], t[0], t[1])
+                if t is not None
+                else tt.arange(shp_begin[i])
+                for i, t in enumerate(begin)
+            ]
+            slc_end = [
+                self.rslice(shp_end[i], t[0], t[1])
+                if t is not None
+                else tt.arange(shp_end[i])
+                for i, t in enumerate(end)
+            ]
             slc = slc_begin + mid + slc_end
         else:
-            raise TypeError('Unrecognized size type, %r' % batch_size)
+            raise TypeError("Unrecognized size type, %r" % batch_size)
         return pm.theanof.ix_(*slc)
 
     def update_shared(self):
@@ -436,7 +457,7 @@ def align_minibatches(batches=None):
     else:
         for b in batches:
             if not isinstance(b, Minibatch):
-                raise TypeError('{b} is not a Minibatch')
+                raise TypeError("{b} is not a Minibatch")
             for rng in Minibatch.RNG[id(b)]:
                 rng.seed()
 
@@ -511,9 +532,11 @@ class Data:
             name = None
             if dims is not None:
                 name = dims[0]
-            if (name is None 
-                    and value.index.name is not None
-                    and value.index.name.isidentifier()):
+            if (
+                name is None
+                and value.index.name is not None
+                and value.index.name.isidentifier()
+            ):
                 name = value.index.name
             if name is not None:
                 coords[name] = value.index
@@ -521,9 +544,11 @@ class Data:
             name = None
             if dims is not None:
                 name = dims[1]
-            if (name is None
-                    and value.columns.name is not None
-                    and value.columns.name.isidentifier()):
+            if (
+                name is None
+                and value.columns.name is not None
+                and value.columns.name.isidentifier()
+            ):
                 name = value.columns.name
             if name is not None:
                 coords[name] = value.columns
@@ -531,8 +556,7 @@ class Data:
             if len(dims) != value.ndim:
                 raise ValueError(
                     "Invalid data shape %s. The rank of the dataset "
-                    "must match the length of `dims`."
-                    % value.shape
+                    "must match the length of `dims`." % value.shape
                 )
             for size, dim in zip(value.shape, dims):
                 coord = model.coords.get(dim, None)
@@ -588,14 +612,14 @@ class TidyData:
             return self._category_cols[key]
         data = self.data.reset_index()
         values = data.loc[:, key]
-        if values.dtype.name != 'category':
-            values = values.astype('category')
+        if values.dtype.name != "category":
+            values = values.astype("category")
         self._category_cols[key] = values.dtype
         return values.dtype
 
     def __getitem__(self, key):
         if key not in self.data.columns:
-            raise KeyError('Unknown column %s' % key)
+            raise KeyError("Unknown column %s" % key)
         if key in self._shared_vars:
             return self._shared_vars[key]
 
@@ -623,7 +647,7 @@ class TidyData:
             coords[col] = pd.CategoricalIndex(cat, name=col)
 
         if dims:
-            raise KeyError('Unknown columns: %s' % dims)
+            raise KeyError("Unknown columns: %s" % dims)
 
         return coords
 
