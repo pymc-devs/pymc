@@ -57,7 +57,7 @@ jobs:
     script:
       - . ./scripts/test.sh --durations=10 --cov-append pymc3/tests/test_sampling.py
     after_success: skip
-  - name: binder
+  - name: Update Binder
     stage: binder
     before_install: skip
     install: skip
