@@ -19,7 +19,7 @@ __all__ = ["Simulator"]
 
 
 class Simulator(NoDistribution):
-    def __init__(self, function, params, *args, **kwargs):
+    def __init__(self, function, *args, params=None, **kwargs):
         """
         This class stores a function defined by the user in python language.
         
