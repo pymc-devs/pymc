@@ -998,11 +998,14 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 raise ValueError('Invalid dimension name. Must be a python '
                                  'identifier: %s' % name)
             if name == 'draw' or name == 'chain':
-                raise ValueError('Dimensions can not be named `draw` or `chain`.')
+                raise ValueError(
+                    "Dimensions can not be named `draw` or `chain`, as they are reserved for the sampler's outputs."
+                )
             if name in self.coords:
                 if not coords[name].equals(self.coords[name]):
                     raise ValueError(
-                        'Duplicate and incompatiple coordinate: %s.' % name)
+                        'Duplicate and incompatiple coordinate: %s.' % name
+                    )
             else:
                 self.coords[name] = coords[name]
 

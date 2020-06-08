@@ -70,12 +70,12 @@ class Distribution:
         shape = kwargs.pop('shape', None)
         if dims is not None:
             if shape is not None:
-                raise ValueError("Specify only one of 'dims' and 'shape'")
+                raise ValueError("Specify only one of 'dims' or 'shape'")
             if isinstance(dims, string_types):
                 dims = (dims,)
             shape = model.shape_from_dims(dims)
 
-        # Some distribution do not accept shape=None
+        # Some distributions do not accept shape=None
         if has_shape or shape is not None:
             dist = cls.dist(*args, **kwargs, shape=shape)
         else:

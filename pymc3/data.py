@@ -502,8 +502,9 @@ class Data:
         if isinstance(dims, str):
             dims = (dims,)
         if dims is not None and len(dims) != shared_object.ndim:
-            raise ValueError('Length of `dims` must match the dimensionality '
-                             'of the dataset.')
+            raise ValueError(
+                "Length of `dims` must match the dimensions of the dataset"
+            )
 
         coords = {}
         if isinstance(value, (pd.Series, pd.DataFrame)):
@@ -528,9 +529,11 @@ class Data:
                 coords[name] = value.columns
         if isinstance(value, np.ndarray) and dims is not None:
             if len(dims) != value.ndim:
-                raise ValueError('Invalid data shape %s. The rank of the dataset '
-                                 'must match the length of `dims`.'
-                                 % value.shape)
+                raise ValueError(
+                    "Invalid data shape %s. The rank of the dataset "
+                    "must match the length of `dims`."
+                    % value.shape
+                )
             for size, dim in zip(value.shape, dims):
                 coord = model.coords.get(dim, None)
                 if coord is None:
@@ -545,9 +548,10 @@ class Data:
         if dims is not None:
             shape_dims = model.shape_from_dims(dims)
             if shared_object.dshape != shape_dims:
-                raise ValueError('Invalid shape. It is %s but the dimensions '
-                                 'suggest %s.'
-                                 % (shared_object.dshape, shape_dims))
+                raise ValueError(
+                    "Invalid shape. It is %s but the dimensions suggest %s."
+                    % (shared_object.dshape, shape_dims)
+                )
 
         model.add_random_variable(shared_object, dims=dims)
         return shared_object
