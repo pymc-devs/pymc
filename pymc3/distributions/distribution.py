@@ -482,8 +482,10 @@ class DensityDist(Distribution):
                         )
             return samples
         else:
-            raise ValueError("Distribution was not passed any random method "
-                            "Define a custom random method and pass it as kwarg random")
+            raise ValueError(
+                "Distribution was not passed any random method. "
+                "Define a custom random method and pass it as kwarg random"
+            )
 
 
 class _DrawValuesContext(metaclass=ContextMeta, context_class='_DrawValuesContext'):
