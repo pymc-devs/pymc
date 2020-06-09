@@ -31,7 +31,6 @@ __all__ = [
     "Minibatch",
     "align_minibatches",
     "Data",
-    "TidyData",
 ]
 
 
