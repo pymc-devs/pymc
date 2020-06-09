@@ -12,17 +12,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from typing import Dict, List, Any
+import collections
 from copy import copy
 import io
 import os
 import pkgutil
-import collections
+from typing import Dict, List, Any
+
 import numpy as np
+import pandas as pd
 import pymc3 as pm
 import theano.tensor as tt
 import theano
-import pandas as pd
 
 __all__ = [
     "get_data",
