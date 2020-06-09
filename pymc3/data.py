@@ -476,7 +476,9 @@ class Data:
     dims: {str, tuple of str}, optional, default=None
         Dimension names of the random variables (as opposed to the shapes of these
         random variables). Use this when `value` is a Pandas Series or DataFrame. The
-        `dims` will then be the name of the Series / DataFrame's columns.
+        `dims` will then be the name of the Series / DataFrame's columns. See ArviZ
+        documentation for more information about dimensions and coordinates: https
+        ://arviz-devs.github.io/arviz/notebooks/Introduction.html
     export_index_as_coords: bool, optional, default=False
         If True, the `Data` container will try to infer what the coordinates should be
         if there is an index in `value`.
