@@ -471,8 +471,15 @@ class Data:
     ----------
     name: str
         The name for this variable
-    value
+    value: {List, np.ndarray, pd.Series, pd.Dataframe}
         A value to associate with this variable
+    dims: {str, tuple of str}, optional, default=None
+        Dimension names of the random variables (as opposed to the shapes of these
+        random variables). Use this when `value` is a Pandas Series or DataFrame. The
+        `dims` will then be the name of the Series / DataFrame's columns.
+    export_index_as_coords: bool, optional, default=False
+        If True, the `Data` container will try to infer what the coordinates should be
+        if there is an index in `value`.
 
     Examples
     --------
@@ -503,7 +510,7 @@ class Data:
     https://docs.pymc.io/notebooks/data_container.html
     """
 
-    def __new__(self, name, value, *, dims=None, export_dims=False):
+    def __new__(self, name, value, *, dims=None, export_index_as_coords=False):
         if isinstance(value, list):
             value = np.array(value)
 
@@ -531,7 +538,7 @@ class Data:
 
         coords = self.set_coords(model, value, dims)
 
-        if export_dims:
+        if export_index_as_coords:
             model.add_coords(coords)
 
         # To draw the node for this variable in the graphviz Digraph we need
