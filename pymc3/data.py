@@ -532,11 +532,7 @@ class Data:
             name = None
             if dims is not None:
                 name = dims[0]
-            if (
-                name is None
-                and value.index.name is not None
-                and value.index.name.isidentifier()
-            ):
+            if name is None and value.index.name is not None:
                 name = value.index.name
             if name is not None:
                 coords[name] = value.index
@@ -544,11 +540,7 @@ class Data:
             name = None
             if dims is not None:
                 name = dims[1]
-            if (
-                name is None
-                and value.columns.name is not None
-                and value.columns.name.isidentifier()
-            ):
+            if name is None and value.columns.name is not None:
                 name = value.columns.name
             if name is not None:
                 coords[name] = value.columns

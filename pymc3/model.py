@@ -1031,11 +1031,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             return
 
         for name in coords:
-            if not name.isidentifier():
-                raise ValueError(
-                    "Dimension names should be Python identifiers (alphanumeric with underscores, not starting with a number)."
-                    " The passed value was: %s" % name
-                )
             if name in { "draw", "chain" }:
                 raise ValueError(
                     "Dimensions can not be named `draw` or `chain`, as they are reserved for the sampler's outputs."
