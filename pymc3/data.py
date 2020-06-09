@@ -523,39 +523,13 @@ class Data:
 
         if isinstance(dims, str):
             dims = (dims,)
-        if dims is not None and len(dims) != shared_object.ndim:
+        if not (dims is None or len(dims) == shared_object.ndim):
             raise pm.exceptions.ShapeError(
                 "Length of `dims` must match the dimensions of the dataset.",
                 actual=len(dims), expected=shared_object.ndim
             )
 
-        coords = {}
-        if isinstance(value, pd.Series):
-            name = None
-            if dims is not None:
-                name = dims[0]
-            if name is None and value.index.name is not None:
-                name = value.index.name
-            if name is not None:
-                coords[name] = value.index
-        if isinstance(value, pd.DataFrame):
-            name = None
-            if dims is not None:
-                name = dims[1]
-            if name is None and value.columns.name is not None:
-                name = value.columns.name
-            if name is not None:
-                coords[name] = value.columns
-        if isinstance(value, np.ndarray) and dims is not None:
-            if len(dims) != value.ndim:
-                raise pm.exceptions.ShapeError(
-                    "Invalid data shape. The rank of the dataset must match the length of `dims`.",
-                    actual=value.shape, expected=value.ndim
-                )
-            for size, dim in zip(value.shape, dims):
-                coord = model.coords.get(dim, None)
-                if coord is None:
-                    coords[dim] = pd.RangeIndex(size, name=dim)
+        coords = self.set_coords(model, value, dims)
 
         if export_dims:
             model.add_coords(coords)
@@ -572,79 +546,41 @@ class Data:
                 )
 
         model.add_random_variable(shared_object, dims=dims)
+
         return shared_object
 
-
-class _IndexAccessor:
-    def __init__(self, data):
-        self._data = data
-
-    def __getitem__(self, key):
-        category = self._data._col_as_category(key)
-        vals = self._data.data.reset_index().loc[:, key]
-        return pd.Categorical(vals, dtype=category).codes
-
-
-class TidyData:
-    def __init__(self, data, copy_data=True, import_dims=None, model=None):
-        self.data = data
-        self._shared_vars = {}
-        self._category_cols = {}
-        self._index_dict = _IndexAccessor(self)
-
-        if import_dims is not None:
-            model = pm.model.modelcontext(model)
-            coords = self._extract_coords(import_dims)
-            model.add_coords(coords)
-
-    @property
-    def idxs(self):
-        return self._index_dict
-
-    def _col_as_category(self, key):
-        if key in self._category_cols:
-            return self._category_cols[key]
-        data = self.data.reset_index()
-        values = data.loc[:, key]
-        if values.dtype.name != "category":
-            values = values.astype("category")
-        self._category_cols[key] = values.dtype
-        return values.dtype
-
-    def __getitem__(self, key):
-        if key not in self.data.columns:
-            raise KeyError("Unknown column %s" % key)
-        if key in self._shared_vars:
-            return self._shared_vars[key]
-
-        shared_var = theano.shared(self.data.loc[:, key].values)
-        self._shared_vars[key] = shared_var
-        return shared_var
-
-    def _extract_coords(self, dims):
-        data = self.data
-        dims = set(dims)
+    @staticmethod
+    def set_coords(model, value, dims=None):
         coords = {}
 
-        if data.index.name is not None and data.index.name in dims:
-            dims.remove(data.index.name)
-            coords[data.index.name] = data.index
+        if isinstance(value, pd.Series):
+            dim_name = None
+            if dims is not None:
+                dim_name = dims[0]
+            if dim_name is None and value.index.name is not None:
+                dim_name = value.index.name
+            if dim_name is not None:
+                coords[dim_name] = value.index
 
-        # We want to iterate over index columns of a multi index as well
-        data = data.reset_index()
-        for col in data.columns:
-            if col not in dims:
-                continue
-            dims.remove(col)
-            category = self._col_as_category(col)
-            cat = pd.Categorical(category.categories, dtype=category)
-            coords[col] = pd.CategoricalIndex(cat, name=col)
+        if isinstance(value, pd.DataFrame):
+            dim_name = None
+            if dims is not None:
+                dim_name = dims[1]
+            if dim_name is None and value.columns.name is not None:
+                dim_name = value.columns.name
+            if dim_name is not None:
+                coords[dim_name] = value.columns
 
-        if dims:
-            raise KeyError("Unknown columns: %s" % dims)
+        if isinstance(value, np.ndarray) and dims is not None:
+            if len(dims) != value.ndim:
+                raise pm.exceptions.ShapeError(
+                    "Invalid data shape. The rank of the dataset must match the "
+                    "length of `dims`.",
+                    actual=value.shape, expected=value.ndim
+                )
+            for size, dim in zip(value.shape, dims):
+                coord = model.coords.get(dim, None)
+                if coord is None:
+                    coords[dim] = pd.RangeIndex(size, name=dim)
 
         return coords
-
-    @property
-    def columns(self):
-        return self.data.columns
