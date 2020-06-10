@@ -1023,7 +1023,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                     "argument of the model or through a pm.Data "
                     "variable." % dim
                 )
-            shape.extend(self.coords[dim].shape)
+            shape.extend(np.shape(self.coords[dim]))
         return tuple(shape)
 
     def add_coords(self, coords):
