@@ -1,4 +1,4 @@
-/Users/bill/packages/pymc3/pymc3/tests #   Copyright 2020 The PyMC Developers
+#   Copyright 2020 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
