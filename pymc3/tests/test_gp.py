@@ -1015,8 +1015,8 @@ class TestTP:
             p = tp.conditional("p", self.Xnew)
         chol = np.linalg.cholesky(cov_func(self.X).eval())
         y_rotated = np.linalg.solve(chol, self.y)
-        # testing full model logp unreliable due to introduction of chi2__log__
-        plogp = p.logp({"f_rotated_": y_rotated, "p": self.pnew, "chi2__log__": np.log(1e20)})
+        # testing full model logp unreliable due to introduction of f_chi2__log__
+        plogp = p.logp({"f_rotated_": y_rotated, "p": self.pnew, "f_chi2__log__": np.log(1e20)})
         npt.assert_allclose(self.plogp, plogp, atol=0, rtol=1e-2)
 
     def testAdditiveTPRaises(self):

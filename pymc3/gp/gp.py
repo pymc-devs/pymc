@@ -266,7 +266,7 @@ class TP(Latent):
         cov = stabilize(self.cov_func(X))
         shape = infer_shape(X, kwargs.pop("shape", None))
         if reparameterize:
-            chi2 = pm.ChiSquared("chi2_", self.nu)
+            chi2 = pm.ChiSquared(name + "_chi2_", self.nu)
             v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, shape=shape, **kwargs)
             f = pm.Deterministic(name, (tt.sqrt(self.nu) / chi2) * (mu + cholesky(cov).dot(v)))
         else:
