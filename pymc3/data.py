@@ -561,7 +561,8 @@ class Data:
     def set_coords(model, value, dims=None):
         coords = {}
 
-        if isinstance(value, pd.Series):
+        # If value is a df or a series, we interpret the index as coords:
+        if isinstance(value, (pd.Series, pd.DataFrame)):
             dim_name = None
             if dims is not None:
                 dim_name = dims[0]
@@ -570,6 +571,7 @@ class Data:
             if dim_name is not None:
                 coords[dim_name] = value.index
 
+        # If value is a df, we also interpret the columns as coords:
         if isinstance(value, pd.DataFrame):
             dim_name = None
             if dims is not None:
