@@ -207,7 +207,12 @@ class TestData(SeededTest):
         # pass coordinates explicitly, use numpy array in Data container
         with pm.Model(coords=coords) as pmodel:
             pm.Data('observations', data, dims=("rows", "columns"))
-        pass
+
+        assert "rows" in pmodel.coords
+        assert pmodel.coords["rows"] == ['R1', 'R2', 'R3', 'R4', 'R5']
+        assert "columns" in pmodel.coords
+        assert pmodel.coords["columns"] == ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7']
+        assert pmodel.RV_dims == {'observations': ('rows', 'columns')}
 
     def test_implicit_coords_series(self):
         ser_sales = pd.Series(
@@ -216,9 +221,11 @@ class TestData(SeededTest):
             name="sales"
         )
         with pm.Model() as pmodel:
-            pm.Data("sales", ser_sales, export_index_as_coords=True)
+            pm.Data("sales", ser_sales, dims="date", export_index_as_coords=True)
+
         assert "date" in pmodel.coords
-        pass
+        assert len(pmodel.coords["date"]) == 22
+        assert pmodel.RV_dims == {'sales': ('date',)}
 
     def test_implicit_coords_dataframe(self):
         N_rows = 5
@@ -228,12 +235,14 @@ class TestData(SeededTest):
             df_data[f'Column {c+1}'] = np.random.normal(size=(N_rows,))
         df_data.index.name = 'rows'
         df_data.columns.name = 'columns'
-        # infer coordinates from index names of the DataFrame
+
+        # infer coordinates from index and columns of the DataFrame
         with pm.Model() as pmodel:
-            pm.Data('observations', df_data, export_index_as_coords=True)
+            pm.Data('observations', df_data, dims=("rows", "columns"), export_index_as_coords=True)
+
         assert "rows" in pmodel.coords
         assert "columns" in pmodel.coords
-        pass
+        assert pmodel.RV_dims == {'observations': ('rows', 'columns')}
 
 
 def test_data_naming():
