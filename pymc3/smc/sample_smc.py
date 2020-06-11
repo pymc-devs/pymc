@@ -12,8 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from .smc import SMC
+import time
 import logging
+from .smc import SMC
 
 
 def sample_smc(
@@ -27,8 +28,8 @@ def sample_smc(
     p_acc_rate=0.99,
     threshold=0.5,
     epsilon=1.0,
-    dist_func="absolute_error",
-    sum_stat=False,
+    dist_func="gaussian_kernel",
+    sum_stat="identity",
     progressbar=False,
     model=None,
     random_seed=-1,
@@ -70,11 +71,10 @@ def sample_smc(
     epsilon: float
         Standard deviation of the gaussian pseudo likelihood. Only works with `kernel = ABC`
     dist_func: str
-        Distance function. Available options are ``absolute_error`` (default) and
-        ``sum_of_squared_distance``. Only works with ``kernel = ABC``
-    sum_stat: bool
-        Whether to use or not a summary statistics. Defaults to False. Only works with
-        ``kernel = ABC``
+        Distance function. The only available option is ``gaussian_kernel``
+    sum_stat: str or callable
+        Summary statistics. Available options are ``indentity``, ``sorted``, ``mean``, ``median``.
+        If a callable is based it should return a number or a 1d numpy array.
     progressbar: bool
         Flag for displaying a progress bar. Defaults to False.
     model: Model (optional if in ``with`` context)).
@@ -144,6 +144,7 @@ def sample_smc(
         random_seed=random_seed,
     )
 
+    t1 = time.time()
     _log = logging.getLogger("pymc3")
     _log.info("Sample initial stage: ...")
     stage = 0
@@ -170,5 +171,7 @@ def sample_smc(
         smc.pool.join()
 
     trace = smc.posterior_to_trace()
-
+    trace.report._n_draws = smc.draws
+    trace.report._n_tune = 0
+    trace.report._t_sampling = time.time() - t1
     return trace

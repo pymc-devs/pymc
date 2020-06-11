@@ -17,8 +17,10 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
+import platform
 import numpy as np
 import scipy.linalg
+import scipy.stats
 import theano.tensor as tt
 import theano
 from theano.scalar import UnaryScalarOp, upgrade_to_float_no_complex
@@ -33,6 +35,16 @@ from pymc3.theanof import floatX
 
 f = floatX
 c = - .5 * np.log(2. * np.pi)
+_beta_clip_values = {
+    dtype: (np.nextafter(0, 1, dtype=dtype), np.nextafter(1, 0, dtype=dtype))
+    for dtype in ["float16", "float32", "float64"]
+}
+if platform.system() in ["Linux", "Darwin"]:
+    _beta_clip_values["float128"] = (
+        np.nextafter(0, 1, dtype="float128"),
+        np.nextafter(1, 0, dtype="float128")
+    )
+
 
 
 def bound(logp, *conditions, **kwargs):
@@ -548,3 +560,43 @@ def incomplete_beta(a, b, value):
             tt.and_(tt.le(b * value, one), tt.le(value, 0.95)),
             ps,
             t))
+
+
+def clipped_beta_rvs(a, b, size=None, dtype="float64"):
+    """Draw beta distributed random samples in the open :math:`(0, 1)` interval.
+
+    The samples are generated with ``scipy.stats.beta.rvs``, but any value that
+    is equal to 0 or 1 will be shifted towards the next floating point in the
+    interval :math:`[0, 1]`, depending on the floating point precision that is
+    given by ``dtype``.
+
+    Parameters
+    ----------
+    a : float or array_like of floats
+        Alpha, strictly positive (>0).
+    b : float or array_like of floats
+        Beta, strictly positive (>0).
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``a`` and ``b`` are both scalars.
+        Otherwise, ``np.broadcast(a, b).size`` samples are drawn.
+    dtype : str or dtype instance
+        The floating point precision that the samples should have. This also
+        determines the value that will be used to shift any samples returned
+        by the numpy random number generator that are zero or one.
+    
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized beta distribution. The scipy
+        implementation can yield values that are equal to zero or one. We
+        assume the support of the Beta distribution to be in the open interval
+        :math:`(0, 1)`, so we shift any sample that is equal to 0 to
+        ``np.nextafter(0, 1, dtype=dtype)`` and any sample that is equal to 1
+        is shifted to ``np.nextafter(1, 0, dtype=dtype)``.
+
+    """
+    out = scipy.stats.beta.rvs(a, b, size=size).astype(dtype)
+    lower, upper = _beta_clip_values[dtype]
+    return np.maximum(np.minimum(out, upper), lower)

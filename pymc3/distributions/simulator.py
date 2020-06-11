@@ -19,17 +19,20 @@ __all__ = ["Simulator"]
 
 
 class Simulator(NoDistribution):
-    def __init__(self, function, *args, **kwargs):
+    def __init__(self, function, *args, params=None, **kwargs):
         """
         This class stores a function defined by the user in python language.
         
         function: function
             Simulation function defined by the user.
+        params: list
+            Parameters passed to function.
         *args and **kwargs: 
             Arguments and keywords arguments that the function takes.
         """
 
         self.function = function
+        self.params = params
         observed = self.data
         super().__init__(shape=np.prod(observed.shape), dtype=observed.dtype, *args, **kwargs)
 

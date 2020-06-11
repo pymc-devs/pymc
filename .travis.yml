@@ -44,7 +44,21 @@ stages:
 
 jobs:
   include:
-  - stage: binder
+  - name: ArviZ compatibility
+    stage: test
+    install:
+      - . ./scripts/create_testenv.sh
+      - pip uninstall arviz -y
+      # replace ArviZ with the lastest master
+      - pip install git+git://github.com/arviz-devs/arviz.git
+      - pip install codecov
+      - conda list && pip freeze
+      - export FLOATX='float64'
+    script:
+      - . ./scripts/test.sh --durations=10 --cov-append pymc3/tests/test_sampling.py
+    after_success: skip
+  - name: Update Binder
+    stage: binder
     before_install: skip
     install: skip
     script:

@@ -18,6 +18,7 @@ import enum
 import typing
 from ..util import is_transformed_name, get_untransformed_name
 
+import arviz
 
 logger = logging.getLogger('pymc3')
 
@@ -98,17 +99,14 @@ class SamplerReport:
         if errors:
             raise ValueError('Serious convergence issues during sampling.')
 
-    def _run_convergence_checks(self, trace, model):
-        if trace.nchains == 1:
+    def _run_convergence_checks(self, idata:arviz.InferenceData, model):
+        if idata.posterior.sizes['chain'] == 1:
             msg = ("Only one chain was sampled, this makes it impossible to "
                    "run some convergence checks")
             warn = SamplerWarning(WarningType.BAD_PARAMS, msg, 'info',
                                   None, None, None)
             self._add_warnings([warn])
             return
-
-        from pymc3 import rhat, ess
-        from arviz import from_pymc3
 
         valid_name = [rv.name for rv in model.free_RVs + model.deterministics]
         varnames = []
@@ -117,12 +115,11 @@ class SamplerReport:
             if is_transformed_name(rv_name):
                 rv_name2 = get_untransformed_name(rv_name)
                 rv_name = rv_name2 if rv_name2 in valid_name else rv_name
-            if rv_name in trace.varnames:
+            if rv_name in idata.posterior:
                 varnames.append(rv_name)
 
-        idata = from_pymc3(trace, log_likelihood=False)
-        self._ess = ess = ess(idata, var_names=varnames)
-        self._rhat = rhat = rhat(idata, var_names=varnames)
+        self._ess = ess = arviz.ess(idata, var_names=varnames)
+        self._rhat = rhat = arviz.rhat(idata, var_names=varnames)
 
         warnings = []
         rhat_max = max(val.max() for val in rhat.values())
@@ -147,7 +144,7 @@ class SamplerReport:
             warnings.append(warn)
 
         eff_min = min(val.min() for val in ess.values())
-        n_samples = len(trace) * trace.nchains
+        n_samples = idata.posterior.sizes['chain'] * idata.posterior.sizes['draw']
         if eff_min < 200 and n_samples >= 500:
             msg = ("The estimated number of effective samples is smaller than "
                    "200 for some parameters.")

@@ -16,7 +16,6 @@ import numpy as np
 import numpy.random as nr
 import theano
 import scipy.linalg
-import warnings
 
 from ..distributions import draw_values
 from .arraystep import ArrayStepShared, PopulationArrayStepShared, ArrayStep, metrop_select, Competence
@@ -696,12 +695,6 @@ class DEMetropolisZ(ArrayStepShared):
 
     def __init__(self, vars=None, S=None, proposal_dist=None, lamb=None, scaling=0.001,
                  tune='lambda', tune_interval=100, tune_drop_fraction:float=0.9, model=None, mode=None, **kwargs):
-
-        warnings.warn(
-            'The DEMetropolisZ implementation in PyMC3 is very young. You should be extra critical about its results.'
-            ' See Pull Request #3784 for more information.'
-        )
-
         model = pm.modelcontext(model)
 
         if vars is None:

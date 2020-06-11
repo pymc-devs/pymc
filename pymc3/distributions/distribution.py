@@ -56,16 +56,31 @@ class Distribution:
                             "a 'with model:' block, or use the '.dist' syntax "
                             "for a standalone distribution.")
 
-        if isinstance(name, string_types):
-            data = kwargs.pop('observed', None)
-            cls.data = data
-            if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
-                raise TypeError("observed needs to be data but got: {}".format(type(data)))
-            total_size = kwargs.pop('total_size', None)
-            dist = cls.dist(*args, **kwargs)
-            return model.Var(name, dist, data, total_size)
-        else:
+        if not isinstance(name, string_types):
             raise TypeError("Name needs to be a string but got: {}".format(name))
+
+        data = kwargs.pop('observed', None)
+        cls.data = data
+        if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
+            raise TypeError("observed needs to be data but got: {}".format(type(data)))
+        total_size = kwargs.pop('total_size', None)
+
+        dims = kwargs.pop('dims', None)
+        has_shape = 'shape' in kwargs
+        shape = kwargs.pop('shape', None)
+        if dims is not None:
+            if shape is not None:
+                raise ValueError("Specify only one of 'dims' or 'shape'")
+            if isinstance(dims, string_types):
+                dims = (dims,)
+            shape = model.shape_from_dims(dims)
+
+        # Some distributions do not accept shape=None
+        if has_shape or shape is not None:
+            dist = cls.dist(*args, **kwargs, shape=shape)
+        else:
+            dist = cls.dist(*args, **kwargs)
+        return model.Var(name, dist, data, total_size, dims=dims)
 
     def __getnewargs__(self):
         return _Unpickling,
@@ -77,7 +92,7 @@ class Distribution:
         return dist
 
     def __init__(self, shape, dtype, testval=None, defaults=(),
-                 transform=None, broadcastable=None):
+                 transform=None, broadcastable=None, dims=None):
         self.shape = np.atleast_1d(shape)
         if False in (np.floor(self.shape) == self.shape):
             raise TypeError("Expected int elements in shape")
@@ -110,6 +125,9 @@ class Distribution:
 
         if isinstance(val, tt.TensorVariable):
             return val.tag.test_value
+
+        if isinstance(val, tt.sharedvar.TensorSharedVariable):
+            return val.get_value()
 
         if isinstance(val, theano_constant):
             return val.value
@@ -464,8 +482,10 @@ class DensityDist(Distribution):
                         )
             return samples
         else:
-            raise ValueError("Distribution was not passed any random method "
-                            "Define a custom random method and pass it as kwarg random")
+            raise ValueError(
+                "Distribution was not passed any random method. "
+                "Define a custom random method and pass it as kwarg random"
+            )
 
 
 class _DrawValuesContext(metaclass=ContextMeta, context_class='_DrawValuesContext'):
