@@ -52,7 +52,7 @@ jobs:
       with:
         python-version: 3.7
     - name: Give PyPI a chance to update the index
-      run: sleep 120
+      run: sleep 240
     - name: Install from PyPI
       run: |
         pip install pymc3
