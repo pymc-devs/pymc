@@ -16,7 +16,6 @@
 - `pm.LKJCholeskyCov` now automatically computes and returns the unpacked Cholesky decomposition, the correlations and the standard deviations of the covariance matrix (see [#3881](https://github.com/pymc-devs/pymc3/pull/3881)).
 
 ### Maintenance
-- AR1 model correctly calculates likelihood of the first observation of a sample, see [#3899](https://github.com/pymc-devs/pymc3/pull/3899)
 - Tuning results no longer leak into sequentially sampled `Metropolis` chains (see #3733 and #3796).
 - In named models, `pm.Data` objects now get model-relative names (see [#3843](https://github.com/pymc-devs/pymc3/pull/3843)).
 - `pm.sample` now takes 1000 draws and 1000 tuning samples by default, instead of 500 previously (see [#3855](https://github.com/pymc-devs/pymc3/pull/3855)).
@@ -26,6 +25,7 @@
 - End of sampling report now uses `arviz.InferenceData` internally and avoids storing
   pointwise log likelihood (see [#3883](https://github.com/pymc-devs/pymc3/pull/3883)).
 - The multiprocessing start method on MacOS is now set to "forkserver", to avoid crashes (see issue [#3849](https://github.com/pymc-devs/pymc3/issues/3849), solved by [#3919](https://github.com/pymc-devs/pymc3/pull/3919)).
+- The AR1 logp now uses the precision of the whole AR1 process instead of just the innovation precision (see issue [#3892](https://github.com/pymc-devs/pymc3/issues/3892), fixed by [#3899](https://github.com/pymc-devs/pymc3/pull/3899)).
 
 ### Deprecations
 - Remove `sample_ppc` and `sample_ppc_w` that were deprecated in 3.6.
