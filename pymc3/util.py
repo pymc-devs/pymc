@@ -140,7 +140,7 @@ def get_variable_name(variable):
             except IndexError:
                 pass
         value = variable.eval()
-        if not value.shape:
+        if not value.shape or value.shape == (1,):
             return asscalar(value)
         return "array"
     return r"\text{%s}" % name
