@@ -89,8 +89,8 @@ class SMC:
         self.acc_per_chain = np.ones(self.draws)
         self.model.marginal_log_likelihood = 0
         self.variables = inputvars(self.model.vars)
-        dimension = sum(v.dsize for v in self.variables)
-        self.scalings = np.ones(self.draws) * min(1, 2.38 ** 2 / dimension)
+        self.dimension = sum(v.dsize for v in self.variables)
+        self.scalings = np.ones(self.draws) * min(1, 2.38 ** 2 / self.dimension)
         self.discrete = np.concatenate(
             [[v.dtype in discrete_types] * (v.dsize or 1) for v in self.variables]
         )
@@ -128,14 +128,14 @@ class SMC:
         Set up the likelihood logp function based on the chosen kernel
         """
         shared = make_shared_replacements(self.variables, self.model)
-        self.prior_logp = logp_forw([self.model.varlogpt], self.variables, shared)
+        self.prior_logp_func = logp_forw([self.model.varlogpt], self.variables, shared)
 
         if self.kernel.lower() == "abc":
             warnings.warn(EXPERIMENTAL_WARNING)
             if len(self.model.observed_RVs) != 1:
                 warnings.warn("SMC-ABC only works properly with models with one observed variable")
             simulator = self.model.observed_RVs[0]
-            self.likelihood_logp = PseudoLikelihood(
+            self.likelihood_logp_func = PseudoLikelihood(
                 self.epsilon,
                 simulator.observations,
                 simulator.distribution.function,
@@ -147,7 +147,7 @@ class SMC:
                 self.sum_stat,
             )
         elif self.kernel.lower() == "metropolis":
-            self.likelihood_logp = logp_forw([self.model.datalogpt], self.variables, shared)
+            self.likelihood_logp_func = logp_forw([self.model.datalogpt], self.variables, shared)
 
     def initialize_logp(self):
         """
@@ -155,16 +155,18 @@ class SMC:
         """
         if self.parallel and self.cores > 1:
             self.pool = mp.Pool(processes=self.cores)
-            priors = self.pool.starmap(self.prior_logp, [(sample,) for sample in self.posterior])
+            priors = self.pool.starmap(
+                self.prior_logp_func, [(sample,) for sample in self.posterior]
+            )
             likelihoods = self.pool.starmap(
-                self.likelihood_logp, [(sample,) for sample in self.posterior]
+                self.likelihood_logp_func, [(sample,) for sample in self.posterior]
             )
         else:
-            priors = [self.prior_logp(sample) for sample in self.posterior]
-            likelihoods = [self.likelihood_logp(sample) for sample in self.posterior]
+            priors = [self.prior_logp_func(sample) for sample in self.posterior]
+            likelihoods = [self.likelihood_logp_func(sample) for sample in self.posterior]
 
-        self.priors = np.array(priors).squeeze()
-        self.likelihoods = np.array(likelihoods).squeeze()
+        self.prior_logp = np.array(priors).squeeze()
+        self.likelihood_logp = np.array(likelihoods).squeeze()
 
     def update_weights_beta(self):
         """
@@ -173,11 +175,11 @@ class SMC:
         """
         low_beta = old_beta = self.beta
         up_beta = 2.0
-        rN = int(len(self.likelihoods) * self.threshold)
+        rN = int(len(self.likelihood_logp) * self.threshold)
 
         while up_beta - low_beta > 1e-6:
             new_beta = (low_beta + up_beta) / 2.0
-            log_weights_un = (new_beta - old_beta) * self.likelihoods
+            log_weights_un = (new_beta - old_beta) * self.likelihood_logp
             log_weights = log_weights_un - logsumexp(log_weights_un)
             ESS = int(np.exp(-logsumexp(log_weights * 2)))
             if ESS == rN:
@@ -188,7 +190,7 @@ class SMC:
                 low_beta = new_beta
         if new_beta >= 1:
             new_beta = 1
-            log_weights_un = (new_beta - old_beta) * self.likelihoods
+            log_weights_un = (new_beta - old_beta) * self.likelihood_logp
             log_weights = log_weights_un - logsumexp(log_weights_un)
 
         ll_max = np.max(log_weights_un)
@@ -206,9 +208,9 @@ class SMC:
             np.arange(self.draws), size=self.draws, p=self.weights
         )
         self.posterior = self.posterior[resampling_indexes]
-        self.priors = self.priors[resampling_indexes]
-        self.likelihoods = self.likelihoods[resampling_indexes]
-        self.tempered_logp = self.priors + self.likelihoods * self.beta
+        self.prior_logp = self.prior_logp[resampling_indexes]
+        self.likelihood_logp = self.likelihood_logp[resampling_indexes]
+        self.posterior_logp = self.prior_logp + self.likelihood_logp * self.beta
         self.acc_per_chain = self.acc_per_chain[resampling_indexes]
         self.scalings = self.scalings[resampling_indexes]
 
@@ -221,6 +223,7 @@ class SMC:
         cov += 1e-6 * np.eye(cov.shape[0])
         if np.isnan(cov).any() or np.isinf(cov).any():
             raise ValueError('Sample covariances not valid! Likely "draws" is too small!')
+        self.cov = cov
         self.proposal = MultivariateNormalProposal(cov)
 
     def tune(self):
@@ -241,56 +244,30 @@ class SMC:
         self.proposed = self.draws * self.n_steps
 
     def mutate(self):
-        """
-        Perform mutation step, i.e. apply selected kernel
-        """
-        parameters = (
-            self.proposal,
-            self.scalings,
-            self.any_discrete,
-            self.all_discrete,
-            self.discrete,
-            self.n_steps,
-            self.prior_logp,
-            self.likelihood_logp,
-            self.beta,
-        )
-        if self.parallel and self.cores > 1:
-            results = self.pool.starmap(
-                metrop_kernel,
-                [
-                    (
-                        self.posterior[draw],
-                        self.tempered_logp[draw],
-                        self.priors[draw],
-                        self.likelihoods[draw],
-                        draw,
-                        *parameters,
-                    )
-                    for draw in range(self.draws)
-                ],
+
+        ac_ = np.empty((self.n_steps, self.draws))
+        proposals = (
+            np.random.multivariate_normal(
+                np.zeros(self.dimension), self.cov, size=(self.n_steps, self.draws)
             )
-        else:
-            iterator = range(self.draws)
-            if self.progressbar:
-                iterator = progress_bar(iterator, display=self.progressbar)
-            results = [
-                metrop_kernel(
-                    self.posterior[draw],
-                    self.tempered_logp[draw],
-                    self.priors[draw],
-                    self.likelihoods[draw],
-                    draw,
-                    *parameters,
-                )
-                for draw in iterator
-            ]
-        posterior, acc_list, priors, likelihoods = zip(*results)
-        self.posterior = np.array(posterior)
-        self.priors = np.array(priors)
-        self.likelihoods = np.array(likelihoods)
-        self.acc_per_chain = np.array(acc_list)
-        self.acc_rate = np.mean(acc_list)
+            * self.scalings[:, None]
+        )
+        log_R = np.log(np.random.rand(self.n_steps, self.draws))
+
+        for n_step in range(self.n_steps):
+            proposal = self.posterior + proposals[n_step]
+            ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
+            pl = np.array([self.prior_logp_func(prop) for prop in proposal])
+            proposal_logp = pl + ll * self.beta
+            accepted = log_R[n_step] < (proposal_logp - self.posterior_logp)
+            ac_[n_step] = accepted
+            self.posterior[accepted] = proposal[accepted]
+            self.posterior_logp[accepted] = proposal_logp[accepted]
+            self.prior_logp[accepted] = pl[accepted]
+            self.likelihood_logp[accepted] = ll[accepted]
+
+        self.acc_per_chain = np.mean(ac_, axis=0)
+        self.acc_rate = np.mean(ac_)
 
     def posterior_to_trace(self):
         """
@@ -311,58 +288,6 @@ class SMC:
                 size += new_size
             strace.record({k: v for k, v in zip(varnames, value)})
         return MultiTrace([strace])
-
-
-def metrop_kernel(
-    q_old,
-    old_tempered_logp,
-    old_prior,
-    old_likelihood,
-    draw,
-    proposal,
-    scalings,
-    any_discrete,
-    all_discrete,
-    discrete,
-    n_steps,
-    prior_logp,
-    likelihood_logp,
-    beta,
-):
-    """
-    Metropolis kernel
-    """
-    deltas = np.squeeze(proposal(n_steps) * scalings[draw])
-
-    accepted = 0
-    for n_step in range(n_steps):
-        delta = deltas[n_step]
-
-        if any_discrete:
-            if all_discrete:
-                delta = np.round(delta, 0).astype("int64")
-                q_old = q_old.astype("int64")
-                q_new = (q_old + delta).astype("int64")
-            else:
-                delta[discrete] = np.round(delta[discrete], 0)
-                q_new = floatX(q_old + delta)
-        else:
-            q_new = floatX(q_old + delta)
-
-        ll = likelihood_logp(q_new)
-        pl = prior_logp(q_new)
-
-        new_tempered_logp = pl + ll * beta
-
-        q_old, accept = metrop_select(new_tempered_logp - old_tempered_logp, q_new, q_old)
-
-        if accept:
-            accepted += 1
-            old_prior = pl
-            old_likelihood = ll
-            old_tempered_logp = new_tempered_logp
-
-    return q_old, accepted / n_steps, old_prior, old_likelihood
 
 
 def logp_forw(out_vars, vars, shared):
