@@ -1,11 +1,9 @@
 name: release-pipeline
 
-#on:
-#  release:
-#    types:
-#      - created
-# !!!!!!!!!!!! TODO: uncomment the block above & remove the next line !!!!!!!!!!!!
-on: [push, pull_request]
+on:
+  release:
+    types:
+      - created
 
 jobs:
   release-job:
@@ -34,8 +32,6 @@ jobs:
         python setup.py sdist bdist_wheel
     - name: Check version number match
       run: |
-# TODO: take out the next line, which simulates the tag
-        export GITHUB_REF="refs/tags/v3.9.0"
         echo "GITHUB_REF: ${GITHUB_REF}"
         # The GITHUB_REF should be something like "refs/tags/v3.x.x"
         # Make sure the package version is the same as the tag
@@ -43,7 +39,7 @@ jobs:
     - name: Publish to PyPI
       run: |
         twine check dist/*
-# TODO: twine upload --repository pypi --username __token__ --password ${PYPI_TOKEN} dist/*
+        twine upload --repository pypi --username __token__ --password ${PYPI_TOKEN} dist/*
   test-install-job:
     needs: release-job
     runs-on: ubuntu-latest
@@ -55,5 +51,4 @@ jobs:
       run: sleep 240
     - name: Install from PyPI
       run: |
-        pip install pymc3
-# TODO: pip install pymc3==${GITHUB_REF:11}
+        pip install pymc3==${GITHUB_REF:11}
