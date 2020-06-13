@@ -43,6 +43,7 @@ jobs:
   test-install-job:
     needs: release-job
     runs-on: ubuntu-latest
+    steps:
     - name: Set up Python
       uses: actions/setup-python@v1
       with:
