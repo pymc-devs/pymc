@@ -147,7 +147,7 @@ class ModelGraph:
             attrs['shape'] = 'box'
 
         graph.node(var_name.replace(':', '&'),
-                '{var_name} ~ {distribution}'.format(var_name=var_name, distribution=distribution),
+                '{var_name}\n~\n{distribution}'.format(var_name=var_name, distribution=distribution),
                 **attrs)
 
     def get_plates(self):

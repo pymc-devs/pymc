@@ -188,12 +188,12 @@ class TestData(SeededTest):
         g = pm.model_to_graphviz(model)
 
         # Data node rendered correctly?
-        text = 'x [label="x ~ Data" shape=box style="rounded, filled"]'
+        text = 'x [label="x\n~\nData" shape=box style="rounded, filled"]'
         assert text in g.source
         # Didn't break ordinary variables?
-        text = 'beta [label="beta ~ Normal"]'
+        text = 'beta [label="beta\n~\nNormal"]'
         assert text in g.source
-        text = 'obs [label="obs ~ Normal" style=filled]'
+        text = 'obs [label="obs\n~\nNormal" style=filled]'
         assert text in g.source
 
     def test_explicit_coords(self):
