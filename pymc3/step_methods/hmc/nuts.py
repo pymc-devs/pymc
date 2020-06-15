@@ -45,7 +45,7 @@ def log1mexp_numpy(x):
         np.log1p(-np.exp(-x)))
 
 
-def logdiffexp(a, b):
+def logdiffexp_numpy(a, b):
     """log(exp(a) - exp(b))"""
     return a + log1mexp_numpy(a - b)
 
