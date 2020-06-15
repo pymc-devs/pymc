@@ -197,7 +197,7 @@ def invlogit(x, eps=sys.float_info.epsilon):
 def logbern(log_p):
     if np.isnan(log_p):
         raise FloatingPointError("log_p can't be nan.")
-    return np.log(nr.uniform()) < log_p
+    return np.log(np.random.uniform()) < log_p
 
 
 def logit(p):
