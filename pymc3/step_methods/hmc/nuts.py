@@ -21,7 +21,7 @@ from ..arraystep import Competence
 from .base_hmc import BaseHMC, HMCStepData, DivergenceInfo
 from .integration import IntegrationError
 from pymc3.backends.report import SamplerWarning, WarningType
-from pymc3.math import logbern, log1mexp_numpy, logdiffexp_numpy
+from pymc3.math import logbern, logdiffexp_numpy
 from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
 
