@@ -1,6 +1,13 @@
 # Release Notes
 
-## PyMC3 3.9 (On deck)
+## PyMC3 3.9.x (on deck)
+*waiting for contributions*
+
+## PyMC3 3.9.1 (16 June 2020)
+The `v3.9.0` upload to PyPI didn't include a tarball, which is fixed in this release.
+Though we had to temporarily remove the `docs/*` folder from the tarball due to a size limit.
+
+## PyMC3 3.9.0 (16 June 2020)
 
 ### New features
 - Use [fastprogress](https://github.com/fastai/fastprogress) instead of tqdm [#3693](https://github.com/pymc-devs/pymc3/pull/3693).
