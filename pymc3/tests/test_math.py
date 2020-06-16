@@ -18,8 +18,19 @@ import theano
 import theano.tensor as tt
 from theano.tests import unittest_tools as utt
 from pymc3.math import (
-    LogDet, logdet, probit, invprobit, expand_packed_triangular,
-    log1pexp, log1mexp, kronecker, cartesian, kron_dot, kron_solve_lower)
+    LogDet,
+    logdet,
+    probit,
+    invprobit,
+    expand_packed_triangular,
+    log1pexp,
+    log1mexp,
+    log1mexp_numpy,
+    kronecker,
+    cartesian,
+    kron_dot,
+    kron_solve_lower,
+)
 from .helpers import SeededTest
 import pytest
 from pymc3.theanof import floatX
@@ -28,14 +39,13 @@ from pymc3.theanof import floatX
 def test_kronecker():
     np.random.seed(1)
     # Create random matrices
-    [a, b, c] = [np.random.rand(3, 3+i) for i in range(3)]
+    [a, b, c] = [np.random.rand(3, 3 + i) for i in range(3)]
 
-    custom = kronecker(a, b, c)       # Custom version
+    custom = kronecker(a, b, c)  # Custom version
     nested = tt.slinalg.kron(a, tt.slinalg.kron(b, c))
     np.testing.assert_array_almost_equal(
-        custom.eval(),
-        nested.eval()   # Standard nested version
-        )
+        custom.eval(), nested.eval()  # Standard nested version
+    )
 
 
 def test_cartesian():
@@ -44,20 +54,21 @@ def test_cartesian():
     b = [0, 2]
     c = [5, 6]
     manual_cartesian = np.array(
-        [[1, 0, 5],
-         [1, 0, 6],
-         [1, 2, 5],
-         [1, 2, 6],
-         [2, 0, 5],
-         [2, 0, 6],
-         [2, 2, 5],
-         [2, 2, 6],
-         [3, 0, 5],
-         [3, 0, 6],
-         [3, 2, 5],
-         [3, 2, 6],
-         ]
-        )
+        [
+            [1, 0, 5],
+            [1, 0, 6],
+            [1, 2, 5],
+            [1, 2, 6],
+            [2, 0, 5],
+            [2, 0, 6],
+            [2, 2, 5],
+            [2, 2, 6],
+            [3, 0, 5],
+            [3, 0, 6],
+            [3, 2, 5],
+            [3, 2, 6],
+        ]
+    )
     auto_cart = cartesian(a, b, c)
     np.testing.assert_array_almost_equal(manual_cartesian, auto_cart)
 
@@ -102,16 +113,19 @@ def test_log1pexp():
     # import mpmath
     # mpmath.mp.dps = 1000
     # [float(mpmath.log(1 + mpmath.exp(x))) for x in vals]
-    expected = np.array([
-        0.0,
-        3.720075976020836e-44,
-        4.539889921686465e-05,
-        0.6930971818099453,
-        0.6931471805599453,
-        0.6931971818099453,
-        10.000045398899218,
-        100.0,
-        1e+20])
+    expected = np.array(
+        [
+            0.0,
+            3.720075976020836e-44,
+            4.539889921686465e-05,
+            0.6930971818099453,
+            0.6931471805599453,
+            0.6931971818099453,
+            10.000045398899218,
+            100.0,
+            1e20,
+        ]
+    )
     actual = log1pexp(vals).eval()
     npt.assert_allclose(actual, expected)
 
@@ -121,16 +135,21 @@ def test_log1mexp():
     # import mpmath
     # mpmath.mp.dps = 1000
     # [float(mpmath.log(1 - mpmath.exp(-x))) for x in vals]
-    expected = np.array([
-        np.nan,
-        -np.inf,
-        -46.051701859880914,
-        -9.210390371559516,
-        -4.540096037048921e-05,
-        -3.720075976020836e-44,
-        0.0])
+    expected = np.array(
+        [
+            np.nan,
+            -np.inf,
+            -46.051701859880914,
+            -9.210390371559516,
+            -4.540096037048921e-05,
+            -3.720075976020836e-44,
+            0.0,
+        ]
+    )
     actual = log1mexp(vals).eval()
     npt.assert_allclose(actual, expected)
+    actual_ = log1mexp_numpy(vals)
+    npt.assert_allclose(actual_, expected)
 
 
 class TestLogDet(SeededTest):
@@ -154,8 +173,10 @@ class TestLogDet(SeededTest):
         # Test gradient:
         utt.verify_grad(self.op, [input_mat])
 
-    @pytest.mark.skipif(theano.config.device in ["cuda", "gpu"],
-                        reason="No logDet implementation on GPU.")
+    @pytest.mark.skipif(
+        theano.config.device in ["cuda", "gpu"],
+        reason="No logDet implementation on GPU.",
+    )
     def test_basic(self):
         # Calls validate with different params
         test_case_1 = np.random.randn(3, 3) / np.sqrt(3)
@@ -166,11 +187,11 @@ class TestLogDet(SeededTest):
 
 def test_expand_packed_triangular():
     with pytest.raises(ValueError):
-        x = tt.matrix('x')
-        x.tag.test_value = np.array([[1.]])
+        x = tt.matrix("x")
+        x.tag.test_value = np.array([[1.0]])
         expand_packed_triangular(5, x)
     N = 5
-    packed = tt.vector('packed')
+    packed = tt.vector("packed")
     packed.tag.test_value = floatX(np.zeros(N * (N + 1) // 2))
     with pytest.raises(TypeError):
         expand_packed_triangular(packed.shape[0], packed)
@@ -182,9 +203,18 @@ def test_expand_packed_triangular():
     upper_packed = floatX(vals[upper != 0])
     expand_lower = expand_packed_triangular(N, packed, lower=True)
     expand_upper = expand_packed_triangular(N, packed, lower=False)
-    expand_diag_lower = expand_packed_triangular(N, packed, lower=True, diagonal_only=True)
-    expand_diag_upper = expand_packed_triangular(N, packed, lower=False, diagonal_only=True)
+    expand_diag_lower = expand_packed_triangular(
+        N, packed, lower=True, diagonal_only=True
+    )
+    expand_diag_upper = expand_packed_triangular(
+        N, packed, lower=False, diagonal_only=True
+    )
     assert np.all(expand_lower.eval({packed: lower_packed}) == lower)
     assert np.all(expand_upper.eval({packed: upper_packed}) == upper)
-    assert np.all(expand_diag_lower.eval({packed: lower_packed}) == floatX(np.diag(vals)))
-    assert np.all(expand_diag_upper.eval({packed: upper_packed}) == floatX(np.diag(vals)))
+    assert np.all(
+        expand_diag_lower.eval({packed: lower_packed}) == floatX(np.diag(vals))
+    )
+    assert np.all(
+        expand_diag_upper.eval({packed: upper_packed}) == floatX(np.diag(vals))
+    )
+
