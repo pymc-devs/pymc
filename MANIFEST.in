@@ -1,6 +1,7 @@
 recursive-include pymc3/examples/data *
 recursive-include source *
-recursive-include docs *
+# because of an upload-size limit by PyPI, we're temporarily removing docs from the tarball:
+recursive-exclude docs *
 include requirements.txt
 include *.md *.rst
 include scripts/*.sh
