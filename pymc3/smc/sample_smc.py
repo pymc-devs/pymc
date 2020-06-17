@@ -18,19 +18,16 @@ from .smc import SMC
 
 
 def sample_smc(
-    draws=1000,
+    draws=2000,
     kernel="metropolis",
     n_steps=25,
-    parallel=False,
     start=None,
-    cores=None,
     tune_steps=True,
     p_acc_rate=0.99,
     threshold=0.5,
     epsilon=1.0,
     dist_func="gaussian_kernel",
     sum_stat="identity",
-    progressbar=False,
     model=None,
     random_seed=-1,
 ):
@@ -49,15 +46,9 @@ def sample_smc(
         The number of steps of each Markov Chain. If ``tune_steps == True`` ``n_steps`` will be used
         for the first stage and for the others it will be determined automatically based on the
         acceptance rate and `p_acc_rate`, the max number of steps is ``n_steps``.
-    parallel: bool
-        Distribute computations across cores if the number of cores is larger than 1.
-        Defaults to False.
     start: dict, or array of dict
         Starting point in parameter space. It should be a list of dict with length `chains`.
         When None (default) the starting point is sampled from the prior distribution. 
-    cores: int
-        The number of chains to run in parallel. If ``None`` (default), it will be automatically
-        set to the number of CPUs in the system.
     tune_steps: bool
         Whether to compute the number of steps automatically or not. Defaults to True
     p_acc_rate: float
@@ -75,8 +66,6 @@ def sample_smc(
     sum_stat: str or callable
         Summary statistics. Available options are ``indentity``, ``sorted``, ``mean``, ``median``.
         If a callable is based it should return a number or a 1d numpy array.
-    progressbar: bool
-        Flag for displaying a progress bar. Defaults to False.
     model: Model (optional if in ``with`` context)).
     random_seed: int
         random seed
@@ -130,16 +119,13 @@ def sample_smc(
         draws=draws,
         kernel=kernel,
         n_steps=n_steps,
-        parallel=parallel,
         start=start,
-        cores=cores,
         tune_steps=tune_steps,
         p_acc_rate=p_acc_rate,
         threshold=threshold,
         epsilon=epsilon,
         dist_func=dist_func,
         sum_stat=sum_stat,
-        progressbar=progressbar,
         model=model,
         random_seed=random_seed,
     )
@@ -159,19 +145,16 @@ def sample_smc(
                 stage, smc.beta, smc.n_steps, smc.acc_rate
             )
         )
-        smc.resample()
         smc.update_proposal()
-        if stage > 0:
+        smc.resample()
+        for _ in range(2):
+            smc.mutate()
             smc.tune()
-        smc.mutate()
         stage += 1
-
-    if smc.parallel and smc.cores > 1:
-        smc.pool.close()
-        smc.pool.join()
 
     trace = smc.posterior_to_trace()
     trace.report._n_draws = smc.draws
     trace.report._n_tune = 0
     trace.report._t_sampling = time.time() - t1
+    trace.report.ess = smc.ess
     return trace

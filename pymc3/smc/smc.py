@@ -16,19 +16,14 @@ from collections import OrderedDict
 
 import numpy as np
 from scipy.special import logsumexp
-from fastprogress.fastprogress import progress_bar
-import multiprocessing as mp
 import warnings
 from theano import function as theano_function
+from arviz import psislw
 
 from ..model import modelcontext, Point
 from ..parallel_sampling import _cpu_count
-from ..theanof import inputvars, make_shared_replacements
-from ..vartypes import discrete_types
+from ..theanof import floatX, inputvars, make_shared_replacements, join_nonshared_inputs
 from ..sampling import sample_prior_predictive
-from ..theanof import floatX, join_nonshared_inputs
-from ..step_methods.arraystep import metrop_select
-from ..step_methods.metropolis import MultivariateNormalProposal
 from ..backends.ndarray import NDArray
 from ..backends.base import MultiTrace
 
@@ -41,19 +36,16 @@ EXPERIMENTAL_WARNING = (
 class SMC:
     def __init__(
         self,
-        draws=1000,
+        draws=2000,
         kernel="metropolis",
         n_steps=25,
-        parallel=False,
         start=None,
-        cores=None,
         tune_steps=True,
         p_acc_rate=0.99,
         threshold=0.5,
         epsilon=1.0,
         dist_func="absolute_error",
         sum_stat="Identity",
-        progressbar=False,
         model=None,
         random_seed=-1,
     ):
@@ -61,16 +53,13 @@ class SMC:
         self.draws = draws
         self.kernel = kernel
         self.n_steps = n_steps
-        self.parallel = parallel
         self.start = start
-        self.cores = cores
         self.tune_steps = tune_steps
         self.p_acc_rate = p_acc_rate
         self.threshold = threshold
         self.epsilon = epsilon
         self.dist_func = dist_func
         self.sum_stat = sum_stat
-        self.progressbar = progressbar
         self.model = model
         self.random_seed = random_seed
 
@@ -79,23 +68,16 @@ class SMC:
         if self.random_seed != -1:
             np.random.seed(self.random_seed)
 
-        if self.cores is None:
-            self.cores = _cpu_count()
-
         self.beta = 0
         self.max_steps = n_steps
         self.proposed = draws * n_steps
         self.acc_rate = 1
         self.acc_per_chain = np.ones(self.draws)
-        self.model.marginal_log_likelihood = 0
+        self.model.log_marginal_likelihood = 0
         self.variables = inputvars(self.model.vars)
         self.dimension = sum(v.dsize for v in self.variables)
-        self.scalings = np.ones(self.draws) * min(1, 2.38 ** 2 / self.dimension)
-        self.discrete = np.concatenate(
-            [[v.dtype in discrete_types] * (v.dsize or 1) for v in self.variables]
-        )
-        self.any_discrete = self.discrete.any()
-        self.all_discrete = self.discrete.all()
+        self.scalings = np.ones(self.draws) * 2.38 / (self.dimension) ** 0.5
+        self.weights = np.ones(self.draws) / self.draws
 
     def initialize_population(self):
         """
@@ -153,17 +135,8 @@ class SMC:
         """
         initialize the prior and likelihood log probabilities
         """
-        if self.parallel and self.cores > 1:
-            self.pool = mp.Pool(processes=self.cores)
-            priors = self.pool.starmap(
-                self.prior_logp_func, [(sample,) for sample in self.posterior]
-            )
-            likelihoods = self.pool.starmap(
-                self.likelihood_logp_func, [(sample,) for sample in self.posterior]
-            )
-        else:
-            priors = [self.prior_logp_func(sample) for sample in self.posterior]
-            likelihoods = [self.likelihood_logp_func(sample) for sample in self.posterior]
+        priors = [self.prior_logp_func(sample) for sample in self.posterior]
+        likelihoods = [self.likelihood_logp_func(sample) for sample in self.posterior]
 
         self.prior_logp = np.array(priors).squeeze()
         self.likelihood_logp = np.array(likelihoods).squeeze()
@@ -192,11 +165,9 @@ class SMC:
             new_beta = 1
             log_weights_un = (new_beta - old_beta) * self.likelihood_logp
             log_weights = log_weights_un - logsumexp(log_weights_un)
+            self.ess = np.exp(-logsumexp(log_weights * 2))
 
-        ll_max = np.max(log_weights_un)
-        self.model.marginal_log_likelihood += ll_max + np.log(
-            np.exp(log_weights_un - ll_max).mean()
-        )
+        self.model.log_marginal_likelihood += logsumexp(log_weights_un) - np.log(self.draws)
         self.beta = new_beta
         self.weights = np.exp(log_weights)
 
@@ -218,13 +189,12 @@ class SMC:
         """
         Update proposal based on the covariance matrix from tempered posterior
         """
-        cov = np.cov(self.posterior, bias=False, rowvar=0)
+        cov = np.cov(self.posterior, ddof=0, aweights=self.weights, rowvar=0)
         cov = np.atleast_2d(cov)
         cov += 1e-6 * np.eye(cov.shape[0])
         if np.isnan(cov).any() or np.isinf(cov).any():
             raise ValueError('Sample covariances not valid! Likely "draws" is too small!')
         self.cov = cov
-        self.proposal = MultivariateNormalProposal(cov)
 
     def tune(self):
         """
@@ -244,8 +214,8 @@ class SMC:
         self.proposed = self.draws * self.n_steps
 
     def mutate(self):
-
         ac_ = np.empty((self.n_steps, self.draws))
+
         proposals = (
             np.random.multivariate_normal(
                 np.zeros(self.dimension), self.cov, size=(self.n_steps, self.draws)
