@@ -1003,7 +1003,7 @@ class PopulationStepper:
         """
         self.nchains = len(steppers)
         self.is_parallelized = False
-        self._master_ends = []
+        self._primary_ends = []
         self._processes = []
         self._steppers = steppers
         if parallelize:
@@ -1017,11 +1017,11 @@ class PopulationStepper:
                 for c, stepper in (
                     enumerate(progress_bar(steppers)) if progressbar else enumerate(steppers)
                 ):
-                    slave_end, master_end = multiprocessing.Pipe()
+                    secondary_end, primary_end = multiprocessing.Pipe()
                     stepper_dumps = pickle.dumps(stepper, protocol=4)
                     process = multiprocessing.Process(
-                        target=self.__class__._run_slave,
-                        args=(c, stepper_dumps, slave_end),
+                        target=self.__class__._run_secondary,
+                        args=(c, stepper_dumps, secondary_end),
                         name="ChainWalker{}".format(c),
                     )
                     # we want the child process to exit if the parent is terminated
@@ -1030,7 +1030,7 @@ class PopulationStepper:
                     # By doing it in the constructor, the sampling progress bar
                     # will not be confused by the process start.
                     process.start()
-                    self._master_ends.append(master_end)
+                    self._primary_ends.append(primary_end)
                     self._processes.append(process)
                 self.is_parallelized = True
             except Exception:
@@ -1053,8 +1053,8 @@ class PopulationStepper:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if len(self._processes) > 0:
             try:
-                for master_end in self._master_ends:
-                    master_end.send(None)
+                for primary_end in self._primary_ends:
+                    primary_end.send(None)
                 for process in self._processes:
                     process.join(timeout=3)
             except Exception:
@@ -1062,7 +1062,7 @@ class PopulationStepper:
         return
 
     @staticmethod
-    def _run_slave(c, stepper_dumps, slave_end):
+    def _run_secondary(c, stepper_dumps, secondary_end):
         """This method is started on a separate process to perform stepping of a chain.
 
         Parameters
@@ -1071,7 +1071,7 @@ class PopulationStepper:
             number of this chain
         stepper : BlockedStep
             a step method such as CompoundStep
-        slave_end : multiprocessing.connection.PipeConnection
+        secondary_end : multiprocessing.connection.PipeConnection
             This is our connection to the main process
         """
         # re-seed each child process to make them unique
@@ -1086,7 +1086,7 @@ class PopulationStepper:
                 if isinstance(sm, arraystep.PopulationArrayStepShared):
                     population_steppers.append(sm)
             while True:
-                incoming = slave_end.recv()
+                incoming = secondary_end.recv()
                 # receiving a None is the signal to exit
                 if incoming is None:
                     break
@@ -1099,7 +1099,7 @@ class PopulationStepper:
                 for popstep in population_steppers:
                     popstep.population = population
                 update = stepper.step(population[c])
-                slave_end.send(update)
+                secondary_end.send(update)
         except Exception:
             _log.exception("ChainWalker{}".format(c))
         return
@@ -1122,10 +1122,10 @@ class PopulationStepper:
         updates = [None] * self.nchains
         if self.is_parallelized:
             for c in range(self.nchains):
-                self._master_ends[c].send((tune_stop, population))
+                self._primary_ends[c].send((tune_stop, population))
             # Blockingly get the step outcomes
             for c in range(self.nchains):
-                updates[c] = self._master_ends[c].recv()
+                updates[c] = self._primary_ends[c].recv()
         else:
             for c in range(self.nchains):
                 if tune_stop:
