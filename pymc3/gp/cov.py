@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -85,6 +86,11 @@ class Covariance:
         raise NotImplementedError
 
     def _slice(self, X, Xs):
+        if self.input_dim != X.shape[-1]:
+            warnings.warn(f"Only {self.input_dim} column(s) out of {X.shape[-1]} are"
+                          " being used to compute the covariance function. If this"
+                          " is not intended, increase 'input_dim' parameter to"
+                          " the number of columns to use. Ignore otherwise.", UserWarning)
         X = tt.as_tensor_variable(X[:, self.active_dims])
         if Xs is not None:
             Xs = tt.as_tensor_variable(Xs[:, self.active_dims])
@@ -467,7 +473,7 @@ class Cosine(Stationary):
     The Cosine kernel.
 
     .. math::
-       k(x, x') = \mathrm{cos}\left( \pi \frac{||x - x'||}{ \ell^2} \right)
+       k(x, x') = \mathrm{cos}\left( 2 \pi \frac{||x - x'||}{ \ell^2} \right)
     """
 
     def full(self, X, Xs=None):
