@@ -1,4 +1,4 @@
--e git://github.com/arviz-devs/arviz.git#egg=arviz
+arviz>=0.8.3
 theano>=1.0.4
 numpy>=1.13.0
 scipy>=0.18.1
