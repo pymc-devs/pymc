@@ -307,7 +307,7 @@ with pm.Model():
     # coarse models list
     # Also initialise a Metropolis step method object
     step_metropolis = pm.Metropolis(tune=tune, tune_interval=tune_interval, blocked=blocked)
-    step_mlda = pm.MLDA(subsampling_rate=nsub, coarse_models=coarse_models,
+    step_mlda = pm.MLDA(subsampling_rates=nsub, coarse_models=coarse_models,
                         tune=tune, tune_interval=tune_interval, base_blocked=blocked)
 
     # Inference!

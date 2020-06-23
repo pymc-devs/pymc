@@ -363,5 +363,5 @@ class TestMultilevelNormal(SeededTest):
         model, coarse_models = self.build_models()
 
         with model:
-            step = pm.MLDA(subsampling_rate=2, coarse_models=coarse_models)
+            step = pm.MLDA(subsampling_rates=2, coarse_models=coarse_models)
             pm.sample(draws=50, chains=2, tune=50, step=step)

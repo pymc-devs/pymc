@@ -949,7 +949,7 @@ class MLDA(ArrayStepShared):
         ...     x = Normal("x", mu=0, sigma=10)
         ...     y = Normal("y", mu=x, sigma=1, observed=datum)
         ...     step_method = pm.MLDA(coarse_models=[coarse_model]
-        ...                           subsampling_rate=5)
+        ...                           subsampling_rates=5)
         ...     trace = pm.sample(ndraws=500, chains=2,
         ...                       tune=100, step=step_method,
         ...                       random_seed=123)
@@ -1007,6 +1007,10 @@ class MLDA(ArrayStepShared):
         if isinstance(subsampling_rates, int):
             self.subsampling_rates = [subsampling_rates] * len(self.coarse_models)
         else:
+            if len(subsampling_rates) != len(self.coarse_models):
+                raise ValueError(f"List of subsampling rates needs to have the same "
+                                 f"length as list of coarse models but the lengths "
+                                 f"were {len(subsampling_rates)}, {len(self.coarse_models)}")
             self.subsampling_rates = subsampling_rates
         self.num_levels = len(self.coarse_models) + 1
         self.base_S = base_S

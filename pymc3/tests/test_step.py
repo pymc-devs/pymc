@@ -1143,7 +1143,7 @@ class TestMLDA:
         with Model():
             Normal("x", 5.0, 1.0)
             for coarse_model in possible_coarse_models:
-                step = MLDA(coarse_models=[coarse_model], subsampling_rate=1,
+                step = MLDA(coarse_models=[coarse_model], subsampling_rates=1,
                             tune=False)
                 trace = sample(chains=1, draws=500, tune=0, step=step)
                 acc.append(trace.get_sampler_stats('accepted').mean())
@@ -1282,4 +1282,25 @@ class TestMLDA:
             Normal('n', 0, 2, shape=(3,))
             Binomial('b', n=2, p=0.3)
         assert MLDA.competence(pmodel[variable], has_grad=has_grad) == outcome
-        pass
+
+    def test_multiple_subsampling_rates(self):
+        """Test that when you give a signle integer it is applied to all levels and
+        when you give a list the list is applied correctly."""
+        with Model() as coarse_model_0:
+            Normal('n', 0, 2.2, shape=(3,))
+        with Model() as coarse_model_1:
+            Normal('n', 0, 2.1, shape=(3,))
+        with Model():
+            Normal('n', 0, 2.0, shape=(3,))
+
+            step_1 = MLDA(coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=3)
+            assert len(step_1.subsampling_rates) == 2
+            assert step_1.subsampling_rates[0] == step_1.subsampling_rates[1] == 3
+
+            step_2 = MLDA(coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=[3, 4])
+            assert step_2.subsampling_rates[0] == 3
+            assert step_2.subsampling_rates[1] == 4
+
+            with pytest.raises(ValueError):
+                step_3 = MLDA(coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=[3, 4, 10])
+
