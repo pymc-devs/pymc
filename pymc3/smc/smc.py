@@ -16,7 +16,6 @@ from collections import OrderedDict
 
 import numpy as np
 from scipy.special import logsumexp
-import warnings
 from theano import function as theano_function
 from arviz import psislw
 
@@ -25,12 +24,6 @@ from ..parallel_sampling import _cpu_count
 from ..theanof import floatX, inputvars, make_shared_replacements, join_nonshared_inputs
 from ..sampling import sample_prior_predictive
 from ..backends.ndarray import NDArray
-from ..backends.base import MultiTrace
-
-EXPERIMENTAL_WARNING = (
-    "Warning: SMC-ABC methods are experimental step methods and not yet"
-    " recommended for use in PyMC3!"
-)
 
 
 class SMC:
@@ -48,6 +41,7 @@ class SMC:
         sum_stat="Identity",
         model=None,
         random_seed=-1,
+        chain=0,
     ):
 
         self.draws = draws
@@ -62,6 +56,7 @@ class SMC:
         self.sum_stat = sum_stat
         self.model = model
         self.random_seed = random_seed
+        self.chain = chain
 
         self.model = modelcontext(model)
 
@@ -73,11 +68,11 @@ class SMC:
         self.proposed = draws * n_steps
         self.acc_rate = 1
         self.acc_per_chain = np.ones(self.draws)
-        self.model.log_marginal_likelihood = 0
         self.variables = inputvars(self.model.vars)
         self.dimension = sum(v.dsize for v in self.variables)
         self.scalings = np.ones(self.draws) * 2.38 / (self.dimension) ** 0.5
         self.weights = np.ones(self.draws) / self.draws
+        self.log_marginal_likelihood = 0
 
     def initialize_population(self):
         """
@@ -113,9 +108,6 @@ class SMC:
         self.prior_logp_func = logp_forw([self.model.varlogpt], self.variables, shared)
 
         if self.kernel.lower() == "abc":
-            warnings.warn(EXPERIMENTAL_WARNING)
-            if len(self.model.observed_RVs) != 1:
-                warnings.warn("SMC-ABC only works properly with models with one observed variable")
             simulator = self.model.observed_RVs[0]
             self.likelihood_logp_func = PseudoLikelihood(
                 self.epsilon,
@@ -165,9 +157,8 @@ class SMC:
             new_beta = 1
             log_weights_un = (new_beta - old_beta) * self.likelihood_logp
             log_weights = log_weights_un - logsumexp(log_weights_un)
-            self.ess = np.exp(-logsumexp(log_weights * 2))
 
-        self.model.log_marginal_likelihood += logsumexp(log_weights_un) - np.log(self.draws)
+        self.log_marginal_likelihood += logsumexp(log_weights_un) - np.log(self.draws)
         self.beta = new_beta
         self.weights = np.exp(log_weights)
 
@@ -178,6 +169,7 @@ class SMC:
         resampling_indexes = np.random.choice(
             np.arange(self.draws), size=self.draws, p=self.weights
         )
+
         self.posterior = self.posterior[resampling_indexes]
         self.prior_logp = self.prior_logp[resampling_indexes]
         self.likelihood_logp = self.likelihood_logp[resampling_indexes]
@@ -239,6 +231,29 @@ class SMC:
         self.acc_per_chain = np.mean(ac_, axis=0)
         self.acc_rate = np.mean(ac_)
 
+    def posterior_to_trace_bk(self):
+        """
+        Save results into a PyMC3 trace
+        """
+        lenght_pos = len(self.posterior)
+        varnames = [v.name for v in self.variables]
+        straces = []
+        with self.model:
+            chain_lenght = int(lenght_pos / 10)
+            for chain in range(10):
+                strace = NDArray(self.model)
+                strace.setup(chain_lenght, chain)
+                for i in range(chain_lenght):
+                    value = []
+                    size = 0
+                    for var in varnames:
+                        shape, new_size = self.var_info[var]
+                        value.append(self.posterior[i][size : size + new_size].reshape(shape))
+                        size += new_size
+                    strace.record({k: v for k, v in zip(varnames, value)})
+                straces.append(strace)
+        return MultiTrace(straces)
+
     def posterior_to_trace(self):
         """
         Save results into a PyMC3 trace
@@ -248,7 +263,7 @@ class SMC:
 
         with self.model:
             strace = NDArray(self.model)
-            strace.setup(lenght_pos, 0)
+            strace.setup(lenght_pos, self.chain)
         for i in range(lenght_pos):
             value = []
             size = 0
@@ -256,8 +271,8 @@ class SMC:
                 shape, new_size = self.var_info[var]
                 value.append(self.posterior[i][size : size + new_size].reshape(shape))
                 size += new_size
-            strace.record({k: v for k, v in zip(varnames, value)})
-        return MultiTrace([strace])
+            strace.record(point={k: v for k, v in zip(varnames, value)})
+        return strace, self.log_marginal_likelihood
 
 
 def logp_forw(out_vars, vars, shared):

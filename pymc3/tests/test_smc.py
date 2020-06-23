@@ -79,9 +79,9 @@ class TestSMC(SeededTest):
                 a = pm.Beta("a", alpha, beta)
                 y = pm.Bernoulli("y", a, observed=data)
                 trace = pm.sample_smc(2000)
-                marginals.append(model.marginal_log_likelihood)
+                marginals.append(trace.report.log_marginal_likelihood)
         # compare to the analytical result
-        assert abs(np.exp(marginals[1] - marginals[0]) - 4.0) <= 1
+        assert abs(np.exp(np.mean(marginals[1]) - np.mean(marginals[0])) - 4.0) <= 1
 
     def test_start(self):
         with pm.Model() as model:
@@ -110,7 +110,9 @@ class TestSMCABC(SeededTest):
 
     def test_one_gaussian(self):
         with self.SMABC_test:
-            trace = pm.sample_smc(draws=1000, kernel="ABC", sum_stat="sorted", epsilon=1)
+            trace = pm.sample_smc(
+                draws=1000, kernel="ABC", sum_stat="sorted", epsilon=1, parallel=False
+            )
 
         np.testing.assert_almost_equal(self.data.mean(), trace["a"].mean(), decimal=2)
         np.testing.assert_almost_equal(self.data.std(), trace["b"].mean(), decimal=1)

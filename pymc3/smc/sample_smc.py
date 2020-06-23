@@ -14,7 +14,19 @@
 
 import time
 import logging
+import warnings
+from collections.abc import Iterable
+import multiprocessing as mp
+import numpy as np
+
 from .smc import SMC
+from ..model import modelcontext
+from ..backends.base import MultiTrace
+from ..parallel_sampling import _cpu_count
+
+EXPERIMENTAL_WARNING = (
+    "Warning: SMC-ABC is an experimental step method and not yet recommended for use in PyMC3!"
+)
 
 
 def sample_smc(
@@ -30,6 +42,9 @@ def sample_smc(
     sum_stat="identity",
     model=None,
     random_seed=-1,
+    parallel=True,
+    chains=None,
+    cores=None,
 ):
     r"""
     Sequential Monte Carlo based sampling
@@ -69,6 +84,16 @@ def sample_smc(
     model: Model (optional if in ``with`` context)).
     random_seed: int
         random seed
+    parallel: bool
+        Distribute computations across cores if the number of cores is larger than 1.
+        Defaults to True.
+    cores : int
+        The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
+        system, but at most 4.
+    chains : int
+        The number of chains to sample. Running independent chains is important for some
+        convergence statistics. If ``None`` (default), then set to either ``cores`` or 2, whichever
+        is larger.
 
     Notes
     -----
@@ -115,6 +140,89 @@ def sample_smc(
         %282007%29133:7%28816%29>`__
     """
 
+    _log = logging.getLogger("pymc3")
+    _log.info("Initializing SMC sampler...")
+
+    if cores is None:
+        cores = _cpu_count()
+
+    if chains is None:
+        chains = max(2, cores)
+
+    _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
+
+    if random_seed == -1:
+        random_seed = None
+    if chains == 1 and isinstance(random_seed, int):
+        random_seed = [random_seed]
+    if random_seed is None or isinstance(random_seed, int):
+        if random_seed is not None:
+            np.random.seed(random_seed)
+        random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
+    if not isinstance(random_seed, Iterable):
+        raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
+
+    if kernel.lower() == "abc":
+        warnings.warn(EXPERIMENTAL_WARNING)
+        if len(modelcontext(model).observed_RVs) != 1:
+            warnings.warn("SMC-ABC only works properly with models with one observed variable")
+
+    params = (
+        draws,
+        kernel,
+        n_steps,
+        start,
+        tune_steps,
+        p_acc_rate,
+        threshold,
+        epsilon,
+        dist_func,
+        sum_stat,
+        model,
+    )
+
+    t1 = time.time()
+    if parallel:
+        loggers = [_log] + [None] * (chains - 1)
+        pool = mp.Pool(cores)
+        results = pool.starmap(
+            sample_smc_int, [(*params, random_seed[i], i, loggers[i]) for i in range(chains)]
+        )
+
+        pool.close()
+        pool.join()
+    else:
+        results = []
+        for i in range(chains):
+            results.append((sample_smc_int(*params, random_seed[i], i, _log)))
+
+    traces, log_marginal_likelihoods = zip(*results)
+    trace = MultiTrace(traces)
+    trace.report._n_draws = draws
+    trace.report._n_tune = 0
+    trace.report._t_sampling = time.time() - t1
+    trace.report.log_marginal_likelihood = np.array(log_marginal_likelihoods)
+
+    return trace
+
+
+def sample_smc_int(
+    draws=2000,
+    kernel="metropolis",
+    n_steps=25,
+    start=None,
+    tune_steps=True,
+    p_acc_rate=0.99,
+    threshold=0.5,
+    epsilon=1.0,
+    dist_func="gaussian_kernel",
+    sum_stat="identity",
+    model=None,
+    random_seed=-1,
+    chain=0,
+    _log=None,
+):
+
     smc = SMC(
         draws=draws,
         kernel=kernel,
@@ -128,11 +236,8 @@ def sample_smc(
         sum_stat=sum_stat,
         model=model,
         random_seed=random_seed,
+        chain=chain,
     )
-
-    t1 = time.time()
-    _log = logging.getLogger("pymc3")
-    _log.info("Sample initial stage: ...")
     stage = 0
     smc.initialize_population()
     smc.setup_kernel()
@@ -140,21 +245,12 @@ def sample_smc(
 
     while smc.beta < 1:
         smc.update_weights_beta()
-        _log.info(
-            "Stage: {:3d} Beta: {:.3f} Steps: {:3d} Acce: {:.3f}".format(
-                stage, smc.beta, smc.n_steps, smc.acc_rate
-            )
-        )
+        if _log is not None:
+            _log.info(f"Stage: {stage:3d} Beta: {smc.beta:.3f}")
         smc.update_proposal()
         smc.resample()
-        for _ in range(2):
-            smc.mutate()
-            smc.tune()
+        smc.mutate()
+        smc.tune()
         stage += 1
 
-    trace = smc.posterior_to_trace()
-    trace.report._n_draws = smc.draws
-    trace.report._n_tune = 0
-    trace.report._t_sampling = time.time() - t1
-    trace.report.ess = smc.ess
-    return trace
+    return smc.posterior_to_trace()
