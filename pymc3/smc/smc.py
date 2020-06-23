@@ -17,10 +17,8 @@ from collections import OrderedDict
 import numpy as np
 from scipy.special import logsumexp
 from theano import function as theano_function
-from arviz import psislw
 
 from ..model import modelcontext, Point
-from ..parallel_sampling import _cpu_count
 from ..theanof import floatX, inputvars, make_shared_replacements, join_nonshared_inputs
 from ..sampling import sample_prior_predictive
 from ..backends.ndarray import NDArray
