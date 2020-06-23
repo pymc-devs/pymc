@@ -923,7 +923,7 @@ class MLDA(ArrayStepShared):
         multilevel models.
     mode :  string or `Mode` instance.
         Compilation mode passed to Theano functions
-    subsampling_rates : integer or list
+    subsampling_rates : integer or list of integers
         One interger for all levels or a list with one number for each level
         (excluding the finest level).
         This is the number of samples generated in level l-1 to propose a sample
@@ -1004,6 +1004,10 @@ class MLDA(ArrayStepShared):
             raise ValueError("MLDA step method was given an empty "
                              "list of coarse models. Give at least "
                              "one coarse model.")
+        if isinstance(subsampling_rates, int):
+            self.subsampling_rates = [subsampling_rates] * len(self.coarse_models)
+        else:
+            self.subsampling_rates = subsampling_rates
         self.num_levels = len(self.coarse_models) + 1
         self.base_S = base_S
         self.base_proposal_dist = base_proposal_dist
@@ -1013,7 +1017,6 @@ class MLDA(ArrayStepShared):
         self.model = model
         self.next_model = self.coarse_models[-1]
         self.mode = mode
-        self.subsampling_rates = subsampling_rates
         self.base_blocked = base_blocked
         self.base_scaling_stats = None
 
