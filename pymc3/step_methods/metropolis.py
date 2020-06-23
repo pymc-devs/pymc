@@ -923,11 +923,12 @@ class MLDA(ArrayStepShared):
         multilevel models.
     mode :  string or `Mode` instance.
         Compilation mode passed to Theano functions
-    subsampling_rates : list
-        List of number of samples generated in level l-1 to propose a sample
+    subsampling_rates : integer or list
+        One interger for all levels or a list with one number for each level
+        (excluding the finest level).
+        This is the number of samples generated in level l-1 to propose a sample
         for level l for all l levels (excluding the finest level). The length of
-        the list needs to be the same as the length of coarse_models. A single
-        integer can also be given, in which case it is applied to all levels.
+        the list needs to be the same as the length of coarse_models.
     base_blocked : bool
         To flag to choose whether base sampler (level=0) is a
         Compound Metropolis step (base_blocked=False)
