@@ -229,29 +229,6 @@ class SMC:
         self.acc_per_chain = np.mean(ac_, axis=0)
         self.acc_rate = np.mean(ac_)
 
-    def posterior_to_trace_bk(self):
-        """
-        Save results into a PyMC3 trace
-        """
-        lenght_pos = len(self.posterior)
-        varnames = [v.name for v in self.variables]
-        straces = []
-        with self.model:
-            chain_lenght = int(lenght_pos / 10)
-            for chain in range(10):
-                strace = NDArray(self.model)
-                strace.setup(chain_lenght, chain)
-                for i in range(chain_lenght):
-                    value = []
-                    size = 0
-                    for var in varnames:
-                        shape, new_size = self.var_info[var]
-                        value.append(self.posterior[i][size : size + new_size].reshape(shape))
-                        size += new_size
-                    strace.record({k: v for k, v in zip(varnames, value)})
-                straces.append(strace)
-        return MultiTrace(straces)
-
     def posterior_to_trace(self):
         """
         Save results into a PyMC3 trace
@@ -270,7 +247,7 @@ class SMC:
                 value.append(self.posterior[i][size : size + new_size].reshape(shape))
                 size += new_size
             strace.record(point={k: v for k, v in zip(varnames, value)})
-        return strace, self.log_marginal_likelihood
+        return strace
 
 
 def logp_forw(out_vars, vars, shared):

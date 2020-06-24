@@ -196,12 +196,15 @@ def sample_smc(
         for i in range(chains):
             results.append((sample_smc_int(*params, random_seed[i], i, _log)))
 
-    traces, log_marginal_likelihoods = zip(*results)
+    traces, log_marginal_likelihoods, betas, accept_ratios, nsteps = zip(*results)
     trace = MultiTrace(traces)
     trace.report._n_draws = draws
     trace.report._n_tune = 0
     trace.report._t_sampling = time.time() - t1
     trace.report.log_marginal_likelihood = np.array(log_marginal_likelihoods)
+    trace.report.betas = betas
+    trace.report.accept_ratios = accept_ratios
+    trace.report.nsteps = nsteps
 
     return trace
 
@@ -239,6 +242,9 @@ def sample_smc_int(
         chain=chain,
     )
     stage = 0
+    betas = []
+    accept_ratios = []
+    nsteps = []
     smc.initialize_population()
     smc.setup_kernel()
     smc.initialize_logp()
@@ -252,5 +258,8 @@ def sample_smc_int(
         smc.mutate()
         smc.tune()
         stage += 1
+        betas.append(smc.beta)
+        accept_ratios.append(smc.acc_rate)
+        nsteps.append(smc.n_steps)
 
-    return smc.posterior_to_trace()
+    return smc.posterior_to_trace(), smc.log_marginal_likelihood, betas, accept_ratios, nsteps
