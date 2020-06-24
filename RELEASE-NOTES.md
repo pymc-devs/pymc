@@ -3,6 +3,15 @@
 ## PyMC3 3.9.x (on deck)
 *waiting for contributions*
 
+## PyMC3 3.9.2 (24 June 2020)
+### Maintenance
+- Warning added in GP module when `input_dim` is lower than the number of columns in `X` to compute the covariance function (see [#3974](https://github.com/pymc-devs/pymc3/pull/3974)).
+- Pass the `tune` argument from `sample` when using `advi+adapt_diag_grad` (see issue [#3965](https://github.com/pymc-devs/pymc3/issues/3965), fixed by [#3979](https://github.com/pymc-devs/pymc3/pull/3979)).
+- Add simple test case for new coords and dims feature in `pm.Model` (see [#3977](https://github.com/pymc-devs/pymc3/pull/3977)). 
+- Require ArviZ >= 0.9.0 (see [#3977](https://github.com/pymc-devs/pymc3/pull/3977)).
+
+_NB: The `docs/*` folder is still removed from the tarball due to an upload size limit on PyPi._
+
 ## PyMC3 3.9.1 (16 June 2020)
 The `v3.9.0` upload to PyPI didn't include a tarball, which is fixed in this release.
 Though we had to temporarily remove the `docs/*` folder from the tarball due to a size limit.
