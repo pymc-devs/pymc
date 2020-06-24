@@ -210,20 +210,20 @@ def sample_smc(
 
 
 def sample_smc_int(
-    draws=2000,
-    kernel="metropolis",
-    n_steps=25,
-    start=None,
-    tune_steps=True,
-    p_acc_rate=0.99,
-    threshold=0.5,
-    epsilon=1.0,
-    dist_func="gaussian_kernel",
-    sum_stat="identity",
-    model=None,
-    random_seed=-1,
-    chain=0,
-    _log=None,
+    draws,
+    kernel,
+    n_steps,
+    start,
+    tune_steps,
+    p_acc_rate,
+    threshold,
+    epsilon,
+    dist_func,
+    sum_stat,
+    model,
+    random_seed,
+    chain,
+    _log,
 ):
 
     smc = SMC(
