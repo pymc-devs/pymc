@@ -42,7 +42,7 @@ def sample_smc(
     sum_stat="identity",
     model=None,
     random_seed=-1,
-    parallel=True,
+    parallel=False,
     chains=None,
     cores=None,
 ):
@@ -86,7 +86,7 @@ def sample_smc(
         random seed
     parallel: bool
         Distribute computations across cores if the number of cores is larger than 1.
-        Defaults to True.
+        Defaults to False.
     cores : int
         The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
         system, but at most 4.
@@ -183,7 +183,7 @@ def sample_smc(
 
     t1 = time.time()
     if parallel:
-        loggers = [None] * (chains)#[_log] + [None] * (chains - 1)
+        loggers = [_log] + [None] * (chains - 1)
         pool = mp.Pool(cores)
         results = pool.starmap(
             sample_smc_int, [(*params, random_seed[i], i, loggers[i]) for i in range(chains)]
