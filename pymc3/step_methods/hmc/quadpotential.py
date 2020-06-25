@@ -307,7 +307,7 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
         self._ngrads2 += 1
 
         if self._n_samples <= 150:
-            super().update(sample, grad)
+            super().update(sample, grad, tune)
         else:
             self._update((self._ngrads1 / self._grads1) ** 2)
 
