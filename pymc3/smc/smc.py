@@ -20,7 +20,6 @@ from theano import function as theano_function
 
 from ..model import modelcontext, Point
 from ..theanof import floatX, inputvars, make_shared_replacements, join_nonshared_inputs
-from ..vartypes import discrete_types
 from ..sampling import sample_prior_predictive
 from ..backends.ndarray import NDArray
 
@@ -72,9 +71,6 @@ class SMC:
         self.scalings = np.ones(self.draws) * 2.38 / (self.dimension) ** 0.5
         self.weights = np.ones(self.draws) / self.draws
         self.log_marginal_likelihood = 0
-        self.discrete = np.concatenate(
-            [[v.dtype in discrete_types] * (v.dsize or 1) for v in self.variables]
-        )
 
     def initialize_population(self):
         """
@@ -219,9 +215,7 @@ class SMC:
         log_R = np.log(np.random.rand(self.n_steps, self.draws))
 
         for n_step in range(self.n_steps):
-            delta = proposals[n_step]
-            # delta[:, self.discrete] = np.round(proposals[n_step][:, self.discrete], 0).astype("int64")
-            proposal = floatX(self.posterior + delta)
+            proposal = floatX(self.posterior + proposals[n_step])
             ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])
             proposal_logp = pl + ll * self.beta
