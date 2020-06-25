@@ -183,7 +183,7 @@ def sample_smc(
 
     t1 = time.time()
     if parallel:
-        loggers = [_log] + [None] * (chains - 1)
+        loggers = [None] * (chains)#[_log] + [None] * (chains - 1)
         pool = mp.Pool(cores)
         results = pool.starmap(
             sample_smc_int, [(*params, random_seed[i], i, loggers[i]) for i in range(chains)]
