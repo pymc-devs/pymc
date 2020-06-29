@@ -79,9 +79,9 @@ class TestSMC(SeededTest):
                 a = pm.Beta("a", alpha, beta)
                 y = pm.Bernoulli("y", a, observed=data)
                 trace = pm.sample_smc(2000)
-                marginals.append(model.marginal_log_likelihood)
+                marginals.append(trace.report.log_marginal_likelihood)
         # compare to the analytical result
-        assert abs(np.exp(marginals[1] - marginals[0]) - 4.0) <= 1
+        assert abs(np.exp(np.mean(marginals[1]) - np.mean(marginals[0])) - 4.0) <= 1
 
     def test_start(self):
         with pm.Model() as model:
