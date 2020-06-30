@@ -17,6 +17,7 @@ import warnings
 from scipy import stats
 import theano.tensor as tt
 from theano import scan
+import numpy as np
 
 from pymc3.util import get_variable_name
 from .continuous import get_tau_sigma, Normal, Flat
@@ -293,6 +294,7 @@ class GaussianRandomWalk(distribution.Continuous):
         sigma, mu = distribution.draw_values(
             [self.sigma, self.mu], point=point, size=size
         )
+        
         return distribution.generate_samples(
             self._random,
             sigma=sigma,
@@ -309,8 +311,14 @@ class GaussianRandomWalk(distribution.Continuous):
         else:
             axis = 0
         rv = stats.norm(mu, sigma)
-        data = rv.rvs(size).cumsum(axis=axis)
-        data = data - data[0]  # TODO: this should be a draw from `init`, if available
+        if len(size) == 1:
+            data = rv.rvs(size).cumsum(axis=axis)
+            data = data - data[0]  # TODO: this should be a draw from `init`, if available
+        else:
+            data = np.empty(size)
+            for i in range(size[0]):
+                data[i]=rv.rvs((size[1],)).cumsum(axis=axis) 
+                data[i]=data[i] - data[i][0]
         return data
 
     def _repr_latex_(self, name=None, dist=None):

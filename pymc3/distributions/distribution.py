@@ -559,6 +559,7 @@ def draw_values(params, point=None, size=None):
     # draw_values in the context of sample_posterior_predictive
     ppc_sampler = vectorized_ppc.get(None)
     if ppc_sampler is not None:
+        
         # this is being done inside new, vectorized sample_posterior_predictive
         return ppc_sampler(params, trace=point, samples=size)
 
@@ -592,7 +593,6 @@ def draw_values(params, point=None, size=None):
             else:
                 # param still needs to be drawn
                 symbolic_params.append((i, p))
-
         if not symbolic_params:
             # We only need to enforce the correct order if there are symbolic
             # params that could be drawn in variable order
@@ -818,6 +818,7 @@ def _draw_value(param, point=None, givens=None, size=None):
         if point and hasattr(param, 'model') and param.name in point:
             return point[param.name]
         elif hasattr(param, 'random') and param.random is not None:
+            print(point)
             return param.random(point=point, size=size)
         elif (hasattr(param, 'distribution') and
                 hasattr(param.distribution, 'random') and
@@ -995,7 +996,7 @@ def generate_samples(generator, *args, **kwargs):
     else:
         samples = generator(size=size_tup + dist_bcast_shape, *args, **kwargs)
     samples = np.asarray(samples)
-
+    
     # reshape samples here
     if samples.ndim > 0 and samples.shape[0] == 1 and size_tup == (1,):
         if (len(samples.shape) > len(dist_shape) and
@@ -1009,4 +1010,5 @@ def generate_samples(generator, *args, **kwargs):
              size_tup == (1,))
     ):
         samples = samples.reshape(samples.shape[:-1])
+    print("samples:",samples)
     return np.asarray(samples)
