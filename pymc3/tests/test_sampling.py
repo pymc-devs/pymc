@@ -957,8 +957,8 @@ class TestSamplePosteriorPredictive:
 
 
 @theano.as_op([tt.dvector], [tt.dvector])
-def segfault_maybe(a):
-    if np.random.uniform() < 0.01:
+def segfault_on_negative(a):
+    if np.any(a < 0):
         # Segfault
         ctypes.string_at(0)
     return 2 * np.array(a)
@@ -968,9 +968,14 @@ class TestIssues:
     def test_3988(self):
         """ Chain crashing on a child process should raise an error on the parent. """
         with pm.Model() as model:
-            x = pm.Normal('x', shape=2)
-            pm.Normal('y', mu=segfault_maybe(x), shape=2)
-            
-            step = pm.Metropolis()
+            # the test_val is positive such that it passes testval computations:
+            x = pm.Normal('x', mu=0.1, shape=2)
+            pm.Normal('y', mu=segfault_on_negative(x), shape=2)
+
+            # expecting to crash child process when it goes to x < 0 during sampling
             with pytest.raises(RuntimeError, match=r"Chain \d failed."):
-                pm.sample(step=step, cores=2, chains=2)
+                pm.sample(
+                    step=pm.Metropolis(),
+                    cores=2, chains=2,
+                    tune=100, draws=300
+                )
