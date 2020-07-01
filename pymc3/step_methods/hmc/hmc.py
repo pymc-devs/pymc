@@ -48,6 +48,9 @@ class HamiltonianMC(BaseHMC):
         'path_length': np.float64,
         'accepted': np.bool,
         'model_logp': np.float64,
+        'process_time_diff_ns': np.int64,
+        'perf_counter_diff_ns': np.int64,
+        'perf_counter_ns': np.int64,
     }]
 
     def __init__(self, vars=None, path_length=2., max_steps=1024, **kwargs):

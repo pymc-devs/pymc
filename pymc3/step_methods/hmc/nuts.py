@@ -72,6 +72,13 @@ class NUTS(BaseHMC):
       samples, the step size is set to this value. This should converge
       during tuning.
     - `model_logp`: The model log-likelihood for this sample.
+    - `process_time_diff_ns`: The time it took to draw the sample, as defined
+      by the python standard library `time.process_time_ns`. This counts all
+      the CPU time, including worker processes in BLAS and OpenMP.
+    - `perf_counter_diff_ns`: The time it took to draw the sample, as defined
+      by the python standard library `time.perf_counter_ns` (wall time).
+    - `perf_counter_ns`: The value of the `time.perf_counter_ns` after drawing
+      the sample.
 
     References
     ----------
@@ -96,6 +103,9 @@ class NUTS(BaseHMC):
             "energy": np.float64,
             "max_energy_error": np.float64,
             "model_logp": np.float64,
+            "process_time_diff_ns": np.int64,
+            "perf_counter_diff_ns": np.int64,
+            "perf_counter_ns": np.int64,
         }
     ]
 
