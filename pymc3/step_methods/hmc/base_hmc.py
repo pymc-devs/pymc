@@ -133,8 +133,8 @@ class BaseHMC(arraystep.GradientSharedStep):
 
     def astep(self, q0):
         """Perform a single HMC iteration."""
-        perf_start = time.perf_counter_ns()
-        process_start = time.process_time_ns()
+        perf_start = time.perf_counter()
+        process_start = time.process_time()
 
         p0 = self.potential.random()
         start = self.integrator.compute_state(q0, p0)
@@ -170,8 +170,8 @@ class BaseHMC(arraystep.GradientSharedStep):
 
         hmc_step = self._hamiltonian_step(start, p0, step_size)
 
-        perf_end = time.perf_counter_ns()
-        process_end = time.process_time_ns()
+        perf_end = time.perf_counter()
+        process_end = time.process_time()
 
         self.step_adapt.update(hmc_step.accept_stat, adapt_step)
         self.potential.update(hmc_step.end.q, hmc_step.end.q_grad, self.tune)
@@ -201,9 +201,9 @@ class BaseHMC(arraystep.GradientSharedStep):
         stats = {
             "tune": self.tune,
             "diverging": bool(hmc_step.divergence_info),
-            "perf_counter_diff_ns": perf_end - perf_start,
-            "process_time_diff_ns": process_end - process_start,
-            "perf_counter_ns": perf_end,
+            "perf_counter_diff": perf_end - perf_start,
+            "process_time_diff": process_end - process_start,
+            "perf_counter_start": perf_start,
         }
 
         stats.update(hmc_step.stats)

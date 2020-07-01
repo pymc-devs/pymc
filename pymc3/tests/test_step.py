@@ -979,7 +979,7 @@ class TestNutsCheckTrace:
 
     def test_sampler_stats(self):
         with Model() as model:
-            x = Normal("x", mu=0, sigma=1)
+            Normal("x", mu=0, sigma=1)
             trace = sample(draws=10, tune=1, chains=1)
 
         # Assert stats exist and have the correct shape.
@@ -995,6 +995,9 @@ class TestNutsCheckTrace:
             "step_size_bar",
             "tree_size",
             "tune",
+            "perf_counter_diff",
+            "perf_counter_start",
+            "process_time_diff",
         }
         assert trace.stat_names == expected_stat_names
         for varname in trace.stat_names:
@@ -1002,7 +1005,8 @@ class TestNutsCheckTrace:
 
         # Assert model logp is computed correctly: computing post-sampling
         # and tracking while sampling should give same results.
-        model_logp_ = np.array(
-            [model.logp(trace.point(i, chain=c)) for c in trace.chains for i in range(len(trace))]
-        )
+        model_logp_ = np.array([
+            model.logp(trace.point(i, chain=c))
+            for c in trace.chains for i in range(len(trace))
+        ])
         assert (trace.model_logp == model_logp_).all()
