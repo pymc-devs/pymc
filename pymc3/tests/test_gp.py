@@ -559,11 +559,11 @@ class TestPeriodic:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
-            cov = pm.gp.cov.Periodic(1, 0.1, 0.1)
+            cov = pm.gp.cov.Periodic(1, 1., 1.)
         K = theano.function([], cov(X))()
-        npt.assert_allclose(K[0, 1], 0.00288, atol=1e-3)
+        npt.assert_allclose(K[3, 4], 0.791397, atol=1e-3)
         K = theano.function([], cov(X, X))()
-        npt.assert_allclose(K[0, 1], 0.00288, atol=1e-3)
+        npt.assert_allclose(K[3, 4], 0.791397, atol=1e-3)
         # check diagonal
         Kd = theano.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
