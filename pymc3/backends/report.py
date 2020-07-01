@@ -99,7 +99,14 @@ class SamplerReport:
         if errors:
             raise ValueError('Serious convergence issues during sampling.')
 
-    def _run_convergence_checks(self, idata:arviz.InferenceData, model):
+    def _run_convergence_checks(self, idata: arviz.InferenceData, model):
+        if not hasattr(idata, 'posterior'):
+            msg = "No posterior samples. Unable to run convergence checks"
+            warn = SamplerWarning(WarningType.BAD_PARAMS, msg, 'info',
+                                  None, None, None)
+            self._add_warnings([warn])
+            return
+
         if idata.posterior.sizes['chain'] == 1:
             msg = ("Only one chain was sampled, this makes it impossible to "
                    "run some convergence checks")
