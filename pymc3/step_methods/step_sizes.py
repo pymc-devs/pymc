@@ -77,7 +77,7 @@ class DualAverageAdaptation:
                    % (mean_accept, target_accept))
             info = {'target': target_accept, 'actual': mean_accept}
             warning = SamplerWarning(
-                WarningType.BAD_ACCEPTANCE, msg, 'warn', None, None, info)
+                WarningType.BAD_ACCEPTANCE, msg, 'warn', extra=info)
             return [warning]
         else:
             return []

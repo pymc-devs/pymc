@@ -12,10 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from collections import namedtuple
 import logging
 import enum
-import typing
+from typing import Any, Optional
+import dataclasses
+
 from ..util import is_transformed_name, get_untransformed_name
 
 import arviz
@@ -38,9 +39,17 @@ class WarningType(enum.Enum):
     BAD_ENERGY = 8
 
 
-SamplerWarning = namedtuple(
-    'SamplerWarning',
-    "kind, message, level, step, exec_info, extra")
+@dataclasses.dataclass
+class SamplerWarning:
+    kind: WarningType
+    message: str
+    level: str
+    step: Optional[int] = None
+    exec_info: Optional[Any] = None
+    extra: Optional[Any] = None
+    divergence_point_source: Optional[dict] = None
+    divergence_point_dest: Optional[dict] = None
+    divergence_info: Optional[Any] = None
 
 
 _LEVELS = {
@@ -53,7 +62,8 @@ _LEVELS = {
 
 
 class SamplerReport:
-    """This object bundles warnings, convergence statistics and metadata of a sampling run."""
+    """Bundle warnings, convergence stats and metadata of a sampling run."""
+
     def __init__(self):
         self._chain_warnings = {}
         self._global_warnings = []
@@ -75,17 +85,17 @@ class SamplerReport:
                    for warn in self._warnings)
 
     @property
-    def n_tune(self) -> typing.Optional[int]:
+    def n_tune(self) -> Optional[int]:
         """Number of tune iterations - not necessarily kept in trace!"""
         return self._n_tune
 
     @property
-    def n_draws(self) -> typing.Optional[int]:
+    def n_draws(self) -> Optional[int]:
         """Number of draw iterations."""
         return self._n_draws
 
     @property
-    def t_sampling(self) -> typing.Optional[float]:
+    def t_sampling(self) -> Optional[float]:
         """
         Number of seconds that the sampling procedure took.
 
@@ -110,8 +120,7 @@ class SamplerReport:
         if idata.posterior.sizes['chain'] == 1:
             msg = ("Only one chain was sampled, this makes it impossible to "
                    "run some convergence checks")
-            warn = SamplerWarning(WarningType.BAD_PARAMS, msg, 'info',
-                                  None, None, None)
+            warn = SamplerWarning(WarningType.BAD_PARAMS, msg, 'info')
             self._add_warnings([warn])
             return
 
@@ -134,41 +143,42 @@ class SamplerReport:
             msg = ("The rhat statistic is larger than 1.4 for some "
                    "parameters. The sampler did not converge.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'error', None, None, rhat)
+                WarningType.CONVERGENCE, msg, 'error', extra=rhat)
             warnings.append(warn)
         elif rhat_max > 1.2:
             msg = ("The rhat statistic is larger than 1.2 for some "
                    "parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'warn', None, None, rhat)
+                WarningType.CONVERGENCE, msg, 'warn', extra=rhat)
             warnings.append(warn)
         elif rhat_max > 1.05:
             msg = ("The rhat statistic is larger than 1.05 for some "
                    "parameters. This indicates slight problems during "
                    "sampling.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'info', None, None, rhat)
+                WarningType.CONVERGENCE, msg, 'info', extra=rhat)
             warnings.append(warn)
 
         eff_min = min(val.min() for val in ess.values())
-        n_samples = idata.posterior.sizes['chain'] * idata.posterior.sizes['draw']
+        sizes = idata.posterior.sizes
+        n_samples = sizes['chain'] * sizes['draw']
         if eff_min < 200 and n_samples >= 500:
             msg = ("The estimated number of effective samples is smaller than "
                    "200 for some parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'error', None, None, ess)
+                WarningType.CONVERGENCE, msg, 'error', extra=ess)
             warnings.append(warn)
         elif eff_min / n_samples < 0.1:
             msg = ("The number of effective samples is smaller than "
                    "10% for some parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'warn', None, None, ess)
+                WarningType.CONVERGENCE, msg, 'warn', extra=ess)
             warnings.append(warn)
         elif eff_min / n_samples < 0.25:
             msg = ("The number of effective samples is smaller than "
                    "25% for some parameters.")
             warn = SamplerWarning(
-                WarningType.CONVERGENCE, msg, 'info', None, None, ess)
+                WarningType.CONVERGENCE, msg, 'info', extra=ess)
             warnings.append(warn)
 
         self._add_warnings(warnings)
@@ -201,7 +211,7 @@ class SamplerReport:
                     filtered.append(warn)
                 elif (start <= warn.step < stop and
                         (warn.step - start) % step == 0):
-                    warn = warn._replace(step=warn.step - start)
+                    warn = dataclasses.replace(warn, step=warn.step - start)
                     filtered.append(warn)
             return filtered
 
