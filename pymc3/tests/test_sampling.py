@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
+import ctypes
 from itertools import combinations
 import packaging
 from typing import Tuple
@@ -907,6 +907,7 @@ class TestSamplePriorPredictive(SeededTest):
             prior_trace = pm.sample_prior_predictive(5)
             assert prior_trace["x"].shape == (5, 3, 1)
 
+
 class TestSamplePosteriorPredictive:
     def test_point_list_arg_bug_fspp(self, point_list_arg_bug_fixture):
         pmodel, trace = point_list_arg_bug_fixture
@@ -953,3 +954,23 @@ class TestSamplePosteriorPredictive:
                 idat.posterior,
                 var_names=['d']
             )
+
+
+@theano.as_op([tt.dvector], [tt.dvector])
+def segfault_maybe(a):
+    if np.random.uniform() < 0.01:
+        # Segfault
+        ctypes.string_at(0)
+    return 2 * np.array(a)
+
+
+class TestIssues:
+    def test_3988(self):
+        """ Chain crashing on a child process should raise an error on the parent. """
+        with pm.Model() as model:
+            x = pm.Normal('x', shape=2)
+            pm.Normal('y', mu=segfault_maybe(x), shape=2)
+            
+            step = pm.Metropolis()
+            with pytest.raises(RuntimeError, match=r"Chain \d failed."):
+                pm.sample(step=step, cores=2, chains=2)
