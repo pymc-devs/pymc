@@ -154,7 +154,8 @@ class BaseHMC(arraystep.GradientSharedStep):
             self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
             message_energy = (
                 "Bad initial energy, check any log probabilities that "
-                "are inf or -inf, nan or very small:\n{}".format(error_logp.to_string())
+                "are inf or -inf, nan or very small:\n{}"
+                .format(error_logp.to_string())
             )
             warning = SamplerWarning(
                 WarningType.BAD_ENERGY,
@@ -190,11 +191,13 @@ class BaseHMC(arraystep.GradientSharedStep):
                 kind = WarningType.DIVERGENCE
                 self._num_divs_sample += 1
                 # We don't want to fill up all memory with divergence info
-                if self._num_divs_sample < 100:
+                if self._num_divs_sample < 100 and info.state is not None:
                     point = self._logp_dlogp_func.array_to_dict(info.state.q)
+                if self._num_divs_sample < 100 and info.state_div is not None:
                     point_dest = self._logp_dlogp_func.array_to_dict(
                         info.state_div.q
                     )
+                if self._num_divs_sample < 100:
                     info_store = info
             warning = SamplerWarning(
                 kind,

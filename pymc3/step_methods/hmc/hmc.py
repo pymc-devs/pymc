@@ -116,23 +116,25 @@ class HamiltonianMC(BaseHMC):
 
         energy_change = -np.inf
         state = start
+        last = state
         div_info = None
         try:
             for _ in range(n_steps):
+                last = state
                 state = self.integrator.step(step_size, state)
         except IntegrationError as e:
-            div_info = DivergenceInfo('Divergence encountered.', e, state)
+            div_info = DivergenceInfo('Integration failed.', e, last, None)
         else:
             if not np.isfinite(state.energy):
                 div_info = DivergenceInfo(
-                    'Divergence encountered, bad energy.', None, state)
+                    'Divergence encountered, bad energy.', None, last, state)
             energy_change = start.energy - state.energy
             if np.isnan(energy_change):
                 energy_change = -np.inf
             if np.abs(energy_change) > self.Emax:
                 div_info = DivergenceInfo(
                     'Divergence encountered, large integration error.',
-                    None, state)
+                    None, last, state)
 
         accept_stat = min(1, np.exp(energy_change))
 
