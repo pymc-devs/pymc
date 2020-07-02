@@ -956,7 +956,10 @@ class TestSamplePosteriorPredictive:
             )
 
 
-@theano.as_op([tt.dvector], [tt.dvector])
+@theano.as_op(
+    [tt.dvector if theano.config.floatX == "float64" else tt.fvector],
+    [tt.dvector if theano.config.floatX == "float64" else tt.fvector]
+)
 def segfault_on_negative(a):
     if np.any(a < 0):
         # Segfault
