@@ -1,6 +1,8 @@
 # Release Notes
 
 ## PyMC3 3.9.x (on deck)
+This release does not support python 3.6 anymore. Use python 3.7 or higher.
+
 ### Documentation
 - Notebook on [multilevel modeling](https://docs.pymc.io/notebooks/multilevel_modeling.html) has been rewritten to showcase ArviZ and xarray usage for inference result analysis (see [#3963](https://github.com/pymc-devs/pymc3/pull/3963))
 
