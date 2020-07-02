@@ -980,5 +980,6 @@ class TestIssues:
                 pm.sample(
                     step=pm.Metropolis(),
                     cores=2, chains=2,
-                    tune=100, draws=300
+                    tune=100, draws=300,
+                    compute_convergence_checks=False
                 )
