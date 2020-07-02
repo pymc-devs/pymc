@@ -311,14 +311,20 @@ class GaussianRandomWalk(distribution.Continuous):
         else:
             axis = 0
         rv = stats.norm(mu, sigma)
-        if len(size) == 1:
+        if size is None:
+            data = rv.rvs(size).cumsum(axis=axis)
+            data = data - data[0]  # TODO: this should be a draw from `init`, if available
+        elif len(size) == 1:
             data = rv.rvs(size).cumsum(axis=axis)
             data = data - data[0]  # TODO: this should be a draw from `init`, if available
         else:
             data = np.empty(size)
+            list_of_size = list(size)
+            size_inner_matrix = list_of_size[1:]
+            size_inner_matrix_tuple = tuple(size_inner_matrix)
             for i in range(size[0]):
-                data[i]=rv.rvs((size[1],)).cumsum(axis=axis) 
-                data[i]=data[i] - data[i][0]
+                data[i]=rv.rvs(size_inner_matrix_tuple).cumsum(axis=axis) 
+                data[i]=data[i] - data[i][0]  # TODO: this should be a draw from `init`, if available
         return data
 
     def _repr_latex_(self, name=None, dist=None):
