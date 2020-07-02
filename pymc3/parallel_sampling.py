@@ -21,7 +21,6 @@ import pickle
 from collections import namedtuple
 import traceback
 from pymc3.exceptions import SamplingError
-import errno
 
 import numpy as np
 from fastprogress.fastprogress import progress_bar
@@ -29,37 +28,6 @@ from fastprogress.fastprogress import progress_bar
 from . import theanof
 
 logger = logging.getLogger("pymc3")
-
-
-def _get_broken_pipe_exception():
-    import sys
-
-    if sys.platform == "win32":
-        return RuntimeError(
-            "The communication pipe between the main process "
-            "and its spawned children is broken.\n"
-            "In Windows OS, this usually means that the child "
-            "process raised an exception while it was being "
-            "spawned, before it was setup to communicate to "
-            "the main process.\n"
-            "The exceptions raised by the child process while "
-            "spawning cannot be caught or handled from the "
-            "main process, and when running from an IPython or "
-            "jupyter notebook interactive kernel, the child's "
-            "exception and traceback appears to be lost.\n"
-            "A known way to see the child's error, and try to "
-            "fix or handle it, is to run the problematic code "
-            "as a batch script from a system's Command Prompt. "
-            "The child's exception will be printed to the "
-            "Command Promt's stderr, and it should be visible "
-            "above this error and traceback.\n"
-            "Note that if running a jupyter notebook that was "
-            "invoked from a Command Prompt, the child's "
-            "exception should have been printed to the Command "
-            "Prompt on which the notebook is running."
-        )
-    else:
-        return None
 
 
 class ParallelSamplingError(Exception):
@@ -133,18 +101,37 @@ class _Process:
         self._tune = tune
         self._pickle_backend = pickle_backend
 
+    def _unpickle_step_method(self):
+        unpickle_error = (
+            "The model could not be unpickled. This is required for sampling "
+            "with more than one core and multiprocessing context spawn "
+            "or forkserver."
+        )
+        if self._step_method_is_pickled:
+            if self._pickle_backend == 'pickle':
+                try:
+                    self._step_method = pickle.loads(self._step_method)
+                except Exception:
+                    raise ValueError(unpickle_error)
+            elif self._pickle_backend == 'dill':
+                try:
+                    import dill
+                except ImportError:
+                    raise ValueError(
+                        "dill must be installed for pickle_backend='dill'."
+                    )
+                try:
+                    self._step_method = dill.loads(self._step_method)
+                except Exception:
+                    raise ValueError(unpickle_error)
+            else:
+                raise ValueError("Unknown pickle backend")
+
     def run(self):
         try:
             # We do not create this in __init__, as pickling this
             # would destroy the shared memory.
-            if self._step_method_is_pickled:
-                if self._pickle_backend == 'pickle':
-                    self._step_method = pickle.loads(self._step_method)
-                elif self._pickle_backend == 'dill':
-                    import dill
-                    self._step_method = dill.loads(self._step_method)
-                else:
-                    raise ValueError("Unknown pickle backend")
+            self._unpickle_step_method()
             self._point = self._make_numpy_refs()
             self._start_loop()
         except KeyboardInterrupt:
@@ -289,7 +276,7 @@ class ProcessAdapter:
 
         self._process = mp_ctx.Process(
             daemon=True,
-            name=name,
+            name=process_name,
             target=_run_process,
             args=(
                 process_name,
@@ -303,21 +290,10 @@ class ProcessAdapter:
                 pickle_backend,
             )
         )
-        try:
-            self._process.start()
-            # Close the remote pipe, so that we get notified if the other
-            # end is closed.
-            remote_conn.close()
-        except IOError as e:
-            # Something may have gone wrong during the fork / spawn
-            if e.errno == errno.EPIPE:
-                exc = _get_broken_pipe_exception()
-                if exc is not None:
-                    # Sleep a little to give the child process time to flush
-                    # all its error message
-                    time.sleep(0.2)
-                    raise exc
-            raise
+        self._process.start()
+        # Close the remote pipe, so that we get notified if the other
+        # end is closed.
+        remote_conn.close()
 
     @property
     def shared_point_view(self):
@@ -451,7 +427,12 @@ class ParallelSampler:
             if pickle_backend == 'pickle':
                 step_method_pickled = pickle.dumps(step_method, protocol=-1)
             elif pickle_backend == 'dill':
-                import dill
+                try:
+                    import dill
+                except ImportError:
+                    raise ValueError(
+                        "dill must be installed for pickle_backend='dill'."
+                    )
                 step_method_pickled = dill.dumps(step_method, protocol=-1)
 
         self._samplers = [

@@ -11,9 +11,39 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import multiprocessing
 
+import pytest
 import pymc3.parallel_sampling as ps
 import pymc3 as pm
+
+
+def test_context():
+    with pm.Model():
+        pm.Normal('x')
+        ctx = multiprocessing.get_context('spawn')
+        pm.sample(tune=2, draws=2, chains=2, cores=2, mp_ctx=ctx)
+
+
+class NoUnpickle:
+    def __getstate__(self):
+        return self.__dict__.copy()
+
+    def __setstate__(self, state):
+        raise AttributeError("This fails")
+
+
+def test_bad_unpickle():
+    with pm.Model() as model:
+        pm.Normal('x')
+
+    with model:
+        step = pm.NUTS()
+        step.no_unpickle = NoUnpickle()
+        with pytest.raises(Exception) as exc_info:
+            pm.sample(tune=2, draws=2, mp_ctx='spawn', step=step,
+                      cores=2, chains=2, compute_convergence_checks=False)
+        assert 'could not be unpickled' in str(exc_info.getrepr(style='short'))
 
 
 def test_abort():
@@ -25,8 +55,10 @@ def test_abort():
 
     step = pm.CompoundStep([step1, step2])
 
-    proc = ps.ProcessAdapter(10, 10, step, chain=3, seed=1,
-                             start={'a': 1., 'b_log__': 2.})
+    ctx = multiprocessing.get_context()
+    proc = ps.ProcessAdapter(10, 10, step, chain=3, seed=1, mp_ctx=ctx,
+                             start={'a': 1., 'b_log__': 2.},
+                             step_method_pickled=None, pickle_backend='pickle')
     proc.start()
     proc.write_next()
     proc.abort()
@@ -42,8 +74,10 @@ def test_explicit_sample():
 
     step = pm.CompoundStep([step1, step2])
 
-    proc = ps.ProcessAdapter(10, 10, step, chain=3, seed=1,
-                             start={'a': 1., 'b_log__': 2.})
+    ctx = multiprocessing.get_context()
+    proc = ps.ProcessAdapter(10, 10, step, chain=3, seed=1, mp_ctx=ctx,
+                             start={'a': 1., 'b_log__': 2.},
+                             step_method_pickled=None, pickle_backend='pickle')
     proc.start()
     while True:
         proc.write_next()
