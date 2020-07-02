@@ -17,6 +17,7 @@ import multiprocessing.sharedctypes
 import ctypes
 import time
 import logging
+import pickle
 from collections import namedtuple
 import traceback
 from pymc3.exceptions import SamplingError
@@ -104,26 +105,46 @@ def rebuild_exc(exc, tb):
 # ('start',)
 
 
-class _Process(multiprocessing.Process):
+class _Process:
     """Seperate process for each chain.
     We communicate with the main process using a pipe,
     and send finished samples using shared memory.
     """
 
-    def __init__(self, name:str, msg_pipe, step_method, shared_point, draws:int, tune:int, seed):
-        super().__init__(daemon=True, name=name)
+    def __init__(
+        self,
+        name: str,
+        msg_pipe,
+        step_method,
+        step_method_is_pickled,
+        shared_point,
+        draws: int,
+        tune: int,
+        seed,
+        pickle_backend,
+    ):
         self._msg_pipe = msg_pipe
         self._step_method = step_method
+        self._step_method_is_pickled = step_method_is_pickled
         self._shared_point = shared_point
         self._seed = seed
         self._tt_seed = seed + 1
         self._draws = draws
         self._tune = tune
+        self._pickle_backend = pickle_backend
 
     def run(self):
         try:
             # We do not create this in __init__, as pickling this
             # would destroy the shared memory.
+            if self._step_method_is_pickled:
+                if self._pickle_backend == 'pickle':
+                    self._step_method = pickle.loads(self._step_method)
+                elif self._pickle_backend == 'dill':
+                    import dill
+                    self._step_method = dill.loads(self._step_method)
+                else:
+                    raise ValueError("Unknown pickle backend")
             self._point = self._make_numpy_refs()
             self._start_loop()
         except KeyboardInterrupt:
@@ -219,10 +240,25 @@ class _Process(multiprocessing.Process):
             return []
 
 
+def _run_process(*args):
+    _Process(*args).run()
+
+
 class ProcessAdapter:
     """Control a Chain process from the main thread."""
 
-    def __init__(self, draws:int, tune:int, step_method, chain:int, seed, start):
+    def __init__(
+        self,
+        draws: int,
+        tune: int,
+        step_method,
+        step_method_pickled,
+        chain: int,
+        seed,
+        start,
+        mp_ctx,
+        pickle_backend,
+    ):
         self.chain = chain
         process_name = "worker_chain_%s" % chain
         self._msg_pipe, remote_conn = multiprocessing.Pipe()
@@ -237,7 +273,7 @@ class ProcessAdapter:
             if size != ctypes.c_size_t(size).value:
                 raise ValueError("Variable %s is too large" % name)
 
-            array = multiprocessing.sharedctypes.RawArray("c", size)
+            array = mp_ctx.RawArray("c", size)
             self._shared_point[name] = array
             array_np = np.frombuffer(array, dtype).reshape(shape)
             array_np[...] = start[name]
@@ -246,14 +282,26 @@ class ProcessAdapter:
         self._readable = True
         self._num_samples = 0
 
-        self._process = _Process(
-            process_name,
-            remote_conn,
-            step_method,
-            self._shared_point,
-            draws,
-            tune,
-            seed,
+        if step_method_pickled is not None:
+            step_method_send = step_method_pickled
+        else:
+            step_method_send = step_method
+
+        self._process = mp_ctx.Process(
+            daemon=True,
+            name=name,
+            target=_run_process,
+            args=(
+                process_name,
+                remote_conn,
+                step_method_send,
+                step_method_pickled is not None,
+                self._shared_point,
+                draws,
+                tune,
+                seed,
+                pickle_backend,
+            )
         )
         try:
             self._process.start()
@@ -277,15 +325,38 @@ class ProcessAdapter:
             raise RuntimeError()
         return self._point
 
+    def _send(self, msg, *args):
+        try:
+            self._msg_pipe.send((msg, *args))
+        except Exception:
+            # try to recive an error message
+            message = None
+            try:
+                message = self._msg_pipe.recv()
+            except Exception:
+                pass
+            if message is not None and message[0] == "error":
+                warns, old_error = message[1:]
+                if warns is not None:
+                    error = ParallelSamplingError(
+                        str(old_error),
+                        self.chain,
+                        warns
+                    )
+                else:
+                    error = RuntimeError("Chain %s failed." % self.chain)
+                raise error from old_error
+            raise
+
     def start(self):
-        self._msg_pipe.send(("start",))
+        self._send("start")
 
     def write_next(self):
         self._readable = False
-        self._msg_pipe.send(("write_next",))
+        self._send("write_next")
 
     def abort(self):
-        self._msg_pipe.send(("abort",))
+        self._send("abort")
 
     def join(self, timeout=None):
         self._process.join(timeout)
@@ -324,7 +395,7 @@ class ProcessAdapter:
         for process in processes:
             try:
                 process.abort()
-            except EOFError:
+            except Exception:
                 pass
 
         start_time = time.time()
@@ -353,23 +424,44 @@ Draw = namedtuple(
 class ParallelSampler:
     def __init__(
         self,
-        draws:int,
-        tune:int,
-        chains:int,
-        cores:int,
-        seeds:list,
-        start_points:list,
+        draws: int,
+        tune: int,
+        chains: int,
+        cores: int,
+        seeds: list,
+        start_points: list,
         step_method,
-        start_chain_num:int=0,
-        progressbar:bool=True,
+        start_chain_num: int = 0,
+        progressbar: bool = True,
+        mp_ctx=None,
+        pickle_backend: str = 'pickle',
     ):
 
         if any(len(arg) != chains for arg in [seeds, start_points]):
             raise ValueError("Number of seeds and start_points must be %s." % chains)
 
+        if mp_ctx is None or isinstance(mp_ctx, str):
+            mp_ctx = multiprocessing.get_context(mp_ctx)
+
+        step_method_pickled = None
+        if mp_ctx.get_start_method() != 'fork':
+            if pickle_backend == 'pickle':
+                step_method_pickled = pickle.dumps(step_method, protocol=-1)
+            elif pickle_backend == 'dill':
+                import dill
+                step_method_pickled = dill.dumps(step_method, protocol=-1)
+
         self._samplers = [
             ProcessAdapter(
-                draws, tune, step_method, chain + start_chain_num, seed, start
+                draws,
+                tune,
+                step_method,
+                step_method_pickled,
+                chain + start_chain_num,
+                seed,
+                start,
+                mp_ctx,
+                pickle_backend
             )
             for chain, seed, start in zip(range(chains), seeds, start_points)
         ]
