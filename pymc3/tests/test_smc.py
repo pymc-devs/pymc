@@ -106,11 +106,13 @@ class TestSMCABC(SeededTest):
         with pm.Model() as self.SMABC_test:
             a = pm.Normal("a", mu=0, sd=5)
             b = pm.HalfNormal("b", sd=2)
-            s = pm.Simulator("s", normal_sim, params=(a, b), observed=self.data)
+            s = pm.Simulator(
+                "s", normal_sim, params=(a, b), sum_stat="sort", epsilon=1, observed=self.data
+            )
 
     def test_one_gaussian(self):
         with self.SMABC_test:
-            trace = pm.sample_smc(draws=1000, kernel="ABC", sum_stat="sorted", epsilon=1)
+            trace = pm.sample_smc(draws=1000, kernel="ABC")
 
         np.testing.assert_almost_equal(self.data.mean(), trace["a"].mean(), decimal=2)
         np.testing.assert_almost_equal(self.data.std(), trace["b"].mean(), decimal=1)
