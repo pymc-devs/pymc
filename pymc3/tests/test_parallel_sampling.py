@@ -50,13 +50,8 @@ def test_bad_unpickle():
         assert 'could not be unpickled' in str(exc_info.getrepr(style='short'))
 
 
-@theano.as_op(
-    [
-        tt.dvector if theano.config.floatX == "float64" else tt.fvector,
-        tt.iscalar,
-    ],
-    [tt.dvector if theano.config.floatX == "float64" else tt.fvector],
-)
+tt_vector = tt.TensorType(theano.config.floatX, [False])
+@theano.as_op([tt_vector, tt.iscalar], [tt_vector])
 def _crash_remote_process(a, master_pid):
     if os.getpid() != master_pid:
         os.exit(0)
