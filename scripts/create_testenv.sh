@@ -27,20 +27,14 @@ if [ -z ${GLOBAL} ]; then
     echo "Environment ${ENVNAME} already exists, keeping up to date"
   else
     conda create -n ${ENVNAME} --yes pip python=${PYTHON_VERSION}
+    conda config --add channels conda-forge
+    conda config --set channel_priority strict
   fi
   source activate ${ENVNAME}
 fi
-pip install --upgrade pip
 
-conda install --yes mkl-service
-conda install --yes -c conda-forge python-graphviz
-
-# Travis env is unable to import cached mpl sometimes https://github.com/pymc-devs/pymc3/issues/3423
-pip install --no-cache-dir --force-reinstall -e .
-pip install --no-cache-dir --force-reinstall -r requirements-dev.txt
-
-# Install untested, non-required code (linter fails without them)
-pip install ipython ipywidgets
+conda install --yes python-graphviz ipywidgets
+conda install --yes --file requirements-dev.txt
 
 #  Install editable using the setup.py
 if [ -z ${NO_SETUP} ]; then
