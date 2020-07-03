@@ -12,10 +12,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import multiprocessing
+import os
 
 import pytest
 import pymc3.parallel_sampling as ps
 import pymc3 as pm
+import theano
+import theano.tensor as tt
+import numpy as np
 
 
 def test_context():
@@ -44,6 +48,31 @@ def test_bad_unpickle():
             pm.sample(tune=2, draws=2, mp_ctx='spawn', step=step,
                       cores=2, chains=2, compute_convergence_checks=False)
         assert 'could not be unpickled' in str(exc_info.getrepr(style='short'))
+
+
+@theano.as_op(
+    [
+        tt.dvector if theano.config.floatX == "float64" else tt.fvector,
+        tt.iscalar,
+    ],
+    [tt.dvector if theano.config.floatX == "float64" else tt.fvector],
+)
+def _crash_remote_process(a, master_pid):
+    if os.getpid() != master_pid:
+        os.exit(0)
+    return 2 * np.array(a)
+
+
+def test_remote_pipe_closed():
+    master_pid = os.getpid()
+    with pm.Model():
+        x = pm.Normal('x', shape=2, mu=0.1)
+        tt_pid = tt.as_tensor_variable(np.array(master_pid, dtype='int32'))
+        pm.Normal('y', mu=_crash_remote_process(x, tt_pid), shape=2)
+
+        step = pm.Metropolis()
+        with pytest.raises(RuntimeError, match="Chain [0-9] failed"):
+            pm.sample(step=step, mp_ctx='spawn', tune=2, draws=2, cores=2, chains=2)
 
 
 def test_abort():
