@@ -153,9 +153,13 @@ class Mixture(Distribution):
         dtype = kwargs.pop('dtype', default_dtype)
 
         try:
-            comp_modes = self._comp_modes()
-            comp_mode_logps = self.logp(comp_modes)
-            self.mode = comp_modes[tt.argmax(w * comp_mode_logps, axis=-1)]
+            if isinstance(comp_dists, Distribution):
+                comp_mode_logps = comp_dists.logp(comp_dists.mode)
+            else:
+                comp_mode_logps = tt.stack([cd.logp(cd.mode) for cd in comp_dists])
+
+            mode_idx = tt.argmax(tt.log(w) + comp_mode_logps, axis=-1)
+            self.mode = self._comp_modes()[mode_idx]
 
             if 'mode' not in defaults:
                 defaults.append('mode')
@@ -427,7 +431,7 @@ class Mixture(Distribution):
         """
         w = self.w
 
-        return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1),
+        return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1, keepdims=False),
                      w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1),
                      broadcast_conditions=False)
 
