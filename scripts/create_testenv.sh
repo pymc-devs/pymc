@@ -35,6 +35,7 @@ fi
 
 conda install --yes python-graphviz ipywidgets
 conda install --yes --file requirements-dev.txt
+conda install --yes --file requirements.txt
 
 #  Install editable using the setup.py
 if [ -z ${NO_SETUP} ]; then
