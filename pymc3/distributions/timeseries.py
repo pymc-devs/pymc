@@ -317,11 +317,21 @@ class GaussianRandomWalk(distribution.Continuous):
         elif len(size) == 1:
             data = rv.rvs(size).cumsum(axis=axis)
             data = data - data[0]  # TODO: this should be a draw from `init`, if available
+        elif len(size) == 2:
+            data = np.empty(size)
+            for i in range(size[0]):
+                # np.reshape() has been introduced to circumvent the failing test case
+                # test_distributions_random.py::TestGuassianRandomWalk::test_
+                # parameters_1d_shape[5]
+                # Otherwise, data[i] = rv.rvs((size[1],)).cumsum(axis = axis) works fine.
+                data[i]=np.reshape(rv.rvs((size[1],1)).cumsum(axis=axis),(size[1]))
+                data[i]=data[i] - data[i][0] 
         else:
             data = np.empty(size)
             list_of_size = list(size)
             size_inner_matrix = list_of_size[1:]
             size_inner_matrix_tuple = tuple(size_inner_matrix)
+            print(size_inner_matrix_tuple)
             for i in range(size[0]):
                 data[i]=rv.rvs(size_inner_matrix_tuple).cumsum(axis=axis) 
                 data[i]=data[i] - data[i][0]  # TODO: this should be a draw from `init`, if available
