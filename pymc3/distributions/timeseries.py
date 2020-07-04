@@ -311,10 +311,7 @@ class GaussianRandomWalk(distribution.Continuous):
         else:
             axis = 0
         rv = stats.norm(mu, sigma)
-        if size is None:
-            data = rv.rvs(size).cumsum(axis=axis)
-            data = data - data[0]  # TODO: this should be a draw from `init`, if available
-        elif len(size) == 1:
+        if (size is None) or (len(size) == 1):
             data = rv.rvs(size).cumsum(axis=axis)
             data = data - data[0]  # TODO: this should be a draw from `init`, if available
         elif len(size) == 2:
