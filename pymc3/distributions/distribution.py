@@ -818,7 +818,6 @@ def _draw_value(param, point=None, givens=None, size=None):
         if point and hasattr(param, 'model') and param.name in point:
             return point[param.name]
         elif hasattr(param, 'random') and param.random is not None:
-            print(point)
             return param.random(point=point, size=size)
         elif (hasattr(param, 'distribution') and
                 hasattr(param.distribution, 'random') and
