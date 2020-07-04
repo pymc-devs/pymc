@@ -1010,5 +1010,4 @@ def generate_samples(generator, *args, **kwargs):
              size_tup == (1,))
     ):
         samples = samples.reshape(samples.shape[:-1])
-    print("samples:",samples)
     return np.asarray(samples)
