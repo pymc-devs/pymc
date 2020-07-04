@@ -1825,7 +1825,6 @@ def sample_prior_predictive(
         samples.
     """
     model = modelcontext(model)
-    
 
     if vars is None and var_names is None:
         prior_pred_vars = model.observed_RVs
@@ -1843,17 +1842,15 @@ def sample_prior_predictive(
     else:
         raise ValueError("Cannot supply both vars and var_names arguments.")
     vars = cast(TIterable[str], vars)  # tell mypy that vars cannot be None here.
-    
 
     if random_seed is not None:
         np.random.seed(random_seed)
     names = get_default_varnames(vars_, include_transformed=False)
     # draw_values fails with auto-transformed variables. transform them later!
     values = draw_values([model[name] for name in names], size=samples)
-    
 
     data = {k: v for k, v in zip(names, values)}
-    if data is None:    
+    if data is None:
         raise AssertionError("No variables sampled: attempting to sample %s" % names)
 
     prior = {}  # type: Dict[str, np.ndarray]
