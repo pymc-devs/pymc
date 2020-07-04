@@ -111,7 +111,7 @@ Another option is to clone the repository and install PyMC3 using
 Dependencies
 ============
 
-PyMC3 is tested on Python 3.6 and depends on Theano, NumPy,
+PyMC3 is tested on Python 3.7 and depends on Theano, NumPy,
 SciPy, and Pandas (see ``requirements.txt`` for version
 information).
 
