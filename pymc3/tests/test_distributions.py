@@ -1328,18 +1328,6 @@ class TestMatchesScipy(SeededTest):
             Dirichlet, Simplex(n), {"a": Vector(Rplus, n)}, dirichlet_logpdf
         )
 
-    @pytest.mark.parametrize("n", [3, 4])
-    def test_dirichlet_init_fail(self, n):
-        with Model():
-            with pytest.raises(
-                ValueError, match=r"All concentration parameters \(a\) must be > 0."
-            ):
-                _ = Dirichlet("x", a=np.zeros(n), shape=n)
-            with pytest.raises(
-                ValueError, match=r"All concentration parameters \(a\) must be > 0."
-            ):
-                _ = Dirichlet("x", a=np.array([-1.0] * n), shape=n)
-
     def test_dirichlet_2D(self):
         self.pymc3_matches_scipy(
             Dirichlet,
