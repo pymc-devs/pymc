@@ -33,9 +33,10 @@ if [ -z ${GLOBAL} ]; then
   source activate ${ENVNAME}
 fi
 
+conda update --yes --all
 conda install --yes python-graphviz ipywidgets
-conda install --yes --file requirements-dev.txt
 conda install --yes --file requirements.txt
+conda install --yes --file requirements-dev.txt
 
 #  Install editable using the setup.py
 if [ -z ${NO_SETUP} ]; then
