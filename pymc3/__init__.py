@@ -27,6 +27,12 @@ if not logging.root.handlers:
         handler = logging.StreamHandler()
         _log.addHandler(handler)
 
+# Set start method to forkserver for MacOS to enable multiprocessing
+# Closes issue https://github.com/pymc-devs/pymc3/issues/3849
+sys = platform.system()
+if sys == "Darwin":
+    new_context = mp.get_context("forkserver")
+
 
 def __set_compiler_flags():
     # Workarounds for Theano compiler problems on various platforms
