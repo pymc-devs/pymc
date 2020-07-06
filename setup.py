@@ -81,7 +81,7 @@ if __name__ == "__main__":
         # package_data={'docs': ['*']},
         include_package_data=True,
         classifiers=classifiers,
-        python_requires=">=3.7",
+        python_requires=">=3.6",
         install_requires=install_reqs,
         tests_require=test_reqs,
         test_suite="nose.collector",
