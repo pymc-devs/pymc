@@ -20,6 +20,7 @@ import logging
 import pickle
 from collections import namedtuple
 import traceback
+import platform
 from pymc3.exceptions import SamplingError
 
 import numpy as np
@@ -420,6 +421,9 @@ class ParallelSampler:
             raise ValueError("Number of seeds and start_points must be %s." % chains)
 
         if mp_ctx is None or isinstance(mp_ctx, str):
+            # Closes issue https://github.com/pymc-devs/pymc3/issues/3849
+            if platform.system() == 'Darwin':
+                mp_ctx = "forkserver"
             mp_ctx = multiprocessing.get_context(mp_ctx)
 
         step_method_pickled = None
