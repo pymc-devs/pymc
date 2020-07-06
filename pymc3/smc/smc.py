@@ -366,4 +366,4 @@ class PseudoLikelihood:
         sim_data = self.function(**func_parameters)
         if self.save:
             self.save_data(sim_data)
-        return self.distance(self.observations, self.sum_stat(sim_data))
+        return self.distance(self.epsilon, self.observations, self.sum_stat(sim_data))

@@ -104,8 +104,8 @@ class TestSMCABC(SeededTest):
             return np.random.normal(a, b, 1000)
 
         with pm.Model() as self.SMABC_test:
-            a = pm.Normal("a", mu=0, sd=5)
-            b = pm.HalfNormal("b", sd=2)
+            a = pm.Normal("a", mu=0, sigma=5)
+            b = pm.HalfNormal("b", sigma=2)
             s = pm.Simulator(
                 "s", normal_sim, params=(a, b), sum_stat="sort", epsilon=1, observed=self.data
             )

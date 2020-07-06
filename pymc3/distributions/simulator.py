@@ -59,12 +59,12 @@ class Simulator(NoDistribution):
         self.epsilon = epsilon
 
         if distance == "gaussian_kernel":
-            self.distance = self.gaussian_kernel
+            self.distance = gaussian_kernel
         elif distance == "wasserstein":
-            self.distance = self.wasserstein
+            self.distance = wasserstein
             sum_stat = "sort"
         elif distance == "energy":
-            self.distance = self.energy
+            self.distance = energy
             sum_stat = "sort"
         elif hasattr(distance, "__call__"):
             self.distance = distance
@@ -107,17 +107,6 @@ class Simulator(NoDistribution):
         else:
             return np.array([self.function(*params) for _ in range(size)])
 
-    def gaussian_kernel(self, obs_data, sim_data):
-        return np.sum(-0.5 * ((obs_data - sim_data) / self.epsilon) ** 2)
-
-    # we are assuming obs_data and sim_data are already sorted!
-    def wasserstein(self, obs_data, sim_data):
-        return np.mean(np.abs((obs_data - sim_data) / self.epsilon))
-
-    # we are assuming obs_data and sim_data are already sorted!
-    def energy(self, obs_data, sim_data):
-        return 1.4142 * np.mean(((obs_data - sim_data) / self.epsilon) ** 2) ** 0.5
-
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
             dist = self
@@ -130,4 +119,26 @@ class Simulator(NoDistribution):
 
 
 def identity(x):
+    """identity function, used as a summary statistics"""
     return x
+
+
+def gaussian_kernel(epsilon, obs_data, sim_data):
+    """gaussian distance function"""
+    return np.sum(-0.5 * ((obs_data - sim_data) / epsilon) ** 2)
+
+
+def wasserstein(epsilon, obs_data, sim_data):
+    """wasserstein distance function
+    
+    We are assuming obs_data and sim_data are already sorted!
+    """
+    return np.mean(np.abs((obs_data - sim_data) / epsilon))
+
+
+def energy(epsilon, obs_data, sim_data):
+    """Energy distance function
+    
+    We are assuming obs_data and sim_data are already sorted!
+    """
+    return 1.4142 * np.mean(((obs_data - sim_data) / epsilon) ** 2) ** 0.5
