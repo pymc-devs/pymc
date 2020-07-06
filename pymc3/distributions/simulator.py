@@ -119,7 +119,7 @@ class Simulator(NoDistribution):
 
 
 def identity(x):
-    """identity function, used as a summary statistics"""
+    """Identity function, used as a summary statistics."""
     return x
 
 
@@ -129,7 +129,7 @@ def gaussian_kernel(epsilon, obs_data, sim_data):
 
 
 def wasserstein(epsilon, obs_data, sim_data):
-    """wasserstein distance function
+    """Wasserstein distance function.
     
     We are assuming obs_data and sim_data are already sorted!
     """
@@ -137,7 +137,7 @@ def wasserstein(epsilon, obs_data, sim_data):
 
 
 def energy(epsilon, obs_data, sim_data):
-    """Energy distance function
+    """Energy distance function.
     
     We are assuming obs_data and sim_data are already sorted!
     """
