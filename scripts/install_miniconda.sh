@@ -7,7 +7,7 @@ if conda --version > /dev/null 2>&1; then
    exit 0
  fi
 
-PYTHON_VERSION=${PYTHON_VERSION:-3.7} # if no python specified, use 3.7
+PYTHON_VERSION=${PYTHON_VERSION:-3.6} # if no python specified, use 3.6
 
 if [ ${PYTHON_VERSION} == "2.7" ]; then
   INSTALL_FOLDER="$HOME/miniconda2"
