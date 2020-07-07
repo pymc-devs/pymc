@@ -248,7 +248,9 @@ def sample(
     callback=None,
     *,
     return_inferencedata=None,
-    idata_kwargs:dict=None,
+    idata_kwargs: dict=None,
+    mp_ctx=None,
+    pickle_backend: str = 'pickle',
     **kwargs
 ):
     """Draw samples from the posterior using the given step methods.
@@ -336,6 +338,13 @@ def sample(
         Defaults to `False`, but we'll switch to `True` in an upcoming release.
     idata_kwargs : dict, optional
         Keyword arguments for `arviz.from_pymc3`
+    mp_ctx : multiprocessing.context.BaseContent
+        A multiprocessing context for parallel sampling. See multiprocessing
+        documentation for details.
+    pickle_backend : str
+        One of `'pickle'` or `'dill'`. The library used to pickle models
+        in parallel sampling if the multiprocessing context is not of type
+        `fork`.
 
     Returns
     -------
@@ -504,6 +513,10 @@ def sample(
         "callback": callback,
         "discard_tuned_samples": discard_tuned_samples,
     }
+    parallel_args = {
+        "pickle_backend": pickle_backend,
+        "mp_ctx": mp_ctx,
+    }
 
     sample_args.update(kwargs)
 
@@ -520,7 +533,7 @@ def sample(
         _log.info("Multiprocess sampling ({} chains in {} jobs)".format(chains, cores))
         _print_step_hierarchy(step)
         try:
-            trace = _mp_sample(**sample_args)
+            trace = _mp_sample(**sample_args, **parallel_args)
         except pickle.PickleError:
             _log.warning("Could not pickle model, sampling singlethreaded.")
             _log.debug("Pickling error:", exec_info=True)
@@ -1349,6 +1362,8 @@ def _mp_sample(
     model=None,
     callback=None,
     discard_tuned_samples=True,
+    mp_ctx=None,
+    pickle_backend='pickle',
     **kwargs
 ):
     """Main iteration for multiprocess sampling.
@@ -1411,7 +1426,17 @@ def _mp_sample(
         traces.append(strace)
 
     sampler = ps.ParallelSampler(
-        draws, tune, chains, cores, random_seed, start, step, chain, progressbar
+        draws,
+        tune,
+        chains,
+        cores,
+        random_seed,
+        start,
+        step,
+        chain,
+        progressbar,
+        mp_ctx=mp_ctx,
+        pickle_backend=pickle_backend,
     )
     try:
         try:
