@@ -51,11 +51,19 @@ def test_bad_unpickle():
 
 
 tt_vector = tt.TensorType(theano.config.floatX, [False])
+
+
 @theano.as_op([tt_vector, tt.iscalar], [tt_vector])
 def _crash_remote_process(a, master_pid):
     if os.getpid() != master_pid:
         os.exit(0)
     return 2 * np.array(a)
+
+
+def test_dill():
+    with pm.Model():
+        pm.Normal('x')
+        pm.sample(tune=1, draws=1, chains=2, cores=2, pickle_backend="dill", mp_ctx="spawn")
 
 
 def test_remote_pipe_closed():
