@@ -352,11 +352,11 @@ class Periodic(Stationary):
     The Periodic kernel.
 
     .. math::
-       k(x, x') = \mathrm{exp}\left( -\frac{\mathrm{sin}^2(2 \pi |x-x'| \frac{1}{T})}{\ell^2} \right)
+       k(x, x') = \mathrm{exp}\left( -\frac{\mathrm{sin}^2(\pi |x-x'| \frac{1}{T})}{2\ell^2} \right)
 
-    .. versionchanged:: 3.9.3
-        Use the standard expression, as presented in [1]_, of the Periodic kernel
-        to evaluate the covariance matrix.
+    The interpretation of length-scale for this kernel is different than the
+    one used normally (see [1]_). Priors on length scale must be put keeping
+    this in mind.
 
     References
     ----------
@@ -376,7 +376,7 @@ class Periodic(Stationary):
         f2 = Xs.dimshuffle("x", 0, 1)
         r = np.pi * (f1 - f2) / self.period
         r = tt.sum(tt.square(tt.sin(r) / self.ls), 2)
-        return tt.exp(-2.0 * r)
+        return tt.exp(-0.5 * r)
 
 
 class ExpQuad(Stationary):

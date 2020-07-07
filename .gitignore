@@ -41,3 +41,4 @@ benchmarks/results/
 pytestdebug.log
 .dir-locals.el
 .pycheckers
+env/
