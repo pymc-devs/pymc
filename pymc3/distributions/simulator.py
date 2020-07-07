@@ -12,10 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import logging
 import numpy as np
 from .distribution import NoDistribution, draw_values
 
 __all__ = ["Simulator"]
+
+_log = logging.getLogger("pymc3")
 
 
 class Simulator(NoDistribution):
@@ -30,15 +33,16 @@ class Simulator(NoDistribution):
         **kwargs,
     ):
         """
-        This class stores a function defined by the user in python language.
+        This class stores a function defined by the user in Python language.
         
         function: function
-            Simulation function defined by the user.
+            Python function defined by the user.
         params: list
             Parameters passed to function.
         distance: str or callable
             Distance functions. Available options are "gaussian_kernel" (default), "wasserstein",
-            "energy" or a user defined function
+            "energy" or a user defined function that takes epsilon (a scalar), and the summary
+            statistics of observed_data, and simulated_data as input.
             ``gaussian_kernel`` :math: `\sum \left(-0.5  \left(\frac{xo - xs}{\epsilon}\right)^2\right)`
             ``wasserstein`` :math: `\frac{1}{n} \sum{\left(\frac{|xo - xs|}{\epsilon}\right)}`
             ``energy`` :math: `\sqrt{2} \sqrt{\frac{1}{n} \sum \left(\frac{|xo - xs|}{\epsilon}\right)^2}`
@@ -62,10 +66,14 @@ class Simulator(NoDistribution):
             self.distance = gaussian_kernel
         elif distance == "wasserstein":
             self.distance = wasserstein
-            sum_stat = "sort"
+            if sum_stat != "sort":
+                _log.info(f"Automatically setting sum_stat to sort as expected by {distance}")
+                sum_stat = "sort"
         elif distance == "energy":
             self.distance = energy
-            sum_stat = "sort"
+            if sum_stat != "sort":
+                _log.info(f"Automatically setting sum_stat to sort as expected by {distance}")
+                sum_stat = "sort"
         elif hasattr(distance, "__call__"):
             self.distance = distance
         else:

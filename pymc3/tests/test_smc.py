@@ -116,3 +116,24 @@ class TestSMCABC(SeededTest):
 
         np.testing.assert_almost_equal(self.data.mean(), trace["a"].mean(), decimal=2)
         np.testing.assert_almost_equal(self.data.std(), trace["b"].mean(), decimal=1)
+
+    def test_automatic_use_of_sort(self):
+        with pm.Model() as model:
+            s_w = pm.Simulator(
+                "s_w",
+                None,
+                params=None,
+                distance="wasserstein",
+                sum_stat="identity",
+                observed=self.data,
+            )
+            s_e = pm.Simulator(
+                "s_e",
+                None,
+                params=None,
+                distance="energy",
+                sum_stat="identity",
+                observed=self.data,
+            )
+        assert s_w.distribution.sum_stat is np.sort
+        assert s_e.distribution.sum_stat is np.sort
