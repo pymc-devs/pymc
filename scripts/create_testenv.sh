@@ -20,24 +20,19 @@ command -v conda >/dev/null 2>&1 || {
 }
 
 ENVNAME="${ENVNAME:-testenv}"         # if no ENVNAME is specified, use testenv
-PYTHON_VERSION=${PYTHON_VERSION:-3.6} # if no python specified, use 3.6
 
 if [ -z ${GLOBAL} ]; then
   if conda env list | grep -q ${ENVNAME}; then
     echo "Environment ${ENVNAME} already exists, keeping up to date"
   else
-    conda create -n ${ENVNAME} --yes pip python=${PYTHON_VERSION}
     conda config --add channels conda-forge
     conda config --set channel_priority strict
+    conda env create -f environment-dev.yml
   fi
   source activate ${ENVNAME}
 fi
 
 conda update --yes --all
-conda install --yes python-graphviz ipywidgets
-conda install --yes --file requirements.txt
-conda install --yes --file requirements-dev.txt
-pip install --no-cache-dir --force-reinstall black_nbconvert
 
 #  Install editable using the setup.py
 if [ -z ${NO_SETUP} ]; then
