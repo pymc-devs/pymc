@@ -578,9 +578,7 @@ class TestSamplePPC(SeededTest):
 
         samples = 100
         with model:
-            post_pred = pm.sample_posterior_predictive(
-                trace, samples=samples, var_names=["p", "obs"]
-            )
+            post_pred = pm.sample_posterior_predictive(trace, samples=samples, var_names=["p", "obs"])
 
         expected_p = np.array(
             [logistic.eval({coeff: val}) for val in trace["x"][:samples]]
