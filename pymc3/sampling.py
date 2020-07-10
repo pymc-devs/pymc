@@ -29,6 +29,7 @@ import time
 import warnings
 
 import arviz
+from arviz import InferenceData
 import numpy as np
 import theano.gradient as tg
 from theano.tensor import Tensor
@@ -57,6 +58,7 @@ from .util import (
     is_transformed_name,
     get_default_varnames,
     dataset_to_point_dict,
+    chains_and_samples,
 )
 from .vartypes import discrete_types
 from .exceptions import IncorrectArgumentsError
@@ -91,6 +93,8 @@ STEP_METHODS = (
 )
 
 ArrayLike = Union[np.ndarray, List[float]]
+PointType = Dict[str, np.ndarray]
+PointList = List[PointType]
 
 _log = logging.getLogger("pymc3")
 
@@ -248,10 +252,10 @@ def sample(
     callback=None,
     *,
     return_inferencedata=None,
-    idata_kwargs: dict=None,
+    idata_kwargs: dict = None,
     mp_ctx=None,
-    pickle_backend: str = 'pickle',
-    **kwargs
+    pickle_backend: str = "pickle",
+    **kwargs,
 ):
     """Draw samples from the posterior using the given step methods.
 
@@ -1584,7 +1588,7 @@ def sample_posterior_predictive(
 
     Parameters
     ----------
-    trace : backend, list, xarray.Dataset, or MultiTrace
+    trace : backend, list, xarray.Dataset, arviz.InferenceData, or MultiTrace
         Trace generated from MCMC sampling, or a list of dicts (eg. points or from find_MAP()),
         or xarray.Dataset (eg. InferenceData.posterior or InferenceData.prior)
     samples : int
@@ -1598,8 +1602,7 @@ def sample_posterior_predictive(
         Variables for which to compute the posterior predictive samples.
         Deprecated: please use ``var_names`` instead.
     var_names : Iterable[str]
-        Alternative way to specify vars to sample, to make this function orthogonal with
-        others.
+        Names of variables for which to compute the posterior predictive samples.
     size : int
         The number of random draws from the distribution specified by the parameters in each
         sample of the trace. Not recommended unless more than ndraws times nchains posterior
@@ -1620,29 +1623,48 @@ def sample_posterior_predictive(
         Dictionary with the variable names as keys, and values numpy arrays containing
         posterior predictive samples.
     """
-    if isinstance(trace, xarray.Dataset):
-        trace = dataset_to_point_dict(trace)
 
-    len_trace = len(trace)
-    try:
-        nchain = trace.nchains
-    except AttributeError:
-        nchain = 1
+    _trace: Union[MultiTrace, PointList]
+    if isinstance(trace, InferenceData):
+        _trace = dataset_to_point_dict(trace.posterior)
+    elif isinstance(trace, xarray.Dataset):
+        _trace = dataset_to_point_dict(trace)
+    else:
+        _trace = trace
+
+    nchain: int
+    len_trace: int
+    if isinstance(trace, (InferenceData, xarray.Dataset)):
+        nchain, len_trace = chains_and_samples(trace)
+    else:
+        len_trace = len(_trace)
+        try:
+            nchain = _trace.nchains
+        except AttributeError:
+            nchain = 1
 
     if keep_size and samples is not None:
-        raise IncorrectArgumentsError("Should not specify both keep_size and samples arguments")
+        raise IncorrectArgumentsError(
+            "Should not specify both keep_size and samples arguments"
+        )
     if keep_size and size is not None:
-        raise IncorrectArgumentsError("Should not specify both keep_size and size arguments")
+        raise IncorrectArgumentsError(
+            "Should not specify both keep_size and size arguments"
+        )
 
     if samples is None:
-        if isinstance(trace, MultiTrace):
-            samples = sum(len(v) for v in trace._straces.values())
-        elif isinstance(trace, list) and all((isinstance(x, dict) for x in trace)):
+        if isinstance(_trace, MultiTrace):
+            samples = sum(len(v) for v in _trace._straces.values())
+        elif isinstance(_trace, list) and all((isinstance(x, dict) for x in _trace)):
             # this is a list of points
-            samples = len(trace)
+            samples = len(_trace)
         else:
-            raise ValueError("Do not know how to compute number of samples for trace argument of type %s"%type(trace))
+            raise ValueError(
+                "Do not know how to compute number of samples for trace argument of type %s"
+                % type(_trace)
+            )
 
+    assert samples is not None
     if samples < len_trace * nchain:
         warnings.warn(
             "samples parameter is smaller than nchains times ndraws, some draws "
@@ -1675,10 +1697,21 @@ def sample_posterior_predictive(
     try:
         for idx in indices:
             if nchain > 1:
-                chain_idx, point_idx = np.divmod(idx, len_trace)
-                param = trace._straces[chain_idx % nchain].point(point_idx)
+                # the trace object will either be a MultiTrace (and have _straces)...
+                if hasattr(_trace, "_straces"):
+                    chain_idx, point_idx = np.divmod(idx, len_trace)
+                    param = (
+                        cast(MultiTrace, _trace)
+                        ._straces[chain_idx % nchain]
+                        .point(point_idx)
+                    )
+                # ... or a PointList
+                else:
+                    param = cast(PointList, _trace)[idx % len_trace]
+            # there's only a single chain, but the index might hit it multiple times if
+            # the number of indices is greater than the length of the trace.
             else:
-                param = trace[idx % len_trace]
+                param = _trace[idx % len_trace]
 
             values = draw_values(vars, point=param, size=size)
             for k, v in zip(vars, values):
