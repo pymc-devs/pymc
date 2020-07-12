@@ -483,6 +483,12 @@ class TestSamplePPC(SeededTest):
                 ppc = pm.sample_posterior_predictive(trace, size=4, keep_size=True)
             with pytest.raises(IncorrectArgumentsError):
                 ppc = pm.sample_posterior_predictive(trace, vars=[a], var_names=["a"])
+            # test wrong type argument
+            bad_trace = {'mu': stats.norm.rvs(size=1000)}
+            with pytest.raises(TypeError):
+                ppc = pm.sample_posterior_predictive(bad_trace)
+            with pytest.raises(TypeError):
+                ppc = pm.fast_sample_posterior_predictive(bad_trace)
 
     def test_vector_observed(self):
         with pm.Model() as model:

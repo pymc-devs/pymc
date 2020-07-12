@@ -1697,7 +1697,7 @@ def sample_posterior_predictive(
             # this is a list of points
             samples = len(_trace)
         else:
-            raise ValueError(
+            raise TypeError(
                 "Do not know how to compute number of samples for trace argument of type %s"
                 % type(_trace)
             )
