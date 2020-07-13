@@ -354,9 +354,11 @@ class Periodic(Stationary):
     .. math::
        k(x, x') = \mathrm{exp}\left( -\frac{\mathrm{sin}^2(\pi |x-x'| \frac{1}{T})}{2\ell^2} \right)
 
-    The interpretation of length-scale for this kernel is different than the
-    one used normally (see [1]_). Priors on length scale must be put keeping
-    this in mind.
+    Notes
+    -----
+    Note that the scaling factor for this kernel is different compared to the more common
+    definition (see [1]_). Here, 0.5 is in the exponent instead of the more common value, 2.
+    Divide the length-scale by 2 when initializing the kernel to recover the standard definition.
 
     References
     ----------
