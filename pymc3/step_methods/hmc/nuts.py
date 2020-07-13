@@ -210,7 +210,7 @@ class NUTS(BaseHMC):
                 "The chain reached the maximum tree depth. Increase "
                 "max_treedepth, increase target_accept or reparameterize."
             )
-            warn = SamplerWarning(WarningType.TREEDEPTH, msg, "warn", None, None, None)
+            warn = SamplerWarning(WarningType.TREEDEPTH, msg, 'warn')
             warnings.append(warn)
         return warnings
 
@@ -331,6 +331,7 @@ class _Tree:
         except IntegrationError as err:
             error_msg = str(err)
             error = err
+            right = None
         else:
             # h - H0
             energy_change = right.energy - self.start_energy
@@ -363,7 +364,7 @@ class _Tree:
                 )
                 error = None
         tree = Subtree(None, None, None, None, -np.inf, -np.inf, 1)
-        divergance_info = DivergenceInfo(error_msg, error, left)
+        divergance_info = DivergenceInfo(error_msg, error, left, right)
         return tree, divergance_info, False
 
     def _build_subtree(self, left, depth, epsilon):

@@ -381,6 +381,13 @@ class TestSamplePPC(SeededTest):
             ppc = pm.fast_sample_posterior_predictive(trace, keep_size=True)
             assert ppc["a"].shape == (nchains, ndraws)
 
+            # test keep_size parameter and idata input
+            idata = az.from_pymc3(trace)
+            ppc = pm.sample_posterior_predictive(idata, keep_size=True)
+            assert ppc["a"].shape == (nchains, ndraws)
+            ppc = pm.fast_sample_posterior_predictive(trace, keep_size=True)
+            assert ppc["a"].shape == (nchains, ndraws)
+
             # test default case
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
             assert "a" in ppc
@@ -428,8 +435,25 @@ class TestSamplePPC(SeededTest):
             assert "a" in ppc
             assert ppc["a"].shape == (12, 2)
 
+            # test keep_size parameter with inference data as input...
+            idata = az.from_pymc3(trace)
+            ppc = pm.sample_posterior_predictive(idata, keep_size=True)
+            assert ppc["a"].shape == (trace.nchains, len(trace), 2)
+            with pytest.warns(UserWarning):
+                ppc = pm.sample_posterior_predictive(trace, samples=12, var_names=["a"])
+            assert "a" in ppc
+            assert ppc["a"].shape == (12, 2)
+
             # test keep_size parameter
             ppc = pm.fast_sample_posterior_predictive(trace, keep_size=True)
+            assert ppc["a"].shape == (trace.nchains, len(trace), 2)
+            with pytest.warns(UserWarning):
+                ppc = pm.fast_sample_posterior_predictive(trace, samples=12, var_names=["a"])
+            assert "a" in ppc
+            assert ppc["a"].shape == (12, 2)
+
+            # test keep_size parameter with inference data as input
+            ppc = pm.fast_sample_posterior_predictive(idata, keep_size=True)
             assert ppc["a"].shape == (trace.nchains, len(trace), 2)
             with pytest.warns(UserWarning):
                 ppc = pm.fast_sample_posterior_predictive(trace, samples=12, var_names=["a"])
@@ -459,6 +483,12 @@ class TestSamplePPC(SeededTest):
                 ppc = pm.sample_posterior_predictive(trace, size=4, keep_size=True)
             with pytest.raises(IncorrectArgumentsError):
                 ppc = pm.sample_posterior_predictive(trace, vars=[a], var_names=["a"])
+            # test wrong type argument
+            bad_trace = {'mu': stats.norm.rvs(size=1000)}
+            with pytest.raises(TypeError):
+                ppc = pm.sample_posterior_predictive(bad_trace)
+            with pytest.raises(TypeError):
+                ppc = pm.fast_sample_posterior_predictive(bad_trace)
 
     def test_vector_observed(self):
         with pm.Model() as model:
@@ -554,9 +584,7 @@ class TestSamplePPC(SeededTest):
 
         samples = 100
         with model:
-            post_pred = pm.sample_posterior_predictive(
-                trace, samples=samples, var_names=["p", "obs"]
-            )
+            post_pred = pm.sample_posterior_predictive(trace, samples=samples, var_names=["p", "obs"])
 
         expected_p = np.array(
             [logistic.eval({coeff: val}) for val in trace["x"][:samples]]

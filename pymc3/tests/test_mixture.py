@@ -66,6 +66,17 @@ class TestMixture(SeededTest):
         cls.pois_mu = np.array([5., 20.])
         cls.pois_x = generate_poisson_mixture_data(cls.pois_w, cls.pois_mu, size=1000)
 
+    def test_dimensions(self):
+        a1 = Normal.dist(mu=0, sigma=1)
+        a2 = Normal.dist(mu=10, sigma=1)
+        mix = Mixture.dist(w=np.r_[0.5, 0.5], comp_dists=[a1, a2])
+
+        assert mix.mode.ndim == 0
+        assert mix.logp(0.0).ndim == 0
+
+        value = np.r_[0.0, 1.0, 2.0]
+        assert mix.logp(value).ndim == 1
+
     def test_mixture_list_of_normals(self):
         with Model() as model:
             w = Dirichlet('w', floatX(np.ones_like(self.norm_w)))
@@ -252,7 +263,7 @@ class TestMixture(SeededTest):
         # check logp of mixture
         testpoint = model.test_point
         mixlogp_st = logsumexp(np.log(testpoint['w']) + complogp_st,
-                               axis=-1, keepdims=True)
+                               axis=-1, keepdims=False)
         assert_allclose(y.logp_elemwise(testpoint),
                         mixlogp_st)
 
@@ -321,7 +332,7 @@ class TestMixture(SeededTest):
             complogp_mix = np.concatenate((mixlogp1, mixlogp2), axis=1)
             mixmixlogpg = logsumexp(np.log(point['mix_w']).astype(floatX) +
                                     complogp_mix,
-                                    axis=-1, keepdims=True)
+                                    axis=-1, keepdims=False)
             return priorlogp, mixmixlogpg
 
         value = np.exp(self.norm_x)[:, None]
