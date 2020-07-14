@@ -112,10 +112,12 @@ class TestSMCABC(SeededTest):
 
     def test_one_gaussian(self):
         with self.SMABC_test:
-            trace = pm.sample_smc(draws=1000, kernel="ABC")
+            trace, sim_data = pm.sample_smc(draws=1000, kernel="ABC", save_sim_data=True)
 
         np.testing.assert_almost_equal(self.data.mean(), trace["a"].mean(), decimal=2)
         np.testing.assert_almost_equal(self.data.std(), trace["b"].mean(), decimal=1)
+        np.testing.assert_almost_equal(self.data.mean(), sim_data["s"].mean(), decimal=2)
+        np.testing.assert_almost_equal(self.data.std(), sim_data["s"].std(), decimal=1)
 
     def test_automatic_use_of_sort(self):
         with pm.Model() as model:
