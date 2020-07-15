@@ -621,7 +621,7 @@ class MLDA(ArrayStepShared):
                                                               model=None,
                                                               mode=self.mode,
                                                               blocked=self.base_blocked,
-                                                              ** base_kwargs)
+                                                              **base_kwargs)
                 else:
                     # DEMetropolisZMLDA sampler in base level (level=0), targeting self.next_model
                     self.next_step_method = pm.DEMetropolisZMLDA(vars=vars_next,
@@ -634,7 +634,7 @@ class MLDA(ArrayStepShared):
                                                                  tune_drop_fraction=self.base_tune_drop_fraction,
                                                                  model=None,
                                                                  mode=self.mode,
-                                                                 ** base_kwargs)
+                                                                 **base_kwargs)
         else:
             # drop the last coarse model
             next_coarse_models = self.coarse_models[:-1]

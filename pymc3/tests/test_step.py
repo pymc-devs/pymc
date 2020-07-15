@@ -29,7 +29,11 @@ from .models import (
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.parallel_sampling import ParallelSamplingError
 from pymc3.exceptions import SamplingError
+<<<<<<< HEAD
 from pymc3.model import Model, Potential, set_data
+=======
+from pymc3.model import Model, Potential
+>>>>>>> Add variance reduction feature to MLDA
 from pymc3.step_methods import (
     NUTS,
     BinaryGibbsMetropolis,
@@ -48,7 +52,11 @@ from pymc3.step_methods import (
     MLDA,
 )
 from pymc3.theanof import floatX
+<<<<<<< HEAD
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal, MvNormal
+=======
+from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal
+>>>>>>> Add variance reduction feature to MLDA
 from pymc3.data import Data
 
 from numpy.testing import assert_array_almost_equal
