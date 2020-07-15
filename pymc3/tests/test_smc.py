@@ -111,6 +111,25 @@ class TestSMCABC(SeededTest):
             )
             self.s = s
 
+        def quantiles(x):
+            return np.quantile(x, [0.25, 0.5, 0.75])
+
+        def abs_diff(eps, obs_data, sim_data):
+            return np.mean(np.abs((obs_data - sim_data) / eps))
+
+        with pm.Model() as self.SMABC_test2:
+            a = pm.Normal("a", mu=0, sigma=1)
+            b = pm.HalfNormal("b", sigma=1)
+            s = pm.Simulator(
+                "s",
+                normal_sim,
+                params=(a, b),
+                distance=abs_diff,
+                sum_stat=quantiles,
+                epsilon=1,
+                observed=self.data,
+            )
+
     def test_one_gaussian(self):
         with self.SMABC_test:
             trace = pm.sample_smc(draws=1000, kernel="ABC")
@@ -133,6 +152,10 @@ class TestSMCABC(SeededTest):
         assert po_p["s"].shape == (1000, 1000)
         np.testing.assert_almost_equal(0, po_p["s"].mean(), decimal=2)
         np.testing.assert_almost_equal(1, po_p["s"].std(), decimal=1)
+
+    def test_custom_dist_sum(self):
+        with self.SMABC_test2:
+            trace = pm.sample_smc(draws=1000, kernel="ABC")
 
     def test_automatic_use_of_sort(self):
         with pm.Model() as model:
