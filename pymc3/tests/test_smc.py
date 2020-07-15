@@ -104,23 +104,46 @@ class TestSMCABC(SeededTest):
             return np.random.normal(a, b, 1000)
 
         with pm.Model() as self.SMABC_test:
-            a = pm.Normal("a", mu=0, sigma=5)
-            b = pm.HalfNormal("b", sigma=2)
+            a = pm.Normal("a", mu=0, sigma=1)
+            b = pm.HalfNormal("b", sigma=1)
             s = pm.Simulator(
                 "s", normal_sim, params=(a, b), sum_stat="sort", epsilon=1, observed=self.data
             )
+            self.s = s
 
     def test_one_gaussian(self):
         with self.SMABC_test:
-            trace, sim_data = pm.sample_smc(draws=1000, kernel="ABC", save_sim_data=True)
+            trace = pm.sample_smc(draws=1000, kernel="ABC")
 
         np.testing.assert_almost_equal(self.data.mean(), trace["a"].mean(), decimal=2)
         np.testing.assert_almost_equal(self.data.std(), trace["b"].mean(), decimal=1)
+
+    def test_sim_data_ppc(self):
+        with self.SMABC_test:
+            trace, sim_data = pm.sample_smc(draws=1000, kernel="ABC", chains=2, save_sim_data=True)
+            pr_p = pm.sample_prior_predictive(1000)
+            po_p = pm.sample_posterior_predictive(trace, 1000)
+
+        assert sim_data["s"].shape == (2, 1000, 1000)
         np.testing.assert_almost_equal(self.data.mean(), sim_data["s"].mean(), decimal=2)
         np.testing.assert_almost_equal(self.data.std(), sim_data["s"].std(), decimal=1)
+        assert pr_p["s"].shape == (1000, 1000)
+        np.testing.assert_almost_equal(0, pr_p["s"].mean(), decimal=1)
+        np.testing.assert_almost_equal(1.4, pr_p["s"].std(), decimal=1)
+        assert po_p["s"].shape == (1000, 1000)
+        np.testing.assert_almost_equal(0, po_p["s"].mean(), decimal=2)
+        np.testing.assert_almost_equal(1, po_p["s"].std(), decimal=1)
 
     def test_automatic_use_of_sort(self):
         with pm.Model() as model:
+            s_g = pm.Simulator(
+                "s_g",
+                None,
+                params=None,
+                distance="gaussian_kernel",
+                sum_stat="mean",
+                observed=self.data,
+            )
             s_w = pm.Simulator(
                 "s_w",
                 None,
@@ -137,5 +160,12 @@ class TestSMCABC(SeededTest):
                 sum_stat="identity",
                 observed=self.data,
             )
+        assert s_g.distribution.sum_stat is np.mean
         assert s_w.distribution.sum_stat is np.sort
         assert s_e.distribution.sum_stat is np.sort
+
+    def test_repr_latex(self):
+        expected = "$\\text{s} \\sim  \\text{Simulator}(\\text{normal_sim}(a, b), \\text{gaussian_kernel}, \\text{sort})$"
+        assert expected == self.s._repr_latex_()
+        assert self.s._repr_latex_() == self.s.__latex__()
+        assert self.SMABC_test.model._repr_latex_() == self.SMABC_test.model.__latex__()
