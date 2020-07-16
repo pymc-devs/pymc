@@ -18,3 +18,4 @@ seaborn>=0.8.1
 sphinx-autobuild==0.7.1
 sphinx>=1.5.5
 watermark
+dill
