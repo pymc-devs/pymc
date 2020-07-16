@@ -32,10 +32,14 @@ jobs:
             '
           - '
             pymc3/tests/test_distributions_random.py
-            pymc3/tests/test_shared.py pymc3/tests/test_smc.py
-            pymc3/tests/test_sampling.py pymc3/tests/test_parallel_sampling.py
-            pymc3/tests/test_dist_math.py pymc3/tests/test_distribution_defaults.py
-            pymc3/tests/test_distributions_timeseries.py pymc3/tests/test_random.py
+            pymc3/tests/test_shared.py
+            pymc3/tests/test_smc.py
+            pymc3/tests/test_sampling.py
+            pymc3/tests/test_parallel_sampling.py
+            pymc3/tests/test_dist_math.py
+            pymc3/tests/test_distribution_defaults.py
+            pymc3/tests/test_distributions_timeseries.py
+            pymc3/tests/test_random.py
             '
           - '
             pymc3/tests/test_examples.py
@@ -50,7 +54,7 @@ jobs:
             '
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=core2 -O0'
+      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=native -O0'
     steps:
     - uses: actions/checkout@v2
     - name: Cache conda and theano
@@ -62,7 +66,7 @@ jobs:
         path: |
           ~/conda_pkgs_dir
           ~/.theano
-        key: ${{ runner.os }}-${{ matrix.floatx }}-${{ matrix.python-versiuon }}-${{ env.CACHE_NUMBER }}
+        key: ${{ runner.os }}-${{ matrix.floatx }}-py${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}
     - name: Install miniconda
       uses: goanpeca/setup-miniconda@v1
       with:
@@ -117,10 +121,14 @@ jobs:
             '
           - '
             pymc3/tests/test_distributions_random.py
-            pymc3/tests/test_shared.py pymc3/tests/test_smc.py
-            pymc3/tests/test_sampling.py pymc3/tests/test_parallel_sampling.py
-            pymc3/tests/test_dist_math.py pymc3/tests/test_distribution_defaults.py
-            pymc3/tests/test_distributions_timeseries.py pymc3/tests/test_random.py
+            pymc3/tests/test_shared.py
+            pymc3/tests/test_smc.py
+            pymc3/tests/test_sampling.py
+            pymc3/tests/test_parallel_sampling.py
+            pymc3/tests/test_dist_math.py
+            pymc3/tests/test_distribution_defaults.py
+            pymc3/tests/test_distributions_timeseries.py
+            pymc3/tests/test_random.py
             '
           - '
             pymc3/tests/test_examples.py
@@ -133,6 +141,9 @@ jobs:
             pymc3/tests/test_updates.py
             pymc3/tests/test_shape_handling.py
             '
+    env:
+      TEST_SUBSET: ${{ matrix.test-subset }}
+      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=core2 -O0'
     steps:
     - uses: actions/checkout@v2
     - name: Cache conda and theano
@@ -144,7 +155,7 @@ jobs:
         path: |
           ~/conda_pkgs_dir
           ~/.theano
-        key: ${{ runner.os }}-${{ matrix.floatx }}-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}
+        key: ${{ runner.os }}-${{ matrix.floatx }}-py${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}
     - name: Install miniconda
       uses: goanpeca/setup-miniconda@v1
       with:
