@@ -1137,11 +1137,15 @@ class MLDA(ArrayStepShared):
         # do not calculate likelihood, just set accept to 0.0
         if (q == q0).all():
             accept = np.float(0.0)
+            skipped_logp = True
         else:
             accept = self.delta_logp(q, q0) + self.delta_logp_next(q0, q)
+            skipped_logp = False
 
         # Accept/reject sample - next sample is stored in q_new
         q_new, accepted = metrop_select(accept, q, q0)
+        if skipped_logp:
+            accepted = False
 
         # Update acceptance counter
         self.accepted += accepted
