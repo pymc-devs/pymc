@@ -7,6 +7,7 @@ jobs:
     runs-on: ${{ matrix.operating-system }}
     strategy:
       max-parallel: 16
+      fail-fast: false
       matrix:
         operating-system: [ubuntu-latest]
         python-version: [3.7]
@@ -54,7 +55,7 @@ jobs:
             '
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=native -O0'
+      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=native'
     steps:
     - uses: actions/checkout@v2
     - name: Cache conda and theano
@@ -96,6 +97,7 @@ jobs:
     runs-on: ${{ matrix.operating-system }}
     strategy:
       max-parallel: 16
+      fail-fast: false
       matrix:
         operating-system: [windows-latest]
         python-version: [3.7]
@@ -143,7 +145,7 @@ jobs:
             '
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=core2 -O0'
+      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=core2'
     steps:
     - uses: actions/checkout@v2
     - name: Cache conda and theano
