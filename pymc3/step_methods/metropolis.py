@@ -981,7 +981,8 @@ class MLDA(ArrayStepShared):
     stats_dtypes = [{
         'accept': np.float64,
         'accepted': np.bool,
-        'tune': np.bool
+        'tune': np.bool,
+        'base_scaling': object
     }]
 
     def __init__(self, coarse_models, vars=None, base_S=None, base_proposal_dist=None,
@@ -1102,13 +1103,6 @@ class MLDA(ArrayStepShared):
                                                  self.tune,
                                                  self.subsampling_rates[-1])
 
-        # Update stats data types dictionary given vars and base_blocked
-        if self.base_blocked or len(self.vars) == 1:
-            self.stats_dtypes[0]['base_scaling'] = np.float64
-        else:
-            for name in self.var_names:
-                self.stats_dtypes[0]['base_scaling_' + name] = np.float64
-
     def astep(self, q0):
         """One MLDA step, given current sample q0"""
         # Check if the tuning flag has been changed and if yes,
@@ -1159,12 +1153,15 @@ class MLDA(ArrayStepShared):
         # Capture latest base chain scaling stats from next step method
         self.base_scaling_stats = {}
         if isinstance(self.next_step_method, CompoundStep):
+            scaling_list = []
             for method in self.next_step_method.methods:
-                self.base_scaling_stats["base_scaling_" + method.vars[0].name] = method.scaling
-        elif isinstance(self.next_step_method, Metropolis):
-            self.base_scaling_stats["base_scaling"] = self.next_step_method.scaling
+                scaling_list.append(method.scaling)
+            self.base_scaling_stats = {"base_scaling": np.array(scaling_list)}
+        elif not isinstance(self.next_step_method, MLDA):
+            # next method is any block sampler
+            self.base_scaling_stats = {"base_scaling": np.array(self.next_step_method.scaling)}
         else:
-            # next method is MLDA
+            # next method is MLDA - propagate dict from lower levels
             self.base_scaling_stats = self.next_step_method.base_scaling_stats
         stats = {**stats, **self.base_scaling_stats}
 

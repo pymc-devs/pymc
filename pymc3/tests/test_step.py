@@ -1130,10 +1130,10 @@ class TestMLDA:
             Normal("x", 5.0, 1.0)
 
         with Model() as coarse_model_1:
-            Normal("x", 5.5, 1.5)
+            Normal("x", 6.0, 2.0)
 
         with Model() as coarse_model_2:
-            Normal("x", 6.0, 2.0)
+            Normal("x", 20.0, 5.0)
 
         possible_coarse_models = [coarse_model_0,
                                   coarse_model_1,
@@ -1143,9 +1143,9 @@ class TestMLDA:
         with Model():
             Normal("x", 5.0, 1.0)
             for coarse_model in possible_coarse_models:
-                step = MLDA(coarse_models=[coarse_model], subsampling_rates=1,
-                            tune=False)
-                trace = sample(chains=1, draws=500, tune=0, step=step)
+                step = MLDA(coarse_models=[coarse_model], subsampling_rates=3,
+                            tune=True)
+                trace = sample(chains=1, draws=500, tune=100, step=step)
                 acc.append(trace.get_sampler_stats('accepted').mean())
             assert acc[0] > acc[1] > acc[2], "Acceptance rate is not " \
                                              "strictly increasing when" \
@@ -1201,10 +1201,10 @@ class TestMLDA:
         assert trace.get_sampler_stats('tune', chains=0)[ts - 1]
         assert not trace.get_sampler_stats('tune', chains=0)[ts]
         assert not trace.get_sampler_stats('tune', chains=0)[-1]
-        assert trace.get_sampler_stats('base_scaling_x', chains=0)[0] == 100.
-        assert trace.get_sampler_stats('base_scaling_y_logodds__', chains=0)[0] == 100.
-        assert trace.get_sampler_stats('base_scaling_x', chains=0)[-1] < 100.
-        assert trace.get_sampler_stats('base_scaling_y_logodds__', chains=0)[-1] < 100.
+        assert trace.get_sampler_stats('base_scaling', chains=0)[0][0] == 100.
+        assert trace.get_sampler_stats('base_scaling', chains=0)[0][1] == 100.
+        assert trace.get_sampler_stats('base_scaling', chains=0)[-1][0] < 100.
+        assert trace.get_sampler_stats('base_scaling', chains=0)[-1][1] < 100.
 
     def test_tuning_and_scaling_off(self):
         """Test that tuning is deactivated when sample()'s tune=0 and that
@@ -1243,17 +1243,19 @@ class TestMLDA:
 
         assert not trace_0.get_sampler_stats('tune', chains=0)[0]
         assert not trace_0.get_sampler_stats('tune', chains=0)[-1]
-        assert trace_0.get_sampler_stats('base_scaling_x', chains=0)[0] == \
-               trace_0.get_sampler_stats('base_scaling_x', chains=0)[-1] == 100.
+        assert trace_0.get_sampler_stats('base_scaling', chains=0)[0][0] == \
+               trace_0.get_sampler_stats('base_scaling', chains=0)[-1][0] == \
+               trace_0.get_sampler_stats('base_scaling', chains=0)[0][1] == \
+               trace_0.get_sampler_stats('base_scaling', chains=0)[-1][1] == 100.
 
         assert trace_1.get_sampler_stats('tune', chains=0)[0]
         assert trace_1.get_sampler_stats('tune', chains=0)[ts_1 - 1]
         assert not trace_1.get_sampler_stats('tune', chains=0)[ts_1]
         assert not trace_1.get_sampler_stats('tune', chains=0)[-1]
-        assert trace_1.get_sampler_stats('base_scaling_x', chains=0)[0] == 100.
-        assert trace_1.get_sampler_stats('base_scaling_y_logodds__', chains=0)[0] == 100.
-        assert trace_1.get_sampler_stats('base_scaling_x', chains=0)[-1] < 100.
-        assert trace_1.get_sampler_stats('base_scaling_y_logodds__', chains=0)[-1] < 100.
+        assert trace_1.get_sampler_stats('base_scaling', chains=0)[0][0] == 100.
+        assert trace_1.get_sampler_stats('base_scaling', chains=0)[0][1] == 100.
+        assert trace_1.get_sampler_stats('base_scaling', chains=0)[-1][0] < 100.
+        assert trace_1.get_sampler_stats('base_scaling', chains=0)[-1][1] < 100.
 
     def test_trace_length(self):
         """Check if trace length is as expected."""
