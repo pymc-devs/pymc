@@ -50,7 +50,7 @@ jobs:
             '
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=native'
+      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=core2 -O0'
     steps:
     - uses: actions/checkout@v2
     - name: Cache conda and theano
@@ -62,7 +62,7 @@ jobs:
         path: |
           ~/conda_pkgs_dir
           ~/.theano
-        key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}
+        key: ${{ runner.os }}-${{ matrix.floatx }}-${{ matrix.python-versiuon }}-${{ env.CACHE_NUMBER }}
     - name: Install miniconda
       uses: goanpeca/setup-miniconda@v1
       with:
@@ -144,7 +144,7 @@ jobs:
         path: |
           ~/conda_pkgs_dir
           ~/.theano
-        key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}
+        key: ${{ runner.os }}-${{ matrix.floatx }}-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}
     - name: Install miniconda
       uses: goanpeca/setup-miniconda@v1
       with:
