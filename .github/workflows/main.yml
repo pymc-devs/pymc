@@ -1,0 +1,152 @@
+name: pymc3
+
+on: [push, pull_request]
+
+jobs:
+  test-on-linux:
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      max-parallel: 16
+      matrix:
+        operating-system: [ubuntu-latest]
+        python-version: [3.7]
+        floatx: ["float32", "float64"]
+        test-subset:
+          - '
+            --ignore=pymc3/tests/test_examples.py
+            --ignore=pymc3/tests/test_distributions_random.py
+            --ignore=pymc3/tests/test_variational_inference.py
+            --ignore=pymc3/tests/test_shared.py
+            --ignore=pymc3/tests/test_smc.py
+            --ignore=pymc3/tests/test_updates.py
+            --ignore=pymc3/tests/test_posteriors.py
+            --ignore=pymc3/tests/test_sampling.py
+            --ignore=pymc3/tests/test_parallel_sampling.py
+            --ignore=pymc3/tests/test_dist_math.py
+            --ignore=pymc3/tests/test_distribution_defaults.py
+            --ignore=pymc3/tests/test_distributions_timeseries.py
+            --ignore=pymc3/tests/test_random.py
+            --ignore=pymc3/tests/test_gp.py
+            --ignore=pymc3/tests/test_shape_handling
+            --ignore=pymc3/tests/test_quadpotential.py
+            '
+          - '
+            pymc3/tests/test_distributions_random.py
+            pymc3/tests/test_shared.py pymc3/tests/test_smc.py
+            pymc3/tests/test_sampling.py pymc3/tests/test_parallel_sampling.py
+            pymc3/tests/test_dist_math.py pymc3/tests/test_distribution_defaults.py
+            pymc3/tests/test_distributions_timeseries.py pymc3/tests/test_random.py
+            '
+          - '
+            pymc3/tests/test_examples.py
+            pymc3/tests/test_posteriors.py
+            pymc3/tests/test_gp.py
+            pymc3/tests/test_quadpotential.py
+            '
+          - '
+            pymc3/tests/test_variational_inference.py
+            pymc3/tests/test_updates.py
+            pymc3/tests/test_shape_handling.py
+            '
+    env:
+      TEST_SUBSET: ${{ matrix.test-subset }}
+      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=native'
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install miniconda
+      uses: goanpeca/setup-miniconda@v1
+      with:
+        auto-update-conda: true
+        activate-environment: pymc3-dev
+        python-version: ${{ matrix.python-version }}
+        channels: conda-forge,defaults
+        channel-priority: strict
+    - name: Install Dependences
+      shell: bash -l {0}
+      run: |
+        conda install --yes --only-deps pymc3
+        conda install coverage pytest parameterized dill nose nose-parameterized python-graphviz pytest-cov
+    - name: Log conda
+      shell: bash -l {0}
+      run: |
+        conda info
+    - name: Install package 
+      shell: bash -l {0}
+      run: |
+        pip install -e .
+    - name: Test with coverage
+      shell: bash -l {0}
+      run: |
+        pytest -v --cov=pymc3 --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
+  test-on-windows:
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      max-parallel: 16
+      matrix:
+        operating-system: [windows-latest]
+        python-version: [3.7]
+        floatx: ["float32", "float64"]
+        test-subset:
+          - '
+            --ignore=pymc3/tests/test_examples.py
+            --ignore=pymc3/tests/test_distributions_random.py
+            --ignore=pymc3/tests/test_variational_inference.py
+            --ignore=pymc3/tests/test_shared.py
+            --ignore=pymc3/tests/test_smc.py
+            --ignore=pymc3/tests/test_updates.py
+            --ignore=pymc3/tests/test_posteriors.py
+            --ignore=pymc3/tests/test_sampling.py
+            --ignore=pymc3/tests/test_parallel_sampling.py
+            --ignore=pymc3/tests/test_dist_math.py
+            --ignore=pymc3/tests/test_distribution_defaults.py
+            --ignore=pymc3/tests/test_distributions_timeseries.py
+            --ignore=pymc3/tests/test_random.py
+            --ignore=pymc3/tests/test_gp.py
+            --ignore=pymc3/tests/test_shape_handling
+            --ignore=pymc3/tests/test_quadpotential.py
+            '
+          - '
+            pymc3/tests/test_distributions_random.py
+            pymc3/tests/test_shared.py pymc3/tests/test_smc.py
+            pymc3/tests/test_sampling.py pymc3/tests/test_parallel_sampling.py
+            pymc3/tests/test_dist_math.py pymc3/tests/test_distribution_defaults.py
+            pymc3/tests/test_distributions_timeseries.py pymc3/tests/test_random.py
+            '
+          - '
+            pymc3/tests/test_examples.py
+            pymc3/tests/test_posteriors.py
+            pymc3/tests/test_gp.py
+            pymc3/tests/test_quadpotential.py
+            '
+          - '
+            pymc3/tests/test_variational_inference.py
+            pymc3/tests/test_updates.py
+            pymc3/tests/test_shape_handling.py
+            '
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install miniconda
+      uses: goanpeca/setup-miniconda@v1
+      with:
+        auto-update-conda: true
+        activate-environment: pymc3-dev
+        python-version: ${{ matrix.python-version }}
+        channels: conda-forge,defaults
+        channel-priority: strict
+    - name: Log conda and Python versions
+      shell: cmd /C call {0}
+      run: |
+        conda info
+    - name: Install build and test dependencies
+      shell: cmd /C call {0}
+      run: |
+        conda install --only-deps pymc3
+        conda install coverage pytest parameterized dill nose nose-parameterized python-graphviz pytest-cov
+    - name: Install pymc3
+      shell: cmd /C call {0}
+      run: |
+        pip install -e .
+    - name: Run pymc3 tests
+      shell: cmd /C call {0}
+      run: |
+        python -m pytest -v --cov=pymc3 --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
