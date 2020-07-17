@@ -1328,6 +1328,15 @@ class TestMatchesScipy(SeededTest):
             Dirichlet, Simplex(n), {"a": Vector(Rplus, n)}, dirichlet_logpdf
         )
 
+    def test_dirichlet_shape(self):
+        a = tt.as_tensor_variable(np.r_[1, 2])
+        with pytest.warns(DeprecationWarning):
+            dir_rv = Dirichlet.dist(a)
+            assert dir_rv.shape == (2,)
+
+        with pytest.warns(DeprecationWarning), theano.change_flags(compute_test_value="ignore"):
+            dir_rv = Dirichlet.dist(tt.vector())
+
     def test_dirichlet_2D(self):
         self.pymc3_matches_scipy(
             Dirichlet,

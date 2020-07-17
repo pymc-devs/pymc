@@ -23,6 +23,7 @@ import theano.tensor as tt
 
 from scipy import stats, linalg
 
+from theano.gof.op import get_test_value
 from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
 from theano.tensor.slinalg import Cholesky
 import pymc3 as pm
@@ -486,6 +487,21 @@ class Dirichlet(Continuous):
 
     def __init__(self, a, transform=transforms.stick_breaking,
                  *args, **kwargs):
+
+        if kwargs.get('shape') is None:
+            warnings.warn(
+                (
+                    "Shape not explicitly set. "
+                    "Please, set the value using the `shape` keyword argument. "
+                    "Using the test value to infer the shape."
+                ),
+                DeprecationWarning
+            )
+            try:
+                kwargs['shape'] = get_test_value(tt.shape(a))
+            except AttributeError:
+                pass
+
         super().__init__(transform=transform, *args, **kwargs)
 
         self.size_prefix = tuple(self.shape[:-1])
