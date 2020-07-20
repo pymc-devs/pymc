@@ -137,6 +137,7 @@ def sample_smc(
     _log = logging.getLogger("pymc3")
     _log.info("Initializing SMC sampler...")
 
+    model = modelcontext(model)
     if cores is None:
         cores = _cpu_count()
 
@@ -165,8 +166,10 @@ def sample_smc(
 
     if kernel.lower() == "abc":
         warnings.warn(EXPERIMENTAL_WARNING)
-        if len(modelcontext(model).observed_RVs) != 1:
+        if len(model.observed_RVs) != 1:
             warnings.warn("SMC-ABC only works properly with models with one observed variable")
+        if model.potentials:
+            _log.info("Potentials will be added to the prior term")
 
     params = (
         draws,
