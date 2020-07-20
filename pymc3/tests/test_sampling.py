@@ -387,6 +387,21 @@ class TestSamplePPC(SeededTest):
             assert ppc["a"].shape == (nchains, ndraws)
             ppc = pm.fast_sample_posterior_predictive(trace, keep_size=True)
             assert ppc["a"].shape == (nchains, ndraws)
+            # test returning an InferenceData object
+            ppc_idata = pm.fast_sample_posterior_predictive(idata, add_to_inference_data=True)
+            assert isinstance(ppc_idata, az.InferenceData)
+            assert hasattr(ppc_idata, 'posterior_predictive')
+            assert set(ppc_idata.posterior_predictive.data_vars.keys()) == set(["a"])
+            # if you pass an InferenceData, you get one back by default --
+            # this may be controversial
+            ppc_idata = pm.fast_sample_posterior_predictive(idata)
+            assert isinstance(ppc_idata, az.InferenceData)
+            assert hasattr(ppc_idata, 'posterior_predictive')
+            assert set(ppc_idata.posterior_predictive.data_vars.keys()) == set(["a"])
+            # but you don't have to get one if you don't want
+            ppc = pm.fast_sample_posterior_predictive(idata, keep_size=True, add_to_inference_data=False)
+            assert not isinstance(ppc, az.InferenceData)
+            assert ppc["a"].shape == (nchains, ndraws)
 
             # test default case
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
@@ -489,6 +504,8 @@ class TestSamplePPC(SeededTest):
                 ppc = pm.sample_posterior_predictive(bad_trace)
             with pytest.raises(TypeError):
                 ppc = pm.fast_sample_posterior_predictive(bad_trace)
+            with pytest.raises(IncorrectArgumentsError):
+                ppc_idata = pm.fast_sample_posterior_predictive(trace, add_to_inference_data=True)
 
     def test_vector_observed(self):
         with pm.Model() as model:

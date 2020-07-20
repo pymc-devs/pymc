@@ -22,6 +22,8 @@ from typing_extensions import Protocol, Literal
 import numpy as np
 import theano
 import theano.tensor as tt
+import arviz as az
+
 from xarray import Dataset
 from arviz import InferenceData
 
@@ -173,7 +175,8 @@ def fast_sample_posterior_predictive(
     var_names: Optional[List[str]] = None,
     keep_size: bool = False,
     random_seed=None,
-) -> Dict[str, np.ndarray]:
+    add_to_inference_data: Optional[bool]=None,
+) -> Union[Dict[str, np.ndarray], InferenceData]:
     """Generate posterior predictive samples from a model given a trace.
 
     This is a vectorized alternative to the standard ``sample_posterior_predictive`` function.
@@ -200,12 +203,17 @@ def fast_sample_posterior_predictive(
         data: ``(nchains, ndraws, ...)``.
     random_seed: int
         Seed for the random number generator.
+    add_to_inference_data : bool, Optional
+        If true or unsupplied, and the ``trace`` argument is an ``InferenceData``, return a new
+        ``InferenceData`` object with the posterior predictive samples in the right group.
+        Defaults to True, *if* the ``trace`` is an ``InferenceData``, else False.
 
     Returns
     -------
-    samples: dict
+    samples: dict or InferenceData
         Dictionary with the variable names as keys, and values numpy arrays containing
-        posterior predictive samples.
+        posterior predictive samples.  See discussion of ``add_to_inference_data`` argument
+        for explanation of ``InferenceData`` return.
     """
 
     ### Implementation note: primarily this function canonicalizes the arguments:
@@ -217,16 +225,24 @@ def fast_sample_posterior_predictive(
     ### greater than the number of samples in the trace parameter, we sample repeatedly.  This
     ### makes the shape issues just a little easier to deal with.
 
+    if not isinstance(trace, InferenceData):
+        if add_to_inference_data:
+            raise IncorrectArgumentsError("add_to_inference_data is only valid if an InferenceData is supplied.")
+
     if isinstance(trace, InferenceData):
         nchains, ndraws = chains_and_samples(trace)
-        trace = dataset_to_point_dict(trace.posterior)
+        _trace0 = dataset_to_point_dict(trace.posterior)
+        if add_to_inference_data is None:
+            add_to_inference_data = True
     elif isinstance(trace, Dataset):
         nchains, ndraws = chains_and_samples(trace)
-        trace = dataset_to_point_dict(trace)
+        _trace0 = dataset_to_point_dict(trace)
     elif isinstance(trace, MultiTrace):
+        _trace0 = trace
         nchains = trace.nchains
         ndraws = len(trace)
     else:
+        _trace0 = trace
         if keep_size:
             # arguably this should be just a warning.
             raise IncorrectArgumentsError(
@@ -242,10 +258,10 @@ def fast_sample_posterior_predictive(
                 "Should not specify both keep_size and samples arguments"
             )
 
-        if isinstance(trace, list) and all((isinstance(x, dict) for x in trace)):
-            _trace = _TraceDict(point_list=trace)
-        elif isinstance(trace, MultiTrace):
-            _trace = _TraceDict(multi_trace=trace)
+        if isinstance(_trace0, list) and all((isinstance(x, dict) for x in _trace0)):
+            _trace = _TraceDict(point_list=_trace0)
+        elif isinstance(_trace0, MultiTrace):
+            _trace = _TraceDict(multi_trace=_trace0)
         else:
             raise TypeError(
                 "Unable to generate posterior predictive samples from argument of type %s"
@@ -322,6 +338,9 @@ def fast_sample_posterior_predictive(
                 for k, ary in ppc_trace.items()
             }
         # this gets us a Dict[str, np.ndarray] instead of my wrapped equiv.
+        if add_to_inference_data:
+            assert isinstance(trace, InferenceData)
+            return az.concat(trace, az.from_dict(posterior_predictive=ppc_trace.data))
         return ppc_trace.data
 
 
