@@ -23,7 +23,10 @@ from pymc3.theanof import floatX
 
 from .helpers import SeededTest
 
-matplotlib.use('Agg', warn=False)
+try:
+    matplotlib.use('Agg', warn=False)
+except TypeError:
+    matplotlib.use('Agg')
 
 
 def get_city_data():
