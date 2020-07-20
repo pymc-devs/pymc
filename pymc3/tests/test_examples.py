@@ -20,12 +20,13 @@ import theano.tensor as tt
 import pytest
 import theano
 from pymc3.theanof import floatX
+from packaging import version
 
 from .helpers import SeededTest
 
-try:
+if version.parse(matplotlib.__version__) < version.parse('3.3'):
     matplotlib.use('Agg', warn=False)
-except TypeError:
+else:
     matplotlib.use('Agg')
 
 
