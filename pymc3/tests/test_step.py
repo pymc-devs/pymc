@@ -38,6 +38,7 @@ from pymc3.step_methods import (
     Slice,
     CompoundStep,
     NormalProposal,
+    UniformProposal,
     MultivariateNormalProposal,
     RecursiveDAProposal,
     HamiltonianMC,
@@ -1032,26 +1033,55 @@ class TestMLDA:
         _, model, _ = mv_simple()
         _, model_coarse, _ = mv_simple_coarse()
         with model:
-            sampler = MLDA(coarse_models=[model_coarse])
-            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
+            sampler = MLDA(coarse_models=[model_coarse],
+                           base_sampler='Metropolis')
+            assert isinstance(sampler.proposal_dist,
+                              RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
             assert isinstance(sampler.next_step_method.proposal_dist, NormalProposal)
+
+            sampler = MLDA(coarse_models=[model_coarse])
+            assert isinstance(sampler.proposal_dist,
+                              RecursiveDAProposal)
+            assert sampler.base_proposal_dist is None
+            assert isinstance(sampler.next_step_method.proposal_dist,
+                              UniformProposal)
 
             s = np.ones(model.ndim)
-            sampler = MLDA(coarse_models=[model_coarse], base_S=s)
-            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
+            sampler = MLDA(coarse_models=[model_coarse],
+                           base_sampler='Metropolis', base_S=s)
+            assert isinstance(sampler.proposal_dist,
+                              RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
             assert isinstance(sampler.next_step_method.proposal_dist, NormalProposal)
 
+            sampler = MLDA(coarse_models=[model_coarse],
+                           base_S=s)
+            assert isinstance(sampler.proposal_dist,
+                              RecursiveDAProposal)
+            assert sampler.base_proposal_dist is None
+            assert isinstance(sampler.next_step_method.proposal_dist,
+                              UniformProposal)
+
             s = np.diag(s)
-            sampler = MLDA(coarse_models=[model_coarse], base_S=s)
-            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
+            sampler = MLDA(coarse_models=[model_coarse],
+                           base_sampler='Metropolis', base_S=s)
+            assert isinstance(sampler.proposal_dist,
+                              RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
             assert isinstance(sampler.next_step_method.proposal_dist, MultivariateNormalProposal)
 
+            sampler = MLDA(coarse_models=[model_coarse],
+                           base_S=s)
+            assert isinstance(sampler.proposal_dist,
+                              RecursiveDAProposal)
+            assert sampler.base_proposal_dist is None
+            assert isinstance(sampler.next_step_method.proposal_dist,
+                              UniformProposal)
+
             s[0, 0] = -s[0, 0]
             with pytest.raises(np.linalg.LinAlgError):
-                MLDA(coarse_models=[model_coarse], base_S=s)
+                MLDA(coarse_models=[model_coarse], base_sampler='Metropolis', base_S=s)
 
     def test_step_methods_in_each_level(self):
         """Test that MLDA creates the correct hierarchy of step methods when no
@@ -1061,9 +1091,16 @@ class TestMLDA:
         _, model_very_coarse, _ = mv_simple_very_coarse()
         with model:
             s = np.ones(model.ndim) + 2.0
-            sampler = MLDA(coarse_models=[model_very_coarse, model_coarse], base_S=s)
+            sampler = MLDA(coarse_models=[model_very_coarse, model_coarse],
+                           base_S=s, base_sampler='Metropolis')
             assert isinstance(sampler.next_step_method, MLDA)
             assert isinstance(sampler.next_step_method.next_step_method, Metropolis)
+            assert np.all(sampler.next_step_method.next_step_method.proposal_dist.s == s)
+
+            sampler = MLDA(coarse_models=[model_very_coarse, model_coarse],
+                           base_S=s)
+            assert isinstance(sampler.next_step_method, MLDA)
+            assert isinstance(sampler.next_step_method.next_step_method, DEMetropolisZ)
             assert np.all(sampler.next_step_method.next_step_method.proposal_dist.s == s)
 
     def test_exceptions_coarse_models(self):
@@ -1136,7 +1173,7 @@ class TestMLDA:
         with Model():
             Normal("x", 5.0, 1.0)
             for coarse_model in possible_coarse_models:
-                step = MLDA(coarse_models=[coarse_model], subsampling_rates=3, tune=True)
+                step = MLDA(coarse_models=[coarse_model], subsampling_rates=3)
                 trace = sample(chains=1, draws=500, tune=100, step=step)
                 acc.append(trace.get_sampler_stats("accepted").mean())
             assert acc[0] > acc[1] > acc[2], (
@@ -1149,31 +1186,36 @@ class TestMLDA:
 
     def test_mlda_non_blocked(self):
         """Test that MLDA correctly creates non-blocked
-        compound steps in level 0."""
+        compound steps in level 0 when using a Metropolis
+        base sampler."""
         _, model = simple_2model_continuous()
         _, model_coarse = simple_2model_continuous()
         with model:
             for stepper in self.steppers:
-                assert isinstance(
-                    stepper(coarse_models=[model_coarse], base_blocked=False).next_step_method,
-                    CompoundStep,
-                )
+                assert isinstance(stepper(coarse_models=[model_coarse],
+                                          base_sampler='Metropolis',
+                                          base_blocked=False).next_step_method,
+                                  CompoundStep)
 
     def test_mlda_blocked(self):
         """Test the type of base sampler instantiated
-        when switching base_blocked flag"""
+        when switching base_blocked flag while
+        the base sampler is Metropolis and when
+        the base sampler is DEMetropolisZ."""
         _, model = simple_2model_continuous()
         _, model_coarse = simple_2model_continuous()
         with model:
             for stepper in self.steppers:
-                assert not isinstance(
-                    stepper(coarse_models=[model_coarse], base_blocked=True).next_step_method,
-                    CompoundStep,
-                )
-                assert isinstance(
-                    stepper(coarse_models=[model_coarse], base_blocked=True).next_step_method,
-                    Metropolis,
-                )
+                assert not isinstance(stepper(coarse_models=[model_coarse],
+                                              base_sampler='Metropolis',
+                                              base_blocked=True).next_step_method,
+                                      CompoundStep)
+                assert isinstance(stepper(coarse_models=[model_coarse],
+                                          base_sampler='Metropolis',
+                                          base_blocked=True).next_step_method,
+                                  Metropolis)
+                assert isinstance(stepper(coarse_models=[model_coarse]).next_step_method,
+                                  DEMetropolisZ)
 
     def test_tuning_and_scaling_on(self):
         """Test that tune and base_scaling change as expected when
@@ -1183,27 +1225,63 @@ class TestMLDA:
         _, model = simple_2model_continuous()
         _, model_coarse = simple_2model_continuous()
         with model:
-            trace = sample(
+            trace_0 = sample(
                 tune=ts,
                 draws=20,
-                step=MLDA(
-                    coarse_models=[model_coarse],
-                    base_tune_interval=50,
-                    base_scaling=100.0,
-                ),
+                step=MLDA(coarse_models=[model_coarse],
+                          base_sampler='Metropolis',
+                          base_tune_interval=50,
+                          base_scaling=100.),
                 chains=1,
                 discard_tuned_samples=False,
                 random_seed=1234,
             )
 
-        assert trace.get_sampler_stats("tune", chains=0)[0]
-        assert trace.get_sampler_stats("tune", chains=0)[ts - 1]
-        assert not trace.get_sampler_stats("tune", chains=0)[ts]
-        assert not trace.get_sampler_stats("tune", chains=0)[-1]
-        assert trace.get_sampler_stats("base_scaling", chains=0)[0][0] == 100.0
-        assert trace.get_sampler_stats("base_scaling", chains=0)[0][1] == 100.0
-        assert trace.get_sampler_stats("base_scaling", chains=0)[-1][0] < 100.0
-        assert trace.get_sampler_stats("base_scaling", chains=0)[-1][1] < 100.0
+            trace_1 = sample(
+                tune=ts,
+                draws=20,
+                step=MLDA(coarse_models=[model_coarse],
+                          base_tune_target='scaling',
+                          base_tune_interval=50,
+                          base_scaling=100.),
+                chains=1,
+                discard_tuned_samples=False,
+                random_seed=1234
+            )
+
+            trace_2 = sample(
+                tune=ts,
+                draws=20,
+                step=MLDA(coarse_models=[model_coarse],
+                          base_tune_interval=50,
+                          base_lamb=100.),
+                chains=1,
+                discard_tuned_samples=False,
+                random_seed=1234
+            )
+
+        assert trace_0.get_sampler_stats('tune', chains=0)[0]
+        assert trace_0.get_sampler_stats('tune', chains=0)[ts - 1]
+        assert not trace_0.get_sampler_stats('tune', chains=0)[ts]
+        assert not trace_0.get_sampler_stats('tune', chains=0)[-1]
+        assert trace_0.get_sampler_stats('base_scaling', chains=0)[0][0] == 100.
+        assert trace_0.get_sampler_stats('base_scaling', chains=0)[0][1] == 100.
+        assert trace_0.get_sampler_stats('base_scaling', chains=0)[-1][0] < 100.
+        assert trace_0.get_sampler_stats('base_scaling', chains=0)[-1][1] < 100.
+
+        assert trace_1.get_sampler_stats('tune', chains=0)[0]
+        assert trace_1.get_sampler_stats('tune', chains=0)[ts - 1]
+        assert not trace_1.get_sampler_stats('tune', chains=0)[ts]
+        assert not trace_1.get_sampler_stats('tune', chains=0)[-1]
+        assert trace_1.get_sampler_stats('base_scaling', chains=0)[0] == 100.
+        assert trace_1.get_sampler_stats('base_scaling', chains=0)[-1] < 100.
+
+        assert trace_2.get_sampler_stats('tune', chains=0)[0]
+        assert trace_2.get_sampler_stats('tune', chains=0)[ts - 1]
+        assert not trace_2.get_sampler_stats('tune', chains=0)[ts]
+        assert not trace_2.get_sampler_stats('tune', chains=0)[-1]
+        assert trace_2.get_sampler_stats('base_lambda', chains=0)[0] == 100.
+        assert trace_2.get_sampler_stats('base_lambda', chains=0)[-1] < 100.
 
     def test_tuning_and_scaling_off(self):
         """Test that tuning is deactivated when sample()'s tune=0 and that
@@ -1217,12 +1295,11 @@ class TestMLDA:
             trace_0 = sample(
                 tune=ts_0,
                 draws=100,
-                step=MLDA(
-                    coarse_models=[model_coarse],
-                    base_tune_interval=50,
-                    base_scaling=100.0,
-                    tune=False,
-                ),
+                step=MLDA(coarse_models=[model_coarse],
+                          base_sampler='Metropolis',
+                          base_tune_interval=50,
+                          base_scaling=100.,
+                          tune=False),
                 chains=1,
                 discard_tuned_samples=False,
                 random_seed=12345,
@@ -1233,12 +1310,11 @@ class TestMLDA:
             trace_1 = sample(
                 tune=ts_1,
                 draws=20,
-                step=MLDA(
-                    coarse_models=[model_coarse],
-                    base_tune_interval=50,
-                    base_scaling=100.0,
-                    tune=False,
-                ),
+                step=MLDA(coarse_models=[model_coarse],
+                          base_sampler='Metropolis',
+                          base_tune_interval=50,
+                          base_scaling=100.,
+                          tune=False),
                 chains=1,
                 discard_tuned_samples=False,
                 random_seed=12345,
@@ -1262,6 +1338,27 @@ class TestMLDA:
         assert trace_1.get_sampler_stats("base_scaling", chains=0)[0][1] == 100.0
         assert trace_1.get_sampler_stats("base_scaling", chains=0)[-1][0] < 100.0
         assert trace_1.get_sampler_stats("base_scaling", chains=0)[-1][1] < 100.0
+
+        ts_2 = 0
+        with model:
+            trace_2 = sample(
+                tune=ts_2,
+                draws=100,
+                step=MLDA(coarse_models=[model_coarse],
+                          base_tune_interval=50,
+                          base_lamb=100.,
+                          base_tune_target=None),
+                chains=1,
+                discard_tuned_samples=False,
+                random_seed=12345
+            )
+
+        assert not trace_2.get_sampler_stats('tune', chains=0)[0]
+        assert not trace_2.get_sampler_stats('tune', chains=0)[-1]
+        assert trace_2.get_sampler_stats('base_lambda', chains=0)[0] == \
+               trace_2.get_sampler_stats('base_lambda', chains=0)[-1] == \
+               trace_2.get_sampler_stats('base_lambda', chains=0)[0] == \
+               trace_2.get_sampler_stats('base_lambda', chains=0)[-1] == 100.
 
     def test_trace_length(self):
         """Check if trace length is as expected."""
