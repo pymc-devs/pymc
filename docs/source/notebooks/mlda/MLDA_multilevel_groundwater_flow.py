@@ -113,16 +113,16 @@ resolutions = [(30, 30), (120, 120)]
 # Set random field parameters
 field_mean = 0
 field_stdev = 1
-lamb_cov = 0.1
+lamb_cov = 0.05
 
 # Set the number of unknown parameters (i.e. dimension of theta in posterior)
 nparam = 3
 
 # Number of draws from the distribution
-ndraws = 1000
+ndraws = 6000
 
 # Number of burn-in samples
-nburn = 500
+nburn = 6000
 
 # MLDA and Metropolis tuning parameters
 tune = True
@@ -130,7 +130,7 @@ tune_interval = 100
 discard_tuning = True
 
 # Number of independent chains
-nchains = 2
+nchains = 4
 
 # Subsampling rate for MLDA
 nsub = 5
@@ -273,9 +273,9 @@ for j in range(len(my_models) - 1):
         # convert m and c to a tensor vector
         theta = tt.as_tensor_variable(parameters)
 
-        # use a DensityDist (use a lamdba function to "call" the Op)
+        # use a Potential for the likelihood
         temp = logl[j]
-        pm.DensityDist('likelihood', lambda v, ll=temp: ll(v), observed={'v': theta})
+        pm.Potential('likelihood', temp(theta))
 
     coarse_models.append(model)
 
@@ -300,8 +300,8 @@ with pm.Model():
     # Convert m and c to a tensor vector
     theta = tt.as_tensor_variable(parameters)
 
-    # use a DensityDist (use a lamdba function to "call" the Op)
-    pm.DensityDist('likelihood', lambda v: logl[-1](v), observed={'v': theta})
+    # use a Potential for the likelihood
+    pm.Potential('likelihood', logl[-1](theta))
 
     # Initialise an MLDA step method object, passing the subsampling rate and
     # coarse models list

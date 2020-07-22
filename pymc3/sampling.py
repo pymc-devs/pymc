@@ -971,7 +971,7 @@ def _iter_sample(
 
     try:
         step.tune = bool(tune)
-        if hasattr(step, 'reset_tuning'):
+        if hasattr(step, "reset_tuning"):
             step.reset_tuning()
         for i in range(draws):
             stats = None
