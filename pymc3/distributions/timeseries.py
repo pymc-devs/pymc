@@ -294,7 +294,6 @@ class GaussianRandomWalk(distribution.Continuous):
         sigma, mu = distribution.draw_values(
             [self.sigma, self.mu], point=point, size=size
         )
-        
         return distribution.generate_samples(
             self._random,
             sigma=sigma,
@@ -305,7 +304,11 @@ class GaussianRandomWalk(distribution.Continuous):
         )
 
     def _random(self, sigma, mu, size, sample_shape):
-        """Implement a Gaussian random walk as a cumulative sum of normals."""
+        """Implement a Gaussian random walk as a cumulative sum of normals.
+        axis = len(size) - 1 denotes the axis along which cumulative sum would be calculated.
+        This might need to be corrected in future when issue #4010 is fixed.
+        Lines 318-322 ties the starting point of each instance of random walk to 0"
+        """
         if size[len(sample_shape)] == sample_shape:
             axis = len(sample_shape)
         else:
