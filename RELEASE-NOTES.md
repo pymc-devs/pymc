@@ -9,7 +9,7 @@
 - Pass the `tune` argument from `sample` when using `advi+adapt_diag_grad` (see issue [#3965](https://github.com/pymc-devs/pymc3/issues/3965), fixed by [#3979](https://github.com/pymc-devs/pymc3/pull/3979)).
 - Add simple test case for new coords and dims feature in `pm.Model` (see [#3977](https://github.com/pymc-devs/pymc3/pull/3977)). 
 - Require ArviZ >= 0.9.0 (see [#3977](https://github.com/pymc-devs/pymc3/pull/3977)).
-- Temporarily fixed issue [#3962](https://github.com/pymc-devs/pymc3/issues/3962) by making change in the `_random()` method of `GaussianRandomWalk` class, refer to PR [#3985].Furthur testing revealed a new issue which is being tracked [#4010](https://github.com/pymc-devs/pymc3/issues/4010) 
+- Temporarily fixed issue [#3962](https://github.com/pymc-devs/pymc3/issues/3962) by making change in the `_random()` method of `GaussianRandomWalk` class, refer to PR [#3985].Further testing revealed a new issue which is being tracked [#4010](https://github.com/pymc-devs/pymc3/issues/4010) 
 
 _NB: The `docs/*` folder is still removed from the tarball due to an upload size limit on PyPi._
 
@@ -54,8 +54,6 @@ Though we had to temporarily remove the `docs/*` folder from the tarball due to 
 - The AR1 logp now uses the precision of the whole AR1 process instead of just the innovation precision (see issue [#3892](https://github.com/pymc-devs/pymc3/issues/3892), fixed by [#3899](https://github.com/pymc-devs/pymc3/pull/3899)).
 - Forced the `Beta` distribution's `random` method to generate samples that are in the open interval $(0, 1)$, i.e. no value can be equal to zero or equal to one (issue [#3898](https://github.com/pymc-devs/pymc3/issues/3898) fixed by [#3924](https://github.com/pymc-devs/pymc3/pull/3924)).
 - Fixed an issue that happened on Windows, that was introduced by the clipped beta distribution rvs function ([#3924](https://github.com/pymc-devs/pymc3/pull/3924)). Windows does not support the `float128` dtype, but we had assumed that it had to be available. The solution was to only support `float128` on Linux and Darwin systems (see issue [#3929](https://github.com/pymc-devs/pymc3/issues/3849) fixed by [#3930](https://github.com/pymc-devs/pymc3/pull/3930)).
-
-
 
 ### Deprecations
 - Remove `sample_ppc` and `sample_ppc_w` that were deprecated in 3.6.
