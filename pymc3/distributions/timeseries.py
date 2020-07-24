@@ -17,6 +17,7 @@ import warnings
 from scipy import stats
 import theano.tensor as tt
 from theano import scan
+import numpy as np
 
 from pymc3.util import get_variable_name
 from .continuous import get_tau_sigma, Normal, Flat
@@ -303,14 +304,23 @@ class GaussianRandomWalk(distribution.Continuous):
         )
 
     def _random(self, sigma, mu, size, sample_shape):
-        """Implement a Gaussian random walk as a cumulative sum of normals."""
+        """Implement a Gaussian random walk as a cumulative sum of normals.
+        axis = len(size) - 1 denotes the axis along which cumulative sum would be calculated.
+        This might need to be corrected in future when issue #4010 is fixed.
+        Lines 318-322 ties the starting point of each instance of random walk to 0"
+        """
         if size[len(sample_shape)] == sample_shape:
             axis = len(sample_shape)
         else:
-            axis = 0
+            axis = len(size) - 1
         rv = stats.norm(mu, sigma)
         data = rv.rvs(size).cumsum(axis=axis)
-        data = data - data[0]  # TODO: this should be a draw from `init`, if available
+        data = np.array(data)
+        if len(data.shape)>1:
+            for i in range(data.shape[0]):
+                data[i] = data[i] - data[i][0]
+        else:
+            data = data - data[0]
         return data
 
     def _repr_latex_(self, name=None, dist=None):
