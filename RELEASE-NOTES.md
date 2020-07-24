@@ -9,7 +9,7 @@
 - Pass the `tune` argument from `sample` when using `advi+adapt_diag_grad` (see issue [#3965](https://github.com/pymc-devs/pymc3/issues/3965), fixed by [#3979](https://github.com/pymc-devs/pymc3/pull/3979)).
 - Add simple test case for new coords and dims feature in `pm.Model` (see [#3977](https://github.com/pymc-devs/pymc3/pull/3977)). 
 - Require ArviZ >= 0.9.0 (see [#3977](https://github.com/pymc-devs/pymc3/pull/3977)).
-- Temporarily fixed issue [#3962](https://github.com/pymc-devs/pymc3/issues/3962) by making change in the `_random()` method of `GaussianRandomWalk` class, refer to PR [#3985].Further testing revealed a new issue which is being tracked [#4010](https://github.com/pymc-devs/pymc3/issues/4010) 
+- Fixed issue [#3962](https://github.com/pymc-devs/pymc3/issues/3962) by making change in the `_random()` method of `GaussianRandomWalk` class, refer to PR [#3985].Further testing revealed a new issue which is being tracked [#4010](https://github.com/pymc-devs/pymc3/issues/4010) 
 
 _NB: The `docs/*` folder is still removed from the tarball due to an upload size limit on PyPi._
 
