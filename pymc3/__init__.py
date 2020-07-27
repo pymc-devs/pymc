@@ -31,12 +31,8 @@ if not logging.root.handlers:
 def __set_compiler_flags():
     # Workarounds for Theano compiler problems on various platforms
     import theano
-
-    system = platform.system()
-    if system == "Windows":
-        theano.config.mode = "FAST_COMPILE"
-    elif system == "Darwin":
-        theano.config.gcc.cxxflags = "-Wno-c++11-narrowing"
+    current = theano.config.gcc.cxxflags
+    theano.config.gcc.cxxflags = f"{current} -Wno-c++11-narrowing"
 
 
 __set_compiler_flags()
