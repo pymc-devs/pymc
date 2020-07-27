@@ -74,6 +74,7 @@ sys.setrecursionlimit(10000)
 
 __all__ = [
     "sample",
+    "subsample",
     "iter_sample",
     "sample_posterior_predictive",
     "sample_posterior_predictive_w",
@@ -629,6 +630,54 @@ def sample(
         return idata
     else:
         return trace
+
+
+def subsample(
+    draws=1,
+    step=None,
+    start=None,
+    trace=None,
+    tune=0,
+    model=None,
+    random_seed=None,
+    callback=None,
+    **kwargs
+):
+    """A stripped down version of sample(), which is called only
+    by the RecursiveDAProposal (which is the proposal used in the MLDA stepper).
+    It uses some all necessary arguments and checks for the context in which it
+    is used and thus skips some of the code in sampler(). It directly calls
+    _iter_sample(), rather than sample_many(). The result is a reduced overhead
+    when running multiple levels in MLDA."""
+    
+    model = modelcontext(model)
+    chain = 0
+    random_seed = np.random.randint(2 ** 30)
+
+    if start is not None:
+        _check_start_shape(model, start)
+    else:
+        start = {}
+
+    draws += tune
+
+    if model.ndim == 0:
+        raise ValueError("The model does not contain any free variables.")
+
+    step = assign_step_methods(model, step, step_kwargs=kwargs)
+
+    if isinstance(step, list):
+        step = CompoundStep(step)
+
+    sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed, callback)
+
+    try:
+        for it, (trace, _) in enumerate(sampling):
+            pass
+    except KeyboardInterrupt:
+        pass
+
+    return trace
 
 
 def _check_start_shape(model, start):

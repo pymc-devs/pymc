@@ -370,6 +370,7 @@ class RecursiveDAProposal(Proposal):
         self.next_model = next_model
         self.tune = tune
         self.subsampling_rate = subsampling_rate
+        self.trace = None
 
     def __call__(self, q0_dict: dict) -> dict:
         """Returns proposed sample given the current sample
@@ -377,7 +378,7 @@ class RecursiveDAProposal(Proposal):
         """
 
         # Logging is reduced to avoid extensive console output
-        # during multiple recursive calls of sample()
+        # during multiple recursive calls of subsample()
         _log = logging.getLogger("pymc3")
         _log.setLevel(logging.ERROR)
 
@@ -388,31 +389,17 @@ class RecursiveDAProposal(Proposal):
             # iterations of the highest-level MLDA sampler run out.
             # The change propagates to all levels.
             if self.tune:
-                # Sample in tuning mode
-                output = pm.sample(
-                    draws=0,
-                    step=self.next_step_method,
-                    start=q0_dict,
-                    tune=self.subsampling_rate,
-                    chains=1,
-                    progressbar=False,
-                    compute_convergence_checks=False,
-                    discard_tuned_samples=False,
-                ).point(-1)
+                # Subsample in tuning mode
+                self.trace = pm.subsample(draws=0, step=self.next_step_method,
+                                          start=q0_dict, trace=self.trace,
+                                          tune=self.subsampling_rate)
             else:
-                # Sample in normal mode without tuning
-                output = pm.sample(
-                    draws=self.subsampling_rate,
-                    step=self.next_step_method,
-                    start=q0_dict,
-                    tune=0,
-                    chains=1,
-                    progressbar=False,
-                    compute_convergence_checks=False,
-                    discard_tuned_samples=False,
-                ).point(-1)
+                # Subsample in normal mode without tuning
+                self.trace = pm.subsample(draws=self.subsampling_rate,
+                                          step=self.next_step_method,
+                                          start=q0_dict, trace=self.trace)
 
         # set logging back to normal
         _log.setLevel(logging.NOTSET)
 
-        return output
+        return self.trace.point(-1)
