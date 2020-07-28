@@ -20,27 +20,19 @@ command -v conda >/dev/null 2>&1 || {
 }
 
 ENVNAME="${ENVNAME:-testenv}"         # if no ENVNAME is specified, use testenv
-PYTHON_VERSION=${PYTHON_VERSION:-3.6} # if no python specified, use 3.6
 
 if [ -z ${GLOBAL} ]; then
   if conda env list | grep -q ${ENVNAME}; then
     echo "Environment ${ENVNAME} already exists, keeping up to date"
   else
-    conda create -n ${ENVNAME} --yes pip python=${PYTHON_VERSION}
+    conda config --add channels conda-forge
+    conda config --set channel_priority strict
+    conda env create -f environment-dev.yml
   fi
   source activate ${ENVNAME}
 fi
-pip install --upgrade pip
 
-conda install --yes mkl-service
-conda install --yes -c conda-forge python-graphviz
-
-# Travis env is unable to import cached mpl sometimes https://github.com/pymc-devs/pymc3/issues/3423
-pip install --no-cache-dir --force-reinstall -e .
-pip install --no-cache-dir --force-reinstall -r requirements-dev.txt
-
-# Install untested, non-required code (linter fails without them)
-pip install ipython ipywidgets
+conda update --yes --all
 
 #  Install editable using the setup.py
 if [ -z ${NO_SETUP} ]; then
