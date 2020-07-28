@@ -14,13 +14,14 @@
 
 import re
 import functools
-from typing import List, Dict
+from typing import List, Dict, Tuple, Union
 
 import xarray
+import arviz
 from numpy import asscalar, ndarray
 
 
-LATEX_ESCAPE_RE = re.compile(r'(%|_|\$|#|&)', re.MULTILINE)
+LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
 
 
 def escape_latex(strng):
@@ -43,8 +44,8 @@ def escape_latex(strng):
         A string with LaTeX escaped
     """
     if strng is None:
-        return 'None'
-    return LATEX_ESCAPE_RE.sub(r'\\\1', strng)
+        return "None"
+    return LATEX_ESCAPE_RE.sub(r"\\\1", strng)
 
 
 def get_transformed_name(name, transform):
@@ -80,7 +81,7 @@ def is_transformed_name(name):
     bool
         Boolean, whether the string could have been produced by `get_transformed_name`
     """
-    return name.endswith('__') and name.count('_') >= 3
+    return name.endswith("__") and name.count("_") >= 3
 
 
 def get_untransformed_name(name):
@@ -98,8 +99,8 @@ def get_untransformed_name(name):
         String with untransformed version of the name.
     """
     if not is_transformed_name(name):
-        raise ValueError('{} does not appear to be a transformed name'.format(name))
-    return '_'.join(name.split('_')[:-3])
+        raise ValueError("{} does not appear to be a transformed name".format(name))
+    return "_".join(name.split("_")[:-3])
 
 
 def get_default_varnames(var_iterator, include_transformed):
@@ -129,19 +130,20 @@ def get_variable_name(variable):
     """
     name = variable.name
     if name is None:
-        if hasattr(variable, 'get_parents'):
+        if hasattr(variable, "get_parents"):
             try:
-                names = [get_variable_name(item)
-                         for item in variable.get_parents()[0].inputs]
+                names = [
+                    get_variable_name(item) for item in variable.get_parents()[0].inputs
+                ]
                 # do not escape_latex these, since it is not idempotent
-                return 'f(%s)' % ',~'.join([n for n in names if isinstance(n, str)])
+                return "f(%s)" % ",~".join([n for n in names if isinstance(n, str)])
             except IndexError:
                 pass
         value = variable.eval()
         if not value.shape:
             return asscalar(value)
-        return 'array'
-    return r'\text{%s}' % name
+        return "array"
+    return r"\text{%s}" % name
 
 
 def update_start_vals(a, b, model):
@@ -154,16 +156,16 @@ def update_start_vals(a, b, model):
             for name in a:
                 if is_transformed_name(tname) and get_untransformed_name(tname) == name:
                     transform_func = [
-                        d.transformation for d in model.deterministics if d.name == name]
+                        d.transformation for d in model.deterministics if d.name == name
+                    ]
                     if transform_func:
-                        b[tname] = transform_func[0].forward_val(
-                            a[name], point=b)
+                        b[tname] = transform_func[0].forward_val(a[name], point=b)
 
     a.update({k: v for k, v in b.items() if k not in a})
 
 
 def get_transformed(z):
-    if hasattr(z, 'transformed'):
+    if hasattr(z, "transformed"):
         z = z.transformed
     return z
 
@@ -182,22 +184,42 @@ def biwrap(wrapper):
         else:
             newwrapper = functools.partial(wrapper, *args, **kwargs)
             return newwrapper
+
     return enhanced
 
+
+# FIXME: this function is poorly named, because it returns a LIST of
+# points, not a dictionary of points.
 def dataset_to_point_dict(ds: xarray.Dataset) -> List[Dict[str, ndarray]]:
     # grab posterior samples for each variable
-    _samples = {
-        vn : ds[vn].values
-        for vn in ds.keys()
-    }
+    _samples: Dict[str, ndarray] = {vn: ds[vn].values for vn in ds.keys()}
     # make dicts
-    points = []
+    points: List[Dict[str, ndarray]] = []
+    vn: str
+    s: ndarray
     for c in ds.chain:
         for d in ds.draw:
-            points.append({
-                vn : s[c, d]
-                for vn, s in _samples.items()
-            })
+            points.append({vn: s[c, d] for vn, s in _samples.items()})
     # use the list of points
-    ds = points
-    return ds
+    return points
+
+
+def chains_and_samples(
+    data: Union[xarray.Dataset, arviz.InferenceData]
+) -> Tuple[int, int]:
+    """Extract and return number of chains and samples in xarray or arviz traces."""
+    dataset: xarray.Dataset
+    if isinstance(data, xarray.Dataset):
+        dataset = data
+    elif isinstance(data, arviz.InferenceData):
+        dataset = data.posterior
+    else:
+        raise ValueError(
+            "Argument must be xarray Dataset or arviz InferenceData. Got %s",
+            data.__class__,
+        )
+
+    coords = dataset.coords
+    nchains = coords["chain"].sizes["chain"]
+    nsamples = coords["draw"].sizes["draw"]
+    return nchains, nsamples

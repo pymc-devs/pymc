@@ -79,7 +79,7 @@ class TestMixture(SeededTest):
 
     def test_mixture_list_of_normals(self):
         with Model() as model:
-            w = Dirichlet('w', floatX(np.ones_like(self.norm_w)))
+            w = Dirichlet('w', floatX(np.ones_like(self.norm_w)), shape=self.norm_w.size)
             mu = Normal('mu', 0., 10., shape=self.norm_w.size)
             tau = Gamma('tau', 1., 1., shape=self.norm_w.size)
             Mixture('x_obs', w,
@@ -98,7 +98,7 @@ class TestMixture(SeededTest):
 
     def test_normal_mixture(self):
         with Model() as model:
-            w = Dirichlet('w', floatX(np.ones_like(self.norm_w)))
+            w = Dirichlet('w', floatX(np.ones_like(self.norm_w)), shape=self.norm_w.size)
             mu = Normal('mu', 0., 10., shape=self.norm_w.size)
             tau = Gamma('tau', 1., 1., shape=self.norm_w.size)
             NormalMixture('x_obs', w, mu, tau=tau, observed=self.norm_x)
@@ -135,7 +135,7 @@ class TestMixture(SeededTest):
         with Model() as model0:
             mus = Normal('mus', shape=comp_shape)
             taus = Gamma('taus', alpha=1, beta=1, shape=comp_shape)
-            ws = Dirichlet('ws', np.ones(ncomp))
+            ws = Dirichlet('ws', np.ones(ncomp), shape=(ncomp,))
             mixture0 = NormalMixture('m', w=ws, mu=mus, tau=taus, shape=nd,
                                      comp_shape=comp_shape)
             obs0 = NormalMixture('obs', w=ws, mu=mus, tau=taus, shape=nd,
@@ -145,7 +145,7 @@ class TestMixture(SeededTest):
         with Model() as model1:
             mus = Normal('mus', shape=comp_shape)
             taus = Gamma('taus', alpha=1, beta=1, shape=comp_shape)
-            ws = Dirichlet('ws', np.ones(ncomp))
+            ws = Dirichlet('ws', np.ones(ncomp), shape=(ncomp,))
             comp_dist = [Normal.dist(mu=mus[..., i], tau=taus[..., i],
                                      shape=nd)
                          for i in range(ncomp)]
@@ -163,7 +163,7 @@ class TestMixture(SeededTest):
             # comp_dists.
             mus = Normal('mus', shape=comp_shape)
             taus = Gamma('taus', alpha=1, beta=1, shape=comp_shape)
-            ws = Dirichlet('ws', np.ones(ncomp))
+            ws = Dirichlet('ws', np.ones(ncomp), shape=(ncomp,))
             if len(nd) > 1:
                 if nd[-1] != ncomp:
                     with pytest.raises(ValueError):
@@ -208,7 +208,7 @@ class TestMixture(SeededTest):
 
     def test_poisson_mixture(self):
         with Model() as model:
-            w = Dirichlet('w', floatX(np.ones_like(self.pois_w)))
+            w = Dirichlet('w', floatX(np.ones_like(self.pois_w)), shape=self.pois_w.shape)
             mu = Gamma('mu', 1., 1., shape=self.pois_w.size)
             Mixture('x_obs', w, Poisson.dist(mu), observed=self.pois_x)
             step = Metropolis()
@@ -224,7 +224,7 @@ class TestMixture(SeededTest):
 
     def test_mixture_list_of_poissons(self):
         with Model() as model:
-            w = Dirichlet('w', floatX(np.ones_like(self.pois_w)))
+            w = Dirichlet('w', floatX(np.ones_like(self.pois_w)), shape=self.pois_w.shape)
             mu = Gamma('mu', 1., 1., shape=self.pois_w.size)
             Mixture('x_obs', w,
                     [Poisson.dist(mu[0]), Poisson.dist(mu[1])],
@@ -247,7 +247,7 @@ class TestMixture(SeededTest):
         cov2 = np.diag([2.5, 3.5])
         obs = np.asarray([[.5, .5], mu1, mu2])
         with Model() as model:
-            w = Dirichlet('w', floatX(np.ones(2)), transform=None)
+            w = Dirichlet('w', floatX(np.ones(2)), transform=None, shape=(2,))
             mvncomp1 = MvNormal.dist(mu=mu1, cov=cov1)
             mvncomp2 = MvNormal.dist(mu=mu2, cov=cov2)
             y = Mixture('x_obs', w, [mvncomp1, mvncomp2],
@@ -291,13 +291,13 @@ class TestMixture(SeededTest):
                 sigma=1,
                 shape=nbr)
             # weight vector for the mixtures
-            g_w = Dirichlet('g_w', a=floatX(np.ones(nbr)*0.0000001), transform=None)
-            l_w = Dirichlet('l_w', a=floatX(np.ones(nbr)*0.0000001), transform=None)
+            g_w = Dirichlet('g_w', a=floatX(np.ones(nbr)*0.0000001), transform=None, shape=(nbr,))
+            l_w = Dirichlet('l_w', a=floatX(np.ones(nbr)*0.0000001), transform=None, shape=(nbr,))
             # mixture components
             g_mix = Mixture.dist(w=g_w, comp_dists=g_comp)
             l_mix = Mixture.dist(w=l_w, comp_dists=l_comp)
             # mixture of mixtures
-            mix_w = Dirichlet('mix_w', a=floatX(np.ones(2)), transform=None)
+            mix_w = Dirichlet('mix_w', a=floatX(np.ones(2)), transform=None, shape=(2,))
             mix = Mixture('mix', w=mix_w,
                           comp_dists=[g_mix, l_mix],
                           observed=np.exp(self.norm_x))
@@ -378,7 +378,7 @@ class TestMixture(SeededTest):
         X, y = build_toy_dataset(N, K)
 
         with pm.Model() as model:
-            pi = pm.Dirichlet('pi', np.ones(K))
+            pi = pm.Dirichlet('pi', np.ones(K), shape=(K,))
 
             comp_dist = []
             mu = []

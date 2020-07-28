@@ -37,9 +37,7 @@ def sample_smc(
     tune_steps=True,
     p_acc_rate=0.99,
     threshold=0.5,
-    epsilon=1.0,
-    dist_func="gaussian_kernel",
-    sum_stat="identity",
+    save_sim_data=False,
     model=None,
     random_seed=-1,
     parallel=False,
@@ -74,13 +72,9 @@ def sample_smc(
         Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
         the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
         It should be between 0 and 1.
-    epsilon: float
-        Standard deviation of the gaussian pseudo likelihood. Only works with `kernel = ABC`
-    dist_func: str
-        Distance function. The only available option is ``gaussian_kernel``
-    sum_stat: str or callable
-        Summary statistics. Available options are ``indentity``, ``sorted``, ``mean``, ``median``.
-        If a callable is based it should return a number or a 1d numpy array.
+    save_sim_data : bool
+        Whether or not to save the simulated data. This parameters only work with the ABC kernel.
+        The stored data corresponds to the posterior predictive distribution.
     model: Model (optional if in ``with`` context)).
     random_seed: int
         random seed
@@ -143,13 +137,21 @@ def sample_smc(
     _log = logging.getLogger("pymc3")
     _log.info("Initializing SMC sampler...")
 
+    model = modelcontext(model)
     if cores is None:
         cores = _cpu_count()
 
     if chains is None:
         chains = max(2, cores)
+    elif chains == 1:
+        cores = 1
 
-    _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
+    _log.info(
+        (
+            f"Multiprocess sampling ({chains} chain{'s' if chains > 1 else ''} "
+            f"in {cores} job{'s' if cores > 1 else ''})"
+        )
+    )
 
     if random_seed == -1:
         random_seed = None
@@ -164,8 +166,10 @@ def sample_smc(
 
     if kernel.lower() == "abc":
         warnings.warn(EXPERIMENTAL_WARNING)
-        if len(modelcontext(model).observed_RVs) != 1:
+        if len(model.observed_RVs) != 1:
             warnings.warn("SMC-ABC only works properly with models with one observed variable")
+        if model.potentials:
+            _log.info("Potentials will be added to the prior term")
 
     params = (
         draws,
@@ -175,14 +179,12 @@ def sample_smc(
         tune_steps,
         p_acc_rate,
         threshold,
-        epsilon,
-        dist_func,
-        sum_stat,
+        save_sim_data,
         model,
     )
 
     t1 = time.time()
-    if parallel:
+    if parallel and chains > 1:
         loggers = [_log] + [None] * (chains - 1)
         pool = mp.Pool(cores)
         results = pool.starmap(
@@ -196,7 +198,7 @@ def sample_smc(
         for i in range(chains):
             results.append((sample_smc_int(*params, random_seed[i], i, _log)))
 
-    traces, log_marginal_likelihoods, betas, accept_ratios, nsteps = zip(*results)
+    traces, sim_data, log_marginal_likelihoods, betas, accept_ratios, nsteps = zip(*results)
     trace = MultiTrace(traces)
     trace.report._n_draws = draws
     trace.report._n_tune = 0
@@ -206,7 +208,10 @@ def sample_smc(
     trace.report.accept_ratios = accept_ratios
     trace.report.nsteps = nsteps
 
-    return trace
+    if save_sim_data:
+        return trace, {modelcontext(model).observed_RVs[0].name: np.array(sim_data)}
+    else:
+        return trace
 
 
 def sample_smc_int(
@@ -217,9 +222,7 @@ def sample_smc_int(
     tune_steps,
     p_acc_rate,
     threshold,
-    epsilon,
-    dist_func,
-    sum_stat,
+    save_sim_data,
     model,
     random_seed,
     chain,
@@ -234,9 +237,7 @@ def sample_smc_int(
         tune_steps=tune_steps,
         p_acc_rate=p_acc_rate,
         threshold=threshold,
-        epsilon=epsilon,
-        dist_func=dist_func,
-        sum_stat=sum_stat,
+        save_sim_data=save_sim_data,
         model=model,
         random_seed=random_seed,
         chain=chain,
@@ -262,4 +263,11 @@ def sample_smc_int(
         accept_ratios.append(smc.acc_rate)
         nsteps.append(smc.n_steps)
 
-    return smc.posterior_to_trace(), smc.log_marginal_likelihood, betas, accept_ratios, nsteps
+    return (
+        smc.posterior_to_trace(),
+        smc.sim_data,
+        smc.log_marginal_likelihood,
+        betas,
+        accept_ratios,
+        nsteps,
+    )
