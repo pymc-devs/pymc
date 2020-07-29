@@ -36,5 +36,6 @@ dependencies:
   - ipywidgets
   - dataclasses  # python_version < 3.7
   - contextvars  # python_version < 3.7
+  - dill
   - pip:
     - black_nbconvert
