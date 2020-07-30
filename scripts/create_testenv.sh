@@ -26,6 +26,7 @@ if [ -z ${GLOBAL} ]; then
     echo "Environment ${ENVNAME} already exists, keeping up to date"
   else
     conda config --add channels conda-forge
+    conda config --set channel_priority strict
     conda env create -f environment-dev.yml
   fi
   source activate ${ENVNAME}
