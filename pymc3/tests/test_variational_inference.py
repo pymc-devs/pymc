@@ -96,7 +96,7 @@ def test_tracker_callback():
         tracker(None, None, 1)
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def three_var_model():
     with pm.Model() as model:
         pm.HalfNormal('one', shape=(10, 2), total_size=100)
