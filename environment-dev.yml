@@ -1,7 +1,6 @@
 name: testenv
 channels:
   - conda-forge
-  - defaults
 dependencies:
   - python=3.6
   - arviz>=0.9
@@ -38,3 +37,4 @@ dependencies:
   - contextvars  # python_version < 3.7
   - pip:
     - black_nbconvert
+    - dill
