@@ -1,6 +1,7 @@
 name: testenv
 channels:
   - conda-forge
+  - defaults
 dependencies:
   - python=3.6
   - arviz>=0.9
@@ -35,6 +36,8 @@ dependencies:
   - ipywidgets
   - dataclasses  # python_version < 3.7
   - contextvars  # python_version < 3.7
+  - mkl-service
+  - libblas=*=*mkl
   - pip:
     - black_nbconvert
     - dill
