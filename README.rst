@@ -158,6 +158,7 @@ Software using PyMC3
 - `sampled <https://github.com/ColCarroll/sampled>`__: Decorator for PyMC3 models.
 - `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
 - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
+- `pymc-learn <https://github.com/pymc-learn/pymc-learn>`__: Custom PyMC models built on top of pymc3_models/scikit-learn API
 
 Please contact us if your software is not listed here.
 
@@ -176,6 +177,19 @@ Support
 =======
 
 PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3 financially, you can donate `here <https://numfocus.salsalabs.org/donate-to-pymc3/index.html>`__.
+
+PyMC for enterprise
+===================
+`Available as part of the Tidelift Subscription`
+
+Tidelift is working with the maintainers of PyMC3 and thousands of other open source
+projects to deliver commercial support and maintenance for the open source dependencies
+you use to build your applications. Save time, reduce risk, and improve code health,
+while paying the maintainers of the exact dependencies you use.
+
+.. raw:: html
+<button name="button" onclick="https://tidelift.com/subscription/pkg/pypi-pymc3?utm_source=pypi-pymc3&utm_medium=referral&utm_campaign=enterprise">Learn more</button>
+<button name="button" onclick="https://tidelift.com/subscription/request-a-demo?utm_source=pypi-pymc3&utm_medium=referral&utm_campaign=enterprise">Request a demo</button>
 
 Sponsors
 ========
