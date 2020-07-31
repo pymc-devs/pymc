@@ -277,8 +277,7 @@ class Bound:
                 "Observed Bound distributions are not supported. "
                 "If you want to model truncated data "
                 "you can use a pm.Potential in combination "
-                "with the cumulative probability function. See "
-                "pymc3/examples/censored_data.py for an example."
+                "with the cumulative probability function."
             )
 
         transform = kwargs.pop("transform", "infer")
