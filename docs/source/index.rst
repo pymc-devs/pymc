@@ -135,7 +135,7 @@
             <div class="ui equal width grid">
                 <div class="column">
                     <a href="https://numfocus.org/">
-                        <img class="ui image" height="120" src="https://www.numfocus.org/wp-content/uploads/2017/03/1457562110.png"/>
+                        <img class="ui image" height="120" src="https://www.numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png"/>
                     </a>
                 </div>
                 <div class="column">
