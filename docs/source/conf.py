@@ -156,7 +156,7 @@ html_theme_options = {
         ("Books + Videos", "learn"),
         ("API", "api"),
         ("Developer Guide", "developer_guide"),
-        ("About PyMC3", "history")
+        ("About PyMC3", "about")
     ],
     #     "fixed_sidebar": "false",
     #     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
@@ -331,8 +331,8 @@ texinfo_documents = [
 
 
 def setup(app):
-    app.add_stylesheet(
+    app.add_css_file(
         "https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css"
     )
-    app.add_stylesheet("default.css")
+    app.add_css_file("default.css")
 
