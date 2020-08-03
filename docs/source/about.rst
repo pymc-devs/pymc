@@ -149,7 +149,7 @@ Enterprise-ready open source software — managed for you
 
 The Tidelift Subscription is a managed open source subscription for application
 dependencies covering millions of open source projects across JavaScript, Python, Java,
-PHP, Ruby, .NET, and more. And now, your favorite probabilistic programming language is included in the Tidelift subscription
+PHP, Ruby, .NET, and more. And now, your favorite probabilistic programming language is included in the Tidelift subscription!
 
 Your subscription includes:
 
