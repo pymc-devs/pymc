@@ -980,10 +980,10 @@ def test_var_replacement():
 def test_empirical_from_trace(another_simple_model):
     with another_simple_model:
         step = pm.Metropolis()
-        trace = pm.sample(100, step=step, chains=1)
+        trace = pm.sample(100, step=step, chains=1, tune=0)
         emp = Empirical(trace)
         assert emp.histogram.shape[0].eval() == 100
-        trace = pm.sample(100, step=step, chains=4)
+        trace = pm.sample(100, step=step, chains=4, tune=0)
         emp = Empirical(trace)
         assert emp.histogram.shape[0].eval() == 400
 
