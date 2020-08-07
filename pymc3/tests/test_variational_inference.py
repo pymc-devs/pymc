@@ -709,7 +709,7 @@ def test_fit_oo(inference,
     mu_post = simple_model_data['mu_post']
     d = simple_model_data['d']
     np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
-    np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
+    np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.2)
 
 
 def test_profile(inference):

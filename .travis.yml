@@ -48,6 +48,7 @@ jobs:
     stage: test
     install:
       - . ./scripts/create_testenv.sh
+      - conda activate testenv
       - mamba uninstall arviz -y
       # replace ArviZ with the latest master
       - pip install git+git://github.com/arviz-devs/arviz.git
