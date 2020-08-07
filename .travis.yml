@@ -49,7 +49,7 @@ jobs:
     install:
       - . ./scripts/create_testenv.sh
       - conda activate testenv
-      - mamba uninstall arviz -y
+      - conda uninstall arviz -y
       # replace ArviZ with the latest master
       - pip install git+git://github.com/arviz-devs/arviz.git
       - pip install codecov
