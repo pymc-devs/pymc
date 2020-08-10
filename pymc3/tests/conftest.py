@@ -44,7 +44,7 @@ def strict_float32():
         yield
 
 
-@pytest.fixture('function', autouse=False)
+@pytest.fixture(scope='function', autouse=False)
 def seeded_test():
     # TODO: use this instead of SeededTest
     np.random.seed(42)

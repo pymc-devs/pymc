@@ -96,7 +96,7 @@ def test_tracker_callback():
         tracker(None, None, 1)
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def three_var_model():
     with pm.Model() as model:
         pm.HalfNormal('one', shape=(10, 2), total_size=100)
@@ -573,7 +573,7 @@ def test_elbo_beta_kl(aux_total_size):
 
 
 @pytest.fixture(
-    'module',
+    scope='module',
     params=[True, False],
     ids=['mini', 'full']
 )
@@ -617,7 +617,7 @@ def simple_model(simple_model_data):
     return model
 
 
-@pytest.fixture('module', params=[
+@pytest.fixture(scope='module', params=[
         dict(cls=NFVI, init=dict(flow='scale-loc')),
         dict(cls=ADVI, init=dict()),
         dict(cls=FullRankADVI, init=dict()),
@@ -642,13 +642,13 @@ def inference_spec(request):
     return init_
 
 
-@pytest.fixture('function')
+@pytest.fixture(scope='function')
 def inference(inference_spec, simple_model):
     with simple_model:
         return inference_spec()
 
 
-@pytest.fixture('function')
+@pytest.fixture(scope='function')
 def fit_kwargs(inference, use_minibatch):
     _select = {
         (ADVI, 'full'): dict(
@@ -709,7 +709,7 @@ def test_fit_oo(inference,
     mu_post = simple_model_data['mu_post']
     d = simple_model_data['d']
     np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
-    np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
+    np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.2)
 
 
 def test_profile(inference):
@@ -747,7 +747,7 @@ def test_clear_cache():
         assert all(len(c) == 0 for c in inference_new.approx._cache.values())
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def another_simple_model():
     _model = models.simple_model()[1]
     with _model:
@@ -798,7 +798,7 @@ def test_fit_fn_text(method, kwargs, error, another_simple_model):
             fit(10, method=method, **kwargs)
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def aevb_model():
     with pm.Model() as model:
         pm.HalfNormal('x', shape=(2,), total_size=5)
@@ -871,7 +871,7 @@ def test_pickle_approx_aevb(three_var_aevb_approx):
     assert new.sample(1000)
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def binomial_model():
     n_samples = 100
     xs = intX(np.random.binomial(n=1, p=0.2, size=n_samples))
@@ -881,7 +881,7 @@ def binomial_model():
     return model
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def binomial_model_inference(binomial_model, inference_spec):
     with binomial_model:
         return inference_spec()
@@ -980,10 +980,10 @@ def test_var_replacement():
 def test_empirical_from_trace(another_simple_model):
     with another_simple_model:
         step = pm.Metropolis()
-        trace = pm.sample(100, step=step, chains=1)
+        trace = pm.sample(100, step=step, chains=1, tune=0)
         emp = Empirical(trace)
         assert emp.histogram.shape[0].eval() == 100
-        trace = pm.sample(100, step=step, chains=4)
+        trace = pm.sample(100, step=step, chains=4, tune=0)
         emp = Empirical(trace)
         assert emp.histogram.shape[0].eval() == 400
 

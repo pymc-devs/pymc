@@ -27,12 +27,11 @@ if [ -z ${GLOBAL} ]; then
   else
     conda config --add channels conda-forge
     conda config --set channel_priority strict
-    conda env create -f environment-dev.yml
+    conda install -c conda-forge mamba --yes
+    mamba env create -f environment-dev.yml
   fi
   source activate ${ENVNAME}
 fi
-
-conda update --yes --all
 
 #  Install editable using the setup.py
 if [ -z ${NO_SETUP} ]; then

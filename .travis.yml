@@ -48,8 +48,8 @@ jobs:
     stage: test
     install:
       - . ./scripts/create_testenv.sh
-      - conda uninstall arviz -y
-      # replace ArviZ with the lastest master
+      - conda activate testenv
+      # replace ArviZ with the latest master
       - pip install git+git://github.com/arviz-devs/arviz.git
       - pip install codecov
       - conda list && pip freeze

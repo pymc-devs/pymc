@@ -36,5 +36,8 @@ dependencies:
   - ipywidgets
   - dataclasses  # python_version < 3.7
   - contextvars  # python_version < 3.7
+  - mkl-service
+  - libblas=*=*mkl
   - pip:
     - black_nbconvert
+    - dill
