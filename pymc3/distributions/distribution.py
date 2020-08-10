@@ -174,11 +174,11 @@ class Distribution:
                 distr_name=dist._distr_name(), params=param_string)
 
     def __str__(self, **kwargs):
-        return self._str_repr(formatting='plain', **kwargs)
+        return self._str_repr(formatting="plain", **kwargs)
 
     def _repr_latex_(self, **kwargs):
         """Magic method name for IPython to use for LaTeX formatting."""
-        return self._str_repr(formatting='latex', **kwargs)
+        return self._str_repr(formatting="latex", **kwargs)
 
     def logp_nojac(self, *args, **kwargs):
         """Return the logp, but do not include a jacobian term for transforms.
