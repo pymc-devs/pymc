@@ -51,7 +51,7 @@ class _DataSampler:
     next = __next__
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def datagen():
     return _DataSampler(np.random.uniform(size=(1000, 10)))
 
