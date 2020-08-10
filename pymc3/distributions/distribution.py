@@ -15,6 +15,7 @@
 import numbers
 import contextvars
 import dill
+import inspect
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Optional, Callable
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
 import numpy as np
 import theano.tensor as tt
 from theano import function
+from pymc3.util import get_variable_name
 import theano
 from ..memoize import memoize
 from ..model import (
@@ -135,9 +137,48 @@ class Distribution:
 
         return val
 
-    def _repr_latex_(self, name=None, dist=None):
+    def _distr_parameters(self):
+        """Return the names of the parameters for this distribution (e.g. "mu"
+        and "sigma" for Normal). Used in generating string (and LaTeX etc.)
+        representations of Distribution objects. By default based on inspection
+        of __init__, but can be overwritten if necessary (e.g. to avoid including
+        "sd" and "tau").
+        """
+        return inspect.getfullargspec(self.__init__).args[1:]
+
+    def _distr_name(self):
+        return self.__class__.__name__
+
+    def _str_repr(self, name=None, dist=None, formatting='plain'):
+        """Generate string representation for this distribution, optionally
+        including LaTeX markup (formatting='latex').
+        """
+        if dist is None:
+            dist = self
+        if name is None:
+            name = '[unnamed]'
+
+        param_names = self._distr_parameters()
+        param_values = [get_variable_name(getattr(dist, x)) for x in param_names]
+
+        if formatting == "latex":
+            param_string = ",~".join([r"\mathit{{{name}}}={value}".format(name=name,
+                value=value) for name, value in zip(param_names, param_values)])
+            return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}({params})$".format(var_name=name,
+                distr_name=dist._distr_name(), params=param_string)
+        else:
+            # 'plain' is default option
+            param_string = ", ".join(["{name}={value}".format(name=name,
+                value=value) for name, value in zip(param_names, param_values)])
+            return "{var_name} ~ {distr_name}({params})".format(var_name=name,
+                distr_name=dist._distr_name(), params=param_string)
+
+    def __str__(self, **kwargs):
+        return self._str_repr(formatting='plain', **kwargs)
+
+    def _repr_latex_(self, **kwargs):
         """Magic method name for IPython to use for LaTeX formatting."""
-        return None
+        return self._str_repr(formatting='latex', **kwargs)
 
     def logp_nojac(self, *args, **kwargs):
         """Return the logp, but do not include a jacobian term for transforms.
