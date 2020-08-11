@@ -196,6 +196,11 @@ class TransformedDistribution(distribution.Distribution):
         """
         return self.dist.logp(self.transform_used.backward(x))
 
+    def _repr_latex_(self, **kwargs):
+        # prevent TransformedDistributions from ending up in LaTeX representations
+        # of models
+        return None
+
 
 transform = Transform
 
