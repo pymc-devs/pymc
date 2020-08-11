@@ -137,7 +137,7 @@ class Distribution:
 
         return val
 
-    def _distr_parameters(self):
+    def _distr_parameters_for_repr(self):
         """Return the names of the parameters for this distribution (e.g. "mu"
         and "sigma" for Normal). Used in generating string (and LaTeX etc.)
         representations of Distribution objects. By default based on inspection
@@ -146,7 +146,7 @@ class Distribution:
         """
         return inspect.getfullargspec(self.__init__).args[1:]
 
-    def _distr_name(self):
+    def _distr_name_for_repr(self):
         return self.__class__.__name__
 
     def _str_repr(self, name=None, dist=None, formatting='plain'):
@@ -158,20 +158,20 @@ class Distribution:
         if name is None:
             name = '[unnamed]'
 
-        param_names = self._distr_parameters()
+        param_names = self._distr_parameters_for_repr()
         param_values = [get_variable_name(getattr(dist, x)) for x in param_names]
 
         if formatting == "latex":
             param_string = ",~".join([r"\mathit{{{name}}}={value}".format(name=name,
                 value=value) for name, value in zip(param_names, param_values)])
             return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}({params})$".format(var_name=name,
-                distr_name=dist._distr_name(), params=param_string)
+                distr_name=dist._distr_name_for_repr(), params=param_string)
         else:
             # 'plain' is default option
             param_string = ", ".join(["{name}={value}".format(name=name,
                 value=value) for name, value in zip(param_names, param_values)])
             return "{var_name} ~ {distr_name}({params})".format(var_name=name,
-                distr_name=dist._distr_name(), params=param_string)
+                distr_name=dist._distr_name_for_repr(), params=param_string)
 
     def __str__(self, **kwargs):
         return self._str_repr(formatting="plain", **kwargs)
