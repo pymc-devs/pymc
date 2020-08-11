@@ -24,7 +24,6 @@ from theano.tensor import Tensor
 from .util import get_default_varnames
 from .model import ObservedRV
 import pymc3 as pm
-from pymc3.util import get_repr_for_variable
 
 
 class ModelGraph:
