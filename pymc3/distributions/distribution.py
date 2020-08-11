@@ -528,6 +528,9 @@ class DensityDist(Distribution):
                 "Define a custom random method and pass it as kwarg random"
             )
 
+    def _distr_parameters_for_repr(self):
+        return []
+
 
 class _DrawValuesContext(metaclass=ContextMeta, context_class='_DrawValuesContext'):
     """ A context manager class used while drawing values with draw_values

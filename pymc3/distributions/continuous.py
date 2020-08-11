@@ -238,15 +238,6 @@ class Uniform(BoundedContinuous):
         return bound(-tt.log(upper - lower),
                      value >= lower, value <= upper)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        lower = dist.lower
-        upper = dist.upper
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Uniform}}(\mathit{{lower}}={},~\mathit{{upper}}={})$'.format(
-            name, get_variable_name(lower), get_variable_name(upper))
-
     def logcdf(self, value):
         """
         Compute the log of the cumulative distribution function for Uniform distribution
@@ -314,10 +305,6 @@ class Flat(Continuous):
         """
         return tt.zeros_like(value)
 
-    def _repr_latex_(self, name=None, dist=None):
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Flat}}()$'.format(name)
-
     def logcdf(self, value):
         """
         Compute the log of the cumulative distribution function for Flat distribution
@@ -380,10 +367,6 @@ class HalfFlat(PositiveContinuous):
         TensorVariable
         """
         return bound(tt.zeros_like(value), value > 0)
-
-    def _repr_latex_(self, name=None, dist=None):
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{HalfFlat}}()$'.format(name)
 
     def logcdf(self, value):
         """
@@ -537,15 +520,8 @@ class Normal(Continuous):
         return bound((-tau * (value - mu)**2 + tt.log(tau / np.pi / 2.)) / 2.,
                      sigma > 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        sigma = dist.sigma
-        mu = dist.mu
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Normal}}(\mathit{{mu}}={},~\mathit{{sigma}}={})$'.format(name,
-                                                                get_variable_name(mu),
-                                                                get_variable_name(sigma))
+    def _distr_parameters_for_repr(self):
+        return ["mu", "sigma"]
 
     def logcdf(self, value):
         """
@@ -765,21 +741,8 @@ class TruncatedNormal(BoundedContinuous):
         else:
             return normal_lcdf(mu, sigma, self.upper)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        name = r'\text{%s}' % name
-        return (
-            r'${} \sim \text{{TruncatedNormal}}('
-            r'\mathit{{mu}}={},~\mathit{{sigma}}={},a={},b={})$'
-            .format(
-                name,
-                get_variable_name(self.mu),
-                get_variable_name(self.sigma),
-                get_variable_name(self.lower),
-                get_variable_name(self.upper),
-            )
-        )
+    def _distr_parameters_for_repr(self):
+        return ["mu", "sigma", "lower", "upper"]
 
 
 class HalfNormal(PositiveContinuous):
@@ -906,13 +869,8 @@ class HalfNormal(PositiveContinuous):
                      value >= 0,
                      tau > 0, sigma > 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        sigma = dist.sigma
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{HalfNormal}}(\mathit{{sigma}}={})$'.format(name,
-                                                                         get_variable_name(sigma))
+    def _distr_parameters_for_repr(self):
+        return ["sigma"]
 
     def logcdf(self, value):
         """
@@ -1109,17 +1067,8 @@ class Wald(PositiveContinuous):
                      value > 0, value - alpha > 0,
                      mu > 0, lam > 0, alpha >= 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        lam = dist.lam
-        mu = dist.mu
-        alpha = dist.alpha
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Wald}}(\mathit{{mu}}={},~\mathit{{lam}}={},~\mathit{{alpha}}={})$'.format(name,
-                                                                get_variable_name(mu),
-                                                                get_variable_name(lam),
-                                                                get_variable_name(alpha))
+    def _distr_parameters_for_repr(self):
+        return ["mu", "lam", "alpha"]
 
     def logcdf(self, value):
         """
@@ -1350,15 +1299,8 @@ class Beta(UnitContinuous):
             )
         )
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        alpha = dist.alpha
-        beta = dist.beta
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Beta}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
-                                                                get_variable_name(alpha),
-                                                                get_variable_name(beta))
+    def _distr_parameters_for_repr(self):
+        return ["alpha", "beta"]
 
 class Kumaraswamy(UnitContinuous):
     R"""
@@ -1466,16 +1408,6 @@ class Kumaraswamy(UnitContinuous):
                      value >= 0, value <= 1,
                      a > 0, b > 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        a = dist.a
-        b = dist.b
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Kumaraswamy}}(\mathit{{a}}={},~\mathit{{b}}={})$'.format(name,
-                                                                                          get_variable_name(a),
-                                                                                          get_variable_name(b))
-
 
 class Exponential(PositiveContinuous):
     R"""
@@ -1563,14 +1495,6 @@ class Exponential(PositiveContinuous):
         """
         lam = self.lam
         return bound(tt.log(lam) - lam * value, value >= 0, lam > 0)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        lam = dist.lam
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Exponential}}(\mathit{{lam}}={})$'.format(name,
-                                                                get_variable_name(lam))
 
     def logcdf(self, value):
         r"""
@@ -1698,16 +1622,6 @@ class Laplace(Continuous):
         b = self.b
 
         return -tt.log(2 * b) - abs(value - mu) / b
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        b = dist.b
-        mu = dist.mu
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Laplace}}(\mathit{{mu}}={},~\mathit{{b}}={})$'.format(name,
-                                                                get_variable_name(mu),
-                                                                get_variable_name(b))
 
     def logcdf(self, value):
         """
@@ -1870,15 +1784,8 @@ class Lognormal(PositiveContinuous):
                      - tt.log(value),
                      tau > 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        tau = dist.tau
-        mu = dist.mu
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Lognormal}}(\mathit{{mu}}={},~\mathit{{tau}}={})$'.format(name,
-                                                                get_variable_name(mu),
-                                                                get_variable_name(tau))
+    def _distr_parameters_for_repr(self):
+        return ["mu", "tau"]
 
     def logcdf(self, value):
         """
@@ -2044,17 +1951,8 @@ class StudentT(Continuous):
                      - (nu + 1.0) / 2.0 * tt.log1p(lam * (value - mu)**2 / nu),
                      lam > 0, nu > 0, sigma > 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        nu = dist.nu
-        mu = dist.mu
-        lam = dist.lam
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{StudentT}}(\mathit{{nu}}={},~\mathit{{mu}}={},~\mathit{{lam}}={})$'.format(name,
-                                                                get_variable_name(nu),
-                                                                get_variable_name(mu),
-                                                                get_variable_name(lam))
+    def _distr_parameters_for_repr(self):
+        return ["nu", "mu", "lam"]
 
     def logcdf(self, value):
         """
@@ -2191,15 +2089,8 @@ class Pareto(Continuous):
                      - logpow(value, alpha + 1),
                      value >= m, alpha > 0, m > 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        alpha = dist.alpha
-        m = dist.m
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Pareto}}(\mathit{{alpha}}={},~\mathit{{m}}={})$'.format(name,
-                                                                get_variable_name(alpha),
-                                                                get_variable_name(m))
+    def _distr_parameters_for_repr(self):
+        return ["alpha", "m"]
 
     def logcdf(self, value):
         """
@@ -2329,16 +2220,6 @@ class Cauchy(Continuous):
                      - tt.log1p(((value - alpha) / beta)**2),
                      beta > 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        alpha = dist.alpha
-        beta = dist.beta
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Cauchy}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
-                                                                get_variable_name(alpha),
-                                                                get_variable_name(beta))
-
     def logcdf(self, value):
         """
         Compute the log of the cumulative distribution function for Cauchy distribution
@@ -2448,14 +2329,6 @@ class HalfCauchy(PositiveContinuous):
         return bound(tt.log(2) - tt.log(np.pi) - tt.log(beta)
                      - tt.log1p((value / beta)**2),
                      value >= 0, beta > 0)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        beta = dist.beta
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{HalfCauchy}}(\mathit{{beta}}={})$'.format(name,
-                                                                get_variable_name(beta))
 
     def logcdf(self, value):
         """
@@ -2640,15 +2513,8 @@ class Gamma(PositiveContinuous):
             alpha > 0,
             beta > 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        beta = dist.beta
-        alpha = dist.alpha
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Gamma}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
-                                                                get_variable_name(alpha),
-                                                                get_variable_name(beta))
+    def _distr_parameters_for_repr(self):
+        return ["alpha", "beta"]
 
 
 class InverseGamma(PositiveContinuous):
@@ -2790,15 +2656,8 @@ class InverseGamma(PositiveContinuous):
                      + logpow(value, -alpha - 1),
                      value > 0, alpha > 0, beta > 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        beta = dist.beta
-        alpha = dist.alpha
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{InverseGamma}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
-                                                                get_variable_name(alpha),
-                                                                get_variable_name(beta))
+    def _distr_parameters_for_repr(self):
+        return ["alpha", "beta"]
 
 
 class ChiSquared(Gamma):
@@ -2842,14 +2701,6 @@ class ChiSquared(Gamma):
     def __init__(self, nu, *args, **kwargs):
         self.nu = nu = tt.as_tensor_variable(floatX(nu))
         super().__init__(alpha=nu / 2., beta=0.5, *args, **kwargs)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        nu = dist.nu
-        name = r'\text{%s}' % name
-        return r'${} \sim \Chi^2(\mathit{{nu}}={})$'.format(name,
-                                                            get_variable_name(nu))
 
 
 class Weibull(PositiveContinuous):
@@ -2957,16 +2808,6 @@ class Weibull(PositiveContinuous):
                      + (alpha - 1) * tt.log(value / beta)
                      - (value / beta)**alpha,
                      value >= 0, alpha > 0, beta > 0)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        beta = dist.beta
-        alpha = dist.alpha
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Weibull}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
-                                                                get_variable_name(alpha),
-                                                                get_variable_name(beta))
 
     def logcdf(self, value):
         r"""
@@ -3126,15 +2967,8 @@ class HalfStudentT(PositiveContinuous):
                      - (nu + 1.0) / 2.0 * tt.log1p(value ** 2 / (nu * sigma**2)),
                      sigma > 0, lam > 0, nu > 0, value >= 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        nu = dist.nu
-        sigma = dist.sigma
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{HalfStudentT}}(\mathit{{nu}}={},~\mathit{{sigma}}={})$'.format(name,
-                                                                get_variable_name(nu),
-                                                                get_variable_name(sigma))
+    def _distr_parameters_for_repr(self):
+        return ["nu", "lam"]
 
 
 class ExGaussian(Continuous):
@@ -3276,17 +3110,8 @@ class ExGaussian(Continuous):
                        - 0.5 * ((value - mu) / sigma)**2)
         return bound(lp, sigma > 0., nu > 0.)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        sigma = dist.sigma
-        mu = dist.mu
-        nu = dist.nu
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{ExGaussian}}(\mathit{{mu}}={},~\mathit{{sigma}}={},~\mathit{{nu}}={})$'.format(name,
-                                                                get_variable_name(mu),
-                                                                get_variable_name(sigma),
-                                                                get_variable_name(nu))
+    def _distr_parameters_for_repr(self):
+        return ["mu", "sigma", "nu"]
 
     def logcdf(self, value):
         """
@@ -3420,16 +3245,8 @@ class VonMises(Continuous):
         return bound(kappa * tt.cos(mu - value) - (tt.log(2 * np.pi) + log_i0(kappa)),
                      kappa > 0, value >= -np.pi, value <= np.pi)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        kappa = dist.kappa
-        mu = dist.mu
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{VonMises}}(\mathit{{mu}}={},~\mathit{{kappa}}={})$'.format(name,
-                                                                get_variable_name(mu),
-                                                                get_variable_name(kappa))
-
+    def _distr_parameters_for_repr(self):
+        return ["mu", "kappa"]
 
 
 class SkewNormal(Continuous):
@@ -3563,17 +3380,8 @@ class SkewNormal(Continuous):
                + tt.log(tau / np.pi / 2.)) / 2.,
             tau > 0, sigma > 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        sigma = dist.sigma
-        mu = dist.mu
-        alpha = dist.alpha
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Skew-Normal}}(\mathit{{mu}}={},~\mathit{{sigma}}={},~\mathit{{alpha}}={})$'.format(name,
-                                                                get_variable_name(mu),
-                                                                get_variable_name(sigma),
-                                                                get_variable_name(alpha))
+    def _distr_parameters_for_repr(self):
+        return ["mu", "sigma", "alpha"]
 
 
 class Triangular(BoundedContinuous):
@@ -3698,18 +3506,6 @@ class Triangular(BoundedContinuous):
                                    tt.switch(alltrue_elemwise([c < value, value <= upper]),
                                              tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),
                                              np.inf)))
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        lower = dist.lower
-        upper = dist.upper
-        c = dist.c
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Triangular}}(\mathit{{c}}={},~\mathit{{lower}}={},~\mathit{{upper}}={})$'.format(name,
-                                                                get_variable_name(c),
-                                                                get_variable_name(lower),
-                                                                get_variable_name(upper))
 
     def logcdf(self, value):
         """
@@ -3843,16 +3639,6 @@ class Gumbel(Continuous):
         """
         scaled = (value - self.mu) / self.beta
         return bound(-scaled - tt.exp(-scaled) - tt.log(self.beta), self.beta > 0)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        beta = dist.beta
-        mu = dist.mu
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Gumbel}}(\mathit{{mu}}={},~\mathit{{beta}}={})$'.format(name,
-                                                                get_variable_name(mu),
-                                                                get_variable_name(beta))
 
     def logcdf(self, value):
         """
@@ -4022,6 +3808,9 @@ class Rice(PositiveContinuous):
                      value > 0,
                      )
 
+    def _distr_parameters_for_repr(self):
+        return ["nu", "sigma"]
+
 
 class Logistic(Continuous):
     R"""
@@ -4119,16 +3908,6 @@ class Logistic(Continuous):
             loc=mu, scale=s,
             dist_shape=self.shape,
             size=size)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        mu = dist.mu
-        s = dist.s
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Logistic}}(\mathit{{mu}}={},~\mathit{{s}}={})$'.format(name,
-                                                                get_variable_name(mu),
-                                                                get_variable_name(s))
 
     def logcdf(self, value):
         r"""
@@ -4271,15 +4050,8 @@ class LogitNormal(UnitContinuous):
                      + 0.5 * tt.log(tau / (2. * np.pi))
                      - tt.log(value * (1 - value)), value > 0, value < 1, tau > 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        sigma = dist.sigma
-        mu = dist.mu
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{LogitNormal}}(\mathit{{mu}}={},~\mathit{{sigma}}={})$'.format(name,
-                                                                get_variable_name(mu),
-                                                                get_variable_name(sigma))
+    def _distr_parameters_for_repr(self):
+        return ["mu", "sigma"]
 
 
 class Interpolated(BoundedContinuous):
@@ -4383,6 +4155,9 @@ class Interpolated(BoundedContinuous):
         """
         return tt.log(self.interp_op(value) / self.Z)
 
+    def _distr_parameters_for_repr(self):
+        return []
+
 
 class Moyal(Continuous):
     R"""
@@ -4484,16 +4259,6 @@ class Moyal(Continuous):
         return bound((-(1 / 2) * (scaled + tt.exp(-scaled))
                       - tt.log(self.sigma)
                       - (1 / 2) * tt.log(2 * np.pi)), self.sigma > 0)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        sigma = dist.sigma
-        mu = dist.mu
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Moyal}}(\mathit{{mu}}={},~\mathit{{sigma}}={})$'.format(name,
-                                                                                         get_variable_name(mu),
-                                                                                         get_variable_name(sigma))
 
     def logcdf(self, value):
         """
