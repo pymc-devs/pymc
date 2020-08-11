@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 import numpy as np
 import theano.tensor as tt
 from theano import function
-from ..util import get_variable_name
+from ..util import get_repr_for_variable
 import theano
 from ..memoize import memoize
 from ..model import (
@@ -159,7 +159,8 @@ class Distribution:
             name = '[unnamed]'
 
         param_names = self._distr_parameters_for_repr()
-        param_values = [get_variable_name(getattr(dist, x)) for x in param_names]
+        param_values = [get_repr_for_variable(getattr(dist, x), formatting=formatting)
+            for x in param_names]
 
         if formatting == "latex":
             param_string = ",~".join([r"\mathit{{{name}}}={value}".format(name=name,

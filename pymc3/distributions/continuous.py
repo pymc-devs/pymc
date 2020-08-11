@@ -27,7 +27,6 @@ import warnings
 
 from pymc3.theanof import floatX
 from . import transforms
-from pymc3.util import get_variable_name
 from .special import log_i0
 from ..math import invlogit, logit, logdiffexp
 from .dist_math import (

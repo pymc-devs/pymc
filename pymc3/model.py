@@ -64,6 +64,27 @@ class PyMC3Variable(TensorVariable):
     def __rmatmul__(self, other):
         return tt.dot(other, self)
 
+    def _str_repr(self, name=None, dist=None, formatting="plain"):
+        if getattr(self, "distribution", None) is None:
+            if formatting == "latex":
+                return None
+            else:
+                return super().__str__()
+
+        if name is None and hasattr(self, 'name'):
+            name = self.name
+        if dist is None and hasattr(self, 'distribution'):
+            dist = self.distribution
+        return self.distribution._str_repr(name=name, dist=dist, formatting=formatting)
+
+    def __str__(self, **kwargs):
+        return self._str_repr(**kwargs)
+
+    def _repr_latex_(self, **kwargs):
+        return self._str_repr(formatting="latex", **kwargs)
+
+    __latex__ = _repr_latex_
+
 
 class InstanceMethod:
     """Class for hiding references to instance methods so they can be pickled.
@@ -1607,17 +1628,6 @@ class FreeRV(Factor, PyMC3Variable):
                 wrapper=InstanceMethod,
             )
 
-    def _repr_latex_(self, name=None, dist=None):
-        if self.distribution is None:
-            return None
-        if name is None:
-            name = self.name
-        if dist is None:
-            dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
-
-    __latex__ = _repr_latex_
-
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""
@@ -1751,17 +1761,6 @@ class ObservedRV(Factor, PyMC3Variable):
             theano.gof.Apply(theano.compile.view_op, inputs=[data], outputs=[self])
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
             self.scaling = _get_scaling(total_size, data.shape, data.ndim)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if self.distribution is None:
-            return None
-        if name is None:
-            name = self.name
-        if dist is None:
-            dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
-
-    __latex__ = _repr_latex_
 
     @property
     def init_value(self):
@@ -1941,17 +1940,6 @@ class TransformedRV(PyMC3Variable):
                 methods=["random"],
                 wrapper=InstanceMethod,
             )
-
-    def _repr_latex_(self, name=None, dist=None):
-        if self.distribution is None:
-            return None
-        if name is None:
-            name = self.name
-        if dist is None:
-            dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
-
-    __latex__ = _repr_latex_
 
     @property
     def init_value(self):

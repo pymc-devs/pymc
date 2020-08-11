@@ -19,7 +19,6 @@ import theano.tensor as tt
 from theano import scan
 import numpy as np
 
-from pymc3.util import get_variable_name
 from .continuous import get_tau_sigma, Normal, Flat
 from .shape_utils import to_tuple
 from . import multivariate
