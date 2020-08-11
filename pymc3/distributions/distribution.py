@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 import numpy as np
 import theano.tensor as tt
 from theano import function
-from .util import get_variable_name
+from ..util import get_variable_name
 import theano
 from ..memoize import memoize
 from ..model import (
