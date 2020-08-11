@@ -1347,20 +1347,36 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             name="Log-probability of test_point",
         )
 
-    def _repr_latex_(self, name=None, dist=None):
-        tex_vars = []
-        for rv in itertools.chain(self.unobserved_RVs, self.observed_RVs):
-            rv_tex = rv.__latex__()
-            if rv_tex is not None:
-                array_rv = rv_tex.replace(r"\sim", r"&\sim &").strip("$")
-                tex_vars.append(array_rv)
-        return r"""$$
-            \begin{{array}}{{rcl}}
-            {}
-            \end{{array}}
-            $$""".format(
-            "\\\\".join(tex_vars)
-        )
+    def _str_repr(self, formatting="plain", **kwargs):
+        all_rv = itertools.chain(self.unobserved_RVs, self.observed_RVs)
+
+        if formatting == "latex":
+            rv_reprs = [rv.__latex__() for rv in all_rv]
+            rv_reprs = [rv_repr.replace(r"\sim", r"&\sim &").strip("$")
+                for rv_repr in rv_reprs if rv_repr is not None]
+            return r"""$$
+                \begin{{array}}{{rcl}}
+                {}
+                \end{{array}}
+                $$""".format(
+                "\\\\".join(rv_reprs))
+        else:
+            rv_reprs = [rv.__str__() for rv in all_rv]
+            rv_reprs = [rv_repr for rv_repr in rv_reprs if not 'TransformedDistribution()' in rv_repr]
+            # align vars on their ~
+            names = [s[:s.index('~')-1] for s in rv_reprs]
+            distrs = [s[s.index('~')+2:] for s in rv_reprs]
+            maxlen = str(max(len(x) for x in names))
+            rv_reprs = [('{name:>' + maxlen + '} ~ {distr}').format(name=n, distr=d)
+                for n, d in zip(names, distrs)]
+            return "\n".join(rv_reprs)
+
+
+    def __str__(self, **kwargs):
+        return self._str_repr(**kwargs)
+
+    def _repr_latex_(self, **kwargs):
+        return self._str_repr(formatting="latex", **kwargs)
 
     __latex__ = _repr_latex_
 
