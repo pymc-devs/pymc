@@ -191,9 +191,9 @@ class TestData(SeededTest):
         text = 'x [label="x\n~\nData" shape=box style="rounded, filled"]'
         assert text in g.source
         # Didn't break ordinary variables?
-        text = 'beta [label="beta\n~\nNormal"]'
+        text = 'beta [label="beta\n~\nNormal(mu=0.0, sigma=10.0)"]'
         assert text in g.source
-        text = 'obs [label="obs\n~\nNormal" style=filled]'
+        text = 'obs [label="obs\n~\nNormal(mu=f(f(beta), x), sigma=0.1)" style=filled]'
         assert text in g.source
 
     def test_explicit_coords(self):
