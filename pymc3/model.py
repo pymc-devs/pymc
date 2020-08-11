@@ -1850,14 +1850,16 @@ def _walk_up_rv(rv, formatting='plain'):
     return all_rvs
 
 
-def _repr_deterministic_rv(rv, formatting='plain'):
+def _repr_deterministic_rv(rv, name=None, formatting='plain'):
     """Make latex string for a Deterministic variable"""
+    if name is None:
+        name = rv.name
     if formatting == 'latex':
         return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
-            name=rv.name, args=r",~".join(_walk_up_rv(rv, formatting=formatting)))
+            name=name, args=r",~".join(_walk_up_rv(rv, formatting=formatting)))
     else:
         return "{name} ~ Deterministic({args})".format(
-            name=rv.name, args=", ".join(_walk_up_rv(rv, formatting=formatting)))
+            name=name, args=", ".join(_walk_up_rv(rv, formatting=formatting)))
 
 
 def Deterministic(name, var, model=None, dims=None):

@@ -34,10 +34,6 @@ class ModelGraph:
         self.var_list = self.model.named_vars.values()
         self.transform_map = {v.transformed: v.name for v in self.var_list if hasattr(v, 'transformed')}
         self._deterministics = None
-        self._distr_params = {
-            'Normal': ['mu', 'sigma'],
-            'Uniform': ['lower', 'upper'],
-        }
 
     def get_deterministics(self, var):
         """Compute the deterministic nodes of the graph, **not** including var itself."""
@@ -125,7 +121,7 @@ class ModelGraph:
                     pass
         return input_map
 
-    def _make_node(self, var_name, graph, include_prior_params):
+    def _make_node(self, var_name, graph, full_details):
         """Attaches the given variable to a graphviz Digraph"""
         v = self.model[var_name]
 
@@ -134,37 +130,27 @@ class ModelGraph:
         if isinstance(v, pm.model.ObservedRV):
             attrs['style'] = 'filled'
 
-        # make Data be roundtangle, instead of rectangle
-        if isinstance(v, SharedVariable):
-            attrs['style'] = 'rounded, filled'
-
-        # Get name for node
         if v in self.model.potentials:
-            distribution = 'Potential'
+            node_text = '{name}\n~\nPotential'.format(name=var_name)
             attrs['shape'] = 'octagon'
-        elif hasattr(v, 'distribution'):
-            distribution = v.distribution.__class__.__name__
         elif isinstance(v, SharedVariable):
-            distribution = 'Data'
+            node_text = '{name}\n~\nData'.format(name=var_name)
             attrs['shape'] = 'box'
+            attrs['style'] = 'rounded, filled'
+        elif not full_details:
+            if hasattr(v, 'distribution'):
+                node_text = '{name}\n~\n{dist}'.format(name=var_name,
+                    dist=v.distribution.__class__.__name__)
+            else:
+                node_text = '{name}\n~\nDeterministic'.format(name=var_name)
         else:
-            distribution = 'Deterministic'
+            node_text = v.__str__(name=var_name).replace(' ~ ', '\n~\n')
+
+
+        if not hasattr(v, 'distribution'):
+            # v is Deterministic
             attrs['shape'] = 'box'
 
-        node_text = '{var_name}\n~\n{distribution}'.format(var_name=var_name, distribution=distribution)
-        if include_prior_params and distribution in self._distr_params:
-            param_strings = []
-            for param in self._distr_params[distribution]:
-                val = get_repr_for_variable(getattr(v.distribution, param))
-                if type(val) is str and len(val) > 100:
-                    val = '<long expression>'
-                try:
-                    val = '{val:.3g}'.format(val=float(val))
-                except ValueError:
-                    pass
-                param_strings.append('{param}={val}'.format(param=param,
-                    val=val))
-            node_text += '(' + ', '.join(param_strings) + ')'
         graph.node(var_name.replace(':', '&'), node_text, **attrs)
 
     def get_plates(self):
@@ -198,7 +184,7 @@ class ModelGraph:
             plates[shape].add(var_name)
         return plates
 
-    def make_graph(self, include_prior_params=False):
+    def make_graph(self, full_details=True):
         """Make graphviz Digraph of PyMC3 model
 
         Returns
@@ -220,12 +206,12 @@ class ModelGraph:
                 # must be preceded by 'cluster' to get a box around it
                 with graph.subgraph(name='cluster' + label) as sub:
                     for var_name in var_names:
-                        self._make_node(var_name, sub, include_prior_params)
+                        self._make_node(var_name, sub, full_details)
                     # plate label goes bottom right
                     sub.attr(label=label, labeljust='r', labelloc='b', style='rounded')
             else:
                 for var_name in var_names:
-                    self._make_node(var_name, graph, include_prior_params)
+                    self._make_node(var_name, graph, full_details)
 
         for key, values in self.make_compute_graph().items():
             for value in values:
@@ -233,7 +219,7 @@ class ModelGraph:
         return graph
 
 
-def model_to_graphviz(model=None, **kwargs):
+def model_to_graphviz(model=None, full_details=True):
     """Produce a graphviz Digraph from a PyMC3 model.
 
     Requires graphviz, which may be installed most easily with
@@ -243,6 +229,13 @@ def model_to_graphviz(model=None, **kwargs):
     and then `pip install graphviz` to get the python bindings.  See
     http://graphviz.readthedocs.io/en/stable/manual.html
     for more information.
+
+    Parameters
+    ----------
+    full_details: bool (default True)
+        Whether to include full details of PyMC3 model RVs
+        (e.g. prior (hyper)parameters)) in the node boxes.
+        Set to False to include only RV names.
     """
     model = pm.modelcontext(model)
-    return ModelGraph(model).make_graph(**kwargs)
+    return ModelGraph(model).make_graph(full_details=full_details)
