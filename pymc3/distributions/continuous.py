@@ -3268,12 +3268,23 @@ class ExGaussian(Continuous):
         sigma = self.sigma
         nu = self.nu
 
-        # This condition suggested by exGAUS.R from gamlss
-        lp = tt.switch(tt.gt(nu,  0.05 * sigma),
-                       - tt.log(nu) + (mu - value) / nu + 0.5 * (sigma / nu)**2
-                       + logpow(std_cdf((value - mu) / sigma - sigma / nu), 1.),
-                       - tt.log(sigma * tt.sqrt(2 * np.pi))
-                       - 0.5 * ((value - mu) / sigma)**2)
+        # This condition is suggested by exGAUS.R from gamlss
+        lp = tt.switch(
+            tt.gt(nu, 0.05 * sigma),
+            -tt.log(nu)
+            + (mu - value) / nu
+            + 0.5 * (sigma / nu) ** 2
+            + logpow(
+                tt.switch(
+                    tt.eq(std_cdf((value - mu) / sigma - sigma / nu), 0),
+                    np.finfo(float).eps,
+                    std_cdf((value - mu) / sigma - sigma / nu)
+                ),
+                1.0
+            ),
+            -tt.log(sigma * tt.sqrt(2 * np.pi)) - 0.5 * ((value - mu) / sigma) ** 2,
+        )
+
         return bound(lp, sigma > 0., nu > 0.)
 
     def _repr_latex_(self, name=None, dist=None):
