@@ -201,6 +201,9 @@ class TransformedDistribution(distribution.Distribution):
         # of models
         return None
 
+    def _distr_parameters_for_repr(self):
+        return []
+
 
 transform = Transform
 
