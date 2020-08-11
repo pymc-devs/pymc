@@ -24,7 +24,7 @@ from theano.tensor import Tensor
 from .util import get_default_varnames
 from .model import ObservedRV
 import pymc3 as pm
-from pymc3.util import get_variable_name
+from pymc3.util import get_repr_for_variable
 
 
 class ModelGraph:
@@ -155,7 +155,7 @@ class ModelGraph:
         if include_prior_params and distribution in self._distr_params:
             param_strings = []
             for param in self._distr_params[distribution]:
-                val = get_variable_name(getattr(v.distribution, param))
+                val = get_repr_for_variable(getattr(v.distribution, param))
                 if type(val) is str and len(val) > 100:
                     val = '<long expression>'
                 try:

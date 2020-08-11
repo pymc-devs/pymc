@@ -124,26 +124,33 @@ def get_default_varnames(var_iterator, include_transformed):
         return [var for var in var_iterator if not is_transformed_name(str(var))]
 
 
-def get_variable_name(variable):
-    r"""Returns the variable data type if it is a constant, otherwise
-    returns the argument name.
+def get_repr_for_variable(variable, formatting="plain"):
+    """Build a human-readable string representation for a variable.
     """
     name = variable.name
     if name is None:
         if hasattr(variable, "get_parents"):
             try:
                 names = [
-                    get_variable_name(item) for item in variable.get_parents()[0].inputs
+                    get_repr_for_variable(item, formatting=formatting)
+                    for item in variable.get_parents()[0].inputs
                 ]
                 # do not escape_latex these, since it is not idempotent
-                return "f(%s)" % ",~".join([n for n in names if isinstance(n, str)])
+                if formatting == "latex":
+                    return "f({args})".format(args=",~".join([n for n in names if isinstance(n, str)]))
+                else:
+                    return "f({args})".format(args=", ".join([n for n in names if isinstance(n, str)]))
             except IndexError:
                 pass
         value = variable.eval()
         if not value.shape or value.shape == (1,):
             return asscalar(value)
         return "array"
-    return r"\text{%s}" % name
+
+    if formatting == "latex":
+        return r"\text{{{name}}}".format(name=name)
+    else:
+        return name
 
 
 def update_start_vals(a, b, model):

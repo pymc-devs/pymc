@@ -30,7 +30,6 @@ import pymc3 as pm
 
 from pymc3.theanof import floatX
 from . import transforms
-from pymc3.util import get_variable_name
 from .distribution import (Continuous, Discrete, draw_values, generate_samples,
                            _DrawValuesContext)
 from ..model import Deterministic
