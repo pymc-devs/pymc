@@ -123,15 +123,6 @@ class Binomial(Discrete):
             0 <= value, value <= n,
             0 <= p, p <= 1)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        n = dist.n
-        p = dist.p
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Binomial}}(\mathit{{n}}={},~\mathit{{p}}={})$'.format(name,
-                                                get_variable_name(n),
-                                                get_variable_name(p))
 
 class BetaBinomial(Discrete):
     R"""
@@ -259,16 +250,6 @@ class BetaBinomial(Discrete):
                      value >= 0, value <= self.n,
                      alpha > 0, beta > 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        alpha = dist.alpha
-        beta = dist.beta
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{BetaBinomial}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
-                                                get_variable_name(alpha),
-                                                get_variable_name(beta))
-
 
 class Bernoulli(Discrete):
     R"""Bernoulli log-likelihood
@@ -371,13 +352,8 @@ class Bernoulli(Discrete):
                 value >= 0, value <= 1,
                 p >= 0, p <= 1)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        p = dist.p
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Bernoulli}}(\mathit{{p}}={})$'.format(name,
-                                                get_variable_name(p))
+    def _distr_parameters_for_repr(self):
+        return ["p"]
 
 
 class DiscreteWeibull(Discrete):
@@ -486,16 +462,6 @@ class DiscreteWeibull(Discrete):
                                 dist_shape=self.shape,
                                 size=size)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        q = dist.q
-        beta = dist.beta
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{DiscreteWeibull}}(\mathit{{q}}={},~\mathit{{beta}}={})$'.format(name,
-                                                get_variable_name(q),
-                                                get_variable_name(beta))
-
 
 class Poisson(Discrete):
     R"""
@@ -589,14 +555,6 @@ class Poisson(Discrete):
         # Return zero when mu and value are both zero
         return tt.switch(tt.eq(mu, 0) * tt.eq(value, 0),
                          0, log_prob)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        mu = dist.mu
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Poisson}}(\mathit{{mu}}={})$'.format(name,
-                                                get_variable_name(mu))
 
 
 class NegativeBinomial(Discrete):
@@ -717,16 +675,6 @@ class NegativeBinomial(Discrete):
                          Poisson.dist(self.mu).logp(value),
                          negbinom)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        mu = dist.mu
-        alpha = dist.alpha
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{NegativeBinomial}}(\mathit{{mu}}={},~\mathit{{alpha}}={})$'.format(name,
-                                                get_variable_name(mu),
-                                                get_variable_name(alpha))
-
 
 class Geometric(Discrete):
     R"""
@@ -809,14 +757,6 @@ class Geometric(Discrete):
         p = self.p
         return bound(tt.log(p) + logpow(1 - p, value - 1),
                      0 <= p, p <= 1, value >= 1)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        p = dist.p
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Geometric}}(\mathit{{p}}={})$'.format(name,
-                                                get_variable_name(p))
 
 
 class DiscreteUniform(Discrete):
@@ -912,16 +852,6 @@ class DiscreteUniform(Discrete):
         lower = self.lower
         return bound(-tt.log(upper - lower + 1),
                      lower <= value, value <= upper)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        lower = dist.lower
-        upper = dist.upper
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{DiscreteUniform}}(\mathit{{lower}}={},~\mathit{{upper}}={})$'.format(name,
-                                                get_variable_name(lower),
-                                                get_variable_name(upper))
 
 
 class Categorical(Discrete):
@@ -1044,14 +974,6 @@ class Categorical(Discrete):
         return bound(a, value >= 0, value <= (k - 1),
                      tt.all(p_ >= 0, axis=-1), tt.all(p <= 1, axis=-1))
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        p = dist.p
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Categorical}}(\mathit{{p}}={})$'.format(name,
-                                                get_variable_name(p))
-
 
 class Constant(Discrete):
     r"""
@@ -1111,12 +1033,6 @@ class Constant(Discrete):
         """
         c = self.c
         return bound(0, tt.eq(value, c))
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{Constant}}()$'.format(name)
 
 
 ConstantDist = Constant
@@ -1231,16 +1147,6 @@ class ZeroInflatedPoisson(Discrete):
             0 <= psi, psi <= 1,
             0 <= theta)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        theta = dist.theta
-        psi = dist.psi
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{ZeroInflatedPoisson}}(\mathit{{theta}}={},~\mathit{{psi}}={})$'.format(name,
-                                                get_variable_name(theta),
-                                                get_variable_name(psi))
-
 
 class ZeroInflatedBinomial(Discrete):
     R"""
@@ -1353,22 +1259,6 @@ class ZeroInflatedBinomial(Discrete):
             0 <= value, value <= n,
             0 <= psi, psi <= 1,
             0 <= p, p <= 1)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        n = dist.n
-        p = dist.p
-        psi = dist.psi
-
-        name_n = get_variable_name(n)
-        name_p = get_variable_name(p)
-        name_psi = get_variable_name(psi)
-        name = r'\text{%s}' % name
-        return (r'${} \sim \text{{ZeroInflatedBinomial}}'
-                r'(\mathit{{n}}={},~\mathit{{p}}={},~'
-                r'\mathit{{psi}}={})$'
-                .format(name, name_n, name_p, name_psi))
 
 
 class ZeroInflatedNegativeBinomial(Discrete):
@@ -1523,22 +1413,6 @@ class ZeroInflatedNegativeBinomial(Discrete):
             0 <= psi, psi <= 1,
             mu > 0, alpha > 0)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        mu = dist.mu
-        alpha = dist.alpha
-        psi = dist.psi
-
-        name_mu = get_variable_name(mu)
-        name_alpha = get_variable_name(alpha)
-        name_psi = get_variable_name(psi)
-        name = r'\text{%s}' % name
-        return (r'${} \sim \text{{ZeroInflatedNegativeBinomial}}'
-                r'(\mathit{{mu}}={},~\mathit{{alpha}}={},~'
-                r'\mathit{{psi}}={})$'
-                .format(name, name_mu, name_alpha, name_psi))
-
 
 class OrderedLogistic(Categorical):
     R"""
@@ -1619,12 +1493,3 @@ class OrderedLogistic(Categorical):
         p = p_cum[..., 1:] - p_cum[..., :-1]
 
         super().__init__(p=p, *args, **kwargs)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        name_eta = get_variable_name(dist.eta)
-        name_cutpoints = get_variable_name(dist.cutpoints)
-        return (r'${} \sim \text{{OrderedLogistic}}'
-                r'(\mathit{{eta}}={}, \mathit{{cutpoints}}={}$'
-                .format(name, name_eta, name_cutpoints))

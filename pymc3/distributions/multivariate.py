@@ -151,18 +151,11 @@ class _QuadFormBase(Continuous):
         logdet = -tt.sum(tt.log(diag))
         return quaddist, logdet, ok
 
-    def _repr_cov_params(self, dist=None):
-        if dist is None:
-            dist = self
-        if self._cov_type == 'chol':
-            chol = get_variable_name(self.chol_cov)
-            return r'\mathit{{chol}}={}'.format(chol)
-        elif self._cov_type == 'cov':
-            cov = get_variable_name(self.cov)
-            return r'\mathit{{cov}}={}'.format(cov)
-        elif self._cov_type == 'tau':
-            tau = get_variable_name(self.tau)
-            return r'\mathit{{tau}}={}'.format(tau)
+    def _cov_param_for_repr(self):
+        if self._cov_type == "chol":
+            return "chol_cov"
+        else:
+            return self._cov_type
 
 
 class MvNormal(_QuadFormBase):
@@ -330,14 +323,8 @@ class MvNormal(_QuadFormBase):
         norm = - 0.5 * k * pm.floatX(np.log(2 * np.pi))
         return bound(norm - 0.5 * quaddist - logdet, ok)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        mu = dist.mu
-        name_mu = get_variable_name(mu)
-        return (r'${} \sim \text{{MvNormal}}'
-                r'(\mathit{{mu}}={}, {})$'
-                .format(name, name_mu, self._repr_cov_params(dist)))
+    def _distr_parameters_for_repr(self):
+        return ["mu", self._cov_param_for_repr()]
 
 
 class MvStudentT(_QuadFormBase):
@@ -448,17 +435,8 @@ class MvStudentT(_QuadFormBase):
         inner = - (self.nu + k) / 2. * tt.log1p(quaddist / self.nu)
         return bound(norm + inner - logdet, ok)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        mu = dist.mu
-        nu = dist.nu
-        name_nu = get_variable_name(nu)
-        name_mu = get_variable_name(mu)
-        return (r'${} \sim \text{{MvStudentT}}'
-                r'(\mathit{{nu}}={}, \mathit{{mu}}={}, '
-                r'{})$'
-                .format(name, name_nu, name_mu, self._repr_cov_params(dist)))
+    def _distr_parameters_for_repr(self):
+        return ["mu", "nu", self._cov_param_for_repr()]
 
 
 class Dirichlet(Continuous):
@@ -580,12 +558,8 @@ class Dirichlet(Continuous):
                      np.logical_not(a.broadcastable), tt.all(a > 0),
                      broadcast_conditions=False)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        a = dist.a
-        return r'${} \sim \text{{Dirichlet}}(\mathit{{a}}={})$'.format(name,
-                                                get_variable_name(a))
+    def _distr_parameters_for_repr(self):
+        return ["a"]
 
 
 class Multinomial(Discrete):
@@ -734,15 +708,6 @@ class Multinomial(Discrete):
             tt.all(tt.ge(n, 0)),
             broadcast_conditions=False
         )
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        n = dist.n
-        p = dist.p
-        return r'${} \sim \text{{Multinomial}}(\mathit{{n}}={}, \mathit{{p}}={})$'.format(name,
-                                                get_variable_name(n),
-                                                get_variable_name(p))
 
 
 def posdef(AA):
@@ -901,14 +866,6 @@ class Wishart(Continuous):
                      broadcast_conditions=False
         )
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        nu = dist.nu
-        V = dist.V
-        return r'${} \sim \text{{Wishart}}(\mathit{{nu}}={}, \mathit{{V}}={})$'.format(name,
-                                                get_variable_name(nu),
-                                                get_variable_name(V))
 
 def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testval=None):
     R"""
