@@ -15,6 +15,7 @@
 from .compound import CompoundStep
 from ..model import modelcontext
 from ..theanof import inputvars
+from ..util import plain_str
 from ..blocking import ArrayOrdering, DictToArrayBijection
 import numpy as np
 from numpy.random import uniform
@@ -175,7 +176,7 @@ class ArrayStepShared(BlockedStep):
         """
         self.vars = vars
         self.ordering = ArrayOrdering(vars)
-        self.shared = {str(var): shared for var, shared in shared.items()}
+        self.shared = {plain_str(var): shared for var, shared in shared.items()}
         self.blocked = blocked
         self.bij = None
 

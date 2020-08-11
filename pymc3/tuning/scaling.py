@@ -17,6 +17,7 @@ from numpy import exp, log, sqrt
 from ..model import modelcontext, Point
 from ..theanof import hessian_diag, inputvars
 from ..blocking import DictToArrayBijection, ArrayOrdering
+from ..util import plain_str
 
 __all__ = ['find_hessian', 'trace_cov', 'guess_scaling']
 
@@ -135,7 +136,7 @@ def trace_cov(trace, vars=None, model=None):
         vars = trace.varnames
 
     def flat_t(var):
-        x = trace[str(var)]
+        x = trace[plain_str(var)]
         return x.reshape((x.shape[0], np.prod(x.shape[1:], dtype=int)))
 
     return np.cov(np.concatenate(list(map(flat_t, vars)), 1).T)

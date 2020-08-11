@@ -20,6 +20,7 @@ import xarray
 import arviz
 from numpy import asscalar, ndarray
 
+from theano.tensor import TensorVariable
 
 LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
 
@@ -230,3 +231,11 @@ def chains_and_samples(
     nchains = coords["chain"].sizes["chain"]
     nsamples = coords["draw"].sizes["draw"]
     return nchains, nsamples
+
+
+def plain_str(k):
+    # make sure to use "plain" string representations (i.e. names) of variables
+    if isinstance(k, TensorVariable):
+        return super(TensorVariable, k).__str__()
+    else:
+        return str(k)

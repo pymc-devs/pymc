@@ -35,7 +35,7 @@ from .memoize import memoize, WithMemoization
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
-from .util import get_transformed_name
+from .util import get_transformed_name, plain_str
 from .exceptions import ImputationWarning
 
 __all__ = [
@@ -1485,14 +1485,8 @@ def Point(*args, **kwargs):
         d = dict(*args, **kwargs)
     except Exception as e:
         raise TypeError("can't turn {} and {} into a dict. {}".format(args, kwargs, e))
-    def _mystr(k):
-        # make sure to use "plain" string representations (i.e. names) of variables
-        if isinstance(k, TensorVariable):
-            return super(TensorVariable, k).__str__()
-        else:
-            return str(k)
     return dict(
-        (_mystr(k), np.array(v)) for k, v in d.items() if _mystr(k) in map(_mystr, model.vars)
+        (plain_str(k), np.array(v)) for k, v in d.items() if plain_str(k) in map(plain_str, model.vars)
     )
 
 
