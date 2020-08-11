@@ -1822,27 +1822,28 @@ class MultiObservedRV(Factor):
         return not self == other
 
 
-def _walk_up_rv(rv):
+def _walk_up_rv(rv, formatting='plain'):
     """Walk up theano graph to get inputs for deterministic RV."""
     all_rvs = []
     parents = list(itertools.chain(*[j.inputs for j in rv.get_parents()]))
     if parents:
         for parent in parents:
-            all_rvs.extend(_walk_up_rv(parent))
+            all_rvs.extend(_walk_up_rv(parent, formatting=formatting))
     else:
-        if rv.name:
-            all_rvs.append(r"\text{%s}" % rv.name)
-        else:
-            all_rvs.append(r"\text{Constant}")
+        name = rv.name if rv.name else "Constant"
+        fmt = r"\text{{{name}}}" if formatting == "latex" else "{name}"
+        all_rvs.append(fmt.format(name=name))
     return all_rvs
 
 
-def _latex_repr_rv(rv):
+def _repr_deterministic_rv(rv, formatting='plain'):
     """Make latex string for a Deterministic variable"""
-    return r"$\text{%s} \sim \text{Deterministic}(%s)$" % (
-        rv.name,
-        r",~".join(_walk_up_rv(rv)),
-    )
+    if formatting == 'latex':
+        return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
+            name=rv.name, args=r",~".join(_walk_up_rv(rv, formatting=formatting)))
+    else:
+        return "{name} ~ Deterministic({args})".format(
+            name=rv.name, args=", ".join(_walk_up_rv(rv, formatting=formatting)))
 
 
 def Deterministic(name, var, model=None, dims=None):
@@ -1861,8 +1862,9 @@ def Deterministic(name, var, model=None, dims=None):
     var = var.copy(model.name_for(name))
     model.deterministics.append(var)
     model.add_random_variable(var, dims)
-    var._repr_latex_ = functools.partial(_latex_repr_rv, var)
+    var._repr_latex_ = functools.partial(_repr_deterministic_rv, var, formatting='latex')
     var.__latex__ = var._repr_latex_
+    var.__str__ = functools.partial(_repr_deterministic_rv, var, formatting='plain')
     return var
 
 
