@@ -175,10 +175,6 @@ class MLDA(ArrayStepShared):
             mean     sd	     hpd_3%	   hpd_97%
         x	1.011	 0.975	 -0.925	   2.824
 
-    A more complete example of how to use MLDA in a realistic
-    multilevel problem can be found in:
-    pymc3/docs/source/notebooks/multi-level_groundwater_flow_with_MLDA.ipynb
-
     References
     ----------
     .. [Dodwell2019] Dodwell, Tim & Ketelsen, Chris & Scheichl,
