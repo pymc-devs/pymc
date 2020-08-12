@@ -3341,7 +3341,7 @@ class ExGaussian(Continuous):
 
         standardized_val = (value - mu) / sigma
         cdf_val = std_cdf(standardized_val - sigma / nu)
-        cdf_val_safe = tt.switch(tt.eq(cdf_val, 0), np.finfo(floatX).eps, cdf_val)
+        cdf_val_safe = tt.switch(tt.eq(cdf_val, 0), np.finfo(float).eps, cdf_val)
 
         # This condition is suggested by exGAUS.R from gamlss
         lp = tt.switch(
