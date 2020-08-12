@@ -208,6 +208,10 @@ class AR(distribution.Continuous):
 class GaussianRandomWalk(distribution.Continuous):
     r"""Random Walk with Normal innovations
 
+    Note that this is mainly a user-friendly wrapper to enable an easier specification
+    of GRW. You are not restricted to use only Normal innovations but can use any
+    distribution: just use `theano.tensor.cumsum()` to create the random walk behavior.
+
     Parameters
     ----------
     mu: tensor
