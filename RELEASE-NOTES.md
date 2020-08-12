@@ -4,6 +4,7 @@
 
 ### Maintenance
 - Mentioned the way to do any random walk with `theano.tensor.cumsum()` in `GaussianRandomWalk` docstrings (see [#4048](https://github.com/pymc-devs/pymc3/pull/4048)).
+- Fixed numerical instability in ExGaussian's logp by preventing `logpow` from returning `-inf` (see [#4049](https://github.com/pymc-devs/pymc3/pull/4049)).
 
 ### Documentation
 
