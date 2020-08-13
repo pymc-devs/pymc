@@ -1,9 +1,10 @@
+.. _about:
+
+***********
+About PyMC3
+***********
+
 .. _intro:
-
-************
-Introduction
-************
-
 
 Purpose
 =======
@@ -86,13 +87,115 @@ Python 3 compatibility, improved summary plots, and some important bug fixes.
 
 In 2011, John Salvatier began thinking about implementing gradient-based MCMC samplers, and developed the ``mcex`` package to experiment with his ideas. The following year, John was invited by the team to re-engineer PyMC to accomodate Hamiltonian Monte Carlo sampling. This led to the adoption of Theano as the computational back end, and marked the beginning of PyMC3's development. The first alpha version of PyMC3 was released in June 2015. Over the following 2 years, the core development team grew to 12 members, and the first release, PyMC3 3.0, was launched in January 2017.
 
+.. _support:
 
+************
+Support PyMC
+************
+
+PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3
+financially, consider donating to the project.
+
+.. raw:: html
+
+    <style>.centered {text-align: center;}</style>
+    <div class="centered"><a href="https://numfocus.org/donate-to-pymc3">
+      <div class="ui huge primary button">Donate to PyMC3</div>
+    </a></div>
+
+Citing PyMC3
+============
+If you use PyMC3 in your reseach please cite: Salvatier J., Wiecki T.V., Fonnesbeck C. (2016) Probabilistic programming in Python using PyMC3. PeerJ Computer Science 2:e55 [DOI: 10.7717/peerj-cs.55](https://doi.org/10.7717/peerj-cs.55).
+
+The BibTeX entry is:
+
+.. code-block:: none
+
+    @article{pymc3,
+      title={Probabilistic programming in Python using PyMC3},
+      author={Salvatier, John and Wiecki, Thomas V and Fonnesbeck, Christopher},
+      journal={PeerJ Computer Science},
+      volume={2},
+      pages={e55},
+      year={2016},
+      publisher={PeerJ Inc.}
+    }
+
+
+PyMC for enterprise
+===================
+`PyMC is now available as part of the Tidelift Subscription!`
+
+Tidelift is working with PyMC and the maintainers of thousands of other open source
+projects to deliver commercial support and maintenance for the open source dependencies
+you use to build your applications. Save time, reduce risk, and improve code health,
+while contributing financially to PyMC -- making it even more robust, reliable and,
+let's face it, amazing!
+
+.. raw:: html
+
+    <style>.centered {text-align: center;}</style>
+    <p><div class="centered">
+    <a href="https://tidelift.com/subscription/pkg/pypi-pymc3?utm_source=undefined&utm_medium=referral&utm_campaign=enterprise">
+      <button class="ui large orange button" color="orange">Learn more</button>
+    </a>
+    <a href="https://tidelift.com/subscription/request-a-demo?utm_source=undefined&utm_medium=referral&utm_campaign=enterprise">
+      <button class="ui large orange button">Request a demo</button>
+    </a>
+    </div></p>
+
+Enterprise-ready open source software — managed for you
+-------------------------------------------------------
+
+The Tidelift Subscription is a managed open source subscription for application
+dependencies covering millions of open source projects across JavaScript, Python, Java,
+PHP, Ruby, .NET, and more. And now, your favorite probabilistic programming language is included in the Tidelift subscription!
+
+Your subscription includes:
+
+* **Security updates**: Tidelift’s security response team coordinates patches for new breaking security vulnerabilities and alerts immediately through a private channel, so your software supply chain is always secure.
+
+* **Licensing verification and indemnification**: Tidelift verifies license information to enable easy policy enforcement and adds intellectual property indemnification to cover creators and users in case something goes wrong. You always have a 100% up-to-date bill of materials for your dependencies to share with your legal team, customers, or partners.
+
+* **Maintenance and code improvement**: Tidelift ensures the software you rely on keeps working as long as you need it to work. Your managed dependencies are actively maintained and Tidelift recruits additional maintainers where required.
+
+* **Package selection and version guidance**: Tidelift helps you choose the best open source packages from the start—and then guides you through updates to stay on the best releases as new issues arise.
+
+* **Roadmap input**: Take a seat at the table with the creators behind the software you use. PyMC developers and other Tidelift’s participating maintainers earn more income as our software is used by more subscribers, so we’re interested in knowing what you need.
+
+* **Tooling and cloud integration**: Tidelift works with GitHub, GitLab, BitBucket, and more. It supports every cloud platform (and other deployment targets, too).
+
+The end result? All of the capabilities you expect from commercial-grade software, for the full breadth of open source you use. That means less time grappling with esoteric open source trivia, and more time building your own applications — and your business.
+
+.. raw:: html
+
+    <style>.centered {text-align: center;}</style>
+    <p><div class="centered">
+    <a href="https://tidelift.com/subscription/pkg/pypi-pymc3?utm_source=undefined&utm_medium=referral&utm_campaign=enterprise">
+      <button class="ui large orange button" color="orange">Learn more</button>
+    </a>
+    <a href="https://tidelift.com/subscription/request-a-demo?utm_source=undefined&utm_medium=referral&utm_campaign=enterprise">
+      <button class="ui large orange button">Request a demo</button>
+    </a>
+    </div></p>
+
+Sponsors
+========
+
+|NumFOCUS| |Quantopian| |ODSC|
+
+More details about sponsoring PyMC3 can be found `here <https://github.com/pymc-devs/pymc3/blob/master/GOVERNANCE.md#institutional-partners-and-funding>`_.
+If you are interested in becoming a sponsor, reach out to `pymc.devs@gmail.com <pymc.devs@gmail.com>`_
+
+**************
 Usage Overview
-==============
+**************
 
 For a detailed overview of building models in PyMC3, please read the appropriate sections in the rest of the documentation. For a flavor of what PyMC3 models look like, here is a quick example.
 
 First, let's import PyMC3 and `ArviZ <https://arviz-devs.github.io/arviz/>`__ (which handles plotting and diagnostics):
+
+::
 
     import arviz as az
     import numpy as np
@@ -146,9 +249,21 @@ This example will generate 1000 posterior samples on each of two cores using the
 The sample is returned as arrays inside a ``MultiTrace`` object, which is then passed to the plotting function. The resulting graph shows a forest plot of the random variables in the model, along with a convergence diagnostic (R-hat) that indicates our model has converged.
 
 .. image:: ./images/forestplot.png
+   :width: 1000px
 
 See also
 ========
 
 * `Tutorials <nb_tutorials/index.html>`__
 * `Examples <nb_examples/index.html>`__
+
+
+.. |NumFOCUS| image:: https://numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png
+   :target: http://www.numfocus.org/
+   :height: 120px
+.. |Quantopian| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg
+   :target: https://quantopian.com
+   :height: 120px
+.. |ODSC| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/odsc_logo.png
+   :target: https://odsc.com
+   :height: 120px
