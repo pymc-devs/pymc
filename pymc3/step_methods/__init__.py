@@ -21,13 +21,12 @@ from .metropolis import DEMetropolis, DEMetropolisZ
 from .metropolis import BinaryMetropolis
 from .metropolis import BinaryGibbsMetropolis
 from .metropolis import CategoricalGibbsMetropolis
-from .mlda import MLDA, MetropolisMLDA
+from .mlda import MLDA, MetropolisMLDA, RecursiveDAProposal
 from .metropolis import NormalProposal
 from .metropolis import CauchyProposal
 from .metropolis import LaplaceProposal
 from .metropolis import PoissonProposal
 from .metropolis import MultivariateNormalProposal
-from .mlda import RecursiveDAProposal
 
 from .gibbs import ElemwiseCategorical
 

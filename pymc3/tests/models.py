@@ -109,30 +109,34 @@ def mv_simple():
 
 
 def mv_simple_coarse():
-    mu = floatX_array([-.2, .6, 1.2])
-    p = floatX_array([
-        [2., 0, 0],
-        [.05, .1, 0],
-        [1., -0.05, 5.5]])
+    mu = floatX_array([-0.2, 0.6, 1.2])
+    p = floatX_array([[2.0, 0, 0], [0.05, 0.1, 0], [1.0, -0.05, 5.5]])
     tau = np.dot(p, p.T)
     with pm.Model() as model:
-        pm.MvNormal('x', tt.constant(mu), tau=tt.constant(tau),
-                    shape=3, testval=floatX_array([.1, 1., .8]))
+        pm.MvNormal(
+            "x",
+            tt.constant(mu),
+            tau=tt.constant(tau),
+            shape=3,
+            testval=floatX_array([0.1, 1.0, 0.8]),
+        )
     H = tau
     C = np.linalg.inv(H)
     return model.test_point, model, (mu, C)
 
 
 def mv_simple_very_coarse():
-    mu = floatX_array([-.3, .7, 1.3])
-    p = floatX_array([
-        [2., 0, 0],
-        [.05, .1, 0],
-        [1., -0.05, 5.5]])
+    mu = floatX_array([-0.3, 0.7, 1.3])
+    p = floatX_array([[2.0, 0, 0], [0.05, 0.1, 0], [1.0, -0.05, 5.5]])
     tau = np.dot(p, p.T)
     with pm.Model() as model:
-        pm.MvNormal('x', tt.constant(mu), tau=tt.constant(tau),
-                    shape=3, testval=floatX_array([.1, 1., .8]))
+        pm.MvNormal(
+            "x",
+            tt.constant(mu),
+            tau=tt.constant(tau),
+            shape=3,
+            testval=floatX_array([0.1, 1.0, 0.8]),
+        )
     H = tau
     C = np.linalg.inv(H)
     return model.test_point, model, (mu, C)
