@@ -5,9 +5,12 @@
 ### Maintenance
 - Mentioned the way to do any random walk with `theano.tensor.cumsum()` in `GaussianRandomWalk` docstrings (see [#4048](https://github.com/pymc-devs/pymc3/pull/4048)).
 
+
 ### Documentation
 
 ### New features
+- `sample_posterior_predictive_w` can now feed on `xarray.Dataset` - e.g. from `InferenceData.posterior`. (see [#4042](https://github.com/pymc-devs/pymc3/pull/4042))
+
 
 ## PyMC3 3.9.3 (11 August 2020)
 
@@ -26,6 +29,7 @@
 - SMC-ABC: Allow use of potentials by adding them to the prior term. [#4016](https://github.com/pymc-devs/pymc3/pull/4016).
 
 _NB: The `docs/*` folder is still removed from the tarball due to an upload size limit on PyPi._
+
 
 ## PyMC3 3.9.2 (24 June 2020)
 ### Maintenance
