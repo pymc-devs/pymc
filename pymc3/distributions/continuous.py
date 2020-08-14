@@ -125,9 +125,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
         return
     try:
         # Transformed distribution
-        support = np.isfinite(
-            var.transformed.distribution.dist.logp(value).tag.test_value
-        )
+        support = np.isfinite(var.transformed.distribution.dist.logp(value).tag.test_value)
     except AttributeError:
         try:
             # Untransformed distribution
@@ -256,11 +254,7 @@ class Uniform(BoundedContinuous):
 
         lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
         return generate_samples(
-            stats.uniform.rvs,
-            loc=lower,
-            scale=upper - lower,
-            dist_shape=self.shape,
-            size=size,
+            stats.uniform.rvs, loc=lower, scale=upper - lower, dist_shape=self.shape, size=size
         )
 
     def logp(self, value):
@@ -376,9 +370,7 @@ class Flat(Continuous):
         TensorVariable
         """
         return tt.switch(
-            tt.eq(value, -np.inf),
-            -np.inf,
-            tt.switch(tt.eq(value, np.inf), 0, tt.log(0.5)),
+            tt.eq(value, -np.inf), -np.inf, tt.switch(tt.eq(value, np.inf), 0, tt.log(0.5))
         )
 
 
@@ -438,9 +430,7 @@ class HalfFlat(PositiveContinuous):
         -------
         TensorVariable
         """
-        return tt.switch(
-            tt.lt(value, np.inf), -np.inf, tt.switch(tt.eq(value, np.inf), 0, -np.inf)
-        )
+        return tt.switch(tt.lt(value, np.inf), -np.inf, tt.switch(tt.eq(value, np.inf), 0, -np.inf))
 
 
 class Normal(Continuous):
@@ -514,9 +504,7 @@ class Normal(Continuous):
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
         self.tau = tt.as_tensor_variable(tau)
 
-        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(
-            floatX(mu)
-        )
+        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(floatX(mu))
         self.variance = 1.0 / self.tau
 
         assert_negative_support(sigma, "sigma", "Normal")
@@ -541,9 +529,7 @@ class Normal(Continuous):
         -------
         array
         """
-        mu, tau, _ = draw_values(
-            [self.mu, self.tau, self.sigma], point=point, size=size
-        )
+        mu, tau, _ = draw_values([self.mu, self.tau, self.sigma], point=point, size=size)
         return generate_samples(
             stats.norm.rvs, loc=mu, scale=tau ** -0.5, dist_shape=self.shape, size=size
         )
@@ -566,9 +552,7 @@ class Normal(Continuous):
         tau = self.tau
         mu = self.mu
 
-        return bound(
-            (-tau * (value - mu) ** 2 + tt.log(tau / np.pi / 2.0)) / 2.0, sigma > 0
-        )
+        return bound((-tau * (value - mu) ** 2 + tt.log(tau / np.pi / 2.0)) / 2.0, sigma > 0)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -688,12 +672,8 @@ class TruncatedNormal(BoundedContinuous):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
         self.tau = tt.as_tensor_variable(tau)
-        self.lower_check = (
-            tt.as_tensor_variable(floatX(lower)) if lower is not None else lower
-        )
-        self.upper_check = (
-            tt.as_tensor_variable(floatX(upper)) if upper is not None else upper
-        )
+        self.lower_check = tt.as_tensor_variable(floatX(lower)) if lower is not None else lower
+        self.upper_check = tt.as_tensor_variable(floatX(upper)) if upper is not None else upper
         self.lower = (
             tt.as_tensor_variable(floatX(lower))
             if lower is not None
@@ -764,11 +744,7 @@ class TruncatedNormal(BoundedContinuous):
         the scipy.rvs representation.
         """
         return stats.truncnorm.rvs(
-            a=(lower - mu) / sigma,
-            b=(upper - mu) / sigma,
-            loc=mu,
-            scale=sigma,
-            size=size,
+            a=(lower - mu) / sigma, b=(upper - mu) / sigma, loc=mu, scale=sigma, size=size
         )
 
     def logp(self, value):
@@ -810,9 +786,7 @@ class TruncatedNormal(BoundedContinuous):
             lsf_a = normal_lccdf(mu, sigma, self.lower)
             lsf_b = normal_lccdf(mu, sigma, self.upper)
 
-            return tt.switch(
-                self.lower > 0, logdiffexp(lsf_a, lsf_b), logdiffexp(lcdf_b, lcdf_a)
-            )
+            return tt.switch(self.lower > 0, logdiffexp(lsf_a, lsf_b), logdiffexp(lcdf_b, lcdf_a))
 
         if self.lower_check is not None:
             return normal_lccdf(mu, sigma, self.lower)
@@ -1080,11 +1054,7 @@ class Wald(PositiveContinuous):
 
         self.mean = self.mu + self.alpha
         self.mode = (
-            self.mu
-            * (
-                tt.sqrt(1.0 + (1.5 * self.mu / self.lam) ** 2)
-                - 1.5 * self.mu / self.lam
-            )
+            self.mu * (tt.sqrt(1.0 + (1.5 * self.mu / self.lam) ** 2) - 1.5 * self.mu / self.lam)
             + self.alpha
         )
         self.variance = (self.mu ** 3) / self.lam
@@ -1141,12 +1111,8 @@ class Wald(PositiveContinuous):
         -------
         array
         """
-        mu, lam, alpha = draw_values(
-            [self.mu, self.lam, self.alpha], point=point, size=size
-        )
-        return generate_samples(
-            self._random, mu, lam, alpha, dist_shape=self.shape, size=size
-        )
+        mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha], point=point, size=size)
+        return generate_samples(self._random, mu, lam, alpha, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -1186,10 +1152,7 @@ class Wald(PositiveContinuous):
         alpha = dist.alpha
         name = r"\text{%s}" % name
         return r"${} \sim \text{{Wald}}(\mathit{{mu}}={},~\mathit{{lam}}={},~\mathit{{alpha}}={})$".format(
-            name,
-            get_variable_name(mu),
-            get_variable_name(lam),
-            get_variable_name(alpha),
+            name, get_variable_name(mu), get_variable_name(lam), get_variable_name(alpha)
         )
 
     def logcdf(self, value):
@@ -1307,9 +1270,7 @@ class Beta(UnitContinuous):
     the binomial distribution.
     """
 
-    def __init__(
-        self, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs
-    ):
+    def __init__(self, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
@@ -1320,9 +1281,7 @@ class Beta(UnitContinuous):
 
         self.mean = self.alpha / (self.alpha + self.beta)
         self.variance = (
-            self.alpha
-            * self.beta
-            / ((self.alpha + self.beta) ** 2 * (self.alpha + self.beta + 1))
+            self.alpha * self.beta / ((self.alpha + self.beta) ** 2 * (self.alpha + self.beta + 1))
         )
 
         assert_negative_support(alpha, "alpha", "Beta")
@@ -1361,9 +1320,7 @@ class Beta(UnitContinuous):
         array
         """
         alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
-        return generate_samples(
-            clipped_beta_rvs, alpha, beta, dist_shape=self.shape, size=size
-        )
+        return generate_samples(clipped_beta_rvs, alpha, beta, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -1475,18 +1432,10 @@ class Kumaraswamy(UnitContinuous):
         self.a = a = tt.as_tensor_variable(floatX(a))
         self.b = b = tt.as_tensor_variable(floatX(b))
 
-        ln_mean = (
-            tt.log(b)
-            + tt.gammaln(1 + 1 / a)
-            + tt.gammaln(b)
-            - tt.gammaln(1 + 1 / a + b)
-        )
+        ln_mean = tt.log(b) + tt.gammaln(1 + 1 / a) + tt.gammaln(b) - tt.gammaln(1 + 1 / a + b)
         self.mean = tt.exp(ln_mean)
         ln_2nd_raw_moment = (
-            tt.log(b)
-            + tt.gammaln(1 + 2 / a)
-            + tt.gammaln(b)
-            - tt.gammaln(1 + 2 / a + b)
+            tt.log(b) + tt.gammaln(1 + 2 / a) + tt.gammaln(b) - tt.gammaln(1 + 2 / a + b)
         )
         self.variance = tt.exp(ln_2nd_raw_moment) - self.mean ** 2
 
@@ -1534,12 +1483,7 @@ class Kumaraswamy(UnitContinuous):
         a = self.a
         b = self.b
 
-        logp = (
-            tt.log(a)
-            + tt.log(b)
-            + (a - 1) * tt.log(value)
-            + (b - 1) * tt.log(1 - value ** a)
-        )
+        logp = tt.log(a) + tt.log(b) + (a - 1) * tt.log(value) + (b - 1) * tt.log(1 - value ** a)
 
         return bound(logp, value >= 0, value <= 1, a > 0, b > 0)
 
@@ -1677,9 +1621,7 @@ class Exponential(PositiveContinuous):
         return tt.switch(
             tt.le(value, 0.0),
             -np.inf,
-            tt.switch(
-                tt.le(a, tt.log(2.0)), tt.log(-tt.expm1(-a)), tt.log1p(-tt.exp(-a))
-            ),
+            tt.switch(tt.le(a, tt.log(2.0)), tt.log(-tt.expm1(-a)), tt.log1p(-tt.exp(-a))),
         )
 
 
@@ -1728,9 +1670,7 @@ class Laplace(Continuous):
     def __init__(self, mu, b, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.b = b = tt.as_tensor_variable(floatX(b))
-        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(
-            floatX(mu)
-        )
+        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(floatX(mu))
 
         self.variance = 2 * self.b ** 2
 
@@ -1754,9 +1694,7 @@ class Laplace(Continuous):
         array
         """
         mu, b = draw_values([self.mu, self.b], point=point, size=size)
-        return generate_samples(
-            np.random.laplace, mu, b, dist_shape=self.shape, size=size
-        )
+        return generate_samples(np.random.laplace, mu, b, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -1808,9 +1746,7 @@ class Laplace(Continuous):
         return tt.switch(
             tt.le(value, a),
             tt.log(0.5) + y,
-            tt.switch(
-                tt.gt(y, 1), tt.log1p(-0.5 * tt.exp(-y)), tt.log(1 - 0.5 * tt.exp(-y))
-            ),
+            tt.switch(tt.gt(y, 1), tt.log1p(-0.5 * tt.exp(-y)), tt.log(1 - 0.5 * tt.exp(-y))),
         )
 
 
@@ -1891,9 +1827,7 @@ class Lognormal(PositiveContinuous):
         self.mean = tt.exp(self.mu + 1.0 / (2 * self.tau))
         self.median = tt.exp(self.mu)
         self.mode = tt.exp(self.mu - 1.0 / self.tau)
-        self.variance = (tt.exp(1.0 / self.tau) - 1) * tt.exp(
-            2 * self.mu + 1.0 / self.tau
-        )
+        self.variance = (tt.exp(1.0 / self.tau) - 1) * tt.exp(2 * self.mu + 1.0 / self.tau)
 
         assert_negative_support(tau, "tau", "Lognormal")
         assert_negative_support(sigma, "sigma", "Lognormal")
@@ -2060,9 +1994,7 @@ class StudentT(Continuous):
         self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
         self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
 
-        self.variance = tt.switch(
-            (nu > 2) * 1, (1 / self.lam) * (nu / (nu - 2)), np.inf
-        )
+        self.variance = tt.switch((nu > 2) * 1, (1 / self.lam) * (nu / (nu - 2)), np.inf)
 
         assert_negative_support(lam, "lam (sigma)", "StudentT")
         assert_negative_support(nu, "nu", "StudentT")
@@ -2205,9 +2137,7 @@ class Pareto(Continuous):
         self.mean = tt.switch(tt.gt(alpha, 1), alpha * m / (alpha - 1.0), np.inf)
         self.median = m * 2.0 ** (1.0 / alpha)
         self.variance = tt.switch(
-            tt.gt(alpha, 2),
-            (alpha * m ** 2) / ((alpha - 2.0) * (alpha - 1.0) ** 2),
-            np.inf,
+            tt.gt(alpha, 2), (alpha * m ** 2) / ((alpha - 2.0) * (alpha - 1.0) ** 2), np.inf
         )
 
         assert_negative_support(alpha, "alpha", "Pareto")
@@ -2239,9 +2169,7 @@ class Pareto(Continuous):
         array
         """
         alpha, m = draw_values([self.alpha, self.m], point=point, size=size)
-        return generate_samples(
-            self._random, alpha, m, dist_shape=self.shape, size=size
-        )
+        return generate_samples(self._random, alpha, m, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -2295,9 +2223,7 @@ class Pareto(Continuous):
         alpha = self.alpha
         arg = (m / value) ** alpha
         return tt.switch(
-            tt.lt(value, m),
-            -np.inf,
-            tt.switch(tt.le(arg, 1e-5), tt.log1p(-arg), tt.log(1 - arg)),
+            tt.lt(value, m), -np.inf, tt.switch(tt.le(arg, 1e-5), tt.log1p(-arg), tt.log(1 - arg))
         )
 
 
@@ -2375,9 +2301,7 @@ class Cauchy(Continuous):
         array
         """
         alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
-        return generate_samples(
-            self._random, alpha, beta, dist_shape=self.shape, size=size
-        )
+        return generate_samples(self._random, alpha, beta, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -2396,8 +2320,7 @@ class Cauchy(Continuous):
         alpha = self.alpha
         beta = self.beta
         return bound(
-            -tt.log(np.pi) - tt.log(beta) - tt.log1p(((value - alpha) / beta) ** 2),
-            beta > 0,
+            -tt.log(np.pi) - tt.log(beta) - tt.log1p(((value - alpha) / beta) ** 2), beta > 0
         )
 
     def _repr_latex_(self, name=None, dist=None):
@@ -2542,9 +2465,7 @@ class HalfCauchy(PositiveContinuous):
         -------
         TensorVariable
         """
-        return tt.switch(
-            tt.le(value, 0), -np.inf, tt.log(2 * tt.arctan(value / self.beta) / np.pi)
-        )
+        return tt.switch(tt.le(value, 0), -np.inf, tt.log(2 * tt.arctan(value / self.beta) / np.pi))
 
 
 class Gamma(PositiveContinuous):
@@ -2605,9 +2526,7 @@ class Gamma(PositiveContinuous):
         Alternative scale parameter (sigma > 0).
     """
 
-    def __init__(
-        self, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs
-    ):
+    def __init__(self, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
@@ -2677,10 +2596,7 @@ class Gamma(PositiveContinuous):
         alpha = self.alpha
         beta = self.beta
         return bound(
-            -gammaln(alpha)
-            + logpow(beta, alpha)
-            - beta * value
-            + logpow(value, alpha - 1),
+            -gammaln(alpha) + logpow(beta, alpha) - beta * value + logpow(value, alpha - 1),
             value >= 0,
             alpha > 0,
             beta > 0,
@@ -2703,9 +2619,7 @@ class Gamma(PositiveContinuous):
         """
         alpha = self.alpha
         beta = self.beta
-        return bound(
-            tt.log(tt.gammainc(alpha, beta * value)), value >= 0, alpha > 0, beta > 0
-        )
+        return bound(tt.log(tt.gammainc(alpha, beta * value)), value >= 0, alpha > 0, beta > 0)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -2766,9 +2680,7 @@ class InverseGamma(PositiveContinuous):
         Alternative scale parameter (sigma > 0).
     """
 
-    def __init__(
-        self, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs
-    ):
+    def __init__(self, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs):
         super().__init__(*args, defaults=("mode",), **kwargs)
 
         if sd is not None:
@@ -2853,10 +2765,7 @@ class InverseGamma(PositiveContinuous):
         alpha = self.alpha
         beta = self.beta
         return bound(
-            logpow(beta, alpha)
-            - gammaln(alpha)
-            - beta / value
-            + logpow(value, -alpha - 1),
+            logpow(beta, alpha) - gammaln(alpha) - beta / value + logpow(value, -alpha - 1),
             value > 0,
             alpha > 0,
             beta > 0,
@@ -3068,9 +2977,7 @@ class Weibull(PositiveContinuous):
         return tt.switch(
             tt.le(value, 0.0),
             -np.inf,
-            tt.switch(
-                tt.le(a, tt.log(2.0)), tt.log(-tt.expm1(-a)), tt.log1p(-tt.exp(-a))
-            ),
+            tt.switch(tt.le(a, tt.log(2.0)), tt.log(-tt.expm1(-a)), tt.log1p(-tt.exp(-a))),
         )
 
 
@@ -3167,9 +3074,7 @@ class HalfStudentT(PositiveContinuous):
         """
         nu, sigma = draw_values([self.nu, self.sigma], point=point, size=size)
         return np.abs(
-            generate_samples(
-                stats.t.rvs, nu, loc=0, scale=sigma, dist_shape=self.shape, size=size
-            )
+            generate_samples(stats.t.rvs, nu, loc=0, scale=sigma, dist_shape=self.shape, size=size)
         )
 
     def logp(self, value):
@@ -3311,18 +3216,14 @@ class ExGaussian(Continuous):
         -------
         array
         """
-        mu, sigma, nu = draw_values(
-            [self.mu, self.sigma, self.nu], point=point, size=size
-        )
+        mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu], point=point, size=size)
 
         def _random(mu, sigma, nu, size=None):
             return np.random.normal(mu, sigma, size=size) + np.random.exponential(
                 scale=nu, size=size
             )
 
-        return generate_samples(
-            _random, mu, sigma, nu, dist_shape=self.shape, size=size
-        )
+        return generate_samples(_random, mu, sigma, nu, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -3344,17 +3245,12 @@ class ExGaussian(Continuous):
 
         standardized_val = (value - mu) / sigma
         cdf_val = std_cdf(standardized_val - sigma / nu)
-        cdf_val_safe = tt.switch(
-            tt.eq(cdf_val, 0), np.finfo(theano.config.floatX).eps, cdf_val
-        )
+        cdf_val_safe = tt.switch(tt.eq(cdf_val, 0), np.finfo(theano.config.floatX).eps, cdf_val)
 
         # This condition is suggested by exGAUS.R from gamlss
         lp = tt.switch(
             tt.gt(nu, 0.05 * sigma),
-            -tt.log(nu)
-            + (mu - value) / nu
-            + 0.5 * (sigma / nu) ** 2
-            + logpow(cdf_val_safe, 1.0),
+            -tt.log(nu) + (mu - value) / nu + 0.5 * (sigma / nu) ** 2 + logpow(cdf_val_safe, 1.0),
             -tt.log(sigma * tt.sqrt(2 * np.pi)) - 0.5 * standardized_val ** 2,
         )
 
@@ -3403,11 +3299,7 @@ class ExGaussian(Continuous):
                 std_cdf((value - mu) / sigma)
                 - std_cdf(z / sigma)
                 * tt.exp(
-                    (
-                        (mu + (sigma_2 / nu)) ** 2
-                        - (mu ** 2)
-                        - 2 * value * ((sigma_2) / nu)
-                    )
+                    ((mu + (sigma_2 / nu)) ** 2 - (mu ** 2) - 2 * value * ((sigma_2) / nu))
                     / (2 * sigma_2)
                 )
             ),
@@ -3463,9 +3355,7 @@ class VonMises(Continuous):
         if transform == "circular":
             transform = transforms.Circular()
         super().__init__(transform=transform, *args, **kwargs)
-        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(
-            floatX(mu)
-        )
+        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(floatX(mu))
         self.kappa = kappa = tt.as_tensor_variable(floatX(kappa))
 
         assert_negative_support(kappa, "kappa", "VonMises")
@@ -3598,12 +3488,8 @@ class SkewNormal(Continuous):
 
         self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
 
-        self.mean = (
-            mu + self.sigma * (2 / np.pi) ** 0.5 * alpha / (1 + alpha ** 2) ** 0.5
-        )
-        self.variance = self.sigma ** 2 * (
-            1 - (2 * alpha ** 2) / ((1 + alpha ** 2) * np.pi)
-        )
+        self.mean = mu + self.sigma * (2 / np.pi) ** 0.5 * alpha / (1 + alpha ** 2) ** 0.5
+        self.variance = self.sigma ** 2 * (1 - (2 * alpha ** 2) / ((1 + alpha ** 2) * np.pi))
 
         assert_negative_support(tau, "tau", "SkewNormal")
         assert_negative_support(sigma, "sigma", "SkewNormal")
@@ -3629,12 +3515,7 @@ class SkewNormal(Continuous):
             [self.mu, self.tau, self.sigma, self.alpha], point=point, size=size
         )
         return generate_samples(
-            stats.skewnorm.rvs,
-            a=alpha,
-            loc=mu,
-            scale=tau ** -0.5,
-            dist_shape=self.shape,
-            size=size,
+            stats.skewnorm.rvs, a=alpha, loc=mu, scale=tau ** -0.5, dist_shape=self.shape, size=size
         )
 
     def logp(self, value):
@@ -3670,10 +3551,7 @@ class SkewNormal(Continuous):
         alpha = dist.alpha
         name = r"\text{%s}" % name
         return r"${} \sim \text{{Skew-Normal}}(\mathit{{mu}}={},~\mathit{{sigma}}={},~\mathit{{alpha}}={})$".format(
-            name,
-            get_variable_name(mu),
-            get_variable_name(sigma),
-            get_variable_name(alpha),
+            name, get_variable_name(mu), get_variable_name(sigma), get_variable_name(alpha)
         )
 
 
@@ -3755,16 +3633,9 @@ class Triangular(BoundedContinuous):
         -------
         array
         """
-        c, lower, upper = draw_values(
-            [self.c, self.lower, self.upper], point=point, size=size
-        )
+        c, lower, upper = draw_values([self.c, self.lower, self.upper], point=point, size=size)
         return generate_samples(
-            self._random,
-            c=c,
-            lower=lower,
-            upper=upper,
-            size=size,
-            dist_shape=self.shape,
+            self._random, c=c, lower=lower, upper=upper, size=size, dist_shape=self.shape
         )
 
     def _random(self, c, lower, upper, size):
@@ -3774,9 +3645,7 @@ class Triangular(BoundedContinuous):
         the scipy.rvs representation.
         """
         scale = upper - lower
-        return stats.triang.rvs(
-            c=(c - lower) / scale, loc=lower, scale=scale, size=size
-        )
+        return stats.triang.rvs(c=(c - lower) / scale, loc=lower, scale=scale, size=size)
 
     def logp(self, value):
         """
@@ -3817,10 +3686,7 @@ class Triangular(BoundedContinuous):
         c = dist.c
         name = r"\text{%s}" % name
         return r"${} \sim \text{{Triangular}}(\mathit{{c}}={},~\mathit{{lower}}={},~\mathit{{upper}}={})$".format(
-            name,
-            get_variable_name(c),
-            get_variable_name(lower),
-            get_variable_name(upper),
+            name, get_variable_name(c), get_variable_name(lower), get_variable_name(upper)
         )
 
     def logcdf(self, value):
@@ -3847,11 +3713,7 @@ class Triangular(BoundedContinuous):
             tt.switch(
                 tt.le(value, c),
                 tt.log(((value - l) ** 2) / ((u - l) * (c - l))),
-                tt.switch(
-                    tt.lt(value, u),
-                    tt.log1p(-((u - value) ** 2) / ((u - l) * (u - c))),
-                    0,
-                ),
+                tt.switch(tt.lt(value, u), tt.log1p(-((u - value) ** 2) / ((u - l) * (u - c))), 0),
             ),
         )
 
@@ -4061,10 +3923,8 @@ class Rice(PositiveContinuous):
             * np.sqrt(np.pi / 2)
             * tt.exp((-nu ** 2 / (2 * sigma ** 2)) / 2)
             * (
-                (1 - (-nu ** 2 / (2 * sigma ** 2)))
-                * tt.i0(-(-nu ** 2 / (2 * sigma ** 2)) / 2)
-                - (-nu ** 2 / (2 * sigma ** 2))
-                * tt.i1(-(-nu ** 2 / (2 * sigma ** 2)) / 2)
+                (1 - (-nu ** 2 / (2 * sigma ** 2))) * tt.i0(-(-nu ** 2 / (2 * sigma ** 2)) / 2)
+                - (-nu ** 2 / (2 * sigma ** 2)) * tt.i1(-(-nu ** 2 / (2 * sigma ** 2)) / 2)
             )
         )
         self.variance = (
@@ -4074,10 +3934,8 @@ class Rice(PositiveContinuous):
             * (
                 tt.exp((-nu ** 2 / (2 * sigma ** 2)) / 2)
                 * (
-                    (1 - (-nu ** 2 / (2 * sigma ** 2)))
-                    * tt.i0(-(-nu ** 2 / (2 * sigma ** 2)) / 2)
-                    - (-nu ** 2 / (2 * sigma ** 2))
-                    * tt.i1(-(-nu ** 2 / (2 * sigma ** 2)) / 2)
+                    (1 - (-nu ** 2 / (2 * sigma ** 2))) * tt.i0(-(-nu ** 2 / (2 * sigma ** 2)) / 2)
+                    - (-nu ** 2 / (2 * sigma ** 2)) * tt.i1(-(-nu ** 2 / (2 * sigma ** 2)) / 2)
                 )
             )
             ** 2
@@ -4112,9 +3970,7 @@ class Rice(PositiveContinuous):
         array
         """
         nu, sigma = draw_values([self.nu, self.sigma], point=point, size=size)
-        return generate_samples(
-            self._random, nu=nu, sigma=sigma, dist_shape=self.shape, size=size
-        )
+        return generate_samples(self._random, nu=nu, sigma=sigma, dist_shape=self.shape, size=size)
 
     def _random(self, nu, sigma, size):
         """ Wrapper around stats.rice.rvs that converts Rice's
@@ -4219,10 +4075,7 @@ class Logistic(Continuous):
         mu = self.mu
         s = self.s
 
-        return bound(
-            -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)),
-            s > 0,
-        )
+        return bound(-(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)), s > 0)
 
     def random(self, point=None, size=None):
         """
@@ -4285,9 +4138,7 @@ class Logistic(Continuous):
             tt.le(a, -37),
             tt.exp(a),
             tt.switch(
-                tt.le(a, 18),
-                tt.log1p(tt.exp(a)),
-                tt.switch(tt.le(a, 33.3), tt.exp(-a) + a, a),
+                tt.le(a, 18), tt.log1p(tt.exp(a)), tt.switch(tt.le(a, 33.3), tt.exp(-a) + a, a)
             ),
         )
 
@@ -4368,13 +4219,9 @@ class LogitNormal(UnitContinuous):
         -------
         array
         """
-        mu, _, sigma = draw_values(
-            [self.mu, self.tau, self.sigma], point=point, size=size
-        )
+        mu, _, sigma = draw_values([self.mu, self.tau, self.sigma], point=point, size=size)
         return expit(
-            generate_samples(
-                stats.norm.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size
-            )
+            generate_samples(stats.norm.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size)
         )
 
     def logp(self, value):
@@ -4470,12 +4317,9 @@ class Interpolated(BoundedContinuous):
         return x[index] + np.where(
             np.abs(slope) <= 1e-8,
             np.where(
-                np.abs(pdf[index]) <= 1e-8,
-                np.zeros(index.shape),
-                (p - cdf[index]) / pdf[index],
+                np.abs(pdf[index]) <= 1e-8, np.zeros(index.shape), (p - cdf[index]) / pdf[index]
             ),
-            (-pdf[index] + np.sqrt(pdf[index] ** 2 + 2 * slope * (p - cdf[index])))
-            / slope,
+            (-pdf[index] + np.sqrt(pdf[index] ** 2 + 2 * slope * (p - cdf[index]))) / slope,
         )
 
     def _random(self, size=None):
