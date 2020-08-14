@@ -18,6 +18,7 @@ A collection of common probability distributions for stochastic
 nodes in PyMC.
 """
 import numpy as np
+import theano
 import theano.tensor as tt
 from scipy import stats
 from scipy.special import expit
@@ -3268,13 +3269,21 @@ class ExGaussian(Continuous):
         sigma = self.sigma
         nu = self.nu
 
-        # This condition suggested by exGAUS.R from gamlss
-        lp = tt.switch(tt.gt(nu,  0.05 * sigma),
-                       - tt.log(nu) + (mu - value) / nu + 0.5 * (sigma / nu)**2
-                       + logpow(std_cdf((value - mu) / sigma - sigma / nu), 1.),
-                       - tt.log(sigma * tt.sqrt(2 * np.pi))
-                       - 0.5 * ((value - mu) / sigma)**2)
-        return bound(lp, sigma > 0., nu > 0.)
+        standardized_val = (value - mu) / sigma
+        cdf_val = std_cdf(standardized_val - sigma / nu)
+        cdf_val_safe = tt.switch(tt.eq(cdf_val, 0), np.finfo(theano.config.floatX).eps, cdf_val)
+
+        # This condition is suggested by exGAUS.R from gamlss
+        lp = tt.switch(
+            tt.gt(nu, 0.05 * sigma),
+            -tt.log(nu)
+            + (mu - value) / nu
+            + 0.5 * (sigma / nu) ** 2
+            + logpow(cdf_val_safe, 1.0),
+            -tt.log(sigma * tt.sqrt(2 * np.pi)) - 0.5 * standardized_val ** 2,
+        )
+
+        return bound(lp, sigma > 0.0, nu > 0.0)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
