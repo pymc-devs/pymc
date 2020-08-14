@@ -56,7 +56,7 @@ __all__ = ['Trace', 'Database']
 
 from pymc import six
 from pymc import utils
-from pymc.six import print_
+from six import print_
 
 
 class Trace(object):

@@ -29,7 +29,7 @@ import warnings
 import traceback
 import itertools
 
-from .six import print_, reraise
+from six import print_, reraise
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'

@@ -22,8 +22,8 @@ import warnings
 import sys
 import inspect
 
-from . import six
-from .six import print_
+import six
+from six import print_
 
 __docformat__ = 'reStructuredText'
 
@@ -696,8 +696,9 @@ class Gibbs(Metropolis):
     def __init__(self, stochastic, verbose=-1):
         Metropolis.__init__(self, stochastic, verbose=verbose, tally=False)
 
-    # Override Metropolis's competence.
-    competence = classmethod(StepMethod.competence)
+    @classmethod
+    def competence(s):
+        return 0
 
     def step(self):
         if not self.conjugate:

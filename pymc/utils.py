@@ -20,8 +20,8 @@ import types
 from .datatypes import *
 import inspect
 
-from . import six
-from .six import print_
+import six
+from six import print_
 from functools import reduce
 reduce = six.moves.reduce
 

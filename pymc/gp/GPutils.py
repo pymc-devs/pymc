@@ -19,7 +19,7 @@ from pymc.gp import chunksize
 import pymc
 
 from pymc import six
-from pymc.six import print_
+from six import print_
 xrange = six.moves.xrange
 
 try:

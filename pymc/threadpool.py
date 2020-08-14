@@ -63,7 +63,7 @@ import traceback
 import os
 import numpy as np
 
-from . import six
+import six
 
 # exceptions
 

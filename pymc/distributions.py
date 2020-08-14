@@ -40,8 +40,8 @@ import pdb
 from . import utils
 import warnings
 
-from . import six
-from .six import print_
+import six
+from six import print_
 xrange = six.moves.xrange
 
 

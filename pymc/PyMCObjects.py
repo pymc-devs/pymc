@@ -26,8 +26,8 @@ from . import calc_utils
 
 from . import datatypes
 
-from . import six
-from .six import print_
+import six
+from six import print_
 
 d_neg_inf = float(-1.7976931348623157e+308)
 

@@ -42,7 +42,7 @@ from .Container_values import LCValue, DCValue, ACValue, OCValue
 from types import ModuleType
 import pdb
 
-from . import six
+import six
 xrange = six.moves.xrange
 
 __all__ = [

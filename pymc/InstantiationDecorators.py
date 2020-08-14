@@ -41,7 +41,7 @@ def enable_special_methods(sma=special_methods_available):
 def check_special_methods(sma=special_methods_available):
     return sma[0]
 
-from . import six
+import six
 
 
 def _extract(__func__, kwds, keys, classname, probe=True):

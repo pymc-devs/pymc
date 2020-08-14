@@ -11,7 +11,7 @@ import sys
 import pdb
 import numpy as np
 import types
-from . import six
+import six
 print_ = six.print_
 
 try:

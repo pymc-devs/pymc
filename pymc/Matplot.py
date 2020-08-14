@@ -28,8 +28,8 @@ except ImportError:
     special = None
 from scipy.stats import kurtosis
 
-from . import six
-from .six import print_
+import six
+from six import print_
 
 __all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope',
            'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace',

@@ -33,7 +33,7 @@ except ImportError:
     def UnboundMethodType(func, inst, cls):
         return func
 
-from . import six
+import six
 xrange = six.moves.xrange
 
 __all__ = [

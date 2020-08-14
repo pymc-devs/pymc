@@ -30,7 +30,7 @@ from numpy import array
 import string
 
 from pymc import six
-from pymc.six import print_
+from six import print_
 
 
 __all__ = ['Trace', 'Database', 'load']

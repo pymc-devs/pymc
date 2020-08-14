@@ -11,8 +11,8 @@ try:
 except ImportError:
     has_sm = False
 
-from . import six
-from .six import print_
+import six
+from six import print_
 xrange = six.moves.xrange
 
 __all__ = [

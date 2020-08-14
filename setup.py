@@ -146,7 +146,7 @@ def setup_pymc():
                 'Programming Language :: Fortran',
                 'Topic :: Scientific/Engineering',
                  ],
-            requires=['NumPy (>=1.8)',],
+            requires=['NumPy (>=1.8)', 'six (>=1.10)'],
             long_description="""
             Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC),
             is an increasingly relevant approach to statistical estimation. However,

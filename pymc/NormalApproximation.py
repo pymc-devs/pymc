@@ -11,8 +11,8 @@ from numpy.random import normal
 from .utils import msqrt, check_type, round_array, logp_of_set
 from copy import copy
 
-from . import six
-from .six import print_
+import six
+from six import print_
 xrange = six.moves.xrange
 
 try:
