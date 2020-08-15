@@ -37,7 +37,7 @@ dependencies:
   - dataclasses  # python_version < 3.7
   - contextvars  # python_version < 3.7
   - mkl-service
+  - dill
   - libblas=*=*mkl
   - pip:
     - black_nbconvert
-    - dill
