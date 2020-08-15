@@ -17,7 +17,8 @@ import functools
 import io
 import operator
 import numpy as np
-from theano import theano, tensor as tt
+import theano
+import theano.tensor as tt
 
 
 import pymc3 as pm
