@@ -1881,5 +1881,8 @@ def test_serialize_density_dist():
 
     with pm.Model():
         pm.Normal('x')
-        pm.DensityDist('y', func)
-        pm.sample(draws=1, tune=1, mp_ctx="spawn")
+        y = pm.DensityDist('y', func)
+        pm.sample(draws=5, tune=1, mp_ctx="spawn")
+
+    import pickle
+    pickle.loads(pickle.dumps(y))
