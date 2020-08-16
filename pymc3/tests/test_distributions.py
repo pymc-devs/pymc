@@ -79,6 +79,7 @@ from ..distributions import (
 
 from ..distributions import continuous
 from pymc3.theanof import floatX
+import pymc3 as pm
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal, assert_allclose, assert_equal
 import numpy.random as nr
@@ -1872,3 +1873,16 @@ class TestBugfixes:
         assert isinstance(actual_a, np.ndarray)
         assert actual_a.shape == (X.shape[0],)
         pass
+
+
+def test_serialize_density_dist():
+    def func(x):
+        return -2 * (x ** 2).sum()
+
+    with pm.Model():
+        pm.Normal('x')
+        y = pm.DensityDist('y', func)
+        pm.sample(draws=5, tune=1, mp_ctx="spawn")
+
+    import pickle
+    pickle.loads(pickle.dumps(y))
