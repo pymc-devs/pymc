@@ -12,7 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from theano import theano, tensor as tt
+import theano
+import theano.tensor as tt
 from pymc3.variational.opvi import node_property
 from pymc3.variational.test_functions import rbf
 from pymc3.theanof import floatX, change_flags

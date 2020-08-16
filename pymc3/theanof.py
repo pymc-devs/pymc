@@ -14,7 +14,7 @@
 
 import numpy as np
 import theano
-from theano import theano, scalar, tensor as tt
+from theano import scalar, tensor as tt
 from theano.configparser import change_flags
 from theano.gof import Op
 from theano.gof.graph import inputs

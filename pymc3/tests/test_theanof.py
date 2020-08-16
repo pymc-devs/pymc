@@ -16,7 +16,8 @@ import collections
 import pytest
 from itertools import product
 
-from theano import theano, tensor as tt
+import theano
+import theano.tensor as tt
 import numpy as np
 
 from pymc3.theanof import set_theano_conf, take_along_axis, _conversion_map
