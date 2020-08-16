@@ -22,16 +22,17 @@ command -v conda >/dev/null 2>&1 || {
 ENVNAME="${ENVNAME:-testenv}"         # if no ENVNAME is specified, use testenv
 
 if [ -z ${GLOBAL} ]; then
+  source $(dirname $(dirname $(which conda)))/etc/profile.d/conda.sh
   if conda env list | grep -q ${ENVNAME}; then
     echo "Environment ${ENVNAME} already exists, keeping up to date"
-    source activate ${ENVNAME}
+    conda activate ${ENVNAME}
     mamba env update -f environment-dev.yml
   else
     conda config --add channels conda-forge
     conda config --set channel_priority strict
     conda install -c conda-forge mamba --yes
     mamba env create -f environment-dev.yml
-    source activate ${ENVNAME}
+    conda activate ${ENVNAME}
   fi
 fi
 
