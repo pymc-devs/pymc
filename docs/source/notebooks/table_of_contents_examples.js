@@ -32,6 +32,7 @@ Gallery.contents = {
     "GP-TProcess": "Gaussian Processes",
     "GP-smoothing": "Gaussian Processes",
     "gaussian_process": "Gaussian Processes",
+    "conditional-autoregressive-model": "Gaussian Processes",
     "dependent_density_regression": "Mixture Models",
     "dp_mix": "Mixture Models",
     "gaussian-mixture-model-advi": "Mixture Models",

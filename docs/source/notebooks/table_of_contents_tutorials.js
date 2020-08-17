@@ -13,7 +13,6 @@ Gallery.contents = {
     "ODE_API_shapes_and_benchmarking": "Deep dives",
     "DEMetropolisZ_EfficiencyComparison": "Deep dives",
     "DEMetropolisZ_tune_drop_fraction": "Deep dives",
-    "PyMC3_tips_and_heuristic": "How-To",
     "blackbox_external_likelihood": "How-To",
     "profiling": "How-To",
     "howto_debugging": "How-To",
