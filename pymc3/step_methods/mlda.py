@@ -15,79 +15,15 @@
 import numpy as np
 import warnings
 import logging
+from typing import Union, List, Optional, Type
 
 from .arraystep import ArrayStepShared, metrop_select, Competence
 from .compound import CompoundStep
 from .metropolis import Proposal, Metropolis, delta_logp
+from ..model import Model
 import pymc3 as pm
 
 __all__ = ["MetropolisMLDA", "RecursiveDAProposal", "MLDA"]
-
-
-# Available proposal distributions for MLDA
-
-
-class RecursiveDAProposal(Proposal):
-    """
-    Recursive Delayed Acceptance proposal to be used with MLDA step sampler.
-    Recursively calls an MLDA sampler if level > 0 and calls MetropolisMLDA
-    sampler if level = 0. The sampler generates subsampling_rate samples and
-    the last one is used as a proposal. Results in a hierarchy of chains
-    each of which is used to propose samples to the chain above.
-    """
-
-    def __init__(self, next_step_method, next_model, tune, subsampling_rate):
-
-        self.next_step_method = next_step_method
-        self.next_model = next_model
-        self.tune = tune
-        self.subsampling_rate = subsampling_rate
-
-    def __call__(self, q0_dict):
-        """Returns proposed sample given the current sample
-        in dictionary form (q0_dict).
-        """
-
-        # Logging is reduced to avoid extensive console output
-        # during multiple recursive calls of sample()
-        _log = logging.getLogger("pymc3")
-        _log.setLevel(logging.ERROR)
-
-        with self.next_model:
-            # Check if the tuning flag has been set to False
-            # in which case tuning is stopped. The flag is set
-            # to False (by MLDA's astep) when the burn-in
-            # iterations of the highest-level MLDA sampler run out.
-            # The change propagates to all levels.
-            if self.tune:
-                # Sample in tuning mode
-                output = pm.sample(
-                    draws=0,
-                    step=self.next_step_method,
-                    start=q0_dict,
-                    tune=self.subsampling_rate,
-                    chains=1,
-                    progressbar=False,
-                    compute_convergence_checks=False,
-                    discard_tuned_samples=False,
-                ).point(-1)
-            else:
-                # Sample in normal mode without tuning
-                output = pm.sample(
-                    draws=self.subsampling_rate,
-                    step=self.next_step_method,
-                    start=q0_dict,
-                    tune=0,
-                    chains=1,
-                    progressbar=False,
-                    compute_convergence_checks=False,
-                    discard_tuned_samples=False,
-                ).point(-1)
-
-        # set logging back to normal
-        _log.setLevel(logging.NOTSET)
-
-        return output
 
 
 class MetropolisMLDA(Metropolis):
@@ -214,19 +150,19 @@ class MLDA(ArrayStepShared):
 
     def __init__(
         self,
-        coarse_models,
-        vars=None,
-        base_S=None,
-        base_proposal_dist=None,
-        base_scaling=1.0,
-        tune=True,
-        base_tune_interval=100,
-        model=None,
-        mode=None,
-        subsampling_rates=5,
-        base_blocked=False,
-        **kwargs,
-    ):
+        coarse_models: List[Model],
+        vars: Optional[list] = None,
+        base_S: Optional = None,
+        base_proposal_dist: Optional[Type[Proposal]] = None,
+        base_scaling: Union[float, int] = 1.0,
+        tune: bool = True,
+        base_tune_interval: int = 100,
+        model: Optional[Model] = None,
+        mode: Optional = None,
+        subsampling_rates: List[int] = 5,
+        base_blocked: bool = False,
+        **kwargs
+    ) -> None:
 
         warnings.warn(
             "The MLDA implementation in PyMC3 is very young. "
@@ -416,3 +352,74 @@ class MLDA(ArrayStepShared):
         if var.dtype in pm.discrete_types:
             return Competence.INCOMPATIBLE
         return Competence.COMPATIBLE
+
+
+# Available proposal distributions for MLDA
+
+
+class RecursiveDAProposal(Proposal):
+    """
+    Recursive Delayed Acceptance proposal to be used with MLDA step sampler.
+    Recursively calls an MLDA sampler if level > 0 and calls MetropolisMLDA
+    sampler if level = 0. The sampler generates subsampling_rate samples and
+    the last one is used as a proposal. Results in a hierarchy of chains
+    each of which is used to propose samples to the chain above.
+    """
+
+    def __init__(self,
+                 next_step_method: Union[MLDA, Metropolis, CompoundStep],
+                 next_model: Model,
+                 tune: bool,
+                 subsampling_rate: int) -> None:
+
+        self.next_step_method = next_step_method
+        self.next_model = next_model
+        self.tune = tune
+        self.subsampling_rate = subsampling_rate
+
+    def __call__(self,
+                 q0_dict: dict) -> dict:
+        """Returns proposed sample given the current sample
+        in dictionary form (q0_dict).
+        """
+
+        # Logging is reduced to avoid extensive console output
+        # during multiple recursive calls of sample()
+        _log = logging.getLogger("pymc3")
+        _log.setLevel(logging.ERROR)
+
+        with self.next_model:
+            # Check if the tuning flag has been set to False
+            # in which case tuning is stopped. The flag is set
+            # to False (by MLDA's astep) when the burn-in
+            # iterations of the highest-level MLDA sampler run out.
+            # The change propagates to all levels.
+            if self.tune:
+                # Sample in tuning mode
+                output = pm.sample(
+                    draws=0,
+                    step=self.next_step_method,
+                    start=q0_dict,
+                    tune=self.subsampling_rate,
+                    chains=1,
+                    progressbar=False,
+                    compute_convergence_checks=False,
+                    discard_tuned_samples=False,
+                ).point(-1)
+            else:
+                # Sample in normal mode without tuning
+                output = pm.sample(
+                    draws=self.subsampling_rate,
+                    step=self.next_step_method,
+                    start=q0_dict,
+                    tune=0,
+                    chains=1,
+                    progressbar=False,
+                    compute_convergence_checks=False,
+                    discard_tuned_samples=False,
+                ).point(-1)
+
+        # set logging back to normal
+        _log.setLevel(logging.NOTSET)
+
+        return output
