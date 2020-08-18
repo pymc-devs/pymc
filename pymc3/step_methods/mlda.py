@@ -175,7 +175,7 @@ class MLDA(ArrayStepShared):
         self.coarse_models = coarse_models
         if not isinstance(coarse_models, list):
             raise ValueError(
-                "MLDA step method cannot use " "coarse_models if it is not a list"
+                "MLDA step method cannot use coarse_models if it is not a list"
             )
         if len(self.coarse_models) == 0:
             raise ValueError(
