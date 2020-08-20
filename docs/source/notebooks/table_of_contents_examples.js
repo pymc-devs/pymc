@@ -58,5 +58,6 @@ Gallery.contents = {
     "GLM-hierarchical-advi-minibatch": "Variational Inference",
     "ODE_with_manual_gradients": "Inference in ODE models",
     "ODE_API_introduction": "Inference in ODE models",
-    "probabilistic_matrix_factorization": "Case Studies"
+    "probabilistic_matrix_factorization": "Case Studies",
+    "MLDA_simple_linear_regression": "MCMC"
 }
