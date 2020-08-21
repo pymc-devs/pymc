@@ -498,7 +498,7 @@ class Dirichlet(Continuous):
                 DeprecationWarning
             )
             try:
-                kwargs['shape'] = get_test_value(tt.shape(a))
+                kwargs['shape'] = np.shape(get_test_value(a))
             except AttributeError:
                 pass
 
