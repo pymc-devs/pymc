@@ -37,11 +37,15 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.mathjax",
+    "sphinx.ext.intersphinx",
     "nbsphinx",
     "numpydoc",
     "IPython.sphinxext.ipython_console_highlighting",
+    "IPython.sphinxext.ipython_directive",
     "sphinx.ext.autosectionlabel",
+    "sphinx.ext.napoleon",
     "gallery_generator",
+    "recommonmark",
 ]
 
 # Don't auto-generate summary for class members.
@@ -59,7 +63,6 @@ templates_path = ["_templates"]
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 # source_suffix = ['.rst', '.md']
-source_parsers = {".md": "recommonmark.parser.CommonMarkParser"}
 source_suffix = [".rst", ".md"]
 
 # The encoding of source files.
@@ -128,12 +131,17 @@ pygments_style = "friendly"
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# intersphinx configuration to ease linking arviz docs
+intersphinx_mapping = {
+    "arviz": ("https://arviz-devs.github.io/arviz/", None),
+}
+
 
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme_path = "./semantic_sphinx"
+html_theme_path = ["."]
 html_theme = "semantic_sphinx"
 
 
@@ -143,10 +151,12 @@ html_theme = "semantic_sphinx"
 
 html_theme_options = {
     "navbar_links": [
-        ("Quickstart", "intro"),
-        ("API", "api"),
+        ("Tutorials", "nb_tutorials/index"),
         ("Examples", "nb_examples/index"),
-        ("Learn", "learn"),
+        ("Books + Videos", "learn"),
+        ("API", "api"),
+        ("Developer Guide", "developer_guide"),
+        ("About PyMC3", "about")
     ],
     #     "fixed_sidebar": "false",
     #     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
@@ -174,7 +184,7 @@ html_favicon = "../logos/PyMC3.ico"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static", "nb_examples/_images"]
+html_static_path = ["_static", "nb_tutorials/_images", "nb_examples/_images"]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -321,8 +331,8 @@ texinfo_documents = [
 
 
 def setup(app):
-    app.add_stylesheet(
+    app.add_css_file(
         "https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css"
     )
-    app.add_stylesheet("default.css")
+    app.add_css_file("default.css")
 

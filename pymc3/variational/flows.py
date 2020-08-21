@@ -1,8 +1,22 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import theano
 from theano import tensor as tt
 
-from ..distributions.dist_math import rho2sd
+from ..distributions.dist_math import rho2sigma
 from ..theanof import change_flags
 from ..memoize import WithMemoization
 from .opvi import node_property, collect_shared_to_list
@@ -18,14 +32,14 @@ __all__ = [
 ]
 
 
-class Formula(object):
+class Formula:
     """
     Helpful class to use string like formulas with
     __call__ syntax similar to Flow.__init__
 
     Parameters
     ----------
-    formula : str
+    formula: str
         string representing normalizing flow
         e.g. 'planar', 'planar*4', 'planar*4-radial*3', 'planar-radial-planar'
         Yet simple pattern is supported:
@@ -263,7 +277,7 @@ flow_for_params = AbstractFlow.flow_for_params
 flow_for_short_name = AbstractFlow.flow_for_short_name
 
 
-class FlowFn(object):
+class FlowFn:
     @staticmethod
     def fn(*args):
         raise NotImplementedError
@@ -286,7 +300,7 @@ class LinearFlow(AbstractFlow):
     @change_flags(compute_test_value='off')
     def __init__(self, h, u=None, w=None, b=None, **kwargs):
         self.h = h
-        super(LinearFlow, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         u = self.add_param(u, 'u')
         w = self.add_param(w, 'w')
         b = self.add_param(b, 'b')
@@ -369,12 +383,12 @@ class PlanarFlow(LinearFlow):
     short_name = 'planar'
 
     def __init__(self, **kwargs):
-        super(PlanarFlow, self).__init__(h=Tanh(), **kwargs)
+        super().__init__(h=Tanh(), **kwargs)
 
     def make_uw(self, u, w):
         if not self.batched:
-            # u_ : d
-            # w_ : d
+            # u_: d
+            # w_: d
             wu = u.dot(w)  # .
             mwu = -1. + tt.nnet.softplus(wu)  # .
             # d + (. - .) * d / .
@@ -384,8 +398,8 @@ class PlanarFlow(LinearFlow):
             )
             return u_h, w
         else:
-            # u_ : bxd
-            # w_ : bxd
+            # u_: bxd
+            # w_: bxd
             wu = (u*w).sum(-1, keepdims=True)  # bx-
             mwu = -1. + tt.nnet.softplus(wu)  # bx-
             # bxd + (bx- - bx-) * bxd / bx- = bxd
@@ -402,7 +416,7 @@ class ReferencePointFlow(AbstractFlow):
 
     @change_flags(compute_test_value='off')
     def __init__(self, h, a=None, b=None, z_ref=None, **kwargs):
-        super(ReferencePointFlow, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         a = self.add_param(a, 'a')
         b = self.add_param(b, 'b')
         if hasattr(self.z0, 'tag') and hasattr(self.z0.tag, 'test_value'):
@@ -500,7 +514,7 @@ class RadialFlow(ReferencePointFlow):
     short_name = 'radial'
 
     def __init__(self, **kwargs):
-        super(RadialFlow, self).__init__(Radial(), **kwargs)
+        super().__init__(Radial(), **kwargs)
 
     def make_ab(self, a, b):
         a = tt.exp(a)
@@ -514,7 +528,7 @@ class LocFlow(AbstractFlow):
     short_name = 'loc'
 
     def __init__(self, loc=None, **kwargs):
-        super(LocFlow, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         loc = self.add_param(loc, 'loc')
         self.shared_params = dict(loc=loc)
 
@@ -538,9 +552,9 @@ class ScaleFlow(AbstractFlow):
 
     @change_flags(compute_test_value='off')
     def __init__(self, rho=None, **kwargs):
-        super(ScaleFlow, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         rho = self.add_param(rho, 'rho')
-        self.scale = rho2sd(rho)
+        self.scale = rho2sigma(rho)
         self.shared_params = dict(rho=rho)
 
     log_scale = property(lambda self: self.shared_params['log_scale'])
@@ -563,7 +577,7 @@ class HouseholderFlow(AbstractFlow):
 
     @change_flags(compute_test_value='raise')
     def __init__(self, v=None, **kwargs):
-        super(HouseholderFlow, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         v = self.add_param(v, 'v')
         self.shared_params = dict(v=v)
         if self.batched:

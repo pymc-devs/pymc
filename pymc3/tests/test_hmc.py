@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import numpy.testing as npt
 
@@ -35,7 +49,7 @@ def test_leapfrog_reversible():
 def test_nuts_tuning():
     model = pymc3.Model()
     with model:
-        pymc3.Normal("mu", mu=0, sd=1)
+        pymc3.Normal("mu", mu=0, sigma=1)
         step = pymc3.NUTS()
         trace = pymc3.sample(10, step=step, tune=5, progressbar=False, chains=1)
 
@@ -46,8 +60,8 @@ def test_nuts_error_reporting(caplog):
     model = pymc3.Model()
     with caplog.at_level(logging.CRITICAL) and pytest.raises(SamplingError):
         with model:
-            pymc3.HalfNormal('a', sd=1, transform=None, testval=-1)
-            pymc3.HalfNormal('b', sd=1, transform=None)
+            pymc3.HalfNormal('a', sigma=1, transform=None, testval=-1)
+            pymc3.HalfNormal('b', sigma=1, transform=None)
             trace = pymc3.sample(init='adapt_diag', chains=1)
         assert "Bad initial energy, check any log  probabilities that are inf or -inf: a        -inf\nb" in caplog.text
 

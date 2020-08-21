@@ -1,4 +1,16 @@
-from __future__ import division
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
 
 import pytest
 import numpy as np
@@ -10,7 +22,10 @@ import numpy.random as nr
 import theano
 
 import pymc3 as pm
-from pymc3.distributions.distribution import draw_values
+from pymc3.distributions.dist_math import clipped_beta_rvs
+from pymc3.distributions.distribution import (draw_values,
+                                              _DrawValuesContext,
+                                              _DrawValuesContextBlocker)
 from .helpers import SeededTest
 from .test_distributions import (
     build_model, Domain, product, R, Rplus, Rplusbig, Runif, Rplusdunif,
@@ -74,14 +89,14 @@ def pymc3_random_discrete(dist, paramdomains,
 class TestDrawValues(SeededTest):
     def test_draw_scalar_parameters(self):
         with pm.Model():
-            y = pm.Normal('y1', mu=0., sd=1.)
+            y = pm.Normal('y1', mu=0., sigma=1.)
             mu, tau = draw_values([y.distribution.mu, y.distribution.tau])
         npt.assert_almost_equal(mu, 0)
         npt.assert_almost_equal(tau, 1)
 
     def test_draw_dependencies(self):
         with pm.Model():
-            x = pm.Normal('x', mu=0., sd=1.)
+            x = pm.Normal('x', mu=0., sigma=1.)
             exp_x = pm.Deterministic('exp_x', pm.math.exp(x))
 
         x, exp_x = draw_values([x, exp_x])
@@ -89,7 +104,7 @@ class TestDrawValues(SeededTest):
 
     def test_draw_order(self):
         with pm.Model():
-            x = pm.Normal('x', mu=0., sd=1.)
+            x = pm.Normal('x', mu=0., sigma=1.)
             exp_x = pm.Deterministic('exp_x', pm.math.exp(x))
 
         # Need to draw x before drawing log_x
@@ -100,7 +115,7 @@ class TestDrawValues(SeededTest):
         with pm.Model():
             mu = pm.Normal('mu', mu=0., tau=1e-3)
             sigma = pm.Gamma('sigma', alpha=1., beta=1., transform=None)
-            y = pm.Normal('y', mu=mu, sd=sigma)
+            y = pm.Normal('y', mu=mu, sigma=sigma)
             mu2, tau2 = draw_values([y.distribution.mu, y.distribution.tau],
                                                      point={'mu': 5., 'sigma': 2.})
         npt.assert_almost_equal(mu2, 5)
@@ -110,18 +125,56 @@ class TestDrawValues(SeededTest):
         with pm.Model():
             mu = pm.Normal('mu', mu=0., tau=1e-3)
             sigma = pm.Gamma('sigma', alpha=1., beta=1., transform=None)
-            y = pm.Normal('y', mu=mu, sd=sigma)
+            y = pm.Normal('y', mu=mu, sigma=sigma)
             mu, tau = draw_values([y.distribution.mu, y.distribution.tau])
         assert isinstance(mu, np.ndarray)
         assert isinstance(tau, np.ndarray)
 
 
-class BaseTestCases(object):
+class TestDrawValuesContext:
+    def test_normal_context(self):
+        with _DrawValuesContext() as context0:
+            assert context0.parent is None
+            context0.drawn_vars['root_test'] = 1
+            with _DrawValuesContext() as context1:
+                assert id(context1.drawn_vars) == id(context0.drawn_vars)
+                assert context1.parent == context0
+                with _DrawValuesContext() as context2:
+                    assert id(context2.drawn_vars) == id(context0.drawn_vars)
+                    assert context2.parent == context1
+                    context2.drawn_vars['leaf_test'] = 2
+                assert context1.drawn_vars['leaf_test'] == 2
+                context1.drawn_vars['root_test'] = 3
+            assert context0.drawn_vars['root_test'] == 3
+            assert context0.drawn_vars['leaf_test'] == 2
+
+    def test_blocking_context(self):
+        with _DrawValuesContext() as context0:
+            assert context0.parent is None
+            context0.drawn_vars['root_test'] = 1
+            with _DrawValuesContext() as context1:
+                assert id(context1.drawn_vars) == id(context0.drawn_vars)
+                assert context1.parent == context0
+                with _DrawValuesContextBlocker() as blocker:
+                    assert id(blocker.drawn_vars) != id(context0.drawn_vars)
+                    assert blocker.parent is None
+                    blocker.drawn_vars['root_test'] = 2
+                    with _DrawValuesContext() as context2:
+                        assert id(context2.drawn_vars) == id(blocker.drawn_vars)
+                        assert context2.parent == blocker
+                        context2.drawn_vars['root_test'] = 3
+                        context2.drawn_vars['leaf_test'] = 4
+                    assert blocker.drawn_vars['root_test'] == 3
+                assert 'leaf_test' not in context1.drawn_vars
+            assert context0.drawn_vars['root_test'] == 1
+
+
+class BaseTestCases:
     class BaseTestCase(SeededTest):
         shape = 5
 
         def setup_method(self, *args, **kwargs):
-            super(BaseTestCases.BaseTestCase, self).setup_method(*args, **kwargs)
+            super().setup_method(*args, **kwargs)
             self.model = pm.Model()
 
         def get_random_variable(self, shape, with_vector_params=False, name=None):
@@ -136,7 +189,12 @@ class BaseTestCases(object):
                 if shape is None:
                     return self.distribution(name, transform=None, **params)
                 else:
-                    return self.distribution(name, shape=shape, transform=None, **params)
+                    try:
+                        return self.distribution(name, shape=shape, transform=None, **params)
+                    except TypeError:
+                        if np.sum(np.atleast_1d(shape)) == 0:
+                            pytest.skip("Timeseries must have positive shape")
+                        raise
 
         @staticmethod
         def sample_random_variable(random_variable, size):
@@ -213,17 +271,33 @@ class BaseTestCases(object):
                 assert e == a
 
 
+class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
+    distribution = pm.GaussianRandomWalk
+    params = {'mu': 1., 'sigma': 1.}
+
+    @pytest.mark.xfail(reason="Supporting this makes a nasty API")
+    def test_broadcast_shape(self):
+        super().test_broadcast_shape()
+
 class TestNormal(BaseTestCases.BaseTestCase):
     distribution = pm.Normal
     params = {'mu': 0., 'tau': 1.}
 
 class TestTruncatedNormal(BaseTestCases.BaseTestCase):
     distribution = pm.TruncatedNormal
-    params = {'mu': 0., 'tau': 1., 'lower':-0.5, 'upper':0.5}
+    params = {'mu': 0., 'tau': 1., 'lower': -0.5, 'upper': 0.5}
+
+class TestTruncatedNormalLower(BaseTestCases.BaseTestCase):
+    distribution = pm.TruncatedNormal
+    params = {'mu': 0., 'tau': 1., 'lower': -0.5}
+
+class TestTruncatedNormalUpper(BaseTestCases.BaseTestCase):
+    distribution = pm.TruncatedNormal
+    params = {'mu': 0., 'tau': 1., 'upper': 0.5}
 
 class TestSkewNormal(BaseTestCases.BaseTestCase):
     distribution = pm.SkewNormal
-    params = {'mu': 0., 'sd': 1., 'alpha': 5.}
+    params = {'mu': 0., 'sigma': 1., 'alpha': 5.}
 
 
 class TestHalfNormal(BaseTestCases.BaseTestCase):
@@ -333,7 +407,7 @@ class TestLogistic(BaseTestCases.BaseTestCase):
 
 class TestLogitNormal(BaseTestCases.BaseTestCase):
     distribution = pm.LogitNormal
-    params = {'mu': 0., 'sd': 1.}
+    params = {'mu': 0., 'sigma': 1.}
 
 
 class TestBinomial(BaseTestCases.BaseTestCase):
@@ -393,18 +467,27 @@ class TestGeometric(BaseTestCases.BaseTestCase):
     distribution = pm.Geometric
     params = {'p': 0.5}
 
+    
+class TestMoyal(BaseTestCases.BaseTestCase):
+    distribution = pm.Moyal
+    params = {'mu': 0., 'sigma': 1.}
 
+    
 class TestCategorical(BaseTestCases.BaseTestCase):
     distribution = pm.Categorical
     params = {'p': np.ones(BaseTestCases.BaseTestCase.shape)}
 
     def get_random_variable(self, shape, with_vector_params=False, **kwargs):  # don't transform categories
-        return super(TestCategorical, self).get_random_variable(shape, with_vector_params=False, **kwargs)
+        return super().get_random_variable(shape, with_vector_params=False, **kwargs)
 
     def test_probability_vector_shape(self):
         """Check that if a 2d array of probabilities are passed to categorical correct shape is returned"""
         p = np.ones((10, 5))
         assert pm.Categorical.dist(p=p).random().shape == (10,)
+        assert pm.Categorical.dist(p=p).random(size=4).shape == (4, 10)
+        p = np.ones((3, 7, 5))
+        assert pm.Categorical.dist(p=p).random().shape == (3, 7)
+        assert pm.Categorical.dist(p=p).random(size=4).shape == (4, 3, 7)
 
 
 class TestScalarParameterSamples(SeededTest):
@@ -419,24 +502,35 @@ class TestScalarParameterSamples(SeededTest):
     def test_uniform(self):
         def ref_rand(size, lower, upper):
             return st.uniform.rvs(size=size, loc=lower, scale=upper - lower)
-
         pymc3_random(pm.Uniform, {'lower': -Rplus, 'upper': Rplus}, ref_rand=ref_rand)
 
     def test_normal(self):
-        def ref_rand(size, mu, sd):
-            return st.norm.rvs(size=size, loc=mu, scale=sd)
-        pymc3_random(pm.Normal, {'mu': R, 'sd': Rplus}, ref_rand=ref_rand)
+        def ref_rand(size, mu, sigma):
+            return st.norm.rvs(size=size, loc=mu, scale=sigma)
+        pymc3_random(pm.Normal, {'mu': R, 'sigma': Rplus}, ref_rand=ref_rand)
 
     def test_truncated_normal(self):
-        def ref_rand(size, mu, sd, lower, upper):
-            return st.truncnorm.rvs((lower-mu)/sd, (upper-mu)/sd, size=size, loc=mu, scale=sd)
-        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sd': Rplusbig, 'lower':-Rplusbig, 'upper':Rplusbig},
+        def ref_rand(size, mu, sigma, lower, upper):
+            return st.truncnorm.rvs((lower - mu) / sigma, (upper - mu) / sigma, size=size, loc=mu, scale=sigma)
+        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sigma': Rplusbig, 'lower': -Rplusbig, 'upper': Rplusbig},
+                     ref_rand=ref_rand)
+
+    def test_truncated_normal_lower(self):
+        def ref_rand(size, mu, sigma, lower):
+            return st.truncnorm.rvs((lower - mu) / sigma, np.inf, size=size, loc=mu, scale=sigma)
+        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sigma': Rplusbig, 'lower': -Rplusbig},
+                     ref_rand=ref_rand)
+
+    def test_truncated_normal_upper(self):
+        def ref_rand(size, mu, sigma, upper):
+            return st.truncnorm.rvs(-np.inf, (upper - mu) / sigma, size=size, loc=mu, scale=sigma)
+        pymc3_random(pm.TruncatedNormal, {'mu': R, 'sigma': Rplusbig, 'upper': Rplusbig},
                      ref_rand=ref_rand)
 
     def test_skew_normal(self):
-        def ref_rand(size, alpha, mu, sd):
-            return st.skewnorm.rvs(size=size, a=alpha, loc=mu, scale=sd)
-        pymc3_random(pm.SkewNormal, {'mu': R, 'sd': Rplus, 'alpha': R}, ref_rand=ref_rand)
+        def ref_rand(size, alpha, mu, sigma):
+            return st.skewnorm.rvs(size=size, a=alpha, loc=mu, scale=sigma)
+        pymc3_random(pm.SkewNormal, {'mu': R, 'sigma': Rplus, 'alpha': R}, ref_rand=ref_rand)
 
     def test_half_normal(self):
         def ref_rand(size, tau):
@@ -455,7 +549,7 @@ class TestScalarParameterSamples(SeededTest):
 
     def test_beta(self):
         def ref_rand(size, alpha, beta):
-            return st.beta.rvs(a=alpha, b=beta, size=size)
+            return clipped_beta_rvs(a=alpha, b=beta, size=size)
         pymc3_random(pm.Beta, {'alpha': Rplus, 'beta': Rplus}, ref_rand=ref_rand)
 
     def test_exponential(self):
@@ -493,10 +587,10 @@ class TestScalarParameterSamples(SeededTest):
             return st.gamma.rvs(alpha, scale=1. / beta, size=size)
         pymc3_random(pm.Gamma, {'alpha': Rplusbig, 'beta': Rplusbig}, ref_rand=ref_rand)
 
-    def test_gamma_mu_sd(self):
-        def ref_rand(size, mu, sd):
-            return st.gamma.rvs(mu**2 / sd**2, scale=sd ** 2 / mu, size=size)
-        pymc3_random(pm.Gamma, {'mu': Rplusbig, 'sd': Rplusbig}, ref_rand=ref_rand)
+    def test_gamma_mu_sigma(self):
+        def ref_rand(size, mu, sigma):
+            return st.gamma.rvs(mu**2 / sigma**2, scale=sigma ** 2 / mu, size=size)
+        pymc3_random(pm.Gamma, {'mu': Rplusbig, 'sigma': Rplusbig}, ref_rand=ref_rand)
 
     def test_inverse_gamma(self):
         def ref_rand(size, alpha, beta):
@@ -729,24 +823,30 @@ class TestScalarParameterSamples(SeededTest):
         pymc3_random(pm.Logistic, {'mu': R, 's': Rplus}, ref_rand=ref_rand)
 
     def test_logitnormal(self):
-        def ref_rand(size, mu, sd):
-            return expit(st.norm.rvs(loc=mu, scale=sd, size=size))
-        pymc3_random(pm.LogitNormal, {'mu': R, 'sd': Rplus}, ref_rand=ref_rand)
+        def ref_rand(size, mu, sigma):
+            return expit(st.norm.rvs(loc=mu, scale=sigma, size=size))
+        pymc3_random(pm.LogitNormal, {'mu': R, 'sigma': Rplus}, ref_rand=ref_rand)
 
+    def test_moyal(self):
+        def ref_rand(size, mu, sigma):
+            return st.moyal.rvs(loc=mu, scale=sigma, size=size)
+        pymc3_random(pm.Moyal, {'mu': R, 'sigma': Rplus}, ref_rand=ref_rand)
+
+        
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
-            for sd in Rplus.vals:
+            for sigma in Rplus.vals:
                 #pylint: disable=cell-var-from-loop
                 def ref_rand(size):
-                    return st.norm.rvs(loc=mu, scale=sd, size=size)
+                    return st.norm.rvs(loc=mu, scale=sigma, size=size)
 
                 class TestedInterpolated (pm.Interpolated):
 
                     def __init__(self, **kwargs):
-                        x_points = np.linspace(mu - 5 * sd, mu + 5 * sd, 100)
-                        pdf_points = st.norm.pdf(x_points, loc=mu, scale=sd)
-                        super(TestedInterpolated, self).__init__(
+                        x_points = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 100)
+                        pdf_points = st.norm.pdf(x_points, loc=mu, scale=sigma)
+                        super().__init__(
                             x_points=x_points,
                             pdf_points=pdf_points,
                             **kwargs
@@ -780,10 +880,7 @@ class TestScalarParameterSamples(SeededTest):
 
                 def __init__(self, **kwargs):
                     kwargs.pop('shape', None)
-                    super(TestedLKJCorr, self).__init__(
-                            n=n,
-                            **kwargs
-                    )
+                    super().__init__(n=n, **kwargs)
 
             pymc3_random(TestedLKJCorr,
                      {'eta': Domain([1., 10., 100.])},
@@ -791,19 +888,19 @@ class TestScalarParameterSamples(SeededTest):
                      ref_rand=ref_rand)
 
     def test_normalmixture(self):
-        def ref_rand(size, w, mu, sd):
+        def ref_rand(size, w, mu, sigma):
             component = np.random.choice(w.size, size=size, p=w)
-            return np.random.normal(mu[component], sd[component], size=size)
+            return np.random.normal(mu[component], sigma[component], size=size)
 
         pymc3_random(pm.NormalMixture, {'w': Simplex(2),
                      'mu': Domain([[.05, 2.5], [-5., 1.]], edges=(None, None)),
-                     'sd': Domain([[1, 1], [1.5, 2.]], edges=(None, None))},
+                     'sigma': Domain([[1, 1], [1.5, 2.]], edges=(None, None))},
                      extra_args={'comp_shape': 2},
                      size=1000,
                      ref_rand=ref_rand)
         pymc3_random(pm.NormalMixture, {'w': Simplex(3),
                      'mu': Domain([[-5., 1., 2.5]], edges=(None, None)),
-                     'sd': Domain([[1.5, 2., 3.]], edges=(None, None))},
+                     'sigma': Domain([[1.5, 2., 3.]], edges=(None, None))},
                      extra_args={'comp_shape': 3},
                      size=1000,
                      ref_rand=ref_rand)
@@ -815,7 +912,7 @@ def test_mixture_random_shape():
                         nr.poisson(9, size=10)])
     with pm.Model() as m:
         comp0 = pm.Poisson.dist(mu=np.ones(2))
-        w0 = pm.Dirichlet('w0', a=np.ones(2))
+        w0 = pm.Dirichlet('w0', a=np.ones(2), shape=(2,))
         like0 = pm.Mixture('like0',
                            w=w0,
                            comp_dists=comp0,
@@ -823,7 +920,7 @@ def test_mixture_random_shape():
 
         comp1 = pm.Poisson.dist(mu=np.ones((20, 2)),
                                 shape=(20, 2))
-        w1 = pm.Dirichlet('w1', a=np.ones(2))
+        w1 = pm.Dirichlet('w1', a=np.ones(2), shape=(2,))
         like1 = pm.Mixture('like1',
                            w=w1,
                            comp_dists=comp1,
@@ -863,26 +960,373 @@ def test_mixture_random_shape():
     assert ppc['like2'].shape == (200, 20)
     assert ppc['like3'].shape == (200, 20)
 
+@pytest.mark.xfail
+def test_mixture_random_shape_fast():
+    # test the shape broadcasting in mixture random
+    y = np.concatenate([nr.poisson(5, size=10),
+                        nr.poisson(9, size=10)])
+    with pm.Model() as m:
+        comp0 = pm.Poisson.dist(mu=np.ones(2))
+        w0 = pm.Dirichlet('w0', a=np.ones(2), shape=(2,))
+        like0 = pm.Mixture('like0',
+                           w=w0,
+                           comp_dists=comp0,
+                           observed=y)
 
-def test_density_dist_with_random_sampleable():
-    with pm.Model() as model:
-        mu = pm.Normal('mu', 0, 1)
-        normal_dist = pm.Normal.dist(mu, 1)
-        pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100), random=normal_dist.random)
-        trace = pm.sample(100)
+        comp1 = pm.Poisson.dist(mu=np.ones((20, 2)),
+                                shape=(20, 2))
+        w1 = pm.Dirichlet('w1', a=np.ones(2), shape=(2,))
+        like1 = pm.Mixture('like1',
+                           w=w1,
+                           comp_dists=comp1,
+                           observed=y)
 
-    samples = 500
-    ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
-    assert len(ppc['density_dist']) == samples
+        comp2 = pm.Poisson.dist(mu=np.ones(2))
+        w2 = pm.Dirichlet('w2',
+                          a=np.ones(2),
+                          shape=(20, 2))
+        like2 = pm.Mixture('like2',
+                           w=w2,
+                           comp_dists=comp2,
+                           observed=y)
+
+        comp3 = pm.Poisson.dist(mu=np.ones(2),
+                                shape=(20, 2))
+        w3 = pm.Dirichlet('w3',
+                          a=np.ones(2),
+                          shape=(20, 2))
+        like3 = pm.Mixture('like3',
+                           w=w3,
+                           comp_dists=comp3,
+                           observed=y)
+
+    rand0, rand1, rand2, rand3 = draw_values([like0, like1, like2, like3],
+                                             point=m.test_point,
+                                             size=100)
+    assert rand0.shape == (100, 20)
+    assert rand1.shape == (100, 20)
+    assert rand2.shape == (100, 20)
+    assert rand3.shape == (100, 20)
+
+    # I *think* that the mixture means that this is not going to work,
+    # but I could be wrong. [2019/08/22:rpg]
+    with m:
+        ppc = pm.fast_sample_posterior_predictive([m.test_point], samples=200)
+    assert ppc['like0'].shape == (200, 20)
+    assert ppc['like1'].shape == (200, 20)
+    assert ppc['like2'].shape == (200, 20)
+    assert ppc['like3'].shape == (200, 20)
 
 
-def test_density_dist_without_random_not_sampleable():
-    with pm.Model() as model:
-        mu = pm.Normal('mu', 0, 1)
-        normal_dist = pm.Normal.dist(mu, 1)
-        pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100))
-        trace = pm.sample(100)
 
-    samples = 500
-    with pytest.raises(ValueError):
-        pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
+class TestDensityDist():
+    @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
+    def test_density_dist_with_random_sampleable(self, shape):
+        with pm.Model() as model:
+            mu = pm.Normal('mu', 0, 1)
+            normal_dist = pm.Normal.dist(mu, 1, shape=shape)
+            obs = pm.DensityDist(
+                'density_dist',
+                normal_dist.logp,
+                observed=np.random.randn(100, *shape),
+                shape=shape,
+                random=normal_dist.random)
+            trace = pm.sample(100)
+
+        samples = 500
+        size = 100
+        ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model, size=size)
+        assert ppc['density_dist'].shape == (samples, size) + obs.distribution.shape
+
+        # ppc = pm.fast_sample_posterior_predictive(trace, samples=samples, model=model, size=size)
+        # assert ppc['density_dist'].shape == (samples, size) + obs.distribution.shape
+
+
+    @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
+    def test_density_dist_with_random_sampleable_failure(self, shape):
+        with pm.Model() as model:
+            mu = pm.Normal('mu', 0, 1)
+            normal_dist = pm.Normal.dist(mu, 1, shape=shape)
+            pm.DensityDist(
+                'density_dist',
+                normal_dist.logp,
+                observed=np.random.randn(100, *shape),
+                shape=shape,
+                random=normal_dist.random,
+                wrap_random_with_dist_shape=False
+            )
+            trace = pm.sample(100)
+
+        samples = 500
+        with pytest.raises(RuntimeError):
+            pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
+
+        with pytest.raises((TypeError, RuntimeError)):
+            pm.fast_sample_posterior_predictive(trace, samples=samples, model=model, size=100)
+
+
+    @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
+    def test_density_dist_with_random_sampleable_hidden_error(self, shape):
+        with pm.Model() as model:
+            mu = pm.Normal('mu', 0, 1)
+            normal_dist = pm.Normal.dist(mu, 1, shape=shape)
+            obs = pm.DensityDist(
+                'density_dist',
+                normal_dist.logp,
+                observed=np.random.randn(100, *shape),
+                shape=shape,
+                random=normal_dist.random,
+                wrap_random_with_dist_shape=False,
+                check_shape_in_random=False
+            )
+            trace = pm.sample(100)
+
+        samples = 500
+        ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model)
+        assert len(ppc['density_dist']) == samples
+        assert ((samples,) + obs.distribution.shape) != ppc['density_dist'].shape
+
+        ppc = pm.fast_sample_posterior_predictive(trace, samples=samples, model=model)
+        assert len(ppc['density_dist']) == samples
+        assert ((samples,) + obs.distribution.shape) != ppc['density_dist'].shape
+
+
+    def test_density_dist_with_random_sampleable_handcrafted_success(self):
+        with pm.Model() as model:
+            mu = pm.Normal('mu', 0, 1)
+            normal_dist = pm.Normal.dist(mu, 1)
+            rvs = pm.Normal.dist(mu, 1, shape=100).random
+            obs = pm.DensityDist(
+                'density_dist',
+                normal_dist.logp,
+                observed=np.random.randn(100),
+                random=rvs,
+                wrap_random_with_dist_shape=False
+            )
+            trace = pm.sample(100)
+
+        samples = 500
+        size = 100
+        ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model, size=size)
+        assert ppc['density_dist'].shape == (samples, size) + obs.distribution.shape
+
+    @pytest.mark.xfail
+    def test_density_dist_with_random_sampleable_handcrafted_success_fast(self):
+        with pm.Model() as model:
+            mu = pm.Normal('mu', 0, 1)
+            normal_dist = pm.Normal.dist(mu, 1)
+            rvs = pm.Normal.dist(mu, 1, shape=100).random
+            obs = pm.DensityDist(
+                'density_dist',
+                normal_dist.logp,
+                observed=np.random.randn(100),
+                random=rvs,
+                wrap_random_with_dist_shape=False
+            )
+            trace = pm.sample(100)
+
+        samples = 500
+        size = 100
+
+        ppc = pm.fast_sample_posterior_predictive(trace, samples=samples, model=model, size=size)
+        assert ppc['density_dist'].shape == (samples, size) + obs.distribution.shape
+
+
+    def test_density_dist_without_random_not_sampleable(self):
+        with pm.Model() as model:
+            mu = pm.Normal('mu', 0, 1)
+            normal_dist = pm.Normal.dist(mu, 1)
+            pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100))
+            trace = pm.sample(100)
+
+        samples = 500
+        with pytest.raises(ValueError):
+            pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
+
+        with pytest.raises((TypeError, ValueError)):
+            pm.fast_sample_posterior_predictive(trace, samples=samples, model=model, size=100)
+
+
+class TestNestedRandom(SeededTest):
+    def build_model(self, distribution, shape, nested_rvs_info):
+        with pm.Model() as model:
+            nested_rvs = {}
+            for rv_name, info in nested_rvs_info.items():
+                try:
+                    value, nested_shape = info
+                    loc = 0.
+                except ValueError:
+                    value, nested_shape, loc = info
+                if value is None:
+                    nested_rvs[rv_name] = pm.Uniform(
+                        rv_name,
+                        0 + loc,
+                        1 + loc,
+                        shape=nested_shape,
+                    )
+                else:
+                    nested_rvs[rv_name] = value * np.ones(nested_shape)
+            rv = distribution(
+                "target",
+                shape=shape,
+                **nested_rvs,
+            )
+        return model, rv, nested_rvs
+
+    def sample_prior(
+        self,
+        distribution,
+        shape,
+        nested_rvs_info,
+        prior_samples
+    ):
+        model, rv, nested_rvs = self.build_model(
+            distribution,
+            shape,
+            nested_rvs_info,
+        )
+        with model:
+            return pm.sample_prior_predictive(prior_samples)
+
+    @pytest.mark.parametrize(
+        ["prior_samples", "shape", "mu", "alpha"],
+        [
+            [10, (3,), (None, tuple()), (None, (3,))],
+            [10, (3,), (None, (3,)), (None, tuple())],
+            [10, (4, 3,), (None, (3,)), (None, (3,))],
+            [10, (4, 3,), (None, (3,)), (None, (4, 3))],
+        ],
+        ids=str,
+    )
+    def test_NegativeBinomial(
+        self,
+        prior_samples,
+        shape,
+        mu,
+        alpha,
+    ):
+        prior = self.sample_prior(
+            distribution=pm.NegativeBinomial,
+            shape=shape,
+            nested_rvs_info=dict(mu=mu, alpha=alpha),
+            prior_samples=prior_samples,
+        )
+        assert prior["target"].shape == (prior_samples,) + shape
+
+    @pytest.mark.parametrize(
+        ["prior_samples", "shape", "psi", "mu", "alpha"],
+        [
+            [10, (3,), (0.5, tuple()), (None, tuple()), (None, (3,))],
+            [10, (3,), (0.5, (3,)), (None, tuple()), (None, (3,))],
+            [10, (3,), (0.5, tuple()), (None, (3,)), (None, tuple())],
+            [10, (3,), (0.5, (3,)), (None, (3,)), (None, tuple())],
+            [10, (4, 3,), (0.5, (3,)), (None, (3,)), (None, (3,))],
+            [10, (4, 3,), (0.5, (3,)), (None, (3,)), (None, (4, 3))],
+        ],
+        ids=str,
+    )
+    def test_ZeroInflatedNegativeBinomial(
+        self,
+        prior_samples,
+        shape,
+        psi,
+        mu,
+        alpha,
+    ):
+        prior = self.sample_prior(
+            distribution=pm.ZeroInflatedNegativeBinomial,
+            shape=shape,
+            nested_rvs_info=dict(psi=psi, mu=mu, alpha=alpha),
+            prior_samples=prior_samples,
+        )
+        assert prior["target"].shape == (prior_samples,) + shape
+
+    @pytest.mark.parametrize(
+        ["prior_samples", "shape", "nu", "sigma"],
+        [
+            [10, (3,), (None, tuple()), (None, (3,))],
+            [10, (3,), (None, tuple()), (None, (3,))],
+            [10, (3,), (None, (3,)), (None, tuple())],
+            [10, (3,), (None, (3,)), (None, tuple())],
+            [10, (4, 3,), (None, (3,)), (None, (3,))],
+            [10, (4, 3,), (None, (3,)), (None, (4, 3))],
+        ],
+        ids=str,
+    )
+    def test_Rice(
+        self,
+        prior_samples,
+        shape,
+        nu,
+        sigma,
+    ):
+        prior = self.sample_prior(
+            distribution=pm.Rice,
+            shape=shape,
+            nested_rvs_info=dict(nu=nu, sigma=sigma),
+            prior_samples=prior_samples,
+        )
+        assert prior["target"].shape == (prior_samples,) + shape
+
+    @pytest.mark.parametrize(
+        ["prior_samples", "shape", "mu", "sigma", "lower", "upper"],
+        [
+            [10, (3,), (None, tuple()), (1., tuple()), (None, tuple(), -1), (None, (3,))],
+            [10, (3,), (None, tuple()), (1., tuple()), (None, tuple(), -1), (None, (3,))],
+            [10, (3,), (None, tuple()), (1., tuple()), (None, (3,), -1), (None, tuple())],
+            [10, (3,), (None, tuple()), (1., tuple()), (None, (3,), -1), (None, tuple())],
+            [10, (4, 3,), (None, (3,)), (1., tuple()), (None, (3,), -1), (None, (3,))],
+            [10, (4, 3,), (None, (3,)), (1., tuple()), (None, (3,), -1), (None, (4, 3))],
+            [10, (3,), (0., tuple()), (None, tuple()), (None, tuple(), -1), (None, (3,))],
+            [10, (3,), (0., tuple()), (None, tuple()), (None, tuple(), -1), (None, (3,))],
+            [10, (3,), (0., tuple()), (None, tuple()), (None, (3,), -1), (None, tuple())],
+            [10, (3,), (0., tuple()), (None, tuple()), (None, (3,), -1), (None, tuple())],
+            [10, (4, 3,), (0., tuple()), (None, (3,)), (None, (3,), -1), (None, (3,))],
+            [10, (4, 3,), (0., tuple()), (None, (3,)), (None, (3,), -1), (None, (4, 3))],
+        ],
+        ids=str,
+    )
+    def test_TruncatedNormal(
+        self,
+        prior_samples,
+        shape,
+        mu,
+        sigma,
+        lower,
+        upper,
+    ):
+        prior = self.sample_prior(
+            distribution=pm.TruncatedNormal,
+            shape=shape,
+            nested_rvs_info=dict(mu=mu, sigma=sigma, lower=lower, upper=upper),
+            prior_samples=prior_samples,
+        )
+        assert prior["target"].shape == (prior_samples,) + shape
+
+
+    @pytest.mark.parametrize(
+        ["prior_samples", "shape", "c", "lower", "upper"],
+        [
+            [10, (3,), (None, tuple()), (-1., (3,)), (2, tuple())],
+            [10, (3,), (None, tuple()), (-1., tuple()), (None, tuple(), 1)],
+            [10, (3,), (None, (3,)), (-1., tuple()), (None, tuple(), 1)],
+            [10, (4, 3,), (None, (3,)), (-1., tuple()), (None, (3,), 1)],
+            [10, (4, 3,), (None, (3,)), (None, tuple(), -1), (None, (3,), 1)],
+        ],
+        ids=str,
+    )
+    def test_Triangular(
+        self,
+        prior_samples,
+        shape,
+        c,
+        lower,
+        upper,
+    ):
+        prior = self.sample_prior(
+            distribution=pm.Triangular,
+            shape=shape,
+            nested_rvs_info=dict(c=c, lower=lower, upper=upper),
+            prior_samples=prior_samples,
+        )
+        assert prior["target"].shape == (prior_samples,) + shape

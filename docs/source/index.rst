@@ -10,26 +10,32 @@
                     <h3 class="ui header">Friendly modelling API</h3>
                     <p>PyMC3 allows you to write down models using an intuitive syntax to describe a data generating
                         process.</p>
-                    <h3 class="ui header">Cutting edge algorithms</h3>
+                    <h3 class="ui header">Cutting edge algorithms and model building blocks</h3>
                     <p>Fit your model using gradient-based MCMC algorithms like NUTS, using ADVI for fast approximate
                         inference &mdash; including minibatch-ADVI for scaling to large datasets &mdash; or using
-                        Gaussian processes to fit a regression model.</p>
+                        Gaussian processes to build Bayesian nonparametric models.</p>
                 </div>
                 <div class="eight wide right floated column">
-                    <pre><code class="python">
-    X, y = linear_training_data()
 
+.. code-block:: python
+
+    import pymc3 as pm
+
+    X, y = linear_training_data()
     with pm.Model() as linear_model:
-        weights = pm.Normal('weights', mu=0, sd=1)
+        weights = pm.Normal('weights', mu=0, sigma=1)
         noise = pm.Gamma('noise', alpha=2, beta=1)
         y_observed = pm.Normal('y_observed',
-                    mu=X.dot(weights),
-                    sd=noise,
+                    mu=X @ weights,
+                    sigma=noise,
                     observed=y)
 
         prior = pm.sample_prior_predictive()
         posterior = pm.sample()
-        posterior_pred = pm.sample_posterior_predictive(posterior)</code></pre>
+        posterior_pred = pm.sample_posterior_predictive(posterior)
+
+.. raw:: html
+
                 </div>
             </div>
         </div>
@@ -72,7 +78,7 @@
             <h2 class="ui dividing header">In-Depth Guides</h2>
             <div class="ui four stackable cards">
 
-                <a class="ui link card" href="/prob_dists.html">
+                <a class="ui link card" href="/Probability_Distributions.html">
                     <div class="content">
                         <div class="header">Probability Distributions</div>
                         <div class="description">PyMC3 includes a comprehensive set of pre-defined statistical distributions that can be used as model building blocks.
@@ -80,7 +86,7 @@
                     </div>
                 </a>
 
-                <a class="ui link card" href="/gp.html">
+                <a class="ui link card" href="/Gaussian_Processes.html">
                     <div class="content">
                         <div class="header">Gaussian Processes</div>
                         <div class="description">Sometimes an unknown parameter or variable in a model is not a scalar value or a fixed-length vector, but a function. A Gaussian process (GP) can be used as a prior probability distribution whose support is over the space of continuous functions. PyMC3 provides rich support for defining and using GPs.
@@ -96,9 +102,9 @@
                     </div>
                 </a>
 
-                <a class="ui link card" href="/theano.html">
+                <a class="ui link card" href="/PyMC3_and_Theano.html">
                     <div class="content">
-                        <div class="header">Theano</div>
+                        <div class="header">PyMC3 and Theano</div>
                         <div class="description">Theano is the deep-learning library PyMC3 uses to construct probability distributions and then access the gradient in order to implement cutting edge inference algorithms. More advanced models may be built by understanding this layer.
                         </div>
                     </div>
@@ -121,22 +127,26 @@
 
         <div class="ui bottom attached segment">
             <h2 class="ui dividing header">Support and sponsors</h2>
-            <p>PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3 financially, you <a href="https://www.flipcause.com/widget/widget_home/MTE4OTc=">can donate here</a>.</p>
+            <p>PyMC3 is a non-profit project under NumFOCUS umbrella.
+            If you value PyMC and want to support its development, consider
+            <a href="https://numfocus.org/donate-to-pymc3">donating to the project</a> or
+            read our <a href="https://docs.pymc.io/about.html#support">support PyMC3 page</a>.
+            </p>
 
             <div class="ui equal width grid">
                 <div class="column">
                     <a href="https://numfocus.org/">
-                        <img class="ui image" src="https://www.numfocus.org/wp-content/uploads/2017/03/1457562110.png"/>
+                        <img class="ui image" height="120" src="https://www.numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png"/>
                     </a>
                 </div>
                 <div class="column">
                     <a href="https://quantopian.com">
-                        <img class="ui image" src="https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg"/>
+                        <img class="ui image" height="120" src="https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg"/>
                     </a>
                 </div>
                 <div class="column">
                     <a href="https://odsc.com/">
-                        <img class="ui image" src="https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/odsc_logo.png"/>
+                        <img class="ui image" height="120" src="https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/odsc_logo.png"/>
                     </a>
                 </div>
             </div>

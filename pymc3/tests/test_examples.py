@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import matplotlib
 import numpy as np
 import pandas as pd
@@ -6,10 +20,14 @@ import theano.tensor as tt
 import pytest
 import theano
 from pymc3.theanof import floatX
+from packaging import version
 
 from .helpers import SeededTest
 
-matplotlib.use('Agg', warn=False)
+if version.parse(matplotlib.__version__) < version.parse('3.3'):
+    matplotlib.use('Agg', warn=False)
+else:
+    matplotlib.use('Agg')
 
 
 def get_city_data():
@@ -33,8 +51,8 @@ def get_city_data():
 class TestARM5_4(SeededTest):
     def build_model(self):
         data = pd.read_csv(pm.get_data('wells.dat'),
-                           delimiter=u' ', index_col=u'id',
-                           dtype={u'switch': np.int8})
+                           delimiter=' ', index_col='id',
+                           dtype={'switch': np.int8})
         data.dist /= 100
         data.educ /= 4
         col = data.columns
@@ -43,7 +61,7 @@ class TestARM5_4(SeededTest):
         P['1'] = 1
 
         with pm.Model() as model:
-            effects = pm.Normal('effects', mu=0, sd=100, shape=len(P.columns))
+            effects = pm.Normal('effects', mu=0, sigma=100, shape=len(P.columns))
             logit_p = tt.dot(floatX(np.array(P)), effects)
             pm.Bernoulli('s', logit_p=logit_p, observed=floatX(data.switch.values))
         return model
@@ -58,11 +76,11 @@ class TestARM12_6(SeededTest):
     def build_model(self):
         data = get_city_data()
 
-        self.obs_means = data.groupby('fips').lradon.mean().as_matrix()
+        self.obs_means = data.groupby('fips').lradon.mean().to_numpy()
 
-        lradon = data.lradon.as_matrix()
-        floor = data.floor.as_matrix()
-        group = data.group.as_matrix()
+        lradon = data.lradon.to_numpy()
+        floor = data.floor.to_numpy()
+        group = data.group.to_numpy()
 
         with pm.Model() as model:
             groupmean = pm.Normal('groupmean', 0, 10. ** -2.)
@@ -93,10 +111,10 @@ class TestARM12_6Uranium(SeededTest):
         data = get_city_data()
         self.obs_means = data.groupby('fips').lradon.mean()
 
-        lradon = data.lradon.as_matrix()
-        floor = data.floor.as_matrix()
-        group = data.group.as_matrix()
-        ufull = data.Uppm.as_matrix()
+        lradon = data.lradon.to_numpy()
+        floor = data.floor.to_numpy()
+        group = data.group.to_numpy()
+        ufull = data.Uppm.to_numpy()
 
         with pm.Model() as model:
             groupmean = pm.Normal('groupmean', 0, 10. ** -2.)
@@ -165,7 +183,7 @@ class TestDisasterModel(SeededTest):
         with model:
             # Initial values for stochastic nodes
             start = {'early_mean': 2., 'late_mean': 3.}
-            # Use slice sampler for means (other varibles auto-selected)
+            # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
             pm.summary(tr)
@@ -175,7 +193,7 @@ class TestDisasterModel(SeededTest):
         with model:
             # Initial values for stochastic nodes
             start = {'early_mean': 2., 'late_mean': 3.}
-            # Use slice sampler for means (other varibles auto-selected)
+            # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
             pm.summary(tr)
@@ -232,7 +250,7 @@ class TestLatentOccupancy(SeededTest):
     Copyright (c) 2008 University of Otago. All rights reserved.
     """
     def setup_method(self):
-        super(TestLatentOccupancy, self).setup_method()
+        super().setup_method()
         # Sample size
         n = 100
         # True mean count, given occupancy

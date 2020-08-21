@@ -1,8 +1,23 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 """Functions for converting traces into a table-like format
 """
 
 import numpy as np
 import pandas as pd
+import warnings
 
 from ..util import get_default_varnames
 
@@ -14,17 +29,23 @@ def trace_to_dataframe(trace, chains=None, varnames=None, include_transformed=Fa
 
     Parameters
     ----------
-    trace : NDarray trace
-    chains : int or list of ints
+    trace: NDarray trace
+    chains: int or list of ints
         Chains to include. If None, all chains are used. A single
         chain value can also be given.
-    varnames : list of variable names
+    varnames: list of variable names
         Variables to be included in the DataFrame, if None all variable are
         included.
     include_transformed: boolean
         If true transformed variables will be included in the resulting
         DataFrame.
     """
+    warnings.warn(
+        'The `trace_to_dataframe` function will soon be removed. '
+        'Please use ArviZ to save traces. '
+        'If you have good reasons for using the `trace_to_dataframe` function, file an issue and tell us about them. ',
+        DeprecationWarning,
+    )
     var_shapes = trace._straces[0].var_shapes
 
     if varnames is None:

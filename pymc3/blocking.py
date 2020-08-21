@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 """
 pymc3.blocking
 
@@ -16,7 +30,7 @@ DataMap = collections.namedtuple('DataMap', 'list_ind, slc, shp, dtype, name')
 # TODO Classes and methods need to be fully documented.
 
 
-class ArrayOrdering(object):
+class ArrayOrdering:
     """
     An ordering for an array space
     """
@@ -45,7 +59,7 @@ class ArrayOrdering(object):
         return self.by_name[key]
 
 
-class DictToArrayBijection(object):
+class DictToArrayBijection:
     """
     A mapping between a dict space and an array space
     """
@@ -68,7 +82,7 @@ class DictToArrayBijection(object):
 
         Parameters
         ----------
-        dpt : dict
+        dpt: dict
         """
         apt = np.empty(self.ordering.size, dtype=self.array_dtype)
         for var, slc, _, _ in self.ordering.vmap:
@@ -81,7 +95,7 @@ class DictToArrayBijection(object):
 
         Parameters
         ----------
-        apt : array
+        apt: array
         """
         dpt = self.dpt.copy()
 
@@ -92,30 +106,30 @@ class DictToArrayBijection(object):
 
     def mapf(self, f):
         """
-         function f : DictSpace -> T to ArraySpace -> T
+         function f: DictSpace -> T to ArraySpace -> T
 
         Parameters
         ----------
 
-        f : dict -> T
+        f: dict -> T
 
         Returns
         -------
-        f : array -> T
+        f: array -> T
         """
         return Compose(f, self.rmap)
 
 
-class ListArrayOrdering(object):
+class ListArrayOrdering:
     """
     An ordering for a list to an array space. Takes also non theano.tensors.
     Modified from pymc3 blocking.
 
     Parameters
     ----------
-    list_arrays : list
+    list_arrays: list
         :class:`numpy.ndarray` or :class:`theano.tensor.Tensor`
-    intype : str
+    intype: str
         defining the input type 'tensor' or 'numpy'
     """
 
@@ -138,14 +152,14 @@ class ListArrayOrdering(object):
             self.size += array.size
 
 
-class ListToArrayBijection(object):
+class ListToArrayBijection:
     """
     A mapping between a List of arrays and an array space
 
     Parameters
     ----------
-    ordering : :class:`ListArrayOrdering`
-    list_arrays : list
+    ordering: :class:`ListArrayOrdering`
+    list_arrays: list
         of :class:`numpy.ndarray`
     """
 
@@ -159,12 +173,12 @@ class ListToArrayBijection(object):
 
         Parameters
         ----------
-        list_arrays : list
+        list_arrays: list
             of :class:`numpy.ndarray`
 
         Returns
         -------
-        array : :class:`numpy.ndarray`
+        array: :class:`numpy.ndarray`
             single array comprising all the input arrays
         """
 
@@ -179,7 +193,7 @@ class ListToArrayBijection(object):
 
         Parameters
         ----------
-        list_arrays : list
+        list_arrays: list
             of :class:`numpy.ndarray`
 
         Returns
@@ -200,11 +214,11 @@ class ListToArrayBijection(object):
 
         Parameters
         ----------
-        array : :class:`numpy.ndarray`
+        array: :class:`numpy.ndarray`
 
         Returns
         -------
-        a_list : list
+        a_list: list
             of :class:`numpy.ndarray`
         """
 
@@ -217,7 +231,7 @@ class ListToArrayBijection(object):
         return a_list
 
 
-class DictToVarBijection(object):
+class DictToVarBijection:
     """
     A mapping between a dict space and the array space for one element within the dict space
     """
@@ -244,7 +258,7 @@ class DictToVarBijection(object):
         return Compose(f, self.rmap)
 
 
-class Compose(object):
+class Compose:
     """
     Compose two functions in a pickleable way
     """

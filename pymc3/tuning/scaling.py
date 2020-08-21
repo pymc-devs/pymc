@@ -1,50 +1,24 @@
-'''
-Created on Mar 12, 2011
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
 
-from __future__ import division
-@author: johnsalvatier
-'''
 import numpy as np
 from numpy import exp, log, sqrt
 from ..model import modelcontext, Point
 from ..theanof import hessian_diag, inputvars
 from ..blocking import DictToArrayBijection, ArrayOrdering
 
-__all__ = ['approx_hessian', 'find_hessian', 'trace_cov', 'guess_scaling']
-
-
-def approx_hessian(point, vars=None, model=None):
-    """
-    Returns an approximation of the Hessian at the current chain location.
-
-    Parameters
-    ----------
-    model : Model (optional if in `with` context)
-    point : dict
-    vars : list
-        Variables for which Hessian is to be calculated.
-    """
-    from numdifftools import Jacobian
-
-    model = modelcontext(model)
-    if vars is None:
-        vars = model.cont_vars
-    vars = inputvars(vars)
-
-    point = Point(point, model=model)
-
-    bij = DictToArrayBijection(ArrayOrdering(vars), point)
-    dlogp = bij.mapf(model.fastdlogp(vars))
-
-    def grad_logp(point):
-        return np.nan_to_num(dlogp(point))
-
-    '''
-    Find the jacobian of the gradient function at the current position
-    this should be the Hessian; invert it to find the approximate
-    covariance matrix.
-    '''
-    return -Jacobian(grad_logp)(bij.map(point))
+__all__ = ['find_hessian', 'trace_cov', 'guess_scaling']
 
 
 def fixed_hessian(point, vars=None, model=None):
@@ -53,9 +27,9 @@ def fixed_hessian(point, vars=None, model=None):
 
     Parameters
     ----------
-    model : Model (optional if in `with` context)
-    point : dict
-    vars : list
+    model: Model (optional if in `with` context)
+    point: dict
+    vars: list
         Variables for which Hessian is to be calculated.
     """
 
@@ -77,9 +51,9 @@ def find_hessian(point, vars=None, model=None):
 
     Parameters
     ----------
-    model : Model (optional if in `with` context)
-    point : dict
-    vars : list
+    model: Model (optional if in `with` context)
+    point: dict
+    vars: list
         Variables for which Hessian is to be calculated.
     """
     model = modelcontext(model)
@@ -93,9 +67,9 @@ def find_hessian_diag(point, vars=None, model=None):
 
     Parameters
     ----------
-    model : Model (optional if in `with` context)
-    point : dict
-    vars : list
+    model: Model (optional if in `with` context)
+    point: dict
+    vars: list
         Variables for which Hessian is to be calculated.
     """
     model = modelcontext(model)
@@ -144,13 +118,13 @@ def trace_cov(trace, vars=None, model=None):
 
     Parameters
     ----------
-    trace : Trace
-    vars : list
+    trace: Trace
+    vars: list
         variables for which to calculate covariance matrix
 
     Returns
     -------
-    r : array (n,n)
+    r: array (n,n)
         covariance matrix
     """
     model = modelcontext(model)

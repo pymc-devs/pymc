@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 # Taken from the Lasagne project: http://lasagne.readthedocs.io/en/latest/
 # License:
 # The MIT License (MIT)
@@ -126,9 +140,9 @@ def get_or_compute_grads(loss_or_grads, params):
 
     Parameters
     ----------
-    loss_or_grads : symbolic expression or list of expressions
+    loss_or_grads: symbolic expression or list of expressions
         A scalar loss expression, or a list of gradient expressions
-    params : list of shared variables
+    params: list of shared variables
         The variables to return the gradients for
 
     Returns
@@ -176,11 +190,11 @@ def sgd(loss_or_grads=None, params=None, learning_rate=1e-3):
 
     Parameters
     ----------
-    loss_or_grads : symbolic expression or list of expressions
+    loss_or_grads: symbolic expression or list of expressions
         A scalar loss expression, or a list of gradient expressions
-    params : list of shared variables
+    params: list of shared variables
         The variables to generate update expressions for
-    learning_rate : float or symbolic scalar
+    learning_rate: float or symbolic scalar
         The learning rate controlling the size of update steps
 
     Returns
@@ -231,12 +245,12 @@ def apply_momentum(updates, params=None, momentum=0.9):
 
     Parameters
     ----------
-    updates : OrderedDict
+    updates: OrderedDict
         A dictionary mapping parameters to update expressions
-    params : iterable of shared variables, optional
+    params: iterable of shared variables, optional
         The variables to apply momentum to. If omitted, will apply
         momentum to all `updates.keys()`.
-    momentum : float or symbolic scalar, optional
+    momentum: float or symbolic scalar, optional
         The amount of momentum to apply. Higher momentum results in
         smoothing over more update steps. Defaults to 0.9.
 
@@ -252,7 +266,7 @@ def apply_momentum(updates, params=None, momentum=0.9):
 
     See Also
     --------
-    momentum : Shortcut applying momentum to SGD updates
+    momentum: Shortcut applying momentum to SGD updates
     """
     if params is None:
         params = updates.keys()
@@ -280,13 +294,13 @@ def momentum(loss_or_grads=None, params=None,
 
     Parameters
     ----------
-    loss_or_grads : symbolic expression or list of expressions
+    loss_or_grads: symbolic expression or list of expressions
         A scalar loss expression, or a list of gradient expressions
-    params : list of shared variables
+    params: list of shared variables
         The variables to generate update expressions for
-    learning_rate : float or symbolic scalar
+    learning_rate: float or symbolic scalar
         The learning rate controlling the size of update steps
-    momentum : float or symbolic scalar, optional
+    momentum: float or symbolic scalar, optional
         The amount of momentum to apply. Higher momentum results in
         smoothing over more update steps. Defaults to 0.9.
 
@@ -305,8 +319,8 @@ def momentum(loss_or_grads=None, params=None,
 
     See Also
     --------
-    apply_momentum : Generic function applying momentum to updates
-    nesterov_momentum : Nesterov's variant of SGD with momentum
+    apply_momentum: Generic function applying momentum to updates
+    nesterov_momentum: Nesterov's variant of SGD with momentum
 
     Examples
     --------
@@ -341,12 +355,12 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
 
     Parameters
     ----------
-    updates : OrderedDict
+    updates: OrderedDict
         A dictionary mapping parameters to update expressions
-    params : iterable of shared variables, optional
+    params: iterable of shared variables, optional
         The variables to apply momentum to. If omitted, will apply
         momentum to all `updates.keys()`.
-    momentum : float or symbolic scalar, optional
+    momentum: float or symbolic scalar, optional
         The amount of momentum to apply. Higher momentum results in
         smoothing over more update steps. Defaults to 0.9.
 
@@ -368,7 +382,7 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
 
     See Also
     --------
-    nesterov_momentum : Shortcut applying Nesterov momentum to SGD updates
+    nesterov_momentum: Shortcut applying Nesterov momentum to SGD updates
     """
     if params is None:
         params = updates.keys()
@@ -396,13 +410,13 @@ def nesterov_momentum(loss_or_grads=None, params=None,
 
     Parameters
     ----------
-    loss_or_grads : symbolic expression or list of expressions
+    loss_or_grads: symbolic expression or list of expressions
         A scalar loss expression, or a list of gradient expressions
-    params : list of shared variables
+    params: list of shared variables
         The variables to generate update expressions for
-    learning_rate : float or symbolic scalar
+    learning_rate: float or symbolic scalar
         The learning rate controlling the size of update steps
-    momentum : float or symbolic scalar, optional
+    momentum: float or symbolic scalar, optional
         The amount of momentum to apply. Higher momentum results in
         smoothing over more update steps. Defaults to 0.9.
 
@@ -427,7 +441,7 @@ def nesterov_momentum(loss_or_grads=None, params=None,
 
     See Also
     --------
-    apply_nesterov_momentum : Function applying momentum to updates
+    apply_nesterov_momentum: Function applying momentum to updates
 
     Examples
     --------
@@ -460,13 +474,13 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 
     Parameters
     ----------
-    loss_or_grads : symbolic expression or list of expressions
+    loss_or_grads: symbolic expression or list of expressions
         A scalar loss expression, or a list of gradient expressions
-    params : list of shared variables
+    params: list of shared variables
         The variables to generate update expressions for
-    learning_rate : float or symbolic scalar
+    learning_rate: float or symbolic scalar
         The learning rate controlling the size of update steps
-    epsilon : float or symbolic scalar
+    epsilon: float or symbolic scalar
         Small value added for numerical stability
 
     Returns
@@ -539,15 +553,15 @@ def adagrad_window(loss_or_grads=None, params=None,
 
     Parameters
     ----------
-    loss_or_grads : symbolic expression or list of expressions
+    loss_or_grads: symbolic expression or list of expressions
         A scalar loss expression, or a list of gradient expressions
-    params : list of shared variables
+    params: list of shared variables
         The variables to generate update expressions for
-    learning_rate : float
+    learning_rate: float
         Learning rate.
-    epsilon : float
+    epsilon: float
         Offset to avoid zero-division in the normalizer of adagrad.
-    n_win : int
+    n_win: int
         Number of past steps to calculate scales of parameter gradients.
 
     Returns
@@ -589,15 +603,15 @@ def rmsprop(loss_or_grads=None, params=None,
 
     Parameters
     ----------
-    loss_or_grads : symbolic expression or list of expressions
+    loss_or_grads: symbolic expression or list of expressions
         A scalar loss expression, or a list of gradient expressions
-    params : list of shared variables
+    params: list of shared variables
         The variables to generate update expressions for
-    learning_rate : float or symbolic scalar
+    learning_rate: float or symbolic scalar
         The learning rate controlling the size of update steps
-    rho : float or symbolic scalar
+    rho: float or symbolic scalar
         Gradient moving average decay factor
-    epsilon : float or symbolic scalar
+    epsilon: float or symbolic scalar
         Small value added for numerical stability
 
     Returns
@@ -667,7 +681,7 @@ def rmsprop(loss_or_grads=None, params=None,
 
 def adadelta(loss_or_grads=None, params=None,
              learning_rate=1.0, rho=0.95, epsilon=1e-6):
-    """ Adadelta updates
+    r""" Adadelta updates
 
     Scale learning rates by the ratio of accumulated gradients to accumulated
     updates, see [1]_ and notes for further description.
@@ -780,17 +794,17 @@ def adam(loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9,
 
     Parameters
     ----------
-    loss_or_grads : symbolic expression or list of expressions
+    loss_or_grads: symbolic expression or list of expressions
         A scalar loss expression, or a list of gradient expressions
-    params : list of shared variables
+    params: list of shared variables
         The variables to generate update expressions for
-    learning_rate : float
+    learning_rate: float
         Learning rate
-    beta1 : float
+    beta1: float
         Exponential decay rate for the first moment estimates.
-    beta2 : float
+    beta2: float
         Exponential decay rate for the second moment estimates.
-    epsilon : float
+    epsilon: float
         Constant for numerical stability.
 
     Returns
@@ -865,22 +879,22 @@ def adamax(loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9,
            beta2=0.999, epsilon=1e-8):
     """Adamax updates
 
-    Adamax updates implemented as in [1]_. This is a variant of of the Adam
+    Adamax updates implemented as in [1]_. This is a variant of the Adam
     algorithm based on the infinity norm.
 
     Parameters
     ----------
-    loss_or_grads : symbolic expression or list of expressions
+    loss_or_grads: symbolic expression or list of expressions
         A scalar loss expression, or a list of gradient expressions
-    params : list of shared variables
+    params: list of shared variables
         The variables to generate update expressions for
-    learning_rate : float
+    learning_rate: float
         Learning rate
-    beta1 : float
+    beta1: float
         Exponential decay rate for the first moment estimates.
-    beta2 : float
+    beta2: float
         Exponential decay rate for the weighted infinity norm estimates.
-    epsilon : float
+    epsilon: float
         Constant for numerical stability.
 
     Returns
@@ -956,12 +970,12 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
 
     Parameters
     ----------
-    tensor_var : TensorVariable
+    tensor_var: TensorVariable
         Theano expression for update, gradient, or other quantity.
-    max_norm : scalar
+    max_norm: scalar
         This value sets the maximum allowed value of any norm in
         `tensor_var`.
-    norm_axes : sequence (list or tuple)
+    norm_axes: sequence (list or tuple)
         The axes over which to compute the norm.  This overrides the
         default norm axes defined for the number of dimensions
         in `tensor_var`. When this is not specified and `tensor_var` is a
@@ -970,7 +984,7 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
         former default is useful for working with dense layers, the latter
         is useful for 1D, 2D and 3D convolutional layers.
         (Optional)
-    epsilon : scalar, optional
+    epsilon: scalar, optional
         Value used to prevent numerical instability when dividing by
         very small or zero norms.
 
@@ -1039,21 +1053,21 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7,
 
     Parameters
     ----------
-    tensor_vars : List of TensorVariables.
+    tensor_vars: List of TensorVariables.
         Tensors to be rescaled.
-    max_norm : float
+    max_norm: float
         Threshold value for total norm.
-    epsilon : scalar, optional
+    epsilon: scalar, optional
         Value used to prevent numerical instability when dividing by
         very small or zero norms.
-    return_norm : bool
+    return_norm: bool
         If true the total norm is also returned.
 
     Returns
     -------
-    tensor_vars_scaled : list of TensorVariables
+    tensor_vars_scaled: list of TensorVariables
         The scaled tensor variables.
-    norm : Theano scalar
+    norm: Theano scalar
         The combined norms of the input variables prior to rescaling,
         only returned if ``return_norms=True``.
 

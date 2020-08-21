@@ -9,3 +9,5 @@ Distributions
    distributions/multivariate
    distributions/mixture
    distributions/timeseries
+   distributions/transforms
+   distributions/utilities

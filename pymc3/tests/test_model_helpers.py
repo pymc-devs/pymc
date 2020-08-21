@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
@@ -10,7 +24,7 @@ import theano.tensor as tt
 import theano.sparse as sparse
 
 
-class TestHelperFunc(object):
+class TestHelperFunc:
     def test_pandas_to_array(self):
         """
         Ensure that pandas_to_array returns the dense array, masked array,
@@ -98,7 +112,7 @@ class TestHelperFunc(object):
         # Create a fake model and fake distribution to be used for the test
         fake_model = pm.Model()
         with fake_model:
-            fake_distribution = pm.Normal.dist(mu=0, sd=1)
+            fake_distribution = pm.Normal.dist(mu=0, sigma=1)
             # Create the testval attribute simply for the sake of model testing
             fake_distribution.testval = None
 

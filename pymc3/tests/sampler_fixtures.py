@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pymc3 as pm
 import numpy as np
 import numpy.testing as npt
@@ -7,21 +21,21 @@ import theano.tensor as tt
 from .helpers import SeededTest
 
 
-class KnownMean(object):
+class KnownMean:
     def test_mean(self):
         for varname, expected in self.means.items():
             samples = self.samples[varname]
             npt.assert_allclose(expected, samples.mean(0), self.rtol, self.atol)
 
 
-class KnownVariance(object):
+class KnownVariance:
     def test_var(self):
         for varname, expected in self.variances.items():
             samples = self.samples[varname]
             npt.assert_allclose(expected, samples.var(0), self.rtol, self.atol)
 
 
-class KnownCDF(object):
+class KnownCDF:
     ks_thin = 5
     alpha = 0.001
 
@@ -64,7 +78,7 @@ class NormalFixture(KnownMean, KnownVariance, KnownCDF):
     @classmethod
     def make_model(cls):
         with pm.Model() as model:
-            a = pm.Normal("a", mu=2, sd=np.sqrt(3), shape=10)
+            a = pm.Normal("a", mu=2, sigma=np.sqrt(3), shape=10)
         return model
 
 
@@ -88,7 +102,7 @@ class StudentTFixture(KnownMean, KnownCDF):
     @classmethod
     def make_model(cls):
         with pm.Model() as model:
-            a = pm.StudentT("a", nu=4, mu=0, sd=1)
+            a = pm.StudentT("a", nu=4, mu=0, sigma=1)
         return model
 
 
@@ -109,7 +123,7 @@ class LKJCholeskyCovFixture(KnownCDF):
     def make_model(cls):
         with pm.Model() as model:
             sd_mu = np.array([1, 2, 3, 4, 5])
-            sd_dist = pm.Lognormal.dist(mu=sd_mu, sd=sd_mu / 10., shape=5)
+            sd_dist = pm.Lognormal.dist(mu=sd_mu, sigma=sd_mu / 10., shape=5)
             chol_packed = pm.LKJCholeskyCov('chol_packed', eta=3, n=5, sd_dist=sd_dist)
             chol = pm.expand_packed_triangular(5, chol_packed, lower=True)
             cov = tt.dot(chol, chol.T)
@@ -124,7 +138,7 @@ class LKJCholeskyCovFixture(KnownCDF):
 class BaseSampler(SeededTest):
     @classmethod
     def setup_class(cls):
-        super(BaseSampler, cls).setup_class()
+        super().setup_class()
         cls.model = cls.make_model()
         with cls.model:
             cls.step = cls.make_step()
@@ -135,12 +149,12 @@ class BaseSampler(SeededTest):
 
     def test_neff(self):
         if hasattr(self, 'min_n_eff'):
-            n_eff = pm.effective_n(self.trace[self.burn:])
+            n_eff = pm.ess(self.trace[self.burn:])
             for var in n_eff:
                 npt.assert_array_less(self.min_n_eff, n_eff[var])
 
     def test_Rhat(self):
-        rhat = pm.gelman_rubin(self.trace[self.burn:])
+        rhat = pm.rhat(self.trace[self.burn:])
         for var in rhat:
             npt.assert_allclose(rhat[var], 1, rtol=0.01)
 

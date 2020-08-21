@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import numpy.testing as npt
 import os
@@ -10,7 +24,7 @@ import pytest
 import theano
 
 
-class ModelBackendSetupTestCase(object):
+class ModelBackendSetupTestCase:
     """Set up a backend trace.
 
     Provides the attributes
@@ -69,7 +83,7 @@ class ModelBackendSetupTestCase(object):
             remove_file_or_directory(self.name)
 
 
-class StatsTestCase(object):
+class StatsTestCase:
     """Test for init and setup of backups.
 
     Provides the attributes
@@ -105,7 +119,7 @@ class StatsTestCase(object):
             remove_file_or_directory(self.name)
 
 
-class ModelBackendSampledTestCase(object):
+class ModelBackendSampledTestCase:
     """Setup and sample a backend trace.
 
     Provides the attributes
@@ -124,13 +138,20 @@ class ModelBackendSampledTestCase(object):
 
     Children may define
     - sampler_vars
+    - write_partial_chain
     """
     @classmethod
     def setup_class(cls):
         cls.test_point, cls.model, _ = models.beta_bernoulli(cls.shape)
+
+        if hasattr(cls, 'write_partial_chain') and cls.write_partial_chain is True:
+            cls.chain_vars = cls.model.unobserved_RVs[1:]
+        else:
+            cls.chain_vars = cls.model.unobserved_RVs
+
         with cls.model:
-            strace0 = cls.backend(cls.name)
-            strace1 = cls.backend(cls.name)
+            strace0 = cls.backend(cls.name, vars=cls.chain_vars)
+            strace1 = cls.backend(cls.name, vars=cls.chain_vars)
 
         if not hasattr(cls, 'sampler_vars'):
             cls.sampler_vars = None
@@ -435,7 +456,7 @@ class DumpLoadTestCase(ModelBackendSampledTestCase):
     """
     @classmethod
     def setup_class(cls):
-        super(DumpLoadTestCase, cls).setup_class()
+        super().setup_class()
         try:
             with cls.model:
                 cls.dumped = cls.load_func(cls.name)
@@ -459,7 +480,7 @@ class DumpLoadTestCase(ModelBackendSampledTestCase):
         trace = self.mtrace
         dumped = self.dumped
         for chain in trace.chains:
-            for varname in self.test_point.keys():
+            for varname in self.chain_vars:
                 data = trace.get_values(varname, chains=[chain])
                 dumped_data = dumped.get_values(varname, chains=[chain])
                 npt.assert_equal(data, dumped_data)
@@ -479,12 +500,12 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
     def setup_class(cls):
         cls.backend = cls.backend0
         cls.name = cls.name0
-        super(BackendEqualityTestCase, cls).setup_class()
+        super().setup_class()
         cls.mtrace0 = cls.mtrace
 
         cls.backend = cls.backend1
         cls.name = cls.name1
-        super(BackendEqualityTestCase, cls).setup_class()
+        super().setup_class()
         cls.mtrace1 = cls.mtrace
 
     @classmethod

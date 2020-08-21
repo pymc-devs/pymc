@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 """Text file trace backend
 
 Store sampling values as CSV files.
@@ -17,11 +31,14 @@ shape of (3, 2).
 """
 from glob import glob
 import os
+import re
 import pandas as pd
+import warnings
 
 from ..backends import base, ndarray
 from . import tracetab as ttab
 from ..theanof import floatX
+from ..model import modelcontext
 
 
 class Text(base.BaseTrace):
@@ -29,21 +46,27 @@ class Text(base.BaseTrace):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of directory to store text files
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
-    vars : list of variables
+    vars: list of variables
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
-    test_point : dict
+    test_point: dict
         use different test point that might be with changed variables shapes
     """
 
     def __init__(self, name, model=None, vars=None, test_point=None):
+        warnings.warn(
+            'The `Text` backend will soon be removed. '
+            'Please switch to a different backend. '
+            'If you have good reasons for using the Text backend, file an issue and tell us about them. ',
+            DeprecationWarning,
+        )
         if not os.path.exists(name):
             os.mkdir(name)
-        super(Text, self).__init__(name, model, vars, test_point)
+        super().__init__(name, model, vars, test_point)
 
         self.flat_names = {v: ttab.create_flat_names(v, shape)
                            for v, shape in self.var_shapes.items()}
@@ -59,9 +82,9 @@ class Text(base.BaseTrace):
 
         Parameters
         ----------
-        draws : int
+        draws: int
             Expected number of draws
-        chain : int
+        chain: int
             Chain number
         """
         if self._fh is not None:
@@ -89,7 +112,7 @@ class Text(base.BaseTrace):
 
         Parameters
         ----------
-        point : dict
+        point: dict
             Values mapped to variable names
         """
         vals = {}
@@ -112,7 +135,6 @@ class Text(base.BaseTrace):
                 if "float" in str(dtype):
                     self.df[key] = floatX(self.df[key])
 
-
     def __len__(self):
         if self.filename is None:
             return 0
@@ -124,9 +146,9 @@ class Text(base.BaseTrace):
 
         Parameters
         ----------
-        varname : str
-        burn : int
-        thin : int
+        varname: str
+        burn: int
+        thin: int
 
         Returns
         -------
@@ -161,15 +183,21 @@ def load(name, model=None):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of directory with files (one per chain)
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
 
     Returns
     -------
     A MultiTrace instance
     """
+    warnings.warn(
+        'The `load` function will soon be removed. '
+        'Please use `arviz.from_netcdf` to load traces. '
+        'If you have good reasons for using the `load` function, file an issue and tell us about them. ',
+        DeprecationWarning,
+    )
     files = glob(os.path.join(name, 'chain-*.csv'))
 
     if len(files) == 0:
@@ -178,11 +206,23 @@ def load(name, model=None):
     straces = []
     for f in files:
         chain = int(os.path.splitext(f)[0].rsplit('-', 1)[1])
-        strace = Text(name, model=model)
+        model_vars_in_chain = _parse_chain_vars(f, model)
+        strace = Text(name, model=model, vars=model_vars_in_chain)
         strace.chain = chain
         strace.filename = f
         straces.append(strace)
     return base.MultiTrace(straces)
+
+
+def _parse_chain_vars(filepath, model):
+    with open(filepath) as f:
+        header = f.readline().split("\n", 1)[0]
+    shape_pattern = re.compile(r"__\d+_\d+")
+    chain_vars = [shape_pattern.split(v)[0] for v in header.split(",")]
+    chain_vars = list(set(chain_vars))
+    m = modelcontext(model)
+    model_vars_in_chain = [v for v in m.unobserved_RVs if v.name in chain_vars]
+    return model_vars_in_chain
 
 
 def dump(name, trace, chains=None):
@@ -190,13 +230,19 @@ def dump(name, trace, chains=None):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of directory to store CSV files in
-    trace : MultiTrace of NDArray traces
+    trace: MultiTrace of NDArray traces
         Result of MCMC run with default NDArray backend
-    chains : list
+    chains: list
         Chains to dump. If None, all chains are dumped.
     """
+    warnings.warn(
+        'The `dump` function will soon be removed. '
+        'Please use `arviz.to_netcdf` to save traces. '
+        'If you have good reasons for using the `dump` function, file an issue and tell us about them. ',
+        DeprecationWarning,
+    )
     if not os.path.exists(name):
         os.mkdir(name)
     if chains is None:

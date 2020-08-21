@@ -43,7 +43,7 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
 
    Always use a ``feature`` branch. It's good practice to never routinely work on the ``master`` branch of any repository.
 
-4. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``.  To set up a development environment, you may (probably in a [virtual environment](http://python-guide-pt-br.readthedocs.io/en/latest/dev/virtualenvs/)) run:
+4. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``.  To set up a development environment, you may (probably in a [virtual environment](https://docs.python-guide.org/dev/virtualenvs/)) run:
 
    ```bash
    $ pip install -r requirements.txt
@@ -138,8 +138,8 @@ You may also use it to run the test suite, with
 
 ```bash
 $  docker exec -it pymc3  bash # logon to the container
-$  cd ~/pymc3  
-$  . ./scripts/test.sh # takes a while!
+$  cd ~/pymc3/tests
+$  . ./../../scripts/test.sh # takes a while!
 ```
 
 This should be quite close to how the tests run on TravisCI.
@@ -154,7 +154,8 @@ docker exec -it pymc3 jupyter notebook list
 
 ## Style guide
 
-Follow [TensorFlow's style guide](https://www.tensorflow.org/versions/master/how_tos/style_guide.html) or the [Google style guide](https://google.github.io/styleguide/pyguide.html) for writing code, which more or less follows PEP 8.
+Follow [TensorFlow's style guide](https://www.tensorflow.org/community/contribute/code_style) or the [Google style guide](https://google.github.io/styleguide/pyguide.html) for writing code, which more or less follows PEP 8.
 
+For documentation strings, we *prefer* [numpy style](https://numpydoc.readthedocs.io/en/latest/format.html) to comply with the style that predominates in our upstream dependencies.
 
 #### This guide was derived from the [scikit-learn guide to contributing](https://github.com/scikit-learn/scikit-learn/blob/master/CONTRIBUTING.md)

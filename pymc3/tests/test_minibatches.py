@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import itertools
 import pickle
 
@@ -13,7 +27,7 @@ from pymc3.tests.helpers import select_by_precision
 from pymc3.theanof import GeneratorOp
 
 
-class _DataSampler(object):
+class _DataSampler:
     """
     Not for users
     """
@@ -37,7 +51,7 @@ class _DataSampler(object):
     next = __next__
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def datagen():
     return _DataSampler(np.random.uniform(size=(1000, 10)))
 
@@ -57,7 +71,7 @@ def integers_ndim(ndim):
 
 
 @pytest.mark.usefixtures('strict_float32')
-class TestGenerator(object):
+class TestGenerator:
 
     def test_basic(self):
         generator = GeneratorAdapter(integers())
@@ -148,7 +162,7 @@ def gen2():
         i += 1
 
 
-class TestScaling(object):
+class TestScaling:
     """
     Related to minibatch training
     """
@@ -232,7 +246,14 @@ class TestScaling(object):
         with pm.Model() as model5:
             Normal('n', observed=[[1]], total_size=[2, Ellipsis, 2])
             p5 = theano.function([], model5.logpt)
-        assert p0() == p1() == p2() == p3() == p4() == p5()
+        _p0 = p0()
+        assert (
+            np.allclose(_p0, p1()) and
+            np.allclose(_p0, p2()) and
+            np.allclose(_p0, p3()) and
+            np.allclose(_p0, p4()) and
+            np.allclose(_p0, p5())
+        )
 
     def test_common_errors(self):
         with pm.Model():
@@ -279,7 +300,7 @@ class TestScaling(object):
 
 
 @pytest.mark.usefixtures('strict_float32')
-class TestMinibatch(object):
+class TestMinibatch:
     data = np.random.rand(30, 10, 40, 10, 50)
 
     def test_1d(self):

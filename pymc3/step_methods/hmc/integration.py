@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from collections import namedtuple
 
 import numpy as np
@@ -11,7 +25,7 @@ class IntegrationError(RuntimeError):
     pass
 
 
-class CpuLeapfrogIntegrator(object):
+class CpuLeapfrogIntegrator:
     def __init__(self, potential, logp_dlogp_func):
         """Leapfrog integrator using CPU."""
         self._potential = potential
@@ -32,7 +46,7 @@ class CpuLeapfrogIntegrator(object):
         energy = kinetic - logp
         return State(q, p, v, dlogp, energy, logp)
 
-    def step(self, epsilon, state, out=None):
+    def step(self, epsilon, state):
         """Leapfrog integrator step.
 
         Half a momentum update, full position update, half momentum update.
@@ -51,7 +65,7 @@ class CpuLeapfrogIntegrator(object):
         None if `out` is provided, else a State namedtuple
         """
         try:
-            return self._step(epsilon, state, out=None)
+            return self._step(epsilon, state)
         except linalg.LinAlgError as err:
             msg = "LinAlgError during leapfrog step."
             raise IntegrationError(msg)
@@ -64,26 +78,20 @@ class CpuLeapfrogIntegrator(object):
             else:
                 raise
 
-    def _step(self, epsilon, state, out=None):
-        pot = self._potential
+    def _step(self, epsilon, state):
         axpy = linalg.blas.get_blas_funcs('axpy', dtype=self._dtype)
+        pot = self._potential
 
-        q, p, v, q_grad, energy, logp = state
-        if out is None:
-            q_new = q.copy()
-            p_new = p.copy()
-            v_new = np.empty_like(q)
-            q_new_grad = np.empty_like(q)
-        else:
-            q_new, p_new, v_new, q_new_grad, energy = out
-            q_new[:] = q
-            p_new[:] = p
+        q_new = state.q.copy()
+        p_new = state.p.copy()
+        v_new = np.empty_like(q_new)
+        q_new_grad = np.empty_like(q_new)
 
         dt = 0.5 * epsilon
 
         # p is already stored in p_new
         # p_new = p + dt * q_grad
-        axpy(q_grad, p_new, a=dt)
+        axpy(state.q_grad, p_new, a=dt)
 
         pot.velocity(p_new, out=v_new)
         # q is already stored in q_new
@@ -98,8 +106,4 @@ class CpuLeapfrogIntegrator(object):
         kinetic = pot.velocity_energy(p_new, v_new)
         energy = kinetic - logp
 
-        if out is not None:
-            out.energy = energy
-            return
-        else:
-            return State(q_new, p_new, v_new, q_new_grad, energy, logp)
+        return State(q_new, p_new, v_new, q_new_grad, energy, logp)

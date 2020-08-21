@@ -1,4 +1,4 @@
-.. title:: Learn
+.. title:: Learning Resources
 
 .. raw:: html
 
@@ -48,6 +48,16 @@
                 <a href="https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy" class="header"> YouTube Playlist</a>
                 <div class="description">
                     There is an actively curated playlist of PyMC3 talks on YouTube.
+                </div>
+            </div>
+        </div>
+
+        <div class="item">
+            <i class="large youtube middle aligned icon"></i>
+            <div class="content">
+                <a href="https://github.com/junpenglao/advance-bayesian-modelling-with-PyMC3" class="header"> Advance Bayesian Modelling with PyMC3</a>
+                <div class="description">
+                    A two days advance workshop in May 2018 @CEAi in the Czech Republic.
                 </div>
             </div>
         </div>

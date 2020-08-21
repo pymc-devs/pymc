@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 """NumPy array trace backend
 
 Store sampling values in memory as a NumPy array.
@@ -6,12 +20,17 @@ import glob
 import json
 import os
 import shutil
+from typing import Optional, Dict, Any, List
+import warnings
 
 import numpy as np
-from ..backends import base
+from pymc3.backends import base
+from pymc3.backends.base import MultiTrace
+from pymc3.model import Model, modelcontext
+from pymc3.exceptions import TraceDirectoryError
 
 
-def save_trace(trace, directory=None, overwrite=False):
+def save_trace(trace: MultiTrace, directory: Optional[str]=None, overwrite=False) -> str:
     """Save multitrace to file.
 
     TODO: Also save warnings.
@@ -23,17 +42,23 @@ def save_trace(trace, directory=None, overwrite=False):
 
     Parameters
     ----------
-    trace : pm.MultiTrace
+    trace: pm.MultiTrace
         trace to save to disk
-    directory : str (optional)
+    directory: str (optional)
         path to a directory to save the trace
-    overwrite : bool (default False)
+    overwrite: bool (default False)
         whether to overwrite an existing directory.
 
     Returns
     -------
     str, path to the directory where the trace was saved
     """
+    warnings.warn(
+        'The `save_trace` function will soon be removed.'
+        'Instead, use `arviz.to_netcdf` to save traces.',
+        DeprecationWarning,
+    )
+
     if directory is None:
         directory = '.pymc_{}.trace'
         idx = 1
@@ -54,7 +79,7 @@ def save_trace(trace, directory=None, overwrite=False):
     return directory
 
 
-def load_trace(directory, model=None):
+def load_trace(directory: str, model=None) -> MultiTrace:
     """Loads a multitrace that has been written to file.
 
     A the model used for the trace must be passed in, or the command
@@ -62,28 +87,42 @@ def load_trace(directory, model=None):
 
     Parameters
     ----------
-    directory : str
+    directory: str
         Path to a pymc3 serialized trace
-    model : pm.Model (optional)
+    model: pm.Model (optional)
         Model used to create the trace.  Can also be inferred from context
 
     Returns
     -------
     pm.Multitrace that was saved in the directory
     """
+    warnings.warn(
+        'The `load_trace` function will soon be removed.'
+        'Instead, use `arviz.from_netcdf` to load traces.',
+        DeprecationWarning,
+    )
     straces = []
-    for directory in glob.glob(os.path.join(directory, '*')):
-        if os.path.isdir(directory):
-            straces.append(SerializeNDArray(directory).load(model))
+    for subdir in glob.glob(os.path.join(directory, '*')):
+        if os.path.isdir(subdir):
+            straces.append(SerializeNDArray(subdir).load(model))
+    if not straces:
+        raise TraceDirectoryError("%s is not a PyMC3 saved chain directory." % directory)
     return base.MultiTrace(straces)
 
 
-class SerializeNDArray(object):
+class SerializeNDArray:
     metadata_file = 'metadata.json'
     samples_file = 'samples.npz'
+    metadata_path = None # type: str
+    samples_path = None # type: str
 
-    def __init__(self, directory):
+    def __init__(self, directory: str):
         """Helper to save and load NDArray objects"""
+        warnings.warn(
+            'The `SerializeNDArray` class will soon be removed. '
+            'Instead, use ArviZ to save/load traces.',
+            DeprecationWarning,
+        )
         self.directory = directory
         self.metadata_path = os.path.join(self.directory, self.metadata_file)
         self.samples_path = os.path.join(self.directory, self.samples_file)
@@ -93,16 +132,21 @@ class SerializeNDArray(object):
         """Extract ndarray metadata into json-serializable content"""
         if ndarray._stats is None:
             stats = ndarray._stats
+            sampler_vars = None
         else:
             stats = []
+            sampler_vars = []
             for stat in ndarray._stats:
                 stats.append({key: value.tolist() for key, value in stat.items()})
+                sampler_vars.append({key: str(value.dtype) for key, value in stat.items()})
+
 
         metadata = {
             'draw_idx': ndarray.draw_idx,
             'draws': ndarray.draws,
             '_stats': stats,
             'chain': ndarray.chain,
+            'sampler_vars': sampler_vars
         }
         return metadata
 
@@ -126,13 +170,23 @@ class SerializeNDArray(object):
 
         np.savez_compressed(self.samples_path, **ndarray.samples)
 
-    def load(self, model):
+    def load(self, model: Model) -> 'NDArray':
         """Load the saved ndarray from file"""
+        if not os.path.exists(self.samples_path) or not os.path.exists(self.metadata_path):
+            raise TraceDirectoryError("%s is not a trace directory" % self.directory)
+
         new_trace = NDArray(model=model)
         with open(self.metadata_path, 'r') as buff:
             metadata = json.load(buff)
 
         metadata['_stats'] = [{k: np.array(v) for k, v in stat.items()} for stat in metadata['_stats']]
+
+        # it seems like at least some old traces don't have 'sampler_vars'
+        try:
+            sampler_vars = metadata.pop('sampler_vars')
+            new_trace._set_sampler_vars(sampler_vars)
+        except KeyError:
+            pass
 
         for key, value in metadata.items():
             setattr(new_trace, key, value)
@@ -145,11 +199,11 @@ class NDArray(base.BaseTrace):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of backend. This has no meaning for the NDArray backend.
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
-    vars : list of variables
+    vars: list of variables
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
     """
@@ -157,7 +211,7 @@ class NDArray(base.BaseTrace):
     supports_sampler_stats = True
 
     def __init__(self, name=None, model=None, vars=None, test_point=None):
-        super(NDArray, self).__init__(name, model, vars, test_point)
+        super().__init__(name, model, vars, test_point)
         self.draw_idx = 0
         self.draws = None
         self.samples = {}
@@ -165,20 +219,20 @@ class NDArray(base.BaseTrace):
 
     # Sampling methods
 
-    def setup(self, draws, chain, sampler_vars=None):
+    def setup(self, draws, chain, sampler_vars=None) -> None:
         """Perform chain-specific setup.
 
         Parameters
         ----------
-        draws : int
+        draws: int
             Expected number of draws
-        chain : int
+        chain: int
             Chain number
-        sampler_vars : list of dicts
+        sampler_vars: list of dicts
             Names and dtypes of the variables that are
             exported by the samplers.
         """
-        super(NDArray, self).setup(draws, chain, sampler_vars)
+        super().setup(draws, chain, sampler_vars)
 
         self.chain = chain
         if self.samples:  # Concatenate new array if chain is already present.
@@ -204,7 +258,7 @@ class NDArray(base.BaseTrace):
         if self._stats is None:
             self._stats = []
             for sampler in sampler_vars:
-                data = dict()
+                data = dict() # type: Dict[str, np.ndarray]
                 self._stats.append(data)
                 for varname, dtype in sampler.items():
                     data[varname] = np.zeros(draws, dtype=dtype)
@@ -218,12 +272,12 @@ class NDArray(base.BaseTrace):
                     new = np.zeros(draws, dtype=dtype)
                     data[varname] = np.concatenate([old, new])
 
-    def record(self, point, sampler_stats=None):
+    def record(self, point, sampler_stats=None) -> None:
         """Record results of a sampling iteration.
 
         Parameters
         ----------
-        point : dict
+        point: dict
             Values mapped to variable names
         """
         for varname, value in zip(self.varnames, self.fn(point)):
@@ -261,14 +315,14 @@ class NDArray(base.BaseTrace):
             return 0
         return self.draw_idx
 
-    def get_values(self, varname, burn=0, thin=1):
+    def get_values(self, varname: str, burn=0, thin=1) -> np.ndarray:
         """Get values from trace.
 
         Parameters
         ----------
-        varname : str
-        burn : int
-        thin : int
+        varname: str
+        burn: int
+        thin: int
 
         Returns
         -------
@@ -302,7 +356,7 @@ class NDArray(base.BaseTrace):
 
         return sliced
 
-    def point(self, idx):
+    def point(self, idx) -> Dict[str, Any]:
         """Return dictionary of point values at `idx` for current chain
         with variable names as keys.
         """
@@ -329,3 +383,20 @@ def _slice_as_ndarray(strace, idx):
         sliced.draw_idx = (stop - start) // step
 
     return sliced
+
+
+def point_list_to_multitrace(point_list: List[Dict[str, np.ndarray]], model: Optional[Model]=None) -> MultiTrace:
+    '''transform point list into MultiTrace'''
+    _model = modelcontext(model)
+    varnames = list(point_list[0].keys())
+    with _model:
+        chain = NDArray(model=_model, vars=[_model[vn] for vn in varnames])
+        chain.setup(draws=len(point_list), chain=0)
+        # since we are simply loading a trace by hand, we need only a vacuous function for
+        # chain.record() to use. This crushes the default.
+        def point_fun(point):
+            return [point[vn] for vn in varnames]
+        chain.fn = point_fun
+        for point in point_list:
+            chain.record(point)
+    return MultiTrace([chain])

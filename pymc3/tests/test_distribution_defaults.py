@@ -1,7 +1,19 @@
-from __future__ import division
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
 
 from ..model import Model
-from ..distributions import DiscreteUniform, Continuous
+from ..distributions import DiscreteUniform, Continuous, Categorical
 
 import numpy as np
 import pytest
@@ -10,7 +22,7 @@ import pytest
 class DistTest(Continuous):
 
     def __init__(self, a, b, *args, **kwargs):
-        super(DistTest, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.a = a
         self.b = b
 
@@ -69,3 +81,10 @@ def test_discrete_uniform_negative():
     with model:
         x = DiscreteUniform('x', lower=-10, upper=0)
     assert model.test_point['x'] == -5
+
+
+def test_categorical_mode():
+    model = Model()
+    with model:
+        x = Categorical('x', p=np.eye(4), shape=4)
+    assert np.allclose(model.test_point['x'], np.arange(4))

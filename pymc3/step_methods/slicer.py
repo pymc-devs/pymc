@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 # Modified from original implementation by Dominik Wabersich (2013)
 
 import numpy as np
@@ -19,13 +33,13 @@ class Slice(ArrayStep):
 
     Parameters
     ----------
-    vars : list
+    vars: list
         List of variables for sampler.
-    w : float
+    w: float
         Initial width of slice (Defaults to 1).
-    tune : bool
+    tune: bool
         Flag for tuning (Defaults to True).
-    model : PyMC Model
+    model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
 
     """
@@ -44,7 +58,7 @@ class Slice(ArrayStep):
             vars = self.model.cont_vars
         vars = inputvars(vars)
 
-        super(Slice, self).__init__(vars, [self.model.fastlogp], **kwargs)
+        super().__init__(vars, [self.model.fastlogp], **kwargs)
 
     def astep(self, q0, logp):
         self.w = np.resize(self.w, len(q0))  # this is a repmat
@@ -101,4 +115,3 @@ class Slice(ArrayStep):
                 return Competence.PREFERRED
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
-       

@@ -39,27 +39,27 @@ specification of a bounded distribution should go within the model block::
 
     with pm.Model() as model:
         BoundedNormal = pm.Bound(pm.Normal, lower=0.0)
-        x = BoundedNormal('x', mu=1.0, sd=3.0)
+        x = BoundedNormal('x', mu=1.0, sigma=3.0)
 
 If the bound will be applied to a single variable in the model, it may be
 cleaner notationally to define both the bound and variable together. ::
 
     with model:
-        x = pm.Bound(pm.Normal, lower=0.0)('x', mu=1.0, sd=3.0)
+        x = pm.Bound(pm.Normal, lower=0.0)('x', mu=1.0, sigma=3.0)
 
 However, it is possible to create multiple different random variables
 that have the same bound applied to them::
 
     with model:
         BoundNormal = pm.Bound(pm.Normal, lower=0.0)
-        hyper_mu = BoundNormal("hyper_mu", mu=1, sd=0.5)
-        mu = BoundNormal("mu", mu=hyper_mu, sd=1)
+        hyper_mu = BoundNormal("hyper_mu", mu=1, sigma=0.5)
+        mu = BoundNormal("mu", mu=hyper_mu, sigma=1)
 
 Bounds can also be applied to a vector of random variables.  With the same
 ``BoundedNormal`` object we created previously we can write::
 
     with model:
-        x_vector = BoundedNormal('x_vector', mu=1.0, sd=3.0, shape=3)
+        x_vector = BoundedNormal('x_vector', mu=1.0, sigma=3.0, shape=3)
 
 Caveats
 #######
@@ -72,8 +72,8 @@ Caveats
   an unnormalized probability distribution.  This doesn't effect inference
   algorithms but may complicate some model comparison procedures.
 
-API
-###
+Bounded Variable API
+####################
 
 
 .. currentmodule:: pymc3.distributions.bound

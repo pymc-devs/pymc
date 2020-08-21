@@ -1,4 +1,17 @@
-import six
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pandas as pd
 import numpy as np
 import theano.tensor as tt
@@ -20,14 +33,14 @@ def any_to_tensor_and_labels(x, labels=None):
 
     Parameters
     ----------
-    x : np.ndarray | pd.DataFrame | tt.Variable | dict | list
-    labels : list - names for columns of output tensor
+    x: np.ndarray | pd.DataFrame | tt.Variable | dict | list
+    labels: list - names for columns of output tensor
 
     Returns
     -------
     (x, labels) - tensor and labels for its columns
     """
-    if isinstance(labels, six.string_types):
+    if isinstance(labels, str):
         labels = [labels]
     # pandas.DataFrame
     # labels can come from here
@@ -35,7 +48,7 @@ def any_to_tensor_and_labels(x, labels=None):
     if isinstance(x, pd.DataFrame):
         if not labels:
             labels = x.columns
-        x = x.as_matrix()
+        x = x.to_numpy()
 
     # pandas.Series
     # there can still be a label
@@ -43,7 +56,7 @@ def any_to_tensor_and_labels(x, labels=None):
     elif isinstance(x, pd.Series):
         if not labels:
             labels = [x.name]
-        x = x.as_matrix()[:, None]
+        x = x.to_numpy()[:, None]
 
     # dict
     # labels are keys,
@@ -53,7 +66,7 @@ def any_to_tensor_and_labels(x, labels=None):
         try:
             x = pd.DataFrame.from_dict(x)
             labels = x.columns
-            x = x.as_matrix()
+            x = x.to_numpy()
         # some types fail there
         # another approach is to construct
         # variable by hand

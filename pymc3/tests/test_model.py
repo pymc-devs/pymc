@@ -1,5 +1,20 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pytest
-from theano import theano, tensor as tt
+import theano
+import theano.tensor as tt
 import numpy as np
 import pandas as pd
 import numpy.testing as npt
@@ -9,15 +24,16 @@ import pymc3 as pm
 from pymc3.distributions import HalfCauchy, Normal, transforms
 from pymc3 import Potential, Deterministic
 from pymc3.model import ValueGradFunction
+from .helpers import select_by_precision
 
 
 class NewModel(pm.Model):
     def __init__(self, name='', model=None):
-        super(NewModel, self).__init__(name, model)
+        super().__init__(name, model)
         assert pm.modelcontext(None) is self
         # 1) init variables with Var method
         self.Var('v1', pm.Normal.dist())
-        self.v2 = pm.Normal('v2', mu=0, sd=1)
+        self.v2 = pm.Normal('v2', mu=0, sigma=1)
         # 2) Potentials and Deterministic variables with method too
         # be sure that names will not overlap with other same models
         pm.Deterministic('d', tt.constant(1))
@@ -25,16 +41,16 @@ class NewModel(pm.Model):
 
 
 class DocstringModel(pm.Model):
-    def __init__(self, mean=0, sd=1, name='', model=None):
-        super(DocstringModel, self).__init__(name, model)
-        self.Var('v1', Normal.dist(mu=mean, sd=sd))
-        Normal('v2', mu=mean, sd=sd)
-        Normal('v3', mu=mean, sd=HalfCauchy('sd', beta=10, testval=1.))
+    def __init__(self, mean=0, sigma=1, name='', model=None):
+        super().__init__(name, model)
+        self.Var('v1', Normal.dist(mu=mean, sigma=sigma))
+        Normal('v2', mu=mean, sigma=sigma)
+        Normal('v3', mu=mean, sigma=HalfCauchy('sd', beta=10, testval=1.))
         Deterministic('v3_sq', self.v3 ** 2)
         Potential('p1', tt.constant(1))
 
 
-class TestBaseModel(object):
+class TestBaseModel:
     def test_setattr_properly_works(self):
         with pm.Model() as model:
             pm.Normal('v1')
@@ -52,10 +68,15 @@ class TestBaseModel(object):
 
     def test_context_passes_vars_to_parent_model(self):
         with pm.Model() as model:
+            assert pm.model.modelcontext(None) == model
+            assert pm.Model.get_context() == model
             # a set of variables is created
-            NewModel()
+            nm = NewModel()
+            assert pm.Model.get_context() == model
             # another set of variables are created but with prefix 'another'
             usermodel2 = NewModel(name='another')
+            assert pm.Model.get_context() == model
+            assert usermodel2._parent == model
             # you can enter in a context with submodel
             with usermodel2:
                 usermodel2.Var('v3', pm.Normal.dist())
@@ -77,7 +98,7 @@ class TestBaseModel(object):
         assert m['one_more_d'] is model['one_more_d']
 
 
-class TestNested(object):
+class TestNested:
     def test_nest_context_works(self):
         with pm.Model() as m:
             new = NewModel()
@@ -123,7 +144,7 @@ class TestNested(object):
                 assert model is sub.root
 
 
-class TestObserved(object):
+class TestObserved:
     def test_observed_rv_fail(self):
         with pytest.raises(TypeError):
             with pm.Model():
@@ -141,7 +162,7 @@ class TestObserved(object):
         assert x2.type == X.type
 
 
-class TestTheanoConfig(object):
+class TestTheanoConfig:
     def test_set_testval_raise(self):
         with theano.configparser.change_flags(compute_test_value='off'):
             with pm.Model():
@@ -156,6 +177,50 @@ class TestTheanoConfig(object):
                     assert theano.config.compute_test_value == 'warn'
                 assert theano.config.compute_test_value == 'ignore'
             assert theano.config.compute_test_value == 'off'
+
+def test_matrix_multiplication():
+    # Check matrix multiplication works between RVs, transformed RVs,
+    # Deterministics, and numpy arrays
+    with pm.Model() as linear_model:
+        matrix = pm.Normal('matrix', shape=(2, 2))
+        transformed = pm.Gamma('transformed', alpha=2, beta=1, shape=2)
+        rv_rv = pm.Deterministic('rv_rv', matrix @ transformed)
+        np_rv = pm.Deterministic('np_rv', np.ones((2, 2)) @ transformed)
+        rv_np = pm.Deterministic('rv_np', matrix @ np.ones(2))
+        rv_det = pm.Deterministic('rv_det', matrix @ rv_rv)
+        det_rv = pm.Deterministic('det_rv', rv_rv @ transformed)
+
+        posterior = pm.sample(10,
+                              tune=0,
+                              compute_convergence_checks=False,
+                              progressbar=False)
+        decimal = select_by_precision(7, 5)
+        for point in posterior.points():
+            npt.assert_almost_equal(
+                point['matrix'] @ point['transformed'],
+                point['rv_rv'],
+                decimal=decimal,
+            )
+            npt.assert_almost_equal(
+                np.ones((2, 2)) @ point['transformed'],
+                point['np_rv'],
+                decimal=decimal,
+            )
+            npt.assert_almost_equal(
+                point['matrix'] @ np.ones(2),
+                point['rv_np'],
+                decimal=decimal,
+            )
+            npt.assert_almost_equal(
+                point['matrix'] @ point['rv_rv'],
+                point['rv_det'],
+                decimal=decimal,
+            )
+            npt.assert_almost_equal(
+                point['rv_rv'] @ point['transformed'],
+                point['det_rv'],
+                decimal=decimal,
+            )
 
 
 def test_duplicate_vars():
@@ -288,3 +353,30 @@ class TestValueGradFunction(unittest.TestCase):
         assert logp.size == 1
         assert dlogp.size == 4
         npt.assert_allclose(dlogp, 0., atol=1e-5)
+
+    def test_tensor_type_conversion(self):
+        # case described in #3122
+        X = np.random.binomial(1, 0.5, 10)
+        X[0] = -1  # masked a single value
+        X = np.ma.masked_values(X, value=-1)
+        with pm.Model() as m:
+            x1 = pm.Uniform('x1', 0., 1.)
+            x2 = pm.Bernoulli('x2', x1, observed=X)
+
+        gf = m.logp_dlogp_function()
+
+        assert m['x2_missing'].type == gf._extra_vars_shared['x2_missing'].type
+
+def test_multiple_observed_rv():
+    "Test previously buggy MultiObservedRV comparison code."
+    y1_data = np.random.randn(10)
+    y2_data = np.random.randn(100)
+    with pm.Model() as model:
+        mu = pm.Normal("mu")
+        x = pm.DensityDist(  # pylint: disable=unused-variable
+            "x", pm.Normal.dist(mu, 1.0).logp, observed={"value": 0.1}
+        )
+    assert not model['x'] == model['mu']
+    assert model['x'] == model['x']
+    assert  model['x'] in model.observed_RVs
+    assert not model['x'] in model.vars

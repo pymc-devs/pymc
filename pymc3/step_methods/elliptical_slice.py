@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import numpy.random as nr
 import theano.tensor as tt
@@ -19,9 +33,9 @@ def get_chol(cov, chol):
 
     Parameters
     ----------
-    cov : array, optional
+    cov: array, optional
         Covariance matrix of the multivariate Gaussian prior.
-    chol : array, optional
+    chol: array, optional
         Cholesky decomposition of the covariance matrix of the
         multivariate Gaussian prior.
     """
@@ -48,14 +62,14 @@ class EllipticalSlice(ArrayStep):
 
     Parameters
     ----------
-    vars : list
+    vars: list
         List of variables for sampler.
-    prior_cov : array, optional
+    prior_cov: array, optional
         Covariance matrix of the multivariate Gaussian prior.
-    prior_chol : array, optional
+    prior_chol: array, optional
         Cholesky decomposition of the covariance matrix of the
         multivariate Gaussian prior.
-    model : PyMC Model
+    model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from
         context).
 
@@ -79,11 +93,11 @@ class EllipticalSlice(ArrayStep):
             vars = self.model.cont_vars
         vars = inputvars(vars)
 
-        super(EllipticalSlice, self).__init__(vars, [self.model.fastlogp], **kwargs)
+        super().__init__(vars, [self.model.fastlogp], **kwargs)
 
     def astep(self, q0, logp):
-        """q0 : current state
-        logp : log probability function
+        """q0: current state
+        logp: log probability function
         """
 
         # Draw from the normal prior by multiplying the Cholesky decomposition

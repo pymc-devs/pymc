@@ -2,6 +2,7 @@
 *.sw[op]
 examples/*.png
 nb_examples/
+nb_tutorials/
 build/*
 dist/*
 *.egg-info/
@@ -31,3 +32,13 @@ benchmarks/env/
 benchmarks/html/
 benchmarks/results/
 .pytest_cache/
+
+# Visual Studio / VSCode
+.vs/
+.vscode/
+.mypy_cache
+
+pytestdebug.log
+.dir-locals.el
+.pycheckers
+

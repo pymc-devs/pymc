@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from copy import copy
 
 import theano
@@ -11,7 +25,7 @@ from pymc3.theanof import change_flags
 import numpy as np
 
 
-class TestType(object):
+class TestType:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
 
     def setup_method(self):
@@ -26,7 +40,7 @@ class TestType(object):
     def test_float64(self):
         with Model() as model:
             x = Normal('x', testval=np.array(1., dtype='float64'))
-            obs = Normal('obs', mu=x, sd=1., observed=np.random.randn(5))
+            obs = Normal('obs', mu=x, sigma=1., observed=np.random.randn(5))
 
         assert x.dtype == 'float64'
         assert obs.dtype == 'float64'
@@ -39,7 +53,7 @@ class TestType(object):
     def test_float32(self):
         with Model() as model:
             x = Normal('x', testval=np.array(1., dtype='float32'))
-            obs = Normal('obs', mu=x, sd=1., observed=np.random.randn(5).astype('float32'))
+            obs = Normal('obs', mu=x, sigma=1., observed=np.random.randn(5).astype('float32'))
 
         assert x.dtype == 'float32'
         assert obs.dtype == 'float32'

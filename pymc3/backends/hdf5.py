@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from ..backends import base, ndarray
 import h5py
 from contextlib import contextmanager
@@ -20,14 +34,14 @@ class HDF5(base.BaseTrace):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of backend. This has no meaning for the HDF5 backend.
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
-    vars : list of variables
+    vars: list of variables
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
-    test_point : dict
+    test_point: dict
         use different test point that might be with changed variables shapes
         """
 
@@ -37,7 +51,7 @@ class HDF5(base.BaseTrace):
         self.hdf5_file = None
         self.draw_idx = 0
         self.draws = None
-        super(HDF5, self).__init__(name, model, vars, test_point)
+        super().__init__(name, model, vars, test_point)
 
     def _get_sampler_stats(self, varname, sampler_idx, burn, thin):
         with self.activate_file:
@@ -134,11 +148,11 @@ class HDF5(base.BaseTrace):
 
         Parameters
         ----------
-        draws : int
+        draws: int
             Expected number of draws
-        chain : int
+        chain: int
             Chain number
-        sampler_vars : list of dicts
+        sampler_vars: list of dicts
             Names and dtypes of the variables that are
             exported by the samplers.
         """
@@ -214,9 +228,9 @@ def load(name, model=None):
 
     Parameters
     ----------
-    name : str
+    name: str
         Path to HDF5 arrays file
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
 
     Returns

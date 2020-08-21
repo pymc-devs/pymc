@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pymc3 as pm
 import numpy as np
 from numpy import random as nr
@@ -33,7 +47,7 @@ def test_draw_value():
 
     with pm.Model():
         mu = 2 * tt.constant(np.array([5., 6.])) + theano.shared(np.array(5))
-        a = pm.Normal('a', mu=mu, sd=5, shape=2)
+        a = pm.Normal('a', mu=mu, sigma=5, shape=2)
 
     val1 = _draw_value(a)
     val2 = _draw_value(a)
@@ -44,7 +58,7 @@ def test_draw_value():
     err.match('Unexpected type')
 
 
-class TestDrawValues(object):
+class TestDrawValues:
     def test_empty(self):
         assert draw_values([]) == []
 
@@ -63,7 +77,7 @@ class TestDrawValues(object):
     def test_simple_model(self):
         with pm.Model():
             mu = 2 * tt.constant(np.array([5., 6.])) + theano.shared(np.array(5))
-            a = pm.Normal('a', mu=mu, sd=5, shape=2)
+            a = pm.Normal('a', mu=mu, sigma=5, shape=2)
 
         val1 = draw_values([a])
         val2 = draw_values([a])
@@ -86,18 +100,34 @@ class TestDrawValues(object):
         val2 = draw_values([a], point={'sd': np.array([2., 3.])})[0]
         val3 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
         val4 = draw_values([a], point={'sd_log__': np.array([2., 3.])})[0]
-        
+
         assert all([np.all(val1 != val2), np.all(val1 != val3),
                     np.all(val1 != val4), np.all(val2 != val3),
                     np.all(val2 != val4), np.all(val3 != val4)])
+
+    def test_gof_constant(self):
+        # Issue 3595 pointed out that slice(None) can introduce
+        # theano.gof.graph.Constant into the compute graph, which wasn't
+        # handled correctly by draw_values
+        n_d = 500
+        n_x = 2
+        n_y = 1
+        n_g = 10
+        g = np.random.randint(0, n_g, (n_d,))  # group
+        x = np.random.randint(0, n_x, (n_d,))  # x factor
+        with pm.Model():
+            multi_dim_rv = pm.Normal('multi_dim_rv', mu=0, sd=1, shape=(n_x, n_g, n_y))
+            indexed_rv = multi_dim_rv[x, g, :]
+            i = draw_values([indexed_rv])
+            assert i is not None
 
 
 class TestJointDistributionDrawValues(SeededTest):
     def test_joint_distribution(self):
         with pm.Model() as model:
-            a = pm.Normal('a', mu=0, sd=100)
-            b = pm.Normal('b', mu=a, sd=1e-8)
-            c = pm.Normal('c', mu=a, sd=1e-8)
+            a = pm.Normal('a', mu=0, sigma=100)
+            b = pm.Normal('b', mu=a, sigma=1e-8)
+            c = pm.Normal('c', mu=a, sigma=1e-8)
             d = pm.Deterministic('d', b + c)
 
         # Expected RVs

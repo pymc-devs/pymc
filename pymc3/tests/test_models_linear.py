@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 from .helpers import SeededTest
 from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
@@ -15,7 +29,7 @@ def generate_data(intercept, slope, size=700):
 class TestGLM(SeededTest):
     @classmethod
     def setup_class(cls):
-        super(TestGLM, cls).setup_class()
+        super().setup_class()
         cls.intercept = 1
         cls.slope = 3
         cls.sd = .05
@@ -43,7 +57,7 @@ class TestGLM(SeededTest):
                 name='lm'
             )   # yields lm_x0, lm_Intercept
             sigma = Uniform('sigma', 0, 20)     # yields sigma_interval__
-            Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)  # yields y_obs
+            Normal('y_obs', mu=lm.y_est, sigma=sigma, observed=self.y_linear)  # yields y_obs
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
             trace = sample(500, tune=0, step=step, start=start,
@@ -58,7 +72,7 @@ class TestGLM(SeededTest):
         with Model() as model:
             lm = LinearComponent.from_formula('y ~ x', self.data_linear)
             sigma = Uniform('sigma', 0, 20)
-            Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)
+            Normal('y_obs', mu=lm.y_est, sigma=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
             trace = sample(500, tune=0, step=step, start=start,

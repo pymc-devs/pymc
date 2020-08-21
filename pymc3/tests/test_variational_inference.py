@@ -1,15 +1,33 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pytest
-import six
 import functools
+import io
 import operator
 import numpy as np
-from theano import theano, tensor as tt
+import theano
+import theano.tensor as tt
 
 
 import pymc3 as pm
 import pymc3.memoize
 import pymc3.util
-from pymc3.theanof import change_flags
+from pymc3.theanof import (
+    change_flags,
+    intX,
+)
 from pymc3.variational.approximations import (
     MeanFieldGroup, FullRankGroup,
     NormalizingFlowGroup, EmpiricalGroup,
@@ -79,7 +97,7 @@ def test_tracker_callback():
         tracker(None, None, 1)
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def three_var_model():
     with pm.Model() as model:
         pm.HalfNormal('one', shape=(10, 2), total_size=100)
@@ -149,13 +167,22 @@ def three_var_approx_single_group_mf(three_var_model):
     return MeanField(model=three_var_model)
 
 
-def test_sample_simple(three_var_approx):
-    trace = three_var_approx.sample(500)
-    assert set(trace.varnames) == {'one', 'one_log__', 'three', 'two'}
-    assert len(trace) == 500
-    assert trace[0]['one'].shape == (10, 2)
-    assert trace[0]['two'].shape == (10, )
-    assert trace[0]['three'].shape == (10, 1, 2)
+@pytest.fixture(
+    params = [
+        ('ndarray', None),
+        ('text', 'test'),
+        ('sqlite', 'test.sqlite'),
+        ('hdf5', 'test.h5')
+    ]
+)
+def test_sample_simple(three_var_approx, request):
+        backend, name = request.param
+        trace = three_var_approx.sample(100, backend=backend, name=name)
+        assert set(trace.varnames) == {'one', 'one_log__', 'three', 'two'}
+        assert len(trace) == 100
+        assert trace[0]['one'].shape == (10, 2)
+        assert trace[0]['two'].shape == (10, )
+        assert trace[0]['three'].shape == (10, 1, 2)
 
 
 @pytest.fixture
@@ -174,7 +201,7 @@ def aevb_initial():
         (NormalizingFlowGroup, {'flow': 'radial'}),
         (NormalizingFlowGroup, {'flow': 'radial-loc'})
     ],
-    ids=lambda t: '{c} : {d}'.format(c=t[0].__name__, d=t[1])
+    ids=lambda t: '{c}: {d}'.format(c=t[0].__name__, d=t[1])
 )
 def parametric_grouped_approxes(request):
     return request.param
@@ -253,10 +280,10 @@ def test_vae():
 
     with pm.Model():
         # Hidden variables
-        zs = pm.Normal('zs', mu=0, sd=1, shape=minibatch_size)
+        zs = pm.Normal('zs', mu=0, sigma=1, shape=minibatch_size)
         dec = zs * ad + bd
         # Observation model
-        pm.Normal('xs_', mu=dec, sd=0.1, observed=x_inp)
+        pm.Normal('xs_', mu=dec, sigma=0.1, observed=x_inp)
 
         pm.fit(1, local_rv={zs: dict(mu=mu, rho=rho)},
                more_replacements={x_inp: x_mini}, more_obj_params=[ae, be, ad, bd])
@@ -434,11 +461,11 @@ def test_elbo():
     y_obs = np.array([1.6, 1.4])
 
     post_mu = np.array([1.88], dtype=theano.config.floatX)
-    post_sd = np.array([1], dtype=theano.config.floatX)
+    post_sigma = np.array([1], dtype=theano.config.floatX)
     # Create a model for test
     with pm.Model() as model:
-        mu = pm.Normal('mu', mu=mu0, sd=sigma)
-        pm.Normal('y', mu=mu, sd=1, observed=y_obs)
+        mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+        pm.Normal('y', mu=mu, sigma=1, observed=y_obs)
 
     # Create variational gradient tensor
     mean_field = MeanField(model=model)
@@ -446,7 +473,7 @@ def test_elbo():
         elbo = -pm.operators.KL(mean_field)()(10000)
 
     mean_field.shared_params['mu'].set_value(post_mu)
-    mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+    mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
     f = theano.function([], elbo)
     elbo_mc = f()
@@ -469,7 +496,7 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
     y_obs = np.array([1.6, 1.4])
     beta = len(y_obs)/float(aux_total_size)
     post_mu = np.array([1.88], dtype=theano.config.floatX)
-    post_sd = np.array([1], dtype=theano.config.floatX)
+    post_sigma = np.array([1], dtype=theano.config.floatX)
 
     # TODO: theano_config
     # with pm.Model(theano_config=dict(floatX='float64')):
@@ -479,27 +506,27 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
         with pm.Model():
             assert theano.config.floatX == 'float64'
             assert theano.config.warn_float64 == 'ignore'
-            mu = pm.Normal('mu', mu=mu0, sd=sigma)
-            pm.Normal('y', mu=mu, sd=1, observed=y_obs, total_size=aux_total_size)
+            mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+            pm.Normal('y', mu=mu, sigma=1, observed=y_obs, total_size=aux_total_size)
             # Create variational gradient tensor
             mean_field_1 = MeanField()
             assert mean_field_1.scale_cost_to_minibatch
             mean_field_1.shared_params['mu'].set_value(post_mu)
-            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
             with pm.theanof.change_flags(compute_test_value='off'):
                 elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
 
         with pm.Model():
-            mu = pm.Normal('mu', mu=mu0, sd=sigma)
-            pm.Normal('y', mu=mu, sd=1, observed=y_obs, total_size=aux_total_size)
+            mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+            pm.Normal('y', mu=mu, sigma=1, observed=y_obs, total_size=aux_total_size)
             # Create variational gradient tensor
             mean_field_2 = MeanField()
             assert mean_field_1.scale_cost_to_minibatch
             mean_field_2.scale_cost_to_minibatch = False
             assert not mean_field_2.scale_cost_to_minibatch
             mean_field_2.shared_params['mu'].set_value(post_mu)
-            mean_field_2.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+            mean_field_2.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
         with pm.theanof.change_flags(compute_test_value='off'):
             elbo_via_total_size_unscaled = -pm.operators.KL(mean_field_2)()(10000)
@@ -518,27 +545,27 @@ def test_elbo_beta_kl(aux_total_size):
     y_obs = np.array([1.6, 1.4])
     beta = len(y_obs)/float(aux_total_size)
     post_mu = np.array([1.88], dtype=theano.config.floatX)
-    post_sd = np.array([1], dtype=theano.config.floatX)
+    post_sigma = np.array([1], dtype=theano.config.floatX)
     with pm.theanof.change_flags(floatX='float64', warn_float64='ignore'):
         with pm.Model():
-            mu = pm.Normal('mu', mu=mu0, sd=sigma)
-            pm.Normal('y', mu=mu, sd=1, observed=y_obs, total_size=aux_total_size)
+            mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+            pm.Normal('y', mu=mu, sigma=1, observed=y_obs, total_size=aux_total_size)
             # Create variational gradient tensor
             mean_field_1 = MeanField()
             mean_field_1.scale_cost_to_minibatch = True
             mean_field_1.shared_params['mu'].set_value(post_mu)
-            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+            mean_field_1.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
             with pm.theanof.change_flags(compute_test_value='off'):
                 elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
 
         with pm.Model():
-            mu = pm.Normal('mu', mu=mu0, sd=sigma)
-            pm.Normal('y', mu=mu, sd=1, observed=y_obs)
+            mu = pm.Normal('mu', mu=mu0, sigma=sigma)
+            pm.Normal('y', mu=mu, sigma=1, observed=y_obs)
             # Create variational gradient tensor
             mean_field_3 = MeanField()
             mean_field_3.shared_params['mu'].set_value(post_mu)
-            mean_field_3.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
+            mean_field_3.shared_params['rho'].set_value(np.log(np.exp(post_sigma) - 1))
 
             with pm.theanof.change_flags(compute_test_value='off'):
                 elbo_via_beta_kl = -pm.operators.KL(mean_field_3, beta=beta)()(10000)
@@ -547,7 +574,7 @@ def test_elbo_beta_kl(aux_total_size):
 
 
 @pytest.fixture(
-    'module',
+    scope='module',
     params=[True, False],
     ids=['mini', 'full']
 )
@@ -555,17 +582,17 @@ def use_minibatch(request):
     return request.param
 
 
-@pytest.fixture('module')
+@pytest.fixture
 def simple_model_data(use_minibatch):
     n = 1000
-    sd0 = 2.
+    sigma0 = 2.
     mu0 = 4.
-    sd = 3.
+    sigma = 3.
     mu = -5.
 
-    data = sd * np.random.randn(n) + mu
-    d = n / sd ** 2 + 1 / sd0 ** 2
-    mu_post = (n * np.mean(data) / sd ** 2 + mu0 / sd0 ** 2) / d
+    data = sigma * np.random.randn(n) + mu
+    d = n / sigma ** 2 + 1 / sigma0 ** 2
+    mu_post = (n * np.mean(data) / sigma ** 2 + mu0 / sigma0 ** 2) / d
     if use_minibatch:
         data = pm.Minibatch(data)
     return dict(
@@ -574,24 +601,24 @@ def simple_model_data(use_minibatch):
         mu_post=mu_post,
         d=d,
         mu0=mu0,
-        sd0=sd0,
-        sd=sd,
+        sigma0=sigma0,
+        sigma=sigma,
     )
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def simple_model(simple_model_data):
     with pm.Model() as model:
         mu_ = pm.Normal(
             'mu', mu=simple_model_data['mu0'],
-            sd=simple_model_data['sd0'], testval=0)
-        pm.Normal('x', mu=mu_, sd=simple_model_data['sd'],
+            sigma=simple_model_data['sigma0'], testval=0)
+        pm.Normal('x', mu=mu_, sigma=simple_model_data['sigma'],
                   observed=simple_model_data['data'],
                   total_size=simple_model_data['n'])
     return model
 
 
-@pytest.fixture('module', params=[
+@pytest.fixture(scope='module', params=[
         dict(cls=NFVI, init=dict(flow='scale-loc')),
         dict(cls=ADVI, init=dict()),
         dict(cls=FullRankADVI, init=dict()),
@@ -616,13 +643,13 @@ def inference_spec(request):
     return init_
 
 
-@pytest.fixture('function')
+@pytest.fixture(scope='function')
 def inference(inference_spec, simple_model):
     with simple_model:
         return inference_spec()
 
 
-@pytest.fixture('function')
+@pytest.fixture(scope='function')
 def fit_kwargs(inference, use_minibatch):
     _select = {
         (ADVI, 'full'): dict(
@@ -683,7 +710,7 @@ def test_fit_oo(inference,
     mu_post = simple_model_data['mu_post']
     d = simple_model_data['d']
     np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.05)
-    np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.1)
+    np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.2)
 
 
 def test_profile(inference):
@@ -694,7 +721,7 @@ def test_remove_scan_op():
     with pm.Model():
         pm.Normal('n', 0, 1)
         inference = ADVI()
-        buff = six.StringIO()
+        buff = io.StringIO()
         inference.run_profiling(n=10).summary(buff)
         assert 'theano.scan_module.scan_op.Scan' not in buff.getvalue()
         buff.close()
@@ -721,7 +748,7 @@ def test_clear_cache():
         assert all(len(c) == 0 for c in inference_new.approx._cache.values())
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def another_simple_model():
     _model = models.simple_model()[1]
     with _model:
@@ -772,7 +799,7 @@ def test_fit_fn_text(method, kwargs, error, another_simple_model):
             fit(10, method=method, **kwargs)
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def aevb_model():
     with pm.Model() as model:
         pm.HalfNormal('x', shape=(2,), total_size=5)
@@ -845,17 +872,17 @@ def test_pickle_approx_aevb(three_var_aevb_approx):
     assert new.sample(1000)
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def binomial_model():
     n_samples = 100
-    xs = np.random.binomial(n=1, p=0.2, size=n_samples)
+    xs = intX(np.random.binomial(n=1, p=0.2, size=n_samples))
     with pm.Model() as model:
         p = pm.Beta('p', alpha=1, beta=1)
         pm.Binomial('xs', n=1, p=p, observed=xs)
     return model
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope='module')
 def binomial_model_inference(binomial_model, inference_spec):
     with binomial_model:
         return inference_spec()
@@ -930,9 +957,9 @@ def test_discrete_not_allowed():
     y = np.random.normal(mu_true[z_true], np.ones_like(z_true))
 
     with pm.Model():
-        mu = pm.Normal('mu', mu=0, sd=10, shape=3)
+        mu = pm.Normal('mu', mu=0, sigma=10, shape=3)
         z = pm.Categorical('z', p=tt.ones(3) / 3, shape=len(y))
-        pm.Normal('y_obs', mu=mu[z], sd=1., observed=y)
+        pm.Normal('y_obs', mu=mu[z], sigma=1., observed=y)
         with pytest.raises(opvi.ParametrizationError):
             pm.fit(n=1)  # fails
 
@@ -954,10 +981,10 @@ def test_var_replacement():
 def test_empirical_from_trace(another_simple_model):
     with another_simple_model:
         step = pm.Metropolis()
-        trace = pm.sample(100, step=step, chains=1)
+        trace = pm.sample(100, step=step, chains=1, tune=0)
         emp = Empirical(trace)
         assert emp.histogram.shape[0].eval() == 100
-        trace = pm.sample(100, step=step, chains=4)
+        trace = pm.sample(100, step=step, chains=4, tune=0)
         emp = Empirical(trace)
         assert emp.histogram.shape[0].eval() == 400
 

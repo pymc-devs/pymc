@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import collections
 
 import numpy as np
@@ -9,7 +23,7 @@ __all__ = [
 ]
 
 
-class Callback(object):
+class Callback:
     def __call__(self, approx, loss, i):
         raise NotImplementedError
 
@@ -33,13 +47,13 @@ class CheckParametersConvergence(Callback):
 
     Parameters
     ----------
-    every : int
+    every: int
         check frequency
-    tolerance : float
-        if diff norm < tolerance : break
-    diff : str
+    tolerance: float
+        if diff norm < tolerance: break
+    diff: str
         difference type one of {'absolute', 'relative'}
-    ord : {non-zero int, inf, -inf, 'fro', 'nuc'}, optional
+    ord: {non-zero int, inf, -inf, 'fro', 'nuc'}, optional
         see more info in :func:`numpy.linalg.norm`
 
     Examples
@@ -91,12 +105,12 @@ class Tracker(Callback):
 
     Parameters
     ----------
-    kwargs : key word arguments
+    kwargs: key word arguments
         keys mapping statname to callable that records the stat
 
     Examples
     --------
-    Consider we want time on each iteration    
+    Consider we want time on each iteration
     >>> import time
     >>> tracker = Tracker(time=time.time)
     >>> with model:

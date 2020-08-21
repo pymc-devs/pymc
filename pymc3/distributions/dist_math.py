@@ -1,18 +1,33 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 '''
 Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
-from __future__ import division
-
+import platform
 import numpy as np
 import scipy.linalg
+import scipy.stats
 import theano.tensor as tt
 import theano
-from theano.scalar import UnaryScalarOp, upgrade_to_float
+from theano.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from theano.tensor.slinalg import Cholesky
 from theano.scan_module import until
 from theano import scan
+from .shape_utils import to_tuple
 
 from .special import gammaln
 from pymc3.theanof import floatX
@@ -20,6 +35,16 @@ from pymc3.theanof import floatX
 
 f = floatX
 c = - .5 * np.log(2. * np.pi)
+_beta_clip_values = {
+    dtype: (np.nextafter(0, 1, dtype=dtype), np.nextafter(1, 0, dtype=dtype))
+    for dtype in ["float16", "float32", "float64"]
+}
+if platform.system() in ["Linux", "Darwin"]:
+    _beta_clip_values["float128"] = (
+        np.nextafter(0, 1, dtype="float128"),
+        np.nextafter(1, 0, dtype="float128")
+    )
+
 
 
 def bound(logp, *conditions, **kwargs):
@@ -28,9 +53,9 @@ def bound(logp, *conditions, **kwargs):
 
     Parameters
     ----------
-    logp : float
-    *conditions : booleans
-    broadcast_conditions : bool (optional, default=True)
+    logp: float
+    *conditions: booleans
+    broadcast_conditions: bool (optional, default=True)
         If True, broadcasts logp to match the largest shape of the conditions.
         This is used e.g. in DiscreteUniform where logp is a scalar constant and the shape
         is specified via the conditions.
@@ -108,19 +133,21 @@ def normal_lccdf(mu, sigma, x):
     )
 
 
-def sd2rho(sd):
+def sigma2rho(sigma):
     """
-    `sd -> rho` theano converter
-    :math:`mu + sd*e = mu + log(1+exp(rho))*e`"""
-    return tt.log(tt.exp(tt.abs_(sd)) - 1.)
+    `sigma -> rho` theano converter
+    :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
+    return tt.log(tt.exp(tt.abs_(sigma)) - 1.)
 
 
-def rho2sd(rho):
+def rho2sigma(rho):
     """
-    `rho -> sd` theano converter
-    :math:`mu + sd*e = mu + log(1+exp(rho))*e`"""
+    `rho -> sigma` theano converter
+    :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
     return tt.nnet.softplus(rho)
 
+rho2sd = rho2sigma
+sd2rho = sigma2rho
 
 def log_normal(x, mean, **kwargs):
     """
@@ -129,11 +156,11 @@ def log_normal(x, mean, **kwargs):
 
     Parameters
     ----------
-    x : Tensor
+    x: Tensor
         point of evaluation
-    mean : Tensor
+    mean: Tensor
         mean of normal distribution
-    kwargs : one of parameters `{sd, tau, w, rho}`
+    kwargs: one of parameters `{sigma, tau, w, rho}`
 
     Notes
     -----
@@ -145,22 +172,22 @@ def log_normal(x, mean, **kwargs):
         4) `tau` that follows this equation :math:`tau = std^{-1}`
     ----
     """
-    sd = kwargs.get('sd')
+    sigma = kwargs.get('sigma')
     w = kwargs.get('w')
     rho = kwargs.get('rho')
     tau = kwargs.get('tau')
     eps = kwargs.get('eps', 0.)
-    check = sum(map(lambda a: a is not None, [sd, w, rho, tau]))
+    check = sum(map(lambda a: a is not None, [sigma, w, rho, tau]))
     if check > 1:
         raise ValueError('more than one required kwarg is passed')
     if check == 0:
         raise ValueError('none of required kwarg is passed')
-    if sd is not None:
-        std = sd
+    if sigma is not None:
+        std = sigma
     elif w is not None:
         std = tt.exp(w)
     elif rho is not None:
-        std = rho2sd(rho)
+        std = rho2sigma(rho)
     else:
         std = tau**(-1)
     std += f(eps)
@@ -174,9 +201,9 @@ def MvNormalLogp():
 
     Parameters
     ----------
-    cov : tt.matrix
+    cov: tt.matrix
         The covariance matrix.
-    delta : tt.matrix
+    delta: tt.matrix
         Array of deviations from the mean.
     """
     cov = tt.matrix('cov')
@@ -270,6 +297,19 @@ class SplineWrapper(theano.Op):
         return [x_grad * self.grad_op(x)]
 
 
+class I1e(UnaryScalarOp):
+    """
+    Modified Bessel function of the first kind of order 1, exponentially scaled.
+    """
+    nfunc_spec = ('scipy.special.i1e', 1, 1)
+
+    def impl(self, x):
+        return scipy.special.i1e(x)
+
+
+i1e_scalar = I1e(upgrade_to_float_no_complex, name="i1e")
+i1e = tt.Elemwise(i1e_scalar, name="Elemwise{i1e,no_inplace}")
+
 
 class I0e(UnaryScalarOp):
     """
@@ -280,8 +320,14 @@ class I0e(UnaryScalarOp):
     def impl(self, x):
         return scipy.special.i0e(x)
 
+    def grad(self, inp, grads):
+        x, = inp
+        gz, = grads
+        return gz * (i1e_scalar(x) - theano.scalar.sgn(x) * i0e_scalar(x)),
 
-i0e = I0e(upgrade_to_float, name='i0e')
+
+i0e_scalar = I0e(upgrade_to_float_no_complex, name="i0e")
+i0e = tt.Elemwise(i0e_scalar, name="Elemwise{i0e,no_inplace}")
 
 
 def random_choice(*args, **kwargs):
@@ -289,11 +335,12 @@ def random_choice(*args, **kwargs):
 
     Args:
         p: array
-           Probability of each class
-        size: int
-            Number of draws to return
-        k: int
-            Number of bins
+           Probability of each class. If p.ndim > 1, the last axis is
+           interpreted as the probability of each class, and numpy.random.choice
+           is iterated for every other axis element.
+        size: int or tuple
+            Shape of the desired output array. If p is multidimensional, size
+            should broadcast with p.shape[:-1].
 
     Returns:
         random sample: array
@@ -304,18 +351,29 @@ def random_choice(*args, **kwargs):
     k = p.shape[-1]
 
     if p.ndim > 1:
-        # If a 2d vector of probabilities is passed return a sample for each row of categorical probability
+        # If p is an nd-array, the last axis is interpreted as the class
+        # probability. We must iterate over the elements of all the other
+        # dimensions.
+        # We first ensure that p is broadcasted to the output's shape
+        size = to_tuple(size) + (1,)
+        p = np.broadcast_arrays(p, np.empty(size))[0]
+        out_shape = p.shape[:-1]
+        # np.random.choice accepts 1D p arrays, so we semiflatten p to
+        # iterate calls using the last axis as the category probabilities
+        p = np.reshape(p, (-1, p.shape[-1]))
         samples = np.array([np.random.choice(k, p=p_) for p_ in p])
+        # We reshape to the desired output shape
+        samples = np.reshape(samples, out_shape)
     else:
         samples = np.random.choice(k, p=p, size=size)
     return samples
 
 
-def zvalue(value, sd, mu):
+def zvalue(value, sigma, mu):
     """
     Calculate the z-value for a normal distribution.
     """
-    return (value - mu) / sd
+    return (value - mu) / sigma
 
 
 def incomplete_beta_cfe(a, b, x, small):
@@ -502,3 +560,43 @@ def incomplete_beta(a, b, value):
             tt.and_(tt.le(b * value, one), tt.le(value, 0.95)),
             ps,
             t))
+
+
+def clipped_beta_rvs(a, b, size=None, dtype="float64"):
+    """Draw beta distributed random samples in the open :math:`(0, 1)` interval.
+
+    The samples are generated with ``scipy.stats.beta.rvs``, but any value that
+    is equal to 0 or 1 will be shifted towards the next floating point in the
+    interval :math:`[0, 1]`, depending on the floating point precision that is
+    given by ``dtype``.
+
+    Parameters
+    ----------
+    a : float or array_like of floats
+        Alpha, strictly positive (>0).
+    b : float or array_like of floats
+        Beta, strictly positive (>0).
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``a`` and ``b`` are both scalars.
+        Otherwise, ``np.broadcast(a, b).size`` samples are drawn.
+    dtype : str or dtype instance
+        The floating point precision that the samples should have. This also
+        determines the value that will be used to shift any samples returned
+        by the numpy random number generator that are zero or one.
+    
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized beta distribution. The scipy
+        implementation can yield values that are equal to zero or one. We
+        assume the support of the Beta distribution to be in the open interval
+        :math:`(0, 1)`, so we shift any sample that is equal to 0 to
+        ``np.nextafter(0, 1, dtype=dtype)`` and any sample that is equal to 1
+        is shifted to ``np.nextafter(1, 0, dtype=dtype)``.
+
+    """
+    out = scipy.stats.beta.rvs(a, b, size=size).astype(dtype)
+    lower, upper = _beta_clip_values[dtype]
+    return np.maximum(np.minimum(out, upper), lower)
