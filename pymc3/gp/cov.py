@@ -353,6 +353,17 @@ class Periodic(Stationary):
 
     .. math::
        k(x, x') = \mathrm{exp}\left( -\frac{\mathrm{sin}^2(\pi |x-x'| \frac{1}{T})}{2\ell^2} \right)
+
+    Notes
+    -----
+    Note that the scaling factor for this kernel is different compared to the more common
+    definition (see [1]_). Here, 0.5 is in the exponent instead of the more common value, 2.
+    Divide the length-scale by 2 when initializing the kernel to recover the standard definition.
+
+    References
+    ----------
+    .. [1] David Duvenaud, "The Kernel Cookbook"
+       https://www.cs.toronto.edu/~duvenaud/cookbook/
     """
 
     def __init__(self, input_dim, period, ls=None, ls_inv=None, active_dims=None):

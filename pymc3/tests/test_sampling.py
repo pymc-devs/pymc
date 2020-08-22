@@ -718,20 +718,22 @@ class TestSamplePPCW(SeededTest):
             mu = pm.Normal("mu", mu=0, sigma=1)
             y = pm.Normal("y", mu=mu, sigma=1, observed=data0)
             trace_0 = pm.sample()
+            idata_0 = az.from_pymc3(trace_0)
 
         with pm.Model() as model_1:
             mu = pm.Normal("mu", mu=0, sigma=1, shape=len(data0))
             y = pm.Normal("y", mu=mu, sigma=1, observed=data0)
             trace_1 = pm.sample()
+            idata_1 = az.from_pymc3(trace_1)
 
-        traces = [trace_0, trace_0]
-        models = [model_0, model_0]
+        traces = [trace_0, trace_1]
+        idatas = [idata_0, idata_1]
+        models = [model_0, model_1]
+
         ppc = pm.sample_posterior_predictive_w(traces, 100, models)
         assert ppc["y"].shape == (100, 500)
 
-        traces = [trace_0, trace_1]
-        models = [model_0, model_1]
-        ppc = pm.sample_posterior_predictive_w(traces, 100, models)
+        ppc = pm.sample_posterior_predictive_w(idatas, 100, models)
         assert ppc["y"].shape == (100, 500)
 
 

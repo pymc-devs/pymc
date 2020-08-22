@@ -17,6 +17,7 @@ from collections import OrderedDict
 import numpy as np
 from scipy.special import logsumexp
 from theano import function as theano_function
+import theano.tensor as tt
 
 from ..model import modelcontext, Point
 from ..theanof import floatX, inputvars, make_shared_replacements, join_nonshared_inputs
@@ -100,9 +101,11 @@ class SMC:
         Set up the likelihood logp function based on the chosen kernel
         """
         shared = make_shared_replacements(self.variables, self.model)
-        self.prior_logp_func = logp_forw([self.model.varlogpt], self.variables, shared)
 
         if self.kernel.lower() == "abc":
+            factors = [var.logpt for var in self.model.free_RVs]
+            factors += [tt.sum(factor) for factor in self.model.potentials]
+            self.prior_logp_func = logp_forw([tt.sum(factors)], self.variables, shared)
             simulator = self.model.observed_RVs[0]
             distance = simulator.distribution.distance
             sum_stat = simulator.distribution.sum_stat
@@ -120,6 +123,7 @@ class SMC:
                 self.save_sim_data,
             )
         elif self.kernel.lower() == "metropolis":
+            self.prior_logp_func = logp_forw([self.model.varlogpt], self.variables, shared)
             self.likelihood_logp_func = logp_forw([self.model.datalogpt], self.variables, shared)
 
     def initialize_logp(self):

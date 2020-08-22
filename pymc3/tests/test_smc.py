@@ -130,6 +130,14 @@ class TestSMCABC(SeededTest):
                 observed=self.data,
             )
 
+        with pm.Model() as self.SMABC_potential:
+            a = pm.Normal("a", mu=0, sigma=1)
+            b = pm.HalfNormal("b", sigma=1)
+            c = pm.Potential("c", pm.math.switch(a > 0, 0, -np.inf))
+            s = pm.Simulator(
+                "s", normal_sim, params=(a, b), sum_stat="sort", epsilon=1, observed=self.data
+            )
+
     def test_one_gaussian(self):
         with self.SMABC_test:
             trace = pm.sample_smc(draws=1000, kernel="ABC")
@@ -156,6 +164,11 @@ class TestSMCABC(SeededTest):
     def test_custom_dist_sum(self):
         with self.SMABC_test2:
             trace = pm.sample_smc(draws=1000, kernel="ABC")
+
+    def test_potential(self):
+        with self.SMABC_potential:
+            trace = pm.sample_smc(draws=1000, kernel="ABC")
+            assert np.all(trace["a"] >= 0)
 
     def test_automatic_use_of_sort(self):
         with pm.Model() as model:

@@ -79,6 +79,7 @@ from ..distributions import (
 
 from ..distributions import continuous
 from pymc3.theanof import floatX
+import pymc3 as pm
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal, assert_allclose, assert_equal
 import numpy.random as nr
@@ -1328,17 +1329,14 @@ class TestMatchesScipy(SeededTest):
             Dirichlet, Simplex(n), {"a": Vector(Rplus, n)}, dirichlet_logpdf
         )
 
-    @pytest.mark.parametrize("n", [3, 4])
-    def test_dirichlet_init_fail(self, n):
-        with Model():
-            with pytest.raises(
-                ValueError, match=r"All concentration parameters \(a\) must be > 0."
-            ):
-                _ = Dirichlet("x", a=np.zeros(n), shape=n)
-            with pytest.raises(
-                ValueError, match=r"All concentration parameters \(a\) must be > 0."
-            ):
-                _ = Dirichlet("x", a=np.array([-1.0] * n), shape=n)
+    def test_dirichlet_shape(self):
+        a = tt.as_tensor_variable(np.r_[1, 2])
+        with pytest.warns(DeprecationWarning):
+            dir_rv = Dirichlet.dist(a)
+            assert dir_rv.shape == (2,)
+
+        with pytest.warns(DeprecationWarning), theano.change_flags(compute_test_value="ignore"):
+            dir_rv = Dirichlet.dist(tt.vector())
 
     def test_dirichlet_2D(self):
         self.pymc3_matches_scipy(
@@ -1875,3 +1873,16 @@ class TestBugfixes:
         assert isinstance(actual_a, np.ndarray)
         assert actual_a.shape == (X.shape[0],)
         pass
+
+
+def test_serialize_density_dist():
+    def func(x):
+        return -2 * (x ** 2).sum()
+
+    with pm.Model():
+        pm.Normal('x')
+        y = pm.DensityDist('y', func)
+        pm.sample(draws=5, tune=1, mp_ctx="spawn")
+
+    import pickle
+    pickle.loads(pickle.dumps(y))

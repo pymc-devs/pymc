@@ -20,10 +20,14 @@ import theano.tensor as tt
 import pytest
 import theano
 from pymc3.theanof import floatX
+from packaging import version
 
 from .helpers import SeededTest
 
-matplotlib.use('Agg', warn=False)
+if version.parse(matplotlib.__version__) < version.parse('3.3'):
+    matplotlib.use('Agg', warn=False)
+else:
+    matplotlib.use('Agg')
 
 
 def get_city_data():
