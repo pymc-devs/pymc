@@ -239,6 +239,9 @@ class NoDistribution(Distribution):
         """
         return tt.zeros_like(x)
 
+    def _distr_parameters_for_repr(self):
+        return []
+
 
 class Discrete(Distribution):
     """Base class for discrete distributions"""
