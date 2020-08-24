@@ -174,9 +174,6 @@ class Distribution:
             return "{var_name} ~ {distr_name}({params})".format(var_name=name,
                 distr_name=dist._distr_name_for_repr(), params=param_string)
 
-    def __str__(self, **kwargs):
-        return self._str_repr(formatting="plain", **kwargs)
-
     def _repr_latex_(self, **kwargs):
         """Magic method name for IPython to use for LaTeX formatting."""
         return self._str_repr(formatting="latex", **kwargs)

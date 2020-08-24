@@ -77,9 +77,6 @@ class PyMC3Variable(TensorVariable):
             dist = self.distribution
         return self.distribution._str_repr(name=name, dist=dist, formatting=formatting)
 
-    def __str__(self, **kwargs):
-        return self._str_repr(**kwargs)
-
     def _repr_latex_(self, **kwargs):
         return self._str_repr(formatting="latex", **kwargs)
 
@@ -1371,10 +1368,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 for n, d in zip(names, distrs)]
             return "\n".join(rv_reprs)
 
-
-    def __str__(self, **kwargs):
-        return self._str_repr(**kwargs)
-
     def _repr_latex_(self, **kwargs):
         return self._str_repr(formatting="latex", **kwargs)
 
@@ -1879,7 +1872,6 @@ def Deterministic(name, var, model=None, dims=None):
     model.add_random_variable(var, dims)
     var._repr_latex_ = functools.partial(_repr_deterministic_rv, var, formatting='latex')
     var.__latex__ = var._repr_latex_
-    var.__str__ = functools.partial(_repr_deterministic_rv, var, formatting='plain')
     return var
 
 
