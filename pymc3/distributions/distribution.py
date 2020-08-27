@@ -293,8 +293,8 @@ class DensityDist(Distribution):
         args, kwargs: (Optional)
             These are passed to the parent class' ``__init__``.
 
-        Note
-        ----
+        Notes
+        -----
             If the ``random`` method is wrapped with dist shape, what this
             means is that the ``random`` callable will be wrapped with the
             :func:`~genereate_samples` function. The distribution's shape will
