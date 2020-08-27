@@ -286,6 +286,7 @@ def sample(
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
         * map: Use the MAP as starting point. This is discouraged.
         * adapt_full: Adapt a dense mass matrix using the sample covariances
+
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically.  By default the NUTS step
@@ -337,11 +338,11 @@ def sample(
         is drawn from.
 
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
-    return_inferencedata : bool, optional, default=False
-        Whether to return the trace as an `arviz.InferenceData` (True) object or a `MultiTrace` (False)
+    return_inferencedata : bool, default=False
+        Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
         Defaults to `False`, but we'll switch to `True` in an upcoming release.
     idata_kwargs : dict, optional
-        Keyword arguments for `arviz.from_pymc3`
+        Keyword arguments for :func:`arviz:arviz.from_pymc3`
     mp_ctx : multiprocessing.context.BaseContent
         A multiprocessing context for parallel sampling. See multiprocessing
         documentation for details.
@@ -415,6 +416,7 @@ def sample(
         >>> pm.summary(trace)
                mean        sd  mc_error   hpd_2.5  hpd_97.5
         p  0.604625  0.047086   0.00078  0.510498  0.694774
+
     """
     model = modelcontext(model)
 
@@ -1746,7 +1748,7 @@ def sample_posterior_predictive_w(
     Parameters
     ----------
     traces : list or list of lists
-        List of traces generated from MCMC sampling (xarray.Dataset, arviz.InferenceData, or 
+        List of traces generated from MCMC sampling (xarray.Dataset, arviz.InferenceData, or
         MultiTrace), or a list of list containing dicts from find_MAP() or points. The number of
         traces should be equal to the number of weights.
     samples : int, optional
@@ -1978,6 +1980,7 @@ def init_nuts(
           test value (usually the prior mean) as starting point.
         * jitter+adapt_full: Same as ``adapt_full`, but use test value plus a uniform jitter in
           [-1, 1] as starting point in each chain.
+
     chains : int
         Number of jobs to start.
     n_init : int
