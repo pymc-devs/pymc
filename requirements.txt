@@ -9,3 +9,4 @@ h5py>=2.7.0
 typing-extensions>=3.7.4
 dataclasses; python_version < '3.7'
 contextvars; python_version < '3.7' 
+dill

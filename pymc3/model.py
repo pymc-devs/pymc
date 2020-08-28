@@ -24,7 +24,8 @@ import numpy as np
 from pandas import Series
 import scipy.sparse as sps
 import theano.sparse as sparse
-from theano import theano, tensor as tt
+import theano
+import theano.tensor as tt
 from theano.tensor.var import TensorVariable
 from theano.compile import SharedVariable
 

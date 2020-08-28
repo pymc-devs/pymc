@@ -13,7 +13,8 @@
 #   limitations under the License.
 
 import pytest
-from theano import theano, tensor as tt
+import theano
+import theano.tensor as tt
 import numpy as np
 import pandas as pd
 import numpy.testing as npt

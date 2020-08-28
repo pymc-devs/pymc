@@ -14,6 +14,7 @@
 
 import numbers
 import contextvars
+import dill
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Optional, Callable
@@ -292,8 +293,8 @@ class DensityDist(Distribution):
         args, kwargs: (Optional)
             These are passed to the parent class' ``__init__``.
 
-        Note
-        ----
+        Notes
+        -----
             If the ``random`` method is wrapped with dist shape, what this
             means is that the ``random`` callable will be wrapped with the
             :func:`~genereate_samples` function. The distribution's shape will
@@ -418,6 +419,19 @@ class DensityDist(Distribution):
         self.rand = random
         self.wrap_random_with_dist_shape = wrap_random_with_dist_shape
         self.check_shape_in_random = check_shape_in_random
+
+    def __getstate__(self):
+        # We use dill to serialize the logp function, as this is almost
+        # always defined in the notebook and won't be pickled correctly.
+        # Fix https://github.com/pymc-devs/pymc3/issues/3844
+        logp = dill.dumps(self.logp)
+        vals = self.__dict__.copy()
+        vals['logp'] = logp
+        return vals
+
+    def __setstate__(self, vals):
+        vals['logp'] = dill.loads(vals['logp'])
+        self.__dict__ = vals
 
     def random(self, point=None, size=None, **kwargs):
         if self.rand is not None:
