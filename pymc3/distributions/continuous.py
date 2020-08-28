@@ -369,9 +369,7 @@ class Flat(Continuous):
         -------
         TensorVariable
         """
-        return tt.switch(
-            tt.eq(value, -np.inf), -np.inf, tt.switch(tt.eq(value, np.inf), 0, tt.log(0.5))
-        )
+        return tt.eq(value, -np.inf), -np.inf, tt.switch(tt.eq(value, np.inf), 0, tt.log(0.5))
 
 
 class HalfFlat(PositiveContinuous):
@@ -1131,14 +1129,15 @@ class Wald(PositiveContinuous):
         mu = self.mu
         lam = self.lam
         alpha = self.alpha
+        centered_value = value - alpha
         # value *must* be iid. Otherwise this is wrong.
         return bound(
             logpow(lam / (2.0 * np.pi), 0.5)
-            - logpow(value - alpha, 1.5)
-            - (0.5 * lam / (value - alpha) * ((value - alpha - mu) / mu) ** 2),
+            - logpow(centered_value, 1.5)
+            - (0.5 * lam / centered_value * ((centered_value - mu) / mu) ** 2),
             # XXX these two are redundant. Please, check.
             value > 0,
-            value - alpha > 0,
+            centered_value > 0,
             mu > 0,
             lam > 0,
             alpha >= 0,
@@ -1182,28 +1181,25 @@ class Wald(PositiveContinuous):
 
         a = normal_lcdf(0, 1, (q - 1.0) / r)
         b = 2.0 / l + normal_lcdf(0, 1, -(q + 1.0) / r)
+
+        left_limit = (
+            tt.lt(value, 0)
+            | (tt.eq(value, 0) & tt.gt(mu, 0) & tt.lt(lam, np.inf))
+            | (tt.lt(value, mu) & tt.eq(lam, 0))
+        )
+        right_limit = (
+            tt.eq(value, np.inf)
+            | (tt.eq(lam, 0) & tt.gt(value, mu))
+            | (tt.gt(value, 0) & tt.eq(lam, np.inf))
+        )
+        degenerate_dist = (tt.lt(mu, np.inf) & tt.eq(mu, value) & tt.eq(lam, 0)) | (
+            tt.eq(value, 0) & tt.eq(lam, np.inf)
+        )
+
         return tt.switch(
-            (
-                # Left limit
-                tt.lt(value, 0)
-                | (tt.eq(value, 0) & tt.gt(mu, 0) & tt.lt(lam, np.inf))
-                | (tt.lt(value, mu) & tt.eq(lam, 0))
-            ),
+            left_limit,
             -np.inf,
-            tt.switch(
-                (
-                    # Right limit
-                    tt.eq(value, np.inf)
-                    | (tt.eq(lam, 0) & tt.gt(value, mu))
-                    | (tt.gt(value, 0) & tt.eq(lam, np.inf))
-                    |
-                    # Degenerate distribution
-                    (tt.lt(mu, np.inf) & tt.eq(mu, value) & tt.eq(lam, 0))
-                    | (tt.eq(value, 0) & tt.eq(lam, np.inf))
-                ),
-                0,
-                a + tt.log1p(tt.exp(b - a)),
-            ),
+            tt.switch((right_limit | degenerate_dist), 0, a + tt.log1p(tt.exp(b - a))),
         )
 
 
@@ -3918,13 +3914,15 @@ class Rice(PositiveContinuous):
         self.nu = nu = tt.as_tensor_variable(floatX(nu))
         self.sigma = self.sd = sigma = tt.as_tensor_variable(floatX(sigma))
         self.b = b = tt.as_tensor_variable(floatX(b))
+
+        nu_sigma_ratio = -nu ** 2 / (2 * sigma ** 2)
         self.mean = (
             sigma
             * np.sqrt(np.pi / 2)
-            * tt.exp((-nu ** 2 / (2 * sigma ** 2)) / 2)
+            * tt.exp(nu_sigma_ratio / 2)
             * (
-                (1 - (-nu ** 2 / (2 * sigma ** 2))) * tt.i0(-(-nu ** 2 / (2 * sigma ** 2)) / 2)
-                - (-nu ** 2 / (2 * sigma ** 2)) * tt.i1(-(-nu ** 2 / (2 * sigma ** 2)) / 2)
+                (1 - nu_sigma_ratio) * tt.i0(-nu_sigma_ratio / 2)
+                - nu_sigma_ratio * tt.i1(-nu_sigma_ratio / 2)
             )
         )
         self.variance = (
@@ -3932,10 +3930,10 @@ class Rice(PositiveContinuous):
             + nu ** 2
             - (np.pi * sigma ** 2 / 2)
             * (
-                tt.exp((-nu ** 2 / (2 * sigma ** 2)) / 2)
+                tt.exp(nu_sigma_ratio / 2)
                 * (
-                    (1 - (-nu ** 2 / (2 * sigma ** 2))) * tt.i0(-(-nu ** 2 / (2 * sigma ** 2)) / 2)
-                    - (-nu ** 2 / (2 * sigma ** 2)) * tt.i1(-(-nu ** 2 / (2 * sigma ** 2)) / 2)
+                    (1 - nu_sigma_ratio) * tt.i0(-nu_sigma_ratio / 2)
+                    - nu_sigma_ratio * tt.i1(-nu_sigma_ratio / 2)
                 )
             )
             ** 2
