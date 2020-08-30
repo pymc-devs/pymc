@@ -369,7 +369,9 @@ class Flat(Continuous):
         -------
         TensorVariable
         """
-        return tt.eq(value, -np.inf), -np.inf, tt.switch(tt.eq(value, np.inf), 0, tt.log(0.5))
+        return tt.switch(
+            tt.eq(value, -np.inf), -np.inf, tt.switch(tt.eq(value, np.inf), 0, tt.log(0.5))
+        )
 
 
 class HalfFlat(PositiveContinuous):
