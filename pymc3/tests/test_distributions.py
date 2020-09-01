@@ -1805,7 +1805,7 @@ class TestLatex:
             r"$\text{sigma} \sim \text{HalfNormal}(\mathit{sigma}=1.0)$",
             r"$\text{mu} \sim \text{Deterministic}(\text{alpha},~\text{Constant},~\text{beta})$",
             r"$\text{beta} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
-            r"$Z \sim \text{MvNormal}(\mathit{mu}=array, \mathit{chol}=array)$",
+            r"$\text{Z} \sim \text{MvNormal}(\mathit{mu}=array,~\mathit{chol_cov}=array)$",
             r"$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sigma}=f(\text{sigma}))$",
         )
 

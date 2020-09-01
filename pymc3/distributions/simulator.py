@@ -34,7 +34,7 @@ class Simulator(NoDistribution):
     ):
         """
         This class stores a function defined by the user in Python language.
-        
+
         function: function
             Python function defined by the user.
         params: list
@@ -53,7 +53,7 @@ class Simulator(NoDistribution):
             If a callable is based it should return a number or a 1d numpy array.
         epsilon: float
             Standard deviation of the gaussian_kernel.
-        *args and **kwargs: 
+        *args and **kwargs:
             Arguments and keywords arguments that the function takes.
         """
 
@@ -115,7 +115,7 @@ class Simulator(NoDistribution):
         else:
             return np.array([self.function(*params) for _ in range(size)])
 
-    def _repr_latex_(self, name=None, dist=None):
+    def _str_repr(self, name=None, dist=None, formatting="plain"):
         if dist is None:
             dist = self
         name = name
@@ -123,7 +123,12 @@ class Simulator(NoDistribution):
         params = ", ".join([var.name for var in dist.params])
         sum_stat = self.sum_stat.__name__ if hasattr(self.sum_stat, "__call__") else self.sum_stat
         distance = self.distance.__name__
-        return f"$\\text{{{name}}} \sim  \\text{{Simulator}}(\\text{{{function}}}({params}), \\text{{{distance}}}, \\text{{{sum_stat}}})$"
+
+        if formatting == "latex":
+            return f"$\\text{{{name}}} \sim  \\text{{Simulator}}(\\text{{{function}}}({params}), \\text{{{distance}}}, \\text{{{sum_stat}}})$"
+        else:
+            return f"{name} ~ Simulator({function}({params}), {distance}, {sum_stat})"
+
 
 
 def identity(x):
@@ -138,7 +143,7 @@ def gaussian_kernel(epsilon, obs_data, sim_data):
 
 def wasserstein(epsilon, obs_data, sim_data):
     """Wasserstein distance function.
-    
+
     We are assuming obs_data and sim_data are already sorted!
     """
     return np.mean(np.abs((obs_data - sim_data) / epsilon))
@@ -146,7 +151,7 @@ def wasserstein(epsilon, obs_data, sim_data):
 
 def energy(epsilon, obs_data, sim_data):
     """Energy distance function.
-    
+
     We are assuming obs_data and sim_data are already sorted!
     """
     return 1.4142 * np.mean(((obs_data - sim_data) / epsilon) ** 2) ** 0.5
