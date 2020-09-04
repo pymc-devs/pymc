@@ -1879,7 +1879,14 @@ def Deterministic(name, var, model=None, dims=None):
     model.add_random_variable(var, dims)
     var._repr_latex_ = functools.partial(_repr_deterministic_rv, var, formatting='latex')
     var.__latex__ = var._repr_latex_
-    var.__str__ = functools.partial(_repr_deterministic_rv, var, formatting='plain')
+
+    # simply assigning var.__str__ is not enough, since str() will default to the class-
+    # defined __str__ anyway; see https://stackoverflow.com/a/5918210/1692028
+    old_type = type(var)
+    new_type = type(old_type.__name__ + '_pymc3_Deterministic', (old_type,),
+        {'__str__': functools.partial(_repr_deterministic_rv, var, formatting='plain')})
+    var.__class__ = new_type
+
     return var
 
 
