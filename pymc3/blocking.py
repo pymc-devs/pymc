@@ -21,7 +21,7 @@ import copy
 import numpy as np
 import collections
 
-from ..util import get_var_name
+from .util import get_var_name
 
 __all__ = ['ArrayOrdering', 'DictToArrayBijection', 'DictToVarBijection']
 
