@@ -20,6 +20,8 @@ import xarray
 import arviz
 from numpy import asscalar, ndarray
 
+from theano.tensor import TensorVariable
+
 
 LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
 
@@ -121,7 +123,7 @@ def get_default_varnames(var_iterator, include_transformed):
     if include_transformed:
         return list(var_iterator)
     else:
-        return [var for var in var_iterator if not is_transformed_name(str(var))]
+        return [var for var in var_iterator if not is_transformed_name(get_var_name(var))]
 
 
 def get_repr_for_variable(variable, formatting="plain"):
@@ -151,6 +153,18 @@ def get_repr_for_variable(variable, formatting="plain"):
         return r"\text{{{name}}}".format(name=name)
     else:
         return name
+
+
+def get_var_name(var):
+    """ Get an appropriate, plain variable name for a variable. Necessary
+    because we override theano.tensor.TensorVariable.__str__ to give informative
+    string representations to our pymc3.PyMC3Variables, yet we want to use the
+    plain name as e.g. keys in dicts.
+    """
+    if isinstance(var, TensorVariable):
+        return super(TensorVariable, var).__str__()
+    else:
+        return str(var)
 
 
 def update_start_vals(a, b, model):

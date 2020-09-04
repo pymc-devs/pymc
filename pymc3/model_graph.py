@@ -21,7 +21,7 @@ from theano.gof.graph import stack_search
 from theano.compile import SharedVariable
 from theano.tensor import Tensor
 
-from .util import get_default_varnames
+from .util import get_default_varnames, get_var_name
 from .model import ObservedRV
 import pymc3 as pm
 
@@ -83,7 +83,7 @@ class ModelGraph:
                 if self.transform_map[p] != var.name:
                     keep.add(self.transform_map[p])
             else:
-                raise AssertionError('Do not know what to do with {}'.format(str(p)))
+                raise AssertionError('Do not know what to do with {}'.format(get_var_name(p)))
         return keep
 
     def get_parents(self, var: Tensor) -> Set[VarName]:

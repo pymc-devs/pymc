@@ -16,6 +16,7 @@ from .compound import CompoundStep
 from ..model import modelcontext
 from ..theanof import inputvars
 from ..blocking import ArrayOrdering, DictToArrayBijection
+from ..util import get_var_name
 import numpy as np
 from numpy.random import uniform
 from enum import IntEnum, unique
@@ -175,7 +176,7 @@ class ArrayStepShared(BlockedStep):
         """
         self.vars = vars
         self.ordering = ArrayOrdering(vars)
-        self.shared = {str(var): shared for var, shared in shared.items()}
+        self.shared = {get_var_name(var): shared for var, shared in shared.items()}
         self.blocked = blocked
         self.bij = None
 

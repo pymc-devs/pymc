@@ -28,6 +28,7 @@ import theano.tensor as tt
 
 from ..model import modelcontext, Model
 from .report import SamplerReport, merge_reports
+from ..util import get_var_name
 
 logger = logging.getLogger('pymc3')
 
@@ -109,7 +110,7 @@ class BaseTrace(ABC):
         self.sampler_vars = sampler_vars
 
     # pylint: disable=unused-argument
-    def setup(self, draws, chain, sampler_vars=None) -> None: 
+    def setup(self, draws, chain, sampler_vars=None) -> None:
         """Perform chain-specific setup.
 
         Parameters
@@ -335,7 +336,7 @@ class MultiTrace:
             var = idx
             burn, thin = 0, 1
 
-        var = str(var)
+        var = get_var_name(var)
         if var in self.varnames:
             if var in self.stat_names:
                 warnings.warn("Attribute access on a trace object is ambigous. "
@@ -355,7 +356,7 @@ class MultiTrace:
         if name in self._attrs:
             raise AttributeError
 
-        name = str(name)
+        name = get_var_name(name)
         if name in self.varnames:
             if name in self.stat_names:
                 warnings.warn("Attribute access on a trace object is ambigous. "
@@ -482,7 +483,7 @@ class MultiTrace:
         """
         if chains is None:
             chains = self.chains
-        varname = str(varname)
+        varname = get_var_name(varname)
         try:
             results = [self._straces[chain].get_values(varname, burn, thin)
                        for chain in chains]
