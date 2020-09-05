@@ -197,7 +197,7 @@ def allinmodel(vars, model):
     notin = [v for v in vars if v not in model.vars]
     if notin:
         notin = list(map(get_var_name, notin))
-        raise ValueError("Some variables not in the model: " + notin)
+        raise ValueError("Some variables not in the model: " + str(notin))
 
 
 class CostFuncWrapper:

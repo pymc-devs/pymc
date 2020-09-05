@@ -19,6 +19,8 @@ from pymc3 import Model, Uniform, Normal, Beta, Binomial, find_MAP, Point
 from .models import simple_model, non_normal, simple_arbitrary_det
 from .helpers import select_by_precision
 
+from pytest import raises
+
 
 def test_accuracy_normal():
     _, model, (mu, _) = simple_model()
@@ -83,3 +85,23 @@ def test_find_MAP():
 
     close_to(map_est2['mu'], 0, tol)
     close_to(map_est2['sigma'], 1, tol)
+
+
+def test_allinmodel():
+    model1 = Model()
+    model2 = Model()
+    with model1:
+        x1 = Normal('x1', mu=0, sigma=1)
+        y1 = Normal('y1', mu=0, sigma=1)
+    with model2:
+        x2 = Normal('x2', mu=0, sigma=1)
+        y2 = Normal('y2', mu=0, sigma=1)
+
+    starting.allinmodel([x1, y1], model1)
+    starting.allinmodel([x1], model1)
+    with raises(ValueError):
+        starting.allinmodel([x2, y2], model1)
+    with raises(ValueError):
+        starting.allinmodel([x2, y1], model1)
+    with raises(ValueError):
+        starting.allinmodel([x2], model1)
