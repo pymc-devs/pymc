@@ -1177,3 +1177,17 @@ class TestUtil:
             )
         plt.close()
         pass
+
+
+class TestCircular:
+    def test_1d(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model():
+            cov = pm.gp.cov.Circular(1, 1, ls=1)
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], 0.691239, atol=1e-3)
+        K = theano.function([], cov(X, X))()
+        npt.assert_allclose(K[0, 1], 0.691239, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)

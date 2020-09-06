@@ -299,6 +299,67 @@ class WhiteNoise(Covariance):
             return tt.alloc(0.0, X.shape[0], Xs.shape[0])
 
 
+class Circular(Covariance):
+    R"""
+    Circular Kernel
+
+    .. math::
+
+        k_g(x, y) = W_\pi(\operatorname{dist}_{\mathit{geo}}(x, y)),
+
+    with
+
+    .. math::
+
+        W_c = \left(1 + \tau \frac{t}{c}\right)\left(1-\frac{t}{c}\right)
+
+    where :math:`c` is maximum value for :math:`t` and :math:`\tau\ge 4`.
+    The larger :math:`\tau` is the less correlated are neighboring points
+
+    Parameters
+    ----------
+    bound : scalar
+        defines the circular interval :math:`[0, \mathit{bound})`
+    tau : scalar
+        :math:`\tau\ge 4` defines correlation strenth, the larger,
+        the smaller correlation is. Minimum value is :math:`4`
+    """
+
+    def __init__(self, input_dim, bound, ls=None, ls_inv=None, tau=4, active_dims=None):
+        super().__init__(input_dim, active_dims)
+        if (ls is None and ls_inv is None) or (ls is not None and ls_inv is not None):
+            raise ValueError("Only one of 'ls' or 'ls_inv' must be provided")
+        if len(self.active_dims) != 1:
+            raise ValueError("Only 1 dimension is supported for Circular kernel")
+        elif ls_inv is not None:
+            if isinstance(ls_inv, (list, tuple)):
+                ls = 1.0 / np.asarray(ls_inv)
+            else:
+                ls = 1.0 / ls_inv
+        self.ls = tt.as_tensor_variable(ls)
+        self.c = tt.as_tensor_variable(bound/2) / self.ls
+        self.tau = tau
+
+    def dist(self, X, Xs):
+        X = tt.mul(X, 1.0 / self.ls)
+        if Xs is None:
+            Xs = tt.transpose(X)
+        else:
+            Xs = tt.mul(Xs, 1.0 / self.ls)
+            Xs = tt.transpose(Xs)
+        return tt.abs_((X - Xs + self.c) % (self.c * 2) - self.c)
+
+    def weinland(self, t):
+        return (1 + self.tau * t / self.c) * tt.clip(1 - t / self.c, 0, np.inf) ** self.tau
+
+    def full(self, X, Xs=None):
+        X, Xs = self._slice(X, Xs)
+        return self.weinland(self.dist(X, Xs))
+
+    def diag(self, X):
+        return tt.alloc(1.0, X.shape[0])
+
+
 class Stationary(Covariance):
     r"""
     Base class for stationary kernels/covariance functions.
