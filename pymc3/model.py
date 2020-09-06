@@ -581,8 +581,9 @@ class ValueGradFunction:
 
     Parameters
     ----------
-    cost: theano variable
-        The value that we compute with its gradient.
+    costs: list of theano variables
+        We compute the weighted sum of the specified theano values, and the gradient
+        of that sum. The weights can be specified with `ValueGradFunction.set_weights`.
     grad_vars: list of named theano variables or None
         The arguments with respect to which the gradient is computed.
     extra_vars: list of named theano variables or None
@@ -610,7 +611,7 @@ class ValueGradFunction:
     """
 
     def __init__(
-        self, cost, grad_vars, extra_vars=None, dtype=None, casting="no", **kwargs
+        self, costs, grad_vars, extra_vars=None, dtype=None, casting="no", **kwargs
     ):
         from .distributions import TensorType
 
@@ -623,19 +624,30 @@ class ValueGradFunction:
         if len(set(names)) != len(names):
             raise ValueError("Names of the arguments are not unique.")
 
-        if cost.ndim > 0:
-            raise ValueError("Cost must be a scalar.")
-
         self._grad_vars = grad_vars
         self._extra_vars = extra_vars
         self._extra_var_names = {var.name for var in extra_vars}
+
+        if dtype is None:
+            dtype = theano.config.floatX
+        self.dtype = dtype
+
+        self._n_costs = len(costs)
+        if self._n_costs == 0:
+            raise ValueError("At least one cost is required.")
+        weights = np.ones(self._n_costs - 1, dtype=self.dtype)
+        self._weights = theano.shared(weights, "__weights")
+
+        cost = costs[0]
+        for i, val in enumerate(costs[1:]):
+            if cost.ndim > 0 or val.ndim > 0:
+                raise ValueError("All costs must be scalar.")
+            cost = cost + self._weights[i] * val
+
         self._cost = cost
         self._ordering = ArrayOrdering(grad_vars)
         self.size = self._ordering.size
         self._extra_are_set = False
-        if dtype is None:
-            dtype = theano.config.floatX
-        self.dtype = dtype
         for var in self._grad_vars:
             if not np.can_cast(var.dtype, self.dtype, casting):
                 raise TypeError(
@@ -673,6 +685,11 @@ class ValueGradFunction:
         self._theano_function = theano.function(
             inputs, [self._cost_joined, grad], givens=givens, **kwargs
         )
+
+    def set_weights(self, values):
+        if values.shape != (self._n_costs - 1,):
+            raise ValueError("Invalid shape. Must be (n_costs - 1,).")
+        self._weights.set_value(values)
 
     def set_extra_values(self, extra_vars):
         self._extra_are_set = True
@@ -940,7 +957,18 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         vars = inputvars(self.cont_vars)
         return self.bijection.mapf(self.fastdlogp(vars))
 
-    def logp_dlogp_function(self, grad_vars=None, **kwargs):
+    def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
+        """Compile a theano function that computes logp and gradient.
+
+        Parameters
+        ----------
+        grad_vars: list of random variables, optional
+            Compute the gradient with respect to those variables. If None,
+            use all free random variables of this model.
+        tempered: bool
+            Compute the tempered logp `free_logp + alpha * observed_logp`.
+            `alpha` can be changed using `ValueGradFunction.set_weights([alpha])`.
+        """
         if grad_vars is None:
             grad_vars = list(typefilter(self.free_RVs, continuous_types))
         else:
@@ -949,9 +977,22 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                     raise ValueError(
                         "Can only compute the gradient of " "continuous types: %s" % var
                     )
+
+        if tempered:
+            with self:
+                free_RVs_logp = tt.sum([
+                    tt.sum(var.logpt) for var in self.free_RVs + self.potentials
+                ])
+                observed_RVs_logp = tt.sum([
+                    tt.sum(var.logpt) for var in self.observed_RVs
+                ])
+
+            costs = [free_RVs_logp, observed_RVs_logp]
+        else:
+            costs = [self.logpt]
         varnames = [var.name for var in grad_vars]
         extra_vars = [var for var in self.free_RVs if var.name not in varnames]
-        return ValueGradFunction(self.logpt, grad_vars, extra_vars, **kwargs)
+        return ValueGradFunction(costs, grad_vars, extra_vars, **kwargs)
 
     @property
     def logpt(self):
@@ -1050,7 +1091,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             return
 
         for name in coords:
-            if name in { "draw", "chain" }:
+            if name in {"draw", "chain"}:
                 raise ValueError(
                     "Dimensions can not be named `draw` or `chain`, as they are reserved for the sampler's outputs."
                 )
