@@ -11,7 +11,7 @@
 
 ### New features
 - `sample_posterior_predictive_w` can now feed on `xarray.Dataset` - e.g. from `InferenceData.posterior`. (see [#4042](https://github.com/pymc-devs/pymc3/pull/4042))
-
+- added `pymc3.gp.cov.Circular` see [#4082](https://github.com/pymc-devs/pymc3/pull/4082), kernel for circular domains (e.g. unit circle)
 
 ## PyMC3 3.9.3 (11 August 2020)
 

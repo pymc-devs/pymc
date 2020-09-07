@@ -301,7 +301,7 @@ class WhiteNoise(Covariance):
 
 class Circular(Covariance):
     R"""
-    Circular Kernel
+    Circular Kernel.
 
     .. math::
 
@@ -314,15 +314,21 @@ class Circular(Covariance):
         W_c = \left(1 + \tau \frac{t}{c}\right)\left(1-\frac{t}{c}\right)
 
     where :math:`c` is maximum value for :math:`t` and :math:`\tau\ge 4`.
-    The larger :math:`\tau` is the less correlated are neighboring points
+    The larger :math:`\tau` is the less correlated are neighboring points.
+    See [1]_ for more explanations and use cases.
 
     Parameters
     ----------
     bound : scalar
         defines the circular interval :math:`[0, \mathit{bound})`
     tau : scalar
-        :math:`\tau\ge 4` defines correlation strenth, the larger,
+        :math:`\tau\ge 4` defines correlation strength, the larger,
         the smaller correlation is. Minimum value is :math:`4`
+
+    References
+    ----------
+    .. [1] Espéran Padonou, O Roustant, "Polar Gaussian Processes for Predicting on Circular Domains"
+    https://hal.archives-ouvertes.fr/hal-01119942v1/document
     """
 
     def __init__(self, input_dim, bound, ls=None, ls_inv=None, tau=4, active_dims=None):
