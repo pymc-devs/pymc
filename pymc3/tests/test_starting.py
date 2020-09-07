@@ -99,9 +99,9 @@ def test_allinmodel():
 
     starting.allinmodel([x1, y1], model1)
     starting.allinmodel([x1], model1)
-    with raises(ValueError):
+    with raises(ValueError, match=r"Some variables not in the model: \['x2', 'y2'\]"):
         starting.allinmodel([x2, y2], model1)
-    with raises(ValueError):
+    with raises(ValueError, match=r"Some variables not in the model: \['x2'\]"):
         starting.allinmodel([x2, y1], model1)
-    with raises(ValueError):
+    with raises(ValueError, match=r"Some variables not in the model: \['x2'\]"):
         starting.allinmodel([x2], model1)
