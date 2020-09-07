@@ -18,7 +18,6 @@ import theano
 import theano.tensor as tt
 import warnings
 
-from pymc3.util import get_variable_name
 from ..math import logsumexp
 from .dist_math import bound, random_choice
 from .distribution import (Discrete, Distribution, draw_values,
@@ -578,6 +577,8 @@ class Mixture(Distribution):
             samples = np.reshape(samples, size + dist_shape)
         return samples
 
+    def _distr_parameters_for_repr(self):
+        return []
 
 class NormalMixture(Mixture):
     R"""
@@ -627,14 +628,5 @@ class NormalMixture(Mixture):
         super().__init__(w, Normal.dist(mu, sigma=sigma, shape=comp_shape),
                                             *args, **kwargs)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        mu = dist.mu
-        w = dist.w
-        sigma = dist.sigma
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{NormalMixture}}(\mathit{{w}}={},~\mathit{{mu}}={},~\mathit{{sigma}}={})$'.format(name,
-                                                get_variable_name(w),
-                                                get_variable_name(mu),
-                                                get_variable_name(sigma))
+    def _distr_parameters_for_repr(self):
+        return ["w", "mu", "sigma"]

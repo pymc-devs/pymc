@@ -64,6 +64,24 @@ class PyMC3Variable(TensorVariable):
     def __rmatmul__(self, other):
         return tt.dot(other, self)
 
+    def _str_repr(self, name=None, dist=None, formatting="plain"):
+        if getattr(self, "distribution", None) is None:
+            if formatting == "latex":
+                return None
+            else:
+                return super().__str__()
+
+        if name is None and hasattr(self, 'name'):
+            name = self.name
+        if dist is None and hasattr(self, 'distribution'):
+            dist = self.distribution
+        return self.distribution._str_repr(name=name, dist=dist, formatting=formatting)
+
+    def _repr_latex_(self, **kwargs):
+        return self._str_repr(formatting="latex", **kwargs)
+
+    __latex__ = _repr_latex_
+
 
 class InstanceMethod:
     """Class for hiding references to instance methods so they can be pickled.
@@ -1326,20 +1344,32 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             name="Log-probability of test_point",
         )
 
-    def _repr_latex_(self, name=None, dist=None):
-        tex_vars = []
-        for rv in itertools.chain(self.unobserved_RVs, self.observed_RVs):
-            rv_tex = rv.__latex__()
-            if rv_tex is not None:
-                array_rv = rv_tex.replace(r"\sim", r"&\sim &").strip("$")
-                tex_vars.append(array_rv)
-        return r"""$$
-            \begin{{array}}{{rcl}}
-            {}
-            \end{{array}}
-            $$""".format(
-            "\\\\".join(tex_vars)
-        )
+    def _str_repr(self, formatting="plain", **kwargs):
+        all_rv = itertools.chain(self.unobserved_RVs, self.observed_RVs)
+
+        if formatting == "latex":
+            rv_reprs = [rv.__latex__() for rv in all_rv]
+            rv_reprs = [rv_repr.replace(r"\sim", r"&\sim &").strip("$")
+                for rv_repr in rv_reprs if rv_repr is not None]
+            return r"""$$
+                \begin{{array}}{{rcl}}
+                {}
+                \end{{array}}
+                $$""".format(
+                "\\\\".join(rv_reprs))
+        else:
+            rv_reprs = [rv.__str__() for rv in all_rv]
+            rv_reprs = [rv_repr for rv_repr in rv_reprs if not 'TransformedDistribution()' in rv_repr]
+            # align vars on their ~
+            names = [s[:s.index('~')-1] for s in rv_reprs]
+            distrs = [s[s.index('~')+2:] for s in rv_reprs]
+            maxlen = str(max(len(x) for x in names))
+            rv_reprs = [('{name:>' + maxlen + '} ~ {distr}').format(name=n, distr=d)
+                for n, d in zip(names, distrs)]
+            return "\n".join(rv_reprs)
+
+    def _repr_latex_(self, **kwargs):
+        return self._str_repr(formatting="latex", **kwargs)
 
     __latex__ = _repr_latex_
 
@@ -1607,17 +1637,6 @@ class FreeRV(Factor, PyMC3Variable):
                 wrapper=InstanceMethod,
             )
 
-    def _repr_latex_(self, name=None, dist=None):
-        if self.distribution is None:
-            return None
-        if name is None:
-            name = self.name
-        if dist is None:
-            dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
-
-    __latex__ = _repr_latex_
-
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""
@@ -1752,17 +1771,6 @@ class ObservedRV(Factor, PyMC3Variable):
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
             self.scaling = _get_scaling(total_size, data.shape, data.ndim)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if self.distribution is None:
-            return None
-        if name is None:
-            name = self.name
-        if dist is None:
-            dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
-
-    __latex__ = _repr_latex_
-
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""
@@ -1822,27 +1830,28 @@ class MultiObservedRV(Factor):
         return not self == other
 
 
-def _walk_up_rv(rv):
+def _walk_up_rv(rv, formatting='plain'):
     """Walk up theano graph to get inputs for deterministic RV."""
     all_rvs = []
     parents = list(itertools.chain(*[j.inputs for j in rv.get_parents()]))
     if parents:
         for parent in parents:
-            all_rvs.extend(_walk_up_rv(parent))
+            all_rvs.extend(_walk_up_rv(parent, formatting=formatting))
     else:
-        if rv.name:
-            all_rvs.append(r"\text{%s}" % rv.name)
-        else:
-            all_rvs.append(r"\text{Constant}")
+        name = rv.name if rv.name else "Constant"
+        fmt = r"\text{{{name}}}" if formatting == "latex" else "{name}"
+        all_rvs.append(fmt.format(name=name))
     return all_rvs
 
 
-def _latex_repr_rv(rv):
+def _repr_deterministic_rv(rv, formatting='plain'):
     """Make latex string for a Deterministic variable"""
-    return r"$\text{%s} \sim \text{Deterministic}(%s)$" % (
-        rv.name,
-        r",~".join(_walk_up_rv(rv)),
-    )
+    if formatting == 'latex':
+        return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
+            name=rv.name, args=r",~".join(_walk_up_rv(rv, formatting=formatting)))
+    else:
+        return "{name} ~ Deterministic({args})".format(
+            name=rv.name, args=", ".join(_walk_up_rv(rv, formatting=formatting)))
 
 
 def Deterministic(name, var, model=None, dims=None):
@@ -1861,7 +1870,7 @@ def Deterministic(name, var, model=None, dims=None):
     var = var.copy(model.name_for(name))
     model.deterministics.append(var)
     model.add_random_variable(var, dims)
-    var._repr_latex_ = functools.partial(_latex_repr_rv, var)
+    var._repr_latex_ = functools.partial(_repr_deterministic_rv, var, formatting='latex')
     var.__latex__ = var._repr_latex_
     return var
 
@@ -1939,17 +1948,6 @@ class TransformedRV(PyMC3Variable):
                 methods=["random"],
                 wrapper=InstanceMethod,
             )
-
-    def _repr_latex_(self, name=None, dist=None):
-        if self.distribution is None:
-            return None
-        if name is None:
-            name = self.name
-        if dist is None:
-            dist = self.distribution
-        return self.distribution._repr_latex_(name=name, dist=dist)
-
-    __latex__ = _repr_latex_
 
     @property
     def init_value(self):
