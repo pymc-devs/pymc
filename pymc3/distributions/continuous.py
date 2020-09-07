@@ -44,7 +44,6 @@ from .special import log_i0
 from ..math import invlogit, logit, logdiffexp
 
 from pymc3.theanof import floatX
-from pymc3.util import get_variable_name
 from scipy import stats
 from scipy.special import expit
 from scipy.interpolate import InterpolatedUnivariateSpline
@@ -1322,7 +1321,7 @@ class Beta(UnitContinuous):
 
     def _distr_parameters_for_repr(self):
         return ["alpha", "beta"]
-      
+
 
 class Kumaraswamy(UnitContinuous):
     r"""
