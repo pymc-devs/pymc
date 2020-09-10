@@ -1,0 +1,9 @@
+repos:
+- repo: https://github.com/nbQA-dev/nbQA
+  rev: 0.1.29
+  hooks:
+    - id: nbqa
+      args: ['isort']
+      name: nbqa-isort
+      alias: nbqa-isort
+      additional_dependencies: ['isort']
