@@ -380,3 +380,26 @@ def test_multiple_observed_rv():
     assert model['x'] == model['x']
     assert  model['x'] in model.observed_RVs
     assert not model['x'] in model.vars
+
+
+def test_tempered_logp_dlogp():
+    with pm.Model() as model:
+        pm.Normal('x')
+        pm.Normal('y', observed=1)
+
+    func = model.logp_dlogp_function()
+    func.set_extra_values({})
+
+    func_temp = model.logp_dlogp_function(tempered=True)
+    func_temp.set_extra_values({})
+
+    x = np.ones(func.size, dtype=func.dtype)
+    assert func(x) == func_temp(x)
+
+    func_temp.set_weights(np.array([0.]))
+    npt.assert_allclose(func(x)[0], 2 * func_temp(x)[0])
+    npt.assert_allclose(func(x)[1], func_temp(x)[1])
+
+    func_temp.set_weights(np.array([0.5]))
+    npt.assert_allclose(func(x)[0], 4 / 3 * func_temp(x)[0])
+    npt.assert_allclose(func(x)[1], func_temp(x)[1])
