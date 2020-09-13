@@ -265,7 +265,7 @@ class TestValueGradFunction(unittest.TestCase):
         a.tag.test_value = np.zeros(3, dtype=a.dtype)
         a.dshape = (3,)
         a.dsize = 3
-        f_grad = ValueGradFunction(a.sum(), [a], [], mode='FAST_COMPILE')
+        f_grad = ValueGradFunction([a.sum()], [a], [], mode='FAST_COMPILE')
         assert f_grad.size == 3
 
     def test_invalid_type(self):
@@ -274,7 +274,7 @@ class TestValueGradFunction(unittest.TestCase):
         a.dshape = (3,)
         a.dsize = 3
         with pytest.raises(TypeError) as err:
-            ValueGradFunction(a.sum(), [a], [], mode='FAST_COMPILE')
+            ValueGradFunction([a.sum()], [a], [], mode='FAST_COMPILE')
         err.match('Invalid dtype')
 
     def setUp(self):
@@ -303,7 +303,7 @@ class TestValueGradFunction(unittest.TestCase):
         self.cost = extra1 * val1.sum() + val2.sum()
 
         self.f_grad = ValueGradFunction(
-            self.cost, [val1, val2], [extra1], mode='FAST_COMPILE')
+            [self.cost], [val1, val2], [extra1], mode='FAST_COMPILE')
 
     def test_extra_not_set(self):
         with pytest.raises(ValueError) as err:
@@ -396,10 +396,15 @@ def test_tempered_logp_dlogp():
     x = np.ones(func.size, dtype=func.dtype)
     assert func(x) == func_temp(x)
 
-    func_temp.set_weights(np.array([0.]))
+    func_temp.set_weights(np.array([0.], dtype=func.dtype))
+    func_temp_nograd.set_weights(np.array([0.], dtype=func.dtype))
     npt.assert_allclose(func(x)[0], 2 * func_temp(x)[0])
     npt.assert_allclose(func(x)[1], func_temp(x)[1])
 
-    func_temp.set_weights(np.array([0.5]))
+    npt.assert_allclose(func_nograd(x), func(x)[0])
+    npt.assert_allclose(func_temp_nograd(x), func_temp(x)[0])
+
+    func_temp.set_weights(np.array([0.5], dtype=func.dtype))
+    func_temp_nograd.set_weights(np.array([0.5], dtype=func.dtype))
     npt.assert_allclose(func(x)[0], 4 / 3 * func_temp(x)[0])
     npt.assert_allclose(func(x)[1], func_temp(x)[1])
