@@ -393,8 +393,18 @@ def test_tempered_logp_dlogp():
     func_temp = model.logp_dlogp_function(tempered=True)
     func_temp.set_extra_values({})
 
+    func_nograd = model.logp_dlogp_function(compute_grads=False)
+    func_nograd.set_extra_values({})
+
+    func_temp_nograd = model.logp_dlogp_function(
+        tempered=True, compute_grads=False
+    )
+    func_temp_nograd.set_extra_values({})
+
     x = np.ones(func.size, dtype=func.dtype)
     assert func(x) == func_temp(x)
+    assert func_nograd(x) == func(x)[0]
+    assert func_temp_nograd(x) == func(x)[0]
 
     func_temp.set_weights(np.array([0.], dtype=func.dtype))
     func_temp_nograd.set_weights(np.array([0.], dtype=func.dtype))
@@ -408,3 +418,6 @@ def test_tempered_logp_dlogp():
     func_temp_nograd.set_weights(np.array([0.5], dtype=func.dtype))
     npt.assert_allclose(func(x)[0], 4 / 3 * func_temp(x)[0])
     npt.assert_allclose(func(x)[1], func_temp(x)[1])
+
+    npt.assert_allclose(func_nograd(x), func(x)[0])
+    npt.assert_allclose(func_temp_nograd(x), func_temp(x)[0])

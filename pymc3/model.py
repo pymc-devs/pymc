@@ -597,6 +597,8 @@ class ValueGradFunction:
         See `numpy.can_cast` for a description of the options.
         Keep in mind that we cast the variables to the array *and*
         back from the array dtype to the variable dtype.
+    compute_grads: bool, default=True
+        If False, return only the logp, not the gradient.
     kwargs
         Extra arguments are passed on to `theano.function`.
 
@@ -611,7 +613,15 @@ class ValueGradFunction:
     """
 
     def __init__(
-        self, costs, grad_vars, extra_vars=None, dtype=None, casting="no", **kwargs
+        self,
+        costs,
+        grad_vars,
+        extra_vars=None,
+        *,
+        dtype=None,
+        casting="no",
+        compute_grads=True,
+        **kwargs
     ):
         from .distributions import TensorType
 
@@ -651,13 +661,13 @@ class ValueGradFunction:
         for var in self._grad_vars:
             if not np.can_cast(var.dtype, self.dtype, casting):
                 raise TypeError(
-                    "Invalid dtype for variable %s. Can not "
-                    "cast to %s with casting rule %s." % (var.name, self.dtype, casting)
+                    f"Invalid dtype for variable {var.name}. Can not "
+                    f"cast to {self.dtype} with casting rule {casting}."
                 )
             if not np.issubdtype(var.dtype, np.floating):
                 raise TypeError(
-                    "Invalid dtype for variable %s. Must be "
-                    "floating point but is %s." % (var.name, var.dtype)
+                    f"Invalid dtype for variable {var.name}. Must be "
+                    f"floating point but is {var.dtype}."
                 )
 
         givens = []
@@ -677,13 +687,17 @@ class ValueGradFunction:
             self._cost, grad_vars, self._ordering.vmap
         )
 
-        grad = tt.grad(self._cost_joined, self._vars_joined)
-        grad.name = "__grad"
+        if compute_grads:
+            grad = tt.grad(self._cost_joined, self._vars_joined)
+            grad.name = "__grad"
+            outputs = [self._cost_joined, grad]
+        else:
+            outputs = self._cost_joined
 
         inputs = [self._vars_joined]
 
         self._theano_function = theano.function(
-            inputs, [self._cost_joined, grad], givens=givens, **kwargs
+            inputs, outputs, givens=givens, **kwargs
         )
 
     def set_weights(self, values):
@@ -723,12 +737,12 @@ class ValueGradFunction:
         else:
             out = grad_out
 
-        logp, dlogp = self._theano_function(array)
+        output = self._theano_function(array)
         if grad_out is None:
-            return logp, dlogp
+            return output
         else:
-            np.copyto(out, dlogp)
-            return logp
+            np.copyto(out, output[1])
+            return output[0]
 
     @property
     def profile(self):
