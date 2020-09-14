@@ -4020,7 +4020,6 @@ class LogitNormal(UnitContinuous):
         -------
         TensorVariable
         """
-        sigma = self.sigma
         mu = self.mu
         tau = self.tau
         return bound(

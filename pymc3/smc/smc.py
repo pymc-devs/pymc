@@ -341,7 +341,6 @@ class PseudoLikelihood:
         self.observations = self.sum_stat(observations)
 
     def posterior_to_function(self, posterior):
-        model = self.model
         var_info = self.var_info
 
         varvalues = []
