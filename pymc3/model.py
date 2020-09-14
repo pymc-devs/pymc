@@ -312,18 +312,15 @@ class ContextMeta(type):
         """Return the most recently pushed context object of type ``cls``
         on the stack, or ``None``. If ``error_if_none`` is True (default),
         raise a ``TypeError`` instead of returning ``None``."""
-        idx = -1
-        while True:
-            try:
-                candidate = cls.get_contexts()[idx]  # type: Optional[T]
-            except IndexError as e:
-                # Calling code expects to get a TypeError if the entity
-                # is unfound, and there's too much to fix.
-                if error_if_none:
-                    raise TypeError("No %s on context stack" % str(cls))
-                return None
-            return candidate
-            idx = idx - 1
+        try:
+            candidate = cls.get_contexts()[-1]  # type: Optional[T]
+        except IndexError as e:
+            # Calling code expects to get a TypeError if the entity
+            # is unfound, and there's too much to fix.
+            if error_if_none:
+                raise TypeError("No %s on context stack" % str(cls))
+            return None
+        return candidate
 
     def get_contexts(cls) -> List[T]:
         """Return a stack of context instances for the ``context_class``
