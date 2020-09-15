@@ -20,6 +20,8 @@ from .checks import close_to
 from .models import (
     simple_categorical,
     mv_simple,
+    mv_simple_coarse,
+    mv_simple_very_coarse,
     mv_simple_discrete,
     mv_prior_simple,
     simple_2model_continuous,
@@ -37,10 +39,12 @@ from pymc3.step_methods import (
     CompoundStep,
     NormalProposal,
     MultivariateNormalProposal,
+    RecursiveDAProposal,
     HamiltonianMC,
     EllipticalSlice,
     DEMetropolis,
     DEMetropolisZ,
+    MLDA
 )
 from pymc3.theanof import floatX
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal
@@ -535,6 +539,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
         start, model, (mu, C) = mv_simple()
         unc = np.diag(C) ** 0.5
         check = (("x", np.mean, mu, unc / 10.0), ("x", np.std, unc, unc / 10.0))
+        _, model_coarse, _ = mv_simple_coarse()
         with model:
             steps = (
                 Slice(),
@@ -550,6 +555,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
                         HamiltonianMC(scaling=C, is_cov=True, blocked=False),
                     ]
                 ),
+                MLDA(coarse_models=[model_coarse], base_S=C, base_proposal_dist=MultivariateNormalProposal)
             )
         for step in steps:
             trace = sample(
@@ -738,7 +744,7 @@ class TestPopulationSamplers:
         """Tests that validity of the tune setting is checked"""
         with Model() as model:
             Normal("n", mu=0, sigma=1, shape=(2,3))
-            
+
             step = DEMetropolis()
             assert step.tune is None
 
@@ -1010,3 +1016,311 @@ class TestNutsCheckTrace:
             for c in trace.chains for i in range(len(trace))
         ])
         assert (trace.model_logp == model_logp_).all()
+
+
+class TestMLDA:
+    steppers = [MLDA]
+
+    def test_proposal_and_base_proposal_choice(self):
+        """Test that proposal_dist and base_proposal_dist are set as
+        expected by MLDA"""
+        _, model, _ = mv_simple()
+        _, model_coarse, _ = mv_simple_coarse()
+        with model:
+            sampler = MLDA(coarse_models=[model_coarse])
+            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
+            assert sampler.base_proposal_dist is None
+            assert isinstance(sampler.next_step_method.proposal_dist, NormalProposal)
+
+            s = np.ones(model.ndim)
+            sampler = MLDA(coarse_models=[model_coarse], base_S=s)
+            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
+            assert sampler.base_proposal_dist is None
+            assert isinstance(sampler.next_step_method.proposal_dist, NormalProposal)
+
+            s = np.diag(s)
+            sampler = MLDA(coarse_models=[model_coarse], base_S=s)
+            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
+            assert sampler.base_proposal_dist is None
+            assert isinstance(
+                sampler.next_step_method.proposal_dist, MultivariateNormalProposal
+            )
+
+            s[0, 0] = -s[0, 0]
+            with pytest.raises(np.linalg.LinAlgError):
+                MLDA(coarse_models=[model_coarse], base_S=s)
+
+    def test_step_methods_in_each_level(self):
+        """Test that MLDA creates the correct hierarchy of step methods when no
+        coarse models are passed and when two coarse models are passed."""
+        _, model, _ = mv_simple()
+        _, model_coarse, _ = mv_simple_coarse()
+        _, model_very_coarse, _ = mv_simple_very_coarse()
+        with model:
+            s = np.ones(model.ndim) + 2.0
+            sampler = MLDA(coarse_models=[model_very_coarse, model_coarse], base_S=s)
+            assert isinstance(sampler.next_step_method, MLDA)
+            assert isinstance(sampler.next_step_method.next_step_method, Metropolis)
+            assert np.all(
+                sampler.next_step_method.next_step_method.proposal_dist.s == s
+            )
+
+    def test_exceptions_coarse_models(self):
+        """Test that MLDA generates the expected exceptions when no coarse_models arg
+        is passed, an empty list is passed or when coarse_models is not a list"""
+        with pytest.raises(TypeError):
+            _, model, _ = mv_simple()
+            with model:
+                MLDA()
+
+        with pytest.raises(ValueError):
+            _, model, _ = mv_simple()
+            with model:
+                MLDA(coarse_models=[])
+
+        with pytest.raises(ValueError):
+            _, model, _ = mv_simple()
+            with model:
+                MLDA(coarse_models=(model, model))
+
+    def test_nonparallelized_chains_are_random(self):
+        """Test that parallel chain are not identical when no parallelisation
+        is applied"""
+        with Model() as coarse_model:
+            Normal("x", 0.3, 1)
+
+        with Model():
+            Normal("x", 0, 1)
+            for stepper in TestMLDA.steppers:
+                step = stepper(coarse_models=[coarse_model])
+                trace = sample(chains=2, cores=1, draws=20, tune=0, step=step)
+                samples = np.array(trace.get_values("x", combine=False))[:, 5]
+                assert (
+                    len(set(samples)) == 2
+                ), "Non parallelized {} " "chains are identical.".format(stepper)
+
+    def test_parallelized_chains_are_random(self):
+        """Test that parallel chain are
+        not identical when parallelisation
+        is applied"""
+        with Model() as coarse_model:
+            Normal("x", 0.3, 1)
+
+        with Model():
+            Normal("x", 0, 1)
+            for stepper in TestMLDA.steppers:
+                step = stepper(coarse_models=[coarse_model])
+                trace = sample(chains=2, cores=2, draws=20, tune=0, step=step)
+                samples = np.array(trace.get_values("x", combine=False))[:, 5]
+                assert (
+                    len(set(samples)) == 2
+                ), "Parallelized {} " "chains are identical.".format(stepper)
+
+    def test_acceptance_rate_against_coarseness(self):
+        """Test that the acceptance rate increases
+        when the coarse model is closer to
+        the fine model."""
+        with Model() as coarse_model_0:
+            Normal("x", 5.0, 1.0)
+
+        with Model() as coarse_model_1:
+            Normal("x", 6.0, 2.0)
+
+        with Model() as coarse_model_2:
+            Normal("x", 20.0, 5.0)
+
+        possible_coarse_models = [coarse_model_0, coarse_model_1, coarse_model_2]
+        acc = []
+
+        with Model():
+            Normal("x", 5.0, 1.0)
+            for coarse_model in possible_coarse_models:
+                step = MLDA(
+                    coarse_models=[coarse_model], subsampling_rates=3, tune=True
+                )
+                trace = sample(chains=1, draws=500, tune=100, step=step)
+                acc.append(trace.get_sampler_stats("accepted").mean())
+            assert acc[0] > acc[1] > acc[2], (
+                "Acceptance rate is not "
+                "strictly increasing when"
+                "coarse model is closer to "
+                "fine model. Acceptance rates"
+                "were: {}".format(acc)
+            )
+
+    def test_mlda_non_blocked(self):
+        """Test that MLDA correctly creates non-blocked
+        compound steps in level 0."""
+        _, model = simple_2model_continuous()
+        _, model_coarse = simple_2model_continuous()
+        with model:
+            for stepper in self.steppers:
+                assert isinstance(
+                    stepper(
+                        coarse_models=[model_coarse], base_blocked=False
+                    ).next_step_method,
+                    CompoundStep,
+                )
+
+    def test_mlda_blocked(self):
+        """Test the type of base sampler instantiated
+        when switching base_blocked flag"""
+        _, model = simple_2model_continuous()
+        _, model_coarse = simple_2model_continuous()
+        with model:
+            for stepper in self.steppers:
+                assert not isinstance(
+                    stepper(
+                        coarse_models=[model_coarse], base_blocked=True
+                    ).next_step_method,
+                    CompoundStep,
+                )
+                assert isinstance(
+                    stepper(
+                        coarse_models=[model_coarse], base_blocked=True
+                    ).next_step_method,
+                    Metropolis,
+                )
+
+    def test_tuning_and_scaling_on(self):
+        """Test that tune and base_scaling change as expected when
+        tuning is on."""
+        np.random.seed(1234)
+        ts = 100
+        _, model = simple_2model_continuous()
+        _, model_coarse = simple_2model_continuous()
+        with model:
+            trace = sample(
+                tune=ts,
+                draws=20,
+                step=MLDA(
+                    coarse_models=[model_coarse],
+                    base_tune_interval=50,
+                    base_scaling=100.0,
+                ),
+                chains=1,
+                discard_tuned_samples=False,
+                random_seed=1234,
+            )
+
+        assert trace.get_sampler_stats("tune", chains=0)[0]
+        assert trace.get_sampler_stats("tune", chains=0)[ts - 1]
+        assert not trace.get_sampler_stats("tune", chains=0)[ts]
+        assert not trace.get_sampler_stats("tune", chains=0)[-1]
+        assert trace.get_sampler_stats("base_scaling", chains=0)[0][0] == 100.0
+        assert trace.get_sampler_stats("base_scaling", chains=0)[0][1] == 100.0
+        assert trace.get_sampler_stats("base_scaling", chains=0)[-1][0] < 100.0
+        assert trace.get_sampler_stats("base_scaling", chains=0)[-1][1] < 100.0
+
+    def test_tuning_and_scaling_off(self):
+        """Test that tuning is deactivated when sample()'s tune=0 and that
+        MLDA's tune=False is overridden by sample()'s tune."""
+        np.random.seed(12345)
+        _, model = simple_2model_continuous()
+        _, model_coarse = simple_2model_continuous()
+
+        ts_0 = 0
+        with model:
+            trace_0 = sample(
+                tune=ts_0,
+                draws=100,
+                step=MLDA(
+                    coarse_models=[model_coarse],
+                    base_tune_interval=50,
+                    base_scaling=100.0,
+                    tune=False,
+                ),
+                chains=1,
+                discard_tuned_samples=False,
+                random_seed=12345,
+            )
+
+        ts_1 = 100
+        with model:
+            trace_1 = sample(
+                tune=ts_1,
+                draws=20,
+                step=MLDA(
+                    coarse_models=[model_coarse],
+                    base_tune_interval=50,
+                    base_scaling=100.0,
+                    tune=False,
+                ),
+                chains=1,
+                discard_tuned_samples=False,
+                random_seed=12345,
+            )
+
+        assert not trace_0.get_sampler_stats("tune", chains=0)[0]
+        assert not trace_0.get_sampler_stats("tune", chains=0)[-1]
+        assert (
+            trace_0.get_sampler_stats("base_scaling", chains=0)[0][0]
+            == trace_0.get_sampler_stats("base_scaling", chains=0)[-1][0]
+            == trace_0.get_sampler_stats("base_scaling", chains=0)[0][1]
+            == trace_0.get_sampler_stats("base_scaling", chains=0)[-1][1]
+            == 100.0
+        )
+
+        assert trace_1.get_sampler_stats("tune", chains=0)[0]
+        assert trace_1.get_sampler_stats("tune", chains=0)[ts_1 - 1]
+        assert not trace_1.get_sampler_stats("tune", chains=0)[ts_1]
+        assert not trace_1.get_sampler_stats("tune", chains=0)[-1]
+        assert trace_1.get_sampler_stats("base_scaling", chains=0)[0][0] == 100.0
+        assert trace_1.get_sampler_stats("base_scaling", chains=0)[0][1] == 100.0
+        assert trace_1.get_sampler_stats("base_scaling", chains=0)[-1][0] < 100.0
+        assert trace_1.get_sampler_stats("base_scaling", chains=0)[-1][1] < 100.0
+
+    def test_trace_length(self):
+        """Check if trace length is as expected."""
+        tune = 100
+        draws = 50
+        with Model() as coarse_model:
+            Normal("n", 0, 2.2, shape=(3,))
+        with Model():
+            Normal("n", 0, 2, shape=(3,))
+            step = MLDA(coarse_models=[coarse_model])
+            trace = sample(
+                tune=tune, draws=draws, step=step, chains=1, discard_tuned_samples=False
+            )
+            assert len(trace) == tune + draws
+
+    @pytest.mark.parametrize(
+        "variable,has_grad,outcome",
+        [("n", True, 1), ("n", False, 1), ("b", True, 0), ("b", False, 0)],
+    )
+    def test_competence(self, variable, has_grad, outcome):
+        """Test if competence function returns expected
+        results for different models"""
+        with Model() as pmodel:
+            Normal("n", 0, 2, shape=(3,))
+            Binomial("b", n=2, p=0.3)
+        assert MLDA.competence(pmodel[variable], has_grad=has_grad) == outcome
+
+    def test_multiple_subsampling_rates(self):
+        """Test that when you give a signle integer it is applied to all levels and
+        when you give a list the list is applied correctly."""
+        with Model() as coarse_model_0:
+            Normal("n", 0, 2.2, shape=(3,))
+        with Model() as coarse_model_1:
+            Normal("n", 0, 2.1, shape=(3,))
+        with Model():
+            Normal("n", 0, 2.0, shape=(3,))
+
+            step_1 = MLDA(
+                coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=3
+            )
+            assert len(step_1.subsampling_rates) == 2
+            assert step_1.subsampling_rates[0] == step_1.subsampling_rates[1] == 3
+
+            step_2 = MLDA(
+                coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=[3, 4]
+            )
+            assert step_2.subsampling_rates[0] == 3
+            assert step_2.subsampling_rates[1] == 4
+
+            with pytest.raises(ValueError):
+                step_3 = MLDA(
+                    coarse_models=[coarse_model_0, coarse_model_1],
+                    subsampling_rates=[3, 4, 10],
+                )
+

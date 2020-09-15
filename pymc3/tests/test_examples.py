@@ -322,3 +322,46 @@ class TestRSV(SeededTest):
     def test_run(self):
         with self.build_model():
             pm.sample(50, step=[pm.NUTS(), pm.Metropolis()])
+
+
+class TestMultilevelNormal(SeededTest):
+    """
+    Toy three-level normal model sampled using MLDA. The finest model is a
+    Normal distribution with unknown mean and sigma=1.0 where we have only one
+    observed datum (y = 11.0). The coarse models are the same but with the observed
+    datum changed to y = 11.5 and y = 12.0. This is a very simple way to create
+    a 3-level system of "approximate" coarse models.
+    Normals with
+    """
+
+    def build_models(self):
+
+        np.random.seed(1234)
+        true_mean = 11.0
+        y = np.array([true_mean])
+
+        with pm.Model() as model_coarse_0:
+            sigma = 1.0
+            x_coeff = pm.Normal('x', true_mean, sigma=10.0)
+            pm.Normal('y', mu=x_coeff, sigma=sigma, observed=y + 1.0)
+
+        with pm.Model() as model_coarse_1:
+            sigma = 1.0
+            x_coeff = pm.Normal('x', true_mean, sigma=10.0)
+            pm.Normal('y', mu=x_coeff, sigma=sigma, observed=y + 0.5)
+
+        coarse_models = [model_coarse_0, model_coarse_1]
+
+        with pm.Model() as model:
+            sigma = 1.0
+            x_coeff = pm.Normal('x', true_mean, sigma=10.0)
+            pm.Normal('y', mu=x_coeff, sigma=sigma, observed=y)
+
+        return model, coarse_models
+
+    def test_run(self):
+        model, coarse_models = self.build_models()
+
+        with model:
+            step = pm.MLDA(subsampling_rates=2, coarse_models=coarse_models)
+            pm.sample(draws=50, chains=2, tune=50, step=step)

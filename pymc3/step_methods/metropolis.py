@@ -577,7 +577,7 @@ class DEMetropolis(PopulationArrayStepShared):
 
         if S is None:
             S = np.ones(model.ndim)
-        
+
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
         else:
