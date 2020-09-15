@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 import numpy as np
 import theano.tensor as tt
 from theano import function
-from ..util import get_repr_for_variable
+from ..util import get_repr_for_variable, get_var_name
 import theano
 from ..memoize import memoize
 from ..model import (
@@ -173,6 +173,9 @@ class Distribution:
                 value=value) for name, value in zip(param_names, param_values)])
             return "{var_name} ~ {distr_name}({params})".format(var_name=name,
                 distr_name=dist._distr_name_for_repr(), params=param_string)
+
+    def __str__(self, **kwargs):
+        return self._str_repr(formatting="plain", **kwargs)
 
     def _repr_latex_(self, **kwargs):
         """Magic method name for IPython to use for LaTeX formatting."""
@@ -728,7 +731,7 @@ def draw_values(params, point=None, size=None):
         missing_inputs = set([j for j, p in symbolic_params])
         while to_eval or missing_inputs:
             if to_eval == missing_inputs:
-                raise ValueError('Cannot resolve inputs for {}'.format([str(params[j]) for j in to_eval]))
+                raise ValueError('Cannot resolve inputs for {}'.format([get_var_name(params[j]) for j in to_eval]))
             to_eval = set(missing_inputs)
             missing_inputs = set()
             for param_idx in to_eval:

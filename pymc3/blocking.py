@@ -21,6 +21,8 @@ import copy
 import numpy as np
 import collections
 
+from .util import get_var_name
+
 __all__ = ['ArrayOrdering', 'DictToArrayBijection', 'DictToVarBijection']
 
 VarMap = collections.namedtuple('VarMap', 'var, slc, shp, dtyp')
@@ -237,7 +239,7 @@ class DictToVarBijection:
     """
 
     def __init__(self, var, idx, dpoint):
-        self.var = str(var)
+        self.var = get_var_name(var)
         self.idx = idx
         self.dpt = dpoint
 

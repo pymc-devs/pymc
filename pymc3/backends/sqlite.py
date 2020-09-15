@@ -36,6 +36,7 @@ import warnings
 
 from ..backends import base, ndarray
 from . import tracetab as ttab
+from ..util import get_var_name
 
 TEMPLATES = {
     'table':            ('CREATE TABLE IF NOT EXISTS [{table}] '
@@ -244,7 +245,7 @@ class SQLite(base.BaseTrace):
         if thin < 1:
             raise ValueError('Only positive thin values are supported '
                              'in SQLite backend.')
-        varname = str(varname)
+        varname = get_var_name(varname)
 
         statement_args = {'chain': self.chain}
         if burn == 0 and thin == 1:

@@ -1771,7 +1771,7 @@ def test_bound():
         BoundPoissonPositionalArgs = Bound(Poisson, upper=6)("x", 2.0)
 
 
-class TestLatex:
+class TestStrAndLatexRepr:
     def setup_class(self):
         # True parameter values
         alpha, sigma = 1, 1
@@ -1800,7 +1800,7 @@ class TestLatex:
             # Likelihood (sampling distribution) of observations
             Y_obs = Normal("Y_obs", mu=mu, sigma=sigma, observed=Y)
         self.distributions = [alpha, sigma, mu, b, Z, Y_obs]
-        self.expected = (
+        self.expected_latex = (
             r"$\text{alpha} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
             r"$\text{sigma} \sim \text{HalfNormal}(\mathit{sigma}=1.0)$",
             r"$\text{mu} \sim \text{Deterministic}(\text{alpha},~\text{Constant},~\text{beta})$",
@@ -1808,21 +1808,37 @@ class TestLatex:
             r"$\text{Z} \sim \text{MvNormal}(\mathit{mu}=array,~\mathit{chol_cov}=array)$",
             r"$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sigma}=f(\text{sigma}))$",
         )
+        self.expected_str = (
+            r"alpha ~ Normal(mu=0.0, sigma=10.0)",
+            r"sigma ~ HalfNormal(sigma=1.0)",
+            r"mu ~ Deterministic(alpha, Constant, beta)",
+            r"beta ~ Normal(mu=0.0, sigma=10.0)",
+            r"Z ~ MvNormal(mu=array, chol_cov=array)",
+            r"Y_obs ~ Normal(mu=mu, sigma=f(sigma))",
+        )
 
     def test__repr_latex_(self):
-        for distribution, tex in zip(self.distributions, self.expected):
+        for distribution, tex in zip(self.distributions, self.expected_latex):
             assert distribution._repr_latex_() == tex
 
         model_tex = self.model._repr_latex_()
 
-        for tex in self.expected:  # make sure each variable is in the model
+        for tex in self.expected_latex:  # make sure each variable is in the model
             for segment in tex.strip("$").split(r"\sim"):
                 assert segment in model_tex
 
     def test___latex__(self):
-        for distribution, tex in zip(self.distributions, self.expected):
+        for distribution, tex in zip(self.distributions, self.expected_latex):
             assert distribution._repr_latex_() == distribution.__latex__()
         assert self.model._repr_latex_() == self.model.__latex__()
+
+    def test___str__(self):
+        for distribution, str_repr in zip(self.distributions, self.expected_str):
+            assert distribution.__str__() == str_repr
+
+        model_str = self.model.__str__()
+        for str_repr in self.expected_str:
+            assert str_repr in model_str
 
 
 def test_discrete_trafo():

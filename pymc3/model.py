@@ -36,7 +36,7 @@ from .memoize import memoize, WithMemoization
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
-from .util import get_transformed_name
+from .util import get_transformed_name, get_var_name
 from .exceptions import ImputationWarning
 
 __all__ = [
@@ -79,6 +79,9 @@ class PyMC3Variable(TensorVariable):
 
     def _repr_latex_(self, **kwargs):
         return self._str_repr(formatting="latex", **kwargs)
+
+    def __str__(self, **kwargs):
+        return self._str_repr(formatting="plain", **kwargs)
 
     __latex__ = _repr_latex_
 
@@ -1365,6 +1368,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 for n, d in zip(names, distrs)]
             return "\n".join(rv_reprs)
 
+    def __str__(self, **kwargs):
+        return self._str_repr(formatting="plain", **kwargs)
+
     def _repr_latex_(self, **kwargs):
         return self._str_repr(formatting="latex", **kwargs)
 
@@ -1477,7 +1483,8 @@ def Point(*args, **kwargs):
     except Exception as e:
         raise TypeError("can't turn {} and {} into a dict. {}".format(args, kwargs, e))
     return dict(
-        (str(k), np.array(v)) for k, v in d.items() if str(k) in map(str, model.vars)
+        (get_var_name(k), np.array(v)) for k, v in d.items()
+         if get_var_name(k) in map(get_var_name, model.vars)
     )
 
 
@@ -1869,6 +1876,14 @@ def Deterministic(name, var, model=None, dims=None):
     model.add_random_variable(var, dims)
     var._repr_latex_ = functools.partial(_repr_deterministic_rv, var, formatting='latex')
     var.__latex__ = var._repr_latex_
+
+    # simply assigning var.__str__ is not enough, since str() will default to the class-
+    # defined __str__ anyway; see https://stackoverflow.com/a/5918210/1692028
+    old_type = type(var)
+    new_type = type(old_type.__name__ + '_pymc3_Deterministic', (old_type,),
+        {'__str__': functools.partial(_repr_deterministic_rv, var, formatting='plain')})
+    var.__class__ = new_type
+
     return var
 
 

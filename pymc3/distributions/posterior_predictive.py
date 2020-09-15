@@ -42,7 +42,7 @@ from ..model import (
 )
 from ..exceptions import IncorrectArgumentsError
 from ..vartypes import theano_constant
-from ..util import dataset_to_point_dict, chains_and_samples
+from ..util import dataset_to_point_dict, chains_and_samples, get_var_name
 
 # Failing tests:
 #    test_mixture_random_shape::test_mixture_random_shape
@@ -460,7 +460,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                 if to_eval == missing_inputs:
                     raise ValueError(
                         "Cannot resolve inputs for {}".format(
-                            [str(trace.varnames[j]) for j in to_eval]
+                            [get_var_name(trace.varnames[j]) for j in to_eval]
                         )
                     )
                 to_eval = set(missing_inputs)
@@ -493,7 +493,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
         return [self.evaluated[j] for j in params]
 
     def init(self) -> None:
-        """This method carries out the initialization phase of sampling 
+        """This method carries out the initialization phase of sampling
     from the posterior predictive distribution.  Notably it initializes the
     ``_DrawValuesContext`` bookkeeping object and evaluates the "fast drawable"
     parts of the model."""
@@ -567,7 +567,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
             The value or distribution. Constants or shared variables
             will be converted to an array and returned. Theano variables
             are evaluated. If `param` is a pymc3 random variable, draw
-            values from it and return that (as ``np.ndarray``), unless a 
+            values from it and return that (as ``np.ndarray``), unless a
             value is specified in the ``trace``.
         trace: pm.MultiTrace, optional
             A dictionary from pymc3 variable names to samples of their values
