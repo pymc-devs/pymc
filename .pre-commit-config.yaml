@@ -7,3 +7,8 @@ repos:
       name: nbqa-isort
       alias: nbqa-isort
       additional_dependencies: ['isort']
+- repo: https://github.com/asottile/pyupgrade
+  rev: v2.7.2
+  hooks:
+    - id: pyupgrade
+      args: ['--py36-plus']
