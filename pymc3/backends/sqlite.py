@@ -340,8 +340,8 @@ def load(name, model=None):
     db.connect()
     varnames = _get_table_list(db.cursor)
     if len(varnames) == 0:
-        raise ValueError(('Can not get variable list for database'
-                          '`{}`'.format(name)))
+        raise ValueError('Can not get variable list for database'
+                          '`{}`'.format(name))
     chains = _get_chain_list(db.cursor, varnames[0])
 
     straces = []
@@ -367,14 +367,14 @@ def _get_table_list(cursor):
 
 
 def _get_var_strs(cursor, varname):
-    cursor.execute('SELECT * FROM [{}]'.format(varname))
+    cursor.execute(f'SELECT * FROM [{varname}]')
     col_names = (col_descr[0] for col_descr in cursor.description)
     return [name for name in col_names if name.startswith('v')]
 
 
 def _get_chain_list(cursor, varname):
     """Return a list of sorted chains for `varname`."""
-    cursor.execute('SELECT DISTINCT chain FROM [{}]'.format(varname))
+    cursor.execute(f'SELECT DISTINCT chain FROM [{varname}]')
     chains = sorted([chain[0] for chain in cursor.fetchall()])
     return chains
 

@@ -134,7 +134,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
             support = False
 
     if np.any(support):
-        msg = "The variable specified for {0} has negative support for {1}, ".format(
+        msg = "The variable specified for {} has negative support for {}, ".format(
             label, distname
         )
         msg += "likely making it unsuitable for this parameter."
@@ -294,7 +294,7 @@ class Uniform(BoundedContinuous):
             tt.switch(
                 tt.eq(value, self.upper),
                 0,
-                tt.log((value - self.lower)) - tt.log((self.upper - self.lower)),
+                tt.log(value - self.lower) - tt.log(self.upper - self.lower),
             ),
         )
 
@@ -1887,7 +1887,7 @@ class StudentT(Continuous):
 
     def __init__(self, nu, mu=0, lam=None, sigma=None, sd=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        super(StudentT, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
             warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)

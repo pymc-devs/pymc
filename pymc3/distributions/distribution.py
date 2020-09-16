@@ -60,7 +60,7 @@ class Distribution:
                             "for a standalone distribution.")
 
         if not isinstance(name, string_types):
-            raise TypeError("Name needs to be a string but got: {}".format(name))
+            raise TypeError(f"Name needs to be a string but got: {name}")
 
         data = kwargs.pop('observed', None)
         cls.data = data
@@ -728,7 +728,7 @@ def draw_values(params, point=None, size=None):
         # test_distributions_random::TestDrawValues::test_draw_order fails without it
         # The remaining params that must be drawn are all hashable
         to_eval = set()
-        missing_inputs = set([j for j, p in symbolic_params])
+        missing_inputs = {j for j, p in symbolic_params}
         while to_eval or missing_inputs:
             if to_eval == missing_inputs:
                 raise ValueError('Cannot resolve inputs for {}'.format([get_var_name(params[j]) for j in to_eval]))
@@ -828,7 +828,7 @@ def vectorize_theano_function(f, inputs, output):
     """
     inputs_signatures = ",".join(
         [
-            get_vectorize_signature(var, var_name="i_{}".format(input_ind))
+            get_vectorize_signature(var, var_name=f"i_{input_ind}")
             for input_ind, var in enumerate(inputs)
         ]
     )
@@ -846,9 +846,9 @@ def get_vectorize_signature(var, var_name="i"):
         return "()"
     else:
         sig = ",".join(
-            ["{}_{}".format(var_name, axis_ind) for axis_ind in range(var.ndim)]
+            [f"{var_name}_{axis_ind}" for axis_ind in range(var.ndim)]
         )
-        return "({})".format(sig)
+        return f"({sig})"
 
 
 def _draw_value(param, point=None, givens=None, size=None):

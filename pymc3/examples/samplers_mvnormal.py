@@ -53,7 +53,7 @@ def run(steppers, p):
             print('{} samples across {} chains'.format(len(mt) * mt.nchains, mt.nchains))
             traces[name] = mt
             en = pm.ess(mt)
-            print('effective: {}\r\n'.format(en))
+            print(f'effective: {en}\r\n')
             if USE_XY:
                 effn[name] = np.mean(en['x']) / len(mt) / mt.nchains
             else:

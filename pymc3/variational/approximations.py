@@ -340,7 +340,7 @@ class EmpiricalGroup(Group):
             shp = ', '.join(map(str, self.histogram.shape.eval()))
         else:
             shp = 'None, ' + str(self.ddim)
-        return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
+        return f'{self.__class__.__name__}[{shp}]'
 
 
 class NormalizingFlowGroup(Group):

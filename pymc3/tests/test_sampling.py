@@ -20,7 +20,7 @@ import numpy as np
 try:
     import unittest.mock as mock  # py3
 except ImportError:
-    import mock
+    from unittest import mock
 
 import numpy.testing as npt
 import arviz as az

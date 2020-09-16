@@ -32,7 +32,7 @@ def test_missing():
 
     with model:
         prior_trace = sample_prior_predictive()
-    assert set(['x', 'y']) <= set(prior_trace.keys())
+    assert {'x', 'y'} <= set(prior_trace.keys())
 
 
 def test_missing_pandas():
@@ -49,7 +49,7 @@ def test_missing_pandas():
 
     with model:
         prior_trace = sample_prior_predictive()
-    assert set(['x', 'y']) <= set(prior_trace.keys())
+    assert {'x', 'y'} <= set(prior_trace.keys())
 
 def test_missing_with_predictors():
     predictors = array([0.5, 1, 0.5, 2, 0.3])
@@ -66,7 +66,7 @@ def test_missing_with_predictors():
 
     with model:
         prior_trace = sample_prior_predictive()
-    assert set(['x', 'y']) <= set(prior_trace.keys())
+    assert {'x', 'y'} <= set(prior_trace.keys())
 
 
 def test_missing_dual_observations():
@@ -82,7 +82,7 @@ def test_missing_dual_observations():
             ovar2 = Normal('o2', mu=beta2 * latent, observed=obs2)
 
         prior_trace = sample_prior_predictive()
-        assert set(['beta1', 'beta2', 'theta', 'o1', 'o2']) <= set(prior_trace.keys())
+        assert {'beta1', 'beta2', 'theta', 'o1', 'o2'} <= set(prior_trace.keys())
         sample()
 
 def test_internal_missing_observations():
@@ -95,5 +95,5 @@ def test_internal_missing_observations():
             theta2 = Normal('theta2', mu=theta1, observed=obs2)
 
         prior_trace = sample_prior_predictive()
-        assert set(['theta1', 'theta2']) <= set(prior_trace.keys())
+        assert {'theta1', 'theta2'} <= set(prior_trace.keys())
         sample()

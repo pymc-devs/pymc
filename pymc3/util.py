@@ -66,7 +66,7 @@ def get_transformed_name(name, transform):
     str
         A string to use for the transformed variable
     """
-    return "{}_{}__".format(name, transform.name)
+    return f"{name}_{transform.name}__"
 
 
 def is_transformed_name(name):
@@ -101,7 +101,7 @@ def get_untransformed_name(name):
         String with untransformed version of the name.
     """
     if not is_transformed_name(name):
-        raise ValueError("{} does not appear to be a transformed name".format(name))
+        raise ValueError(f"{name} does not appear to be a transformed name")
     return "_".join(name.split("_")[:-3])
 
 
@@ -150,7 +150,7 @@ def get_repr_for_variable(variable, formatting="plain"):
         return "array"
 
     if formatting == "latex":
-        return r"\text{{{name}}}".format(name=name)
+        return fr"\text{{{name}}}"
     else:
         return name
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # pymc3 documentation build configuration file, created by
 # sphinx-quickstart on Sat Dec 26 14:40:23 2015.

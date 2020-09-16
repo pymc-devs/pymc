@@ -253,7 +253,7 @@ class BaseTestCases:
         def test_different_shapes_and_sample_sizes(self, shape):
             prefix = self.distribution.__name__
 
-            rv = self.get_random_variable(shape, name='%s_%s' % (prefix, shape))
+            rv = self.get_random_variable(shape, name=f'{prefix}_{shape}')
             for size in (None, 1, 5, (4, 5)):
                 if size is None:
                     s = []

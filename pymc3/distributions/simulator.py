@@ -32,7 +32,7 @@ class Simulator(NoDistribution):
         epsilon=1,
         **kwargs,
     ):
-        """
+        r"""
         This class stores a function defined by the user in Python language.
 
         function: function
@@ -125,7 +125,7 @@ class Simulator(NoDistribution):
         distance = self.distance.__name__
 
         if formatting == "latex":
-            return f"$\\text{{{name}}} \sim  \\text{{Simulator}}(\\text{{{function}}}({params}), \\text{{{distance}}}, \\text{{{sum_stat}}})$"
+            return f"$\\text{{{name}}} \\sim  \\text{{Simulator}}(\\text{{{function}}}({params}), \\text{{{distance}}}, \\text{{{sum_stat}}})$"
         else:
             return f"{name} ~ Simulator({function}({params}), {distance}, {sum_stat})"
 

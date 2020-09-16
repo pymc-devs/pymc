@@ -176,7 +176,7 @@ class SerializeNDArray:
             raise TraceDirectoryError("%s is not a trace directory" % self.directory)
 
         new_trace = NDArray(model=model)
-        with open(self.metadata_path, 'r') as buff:
+        with open(self.metadata_path) as buff:
             metadata = json.load(buff)
 
         metadata['_stats'] = [{k: np.array(v) for k, v in stat.items()} for stat in metadata['_stats']]

@@ -114,8 +114,8 @@ class ModelGraph:
                 try:
                     obs_name = var.observations.name
                     if obs_name:
-                        input_map[var_name] = input_map[var_name].difference(set([obs_name]))
-                        update_input_map(obs_name, set([var_name]))
+                        input_map[var_name] = input_map[var_name].difference({obs_name})
+                        update_input_map(obs_name, {var_name})
                 except AttributeError:
                     pass
         return input_map
@@ -147,7 +147,7 @@ class ModelGraph:
             attrs['shape'] = 'box'
 
         graph.node(var_name.replace(':', '&'),
-                '{var_name}\n~\n{distribution}'.format(var_name=var_name, distribution=distribution),
+                f'{var_name}\n~\n{distribution}',
                 **attrs)
 
     def get_plates(self):

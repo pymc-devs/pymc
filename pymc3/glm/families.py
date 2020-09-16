@@ -62,14 +62,14 @@ class Family:
         dict: mapping name -> pymc3 distribution
         """
         if name:
-            name = '{}_'.format(name)
+            name = f'{name}_'
         model = modelcontext(model)
         priors = {}
         for key, val in self.priors.items():
             if isinstance(val, (numbers.Number, np.ndarray, np.generic)):
                 priors[key] = val
             else:
-                priors[key] = model.Var('{}{}'.format(name, key), val)
+                priors[key] = model.Var(f'{name}{key}', val)
 
         return priors
 
@@ -87,8 +87,8 @@ class Family:
         # Wrap y_est in link function
         priors[self.parent] = self.link(y_est)
         if name:
-            name = '{}_'.format(name)
-        return self.likelihood('{}y'.format(name), observed=y_data, **priors)
+            name = f'{name}_'
+        return self.likelihood(f'{name}y', observed=y_data, **priors)
 
     def __repr__(self):
         return """Family {klass}:

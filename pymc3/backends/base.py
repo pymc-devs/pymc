@@ -347,8 +347,8 @@ class MultiTrace:
             return self.get_sampler_stats(var, burn=burn, thin=thin)
         raise KeyError("Unknown variable %s" % var)
 
-    _attrs = set(['_straces', 'varnames', 'chains', 'stat_names',
-                  'supports_sampler_stats', '_report'])
+    _attrs = {'_straces', 'varnames', 'chains', 'stat_names',
+                  'supports_sampler_stats', '_report'}
 
     def __getattr__(self, name):
         # Avoid infinite recursion when called before __init__
@@ -417,7 +417,7 @@ class MultiTrace:
                     self.varnames.remove(k)
                     new_var = 0
                 else:
-                    raise ValueError("Variable name {} already exists.".format(k))
+                    raise ValueError(f"Variable name {k} already exists.")
 
             self.varnames.append(k)
 
@@ -448,7 +448,7 @@ class MultiTrace:
         """
         varnames = self.varnames
         if name not in varnames:
-            raise KeyError("Unknown variable {}".format(name))
+            raise KeyError(f"Unknown variable {name}")
         self.varnames.remove(name)
         chains = self._straces
         for chain in chains.values():

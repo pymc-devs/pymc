@@ -32,7 +32,7 @@ def map_args(func):
     def wrapped(*args, **kwargs):
         for (old, new) in swaps:
             if old in kwargs and new not in kwargs:
-                warnings.warn('Keyword argument `{old}` renamed to `{new}`, and will be removed in pymc3 3.8'.format(old=old, new=new))
+                warnings.warn(f'Keyword argument `{old}` renamed to `{new}`, and will be removed in pymc3 3.8')
                 kwargs[new] = kwargs.pop(old)
             return func(*args, **kwargs)
     return wrapped

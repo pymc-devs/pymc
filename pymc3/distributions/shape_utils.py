@@ -58,14 +58,14 @@ def _check_shape_type(shape):
         shape = np.atleast_1d(shape)
         for s in shape:
             if isinstance(s, np.ndarray) and s.ndim > 0:
-                raise TypeError("Value {} is not a valid integer".format(s))
+                raise TypeError(f"Value {s} is not a valid integer")
             o = int(s)
             if o != s:
-                raise TypeError("Value {} is not a valid integer".format(s))
+                raise TypeError(f"Value {s} is not a valid integer")
             out.append(o)
     except Exception:
         raise TypeError(
-            "Supplied value {} does not represent a valid shape".format(shape)
+            f"Supplied value {shape} does not represent a valid shape"
         )
     return tuple(out)
 
@@ -103,7 +103,7 @@ def shapes_broadcasting(*args, raise_exception=False):
             if raise_exception:
                 raise ValueError(
                     "Supplied shapes {} do not broadcast together".format(
-                        ", ".join(["{}".format(a) for a in args])
+                        ", ".join([f"{a}" for a in args])
                     )
                 )
             else:
@@ -165,7 +165,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
         if broadcasted_shape is None:
             raise ValueError(
                 "Cannot broadcast provided shapes {} given size: {}".format(
-                    ", ".join(["{}".format(s) for s in shapes]), size
+                    ", ".join([f"{s}" for s in shapes]), size
                 )
             )
         return broadcasted_shape
@@ -181,7 +181,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
     except ValueError:
         raise ValueError(
             "Cannot broadcast provided shapes {} given size: {}".format(
-                ", ".join(["{}".format(s) for s in shapes]), size
+                ", ".join([f"{s}" for s in shapes]), size
             )
         )
     broadcastable_shapes = []
