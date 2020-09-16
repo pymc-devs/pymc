@@ -32,7 +32,7 @@ class Simulator(NoDistribution):
         epsilon=1,
         **kwargs,
     ):
-        """
+        r"""
         This class stores a function defined by the user in Python language.
 
         function: function
@@ -43,9 +43,9 @@ class Simulator(NoDistribution):
             Distance functions. Available options are "gaussian_kernel" (default), "wasserstein",
             "energy" or a user defined function that takes epsilon (a scalar), and the summary
             statistics of observed_data, and simulated_data as input.
-            ``gaussian_kernel`` :math: `\\sum \\left(-0.5  \\left(\frac{xo - xs}{\\epsilon}\right)^2\right)`
-            ``wasserstein`` :math: `\frac{1}{n} \\sum{\\left(\frac{|xo - xs|}{\\epsilon}\right)}`
-            ``energy`` :math: `\\sqrt{2} \\sqrt{\frac{1}{n} \\sum \\left(\frac{|xo - xs|}{\\epsilon}\right)^2}`
+            ``gaussian_kernel`` :math: `\sum \left(-0.5  \left(\frac{xo - xs}{\epsilon}\right)^2\right)`
+            ``wasserstein`` :math: `\frac{1}{n} \sum{\left(\frac{|xo - xs|}{\epsilon}\right)}`
+            ``energy`` :math: `\sqrt{2} \sqrt{\frac{1}{n} \sum \left(\frac{|xo - xs|}{\epsilon}\right)^2}`
             For the wasserstein and energy distances the observed data xo and simulated data xs
             are internally sorted (i.e. the sum_stat is "sort").
         sum_stat: str or callable
