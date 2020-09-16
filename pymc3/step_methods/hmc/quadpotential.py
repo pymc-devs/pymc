@@ -584,7 +584,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
 
     def raise_ok(self, vmap):
         if self._chol_error is not None:
-            raise ValueError("{0}".format(self._chol_error))
+            raise ValueError(f"{self._chol_error}")
 
 
 class _WeightedCovariance:

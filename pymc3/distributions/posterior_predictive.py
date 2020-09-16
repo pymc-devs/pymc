@@ -88,7 +88,7 @@ class _TraceDict(_TraceDictParent):
             assert point_list is None and dict is None
             self.data = {}  # Dict[str, np.ndarray]
             self._len = sum(
-                (len(multi_trace._straces[chain]) for chain in multi_trace.chains)
+                len(multi_trace._straces[chain]) for chain in multi_trace.chains
             )
             self.varnames = multi_trace.varnames
             for vn in multi_trace.varnames:
@@ -153,7 +153,7 @@ class _TraceDict(_TraceDictParent):
 
     def __getitem__(self, item):
         if isinstance(item, str):
-            return super(_TraceDict, self).__getitem__(item)
+            return super().__getitem__(item)
         elif isinstance(item, slice):
             return self._extract_slice(item)
         elif isinstance(item, int):
@@ -161,7 +161,7 @@ class _TraceDict(_TraceDictParent):
                 dict={k: np.atleast_1d(v[item]) for k, v in self.data.items()}
             )
         elif hasattr(item, "name"):
-            return super(_TraceDict, self).__getitem__(item.name)
+            return super().__getitem__(item.name)
         else:
             raise IndexError("Illegal index %s for _TraceDict" % str(item))
 
@@ -242,7 +242,7 @@ def fast_sample_posterior_predictive(
                 "Should not specify both keep_size and samples arguments"
             )
 
-        if isinstance(trace, list) and all((isinstance(x, dict) for x in trace)):
+        if isinstance(trace, list) and all(isinstance(x, dict) for x in trace):
             _trace = _TraceDict(point_list=trace)
         elif isinstance(trace, MultiTrace):
             _trace = _TraceDict(multi_trace=trace)
@@ -454,7 +454,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
             # test_distributions_random::TestDrawValues::test_draw_order fails without it
             # The remaining params that must be drawn are all hashable
             to_eval: Set[int] = set()
-            missing_inputs: Set[int] = set([j for j, p in self.symbolic_params])
+            missing_inputs: Set[int] = {j for j, p in self.symbolic_params}
 
             while to_eval or missing_inputs:
                 if to_eval == missing_inputs:

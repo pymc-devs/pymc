@@ -230,7 +230,7 @@ def _print_step_hierarchy(s, level=0):
                 for v in s.vars
             ]
         )
-        _log.info(">" * level + "{}: [{}]".format(s.__class__.__name__, varnames))
+        _log.info(">" * level + f"{s.__class__.__name__}: [{varnames}]")
 
 
 def sample(
@@ -536,7 +536,7 @@ def sample(
     parallel = cores > 1 and chains > 1 and not has_population_samplers
     t_start = time.time()
     if parallel:
-        _log.info("Multiprocess sampling ({} chains in {} jobs)".format(chains, cores))
+        _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
         _print_step_hierarchy(step)
         try:
             trace = _mp_sample(**sample_args, **parallel_args)
@@ -559,7 +559,7 @@ def sample(
                     for m in (step.methods if isinstance(step, CompoundStep) else [step])
                 ]
             )
-            _log.info("Population sampling ({} chains)".format(chains))
+            _log.info(f"Population sampling ({chains} chains)")
             if has_demcmc and chains < 3:
                 raise ValueError(
                     "DEMetropolis requires at least 3 chains. "
@@ -576,7 +576,7 @@ def sample(
             _print_step_hierarchy(step)
             trace = _sample_population(**sample_args, parallelize=cores > 1)
         else:
-            _log.info("Sequential sampling ({} chains in 1 job)".format(chains))
+            _log.info(f"Sequential sampling ({chains} chains in 1 job)")
             _print_step_hierarchy(step)
             trace = _sample_many(**sample_args)
 
@@ -653,7 +653,7 @@ def _check_start_shape(model, start):
                     )
 
     if e != "":
-        raise ValueError("Bad shape for start argument:{}".format(e))
+        raise ValueError(f"Bad shape for start argument:{e}")
 
 
 def _sample_many(
@@ -1055,7 +1055,7 @@ class PopulationStepper:
                     process = multiprocessing.Process(
                         target=self.__class__._run_secondary,
                         args=(c, stepper_dumps, secondary_end),
-                        name="ChainWalker{}".format(c),
+                        name=f"ChainWalker{c}",
                     )
                     # we want the child process to exit if the parent is terminated
                     process.daemon = True
@@ -1134,7 +1134,7 @@ class PopulationStepper:
                 update = stepper.step(population[c])
                 secondary_end.send(update)
         except Exception:
-            _log.exception("ChainWalker{}".format(c))
+            _log.exception(f"ChainWalker{c}")
         return
 
     def step(self, tune_stop, population):
@@ -1666,7 +1666,7 @@ def sample_posterior_predictive(
     if samples is None:
         if isinstance(_trace, MultiTrace):
             samples = sum(len(v) for v in _trace._straces.values())
-        elif isinstance(_trace, list) and all((isinstance(x, dict) for x in _trace)):
+        elif isinstance(_trace, list) and all(isinstance(x, dict) for x in _trace):
             # this is a list of points
             samples = len(_trace)
         else:
@@ -1833,7 +1833,7 @@ def sample_posterior_predictive_w(
     obs = [x for m in models for x in m.observed_RVs]
     variables = np.repeat(obs, n)
 
-    lengths = list(set([np.atleast_1d(observed).shape for observed in obs]))
+    lengths = list({np.atleast_1d(observed).shape for observed in obs})
 
     if len(lengths) == 1:
         size = [None for i in variables]
@@ -2015,7 +2015,7 @@ def init_nuts(
     if init == "auto":
         init = "jitter+adapt_diag"
 
-    _log.info("Initializing NUTS using {}...".format(init))
+    _log.info(f"Initializing NUTS using {init}...")
 
     if random_seed is not None:
         random_seed = int(np.atleast_1d(random_seed)[0])
@@ -2129,7 +2129,7 @@ def init_nuts(
         cov = np.eye(model.ndim)
         potential = quadpotential.QuadPotentialFullAdapt(model.ndim, mean, cov, 10)
     else:
-        raise ValueError("Unknown initializer: {}.".format(init))
+        raise ValueError(f"Unknown initializer: {init}.")
 
     step = pm.NUTS(potential=potential, model=model, **kwargs)
 

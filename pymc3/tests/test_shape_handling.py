@@ -160,7 +160,7 @@ class TestShapesBroadcasting:
         except ValueError:
             expected_out = None
         if expected_out is not None and any(
-            (s[: min([len(size_), len(s)])] == size_ for s in shapes)
+            s[: min([len(size_), len(s)])] == size_ for s in shapes
         ):
             expected_out = size_ + expected_out
         if expected_out is None:
@@ -176,7 +176,7 @@ class TestSamplesBroadcasting:
         size, samples, broadcast_shape = samples_to_broadcast
         if broadcast_shape is not None:
             outs = broadcast_distribution_samples(samples, size=size)
-            assert all((o.shape == broadcast_shape for o in outs))
+            assert all(o.shape == broadcast_shape for o in outs)
         else:
             with pytest.raises(ValueError):
                 broadcast_distribution_samples(samples, size=size)
@@ -209,7 +209,7 @@ class TestSamplesBroadcasting:
         to_shape, size, samples, broadcast_shape = samples_to_broadcast_to
         if broadcast_shape is not None:
             outs = broadcast_dist_samples_to(to_shape, samples, size=size)
-            assert all((o.shape == broadcast_shape for o in outs))
+            assert all(o.shape == broadcast_shape for o in outs)
         else:
             with pytest.raises(ValueError):
                 broadcast_dist_samples_to(to_shape, samples, size=size)

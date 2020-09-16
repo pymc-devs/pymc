@@ -140,7 +140,7 @@ class HDF5(base.BaseTrace):
                             data.create_dataset(varname, (self.draws,), dtype=dtype, maxshape=(None,))
                 elif data.keys() != sampler.keys():
                     raise ValueError(
-                        "Sampler vars can't change, names incompatible: {} != {}".format(data.keys(), sampler.keys()))
+                        f"Sampler vars can't change, names incompatible: {data.keys()} != {sampler.keys()}")
             self.records_stats = True
 
     def setup(self, draws, chain, sampler_vars=None):

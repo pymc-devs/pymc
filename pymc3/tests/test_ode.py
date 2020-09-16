@@ -89,7 +89,7 @@ def test_simulate():
     np.testing.assert_allclose(y, simulated_y, rtol=1e-5)
 
 
-class TestSensitivityInitialCondition(object):
+class TestSensitivityInitialCondition:
 
     t = np.arange(0, 12, 0.25).reshape(-1, 1)
 
@@ -230,7 +230,7 @@ def test_logp_scalar_ode():
     np.testing.assert_allclose(manual_logp, pymc3_logp)
 
 
-class TestErrors(object):
+class TestErrors:
     """Test running model for a scalar ODE with 1 parameter"""
 
     def system(y, t, p):
@@ -281,7 +281,7 @@ class TestErrors(object):
             )
 
 
-class TestDiffEqModel(object):
+class TestDiffEqModel:
     def test_op_equality(self):
         """Tests that the equality of mathematically identical Ops evaluates True"""
 

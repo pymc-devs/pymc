@@ -91,7 +91,7 @@ class Text(base.BaseTrace):
             self._fh.close()
 
         self.chain = chain
-        self.filename = os.path.join(self.name, 'chain-{}.csv'.format(chain))
+        self.filename = os.path.join(self.name, f'chain-{chain}.csv')
 
         cnames = [fv for v in self.varnames for fv in self.flat_names[v]]
 
@@ -201,7 +201,7 @@ def load(name, model=None):
     files = glob(os.path.join(name, 'chain-*.csv'))
 
     if len(files) == 0:
-        raise ValueError('No files present in directory {}'.format(name))
+        raise ValueError(f'No files present in directory {name}')
 
     straces = []
     for f in files:
@@ -249,7 +249,7 @@ def dump(name, trace, chains=None):
         chains = trace.chains
 
     for chain in chains:
-        filename = os.path.join(name, 'chain-{}.csv'.format(chain))
+        filename = os.path.join(name, f'chain-{chain}.csv')
         df = ttab.trace_to_dataframe(
             trace, chains=chain, include_transformed=True)
         df.to_csv(filename, index=False)

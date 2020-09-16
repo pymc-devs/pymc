@@ -118,7 +118,7 @@ class Mixture(Distribution):
             isinstance(comp_dists, Distribution)
             or (
                 isinstance(comp_dists, Iterable)
-                and all((isinstance(c, Distribution) for c in comp_dists))
+                and all(isinstance(c, Distribution) for c in comp_dists)
             )
         ):
             raise TypeError(

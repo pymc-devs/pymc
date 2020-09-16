@@ -124,7 +124,7 @@ def incorporate_methods(source, destination, methods, wrapper=None, override=Fal
     for method in methods:
         if hasattr(destination, method) and not override:
             raise AttributeError(
-                "Cannot add method {!r}".format(method)
+                f"Cannot add method {method!r}"
                 + "to destination object as it already exists. "
                 "To prevent this error set 'override=True'."
             )
@@ -628,7 +628,7 @@ class ValueGradFunction:
 
         self._grad_vars = grad_vars
         self._extra_vars = extra_vars
-        self._extra_var_names = set(var.name for var in extra_vars)
+        self._extra_var_names = {var.name for var in extra_vars}
         self._cost = cost
         self._ordering = ArrayOrdering(grad_vars)
         self.size = self._ordering.size
@@ -729,7 +729,7 @@ class ValueGradFunction:
         """Convert an array to a dictionary containing the grad_vars."""
         if array.shape != (self.size,):
             raise ValueError(
-                "Array should have shape (%s,) but has %s" % (self.size, array.shape)
+                f"Array should have shape ({self.size},) but has {array.shape}"
             )
         if array.dtype != self.dtype:
             raise ValueError(
@@ -1147,7 +1147,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def add_random_variable(self, var, dims=None):
         """Add a random variable to the named variables of the model."""
         if self.named_vars.tree_contains(var.name):
-            raise ValueError("Variable name {} already exists.".format(var.name))
+            raise ValueError(f"Variable name {var.name} already exists.")
 
         if dims is not None:
             if isinstance(dims, str):
@@ -1168,7 +1168,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """
         if self.prefix:
             if not name.startswith(self.prefix):
-                return "{}{}".format(self.prefix, name)
+                return f"{self.prefix}{name}"
             else:
                 return name
         else:
@@ -1481,11 +1481,11 @@ def Point(*args, **kwargs):
     try:
         d = dict(*args, **kwargs)
     except Exception as e:
-        raise TypeError("can't turn {} and {} into a dict. {}".format(args, kwargs, e))
-    return dict(
-        (get_var_name(k), np.array(v)) for k, v in d.items()
+        raise TypeError(f"can't turn {args} and {kwargs} into a dict. {e}")
+    return {
+        get_var_name(k): np.array(v) for k, v in d.items()
          if get_var_name(k) in map(get_var_name, model.vars)
-    )
+    }
 
 
 class FastPointFunc:

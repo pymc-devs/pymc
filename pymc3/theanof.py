@@ -490,9 +490,9 @@ def ix_(*args):
 
 
 def largest_common_dtype(tensors):
-    dtypes = set(str(t.dtype) if hasattr(t, 'dtype')
+    dtypes = {str(t.dtype) if hasattr(t, 'dtype')
                  else smartfloatX(np.asarray(t)).dtype
-                 for t in tensors)
+                 for t in tensors}
     return np.stack([np.ones((), dtype=dtype) for dtype in dtypes]).dtype
 
 

@@ -241,10 +241,10 @@ class Inference:
                 if i % 10 == 0:
                     avg_loss = _infmean(scores[max(0, i - 1000): i + 1])
                     if hasattr(progress, 'comment'):
-                        progress.comment = "Average Loss = {:,.5g}".format(avg_loss)
+                        progress.comment = f"Average Loss = {avg_loss:,.5g}"
                     avg_loss = scores[max(0, i - 1000): i + 1].mean()
                     if hasattr(progress, 'comment'):
-                        progress.comment = "Average Loss = {:,.5g}".format(avg_loss)
+                        progress.comment = f"Average Loss = {avg_loss:,.5g}"
                 for callback in callbacks:
                     callback(self.approx, scores[: i + 1], i + s + 1)
         except (KeyboardInterrupt, StopIteration) as e:  # pragma: no cover
@@ -270,7 +270,7 @@ class Inference:
                 logger.info("Finished [100%]: Loss = {:,.5g}".format(scores[-1]))
             else:
                 avg_loss = _infmean(scores[max(0, i - 1000): i + 1])
-                logger.info("Finished [100%]: Average Loss = {:,.5g}".format(avg_loss))
+                logger.info(f"Finished [100%]: Average Loss = {avg_loss:,.5g}")
         self.hist = np.concatenate([self.hist, scores])
         return State(i + s, step=step_func, callbacks=callbacks, score=True)
 

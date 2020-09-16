@@ -130,7 +130,7 @@ def test_init_groups(three_var_model, raises, grouping):
             if g is None:
                 pass
             else:
-                assert set(pm.util.get_transformed(z) for z in g) == set(ig.group)
+                assert {pm.util.get_transformed(z) for z in g} == set(ig.group)
         else:
             assert approx.ndim == three_var_model.ndim
 
@@ -143,7 +143,7 @@ def test_init_groups(three_var_model, raises, grouping):
         ({}, {MeanFieldGroup: (['one'], {}), FullRankGroup: (['two', 'three'], {})}),
         ({}, {MeanFieldGroup: (['one'], {}), EmpiricalGroup: (['two', 'three'], {'size': 100})})
 ],
-    ids=lambda t: ', '.join('%s: %s' % (k.__name__, v[0]) for k, v in t[1].items())
+    ids=lambda t: ', '.join('{}: {}'.format(k.__name__, v[0]) for k, v in t[1].items())
 )
 def three_var_groups(request, three_var_model):
     kw, grouping = request.param

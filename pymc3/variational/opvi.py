@@ -156,7 +156,7 @@ class ObjectiveUpdates(theano.OrderedUpdates):
 
 
 def _warn_not_used(smth, where):
-    warnings.warn('`%s` is not used for %s and ignored' % (smth, where))
+    warnings.warn(f'`{smth}` is not used for {where} and ignored')
 
 
 class ObjectiveFunction:
@@ -1207,7 +1207,7 @@ class Group(WithMemoization):
                 shp = 'None, ' + shp
             elif self.batched:
                 shp = str(self.bdim) + ', ' + shp
-        return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
+        return f'{self.__class__.__name__}[{shp}]'
 
     @node_property
     def std(self):
@@ -1580,7 +1580,7 @@ class Approximation(WithMemoization):
 
         def inner(draws=100):
             _samples = sample_fn(draws)
-            return dict([(v_.name, s_) for v_, s_ in zip(self.model.free_RVs, _samples)])
+            return {v_.name: s_ for v_, s_ in zip(self.model.free_RVs, _samples)}
 
         return inner
 

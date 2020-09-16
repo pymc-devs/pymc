@@ -70,13 +70,13 @@ class NotebookGenerator:
         self.basename = os.path.basename(filename)
         self.stripped_name = os.path.splitext(self.basename)[0]
         self.output_html = os.path.join(
-            "..", "notebooks", "{}.html".format(self.stripped_name)
+            "..", "notebooks", f"{self.stripped_name}.html"
         )
         self.image_dir = os.path.join(target_dir, "_images")
         self.png_path = os.path.join(
-            self.image_dir, "{}.png".format(self.stripped_name)
+            self.image_dir, f"{self.stripped_name}.png"
         )
-        with open(filename, "r") as fid:
+        with open(filename) as fid:
             self.json_source = json.load(fid)
         self.pagetitle = self.extract_title()
         self.default_image_loc = DEFAULT_IMG_LOC
@@ -89,7 +89,7 @@ class NotebookGenerator:
 
             self.gen_previews()
         else:
-            print("skipping {0}".format(filename))
+            print(f"skipping {filename}")
 
     def extract_preview_pic(self):
         """By default, just uses the last image in the notebook."""
@@ -136,7 +136,7 @@ def build_gallery(srcdir, gallery):
     working_dir = os.getcwd()
     os.chdir(srcdir)
     static_dir = os.path.join(srcdir, "_static")
-    target_dir = os.path.join(srcdir, "nb_{}".format(gallery))
+    target_dir = os.path.join(srcdir, f"nb_{gallery}")
     image_dir = os.path.join(target_dir, "_images")
     source_dir = os.path.abspath(
         os.path.join(os.path.dirname(os.path.dirname(srcdir)), "notebooks")
@@ -182,8 +182,8 @@ def build_gallery(srcdir, gallery):
                 "thumb": os.path.basename(default_png_path),
             }
 
-    js_file = os.path.join(image_dir, "gallery_{}_contents.js".format(gallery))
-    with open(table_of_contents_file, "r") as toc:
+    js_file = os.path.join(image_dir, f"gallery_{gallery}_contents.js")
+    with open(table_of_contents_file) as toc:
         table_of_contents = toc.read()
 
     js_contents = "Gallery.examples = {}\n{}".format(
