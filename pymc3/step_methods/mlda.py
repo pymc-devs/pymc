@@ -475,9 +475,7 @@ class MLDA(ArrayStepShared):
                                 "variable.")
 
         self.next_model = self.coarse_models[-1]
-
         self.adaptive_error_model = adaptive_error_model
-
         # check that certain requirements hold
         # for the adaptive error model feature to work
         if self.adaptive_error_model:
@@ -534,7 +532,6 @@ class MLDA(ArrayStepShared):
             # this is the subsampling rate applied to the current level
             # it is stored in the level above and transferred here
             self.subsampling_rate_above = kwargs.get("subsampling_rate_above", None)
-
         self.num_levels = len(self.coarse_models) + 1
         self.base_sampler = base_sampler
 
