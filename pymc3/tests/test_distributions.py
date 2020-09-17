@@ -821,7 +821,7 @@ class TestMatchesScipy(SeededTest):
     def test_hypergeometric(self):
         self.pymc3_matches_scipy(HyperGeometric, Nat, {'N': NatSmall, 'n': NatSmall, 'k': NatSmall},
                                  lambda value, N, n, k: sp.hypergeom.logpmf(value, N, k, n))
-        
+
     def test_negative_binomial(self):
         def test_fun(value, mu, alpha):
             return sp.nbinom.logpmf(value, alpha, 1 - mu / (mu + alpha))
