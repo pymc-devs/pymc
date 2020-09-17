@@ -943,16 +943,17 @@ class HyperGeometric(Discrete):
         N = self.N
         k = self.k
         n = self.n
-        return bound(
-            binomln(k, value) + binomln(N - k, n - value) - binomln(N, n),
-            0 <= k,
-            k <= N,
-            0 <= n,
-            n - N + k <= value,
-            0 <= value,
-            value <= k,
-            value <= n,
+        tot, good = N, k
+        bad = tot - good
+        result = (
+            betaln(good + 1, 1)
+            + betaln(bad + 1, 1)
+            + betaln(tot - n + 1, n + 1)
+            - betaln(value + 1, good - value + 1)
+            - betaln(n - value + 1, bad - n + value + 1)
+            - betaln(tot + 1, 1)
         )
+        return result
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
