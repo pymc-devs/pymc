@@ -75,7 +75,7 @@ from ..distributions import (
     Rice,
     Kumaraswamy,
     Moyal,
-    HyperGeometric
+    HyperGeometric,
 )
 
 from ..distributions import continuous
@@ -819,8 +819,12 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_hypergeometric(self):
-        self.pymc3_matches_scipy(HyperGeometric, Nat, {'N': NatSmall, 'n': NatSmall, 'k': NatSmall},
-                                 lambda value, N, n, k: sp.hypergeom.logpmf(value, N, k, n))
+        self.pymc3_matches_scipy(
+            HyperGeometric,
+            Nat,
+            {"N": NatSmall, "n": NatSmall, "k": NatSmall},
+            lambda value, N, n, k: sp.hypergeom.logpmf(value, N, k, n),
+        )
 
     def test_negative_binomial(self):
         def test_fun(value, mu, alpha):
@@ -1340,7 +1344,9 @@ class TestMatchesScipy(SeededTest):
             dir_rv = Dirichlet.dist(a)
             assert dir_rv.shape == (2,)
 
-        with pytest.warns(DeprecationWarning), theano.change_flags(compute_test_value="ignore"):
+        with pytest.warns(DeprecationWarning), theano.change_flags(
+            compute_test_value="ignore"
+        ):
             dir_rv = Dirichlet.dist(tt.vector())
 
     def test_dirichlet_2D(self):
@@ -1885,9 +1891,10 @@ def test_serialize_density_dist():
         return -2 * (x ** 2).sum()
 
     with pm.Model():
-        pm.Normal('x')
-        y = pm.DensityDist('y', func)
+        pm.Normal("x")
+        y = pm.DensityDist("y", func)
         pm.sample(draws=5, tune=1, mp_ctx="spawn")
 
     import pickle
+
     pickle.loads(pickle.dumps(y))
