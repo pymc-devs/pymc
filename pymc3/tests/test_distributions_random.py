@@ -467,6 +467,7 @@ class TestGeometric(BaseTestCases.BaseTestCase):
     distribution = pm.Geometric
     params = {'p': 0.5}
 
+
 class TestHyperGeometric(BaseTestCases.BaseTestCase):
     distribution = pm.HyperGeometric
     params = {'N': 50, 'n' : 25, 'k' :10}
