@@ -11,6 +11,7 @@
 
 ### New features
 - `sample_posterior_predictive_w` can now feed on `xarray.Dataset` - e.g. from `InferenceData.posterior`. (see [#4042](https://github.com/pymc-devs/pymc3/pull/4042))
+- Support HyperGeometric Distribution through `pymc3.distributions.discrete.HyperGeometric`. (see [#4108](https://github.com/pymc-devs/pymc3/pull/4108))
 
 
 ## PyMC3 3.9.3 (11 August 2020)
