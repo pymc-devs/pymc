@@ -948,7 +948,6 @@ class HyperGeometric(Discrete):
             0 <= k,
             k <= N,
             0 <= n,
-            0 <= N,
             n - N + k <= value,
             0 <= value,
             value <= k,
