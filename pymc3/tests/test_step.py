@@ -1323,4 +1323,3 @@ class TestMLDA:
                     coarse_models=[coarse_model_0, coarse_model_1],
                     subsampling_rates=[3, 4, 10],
                 )
-

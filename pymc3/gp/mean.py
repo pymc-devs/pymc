@@ -105,4 +105,3 @@ class Prod(Mean):
 
     def __call__(self, X):
         return tt.mul(self.m1(X), self.m2(X))
-

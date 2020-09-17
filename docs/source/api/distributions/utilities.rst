@@ -26,4 +26,3 @@ Distribution utility classes and functions
 
 .. autofunction:: draw_values
 .. autofunction:: generate_samples
-

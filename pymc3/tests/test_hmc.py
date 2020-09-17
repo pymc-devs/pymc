@@ -64,4 +64,3 @@ def test_nuts_error_reporting(caplog):
             pymc3.HalfNormal('b', sigma=1, transform=None)
             trace = pymc3.sample(init='adapt_diag', chains=1)
         assert "Bad initial energy, check any log  probabilities that are inf or -inf: a        -inf\nb" in caplog.text
-

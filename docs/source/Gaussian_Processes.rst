@@ -259,5 +259,3 @@ variables that can now be used like any other random variable in PyMC3.
 
 Check the notebooks for detailed demonstrations of the usage of GP functionality
 in PyMC3.
-
-
