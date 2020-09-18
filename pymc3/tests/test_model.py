@@ -421,3 +421,24 @@ def test_tempered_logp_dlogp():
 
     npt.assert_allclose(func_nograd(x), func(x)[0])
     npt.assert_allclose(func_temp_nograd(x), func_temp(x)[0])
+
+
+import pickle
+def test_model_pickle(tmpdir):
+    """Tests that PyMC3 models are pickleable"""
+
+    # Data of the Eight Schools Model
+    J = 8
+    y = np.array([28., 8., -3., 7., -1., 1., 18., 12.])
+    sigma = np.array([15., 10., 16., 11., 9., 11., 10., 18.])
+
+    with pm.Model() as model:
+        mu = pm.Normal('mu', mu=0, sigma=5)
+        tau = pm.HalfCauchy('tau', beta=5)
+        theta = pm.Normal('theta', mu=mu, sigma=tau, shape=J)
+        obs = pm.Normal('obs', mu=theta, sigma=sigma, observed=y)
+        # t = pm.sample(draws=100)
+
+    file_path = tmpdir.join("model.p")
+    with open(file_path, 'wb') as buff:
+        pickle.dump(model, buff)
