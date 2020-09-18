@@ -3636,6 +3636,150 @@ class Gumbel(Continuous):
         return -tt.exp(-(value - mu) / beta)
 
 
+class GEV(BoundedContinuous):
+    """Generalized extreme value distribution.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       TODO
+
+    where
+
+    .. math::
+
+        TODO
+
+    .. plot::
+
+        TODO
+
+    ========  ==========================================
+    Support   :math:TODO
+    Mean      :math:TODO
+    Variance  :math:TODO
+    ========  ==========================================
+
+    Parameters
+    ----------
+    mu: float
+        Location parameter.
+    sigma: float
+        Scale parameter (sigma > 0).
+    xi: float
+        Shape parameter
+
+    Notes
+    -----
+    Parameterisation accords with Wikipedia.
+    """
+
+    def __init__(self,mu,sigma,xi, *args, **kwargs):
+
+        self.mu = tt.as_tensor_variable(floatX(mu))
+        self.sigma = tt.as_tensor_variable(floatX(sigma))
+        self.xi = tt.as_tensor_variable(floatX(xi))
+        
+        super().__init__(*args, **kwargs)
+
+    def random(self,*args,**kwargs):
+        raise NotImplementedError
+
+    def logp(self,value):
+        """
+        Calculate log-probability of GEV distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log 
+            probabilities for multiple values are desired the values must be 
+            provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        scale=self.sigma; shape=self.xi;
+
+        t_x = self._t(x=value)
+        logp_terms = -tt.log(scale) + (shape+1) * tt.log(t_x) - t_x
+        mask = self._within_support(x=value)
+        logp_terms = tt.switch(mask,logp_terms,-np.inf)
+        return tt.sum(logp_terms)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for GEV 
+        distribution at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for 
+            multiple values are desired the values must be provided in a 
+            numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        t_x = self._t(x=value)
+        mask = self._within_support(x=value)
+        logcdf = -t_x
+        limit = self._support_limit()
+        return tt.switch(mask,logcdf,tt.switch(tt.gt(value,limit),0.0,-np.inf))
+
+    # ------ PRIVATE METHODS ------
+
+    def _t(self,x):
+        """t(x) intermediate result for GEV, as defined on Wikipedia."""
+
+        loc=self.mu; scale=self.sigma; shape=self.xi;
+
+        try:
+            t1 = (1 + shape * (x-loc)/scale)**(-1/shape)
+        except ZeroDivisionError:
+            t1 = x * np.nan
+        
+        t2 = tt.exp(-(x-loc)/scale)
+
+        return tt.switch(tt.eq(shape,0),t2,t1)
+
+
+    def _support_limit(self):
+        """Finite limit to support (either upper of lower bound)."""
+
+        loc=self.mu; scale=self.sigma; shape=self.xi;
+
+        try:
+            limit = loc-scale/shape
+        except ZeroDivisionError:
+            limit = np.nan # limit not relevant as shape=0 implies Gumbel
+
+        return limit
+
+    def _within_support(self,x):
+        """Test if x values within support of the distribution."""
+
+        shape=self.xi;
+
+        limit = self._support_limit()
+
+        # Define True and False as numpy arrays (to work with theano)
+        false = np.array(False);true = np.array(True)
+
+        case1 = tt.switch(tt.lt(x,limit),false,true)
+        case3 = tt.switch(tt.gt(x,limit),false,true)
+
+        return tt.switch(tt.gt(shape,0), # if
+                         case1,
+               tt.switch(tt.lt(shape,0), # elif
+                         case3,
+                         true))          # else
+
+
 class Rice(PositiveContinuous):
     r"""
     Rice distribution.
