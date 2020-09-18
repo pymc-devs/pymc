@@ -951,7 +951,7 @@ class Group(WithMemoization):
         for var in self.group:
             if isinstance(var.distribution, pm.Discrete):
                 raise ParametrizationError(
-                    "Discrete variables are not supported by VI: {}".format(var)
+                    f"Discrete variables are not supported by VI: {var}"
                 )
             begin = self.ddim
             if self.batched:
