@@ -147,10 +147,8 @@ def sample_smc(
         cores = 1
 
     _log.info(
-        (
             f"Sampling {chains} chain{'s' if chains > 1 else ''} "
             f"in {cores} job{'s' if cores > 1 else ''}"
-        )
     )
 
     if random_seed == -1:
@@ -196,7 +194,7 @@ def sample_smc(
     else:
         results = []
         for i in range(chains):
-            results.append((sample_smc_int(*params, random_seed[i], i, _log)))
+            results.append(sample_smc_int(*params, random_seed[i], i, _log))
 
     traces, sim_data, log_marginal_likelihoods, betas, accept_ratios, nsteps = zip(*results)
     trace = MultiTrace(traces)
