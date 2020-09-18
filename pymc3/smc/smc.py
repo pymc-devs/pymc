@@ -217,7 +217,7 @@ class SMC:
         dist = multivariate_normal(self.posterior.mean(axis=0), self.cov)
 
         for n_step in range(self.n_steps):
-            proposal = dist.rvs(size=self.draws)
+            proposal = floatX(dist.rvs(size=self.draws))
             proposal = proposal.reshape(len(proposal), -1)
             forward = dist.logpdf(proposal)
             backward = multivariate_normal(proposal.mean(axis=0), self.cov).logpdf(self.posterior)
