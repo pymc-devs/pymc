@@ -80,8 +80,9 @@ class PyMC3Variable(TensorVariable):
     def _repr_latex_(self, **kwargs):
         return self._str_repr(formatting="latex", **kwargs)
 
-    def __str__(self, **kwargs):
-        return self._str_repr(formatting="plain", **kwargs)
+    # TODO: Enable this one we figure out pickle
+    # def __str__(self, **kwargs):
+    #     return self._str_repr(formatting="plain", **kwargs)
 
     __latex__ = _repr_latex_
 
@@ -1423,8 +1424,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 for n, d in zip(names, distrs)]
             return "\n".join(rv_reprs)
 
-    def __str__(self, **kwargs):
-        return self._str_repr(formatting="plain", **kwargs)
+    # TODO: Enable this one we figure out pickle
+    # def __str__(self, **kwargs):
+    #     return self._str_repr(formatting="plain", **kwargs)
 
     def _repr_latex_(self, **kwargs):
         return self._str_repr(formatting="latex", **kwargs)
@@ -1934,10 +1936,12 @@ def Deterministic(name, var, model=None, dims=None):
 
     # simply assigning var.__str__ is not enough, since str() will default to the class-
     # defined __str__ anyway; see https://stackoverflow.com/a/5918210/1692028
-    old_type = type(var)
-    new_type = type(old_type.__name__ + '_pymc3_Deterministic', (old_type,),
-        {'__str__': functools.partial(_repr_deterministic_rv, var, formatting='plain')})
-    var.__class__ = new_type
+
+    # TODO: Fix enable this once we figure out pickle
+    # old_type = type(var)
+    # new_type = type(old_type.__name__ + '_pymc3_Deterministic', (old_type,),
+    #     {'__str__': functools.partial(_repr_deterministic_rv, var, formatting='plain')})
+    # var.__class__ = new_type
 
     return var
 

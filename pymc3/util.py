@@ -161,10 +161,10 @@ def get_var_name(var):
     string representations to our pymc3.PyMC3Variables, yet we want to use the
     plain name as e.g. keys in dicts.
     """
-    if isinstance(var, TensorVariable):
-        return super(TensorVariable, var).__str__()
-    else:
-        return str(var)
+    # if isinstance(var, TensorVariable):
+    #     return super(TensorVariable, var).__str__()
+    # else:
+    return str(var)
 
 
 def update_start_vals(a, b, model):
