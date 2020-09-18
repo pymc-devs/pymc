@@ -162,13 +162,16 @@ def get_or_compute_grads(loss_or_grads, params):
         compute its gradient, we can never update it and want to fail early).
     """
     if any(not isinstance(p, theano.compile.SharedVariable) for p in params):
-        raise ValueError("params must contain shared variables only. If it "
-                         "contains arbitrary parameter expressions, then "
-                         "lasagne.utils.collect_shared_vars() may help you.")
+        raise ValueError(
+            "params must contain shared variables only. If it "
+            "contains arbitrary parameter expressions, then "
+            "lasagne.utils.collect_shared_vars() may help you."
+        )
     if isinstance(loss_or_grads, list):
         if not len(loss_or_grads) == len(params):
-            raise ValueError("Got %d gradient expressions for %d parameters" %
-                             (len(loss_or_grads), len(params)))
+            raise ValueError(
+                "Got %d gradient expressions for %d parameters" % (len(loss_or_grads), len(params))
+            )
         return loss_or_grads
     else:
         return theano.grad(loss_or_grads, params)
@@ -176,8 +179,8 @@ def get_or_compute_grads(loss_or_grads, params):
 
 def _get_call_kwargs(_locals_):
     _locals_ = _locals_.copy()
-    _locals_.pop('loss_or_grads')
-    _locals_.pop('params')
+    _locals_.pop("loss_or_grads")
+    _locals_.pop("params")
     return _locals_
 
 
@@ -224,8 +227,7 @@ def sgd(loss_or_grads=None, params=None, learning_rate=1e-3):
     if loss_or_grads is None and params is None:
         return partial(sgd, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError(
-            'Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
@@ -274,8 +276,9 @@ def apply_momentum(updates, params=None, momentum=0.9):
 
     for param in params:
         value = param.get_value(borrow=True)
-        velocity = theano.shared(np.zeros(value.shape, dtype=value.dtype),
-                                 broadcastable=param.broadcastable)
+        velocity = theano.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
         x = momentum * velocity + updates[param]
         updates[velocity] = x - param
         updates[param] = x
@@ -283,8 +286,7 @@ def apply_momentum(updates, params=None, momentum=0.9):
     return updates
 
 
-def momentum(loss_or_grads=None, params=None,
-             learning_rate=1e-3, momentum=0.9):
+def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
     """Stochastic Gradient Descent (SGD) updates with momentum
 
     Generates update expressions of the form:
@@ -339,8 +341,7 @@ def momentum(loss_or_grads=None, params=None,
     if loss_or_grads is None and params is None:
         return partial(pm.updates.momentum, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError(
-            'Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     updates = sgd(loss_or_grads, params, learning_rate)
     return apply_momentum(updates, momentum=momentum)
 
@@ -390,8 +391,9 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
 
     for param in params:
         value = param.get_value(borrow=True)
-        velocity = theano.shared(np.zeros(value.shape, dtype=value.dtype),
-                                 broadcastable=param.broadcastable)
+        velocity = theano.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
         x = momentum * velocity + updates[param] - param
         updates[velocity] = x
         updates[param] = momentum * x + updates[param]
@@ -399,8 +401,7 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
     return updates
 
 
-def nesterov_momentum(loss_or_grads=None, params=None,
-                      learning_rate=1e-3, momentum=0.9):
+def nesterov_momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
     """Stochastic Gradient Descent (SGD) updates with Nesterov momentum
 
     Generates update expressions of the form:
@@ -460,8 +461,7 @@ def nesterov_momentum(loss_or_grads=None, params=None,
     if loss_or_grads is None and params is None:
         return partial(nesterov_momentum, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError(
-            'Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     updates = sgd(loss_or_grads, params, learning_rate)
     return apply_nesterov_momentum(updates, momentum=momentum)
 
@@ -529,25 +529,23 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
     if loss_or_grads is None and params is None:
         return partial(adagrad, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError(
-            'Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
-        accu = theano.shared(np.zeros(value.shape, dtype=value.dtype),
-                             broadcastable=param.broadcastable)
+        accu = theano.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
         accu_new = accu + grad ** 2
         updates[accu] = accu_new
-        updates[param] = param - (learning_rate * grad /
-                                  tt.sqrt(accu_new + epsilon))
+        updates[param] = param - (learning_rate * grad / tt.sqrt(accu_new + epsilon))
 
     return updates
 
 
-def adagrad_window(loss_or_grads=None, params=None,
-                   learning_rate=0.001, epsilon=.1, n_win=10):
+def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon=0.1, n_win=10):
     """Returns a function that returns parameter updates.
     Instead of accumulated estimate, uses running window
 
@@ -572,15 +570,14 @@ def adagrad_window(loss_or_grads=None, params=None,
     if loss_or_grads is None and params is None:
         return partial(adagrad_window, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError('Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
     for param, grad in zip(params, grads):
         i = theano.shared(pm.floatX(0))
-        i_int = i.astype('int32')
+        i_int = i.astype("int32")
         value = param.get_value(borrow=True)
-        accu = theano.shared(
-            np.zeros(value.shape + (n_win,), dtype=value.dtype))
+        accu = theano.shared(np.zeros(value.shape + (n_win,), dtype=value.dtype))
 
         # Append squared gradient vector to accu_new
         accu_new = tt.set_subtensor(accu[..., i_int], grad ** 2)
@@ -589,13 +586,11 @@ def adagrad_window(loss_or_grads=None, params=None,
         updates[i] = i_new
 
         accu_sum = accu_new.sum(axis=-1)
-        updates[param] = param - (learning_rate * grad /
-                                  tt.sqrt(accu_sum + epsilon))
+        updates[param] = param - (learning_rate * grad / tt.sqrt(accu_sum + epsilon))
     return updates
 
 
-def rmsprop(loss_or_grads=None, params=None,
-            learning_rate=1.0, rho=0.9, epsilon=1e-6):
+def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon=1e-6):
     """RMSProp updates
 
     Scale learning rates by dividing with the moving average of the root mean
@@ -659,8 +654,7 @@ def rmsprop(loss_or_grads=None, params=None,
     if loss_or_grads is None and params is None:
         return partial(rmsprop, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError(
-            'Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
@@ -669,18 +663,17 @@ def rmsprop(loss_or_grads=None, params=None,
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
-        accu = theano.shared(np.zeros(value.shape, dtype=value.dtype),
-                             broadcastable=param.broadcastable)
+        accu = theano.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
         accu_new = rho * accu + (one - rho) * grad ** 2
         updates[accu] = accu_new
-        updates[param] = param - (learning_rate * grad /
-                                  tt.sqrt(accu_new + epsilon))
+        updates[param] = param - (learning_rate * grad / tt.sqrt(accu_new + epsilon))
 
     return updates
 
 
-def adadelta(loss_or_grads=None, params=None,
-             learning_rate=1.0, rho=0.95, epsilon=1e-6):
+def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsilon=1e-6):
     r""" Adadelta updates
 
     Scale learning rates by the ratio of accumulated gradients to accumulated
@@ -753,8 +746,7 @@ def adadelta(loss_or_grads=None, params=None,
     if loss_or_grads is None and params is None:
         return partial(adadelta, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError(
-            'Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
@@ -764,19 +756,20 @@ def adadelta(loss_or_grads=None, params=None,
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
         # accu: accumulate gradient magnitudes
-        accu = theano.shared(np.zeros(value.shape, dtype=value.dtype),
-                             broadcastable=param.broadcastable)
+        accu = theano.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
         # delta_accu: accumulate update magnitudes (recursively!)
-        delta_accu = theano.shared(np.zeros(value.shape, dtype=value.dtype),
-                                   broadcastable=param.broadcastable)
+        delta_accu = theano.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
 
         # update accu (as in rmsprop)
         accu_new = rho * accu + (one - rho) * grad ** 2
         updates[accu] = accu_new
 
         # compute parameter update, using the 'old' delta_accu
-        update = (grad * tt.sqrt(delta_accu + epsilon) /
-                  tt.sqrt(accu_new + epsilon))
+        update = grad * tt.sqrt(delta_accu + epsilon) / tt.sqrt(accu_new + epsilon)
         updates[param] = param - learning_rate * update
 
         # update delta_accu (as accu, but accumulating updates)
@@ -786,8 +779,9 @@ def adadelta(loss_or_grads=None, params=None,
     return updates
 
 
-def adam(loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9,
-         beta2=0.999, epsilon=1e-8):
+def adam(
+    loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
+):
     """Adam updates
 
     Adam updates implemented as in [1]_.
@@ -844,27 +838,28 @@ def adam(loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9,
     if loss_or_grads is None and params is None:
         return partial(adam, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError(
-            'Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     all_grads = get_or_compute_grads(loss_or_grads, params)
-    t_prev = theano.shared(pm.theanof.floatX(0.))
+    t_prev = theano.shared(pm.theanof.floatX(0.0))
     updates = OrderedDict()
 
     # Using theano constant to prevent upcasting of float32
     one = tt.constant(1)
 
     t = t_prev + 1
-    a_t = learning_rate * tt.sqrt(one - beta2**t) / (one - beta1**t)
+    a_t = learning_rate * tt.sqrt(one - beta2 ** t) / (one - beta1 ** t)
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
-        m_prev = theano.shared(np.zeros(value.shape, dtype=value.dtype),
-                               broadcastable=param.broadcastable)
-        v_prev = theano.shared(np.zeros(value.shape, dtype=value.dtype),
-                               broadcastable=param.broadcastable)
+        m_prev = theano.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
+        v_prev = theano.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
 
         m_t = beta1 * m_prev + (one - beta1) * g_t
-        v_t = beta2 * v_prev + (one - beta2) * g_t**2
+        v_t = beta2 * v_prev + (one - beta2) * g_t ** 2
         step = a_t * m_t / (tt.sqrt(v_t) + epsilon)
 
         updates[m_prev] = m_t
@@ -875,8 +870,9 @@ def adam(loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9,
     return updates
 
 
-def adamax(loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9,
-           beta2=0.999, epsilon=1e-8):
+def adamax(
+    loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9, beta2=0.999, epsilon=1e-8
+):
     """Adamax updates
 
     Adamax updates implemented as in [1]_. This is a variant of the Adam
@@ -930,24 +926,25 @@ def adamax(loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9,
     if loss_or_grads is None and params is None:
         return partial(adamax, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
-        raise ValueError(
-            'Please provide both `loss_or_grads` and `params` to get updates')
+        raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     all_grads = get_or_compute_grads(loss_or_grads, params)
-    t_prev = theano.shared(pm.theanof.floatX(0.))
+    t_prev = theano.shared(pm.theanof.floatX(0.0))
     updates = OrderedDict()
 
     # Using theano constant to prevent upcasting of float32
     one = tt.constant(1)
 
     t = t_prev + 1
-    a_t = learning_rate / (one - beta1**t)
+    a_t = learning_rate / (one - beta1 ** t)
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
-        m_prev = theano.shared(np.zeros(value.shape, dtype=value.dtype),
-                               broadcastable=param.broadcastable)
-        u_prev = theano.shared(np.zeros(value.shape, dtype=value.dtype),
-                               broadcastable=param.broadcastable)
+        m_prev = theano.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
+        u_prev = theano.shared(
+            np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+        )
 
         m_t = beta1 * m_prev + (one - beta1) * g_t
         u_t = tt.maximum(beta2 * u_prev, abs(g_t))
@@ -1028,21 +1025,18 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
         sum_over = tuple(range(1, ndim))
     else:
         raise ValueError(
-            "Unsupported tensor dimensionality {}."
-            "Must specify `norm_axes`".format(ndim)
+            "Unsupported tensor dimensionality {}." "Must specify `norm_axes`".format(ndim)
         )
 
     dtype = np.dtype(theano.config.floatX).type
     norms = tt.sqrt(tt.sum(tt.sqr(tensor_var), axis=sum_over, keepdims=True))
     target_norms = tt.clip(norms, 0, dtype(max_norm))
-    constrained_output = \
-        (tensor_var * (target_norms / (dtype(epsilon) + norms)))
+    constrained_output = tensor_var * (target_norms / (dtype(epsilon) + norms))
 
     return constrained_output
 
 
-def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7,
-                          return_norm=False):
+def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7, return_norm=False):
     """Rescales a list of tensors based on their combined norm
 
     If the combined norm of the input tensors exceeds the threshold then all
@@ -1097,7 +1091,7 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7,
        learning with neural networks. In Advances in Neural Information
        Processing Systems (pp. 3104-3112).
     """
-    norm = tt.sqrt(sum(tt.sum(tensor**2) for tensor in tensor_vars))
+    norm = tt.sqrt(sum(tt.sum(tensor ** 2) for tensor in tensor_vars))
     dtype = np.dtype(theano.config.floatX).type
     target_norm = tt.clip(norm, 0, dtype(max_norm))
     multiplier = target_norm / (dtype(epsilon) + norm)
