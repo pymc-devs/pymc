@@ -136,9 +136,8 @@ from ..backends.text import Text
 from ..backends.sqlite import SQLite
 from ..backends.hdf5 import HDF5
 
-_shortcuts = {'text': {'backend': Text,
-                       'name': 'mcmc'},
-              'sqlite': {'backend': SQLite,
-                         'name': 'mcmc.sqlite'},
-              'hdf5': {'backend': HDF5,
-                       'name': 'mcmc.hdf5'}}
+_shortcuts = {
+    "text": {"backend": Text, "name": "mcmc"},
+    "sqlite": {"backend": SQLite, "name": "mcmc.sqlite"},
+    "hdf5": {"backend": HDF5, "name": "mcmc.hdf5"},
+}
