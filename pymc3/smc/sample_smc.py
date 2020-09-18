@@ -35,7 +35,7 @@ def sample_smc(
     n_steps=25,
     start=None,
     tune_steps=True,
-    p_acc_rate=0.99,
+    p_acc_rate=0.85,
     threshold=0.5,
     save_sim_data=False,
     model=None,
@@ -61,7 +61,7 @@ def sample_smc(
         acceptance rate and `p_acc_rate`, the max number of steps is ``n_steps``.
     start: dict, or array of dict
         Starting point in parameter space. It should be a list of dict with length `chains`.
-        When None (default) the starting point is sampled from the prior distribution. 
+        When None (default) the starting point is sampled from the prior distribution.
     tune_steps: bool
         Whether to compute the number of steps automatically or not. Defaults to True
     p_acc_rate: float
@@ -147,8 +147,10 @@ def sample_smc(
         cores = 1
 
     _log.info(
-            f"Multiprocess sampling ({chains} chain{'s' if chains > 1 else ''} "
-            f"in {cores} job{'s' if cores > 1 else ''})"
+        (
+            f"Sampling {chains} chain{'s' if chains > 1 else ''} "
+            f"in {cores} job{'s' if cores > 1 else ''}"
+        )
     )
 
     if random_seed == -1:
@@ -194,17 +196,17 @@ def sample_smc(
     else:
         results = []
         for i in range(chains):
-            results.append(sample_smc_int(*params, random_seed[i], i, _log))
+            results.append((sample_smc_int(*params, random_seed[i], i, _log)))
 
     traces, sim_data, log_marginal_likelihoods, betas, accept_ratios, nsteps = zip(*results)
     trace = MultiTrace(traces)
     trace.report._n_draws = draws
     trace.report._n_tune = 0
-    trace.report._t_sampling = time.time() - t1
     trace.report.log_marginal_likelihood = np.array(log_marginal_likelihoods)
     trace.report.betas = betas
     trace.report.accept_ratios = accept_ratios
     trace.report.nsteps = nsteps
+    trace.report._t_sampling = time.time() - t1
 
     if save_sim_data:
         return trace, {modelcontext(model).observed_RVs[0].name: np.array(sim_data)}
