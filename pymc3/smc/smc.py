@@ -63,7 +63,6 @@ class SMC:
         self.max_steps = n_steps
         self.proposed = draws * n_steps
         self.acc_rate = 1
-        self.acc_per_chain = np.ones(self.draws)
         self.variables = inputvars(self.model.vars)
         self.weights = np.ones(self.draws) / self.draws
         self.log_marginal_likelihood = 0
@@ -181,7 +180,6 @@ class SMC:
         self.prior_logp = self.prior_logp[resampling_indexes]
         self.likelihood_logp = self.likelihood_logp[resampling_indexes]
         self.posterior_logp = self.prior_logp + self.likelihood_logp * self.beta
-        self.acc_per_chain = self.acc_per_chain[resampling_indexes]
         if self.save_sim_data:
             self.sim_data = self.sim_data[resampling_indexes]
 
@@ -337,7 +335,6 @@ class PseudoLikelihood:
         self.observations = self.sum_stat(observations)
 
     def posterior_to_function(self, posterior):
-        model = self.model
         var_info = self.var_info
 
         varvalues = []
