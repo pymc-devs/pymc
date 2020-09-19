@@ -752,7 +752,7 @@ class DirichletMultinomial(Discrete):
                      broadcast_conditions=False)
 
     def random(self, point=None, size=None, repeat=None):
-        alpha, n = draw_values([self.alpha, self.n], point=point)
+        alpha, n = draw_values([self.alpha, self.n], point=point, size=size)
         out = np.empty_like(alpha)
         for i in range(len(n)):
             p = np.random.dirichlet(alpha[i, :])
