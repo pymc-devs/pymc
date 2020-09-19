@@ -1705,6 +1705,8 @@ def test_bound():
         BoundPoissonPositionalArgs = Bound(Poisson, upper=6)("x", 2.0)
 
 
+@pytest.mark.xfail(reason=("Currently failing due to pm.Deterministic issue. "
+                   "See https://github.com/pymc-devs/pymc3/pull/4117 "))
 class TestStrAndLatexRepr:
     def setup_class(self):
         # True parameter values
