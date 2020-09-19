@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from numbers import Real
 
 import numpy as np
@@ -45,7 +59,7 @@ class _Bounded(Distribution):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -93,10 +107,10 @@ class _Bounded(Distribution):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -165,13 +179,13 @@ class _ContinuousBounded(_Bounded, Continuous):
 
     Parameters
     ----------
-    distribution : pymc3 distribution
+    distribution: pymc3 distribution
         Distribution to be transformed into a bounded distribution
-    lower : float (optional)
+    lower: float (optional)
         Lower bound of the distribution, set to -inf to disable.
-    upper : float (optional)
+    upper: float (optional)
         Upper bound of the distribibution, set to inf to disable.
-    tranform : 'infer' or object
+    tranform: 'infer' or object
         If 'infer', infers the right transform to apply from the supplied bounds.
         If transform object, has to supply .forward() and .backward() methods.
         See pymc3.distributions.transforms for more information.
@@ -220,11 +234,11 @@ class Bound:
 
     Parameters
     ----------
-    distribution : pymc3 distribution
+    distribution: pymc3 distribution
         Distribution to be transformed into a bounded distribution.
-    lower : float or array like, optional
+    lower: float or array like, optional
         Lower bound of the distribution.
-    upper : float or array like, optional
+    upper: float or array like, optional
         Upper bound of the distribution.
 
     Examples
@@ -263,8 +277,7 @@ class Bound:
                 "Observed Bound distributions are not supported. "
                 "If you want to model truncated data "
                 "you can use a pm.Potential in combination "
-                "with the cumulative probability function. See "
-                "pymc3/examples/censored_data.py for an example."
+                "with the cumulative probability function."
             )
 
         transform = kwargs.pop("transform", "infer")
@@ -303,4 +316,3 @@ class Bound:
             )
         else:
             raise ValueError("Distribution is neither continuous nor discrete.")
-

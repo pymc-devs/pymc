@@ -1,5 +1,4 @@
 language: python
-sudo: required
 
 cache:
   directories:
@@ -23,13 +22,13 @@ install:
   - conda list && pip freeze
 
 env:
-  - FLOATX='float32' TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py --ignore=pymc3/tests/test_parallel_sampling.py --ignore=pymc3/tests/test_dist_math.py --ignore=pymc3/tests/test_distribution_defaults.py --ignore=pymc3/tests/test_distributions_timeseries.py --ignore=pymc3/tests/test_random.py --ignore=pymc3/tests/test_gp.py --ignore=pymc3/tests/test_shape_handling.py"
+  - FLOATX='float32' TESTCMD="--durations=10 --ignore=pymc3/tests/test_examples.py --cov-append --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py --ignore=pymc3/tests/test_parallel_sampling.py --ignore=pymc3/tests/test_dist_math.py --ignore=pymc3/tests/test_distribution_defaults.py --ignore=pymc3/tests/test_distributions_timeseries.py --ignore=pymc3/tests/test_random.py --ignore=pymc3/tests/test_gp.py --ignore=pymc3/tests/test_shape_handling.py --ignore=pymc3/tests/test_quadpotential.py"
   - FLOATX='float32' RUN_PYLINT="true" TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py pymc3/tests/test_smc.py pymc3/tests/test_sampling.py pymc3/tests/test_parallel_sampling.py pymc3/tests/test_dist_math.py pymc3/tests/test_distribution_defaults.py pymc3/tests/test_distributions_timeseries.py pymc3/tests/test_random.py"
-  - FLOATX='float32' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py pymc3/tests/test_gp.py"
+  - FLOATX='float32' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py pymc3/tests/test_gp.py pymc3/tests/test_quadpotential.py"
   - FLOATX='float32' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py pymc3/tests/test_updates.py pymc3/tests/test_shape_handling.py"
-  - FLOATX='float64' TESTCMD="--durations=10 --cov-append --ignore=pymc3/tests/test_examples.py --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py --ignore=pymc3/tests/test_parallel_sampling.py --ignore=pymc3/tests/test_dist_math.py --ignore=pymc3/tests/test_distribution_defaults.py --ignore=pymc3/tests/test_distributions_timeseries.py --ignore=pymc3/tests/test_random.py --ignore=pymc3/tests/test_gp.py --ignore=pymc3/tests/test_shape_handling.py"
+  - FLOATX='float64' TESTCMD="--durations=10 --cov-append --ignore=pymc3/tests/test_examples.py --ignore=pymc3/tests/test_distributions_random.py --ignore=pymc3/tests/test_variational_inference.py --ignore=pymc3/tests/test_shared.py --ignore=pymc3/tests/test_smc.py --ignore=pymc3/tests/test_updates.py --ignore=pymc3/tests/test_posteriors.py --ignore=pymc3/tests/test_sampling.py --ignore=pymc3/tests/test_parallel_sampling.py --ignore=pymc3/tests/test_dist_math.py --ignore=pymc3/tests/test_distribution_defaults.py --ignore=pymc3/tests/test_distributions_timeseries.py --ignore=pymc3/tests/test_random.py --ignore=pymc3/tests/test_gp.py --ignore=pymc3/tests/test_shape_handling.py --ignore=pymc3/tests/test_quadpotential.py"
   - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_distributions_random.py pymc3/tests/test_shared.py pymc3/tests/test_smc.py pymc3/tests/test_sampling.py pymc3/tests/test_parallel_sampling.py pymc3/tests/test_dist_math.py pymc3/tests/test_distribution_defaults.py pymc3/tests/test_distributions_timeseries.py pymc3/tests/test_random.py"
-  - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py pymc3/tests/test_gp.py"
+  - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_examples.py pymc3/tests/test_posteriors.py pymc3/tests/test_gp.py pymc3/tests/test_quadpotential.py"
   - FLOATX='float64' TESTCMD="--durations=10 --cov-append pymc3/tests/test_variational_inference.py pymc3/tests/test_updates.py pymc3/tests/test_shape_handling.py"
 
 script:
@@ -45,7 +44,21 @@ stages:
 
 jobs:
   include:
-  - stage: binder
+  - name: ArviZ compatibility
+    stage: test
+    install:
+      - . ./scripts/create_testenv.sh
+      - conda activate testenv
+      # replace ArviZ with the latest master
+      - pip install git+git://github.com/arviz-devs/arviz.git
+      - pip install codecov
+      - conda list && pip freeze
+      - export FLOATX='float64'
+    script:
+      - . ./scripts/test.sh --durations=10 --cov-append pymc3/tests/test_sampling.py
+    after_success: skip
+  - name: Update Binder
+    stage: binder
     before_install: skip
     install: skip
     script:

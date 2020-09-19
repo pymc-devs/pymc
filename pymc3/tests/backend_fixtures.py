@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import numpy.testing as npt
 import os
@@ -95,7 +109,7 @@ class StatsTestCase:
             strace.setup(self.draws, self.chain, bad_vars)
         strace.setup(self.draws, self.chain, good_vars)
         if strace.supports_sampler_stats:
-            assert strace.stat_names == set(['a'])
+            assert strace.stat_names == {'a'}
         else:
             with pytest.raises((ValueError, TypeError)):
                 strace.setup(self.draws, self.chain, good_vars)
@@ -183,9 +197,9 @@ class ModelBackendSampledTestCase:
             point1 = {varname: cls.expected[1][varname][idx, ...]
                       for varname in varnames}
             if cls.sampler_vars is not None:
-                stats1 = [dict((key, val[idx]) for key, val in stats.items())
+                stats1 = [{key: val[idx] for key, val in stats.items()}
                           for stats in cls.expected_stats[0]]
-                stats2 = [dict((key, val[idx]) for key, val in stats.items())
+                stats2 = [{key: val[idx] for key, val in stats.items()}
                           for stats in cls.expected_stats[1]]
                 strace0.record(point=point0, sampler_stats=stats1)
                 strace1.record(point=point1, sampler_stats=stats2)
@@ -233,7 +247,7 @@ class SamplingTestCase(ModelBackendSetupTestCase):
         point = {varname: np.tile(val, value.shape)
                  for varname, value in self.test_point.items()}
         if self.sampler_vars is not None:
-            stats = [dict((key, dtype(val)) for key, dtype in vars.items())
+            stats = [{key: dtype(val) for key, dtype in vars.items()}
                      for vars in self.sampler_vars]
             self.strace.record(point=point, sampler_stats=stats)
         else:

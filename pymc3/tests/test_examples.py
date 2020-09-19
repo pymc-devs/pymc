@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import matplotlib
 import numpy as np
 import pandas as pd
@@ -6,10 +20,14 @@ import theano.tensor as tt
 import pytest
 import theano
 from pymc3.theanof import floatX
+from packaging import version
 
 from .helpers import SeededTest
 
-matplotlib.use('Agg', warn=False)
+if version.parse(matplotlib.__version__) < version.parse('3.3'):
+    matplotlib.use('Agg', warn=False)
+else:
+    matplotlib.use('Agg')
 
 
 def get_city_data():
@@ -58,11 +76,11 @@ class TestARM12_6(SeededTest):
     def build_model(self):
         data = get_city_data()
 
-        self.obs_means = data.groupby('fips').lradon.mean().as_matrix()
+        self.obs_means = data.groupby('fips').lradon.mean().to_numpy()
 
-        lradon = data.lradon.as_matrix()
-        floor = data.floor.as_matrix()
-        group = data.group.as_matrix()
+        lradon = data.lradon.to_numpy()
+        floor = data.floor.to_numpy()
+        group = data.group.to_numpy()
 
         with pm.Model() as model:
             groupmean = pm.Normal('groupmean', 0, 10. ** -2.)
@@ -93,10 +111,10 @@ class TestARM12_6Uranium(SeededTest):
         data = get_city_data()
         self.obs_means = data.groupby('fips').lradon.mean()
 
-        lradon = data.lradon.as_matrix()
-        floor = data.floor.as_matrix()
-        group = data.group.as_matrix()
-        ufull = data.Uppm.as_matrix()
+        lradon = data.lradon.to_numpy()
+        floor = data.floor.to_numpy()
+        group = data.group.to_numpy()
+        ufull = data.Uppm.to_numpy()
 
         with pm.Model() as model:
             groupmean = pm.Normal('groupmean', 0, 10. ** -2.)
@@ -165,7 +183,7 @@ class TestDisasterModel(SeededTest):
         with model:
             # Initial values for stochastic nodes
             start = {'early_mean': 2., 'late_mean': 3.}
-            # Use slice sampler for means (other varibles auto-selected)
+            # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
             pm.summary(tr)
@@ -175,7 +193,7 @@ class TestDisasterModel(SeededTest):
         with model:
             # Initial values for stochastic nodes
             start = {'early_mean': 2., 'late_mean': 3.}
-            # Use slice sampler for means (other varibles auto-selected)
+            # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
             pm.summary(tr)
@@ -304,3 +322,46 @@ class TestRSV(SeededTest):
     def test_run(self):
         with self.build_model():
             pm.sample(50, step=[pm.NUTS(), pm.Metropolis()])
+
+
+class TestMultilevelNormal(SeededTest):
+    """
+    Toy three-level normal model sampled using MLDA. The finest model is a
+    Normal distribution with unknown mean and sigma=1.0 where we have only one
+    observed datum (y = 11.0). The coarse models are the same but with the observed
+    datum changed to y = 11.5 and y = 12.0. This is a very simple way to create
+    a 3-level system of "approximate" coarse models.
+    Normals with
+    """
+
+    def build_models(self):
+
+        np.random.seed(1234)
+        true_mean = 11.0
+        y = np.array([true_mean])
+
+        with pm.Model() as model_coarse_0:
+            sigma = 1.0
+            x_coeff = pm.Normal('x', true_mean, sigma=10.0)
+            pm.Normal('y', mu=x_coeff, sigma=sigma, observed=y + 1.0)
+
+        with pm.Model() as model_coarse_1:
+            sigma = 1.0
+            x_coeff = pm.Normal('x', true_mean, sigma=10.0)
+            pm.Normal('y', mu=x_coeff, sigma=sigma, observed=y + 0.5)
+
+        coarse_models = [model_coarse_0, model_coarse_1]
+
+        with pm.Model() as model:
+            sigma = 1.0
+            x_coeff = pm.Normal('x', true_mean, sigma=10.0)
+            pm.Normal('y', mu=x_coeff, sigma=sigma, observed=y)
+
+        return model, coarse_models
+
+    def test_run(self):
+        model, coarse_models = self.build_models()
+
+        with model:
+            step = pm.MLDA(subsampling_rates=2, coarse_models=coarse_models)
+            pm.sample(draws=50, chains=2, tune=50, step=step)

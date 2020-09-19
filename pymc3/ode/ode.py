@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import logging
 import numpy as np
 import scipy
@@ -11,7 +25,7 @@ floatX = theano.config.floatX
 
 
 class DifferentialEquation(theano.Op):
-    """
+    r"""
     Specify an ordinary differential equation
 
     .. math::
@@ -31,6 +45,9 @@ class DifferentialEquation(theano.Op):
         Number of parameters in the differential equation.
     t0 : float
         Time corresponding to the initial condition
+
+    Examples
+    --------
     
     .. code-block:: python
 
@@ -77,14 +94,18 @@ class DifferentialEquation(theano.Op):
         # Cache symbolic sensitivities by the hash of inputs
         self._apply_nodes = {}
         self._output_sensitivities = {}
-    
-    def _system(self, Y, t, p):
-        """This is the function that will be passed to odeint. Solves both ODE and sensitivities.
 
-        Args:
-            Y: augmented state vector (n_states + n_states + n_theta)
-            t: current time
-            p: parameter vector (y0, theta)
+    def _system(self, Y, t, p):
+        r"""This is the function that will be passed to odeint. Solves both ODE and sensitivities.
+
+        Parameters
+        ----------
+        Y : array
+            augmented state vector (n_states + n_states + n_theta)
+        t : float
+            current time
+        p : array
+            parameter vector (y0, theta)
         """
         dydt, ddt_dydp = self._augmented_func(Y[:self.n_states], t, p, Y[self.n_states:])
         derivatives = np.concatenate([dydt, ddt_dydp])
@@ -128,7 +149,7 @@ class DifferentialEquation(theano.Op):
         inputs = [y0, theta]
         for i, (input_val, itype) in enumerate(zip(inputs, self._itypes)):
             if not input_val.type == itype:
-                raise ValueError('Input {} of type {} does not have the expected type of {}'.format(i, input_val.type, itype))
+                raise ValueError(f'Input {i} of type {input_val.type} does not have the expected type of {itype}')
         
         # use default implementation to prepare symbolic outputs (via make_node)
         states, sens = super(theano.Op, self).__call__(y0, theta, **kwargs)

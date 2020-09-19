@@ -1,88 +1,74 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from collections import OrderedDict
 
 import numpy as np
 from scipy.special import logsumexp
-from fastprogress import progress_bar
-import multiprocessing as mp
-import warnings
 from theano import function as theano_function
+import theano.tensor as tt
 
 from ..model import modelcontext, Point
-from ..parallel_sampling import _cpu_count
-from ..theanof import inputvars, make_shared_replacements
-from ..vartypes import discrete_types
+from ..theanof import floatX, inputvars, make_shared_replacements, join_nonshared_inputs
 from ..sampling import sample_prior_predictive
-from ..theanof import floatX, join_nonshared_inputs
-from ..step_methods.arraystep import metrop_select
-from ..step_methods.metropolis import MultivariateNormalProposal
 from ..backends.ndarray import NDArray
-from ..backends.base import MultiTrace
-from ..util import get_untransformed_name, is_transformed_name
-
-EXPERIMENTAL_WARNING = (
-    "Warning: SMC-ABC methods are experimental step methods and not yet"
-    " recommended for use in PyMC3!"
-)
 
 
 class SMC:
     def __init__(
         self,
-        draws=1000,
+        draws=2000,
         kernel="metropolis",
         n_steps=25,
-        parallel=False,
         start=None,
-        cores=None,
         tune_steps=True,
         p_acc_rate=0.99,
         threshold=0.5,
-        epsilon=1.0,
-        dist_func="absolute_error",
-        sum_stat=False,
-        progressbar=False,
+        save_sim_data=False,
         model=None,
         random_seed=-1,
+        chain=0,
     ):
 
         self.draws = draws
         self.kernel = kernel
         self.n_steps = n_steps
-        self.parallel = parallel
         self.start = start
-        self.cores = cores
         self.tune_steps = tune_steps
         self.p_acc_rate = p_acc_rate
         self.threshold = threshold
-        self.epsilon = epsilon
-        self.dist_func = dist_func
-        self.sum_stat = sum_stat
-        self.progressbar = progressbar
+        self.save_sim_data = save_sim_data
         self.model = model
         self.random_seed = random_seed
+        self.chain = chain
 
         self.model = modelcontext(model)
 
         if self.random_seed != -1:
             np.random.seed(self.random_seed)
 
-        if self.cores is None:
-            self.cores = _cpu_count()
-
         self.beta = 0
         self.max_steps = n_steps
         self.proposed = draws * n_steps
         self.acc_rate = 1
         self.acc_per_chain = np.ones(self.draws)
-        self.model.marginal_log_likelihood = 0
         self.variables = inputvars(self.model.vars)
-        dimension = sum(v.dsize for v in self.variables)
-        self.scalings = np.ones(self.draws) * min(1, 2.38 ** 2 / dimension)
-        self.discrete = np.concatenate(
-            [[v.dtype in discrete_types] * (v.dsize or 1) for v in self.variables]
-        )
-        self.any_discrete = self.discrete.any()
-        self.all_discrete = self.discrete.all()
+        self.dimension = sum(v.dsize for v in self.variables)
+        self.scalings = np.ones(self.draws) * 2.38 / (self.dimension) ** 0.5
+        self.weights = np.ones(self.draws) / self.draws
+        self.log_marginal_likelihood = 0
+        self.sim_data = []
 
     def initialize_population(self):
         """
@@ -115,41 +101,43 @@ class SMC:
         Set up the likelihood logp function based on the chosen kernel
         """
         shared = make_shared_replacements(self.variables, self.model)
-        self.prior_logp = logp_forw([self.model.varlogpt], self.variables, shared)
 
         if self.kernel.lower() == "abc":
-            warnings.warn(EXPERIMENTAL_WARNING)
-            if len(self.model.observed_RVs) != 1:
-                warnings.warn("SMC-ABC only works properly with models with one observed variable")
+            factors = [var.logpt for var in self.model.free_RVs]
+            factors += [tt.sum(factor) for factor in self.model.potentials]
+            self.prior_logp_func = logp_forw([tt.sum(factors)], self.variables, shared)
             simulator = self.model.observed_RVs[0]
-            self.likelihood_logp = PseudoLikelihood(
-                self.epsilon,
+            distance = simulator.distribution.distance
+            sum_stat = simulator.distribution.sum_stat
+            self.likelihood_logp_func = PseudoLikelihood(
+                simulator.distribution.epsilon,
                 simulator.observations,
                 simulator.distribution.function,
+                [v.name for v in simulator.distribution.params],
                 self.model,
                 self.var_info,
-                self.dist_func,
-                self.sum_stat,
+                self.variables,
+                distance,
+                sum_stat,
+                self.draws,
+                self.save_sim_data,
             )
         elif self.kernel.lower() == "metropolis":
-            self.likelihood_logp = logp_forw([self.model.datalogpt], self.variables, shared)
+            self.prior_logp_func = logp_forw([self.model.varlogpt], self.variables, shared)
+            self.likelihood_logp_func = logp_forw([self.model.datalogpt], self.variables, shared)
 
     def initialize_logp(self):
         """
         initialize the prior and likelihood log probabilities
         """
-        if self.parallel and self.cores > 1:
-            self.pool = mp.Pool(processes=self.cores)
-            priors = self.pool.starmap(self.prior_logp, [(sample,) for sample in self.posterior])
-            likelihoods = self.pool.starmap(
-                self.likelihood_logp, [(sample,) for sample in self.posterior]
-            )
-        else:
-            priors = [self.prior_logp(sample) for sample in self.posterior]
-            likelihoods = [self.likelihood_logp(sample) for sample in self.posterior]
+        priors = [self.prior_logp_func(sample) for sample in self.posterior]
+        likelihoods = [self.likelihood_logp_func(sample) for sample in self.posterior]
 
-        self.priors = np.array(priors).squeeze()
-        self.likelihoods = np.array(likelihoods).squeeze()
+        self.prior_logp = np.array(priors).squeeze()
+        self.likelihood_logp = np.array(likelihoods).squeeze()
+
+        if self.save_sim_data:
+            self.sim_data = self.likelihood_logp_func.get_data()
 
     def update_weights_beta(self):
         """
@@ -158,11 +146,11 @@ class SMC:
         """
         low_beta = old_beta = self.beta
         up_beta = 2.0
-        rN = int(len(self.likelihoods) * self.threshold)
+        rN = int(len(self.likelihood_logp) * self.threshold)
 
         while up_beta - low_beta > 1e-6:
             new_beta = (low_beta + up_beta) / 2.0
-            log_weights_un = (new_beta - old_beta) * self.likelihoods
+            log_weights_un = (new_beta - old_beta) * self.likelihood_logp
             log_weights = log_weights_un - logsumexp(log_weights_un)
             ESS = int(np.exp(-logsumexp(log_weights * 2)))
             if ESS == rN:
@@ -173,13 +161,10 @@ class SMC:
                 low_beta = new_beta
         if new_beta >= 1:
             new_beta = 1
-            log_weights_un = (new_beta - old_beta) * self.likelihoods
+            log_weights_un = (new_beta - old_beta) * self.likelihood_logp
             log_weights = log_weights_un - logsumexp(log_weights_un)
 
-        ll_max = np.max(self.likelihoods)
-        self.model.marginal_log_likelihood += ll_max + np.log(
-            np.exp(log_weights_un - ll_max).mean()
-        )
+        self.log_marginal_likelihood += logsumexp(log_weights_un) - np.log(self.draws)
         self.beta = new_beta
         self.weights = np.exp(log_weights)
 
@@ -190,23 +175,26 @@ class SMC:
         resampling_indexes = np.random.choice(
             np.arange(self.draws), size=self.draws, p=self.weights
         )
+
         self.posterior = self.posterior[resampling_indexes]
-        self.priors = self.priors[resampling_indexes]
-        self.likelihoods = self.likelihoods[resampling_indexes]
-        self.tempered_logp = self.priors + self.likelihoods * self.beta
+        self.prior_logp = self.prior_logp[resampling_indexes]
+        self.likelihood_logp = self.likelihood_logp[resampling_indexes]
+        self.posterior_logp = self.prior_logp + self.likelihood_logp * self.beta
         self.acc_per_chain = self.acc_per_chain[resampling_indexes]
         self.scalings = self.scalings[resampling_indexes]
+        if self.save_sim_data:
+            self.sim_data = self.sim_data[resampling_indexes]
 
     def update_proposal(self):
         """
         Update proposal based on the covariance matrix from tempered posterior
         """
-        cov = np.cov(self.posterior, bias=False, rowvar=0)
+        cov = np.cov(self.posterior, ddof=0, aweights=self.weights, rowvar=0)
         cov = np.atleast_2d(cov)
         cov += 1e-6 * np.eye(cov.shape[0])
         if np.isnan(cov).any() or np.isinf(cov).any():
             raise ValueError('Sample covariances not valid! Likely "draws" is too small!')
-        self.proposal = MultivariateNormalProposal(cov)
+        self.cov = cov
 
     def tune(self):
         """
@@ -226,53 +214,32 @@ class SMC:
         self.proposed = self.draws * self.n_steps
 
     def mutate(self):
-        """
-        Perform mutation step, i.e. apply selected kernel
-        """
-        parameters = (
-            self.proposal,
-            self.scalings,
-            self.any_discrete,
-            self.all_discrete,
-            self.discrete,
-            self.n_steps,
-            self.prior_logp,
-            self.likelihood_logp,
-            self.beta,
-        )
-        if self.parallel and self.cores > 1:
-            results = self.pool.starmap(
-                metrop_kernel,
-                [
-                    (
-                        self.posterior[draw],
-                        self.tempered_logp[draw],
-                        self.priors[draw],
-                        self.likelihoods[draw],
-                        draw,
-                        *parameters,
-                    )
-                    for draw in range(self.draws)
-                ],
+        ac_ = np.empty((self.n_steps, self.draws))
+
+        proposals = (
+            np.random.multivariate_normal(
+                np.zeros(self.dimension), self.cov, size=(self.n_steps, self.draws)
             )
-        else:
-            results = [
-                metrop_kernel(
-                    self.posterior[draw],
-                    self.tempered_logp[draw],
-                    self.priors[draw],
-                    self.likelihoods[draw],
-                    draw,
-                    *parameters
-                )
-                for draw in progress_bar(range(self.draws), display=self.progressbar)
-            ]
-        posterior, acc_list, priors, likelihoods = zip(*results)
-        self.posterior = np.array(posterior)
-        self.priors = np.array(priors)
-        self.likelihoods = np.array(likelihoods)
-        self.acc_per_chain = np.array(acc_list)
-        self.acc_rate = np.mean(acc_list)
+            * self.scalings[:, None]
+        )
+        log_R = np.log(np.random.rand(self.n_steps, self.draws))
+
+        for n_step in range(self.n_steps):
+            proposal = floatX(self.posterior + proposals[n_step])
+            ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
+            pl = np.array([self.prior_logp_func(prop) for prop in proposal])
+            proposal_logp = pl + ll * self.beta
+            accepted = log_R[n_step] < (proposal_logp - self.posterior_logp)
+            ac_[n_step] = accepted
+            self.posterior[accepted] = proposal[accepted]
+            self.posterior_logp[accepted] = proposal_logp[accepted]
+            self.prior_logp[accepted] = pl[accepted]
+            self.likelihood_logp[accepted] = ll[accepted]
+            if self.save_sim_data:
+                self.sim_data[accepted] = self.likelihood_logp_func.get_data()[accepted]
+
+        self.acc_per_chain = np.mean(ac_, axis=0)
+        self.acc_rate = np.mean(ac_)
 
     def posterior_to_trace(self):
         """
@@ -283,7 +250,7 @@ class SMC:
 
         with self.model:
             strace = NDArray(self.model)
-            strace.setup(lenght_pos, 0)
+            strace.setup(lenght_pos, self.chain)
         for i in range(lenght_pos):
             value = []
             size = 0
@@ -291,60 +258,8 @@ class SMC:
                 shape, new_size = self.var_info[var]
                 value.append(self.posterior[i][size : size + new_size].reshape(shape))
                 size += new_size
-            strace.record({k: v for k, v in zip(varnames, value)})
-        return MultiTrace([strace])
-
-
-def metrop_kernel(
-    q_old,
-    old_tempered_logp,
-    old_prior,
-    old_likelihood,
-    draw,
-    proposal,
-    scalings,
-    any_discrete,
-    all_discrete,
-    discrete,
-    n_steps,
-    prior_logp,
-    likelihood_logp,
-    beta,
-):
-    """
-    Metropolis kernel
-    """
-    deltas = np.squeeze(proposal(n_steps) * scalings[draw])
-
-    accepted = 0
-    for n_step in range(n_steps):
-        delta = deltas[n_step]
-
-        if any_discrete:
-            if all_discrete:
-                delta = np.round(delta, 0).astype("int64")
-                q_old = q_old.astype("int64")
-                q_new = (q_old + delta).astype("int64")
-            else:
-                delta[discrete] = np.round(delta[discrete], 0)
-                q_new = floatX(q_old + delta)
-        else:
-            q_new = floatX(q_old + delta)
-
-        ll = likelihood_logp(q_new)
-        pl = prior_logp(q_new)
-
-        new_tempered_logp = pl + ll * beta
-
-        q_old, accept = metrop_select(new_tempered_logp - old_tempered_logp, q_new, q_old)
-
-        if accept:
-            accepted += 1
-            old_prior = pl
-            old_likelihood = ll
-            old_tempered_logp = new_tempered_logp
-
-    return q_old, accepted / n_steps, old_prior, old_likelihood
+            strace.record(point={k: v for k, v in zip(varnames, value)})
+        return strace
 
 
 def logp_forw(out_vars, vars, shared):
@@ -352,11 +267,11 @@ def logp_forw(out_vars, vars, shared):
 
     Parameters
     ----------
-    out_vars : List
+    out_vars: List
         containing :class:`pymc3.Distribution` for the output variables
-    vars : List
+    vars: List
         containing :class:`pymc3.Distribution` for the input variables
-    shared : List
+    shared: List
         containing :class:`theano.tensor.Tensor` for depended shared data
     """
     out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
@@ -370,72 +285,88 @@ class PseudoLikelihood:
     Pseudo Likelihood
     """
 
-    def __init__(self, epsilon, observations, function, model, var_info, distance, sum_stat):
+    def __init__(
+        self,
+        epsilon,
+        observations,
+        function,
+        params,
+        model,
+        var_info,
+        variables,
+        distance,
+        sum_stat,
+        size,
+        save,
+    ):
         """
-        epsilon : float
+        epsilon: float
             Standard deviation of the gaussian pseudo likelihood.
-        observations : array-like
+        observations: array-like
             observed data
-        function : python function
+        function: python function
             data simulator
-        model : PyMC3 model
-        var_info : dict
+        params: list
+            names of the variables parameterizing the simulator.
+        model: PyMC3 model
+        var_info: dict
             generated by ``SMC.initialize_population``
-        distance : str
-            Distance function. Available options are ``absolute_error`` (default) and
-            ``sum_of_squared_distance``.
-        sum_stat : bool
-            Whether to use or not a summary statistics.
+        variables: list
+            Model variables.
+        distance : str or callable
+            Distance function.
+        sum_stat: str or callable
+            Summary statistics.
+        size : int
+            Number of simulated datasets to save. When this number is exceeded the counter will be
+            restored to zero and it will start saving again.
+        save : bool
+            whether to save or not the simulated data.
         """
         self.epsilon = epsilon
-        self.observations = observations
         self.function = function
+        self.params = params
         self.model = model
         self.var_info = var_info
-        self.kernel = self.gauss_kernel
-        self.dist_func = distance
+        self.variables = variables
+        self.varnames = [v.name for v in self.variables]
+        self.distance = distance
         self.sum_stat = sum_stat
+        self.unobserved_RVs = [v.name for v in self.model.unobserved_RVs]
+        self.get_unobserved_fn = self.model.fastfn(self.model.unobserved_RVs)
+        self.size = size
+        self.save = save
+        self.lista = []
 
-        if distance == "absolute_error":
-            self.dist_func = self.absolute_error
-        elif distance == "sum_of_squared_distance":
-            self.dist_func = self.sum_of_squared_distance
-        else:
-            raise ValueError("Distance metric not understood")
+        self.observations = self.sum_stat(observations)
 
     def posterior_to_function(self, posterior):
-        model = self.model
         var_info = self.var_info
-        parameters = {}
+
+        varvalues = []
+        samples = {}
         size = 0
-        for var, values in var_info.items():
-            shape, new_size = values
-            value = posterior[size : size + new_size].reshape(shape)
-            if is_transformed_name(var):
-                var = get_untransformed_name(var)
-                value = model[var].transformation.backward_val(value)
-            parameters[var] = value
+        for var in self.variables:
+            shape, new_size = var_info[var.name]
+            varvalues.append(posterior[size : size + new_size].reshape(shape))
             size += new_size
-        return parameters
+        point = {k: v for k, v in zip(self.varnames, varvalues)}
+        for varname, value in zip(self.unobserved_RVs, self.get_unobserved_fn(point)):
+            if varname in self.params:
+                samples[varname] = value
+        return samples
 
-    def gauss_kernel(self, value):
-        epsilon = self.epsilon
-        return (-(value ** 2) / epsilon ** 2 + np.log(1 / (2 * np.pi * epsilon ** 2))) / 2.0
+    def save_data(self, sim_data):
+        if len(self.lista) == self.size:
+            self.lista = []
+        self.lista.append(sim_data)
 
-    def absolute_error(self, a, b):
-        if self.sum_stat:
-            return np.atleast_2d(np.abs(a.mean() - b.mean()))
-        else:
-            return np.mean(np.atleast_2d(np.abs(a - b)))
-
-    def sum_of_squared_distance(self, a, b):
-        if self.sum_stat:
-            return np.sum(np.atleast_2d((a.mean() - b.mean()) ** 2))
-        else:
-            return np.mean(np.sum(np.atleast_2d((a - b) ** 2)))
+    def get_data(self):
+        return np.array(self.lista)
 
     def __call__(self, posterior):
         func_parameters = self.posterior_to_function(posterior)
         sim_data = self.function(**func_parameters)
-        value = self.dist_func(self.observations, sim_data)
-        return self.kernel(value)
+        if self.save:
+            self.save_data(sim_data)
+        return self.distance(self.epsilon, self.observations, self.sum_stat(sim_data))

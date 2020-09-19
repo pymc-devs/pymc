@@ -1,7 +1,22 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from .compound import CompoundStep
 from ..model import modelcontext
 from ..theanof import inputvars
 from ..blocking import ArrayOrdering, DictToArrayBijection
+from ..util import get_var_name
 import numpy as np
 from numpy.random import uniform
 from enum import IntEnum, unique
@@ -114,7 +129,7 @@ class ArrayStep(BlockedStep):
 
     Parameters
     ----------
-    vars : list
+    vars: list
         List of variables for sampler.
     fs: list of logp theano functions
     allvars: Boolean (default False)
@@ -155,13 +170,13 @@ class ArrayStepShared(BlockedStep):
         """
         Parameters
         ----------
-        vars : list of sampling variables
-        shared : dict of theano variable -> shared variable
-        blocked : Boolean (default True)
+        vars: list of sampling variables
+        shared: dict of theano variable -> shared variable
+        blocked: Boolean (default True)
         """
         self.vars = vars
         self.ordering = ArrayOrdering(vars)
-        self.shared = {str(var): shared for var, shared in shared.items()}
+        self.shared = {get_var_name(var): shared for var, shared in shared.items()}
         self.blocked = blocked
         self.bij = None
 
@@ -190,9 +205,9 @@ class PopulationArrayStepShared(ArrayStepShared):
         """
         Parameters
         ----------
-        vars : list of sampling variables
-        shared : dict of theano variable -> shared variable
-        blocked : Boolean (default True)
+        vars: list of sampling variables
+        shared: dict of theano variable -> shared variable
+        blocked: Boolean (default True)
         """
         self.population = None
         self.this_chain = None
@@ -204,9 +219,9 @@ class PopulationArrayStepShared(ArrayStepShared):
 
         Parameters
         ----------
-        population : list of Points. (The elements of this list must be
+        population: list of Points. (The elements of this list must be
             replaced with current chain states in every iteration.)
-        chain_index : int of the index of this sampler in the population
+        chain_index: int of the index of this sampler in the population
         """
         self.population = population
         self.this_chain = chain_index
@@ -221,13 +236,16 @@ class PopulationArrayStepShared(ArrayStepShared):
 
 class GradientSharedStep(BlockedStep):
     def __init__(self, vars, model=None, blocked=True,
-                 dtype=None, **theano_kwargs):
+                 dtype=None, logp_dlogp_func=None, **theano_kwargs):
         model = modelcontext(model)
         self.vars = vars
         self.blocked = blocked
 
-        func = model.logp_dlogp_function(
-            vars, dtype=dtype, **theano_kwargs)
+        if logp_dlogp_func is None:
+            func = model.logp_dlogp_function(
+                vars, dtype=dtype, **theano_kwargs)
+        else:
+            func = logp_dlogp_func
 
         # handle edge case discovered in #2948
         try:
@@ -235,6 +253,8 @@ class GradientSharedStep(BlockedStep):
             q = func.dict_to_array(model.test_point)
             logp, dlogp = func(q)
         except ValueError:
+            if logp_dlogp_func is not None:
+                raise
             theano_kwargs.update(mode='FAST_COMPILE')
             func = model.logp_dlogp_function(
                 vars, dtype=dtype, **theano_kwargs)
@@ -264,9 +284,9 @@ def metrop_select(mr, q, q0):
 
     Parameters
     ----------
-    mr : float, Metropolis acceptance rate
-    q : proposed sample
-    q0 : current sample
+    mr: float, Metropolis acceptance rate
+    q: proposed sample
+    q0: current sample
 
     Returns
     -------

@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 from numpy.testing import assert_equal
 
@@ -84,7 +98,7 @@ class TestGLM(SeededTest):
         with Model() as model:
             GLM.from_formula('y ~ x', self.data_logistic2,
                     family=families.Binomial(priors={'n': self.data_logistic2['n']}))
-            trace = sample(1000, progressbar=False,
+            trace = sample(1000, progressbar=False, init='adapt_diag',
                            random_seed=self.random_seed)
 
             assert round(abs(np.mean(trace['Intercept'])-self.intercept), 1) == 0

@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import scipy.sparse
 
@@ -225,7 +239,7 @@ def test_full_adapt_adaptation_window(seed=8978):
     for i in range(window + 1):
         pot.update(np.random.randn(2), None, True)
     assert pot._previous_update == window
-    assert pot._adaptation_window == window * pot._adaptation_window_multiplier
+    assert pot.adaptation_window == window * pot.adaptation_window_multiplier
 
     pot = quadpotential.QuadPotentialFullAdapt(
         2, np.zeros(2), np.eye(2), 1, adaptation_window=window
@@ -233,7 +247,7 @@ def test_full_adapt_adaptation_window(seed=8978):
     for i in range(window + 1):
         pot.update(np.random.randn(2), None, True)
     assert pot._previous_update == window
-    assert pot._adaptation_window == window * pot._adaptation_window_multiplier
+    assert pot.adaptation_window == window * pot.adaptation_window_multiplier
 
 
 def test_full_adapt_not_invertible():
@@ -269,3 +283,9 @@ def test_full_adapt_sampling(seed=289586):
         pymc3.sample(
             draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1
         )
+
+        
+def test_issue_3965():
+    with pymc3.Model():
+        pymc3.Normal('n')
+        pymc3.sample(100, tune=300, chains=1, init='advi+adapt_diag_grad')

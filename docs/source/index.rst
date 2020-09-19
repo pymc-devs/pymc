@@ -127,22 +127,26 @@
 
         <div class="ui bottom attached segment">
             <h2 class="ui dividing header">Support and sponsors</h2>
-            <p>PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3 financially, you <a href="https://numfocus.salsalabs.org/donate-to-pymc3/index.html">can donate here</a>.</p>
+            <p>PyMC3 is a non-profit project under NumFOCUS umbrella.
+            If you value PyMC and want to support its development, consider
+            <a href="https://numfocus.org/donate-to-pymc3">donating to the project</a> or
+            read our <a href="https://docs.pymc.io/about.html#support">support PyMC3 page</a>.
+            </p>
 
             <div class="ui equal width grid">
                 <div class="column">
                     <a href="https://numfocus.org/">
-                        <img class="ui image" src="https://www.numfocus.org/wp-content/uploads/2017/03/1457562110.png"/>
+                        <img class="ui image" height="120" src="https://www.numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png"/>
                     </a>
                 </div>
                 <div class="column">
                     <a href="https://quantopian.com">
-                        <img class="ui image" src="https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg"/>
+                        <img class="ui image" height="120" src="https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg"/>
                     </a>
                 </div>
                 <div class="column">
                     <a href="https://odsc.com/">
-                        <img class="ui image" src="https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/odsc_logo.png"/>
+                        <img class="ui image" height="120" src="https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/odsc_logo.png"/>
                     </a>
                 </div>
             </div>

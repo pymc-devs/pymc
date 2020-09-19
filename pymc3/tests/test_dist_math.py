@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import numpy.testing as npt
 import theano.tensor as tt
@@ -10,7 +24,9 @@ import pytest
 from ..theanof import floatX
 from ..distributions import Discrete
 from ..distributions.dist_math import (
-    bound, factln, alltrue_scalar, MvNormalLogp, SplineWrapper, i0e)
+    bound, factln, alltrue_scalar, MvNormalLogp, SplineWrapper, i0e,
+    clipped_beta_rvs,
+)
 
 
 def test_bound():
@@ -110,11 +126,11 @@ def test_multinomial_bound():
     n = x.sum()
 
     with pm.Model() as modelA:
-        p_a = pm.Dirichlet('p', floatX(np.ones(2)))
+        p_a = pm.Dirichlet('p', floatX(np.ones(2)), shape=(2,))
         MultinomialA('x', n, p_a, observed=x)
 
     with pm.Model() as modelB:
-        p_b = pm.Dirichlet('p', floatX(np.ones(2)))
+        p_b = pm.Dirichlet('p', floatX(np.ones(2)), shape=(2,))
         MultinomialB('x', n, p_b, observed=x)
 
     assert np.isclose(modelA.logp({'p_stickbreaking__': [0]}),
@@ -202,3 +218,11 @@ class TestI0e:
         utt.verify_grad(i0e, [-2.])
         utt.verify_grad(i0e, [[0.5, -2.]])
         utt.verify_grad(i0e, [[[0.5, -2.]]])
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "float128"])
+def test_clipped_beta_rvs(dtype):
+    # Verify that the samples drawn from the beta distribution are never
+    # equal to zero or one (issue #3898)
+    values = clipped_beta_rvs(0.01, 0.01, size=1000000, dtype=dtype)
+    assert not (np.any(values == 0) or np.any(values == 1))

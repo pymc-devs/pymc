@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -52,9 +66,20 @@ class TestMixture(SeededTest):
         cls.pois_mu = np.array([5., 20.])
         cls.pois_x = generate_poisson_mixture_data(cls.pois_w, cls.pois_mu, size=1000)
 
+    def test_dimensions(self):
+        a1 = Normal.dist(mu=0, sigma=1)
+        a2 = Normal.dist(mu=10, sigma=1)
+        mix = Mixture.dist(w=np.r_[0.5, 0.5], comp_dists=[a1, a2])
+
+        assert mix.mode.ndim == 0
+        assert mix.logp(0.0).ndim == 0
+
+        value = np.r_[0.0, 1.0, 2.0]
+        assert mix.logp(value).ndim == 1
+
     def test_mixture_list_of_normals(self):
         with Model() as model:
-            w = Dirichlet('w', floatX(np.ones_like(self.norm_w)))
+            w = Dirichlet('w', floatX(np.ones_like(self.norm_w)), shape=self.norm_w.size)
             mu = Normal('mu', 0., 10., shape=self.norm_w.size)
             tau = Gamma('tau', 1., 1., shape=self.norm_w.size)
             Mixture('x_obs', w,
@@ -73,7 +98,7 @@ class TestMixture(SeededTest):
 
     def test_normal_mixture(self):
         with Model() as model:
-            w = Dirichlet('w', floatX(np.ones_like(self.norm_w)))
+            w = Dirichlet('w', floatX(np.ones_like(self.norm_w)), shape=self.norm_w.size)
             mu = Normal('mu', 0., 10., shape=self.norm_w.size)
             tau = Gamma('tau', 1., 1., shape=self.norm_w.size)
             NormalMixture('x_obs', w, mu, tau=tau, observed=self.norm_x)
@@ -110,7 +135,7 @@ class TestMixture(SeededTest):
         with Model() as model0:
             mus = Normal('mus', shape=comp_shape)
             taus = Gamma('taus', alpha=1, beta=1, shape=comp_shape)
-            ws = Dirichlet('ws', np.ones(ncomp))
+            ws = Dirichlet('ws', np.ones(ncomp), shape=(ncomp,))
             mixture0 = NormalMixture('m', w=ws, mu=mus, tau=taus, shape=nd,
                                      comp_shape=comp_shape)
             obs0 = NormalMixture('obs', w=ws, mu=mus, tau=taus, shape=nd,
@@ -120,7 +145,7 @@ class TestMixture(SeededTest):
         with Model() as model1:
             mus = Normal('mus', shape=comp_shape)
             taus = Gamma('taus', alpha=1, beta=1, shape=comp_shape)
-            ws = Dirichlet('ws', np.ones(ncomp))
+            ws = Dirichlet('ws', np.ones(ncomp), shape=(ncomp,))
             comp_dist = [Normal.dist(mu=mus[..., i], tau=taus[..., i],
                                      shape=nd)
                          for i in range(ncomp)]
@@ -138,7 +163,7 @@ class TestMixture(SeededTest):
             # comp_dists.
             mus = Normal('mus', shape=comp_shape)
             taus = Gamma('taus', alpha=1, beta=1, shape=comp_shape)
-            ws = Dirichlet('ws', np.ones(ncomp))
+            ws = Dirichlet('ws', np.ones(ncomp), shape=(ncomp,))
             if len(nd) > 1:
                 if nd[-1] != ncomp:
                     with pytest.raises(ValueError):
@@ -183,7 +208,7 @@ class TestMixture(SeededTest):
 
     def test_poisson_mixture(self):
         with Model() as model:
-            w = Dirichlet('w', floatX(np.ones_like(self.pois_w)))
+            w = Dirichlet('w', floatX(np.ones_like(self.pois_w)), shape=self.pois_w.shape)
             mu = Gamma('mu', 1., 1., shape=self.pois_w.size)
             Mixture('x_obs', w, Poisson.dist(mu), observed=self.pois_x)
             step = Metropolis()
@@ -199,7 +224,7 @@ class TestMixture(SeededTest):
 
     def test_mixture_list_of_poissons(self):
         with Model() as model:
-            w = Dirichlet('w', floatX(np.ones_like(self.pois_w)))
+            w = Dirichlet('w', floatX(np.ones_like(self.pois_w)), shape=self.pois_w.shape)
             mu = Gamma('mu', 1., 1., shape=self.pois_w.size)
             Mixture('x_obs', w,
                     [Poisson.dist(mu[0]), Poisson.dist(mu[1])],
@@ -222,7 +247,7 @@ class TestMixture(SeededTest):
         cov2 = np.diag([2.5, 3.5])
         obs = np.asarray([[.5, .5], mu1, mu2])
         with Model() as model:
-            w = Dirichlet('w', floatX(np.ones(2)), transform=None)
+            w = Dirichlet('w', floatX(np.ones(2)), transform=None, shape=(2,))
             mvncomp1 = MvNormal.dist(mu=mu1, cov=cov1)
             mvncomp2 = MvNormal.dist(mu=mu2, cov=cov2)
             y = Mixture('x_obs', w, [mvncomp1, mvncomp2],
@@ -238,7 +263,7 @@ class TestMixture(SeededTest):
         # check logp of mixture
         testpoint = model.test_point
         mixlogp_st = logsumexp(np.log(testpoint['w']) + complogp_st,
-                               axis=-1, keepdims=True)
+                               axis=-1, keepdims=False)
         assert_allclose(y.logp_elemwise(testpoint),
                         mixlogp_st)
 
@@ -266,13 +291,13 @@ class TestMixture(SeededTest):
                 sigma=1,
                 shape=nbr)
             # weight vector for the mixtures
-            g_w = Dirichlet('g_w', a=floatX(np.ones(nbr)*0.0000001), transform=None)
-            l_w = Dirichlet('l_w', a=floatX(np.ones(nbr)*0.0000001), transform=None)
+            g_w = Dirichlet('g_w', a=floatX(np.ones(nbr)*0.0000001), transform=None, shape=(nbr,))
+            l_w = Dirichlet('l_w', a=floatX(np.ones(nbr)*0.0000001), transform=None, shape=(nbr,))
             # mixture components
             g_mix = Mixture.dist(w=g_w, comp_dists=g_comp)
             l_mix = Mixture.dist(w=l_w, comp_dists=l_comp)
             # mixture of mixtures
-            mix_w = Dirichlet('mix_w', a=floatX(np.ones(2)), transform=None)
+            mix_w = Dirichlet('mix_w', a=floatX(np.ones(2)), transform=None, shape=(2,))
             mix = Mixture('mix', w=mix_w,
                           comp_dists=[g_mix, l_mix],
                           observed=np.exp(self.norm_x))
@@ -307,7 +332,7 @@ class TestMixture(SeededTest):
             complogp_mix = np.concatenate((mixlogp1, mixlogp2), axis=1)
             mixmixlogpg = logsumexp(np.log(point['mix_w']).astype(floatX) +
                                     complogp_mix,
-                                    axis=-1, keepdims=True)
+                                    axis=-1, keepdims=False)
             return priorlogp, mixmixlogpg
 
         value = np.exp(self.norm_x)[:, None]
@@ -353,7 +378,7 @@ class TestMixture(SeededTest):
         X, y = build_toy_dataset(N, K)
 
         with pm.Model() as model:
-            pi = pm.Dirichlet('pi', np.ones(K))
+            pi = pm.Dirichlet('pi', np.ones(K), shape=(K,))
 
             comp_dist = []
             mu = []

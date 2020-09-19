@@ -1,10 +1,24 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import theano
 import theano.tensor as tt
 
 
 def make_sens_ic(n_states, n_theta, floatX):
-        """
+        r"""
         The sensitivity matrix will always have consistent form. (n_states, n_states + n_theta)
 
         If the first n_states entries of the parameters vector in the simulate call
@@ -55,16 +69,16 @@ def augment_system(ode_func, n_states, n_theta):
 
     Parameters
     ----------
-    ode_func : function
+    ode_func: function
         Differential equation.  Returns array-like.
-    n_states : int
+    n_states: int
         Number of rows of the sensitivity matrix. (n_states)
-    n_theta : int
+    n_theta: int
         Number of ODE parameters
 
     Returns
     -------
-    system : function
+    system: function
         Augemted system of differential equations.
     """
 

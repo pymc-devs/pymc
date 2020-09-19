@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pandas as pd
 import numpy as np
 import theano.tensor as tt
@@ -19,8 +33,8 @@ def any_to_tensor_and_labels(x, labels=None):
 
     Parameters
     ----------
-    x : np.ndarray | pd.DataFrame | tt.Variable | dict | list
-    labels : list - names for columns of output tensor
+    x: np.ndarray | pd.DataFrame | tt.Variable | dict | list
+    labels: list - names for columns of output tensor
 
     Returns
     -------
@@ -34,7 +48,7 @@ def any_to_tensor_and_labels(x, labels=None):
     if isinstance(x, pd.DataFrame):
         if not labels:
             labels = x.columns
-        x = x.as_matrix()
+        x = x.to_numpy()
 
     # pandas.Series
     # there can still be a label
@@ -42,7 +56,7 @@ def any_to_tensor_and_labels(x, labels=None):
     elif isinstance(x, pd.Series):
         if not labels:
             labels = [x.name]
-        x = x.as_matrix()[:, None]
+        x = x.to_numpy()[:, None]
 
     # dict
     # labels are keys,
@@ -52,7 +66,7 @@ def any_to_tensor_and_labels(x, labels=None):
         try:
             x = pd.DataFrame.from_dict(x)
             labels = x.columns
-            x = x.as_matrix()
+            x = x.to_numpy()
         # some types fail there
         # another approach is to construct
         # variable by hand
@@ -71,7 +85,7 @@ def any_to_tensor_and_labels(x, labels=None):
     elif not isinstance(x, tt.Variable):
         x = np.asarray(x)
         if x.ndim == 0:
-            raise ValueError('Cannot use scalars')
+            raise ValueError("Cannot use scalars")
         elif x.ndim == 1:
             x = x[:, None]
     # something really strange goes here,
@@ -80,28 +94,26 @@ def any_to_tensor_and_labels(x, labels=None):
     elif labels is not None:
         x = tt.as_tensor_variable(x)
         if x.ndim == 0:
-            raise ValueError('Cannot use scalars')
+            raise ValueError("Cannot use scalars")
         elif x.ndim == 1:
             x = x[:, None]
-    else:   # trust input
+    else:  # trust input
         pass
     # we should check that we can extract labels
     if labels is None and not isinstance(x, tt.Variable):
-        labels = ['x%d' % i for i in range(x.shape[1])]
+        labels = ["x%d" % i for i in range(x.shape[1])]
     # for theano variables we should have labels from user
     elif labels is None:
-        raise ValueError('Please provide labels as '
-                         'we cannot infer shape of input')
-    else:   # trust labels, user knows what he is doing
+        raise ValueError("Please provide labels as " "we cannot infer shape of input")
+    else:  # trust labels, user knows what he is doing
         pass
     # it's time to check shapes if we can
     if not isinstance(x, tt.Variable):
         if not len(labels) == x.shape[1]:
             raise ValueError(
-                'Please provide full list '
-                'of labels for coefficients, '
-                'got len(labels)=%d instead of %d'
-                % (len(labels), x.shape[1])
+                "Please provide full list "
+                "of labels for coefficients, "
+                "got len(labels)=%d instead of %d" % (len(labels), x.shape[1])
             )
     else:
         # trust labels, as we raised an
@@ -109,7 +121,7 @@ def any_to_tensor_and_labels(x, labels=None):
         pass
     # convert labels to list
     if isinstance(labels, pd.RangeIndex):
-        labels = ['x%d' % i for i in labels]
+        labels = ["x%d" % i for i in labels]
     # maybe it was a tuple ot whatever
     elif not isinstance(labels, list):
         labels = list(labels)
@@ -118,7 +130,7 @@ def any_to_tensor_and_labels(x, labels=None):
         x = tt.as_tensor_variable(x)
         # finally check dimensions
         if x.ndim == 0:
-            raise ValueError('Cannot use scalars')
+            raise ValueError("Cannot use scalars")
         elif x.ndim == 1:
             x = x[:, None]
     return x, labels

@@ -1,6 +1,20 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 import theano
-from theano import theano, scalar, tensor as tt
+from theano import scalar, tensor as tt
 from theano.configparser import change_flags
 from theano.gof import Op
 from theano.gof.graph import inputs
@@ -34,11 +48,11 @@ def inputvars(a):
 
     Parameters
     ----------
-        a : theano variable
+        a: theano variable
 
     Returns
     -------
-        r : list of tensor variables that are inputs
+        r: list of tensor variables that are inputs
     """
     return [v for v in inputs(makeiter(a)) if isinstance(v, tt.TensorVariable)]
 
@@ -49,11 +63,11 @@ def cont_inputs(f):
 
     Parameters
     ----------
-        a : theano variable
+        a: theano variable
 
     Returns
     -------
-        r : list of tensor variables that are continuous inputs
+        r: list of tensor variables that are continuous inputs
     """
     return typefilter(inputvars(f), continuous_types)
 
@@ -215,8 +229,8 @@ def make_shared_replacements(vars, model):
 
     Parameters
     ----------
-    vars : list of variables not to make shared
-    model : model
+    vars: list of variables not to make shared
+    model: model
 
     Returns
     -------
@@ -232,14 +246,14 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
 
     Parameters
     ----------
-    xs : list of theano tensors
-    vars : list of variables to join
+    xs: list of theano tensors
+    vars: list of variables to join
 
     Returns
     -------
     tensors, inarray
-    tensors : list of same tensors but with inarray as input
-    inarray : vector of inputs
+    tensors: list of same tensors but with inarray as input
+    inarray: vector of inputs
     """
     if not vars:
         raise ValueError('Empty list of variables.')
@@ -287,7 +301,7 @@ class CallableTensor:
 
         Parameters
         ----------
-        input : TensorVariable
+        input: TensorVariable
         """
         oldinput, = inputvars(self.tensor)
         return theano.clone(self.tensor, {oldinput: input}, strict=False)
@@ -303,17 +317,17 @@ class GeneratorOp(Op):
 
     __call__ creates TensorVariable
         It has 2 new methods
-        - var.set_gen(gen) : sets new generator
-        - var.set_default(value) : sets new default value (None erases default value)
+        - var.set_gen(gen): sets new generator
+        - var.set_default(value): sets new default value (None erases default value)
 
     If generator is exhausted, variable will produce default value if it is not None,
     else raises `StopIteration` exception that can be caught on runtime.
 
     Parameters
     ----------
-    gen : generator that implements __next__ (py3) or next (py2) method
+    gen: generator that implements __next__ (py3) or next (py2) method
         and yields np.arrays with same types
-    default : np.array with the same type as generator produces
+    default: np.array with the same type as generator produces
     """
     __props__ = ('generator',)
 
@@ -367,16 +381,16 @@ def generator(gen, default=None):
 
     Parameters
     ----------
-    gen : generator that implements __next__ (py3) or next (py2) method
+    gen: generator that implements __next__ (py3) or next (py2) method
         and yields np.arrays with same types
-    default : np.array with the same type as generator produces
+    default: np.array with the same type as generator produces
 
     Returns
     -------
     TensorVariable
         It has 2 new methods
-        - var.set_gen(gen) : sets new generator
-        - var.set_default(value) : sets new default value (None erases default value)
+        - var.set_gen(gen): sets new generator
+        - var.set_default(value): sets new default value (None erases default value)
     """
     return GeneratorOp(gen, default)()
 
@@ -390,7 +404,7 @@ def tt_rng(random_seed=None):
 
     Parameters
     ----------
-    random_seed : int
+    random_seed: int
         If not None
         returns *new* theano random generator without replacing package global one
 
@@ -413,7 +427,7 @@ def set_tt_rng(new_rng):
 
     Parameters
     ----------
-    new_rng : `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
+    new_rng: `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
         The random number generator to use.
     """
     # pylint: disable=global-statement
@@ -476,9 +490,9 @@ def ix_(*args):
 
 
 def largest_common_dtype(tensors):
-    dtypes = set(str(t.dtype) if hasattr(t, 'dtype')
+    dtypes = {str(t.dtype) if hasattr(t, 'dtype')
                  else smartfloatX(np.asarray(t)).dtype
-                 for t in tensors)
+                 for t in tensors}
     return np.stack([np.ones((), dtype=dtype) for dtype in dtypes]).dtype
 
 

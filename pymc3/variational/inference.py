@@ -1,9 +1,23 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import logging
 import warnings
 import collections
 
 import numpy as np
-from fastprogress import progress_bar
+from fastprogress.fastprogress import progress_bar
 
 import pymc3 as pm
 from pymc3.variational import test_functions
@@ -40,12 +54,12 @@ class Inference:
 
     Parameters
     ----------
-    op : Operator class
-    approx : Approximation class or instance
-    tf : TestFunction instance
-    model : Model
+    op: Operator class
+    approx: Approximation class or instance
+    tf: TestFunction instance
+    model: Model
         PyMC3 Model
-    kwargs : kwargs passed to :class:`Operator`
+    kwargs: kwargs passed to :class:`Operator`
     """
 
     def __init__(self, op, approx, tf, **kwargs):
@@ -73,9 +87,7 @@ class Inference:
         score = self._maybe_score(score)
         fn_kwargs = kwargs.pop("fn_kwargs", dict())
         fn_kwargs["profile"] = True
-        step_func = self.objective.step_function(
-            score=score, fn_kwargs=fn_kwargs, **kwargs
-        )
+        step_func = self.objective.step_function(score=score, fn_kwargs=fn_kwargs, **kwargs)
         progress = progress_bar(range(n))
         try:
             for _ in progress:
@@ -89,36 +101,36 @@ class Inference:
 
         Parameters
         ----------
-        n : int
+        n: int
             number of iterations
-        score : bool
+        score: bool
             evaluate loss on each iteration or not
-        callbacks : list[function : (Approximation, losses, i) -> None]
+        callbacks: list[function: (Approximation, losses, i) -> None]
             calls provided functions after each iteration step
-        progressbar : bool
+        progressbar: bool
             whether to show progressbar or not
 
         Other Parameters
         ----------------
-        obj_n_mc : `int`
+        obj_n_mc: `int`
             Number of monte carlo samples used for approximation of objective gradients
-        tf_n_mc : `int`
+        tf_n_mc: `int`
             Number of monte carlo samples used for approximation of test function gradients
-        obj_optimizer : function (grads, params) -> updates
+        obj_optimizer: function (grads, params) -> updates
             Optimizer that is used for objective params
-        test_optimizer : function (grads, params) -> updates
+        test_optimizer: function (grads, params) -> updates
             Optimizer that is used for test function params
-        more_obj_params : `list`
+        more_obj_params: `list`
             Add custom params for objective optimizer
-        more_tf_params : `list`
+        more_tf_params: `list`
             Add custom params for test function optimizer
-        more_updates : `dict`
+        more_updates: `dict`
             Add custom updates to resulting updates
-        total_grad_norm_constraint : `float`
+        total_grad_norm_constraint: `float`
             Bounds gradient norm, prevents exploding gradient problem
-        fn_kwargs : `dict`
+        fn_kwargs: `dict`
             Add kwargs to theano.function (e.g. `{'profile': True}`)
-        more_replacements : `dict`
+        more_replacements: `dict`
             Apply custom replacements before calculating gradients
 
         Returns
@@ -129,7 +141,10 @@ class Inference:
             callbacks = []
         score = self._maybe_score(score)
         step_func = self.objective.step_function(score=score, **kwargs)
-        progress = progress_bar(range(n), display=progressbar)
+        if progressbar:
+            progress = progress_bar(range(n), display=progressbar)
+        else:
+            progress = range(n)
         if score:
             state = self._iterate_with_loss(0, n, step_func, progress, callbacks)
         else:
@@ -153,8 +168,8 @@ class Inference:
                     vmap = self.approx.groups[0].bij.ordering.vmap
                     for vmap_ in vmap:
                         slclen = len(tmp_hold[vmap_.slc])
-                        for i in range(slclen):
-                            name_slc.append((vmap_.var, i))
+                        for j in range(slclen):
+                            name_slc.append((vmap_.var, j))
                     index = np.where(np.isnan(current_param))[0]
                     errmsg = ["NaN occurred in optimization. "]
                     suggest_solution = (
@@ -202,8 +217,8 @@ class Inference:
                     vmap = self.approx.groups[0].bij.ordering.vmap
                     for vmap_ in vmap:
                         slclen = len(tmp_hold[vmap_.slc])
-                        for i in range(slclen):
-                            name_slc.append((vmap_.var, i))
+                        for j in range(slclen):
+                            name_slc.append((vmap_.var, j))
                     index = np.where(np.isnan(current_param))[0]
                     errmsg = ["NaN occurred in optimization. "]
                     suggest_solution = (
@@ -223,9 +238,11 @@ class Inference:
                 scores[i] = e
                 if i % 10 == 0:
                     avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
-                    progress.comment = "Average Loss = {:,.5g}".format(avg_loss)
+                    if hasattr(progress, "comment"):
+                        progress.comment = f"Average Loss = {avg_loss:,.5g}"
                     avg_loss = scores[max(0, i - 1000) : i + 1].mean()
-                    progress.comment = "Average Loss = {:,.5g}".format(avg_loss)
+                    if hasattr(progress, "comment"):
+                        progress.comment = f"Average Loss = {avg_loss:,.5g}"
                 for callback in callbacks:
                     callback(self.approx, scores[: i + 1], i + s + 1)
         except (KeyboardInterrupt, StopIteration) as e:  # pragma: no cover
@@ -251,17 +268,19 @@ class Inference:
                 logger.info("Finished [100%]: Loss = {:,.5g}".format(scores[-1]))
             else:
                 avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
-                logger.info("Finished [100%]: Average Loss = {:,.5g}".format(avg_loss))
+                logger.info(f"Finished [100%]: Average Loss = {avg_loss:,.5g}")
         self.hist = np.concatenate([self.hist, scores])
         return State(i + s, step=step_func, callbacks=callbacks, score=True)
 
     def refine(self, n, progressbar=True):
-        """Refine the solution using the last compiled step function
-        """
+        """Refine the solution using the last compiled step function"""
         if self.state is None:
             raise TypeError("Need to call `.fit` first")
         i, step, callbacks, score = self.state
-        progress = progress_bar(n, display=progressbar)
+        if progressbar:
+            progress = progress_bar(range(n), display=progressbar)
+        else:
+            progress = range(n)  # This is a guess at what progress_bar(n) does.
         if score:
             state = self._iterate_with_loss(i, n, step, progress, callbacks)
         else:
@@ -270,7 +289,7 @@ class Inference:
 
 
 class KLqp(Inference):
-    """**Kullback Leibler Divergence Inference**
+    r"""**Kullback Leibler Divergence Inference**
 
     General approach to fit Approximations that define :math:`logq`
     by maximizing ELBO (Evidence Lower Bound). In some cases
@@ -282,9 +301,9 @@ class KLqp(Inference):
 
     Parameters
     ----------
-    approx : :class:`Approximation`
+    approx: :class:`Approximation`
         Approximation to fit, it is required to have `logQ`
-    beta : float
+    beta: float
         Scales the regularization term in ELBO (see Christopher P. Burgess et al., 2017)
 
     References
@@ -416,16 +435,16 @@ class ADVI(KLqp):
 
     Parameters
     ----------
-    local_rv : dict[var->tuple]
+    local_rv: dict[var->tuple]
         mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`pymc3.Model`
+    model: :class:`pymc3.Model`
         PyMC3 model for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start : `Point`
+    start: `Point`
         starting point for inference
 
     References
@@ -451,16 +470,16 @@ class FullRankADVI(KLqp):
 
     Parameters
     ----------
-    local_rv : dict[var->tuple]
+    local_rv: dict[var->tuple]
         mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    model : :class:`pymc3.Model`
+    model: :class:`pymc3.Model`
         PyMC3 model for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start : `Point`
+    start: `Point`
         starting point for inference
 
     References
@@ -518,24 +537,24 @@ class SVGD(ImplicitGradient):
 
     Parameters
     ----------
-    n_particles : `int`
+    n_particles: `int`
         number of particles to use for approximation
-    jitter : `float`
+    jitter: `float`
         noise sd for initial point
-    model : :class:`pymc3.Model`
+    model: :class:`pymc3.Model`
         PyMC3 model for inference
-    kernel : `callable`
+    kernel: `callable`
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
-    temperature : float
+    temperature: float
         parameter responsible for exploration, higher temperature gives more broad posterior estimate
-    start : `dict`
+    start: `dict`
         initial point for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    start : `Point`
+    start: `Point`
         starting point for inference
-    kwargs : other keyword arguments passed to estimator
+    kwargs: other keyword arguments passed to estimator
 
     References
     ----------
@@ -594,12 +613,12 @@ class ASVGD(ImplicitGradient):
 
     Parameters
     ----------
-    approx : :class:`Approximation`
+    approx: :class:`Approximation`
         default is :class:`FullRank` but can be any
-    kernel : `callable`
+    kernel: `callable`
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
-    model : :class:`Model`
-    kwargs : kwargs for gradient estimator
+    model: :class:`Model`
+    kwargs: kwargs for gradient estimator
 
     References
     ----------
@@ -695,12 +714,12 @@ class NFVI(KLqp):
 
     Parameters
     ----------
-    flow : str|AbstractFlow
+    flow: str|AbstractFlow
         formula or initialized Flow, default is `'scale-loc'` that
         is identical to MeanField
-    model : :class:`pymc3.Model`
+    model: :class:`pymc3.Model`
         PyMC3 model for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
     """
@@ -723,13 +742,13 @@ def fit(
 
     Parameters
     ----------
-    n : `int`
+    n: `int`
         number of iterations
-    local_rv : dict[var->tuple]
+    local_rv: dict[var->tuple]
         mapping {model_variable -> approx params}
         Local Vars are used for Autoencoding Variational Bayes
         See (AEVB; Kingma and Welling, 2014) for details
-    method : str or :class:`Inference`
+    method: str or :class:`Inference`
         string name is case insensitive in:
 
         -   'advi'  for ADVI
@@ -739,43 +758,43 @@ def fit(
         -   'nfvi'  for Normalizing Flow with default `scale-loc` flow
         -   'nfvi=<formula>'  for Normalizing Flow using formula
 
-    model : :class:`Model`
+    model: :class:`Model`
         PyMC3 model for inference
-    random_seed : None or int
+    random_seed: None or int
         leave None to use package global RandomStream or other
         valid value to create instance specific one
-    inf_kwargs : dict
+    inf_kwargs: dict
         additional kwargs passed to :class:`Inference`
-    start : `Point`
+    start: `Point`
         starting point for inference
 
     Other Parameters
     ----------------
-    score : bool
+    score: bool
             evaluate loss on each iteration or not
-    callbacks : list[function : (Approximation, losses, i) -> None]
+    callbacks: list[function: (Approximation, losses, i) -> None]
         calls provided functions after each iteration step
-    progressbar : bool
+    progressbar: bool
         whether to show progressbar or not
-    obj_n_mc : `int`
+    obj_n_mc: `int`
         Number of monte carlo samples used for approximation of objective gradients
-    tf_n_mc : `int`
+    tf_n_mc: `int`
         Number of monte carlo samples used for approximation of test function gradients
-    obj_optimizer : function (grads, params) -> updates
+    obj_optimizer: function (grads, params) -> updates
         Optimizer that is used for objective params
-    test_optimizer : function (grads, params) -> updates
+    test_optimizer: function (grads, params) -> updates
         Optimizer that is used for test function params
-    more_obj_params : `list`
+    more_obj_params: `list`
         Add custom params for objective optimizer
-    more_tf_params : `list`
+    more_tf_params: `list`
         Add custom params for test function optimizer
-    more_updates : `dict`
+    more_updates: `dict`
         Add custom updates to resulting updates
-    total_grad_norm_constraint : `float`
+    total_grad_norm_constraint: `float`
         Bounds gradient norm, prevents exploding gradient problem
-    fn_kwargs : `dict`
+    fn_kwargs: `dict`
         Add kwargs to theano.function (e.g. `{'profile': True}`)
-    more_replacements : `dict`
+    more_replacements: `dict`
         Apply custom replacements before calculating gradients
 
     Returns
@@ -794,9 +813,7 @@ def fit(
         inf_kwargs["start"] = start
     if model is None:
         model = pm.modelcontext(model)
-    _select = dict(
-        advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD, asvgd=ASVGD, nfvi=NFVI
-    )
+    _select = dict(advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD, asvgd=ASVGD, nfvi=NFVI)
     if isinstance(method, str):
         method = method.lower()
         if method.startswith("nfvi="):
@@ -806,13 +823,9 @@ def fit(
 
             inference = _select[method](model=model, **inf_kwargs)
         else:
-            raise KeyError(
-                f"method should be one of {set(_select.keys())} or Inference instance"
-            )
+            raise KeyError(f"method should be one of {set(_select.keys())} or Inference instance")
     elif isinstance(method, Inference):
         inference = method
     else:
-        raise TypeError(
-            f"method should be one of {set(_select.keys())} or Inference instance"
-        )
+        raise TypeError(f"method should be one of {set(_select.keys())} or Inference instance")
     return inference.fit(n, **kwargs)

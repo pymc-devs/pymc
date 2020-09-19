@@ -32,6 +32,8 @@ Gallery.contents = {
     "GP-TProcess": "Gaussian Processes",
     "GP-smoothing": "Gaussian Processes",
     "gaussian_process": "Gaussian Processes",
+    "conditional-autoregressive-model": "Gaussian Processes",
+    "log-gaussian-cox-process":"Gaussian Processes",
     "dependent_density_regression": "Mixture Models",
     "dp_mix": "Mixture Models",
     "gaussian-mixture-model-advi": "Mixture Models",
@@ -56,6 +58,7 @@ Gallery.contents = {
     "GLM-hierarchical-advi-minibatch": "Variational Inference",
     "ODE_with_manual_gradients": "Inference in ODE models",
     "ODE_API_introduction": "Inference in ODE models",
-    "ODE_API_shapes_and_benchmarking": "Inference in ODE models",
-    "probabilistic_matrix_factorization": "Case Studies"
+    "probabilistic_matrix_factorization": "Case Studies",
+    "MLDA_simple_linear_regression": "MCMC",
+    "MLDA_gravity_surveying": "MCMC"
 }

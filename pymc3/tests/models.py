@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from pymc3 import Model, Normal, Categorical, Metropolis
 import numpy as np
 import pymc3 as pm
@@ -89,6 +103,40 @@ def mv_simple():
     with pm.Model() as model:
         pm.MvNormal('x', tt.constant(mu), tau=tt.constant(tau),
                     shape=3, testval=floatX_array([.1, 1., .8]))
+    H = tau
+    C = np.linalg.inv(H)
+    return model.test_point, model, (mu, C)
+
+
+def mv_simple_coarse():
+    mu = floatX_array([-0.2, 0.6, 1.2])
+    p = floatX_array([[2.0, 0, 0], [0.05, 0.1, 0], [1.0, -0.05, 5.5]])
+    tau = np.dot(p, p.T)
+    with pm.Model() as model:
+        pm.MvNormal(
+            "x",
+            tt.constant(mu),
+            tau=tt.constant(tau),
+            shape=3,
+            testval=floatX_array([0.1, 1.0, 0.8]),
+        )
+    H = tau
+    C = np.linalg.inv(H)
+    return model.test_point, model, (mu, C)
+
+
+def mv_simple_very_coarse():
+    mu = floatX_array([-0.3, 0.7, 1.3])
+    p = floatX_array([[2.0, 0, 0], [0.05, 0.1, 0], [1.0, -0.05, 5.5]])
+    tau = np.dot(p, p.T)
+    with pm.Model() as model:
+        pm.MvNormal(
+            "x",
+            tt.constant(mu),
+            tau=tt.constant(tau),
+            shape=3,
+            testval=floatX_array([0.1, 1.0, 0.8]),
+        )
     H = tau
     C = np.linalg.inv(H)
     return model.test_point, model, (mu, C)

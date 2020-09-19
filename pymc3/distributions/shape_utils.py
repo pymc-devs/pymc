@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 # -*- coding: utf-8 -*-
 """
 A collection of common numpy array shape operations needed for broadcasting
@@ -21,7 +35,7 @@ def to_tuple(shape):
 
     Parameters
     ----------
-    shape : None, int or array-like
+    shape: None, int or array-like
         Represents the shape to convert to tuple.
 
     Returns
@@ -44,14 +58,14 @@ def _check_shape_type(shape):
         shape = np.atleast_1d(shape)
         for s in shape:
             if isinstance(s, np.ndarray) and s.ndim > 0:
-                raise TypeError("Value {} is not a valid integer".format(s))
+                raise TypeError(f"Value {s} is not a valid integer")
             o = int(s)
             if o != s:
-                raise TypeError("Value {} is not a valid integer".format(s))
+                raise TypeError(f"Value {s} is not a valid integer")
             out.append(o)
     except Exception:
         raise TypeError(
-            "Supplied value {} does not represent a valid shape".format(shape)
+            f"Supplied value {shape} does not represent a valid shape"
         )
     return tuple(out)
 
@@ -62,7 +76,7 @@ def shapes_broadcasting(*args, raise_exception=False):
 
     Parameters
     ----------
-    *args : array-like of int
+    *args: array-like of int
         Tuples or arrays or lists representing the shapes of arrays to be
         broadcast.
     raise_exception: bool (optional)
@@ -89,7 +103,7 @@ def shapes_broadcasting(*args, raise_exception=False):
             if raise_exception:
                 raise ValueError(
                     "Supplied shapes {} do not broadcast together".format(
-                        ", ".join(["{}".format(a) for a in args])
+                        ", ".join([f"{a}" for a in args])
                     )
                 )
             else:
@@ -151,7 +165,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
         if broadcasted_shape is None:
             raise ValueError(
                 "Cannot broadcast provided shapes {} given size: {}".format(
-                    ", ".join(["{}".format(s) for s in shapes]), size
+                    ", ".join([f"{s}" for s in shapes]), size
                 )
             )
         return broadcasted_shape
@@ -167,7 +181,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
     except ValueError:
         raise ValueError(
             "Cannot broadcast provided shapes {} given size: {}".format(
-                ", ".join(["{}".format(s) for s in shapes]), size
+                ", ".join([f"{s}" for s in shapes]), size
             )
         )
     broadcastable_shapes = []

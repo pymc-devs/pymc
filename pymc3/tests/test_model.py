@@ -1,5 +1,20 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pytest
-from theano import theano, tensor as tt
+import theano
+import theano.tensor as tt
 import numpy as np
 import pandas as pd
 import numpy.testing as npt
@@ -9,6 +24,7 @@ import pymc3 as pm
 from pymc3.distributions import HalfCauchy, Normal, transforms
 from pymc3 import Potential, Deterministic
 from pymc3.model import ValueGradFunction
+from .helpers import select_by_precision
 
 
 class NewModel(pm.Model):
@@ -178,17 +194,33 @@ def test_matrix_multiplication():
                               tune=0,
                               compute_convergence_checks=False,
                               progressbar=False)
+        decimal = select_by_precision(7, 5)
         for point in posterior.points():
-            npt.assert_almost_equal(point['matrix'] @ point['transformed'],
-                                    point['rv_rv'])
-            npt.assert_almost_equal(np.ones((2, 2)) @ point['transformed'],
-                                    point['np_rv'])
-            npt.assert_almost_equal(point['matrix'] @ np.ones(2),
-                                    point['rv_np'])
-            npt.assert_almost_equal(point['matrix'] @ point['rv_rv'],
-                                    point['rv_det'])
-            npt.assert_almost_equal(point['rv_rv'] @ point['transformed'],
-                                    point['det_rv'])
+            npt.assert_almost_equal(
+                point['matrix'] @ point['transformed'],
+                point['rv_rv'],
+                decimal=decimal,
+            )
+            npt.assert_almost_equal(
+                np.ones((2, 2)) @ point['transformed'],
+                point['np_rv'],
+                decimal=decimal,
+            )
+            npt.assert_almost_equal(
+                point['matrix'] @ np.ones(2),
+                point['rv_np'],
+                decimal=decimal,
+            )
+            npt.assert_almost_equal(
+                point['matrix'] @ point['rv_rv'],
+                point['rv_det'],
+                decimal=decimal,
+            )
+            npt.assert_almost_equal(
+                point['rv_rv'] @ point['transformed'],
+                point['det_rv'],
+                decimal=decimal,
+            )
 
 
 def test_duplicate_vars():
@@ -233,7 +265,7 @@ class TestValueGradFunction(unittest.TestCase):
         a.tag.test_value = np.zeros(3, dtype=a.dtype)
         a.dshape = (3,)
         a.dsize = 3
-        f_grad = ValueGradFunction(a.sum(), [a], [], mode='FAST_COMPILE')
+        f_grad = ValueGradFunction([a.sum()], [a], [], mode='FAST_COMPILE')
         assert f_grad.size == 3
 
     def test_invalid_type(self):
@@ -242,7 +274,7 @@ class TestValueGradFunction(unittest.TestCase):
         a.dshape = (3,)
         a.dsize = 3
         with pytest.raises(TypeError) as err:
-            ValueGradFunction(a.sum(), [a], [], mode='FAST_COMPILE')
+            ValueGradFunction([a.sum()], [a], [], mode='FAST_COMPILE')
         err.match('Invalid dtype')
 
     def setUp(self):
@@ -271,7 +303,7 @@ class TestValueGradFunction(unittest.TestCase):
         self.cost = extra1 * val1.sum() + val2.sum()
 
         self.f_grad = ValueGradFunction(
-            self.cost, [val1, val2], [extra1], mode='FAST_COMPILE')
+            [self.cost], [val1, val2], [extra1], mode='FAST_COMPILE')
 
     def test_extra_not_set(self):
         with pytest.raises(ValueError) as err:
@@ -334,3 +366,58 @@ class TestValueGradFunction(unittest.TestCase):
         gf = m.logp_dlogp_function()
 
         assert m['x2_missing'].type == gf._extra_vars_shared['x2_missing'].type
+
+def test_multiple_observed_rv():
+    "Test previously buggy MultiObservedRV comparison code."
+    y1_data = np.random.randn(10)
+    y2_data = np.random.randn(100)
+    with pm.Model() as model:
+        mu = pm.Normal("mu")
+        x = pm.DensityDist(  # pylint: disable=unused-variable
+            "x", pm.Normal.dist(mu, 1.0).logp, observed={"value": 0.1}
+        )
+    assert not model['x'] == model['mu']
+    assert model['x'] == model['x']
+    assert  model['x'] in model.observed_RVs
+    assert not model['x'] in model.vars
+
+
+def test_tempered_logp_dlogp():
+    with pm.Model() as model:
+        pm.Normal('x')
+        pm.Normal('y', observed=1)
+
+    func = model.logp_dlogp_function()
+    func.set_extra_values({})
+
+    func_temp = model.logp_dlogp_function(tempered=True)
+    func_temp.set_extra_values({})
+
+    func_nograd = model.logp_dlogp_function(compute_grads=False)
+    func_nograd.set_extra_values({})
+
+    func_temp_nograd = model.logp_dlogp_function(
+        tempered=True, compute_grads=False
+    )
+    func_temp_nograd.set_extra_values({})
+
+    x = np.ones(func.size, dtype=func.dtype)
+    assert func(x) == func_temp(x)
+    assert func_nograd(x) == func(x)[0]
+    assert func_temp_nograd(x) == func(x)[0]
+
+    func_temp.set_weights(np.array([0.], dtype=func.dtype))
+    func_temp_nograd.set_weights(np.array([0.], dtype=func.dtype))
+    npt.assert_allclose(func(x)[0], 2 * func_temp(x)[0])
+    npt.assert_allclose(func(x)[1], func_temp(x)[1])
+
+    npt.assert_allclose(func_nograd(x), func(x)[0])
+    npt.assert_allclose(func_temp_nograd(x), func_temp(x)[0])
+
+    func_temp.set_weights(np.array([0.5], dtype=func.dtype))
+    func_temp_nograd.set_weights(np.array([0.5], dtype=func.dtype))
+    npt.assert_allclose(func(x)[0], 4 / 3 * func_temp(x)[0])
+    npt.assert_allclose(func(x)[1], func_temp(x)[1])
+
+    npt.assert_allclose(func_nograd(x), func(x)[0])
+    npt.assert_allclose(func_temp_nograd(x), func_temp(x)[0])

@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import theano
 import theano.tensor as tt
 
@@ -8,7 +22,6 @@ from ..math import logit, invlogit
 from .distribution import draw_values
 import numpy as np
 from scipy.special import logit as nplogit
-from scipy.special import expit
 
 
 __all__ = [
@@ -134,7 +147,6 @@ class TransformedDistribution(distribution.Distribution):
             arguments to Distribution"""
         forward = transform.forward
         testval = forward(dist.default())
-        forward_val = transform.forward_val
 
         self.dist = dist
         self.transform_used = transform
@@ -183,6 +195,14 @@ class TransformedDistribution(distribution.Distribution):
         """
         return self.dist.logp(self.transform_used.backward(x))
 
+    def _repr_latex_(self, **kwargs):
+        # prevent TransformedDistributions from ending up in LaTeX representations
+        # of models
+        return None
+
+    def _distr_parameters_for_repr(self):
+        return []
+
 
 transform = Transform
 
@@ -192,9 +212,6 @@ class Log(ElemwiseTransform):
 
     def backward(self, x):
         return tt.exp(x)
-
-    def backward_val(self, x):
-        return np.exp(x)
 
     def forward(self, x):
         return tt.log(x)
@@ -215,9 +232,6 @@ class LogExpM1(ElemwiseTransform):
     def backward(self, x):
         return tt.nnet.softplus(x)
 
-    def backward_val(self, x):
-        return np.log(1 + np.exp(-np.abs(x))) + np.max([x, 0])
-
     def forward(self, x):
         """Inverse operation of softplus.
 
@@ -236,14 +250,10 @@ class LogExpM1(ElemwiseTransform):
 log_exp_m1 = LogExpM1()
 
 
-
 class LogOdds(ElemwiseTransform):
     name = "logodds"
 
     def backward(self, x):
-        return invlogit(x, 0.0)
-
-    def backward_val(self, x):
         return invlogit(x, 0.0)
 
     def forward(self, x):
@@ -256,7 +266,6 @@ class LogOdds(ElemwiseTransform):
 logodds = LogOdds()
 
 
-
 class Interval(ElemwiseTransform):
     """Transform from real line interval [a,b] to whole real line."""
 
@@ -265,17 +274,10 @@ class Interval(ElemwiseTransform):
     def __init__(self, a, b):
         self.a = tt.as_tensor_variable(a)
         self.b = tt.as_tensor_variable(b)
-        self.a_ = a
-        self.b_ = b
 
     def backward(self, x):
         a, b = self.a, self.b
         r = (b - a) * tt.nnet.sigmoid(x) + a
-        return r
-
-    def backward_val(self, x):
-        a, b = self.a_, self.b_
-        r = (b - a) * 1 / (1 + np.exp(-x)) + a
         return r
 
     def forward(self, x):
@@ -304,16 +306,10 @@ class LowerBound(ElemwiseTransform):
 
     def __init__(self, a):
         self.a = tt.as_tensor_variable(a)
-        self.a_ = a
 
     def backward(self, x):
-        a = self.a_
-        r = tt.exp(x) + a
-        return r
-
-    def backward_val(self, x):
         a = self.a
-        r = np.exp(x) + a
+        r = tt.exp(x) + a
         return r
 
     def forward(self, x):
@@ -332,10 +328,10 @@ class LowerBound(ElemwiseTransform):
 
 
 lowerbound = LowerBound
-'''
+"""
 Alias for ``LowerBound`` (:class: LowerBound) Transform (:class: Transform) class
 for use in the ``transform`` argument of a random variable.
-'''
+"""
 
 
 class UpperBound(ElemwiseTransform):
@@ -345,16 +341,10 @@ class UpperBound(ElemwiseTransform):
 
     def __init__(self, b):
         self.b = tt.as_tensor_variable(b)
-        self.b_ = b
 
     def backward(self, x):
         b = self.b
         r = b - tt.exp(x)
-        return r
-
-    def backward_val(self, x):
-        b = self.b_
-        r = b - np.exp(x)
         return r
 
     def forward(self, x):
@@ -373,11 +363,10 @@ class UpperBound(ElemwiseTransform):
 
 
 upperbound = UpperBound
-'''
+"""
 Alias for ``UpperBound`` (:class: UpperBound) Transform (:class: Transform) class
 for use in the ``transform`` argument of a random variable.
-'''
-
+"""
 
 
 class Ordered(Transform):
@@ -388,12 +377,6 @@ class Ordered(Transform):
         x = tt.inc_subtensor(x[..., 0], y[..., 0])
         x = tt.inc_subtensor(x[..., 1:], tt.exp(y[..., 1:]))
         return tt.cumsum(x, axis=-1)
-
-    def backward_val(self, y):
-        x = np.zeros(y.shape)
-        x[..., 0] += y[..., 0]
-        x[..., 1:] += np.exp(y[..., 1:])
-        return np.cumsum(x, axis=-1)
 
     def forward(self, x):
         y = tt.zeros(x.shape)
@@ -412,10 +395,10 @@ class Ordered(Transform):
 
 
 ordered = Ordered()
-'''
+"""
 Instantiation of ``Ordered`` (:class: Ordered) Transform (:class: Transform) class
 for use in the ``transform`` argument of a random variable.
-'''
+"""
 
 
 class SumTo1(Transform):
@@ -429,10 +412,6 @@ class SumTo1(Transform):
     def backward(self, y):
         remaining = 1 - tt.sum(y[..., :], axis=-1, keepdims=True)
         return tt.concatenate([y[..., :], remaining], axis=-1)
-
-    def backward_val(self, y):
-        remaining = 1 - np.sum(y[..., :], axis=-1, keepdims=True)
-        return np.concatenate([y[..., :], remaining], axis=-1)
 
     def forward(self, x):
         return x[..., :-1]
@@ -451,7 +430,7 @@ sum_to_1 = SumTo1()
 class StickBreaking(Transform):
     """
     Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of real values.
-    Primarily borrowed from the STAN implementation.
+    Primarily borrowed from the Stan implementation.
 
     Parameters
     ----------
@@ -500,18 +479,6 @@ class StickBreaking(Transform):
         x = S * yl
         return floatX(x.T)
 
-    def backward_val(self, y_):
-        y = y_.T
-        Km1 = y.shape[0]
-        k = np.arange(Km1)[(slice(None),) + (None,) * (y.ndim - 1)]
-        eq_share = nplogit(1.0 / (Km1 + 1 - k).astype(str(y_.dtype)))
-        z = expit(y + eq_share)
-        yl = np.concatenate([z, np.ones(y[:1].shape)])
-        yu = np.concatenate([np.ones(y[:1].shape), 1 - z])
-        S = np.cumprod(yu, 0)
-        x = S * yl
-        return floatX(x.T)
-
     def jacobian_det(self, y_):
         y = y_.T
         Km1 = y.shape[0]
@@ -526,10 +493,9 @@ class StickBreaking(Transform):
 stick_breaking = StickBreaking()
 
 
-
 def t_stick_breaking(eps: float) -> StickBreaking:
-    '''Return a new :class:`StickBreaking` transform with specified eps(ilon),
-    instead of the default.'''
+    """Return a new :class:`StickBreaking` transform with specified eps(ilon),
+    instead of the default."""
     return StickBreaking(eps)
 
 
@@ -541,9 +507,6 @@ class Circular(ElemwiseTransform):
 
     def backward(self, y):
         return tt.arctan2(tt.sin(y), tt.cos(y))
-
-    def backward_val(self, y):
-        return y
 
     def forward(self, x):
         return tt.as_tensor_variable(x)
@@ -557,6 +520,7 @@ class Circular(ElemwiseTransform):
 
 circular = Circular()
 
+
 class CholeskyCovPacked(Transform):
     name = "cholesky-cov-packed"
 
@@ -565,10 +529,6 @@ class CholeskyCovPacked(Transform):
 
     def backward(self, x):
         return tt.advanced_set_subtensor1(x, tt.exp(x[self.diag_idxs]), self.diag_idxs)
-
-    def backward_val(self, x):
-        x[..., self.diag_idxs] = np.exp(x[..., self.diag_idxs])
-        return x
 
     def forward(self, y):
         return tt.advanced_set_subtensor1(y, tt.log(y[self.diag_idxs]), self.diag_idxs)
@@ -579,6 +539,7 @@ class CholeskyCovPacked(Transform):
 
     def jacobian_det(self, y):
         return tt.sum(y[self.diag_idxs])
+
 
 class Chain(Transform):
     def __init__(self, transform_list):
@@ -601,12 +562,6 @@ class Chain(Transform):
         x = y
         for transf in reversed(self.transform_list):
             x = transf.backward(x)
-        return x
-
-    def backward_val(self, y):
-        x = y
-        for transf in reversed(self.transform_list):
-            x = transf.backward_val(x)
         return x
 
     def jacobian_det(self, y):

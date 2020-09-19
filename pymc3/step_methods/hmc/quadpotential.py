@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import warnings
 import numpy as np
 from numpy.random import normal
@@ -19,15 +33,15 @@ def quad_potential(C, is_cov):
 
     Parameters
     ----------
-    C : arraylike, 0 <= ndim <= 2
+    C: arraylike, 0 <= ndim <= 2
         scaling matrix for the potential
         vector treated as diagonal matrix.
-    is_cov : Boolean
+    is_cov: Boolean
         whether C is provided as a covariance matrix or hessian
 
     Returns
     -------
-    q : Quadpotential
+    q: Quadpotential
     """
     if issparse(C):
         if not chol_available:
@@ -101,7 +115,7 @@ class QuadPotential:
 
         Parameters
         ----------
-        vmap : blocking.ArrayOrdering.vmap
+        vmap: blocking.ArrayOrdering.vmap
             List of `VarMap`s, which are namedtuples with var, slc, shp, dtyp
 
         Raises
@@ -157,16 +171,24 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
         self.dtype = dtype
         self._n = n
-        self._var = np.array(initial_diag, dtype=self.dtype, copy=True)
-        self._var_theano = theano.shared(self._var)
-        self._stds = np.sqrt(initial_diag)
-        self._inv_stds = floatX(1.) / self._stds
-        self._foreground_var = _WeightedVariance(
-            self._n, initial_mean, initial_diag, initial_weight, self.dtype)
-        self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
-        self._n_samples = 0
+
+        self._initial_mean = initial_mean
+        self._initial_diag = initial_diag
+        self._initial_weight = initial_weight
         self.adaptation_window = adaptation_window
         self.adaptation_window_multiplier = float(adaptation_window_multiplier)
+
+        self.reset()
+
+    def reset(self):
+        self._var = np.array(self._initial_diag, dtype=self.dtype, copy=True)
+        self._var_theano = theano.shared(self._var)
+        self._stds = np.sqrt(self._initial_diag)
+        self._inv_stds = floatX(1.) / self._stds
+        self._foreground_var = _WeightedVariance(
+            self._n, self._initial_mean, self._initial_diag, self._initial_weight, self.dtype)
+        self._background_var = _WeightedVariance(self._n, dtype=self.dtype)
+        self._n_samples = 0
 
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
@@ -215,7 +237,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
         Parameters
         ----------
-        vmap : blocking.ArrayOrdering.vmap
+        vmap: blocking.ArrayOrdering.vmap
             List of `VarMap`s, which are namedtuples with var, slc, shp, dtyp
 
         Raises
@@ -261,8 +283,8 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
     This is experimental, and may be removed without prior deprication.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def reset(self):
+        super().reset()
         self._grads1 = np.zeros(self._n, dtype=self.dtype)
         self._ngrads1 = 0
         self._grads2 = np.zeros(self._n, dtype=self.dtype)
@@ -285,7 +307,7 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
         self._ngrads2 += 1
 
         if self._n_samples <= 150:
-            super().update(sample, grad)
+            super().update(sample, grad, tune)
         else:
             self._update((self._ngrads1 / self._grads1) ** 2)
 
@@ -347,7 +369,7 @@ class QuadPotentialDiag(QuadPotential):
 
         Parameters
         ----------
-        v : vector, 0 <= ndim <= 1
+        v: vector, 0 <= ndim <= 1
            Diagonal of covariance matrix for the potential vector
         """
         if dtype is None:
@@ -391,7 +413,7 @@ class QuadPotentialFullInv(QuadPotential):
 
         Parameters
         ----------
-        A : matrix, ndim = 2
+        A: matrix, ndim = 2
            Inverse of covariance matrix for the potential vector
         """
         if dtype is None:
@@ -431,7 +453,7 @@ class QuadPotentialFull(QuadPotential):
 
         Parameters
         ----------
-        A : matrix, ndim = 2
+        A: matrix, ndim = 2
             scaling matrix for the potential vector
         """
         if dtype is None:
@@ -504,19 +526,26 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
 
         self.dtype = dtype
         self._n = n
-        self._cov = np.array(initial_cov, dtype=self.dtype, copy=True)
+        self._initial_mean = initial_mean
+        self._initial_cov = initial_cov
+        self._initial_weight = initial_weight
+
+        self.adaptation_window = int(adaptation_window)
+        self.adaptation_window_multiplier = float(adaptation_window_multiplier)
+        self._update_window = int(update_window)
+
+        self.reset()
+
+    def reset(self):
+        self._previous_update = 0
+        self._cov = np.array(self._initial_cov, dtype=self.dtype, copy=True)
         self._chol = scipy.linalg.cholesky(self._cov, lower=True)
         self._chol_error = None
         self._foreground_cov = _WeightedCovariance(
-            self._n, initial_mean, initial_cov, initial_weight, self.dtype
+            self._n, self._initial_mean, self._initial_cov, self._initial_weight, self.dtype
         )
         self._background_cov = _WeightedCovariance(self._n, dtype=self.dtype)
         self._n_samples = 0
-
-        self._adaptation_window = int(adaptation_window)
-        self._adaptation_window_multiplier = float(adaptation_window_multiplier)
-        self._update_window = int(update_window)
-        self._previous_update = 0
 
     def _update_from_weightvar(self, weightvar):
         weightvar.current_covariance(out=self._cov)
@@ -542,20 +571,20 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
 
         # Reset the background covariance if we are at the end of the adaptation
         # window.
-        if delta >= self._adaptation_window:
+        if delta >= self.adaptation_window:
             self._foreground_cov = self._background_cov
             self._background_cov = _WeightedCovariance(
                 self._n, dtype=self.dtype
             )
 
             self._previous_update = self._n_samples
-            self._adaptation_window = int(self._adaptation_window * self._adaptation_window_multiplier)
+            self.adaptation_window = int(self.adaptation_window * self.adaptation_window_multiplier)
 
         self._n_samples += 1
 
     def raise_ok(self, vmap):
         if self._chol_error is not None:
-            raise ValueError("{0}".format(self._chol_error))
+            raise ValueError(str(self._chol_error))
 
 
 class _WeightedCovariance:
@@ -631,7 +660,7 @@ if chol_available:
 
             Parameters
             ----------
-            A : matrix, ndim = 2
+            A: matrix, ndim = 2
                 scaling matrix for the potential vector
             """
             self.A = A

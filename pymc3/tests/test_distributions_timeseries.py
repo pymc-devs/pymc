@@ -1,7 +1,21 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from ..model import Model
 from ..distributions.continuous import Flat, Normal
 from ..distributions.timeseries import EulerMaruyama, AR1, AR, GARCH11
-from ..sampling import sample, sample_posterior_predictive
+from ..sampling import sample, sample_posterior_predictive, fast_sample_posterior_predictive
 from ..theanof import floatX
 
 import numpy as np
@@ -127,9 +141,12 @@ def test_linear():
         trace = sample(init='advi+adapt_diag', chains=1)
 
     ppc = sample_posterior_predictive(trace, model=model)
+    ppcf = fast_sample_posterior_predictive(trace, model=model)
     # test
     p95 = [2.5, 97.5]
     lo, hi = np.percentile(trace[lamh], p95, axis=0)
     assert (lo < lam) and (lam < hi)
     lo, hi = np.percentile(ppc['zh'], p95, axis=0)
+    assert ((lo < z) * (z < hi)).mean() > 0.95
+    lo, hi = np.percentile(ppcf['zh'], p95, axis=0)
     assert ((lo < z) * (z < hi)).mean() > 0.95

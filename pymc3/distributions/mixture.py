@@ -1,9 +1,23 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from collections.abc import Iterable
 import numpy as np
 import theano
 import theano.tensor as tt
+import warnings
 
-from pymc3.util import get_variable_name
 from ..math import logsumexp
 from .dist_math import bound, random_choice
 from .distribution import (Discrete, Distribution, draw_values,
@@ -33,16 +47,16 @@ class Mixture(Distribution):
     .. math:: f(x \mid w, \theta) = \sum_{i = 1}^n w_i f_i(x \mid \theta_i)
 
     ========  ============================================
-    Support   :math:`\cap_{i = 1}^n \textrm{support}(f_i)`
+    Support   :math:`\cup_{i = 1}^n \textrm{support}(f_i)`
     Mean      :math:`\sum_{i = 1}^n w_i \mu_i`
     ========  ============================================
 
     Parameters
     ----------
-    w : array of floats
+    w: array of floats
         w >= 0 and w <= 1
         the mixture weights
-    comp_dists : multidimensional PyMC3 distribution (e.g. `pm.Poisson.dist(...)`)
+    comp_dists: multidimensional PyMC3 distribution (e.g. `pm.Poisson.dist(...)`)
         or iterable of PyMC3 distributions the component distributions
         :math:`f_1, \ldots, f_n`
 
@@ -104,7 +118,7 @@ class Mixture(Distribution):
             isinstance(comp_dists, Distribution)
             or (
                 isinstance(comp_dists, Iterable)
-                and all((isinstance(c, Distribution) for c in comp_dists))
+                and all(isinstance(c, Distribution) for c in comp_dists)
             )
         ):
             raise TypeError(
@@ -138,9 +152,13 @@ class Mixture(Distribution):
         dtype = kwargs.pop('dtype', default_dtype)
 
         try:
-            comp_modes = self._comp_modes()
-            comp_mode_logps = self.logp(comp_modes)
-            self.mode = comp_modes[tt.argmax(w * comp_mode_logps, axis=-1)]
+            if isinstance(comp_dists, Distribution):
+                comp_mode_logps = comp_dists.logp(comp_dists.mode)
+            else:
+                comp_mode_logps = tt.stack([cd.logp(cd.mode) for cd in comp_dists])
+
+            mode_idx = tt.argmax(tt.log(w) + comp_mode_logps, axis=-1)
+            self.mode = self._comp_modes()[mode_idx]
 
             if 'mode' not in defaults:
                 defaults.append('mode')
@@ -402,7 +420,7 @@ class Mixture(Distribution):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
             values are desired the values must be provided in a numpy array or theano tensor
 
@@ -412,7 +430,7 @@ class Mixture(Distribution):
         """
         w = self.w
 
-        return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1),
+        return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1, keepdims=False),
                      w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1),
                      broadcast_conditions=False)
 
@@ -422,10 +440,10 @@ class Mixture(Distribution):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -559,6 +577,8 @@ class Mixture(Distribution):
             samples = np.reshape(samples, size + dist_shape)
         return samples
 
+    def _distr_parameters_for_repr(self):
+        return []
 
 class NormalMixture(Mixture):
     R"""
@@ -576,16 +596,16 @@ class NormalMixture(Mixture):
 
     Parameters
     ----------
-    w : array of floats
+    w: array of floats
         w >= 0 and w <= 1
         the mixture weights
-    mu : array of floats
+    mu: array of floats
         the component means
-    sigma : array of floats
+    sigma: array of floats
         the component standard deviations
-    tau : array of floats
+    tau: array of floats
         the component precisions
-    comp_shape : shape of the Normal component
+    comp_shape: shape of the Normal component
         notice that it should be different than the shape
         of the mixture distribution, with one axis being
         the number of components.
@@ -596,6 +616,10 @@ class NormalMixture(Mixture):
     def __init__(self, w, mu, sigma=None, tau=None, sd=None, comp_shape=(), *args, **kwargs):
         if sd is not None:
             sigma = sd
+            warnings.warn(
+                "sd is deprecated, use sigma instead",
+                DeprecationWarning
+            )
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
         self.mu = mu = tt.as_tensor_variable(mu)
@@ -604,14 +628,5 @@ class NormalMixture(Mixture):
         super().__init__(w, Normal.dist(mu, sigma=sigma, shape=comp_shape),
                                             *args, **kwargs)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        mu = dist.mu
-        w = dist.w
-        sigma = dist.sigma
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{NormalMixture}}(\mathit{{w}}={},~\mathit{{mu}}={},~\mathit{{sigma}}={})$'.format(name,
-                                                get_variable_name(w),
-                                                get_variable_name(mu),
-                                                get_variable_name(sigma))
+    def _distr_parameters_for_repr(self):
+        return ["w", "mu", "sigma"]

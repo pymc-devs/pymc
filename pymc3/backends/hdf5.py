@@ -1,6 +1,21 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from ..backends import base, ndarray
 import h5py
 from contextlib import contextmanager
+
 
 @contextmanager
 def activator(instance):
@@ -9,7 +24,7 @@ def activator(instance):
             yield
             return
     # if file is closed/not referenced: open, do job, then close
-    instance.hdf5_file = h5py.File(instance.name, 'a')
+    instance.hdf5_file = h5py.File(instance.name, "a")
     yield
     instance.hdf5_file.close()
     return
@@ -20,16 +35,16 @@ class HDF5(base.BaseTrace):
 
     Parameters
     ----------
-    name : str
+    name: str
         Name of backend. This has no meaning for the HDF5 backend.
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
-    vars : list of variables
+    vars: list of variables
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
-    test_point : dict
+    test_point: dict
         use different test point that might be with changed variables shapes
-        """
+    """
 
     supports_sampler_stats = True
 
@@ -50,21 +65,21 @@ class HDF5(base.BaseTrace):
     @property
     def samples(self):
         g = self.hdf5_file.require_group(str(self.chain))
-        if 'name' not in g.attrs:
-            g.attrs['name'] = self.chain
-        return g.require_group('samples')
+        if "name" not in g.attrs:
+            g.attrs["name"] = self.chain
+        return g.require_group("samples")
 
     @property
     def stats(self):
         g = self.hdf5_file.require_group(str(self.chain))
-        if 'name' not in g.attrs:
-            g.attrs['name'] = self.chain
-        return g.require_group('stats')
+        if "name" not in g.attrs:
+            g.attrs["name"] = self.chain
+        return g.require_group("stats")
 
     @property
     def chains(self):
         with self.activate_file:
-            return [v.attrs['name'] for v in self.hdf5_file.values()]
+            return [v.attrs["name"] for v in self.hdf5_file.values()]
 
     @property
     def is_new_file(self):
@@ -84,19 +99,19 @@ class HDF5(base.BaseTrace):
     @property
     def records_stats(self):
         with self.activate_file:
-            return self.hdf5_file.attrs['records_stats']
+            return self.hdf5_file.attrs["records_stats"]
 
     @records_stats.setter
     def records_stats(self, v):
         with self.activate_file:
-            self.hdf5_file.attrs['records_stats'] = bool(v)
+            self.hdf5_file.attrs["records_stats"] = bool(v)
 
     def _resize(self, n):
         for v in self.samples.values():
             v.resize(n, axis=0)
         for key, group in self.stats.items():
             for statds in group.values():
-                statds.resize((n, ))
+                statds.resize((n,))
 
     @property
     def sampler_vars(self):
@@ -123,10 +138,13 @@ class HDF5(base.BaseTrace):
                 if not data.keys():  # no pre-recorded stats
                     for varname, dtype in sampler.items():
                         if varname not in data:
-                            data.create_dataset(varname, (self.draws,), dtype=dtype, maxshape=(None,))
+                            data.create_dataset(
+                                varname, (self.draws,), dtype=dtype, maxshape=(None,)
+                            )
                 elif data.keys() != sampler.keys():
                     raise ValueError(
-                        "Sampler vars can't change, names incompatible: {} != {}".format(data.keys(), sampler.keys()))
+                        f"Sampler vars can't change, names incompatible: {data.keys()} != {sampler.keys()}"
+                    )
             self.records_stats = True
 
     def setup(self, draws, chain, sampler_vars=None):
@@ -134,11 +152,11 @@ class HDF5(base.BaseTrace):
 
         Parameters
         ----------
-        draws : int
+        draws: int
             Expected number of draws
-        chain : int
+        chain: int
             Chain number
-        sampler_vars : list of dicts
+        sampler_vars: list of dicts
             Names and dtypes of the variables that are
             exported by the samplers.
         """
@@ -146,15 +164,17 @@ class HDF5(base.BaseTrace):
         with self.activate_file:
             for varname, shape in self.var_shapes.items():
                 if varname not in self.samples:
-                    self.samples.create_dataset(name=varname, shape=(draws, ) + shape,
-                                                dtype=self.var_dtypes[varname],
-                                                maxshape=(None, ) + shape)
+                    self.samples.create_dataset(
+                        name=varname,
+                        shape=(draws,) + shape,
+                        dtype=self.var_dtypes[varname],
+                        maxshape=(None,) + shape,
+                    )
             self.draw_idx = len(self)
             self.draws = self.draw_idx + draws
             self._set_sampler_vars(sampler_vars)
             self._is_base_setup = True
             self._resize(self.draws)
-
 
     def close(self):
         with self.activate_file:
@@ -190,8 +210,7 @@ class HDF5(base.BaseTrace):
             start, stop, step = idx.indices(len(self))
             sliced = ndarray.NDArray(model=self.model, vars=self.vars)
             sliced.chain = self.chain
-            sliced.samples = {v: self.samples[v][start:stop:step]
-                              for v in self.varnames}
+            sliced.samples = {v: self.samples[v][start:stop:step] for v in self.varnames}
             sliced.draw_idx = (stop - start) // step
             return sliced
 
@@ -214,9 +233,9 @@ def load(name, model=None):
 
     Parameters
     ----------
-    name : str
+    name: str
         Path to HDF5 arrays file
-    model : Model
+    model: Model
         If None, the model is taken from the `with` context.
 
     Returns

@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 """
 Created on Mar 12, 2011
 
@@ -6,14 +20,15 @@ Created on Mar 12, 2011
 from scipy.optimize import minimize
 import numpy as np
 from numpy import isfinite, nan_to_num
-from fastprogress import progress_bar
+from fastprogress.fastprogress import progress_bar
+from fastprogress.fastprogress import ProgressBar
 import pymc3 as pm
 from ..vartypes import discrete_types, typefilter
 from ..model import modelcontext, Point
 from ..theanof import inputvars
 import theano.gradient as tg
 from ..blocking import DictToArrayBijection, ArrayOrdering
-from ..util import update_start_vals, get_default_varnames
+from ..util import update_start_vals, get_default_varnames, get_var_name
 
 import warnings
 from inspect import getargspec
@@ -40,24 +55,24 @@ def find_MAP(
 
     Parameters
     ----------
-    start : `dict` of parameter values (Defaults to `model.test_point`)
-    vars : list
+    start: `dict` of parameter values (Defaults to `model.test_point`)
+    vars: list
         List of variables to optimize and set to optimum (Defaults to all continuous).
-    method : string or callable
+    method: string or callable
         Optimization algorithm (Defaults to 'L-BFGS-B' unless
         discrete variables are specified in `vars`, then
         `Powell` which will perform better).  For instructions on use of a callable,
         refer to SciPy's documentation of `optimize.minimize`.
-    return_raw : bool
+    return_raw: bool
         Whether to return the full output of scipy.optimize.minimize (Defaults to `False`)
-    include_transformed : bool
+    include_transformed: bool, optional defaults to True
         Flag for reporting automatically transformed variables in addition
-        to original variables (defaults to True).
-    progressbar : bool
+        to original variables.
+    progressbar: bool, optional defaults to True
         Whether or not to display a progress bar in the command line.
-    maxeval : int
+    maxeval: int, optional, defaults to 5000
         The maximum number of times the posterior distribution is evaluated.
-    model : Model (optional if in `with` context)
+    model: Model (optional if in `with` context)
     *args, **kwargs
         Extra args passed to scipy.optimize.minimize
 
@@ -125,11 +140,11 @@ def find_MAP(
             def grad_logp(point):
                 return nan_to_num(-dlogp_func(point))
 
-            opt_result = fmin(cost_func, bij.map(start), fprime=grad_logp, *args, **kwargs)
+            opt_result = fmin(cost_func, x0, fprime=grad_logp, *args, **kwargs)
         else:
             # Check to see if minimization function uses a starting value
             if "x0" in getargspec(fmin).args:
-                opt_result = fmin(cost_func, bij.map(start), *args, **kwargs)
+                opt_result = fmin(cost_func, x0, *args, **kwargs)
             else:
                 opt_result = fmin(cost_func, *args, **kwargs)
 
@@ -155,8 +170,11 @@ def find_MAP(
                 pm._log.info(e)
         finally:
             last_v = cost_func.n_eval
-            cost_func.progress.total = last_v
-            cost_func.progress.update(last_v)
+            if progressbar:
+                assert isinstance(cost_func.progress, ProgressBar)
+                cost_func.progress.total = last_v
+                cost_func.progress.update(last_v)
+                print()
 
     vars = get_default_varnames(model.unobserved_RVs, include_transformed)
     mx = {var.name: value for var, value in zip(vars, model.fastfn(vars)(bij.rmap(mx0)))}
@@ -178,6 +196,7 @@ def nan_to_high(x):
 def allinmodel(vars, model):
     notin = [v for v in vars if v not in model.vars]
     if notin:
+        notin = list(map(get_var_name, notin))
         raise ValueError("Some variables not in the model: " + str(notin))
 
 
@@ -194,8 +213,12 @@ class CostFuncWrapper:
             self.use_gradient = True
             self.desc = "logp = {:,.5g}, ||grad|| = {:,.5g}"
         self.previous_x = None
-        self.progress = progress_bar(range(maxeval), total=maxeval, display=progressbar)
-        self.progress.update(0)
+        self.progressbar = progressbar
+        if progressbar:
+            self.progress = progress_bar(range(maxeval), total=maxeval, display=progressbar)
+            self.progress.update(0)
+        else:
+            self.progress = range(maxeval)
 
     def __call__(self, x):
         neg_value = np.float64(self.logp_func(pm.floatX(x)))
@@ -218,16 +241,19 @@ class CostFuncWrapper:
             raise StopIteration
 
         self.n_eval += 1
-        self.progress.update_bar(self.n_eval)
+        if self.progressbar:
+            assert isinstance(self.progress, ProgressBar)
+            self.progress.update_bar(self.n_eval)
 
         if self.use_gradient:
             return value, grad
         else:
             return value
 
-    def update_progress_desc(self, neg_value, grad=None):
-        if grad is None:
-            self.progress.comment = self.desc.format(neg_value)
-        else:
-            norm_grad = np.linalg.norm(grad)
-            self.progress.comment = self.desc.format(neg_value, norm_grad)
+    def update_progress_desc(self, neg_value: float, grad: np.float64 = None) -> None:
+        if self.progressbar:
+            if grad is None:
+                self.progress.comment = self.desc.format(neg_value)
+            else:
+                norm_grad = np.linalg.norm(grad)
+                self.progress.comment = self.desc.format(neg_value, norm_grad)

@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pymc3 as pm
 from pymc3.tests import backend_fixtures as bf
 from pymc3.backends import ndarray, text
@@ -13,6 +27,11 @@ class TestTextSampling:
             pm.Normal("mu", mu=0, sigma=1, shape=2)
             db = text.Text(self.name)
             pm.sample(20, tune=10, init=None, trace=db, cores=2)
+
+    def test_supports_sampler_stats_diverging(self):
+        with pm.Model():
+            pm.Normal("mu", mu=0, sigma=1, shape=2)
+            pm.sample(20, tune=10, init=None, trace='text', cores=1)
 
     def teardown_method(self):
         bf.remove_file_or_directory(self.name)
