@@ -436,7 +436,7 @@ def test_model_pickle(tmpdir):
 
 
 def test_model_pickle_deterministic(tmpdir):
-    """Tests that PyMC3 models are pickleable"""
+    """Tests that PyMC3 models with deterministics are pickleable"""
     with pm.Model() as model:
         x = pm.Normal('x')
         z = pm.Normal("z")
