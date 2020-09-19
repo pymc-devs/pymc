@@ -20,7 +20,8 @@ import xarray
 import arviz
 from numpy import asscalar, ndarray
 
-from theano.tensor import TensorVariable
+# TODO: Reimplement after pickle fix
+# from theano.tensor import TensorVariable
 
 
 LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
