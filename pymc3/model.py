@@ -1903,14 +1903,22 @@ def _walk_up_rv(rv, formatting='plain'):
     return all_rvs
 
 
-def _repr_deterministic_rv(rv, formatting='plain'):
-    """Make latex string for a Deterministic variable"""
-    if formatting == 'latex':
-        return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
-            name=rv.name, args=r",~".join(_walk_up_rv(rv, formatting=formatting)))
-    else:
-        return "{name} ~ Deterministic({args})".format(
-            name=rv.name, args=", ".join(_walk_up_rv(rv, formatting=formatting)))
+class DeterministicWrapper(tt.TensorVariable):
+    def _str_repr(self, formatting='plain'):
+        if formatting == 'latex':
+            return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
+                name=self.name, args=r",~".join(_walk_up_rv(self, formatting=formatting)))
+        else:
+            return "{name} ~ Deterministic({args})".format(
+                name=self.name, args=", ".join(_walk_up_rv(self, formatting=formatting)))
+
+    def _repr_latex_(self):
+        return self._str_repr(formatting='latex')
+
+    __latex__ = _repr_latex_
+
+    def __str__(self):
+        return self._str_repr(formatting='plain')
 
 
 def Deterministic(name, var, model=None, dims=None):
@@ -1929,15 +1937,7 @@ def Deterministic(name, var, model=None, dims=None):
     var = var.copy(model.name_for(name))
     model.deterministics.append(var)
     model.add_random_variable(var, dims)
-    var._repr_latex_ = functools.partial(_repr_deterministic_rv, var, formatting='latex')
-    var.__latex__ = var._repr_latex_
-
-    # simply assigning var.__str__ is not enough, since str() will default to the class-
-    # defined __str__ anyway; see https://stackoverflow.com/a/5918210/1692028
-    old_type = type(var)
-    new_type = type(old_type.__name__ + '_pymc3_Deterministic', (old_type,),
-        {'__str__': functools.partial(_repr_deterministic_rv, var, formatting='plain')})
-    var.__class__ = new_type
+    var.__class__ = DeterministicWrapper # adds str and latex functionality
 
     return var
 
