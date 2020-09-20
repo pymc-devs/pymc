@@ -16,6 +16,7 @@ import pytest
 import theano
 import theano.tensor as tt
 import numpy as np
+import pickle
 import pandas as pd
 import numpy.testing as npt
 import unittest
@@ -421,3 +422,27 @@ def test_tempered_logp_dlogp():
 
     npt.assert_allclose(func_nograd(x), func(x)[0])
     npt.assert_allclose(func_temp_nograd(x), func_temp(x)[0])
+
+
+def test_model_pickle(tmpdir):
+    """Tests that PyMC3 models are pickleable"""
+    with pm.Model() as model:
+        x = pm.Normal('x')
+        pm.Normal('y', observed=1)
+
+    file_path = tmpdir.join("model.p")
+    with open(file_path, 'wb') as buff:
+        pickle.dump(model, buff)
+
+
+def test_model_pickle_deterministic(tmpdir):
+    """Tests that PyMC3 models are pickleable"""
+    with pm.Model() as model:
+        x = pm.Normal('x')
+        z = pm.Normal("z")
+        pm.Deterministic("w", x/z)
+        pm.Normal('y', observed=1)
+
+    file_path = tmpdir.join("model.p")
+    with open(file_path, 'wb') as buff:
+        pickle.dump(model, buff)

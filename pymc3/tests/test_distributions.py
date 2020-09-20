@@ -1774,6 +1774,14 @@ class TestStrAndLatexRepr:
         for str_repr in self.expected_str:
             assert str_repr in model_str
 
+    def test_str(self):
+        for distribution, str_repr in zip(self.distributions, self.expected_str):
+            assert str(distribution) == str_repr
+
+        model_str = str(self.model)
+        for str_repr in self.expected_str:
+            assert str_repr in model_str
+
 
 def test_discrete_trafo():
     with pytest.raises(ValueError) as err:
