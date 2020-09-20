@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import collections
-import functools
 import itertools
 import threading
 import warnings
