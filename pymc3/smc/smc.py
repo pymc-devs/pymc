@@ -212,12 +212,16 @@ class SMC:
 
         log_R = np.log(np.random.rand(self.n_steps, self.draws))
 
+        # The proposal distribution is a MVNormal, with mean and covariance computed from the previous tempered posterior
         dist = multivariate_normal(self.posterior.mean(axis=0), self.cov)
 
         for n_step in range(self.n_steps):
-            proposal = floatX(dist.rvs(size=self.draws))
-            proposal = proposal.reshape(len(proposal), -1)
+            # The proposal is independent from the current point.
+            # We have to take that into account to compute the Metropolis-Hastings acceptance
+            proposal = floatX(dist.rvs(size=self.draws).reshape(len(proposal), -1))
+            # To do that we compute the logp of moving to a new point
             forward = dist.logpdf(proposal)
+            # And to going back from that new point
             backward = multivariate_normal(proposal.mean(axis=0), self.cov).logpdf(self.posterior)
             ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
             pl = np.array([self.prior_logp_func(prop) for prop in proposal])

@@ -105,17 +105,18 @@ def sample_smc(
 
      1. Initialize :math:`\beta` at zero and stage at zero.
      2. Generate N samples :math:`S_{\beta}` from the prior (because when :math `\beta = 0` the
-         tempered posterior is the prior).
+        tempered posterior is the prior).
      3. Increase :math:`\beta` in order to make the effective sample size equals some predefined
         value (we use :math:`Nt`, where :math:`t` is 0.5 by default).
      4. Compute a set of N importance weights W. The weights are computed as the ratio of the
         likelihoods of a sample at stage i+1 and stage i.
      5. Obtain :math:`S_{w}` by re-sampling according to W.
-     6. Use W to compute the covariance for the proposal distribution.
-     7. For stages other than 0 use the acceptance rate from the previous stage to estimate the
-        scaling of the proposal distribution and `n_steps`.
-     8. Run N Metropolis chains (each one of length `n_steps`), starting each one from a different
-        sample in :math:`S_{w}`.
+     6. Use W to compute the mean and covariance for the proposal distribution, a MVNormal.
+     7. For stages other than 0 use the acceptance rate from the previous stage to estimate
+        `n_steps`.
+     8. Run N independent Metropolis-Hastings (IMH) chains (each one of length `n_steps`),
+        starting each one from a different sample in :math:`S_{w}`. Samples are IMH as the proposal
+        mean is the of the previous posterior stage and not the current point in parameter space.
      9. Repeat from step 3 until :math:`\beta \ge 1`.
      10. The final result is a collection of N samples from the posterior.
 
@@ -147,8 +148,8 @@ def sample_smc(
         cores = 1
 
     _log.info(
-            f"Sampling {chains} chain{'s' if chains > 1 else ''} "
-            f"in {cores} job{'s' if cores > 1 else ''}"
+        f"Sampling {chains} chain{'s' if chains > 1 else ''} "
+        f"in {cores} job{'s' if cores > 1 else ''}"
     )
 
     if random_seed == -1:
