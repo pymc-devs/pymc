@@ -330,7 +330,17 @@ class MLDA(ArrayStepShared):
     variance_reduction: bool
         Calculate and store quantities of interest and quantity of interest
         differences between levels to enable computing a variance-reduced
-        sum of the quantity of interest after sampling.
+        sum of the quantity of interest after sampling. In order to use
+        variance reduction, the user needs to do the following when defining
+        the PyMC3 model (also demonstrated in the example notebook):
+            - Include a `pm.Data()` variable with the name `Q` in the
+            model description of all levels.
+            - Use a Theano Op to calculate the forward model (or the
+            combination of a forward model and a likelihood). This Op
+            should have a `perform()` method which (in addition to all
+            the other calculations), calculates the quantity of interest
+            and stores it to the variable `Q` of the PyMC3 model,
+            using the `set_value()` function.
     store_Q_fine: bool
         Store the values of the quantity of interest from the fine chain.
     adaptive_error_model : bool
@@ -349,7 +359,8 @@ class MLDA(ArrayStepShared):
             - Use a Theano Op to define the forward model (and
             optionally the likelihood) for all levels. The Op needs
             to store the result of each forward model calculation
-            to the variable model_output of the PyMC3 model.
+            to the variable model_output of the PyMC3 model,
+            using the `set_value()` function.
             - Define a Multivariate Normal likelihood (either using
             the standard PyMC3 API or within an Op) which has mean
             equal to the forward model output plus mu_B and covariance
