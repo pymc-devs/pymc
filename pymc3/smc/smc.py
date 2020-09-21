@@ -218,7 +218,8 @@ class SMC:
         for n_step in range(self.n_steps):
             # The proposal is independent from the current point.
             # We have to take that into account to compute the Metropolis-Hastings acceptance
-            proposal = floatX(dist.rvs(size=self.draws).reshape(len(proposal), -1))
+            proposal = floatX(dist.rvs(size=self.draws))
+            proposal = proposal.reshape(len(proposal), -1)
             # To do that we compute the logp of moving to a new point
             forward = dist.logpdf(proposal)
             # And to going back from that new point
