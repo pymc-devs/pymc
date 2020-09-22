@@ -18,6 +18,9 @@ import threading
 import warnings
 from typing import Optional, TypeVar, Type, List, Union, TYPE_CHECKING, Any, cast
 from sys import modules
+import uuid
+import weakref
+import functools
 
 import numpy as np
 from pandas import Series
@@ -49,6 +52,7 @@ __all__ = [
     "Deterministic",
     "Potential",
     "set_data",
+    "submodel",
 ]
 
 FlatView = collections.namedtuple("FlatView", "input, replacements, view")
@@ -794,6 +798,40 @@ class ValueGradFunction:
         return args_joined, theano.clone(cost, replace=replace)
 
 
+class _NamespaceGuard:
+    def __init__(self, model, name):
+        self._model = weakref.ref(model)
+        self._name = name
+        self._id = uuid.uuid4()
+
+    def __enter__(self):
+        model = self._model()
+        if model is None:
+            raise ValueError("Main model does not exist anymore.")
+        model._activate_namespace(self)
+
+    def __exit__(self, exc_type, exc_val, traceback):
+        model = self._model()
+        if model is None:
+            raise ValueError("Main model does not exist anymore.")
+        model._deactivate_namespace(self)
+
+    def __hash__(self):
+        return hash(self._id)
+
+    def __eq__(self, other):
+        return self._id == other._id
+
+
+def submodel(func):
+    @functools.wraps(func)
+    def wrapper(name, *args, model=None, **kwargs):
+        model = pm.modelcontext(model)
+        with model.namespace(name):
+            return func(*args, **kwargs)
+    return wrapper
+
+
 class Model(Factor, WithMemoization, metaclass=ContextMeta):
     """Encapsulates the variables and likelihood factors of a model.
 
@@ -909,6 +947,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         self.coords = {}
         self.RV_dims = {}
         self.add_coords(coords)
+        self._namespaces = []
+        self._active_namespaces = []
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
@@ -1136,6 +1176,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         -------
         FreeRV or ObservedRV
         """
+        orig_name = name
         name = self.name_for(name)
 
         if data is None:
@@ -1149,6 +1190,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 with self:
                     var = TransformedRV(
                         name=name,
+                        orig_name=orig_name,
                         distribution=dist,
                         transform=dist.transform,
                         total_size=total_size,
@@ -1213,6 +1255,21 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if not hasattr(self, self.name_of(var.name)):
             setattr(self, self.name_of(var.name), var)
 
+    def namespace(self, name):
+        namespace = _NamespaceGuard(self, name)
+        self._namespaces.append(namespace)
+        return namespace
+
+    def _activate_namespace(self, namespace):
+        if namespace in self._active_namespaces:
+            raise ValueError("Namespace already active.")
+        self._active_namespaces.append(namespace)
+
+    def _deactivate_namespace(self, model):
+        if not self._active_namespaces or model != self._active_namespaces[-1]:
+            raise ValueError("Namespace is not active.")
+        self._active_namespaces.pop()
+
     @property
     def prefix(self):
         return "%s_" % self.name if self.name else ""
@@ -1220,23 +1277,23 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def name_for(self, name):
         """Checks if name has prefix and adds if needed
         """
-        if self.prefix:
-            if not name.startswith(self.prefix):
-                return f"{self.prefix}{name}"
+        for namespace in reversed(self._active_namespaces):
+            if name == '':
+                name = namespace._name
             else:
-                return name
-        else:
-            return name
+                name = f"{namespace._name}_{name}"
+        if self.prefix:
+            name = f"{self.prefix}{name}"
+        return name
 
     def name_of(self, name):
         """Checks if name has prefix and deletes if needed
         """
         if not self.prefix or not name:
             return name
-        elif name.startswith(self.prefix):
-            return name[len(self.prefix) :]
-        else:
-            return name
+        if not name.startswith(self.prefix):
+            raise ValueError("Variable name does not start with model prefix")
+        return name[len(self.prefix):]
 
     def __getitem__(self, key):
         try:
@@ -1980,6 +2037,7 @@ class TransformedRV(PyMC3Variable):
         owner=None,
         index=None,
         name=None,
+        orig_name=None,
         distribution=None,
         model=None,
         transform=None,
@@ -1997,7 +2055,7 @@ class TransformedRV(PyMC3Variable):
             self.dshape = tuple(distribution.shape)
             self.dsize = int(np.prod(distribution.shape))
 
-            transformed_name = get_transformed_name(name, transform)
+            transformed_name = get_transformed_name(orig_name, transform)
 
             self.transformed = model.Var(
                 transformed_name, transform.apply(distribution), total_size=total_size
