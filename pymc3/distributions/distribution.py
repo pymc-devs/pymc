@@ -19,6 +19,7 @@ import inspect
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Optional, Callable
+import threading
 
 import numpy as np
 import theano.tensor as tt
@@ -28,7 +29,7 @@ import theano
 from ..memoize import memoize
 from ..model import (
     Model, build_named_node_tree, FreeRV,
-    ObservedRV, MultiObservedRV, ContextMeta
+    ObservedRV, MultiObservedRV
 )
 from ..vartypes import string_types, theano_constant
 from .shape_utils import (
@@ -550,9 +551,29 @@ class DensityDist(Distribution):
         return []
 
 
-class _DrawValuesContext(metaclass=ContextMeta, context_class='_DrawValuesContext'):
+class _DrawValuesContext:
     """ A context manager class used while drawing values with draw_values
     """
+    _context_stack = threading.local()
+    _context_stack.values = []
+
+    @classmethod
+    def get_context(cls, error_if_none=False):
+        stack = cls._context_stack.values
+        if stack:
+            return stack[-1]
+        if error_if_none:
+            raise ValueError("No context on context stack.")
+
+    def __enter__(self):
+        stack = type(self)._context_stack.values
+        stack.append(self)
+        return self
+
+    def __exit__(self, *exc):
+        stack = type(self)._context_stack.values
+        stack.pop()
+        return False
 
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance

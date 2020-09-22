@@ -14,10 +14,9 @@
 
 import collections
 import itertools
-import threading
 import warnings
 from typing import Optional, TypeVar, Type, List, Union, TYPE_CHECKING, Any, cast
-from sys import modules
+import threading
 import uuid
 import weakref
 import functools
@@ -34,7 +33,6 @@ from theano.compile import SharedVariable
 from pymc3.theanof import set_theano_conf, floatX
 import pymc3 as pm
 from pymc3.math import flatten_list
-from .memoize import memoize, WithMemoization
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
@@ -88,56 +86,6 @@ class PyMC3Variable(TensorVariable):
 
     __latex__ = _repr_latex_
 
-
-class InstanceMethod:
-    """Class for hiding references to instance methods so they can be pickled.
-
-    >>> self.method = InstanceMethod(some_object, 'method_name')
-    """
-
-    def __init__(self, obj, method_name):
-        self.obj = obj
-        self.method_name = method_name
-
-    def __call__(self, *args, **kwargs):
-        return getattr(self.obj, self.method_name)(*args, **kwargs)
-
-
-def incorporate_methods(source, destination, methods, wrapper=None, override=False):
-    """
-    Add attributes to a destination object which point to
-    methods from from a source object.
-
-    Parameters
-    ----------
-    source: object
-        The source object containing the methods.
-    destination: object
-        The destination object for the methods.
-    methods: list of str
-        Names of methods to incorporate.
-    wrapper: function
-        An optional function to allow the source method to be
-        wrapped. Should take the form my_wrapper(source, method_name)
-        and return a single value.
-    override: bool
-        If the destination object already has a method/attribute
-        an AttributeError will be raised if override is False (the default).
-    """
-    for method in methods:
-        if hasattr(destination, method) and not override:
-            raise AttributeError(
-                f"Cannot add method {method!r}"
-                + "to destination object as it already exists. "
-                "To prevent this error set 'override=True'."
-            )
-        if hasattr(source, method):
-            if wrapper is None:
-                setattr(destination, method, getattr(source, method))
-            else:
-                setattr(destination, method, wrapper(source, method))
-        else:
-            setattr(destination, method, None)
 
 
 def get_named_nodes_and_relations(graph):
@@ -271,124 +219,6 @@ def build_named_node_tree(graphs):
     return leaf_dict, named_nodes_descendents, named_nodes_ancestors
 
 
-T = TypeVar("T", bound="ContextMeta")
-
-
-class ContextMeta(type):
-    """Functionality for objects that put themselves in a context using
-    the `with` statement.
-    """
-
-    def __new__(cls, name, bases, dct, **kargs):  # pylint: disable=unused-argument
-        "Add __enter__ and __exit__ methods to the class."
-
-        def __enter__(self):
-            self.__class__.context_class.get_contexts().append(self)
-            # self._theano_config is set in Model.__new__
-            if hasattr(self, "_theano_config"):
-                self._old_theano_config = set_theano_conf(self._theano_config)
-            return self
-
-        def __exit__(self, typ, value, traceback):  # pylint: disable=unused-argument
-            self.__class__.context_class.get_contexts().pop()
-            # self._theano_config is set in Model.__new__
-            if hasattr(self, "_old_theano_config"):
-                set_theano_conf(self._old_theano_config)
-
-        dct[__enter__.__name__] = __enter__
-        dct[__exit__.__name__] = __exit__
-
-        # We strip off keyword args, per the warning from
-        # StackExchange:
-        # DO NOT send "**kargs" to "type.__new__".  It won't catch them and
-        # you'll get a "TypeError: type() takes 1 or 3 arguments" exception.
-        return super().__new__(cls, name, bases, dct)
-
-    # FIXME: is there a more elegant way to automatically add methods to the class that
-    # are instance methods instead of class methods?
-    def __init__(
-        cls, name, bases, nmspc, context_class: Optional[Type] = None, **kwargs
-    ):  # pylint: disable=unused-argument
-        """Add ``__enter__`` and ``__exit__`` methods to the new class automatically."""
-        if context_class is not None:
-            cls._context_class = context_class
-        super().__init__(name, bases, nmspc)
-
-    def get_context(cls, error_if_none=True) -> Optional[T]:
-        """Return the most recently pushed context object of type ``cls``
-        on the stack, or ``None``. If ``error_if_none`` is True (default),
-        raise a ``TypeError`` instead of returning ``None``."""
-        try:
-            candidate = cls.get_contexts()[-1]  # type: Optional[T]
-        except IndexError as e:
-            # Calling code expects to get a TypeError if the entity
-            # is unfound, and there's too much to fix.
-            if error_if_none:
-                raise TypeError("No %s on context stack" % str(cls))
-            return None
-        return candidate
-
-    def get_contexts(cls) -> List[T]:
-        """Return a stack of context instances for the ``context_class``
-        of ``cls``."""
-        # This lazily creates the context class's contexts
-        # thread-local object, as needed. This seems inelegant to me,
-        # but since the context class is not guaranteed to exist when
-        # the metaclass is being instantiated, I couldn't figure out a
-        # better way. [2019/10/11:rpg]
-
-        # no race-condition here, contexts is a thread-local object
-        # be sure not to override contexts in a subclass however!
-        context_class = cls.context_class
-        assert isinstance(context_class, type), (
-            "Name of context class, %s was not resolvable to a class" % context_class
-        )
-        if not hasattr(context_class, "contexts"):
-            context_class.contexts = threading.local()
-
-        contexts = context_class.contexts
-
-        if not hasattr(contexts, "stack"):
-            contexts.stack = []
-        return contexts.stack
-
-    # the following complex property accessor is necessary because the
-    # context_class may not have been created at the point it is
-    # specified, so the context_class may be a class *name* rather
-    # than a class.
-    @property
-    def context_class(cls) -> Type:
-        def resolve_type(c: Union[Type, str]) -> Type:
-            if isinstance(c, str):
-                c = getattr(modules[cls.__module__], c)
-            if isinstance(c, type):
-                return c
-            raise ValueError("Cannot resolve context class %s" % c)
-
-        assert cls is not None
-        if isinstance(cls._context_class, str):
-            cls._context_class = resolve_type(cls._context_class)
-        if not isinstance(cls._context_class, (str, type)):
-            raise ValueError(
-                "Context class for %s, %s, is not of the right type"
-                % (cls.__name__, cls._context_class)
-            )
-        return cls._context_class
-
-    # Inherit context class from parent
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        cls.context_class = super().context_class
-
-    # Initialize object in its own context...
-    # Merged from InitContextMeta in the original.
-    def __call__(cls, *args, **kwargs):
-        instance = cls.__new__(cls, *args, **kwargs)
-        with instance:  # appends context
-            instance.__init__(*args, **kwargs)
-        return instance
-
-
 def modelcontext(model: Optional["Model"]) -> "Model":
     """
     Return the given model or, if none was supplied, try to find one in
@@ -487,96 +317,6 @@ class Factor:
         if self.name is not None:
             logp.name = "__logp_%s" % self.name
         return logp
-
-
-def withparent(meth):
-    """Helper wrapper that passes calls to parent's instance"""
-
-    def wrapped(self, *args, **kwargs):
-        res = meth(self, *args, **kwargs)
-        if getattr(self, "parent", None) is not None:
-            getattr(self.parent, meth.__name__)(*args, **kwargs)
-        return res
-
-    # Unfortunately functools wrapper fails
-    # when decorating built-in methods so we
-    # need to fix that improper behaviour
-    wrapped.__name__ = meth.__name__
-    return wrapped
-
-
-class treelist(list):
-    """A list that passes mutable extending operations used in Model
-    to parent list instance.
-    Extending treelist you will also extend its parent
-    """
-
-    def __init__(self, iterable=(), parent=None):
-        super().__init__(iterable)
-        assert isinstance(parent, list) or parent is None
-        self.parent = parent
-        if self.parent is not None:
-            self.parent.extend(self)
-
-    # typechecking here works bad
-    append = withparent(list.append)
-    __iadd__ = withparent(list.__iadd__)
-    extend = withparent(list.extend)
-
-    def tree_contains(self, item):
-        if isinstance(self.parent, treedict):
-            return list.__contains__(self, item) or self.parent.tree_contains(item)
-        elif isinstance(self.parent, list):
-            return list.__contains__(self, item) or self.parent.__contains__(item)
-        else:
-            return list.__contains__(self, item)
-
-    def __setitem__(self, key, value):
-        raise NotImplementedError(
-            "Method is removed as we are not"
-            " able to determine "
-            "appropriate logic for it"
-        )
-
-    # Added this because mypy didn't like having __imul__ without __mul__
-    # This is my best guess about what this should do.  I might be happier
-    # to kill both of these if they are not used.
-    def __mul__(self, other) -> "treelist":
-        return cast("treelist", list.__mul__(self, other))
-
-    def __imul__(self, other) -> "treelist":
-        t0 = len(self)
-        list.__imul__(self, other)
-        if self.parent is not None:
-            self.parent.extend(self[t0:])
-        return self  # python spec says should return the result.
-
-
-class treedict(dict):
-    """A dict that passes mutable extending operations used in Model
-    to parent dict instance.
-    Extending treedict you will also extend its parent
-    """
-
-    def __init__(self, iterable=(), parent=None, **kwargs):
-        super().__init__(iterable, **kwargs)
-        assert isinstance(parent, dict) or parent is None
-        self.parent = parent
-        if self.parent is not None:
-            self.parent.update(self)
-
-    # typechecking here works bad
-    __setitem__ = withparent(dict.__setitem__)
-    update = withparent(dict.update)
-
-    def tree_contains(self, item):
-        # needed for `add_random_variable` method
-        if isinstance(self.parent, treedict):
-            return dict.__contains__(self, item) or self.parent.tree_contains(item)
-        elif isinstance(self.parent, dict):
-            return dict.__contains__(self, item) or self.parent.__contains__(item)
-        else:
-            return dict.__contains__(self, item)
 
 
 class ValueGradFunction:
@@ -815,6 +555,7 @@ class _NamespaceGuard:
         if model is None:
             raise ValueError("Main model does not exist anymore.")
         model._deactivate_namespace(self)
+        return False
 
     def __hash__(self):
         return hash(self._id)
@@ -832,7 +573,7 @@ def submodel(func):
     return wrapper
 
 
-class Model(Factor, WithMemoization, metaclass=ContextMeta):
+class Model(Factor):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
@@ -920,77 +661,80 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             CustomModel(mean=1, name='first')
             CustomModel(mean=2, name='second')
     """
+    _model_stack = threading.local()
+    _model_stack.values = []
 
-    if TYPE_CHECKING:
+    @classmethod
+    def get_context(cls, error_if_none=True):
+        stack = cls._model_stack.values
+        if stack:
+            return stack[-1]
+        if error_if_none:
+            raise ValueError("No active model available.")
 
-        def __enter__(self: "Model") -> "Model":
-            ...
+    @classmethod
+    def _activate(cls, model):
+        cls._model_stack.values.append(model)
 
-        def __exit__(self: "Model", *exc: Any) -> bool:
-            ...
+    @classmethod
+    def _deactivate(cls, model):
+        stack = cls._model_stack.values
+        if not stack or stack[-1] != model:
+            raise ValueError("Could not deactivate model.")
+        stack.pop()
+
+    def __enter__(self) -> 'Model':
+        old_conf = set_theano_conf(self._theano_config)
+        self._old_theano_configs.append(old_conf)
+        type(self)._activate(self)
+        return self
+
+    def __exit__(self, *exc):
+        if not self._old_theano_configs:
+            raise ValueError("Could not restore theano config.")
+        set_theano_conf(self._old_theano_configs.pop())
+        type(self)._deactivate(self)
+        return False
 
     def __new__(cls, *args, **kwargs):
-        # resolves the parent instance
-        instance = super().__new__(cls)
-        if kwargs.get("model") is not None:
-            instance._parent = kwargs.get("model")
-        else:
-            instance._parent = cls.get_context(error_if_none=False)
-        theano_config = kwargs.get("theano_config", None)
-        if theano_config is None or "compute_test_value" not in theano_config:
-            theano_config = {"compute_test_value": "raise"}
-        instance._theano_config = theano_config
-        return instance
+        parent = kwargs.get('model', None)
+        if parent is None:
+            parent = cls.get_context(error_if_none=False)
+        if parent is None:
+            return super().__new__(cls)
 
-    def __init__(self, name="", model=None, theano_config=None, coords=None):
+        name = kwargs.get('name', None)
+        if name is None and len(args) > 0:
+            name = args[0]
+        if name is None:
+            raise ValueError("Missing name argument in submodel.")
+        return parent.namespace(name)
+
+    def __init__(self, *, name="", theano_config=None, coords=None):
         self.name = name
         self.coords = {}
         self.RV_dims = {}
         self.add_coords(coords)
-        self._namespaces = []
         self._active_namespaces = []
 
-        if self.parent is not None:
-            self.named_vars = treedict(parent=self.parent.named_vars)
-            self.free_RVs = treelist(parent=self.parent.free_RVs)
-            self.observed_RVs = treelist(parent=self.parent.observed_RVs)
-            self.deterministics = treelist(parent=self.parent.deterministics)
-            self.potentials = treelist(parent=self.parent.potentials)
-            self.missing_values = treelist(parent=self.parent.missing_values)
-        else:
-            self.named_vars = treedict()
-            self.free_RVs = treelist()
-            self.observed_RVs = treelist()
-            self.deterministics = treelist()
-            self.potentials = treelist()
-            self.missing_values = treelist()
+        if theano_config is None:
+            theano_config = {}
+        if "compute_test_value" not in theano_config:
+            theano_config["compute_test_value"] = "raise"
+        self._theano_config = theano_config
+        self._old_theano_configs = []
 
-    @property
-    def model(self):
-        return self
-
-    @property
-    def parent(self):
-        return self._parent
-
-    @property
-    def root(self):
-        model = self
-        while not model.isroot:
-            model = model.parent
-        return model
-
-    @property
-    def isroot(self):
-        return self.parent is None
+        self.named_vars = {}
+        self.free_RVs = []
+        self.observed_RVs = []
+        self.deterministics = []
+        self.potentials = []
+        self.missing_values = []
 
     @property  # type: ignore
-    @memoize(bound=True)
     def bijection(self):
         vars = inputvars(self.vars)
-
         bij = DictToArrayBijection(ArrayOrdering(vars), self.test_point)
-
         return bij
 
     @property
@@ -1242,7 +986,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     def add_random_variable(self, var, dims=None):
         """Add a random variable to the named variables of the model."""
-        if self.named_vars.tree_contains(var.name):
+        if var.name in self.named_vars:
             raise ValueError(f"Variable name {var.name} already exists.")
 
         if dims is not None:
@@ -1257,7 +1001,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     def namespace(self, name):
         namespace = _NamespaceGuard(self, name)
-        self._namespaces.append(namespace)
         return namespace
 
     def _activate_namespace(self, namespace):
@@ -1486,11 +1229,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return self._str_repr(formatting="latex", **kwargs)
 
     __latex__ = _repr_latex_
-
-
-# this is really disgusting, but it breaks a self-loop: I can't pass Model
-# itself as context class init arg.
-Model._context_class = Model
 
 
 def set_data(new_data, model=None):
@@ -1745,12 +1483,8 @@ class FreeRV(Factor, PyMC3Variable):
             self.model = model
             self.scaling = _get_scaling(total_size, self.shape, self.ndim)
 
-            incorporate_methods(
-                source=distribution,
-                destination=self,
-                methods=["random"],
-                wrapper=InstanceMethod,
-            )
+    def random(self, *args, **kwargs):
+        return self.distribution.random(*args, **kwargs)
 
     @property
     def init_value(self):
@@ -2066,12 +1800,9 @@ class TransformedRV(PyMC3Variable):
             theano.Apply(theano.compile.view_op, inputs=[normalRV], outputs=[self])
             self.tag.test_value = normalRV.tag.test_value
             self.scaling = _get_scaling(total_size, self.shape, self.ndim)
-            incorporate_methods(
-                source=distribution,
-                destination=self,
-                methods=["random"],
-                wrapper=InstanceMethod,
-            )
+
+    def random(self, *args, **kwargs):
+        return self.distribution.random(*args, **kwargs)
 
     @property
     def init_value(self):
