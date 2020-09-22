@@ -661,9 +661,6 @@ def subsample(
 
     draws += tune
 
-    if model.ndim == 0:
-        raise ValueError("The model does not contain any free variables.")
-
     step = assign_step_methods(model, step, step_kwargs=kwargs)
 
     if isinstance(step, list):
