@@ -956,6 +956,54 @@ def delta_logp_inverse(logp, vars, shared):
     return f
 
 
+def subsample(
+    draws=1,
+    step=None,
+    start=None,
+    trace=None,
+    tune=0,
+    model=None,
+    random_seed=None,
+    callback=None,
+    **kwargs
+):
+    """
+    A stripped down version of sample(), which is called only
+    by the RecursiveDAProposal (which is the proposal used in the MLDA 
+    stepper). RecursiveDAProposal only requires a small set of the input
+    parameters and checks normally performed by sample(), and this 
+    function thus skips some of the code in sampler(). It directly calls
+    _iter_sample(), rather than sample_many(). The result is a reduced 
+    overhead when running multiple levels in MLDA.
+    """
+    
+    model = pm.modelcontext(model)
+    chain = 0
+    random_seed = np.random.randint(2 ** 30)
+
+    if start is not None:
+        pm.sampling._check_start_shape(model, start)
+    else:
+        start = {}
+
+    draws += tune
+
+    step = pm.sampling.assign_step_methods(model, step, step_kwargs=kwargs)
+
+    if isinstance(step, list):
+        step = CompoundStep(step)
+
+    sampling = pm.sampling._iter_sample(draws, step, start, trace, chain, tune, model, random_seed, callback)
+
+    try:
+        for it, (trace, _) in enumerate(sampling):
+            pass
+    except KeyboardInterrupt:
+        pass
+
+    return trace
+
+
 # Available proposal distributions for MLDA
 
 
@@ -999,18 +1047,18 @@ class RecursiveDAProposal(Proposal):
 
             if self.tune:
                 # Subsample in tuning mode
-                self.trace = pm.subsample(draws=0, step=self.next_step_method,
-                                          start=q0_dict, trace=self.trace,
-                                          tune=self.subsampling_rate)
+                self.trace = subsample(draws=0, step=self.next_step_method,
+                                       start=q0_dict, trace=self.trace,
+                                       tune=self.subsampling_rate)
             else:
                 # Subsample in normal mode without tuning
                 # If DEMetropolisZMLDA is the base sampler a flag is raised to
                 # make sure that history is edited after tuning ends
                 if self.tuning_end_trigger and isinstance(self.next_step_method, DEMetropolisZMLDA):
                     self.next_step_method.tuning_end_trigger = True
-                self.trace = pm.subsample(draws=self.subsampling_rate,
-                                          step=self.next_step_method,
-                                          start=q0_dict, trace=self.trace)
+                self.trace = subsample(draws=self.subsampling_rate,
+                                       step=self.next_step_method,
+                                       start=q0_dict, trace=self.trace)
                 self.tuning_end_trigger = False
                 # If DEMetropolisZMLDA is the base sampler the flag is set to False
                 # to avoid further deletion of samples history
