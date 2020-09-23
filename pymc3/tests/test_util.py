@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pytest
 
 import pymc3 as pm
@@ -84,3 +98,39 @@ class TestUpdateStartVals(SeededTest):
                             test_point['interv_interval__'])
 
 
+class TestExceptions:
+    def test_shape_error(self):
+        with pytest.raises(pm.exceptions.ShapeError) as exinfo:
+            raise pm.exceptions.ShapeError('Just the message.')
+        assert 'Just' in exinfo.value.args[0]
+
+        with pytest.raises(pm.exceptions.ShapeError) as exinfo:
+            raise pm.exceptions.ShapeError('With shapes.', actual=(2,3))
+        assert '(2, 3)' in exinfo.value.args[0]
+
+        with pytest.raises(pm.exceptions.ShapeError) as exinfo:
+            raise pm.exceptions.ShapeError('With shapes.', expected='(2,3) or (5,6)')
+        assert '(5,6)' in exinfo.value.args[0]
+
+        with pytest.raises(pm.exceptions.ShapeError) as exinfo:
+            raise pm.exceptions.ShapeError('With shapes.', actual=(), expected='(5,4) or (?,?,6)')
+        assert '(?,?,6)' in exinfo.value.args[0]
+        pass
+
+    def test_dtype_error(self):
+        with pytest.raises(pm.exceptions.DtypeError) as exinfo:
+            raise pm.exceptions.DtypeError('Just the message.')
+        assert 'Just' in exinfo.value.args[0]
+
+        with pytest.raises(pm.exceptions.DtypeError) as exinfo:
+            raise pm.exceptions.DtypeError('With types.', actual=str)
+        assert 'str' in exinfo.value.args[0]
+
+        with pytest.raises(pm.exceptions.DtypeError) as exinfo:
+            raise pm.exceptions.DtypeError('With types.', expected=float)
+        assert 'float' in exinfo.value.args[0]
+
+        with pytest.raises(pm.exceptions.DtypeError) as exinfo:
+            raise pm.exceptions.DtypeError('With types.', actual=int, expected=str)
+        assert 'int' in exinfo.value.args[0] and 'str' in exinfo.value.args[0]
+        pass

@@ -1,279 +1,371 @@
-"""
-Sequential Monte Carlo sampler
-"""
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+from collections import OrderedDict
+
 import numpy as np
-import pymc3 as pm
-from tqdm import tqdm
-import multiprocessing as mp
-import warnings
+from scipy.special import logsumexp
+from scipy.stats import multivariate_normal
+from theano import function as theano_function
+import theano.tensor as tt
 
-from ..step_methods.metropolis import MultivariateNormalProposal
-from .smc_utils import (
-    _initial_population,
-    _calc_covariance,
-    _tune,
-    _posterior_to_trace,
-    logp_forw,
-    calc_beta,
-    metrop_kernel,
-    PseudoLikelihood,
-)
-from ..theanof import inputvars, make_shared_replacements
-from ..model import modelcontext
-from ..parallel_sampling import _cpu_count
+from ..model import modelcontext, Point
+from ..theanof import floatX, inputvars, make_shared_replacements, join_nonshared_inputs
+from ..sampling import sample_prior_predictive
+from ..backends.ndarray import NDArray
 
 
-EXPERIMENTAL_WARNING = (
-    "Warning: SMC-ABC methods are experimental step methods and not yet"
-    " recommended for use in PyMC3!"
-)
+class SMC:
+    def __init__(
+        self,
+        draws=2000,
+        kernel="metropolis",
+        n_steps=25,
+        start=None,
+        tune_steps=True,
+        p_acc_rate=0.85,
+        threshold=0.5,
+        save_sim_data=False,
+        model=None,
+        random_seed=-1,
+        chain=0,
+    ):
 
-__all__ = ["sample_smc"]
+        self.draws = draws
+        self.kernel = kernel.lower()
+        self.n_steps = n_steps
+        self.start = start
+        self.tune_steps = tune_steps
+        self.p_acc_rate = p_acc_rate
+        self.threshold = threshold
+        self.save_sim_data = save_sim_data
+        self.model = model
+        self.random_seed = random_seed
+        self.chain = chain
+
+        self.model = modelcontext(model)
+
+        if self.random_seed != -1:
+            np.random.seed(self.random_seed)
+
+        self.beta = 0
+        self.max_steps = n_steps
+        self.proposed = draws * n_steps
+        self.acc_rate = 1
+        self.variables = inputvars(self.model.vars)
+        self.weights = np.ones(self.draws) / self.draws
+        self.log_marginal_likelihood = 0
+        self.sim_data = []
+
+    def initialize_population(self):
+        """
+        Create an initial population from the prior distribution
+        """
+        population = []
+        var_info = OrderedDict()
+        if self.start is None:
+            init_rnd = sample_prior_predictive(
+                self.draws,
+                var_names=[v.name for v in self.model.unobserved_RVs],
+                model=self.model,
+            )
+        else:
+            init_rnd = self.start
+
+        init = self.model.test_point
+
+        for v in self.variables:
+            var_info[v.name] = (init[v.name].shape, init[v.name].size)
+
+        for i in range(self.draws):
+
+            point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
+            population.append(self.model.dict_to_array(point))
+
+        self.posterior = np.array(floatX(population))
+        self.var_info = var_info
+
+    def setup_kernel(self):
+        """
+        Set up the likelihood logp function based on the chosen kernel
+        """
+        shared = make_shared_replacements(self.variables, self.model)
+
+        if self.kernel == "abc":
+            factors = [var.logpt for var in self.model.free_RVs]
+            factors += [tt.sum(factor) for factor in self.model.potentials]
+            self.prior_logp_func = logp_forw([tt.sum(factors)], self.variables, shared)
+            simulator = self.model.observed_RVs[0]
+            distance = simulator.distribution.distance
+            sum_stat = simulator.distribution.sum_stat
+            self.likelihood_logp_func = PseudoLikelihood(
+                simulator.distribution.epsilon,
+                simulator.observations,
+                simulator.distribution.function,
+                [v.name for v in simulator.distribution.params],
+                self.model,
+                self.var_info,
+                self.variables,
+                distance,
+                sum_stat,
+                self.draws,
+                self.save_sim_data,
+            )
+        elif self.kernel == "metropolis":
+            self.prior_logp_func = logp_forw([self.model.varlogpt], self.variables, shared)
+            self.likelihood_logp_func = logp_forw([self.model.datalogpt], self.variables, shared)
+
+    def initialize_logp(self):
+        """
+        initialize the prior and likelihood log probabilities
+        """
+        priors = [self.prior_logp_func(sample) for sample in self.posterior]
+        likelihoods = [self.likelihood_logp_func(sample) for sample in self.posterior]
+
+        self.prior_logp = np.array(priors).squeeze()
+        self.likelihood_logp = np.array(likelihoods).squeeze()
+
+        if self.kernel == "abc" and self.save_sim_data:
+            self.sim_data = self.likelihood_logp_func.get_data()
+
+    def update_weights_beta(self):
+        """
+        Calculate the next inverse temperature (beta), the importance weights based on current beta
+        and tempered likelihood and updates the marginal likelihood estimation
+        """
+        low_beta = old_beta = self.beta
+        up_beta = 2.0
+        rN = int(len(self.likelihood_logp) * self.threshold)
+
+        while up_beta - low_beta > 1e-6:
+            new_beta = (low_beta + up_beta) / 2.0
+            log_weights_un = (new_beta - old_beta) * self.likelihood_logp
+            log_weights = log_weights_un - logsumexp(log_weights_un)
+            ESS = int(np.exp(-logsumexp(log_weights * 2)))
+            if ESS == rN:
+                break
+            elif ESS < rN:
+                up_beta = new_beta
+            else:
+                low_beta = new_beta
+        if new_beta >= 1:
+            new_beta = 1
+            log_weights_un = (new_beta - old_beta) * self.likelihood_logp
+            log_weights = log_weights_un - logsumexp(log_weights_un)
+
+        self.log_marginal_likelihood += logsumexp(log_weights_un) - np.log(self.draws)
+        self.beta = new_beta
+        self.weights = np.exp(log_weights)
+
+    def resample(self):
+        """
+        Resample particles based on importance weights
+        """
+        resampling_indexes = np.random.choice(
+            np.arange(self.draws), size=self.draws, p=self.weights
+        )
+
+        self.posterior = self.posterior[resampling_indexes]
+        self.prior_logp = self.prior_logp[resampling_indexes]
+        self.likelihood_logp = self.likelihood_logp[resampling_indexes]
+        self.posterior_logp = self.prior_logp + self.likelihood_logp * self.beta
+        if self.save_sim_data:
+            self.sim_data = self.sim_data[resampling_indexes]
+
+    def update_proposal(self):
+        """
+        Update proposal based on the covariance matrix from tempered posterior
+        """
+        cov = np.cov(self.posterior, ddof=0, aweights=self.weights, rowvar=0)
+        cov = np.atleast_2d(cov)
+        cov += 1e-6 * np.eye(cov.shape[0])
+        if np.isnan(cov).any() or np.isinf(cov).any():
+            raise ValueError('Sample covariances not valid! Likely "draws" is too small!')
+        self.cov = cov
+
+    def tune(self):
+        """
+        Tune n_steps based on the acceptance rate.
+        """
+        if self.tune_steps:
+            acc_rate = max(1.0 / self.proposed, self.acc_rate)
+            self.n_steps = min(
+                self.max_steps,
+                max(2, int(np.log(1 - self.p_acc_rate) / np.log(1 - acc_rate))),
+            )
+
+        self.proposed = self.draws * self.n_steps
+
+    def mutate(self):
+        ac_ = np.empty((self.n_steps, self.draws))
+
+        log_R = np.log(np.random.rand(self.n_steps, self.draws))
+
+        # The proposal distribution is a MVNormal, with mean and covariance computed from the previous tempered posterior
+        dist = multivariate_normal(self.posterior.mean(axis=0), self.cov)
+
+        for n_step in range(self.n_steps):
+            # The proposal is independent from the current point.
+            # We have to take that into account to compute the Metropolis-Hastings acceptance
+            proposal = floatX(dist.rvs(size=self.draws))
+            proposal = proposal.reshape(len(proposal), -1)
+            # To do that we compute the logp of moving to a new point
+            forward = dist.logpdf(proposal)
+            # And to going back from that new point
+            backward = multivariate_normal(proposal.mean(axis=0), self.cov).logpdf(self.posterior)
+            ll = np.array([self.likelihood_logp_func(prop) for prop in proposal])
+            pl = np.array([self.prior_logp_func(prop) for prop in proposal])
+            proposal_logp = pl + ll * self.beta
+            accepted = log_R[n_step] < (
+                (proposal_logp + backward) - (self.posterior_logp + forward)
+            )
+            ac_[n_step] = accepted
+            self.posterior[accepted] = proposal[accepted]
+            self.posterior_logp[accepted] = proposal_logp[accepted]
+            self.prior_logp[accepted] = pl[accepted]
+            self.likelihood_logp[accepted] = ll[accepted]
+            if self.kernel == "abc" and self.save_sim_data:
+                self.sim_data[accepted] = self.likelihood_logp_func.get_data()[accepted]
+
+        self.acc_rate = np.mean(ac_)
+
+    def posterior_to_trace(self):
+        """
+        Save results into a PyMC3 trace
+        """
+        lenght_pos = len(self.posterior)
+        varnames = [v.name for v in self.variables]
+
+        with self.model:
+            strace = NDArray(self.model)
+            strace.setup(lenght_pos, self.chain)
+        for i in range(lenght_pos):
+            value = []
+            size = 0
+            for var in varnames:
+                shape, new_size = self.var_info[var]
+                value.append(self.posterior[i][size : size + new_size].reshape(shape))
+                size += new_size
+            strace.record(point={k: v for k, v in zip(varnames, value)})
+        return strace
 
 
-def sample_smc(
-    draws=1000,
-    kernel="metropolis",
-    n_steps=25,
-    parallel=False,
-    start=None,
-    cores=None,
-    tune_scaling=True,
-    tune_steps=True,
-    scaling=1.0,
-    p_acc_rate=0.99,
-    threshold=0.5,
-    epsilon=1.0,
-    dist_func="absolute_error",
-    sum_stat=False,
-    progressbar=False,
-    model=None,
-    random_seed=-1,
-):
-    """
-    Sequential Monte Carlo based sampling
+def logp_forw(out_vars, vars, shared):
+    """Compile Theano function of the model and the input and output variables.
 
     Parameters
     ----------
-    draws : int
-        The number of samples to draw from the posterior (i.e. last stage). And also the number of
-        independent chains. Defaults to 1000.
-    kernel : str
-        Kernel method for the SMC sampler. Available option are ``metropolis`` (default) and `ABC`.
-        Use `ABC` for likelihood free inference togheter with a ``pm.Simulator``.
-    n_steps : int
-        The number of steps of each Markov Chain. If ``tune_steps == True`` ``n_steps`` will be used
-        for the first stage and for the others it will be determined automatically based on the
-        acceptance rate and `p_acc_rate`, the max number of steps is ``n_steps``.
-    parallel : bool
-        Distribute computations across cores if the number of cores is larger than 1.
-        Defaults to False.
-    start : dict, or array of dict
-        Starting point in parameter space. It should be a list of dict with length `chains`.
-        When None (default) the starting point is sampled from the prior distribution. 
-    cores : int
-        The number of chains to run in parallel. If ``None`` (default), it will be automatically
-        set to the number of CPUs in the system.
-    tune_scaling : bool
-        Whether to compute the scaling factor automatically or not. Defaults to True
-    tune_steps : bool
-        Whether to compute the number of steps automatically or not. Defaults to True
-    scaling : float
-        Scaling factor applied to the proposal distribution i.e. the step size of the Markov Chain.
-        If ``tune_scaling == True`` (defaults) it will be determined automatically at each stage.
-    p_acc_rate : float
-        Used to compute ``n_steps`` when ``tune_steps == True``. The higher the value of
-        ``p_acc_rate`` the higher the number of steps computed automatically. Defaults to 0.99.
-        It should be between 0 and 1.
-    threshold : float
-        Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
-        the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
-        It should be between 0 and 1.
-    epsilon : float
-        Standard deviation of the gaussian pseudo likelihood. Only works with `kernel = ABC`
-    dist_func : str
-        Distance function. Available options are ``absolute_error`` (default) and
-        ``sum_of_squared_distance``. Only works with ``kernel = ABC``
-    sum_stat : bool
-        Whether to use or not a summary statistics. Defaults to False. Only works with
-        ``kernel = ABC``
-    progressbar : bool
-        Flag for displaying a progress bar. Defaults to False.
-    model : Model (optional if in ``with`` context)).
-    random_seed : int
-        random seed
-
-    Notes
-    -----
-    SMC works by moving through successive stages. At each stage the inverse temperature
-    :math:`\beta` is increased a little bit (starting from 0 up to 1). When :math:`\beta` = 0
-    we have the prior distribution and when :math:`\beta` =1 we have the posterior distribution.
-    So in more general terms we are always computing samples from a tempered posterior that we can
-    write as:
-
-    .. math::
-
-        p(\theta \mid y)_{\beta} = p(y \mid \theta)^{\beta} p(\theta)
-
-    A summary of the algorithm is:
-
-     1. Initialize :math:`\beta` at zero and stage at zero.
-     2. Generate N samples :math:`S_{\beta}` from the prior (because when :math `\beta = 0` the
-         tempered posterior is the prior).
-     3. Increase :math:`\beta` in order to make the effective sample size equals some predefined
-        value (we use :math:`Nt`, where :math:`t` is 0.5 by default).
-     4. Compute a set of N importance weights W. The weights are computed as the ratio of the
-        likelihoods of a sample at stage i+1 and stage i.
-     5. Obtain :math:`S_{w}` by re-sampling according to W.
-     6. Use W to compute the covariance for the proposal distribution.
-     7. For stages other than 0 use the acceptance rate from the previous stage to estimate the
-        scaling of the proposal distribution and `n_steps`.
-     8. Run N Metropolis chains (each one of length `n_steps`), starting each one from a different
-        sample in :math:`S_{w}`.
-     9. Repeat from step 3 until :math:`\beta \ge 1`.
-     10. The final result is a collection of N samples from the posterior.
+    out_vars: List
+        containing :class:`pymc3.Distribution` for the output variables
+    vars: List
+        containing :class:`pymc3.Distribution` for the input variables
+    shared: List
+        containing :class:`theano.tensor.Tensor` for depended shared data
+    """
+    out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
+    f = theano_function([inarray0], out_list[0])
+    f.trust_input = True
+    return f
 
 
-    References
-    ----------
-    .. [Minson2013] Minson, S. E. and Simons, M. and Beck, J. L., (2013),
-        Bayesian inversion for finite fault earthquake source models I- Theory and algorithm.
-        Geophysical Journal International, 2013, 194(3), pp.1701-1726,
-        `link <https://gji.oxfordjournals.org/content/194/3/1701.full>`__
-
-    .. [Ching2007] Ching, J. and Chen, Y. (2007).
-        Transitional Markov Chain Monte Carlo Method for Bayesian Model Updating, Model Class
-        Selection, and Model Averaging. J. Eng. Mech., 10.1061/(ASCE)0733-9399(2007)133:7(816),
-        816-832. `link <http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399
-        %282007%29133:7%28816%29>`__
+class PseudoLikelihood:
+    """
+    Pseudo Likelihood
     """
 
-    model = modelcontext(model)
+    def __init__(
+        self,
+        epsilon,
+        observations,
+        function,
+        params,
+        model,
+        var_info,
+        variables,
+        distance,
+        sum_stat,
+        size,
+        save,
+    ):
+        """
+        epsilon: float
+            Standard deviation of the gaussian pseudo likelihood.
+        observations: array-like
+            observed data
+        function: python function
+            data simulator
+        params: list
+            names of the variables parameterizing the simulator.
+        model: PyMC3 model
+        var_info: dict
+            generated by ``SMC.initialize_population``
+        variables: list
+            Model variables.
+        distance : str or callable
+            Distance function.
+        sum_stat: str or callable
+            Summary statistics.
+        size : int
+            Number of simulated datasets to save. When this number is exceeded the counter will be
+            restored to zero and it will start saving again.
+        save : bool
+            whether to save or not the simulated data.
+        """
+        self.epsilon = epsilon
+        self.function = function
+        self.params = params
+        self.model = model
+        self.var_info = var_info
+        self.variables = variables
+        self.varnames = [v.name for v in self.variables]
+        self.distance = distance
+        self.sum_stat = sum_stat
+        self.unobserved_RVs = [v.name for v in self.model.unobserved_RVs]
+        self.get_unobserved_fn = self.model.fastfn(self.model.unobserved_RVs)
+        self.size = size
+        self.save = save
+        self.lista = []
 
-    if random_seed != -1:
-        np.random.seed(random_seed)
+        self.observations = self.sum_stat(observations)
 
-    if cores is None:
-        cores = _cpu_count()
+    def posterior_to_function(self, posterior):
+        var_info = self.var_info
 
-    beta = 0
-    stage = 0
-    accepted = 0
-    acc_rate = 1.0
-    max_steps = n_steps
-    proposed = draws * n_steps
-    model.marginal_likelihood = 1
-    variables = inputvars(model.vars)
-    discrete = np.concatenate([[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in variables])
-    any_discrete = discrete.any()
-    all_discrete = discrete.all()
-    shared = make_shared_replacements(variables, model)
-    prior_logp = logp_forw([model.varlogpt], variables, shared)
+        varvalues = []
+        samples = {}
+        size = 0
+        for var in self.variables:
+            shape, new_size = var_info[var.name]
+            varvalues.append(posterior[size : size + new_size].reshape(shape))
+            size += new_size
+        point = {k: v for k, v in zip(self.varnames, varvalues)}
+        for varname, value in zip(self.unobserved_RVs, self.get_unobserved_fn(point)):
+            if varname in self.params:
+                samples[varname] = value
+        return samples
 
-    pm._log.info("Sample initial stage: ...")
+    def save_data(self, sim_data):
+        if len(self.lista) == self.size:
+            self.lista = []
+        self.lista.append(sim_data)
 
-    posterior, var_info = _initial_population(draws, model, variables, start)
+    def get_data(self):
+        return np.array(self.lista)
 
-    if kernel.lower() == "abc":
-        warnings.warn(EXPERIMENTAL_WARNING)
-        simulator = model.observed_RVs[0]
-        likelihood_logp = PseudoLikelihood(
-            epsilon,
-            simulator.observations,
-            simulator.distribution.function,
-            model,
-            var_info,
-            dist_func,
-            sum_stat,
-        )
-    elif kernel.lower() == "metropolis":
-        likelihood_logp = logp_forw([model.datalogpt], variables, shared)
-
-    if parallel and cores > 1:
-        pool = mp.Pool(processes=cores)
-        priors = pool.starmap(prior_logp, [(sample,) for sample in posterior])
-        likelihoods = pool.starmap(likelihood_logp, [(sample,) for sample in posterior])
-    else:
-        priors = [prior_logp(sample) for sample in posterior]
-        likelihoods = [likelihood_logp(sample) for sample in posterior]
-
-    priors = np.array(priors).squeeze()
-    likelihoods = np.array(likelihoods).squeeze()
-
-    while beta < 1:
-        beta, old_beta, weights, sj = calc_beta(beta, likelihoods, threshold)
-
-        model.marginal_likelihood *= sj
-        # resample based on plausibility weights (selection)
-        resampling_indexes = np.random.choice(np.arange(draws), size=draws, p=weights)
-        posterior = posterior[resampling_indexes]
-        priors = priors[resampling_indexes]
-        likelihoods = likelihoods[resampling_indexes]
-
-        # compute proposal distribution based on weights
-        covariance = _calc_covariance(posterior, weights)
-        proposal = MultivariateNormalProposal(covariance)
-
-        # compute scaling (optional) and number of Markov chains steps (optional), based on the
-        # acceptance rate of the previous stage
-        if (tune_scaling or tune_steps) and stage > 0:
-            scaling, n_steps = _tune(
-                acc_rate, proposed, tune_scaling, tune_steps, scaling, max_steps, p_acc_rate
-            )
-
-        pm._log.info("Stage: {:3d} Beta: {:.3f} Steps: {:3d}".format(stage, beta, n_steps))
-        # Apply Metropolis kernel (mutation)
-        proposed = draws * n_steps
-        tempered_logp = priors + likelihoods * beta
-
-        parameters = (
-            proposal,
-            scaling,
-            accepted,
-            any_discrete,
-            all_discrete,
-            discrete,
-            n_steps,
-            prior_logp,
-            likelihood_logp,
-            beta,
-        )
-        if parallel and cores > 1:
-            results = pool.starmap(
-                metrop_kernel,
-                [
-                    (
-                        posterior[draw],
-                        tempered_logp[draw],
-                        priors[draw],
-                        likelihoods[draw],
-                        *parameters,
-                    )
-                    for draw in range(draws)
-                ],
-            )
-        else:
-            results = [
-                metrop_kernel(
-                    posterior[draw],
-                    tempered_logp[draw],
-                    priors[draw],
-                    likelihoods[draw],
-                    *parameters
-                )
-                for draw in tqdm(range(draws), disable=not progressbar)
-            ]
-
-        posterior, acc_list, priors, likelihoods = zip(*results)
-        posterior = np.array(posterior)
-        priors = np.array(priors)
-        likelihoods = np.array(likelihoods)
-        acc_rate = sum(acc_list) / proposed
-        stage += 1
-
-    if parallel and cores > 1:
-        pool.close()
-        pool.join()
-    trace = _posterior_to_trace(posterior, variables, model, var_info)
-
-    return trace
+    def __call__(self, posterior):
+        func_parameters = self.posterior_to_function(posterior)
+        sim_data = self.function(**func_parameters)
+        if self.save:
+            self.save_data(sim_data)
+        return self.distance(self.epsilon, self.observations, self.sum_stat(sim_data))

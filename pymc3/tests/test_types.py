@@ -1,10 +1,24 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from copy import copy
 
 import theano
 
 from pymc3.sampling import sample
 from pymc3.model import Model
-from pymc3.step_methods import NUTS, Metropolis, Slice, HamiltonianMC
+from pymc3.step_methods import NUTS, Metropolis, Slice, HamiltonianMC, MLDA
 from pymc3.distributions import Normal
 from pymc3.theanof import change_flags
 
@@ -47,3 +61,39 @@ class TestType:
         for sampler in self.samplers:
             with model:
                 sample(10, sampler())
+
+    @change_flags({'floatX': 'float64', 'warn_float64': 'ignore'})
+    def test_float64_MLDA(self):
+        data = np.random.randn(5)
+
+        with Model() as coarse_model:
+            x = Normal('x', testval=np.array(1., dtype='float64'))
+            obs = Normal('obs', mu=x, sigma=1., observed=data + 0.5)
+
+        with Model() as model:
+            x = Normal('x', testval=np.array(1., dtype='float64'))
+            obs = Normal('obs', mu=x, sigma=1., observed=data)
+
+        assert x.dtype == 'float64'
+        assert obs.dtype == 'float64'
+
+        with model:
+            sample(10, MLDA(coarse_models=[coarse_model]))
+
+    @change_flags({'floatX': 'float32', 'warn_float64': 'warn'})
+    def test_float32_MLDA(self):
+        data = np.random.randn(5).astype('float32')
+
+        with Model() as coarse_model:
+            x = Normal('x', testval=np.array(1., dtype='float32'))
+            obs = Normal('obs', mu=x, sigma=1., observed=data + 0.5)
+
+        with Model() as model:
+            x = Normal('x', testval=np.array(1., dtype='float32'))
+            obs = Normal('obs', mu=x, sigma=1., observed=data)
+
+        assert x.dtype == 'float32'
+        assert obs.dtype == 'float32'
+
+        with model:
+            sample(10, MLDA(coarse_models=[coarse_model]))

@@ -41,8 +41,7 @@
     // package (in PyPI) and the values are version numbers.  An empty
     // list indicates to just test against the default (latest)
     // version.
-    "matrix": {
-    },
+    "matrix": {},
 
     // The directory (relative to the current directory) that benchmarks are
     // stored in.  If not provided, defaults to "benchmarks"
@@ -66,7 +65,7 @@
     // `asv` will cache wheels of the recent builds in each
     // environment, making them faster to install next time.  This is
     // number of builds to keep, per environment.
-    "wheel_cache_size": 2,
+    "build_cache_size": 2,
 
     // The commits after which the regression search in `asv publish`
     // should start looking for regressions. Dictionary whose keys are

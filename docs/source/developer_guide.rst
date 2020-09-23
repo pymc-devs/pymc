@@ -378,11 +378,13 @@ https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8
         self.add_random_variable(var)
         return var
 
-In general, if there is observed, the RV is defined as a ``ObservedRV``,
-otherwise if it has a transformed method, it is a ``TransformedRV``, otherwise, it returns the
-most elementary form: a ``FreeRV``.
+In general, if a variable has observations (``observed`` parameter), the RV is defined as an ``ObservedRV``,
+otherwise if it has a ``transformed`` (``transform`` parameter) attribute, it is a
+``TransformedRV``, otherwise, it will be the most elementary form: a
+``FreeRV``.  Note that this means that random variables with
+observations cannot be transformed.
 
-Below, I will take a deeper look into ``TransformedRV``, a normal user
+Below, I will take a deeper look into ``TransformedRV``. A normal user
 might not necessary come in contact with the concept, as
 ``TransformedRV`` and ``TransformedDistribution`` are intentionally not
 user facing.
@@ -390,13 +392,15 @@ user facing.
 Because in PyMC3 there is no bijector class like in TFP or pyro, we only
 have a partial implementation called ``Transform``, which implements
 Jacobian correction for forward mapping only (there is no Jacobian
-correction for inverse mapping). The use case we considered are limited
+correction for inverse mapping). The use cases we considered are limited
 to the set of distributions that are bounded, and the transformation
 maps the bounded set to the real line - see
-`doc <https://docs.pymc.io/notebooks/api_quickstart.html#Automatic-transforms-of-bounded-RVs>`__.
+`doc
+<https://docs.pymc.io/notebooks/api_quickstart.html#Automatic-transforms-of-bounded-RVs>`__.
+However, other transformations are possible.
 In general, PyMC3 does not provide explicit functionality to transform
 one distribution to another. Instead, a dedicated distribution is
-usually created in consideration of optimising performance. But getting a
+usually created in order to optimise performance. But getting a
 ``TransformedDistribution`` is also possible (see also in
 `doc <https://docs.pymc.io/notebooks/api_quickstart.html#Transformed-distributions-and-changes-of-variables>`__):
 
@@ -422,7 +426,7 @@ usually created in consideration of optimising performance. But getting a
 
 
 
-Now, back to ``model.RV(...)`` - things return from ``model.RV(...)``
+Now, back to ``model.RV(...)`` - things returned from ``model.RV(...)``
 are Theano tensor variables, and it is clear from looking at
 ``TransformedRV``:
 
@@ -431,19 +435,19 @@ are Theano tensor variables, and it is clear from looking at
     class TransformedRV(TensorVariable):
         ...
 
-as for ``FreeRV`` and ``ObservedRV``, they are TensorVariable with
-Factor:
+as for ``FreeRV`` and ``ObservedRV``, they are ``TensorVariable``\s with
+``Factor`` as mixin:
 
 .. code:: python
 
     class FreeRV(Factor, TensorVariable):
         ...
 
-and ``Factor`` basically `enable and assign the
+``Factor`` basically `enable and assign the
 logp <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/model.py#L195-L276>`__
 (representated as a tensor also) property to a Theano tensor (thus
-making it a random variable). For a ``TransformedRV``, it transform the
-distribution into a ``TransformedDistribution``, and then model.Var is
+making it a random variable). For a ``TransformedRV``, it transforms the
+distribution into a ``TransformedDistribution``, and then ``model.Var`` is
 called again to added the RV associated with the
 ``TransformedDistribution`` as a ``FreeRV``:
 
@@ -483,11 +487,11 @@ the model logp), and also deterministic transformation (as bookkeeping):
 named\_vars, free\_RVs, observed\_RVs, deterministics, potentials,
 missing\_values. The model context then computes some simple model
 properties, builds a bijection mapping that transforms between
-dictionary and numpy/Theano ndarray, thus allowing logp/dlogp function
-to have two equivalent version: one take a dict as input and the other
-take a ndarray as input. More importantly, a pm.Model() contains methods
-to compile Theano function that takes Random Variables (that are also
-initialised within the same model) as input.
+dictionary and numpy/Theano ndarray, thus allowing the ``logp``/``dlogp`` functions
+to have two equivalent versions: one takes a ``dict`` as input and the other
+takes an ``ndarray`` as input. More importantly, a ``pm.Model()`` contains methods
+to compile Theano functions that take Random Variables (that are also
+initialised within the same model) as input, for example:
 
 .. code:: python
 
@@ -902,7 +906,7 @@ TFP, which is a tenor in tensor out function. Moreover, transition
 kernels in TFP do not flatten the tensors, see eg docstring of
 `tensorflow\_probability/python/mcmc/random\_walk\_metropolis.py <https://github.com/tensorflow/probability/blob/master/tensorflow_probability/python/mcmc/random_walk_metropolis.py>`__:
 
-.. code:: python
+.. code::
 
           new_state_fn: Python callable which takes a list of state parts and a
             seed; returns a same-type `list` of `Tensor`s, each being a perturbation
@@ -919,9 +923,11 @@ We love NUTS, or to be more precise Dynamic HMC with complex stoping
 rules. This part is actually all done outside of Theano, for NUTS, it
 includes: the leapfrog, dual averaging, tunning of mass matrix and step
 size, the tree building, sampler related statistics like divergence and
-energy checking. We actually have a Theano version of HMC:
-https://github.com/pymc-devs/pymc3/blob/master/pymc3/step\_methods/hmc/trajectory.py
-but it is never been used.
+energy checking. We actually have a Theano version of HMC, but it has never
+been used, and has been removed from the main repository. It can still be
+found in the `git history
+<https://github.com/pymc-devs/pymc3/pull/3734/commits/0fdae8207fd14f66635f3673ef267b2b8817aa68>`__,
+though.
 
 Variational Inference (VI)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -941,7 +947,7 @@ where it builds the objective function by calling:
 
 Where:
 
-.. code:: python
+.. code::
 
         op     : Operator class
         approx : Approximation class or instance

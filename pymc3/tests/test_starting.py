@@ -1,9 +1,25 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 from .checks import close_to
 import numpy as np
 from pymc3.tuning import starting
 from pymc3 import Model, Uniform, Normal, Beta, Binomial, find_MAP, Point
 from .models import simple_model, non_normal, simple_arbitrary_det
 from .helpers import select_by_precision
+
+from pytest import raises
 
 
 def test_accuracy_normal():
@@ -69,3 +85,23 @@ def test_find_MAP():
 
     close_to(map_est2['mu'], 0, tol)
     close_to(map_est2['sigma'], 1, tol)
+
+
+def test_allinmodel():
+    model1 = Model()
+    model2 = Model()
+    with model1:
+        x1 = Normal('x1', mu=0, sigma=1)
+        y1 = Normal('y1', mu=0, sigma=1)
+    with model2:
+        x2 = Normal('x2', mu=0, sigma=1)
+        y2 = Normal('y2', mu=0, sigma=1)
+
+    starting.allinmodel([x1, y1], model1)
+    starting.allinmodel([x1], model1)
+    with raises(ValueError, match=r"Some variables not in the model: \['x2', 'y2'\]"):
+        starting.allinmodel([x2, y2], model1)
+    with raises(ValueError, match=r"Some variables not in the model: \['x2'\]"):
+        starting.allinmodel([x2, y1], model1)
+    with raises(ValueError, match=r"Some variables not in the model: \['x2'\]"):
+        starting.allinmodel([x2], model1)

@@ -1,8 +1,23 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import collections
 import pytest
 from itertools import product
 
-from theano import theano, tensor as tt
+import theano
+import theano.tensor as tt
 import numpy as np
 
 from pymc3.theanof import set_theano_conf, take_along_axis, _conversion_map
@@ -53,7 +68,7 @@ else:
                 _axis = axis
             if _axis < 0 or _axis >= arr.ndim:
                 raise ValueError(
-                    "Supplied axis {} is out of bounds".format(axis)
+                    f"Supplied axis {axis} is out of bounds"
                 )
             return arr[_make_along_axis_idx(arr.shape, indices, _axis)]
 

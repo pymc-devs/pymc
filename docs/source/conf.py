@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # pymc3 documentation build configuration file, created by
 # sphinx-quickstart on Sat Dec 26 14:40:23 2015.
@@ -37,9 +36,11 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.mathjax",
+    "sphinx.ext.intersphinx",
     "nbsphinx",
     "numpydoc",
     "IPython.sphinxext.ipython_console_highlighting",
+    "IPython.sphinxext.ipython_directive",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.napoleon",
     "gallery_generator",
@@ -129,6 +130,11 @@ pygments_style = "friendly"
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# intersphinx configuration to ease linking arviz docs
+intersphinx_mapping = {
+    "arviz": ("https://arviz-devs.github.io/arviz/", None),
+}
+
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -149,7 +155,7 @@ html_theme_options = {
         ("Books + Videos", "learn"),
         ("API", "api"),
         ("Developer Guide", "developer_guide"),
-        ("About PyMC3", "history")
+        ("About PyMC3", "about")
     ],
     #     "fixed_sidebar": "false",
     #     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
@@ -324,8 +330,7 @@ texinfo_documents = [
 
 
 def setup(app):
-    app.add_stylesheet(
+    app.add_css_file(
         "https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css"
     )
-    app.add_stylesheet("default.css")
-
+    app.add_css_file("default.css")

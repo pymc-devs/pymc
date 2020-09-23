@@ -3,7 +3,7 @@
     :alt: PyMC3 logo
     :align: center
 
-|Build Status| |Coverage| |NumFOCUS_badge| |Binder|
+|Build Status| |Coverage| |NumFOCUS_badge| |Binder| |Dockerhub|
 
 PyMC3 is a Python package for Bayesian statistical modeling and Probabilistic Machine Learning
 focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (VI)
@@ -158,7 +158,8 @@ Software using PyMC3
 - `sampled <https://github.com/ColCarroll/sampled>`__: Decorator for PyMC3 models.
 - `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
 - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
-- `BayesFit <https://github.com/Slugocm/BayesFit>`__: Bayesian Psychometric Curve Fitting Tool.
+- `pymc-learn <https://github.com/pymc-learn/pymc-learn>`__: Custom PyMC models built on top of pymc3_models/scikit-learn API
+- `fenics-pymc3 <https://github.com/IvanYashchuk/fenics-pymc3>`__: Differentiable interface to FEniCS, a library for solving partial differential equations.
 
 Please contact us if your software is not listed here.
 
@@ -178,6 +179,18 @@ Support
 
 PyMC3 is a non-profit project under NumFOCUS umbrella. If you want to support PyMC3 financially, you can donate `here <https://numfocus.salsalabs.org/donate-to-pymc3/index.html>`__.
 
+PyMC for enterprise
+===================
+`PyMC is now available as part of the Tidelift Subscription!`
+
+Tidelift is working with PyMC and the maintainers of thousands of other open source
+projects to deliver commercial support and maintenance for the open source dependencies
+you use to build your applications. Save time, reduce risk, and improve code health,
+while contributing financially to PyMC -- making it even more robust, reliable and,
+let's face it, amazing!
+
+|tidelift_learn| |tidelift_demo|
+
 Sponsors
 ========
 
@@ -187,12 +200,14 @@ Sponsors
 
 |ODSC|
 
-.. |Binder| image:: https://mybinder.org/badge.svg
+.. |Binder| image:: https://mybinder.org/badge_logo.svg
    :target: https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks
 .. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.svg?branch=master
    :target: https://travis-ci.org/pymc-devs/pymc3
-.. |Coverage| image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master
-   :target: https://coveralls.io/github/pymc-devs/pymc3?branch=master
+.. |Coverage| image:: https://codecov.io/gh/pymc-devs/pymc3/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/pymc-devs/pymc3
+.. |Dockerhub| image:: https://img.shields.io/docker/automated/pymc/pymc3.svg
+  :target: https://hub.docker.com/r/pymc/pymc3
 .. |NumFOCUS| image:: https://www.numfocus.org/wp-content/uploads/2017/03/1457562110.png
    :target: http://www.numfocus.org/
 .. |Quantopian| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg
@@ -201,3 +216,9 @@ Sponsors
    :target: http://www.numfocus.org/
 .. |ODSC| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/odsc_logo.png
    :target: https://odsc.com
+.. |tidelift| image:: https://img.shields.io/badge/-lifted!-2dd160.svg?colorA=58595b&style=flat&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAOCAYAAADJ7fe0AAAAAXNSR0IArs4c6QAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAVlpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDUuNC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iPgogICAgICAgICA8dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KTMInWQAAAVhJREFUKBV1kj0vBFEUhmd2sdZHh2IlGhKFQuOviEYiNlFodCqtUqPxA%2FwCjUTnDygkGoVERFQaZFlE9nreO%2BdM5u5wkifvuee892Pu3CyEcA0DeIc%2B9IwftJsR6Cko3uCjguZdjuBZhhwmYDjGrOC96WED41UtsgEdGEAPlmAfpuAbFF%2BFZLfoMfRBGzThDtLgePPwBIpdddGzOArhPHUXowbNptE2www6a%2Fm96Y3pHN7oQ1s%2B13pxt1ENaKzBFWyWzaJ%2BRO0C9Jny6VPSoKjLVbMDC5bn5OPuJF%2BBSe95PVEMuugY5AegS9fCh7BedP45hRnj8TC34QQUe9bTZyh2KgvFk2vc8GIlXyTfsvqr6bPpNgv52ynnlomZJNpB70Xhl%2Bf6Sa02p1bApEfnETwxVa%2Faj%2BW%2FFtHltmxS%2FO3krvpTtTnVgu%2F6gvHRFvG78Ef3kOe5PimJXycY74blT5R%2BAAAAAElFTkSuQmCC
+   :target: https://tidelift.com/subscription/pkg/pypi-pymc3?utm_source=pypi-pymc3&utm_medium=referral&utm_campaign=enterprise
+.. |tidelift_learn| image:: https://img.shields.io/badge/-learn%20more-2dd160.svg?color=orange&labelColor=58595b&style=flat&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAOCAYAAADJ7fe0AAAAAXNSR0IArs4c6QAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAVlpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDUuNC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iPgogICAgICAgICA8dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KTMInWQAAAVhJREFUKBV1kj0vBFEUhmd2sdZHh2IlGhKFQuOviEYiNlFodCqtUqPxA%2FwCjUTnDygkGoVERFQaZFlE9nreO%2BdM5u5wkifvuee892Pu3CyEcA0DeIc%2B9IwftJsR6Cko3uCjguZdjuBZhhwmYDjGrOC96WED41UtsgEdGEAPlmAfpuAbFF%2BFZLfoMfRBGzThDtLgePPwBIpdddGzOArhPHUXowbNptE2www6a%2Fm96Y3pHN7oQ1s%2B13pxt1ENaKzBFWyWzaJ%2BRO0C9Jny6VPSoKjLVbMDC5bn5OPuJF%2BBSe95PVEMuugY5AegS9fCh7BedP45hRnj8TC34QQUe9bTZyh2KgvFk2vc8GIlXyTfsvqr6bPpNgv52ynnlomZJNpB70Xhl%2Bf6Sa02p1bApEfnETwxVa%2Faj%2BW%2FFtHltmxS%2FO3krvpTtTnVgu%2F6gvHRFvG78Ef3kOe5PimJXycY74blT5R%2BAAAAAElFTkSuQmCC
+   :target: https://tidelift.com/subscription/pkg/pypi-pymc3?utm_source=pypi-pymc3&utm_medium=referral&utm_campaign=enterprise
+.. |tidelift_demo| image:: https://img.shields.io/badge/-request%20a%20demo-2dd160.svg?color=orange&labelColor=58595b&style=flat&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAOCAYAAADJ7fe0AAAAAXNSR0IArs4c6QAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAVlpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDUuNC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iPgogICAgICAgICA8dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KTMInWQAAAVhJREFUKBV1kj0vBFEUhmd2sdZHh2IlGhKFQuOviEYiNlFodCqtUqPxA%2FwCjUTnDygkGoVERFQaZFlE9nreO%2BdM5u5wkifvuee892Pu3CyEcA0DeIc%2B9IwftJsR6Cko3uCjguZdjuBZhhwmYDjGrOC96WED41UtsgEdGEAPlmAfpuAbFF%2BFZLfoMfRBGzThDtLgePPwBIpdddGzOArhPHUXowbNptE2www6a%2Fm96Y3pHN7oQ1s%2B13pxt1ENaKzBFWyWzaJ%2BRO0C9Jny6VPSoKjLVbMDC5bn5OPuJF%2BBSe95PVEMuugY5AegS9fCh7BedP45hRnj8TC34QQUe9bTZyh2KgvFk2vc8GIlXyTfsvqr6bPpNgv52ynnlomZJNpB70Xhl%2Bf6Sa02p1bApEfnETwxVa%2Faj%2BW%2FFtHltmxS%2FO3krvpTtTnVgu%2F6gvHRFvG78Ef3kOe5PimJXycY74blT5R%2BAAAAAElFTkSuQmCC
+   :target: https://tidelift.com/subscription/request-a-demo?utm_source=pypi-pymc3&utm_medium=referral&utm_campaign=enterprise

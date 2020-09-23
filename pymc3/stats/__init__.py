@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 """Statistical utility functions for PyMC3
 
 Diagnostics and auxiliary statistical functions are delegated to the ArviZ library, a general
@@ -39,19 +53,6 @@ summary = map_args(az.summary)
 waic = map_args(az.waic)
 
 
-def gelman_rubin(*args, **kwargs):
-    warnings.warn("gelman_rubin has been deprecated. In the future, use rhat instead.")
-    return rhat(*args, **kwargs)
-
-gelman_rubin.__doc__ = rhat.__doc__
-
-
-def effective_n(*args, **kwargs):
-    warnings.warn("effective_n has been deprecated. In the future, use ess instead.")
-    return ess(*args, **kwargs)
-
-effective_n.__doc__ = ess.__doc__
-
 __all__ = [
     "bfmi",
     "compare",
@@ -64,6 +65,4 @@ __all__ = [
     "rhat",
     "summary",
     "waic",
-    "gelman_rubin",  # deprecated, remove after 3.8
-    "effective_n",  # deprecated, remove after 3.8
 ]

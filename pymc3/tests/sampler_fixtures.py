@@ -1,4 +1,19 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import pymc3 as pm
+from pymc3.util import get_var_name
 import numpy as np
 import numpy.testing as npt
 from scipy import stats
@@ -131,16 +146,16 @@ class BaseSampler(SeededTest):
             cls.trace = pm.sample(cls.n_samples, tune=cls.tune, step=cls.step, cores=cls.chains)
         cls.samples = {}
         for var in cls.model.unobserved_RVs:
-            cls.samples[str(var)] = cls.trace.get_values(var, burn=cls.burn)
+            cls.samples[get_var_name(var)] = cls.trace.get_values(var, burn=cls.burn)
 
     def test_neff(self):
         if hasattr(self, 'min_n_eff'):
-            n_eff = pm.effective_n(self.trace[self.burn:])
+            n_eff = pm.ess(self.trace[self.burn:])
             for var in n_eff:
                 npt.assert_array_less(self.min_n_eff, n_eff[var])
 
     def test_Rhat(self):
-        rhat = pm.gelman_rubin(self.trace[self.burn:])
+        rhat = pm.rhat(self.trace[self.burn:])
         for var in rhat:
             npt.assert_allclose(rhat[var], 1, rtol=0.01)
 

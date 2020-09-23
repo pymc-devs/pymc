@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 from pymc3 import HalfCauchy, Model, Normal, get_data, sample
 from pymc3.distributions.timeseries import GaussianRandomWalk
 
-data = pd.read_csv(get_data('pancreatitis.csv'))
-countries = ['CYP', 'DNK', 'ESP', 'FIN', 'GBR', 'ISL']
+data = pd.read_csv(get_data("pancreatitis.csv"))
+countries = ["CYP", "DNK", "ESP", "FIN", "GBR", "ISL"]
 data = data[data.area.isin(countries)]
 
-age = data['age'] = np.array(data.age_start + data.age_end) / 2
+age = data["age"] = np.array(data.age_start + data.age_end) / 2
 rate = data.value = data.value * 1000
 group, countries = pd.factorize(data.area, order=countries)
 
@@ -20,7 +20,7 @@ for i, country in enumerate(countries):
     plt.subplot(2, 3, i + 1)
     plt.title(country)
     d = data[data.area == country]
-    plt.plot(d.age, d.value, '.')
+    plt.plot(d.age, d.value, ".")
 
     plt.ylim(0, rate.max())
 
@@ -43,33 +43,33 @@ def interpolate(x0, y0, x, group):
 
 
 with Model() as model:
-    coeff_sd = HalfCauchy('coeff_sd', 5)
+    coeff_sd = HalfCauchy("coeff_sd", 5)
 
-    y = GaussianRandomWalk('y', sigma=coeff_sd, shape=(nknots, ncountries))
+    y = GaussianRandomWalk("y", sigma=coeff_sd, shape=(nknots, ncountries))
 
     p = interpolate(knots, y, age, group)
 
-    sd = HalfCauchy('sd', 5)
+    sd = HalfCauchy("sd", 5)
 
-    vals = Normal('vals', p, sigma=sd, observed=rate)
+    vals = Normal("vals", p, sigma=sd, observed=rate)
 
 
 def run(n=3000):
     if n == "short":
         n = 150
     with model:
-        trace = sample(n, tune=int(n/2), init='advi+adapt_diag')
+        trace = sample(n, tune=int(n / 2), init="advi+adapt_diag")
 
     for i, country in enumerate(countries):
         plt.subplot(2, 3, i + 1)
         plt.title(country)
 
         d = data[data.area == country]
-        plt.plot(d.age, d.value, '.')
-        plt.plot(knots, trace[y][::5, :, i].T, color='r', alpha=.01)
+        plt.plot(d.age, d.value, ".")
+        plt.plot(knots, trace[y][::5, :, i].T, color="r", alpha=0.01)
 
         plt.ylim(0, rate.max())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

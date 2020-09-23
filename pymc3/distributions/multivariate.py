@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -9,13 +23,13 @@ import theano.tensor as tt
 
 from scipy import stats, linalg
 
+from theano.gof.op import get_test_value
 from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
 from theano.tensor.slinalg import Cholesky
 import pymc3 as pm
 
 from pymc3.theanof import floatX
 from . import transforms
-from pymc3.util import get_variable_name
 from .distribution import (Continuous, Discrete, draw_values, generate_samples,
                            _DrawValuesContext)
 from ..model import Deterministic
@@ -136,18 +150,11 @@ class _QuadFormBase(Continuous):
         logdet = -tt.sum(tt.log(diag))
         return quaddist, logdet, ok
 
-    def _repr_cov_params(self, dist=None):
-        if dist is None:
-            dist = self
-        if self._cov_type == 'chol':
-            chol = get_variable_name(self.chol_cov)
-            return r'\mathit{{chol}}={}'.format(chol)
-        elif self._cov_type == 'cov':
-            cov = get_variable_name(self.cov)
-            return r'\mathit{{cov}}={}'.format(cov)
-        elif self._cov_type == 'tau':
-            tau = get_variable_name(self.tau)
-            return r'\mathit{{tau}}={}'.format(tau)
+    def _cov_param_for_repr(self):
+        if self._cov_type == "chol":
+            return "chol_cov"
+        else:
+            return self._cov_type
 
 
 class MvNormal(_QuadFormBase):
@@ -168,16 +175,16 @@ class MvNormal(_QuadFormBase):
 
     Parameters
     ----------
-    mu : array
+    mu: array
         Vector of means.
-    cov : array
+    cov: array
         Covariance matrix. Exactly one of cov, tau, or chol is needed.
-    tau : array
+    tau: array
         Precision matrix. Exactly one of cov, tau, or chol is needed.
-    chol : array
+    chol: array
         Cholesky decomposition of covariance matrix. Exactly one of cov,
         tau, or chol is needed.
-    lower : bool, default=True
+    lower: bool, default=True
         Whether chol is the lower tridiagonal cholesky factor.
 
     Examples
@@ -200,19 +207,17 @@ class MvNormal(_QuadFormBase):
                              [0.1, 0.2, 1.0]])
         data = np.random.multivariate_normal(mu, true_cov, 10)
 
-        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
-        chol_packed = pm.LKJCholeskyCov('chol_packed',
-            n=3, eta=2, sd_dist=sd_dist)
-        chol = pm.expand_packed_triangular(3, chol_packed)
+        sd_dist = pm.Exponential.dist(1.0, shape=3)
+        chol, corr, stds = pm.LKJCholeskyCov('chol_cov', n=3, eta=2,
+            sd_dist=sd_dist, compute_corr=True)
         vals = pm.MvNormal('vals', mu=mu, chol=chol, observed=data)
 
     For unobserved values it can be better to use a non-centered
     parametrization::
 
-        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
-        chol_packed = pm.LKJCholeskyCov('chol_packed',
-            n=3, eta=2, sd_dist=sd_dist)
-        chol = pm.expand_packed_triangular(3, chol_packed)
+        sd_dist = pm.Exponential.dist(1.0, shape=3)
+        chol, _, _ = pm.LKJCholeskyCov('chol_cov', n=3, eta=2,
+            sd_dist=sd_dist, compute_corr=True)
         vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=(5, 3))
         vals = pm.Deterministic('vals', tt.dot(chol, vals_raw.T).T)
     """
@@ -228,10 +233,10 @@ class MvNormal(_QuadFormBase):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -305,7 +310,7 @@ class MvNormal(_QuadFormBase):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -313,18 +318,12 @@ class MvNormal(_QuadFormBase):
         TensorVariable
         """
         quaddist, logdet, ok = self._quaddist(value)
-        k = value.shape[-1].astype(theano.config.floatX)
+        k = floatX(value.shape[-1])
         norm = - 0.5 * k * pm.floatX(np.log(2 * np.pi))
         return bound(norm - 0.5 * quaddist - logdet, ok)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        mu = dist.mu
-        name_mu = get_variable_name(mu)
-        return (r'${} \sim \text{{MvNormal}}'
-                r'(\mathit{{mu}}={}, {})$'
-                .format(name, name_mu, self._repr_cov_params(dist)))
+    def _distr_parameters_for_repr(self):
+        return ["mu", self._cov_param_for_repr()]
 
 
 class MvStudentT(_QuadFormBase):
@@ -352,19 +351,19 @@ class MvStudentT(_QuadFormBase):
 
     Parameters
     ----------
-    nu : int
+    nu: int
         Degrees of freedom.
-    Sigma : matrix
+    Sigma: matrix
         Covariance matrix. Use `cov` in new code.
-    mu : array
+    mu: array
         Vector of means.
-    cov : matrix
+    cov: matrix
         The covariance matrix.
-    tau : matrix
+    tau: matrix
         The precision matrix.
-    chol : matrix
+    chol: matrix
         The cholesky factor of the covariance matrix.
-    lower : bool, default=True
+    lower: bool, default=True
         Whether the cholesky fatcor is given as a lower triangular matrix.
     """
 
@@ -384,10 +383,10 @@ class MvStudentT(_QuadFormBase):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -419,7 +418,7 @@ class MvStudentT(_QuadFormBase):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -427,7 +426,7 @@ class MvStudentT(_QuadFormBase):
         TensorVariable
         """
         quaddist, logdet, ok = self._quaddist(value)
-        k = value.shape[-1].astype(theano.config.floatX)
+        k = floatX(value.shape[-1])
 
         norm = (gammaln((self.nu + k) / 2.)
                 - gammaln(self.nu / 2.)
@@ -435,17 +434,8 @@ class MvStudentT(_QuadFormBase):
         inner = - (self.nu + k) / 2. * tt.log1p(quaddist / self.nu)
         return bound(norm + inner - logdet, ok)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        mu = dist.mu
-        nu = dist.nu
-        name_nu = get_variable_name(nu)
-        name_mu = get_variable_name(mu)
-        return (r'${} \sim \text{{MvStudentT}}'
-                r'(\mathit{{nu}}={}, \mathit{{mu}}={}, '
-                r'{})$'
-                .format(name, name_nu, name_mu, self._repr_cov_params(dist)))
+    def _distr_parameters_for_repr(self):
+        return ["mu", "nu", self._cov_param_for_repr()]
 
 
 class Dirichlet(Continuous):
@@ -468,19 +458,30 @@ class Dirichlet(Continuous):
 
     Parameters
     ----------
-    a : array
+    a: array
         Concentration parameters (a > 0).
     """
 
     def __init__(self, a, transform=transforms.stick_breaking,
                  *args, **kwargs):
-        shape = np.atleast_1d(a.shape)[-1]
 
-        kwargs.setdefault("shape", shape)
+        if kwargs.get('shape') is None:
+            warnings.warn(
+                (
+                    "Shape not explicitly set. "
+                    "Please, set the value using the `shape` keyword argument. "
+                    "Using the test value to infer the shape."
+                ),
+                DeprecationWarning
+            )
+            try:
+                kwargs['shape'] = np.shape(get_test_value(a))
+            except AttributeError:
+                pass
+
         super().__init__(transform=transform, *args, **kwargs)
 
         self.size_prefix = tuple(self.shape[:-1])
-        self.k = tt.as_tensor_variable(shape)
         self.a = a = tt.as_tensor_variable(a)
         self.mean = a / tt.sum(a)
 
@@ -515,10 +516,10 @@ class Dirichlet(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -540,29 +541,24 @@ class Dirichlet(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
         -------
         TensorVariable
         """
-        k = self.k
         a = self.a
 
         # only defined for sum(value) == 1
         return bound(tt.sum(logpow(value, a - 1) - gammaln(a), axis=-1)
                      + gammaln(tt.sum(a, axis=-1)),
                      tt.all(value >= 0), tt.all(value <= 1),
-                     k > 1, tt.all(a > 0),
+                     np.logical_not(a.broadcastable), tt.all(a > 0),
                      broadcast_conditions=False)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        a = dist.a
-        return r'${} \sim \text{{Dirichlet}}(\mathit{{a}}={})$'.format(name,
-                                                get_variable_name(a))
+    def _distr_parameters_for_repr(self):
+        return ["a"]
 
 
 class Multinomial(Discrete):
@@ -589,10 +585,10 @@ class Multinomial(Discrete):
 
     Parameters
     ----------
-    n : int or array
+    n: int or array
         Number of trials (n > 0). If n is an array its shape must be (N,) with
         N = p.shape[0]
-    p : one- or two-dimensional array
+    p: one- or two-dimensional array
         Probability of each one of the different outcomes. Elements must
         be non-negative and sum to 1 along the last axis. They will be
         automatically rescaled otherwise.
@@ -667,10 +663,10 @@ class Multinomial(Discrete):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -692,7 +688,7 @@ class Multinomial(Discrete):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -711,15 +707,6 @@ class Multinomial(Discrete):
             tt.all(tt.ge(n, 0)),
             broadcast_conditions=False
         )
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        n = dist.n
-        p = dist.p
-        return r'${} \sim \text{{Multinomial}}(\mathit{{n}}={}, \mathit{{p}}={})$'.format(name,
-                                                get_variable_name(n),
-                                                get_variable_name(p))
 
 
 def posdef(AA):
@@ -797,9 +784,9 @@ class Wishart(Continuous):
 
     Parameters
     ----------
-    nu : int
+    nu: int
         Degrees of freedom, > 0.
-    V : array
+    V: array
         p x p positive definite matrix.
 
     Notes
@@ -831,10 +818,10 @@ class Wishart(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -854,7 +841,7 @@ class Wishart(Continuous):
 
         Parameters
         ----------
-        X : numeric
+        X: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -878,14 +865,6 @@ class Wishart(Continuous):
                      broadcast_conditions=False
         )
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        nu = dist.nu
-        V = dist.V
-        return r'${} \sim \text{{Wishart}}(\mathit{{nu}}={}, \mathit{{V}}={})$'.format(name,
-                                                get_variable_name(nu),
-                                                get_variable_name(V))
 
 def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testval=None):
     R"""
@@ -911,18 +890,18 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
 
     Parameters
     ----------
-    S : ndarray
+    S: ndarray
         p x p positive definite matrix
         Or:
         p x p lower-triangular matrix that is the Cholesky factor
         of the covariance matrix.
-    nu : int
+    nu: int
         Degrees of freedom, > dim(S).
-    is_cholesky : bool (default=False)
+    is_cholesky: bool (default=False)
         Input matrix S is already Cholesky decomposed as S.T * S
-    return_cholesky : bool (default=False)
+    return_cholesky: bool (default=False)
         Only return the Cholesky decomposed matrix.
-    testval : ndarray
+    testval: ndarray
         p x p positive definite matrix used to initialize
 
     Notes
@@ -987,113 +966,9 @@ def _lkj_normalizing_constant(eta, n):
     return result
 
 
-class LKJCholeskyCov(Continuous):
-    R"""Covariance matrix with LKJ distributed correlations.
-
-    This defines a distribution over cholesky decomposed covariance
-    matrices, such that the underlying correlation matrices follow an
-    LKJ distribution [1] and the standard deviations follow an arbitray
-    distribution specified by the user.
-
-    Parameters
-    ----------
-    n : int
-        Dimension of the covariance matrix (n > 1).
-    eta : float
-        The shape parameter (eta > 0) of the LKJ distribution. eta = 1
-        implies a uniform distribution of the correlation matrices;
-        larger values put more weight on matrices with few correlations.
-    sd_dist : pm.Distribution
-        A distribution for the standard deviations.
-
-    Notes
-    -----
-    Since the cholesky factor is a lower triangular matrix, we use
-    packed storge for the matrix: We store and return the values of
-    the lower triangular matrix in a one-dimensional array, numbered
-    by row::
-
-        [[0 - - -]
-         [1 2 - -]
-         [3 4 5 -]
-         [6 7 8 9]]
-
-    You can use `pm.expand_packed_triangular(packed_cov, lower=True)`
-    to convert this to a regular two-dimensional array.
-
-    Examples
-    --------
-    .. code:: python
-
-        with pm.Model() as model:
-            # Note that we access the distribution for the standard
-            # deviations, and do not create a new random variable.
-            sd_dist = pm.HalfCauchy.dist(beta=2.5)
-            packed_chol = pm.LKJCholeskyCov('chol_cov', eta=2, n=10, sd_dist=sd_dist)
-            chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
-
-            # Define a new MvNormal with the given covariance
-            vals = pm.MvNormal('vals', mu=np.zeros(10), chol=chol, shape=10)
-
-            # Or transform an uncorrelated normal:
-            vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=10)
-            vals = tt.dot(chol, vals_raw)
-
-            # Or compute the covariance matrix
-            cov = tt.dot(chol, chol.T)
-
-            # Extract the standard deviations
-            stds = tt.sqrt(tt.diag(cov))
-
-    **Implementation** In the unconstrained space all values of the cholesky factor
-    are stored untransformed, except for the diagonal entries, where
-    we use a log-transform to restrict them to positive values.
-
-    To correctly compute log-likelihoods for the standard deviations
-    and the correlation matrix seperatly, we need to consider a
-    second transformation: Given a cholesky factorization
-    :math:`LL^T = \Sigma` of a covariance matrix we can recover the
-    standard deviations :math:`\sigma` as the euclidean lengths of
-    the rows of :math:`L`, and the cholesky factor of the
-    correlation matrix as :math:`U = \text{diag}(\sigma)^{-1}L`.
-    Since each row of :math:`U` has length 1, we do not need to
-    store the diagonal. We define a transformation :math:`\phi`
-    such that :math:`\phi(L)` is the lower triangular matrix containing
-    the standard deviations :math:`\sigma` on the diagonal and the
-    correlation matrix :math:`U` below. In this form we can easily
-    compute the different likelihoods seperatly, as the likelihood
-    of the correlation matrix only depends on the values below the
-    diagonal, and the likelihood of the standard deviation depends
-    only on the diagonal values.
-
-    We still need the determinant of the jacobian of :math:`\phi^{-1}`.
-    If we think of :math:`\phi` as an automorphism on
-    :math:`\mathbb{R}^{\tfrac{n(n+1)}{2}}`, where we order
-    the dimensions as described in the notes above, the jacobian
-    is a block-diagonal matrix, where each block corresponds to
-    one row of :math:`U`. Each block has arrowhead shape, and we
-    can compute the determinant of that as described in [2]. Since
-    the determinant of a block-diagonal matrix is the product
-    of the determinants of the blocks, we get
-
-    .. math::
-
-       \text{det}(J_{\phi^{-1}}(U)) =
-       \left[
-         \prod_{i=2}^N u_{ii}^{i - 1} L_{ii}
-       \right]^{-1}
-
-    References
-    ----------
-    .. [1] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
-       "Generating random correlation matrices based on vines and
-       extended onion method." Journal of multivariate analysis,
-       100(9), pp.1989-2001.
-
-    .. [2] J. M. isn't a mathematician (http://math.stackexchange.com/users/498/
-       j-m-isnt-a-mathematician), Different approaches to evaluate this
-       determinant, URL (version: 2012-04-14):
-       http://math.stackexchange.com/q/130026
+class _LKJCholeskyCov(Continuous):
+    R"""Underlying class for covariance matrix with LKJ distributed correlations.
+    See docs for LKJCholeskyCov function for more details on how to use it in models.
     """
     def __init__(self, eta, n, sd_dist, *args, **kwargs):
         self.n = n
@@ -1128,7 +1003,7 @@ class LKJCholeskyCov(Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -1213,10 +1088,10 @@ class LKJCholeskyCov(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1265,6 +1140,161 @@ class LKJCholeskyCov(Continuous):
         return samples
 
 
+def LKJCholeskyCov(
+        name, eta, n, sd_dist, compute_corr=False, store_in_trace=True, *args, **kwargs
+):
+    R"""Wrapper function for covariance matrix with LKJ distributed correlations.
+
+    This defines a distribution over Cholesky decomposed covariance
+    matrices, such that the underlying correlation matrices follow an
+    LKJ distribution [1] and the standard deviations follow an arbitray
+    distribution specified by the user.
+
+    Parameters
+    ----------
+    name: str
+        The name given to the variable in the model.
+    eta: float
+        The shape parameter (eta > 0) of the LKJ distribution. eta = 1
+        implies a uniform distribution of the correlation matrices;
+        larger values put more weight on matrices with few correlations.
+    n: int
+        Dimension of the covariance matrix (n > 1).
+    sd_dist: pm.Distribution
+        A distribution for the standard deviations.
+    compute_corr: bool, default=False
+        If `True`, returns three values: the Cholesky decomposition, the correlations
+        and the standard deviations of the covariance matrix. Otherwise, only returns
+        the packed Cholesky decomposition. Defaults to `False` to ensure backwards
+        compatibility.
+    store_in_trace: bool, default=True
+        Whether to store the correlations and standard deviations of the covariance
+        matrix in the posterior trace. If `True`, they will automatically be named as
+        `{name}_corr` and `{name}_stds` respectively. Effective only when
+        `compute_corr=True`.
+
+    Returns
+    -------
+    packed_chol: TensorVariable
+        If `compute_corr=False` (default). The packed Cholesky covariance decomposition.
+    chol:  TensorVariable
+        If `compute_corr=True`. The unpacked Cholesky covariance decomposition.
+    corr: TensorVariable
+        If `compute_corr=True`. The correlations of the covariance matrix.
+    stds: TensorVariable
+        If `compute_corr=True`. The standard deviations of the covariance matrix.
+
+    Notes
+    -----
+    Since the Cholesky factor is a lower triangular matrix, we use packed storage for
+    the matrix: We store the values of the lower triangular matrix in a one-dimensional
+    array, numbered by row::
+
+        [[0 - - -]
+         [1 2 - -]
+         [3 4 5 -]
+         [6 7 8 9]]
+
+    The unpacked Cholesky covariance matrix is automatically computed and returned when
+    you specify `compute_corr=True` in `pm.LKJCholeskyCov` (see example below).
+    Otherwise, you can use `pm.expand_packed_triangular(packed_cov, lower=True)`
+    to convert the packed Cholesky matrix to a regular two-dimensional array.
+
+    Examples
+    --------
+    .. code:: python
+
+        with pm.Model() as model:
+            # Note that we access the distribution for the standard
+            # deviations, and do not create a new random variable.
+            sd_dist = pm.Exponential.dist(1.0)
+            chol, corr, sigmas = pm.LKJCholeskyCov('chol_cov', eta=4, n=10,
+            sd_dist=sd_dist, compute_corr=True)
+
+            # if you only want the packed Cholesky (default behavior):
+            # packed_chol = pm.LKJCholeskyCov('chol_cov', eta=4, n=10, sd_dist=sd_dist)
+            # chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
+
+            # Define a new MvNormal with the given covariance
+            vals = pm.MvNormal('vals', mu=np.zeros(10), chol=chol, shape=10)
+
+            # Or transform an uncorrelated normal:
+            vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=10)
+            vals = tt.dot(chol, vals_raw)
+
+            # Or compute the covariance matrix
+            cov = tt.dot(chol, chol.T)
+
+    **Implementation** In the unconstrained space all values of the cholesky factor
+    are stored untransformed, except for the diagonal entries, where
+    we use a log-transform to restrict them to positive values.
+
+    To correctly compute log-likelihoods for the standard deviations
+    and the correlation matrix seperatly, we need to consider a
+    second transformation: Given a cholesky factorization
+    :math:`LL^T = \Sigma` of a covariance matrix we can recover the
+    standard deviations :math:`\sigma` as the euclidean lengths of
+    the rows of :math:`L`, and the cholesky factor of the
+    correlation matrix as :math:`U = \text{diag}(\sigma)^{-1}L`.
+    Since each row of :math:`U` has length 1, we do not need to
+    store the diagonal. We define a transformation :math:`\phi`
+    such that :math:`\phi(L)` is the lower triangular matrix containing
+    the standard deviations :math:`\sigma` on the diagonal and the
+    correlation matrix :math:`U` below. In this form we can easily
+    compute the different likelihoods separately, as the likelihood
+    of the correlation matrix only depends on the values below the
+    diagonal, and the likelihood of the standard deviation depends
+    only on the diagonal values.
+
+    We still need the determinant of the jacobian of :math:`\phi^{-1}`.
+    If we think of :math:`\phi` as an automorphism on
+    :math:`\mathbb{R}^{\tfrac{n(n+1)}{2}}`, where we order
+    the dimensions as described in the notes above, the jacobian
+    is a block-diagonal matrix, where each block corresponds to
+    one row of :math:`U`. Each block has arrowhead shape, and we
+    can compute the determinant of that as described in [2]. Since
+    the determinant of a block-diagonal matrix is the product
+    of the determinants of the blocks, we get
+
+    .. math::
+
+       \text{det}(J_{\phi^{-1}}(U)) =
+       \left[
+         \prod_{i=2}^N u_{ii}^{i - 1} L_{ii}
+       \right]^{-1}
+
+    References
+    ----------
+    .. [1] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
+       "Generating random correlation matrices based on vines and
+       extended onion method." Journal of multivariate analysis,
+       100(9), pp.1989-2001.
+
+    .. [2] J. M. isn't a mathematician (http://math.stackexchange.com/users/498/
+       j-m-isnt-a-mathematician), Different approaches to evaluate this
+       determinant, URL (version: 2012-04-14):
+       http://math.stackexchange.com/q/130026
+    """
+    # compute Cholesky decomposition
+    packed_chol = _LKJCholeskyCov(name, eta=eta, n=n, sd_dist=sd_dist)
+    if not compute_corr:
+        return packed_chol
+
+    else:
+        chol = pm.expand_packed_triangular(n, packed_chol, lower=True)
+        # compute covariance matrix
+        cov = tt.dot(chol, chol.T)
+        # extract standard deviations and rho
+        stds = tt.sqrt(tt.diag(cov))
+        inv_stds = 1 / stds
+        corr = inv_stds[None, :] * cov * inv_stds[:, None]
+        if store_in_trace:
+            stds = pm.Deterministic(f"{name}_stds", stds)
+            corr = pm.Deterministic(f"{name}_corr", corr)
+
+        return chol, corr, stds
+
+
 class LKJCorr(Continuous):
     R"""
     The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
@@ -1279,9 +1309,9 @@ class LKJCorr(Continuous):
 
     Parameters
     ----------
-    n : int
+    n: int
         Dimension of the covariance matrix (n > 1).
-    eta : float
+    eta: float
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
@@ -1364,10 +1394,10 @@ class LKJCorr(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1388,7 +1418,7 @@ class LKJCorr(Continuous):
 
         Parameters
         ----------
-        x : numeric
+        x: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -1431,20 +1461,20 @@ class MatrixNormal(Continuous):
 
     Parameters
     ----------
-    mu : array
+    mu: array
         Array of means. Must be broadcastable with the random variable X such
         that the shape of mu + X is (m,n).
-    rowcov : mxm array
+    rowcov: mxm array
         Among-row covariance matrix. Defines variance within
         columns. Exactly one of rowcov or rowchol is needed.
-    rowchol : mxm array
+    rowchol: mxm array
         Cholesky decomposition of among-row covariance matrix. Exactly one of
         rowcov or rowchol is needed.
-    colcov : nxn array
+    colcov: nxn array
         Among-column covariance matrix. If rowcov is the identity matrix,
         this functions as `cov` in MvNormal.
         Exactly one of colcov or colchol is needed.
-    colchol : nxn array
+    colchol: nxn array
         Cholesky decomposition of among-column covariance matrix. Exactly one
         of colcov or colchol is needed.
 
@@ -1581,10 +1611,10 @@ class MatrixNormal(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1646,7 +1676,7 @@ class MatrixNormal(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
@@ -1678,22 +1708,22 @@ class KroneckerNormal(Continuous):
 
     Parameters
     ----------
-    mu : array
+    mu: array
         Vector of means, just as in `MvNormal`.
-    covs : list of arrays
+    covs: list of arrays
         The set of covariance matrices :math:`[K_1, K_2, ...]` to be
         Kroneckered in the order provided :math:`\bigotimes K_i`.
-    chols : list of arrays
+    chols: list of arrays
         The set of lower cholesky matrices :math:`[L_1, L_2, ...]` such that
         :math:`K_i = L_i L_i'`.
-    evds : list of tuples
+    evds: list of tuples
         The set of eigenvalue-vector, eigenvector-matrix pairs
         :math:`[(v_1, Q_1), (v_2, Q_2), ...]` such that
         :math:`K_i = Q_i \text{diag}(v_i) Q_i'`. For example::
 
             v_i, Q_i = tt.nlinalg.eigh(K_i)
 
-    sigma : scalar, variable
+    sigma: scalar, variable
         Standard deviation of the Gaussian white noise.
 
     Examples
@@ -1845,10 +1875,10 @@ class KroneckerNormal(Continuous):
 
         Parameters
         ----------
-        point : dict, optional
+        point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size : int, optional
+        size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -1895,7 +1925,7 @@ class KroneckerNormal(Continuous):
 
         Parameters
         ----------
-        value : numeric
+        value: numeric
             Value for which log-probability is calculated.
 
         Returns
