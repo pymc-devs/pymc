@@ -557,7 +557,7 @@ class StickBreaking2(Transform):
 
     def jacobian_det(self, y_):
         y = y_.T
-        Km1 = y.shape[0]
+        Km1 = y.shape[0] + 1
         sy = tt.sum(y, 0, keepdims=True)
         r = tt.concatenate([y+sy, tt.zeros(sy.shape)])
         # stable according to: http://deeplearning.net/software/theano_versions/0.9.X/NEWS.html
