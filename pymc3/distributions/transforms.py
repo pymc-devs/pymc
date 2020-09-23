@@ -18,7 +18,7 @@ import theano.tensor as tt
 from ..model import FreeRV
 from ..theanof import gradient, floatX
 from . import distribution
-from ..math import logit, invlogit
+from ..math import logit, invlogit, logsumexp
 from .distribution import draw_values
 import numpy as np
 from scipy.special import logit as nplogit
@@ -543,7 +543,7 @@ class StickBreaking2(Transform):
         sy = tt.sum(y, 0, keepdims=True)
         r = tt.concatenate([y+sy, tt.zeros(sy.shape)])
         # stable according to: http://deeplearning.net/software/theano_versions/0.9.X/NEWS.html
-        sr = tt.log(tt.sum(tt.exp(r), 0, keepdims=True))
+        sr = logsumexp(r, 0, keepdims=True)
         d = tt.log(Km1) + (Km1*sy) - (Km1*sr)
         return tt.sum(d, 0).T
 
