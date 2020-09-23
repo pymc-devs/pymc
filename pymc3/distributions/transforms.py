@@ -542,7 +542,6 @@ class StickBreaking2(Transform):
         Km1 = y.shape[0] + 1
         sy = tt.sum(y, 0, keepdims=True)
         r = tt.concatenate([y+sy, tt.zeros(sy.shape)])
-        # stable according to: http://deeplearning.net/software/theano_versions/0.9.X/NEWS.html
         sr = logsumexp(r, 0, keepdims=True)
         d = tt.log(Km1) + (Km1*sy) - (Km1*sr)
         return tt.sum(d, 0).T
