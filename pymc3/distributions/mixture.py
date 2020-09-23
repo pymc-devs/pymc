@@ -20,9 +20,14 @@ import warnings
 
 from ..math import logsumexp
 from .dist_math import bound, random_choice
-from .distribution import (Discrete, Distribution, draw_values,
-                           generate_samples, _DrawValuesContext,
-                           _DrawValuesContextBlocker)
+from .distribution import (
+    Discrete,
+    Distribution,
+    draw_values,
+    generate_samples,
+    _DrawValuesContext,
+    _DrawValuesContextBlocker,
+)
 from .shape_utils import to_tuple, broadcast_distribution_samples
 from .continuous import get_tau_sigma, Normal
 from ..theanof import _conversion_map
@@ -130,12 +135,12 @@ class Mixture(Distribution):
                     else [type(c) for c in comp_dists]
                 )
             )
-        shape = kwargs.pop('shape', ())
+        shape = kwargs.pop("shape", ())
 
         self.w = w = tt.as_tensor_variable(w)
         self.comp_dists = comp_dists
 
-        defaults = kwargs.pop('defaults', [])
+        defaults = kwargs.pop("defaults", [])
 
         if all_discrete(comp_dists):
             default_dtype = _conversion_map[theano.config.floatX]
@@ -145,11 +150,11 @@ class Mixture(Distribution):
             try:
                 self.mean = (w * self._comp_means()).sum(axis=-1)
 
-                if 'mean' not in defaults:
-                    defaults.append('mean')
+                if "mean" not in defaults:
+                    defaults.append("mean")
             except AttributeError:
                 pass
-        dtype = kwargs.pop('dtype', default_dtype)
+        dtype = kwargs.pop("dtype", default_dtype)
 
         try:
             if isinstance(comp_dists, Distribution):
@@ -160,8 +165,8 @@ class Mixture(Distribution):
             mode_idx = tt.argmax(tt.log(w) + comp_mode_logps, axis=-1)
             self.mode = self._comp_modes()[mode_idx]
 
-            if 'mode' not in defaults:
-                defaults.append('mode')
+            if "mode" not in defaults:
+                defaults.append("mode")
         except (AttributeError, ValueError, IndexError):
             pass
 
@@ -190,9 +195,11 @@ class Mixture(Distribution):
                     *[np.empty(shape) for shape in self._comp_dist_shapes]
                 ).shape
             except Exception:
-                raise TypeError('Supplied comp_dists shapes do not broadcast '
-                                'with each other. comp_dists shapes are: '
-                                '{}'.format(self._comp_dist_shapes))
+                raise TypeError(
+                    "Supplied comp_dists shapes do not broadcast "
+                    "with each other. comp_dists shapes are: "
+                    "{}".format(self._comp_dist_shapes)
+                )
 
             # We wrap the _comp_dist.random by adding the kwarg raw_size_,
             # which will be the size attribute passed to _comp_samples.
@@ -212,15 +219,17 @@ class Mixture(Distribution):
         scipy.stats.*.rvs, where size has a different meaning than in the
         distributions' random methods.
         """
+
         def wrapped_random(*args, **kwargs):
-            raw_size_ = kwargs.pop('raw_size_', None)
+            raw_size_ = kwargs.pop("raw_size_", None)
             # Distribution.random's signature is always (point=None, size=None)
             # so size could be the second arg or be given as a kwarg
             if len(args) > 1:
                 args[1] = raw_size_
             else:
-                kwargs['size'] = raw_size_
+                kwargs["size"] = raw_size_
             return random(*args, **kwargs)
+
         return wrapped_random
 
     def _comp_logp(self, value):
@@ -247,25 +256,17 @@ class Mixture(Distribution):
                 self_shape = None
             comp_shape = tuple(comp_dists.shape)
             ndim = value.ndim
-            if (
-                val_shape is not None and
-                    not((self_shape is not None and val_shape == self_shape) or
-                        val_shape == comp_shape)
+            if val_shape is not None and not (
+                (self_shape is not None and val_shape == self_shape) or val_shape == comp_shape
             ):
                 # value is neither the test point nor the self tensor, it
                 # is likely to hold observed values, so we must compute the
                 # ndim discarding the dimensions that don't match
                 # self_shape
-                if (
-                    self_shape and
-                    val_shape[-len(self_shape):] == self_shape
-                ):
+                if self_shape and val_shape[-len(self_shape) :] == self_shape:
                     # value has observed values for the Mixture
                     ndim = len(self_shape)
-                elif (
-                    comp_shape and
-                    val_shape[-len(comp_shape):] == comp_shape
-                ):
+                elif comp_shape and val_shape[-len(comp_shape) :] == comp_shape:
                     # value has observed for the Mixture components
                     ndim = len(comp_shape)
                 else:
@@ -285,35 +286,28 @@ class Mixture(Distribution):
                 if ndim <= 1:
                     ndim = len(comp_dists.shape) - 1
             if ndim < len(comp_dists.shape):
-                value_ = tt.shape_padright(value,
-                                           len(comp_dists.shape) - ndim)
+                value_ = tt.shape_padright(value, len(comp_dists.shape) - ndim)
             else:
                 value_ = value
             return comp_dists.logp(value_)
         else:
-            return tt.squeeze(tt.stack([comp_dist.logp(value)
-                                        for comp_dist in comp_dists],
-                                       axis=-1))
+            return tt.squeeze(
+                tt.stack([comp_dist.logp(value) for comp_dist in comp_dists], axis=-1)
+            )
 
     def _comp_means(self):
         try:
             return tt.as_tensor_variable(self.comp_dists.mean)
         except AttributeError:
-            return tt.squeeze(tt.stack([comp_dist.mean
-                                        for comp_dist in self.comp_dists],
-                                       axis=-1))
+            return tt.squeeze(tt.stack([comp_dist.mean for comp_dist in self.comp_dists], axis=-1))
 
     def _comp_modes(self):
         try:
             return tt.as_tensor_variable(self.comp_dists.mode)
         except AttributeError:
-            return tt.squeeze(tt.stack([comp_dist.mode
-                                        for comp_dist in self.comp_dists],
-                                       axis=-1))
+            return tt.squeeze(tt.stack([comp_dist.mode for comp_dist in self.comp_dists], axis=-1))
 
-    def _comp_samples(self, point=None, size=None,
-                      comp_dist_shapes=None,
-                      broadcast_shape=None):
+    def _comp_samples(self, point=None, size=None, comp_dist_shapes=None, broadcast_shape=None):
         if self.comp_is_distribution:
             samples = self._comp_dists.random(point=point, size=size)
         else:
@@ -322,20 +316,17 @@ class Mixture(Distribution):
             if broadcast_shape is None:
                 broadcast_shape = self._sample_shape
             samples = []
-            for dist_shape, generator in zip(comp_dist_shapes,
-                                             self._generators):
+            for dist_shape, generator in zip(comp_dist_shapes, self._generators):
                 sample = generate_samples(
                     generator=generator,
                     dist_shape=dist_shape,
                     broadcast_shape=broadcast_shape,
                     point=point,
                     size=size,
-                    not_broadcast_kwargs={'raw_size_': size},
+                    not_broadcast_kwargs={"raw_size_": size},
                 )
                 samples.append(sample)
-            samples = np.array(
-                broadcast_distribution_samples(samples, size=size)
-            )
+            samples = np.array(broadcast_distribution_samples(samples, size=size))
             # In the logp we assume the last axis holds the mixture components
             # so we move the axis to the last dimension
             samples = np.moveaxis(samples, 0, -1)
@@ -380,8 +371,7 @@ class Mixture(Distribution):
                 # hoping that it can circumvent the Flat and HalfFlat
                 # undrawable distributions.
                 with _DrawValuesContextBlocker():
-                    test_sample = self._comp_dists.random(point=point,
-                                                          size=None)
+                    test_sample = self._comp_dists.random(point=point, size=None)
                     comp_dist_shapes = test_sample.shape
             broadcast_shape = comp_dist_shapes
         else:
@@ -390,8 +380,7 @@ class Mixture(Distribution):
             # used by generate samples (the shape of a single random sample)
             # from the mixture
             comp_dist_shapes = []
-            for dist_shape, comp_dist in zip(self._comp_dist_shapes,
-                                             self._comp_dists):
+            for dist_shape, comp_dist in zip(self._comp_dist_shapes, self._comp_dists):
                 if dist_shape == tuple():
                     # Happens when the distribution is a scalar or when it was
                     # not given a shape. In these cases we try to draw a single
@@ -399,8 +388,7 @@ class Mixture(Distribution):
                     # dictionary hoping that it can circumvent the Flat and
                     # HalfFlat undrawable distributions.
                     with _DrawValuesContextBlocker():
-                        test_sample = comp_dist.random(point=point,
-                                                       size=None)
+                        test_sample = comp_dist.random(point=point, size=None)
                         dist_shape = test_sample.shape
                 comp_dist_shapes.append(dist_shape)
             # All component distributions must broadcast with each other
@@ -409,9 +397,11 @@ class Mixture(Distribution):
                     *[np.empty(shape) for shape in comp_dist_shapes]
                 ).shape
             except Exception:
-                raise TypeError('Inferred comp_dist shapes do not broadcast '
-                                'with each other. comp_dists inferred shapes '
-                                'are: {}'.format(comp_dist_shapes))
+                raise TypeError(
+                    "Inferred comp_dist shapes do not broadcast "
+                    "with each other. comp_dists inferred shapes "
+                    "are: {}".format(comp_dist_shapes)
+                )
         return comp_dist_shapes, broadcast_shape
 
     def logp(self, value):
@@ -430,9 +420,13 @@ class Mixture(Distribution):
         """
         w = self.w
 
-        return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=-1, keepdims=False),
-                     w >= 0, w <= 1, tt.allclose(w.sum(axis=-1), 1),
-                     broadcast_conditions=False)
+        return bound(
+            logsumexp(tt.log(w) + self._comp_logp(value), axis=-1, keepdims=False),
+            w >= 0,
+            w <= 1,
+            tt.allclose(w.sum(axis=-1), 1),
+            broadcast_conditions=False,
+        )
 
     def random(self, point=None, size=None):
         """
@@ -457,26 +451,21 @@ class Mixture(Distribution):
         with _DrawValuesContext() as draw_context:
             # We first need to check w and comp_tmp shapes and re compute size
             w = draw_values([self.w], point=point, size=size)[0]
-            comp_dist_shapes, broadcast_shape = (
-                self.infer_comp_dist_shapes(point=point)
-            )
+            comp_dist_shapes, broadcast_shape = self.infer_comp_dist_shapes(point=point)
 
         # When size is not None, it's hard to tell the w parameter shape
-        if size is not None and w.shape[:len(size)] == size:
-            w_shape = w.shape[len(size):]
+        if size is not None and w.shape[: len(size)] == size:
+            w_shape = w.shape[len(size) :]
         else:
             w_shape = w.shape
 
         # Try to determine parameter shape and dist_shape
         if self.comp_is_distribution:
-            param_shape = np.broadcast(np.empty(w_shape),
-                                       np.empty(broadcast_shape)).shape
+            param_shape = np.broadcast(np.empty(w_shape), np.empty(broadcast_shape)).shape
         else:
-            param_shape = np.broadcast(np.empty(w_shape),
-                                       np.empty(broadcast_shape + (1,))).shape
+            param_shape = np.broadcast(np.empty(w_shape), np.empty(broadcast_shape + (1,))).shape
         if np.asarray(self.shape).size != 0:
-            dist_shape = np.broadcast(np.empty(self.shape),
-                                      np.empty(param_shape[:-1])).shape
+            dist_shape = np.broadcast(np.empty(self.shape), np.empty(param_shape[:-1])).shape
         else:
             dist_shape = param_shape[:-1]
 
@@ -500,22 +489,20 @@ class Mixture(Distribution):
             else:
                 sh = wsh[i]
             w_sample_size.append(sh)
-        if size is not None and w_sample_size[:len(size)] != size:
+        if size is not None and w_sample_size[: len(size)] != size:
             w_sample_size = size + tuple(w_sample_size)
         # Broadcast w to the w_sample_size (add a singleton last axis for the
         # mixture components)
-        w = broadcast_distribution_samples([w, np.empty(w_sample_size + (1,))],
-                                           size=size)[0]
+        w = broadcast_distribution_samples([w, np.empty(w_sample_size + (1,))], size=size)[0]
 
         # Semiflatten the mixture weights. The last axis is the number of
         # mixture mixture components, and the rest is all about size,
         # dist_shape and broadcasting
         w_ = np.reshape(w, (-1, w.shape[-1]))
-        w_samples = random_choice(p=w_,
-                                  size=None)  # w's shape already includes size
+        w_samples = random_choice(p=w_, size=None)  # w's shape already includes size
         # Now we broadcast the chosen components to the dist_shape
         w_samples = np.reshape(w_samples, w.shape[:-1])
-        if size is not None and dist_shape[:len(size)] != size:
+        if size is not None and dist_shape[: len(size)] != size:
             w_samples = np.broadcast_to(w_samples, size + dist_shape)
         else:
             w_samples = np.broadcast_to(w_samples, dist_shape)
@@ -524,8 +511,8 @@ class Mixture(Distribution):
         if size is not None:
             if size == dist_shape:
                 size = None
-            elif size[-len(dist_shape):] == dist_shape:
-                size = size[:len(size) - len(dist_shape)]
+            elif size[-len(dist_shape) :] == dist_shape:
+                size = size[: len(size) - len(dist_shape)]
 
         # We get an integer _size instead of a tuple size for drawing the
         # mixture, then we just reshape the output
@@ -543,8 +530,7 @@ class Mixture(Distribution):
         if self.comp_is_distribution:
             mixture_size = int(output_size // np.prod(broadcast_shape))
         else:
-            mixture_size = int(output_size //
-                               (np.prod(broadcast_shape) * param_shape[-1]))
+            mixture_size = int(output_size // (np.prod(broadcast_shape) * param_shape[-1]))
         if mixture_size == 1 and _size is None:
             mixture_size = None
 
@@ -558,18 +544,17 @@ class Mixture(Distribution):
             )
         # Test that the mixture has the same number of "samples" as w
         if w_samples.size != (mixed_samples.size // w.shape[-1]):
-            raise ValueError('Inconsistent number of samples from the '
-                             'mixture and mixture weights. Drew {} mixture '
-                             'weights elements, and {} samples from the '
-                             'mixture components.'.
-                             format(w_samples.size,
-                                    mixed_samples.size // w.shape[-1]))
+            raise ValueError(
+                "Inconsistent number of samples from the "
+                "mixture and mixture weights. Drew {} mixture "
+                "weights elements, and {} samples from the "
+                "mixture components.".format(w_samples.size, mixed_samples.size // w.shape[-1])
+            )
         # Semiflatten the mixture to be able to zip it with w_samples
         w_samples = w_samples.flatten()
         mixed_samples = np.reshape(mixed_samples, (-1, w.shape[-1]))
         # Select the samples from the mixture
-        samples = np.array([mixed[choice] for choice, mixed in
-                            zip(w_samples, mixed_samples)])
+        samples = np.array([mixed[choice] for choice, mixed in zip(w_samples, mixed_samples)])
         # Reshape the samples to the correct output shape
         if size is None:
             samples = np.reshape(samples, dist_shape)
@@ -579,6 +564,7 @@ class Mixture(Distribution):
 
     def _distr_parameters_for_repr(self):
         return []
+
 
 class NormalMixture(Mixture):
     R"""
@@ -616,17 +602,13 @@ class NormalMixture(Mixture):
     def __init__(self, w, mu, sigma=None, tau=None, sd=None, comp_shape=(), *args, **kwargs):
         if sd is not None:
             sigma = sd
-            warnings.warn(
-                "sd is deprecated, use sigma instead",
-                DeprecationWarning
-            )
+            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
         self.mu = mu = tt.as_tensor_variable(mu)
         self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
 
-        super().__init__(w, Normal.dist(mu, sigma=sigma, shape=comp_shape),
-                                            *args, **kwargs)
+        super().__init__(w, Normal.dist(mu, sigma=sigma, shape=comp_shape), *args, **kwargs)
 
     def _distr_parameters_for_repr(self):
         return ["w", "mu", "sigma"]

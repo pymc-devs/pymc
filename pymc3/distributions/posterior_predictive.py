@@ -81,15 +81,11 @@ class _TraceDict(_TraceDictParent):
         multi_trace: Optional[MultiTrace] = None,
         dict: Optional[Dict[str, np.ndarray]] = None,
     ):
-        """
-
-        """
+        """"""
         if multi_trace:
             assert point_list is None and dict is None
             self.data = {}  # Dict[str, np.ndarray]
-            self._len = sum(
-                len(multi_trace._straces[chain]) for chain in multi_trace.chains
-            )
+            self._len = sum(len(multi_trace._straces[chain]) for chain in multi_trace.chains)
             self.varnames = multi_trace.varnames
             for vn in multi_trace.varnames:
                 self.data[vn] = multi_trace.get_values(vn)
@@ -121,11 +117,7 @@ class _TraceDict(_TraceDictParent):
             self.data = dict
             self.varnames = list(dict.keys())
             self._len = dict[self.varnames[0]].shape[0]
-        assert (
-            self.varnames is not None
-            and self._len is not None
-            and self.data is not None
-        )
+        assert self.varnames is not None and self._len is not None and self.data is not None
 
     def __len__(self) -> int:
         return self._len
@@ -157,9 +149,7 @@ class _TraceDict(_TraceDictParent):
         elif isinstance(item, slice):
             return self._extract_slice(item)
         elif isinstance(item, int):
-            return _TraceDict(
-                dict={k: np.atleast_1d(v[item]) for k, v in self.data.items()}
-            )
+            return _TraceDict(dict={k: np.atleast_1d(v[item]) for k, v in self.data.items()})
         elif hasattr(item, "name"):
             return super().__getitem__(item.name)
         else:
@@ -238,9 +228,7 @@ def fast_sample_posterior_predictive(
     with model:
 
         if keep_size and samples is not None:
-            raise IncorrectArgumentsError(
-                "Should not specify both keep_size and samples arguments"
-            )
+            raise IncorrectArgumentsError("Should not specify both keep_size and samples arguments")
 
         if isinstance(trace, list) and all(isinstance(x, dict) for x in trace):
             _trace = _TraceDict(point_list=trace)
@@ -306,20 +294,15 @@ def fast_sample_posterior_predictive(
         for s in _samples:
             strace = _trace if s == len_trace else _trace[slice(0, s)]
             try:
-                values = posterior_predictive_draw_values(
-                    cast(List[Any], vars), strace, s
-                )
-                new_trace: Dict[str, np.ndarray] = {
-                    k.name: v for (k, v) in zip(vars, values)
-                }
+                values = posterior_predictive_draw_values(cast(List[Any], vars), strace, s)
+                new_trace: Dict[str, np.ndarray] = {k.name: v for (k, v) in zip(vars, values)}
                 ppc_trace.extend_trace(new_trace)
             except KeyboardInterrupt:
                 pass
 
         if keep_size:
             return {
-                k: ary.reshape((nchains, ndraws, *ary.shape[1:]))
-                for k, ary in ppc_trace.items()
+                k: ary.reshape((nchains, ndraws, *ary.shape[1:])) for k, ary in ppc_trace.items()
             }
         # this gets us a Dict[str, np.ndarray] instead of my wrapped equiv.
         return ppc_trace.data
@@ -354,9 +337,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
     named_nodes_children: Dict[str, Any]
     _tok: contextvars.Token
 
-    def __init__(
-        self, vars, trace: _TraceDict, samples, model: Optional[Model], size=None
-    ):
+    def __init__(self, vars, trace: _TraceDict, samples, model: Optional[Model], size=None):
         if size is not None:
             raise NotImplementedError(
                 "sample_posterior_predictive does not support the size argument at this time."
@@ -474,17 +455,12 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                         try:
                             if param in self.named_nodes_children:
                                 for node in self.named_nodes_children[param]:
-                                    if (
-                                        node.name not in givens
-                                        and (node, samples) in drawn
-                                    ):
+                                    if node.name not in givens and (node, samples) in drawn:
                                         givens[node.name] = (
                                             node,
                                             drawn[(node, samples)],
                                         )
-                            value = self.draw_value(
-                                param, trace=self.trace, givens=givens.values()
-                            )
+                            value = self.draw_value(param, trace=self.trace, givens=givens.values())
                             assert isinstance(value, np.ndarray)
                             self.evaluated[param_idx] = drawn[(param, samples)] = value
                             givens[param.name] = (param, value)
@@ -494,9 +470,9 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
 
     def init(self) -> None:
         """This method carries out the initialization phase of sampling
-    from the posterior predictive distribution.  Notably it initializes the
-    ``_DrawValuesContext`` bookkeeping object and evaluates the "fast drawable"
-    parts of the model."""
+        from the posterior predictive distribution.  Notably it initializes the
+        ``_DrawValuesContext`` bookkeeping object and evaluates the "fast drawable"
+        parts of the model."""
         vars: List[Any] = self.vars
         trace: _TraceDict = self.trace
         samples: int = self.samples
@@ -519,11 +495,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                 if (var, samples) in drawn:
                     evaluated[i] = drawn[(var, samples)]
                     # We filter out Deterministics by checking for `model` attribute
-                elif (
-                    name is not None
-                    and hasattr(var, "model")
-                    and name in trace.varnames
-                ):
+                elif name is not None and hasattr(var, "model") and name in trace.varnames:
                     # param.name is in the trace.  Record it as drawn and evaluated
                     drawn[(var, samples)] = evaluated[i] = trace[cast(str, name)]
                 else:
@@ -618,9 +590,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                 model = modelcontext(None)
                 assert isinstance(model, Model)
                 shape: Tuple[int, ...] = tuple(_param_shape(param, model))
-                return random_sample(
-                    param.random, param, point=trace, size=samples, shape=shape
-                )
+                return random_sample(param.random, param, point=trace, size=samples, shape=shape)
             elif (
                 hasattr(param, "distribution")
                 and hasattr(param.distribution, "random")
@@ -630,9 +600,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     # shape inspection for ObservedRV
                     dist_tmp = param.distribution
                     try:
-                        distshape: Tuple[int, ...] = tuple(
-                            param.observations.shape.eval()
-                        )
+                        distshape: Tuple[int, ...] = tuple(param.observations.shape.eval())
                     except AttributeError:
                         distshape = tuple(param.observations.shape)
 
@@ -653,9 +621,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                         # we don't want to store these drawn values to the context
                         with _DrawValuesContextBlocker():
                             point = trace[0] if trace else None
-                            temp_val = np.atleast_1d(
-                                dist_tmp.random(point=point, size=None)
-                            )
+                            temp_val = np.atleast_1d(dist_tmp.random(point=point, size=None))
                         # if hasattr(param, 'name') and param.name == 'obs':
                         #     import pdb; pdb.set_trace()
                         # Sometimes point may change the size of val but not the
@@ -694,13 +660,9 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     variables = values = []
                 # We only truly care if the ancestors of param that were given
                 # value have the matching dshape and val.shape
-                param_ancestors = set(
-                    theano.gof.graph.ancestors([param], blockers=list(variables))
-                )
+                param_ancestors = set(theano.gof.graph.ancestors([param], blockers=list(variables)))
                 inputs = [
-                    (var, val)
-                    for var, val in zip(variables, values)
-                    if var in param_ancestors
+                    (var, val) for var, val in zip(variables, values) if var in param_ancestors
                 ]
                 if inputs:
                     input_vars, input_vals = list(zip(*inputs))
@@ -709,9 +671,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     input_vals = []
                 func = _compile_theano_function(param, input_vars)
                 if not input_vars:
-                    assert (
-                        input_vals == []
-                    )  # AFAICT if there are now vars, there can't be vals
+                    assert input_vals == []  # AFAICT if there are now vars, there can't be vals
                     output = func(*input_vals)
                     if hasattr(output, "shape"):
                         val = np.repeat(np.expand_dims(output, 0), samples, axis=0)
