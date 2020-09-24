@@ -515,7 +515,7 @@ class StickBreaking2(Transform):
         y = lx[:-1] - shift
         return floatX(y.T)
 
-    def forward_val(self, x_):
+    def forward_val(self, x_, point=None):
         x = x_.T
         n = x.shape[0]
         lx = np.log(x)
