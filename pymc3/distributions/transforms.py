@@ -531,12 +531,6 @@ class StickBreaking2(Transform):
         x = e_y / tt.sum(e_y, 0, keepdims=True)
         return floatX(x.T)
 
-    def backward_val(self, y_):
-        y = y_.T
-        y = np.concatenate([y, -np.sum(y, 0, keepdims=True)])
-        x = np.exp(y)/np.sum(np.exp(y), 0, keepdims=True)
-        return floatX(x.T)
-
     def jacobian_det(self, y_):
         y = y_.T
         Km1 = y.shape[0] + 1
