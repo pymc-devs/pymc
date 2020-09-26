@@ -1,0 +1,19 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.2.0
+  hooks:
+    -   id: end-of-file-fixer
+    -   id: check-toml
+- repo: https://github.com/nbQA-dev/nbQA
+  rev: 0.2.0
+  hooks:
+    - id: nbqa
+      args: ['isort']
+      name: nbqa-isort
+      alias: nbqa-isort
+      additional_dependencies: ['isort']
+- repo: https://github.com/asottile/pyupgrade
+  rev: v2.7.2
+  hooks:
+    - id: pyupgrade
+      args: ['--py36-plus']

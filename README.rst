@@ -78,12 +78,7 @@ Or via conda-forge:
 
     conda install -c conda-forge pymc3
 
-Plotting is done using `ArviZ <https://arviz-devs.github.io/arviz/>`__
-which may be installed separately, or along with PyMC3:
-
-::
-
-    pip install pymc3[plots]
+Plotting is done using `ArviZ <https://arviz-devs.github.io/arviz/>`__ - if you follow the installation instructions above, then it will be installed alongside ``PyMC3``.
 
 The current development branch of PyMC3 can be installed from GitHub, also using ``pip``:
 

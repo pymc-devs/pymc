@@ -316,4 +316,3 @@ class Bound:
             )
         else:
             raise ValueError("Distribution is neither continuous nor discrete.")
-

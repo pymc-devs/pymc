@@ -16,6 +16,7 @@ import pytest
 import theano
 import theano.tensor as tt
 import numpy as np
+import pickle
 import pandas as pd
 import numpy.testing as npt
 import unittest
@@ -265,7 +266,7 @@ class TestValueGradFunction(unittest.TestCase):
         a.tag.test_value = np.zeros(3, dtype=a.dtype)
         a.dshape = (3,)
         a.dsize = 3
-        f_grad = ValueGradFunction(a.sum(), [a], [], mode='FAST_COMPILE')
+        f_grad = ValueGradFunction([a.sum()], [a], [], mode='FAST_COMPILE')
         assert f_grad.size == 3
 
     def test_invalid_type(self):
@@ -274,7 +275,7 @@ class TestValueGradFunction(unittest.TestCase):
         a.dshape = (3,)
         a.dsize = 3
         with pytest.raises(TypeError) as err:
-            ValueGradFunction(a.sum(), [a], [], mode='FAST_COMPILE')
+            ValueGradFunction([a.sum()], [a], [], mode='FAST_COMPILE')
         err.match('Invalid dtype')
 
     def setUp(self):
@@ -303,7 +304,7 @@ class TestValueGradFunction(unittest.TestCase):
         self.cost = extra1 * val1.sum() + val2.sum()
 
         self.f_grad = ValueGradFunction(
-            self.cost, [val1, val2], [extra1], mode='FAST_COMPILE')
+            [self.cost], [val1, val2], [extra1], mode='FAST_COMPILE')
 
     def test_extra_not_set(self):
         with pytest.raises(ValueError) as err:
@@ -380,3 +381,68 @@ def test_multiple_observed_rv():
     assert model['x'] == model['x']
     assert  model['x'] in model.observed_RVs
     assert not model['x'] in model.vars
+
+
+def test_tempered_logp_dlogp():
+    with pm.Model() as model:
+        pm.Normal('x')
+        pm.Normal('y', observed=1)
+
+    func = model.logp_dlogp_function()
+    func.set_extra_values({})
+
+    func_temp = model.logp_dlogp_function(tempered=True)
+    func_temp.set_extra_values({})
+
+    func_nograd = model.logp_dlogp_function(compute_grads=False)
+    func_nograd.set_extra_values({})
+
+    func_temp_nograd = model.logp_dlogp_function(
+        tempered=True, compute_grads=False
+    )
+    func_temp_nograd.set_extra_values({})
+
+    x = np.ones(func.size, dtype=func.dtype)
+    assert func(x) == func_temp(x)
+    assert func_nograd(x) == func(x)[0]
+    assert func_temp_nograd(x) == func(x)[0]
+
+    func_temp.set_weights(np.array([0.], dtype=func.dtype))
+    func_temp_nograd.set_weights(np.array([0.], dtype=func.dtype))
+    npt.assert_allclose(func(x)[0], 2 * func_temp(x)[0])
+    npt.assert_allclose(func(x)[1], func_temp(x)[1])
+
+    npt.assert_allclose(func_nograd(x), func(x)[0])
+    npt.assert_allclose(func_temp_nograd(x), func_temp(x)[0])
+
+    func_temp.set_weights(np.array([0.5], dtype=func.dtype))
+    func_temp_nograd.set_weights(np.array([0.5], dtype=func.dtype))
+    npt.assert_allclose(func(x)[0], 4 / 3 * func_temp(x)[0])
+    npt.assert_allclose(func(x)[1], func_temp(x)[1])
+
+    npt.assert_allclose(func_nograd(x), func(x)[0])
+    npt.assert_allclose(func_temp_nograd(x), func_temp(x)[0])
+
+
+def test_model_pickle(tmpdir):
+    """Tests that PyMC3 models are pickleable"""
+    with pm.Model() as model:
+        x = pm.Normal('x')
+        pm.Normal('y', observed=1)
+
+    file_path = tmpdir.join("model.p")
+    with open(file_path, 'wb') as buff:
+        pickle.dump(model, buff)
+
+
+def test_model_pickle_deterministic(tmpdir):
+    """Tests that PyMC3 models are pickleable"""
+    with pm.Model() as model:
+        x = pm.Normal('x')
+        z = pm.Normal("z")
+        pm.Deterministic("w", x/z)
+        pm.Normal('y', observed=1)
+
+    file_path = tmpdir.join("model.p")
+    with open(file_path, 'wb') as buff:
+        pickle.dump(model, buff)

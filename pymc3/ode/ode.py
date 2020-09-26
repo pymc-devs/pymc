@@ -149,7 +149,7 @@ class DifferentialEquation(theano.Op):
         inputs = [y0, theta]
         for i, (input_val, itype) in enumerate(zip(inputs, self._itypes)):
             if not input_val.type == itype:
-                raise ValueError('Input {} of type {} does not have the expected type of {}'.format(i, input_val.type, itype))
+                raise ValueError(f'Input {i} of type {input_val.type} does not have the expected type of {itype}')
         
         # use default implementation to prepare symbolic outputs (via make_node)
         states, sens = super(theano.Op, self).__call__(y0, theta, **kwargs)

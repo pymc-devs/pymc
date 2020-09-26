@@ -217,4 +217,3 @@ def test_expand_packed_triangular():
     assert np.all(
         expand_diag_upper.eval({packed: upper_packed}) == floatX(np.diag(vals))
     )
-

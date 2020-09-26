@@ -147,7 +147,6 @@ class TransformedDistribution(distribution.Distribution):
             arguments to Distribution"""
         forward = transform.forward
         testval = forward(dist.default())
-        forward_val = transform.forward_val
 
         self.dist = dist
         self.transform_used = transform

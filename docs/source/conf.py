@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # pymc3 documentation build configuration file, created by
 # sphinx-quickstart on Sat Dec 26 14:40:23 2015.
@@ -335,4 +334,3 @@ def setup(app):
         "https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css"
     )
     app.add_css_file("default.css")
-

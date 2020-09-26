@@ -92,4 +92,3 @@ class TestSimpleModel(SeededTest):
         g = model_to_graphviz(self.model)
         for key in self.compute_graph:
             assert key in g.source
-

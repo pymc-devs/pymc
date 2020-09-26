@@ -68,7 +68,7 @@ else:
                 _axis = axis
             if _axis < 0 or _axis >= arr.ndim:
                 raise ValueError(
-                    "Supplied axis {} is out of bounds".format(axis)
+                    f"Supplied axis {axis} is out of bounds"
                 )
             return arr[_make_along_axis_idx(arr.shape, indices, _axis)]
 

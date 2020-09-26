@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import pymc3 as pm
+from pymc3.util import get_var_name
 import numpy as np
 import numpy.testing as npt
 from scipy import stats
@@ -145,7 +146,7 @@ class BaseSampler(SeededTest):
             cls.trace = pm.sample(cls.n_samples, tune=cls.tune, step=cls.step, cores=cls.chains)
         cls.samples = {}
         for var in cls.model.unobserved_RVs:
-            cls.samples[str(var)] = cls.trace.get_values(var, burn=cls.burn)
+            cls.samples[get_var_name(var)] = cls.trace.get_values(var, burn=cls.burn)
 
     def test_neff(self):
         if hasattr(self, 'min_n_eff'):

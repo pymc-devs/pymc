@@ -21,7 +21,7 @@ from theano.gof.graph import stack_search
 from theano.compile import SharedVariable
 from theano.tensor import Tensor
 
-from .util import get_default_varnames
+from .util import get_default_varnames, get_var_name
 from .model import ObservedRV
 import pymc3 as pm
 
@@ -83,7 +83,7 @@ class ModelGraph:
                 if self.transform_map[p] != var.name:
                     keep.add(self.transform_map[p])
             else:
-                raise AssertionError('Do not know what to do with {}'.format(str(p)))
+                raise AssertionError('Do not know what to do with {}'.format(get_var_name(p)))
         return keep
 
     def get_parents(self, var: Tensor) -> Set[VarName]:
@@ -114,8 +114,8 @@ class ModelGraph:
                 try:
                     obs_name = var.observations.name
                     if obs_name:
-                        input_map[var_name] = input_map[var_name].difference(set([obs_name]))
-                        update_input_map(obs_name, set([var_name]))
+                        input_map[var_name] = input_map[var_name].difference({obs_name})
+                        update_input_map(obs_name, {var_name})
                 except AttributeError:
                     pass
         return input_map
@@ -147,7 +147,7 @@ class ModelGraph:
             attrs['shape'] = 'box'
 
         graph.node(var_name.replace(':', '&'),
-                '{var_name}\n~\n{distribution}'.format(var_name=var_name, distribution=distribution),
+                f'{var_name}\n~\n{distribution}',
                 **attrs)
 
     def get_plates(self):

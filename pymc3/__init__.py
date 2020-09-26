@@ -31,6 +31,7 @@ if not logging.root.handlers:
 def __set_compiler_flags():
     # Workarounds for Theano compiler problems on various platforms
     import theano
+
     current = theano.config.gcc.cxxflags
     theano.config.gcc.cxxflags = f"{current} -Wno-c++11-narrowing"
 

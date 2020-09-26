@@ -36,37 +36,41 @@ import warnings
 
 from ..backends import base, ndarray
 from . import tracetab as ttab
+from ..util import get_var_name
 
 TEMPLATES = {
-    'table':            ('CREATE TABLE IF NOT EXISTS [{table}] '
-                         '(recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
-                         'draw INTEGER, chain INT(5), '
-                         '{value_cols})'),
-    'insert':           ('INSERT INTO [{table}] '
-                         '(recid, draw, chain, {value_cols}) '
-                         'VALUES (NULL, ?, ?, {values})'),
-    'max_draw':         ('SELECT MAX(draw) FROM [{table}] '
-                         'WHERE chain = ?'),
-    'draw_count':       ('SELECT COUNT(*) FROM [{table}] '
-                         'WHERE chain = ?'),
+    "table": (
+        "CREATE TABLE IF NOT EXISTS [{table}] "
+        "(recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
+        "draw INTEGER, chain INT(5), "
+        "{value_cols})"
+    ),
+    "insert": (
+        "INSERT INTO [{table}] "
+        "(recid, draw, chain, {value_cols}) "
+        "VALUES (NULL, ?, ?, {values})"
+    ),
+    "max_draw": ("SELECT MAX(draw) FROM [{table}] " "WHERE chain = ?"),
+    "draw_count": ("SELECT COUNT(*) FROM [{table}] " "WHERE chain = ?"),
     # Named placeholders are used in the selection templates because
     # some values occur more than once in the same template.
-    'select':           ('SELECT * FROM [{table}] '
-                         'WHERE (chain = :chain)'),
-    'select_burn':      ('SELECT * FROM [{table}] '
-                         'WHERE (chain = :chain) AND (draw > :burn)'),
-    'select_thin':      ('SELECT * FROM [{table}] '
-                         'WHERE (chain = :chain) AND '
-                         '(draw - (SELECT draw FROM [{table}] '
-                         'WHERE chain = :chain '
-                         'ORDER BY draw LIMIT 1)) % :thin = 0'),
-    'select_burn_thin': ('SELECT * FROM [{table}] '
-                         'WHERE (chain = :chain) AND (draw > :burn) '
-                         'AND (draw - (SELECT draw FROM [{table}] '
-                         'WHERE (chain = :chain) AND (draw > :burn) '
-                         'ORDER BY draw LIMIT 1)) % :thin = 0'),
-    'select_point':     ('SELECT * FROM [{table}] '
-                         'WHERE (chain = :chain) AND (draw = :draw)'),
+    "select": ("SELECT * FROM [{table}] " "WHERE (chain = :chain)"),
+    "select_burn": ("SELECT * FROM [{table}] " "WHERE (chain = :chain) AND (draw > :burn)"),
+    "select_thin": (
+        "SELECT * FROM [{table}] "
+        "WHERE (chain = :chain) AND "
+        "(draw - (SELECT draw FROM [{table}] "
+        "WHERE chain = :chain "
+        "ORDER BY draw LIMIT 1)) % :thin = 0"
+    ),
+    "select_burn_thin": (
+        "SELECT * FROM [{table}] "
+        "WHERE (chain = :chain) AND (draw > :burn) "
+        "AND (draw - (SELECT draw FROM [{table}] "
+        "WHERE (chain = :chain) AND (draw > :burn) "
+        "ORDER BY draw LIMIT 1)) % :thin = 0"
+    ),
+    "select_point": ("SELECT * FROM [{table}] " "WHERE (chain = :chain) AND (draw = :draw)"),
 }
 
 sqlite3.register_adapter(np.int32, int)
@@ -91,9 +95,9 @@ class SQLite(base.BaseTrace):
 
     def __init__(self, name, model=None, vars=None, test_point=None):
         warnings.warn(
-            'The `SQLite` backend will soon be removed. '
-            'Please switch to a different backend. '
-            'If you have good reasons for using the SQLite backend, file an issue and tell us about them.',
+            "The `SQLite` backend will soon be removed. "
+            "Please switch to a different backend. "
+            "If you have good reasons for using the SQLite backend, file an issue and tell us about them.",
             DeprecationWarning,
         )
         super().__init__(name, model, vars, test_point)
@@ -129,35 +133,34 @@ class SQLite(base.BaseTrace):
             self.draw_idx = self._get_max_draw(chain) + 1
             self._len = None
         else:  # Table has not been created.
-            self._var_cols = {varname: ttab.create_flat_names('v', shape)
-                              for varname, shape in self.var_shapes.items()}
+            self._var_cols = {
+                varname: ttab.create_flat_names("v", shape)
+                for varname, shape in self.var_shapes.items()
+            }
             self._create_table()
             self._is_setup = True
         self._create_insert_queries()
         self._closed = False
 
     def _create_table(self):
-        template = TEMPLATES['table']
+        template = TEMPLATES["table"]
         with self.db.con:
             for varname, var_cols in self._var_cols.items():
                 if np.issubdtype(self.var_dtypes[varname], np.integer):
-                    dtype = 'INT'
+                    dtype = "INT"
                 else:
-                    dtype = 'FLOAT'
-                colnames = ', '.join([v + ' ' + dtype for v in var_cols])
-                statement = template.format(table=varname,
-                                            value_cols=colnames)
+                    dtype = "FLOAT"
+                colnames = ", ".join([v + " " + dtype for v in var_cols])
+                statement = template.format(table=varname, value_cols=colnames)
                 self.db.cursor.execute(statement)
 
     def _create_insert_queries(self):
-        template = TEMPLATES['insert']
+        template = TEMPLATES["insert"]
         for varname, var_cols in self._var_cols.items():
             # Create insert statement for each variable.
-            var_str = ', '.join(var_cols)
-            placeholders = ', '.join(['?'] * len(var_cols))
-            statement = template.format(table=varname,
-                                        value_cols=var_str,
-                                        values=placeholders)
+            var_str = ", ".join(var_cols)
+            placeholders = ", ".join(["?"] * len(var_cols))
+            statement = template.format(table=varname, value_cols=var_str, values=placeholders)
             self.var_inserts[varname] = statement
 
     def record(self, point):
@@ -181,8 +184,7 @@ class SQLite(base.BaseTrace):
             for varname in self.varnames:
                 if not self._queue[varname]:
                     continue
-                self.db.cursor.executemany(self.var_inserts[varname],
-                                           self._queue[varname])
+                self.db.cursor.executemany(self.var_inserts[varname], self._queue[varname])
                 self._queue[varname] = []
 
     def close(self):
@@ -203,7 +205,7 @@ class SQLite(base.BaseTrace):
 
     def _get_number_draws(self):
         self.db.connect()
-        statement = TEMPLATES['draw_count'].format(table=self.varnames[0])
+        statement = TEMPLATES["draw_count"].format(table=self.varnames[0])
         self.db.cursor.execute(statement, (self.chain,))
         counts = self.db.cursor.fetchall()[0][0]
         if counts is None:
@@ -213,8 +215,8 @@ class SQLite(base.BaseTrace):
 
     def _get_max_draw(self, chain):
         self.db.connect()
-        statement = TEMPLATES['max_draw'].format(table=self.varnames[0])
-        self.db.cursor.execute(statement, (chain, ))
+        statement = TEMPLATES["max_draw"].format(table=self.varnames[0])
+        self.db.cursor.execute(statement, (chain,))
         counts = self.db.cursor.fetchall()[0][0]
         if counts is None:
             return 0
@@ -242,23 +244,22 @@ class SQLite(base.BaseTrace):
         if burn < 0:
             burn = max(0, len(self) + burn)
         if thin < 1:
-            raise ValueError('Only positive thin values are supported '
-                             'in SQLite backend.')
-        varname = str(varname)
+            raise ValueError("Only positive thin values are supported " "in SQLite backend.")
+        varname = get_var_name(varname)
 
-        statement_args = {'chain': self.chain}
+        statement_args = {"chain": self.chain}
         if burn == 0 and thin == 1:
-            action = 'select'
+            action = "select"
         elif thin == 1:
-            action = 'select_burn'
-            statement_args['burn'] = burn - 1
+            action = "select_burn"
+            statement_args["burn"] = burn - 1
         elif burn == 0:
-            action = 'select_thin'
-            statement_args['thin'] = thin
+            action = "select_thin"
+            statement_args["thin"] = thin
         else:
-            action = 'select_burn_thin'
-            statement_args['burn'] = burn - 1
-            statement_args['thin'] = thin
+            action = "select_burn_thin"
+            statement_args["burn"] = burn - 1
+            statement_args["thin"] = thin
 
         self.db.connect()
         shape = (-1,) + self.var_shapes[varname]
@@ -269,7 +270,7 @@ class SQLite(base.BaseTrace):
 
     def _slice(self, idx):
         if idx.stop is not None:
-            raise ValueError('Stop value in slice not supported.')
+            raise ValueError("Stop value in slice not supported.")
         return ndarray._slice_as_ndarray(self, idx)
 
     def point(self, idx):
@@ -279,20 +280,18 @@ class SQLite(base.BaseTrace):
         idx = int(idx)
         if idx < 0:
             idx = self._get_max_draw(self.chain) + idx + 1
-        statement = TEMPLATES['select_point']
+        statement = TEMPLATES["select_point"]
         self.db.connect()
         var_values = {}
-        statement_args = {'chain': self.chain, 'draw': idx}
+        statement_args = {"chain": self.chain, "draw": idx}
         for varname in self.varnames:
-            self.db.cursor.execute(statement.format(table=varname),
-                                   statement_args)
+            self.db.cursor.execute(statement.format(table=varname), statement_args)
             values = _rows_to_ndarray(self.db.cursor)
             var_values[varname] = values.reshape(self.var_shapes[varname])
         return var_values
 
 
 class _SQLiteDB:
-
     def __init__(self, name):
         self.name = name
         self.con = None
@@ -330,25 +329,26 @@ def load(name, model=None):
     A MultiTrace instance
     """
     warnings.warn(
-        'The `sqlite.load` function will soon be removed. '
-        'Please use ArviZ to save traces. '
-        'If you have good reasons for using the `load` function, file an issue and tell us about them. ',
+        "The `sqlite.load` function will soon be removed. "
+        "Please use ArviZ to save traces. "
+        "If you have good reasons for using the `load` function, file an issue and tell us about them. ",
         DeprecationWarning,
     )
     db = _SQLiteDB(name)
     db.connect()
     varnames = _get_table_list(db.cursor)
     if len(varnames) == 0:
-        raise ValueError(('Can not get variable list for database'
-                          '`{}`'.format(name)))
+        raise ValueError("Can not get variable list for database" "`{}`".format(name))
     chains = _get_chain_list(db.cursor, varnames[0])
 
     straces = []
     for chain in chains:
         strace = SQLite(name, model=model)
         strace.chain = chain
-        strace._var_cols = {varname: ttab.create_flat_names('v', shape)
-                            for varname, shape in strace.var_shapes.items()}
+        strace._var_cols = {
+            varname: ttab.create_flat_names("v", shape)
+            for varname, shape in strace.var_shapes.items()
+        }
         strace._is_setup = True
         strace.db = db  # Share the db with all traces.
         straces.append(strace)
@@ -359,21 +359,23 @@ def _get_table_list(cursor):
     """Return a list of table names in the current database."""
     # Modified from Django. Skips the sqlite_sequence system table used
     # for autoincrement key generation.
-    cursor.execute("SELECT name FROM sqlite_master "
-                   "WHERE type='table' AND NOT name='sqlite_sequence' "
-                   "ORDER BY name")
+    cursor.execute(
+        "SELECT name FROM sqlite_master "
+        "WHERE type='table' AND NOT name='sqlite_sequence' "
+        "ORDER BY name"
+    )
     return [row[0] for row in cursor.fetchall()]
 
 
 def _get_var_strs(cursor, varname):
-    cursor.execute('SELECT * FROM [{}]'.format(varname))
+    cursor.execute(f"SELECT * FROM [{varname}]")
     col_names = (col_descr[0] for col_descr in cursor.description)
-    return [name for name in col_names if name.startswith('v')]
+    return [name for name in col_names if name.startswith("v")]
 
 
 def _get_chain_list(cursor, varname):
     """Return a list of sorted chains for `varname`."""
-    cursor.execute('SELECT DISTINCT chain FROM [{}]'.format(varname))
+    cursor.execute(f"SELECT DISTINCT chain FROM [{varname}]")
     chains = sorted([chain[0] for chain in cursor.fetchall()])
     return chains
 

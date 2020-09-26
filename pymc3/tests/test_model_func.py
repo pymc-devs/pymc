@@ -64,6 +64,3 @@ def test_mapping():
     randarray = np.random.randn(*parray.shape)
     randpoint = model.bijection.rmap(randarray)
     assert lp(randpoint) == lparray(randarray)
-
-
-

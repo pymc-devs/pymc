@@ -26,13 +26,7 @@ from pymc3.math import batched_diag
 from pymc3.variational import flows
 
 
-__all__ = [
-    'MeanField',
-    'FullRank',
-    'Empirical',
-    'NormalizingFlow',
-    'sample_approx'
-]
+__all__ = ["MeanField", "FullRank", "Empirical", "NormalizingFlow", "sample_approx"]
 
 
 @Group.register
@@ -42,21 +36,21 @@ class MeanFieldGroup(Group):
     that latent space variables are uncorrelated that is the main drawback
     of the method
     """
-    __param_spec__ = dict(mu=('d', ), rho=('d', ))
-    short_name = 'mean_field'
-    alias_names = frozenset(['mf'])
+    __param_spec__ = dict(mu=("d",), rho=("d",))
+    short_name = "mean_field"
+    alias_names = frozenset(["mf"])
 
     @node_property
     def mean(self):
-        return self.params_dict['mu']
+        return self.params_dict["mu"]
 
     @node_property
     def rho(self):
-        return self.params_dict['rho']
+        return self.params_dict["rho"]
 
     @node_property
     def cov(self):
-        var = rho2sigma(self.rho)**2
+        var = rho2sigma(self.rho) ** 2
         if self.batched:
             return batched_diag(var)
         else:
@@ -66,13 +60,11 @@ class MeanFieldGroup(Group):
     def std(self):
         return rho2sigma(self.rho)
 
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         if not self._check_user_params():
-            self.shared_params = self.create_shared_params(
-                self._kwargs.get('start', None)
-            )
+            self.shared_params = self.create_shared_params(self._kwargs.get("start", None))
         self._finalize_init()
 
     def create_shared_params(self, start=None):
@@ -90,10 +82,10 @@ class MeanFieldGroup(Group):
         if self.batched:
             start = np.tile(start, (self.bdim, 1))
             rho = np.tile(rho, (self.bdim, 1))
-        return {'mu': theano.shared(
-                    pm.floatX(start), 'mu'),
-                'rho': theano.shared(
-                    pm.floatX(rho), 'rho')}
+        return {
+            "mu": theano.shared(pm.floatX(start), "mu"),
+            "rho": theano.shared(pm.floatX(rho), "rho"),
+        }
 
     @node_property
     def symbolic_random(self):
@@ -118,17 +110,16 @@ class FullRankGroup(Group):
     MeanField approach correlations between variables are taken in account. The
     main drawback of the method is computational cost.
     """
-    __param_spec__ = dict(mu=('d',), L_tril=('int(d * (d + 1) / 2)',))
-    short_name = 'full_rank'
-    alias_names = frozenset(['fr'])
 
-    @change_flags(compute_test_value='off')
+    __param_spec__ = dict(mu=("d",), L_tril=("int(d * (d + 1) / 2)",))
+    short_name = "full_rank"
+    alias_names = frozenset(["fr"])
+
+    @change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         if not self._check_user_params():
-            self.shared_params = self.create_shared_params(
-                self._kwargs.get('start', None)
-            )
+            self.shared_params = self.create_shared_params(self._kwargs.get("start", None))
         self._finalize_init()
 
     def create_shared_params(self, start=None):
@@ -143,35 +134,26 @@ class FullRankGroup(Group):
         else:
             start = self.bij.map(start)
         n = self.ddim
-        L_tril = (
-            np.eye(n)
-            [np.tril_indices(n)]
-            .astype(theano.config.floatX)
-        )
+        L_tril = np.eye(n)[np.tril_indices(n)].astype(theano.config.floatX)
         if self.batched:
             start = np.tile(start, (self.bdim, 1))
             L_tril = np.tile(L_tril, (self.bdim, 1))
-        return {'mu': theano.shared(start, 'mu'),
-                'L_tril': theano.shared(L_tril, 'L_tril')}
+        return {"mu": theano.shared(start, "mu"), "L_tril": theano.shared(L_tril, "L_tril")}
 
     @node_property
     def L(self):
         if self.batched:
             L = tt.zeros((self.ddim, self.ddim, self.bdim))
-            L = tt.set_subtensor(
-                L[self.tril_indices],
-                self.params_dict['L_tril'].T)
+            L = tt.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"].T)
             L = L.dimshuffle(2, 0, 1)
         else:
             L = tt.zeros((self.ddim, self.ddim))
-            L = tt.set_subtensor(
-                L[self.tril_indices],
-                self.params_dict['L_tril'])
+            L = tt.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"])
         return L
 
     @node_property
     def mean(self):
-        return self.params_dict['mu']
+        return self.params_dict["mu"]
 
     @node_property
     def cov(self):
@@ -201,8 +183,10 @@ class FullRankGroup(Group):
     def symbolic_logq_not_scaled(self):
         z = self.symbolic_random
         if self.batched:
+
             def logq(z_b, mu_b, L_b):
                 return pm.MvNormal.dist(mu=mu_b, chol=L_b).logp(z_b)
+
             # it's gonna be so slow
             # scan is computed over batch and then summed up
             # output shape is (batch, samples)
@@ -229,28 +213,29 @@ class EmpiricalGroup(Group):
     """Builds Approximation instance from a given trace,
     it has the same interface as variational approximation
     """
+
     supports_batched = False
     has_logq = False
-    __param_spec__ = dict(histogram=('s', 'd'))
-    short_name = 'empirical'
+    __param_spec__ = dict(histogram=("s", "d"))
+    short_name = "empirical"
 
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         self._check_trace()
         if not self._check_user_params(spec_kw=dict(s=-1)):
             self.shared_params = self.create_shared_params(
-                trace=self._kwargs.get('trace', None),
-                size=self._kwargs.get('size', None),
-                jitter=self._kwargs.get('jitter', 1),
-                start=self._kwargs.get('start', None)
+                trace=self._kwargs.get("trace", None),
+                size=self._kwargs.get("size", None),
+                jitter=self._kwargs.get("jitter", 1),
+                start=self._kwargs.get("start", None),
             )
         self._finalize_init()
 
     def create_shared_params(self, trace=None, size=None, jitter=1, start=None):
         if trace is None:
             if size is None:
-                raise opvi.ParametrizationError('Need `trace` or `size` to initialize')
+                raise opvi.ParametrizationError("Need `trace` or `size` to initialize")
             else:
                 if start is None:
                     start = self.model.test_point
@@ -270,14 +255,12 @@ class EmpiricalGroup(Group):
                 for j in range(len(trace)):
                     histogram[i] = self.bij.map(trace.point(j, t))
                     i += 1
-        return dict(histogram=theano.shared(pm.floatX(histogram), 'histogram'))
+        return dict(histogram=theano.shared(pm.floatX(histogram), "histogram"))
 
     def _check_trace(self):
-        trace = self._kwargs.get('trace', None)
-        if (trace is not None
-            and not all([var.name in trace.varnames
-                         for var in self.group])):
-            raise ValueError('trace has not all FreeRV in the group')
+        trace = self._kwargs.get("trace", None)
+        if trace is not None and not all([var.name in trace.varnames for var in self.group]):
+            raise ValueError("trace has not all FreeRV in the group")
 
     def randidx(self, size=None):
         if size is None:
@@ -286,31 +269,26 @@ class EmpiricalGroup(Group):
             if size.ndim < 1:
                 size = size[None]
             elif size.ndim > 1:
-                raise ValueError('size ndim should be no more than 1d')
+                raise ValueError("size ndim should be no more than 1d")
             else:
                 pass
         else:
             size = tuple(np.atleast_1d(size))
-        return (self._rng
-                .uniform(size=size,
-                         low=pm.floatX(0),
-                         high=pm.floatX(self.histogram.shape[0]) - pm.floatX(1e-16))
-                .astype('int32'))
+        return self._rng.uniform(
+            size=size, low=pm.floatX(0), high=pm.floatX(self.histogram.shape[0]) - pm.floatX(1e-16)
+        ).astype("int32")
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         theano_condition_is_here = isinstance(deterministic, tt.Variable)
         if theano_condition_is_here:
             return tt.switch(
                 deterministic,
-                tt.repeat(
-                    self.mean.dimshuffle('x', 0),
-                    size if size is not None else 1, -1),
-                self.histogram[self.randidx(size)])
+                tt.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1),
+                self.histogram[self.randidx(size)],
+            )
         else:
             if deterministic:
-                return tt.repeat(
-                    self.mean.dimshuffle('x', 0),
-                    size if size is not None else 1, -1)
+                return tt.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1)
             else:
                 return self.histogram[self.randidx(size)]
 
@@ -320,7 +298,7 @@ class EmpiricalGroup(Group):
 
     @property
     def histogram(self):
-        return self.params_dict['histogram']
+        return self.params_dict["histogram"]
 
     @node_property
     def mean(self):
@@ -328,7 +306,7 @@ class EmpiricalGroup(Group):
 
     @node_property
     def cov(self):
-        x = (self.histogram - self.mean)
+        x = self.histogram - self.mean
         return x.T.dot(x) / pm.floatX(self.histogram.shape[0])
 
     @node_property
@@ -337,10 +315,10 @@ class EmpiricalGroup(Group):
 
     def __str__(self):
         if isinstance(self.histogram, theano.compile.SharedVariable):
-            shp = ', '.join(map(str, self.histogram.shape.eval()))
+            shp = ", ".join(map(str, self.histogram.shape.eval()))
         else:
-            shp = 'None, ' + str(self.ddim)
-        return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
+            shp = "None, " + str(self.ddim)
+        return f"{self.__class__.__name__}[{shp}]"
 
 
 class NormalizingFlowGroup(Group):
@@ -391,17 +369,17 @@ class NormalizingFlowGroup(Group):
         Improving Variational Auto-Encoders using Householder Flow
         arXiv:1611.09630
     """
-    default_flow = 'scale-loc'
+    default_flow = "scale-loc"
 
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         # objects to be resolved
         # 1. string formula
         # 2. not changed default value
         # 3. Formula
-        formula = self._kwargs.get('flow', self._vfam)
-        jitter = self._kwargs.get('jitter', 1)
+        formula = self._kwargs.get("flow", self._vfam)
+        jitter = self._kwargs.get("jitter", 1)
         if formula is None or isinstance(formula, str):
             # case 1 and 2
             has_params = self._check_user_params(f=formula)
@@ -409,13 +387,15 @@ class NormalizingFlowGroup(Group):
             # case 3
             has_params = self._check_user_params(f=formula.formula)
         else:
-            raise TypeError('Wrong type provided for NormalizingFlow as `flow` argument, '
-                            'expected Formula or string')
+            raise TypeError(
+                "Wrong type provided for NormalizingFlow as `flow` argument, "
+                "expected Formula or string"
+            )
         if not has_params:
             if formula is None:
                 formula = self.default_flow
         else:
-            formula = '-'.join(
+            formula = "-".join(
                 flows.flow_for_params(self.user_params[i]).short_name
                 for i in range(len(self.user_params))
             )
@@ -438,31 +418,35 @@ class NormalizingFlowGroup(Group):
 
     def _check_user_params(self, **kwargs):
         params = self._user_params = self.user_params
-        formula = kwargs.pop('f')
+        formula = kwargs.pop("f")
         if params is None:
             return False
         if formula is not None:
-            raise opvi.ParametrizationError('No formula is allowed if user params are provided')
+            raise opvi.ParametrizationError("No formula is allowed if user params are provided")
         if not isinstance(params, dict):
-            raise TypeError('params should be a dict')
+            raise TypeError("params should be a dict")
         if not all(isinstance(k, int) for k in params.keys()):
-            raise TypeError('params should be a dict with `int` keys')
+            raise TypeError("params should be a dict with `int` keys")
         needed = set(range(len(params)))
         givens = set(params.keys())
         if givens != needed:
             raise opvi.ParametrizationError(
-                'Passed parameters do not have a needed set of keys, '
-                'they should be equal, needed {needed}, got {givens}'.format(
-                    givens=list(sorted(givens)), needed='[0, 1, ..., %d]' % len(formula.flows)))
+                "Passed parameters do not have a needed set of keys, "
+                "they should be equal, needed {needed}, got {givens}".format(
+                    givens=list(sorted(givens)), needed="[0, 1, ..., %d]" % len(formula.flows)
+                )
+            )
         for i in needed:
             flow = flows.flow_for_params(params[i])
             flow_keys = set(flow.__param_spec__)
             user_keys = set(params[i].keys())
             if flow_keys != user_keys:
                 raise opvi.ParametrizationError(
-                    'Passed parameters for flow `{i}` ({cls}) do not have a needed set of keys, '
-                    'they should be equal, needed {needed}, got {givens}'.format(
-                        givens=user_keys, needed=flow_keys, i=i, cls=flow.__name__))
+                    "Passed parameters for flow `{i}` ({cls}) do not have a needed set of keys, "
+                    "they should be equal, needed {needed}, got {givens}".format(
+                        givens=user_keys, needed=flow_keys, i=i, cls=flow.__name__
+                    )
+                )
         return True
 
     @property
@@ -482,7 +466,7 @@ class NormalizingFlowGroup(Group):
     @shared_params.setter
     def shared_params(self, value):
         if self.user_params is not None:
-            raise AttributeError('Cannot set when having user params')
+            raise AttributeError("Cannot set when having user params")
         current = self.flow
         i = 0
         current.shared_params = value[i]
@@ -499,7 +483,7 @@ class NormalizingFlowGroup(Group):
     def symbolic_logq_not_scaled(self):
         z0 = self.symbolic_initial
         q0 = pm.Normal.dist().logp(z0).sum(range(1, z0.ndim))
-        return q0-self.flow.sum_logdets
+        return q0 - self.flow.sum_logdets
 
     @property
     def symbolic_random(self):
@@ -540,15 +524,20 @@ def sample_approx(approx, draws=100, include_transformed=True):
 # single group shortcuts exported to user
 class SingleGroupApproximation(Approximation):
     """Base class for Single Group Approximation"""
+
     _group_class = None
 
     def __init__(self, *args, **kwargs):
-        local_rv = kwargs.get('local_rv')
+        local_rv = kwargs.get("local_rv")
         groups = [self._group_class(None, *args, **kwargs)]
         if local_rv is not None:
-            groups.extend([Group([v], params=p, local=True, model=kwargs.get('model'))
-                           for v, p in local_rv.items()])
-        super().__init__(groups, model=kwargs.get('model'))
+            groups.extend(
+                [
+                    Group([v], params=p, local=True, model=kwargs.get("model"))
+                    for v, p in local_rv.items()
+                ]
+            )
+        super().__init__(groups, model=kwargs.get("model"))
 
     def __getattr__(self, item):
         return getattr(self.groups[0], item)
@@ -562,26 +551,32 @@ class SingleGroupApproximation(Approximation):
 class MeanField(SingleGroupApproximation):
     __doc__ = """**Single Group Mean Field Approximation**
 
-    """ + str(MeanFieldGroup.__doc__)
+    """ + str(
+        MeanFieldGroup.__doc__
+    )
     _group_class = MeanFieldGroup
 
 
 class FullRank(SingleGroupApproximation):
     __doc__ = """**Single Group Full Rank Approximation**
 
-    """ + str(FullRankGroup.__doc__)
+    """ + str(
+        FullRankGroup.__doc__
+    )
     _group_class = FullRankGroup
 
 
 class Empirical(SingleGroupApproximation):
     __doc__ = """**Single Group Full Rank Approximation**
 
-    """ + str(EmpiricalGroup.__doc__)
+    """ + str(
+        EmpiricalGroup.__doc__
+    )
     _group_class = EmpiricalGroup
 
     def __init__(self, trace=None, size=None, **kwargs):
-        if kwargs.get('local_rv', None) is not None:
-            raise opvi.LocalGroupError('Empirical approximation does not support local variables')
+        if kwargs.get("local_rv", None) is not None:
+            raise opvi.LocalGroupError("Empirical approximation does not support local variables")
         super().__init__(trace=trace, size=size, **kwargs)
 
     def evaluate_over_trace(self, node):
@@ -608,9 +603,11 @@ class Empirical(SingleGroupApproximation):
 class NormalizingFlow(SingleGroupApproximation):
     __doc__ = """**Single Group Normalizing Flow Approximation**
 
-    """ + str(NormalizingFlowGroup.__doc__)
+    """ + str(
+        NormalizingFlowGroup.__doc__
+    )
     _group_class = NormalizingFlowGroup
 
     def __init__(self, flow=NormalizingFlowGroup.default_flow, *args, **kwargs):
-        kwargs['flow'] = flow
+        kwargs["flow"] = flow
         super().__init__(*args, **kwargs)

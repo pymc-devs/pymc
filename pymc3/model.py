@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import collections
-import functools
 import itertools
 import threading
 import warnings
@@ -36,7 +35,7 @@ from .memoize import memoize, WithMemoization
 from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
-from .util import get_transformed_name
+from .util import get_transformed_name, get_var_name
 from .exceptions import ImputationWarning
 
 __all__ = [
@@ -80,6 +79,9 @@ class PyMC3Variable(TensorVariable):
     def _repr_latex_(self, **kwargs):
         return self._str_repr(formatting="latex", **kwargs)
 
+    def __str__(self, **kwargs):
+        return self._str_repr(formatting="plain", **kwargs)
+
     __latex__ = _repr_latex_
 
 
@@ -121,7 +123,7 @@ def incorporate_methods(source, destination, methods, wrapper=None, override=Fal
     for method in methods:
         if hasattr(destination, method) and not override:
             raise AttributeError(
-                "Cannot add method {!r}".format(method)
+                f"Cannot add method {method!r}"
                 + "to destination object as it already exists. "
                 "To prevent this error set 'override=True'."
             )
@@ -312,18 +314,15 @@ class ContextMeta(type):
         """Return the most recently pushed context object of type ``cls``
         on the stack, or ``None``. If ``error_if_none`` is True (default),
         raise a ``TypeError`` instead of returning ``None``."""
-        idx = -1
-        while True:
-            try:
-                candidate = cls.get_contexts()[idx]  # type: Optional[T]
-            except IndexError as e:
-                # Calling code expects to get a TypeError if the entity
-                # is unfound, and there's too much to fix.
-                if error_if_none:
-                    raise TypeError("No %s on context stack" % str(cls))
-                return None
-            return candidate
-            idx = idx - 1
+        try:
+            candidate = cls.get_contexts()[-1]  # type: Optional[T]
+        except IndexError as e:
+            # Calling code expects to get a TypeError if the entity
+            # is unfound, and there's too much to fix.
+            if error_if_none:
+                raise TypeError("No %s on context stack" % str(cls))
+            return None
+        return candidate
 
     def get_contexts(cls) -> List[T]:
         """Return a stack of context instances for the ``context_class``
@@ -581,8 +580,9 @@ class ValueGradFunction:
 
     Parameters
     ----------
-    cost: theano variable
-        The value that we compute with its gradient.
+    costs: list of theano variables
+        We compute the weighted sum of the specified theano values, and the gradient
+        of that sum. The weights can be specified with `ValueGradFunction.set_weights`.
     grad_vars: list of named theano variables or None
         The arguments with respect to which the gradient is computed.
     extra_vars: list of named theano variables or None
@@ -596,6 +596,8 @@ class ValueGradFunction:
         See `numpy.can_cast` for a description of the options.
         Keep in mind that we cast the variables to the array *and*
         back from the array dtype to the variable dtype.
+    compute_grads: bool, default=True
+        If False, return only the logp, not the gradient.
     kwargs
         Extra arguments are passed on to `theano.function`.
 
@@ -610,7 +612,15 @@ class ValueGradFunction:
     """
 
     def __init__(
-        self, cost, grad_vars, extra_vars=None, dtype=None, casting="no", **kwargs
+        self,
+        costs,
+        grad_vars,
+        extra_vars=None,
+        *,
+        dtype=None,
+        casting="no",
+        compute_grads=True,
+        **kwargs
     ):
         from .distributions import TensorType
 
@@ -623,29 +633,40 @@ class ValueGradFunction:
         if len(set(names)) != len(names):
             raise ValueError("Names of the arguments are not unique.")
 
-        if cost.ndim > 0:
-            raise ValueError("Cost must be a scalar.")
-
         self._grad_vars = grad_vars
         self._extra_vars = extra_vars
-        self._extra_var_names = set(var.name for var in extra_vars)
+        self._extra_var_names = {var.name for var in extra_vars}
+
+        if dtype is None:
+            dtype = theano.config.floatX
+        self.dtype = dtype
+
+        self._n_costs = len(costs)
+        if self._n_costs == 0:
+            raise ValueError("At least one cost is required.")
+        weights = np.ones(self._n_costs - 1, dtype=self.dtype)
+        self._weights = theano.shared(weights, "__weights")
+
+        cost = costs[0]
+        for i, val in enumerate(costs[1:]):
+            if cost.ndim > 0 or val.ndim > 0:
+                raise ValueError("All costs must be scalar.")
+            cost = cost + self._weights[i] * val
+
         self._cost = cost
         self._ordering = ArrayOrdering(grad_vars)
         self.size = self._ordering.size
         self._extra_are_set = False
-        if dtype is None:
-            dtype = theano.config.floatX
-        self.dtype = dtype
         for var in self._grad_vars:
             if not np.can_cast(var.dtype, self.dtype, casting):
                 raise TypeError(
-                    "Invalid dtype for variable %s. Can not "
-                    "cast to %s with casting rule %s." % (var.name, self.dtype, casting)
+                    f"Invalid dtype for variable {var.name}. Can not "
+                    f"cast to {self.dtype} with casting rule {casting}."
                 )
             if not np.issubdtype(var.dtype, np.floating):
                 raise TypeError(
-                    "Invalid dtype for variable %s. Must be "
-                    "floating point but is %s." % (var.name, var.dtype)
+                    f"Invalid dtype for variable {var.name}. Must be "
+                    f"floating point but is {var.dtype}."
                 )
 
         givens = []
@@ -665,14 +686,23 @@ class ValueGradFunction:
             self._cost, grad_vars, self._ordering.vmap
         )
 
-        grad = tt.grad(self._cost_joined, self._vars_joined)
-        grad.name = "__grad"
+        if compute_grads:
+            grad = tt.grad(self._cost_joined, self._vars_joined)
+            grad.name = "__grad"
+            outputs = [self._cost_joined, grad]
+        else:
+            outputs = self._cost_joined
 
         inputs = [self._vars_joined]
 
         self._theano_function = theano.function(
-            inputs, [self._cost_joined, grad], givens=givens, **kwargs
+            inputs, outputs, givens=givens, **kwargs
         )
+
+    def set_weights(self, values):
+        if values.shape != (self._n_costs - 1,):
+            raise ValueError("Invalid shape. Must be (n_costs - 1,).")
+        self._weights.set_value(values)
 
     def set_extra_values(self, extra_vars):
         self._extra_are_set = True
@@ -706,12 +736,12 @@ class ValueGradFunction:
         else:
             out = grad_out
 
-        logp, dlogp = self._theano_function(array)
+        output = self._theano_function(array)
         if grad_out is None:
-            return logp, dlogp
+            return output
         else:
-            np.copyto(out, dlogp)
-            return logp
+            np.copyto(out, output[1])
+            return output[0]
 
     @property
     def profile(self):
@@ -729,7 +759,7 @@ class ValueGradFunction:
         """Convert an array to a dictionary containing the grad_vars."""
         if array.shape != (self.size,):
             raise ValueError(
-                "Array should have shape (%s,) but has %s" % (self.size, array.shape)
+                f"Array should have shape ({self.size},) but has {array.shape}"
             )
         if array.dtype != self.dtype:
             raise ValueError(
@@ -940,7 +970,18 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         vars = inputvars(self.cont_vars)
         return self.bijection.mapf(self.fastdlogp(vars))
 
-    def logp_dlogp_function(self, grad_vars=None, **kwargs):
+    def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
+        """Compile a theano function that computes logp and gradient.
+
+        Parameters
+        ----------
+        grad_vars: list of random variables, optional
+            Compute the gradient with respect to those variables. If None,
+            use all free random variables of this model.
+        tempered: bool
+            Compute the tempered logp `free_logp + alpha * observed_logp`.
+            `alpha` can be changed using `ValueGradFunction.set_weights([alpha])`.
+        """
         if grad_vars is None:
             grad_vars = list(typefilter(self.free_RVs, continuous_types))
         else:
@@ -949,9 +990,22 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                     raise ValueError(
                         "Can only compute the gradient of " "continuous types: %s" % var
                     )
+
+        if tempered:
+            with self:
+                free_RVs_logp = tt.sum([
+                    tt.sum(var.logpt) for var in self.free_RVs + self.potentials
+                ])
+                observed_RVs_logp = tt.sum([
+                    tt.sum(var.logpt) for var in self.observed_RVs
+                ])
+
+            costs = [free_RVs_logp, observed_RVs_logp]
+        else:
+            costs = [self.logpt]
         varnames = [var.name for var in grad_vars]
         extra_vars = [var for var in self.free_RVs if var.name not in varnames]
-        return ValueGradFunction(self.logpt, grad_vars, extra_vars, **kwargs)
+        return ValueGradFunction(costs, grad_vars, extra_vars, **kwargs)
 
     @property
     def logpt(self):
@@ -1050,7 +1104,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             return
 
         for name in coords:
-            if name in { "draw", "chain" }:
+            if name in {"draw", "chain"}:
                 raise ValueError(
                     "Dimensions can not be named `draw` or `chain`, as they are reserved for the sampler's outputs."
                 )
@@ -1147,7 +1201,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def add_random_variable(self, var, dims=None):
         """Add a random variable to the named variables of the model."""
         if self.named_vars.tree_contains(var.name):
-            raise ValueError("Variable name {} already exists.".format(var.name))
+            raise ValueError(f"Variable name {var.name} already exists.")
 
         if dims is not None:
             if isinstance(dims, str):
@@ -1168,7 +1222,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """
         if self.prefix:
             if not name.startswith(self.prefix):
-                return "{}{}".format(self.prefix, name)
+                return f"{self.prefix}{name}"
             else:
                 return name
         else:
@@ -1368,6 +1422,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 for n, d in zip(names, distrs)]
             return "\n".join(rv_reprs)
 
+    def __str__(self, **kwargs):
+        return self._str_repr(formatting="plain", **kwargs)
+
     def _repr_latex_(self, **kwargs):
         return self._str_repr(formatting="latex", **kwargs)
 
@@ -1478,10 +1535,11 @@ def Point(*args, **kwargs):
     try:
         d = dict(*args, **kwargs)
     except Exception as e:
-        raise TypeError("can't turn {} and {} into a dict. {}".format(args, kwargs, e))
-    return dict(
-        (str(k), np.array(v)) for k, v in d.items() if str(k) in map(str, model.vars)
-    )
+        raise TypeError(f"can't turn {args} and {kwargs} into a dict. {e}")
+    return {
+        get_var_name(k): np.array(v) for k, v in d.items()
+         if get_var_name(k) in map(get_var_name, model.vars)
+    }
 
 
 class FastPointFunc:
@@ -1844,14 +1902,22 @@ def _walk_up_rv(rv, formatting='plain'):
     return all_rvs
 
 
-def _repr_deterministic_rv(rv, formatting='plain'):
-    """Make latex string for a Deterministic variable"""
-    if formatting == 'latex':
-        return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
-            name=rv.name, args=r",~".join(_walk_up_rv(rv, formatting=formatting)))
-    else:
-        return "{name} ~ Deterministic({args})".format(
-            name=rv.name, args=", ".join(_walk_up_rv(rv, formatting=formatting)))
+class DeterministicWrapper(tt.TensorVariable):
+    def _str_repr(self, formatting='plain'):
+        if formatting == 'latex':
+            return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
+                name=self.name, args=r",~".join(_walk_up_rv(self, formatting=formatting)))
+        else:
+            return "{name} ~ Deterministic({args})".format(
+                name=self.name, args=", ".join(_walk_up_rv(self, formatting=formatting)))
+
+    def _repr_latex_(self):
+        return self._str_repr(formatting='latex')
+
+    __latex__ = _repr_latex_
+
+    def __str__(self):
+        return self._str_repr(formatting='plain')
 
 
 def Deterministic(name, var, model=None, dims=None):
@@ -1870,8 +1936,8 @@ def Deterministic(name, var, model=None, dims=None):
     var = var.copy(model.name_for(name))
     model.deterministics.append(var)
     model.add_random_variable(var, dims)
-    var._repr_latex_ = functools.partial(_repr_deterministic_rv, var, formatting='latex')
-    var.__latex__ = var._repr_latex_
+    var.__class__ = DeterministicWrapper # adds str and latex functionality
+
     return var
 
 
