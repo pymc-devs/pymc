@@ -430,6 +430,10 @@ sum_to_1 = SumTo1()
 class StickBreaking(Transform):
     """
     Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of real values.
+    This is a variant of the isometric logration transformation:
+        Egozcue, J.J., Pawlowsky-Glahn, V., Mateu-Figueras, G. et al.
+        Isometric Logratio Transformations for Compositional Data Analysis.
+        Mathematical Geology 35, 279–300 (2003). https://doi.org/10.1023/A:1023818214614
     """
 
     name = "stickbreaking"
