@@ -1180,14 +1180,28 @@ class TestUtil:
 
 
 class TestCircular:
-    def test_1d(self):
+    def test_1d_tau1(self):
         X = np.linspace(0, 1, 10)[:, None]
+        etalon = 0.600881
         with pm.Model():
-            cov = pm.gp.cov.Circular(1, 1, ls=1)
+            cov = pm.gp.cov.Circular(1, 1, tau=5)
         K = theano.function([], cov(X))()
-        npt.assert_allclose(K[0, 1], 0.691239, atol=1e-3)
+        npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
         K = theano.function([], cov(X, X))()
-        npt.assert_allclose(K[0, 1], 0.691239, atol=1e-3)
+        npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
+        # check diagonal
+        Kd = theano.function([], cov(X, diag=True))()
+        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_1d_tau2(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        etalon = 0.691239
+        with pm.Model():
+            cov = pm.gp.cov.Circular(1, 1, tau=4)
+        K = theano.function([], cov(X))()
+        npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
+        K = theano.function([], cov(X, X))()
+        npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
         # check diagonal
         Kd = theano.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
