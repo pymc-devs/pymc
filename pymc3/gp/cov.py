@@ -311,7 +311,7 @@ class Circular(Covariance):
 
     .. math::
 
-        W_c = \left(1 + \tau \frac{t}{c}\right)\left(1-\frac{t}{c}\right)^\tau_+
+        W_c(t) = \left(1 + \tau \frac{t}{c}\right)\left(1-\frac{t}{c}\right)^\tau_+
 
     where :math:`c` is maximum value for :math:`t` and :math:`\tau\ge 4`.
     The larger :math:`\tau` is the less correlated are neighboring points.
