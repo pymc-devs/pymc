@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import theano
 import theano.tensor as tt
 
 from ..model import FreeRV
