@@ -105,7 +105,8 @@ class Transform:
         raise NotImplementedError
 
     def jacobian_det(self, x):
-        """Calculates logarithm of the absolute value of the Jacobian determinant for input `x`.
+        """Calculates logarithm of the absolute value of the Jacobian determinant
+        of the backward transformation for input `x`.
 
         Parameters
         ----------
