@@ -103,6 +103,16 @@ def test_stickbreaking_bounds():
     check_jacobian_det(tr.stick_breaking, Vector(
         R, 2), tt.dvector, np.array([0, 0]), lambda x: x[:-1])
 
+def test_stickbreaking_accuracy():
+    val = np.array([-100])
+    x = tt.dvector('x')
+    x.tag.test_value = val
+    identity_f = theano.function(
+        [x],
+        tr.stick_breaking.forward(tr.stick_breaking.backward(x))
+    )
+    close_to(val, identity_f(val), tol)
+
 
 def test_stickbreaking2():
     check_vector_transform(tr.stick_breaking2, Simplex(2))
@@ -123,6 +133,16 @@ def test_stickbreaking2_bounds():
     check_jacobian_det(tr.stick_breaking2, Vector(R, 2),
                        tt.dvector, np.array([0, 0]),
                        lambda x: x[:-1])
+
+def test_stickbreaking2_accuracy():
+    val = np.array([-100])
+    x = tt.dvector('x')
+    x.tag.test_value = val
+    identity_f = theano.function(
+        [x],
+        tr.stick_breaking2.forward(tr.stick_breaking2.backward(x))
+    )
+    close_to(val, identity_f(val), tol)
 
 
 def test_sum_to_1():
