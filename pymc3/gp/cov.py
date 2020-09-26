@@ -319,7 +319,7 @@ class Circular(Covariance):
 
     Parameters
     ----------
-    bound : scalar
+    period : scalar
         defines the circular interval :math:`[0, \mathit{bound})`
     tau : scalar
         :math:`\tau\ge 4` defines correlation strength, the larger,
@@ -331,7 +331,7 @@ class Circular(Covariance):
     https://hal.archives-ouvertes.fr/hal-01119942v1/document
     """
 
-    def __init__(self, input_dim, bound, ls=None, ls_inv=None, tau=4, active_dims=None):
+    def __init__(self, input_dim, period, ls=None, ls_inv=None, tau=4, active_dims=None):
         super().__init__(input_dim, active_dims)
         if (ls is None and ls_inv is None) or (ls is not None and ls_inv is not None):
             raise ValueError("Only one of 'ls' or 'ls_inv' must be provided")
@@ -343,7 +343,7 @@ class Circular(Covariance):
             else:
                 ls = 1.0 / ls_inv
         self.ls = tt.as_tensor_variable(ls)
-        self.c = tt.as_tensor_variable(bound/2) / self.ls
+        self.c = tt.as_tensor_variable(period / 2) / self.ls
         self.tau = tau
 
     def dist(self, X, Xs):
