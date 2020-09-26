@@ -17,6 +17,7 @@ import contextvars
 import dill
 import inspect
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Optional, Callable
 
@@ -26,10 +27,7 @@ from theano import function
 from ..util import get_repr_for_variable, get_var_name
 import theano
 from ..memoize import memoize
-from ..model import (
-    Model, build_named_node_tree, FreeRV,
-    ObservedRV, MultiObservedRV, ContextMeta
-)
+from ..model import Model, build_named_node_tree, FreeRV, ObservedRV, MultiObservedRV, ContextMeta
 from ..vartypes import string_types, theano_constant
 from .shape_utils import (
     to_tuple,
@@ -37,10 +35,21 @@ from .shape_utils import (
     broadcast_dist_samples_shape,
 )
 
-__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete',
-           'NoDistribution', 'TensorType', 'draw_values', 'generate_samples']
+__all__ = [
+    "DensityDist",
+    "Distribution",
+    "Continuous",
+    "Discrete",
+    "NoDistribution",
+    "TensorType",
+    "draw_values",
+    "generate_samples",
+]
 
-vectorized_ppc = contextvars.ContextVar('vectorized_ppc', default=None) # type: contextvars.ContextVar[Optional[Callable]]
+vectorized_ppc = contextvars.ContextVar(
+    "vectorized_ppc", default=None
+)  # type: contextvars.ContextVar[Optional[Callable]]
+
 
 class _Unpickling:
     pass
@@ -48,29 +57,32 @@ class _Unpickling:
 
 class Distribution:
     """Statistical distribution"""
+
     def __new__(cls, name, *args, **kwargs):
         if name is _Unpickling:
             return object.__new__(cls)  # for pickle
         try:
             model = Model.get_context()
         except TypeError:
-            raise TypeError("No model on context stack, which is needed to "
-                            "instantiate distributions. Add variable inside "
-                            "a 'with model:' block, or use the '.dist' syntax "
-                            "for a standalone distribution.")
+            raise TypeError(
+                "No model on context stack, which is needed to "
+                "instantiate distributions. Add variable inside "
+                "a 'with model:' block, or use the '.dist' syntax "
+                "for a standalone distribution."
+            )
 
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
 
-        data = kwargs.pop('observed', None)
+        data = kwargs.pop("observed", None)
         cls.data = data
         if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
             raise TypeError("observed needs to be data but got: {}".format(type(data)))
-        total_size = kwargs.pop('total_size', None)
+        total_size = kwargs.pop("total_size", None)
 
-        dims = kwargs.pop('dims', None)
-        has_shape = 'shape' in kwargs
-        shape = kwargs.pop('shape', None)
+        dims = kwargs.pop("dims", None)
+        has_shape = "shape" in kwargs
+        shape = kwargs.pop("shape", None)
         if dims is not None:
             if shape is not None:
                 raise ValueError("Specify only one of 'dims' or 'shape'")
@@ -86,7 +98,7 @@ class Distribution:
         return model.Var(name, dist, data, total_size, dims=dims)
 
     def __getnewargs__(self):
-        return _Unpickling,
+        return (_Unpickling,)
 
     @classmethod
     def dist(cls, *args, **kwargs):
@@ -94,8 +106,9 @@ class Distribution:
         dist.__init__(*args, **kwargs)
         return dist
 
-    def __init__(self, shape, dtype, testval=None, defaults=(),
-                 transform=None, broadcastable=None, dims=None):
+    def __init__(
+        self, shape, dtype, testval=None, defaults=(), transform=None, broadcastable=None, dims=None
+    ):
         self.shape = np.atleast_1d(shape)
         if False in (np.floor(self.shape) == self.shape):
             raise TypeError("Expected int elements in shape")
@@ -117,10 +130,11 @@ class Distribution:
             return self.getattr_value(val)
 
         if val is None:
-            raise AttributeError("%s has no finite default value to use, "
-                                 "checked: %s. Pass testval argument or "
-                                 "adjust so value is finite."
-                                 % (self, str(defaults)))
+            raise AttributeError(
+                "%s has no finite default value to use, "
+                "checked: %s. Pass testval argument or "
+                "adjust so value is finite." % (self, str(defaults))
+            )
 
     def getattr_value(self, val):
         if isinstance(val, string_types):
@@ -149,30 +163,41 @@ class Distribution:
     def _distr_name_for_repr(self):
         return self.__class__.__name__
 
-    def _str_repr(self, name=None, dist=None, formatting='plain'):
+    def _str_repr(self, name=None, dist=None, formatting="plain"):
         """Generate string representation for this distribution, optionally
         including LaTeX markup (formatting='latex').
         """
         if dist is None:
             dist = self
         if name is None:
-            name = '[unnamed]'
+            name = "[unnamed]"
 
         param_names = self._distr_parameters_for_repr()
-        param_values = [get_repr_for_variable(getattr(dist, x), formatting=formatting)
-            for x in param_names]
+        param_values = [
+            get_repr_for_variable(getattr(dist, x), formatting=formatting) for x in param_names
+        ]
 
         if formatting == "latex":
-            param_string = ",~".join([r"\mathit{{{name}}}={value}".format(name=name,
-                value=value) for name, value in zip(param_names, param_values)])
-            return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}({params})$".format(var_name=name,
-                distr_name=dist._distr_name_for_repr(), params=param_string)
+            param_string = ",~".join(
+                [
+                    fr"\mathit{{{name}}}={value}"
+                    for name, value in zip(param_names, param_values)
+                ]
+            )
+            return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}({params})$".format(
+                var_name=name, distr_name=dist._distr_name_for_repr(), params=param_string
+            )
         else:
             # 'plain' is default option
-            param_string = ", ".join(["{name}={value}".format(name=name,
-                value=value) for name, value in zip(param_names, param_values)])
-            return "{var_name} ~ {distr_name}({params})".format(var_name=name,
-                distr_name=dist._distr_name_for_repr(), params=param_string)
+            param_string = ", ".join(
+                [
+                    f"{name}={value}"
+                    for name, value in zip(param_names, param_values)
+                ]
+            )
+            return "{var_name} ~ {distr_name}({params})".format(
+                var_name=name, distr_name=dist._distr_name_for_repr(), params=param_string
+            )
 
     def __str__(self, **kwargs):
         return self._str_repr(formatting="plain", **kwargs)
@@ -213,19 +238,27 @@ def TensorType(dtype, shape, broadcastable=None):
 
 
 class NoDistribution(Distribution):
-
-    def __init__(self, shape, dtype, testval=None, defaults=(), transform=None, parent_dist=None,
-                 *args, **kwargs):
-        super().__init__(shape=shape, dtype=dtype, testval=testval, defaults=defaults,
-                         *args, **kwargs)
+    def __init__(
+        self,
+        shape,
+        dtype,
+        testval=None,
+        defaults=(),
+        transform=None,
+        parent_dist=None,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(
+            shape=shape, dtype=dtype, testval=testval, defaults=defaults, *args, **kwargs
+        )
         self.parent_dist = parent_dist
 
     def __getattr__(self, name):
         # Do not use __getstate__ and __setstate__ from parent_dist
         # to avoid infinite recursion during unpickling
-        if name.startswith('__'):
-            raise AttributeError(
-                "'NoDistribution' has no attribute '%s'" % name)
+        if name.startswith("__"):
+            raise AttributeError("'NoDistribution' has no attribute '%s'" % name)
         return getattr(self.parent_dist, name)
 
     def logp(self, x):
@@ -249,19 +282,17 @@ class NoDistribution(Distribution):
 class Discrete(Distribution):
     """Base class for discrete distributions"""
 
-    def __init__(self, shape=(), dtype=None, defaults=('mode',),
-                 *args, **kwargs):
+    def __init__(self, shape=(), dtype=None, defaults=("mode",), *args, **kwargs):
         if dtype is None:
-            if theano.config.floatX == 'float32':
-                dtype = 'int16'
+            if theano.config.floatX == "float32":
+                dtype = "int16"
             else:
-                dtype = 'int64'
-        if dtype != 'int16' and dtype != 'int64':
-            raise TypeError('Discrete classes expect dtype to be int16 or int64.')
+                dtype = "int64"
+        if dtype != "int16" and dtype != "int64":
+            raise TypeError("Discrete classes expect dtype to be int16 or int64.")
 
-        if kwargs.get('transform', None) is not None:
-            raise ValueError("Transformations for discrete distributions "
-                             "are not allowed.")
+        if kwargs.get("transform", None) is not None:
+            raise ValueError("Transformations for discrete distributions " "are not allowed.")
 
         super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
@@ -269,8 +300,7 @@ class Discrete(Distribution):
 class Continuous(Distribution):
     """Base class for continuous distributions"""
 
-    def __init__(self, shape=(), dtype=None, defaults=('median', 'mean', 'mode'),
-                 *args, **kwargs):
+    def __init__(self, shape=(), dtype=None, defaults=("median", "mean", "mode"), *args, **kwargs):
         if dtype is None:
             dtype = theano.config.floatX
         super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
@@ -279,9 +309,9 @@ class Continuous(Distribution):
 class DensityDist(Distribution):
     """Distribution based on a given log density function.
 
-        A distribution with the passed log density function is created.
-        Requires a custom random function passed as kwarg `random` to
-        enable prior or posterior predictive sampling.
+    A distribution with the passed log density function is created.
+    Requires a custom random function passed as kwarg `random` to
+    enable prior or posterior predictive sampling.
 
     """
 
@@ -295,7 +325,7 @@ class DensityDist(Distribution):
         wrap_random_with_dist_shape=True,
         check_shape_in_random=True,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Parameters
@@ -471,11 +501,11 @@ class DensityDist(Distribution):
         # Fix https://github.com/pymc-devs/pymc3/issues/3844
         logp = dill.dumps(self.logp)
         vals = self.__dict__.copy()
-        vals['logp'] = logp
+        vals["logp"] = logp
         return vals
 
     def __setstate__(self, vals):
-        vals['logp'] = dill.loads(vals['logp'])
+        vals["logp"] = dill.loads(vals["logp"])
         self.__dict__ = vals
 
     def random(self, point=None, size=None, **kwargs):
@@ -491,17 +521,12 @@ class DensityDist(Distribution):
                         not_broadcast_kwargs=not_broadcast_kwargs,
                     )
                     test_shape = test_draw.shape
-                if self.shape[:len(size)] == size:
+                if self.shape[: len(size)] == size:
                     dist_shape = size + self.shape
                 else:
                     dist_shape = self.shape
-                broadcast_shape = broadcast_dist_samples_shape(
-                    [dist_shape, test_shape],
-                    size=size
-                )
-                broadcast_shape = broadcast_shape[
-                    :len(broadcast_shape) - len(test_shape)
-                ]
+                broadcast_shape = broadcast_dist_samples_shape([dist_shape, test_shape], size=size)
+                broadcast_shape = broadcast_shape[: len(broadcast_shape) - len(test_shape)]
                 samples = generate_samples(
                     self.rand,
                     broadcast_shape=broadcast_shape,
@@ -511,11 +536,7 @@ class DensityDist(Distribution):
             else:
                 samples = self.rand(point=point, size=size, **kwargs)
                 if self.check_shape_in_random:
-                    expected_shape = (
-                        self.shape
-                        if size is None else
-                        to_tuple(size) + self.shape
-                    )
+                    expected_shape = self.shape if size is None else to_tuple(size) + self.shape
                     if not expected_shape == samples.shape:
                         raise RuntimeError(
                             "DensityDist encountered a shape inconsistency "
@@ -533,8 +554,7 @@ class DensityDist(Distribution):
                             "values.\n"
                             "This check can be disabled by passing "
                             "check_shape_in_random=False when the DensityDist "
-                            "is initialized.".
-                            format(
+                            "is initialized.".format(
                                 expected=expected_shape,
                                 got=samples.shape,
                             )
@@ -550,9 +570,8 @@ class DensityDist(Distribution):
         return []
 
 
-class _DrawValuesContext(metaclass=ContextMeta, context_class='_DrawValuesContext'):
-    """ A context manager class used while drawing values with draw_values
-    """
+class _DrawValuesContext(metaclass=ContextMeta, context_class="_DrawValuesContext"):
+    """A context manager class used while drawing values with draw_values"""
 
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
@@ -583,6 +602,7 @@ class _DrawValuesContextBlocker(_DrawValuesContext):
     parent contexts. This can be used inside a random method to ensure that
     the drawn values wont be the ones cached by previous calls
     """
+
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
         instance = super().__new__(cls)
@@ -594,10 +614,9 @@ class _DrawValuesContextBlocker(_DrawValuesContext):
 
 
 def is_fast_drawable(var):
-    return isinstance(var, (numbers.Number,
-                            np.ndarray,
-                            theano_constant,
-                            tt.sharedvar.SharedVariable))
+    return isinstance(
+        var, (numbers.Number, np.ndarray, theano_constant, tt.sharedvar.SharedVariable)
+    )
 
 
 def draw_values(params, point=None, size=None):
@@ -641,13 +660,13 @@ def draw_values(params, point=None, size=None):
                 evaluated[i] = v
                 continue
 
-            name = getattr(p, 'name', None)
+            name = getattr(p, "name", None)
             if (p, size) in drawn:
                 # param was drawn in related contexts
                 v = drawn[(p, size)]
                 evaluated[i] = v
             # We filter out Deterministics by checking for `model` attribute
-            elif name is not None and hasattr(p, 'model') and name in point:
+            elif name is not None and hasattr(p, "model") and name in point:
                 # param.name is in point
                 v = point[name]
                 evaluated[i] = drawn[(p, size)] = v
@@ -663,26 +682,21 @@ def draw_values(params, point=None, size=None):
         # Distribution parameters may be nodes which have named node-inputs
         # specified in the point. Need to find the node-inputs, their
         # parents and children to replace them.
-        leaf_nodes, named_nodes_descendents, named_nodes_ancestors = (
-            build_named_node_tree(
-                (
-                    param for _, param in symbolic_params
-                    if hasattr(param, "name")
-                )
-            )
+        leaf_nodes, named_nodes_descendents, named_nodes_ancestors = build_named_node_tree(
+            (param for _, param in symbolic_params if hasattr(param, "name"))
         )
 
         # Init givens and the stack of nodes to try to `_draw_value` from
-        givens = {p.name: (p, v) for (p, size), v in drawn.items()
-                  if getattr(p, 'name', None) is not None}
+        givens = {
+            p.name: (p, v) for (p, size), v in drawn.items() if getattr(p, "name", None) is not None
+        }
         stack = list(leaf_nodes.values())
         while stack:
             next_ = stack.pop(0)
             if (next_, size) in drawn:
                 # If the node already has a givens value, skip it
                 continue
-            elif isinstance(next_, (theano_constant,
-                                    tt.sharedvar.SharedVariable)):
+            elif isinstance(next_, (theano_constant, tt.sharedvar.SharedVariable)):
                 # If the node is a theano.tensor.TensorConstant or a
                 # theano.tensor.sharedvar.SharedVariable, its value will be
                 # available automatically in _compile_theano_function so
@@ -696,10 +710,14 @@ def draw_values(params, point=None, size=None):
                 # of TensorConstants or SharedVariables, we must add them
                 # to the stack or risk evaluating deterministics with the
                 # wrong values (issue #3354)
-                stack.extend([node for node in named_nodes_descendents[next_]
-                              if isinstance(node, (ObservedRV,
-                                                   MultiObservedRV))
-                              and (node, size) not in drawn])
+                stack.extend(
+                    [
+                        node
+                        for node in named_nodes_descendents[next_]
+                        if isinstance(node, (ObservedRV, MultiObservedRV))
+                        and (node, size) not in drawn
+                    ]
+                )
                 continue
             else:
                 # If the node does not have a givens value, try to draw it.
@@ -710,19 +728,20 @@ def draw_values(params, point=None, size=None):
                 try:
                     # This may fail for autotransformed RVs, which don't
                     # have the random method
-                    value = _draw_value(next_,
-                                        point=point,
-                                        givens=temp_givens,
-                                        size=size)
+                    value = _draw_value(next_, point=point, givens=temp_givens, size=size)
                     givens[next_.name] = (next_, value)
                     drawn[(next_, size)] = value
                 except theano.gof.fg.MissingInputError:
                     # The node failed, so we must add the node's parents to
                     # the stack of nodes to try to draw from. We exclude the
                     # nodes in the `params` list.
-                    stack.extend([node for node in named_nodes_descendents[next_]
-                                  if node is not None and
-                                  (node, size) not in drawn])
+                    stack.extend(
+                        [
+                            node
+                            for node in named_nodes_descendents[next_]
+                            if node is not None and (node, size) not in drawn
+                        ]
+                    )
 
         # the below makes sure the graph is evaluated in order
         # test_distributions_random::TestDrawValues::test_draw_order fails without it
@@ -731,7 +750,11 @@ def draw_values(params, point=None, size=None):
         missing_inputs = {j for j, p in symbolic_params}
         while to_eval or missing_inputs:
             if to_eval == missing_inputs:
-                raise ValueError('Cannot resolve inputs for {}'.format([get_var_name(params[j]) for j in to_eval]))
+                raise ValueError(
+                    "Cannot resolve inputs for {}".format(
+                        [get_var_name(params[j]) for j in to_eval]
+                    )
+                )
             to_eval = set(missing_inputs)
             missing_inputs = set()
             for param_idx in to_eval:
@@ -746,24 +769,15 @@ def draw_values(params, point=None, size=None):
                         # dictionary. Here, we try to fix that.
                         if param in named_nodes_ancestors:
                             for node in named_nodes_ancestors[param]:
-                                if (
-                                    node.name not in givens and
-                                    (node, size) in drawn
-                                ):
-                                    givens[node.name] = (
-                                        node,
-                                        drawn[(node, size)]
-                                    )
-                        value = _draw_value(param,
-                                            point=point,
-                                            givens=givens.values(),
-                                            size=size)
+                                if node.name not in givens and (node, size) in drawn:
+                                    givens[node.name] = (node, drawn[(node, size)])
+                        value = _draw_value(param, point=point, givens=givens.values(), size=size)
                         evaluated[param_idx] = drawn[(param, size)] = value
                         givens[param.name] = (param, value)
                     except theano.gof.fg.MissingInputError:
                         missing_inputs.add(param_idx)
 
-    return [evaluated[j] for j in params] # set the order back
+    return [evaluated[j] for j in params]  # set the order back
 
 
 @memoize
@@ -845,9 +859,7 @@ def get_vectorize_signature(var, var_name="i"):
     if var.ndim == 0:
         return "()"
     else:
-        sig = ",".join(
-            [f"{var_name}_{axis_ind}" for axis_ind in range(var.ndim)]
-        )
+        sig = ",".join([f"{var_name}_{axis_ind}" for axis_ind in range(var.ndim)])
         return f"({sig})"
 
 
@@ -877,14 +889,16 @@ def _draw_value(param, point=None, givens=None, size=None):
     elif isinstance(param, tt.sharedvar.SharedVariable):
         return param.get_value()
     elif isinstance(param, (tt.TensorVariable, MultiObservedRV)):
-        if point and hasattr(param, 'model') and param.name in point:
+        if point and hasattr(param, "model") and param.name in point:
             return point[param.name]
-        elif hasattr(param, 'random') and param.random is not None:
+        elif hasattr(param, "random") and param.random is not None:
             return param.random(point=point, size=size)
-        elif (hasattr(param, 'distribution') and
-                hasattr(param.distribution, 'random') and
-                param.distribution.random is not None):
-            if hasattr(param, 'observations'):
+        elif (
+            hasattr(param, "distribution")
+            and hasattr(param.distribution, "random")
+            and param.distribution.random is not None
+        ):
+            if hasattr(param, "observations"):
                 # shape inspection for ObservedRV
                 dist_tmp = param.distribution
                 try:
@@ -902,14 +916,13 @@ def _draw_value(param, point=None, givens=None, size=None):
                     # We want to draw values to infer the dist_shape,
                     # we don't want to store these drawn values to the context
                     with _DrawValuesContextBlocker():
-                        val = np.atleast_1d(dist_tmp.random(point=point,
-                                                            size=None))
+                        val = np.atleast_1d(dist_tmp.random(point=point, size=None))
                     # Sometimes point may change the size of val but not the
                     # distribution's shape
                     if point and size is not None:
                         temp_size = np.atleast_1d(size)
-                        if all(val.shape[:len(temp_size)] == temp_size):
-                            dist_tmp.shape = val.shape[len(temp_size):]
+                        if all(val.shape[: len(temp_size)] == temp_size):
+                            dist_tmp.shape = val.shape[len(temp_size) :]
                         else:
                             dist_tmp.shape = val.shape
                 return dist_tmp.random(point=point, size=size)
@@ -922,13 +935,8 @@ def _draw_value(param, point=None, givens=None, size=None):
                 variables = values = []
             # We only truly care if the ancestors of param that were given
             # value have the matching dshape and val.shape
-            param_ancestors = \
-                set(theano.gof.graph.ancestors([param],
-                                               blockers=list(variables))
-                    )
-            inputs = [(var, val) for var, val in
-                      zip(variables, values)
-                      if var in param_ancestors]
+            param_ancestors = set(theano.gof.graph.ancestors([param], blockers=list(variables)))
+            inputs = [(var, val) for var, val in zip(variables, values) if var in param_ancestors]
             if inputs:
                 input_vars, input_vals = list(zip(*inputs))
             else:
@@ -937,16 +945,18 @@ def _draw_value(param, point=None, givens=None, size=None):
             func = _compile_theano_function(param, input_vars)
             output = func(*input_vals)
             return output
-    raise ValueError('Unexpected type in draw_value: %s' % type(param))
+    raise ValueError("Unexpected type in draw_value: %s" % type(param))
+
 
 def _is_one_d(dist_shape):
-    if hasattr(dist_shape, 'dshape') and dist_shape.dshape in ((), (0,), (1,)):
+    if hasattr(dist_shape, "dshape") and dist_shape.dshape in ((), (0,), (1,)):
         return True
-    elif hasattr(dist_shape, 'shape') and dist_shape.shape in ((), (0,), (1,)):
+    elif hasattr(dist_shape, "shape") and dist_shape.shape in ((), (0,), (1,)):
         return True
     elif to_tuple(dist_shape) == ():
         return True
     return False
+
 
 def generate_samples(generator, *args, **kwargs):
     """Generate samples from the distribution of a random variable.
@@ -980,11 +990,11 @@ def generate_samples(generator, *args, **kwargs):
 
     Any remaining args and kwargs are passed on to the generator function.
     """
-    dist_shape = kwargs.pop('dist_shape', ())
+    dist_shape = kwargs.pop("dist_shape", ())
     one_d = _is_one_d(dist_shape)
-    size = kwargs.pop('size', None)
-    broadcast_shape = kwargs.pop('broadcast_shape', None)
-    not_broadcast_kwargs = kwargs.pop('not_broadcast_kwargs', None)
+    size = kwargs.pop("size", None)
+    broadcast_shape = kwargs.pop("broadcast_shape", None)
+    not_broadcast_kwargs = kwargs.pop("not_broadcast_kwargs", None)
     if not_broadcast_kwargs is None:
         not_broadcast_kwargs = dict()
 
@@ -997,7 +1007,7 @@ def generate_samples(generator, *args, **kwargs):
     # Convert size and dist_shape to tuples
     size_tup = to_tuple(size)
     dist_shape = to_tuple(dist_shape)
-    if dist_shape[:len(size_tup)] == size_tup:
+    if dist_shape[: len(size_tup)] == size_tup:
         # dist_shape is prepended with size_tup. This is not a consequence
         # of the parameters being drawn size_tup times! By chance, the
         # distribution's shape has its first elements equal to size_tup.
@@ -1007,15 +1017,13 @@ def generate_samples(generator, *args, **kwargs):
     else:
         _dist_shape = dist_shape
 
-
     if broadcast_shape is None:
         # If broadcast_shape is not explicitly provided, it is inferred as the
         # broadcasted shape of the input parameter and dist_shape, taking into
         # account the potential size prefix
         inputs = args + tuple(kwargs.values())
         broadcast_shape = broadcast_dist_samples_shape(
-            [np.asarray(i).shape for i in inputs] + [_dist_shape],
-            size=size_tup
+            [np.asarray(i).shape for i in inputs] + [_dist_shape], size=size_tup
         )
         # We do this instead of broadcast_distribution_samples to avoid
         # creating a dummy array with dist_shape in memory
@@ -1025,7 +1033,7 @@ def generate_samples(generator, *args, **kwargs):
             must_bcast_with=broadcast_shape,
         )
         # We modify the arguments with their broadcasted counterparts
-        args = tuple(inputs[:len(args)])
+        args = tuple(inputs[: len(args)])
         for offset, key in enumerate(kwargs):
             kwargs[key] = inputs[len(args) + offset]
     # Update kwargs with the keyword arguments that were not broadcasted
@@ -1040,19 +1048,22 @@ def generate_samples(generator, *args, **kwargs):
             size=size,
         )
     except (ValueError, TypeError):
-        raise TypeError('''Attempted to generate values with incompatible shapes:
+        raise TypeError(
+            """Attempted to generate values with incompatible shapes:
             size: {size}
             size_tup: {size_tup}
             broadcast_shape[:len(size_tup)] == size_tup: {size_prepended}
             dist_shape: {dist_shape}
             broadcast_shape: {broadcast_shape}
-        '''.format(size=size,
-                   size_tup=size_tup,
-                   dist_shape=dist_shape,
-                   broadcast_shape=broadcast_shape,
-                   size_prepended=broadcast_shape[:len(size_tup)] == size_tup)
+        """.format(
+                size=size,
+                size_tup=size_tup,
+                dist_shape=dist_shape,
+                broadcast_shape=broadcast_shape,
+                size_prepended=broadcast_shape[: len(size_tup)] == size_tup,
+            )
         )
-    if dist_bcast_shape[:len(size_tup)] == size_tup:
+    if dist_bcast_shape[: len(size_tup)] == size_tup:
         samples = generator(size=dist_bcast_shape, *args, **kwargs)
     else:
         samples = generator(size=size_tup + dist_bcast_shape, *args, **kwargs)
@@ -1060,15 +1071,17 @@ def generate_samples(generator, *args, **kwargs):
 
     # reshape samples here
     if samples.ndim > 0 and samples.shape[0] == 1 and size_tup == (1,):
-        if (len(samples.shape) > len(dist_shape) and
-            samples.shape[-len(dist_shape):] == dist_shape[-len(dist_shape):]
+        if (
+            len(samples.shape) > len(dist_shape)
+            and samples.shape[-len(dist_shape) :] == dist_shape[-len(dist_shape) :]
         ):
             samples = samples.reshape(samples.shape[1:])
 
-    if (one_d and samples.ndim > 0 and samples.shape[-1] == 1
-        and (samples.shape != size_tup or
-             size_tup == tuple() or
-             size_tup == (1,))
+    if (
+        one_d
+        and samples.ndim > 0
+        and samples.shape[-1] == 1
+        and (samples.shape != size_tup or size_tup == tuple() or size_tup == (1,))
     ):
         samples = samples.reshape(samples.shape[:-1])
     return np.asarray(samples)
