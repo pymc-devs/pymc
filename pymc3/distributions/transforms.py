@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
 import theano.tensor as tt
 
 from ..model import FreeRV
@@ -435,6 +436,11 @@ class StickBreaking(Transform):
     """
 
     name = "stickbreaking"
+
+    def __init__(self, eps=None):
+        if eps is not None:
+            warnings.warn("The argument `eps` is deprecated and will not be used.",
+                          DeprecationWarning)
 
     def forward(self, x_):
         x = x_.T
