@@ -36,7 +36,6 @@ __all__ = [
     "ordered",
     "log",
     "sum_to_1",
-    "t_stick_breaking",
     "circular",
     "CholeskyCovPacked",
     "Chain",
