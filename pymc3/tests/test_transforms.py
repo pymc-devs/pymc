@@ -87,7 +87,7 @@ def check_jacobian_det(transform, domain,
 def test_stickbreaking():
     with pytest.warns(
         DeprecationWarning,
-            match="The argument `eps` is deprecated and will not be used."
+        match="The argument `eps` is deprecated and will not be used."
     ):
         tr.StickBreaking(eps=1e-9)
     check_vector_transform(tr.stick_breaking, Simplex(2))
