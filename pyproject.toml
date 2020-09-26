@@ -1,2 +1,16 @@
 [tool.black]
 line-length = 100
+
+[tool.nbqa.config]
+isort = "setup.cfg"
+black = "pyproject.toml"
+
+[tool.nbqa.mutate]
+isort = 1
+black = 1
+
+[tool.nbqa.addopts]
+isort = ["--treat-comment-as-code", "# %%"]
+
+[tool.nbqa.ignore_cells]
+black = "%%cython"
