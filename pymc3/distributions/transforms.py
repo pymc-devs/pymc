@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import warnings
+import theano
 import theano.tensor as tt
 
 from ..model import FreeRV
