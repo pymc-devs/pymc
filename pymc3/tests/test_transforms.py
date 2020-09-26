@@ -104,7 +104,7 @@ def test_stickbreaking_bounds():
         R, 2), tt.dvector, np.array([0, 0]), lambda x: x[:-1])
 
 def test_stickbreaking_accuracy():
-    val = np.array([-100])
+    val = np.array([-30])
     x = tt.dvector('x')
     x.tag.test_value = val
     identity_f = theano.function(
