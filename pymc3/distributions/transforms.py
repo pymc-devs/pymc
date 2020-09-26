@@ -28,7 +28,6 @@ __all__ = [
     "Transform",
     "transform",
     "stick_breaking",
-    "stick_breaking2",
     "logodds",
     "interval",
     "log_exp_m1",
@@ -431,78 +430,6 @@ sum_to_1 = SumTo1()
 class StickBreaking(Transform):
     """
     Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of real values.
-    Primarily borrowed from the Stan implementation.
-
-    Parameters
-    ----------
-    eps: float, positive value
-        A small value for numerical stability in invlogit.
-    """
-
-    name = "stickbreaking"
-
-    def __init__(self, eps=floatX(np.finfo(theano.config.floatX).eps)):
-        self.eps = eps
-
-    def forward(self, x_):
-        x = x_.T
-        # reverse cumsum
-        x0 = x[:-1]
-        s = tt.extra_ops.cumsum(x0[::-1], 0)[::-1] + x[-1]
-        z = x0 / s
-        Km1 = x.shape[0] - 1
-        k = tt.arange(Km1)[(slice(None),) + (None,) * (x.ndim - 1)]
-        eq_share = logit(1.0 / (Km1 + 1 - k).astype(str(x_.dtype)))
-        y = logit(z) - eq_share
-        return floatX(y.T)
-
-    def forward_val(self, x_, point=None):
-        x = x_.T
-        # reverse cumsum
-        x0 = x[:-1]
-        s = np.cumsum(x0[::-1], 0)[::-1] + x[-1]
-        z = x0 / s
-        Km1 = x.shape[0] - 1
-        k = np.arange(Km1)[(slice(None),) + (None,) * (x.ndim - 1)]
-        eq_share = nplogit(1.0 / (Km1 + 1 - k).astype(str(x_.dtype)))
-        y = nplogit(z) - eq_share
-        return floatX(y.T)
-
-    def backward(self, y_):
-        y = y_.T
-        Km1 = y.shape[0]
-        k = tt.arange(Km1)[(slice(None),) + (None,) * (y.ndim - 1)]
-        eq_share = logit(1.0 / (Km1 + 1 - k).astype(str(y_.dtype)))
-        z = invlogit(y + eq_share, self.eps)
-        yl = tt.concatenate([z, tt.ones(y[:1].shape)])
-        yu = tt.concatenate([tt.ones(y[:1].shape), 1 - z])
-        S = tt.extra_ops.cumprod(yu, 0)
-        x = S * yl
-        return floatX(x.T)
-
-    def jacobian_det(self, y_):
-        y = y_.T
-        Km1 = y.shape[0]
-        k = tt.arange(Km1)[(slice(None),) + (None,) * (y.ndim - 1)]
-        eq_share = logit(1.0 / (Km1 + 1 - k).astype(str(y_.dtype)))
-        yl = y + eq_share
-        yu = tt.concatenate([tt.ones(y[:1].shape), 1 - invlogit(yl, self.eps)])
-        S = tt.extra_ops.cumprod(yu, 0)
-        return tt.sum(tt.log(S[:-1]) - tt.log1p(tt.exp(yl)) - tt.log1p(tt.exp(-yl)), 0).T
-
-
-stick_breaking = StickBreaking()
-
-
-def t_stick_breaking(eps: float) -> StickBreaking:
-    """Return a new :class:`StickBreaking` transform with specified eps(ilon),
-    instead of the default."""
-    return StickBreaking(eps)
-
-
-class StickBreaking2(Transform):
-    """
-    Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of real values.
     """
 
     name = "stickbreaking"
@@ -541,7 +468,7 @@ class StickBreaking2(Transform):
         return tt.sum(d, 0).T
 
 
-stick_breaking2 = StickBreaking2()
+stick_breaking = StickBreaking()
 
 
 class Circular(ElemwiseTransform):

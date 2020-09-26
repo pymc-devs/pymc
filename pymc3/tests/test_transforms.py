@@ -114,37 +114,6 @@ def test_stickbreaking_accuracy():
     close_to(val, identity_f(val), tol)
 
 
-def test_stickbreaking2():
-    check_vector_transform(tr.stick_breaking2, Simplex(2))
-    check_vector_transform(tr.stick_breaking2, Simplex(4))
-
-    check_transform(tr.stick_breaking2, MultiSimplex(
-        3, 2), constructor=tt.dmatrix, test=np.zeros((2, 2)))
-
-
-def test_stickbreaking2_bounds():
-    vals = get_values(tr.stick_breaking2, Vector(R, 2),
-                      tt.dvector, np.array([0, 0]))
-
-    close_to(vals.sum(axis=1), 1, tol)
-    close_to_logical(vals > 0, True, tol)
-    close_to_logical(vals < 1, True, tol)
-
-    check_jacobian_det(tr.stick_breaking2, Vector(R, 2),
-                       tt.dvector, np.array([0, 0]),
-                       lambda x: x[:-1])
-
-def test_stickbreaking2_accuracy():
-    val = np.array([-100])
-    x = tt.dvector('x')
-    x.tag.test_value = val
-    identity_f = theano.function(
-        [x],
-        tr.stick_breaking2.forward(tr.stick_breaking2.backward(x))
-    )
-    close_to(val, identity_f(val), tol)
-
-
 def test_sum_to_1():
     check_vector_transform(tr.sum_to_1, Simplex(2))
     check_vector_transform(tr.sum_to_1, Simplex(4))
