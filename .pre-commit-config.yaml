@@ -3,8 +3,9 @@ repos:
   rev: v3.2.0
   hooks:
     -   id: end-of-file-fixer
+    -   id: check-toml
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 0.1.29
+  rev: 0.2.0
   hooks:
     - id: nbqa
       args: ['isort']
