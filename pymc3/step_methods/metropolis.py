@@ -478,7 +478,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
             self.astep = self.astep_prop
         else:
             raise ValueError(
-                "Argument 'proposal' should either be " + "'uniform' or 'proportional'"
+                "Argument 'proposal' should either be 'uniform' or 'proportional'"
             )
 
         super().__init__(vars, [model.fastlogp])

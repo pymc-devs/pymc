@@ -63,7 +63,7 @@ class _QuadFormBase(Continuous):
             chol = chol.T
         if len([i for i in [tau, cov, chol] if i is not None]) != 1:
             raise ValueError(
-                "Incompatible parameterization. " "Specify exactly one of tau, cov, " "or chol."
+                "Incompatible parameterization. Specify exactly one of tau, cov, or chol."
             )
         self.mu = mu = tt.as_tensor_variable(mu)
         self.solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
@@ -1815,7 +1815,7 @@ class KroneckerNormal(Continuous):
         self.cholesky = Cholesky(lower=True, on_error="raise")
         if len([i for i in [covs, chols, evds] if i is not None]) != 1:
             raise ValueError(
-                "Incompatible parameterization. " "Specify exactly one of covs, chols, " "or evds."
+                "Incompatible parameterization. Specify exactly one of covs, chols, or evds."
             )
         self._isEVD = False
         self.sigma = sigma
