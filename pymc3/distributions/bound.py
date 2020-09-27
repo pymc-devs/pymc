@@ -82,7 +82,7 @@ class _Bounded(Distribution):
         upper = np.asarray(upper)
         if lower.size > 1 or upper.size > 1:
             raise ValueError(
-                "Drawing samples from distributions with " "array-valued bounds is not supported."
+                "Drawing samples from distributions with array-valued bounds is not supported."
             )
         total_size = np.prod(size).astype(np.int)
         samples = []
