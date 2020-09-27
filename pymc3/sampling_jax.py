@@ -5,7 +5,7 @@ xla_flags = re.sub(r'xla_force_host_platform_device_count=.+\s', '', xla_flags).
 os.environ['XLA_FLAGS'] = ' '.join(['--xla_force_host_platform_device_count={}'.format(100)])
 
 import theano
-
+import numpy as np
 import pymc3 as pm
 
 # Disable C compilation by default
