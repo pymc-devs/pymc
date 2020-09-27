@@ -9,10 +9,10 @@ import numpy as np
 import pymc3 as pm
 
 # Disable C compilation by default
-theano.config.cxx = ""
+# theano.config.cxx = ""
 
 # This will make the JAX Linker the default
-theano.config.mode = "JAX"
+# theano.config.mode = "JAX"
 
 import jax
 from tensorflow_probability.substrates import jax as tfp
