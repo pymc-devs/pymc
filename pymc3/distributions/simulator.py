@@ -130,7 +130,6 @@ class Simulator(NoDistribution):
             return f"{name} ~ Simulator({function}({params}), {distance}, {sum_stat})"
 
 
-
 def identity(x):
     """Identity function, used as a summary statistics."""
     return x

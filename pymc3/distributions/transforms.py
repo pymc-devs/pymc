@@ -235,8 +235,8 @@ class LogExpM1(ElemwiseTransform):
     def forward(self, x):
         """Inverse operation of softplus.
 
-            y = Log(Exp(x) - 1)
-              = Log(1 - Exp(-x)) + x
+        y = Log(Exp(x) - 1)
+          = Log(1 - Exp(-x)) + x
         """
         return tt.log(1.0 - tt.exp(-x)) + x
 
@@ -500,8 +500,7 @@ def t_stick_breaking(eps: float) -> StickBreaking:
 
 
 class Circular(ElemwiseTransform):
-    """Transforms a linear space into a circular one.
-    """
+    """Transforms a linear space into a circular one."""
 
     name = "circular"
 

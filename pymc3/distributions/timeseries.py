@@ -112,15 +112,7 @@ class AR(distribution.Continuous):
     """
 
     def __init__(
-        self,
-        rho,
-        sigma=None,
-        tau=None,
-        constant=False,
-        init=Flat.dist(),
-        sd=None,
-        *args,
-        **kwargs
+        self, rho, sigma=None, tau=None, constant=False, init=Flat.dist(), sd=None, *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
         if sd is not None:
@@ -170,10 +162,7 @@ class AR(distribution.Continuous):
         """
         if self.constant:
             x = tt.add(
-                *[
-                    self.rho[i + 1] * value[self.p - (i + 1) : -(i + 1)]
-                    for i in range(self.p)
-                ]
+                *[self.rho[i + 1] * value[self.p - (i + 1) : -(i + 1)] for i in range(self.p)]
             )
             eps = value[self.p :] - self.rho[0] - x
         else:
@@ -181,10 +170,7 @@ class AR(distribution.Continuous):
                 x = self.rho * value[:-1]
             else:
                 x = tt.add(
-                    *[
-                        self.rho[i] * value[self.p - (i + 1) : -(i + 1)]
-                        for i in range(self.p)
-                    ]
+                    *[self.rho[i] * value[self.p - (i + 1) : -(i + 1)] for i in range(self.p)]
                 )
             eps = value[self.p :] - x
 
@@ -219,15 +205,11 @@ class GaussianRandomWalk(distribution.Continuous):
         distribution for initial value (Defaults to Flat())
     """
 
-    def __init__(
-        self, tau=None, init=Flat.dist(), sigma=None, mu=0.0, sd=None, *args, **kwargs
-    ):
+    def __init__(self, tau=None, init=Flat.dist(), sigma=None, mu=0.0, sd=None, *args, **kwargs):
         kwargs.setdefault("shape", 1)
         super().__init__(*args, **kwargs)
         if sum(self.shape) == 0:
-            raise TypeError(
-                "GaussianRandomWalk must be supplied a non-zero shape argument!"
-            )
+            raise TypeError("GaussianRandomWalk must be supplied a non-zero shape argument!")
         if sd is not None:
             sigma = sd
             warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
@@ -284,9 +266,7 @@ class GaussianRandomWalk(distribution.Continuous):
         -------
         array
         """
-        sigma, mu = distribution.draw_values(
-            [self.sigma, self.mu], point=point, size=size
-        )
+        sigma, mu = distribution.draw_values([self.sigma, self.mu], point=point, size=size)
         return distribution.generate_samples(
             self._random,
             sigma=sigma,
@@ -309,7 +289,7 @@ class GaussianRandomWalk(distribution.Continuous):
         rv = stats.norm(mu, sigma)
         data = rv.rvs(size).cumsum(axis=axis)
         data = np.array(data)
-        if len(data.shape)>1:
+        if len(data.shape) > 1:
             for i in range(data.shape[0]):
                 data[i] = data[i] - data[i][0]
         else:
@@ -454,15 +434,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
     """
 
     def __init__(
-        self,
-        mu=0.0,
-        cov=None,
-        tau=None,
-        chol=None,
-        lower=True,
-        init=Flat.dist(),
-        *args,
-        **kwargs
+        self, mu=0.0, cov=None, tau=None, chol=None, lower=True, init=Flat.dist(), *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
 
