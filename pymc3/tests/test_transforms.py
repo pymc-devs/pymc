@@ -84,7 +84,12 @@ def check_jacobian_det(transform, domain,
             computed_ljd(yval), tol)
 
 
-def test_simplex():
+def test_stickbreaking():
+    with pytest.warns(
+        DeprecationWarning,
+        match="The argument `eps` is deprecated and will not be used."
+    ):
+        tr.StickBreaking(eps=1e-9)
     check_vector_transform(tr.stick_breaking, Simplex(2))
     check_vector_transform(tr.stick_breaking, Simplex(4))
 
@@ -92,7 +97,7 @@ def test_simplex():
         3, 2), constructor=tt.dmatrix, test=np.zeros((2, 2)))
 
 
-def test_simplex_bounds():
+def test_stickbreaking_bounds():
     vals = get_values(tr.stick_breaking, Vector(R, 2),
                       tt.dvector, np.array([0, 0]))
 
@@ -102,6 +107,16 @@ def test_simplex_bounds():
 
     check_jacobian_det(tr.stick_breaking, Vector(
         R, 2), tt.dvector, np.array([0, 0]), lambda x: x[:-1])
+
+def test_stickbreaking_accuracy():
+    val = np.array([-30])
+    x = tt.dvector('x')
+    x.tag.test_value = val
+    identity_f = theano.function(
+        [x],
+        tr.stick_breaking.forward(tr.stick_breaking.backward(x))
+    )
+    close_to(val, identity_f(val), tol)
 
 
 def test_sum_to_1():
