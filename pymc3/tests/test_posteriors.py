@@ -16,6 +16,7 @@ import pytest
 from . import sampler_fixtures as sf
 import theano
 
+
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNUTSUniform(sf.NutsFixture, sf.UniformFixture):
     n_samples = 10000
@@ -48,11 +49,11 @@ class TestSliceUniform(sf.SliceFixture, sf.UniformFixture):
 
 
 class TestNUTSUniform2(TestNUTSUniform):
-    step_args = {'target_accept': 0.95}
+    step_args = {"target_accept": 0.95}
 
 
 class TestNUTSUniform3(TestNUTSUniform):
-    step_args = {'target_accept': 0.80}
+    step_args = {"target_accept": 0.80}
 
 
 class TestNUTSNormal(sf.NutsFixture, sf.NormalFixture):
@@ -84,7 +85,7 @@ class TestNUTSStudentT(sf.NutsFixture, sf.StudentTFixture):
     atol = 0.05
 
 
-@pytest.mark.skip('Takes too long to run')
+@pytest.mark.skip("Takes too long to run")
 class TestNUTSNormalLong(sf.NutsFixture, sf.NormalFixture):
     n_samples = 500000
     tune = 5000
