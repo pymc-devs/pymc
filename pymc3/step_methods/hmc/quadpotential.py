@@ -684,10 +684,3 @@ if chol_available:
         def energy(self, x):
             """Compute kinetic energy at a position in parameter space."""
             return 0.5 * x.T.dot(self.velocity(x))
-            n = self.factor.solve_Lt(n)
-            n = self.factor.apply_Pt(n)
-            return n
-
-        def energy(self, x):
-            """Compute kinetic energy at a position in parameter space."""
-            return 0.5 * x.T.dot(self.velocity(x))
