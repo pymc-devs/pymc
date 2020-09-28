@@ -123,12 +123,8 @@ class TestData(SeededTest):
         new_y = [5.0, 6.0, 9.0]
         with model:
             pm.set_data(new_data={"index": new_index, "y": new_y})
-            pp_trace = pm.sample_posterior_predictive(
-                trace, 1000, var_names=["alpha", "obs"]
-            )
-            pp_tracef = pm.fast_sample_posterior_predictive(
-                trace, 1000, var_names=["alpha", "obs"]
-            )
+            pp_trace = pm.sample_posterior_predictive(trace, 1000, var_names=["alpha", "obs"])
+            pp_tracef = pm.fast_sample_posterior_predictive(trace, 1000, var_names=["alpha", "obs"])
 
         assert prior_trace["alpha"].shape == (1000, 3)
         assert trace["alpha"].shape == (1000, 3)
@@ -148,18 +144,14 @@ class TestData(SeededTest):
             trace = pm.sample(chains=1)
 
         np.testing.assert_allclose(np.array([1.0, 2.0, 3.0]), x.get_value(), atol=1e-1)
-        np.testing.assert_allclose(
-            np.array([1.0, 2.0, 3.0]), trace["y"].mean(0), atol=1e-1
-        )
+        np.testing.assert_allclose(np.array([1.0, 2.0, 3.0]), trace["y"].mean(0), atol=1e-1)
 
         with m:
             pm.set_data({"x": np.array([2.0, 4.0, 6.0])})
             trace = pm.sample(chains=1)
 
         np.testing.assert_allclose(np.array([2.0, 4.0, 6.0]), x.get_value(), atol=1e-1)
-        np.testing.assert_allclose(
-            np.array([2.0, 4.0, 6.0]), trace["y"].mean(0), atol=1e-1
-        )
+        np.testing.assert_allclose(np.array([2.0, 4.0, 6.0]), trace["y"].mean(0), atol=1e-1)
 
     def test_creation_of_data_outside_model_context(self):
         with pytest.raises((IndexError, TypeError)) as error:
@@ -202,47 +194,47 @@ class TestData(SeededTest):
         data = np.random.uniform(size=(N_rows, N_cols))
         coords = {
             "rows": [f"R{r+1}" for r in range(N_rows)],
-            "columns": [f"C{c+1}" for c in range(N_cols)]
+            "columns": [f"C{c+1}" for c in range(N_cols)],
         }
         # pass coordinates explicitly, use numpy array in Data container
         with pm.Model(coords=coords) as pmodel:
-            pm.Data('observations', data, dims=("rows", "columns"))
+            pm.Data("observations", data, dims=("rows", "columns"))
 
         assert "rows" in pmodel.coords
-        assert pmodel.coords["rows"] == ['R1', 'R2', 'R3', 'R4', 'R5']
+        assert pmodel.coords["rows"] == ["R1", "R2", "R3", "R4", "R5"]
         assert "columns" in pmodel.coords
-        assert pmodel.coords["columns"] == ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7']
-        assert pmodel.RV_dims == {'observations': ('rows', 'columns')}
+        assert pmodel.coords["columns"] == ["C1", "C2", "C3", "C4", "C5", "C6", "C7"]
+        assert pmodel.RV_dims == {"observations": ("rows", "columns")}
 
     def test_implicit_coords_series(self):
         ser_sales = pd.Series(
             data=np.random.randint(low=0, high=30, size=22),
             index=pd.date_range(start="2020-05-01", periods=22, freq="24H", name="date"),
-            name="sales"
+            name="sales",
         )
         with pm.Model() as pmodel:
             pm.Data("sales", ser_sales, dims="date", export_index_as_coords=True)
 
         assert "date" in pmodel.coords
         assert len(pmodel.coords["date"]) == 22
-        assert pmodel.RV_dims == {'sales': ('date',)}
+        assert pmodel.RV_dims == {"sales": ("date",)}
 
     def test_implicit_coords_dataframe(self):
         N_rows = 5
         N_cols = 7
         df_data = pd.DataFrame()
         for c in range(N_cols):
-            df_data[f'Column {c+1}'] = np.random.normal(size=(N_rows,))
-        df_data.index.name = 'rows'
-        df_data.columns.name = 'columns'
+            df_data[f"Column {c+1}"] = np.random.normal(size=(N_rows,))
+        df_data.index.name = "rows"
+        df_data.columns.name = "columns"
 
         # infer coordinates from index and columns of the DataFrame
         with pm.Model() as pmodel:
-            pm.Data('observations', df_data, dims=("rows", "columns"), export_index_as_coords=True)
+            pm.Data("observations", df_data, dims=("rows", "columns"), export_index_as_coords=True)
 
         assert "rows" in pmodel.coords
         assert "columns" in pmodel.coords
-        assert pmodel.RV_dims == {'observations': ('rows', 'columns')}
+        assert pmodel.RV_dims == {"observations": ("rows", "columns")}
 
 
 def test_data_naming():
