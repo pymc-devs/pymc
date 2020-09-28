@@ -155,7 +155,7 @@ html_theme_options = {
         ("Books + Videos", "learn"),
         ("API", "api"),
         ("Developer Guide", "developer_guide"),
-        ("About PyMC3", "about"),
+        ("About PyMC3", "about")
     ],
     #     "fixed_sidebar": "false",
     #     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
@@ -264,7 +264,9 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [(master_doc, "pymc3.tex", "PyMC3 Documentation", "PyMC developers", "manual")]
+latex_documents = [
+    (master_doc, "pymc3.tex", "PyMC3 Documentation", "PyMC developers", "manual")
+]
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
@@ -328,5 +330,7 @@ texinfo_documents = [
 
 
 def setup(app):
-    app.add_css_file("https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css")
+    app.add_css_file(
+        "https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css"
+    )
     app.add_css_file("default.css")

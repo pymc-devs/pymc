@@ -382,7 +382,9 @@ class BlockDiagonalMatrix(Op):
 
     def __init__(self, sparse=False, format="csr"):
         if format not in ("csr", "csc"):
-            raise ValueError(f"format must be one of: 'csr', 'csc', got {format}")
+            raise ValueError(
+                f"format must be one of: 'csr', 'csc', got {format}"
+            )
         self.sparse = sparse
         self.format = format
 
@@ -393,7 +395,9 @@ class BlockDiagonalMatrix(Op):
         if any(mat.type.ndim != 2 for mat in matrices):
             raise TypeError("all data arguments must be matrices")
         if self.sparse:
-            out_type = theano.sparse.matrix(self.format, dtype=largest_common_dtype(matrices))
+            out_type = theano.sparse.matrix(
+                self.format, dtype=largest_common_dtype(matrices)
+            )
         else:
             out_type = theano.tensor.matrix(dtype=largest_common_dtype(matrices))
         return tt.Apply(self, matrices, [out_type])
