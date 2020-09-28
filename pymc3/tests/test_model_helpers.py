@@ -34,21 +34,20 @@ class TestHelperFunc:
         sparse_input = sps.csr_matrix(np.eye(3))
         dense_input = np.arange(9).reshape((3, 3))
 
-        input_name = 'input_variable'
+        input_name = "input_variable"
         theano_graph_input = tt.as_tensor(dense_input, name=input_name)
 
         pandas_input = pd.DataFrame(dense_input)
 
         # All the even numbers are replaced with NaN
-        missing_pandas_input = pd.DataFrame(np.array([[np.nan, 1, np.nan],
-                                                      [3, np.nan, 5],
-                                                      [np.nan, 7, np.nan]]))
-        masked_array_input = ma.array(dense_input,
-                                      mask=(np.mod(dense_input, 2) == 0))
+        missing_pandas_input = pd.DataFrame(
+            np.array([[np.nan, 1, np.nan], [3, np.nan, 5], [np.nan, 7, np.nan]])
+        )
+        masked_array_input = ma.array(dense_input, mask=(np.mod(dense_input, 2) == 0))
 
         # Create a generator object. Apparently the generator object needs to
         # yield numpy arrays.
-        square_generator = (np.array([i**2], dtype=int) for i in range(100))
+        square_generator = (np.array([i ** 2], dtype=int) for i in range(100))
 
         # Alias the function to be tested
         func = pm.model.pandas_to_array
@@ -68,8 +67,7 @@ class TestHelperFunc:
         sparse_output = func(sparse_input)
         assert sps.issparse(sparse_output)
         assert sparse_output.shape == sparse_input.shape
-        npt.assert_allclose(sparse_output.toarray(),
-                            sparse_input.toarray())
+        npt.assert_allclose(sparse_output.toarray(), sparse_input.toarray())
 
         # Check function behavior when using masked array inputs and pandas
         # objects with missing data
@@ -103,11 +101,10 @@ class TestHelperFunc:
         should return a Sparse Theano object.
         """
         # Create the various inputs to the function
-        input_name = 'testing_inputs'
+        input_name = "testing_inputs"
         sparse_input = sps.csr_matrix(np.eye(3))
         dense_input = np.arange(9).reshape((3, 3))
-        masked_array_input = ma.array(dense_input,
-                                      mask=(np.mod(dense_input, 2) == 0))
+        masked_array_input = ma.array(dense_input, mask=(np.mod(dense_input, 2) == 0))
 
         # Create a fake model and fake distribution to be used for the test
         fake_model = pm.Model()
@@ -120,18 +117,9 @@ class TestHelperFunc:
         func = pm.model.as_tensor
 
         # Check function behavior using the various inputs
-        dense_output = func(dense_input,
-                            input_name,
-                            fake_model,
-                            fake_distribution)
-        sparse_output = func(sparse_input,
-                             input_name,
-                             fake_model,
-                             fake_distribution)
-        masked_output = func(masked_array_input,
-                             input_name,
-                             fake_model,
-                             fake_distribution)
+        dense_output = func(dense_input, input_name, fake_model, fake_distribution)
+        sparse_output = func(sparse_input, input_name, fake_model, fake_distribution)
+        masked_output = func(masked_array_input, input_name, fake_model, fake_distribution)
 
         # Ensure that the missing values are appropriately set to None
         for func_output in [dense_output, sparse_output]:

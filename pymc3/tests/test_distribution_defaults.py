@@ -20,7 +20,6 @@ import pytest
 
 
 class DistTest(Continuous):
-
     def __init__(self, a, b, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.a = a
@@ -32,59 +31,60 @@ class DistTest(Continuous):
 
 def test_default_nan_fail():
     with Model(), pytest.raises(AttributeError):
-        DistTest('x', np.nan, 2, defaults=['a'])
+        DistTest("x", np.nan, 2, defaults=["a"])
 
 
 def test_default_empty_fail():
     with Model(), pytest.raises(AttributeError):
-        DistTest('x', 1, 2, defaults=[])
+        DistTest("x", 1, 2, defaults=[])
 
 
 def test_default_testval():
     with Model():
-        x = DistTest('x', 1, 2, testval=5, defaults=[])
+        x = DistTest("x", 1, 2, testval=5, defaults=[])
         assert x.tag.test_value == 5
 
 
 def test_default_testval_nan():
     with Model():
-        x = DistTest('x', 1, 2, testval=np.nan, defaults=['a'])
+        x = DistTest("x", 1, 2, testval=np.nan, defaults=["a"])
         np.testing.assert_almost_equal(x.tag.test_value, np.nan)
 
 
 def test_default_a():
     with Model():
-        x = DistTest('x', 1, 2, defaults=['a'])
+        x = DistTest("x", 1, 2, defaults=["a"])
         assert x.tag.test_value == 1
 
 
 def test_default_b():
     with Model():
-        x = DistTest('x', np.nan, 2, defaults=['a', 'b'])
+        x = DistTest("x", np.nan, 2, defaults=["a", "b"])
         assert x.tag.test_value == 2
 
 
 def test_default_c():
     with Model():
-        y = DistTest('y', 7, 8, testval=94)
-        x = DistTest('x', y, 2, defaults=['a', 'b'])
+        y = DistTest("y", 7, 8, testval=94)
+        x = DistTest("x", y, 2, defaults=["a", "b"])
         assert x.tag.test_value == 94
 
 
 def test_default_discrete_uniform():
     with Model():
-        x = DiscreteUniform('x', lower=1, upper=2)
+        x = DiscreteUniform("x", lower=1, upper=2)
         assert x.init_value == 1
+
 
 def test_discrete_uniform_negative():
     model = Model()
     with model:
-        x = DiscreteUniform('x', lower=-10, upper=0)
-    assert model.test_point['x'] == -5
+        x = DiscreteUniform("x", lower=-10, upper=0)
+    assert model.test_point["x"] == -5
 
 
 def test_categorical_mode():
     model = Model()
     with model:
-        x = Categorical('x', p=np.eye(4), shape=4)
-    assert np.allclose(model.test_point['x'], np.arange(4))
+        x = Categorical("x", p=np.eye(4), shape=4)
+    assert np.allclose(model.test_point["x"], np.arange(4))

@@ -134,9 +134,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
             support = False
 
     if np.any(support):
-        msg = "The variable specified for {} has negative support for {}, ".format(
-            label, distname
-        )
+        msg = f"The variable specified for {label} has negative support for {distname}, "
         msg += "likely making it unsuitable for this parameter."
         warnings.warn(msg)
 
@@ -712,7 +710,7 @@ class TruncatedNormal(BoundedContinuous):
         )
 
     def _random(self, mu, sigma, lower, upper, size):
-        """ Wrapper around stats.truncnorm.rvs that converts TruncatedNormal's
+        """Wrapper around stats.truncnorm.rvs that converts TruncatedNormal's
         parametrization to scipy.truncnorm. All parameter arrays should have
         been broadcasted properly by generate_samples at this point and size is
         the scipy.rvs representation.
@@ -3447,7 +3445,7 @@ class Triangular(BoundedContinuous):
         )
 
     def _random(self, c, lower, upper, size):
-        """ Wrapper around stats.triang.rvs that converts Triangular's
+        """Wrapper around stats.triang.rvs that converts Triangular's
         parametrization to scipy.triang. All parameter arrays should have
         been broadcasted properly by generate_samples at this point and size is
         the scipy.rvs representation.
@@ -3706,7 +3704,7 @@ class Rice(PositiveContinuous):
         self.sigma = self.sd = sigma = tt.as_tensor_variable(floatX(sigma))
         self.b = b = tt.as_tensor_variable(floatX(b))
 
-        nu_sigma_ratio = -nu ** 2 / (2 * sigma ** 2)
+        nu_sigma_ratio = -(nu ** 2) / (2 * sigma ** 2)
         self.mean = (
             sigma
             * np.sqrt(np.pi / 2)
@@ -3762,7 +3760,7 @@ class Rice(PositiveContinuous):
         return generate_samples(self._random, nu=nu, sigma=sigma, dist_shape=self.shape, size=size)
 
     def _random(self, nu, sigma, size):
-        """ Wrapper around stats.rice.rvs that converts Rice's
+        """Wrapper around stats.rice.rvs that converts Rice's
         parametrization to scipy.rice. All parameter arrays should have
         been broadcasted properly by generate_samples at this point and size is
         the scipy.rvs representation.

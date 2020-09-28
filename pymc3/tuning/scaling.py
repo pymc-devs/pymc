@@ -19,7 +19,7 @@ from ..theanof import hessian_diag, inputvars
 from ..blocking import DictToArrayBijection, ArrayOrdering
 from ..util import get_var_name
 
-__all__ = ['find_hessian', 'trace_cov', 'guess_scaling']
+__all__ = ["find_hessian", "trace_cov", "guess_scaling"]
 
 
 def fixed_hessian(point, vars=None, model=None):
@@ -99,8 +99,8 @@ def adjust_scaling(s, scaling_bound):
 def adjust_precision(tau, scaling_bound=1e-8):
     mag = sqrt(abs(tau))
 
-    bounded = bound(log(mag), log(scaling_bound), log(1./scaling_bound))
-    return exp(bounded)**2
+    bounded = bound(log(mag), log(scaling_bound), log(1.0 / scaling_bound))
+    return exp(bounded) ** 2
 
 
 def bound(a, l, u):

@@ -74,9 +74,7 @@ def fixture_exception_handling(request):
 def samples_to_broadcast(fixture_sizes, fixture_shapes):
     samples = [np.empty(s) for s in fixture_shapes]
     try:
-        broadcast_shape = broadcast_dist_samples_shape(
-            fixture_shapes, size=fixture_sizes
-        )
+        broadcast_shape = broadcast_dist_samples_shape(fixture_shapes, size=fixture_sizes)
     except ValueError:
         broadcast_shape = None
     return fixture_sizes, samples, broadcast_shape
@@ -103,9 +101,7 @@ def fixture_model():
         dim = 4
         with pm.Model():
             cov = pm.InverseGamma("cov", alpha=1, beta=1)
-            x = pm.Normal(
-                "x", mu=np.ones((dim,)), sigma=pm.math.sqrt(cov), shape=(n, dim)
-            )
+            x = pm.Normal("x", mu=np.ones((dim,)), sigma=pm.math.sqrt(cov), shape=(n, dim))
             eps = pm.HalfNormal("eps", np.ones((n, 1)), shape=(n, dim))
             mu = pm.Deterministic("mu", tt.sum(x + eps, axis=-1))
             y = pm.Normal("y", mu=mu, sigma=1, shape=(n,))
@@ -152,8 +148,7 @@ class TestShapesBroadcasting:
         shapes = fixture_shapes
         size_ = to_tuple(size)
         shapes_ = [
-            s if s[: min([len(size_), len(s)])] != size_ else s[len(size_) :]
-            for s in shapes
+            s if s[: min([len(size_), len(s)])] != size_ else s[len(size_) :] for s in shapes
         ]
         try:
             expected_out = np.broadcast(*[np.empty(s) for s in shapes_]).shape
@@ -193,9 +188,7 @@ class TestSamplesBroadcasting:
                 ishape = i.shape
                 if ishape[: min([len(size_), len(ishape)])] == size_:
                     expected_shape = (
-                        size_
-                        + (1,) * (len(broadcast_shape) - len(ishape))
-                        + ishape[len(size_) :]
+                        size_ + (1,) * (len(broadcast_shape) - len(ishape)) + ishape[len(size_) :]
                     )
                 else:
                     expected_shape = ishape

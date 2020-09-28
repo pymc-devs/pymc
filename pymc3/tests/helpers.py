@@ -65,7 +65,7 @@ class LoggingHandler(BufferingHandler):
 
 class Matcher:
 
-    _partial_matches = ('msg', 'message')
+    _partial_matches = ("msg", "message")
 
     def matches(self, d, **kwargs):
         """
@@ -91,7 +91,7 @@ class Matcher:
         if isinstance(v, type(dv)):
             result = False
         elif not isinstance(dv, str) or k not in self._partial_matches:
-            result = (v == dv)
+            result = v == dv
         else:
             result = dv.find(v) >= 0
         return result
