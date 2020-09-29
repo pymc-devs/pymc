@@ -524,7 +524,7 @@ class treelist(list):
 
     def __setitem__(self, key, value):
         raise NotImplementedError(
-            "Method is removed as we are not" " able to determine " "appropriate logic for it"
+            "Method is removed as we are not able to determine appropriate logic for it"
         )
 
     # Added this because mypy didn't like having __imul__ without __mul__
@@ -972,7 +972,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             for var in grad_vars:
                 if var.dtype not in continuous_types:
                     raise ValueError(
-                        "Can only compute the gradient of " "continuous types: %s" % var
+                        "Can only compute the gradient of continuous types: %s" % var
                     )
 
         if tempered:
@@ -1609,7 +1609,7 @@ def _get_scaling(total_size, shape, ndim):
         coef = tt.prod(coefs)
     else:
         raise TypeError(
-            "Unrecognized `total_size` type, expected " "int or list of ints, got %r" % total_size
+            "Unrecognized `total_size` type, expected int or list of ints, got %r" % total_size
         )
     return tt.as_tensor(floatX(coef))
 
