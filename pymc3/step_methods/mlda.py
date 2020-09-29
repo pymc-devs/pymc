@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import arviz as az
 import numpy as np
 import warnings
 import logging
@@ -26,7 +27,7 @@ from ..model import Model
 import pymc3 as pm
 from pymc3.theanof import floatX
 
-__all__ = ["MetropolisMLDA", "DEMetropolisZMLDA", "RecursiveDAProposal", "MLDA"]
+__all__ = ["MetropolisMLDA", "DEMetropolisZMLDA", "RecursiveDAProposal", "MLDA", "extract_Q_values"]
 
 
 class MetropolisMLDA(Metropolis):
@@ -957,6 +958,39 @@ def delta_logp_inverse(logp, vars, shared):
     f = theano.function([inarray1, inarray0], - logp0 + logp1)
     f.trust_input = True
     return f
+
+
+def extract_Q_values(trace, levels):
+    """
+    Returns expectation and standard error of quantity of interest,
+    given a trace and the number of levels in the multilevel model.
+    It makes use of the collapsing sum formula. Only applicable when
+    MLDA with variance reduction has been used for sampling.
+    """
+
+    Q_0_raw = trace.get_sampler_stats("Q_0")
+    # total number of base level samples from all iterations
+    total_base_level_samples = sum([it.shape[0] for it in Q_0_raw.copy()])
+    Q_0 = np.concatenate(Q_0_raw.copy()).reshape((1, total_base_level_samples))
+    ess_Q_0 = az.ess(np.array(Q_0.copy(), np.float64))
+    Q_0_var = Q_0.var() / ess_Q_0
+
+    Q_diff_means = []
+    Q_diff_vars = []
+    for l in range(1, levels):
+        Q_diff_raw = trace.get_sampler_stats(f"Q_{l}_{l-1}")
+        # total number of samples from all iterations
+        total_level_samples = sum([it.shape[0] for it in Q_diff_raw.copy()])
+        Q_diff = np.concatenate(Q_diff_raw.copy()).reshape((1, total_level_samples))
+        ess_diff = az.ess(np.array(Q_diff.copy(), np.float64))
+
+        Q_diff_means.append(Q_diff.mean())
+        Q_diff_vars.append(Q_diff.var() / ess_diff)
+
+    Q_mean = Q_0.mean() + sum(Q_diff_means)
+    Q_se = np.sqrt(Q_0_var + sum(Q_diff_vars))
+
+    return Q_mean, Q_se
 
 
 def subsample(
