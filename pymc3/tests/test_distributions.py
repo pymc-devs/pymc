@@ -802,6 +802,24 @@ class TestMatchesScipy(SeededTest):
             lambda value, p, n: sp.nbinom.logpmf(value, n, p),
         )
 
+    def test_negative_binomial_init_fail(self):
+        with Model():
+            with pytest.raises(ValueError) as err:
+                x = NegativeBinomial("x", mu=5)
+            err.match("Incompatible parametrization. Must specify either alpha or n.")
+
+            with pytest.raises(ValueError) as err:
+                x = NegativeBinomial("x", n=2, alpha=2)
+            err.match("Incompatible parametrization Can't specify both alpha and n.")
+
+            with pytest.raises(ValueError) as err:
+                x = NegativeBinomial("x", n=2)
+            err.match("Incompatible parametrization. Must specify either mu or p.")
+
+            with pytest.raises(ValueError) as err:
+                x = NegativeBinomial("x", n=2, mu=2, p=.5)
+            err.match("Incompatible parametrization. Can't specify both mu and p.")
+
     def test_laplace(self):
         self.pymc3_matches_scipy(
             Laplace,
