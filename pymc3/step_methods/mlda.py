@@ -27,7 +27,7 @@ from ..model import Model
 import pymc3 as pm
 from pymc3.theanof import floatX
 
-__all__ = ["MetropolisMLDA", "DEMetropolisZMLDA", "RecursiveDAProposal", "MLDA", "extract_Q_values"]
+__all__ = ["MetropolisMLDA", "DEMetropolisZMLDA", "RecursiveDAProposal", "MLDA", "extract_Q_estimate"]
 
 
 class MetropolisMLDA(Metropolis):
@@ -960,7 +960,7 @@ def delta_logp_inverse(logp, vars, shared):
     return f
 
 
-def extract_Q_values(trace, levels):
+def extract_Q_estimate(trace, levels):
     """
     Returns expectation and standard error of quantity of interest,
     given a trace and the number of levels in the multilevel model.
