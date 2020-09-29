@@ -715,7 +715,7 @@ class ValueGradFunction:
 
         if array.shape != (self.size,):
             raise ValueError(
-                "Invalid shape for array. Must be %s but is %s." % ((self.size,), array.shape)
+                "Invalid shape for array. Must be {} but is {}.".format((self.size,), array.shape)
             )
 
         if grad_out is None:
@@ -748,7 +748,7 @@ class ValueGradFunction:
             raise ValueError(f"Array should have shape ({self.size},) but has {array.shape}")
         if array.dtype != self.dtype:
             raise ValueError(
-                "Array has invalid dtype. Should be %s but is %s" % (self._dtype, self.dtype)
+                f"Array has invalid dtype. Should be {self._dtype} but is {self.dtype}"
             )
         point = {}
         for varmap in self._ordering.vmap:
