@@ -134,7 +134,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
             support = False
 
     if np.any(support):
-        msg = "The variable specified for {} has negative support for {}, ".format(label, distname)
+        msg = f"The variable specified for {label} has negative support for {distname}, "
         msg += "likely making it unsuitable for this parameter."
         warnings.warn(msg)
 
