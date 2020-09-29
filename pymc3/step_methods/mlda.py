@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import arviz as az
 import numpy as np
 import warnings
 import logging
@@ -25,8 +26,8 @@ from .metropolis import Proposal, Metropolis, DEMetropolisZ, delta_logp, tune
 from ..model import Model
 import pymc3 as pm
 from pymc3.theanof import floatX
-
-__all__ = ["MetropolisMLDA", "DEMetropolisZMLDA", "RecursiveDAProposal", "MLDA"]
+import ipdb
+__all__ = ["MetropolisMLDA", "DEMetropolisZMLDA", "RecursiveDAProposal", "MLDA", "extract_Q_values"]
 
 
 class MetropolisMLDA(Metropolis):
@@ -51,7 +52,6 @@ class MetropolisMLDA(Metropolis):
             self.sub_counter = 0
             self.Q_last = np.nan
             self.Q_reg = [np.nan] * self.mlda_subsampling_rate_above
-            self.acceptance_reg = [None] * self.mlda_subsampling_rate_above
 
             # extract some necessary variables
             model = pm.modelcontext(kwargs.get("model", None))
@@ -111,7 +111,6 @@ class MetropolisMLDA(Metropolis):
             if self.sub_counter == self.mlda_subsampling_rate_above:
                 self.sub_counter = 0
             self.Q_reg[self.sub_counter] = self.Q_last
-            self.acceptance_reg[self.sub_counter] = accepted
             self.sub_counter += 1
 
         self.steps_until_tune -= 1
@@ -151,7 +150,6 @@ class DEMetropolisZMLDA(DEMetropolisZ):
             self.sub_counter = 0
             self.Q_last = np.nan
             self.Q_reg = [np.nan] * self.mlda_subsampling_rate_above
-            self.acceptance_reg = [None] * self.mlda_subsampling_rate_above
 
             # extract some necessary variables
             model = pm.modelcontext(kwargs.get("model", None))
@@ -221,7 +219,6 @@ class DEMetropolisZMLDA(DEMetropolisZ):
             if self.sub_counter == self.mlda_subsampling_rate_above:
                 self.sub_counter = 0
             self.Q_reg[self.sub_counter] = self.Q_last
-            self.acceptance_reg[self.sub_counter] = accepted
             self.sub_counter += 1
 
         self.steps_until_tune -= 1
@@ -305,7 +302,7 @@ class MLDA(ArrayStepShared):
     base_lamb : float
         Lambda parameter of the base level DE proposal mechanism. Only applicable when
         base_sampler is 'DEMetropolisZ'. Defaults to 2.38 / sqrt(2 * ndim)
-    base_tune_drop_fraction: float
+    base_tune_drop_fraction : float
         Fraction of tuning steps that will be removed from the base level samplers
         history when the tuning ends. Only applicable when base_sampler is
         'DEMetropolisZ'. Defaults to 0.9 - keeping the last 10% of tuning steps
@@ -538,11 +535,13 @@ class MLDA(ArrayStepShared):
                     f"were {len(subsampling_rates)}, {len(self.coarse_models)}"
                 )
             self.subsampling_rates = subsampling_rates
-
+        self.subsampling_rate = self.subsampling_rates[-1]
+        self.subchain_selection = None
         if self.is_child:
             # this is the subsampling rate applied to the current level
             # it is stored in the level above and transferred here
-            self.subsampling_rate_above = kwargs.get("subsampling_rate_above", None)
+            self.subsampling_rate_above = kwargs.pop("subsampling_rate_above", None)
+
         self.num_levels = len(self.coarse_models) + 1
         self.base_sampler = base_sampler
 
@@ -617,7 +616,7 @@ class MLDA(ArrayStepShared):
 
                 # create kwargs
                 if self.variance_reduction:
-                    base_kwargs = {"mlda_subsampling_rate_above": self.subsampling_rates[-1],
+                    base_kwargs = {"mlda_subsampling_rate_above": self.subsampling_rate,
                                    "mlda_variance_reduction": True}
                 else:
                     base_kwargs = {}
@@ -659,7 +658,7 @@ class MLDA(ArrayStepShared):
                 # create kwargs
                 if self.variance_reduction:
                     mlda_kwargs = {"is_child": True,
-                                   "subsampling_rate_above": self.subsampling_rates[-1]}
+                                   "subsampling_rate_above": self.subsampling_rate}
                 else:
                     mlda_kwargs = {"is_child": True}
                 if self.adaptive_error_model:
@@ -693,7 +692,7 @@ class MLDA(ArrayStepShared):
             self.next_step_method,
             self.next_model,
             self.tune,
-            self.subsampling_rates[-1]
+            self.subsampling_rate
         )
 
         # add 'base_lambda' to stats if 'DEMetropolisZ' is used
@@ -738,6 +737,11 @@ class MLDA(ArrayStepShared):
         # Convert current sample from numpy array ->
         # dict before feeding to proposal
         q0_dict = self.bij.rmap(q0)
+
+        # Set self.subchain_selection between 0 (inclusive) and self.subsampling_rate (exclusive)
+        # This defines which one of the samples of the subchain will be selected for proposal
+        self.subchain_selection = self.subsampling_rate - 1 #np.random.randint(0, self.subsampling_rate)
+        self.proposal_dist.subchain_selection = self.subchain_selection
 
         # Call the recursive DA proposal to get proposed sample
         # and convert dict -> numpy array
@@ -840,7 +844,7 @@ class MLDA(ArrayStepShared):
         if self.variance_reduction:
             # if this MLDA is not at the finest level, store Q_last in a
             # register Q_reg and increase sub_counter (until you reach
-            # the subsampling rate, at which point you make it zero)
+            # the subsampling rate, at which point you make it zero).
             # Q_reg will later be used by the level above to calculate differences
             if self.is_child:
                 if self.sub_counter == self.subsampling_rate_above:
@@ -860,7 +864,7 @@ class MLDA(ArrayStepShared):
             # level below. If sample is not accepted, just keep the latest
             # accepted Q_diff
             if accepted and not skipped_logp:
-                self.Q_diff_last = self.Q_last - self.next_step_method.Q_reg[self.subsampling_rates[-1] - 1]
+                self.Q_diff_last = self.Q_last - self.next_step_method.Q_reg[self.subchain_selection]
             # Add the last accepted Q_diff to the list
             self.Q_diff.append(self.Q_diff_last)
 
@@ -956,6 +960,39 @@ def delta_logp_inverse(logp, vars, shared):
     return f
 
 
+def extract_Q_values(trace, levels):
+    """
+    Returns expectation and standard error of quantity of interest,
+    given a trace and the number of levels in the multilevel model.
+    It makes use of the collapsing sum formula. Only applicable when
+    MLDA with variance reduction has been used for sampling.
+    """
+
+    Q_0_raw = trace.get_sampler_stats("Q_0")
+    # total number of base level samples from all iterations
+    total_base_level_samples = sum([it.shape[0] for it in Q_0_raw])
+    Q_0 = np.concatenate(Q_0_raw).reshape((1, total_base_level_samples))
+    ess_Q_0 = az.ess(np.array(Q_0, np.float64))
+    Q_0_var = Q_0.var() / ess_Q_0
+
+    Q_diff_means = []
+    Q_diff_vars = []
+    for l in range(1, levels):
+        Q_diff_raw = trace.get_sampler_stats(f"Q_{l}_{l-1}")
+        # total number of samples from all iterations
+        total_level_samples = sum([it.shape[0] for it in Q_diff_raw])
+        Q_diff = np.concatenate(Q_diff_raw).reshape((1, total_level_samples))
+        ess_diff = az.ess(np.array(Q_diff, np.float64))
+
+        Q_diff_means.append(Q_diff.mean())
+        Q_diff_vars.append(Q_diff.var() / ess_diff)
+
+    Q_mean = Q_0.mean() + sum(Q_diff_means)
+    Q_se = np.sqrt(Q_0_var + sum(Q_diff_vars))
+
+    return Q_mean, Q_se
+
+
 def subsample(
     draws=1,
     step=None,
@@ -1026,6 +1063,7 @@ class RecursiveDAProposal(Proposal):
         self.next_model = next_model
         self.tune = tune
         self.subsampling_rate = subsampling_rate
+        self.subchain_selection = None
         self.tuning_end_trigger = True
         self.trace = None
 
@@ -1068,4 +1106,4 @@ class RecursiveDAProposal(Proposal):
         # set logging back to normal
         _log.setLevel(logging.NOTSET)
 
-        return self.trace.point(-1)
+        return self.trace.point(- self.subsampling_rate + self.subchain_selection)
