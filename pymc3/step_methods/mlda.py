@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import arviz as az
 import numpy as np
 import warnings
 import logging
@@ -26,8 +25,8 @@ from .metropolis import Proposal, Metropolis, DEMetropolisZ, delta_logp, tune
 from ..model import Model
 import pymc3 as pm
 from pymc3.theanof import floatX
-import ipdb
-__all__ = ["MetropolisMLDA", "DEMetropolisZMLDA", "RecursiveDAProposal", "MLDA", "extract_Q_values"]
+
+__all__ = ["MetropolisMLDA", "DEMetropolisZMLDA", "RecursiveDAProposal", "MLDA"]
 
 
 class MetropolisMLDA(Metropolis):
@@ -740,7 +739,7 @@ class MLDA(ArrayStepShared):
 
         # Set self.subchain_selection between 0 (inclusive) and self.subsampling_rate (exclusive)
         # This defines which one of the samples of the subchain will be selected for proposal
-        self.subchain_selection = self.subsampling_rate - 1 #np.random.randint(0, self.subsampling_rate)
+        self.subchain_selection = np.random.randint(0, self.subsampling_rate)
         self.proposal_dist.subchain_selection = self.subchain_selection
 
         # Call the recursive DA proposal to get proposed sample
@@ -960,39 +959,6 @@ def delta_logp_inverse(logp, vars, shared):
     return f
 
 
-def extract_Q_values(trace, levels):
-    """
-    Returns expectation and standard error of quantity of interest,
-    given a trace and the number of levels in the multilevel model.
-    It makes use of the collapsing sum formula. Only applicable when
-    MLDA with variance reduction has been used for sampling.
-    """
-
-    Q_0_raw = trace.get_sampler_stats("Q_0")
-    # total number of base level samples from all iterations
-    total_base_level_samples = sum([it.shape[0] for it in Q_0_raw])
-    Q_0 = np.concatenate(Q_0_raw).reshape((1, total_base_level_samples))
-    ess_Q_0 = az.ess(np.array(Q_0, np.float64))
-    Q_0_var = Q_0.var() / ess_Q_0
-
-    Q_diff_means = []
-    Q_diff_vars = []
-    for l in range(1, levels):
-        Q_diff_raw = trace.get_sampler_stats(f"Q_{l}_{l-1}")
-        # total number of samples from all iterations
-        total_level_samples = sum([it.shape[0] for it in Q_diff_raw])
-        Q_diff = np.concatenate(Q_diff_raw).reshape((1, total_level_samples))
-        ess_diff = az.ess(np.array(Q_diff, np.float64))
-
-        Q_diff_means.append(Q_diff.mean())
-        Q_diff_vars.append(Q_diff.var() / ess_diff)
-
-    Q_mean = Q_0.mean() + sum(Q_diff_means)
-    Q_se = np.sqrt(Q_0_var + sum(Q_diff_vars))
-
-    return Q_mean, Q_se
-
-
 def subsample(
     draws=1,
     step=None,
@@ -1106,4 +1072,7 @@ class RecursiveDAProposal(Proposal):
         # set logging back to normal
         _log.setLevel(logging.NOTSET)
 
+        # return sample with index self.subchain_selection from the generated
+        # sequence of self.subsampling_rate samples - the index is randomly
+        # generated within MLDA's astep()
         return self.trace.point(- self.subsampling_rate + self.subchain_selection)

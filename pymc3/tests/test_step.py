@@ -1565,7 +1565,7 @@ class TestMLDA:
         size = 100
         true_intercept = 1
         true_slope = 2
-        sigma = 1
+        sigma = 0.2
         x = np.linspace(0, 1, size, dtype=p)
         # y = a + b*x
         true_regression_line = true_intercept + true_slope * x
@@ -1706,22 +1706,12 @@ class TestMLDA:
                     ess_Q_2_1 = az.ess(np.array(Q_2_1, np.float64))
                     ess_Q2 = az.ess(np.array(Q_2, np.float64))
 
-                    m, s = extract_Q_values(trace, 3)
-                    close_to(m, Q_mean_vr, bound=1e-7)
-                    close_to(s, np.sqrt(Q_0.var() / ess_Q0 + Q_1_0.var() / ess_Q_1_0 + Q_2_1.var() / ess_Q_2_1),
-                             bound=1e-7)
-
-                    #import ipdb
-                    #ipdb.set_trace()
                     # check that the standard and VR estimates are close
                     assert isclose(Q_mean_standard, Q_mean_vr, rel_tol=1e-1)
 
                     if isinstance(f, Likelihood1):
                         assert Q_1_0.mean(axis=1) == 0.0
                         assert Q_2_1.mean(axis=1) == 0.0
-
-                    #import ipdb
-                    #ipdb.set_trace()
 
                     # check that the variance of VR is smaller
                     assert Q_2.var() / ess_Q2 > Q_0.var() / ess_Q0 + \
