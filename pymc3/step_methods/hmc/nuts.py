@@ -210,7 +210,7 @@ class NUTS(BaseHMC):
                 "The chain reached the maximum tree depth. Increase "
                 "max_treedepth, increase target_accept or reparameterize."
             )
-            warn = SamplerWarning(WarningType.TREEDEPTH, msg, 'warn')
+            warn = SamplerWarning(WarningType.TREEDEPTH, msg, "warn")
             warnings.append(warn)
         return warnings
 
@@ -249,9 +249,7 @@ class _Tree:
         self.start_energy = np.array(start.energy)
 
         self.left = self.right = start
-        self.proposal = Proposal(
-            start.q, start.q_grad, start.energy, 1.0, start.model_logp
-        )
+        self.proposal = Proposal(start.q, start.q_grad, start.energy, 1.0, start.model_logp)
         self.depth = 0
         self.log_size = 0
         self.log_weighted_accept_sum = -np.inf
@@ -313,13 +311,9 @@ class _Tree:
             p_sum = self.p_sum
             turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
             p_sum1 = leftmost_p_sum + rightmost_begin.p
-            turning1 = (p_sum1.dot(leftmost_begin.v) <= 0) or (
-                p_sum1.dot(rightmost_begin.v) <= 0
-            )
+            turning1 = (p_sum1.dot(leftmost_begin.v) <= 0) or (p_sum1.dot(rightmost_begin.v) <= 0)
             p_sum2 = leftmost_end.p + rightmost_p_sum
-            turning2 = (p_sum2.dot(leftmost_end.v) <= 0) or (
-                p_sum2.dot(rightmost_end.v) <= 0
-            )
+            turning2 = (p_sum2.dot(leftmost_end.v) <= 0) or (p_sum2.dot(rightmost_end.v) <= 0)
             turning = turning | turning1 | turning2
 
         return diverging, turning
@@ -354,14 +348,10 @@ class _Tree:
                     log_p_accept_weighted,
                     right.model_logp,
                 )
-                tree = Subtree(
-                    right, right, right.p, proposal, log_size, log_p_accept_weighted, 1
-                )
+                tree = Subtree(right, right, right.p, proposal, log_size, log_p_accept_weighted, 1)
                 return tree, None, False
             else:
-                error_msg = (
-                    "Energy change in leapfrog step is too large: %s." % energy_change
-                )
+                error_msg = "Energy change in leapfrog step is too large: %s." % energy_change
                 error = None
         tree = Subtree(None, None, None, None, -np.inf, -np.inf, 1)
         divergance_info = DivergenceInfo(error_msg, error, left, right)
@@ -385,13 +375,9 @@ class _Tree:
             # Additional U turn check only when depth > 1 to avoid redundant work.
             if depth - 1 > 0:
                 p_sum1 = tree1.p_sum + tree2.left.p
-                turning1 = (p_sum1.dot(tree1.left.v) <= 0) or (
-                    p_sum1.dot(tree2.left.v) <= 0
-                )
+                turning1 = (p_sum1.dot(tree1.left.v) <= 0) or (p_sum1.dot(tree2.left.v) <= 0)
                 p_sum2 = tree1.right.p + tree2.p_sum
-                turning2 = (p_sum2.dot(tree1.right.v) <= 0) or (
-                    p_sum2.dot(tree2.right.v) <= 0
-                )
+                turning2 = (p_sum2.dot(tree1.right.v) <= 0) or (p_sum2.dot(tree2.right.v) <= 0)
                 turning = turning | turning1 | turning2
 
             log_size = np.logaddexp(tree1.log_size, tree2.log_size)
@@ -410,9 +396,7 @@ class _Tree:
 
         n_proposals = tree1.n_proposals + tree2.n_proposals
 
-        tree = Subtree(
-            left, right, p_sum, proposal, log_size, log_weighted_accept_sum, n_proposals
-        )
+        tree = Subtree(left, right, p_sum, proposal, log_size, log_weighted_accept_sum, n_proposals)
         return tree, diverging, turning
 
     def stats(self):
@@ -421,9 +405,7 @@ class _Tree:
             # Remove contribution from initial state which is always a perfect
             # accept
             log_sum_weight = logdiffexp_numpy(self.log_size, 0.0)
-            self.mean_tree_accept = np.exp(
-                self.log_weighted_accept_sum - log_sum_weight
-            )
+            self.mean_tree_accept = np.exp(self.log_weighted_accept_sum - log_sum_weight)
         return {
             "depth": self.depth,
             "mean_tree_accept": self.mean_tree_accept,

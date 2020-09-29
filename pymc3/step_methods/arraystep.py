@@ -21,8 +21,7 @@ import numpy as np
 from numpy.random import uniform
 from enum import IntEnum, unique
 
-__all__ = [
-    'ArrayStep', 'ArrayStepShared', 'metrop_select', 'Competence']
+__all__ = ["ArrayStep", "ArrayStepShared", "metrop_select", "Competence"]
 
 
 @unique
@@ -34,6 +33,7 @@ class Competence(IntEnum):
     2: PREFERRED
     3: IDEAL
     """
+
     INCOMPATIBLE = 0
     COMPATIBLE = 1
     PREFERRED = 2
@@ -45,21 +45,21 @@ class BlockedStep:
     generates_stats = False
 
     def __new__(cls, *args, **kwargs):
-        blocked = kwargs.get('blocked')
+        blocked = kwargs.get("blocked")
         if blocked is None:
             # Try to look up default value from class
-            blocked = getattr(cls, 'default_blocked', True)
-            kwargs['blocked'] = blocked
+            blocked = getattr(cls, "default_blocked", True)
+            kwargs["blocked"] = blocked
 
-        model = modelcontext(kwargs.get('model'))
-        kwargs.update({'model':model})
+        model = modelcontext(kwargs.get("model"))
+        kwargs.update({"model": model})
 
         # vars can either be first arg or a kwarg
-        if 'vars' not in kwargs and len(args) >= 1:
+        if "vars" not in kwargs and len(args) >= 1:
             vars = args[0]
             args = args[1:]
-        elif 'vars' in kwargs:
-            vars = kwargs.pop('vars')
+        elif "vars" in kwargs:
+            vars = kwargs.pop("vars")
         else:  # Assume all model variables
             vars = model.vars
 
@@ -67,7 +67,7 @@ class BlockedStep:
         vars = inputvars(vars)
 
         if len(vars) == 0:
-            raise ValueError('No free random variables to sample.')
+            raise ValueError("No free random variables to sample.")
 
         if not blocked and len(vars) > 1:
             # In this case we create a separate sampler for each var
@@ -79,14 +79,14 @@ class BlockedStep:
                 # call __init__
                 step.__init__([var], *args, **kwargs)
                 # Hack for creating the class correctly when unpickling.
-                step.__newargs = ([var], ) + args, kwargs
+                step.__newargs = ([var],) + args, kwargs
                 steps.append(step)
 
             return CompoundStep(steps)
         else:
             step = super().__new__(cls)
             # Hack for creating the class correctly when unpickling.
-            step.__newargs = (vars, ) + args, kwargs
+            step.__newargs = (vars,) + args, kwargs
             return step
 
     # Hack for creating the class correctly when unpickling.
@@ -119,7 +119,7 @@ class BlockedStep:
         return shape_dtypes
 
     def stop_tuning(self):
-        if hasattr(self, 'tune'):
+        if hasattr(self, "tune"):
             self.tune = False
 
 
@@ -228,22 +228,24 @@ class PopulationArrayStepShared(ArrayStepShared):
         self.other_chains = [c for c in range(len(population)) if c != chain_index]
         if not len(self.other_chains) > 1:
             raise ValueError(
-                'Population is just {} + {}. ' \
-                'This is too small and the error should have been raised earlier.'.format(self.this_chain, self.other_chains)
+                "Population is just {} + {}. "
+                "This is too small and the error should have been raised earlier.".format(
+                    self.this_chain, self.other_chains
+                )
             )
         return
 
 
 class GradientSharedStep(BlockedStep):
-    def __init__(self, vars, model=None, blocked=True,
-                 dtype=None, logp_dlogp_func=None, **theano_kwargs):
+    def __init__(
+        self, vars, model=None, blocked=True, dtype=None, logp_dlogp_func=None, **theano_kwargs
+    ):
         model = modelcontext(model)
         self.vars = vars
         self.blocked = blocked
 
         if logp_dlogp_func is None:
-            func = model.logp_dlogp_function(
-                vars, dtype=dtype, **theano_kwargs)
+            func = model.logp_dlogp_function(vars, dtype=dtype, **theano_kwargs)
         else:
             func = logp_dlogp_func
 
@@ -255,9 +257,8 @@ class GradientSharedStep(BlockedStep):
         except ValueError:
             if logp_dlogp_func is not None:
                 raise
-            theano_kwargs.update(mode='FAST_COMPILE')
-            func = model.logp_dlogp_function(
-                vars, dtype=dtype, **theano_kwargs)
+            theano_kwargs.update(mode="FAST_COMPILE")
+            func = model.logp_dlogp_function(vars, dtype=dtype, **theano_kwargs)
 
         self._logp_dlogp_func = func
 
