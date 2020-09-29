@@ -58,7 +58,6 @@ from pymc3.step_methods import (
 from pymc3.theanof import floatX
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal, MvNormal
 from pymc3.data import Data
-from pymc3.step_methods.mlda import extract_Q_values
 
 from numpy.testing import assert_array_almost_equal
 import arviz as az
