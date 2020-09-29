@@ -795,6 +795,12 @@ class TestMatchesScipy(SeededTest):
             return sp.nbinom.logpmf(value, alpha, 1 - mu / (mu + alpha))
 
         self.pymc3_matches_scipy(NegativeBinomial, Nat, {"mu": Rplus, "alpha": Rplus}, test_fun)
+        self.pymc3_matches_scipy(
+            NegativeBinomial,
+            Nat,
+            {"p": Unit, "n": Rplus},
+            lambda value, p, n: sp.nbinom.logpmf(value, n, p),
+        )
 
     def test_laplace(self):
         self.pymc3_matches_scipy(
