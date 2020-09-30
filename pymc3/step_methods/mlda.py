@@ -255,9 +255,12 @@ class MLDA(ArrayStepShared):
     posteriors that ideally should be approximations of the fine (top-level)
     posterior and require less computational effort to evaluate their likelihood.
 
-    Each chain runs for a fixed number of iterations (subsampling_rate) and then
-    the last sample generated is used as a proposal for the chain in the level
-    above. The bottom-level chain is a MetropolisMLDA or DEMetropolisZMLDA sampler.
+    Each chain runs for a random number of iterations (up to subsampling_rate) and
+    then the last sample generated is used as a proposal for the chain in the level
+    above (excluding when variance reduction is used, where a slightly different
+    setup is used). The bottom-level chain is a MetropolisMLDA or DEMetropolisZMLDA
+    sampler.
+
     The algorithm achieves higher acceptance rate and effective sample sizes
     than other samplers if the coarse models are sufficiently good approximations
     of the fine one.
@@ -316,9 +319,10 @@ class MLDA(ArrayStepShared):
     subsampling_rates : integer or list of integers
         One interger for all levels or a list with one number for each level
         (excluding the finest level).
-        This is the number of samples generated in level l-1 to propose a sample
-        for level l for all l levels (excluding the finest level). The length of
-        the list needs to be the same as the length of coarse_models.
+        This is the maximum number of samples generated in level l-1 to
+        propose a sample for level l - applies to all levels excluding the
+        finest level). The length of the list needs to be the same as the
+        length of coarse_models.
     base_blocked : bool
         Flag to choose whether base sampler (level=0) is a
         Compound MetropolisMLDA step (base_blocked=False)
@@ -338,6 +342,10 @@ class MLDA(ArrayStepShared):
             the other calculations), calculates the quantity of interest
             and stores it to the variable `Q` of the PyMC3 model,
             using the `set_value()` function.
+        When variance_reduction=True, all subchains run for a fixed number
+        of iterations (equal to subsampling_rates) instead of running for a
+        random number of iterations and a random sample is selected from the
+        generated sequence.
     store_Q_fine: bool
         Store the values of the quantity of interest from the fine chain.
     adaptive_error_model : bool
@@ -536,8 +544,9 @@ class MLDA(ArrayStepShared):
                 )
             self.subsampling_rates = subsampling_rates
         self.subsampling_rate = self.subsampling_rates[-1]
+        self.subchain_length = None
         self.subchain_selection = None
-        if self.is_child:
+        if self.is_child and self.variance_reduction:
             # this is the subsampling rate applied to the current level
             # it is stored in the level above and transferred here
             self.subsampling_rate_above = kwargs.pop("subsampling_rate_above", None)
@@ -738,9 +747,22 @@ class MLDA(ArrayStepShared):
         # dict before feeding to proposal
         q0_dict = self.bij.rmap(q0)
 
-        # Set self.subchain_selection between 0 (inclusive) and self.subsampling_rate (exclusive)
-        # This defines which one of the samples of the subchain will be selected for proposal
-        self.subchain_selection = np.random.randint(0, self.subsampling_rate)
+        # Set subchain_length (length of the coarse chain) and
+        # subchain_selection (which sample from the coarse chain
+        # is passed as a proposal to the fine chain). If variance
+        # reduction is used, the subchain runs for subsampling_rate
+        # iterations and a random sample is selected for proposal.
+        # If variance reduction is not used, the subchain runs for
+        # a number of iterations between 1 (inclusive) and
+        # subsampling_rate (inclusive) and the last sample is
+        # selected as proposal.
+        if self.variance_reduction:
+            self.subchain_length = self.subsampling_rate
+            self.subchain_selection = np.random.randint(0, self.subsampling_rate)
+        else:
+            self.subchain_length = np.random.randint(1, self.subsampling_rate + 1)
+            self.subchain_selection = self.subchain_length - 1
+        self.proposal_dist.subchain_length = self.subchain_length
         self.proposal_dist.subchain_selection = self.subchain_selection
 
         # Call the recursive DA proposal to get proposed sample
@@ -791,8 +813,8 @@ class MLDA(ArrayStepShared):
             }
             if self.base_sampler == "DEMetropolisZ":
                 self.base_lambda_stats = {
-                "base_lambda": self.next_step_method.lamb
-            }
+                    "base_lambda": self.next_step_method.lamb
+                }
         else:
             # next method is MLDA - propagate dict from lower levels
             self.base_scaling_stats = self.next_step_method.base_scaling_stats
@@ -860,9 +882,9 @@ class MLDA(ArrayStepShared):
                 self.Q_base_full.extend(self.next_step_method.Q_reg)
 
             # if the sample is accepted, update Q_diff_last with the latest
-            # difference between the Q of this level and the last Q of the
-            # level below. If sample is not accepted, just keep the latest
-            # accepted Q_diff
+            # difference between the last Q of this level and the Q of the
+            # proposed (selected) sample from the level below.
+            # If sample is not accepted, just keep the latest accepted Q_diff
             if accepted and not skipped_logp:
                 self.Q_diff_last = self.Q_last - self.next_step_method.Q_reg[self.subchain_selection]
             # Add the last accepted Q_diff to the list
@@ -1049,7 +1071,8 @@ class RecursiveDAProposal(Proposal):
     Recursive Delayed Acceptance proposal to be used with MLDA step sampler.
     Recursively calls an MLDA sampler if level > 0 and calls MetropolisMLDA or
     DEMetropolisZMLDA sampler if level = 0. The sampler generates
-    subsampling_rate samples and the last one is used as a proposal.
+    self.subchain_length samples and returns the sample with index
+    self.subchain_selection to be used as a proposal.
     Results in a hierarchy of chains each of which is used to propose
     samples to the chain above.
     """
@@ -1063,6 +1086,7 @@ class RecursiveDAProposal(Proposal):
         self.next_model = next_model
         self.tune = tune
         self.subsampling_rate = subsampling_rate
+        self.subchain_length = None
         self.subchain_selection = None
         self.tuning_end_trigger = True
         self.trace = None
@@ -1082,19 +1106,18 @@ class RecursiveDAProposal(Proposal):
             # to False (by MLDA's astep) when the burn-in
             # iterations of the highest-level MLDA sampler run out.
             # The change propagates to all levels.
-
             if self.tune:
                 # Subsample in tuning mode
                 self.trace = subsample(draws=0, step=self.next_step_method,
                                        start=q0_dict, trace=self.trace,
-                                       tune=self.subsampling_rate)
+                                       tune=self.subchain_length)
             else:
                 # Subsample in normal mode without tuning
                 # If DEMetropolisZMLDA is the base sampler a flag is raised to
                 # make sure that history is edited after tuning ends
                 if self.tuning_end_trigger and isinstance(self.next_step_method, DEMetropolisZMLDA):
                     self.next_step_method.tuning_end_trigger = True
-                self.trace = subsample(draws=self.subsampling_rate,
+                self.trace = subsample(draws=self.subchain_length,
                                        step=self.next_step_method,
                                        start=q0_dict, trace=self.trace)
                 self.tuning_end_trigger = False
@@ -1107,6 +1130,6 @@ class RecursiveDAProposal(Proposal):
         _log.setLevel(logging.NOTSET)
 
         # return sample with index self.subchain_selection from the generated
-        # sequence of self.subsampling_rate samples - the index is randomly
-        # generated within MLDA's astep()
-        return self.trace.point(- self.subsampling_rate + self.subchain_selection)
+        # sequence of length self.subchain_selection - the length and index
+        # are both set within MLDA's astep() function
+        return self.trace.point(- self.subchain_length + self.subchain_selection)
