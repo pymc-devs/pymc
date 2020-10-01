@@ -612,19 +612,59 @@ class NegativeBinomial(Discrete):
     Mean      :math:`\mu`
     ========  ==========================
 
+    The negative binomial distribution can be parametrized either in terms of mu or p,
+    and either in terms of alpha or n. The link between the parametrizations is given by
+
+    .. math::
+
+        \mu &= \frac{n(1-p)}{p} \\
+        \alpha &= n
+
     Parameters
     ----------
     mu: float
         Poission distribution parameter (mu > 0).
     alpha: float
         Gamma distribution parameter (alpha > 0).
+    p: float
+        Alternative probability of success in each trial (0 < p < 1).
+    n: float
+        Alternative number of target success trials (n > 0)
     """
 
-    def __init__(self, mu, alpha, *args, **kwargs):
+    def __init__(self, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        mu, alpha = self.get_mu_alpha(mu, alpha, p, n)
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
         self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
         self.mode = intX(tt.floor(mu))
+
+    def get_mu_alpha(self, mu=None, alpha=None, p=None, n=None):
+        if alpha is None:
+            if n is not None:
+                alpha = n
+            else:
+                raise ValueError(
+                    "Incompatible parametrization. Must specify either alpha or n."
+                )
+        elif n is not None:
+            raise ValueError(
+                "Incompatible parametrization. Can't specify both alpha and n."
+            )
+
+        if mu is None:
+            if p is not None:
+                mu = alpha * (1 - p) / p
+            else:
+                raise ValueError(
+                    "Incompatible parametrization. Must specify either mu or p."
+                )
+        elif p is not None:
+            raise ValueError(
+                "Incompatible parametrization. Can't specify both mu and p."
+            )
+
+        return mu, alpha
 
     def random(self, point=None, size=None):
         r"""
