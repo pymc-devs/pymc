@@ -810,7 +810,7 @@ class TestMatchesScipy(SeededTest):
             (None, None, None, None, "Incompatible parametrization. Must specify either alpha or n."),
             (5, None, 2, 2, "Incompatible parametrization. Can't specify both alpha and n."),
             (None, .5, 2, 2, "Incompatible parametrization. Can't specify both alpha and n."),
-            (5, .5, 2, 2, "Incompatible parametrization. Can't specify both alpha and n."),
+            (None, None, 2, 2, "Incompatible parametrization. Can't specify both alpha and n."),
             (None, None, 2, None, "Incompatible parametrization. Must specify either mu or p."),
             (None, None, None, 2, "Incompatible parametrization. Must specify either mu or p."),
             (5, .5, 2, None, "Incompatible parametrization. Can't specify both mu and p."),
