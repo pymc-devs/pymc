@@ -635,7 +635,7 @@ class NegativeBinomial(Discrete):
                 )
         elif n is not None:
             raise ValueError(
-                "Incompatible parametrization Can't specify both alpha and n."
+                "Incompatible parametrization. Can't specify both alpha and n."
             )
 
         if mu is None:
