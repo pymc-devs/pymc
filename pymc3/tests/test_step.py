@@ -1548,9 +1548,8 @@ class TestMLDA:
         """
         Test if the right stats are outputed when variance reduction is used in MLDA,
         if the output estimates are close (VR estimate vs. standard estimate from
-        the first chain) and if the variance of VR is lower. Also tests the extract_Q_values
-        utility function. Uses a linear regression model with multiple levels where
-        approximate levels have fewer data.
+        the first chain) and if the variance of VR is lower. Uses a linear regression
+        model with multiple levels where approximate levels have fewer data.
         """
         # arithmetic precision
         if theano.config.floatX == "float32":

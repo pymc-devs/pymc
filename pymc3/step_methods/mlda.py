@@ -985,9 +985,9 @@ def extract_Q_estimate(trace, levels):
 
     Q_0_raw = trace.get_sampler_stats("Q_0")
     # total number of base level samples from all iterations
-    total_base_level_samples = sum([it.shape[0] for it in Q_0_raw.copy()])
-    Q_0 = np.concatenate(Q_0_raw.copy()).reshape((1, total_base_level_samples))
-    ess_Q_0 = az.ess(np.array(Q_0.copy(), np.float64))
+    total_base_level_samples = sum([it.shape[0] for it in Q_0_raw])
+    Q_0 = np.concatenate(Q_0_raw).reshape((1, total_base_level_samples))
+    ess_Q_0 = az.ess(np.array(Q_0, np.float64))
     Q_0_var = Q_0.var() / ess_Q_0
 
     Q_diff_means = []
@@ -995,9 +995,9 @@ def extract_Q_estimate(trace, levels):
     for l in range(1, levels):
         Q_diff_raw = trace.get_sampler_stats(f"Q_{l}_{l-1}")
         # total number of samples from all iterations
-        total_level_samples = sum([it.shape[0] for it in Q_diff_raw.copy()])
-        Q_diff = np.concatenate(Q_diff_raw.copy()).reshape((1, total_level_samples))
-        ess_diff = az.ess(np.array(Q_diff.copy(), np.float64))
+        total_level_samples = sum([it.shape[0] for it in Q_diff_raw])
+        Q_diff = np.concatenate(Q_diff_raw).reshape((1, total_level_samples))
+        ess_diff = az.ess(np.array(Q_diff, np.float64))
 
         Q_diff_means.append(Q_diff.mean())
         Q_diff_vars.append(Q_diff.var() / ess_diff)
@@ -1064,7 +1064,7 @@ class RecursiveDAProposal(Proposal):
     Recursive Delayed Acceptance proposal to be used with MLDA step sampler.
     Recursively calls an MLDA sampler if level > 0 and calls MetropolisMLDA or
     DEMetropolisZMLDA sampler if level = 0. The sampler generates
-    self.subchain_length samples and returns the sample with index
+    self.subsampling_rate samples and returns the sample with index
     self.subchain_selection to be used as a proposal.
     Results in a hierarchy of chains each of which is used to propose
     samples to the chain above.
