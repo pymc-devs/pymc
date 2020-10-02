@@ -42,7 +42,7 @@ def sample_smc(
     cores=None,
 ):
     r"""
-    Sequential Monte Carlo based sampling
+    Sequential Monte Carlo based sampling.
 
     Parameters
     ----------
@@ -134,7 +134,6 @@ def sample_smc(
         816-832. `link <http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399
         %282007%29133:7%28816%29>`__
     """
-
     _log = logging.getLogger("pymc3")
     _log.info("Initializing SMC sampler...")
 
@@ -237,7 +236,7 @@ def sample_smc_int(
     chain,
     _log,
 ):
-
+    """Run one SMC instance."""
     smc = SMC(
         draws=draws,
         kernel=kernel,

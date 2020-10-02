@@ -23,6 +23,32 @@ _log = logging.getLogger("pymc3")
 
 
 class Simulator(NoDistribution):
+    r"""
+    Define a simulator, from a Python function, to be used in ABC methods.
+
+    function: function
+        Python function defined by the user.
+    params: list
+        Parameters passed to function.
+    distance: str or callable
+        Distance functions. Available options are "gaussian" (default), "laplacian",
+        "kullback_leibler" or a user defined function that takes epsilon (a scalar), and the
+        summary statistics of observed_data, and simulated_data as input.
+        ``gaussian`` :math: `-0.5 \left(\left(\frac{xo - xs}{\epsilon}\right)^2\right)`
+        ``laplace`` :math: `{\left(\frac{|xo - xs|}{\epsilon}\right)}`
+        ``kullback_leibler`` `:math: d \sum(-\log(\frac{\nu_d} {\rho_d}) / \epsilon) + log_r`
+        gaussian + ``sum_stat="sort"`` is equivalent to the 1D 2-wasserstein distance
+        laplace + ``sum_stat="sort"`` is equivalent to the the 1D 1-wasserstein distance
+    sum_stat: str or callable
+        Summary statistics. Available options are ``indentity``, ``sort``, ``mean``, ``median``.
+        If a callable is based it should return a number or a 1d numpy array.
+    epsilon: float or array
+        Scaling parameter for the distance functions. It should be a float or an array of the
+        same size of the output of ``sum_stat``.
+    *args and **kwargs:
+        Arguments and keywords arguments that the function takes.
+    """
+
     def __init__(
         self,
         function,
@@ -33,32 +59,6 @@ class Simulator(NoDistribution):
         epsilon=1,
         **kwargs,
     ):
-        """
-        This class stores a function defined by the user in Python language.
-
-        function: function
-            Python function defined by the user.
-        params: list
-            Parameters passed to function.
-        distance: str or callable
-            Distance functions. Available options are "gaussian" (default), "laplacian",
-            "kullback_leibler" or a user defined function that takes epsilon (a scalar), and the
-            summary statistics of observed_data, and simulated_data as input.
-            ``gaussian`` :math: `-0.5 \left(\left(\frac{xo - xs}{\epsilon}\right)^2\right)`
-            ``laplace`` :math: `{\left(\frac{|xo - xs|}{\epsilon}\right)}`
-            ``kullback_leibler`` :math: d \sum(-\log(\frac{\nu_d} {\rho_d}) / \epsilon) + log_r`
-            gaussian + ``sum_stat="sort"`` is equivalent to the 1D 2-wasserstein distance
-            laplace + ``sum_stat="sort"`` is equivalent to the the 1D 1-wasserstein distance
-        sum_stat: str or callable
-            Summary statistics. Available options are ``indentity``, ``sort``, ``mean``, ``median``.
-            If a callable is based it should return a number or a 1d numpy array.
-        epsilon: float or array
-            Scaling parameter for the distance functions. It should be a float or an array of the
-            same size of the output of ``sum_stat``.
-        *args and **kwargs:
-            Arguments and keywords arguments that the function takes.
-        """
-
         self.function = function
         self.params = params
         observed = self.data
@@ -71,8 +71,8 @@ class Simulator(NoDistribution):
         elif distance == "kullback_leibler":
             self.distance = KullbackLiebler(observed)
             if sum_stat != "identity":
-                 _log.info(f"Automatically setting sum_stat to identity as expected by {distance}")
-                 sum_stat = "identity"
+                _log.info(f"Automatically setting sum_stat to identity as expected by {distance}")
+                sum_stat = "identity"
         elif hasattr(distance, "__call__"):
             self.distance = distance
         else:
@@ -95,7 +95,8 @@ class Simulator(NoDistribution):
 
     def random(self, point=None, size=None):
         """
-        Draw random values from Simulator
+        Draw random values from Simulator.
+
         Parameters
         ----------
         point: dict, optional
@@ -104,6 +105,7 @@ class Simulator(NoDistribution):
         size: int, optional
             Desired size of random sample (returns one sample if not
             specified).
+
         Returns
         -------
         array
@@ -113,7 +115,6 @@ class Simulator(NoDistribution):
             return self.function(*params)
         else:
             return np.array([self.function(*params) for _ in range(size)])
-
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):
         if dist is None:
@@ -160,7 +161,6 @@ class KullbackLiebler:
         self.d_n = d / n
         self.log_r = np.log(n / (n - 1))
         self.obs_data = obs_data
-
 
     def __call__(self, epsilon, obs_data, sim_data):
         if sim_data.ndim == 1:
