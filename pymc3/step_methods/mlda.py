@@ -78,51 +78,19 @@ class MetropolisMLDA(Metropolis):
         return
 
     def astep(self, q0):
-        """Modified astep that is compatible with MLDA features"""
-        if not self.steps_until_tune and self.tune:
-            # Tune scaling parameter
-            self.scaling = tune(
-                self.scaling, self.accepted / float(self.tune_interval))
-            # Reset counter
-            self.steps_until_tune = self.tune_interval
-            self.accepted = 0
-
-        delta = self.proposal_dist() * self.scaling
-
-        if self.any_discrete:
-            if self.all_discrete:
-                delta = np.round(delta, 0).astype('int64')
-                q0 = q0.astype('int64')
-                q = (q0 + delta).astype('int64')
-            else:
-                delta[self.discrete] = np.round(
-                    delta[self.discrete], 0)
-                q = (q0 + delta)
-        else:
-            q = floatX(q0 + delta)
-
-        accept = self.delta_logp(q, q0)
-        q_new, accepted = metrop_select(accept, q, q0)
-        self.accepted += accepted
-
+        
+        q_new, stats = super().astep(q0)
+        
+        # Add variance reduction functionality.
         if self.mlda_variance_reduction:
-            if accepted:
+            if stats[0]['accepted']:
                 self.Q_last = self.model.Q.get_value()
             if self.sub_counter == self.mlda_subsampling_rate_above:
                 self.sub_counter = 0
             self.Q_reg[self.sub_counter] = self.Q_last
             self.sub_counter += 1
-
-        self.steps_until_tune -= 1
-
-        stats = {
-            'tune': self.tune,
-            'scaling': self.scaling,
-            'accept': np.exp(accept),
-            'accepted': accepted,
-        }
-
-        return q_new, [stats]
+        
+        return q_new, stats
 
 
 class DEMetropolisZMLDA(DEMetropolisZ):
@@ -176,62 +144,19 @@ class DEMetropolisZMLDA(DEMetropolisZ):
         return
 
     def astep(self, q0):
-        """Modified astep that is compatible with MLDA features"""
-
-        # same tuning scheme as DEMetropolis
-        if not self.steps_until_tune and self.tune:
-            if self.tune_target == 'scaling':
-                self.scaling = tune(self.scaling, self.accepted / float(self.tune_interval))
-            elif self.tune_target == 'lambda':
-                self.lamb = tune(self.lamb, self.accepted / float(self.tune_interval))
-            # Reset counter
-            self.steps_until_tune = self.tune_interval
-            self.accepted = 0
-
-        epsilon = self.proposal_dist() * self.scaling
-
-        it = len(self._history)
-        # use the DE-MCMC-Z proposal scheme as soon as the history has 2 entries
-        if it > 1:
-            # differential evolution proposal
-            # select two other chains
-            iz1 = np.random.randint(it)
-            iz2 = np.random.randint(it)
-            while iz2 == iz1:
-                iz2 = np.random.randint(it)
-
-            z1 = self._history[iz1]
-            z2 = self._history[iz2]
-            # propose a jump
-            q = floatX(q0 + self.lamb * (z1 - z2) + epsilon)
-        else:
-            # propose just with noise in the first 2 iterations
-            q = floatX(q0 + epsilon)
-
-        accept = self.delta_logp(q, q0)
-        q_new, accepted = metrop_select(accept, q, q0)
-        self.accepted += accepted
-        self._history.append(q_new)
-
+        
+        q_new, stats = super().astep(q0)
+        
+        # Add variance reduction functionality.
         if self.mlda_variance_reduction:
-            if accepted:
+            if stats[0]['accepted']:
                 self.Q_last = self.model.Q.get_value()
             if self.sub_counter == self.mlda_subsampling_rate_above:
                 self.sub_counter = 0
             self.Q_reg[self.sub_counter] = self.Q_last
             self.sub_counter += 1
-
-        self.steps_until_tune -= 1
-
-        stats = {
-            'tune': self.tune,
-            'scaling': self.scaling,
-            'lambda': self.lamb,
-            'accept': np.exp(accept),
-            'accepted': accepted
-        }
-
-        return q_new, [stats]
+        
+        return q_new, stats
 
     def stop_tuning(self):
         """At the end of the tuning phase, this method
