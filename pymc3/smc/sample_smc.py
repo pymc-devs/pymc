@@ -48,7 +48,7 @@ def sample_smc(
     ----------
     draws: int
         The number of samples to draw from the posterior (i.e. last stage). And also the number of
-        independent chains. Defaults to 1000.
+        independent chains. Defaults to 2000.
     kernel: str
         Kernel method for the SMC sampler. Available option are ``metropolis`` (default) and `ABC`.
         Use `ABC` for likelihood free inference togheter with a ``pm.Simulator``.
@@ -63,18 +63,19 @@ def sample_smc(
         Whether to compute the number of steps automatically or not. Defaults to True
     p_acc_rate: float
         Used to compute ``n_steps`` when ``tune_steps == True``. The higher the value of
-        ``p_acc_rate`` the higher the number of steps computed automatically. Defaults to 0.99.
+        ``p_acc_rate`` the higher the number of steps computed automatically. Defaults to 0.85.
         It should be between 0 and 1.
     threshold: float
         Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
         the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
         It should be between 0 and 1.
     save_sim_data : bool
-        Whether or not to save the simulated data. This parameter only work with the ABC kernel.
-        The stored data corresponds to the posterior predictive distribution.
+        Whether or not to save the simulated data. This parameter only works with the ABC kernel.
+        The stored data corresponds to a samples from the posterior predictive distribution.
     save_log_pseudolikelihood : bool
-        Whether or not to save the log pseudolikelihood values. This parameter only work with the
-        ABC kernel. The stored data can be used to compute LOO or WAIC values (this feature is experimental)
+        Whether or not to save the log pseudolikelihood values. This parameter only works with the
+        ABC kernel. The stored data can be used to compute LOO or WAIC values. Computing LOO/WAIC
+        values from log pseudolikelihood values is experimental.
     model: Model (optional if in ``with`` context)).
     random_seed: int
         random seed
