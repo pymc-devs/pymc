@@ -172,36 +172,18 @@ class TestSMCABC(SeededTest):
 
     def test_automatic_use_of_sort(self):
         with pm.Model() as model:
-            s_g = pm.Simulator(
-                "s_g",
+            s_k = pm.Simulator(
+                "s_k",
                 None,
                 params=None,
-                distance="gaussian_kernel",
-                sum_stat="mean",
+                distance="kullback_leibler",
+                sum_stat="sort",
                 observed=self.data,
             )
-            s_w = pm.Simulator(
-                "s_w",
-                None,
-                params=None,
-                distance="wasserstein",
-                sum_stat="identity",
-                observed=self.data,
-            )
-            s_e = pm.Simulator(
-                "s_e",
-                None,
-                params=None,
-                distance="energy",
-                sum_stat="identity",
-                observed=self.data,
-            )
-        assert s_g.distribution.sum_stat is np.mean
-        assert s_w.distribution.sum_stat is np.sort
-        assert s_e.distribution.sum_stat is np.sort
+        assert s_k.distribution.sum_stat is pm.distributions.simulator.identity
 
     def test_repr_latex(self):
-        expected = "$\\text{s} \\sim  \\text{Simulator}(\\text{normal_sim}(a, b), \\text{gaussian_kernel}, \\text{sort})$"
+        expected = "$\\text{s} \\sim  \\text{Simulator}(\\text{normal_sim}(a, b), \\text{gaussian}, \\text{sort})$"
         assert expected == self.s._repr_latex_()
         assert self.s._repr_latex_() == self.s.__latex__()
         assert self.SMABC_test.model._repr_latex_() == self.SMABC_test.model.__latex__()

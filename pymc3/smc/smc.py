@@ -37,6 +37,7 @@ class SMC:
         p_acc_rate=0.85,
         threshold=0.5,
         save_sim_data=False,
+        save_log_pseudolikelihood=True,
         model=None,
         random_seed=-1,
         chain=0,
@@ -50,6 +51,7 @@ class SMC:
         self.p_acc_rate = p_acc_rate
         self.threshold = threshold
         self.save_sim_data = save_sim_data
+        self.save_log_pseudolikelihood = save_log_pseudolikelihood
         self.model = model
         self.random_seed = random_seed
         self.chain = chain
@@ -67,6 +69,7 @@ class SMC:
         self.weights = np.ones(self.draws) / self.draws
         self.log_marginal_likelihood = 0
         self.sim_data = []
+        self.log_pseudolikelihood = []
 
     def initialize_population(self):
         """
@@ -121,6 +124,7 @@ class SMC:
                 sum_stat,
                 self.draws,
                 self.save_sim_data,
+                self.save_log_pseudolikelihood,
             )
         elif self.kernel == "metropolis":
             self.prior_logp_func = logp_forw([self.model.varlogpt], self.variables, shared)
@@ -138,6 +142,9 @@ class SMC:
 
         if self.kernel == "abc" and self.save_sim_data:
             self.sim_data = self.likelihood_logp_func.get_data()
+
+        if self.kernel == "abc" and self.save_log_pseudolikelihood:
+            self.log_pseudolikelihood = self.likelihood_logp_func.get_lpl()
 
     def update_weights_beta(self):
         """
@@ -235,8 +242,12 @@ class SMC:
             self.posterior_logp[accepted] = proposal_logp[accepted]
             self.prior_logp[accepted] = pl[accepted]
             self.likelihood_logp[accepted] = ll[accepted]
+
             if self.kernel == "abc" and self.save_sim_data:
                 self.sim_data[accepted] = self.likelihood_logp_func.get_data()[accepted]
+
+            if self.kernel == "abc" and self.save_log_pseudolikelihood:
+                self.log_pseudolikelihood[accepted] = self.likelihood_logp_func.get_lpl()[accepted]
 
         self.acc_rate = np.mean(ac_)
 
@@ -296,7 +307,8 @@ class PseudoLikelihood:
         distance,
         sum_stat,
         size,
-        save,
+        save_sim_data,
+        save_log_pseudolikelihood,
     ):
         """
         epsilon: float
@@ -319,8 +331,10 @@ class PseudoLikelihood:
         size : int
             Number of simulated datasets to save. When this number is exceeded the counter will be
             restored to zero and it will start saving again.
-        save : bool
+        save_sim_data : bool
             whether to save or not the simulated data.
+        save_log_pseudolikelihood : bool
+            whether to save or not the log pseudolikelihood values.
         """
         self.epsilon = epsilon
         self.function = function
@@ -334,12 +348,15 @@ class PseudoLikelihood:
         self.unobserved_RVs = [v.name for v in self.model.unobserved_RVs]
         self.get_unobserved_fn = self.model.fastfn(self.model.unobserved_RVs)
         self.size = size
-        self.save = save
-        self.lista = []
+        self.save_sim_data = save_sim_data
+        self.save_log_pseudolikelihood = save_log_pseudolikelihood
+        self.sim_data_l = []
+        self.lpl_l = []
 
         self.observations = self.sum_stat(observations)
 
     def posterior_to_function(self, posterior):
+        model = self.model
         var_info = self.var_info
 
         varvalues = []
@@ -356,16 +373,27 @@ class PseudoLikelihood:
         return samples
 
     def save_data(self, sim_data):
-        if len(self.lista) == self.size:
-            self.lista = []
-        self.lista.append(sim_data)
+        if len(self.sim_data_l) == self.size:
+            self.sim_data_l = []
+        self.sim_data_l.append(sim_data)
 
     def get_data(self):
-        return np.array(self.lista)
+        return np.array(self.sim_data_l)
+
+    def save_lpl(self, elemwise):
+        if len(self.lpl_l) == self.size:
+            self.lpl_l = []
+        self.lpl_l.append(elemwise)
+
+    def get_lpl(self):
+        return np.array(self.lpl_l)
 
     def __call__(self, posterior):
         func_parameters = self.posterior_to_function(posterior)
         sim_data = self.function(**func_parameters)
-        if self.save:
+        if self.save_sim_data:
             self.save_data(sim_data)
-        return self.distance(self.epsilon, self.observations, self.sum_stat(sim_data))
+        elemwise = self.distance(self.epsilon, self.observations, self.sum_stat(sim_data))
+        if self.save_log_pseudolikelihood:
+            self.save_lpl(elemwise)
+        return elemwise.sum()

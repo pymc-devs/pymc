@@ -24,10 +24,6 @@ from ..model import modelcontext
 from ..backends.base import MultiTrace
 from ..parallel_sampling import _cpu_count
 
-EXPERIMENTAL_WARNING = (
-    "Warning: SMC-ABC is an experimental step method and not yet recommended for use in PyMC3!"
-)
-
 
 def sample_smc(
     draws=2000,
@@ -38,6 +34,7 @@ def sample_smc(
     p_acc_rate=0.85,
     threshold=0.5,
     save_sim_data=False,
+    save_log_pseudolikelihood=True,
     model=None,
     random_seed=-1,
     parallel=False,
@@ -73,8 +70,11 @@ def sample_smc(
         the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
         It should be between 0 and 1.
     save_sim_data : bool
-        Whether or not to save the simulated data. This parameters only work with the ABC kernel.
+        Whether or not to save the simulated data. This parameter only work with the ABC kernel.
         The stored data corresponds to the posterior predictive distribution.
+    save_log_pseudolikelihood : bool
+        Whether or not to save the log pseudolikelihood values. This parameter only work with the
+        ABC kernel. The stored data can be used to compute LOO or WAIC values (this feature is experimental)
     model: Model (optional if in ``with`` context)).
     random_seed: int
         random seed
@@ -164,7 +164,6 @@ def sample_smc(
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
 
     if kernel.lower() == "abc":
-        warnings.warn(EXPERIMENTAL_WARNING)
         if len(model.observed_RVs) != 1:
             warnings.warn("SMC-ABC only works properly with models with one observed variable")
         if model.potentials:
@@ -179,6 +178,7 @@ def sample_smc(
         p_acc_rate,
         threshold,
         save_sim_data,
+        save_log_pseudolikelihood,
         model,
     )
 
@@ -197,11 +197,20 @@ def sample_smc(
         for i in range(chains):
             results.append(sample_smc_int(*params, random_seed[i], i, _log))
 
-    traces, sim_data, log_marginal_likelihoods, betas, accept_ratios, nsteps = zip(*results)
+    (
+        traces,
+        sim_data,
+        log_marginal_likelihoods,
+        log_pseudolikelihood,
+        betas,
+        accept_ratios,
+        nsteps,
+    ) = zip(*results)
     trace = MultiTrace(traces)
     trace.report._n_draws = draws
     trace.report._n_tune = 0
     trace.report.log_marginal_likelihood = np.array(log_marginal_likelihoods)
+    trace.report.log_pseudolikelihood = log_pseudolikelihood
     trace.report.betas = betas
     trace.report.accept_ratios = accept_ratios
     trace.report.nsteps = nsteps
@@ -222,6 +231,7 @@ def sample_smc_int(
     p_acc_rate,
     threshold,
     save_sim_data,
+    save_log_pseudolikelihood,
     model,
     random_seed,
     chain,
@@ -237,6 +247,7 @@ def sample_smc_int(
         p_acc_rate=p_acc_rate,
         threshold=threshold,
         save_sim_data=save_sim_data,
+        save_log_pseudolikelihood=save_log_pseudolikelihood,
         model=model,
         random_seed=random_seed,
         chain=chain,
@@ -266,6 +277,7 @@ def sample_smc_int(
         smc.posterior_to_trace(),
         smc.sim_data,
         smc.log_marginal_likelihood,
+        smc.log_pseudolikelihood,
         betas,
         accept_ratios,
         nsteps,

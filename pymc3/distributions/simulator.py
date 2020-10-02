@@ -15,6 +15,7 @@
 import logging
 import numpy as np
 from .distribution import NoDistribution, draw_values
+from scipy.spatial import cKDTree
 
 __all__ = ["Simulator"]
 
@@ -27,12 +28,12 @@ class Simulator(NoDistribution):
         function,
         *args,
         params=None,
-        distance="gaussian_kernel",
+        distance="gaussian",
         sum_stat="identity",
         epsilon=1,
         **kwargs,
     ):
-        r"""
+        """
         This class stores a function defined by the user in Python language.
 
         function: function
@@ -40,19 +41,20 @@ class Simulator(NoDistribution):
         params: list
             Parameters passed to function.
         distance: str or callable
-            Distance functions. Available options are "gaussian_kernel" (default), "wasserstein",
-            "energy" or a user defined function that takes epsilon (a scalar), and the summary
-            statistics of observed_data, and simulated_data as input.
-            ``gaussian_kernel`` :math: `\sum \left(-0.5  \left(\frac{xo - xs}{\epsilon}\right)^2\right)`
-            ``wasserstein`` :math: `\frac{1}{n} \sum{\left(\frac{|xo - xs|}{\epsilon}\right)}`
-            ``energy`` :math: `\sqrt{2} \sqrt{\frac{1}{n} \sum \left(\frac{|xo - xs|}{\epsilon}\right)^2}`
-            For the wasserstein and energy distances the observed data xo and simulated data xs
-            are internally sorted (i.e. the sum_stat is "sort").
+            Distance functions. Available options are "gaussian" (default), "laplacian",
+            "kullback_leibler" or a user defined function that takes epsilon (a scalar), and the
+            summary statistics of observed_data, and simulated_data as input.
+            ``gaussian`` :math: `-0.5 \left(\left(\frac{xo - xs}{\epsilon}\right)^2\right)`
+            ``laplace`` :math: `{\left(\frac{|xo - xs|}{\epsilon}\right)}`
+            ``kullback_leibler`` :math: d \sum(-\log(\frac{\nu_d} {\rho_d}) / \epsilon) + log_r
+            gaussian + ``sum_stat="sort"`` is equivalent to the 1D 2-wasserstein distance
+            laplace + ``sum_stat="sort"`` is equivalent to the the 1D 1-wasserstein distance
         sum_stat: str or callable
             Summary statistics. Available options are ``indentity``, ``sort``, ``mean``, ``median``.
             If a callable is based it should return a number or a 1d numpy array.
-        epsilon: float
-            Standard deviation of the gaussian_kernel.
+        epsilon: float or array
+            Scaling parameter for the distance functions. It should be a float or an array of the
+            same size of the output of ``sum_stat``.
         *args and **kwargs:
             Arguments and keywords arguments that the function takes.
         """
@@ -62,18 +64,15 @@ class Simulator(NoDistribution):
         observed = self.data
         self.epsilon = epsilon
 
-        if distance == "gaussian_kernel":
-            self.distance = gaussian_kernel
-        elif distance == "wasserstein":
-            self.distance = wasserstein
-            if sum_stat != "sort":
-                _log.info(f"Automatically setting sum_stat to sort as expected by {distance}")
-                sum_stat = "sort"
-        elif distance == "energy":
-            self.distance = energy
-            if sum_stat != "sort":
-                _log.info(f"Automatically setting sum_stat to sort as expected by {distance}")
-                sum_stat = "sort"
+        if distance == "gaussian":
+            self.distance = gaussian
+        elif distance == "laplace":
+            self.distance = laplace
+        elif distance == "kullback_leibler":
+            self.distance = KullbackLiebler(observed)
+            if sum_stat != "identity":
+                 _log.info(f"Automatically setting sum_stat to identity as expected by {distance}")
+                 sum_stat = "identity"
         elif hasattr(distance, "__call__"):
             self.distance = distance
         else:
@@ -115,6 +114,7 @@ class Simulator(NoDistribution):
         else:
             return np.array([self.function(*params) for _ in range(size)])
 
+
     def _str_repr(self, name=None, dist=None, formatting="plain"):
         if dist is None:
             dist = self
@@ -122,7 +122,10 @@ class Simulator(NoDistribution):
         function = dist.function.__name__
         params = ", ".join([var.name for var in dist.params])
         sum_stat = self.sum_stat.__name__ if hasattr(self.sum_stat, "__call__") else self.sum_stat
-        distance = self.distance.__name__
+        if hasattr(self.distance, "__name__"):
+            distance = self.distance.__name__
+        else:
+            distance = self.distance.__class__.__name__
 
         if formatting == "latex":
             return f"$\\text{{{name}}} \\sim  \\text{{Simulator}}(\\text{{{function}}}({params}), \\text{{{distance}}}, \\text{{{sum_stat}}})$"
@@ -135,22 +138,32 @@ def identity(x):
     return x
 
 
-def gaussian_kernel(epsilon, obs_data, sim_data):
-    """gaussian distance function"""
-    return np.sum(-0.5 * ((obs_data - sim_data) / epsilon) ** 2)
+def gaussian(epsilon, obs_data, sim_data):
+    """Gaussian kernel distance function."""
+    return -0.5 * ((obs_data - sim_data) / epsilon) ** 2
 
 
-def wasserstein(epsilon, obs_data, sim_data):
-    """Wasserstein distance function.
-
-    We are assuming obs_data and sim_data are already sorted!
-    """
-    return np.mean(np.abs((obs_data - sim_data) / epsilon))
+def laplace(epsilon, obs_data, sim_data):
+    """Laplace kernel distance function."""
+    return -np.abs((obs_data - sim_data) / epsilon)
 
 
-def energy(epsilon, obs_data, sim_data):
-    """Energy distance function.
+class KullbackLiebler:
+    """Approximate Kullback-Liebler distance function."""
 
-    We are assuming obs_data and sim_data are already sorted!
-    """
-    return 1.4142 * np.mean(((obs_data - sim_data) / epsilon) ** 2) ** 0.5
+    def __init__(self, obs_data):
+        if obs_data.ndim == 1:
+            obs_data = obs_data[:, None]
+        n, d = obs_data.shape
+        rho_d, _ = cKDTree(obs_data).query(obs_data, 2)
+        self.rho_d = rho_d[:, 1]
+        self.d_n = d / n
+        self.log_r = np.log(n / (n - 1))
+        self.obs_data = obs_data
+
+
+    def __call__(self, epsilon, obs_data, sim_data):
+        if sim_data.ndim == 1:
+            sim_data = sim_data[:, None]
+        nu_d, _ = cKDTree(sim_data).query(self.obs_data, 1)
+        return self.d_n * np.sum(-np.log(nu_d / self.rho_d) / epsilon) + self.log_r
