@@ -241,6 +241,7 @@ class DEMetropolisZMLDA(DEMetropolisZ):
         when the self.tuning_end_trigger flag is set to True.
         """
         if self.tuning_end_trigger:
+            self.tuning_end_trigger = False
             return super().stop_tuning()
         else:
             return
@@ -1098,6 +1099,7 @@ class RecursiveDAProposal(Proposal):
             # to False (by MLDA's astep) when the burn-in
             # iterations of the highest-level MLDA sampler run out.
             # The change propagates to all levels.
+            
             if self.tune:
                 # Subsample in tuning mode
                 self.trace = subsample(draws=0, step=self.next_step_method,
@@ -1107,16 +1109,14 @@ class RecursiveDAProposal(Proposal):
                 # Subsample in normal mode without tuning
                 # If DEMetropolisZMLDA is the base sampler a flag is raised to
                 # make sure that history is edited after tuning ends
-                if self.tuning_end_trigger and isinstance(self.next_step_method, DEMetropolisZMLDA):
-                    self.next_step_method.tuning_end_trigger = True
+                if self.tuning_end_trigger:
+                    if isinstance(self.next_step_method, DEMetropolisZMLDA):
+                        self.next_step_method.tuning_end_trigger = True
+                    self.tuning_end_trigger = False
+                
                 self.trace = subsample(draws=self.subsampling_rate,
                                        step=self.next_step_method,
                                        start=q0_dict, trace=self.trace)
-                self.tuning_end_trigger = False
-                # If DEMetropolisZMLDA is the base sampler the flag is set to False
-                # to avoid further deletion of samples history
-                if isinstance(self.next_step_method, DEMetropolisZMLDA):
-                    self.next_step_method.tuning_end_trigger = False
 
         # set logging back to normal
         _log.setLevel(logging.NOTSET)
