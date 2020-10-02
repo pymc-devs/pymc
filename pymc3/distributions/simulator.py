@@ -46,7 +46,7 @@ class Simulator(NoDistribution):
             summary statistics of observed_data, and simulated_data as input.
             ``gaussian`` :math: `-0.5 \left(\left(\frac{xo - xs}{\epsilon}\right)^2\right)`
             ``laplace`` :math: `{\left(\frac{|xo - xs|}{\epsilon}\right)}`
-            ``kullback_leibler`` :math: d \sum(-\log(\frac{\nu_d} {\rho_d}) / \epsilon) + log_r
+            ``kullback_leibler`` :math: d \sum(-\log(\frac{\nu_d} {\rho_d}) / \epsilon) + log_r`
             gaussian + ``sum_stat="sort"`` is equivalent to the 1D 2-wasserstein distance
             laplace + ``sum_stat="sort"`` is equivalent to the the 1D 1-wasserstein distance
         sum_stat: str or callable
