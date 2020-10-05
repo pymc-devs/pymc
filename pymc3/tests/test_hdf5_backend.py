@@ -18,19 +18,18 @@ from pymc3.backends import ndarray, hdf5
 import os
 import tempfile
 
-STATS1 = [{
-    'a': np.float64,
-    'b': np.bool
-}]
+STATS1 = [{"a": np.float64, "b": np.bool}]
 
-STATS2 = [{
-    'a': np.float64
-}, {
-    'a': np.float64,
-    'b': np.int64,
-}]
+STATS2 = [
+    {"a": np.float64},
+    {
+        "a": np.float64,
+        "b": np.int64,
+    },
+]
 
-DBNAME = os.path.join(tempfile.gettempdir(), 'test.h5')
+DBNAME = os.path.join(tempfile.gettempdir(), "test.h5")
+
 
 class TestHDF50dSampling(bf.SamplingTestCase):
     backend = hdf5.HDF5
