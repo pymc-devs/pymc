@@ -51,7 +51,10 @@ def get_city_data():
 class TestARM5_4(SeededTest):
     def build_model(self):
         data = pd.read_csv(
-            pm.get_data("wells.dat"), delimiter=" ", index_col="id", dtype={"switch": np.int8}
+            pm.get_data("wells.dat"),
+            delimiter=" ",
+            index_col="id",
+            dtype={"switch": np.int8},
         )
         data.dist /= 100
         data.educ /= 4
@@ -87,7 +90,9 @@ class TestARM12_6(SeededTest):
             groupsd = pm.Uniform("groupsd", 0, 10.0)
             sd = pm.Uniform("sd", 0, 10.0)
             floor_m = pm.Normal("floor_m", 0, 5.0 ** -2.0)
-            means = pm.Normal("means", groupmean, groupsd ** -2.0, shape=len(self.obs_means))
+            means = pm.Normal(
+                "means", groupmean, groupsd ** -2.0, shape=len(self.obs_means)
+            )
             pm.Normal("lr", floor * floor_m + means[group], sd ** -2.0, observed=lradon)
         return model
 
@@ -102,7 +107,8 @@ class TestARM12_6(SeededTest):
         }
         with model:
             start = pm.find_MAP(
-                start=start, vars=[model["groupmean"], model["sd_interval__"], model["floor_m"]]
+                start=start,
+                vars=[model["groupmean"], model["sd_interval__"], model["floor_m"]],
             )
             step = pm.NUTS(model.vars, scaling=start)
             pm.sample(50, step=step, start=start)
@@ -124,9 +130,14 @@ class TestARM12_6Uranium(SeededTest):
             sd = pm.Uniform("sd", 0, 10.0)
             floor_m = pm.Normal("floor_m", 0, 5.0 ** -2.0)
             u_m = pm.Normal("u_m", 0, 5.0 ** -2)
-            means = pm.Normal("means", groupmean, groupsd ** -2.0, shape=len(self.obs_means))
+            means = pm.Normal(
+                "means", groupmean, groupsd ** -2.0, shape=len(self.obs_means)
+            )
             pm.Normal(
-                "lr", floor * floor_m + means[group] + ufull * u_m, sd ** -2.0, observed=lradon
+                "lr",
+                floor * floor_m + means[group] + ufull * u_m,
+                sd ** -2.0,
+                observed=lradon,
             )
         return model
 
@@ -152,6 +163,7 @@ class TestARM12_6Uranium(SeededTest):
             pm.sample(50, step=step, start=start)
 
 
+# fmt: off
 def build_disaster_model(masked=False):
     disasters_data = np.array(
         [
@@ -268,6 +280,7 @@ def build_disaster_model(masked=False):
             1,
         ]
     )
+    # fmt: on
     if masked:
         disasters_data[[23, 68]] = -1
         disasters_data = np.ma.masked_values(disasters_data, value=-1)
