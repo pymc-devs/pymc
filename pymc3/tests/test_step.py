@@ -1049,13 +1049,13 @@ class TestMLDA:
             assert isinstance(sampler.proposal_dist,
                               RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(sampler.next_step_method.proposal_dist, NormalProposal)
+            assert isinstance(sampler.step_method_below.proposal_dist, NormalProposal)
 
             sampler = MLDA(coarse_models=[model_coarse])
             assert isinstance(sampler.proposal_dist,
                               RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(sampler.next_step_method.proposal_dist,
+            assert isinstance(sampler.step_method_below.proposal_dist,
                               UniformProposal)
 
             s = np.ones(model.ndim)
@@ -1064,14 +1064,14 @@ class TestMLDA:
             assert isinstance(sampler.proposal_dist,
                               RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(sampler.next_step_method.proposal_dist, NormalProposal)
+            assert isinstance(sampler.step_method_below.proposal_dist, NormalProposal)
 
             sampler = MLDA(coarse_models=[model_coarse],
                            base_S=s)
             assert isinstance(sampler.proposal_dist,
                               RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(sampler.next_step_method.proposal_dist,
+            assert isinstance(sampler.step_method_below.proposal_dist,
                               UniformProposal)
 
             s = np.diag(s)
@@ -1080,14 +1080,14 @@ class TestMLDA:
             assert isinstance(sampler.proposal_dist,
                               RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(sampler.next_step_method.proposal_dist, MultivariateNormalProposal)
+            assert isinstance(sampler.step_method_below.proposal_dist, MultivariateNormalProposal)
 
             sampler = MLDA(coarse_models=[model_coarse],
                            base_S=s)
             assert isinstance(sampler.proposal_dist,
                               RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(sampler.next_step_method.proposal_dist,
+            assert isinstance(sampler.step_method_below.proposal_dist,
                               UniformProposal)
 
             s[0, 0] = -s[0, 0]
@@ -1104,15 +1104,15 @@ class TestMLDA:
             s = np.ones(model.ndim) + 2.0
             sampler = MLDA(coarse_models=[model_very_coarse, model_coarse],
                            base_S=s, base_sampler='Metropolis')
-            assert isinstance(sampler.next_step_method, MLDA)
-            assert isinstance(sampler.next_step_method.next_step_method, Metropolis)
-            assert np.all(sampler.next_step_method.next_step_method.proposal_dist.s == s)
+            assert isinstance(sampler.step_method_below, MLDA)
+            assert isinstance(sampler.step_method_below.step_method_below, Metropolis)
+            assert np.all(sampler.step_method_below.step_method_below.proposal_dist.s == s)
 
             sampler = MLDA(coarse_models=[model_very_coarse, model_coarse],
                            base_S=s)
-            assert isinstance(sampler.next_step_method, MLDA)
-            assert isinstance(sampler.next_step_method.next_step_method, DEMetropolisZ)
-            assert np.all(sampler.next_step_method.next_step_method.proposal_dist.s == s)
+            assert isinstance(sampler.step_method_below, MLDA)
+            assert isinstance(sampler.step_method_below.step_method_below, DEMetropolisZ)
+            assert np.all(sampler.step_method_below.step_method_below.proposal_dist.s == s)
 
     def test_exceptions_coarse_models(self):
         """Test that MLDA generates the expected exceptions when no coarse_models arg
@@ -1205,7 +1205,7 @@ class TestMLDA:
             for stepper in self.steppers:
                 assert isinstance(stepper(coarse_models=[model_coarse],
                                           base_sampler='Metropolis',
-                                          base_blocked=False).next_step_method,
+                                          base_blocked=False).step_method_below,
                                   CompoundStep)
 
     def test_mlda_blocked(self):
@@ -1219,13 +1219,13 @@ class TestMLDA:
             for stepper in self.steppers:
                 assert not isinstance(stepper(coarse_models=[model_coarse],
                                               base_sampler='Metropolis',
-                                              base_blocked=True).next_step_method,
+                                              base_blocked=True).step_method_below,
                                       CompoundStep)
                 assert isinstance(stepper(coarse_models=[model_coarse],
                                           base_sampler='Metropolis',
-                                          base_blocked=True).next_step_method,
+                                          base_blocked=True).step_method_below,
                                   Metropolis)
-                assert isinstance(stepper(coarse_models=[model_coarse]).next_step_method,
+                assert isinstance(stepper(coarse_models=[model_coarse]).step_method_below,
                                   DEMetropolisZ)
 
     def test_tuning_and_scaling_on(self):
@@ -1534,10 +1534,10 @@ class TestMLDA:
                                 discard_tuned_samples=True,
                                 random_seed=84759238)
 
-            m0 = step_mlda.next_step_method.next_model.mu_B.get_value()
-            s0 = step_mlda.next_step_method.next_model.Sigma_B.get_value()
-            m1 = step_mlda.next_model.mu_B.get_value()
-            s1 = step_mlda.next_model.Sigma_B.get_value()
+            m0 = step_mlda.step_method_below.model_below.mu_B.get_value()
+            s0 = step_mlda.step_method_below.model_below.Sigma_B.get_value()
+            m1 = step_mlda.model_below.mu_B.get_value()
+            s1 = step_mlda.model_below.Sigma_B.get_value()
 
             assert np.all(np.abs(m0 + 3.5 * np.ones(y.shape, dtype=p)) < 1e-1)
             assert np.all(np.abs(m1 + 2.2 * np.ones(y.shape, dtype=p)) < 1e-1)
