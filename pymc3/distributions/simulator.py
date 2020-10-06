@@ -32,8 +32,8 @@ class Simulator(NoDistribution):
         Parameters passed to function.
     distance: str or callable
         Distance functions. Available options are "gaussian" (default), "laplacian",
-        "kullback_leibler" or a user defined function that takes epsilon (a scalar), and the
-        summary statistics of observed_data, and simulated_data as input.
+        "kullback_leibler" or a user defined function that takes epsilon, the summary statistics of
+        observed_data and the summary statistics of simulated_data as input.
         ``gaussian`` :math: `-0.5 \left(\left(\frac{xo - xs}{\epsilon}\right)^2\right)`
         ``laplace`` :math: `{\left(\frac{|xo - xs|}{\epsilon}\right)}`
         ``kullback_leibler`` `:math: d \sum(-\log(\frac{\nu_d} {\rho_d}) / \epsilon) + log_r`
@@ -100,11 +100,10 @@ class Simulator(NoDistribution):
         Parameters
         ----------
         point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
+            Dict of variable values on which random values are to be conditioned (uses default
+            point if not specified).
         size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
+            Desired size of random sample (returns one sample if not specified).
 
         Returns
         -------
@@ -137,17 +136,17 @@ def identity(x):
 
 
 def gaussian(epsilon, obs_data, sim_data):
-    """Gaussian kernel distance function."""
+    """Gaussian kernel."""
     return -0.5 * ((obs_data - sim_data) / epsilon) ** 2
 
 
 def laplace(epsilon, obs_data, sim_data):
-    """Laplace kernel distance function."""
+    """Laplace kernel."""
     return -np.abs((obs_data - sim_data) / epsilon)
 
 
 class KullbackLiebler:
-    """Approximate Kullback-Liebler distance function."""
+    """Approximate Kullback-Liebler."""
 
     def __init__(self, obs_data):
         if obs_data.ndim == 1:
