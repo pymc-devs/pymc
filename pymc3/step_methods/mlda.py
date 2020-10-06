@@ -701,9 +701,16 @@ class MLDA(ArrayStepShared):
         q_new, accepted = metrop_select(accept, q, q0)
         if skipped_logp:
             accepted = False
+            
+        # if sample is accepted, update self.Q_last with the sample's Q value
+        # runs only for VR or when store_Q_fine is True
+        if self.variance_reduction or self.store_Q_fine:
+            if accepted and not skipped_logp:
+                self.Q_last = self.model.Q.get_value()
 
         # Variance reduction
-        self.update_vr_variables(accepted, skipped_logp)
+        if self.variance_reduction:
+            self.update_vr_variables(accepted, skipped_logp)
 
         # Adaptive error model - runs only during tuning.
         if self.tune and self.adaptive_error_model:
@@ -775,39 +782,32 @@ class MLDA(ArrayStepShared):
 
         These registers are updated here so that they can be exported later."""
 
-        # if sample is accepted, update self.Q_last with the sample's Q value
-        # runs only for VR or when store_Q_fine is True
-        if self.variance_reduction or self.store_Q_fine:
-            if accepted and not skipped_logp:
-                self.Q_last = self.model.Q.get_value()
+        # if this MLDA is not at the finest level, store Q_last in a
+        # register Q_reg and increase sub_counter (until you reach
+        # the subsampling rate, at which point you make it zero).
+        # Q_reg will later be used by the level above to calculate differences
+        if self.is_child:
+            if self.sub_counter == self.subsampling_rate_above:
+                self.sub_counter = 0
+            self.Q_reg[self.sub_counter] = self.Q_last
+            self.sub_counter += 1
 
-        if self.variance_reduction:
-            # if this MLDA is not at the finest level, store Q_last in a
-            # register Q_reg and increase sub_counter (until you reach
-            # the subsampling rate, at which point you make it zero).
-            # Q_reg will later be used by the level above to calculate differences
-            if self.is_child:
-                if self.sub_counter == self.subsampling_rate_above:
-                    self.sub_counter = 0
-                self.Q_reg[self.sub_counter] = self.Q_last
-                self.sub_counter += 1
+        # if MLDA is in the level above the base level, extract the
+        # latest set of Q values from Q_reg in the base level
+        # and add them to Q_base_full (which stores all the history of
+        # Q values from the base level)
+        if self.num_levels == 2:
+            self.Q_base_full.extend(self.step_method_below.Q_reg)
 
-            # if MLDA is in the level above the base level, extract the
-            # latest set of Q values from Q_reg in the base level
-            # and add them to Q_base_full (which stores all the history of
-            # Q values from the base level)
-            if self.num_levels == 2:
-                self.Q_base_full.extend(self.step_method_below.Q_reg)
-
-            # if the sample is accepted, update Q_diff_last with the latest
-            # difference between the last Q of this level and the Q of the
-            # proposed (selected) sample from the level below.
-            # If sample is not accepted, just keep the latest accepted Q_diff
-            if accepted and not skipped_logp:
-                self.Q_diff_last = self.Q_last -\
-                                   self.step_method_below.Q_reg[self.subchain_selection]
-            # Add the last accepted Q_diff to the list
-            self.Q_diff.append(self.Q_diff_last)
+        # if the sample is accepted, update Q_diff_last with the latest
+        # difference between the last Q of this level and the Q of the
+        # proposed (selected) sample from the level below.
+        # If sample is not accepted, just keep the latest accepted Q_diff
+        if accepted and not skipped_logp:
+            self.Q_diff_last = self.Q_last -\
+                               self.step_method_below.Q_reg[self.subchain_selection]
+        # Add the last accepted Q_diff to the list
+        self.Q_diff.append(self.Q_diff_last)
 
     def update_error_estimate(self, accepted, skipped_logp):
         """Updates the adaptive error model estimate with
@@ -824,6 +824,7 @@ class MLDA(ArrayStepShared):
             self.last_synced_output_diff = self.model.model_output.get_value() - \
                                            self.model_below.model_output.get_value()
             self.adaptation_started = True
+        
         if self.adaptation_started:
             # update the internal recursive bias estimator with the last saved error
             self.bias.update(self.last_synced_output_diff)
