@@ -163,123 +163,15 @@ class TestARM12_6Uranium(SeededTest):
             pm.sample(50, step=step, start=start)
 
 
-# fmt: off
 def build_disaster_model(masked=False):
-    disasters_data = np.array(
-        [
-            4,
-            5,
-            4,
-            0,
-            1,
-            4,
-            3,
-            4,
-            0,
-            6,
-            3,
-            3,
-            4,
-            0,
-            2,
-            6,
-            3,
-            3,
-            5,
-            4,
-            5,
-            3,
-            1,
-            4,
-            4,
-            1,
-            5,
-            5,
-            3,
-            4,
-            2,
-            5,
-            2,
-            2,
-            3,
-            4,
-            2,
-            1,
-            3,
-            2,
-            2,
-            1,
-            1,
-            1,
-            1,
-            3,
-            0,
-            0,
-            1,
-            0,
-            1,
-            1,
-            0,
-            0,
-            3,
-            1,
-            0,
-            3,
-            2,
-            2,
-            0,
-            1,
-            1,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            0,
-            0,
-            2,
-            1,
-            0,
-            0,
-            0,
-            1,
-            1,
-            0,
-            2,
-            3,
-            3,
-            1,
-            1,
-            2,
-            1,
-            1,
-            1,
-            1,
-            2,
-            4,
-            2,
-            0,
-            0,
-            1,
-            4,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            1,
-            0,
-            1,
-        ]
-    )
+    # fmt: off
+    disasters_data = np.array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+                               3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
+                               2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
+                               1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
+                               0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
+                               3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+                               0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
     # fmt: on
     if masked:
         disasters_data[[23, 68]] = -1
@@ -301,7 +193,9 @@ def build_disaster_model(masked=False):
     return model
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+@pytest.mark.xfail(
+    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
+)
 class TestDisasterModel(SeededTest):
     # Time series of recorded coal mining disasters in the UK from 1851 to 1962
     def test_disaster_model(self):
@@ -331,7 +225,11 @@ class TestGLMLinear(SeededTest):
         true_intercept = 1
         true_slope = 2
         self.x = np.linspace(0, 1, size)
-        self.y = true_intercept + self.x * true_slope + np.random.normal(scale=0.5, size=size)
+        self.y = (
+            true_intercept
+            + self.x * true_slope
+            + np.random.normal(scale=0.5, size=size)
+        )
         data = dict(x=self.x, y=self.y)
         with pm.Model() as model:
             pm.GLM.from_formula("y ~ x", data)
@@ -347,31 +245,21 @@ class TestLatentOccupancy(SeededTest):
     """
     From the PyMC example list
     latent_occupancy.py
-
     Simple model demonstrating the estimation of occupancy, using latent variables. Suppose
     a population of n sites, with some proportion pi being occupied. Each site is surveyed,
     yielding an array of counts, y:
-
     y = [3, 0, 0, 2, 1, 0, 1, 0, ..., ]
-
     This is a classic zero-inflated count problem, where more zeros appear in the data than would
     be predicted by a simple Poisson model. We have, in fact, a mixture of models; one, conditional
     on occupancy, with a poisson mean of theta, and another, conditional on absence, with mean zero.
     One way to tackle the problem is to model the latent state of 'occupancy' as a Bernoulli
     variable at each site, with some unknown probability:
-
     z_i ~ Bern(pi)
-
     These latent variables can then be used to generate an array of Poisson parameters:
-
     t_i = theta (if z_i=1) or 0 (if z_i=0)
-
     Hence, the likelihood is just:
-
     y_i = Poisson(t_i)
-
     (Note in this elementary model, we are ignoring the issue of imperfect detection.)
-
     Created by Chris Fonnesbeck on 2008-07-28.
     Copyright (c) 2008 University of Otago. All rights reserved.
     """
@@ -385,7 +273,9 @@ class TestLatentOccupancy(SeededTest):
         # True occupancy
         pi = 0.4
         # Simulate some data data
-        self.y = ((np.random.random(n) < pi) * np.random.poisson(lam=theta, size=n)).astype("int16")
+        self.y = (
+            (np.random.random(n) < pi) * np.random.poisson(lam=theta, size=n)
+        ).astype("int16")
 
     def build_model(self):
         with pm.Model() as model:
@@ -421,7 +311,6 @@ class TestRSV(SeededTest):
     This model estimates the population prevalence of respiratory syncytial virus
     (RSV) among children in Amman, Jordan, based on 3 years of admissions diagnosed
     with RSV to Al Bashir hospital.
-
     To estimate this parameter from raw counts of diagnoses, we need to establish
     the population of  1-year-old children from which the diagnosed individuals
     were sampled. This involved correcting census data (national estimate of
