@@ -440,8 +440,9 @@ class StickBreaking(Transform):
 
     def __init__(self, eps=None):
         if eps is not None:
-            warnings.warn("The argument `eps` is deprecated and will not be used.",
-                          DeprecationWarning)
+            warnings.warn(
+                "The argument `eps` is deprecated and will not be used.", DeprecationWarning
+            )
 
     def forward(self, x_):
         x = x_.T
@@ -471,9 +472,9 @@ class StickBreaking(Transform):
         y = y_.T
         Km1 = y.shape[0] + 1
         sy = tt.sum(y, 0, keepdims=True)
-        r = tt.concatenate([y+sy, tt.zeros(sy.shape)])
+        r = tt.concatenate([y + sy, tt.zeros(sy.shape)])
         sr = logsumexp(r, 0, keepdims=True)
-        d = tt.log(Km1) + (Km1*sy) - (Km1*sr)
+        d = tt.log(Km1) + (Km1 * sy) - (Km1 * sr)
         return tt.sum(d, 0).T
 
 
