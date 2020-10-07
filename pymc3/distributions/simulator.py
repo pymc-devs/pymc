@@ -26,7 +26,7 @@ class Simulator(NoDistribution):
     r"""
     Define a simulator, from a Python function, to be used in ABC methods.
 
-    function: function
+    function: callable
         Python function defined by the user.
     params: list
         Parameters passed to function.
