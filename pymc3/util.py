@@ -127,8 +127,7 @@ def get_default_varnames(var_iterator, include_transformed):
 
 
 def get_repr_for_variable(variable, formatting="plain"):
-    """Build a human-readable string representation for a variable.
-    """
+    """Build a human-readable string representation for a variable."""
     name = variable.name
     if name is None:
         if hasattr(variable, "get_parents"):
@@ -139,9 +138,13 @@ def get_repr_for_variable(variable, formatting="plain"):
                 ]
                 # do not escape_latex these, since it is not idempotent
                 if formatting == "latex":
-                    return "f({args})".format(args=",~".join([n for n in names if isinstance(n, str)]))
+                    return "f({args})".format(
+                        args=",~".join([n for n in names if isinstance(n, str)])
+                    )
                 else:
-                    return "f({args})".format(args=", ".join([n for n in names if isinstance(n, str)]))
+                    return "f({args})".format(
+                        args=", ".join([n for n in names if isinstance(n, str)])
+                    )
             except IndexError:
                 pass
         value = variable.eval()
@@ -156,7 +159,7 @@ def get_repr_for_variable(variable, formatting="plain"):
 
 
 def get_var_name(var):
-    """ Get an appropriate, plain variable name for a variable. Necessary
+    """Get an appropriate, plain variable name for a variable. Necessary
     because we override theano.tensor.TensorVariable.__str__ to give informative
     string representations to our pymc3.PyMC3Variables, yet we want to use the
     plain name as e.g. keys in dicts.
@@ -225,9 +228,7 @@ def dataset_to_point_dict(ds: xarray.Dataset) -> List[Dict[str, ndarray]]:
     return points
 
 
-def chains_and_samples(
-    data: Union[xarray.Dataset, arviz.InferenceData]
-) -> Tuple[int, int]:
+def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tuple[int, int]:
     """Extract and return number of chains and samples in xarray or arviz traces."""
     dataset: xarray.Dataset
     if isinstance(data, xarray.Dataset):

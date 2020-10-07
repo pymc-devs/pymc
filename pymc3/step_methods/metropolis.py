@@ -477,9 +477,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
             # Use the optimized "Metropolized Gibbs Sampler" described in Liu96.
             self.astep = self.astep_prop
         else:
-            raise ValueError(
-                "Argument 'proposal' should either be 'uniform' or 'proportional'"
-            )
+            raise ValueError("Argument 'proposal' should either be 'uniform' or 'proportional'")
 
         super().__init__(vars, [model.fastlogp])
 

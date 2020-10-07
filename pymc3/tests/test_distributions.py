@@ -806,16 +806,28 @@ class TestMatchesScipy(SeededTest):
         "mu, p, alpha, n, expected",
         [
             (5, None, None, None, "Incompatible parametrization. Must specify either alpha or n."),
-            (None, .5, None, None, "Incompatible parametrization. Must specify either alpha or n."),
-            (None, None, None, None, "Incompatible parametrization. Must specify either alpha or n."),
+            (
+                None,
+                0.5,
+                None,
+                None,
+                "Incompatible parametrization. Must specify either alpha or n.",
+            ),
+            (
+                None,
+                None,
+                None,
+                None,
+                "Incompatible parametrization. Must specify either alpha or n.",
+            ),
             (5, None, 2, 2, "Incompatible parametrization. Can't specify both alpha and n."),
-            (None, .5, 2, 2, "Incompatible parametrization. Can't specify both alpha and n."),
+            (None, 0.5, 2, 2, "Incompatible parametrization. Can't specify both alpha and n."),
             (None, None, 2, 2, "Incompatible parametrization. Can't specify both alpha and n."),
             (None, None, 2, None, "Incompatible parametrization. Must specify either mu or p."),
             (None, None, None, 2, "Incompatible parametrization. Must specify either mu or p."),
-            (5, .5, 2, None, "Incompatible parametrization. Can't specify both mu and p."),
-            (5, .5, None, 2, "Incompatible parametrization. Can't specify both mu and p."),
-        ]
+            (5, 0.5, 2, None, "Incompatible parametrization. Can't specify both mu and p."),
+            (5, 0.5, None, 2, "Incompatible parametrization. Can't specify both mu and p."),
+        ],
     )
     def test_negative_binomial_init_fail(self, mu, p, alpha, n, expected):
         with Model():

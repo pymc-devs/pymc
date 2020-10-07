@@ -90,9 +90,7 @@ class TestARM12_6(SeededTest):
             groupsd = pm.Uniform("groupsd", 0, 10.0)
             sd = pm.Uniform("sd", 0, 10.0)
             floor_m = pm.Normal("floor_m", 0, 5.0 ** -2.0)
-            means = pm.Normal(
-                "means", groupmean, groupsd ** -2.0, shape=len(self.obs_means)
-            )
+            means = pm.Normal("means", groupmean, groupsd ** -2.0, shape=len(self.obs_means))
             pm.Normal("lr", floor * floor_m + means[group], sd ** -2.0, observed=lradon)
         return model
 
@@ -130,9 +128,7 @@ class TestARM12_6Uranium(SeededTest):
             sd = pm.Uniform("sd", 0, 10.0)
             floor_m = pm.Normal("floor_m", 0, 5.0 ** -2.0)
             u_m = pm.Normal("u_m", 0, 5.0 ** -2)
-            means = pm.Normal(
-                "means", groupmean, groupsd ** -2.0, shape=len(self.obs_means)
-            )
+            means = pm.Normal("means", groupmean, groupsd ** -2.0, shape=len(self.obs_means))
             pm.Normal(
                 "lr",
                 floor * floor_m + means[group] + ufull * u_m,
@@ -193,9 +189,7 @@ def build_disaster_model(masked=False):
     return model
 
 
-@pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"), reason="Fails on float32"
-)
+@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestDisasterModel(SeededTest):
     # Time series of recorded coal mining disasters in the UK from 1851 to 1962
     def test_disaster_model(self):
@@ -225,11 +219,7 @@ class TestGLMLinear(SeededTest):
         true_intercept = 1
         true_slope = 2
         self.x = np.linspace(0, 1, size)
-        self.y = (
-            true_intercept
-            + self.x * true_slope
-            + np.random.normal(scale=0.5, size=size)
-        )
+        self.y = true_intercept + self.x * true_slope + np.random.normal(scale=0.5, size=size)
         data = dict(x=self.x, y=self.y)
         with pm.Model() as model:
             pm.GLM.from_formula("y ~ x", data)
@@ -273,9 +263,7 @@ class TestLatentOccupancy(SeededTest):
         # True occupancy
         pi = 0.4
         # Simulate some data data
-        self.y = (
-            (np.random.random(n) < pi) * np.random.poisson(lam=theta, size=n)
-        ).astype("int16")
+        self.y = ((np.random.random(n) < pi) * np.random.poisson(lam=theta, size=n)).astype("int16")
 
     def build_model(self):
         with pm.Model() as model:

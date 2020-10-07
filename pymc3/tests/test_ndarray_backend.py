@@ -22,7 +22,13 @@ import pytest
 
 STATS1 = [{"a": np.float64, "b": np.bool}]
 
-STATS2 = [{"a": np.float64}, {"a": np.float64, "b": np.int64,}]
+STATS2 = [
+    {"a": np.float64},
+    {
+        "a": np.float64,
+        "b": np.int64,
+    },
+]
 
 
 class TestNDArray0dSampling(bf.SamplingTestCase):

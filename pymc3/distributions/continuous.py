@@ -636,7 +636,7 @@ class TruncatedNormal(BoundedContinuous):
         transform="auto",
         sd=None,
         *args,
-        **kwargs
+        **kwargs,
     ):
         if sd is not None:
             sigma = sd
@@ -676,7 +676,7 @@ class TruncatedNormal(BoundedContinuous):
             lower=lower,
             upper=upper,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def random(self, point=None, size=None):
