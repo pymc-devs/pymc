@@ -89,7 +89,7 @@ class PositiveDefiniteError(ValueError):
         self.msg = msg
 
     def __str__(self):
-        return "Scaling is not positive definite: %s. Check indexes %s." % (self.msg, self.idx)
+        return f"Scaling is not positive definite: {self.msg}. Check indexes {self.idx}."
 
 
 class QuadPotential:
@@ -161,11 +161,11 @@ class QuadPotentialDiagAdapt(QuadPotential):
             raise ValueError("Initial mean must be one-dimensional.")
         if initial_diag is not None and len(initial_diag) != n:
             raise ValueError(
-                "Wrong shape for initial_diag: expected %s got %s" % (n, len(initial_diag))
+                "Wrong shape for initial_diag: expected {} got {}".format(n, len(initial_diag))
             )
         if len(initial_mean) != n:
             raise ValueError(
-                "Wrong shape for initial_mean: expected %s got %s" % (n, len(initial_mean))
+                "Wrong shape for initial_mean: expected {} got {}".format(n, len(initial_mean))
             )
 
         if dtype is None:
@@ -518,11 +518,11 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
             raise ValueError("Initial mean must be one-dimensional.")
         if initial_cov is not None and initial_cov.shape != (n, n):
             raise ValueError(
-                "Wrong shape for initial_cov: expected %s got %s" % (n, initial_cov.shape)
+                f"Wrong shape for initial_cov: expected {n} got {initial_cov.shape}"
             )
         if len(initial_mean) != n:
             raise ValueError(
-                "Wrong shape for initial_mean: expected %s got %s" % (n, len(initial_mean))
+                "Wrong shape for initial_mean: expected {} got {}".format(n, len(initial_mean))
             )
 
         if dtype is None:
