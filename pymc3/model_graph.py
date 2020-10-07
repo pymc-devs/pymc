@@ -143,7 +143,7 @@ class ModelGraph:
         if v in self.model.potentials:
             label = f'{var_name}\n~\nPotential'
         elif isinstance(v, SharedVariable):
-            label = f'{var_name}\n~\Data'
+            label = f'{var_name}\n~\nData'
         else:
             label = str(v).replace(' ~ ', '\n~\n')
 
