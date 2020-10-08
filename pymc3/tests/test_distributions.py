@@ -806,16 +806,16 @@ class TestMatchesScipy(SeededTest):
         "mu, p, alpha, n, expected",
         [
             (5, None, None, None, "Must specify either alpha or n."),
-            (None, .5, None, None, "Must specify either alpha or n."),
+            (None, 0.5, None, None, "Must specify either alpha or n."),
             (None, None, None, None, "Must specify either alpha or n."),
             (5, None, 2, 2, "Can't specify both alpha and n."),
-            (None, .5, 2, 2, "Can't specify both alpha and n."),
+            (None, 0.5, 2, 2, "Can't specify both alpha and n."),
             (None, None, 2, 2, "Can't specify both alpha and n."),
             (None, None, 2, None, "Must specify either mu or p."),
             (None, None, None, 2, "Must specify either mu or p."),
-            (5, .5, 2, None, "Can't specify both mu and p."),
-            (5, .5, None, 2, "Can't specify both mu and p."),
-        ]
+            (5, 0.5, 2, None, "Can't specify both mu and p."),
+            (5, 0.5, None, 2, "Can't specify both mu and p."),
+        ],
     )
     def test_negative_binomial_init_fail(self, mu, p, alpha, n, expected):
         with Model():

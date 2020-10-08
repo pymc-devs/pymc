@@ -517,9 +517,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         if initial_mean.ndim != 1:
             raise ValueError("Initial mean must be one-dimensional.")
         if initial_cov is not None and initial_cov.shape != (n, n):
-            raise ValueError(
-                f"Wrong shape for initial_cov: expected {n} got {initial_cov.shape}"
-            )
+            raise ValueError(f"Wrong shape for initial_cov: expected {n} got {initial_cov.shape}")
         if len(initial_mean) != n:
             raise ValueError(
                 "Wrong shape for initial_mean: expected {} got {}".format(n, len(initial_mean))

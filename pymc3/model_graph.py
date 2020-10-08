@@ -136,20 +136,19 @@ class ModelGraph:
 
         # determine the shape for this node (default (Distribution) is ellipse)
         if v in self.model.potentials:
-            attrs['shape'] = 'octagon'
-        elif isinstance(v, SharedVariable) or not hasattr(v, 'distribution'):
+            attrs["shape"] = "octagon"
+        elif isinstance(v, SharedVariable) or not hasattr(v, "distribution"):
             # shared variables and Deterministic represented by a box
-            attrs['shape'] = 'box'
+            attrs["shape"] = "box"
 
         if v in self.model.potentials:
-            label = f'{var_name}\n~\nPotential'
+            label = f"{var_name}\n~\nPotential"
         elif isinstance(v, SharedVariable):
-            label = f'{var_name}\n~\nData'
+            label = f"{var_name}\n~\nData"
         else:
-            label = str(v).replace(' ~ ', '\n~\n')
+            label = str(v).replace(" ~ ", "\n~\n")
 
-        graph.node(var_name.replace(':', '&'), label, **attrs)
-
+        graph.node(var_name.replace(":", "&"), label, **attrs)
 
     def get_plates(self):
         """Rough but surprisingly accurate plate detection.

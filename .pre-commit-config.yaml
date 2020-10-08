@@ -5,7 +5,7 @@ repos:
     -   id: end-of-file-fixer
     -   id: check-toml
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 0.2.1
+  rev: 0.2.3
   hooks:
     - id: nbqa
       args: ['isort']
@@ -22,3 +22,7 @@ repos:
   hooks:
     - id: pyupgrade
       args: ['--py36-plus']
+- repo: https://github.com/psf/black
+  rev: 20.8b1
+  hooks:
+    - id: black
