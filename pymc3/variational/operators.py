@@ -19,10 +19,7 @@ from pymc3.variational.opvi import Operator, ObjectiveFunction
 from pymc3.variational.stein import Stein
 import pymc3 as pm
 
-__all__ = [
-    'KL',
-    'KSD'
-]
+__all__ = ["KL", "KSD"]
 
 
 class KL(Operator):
@@ -49,12 +46,13 @@ class KL(Operator):
         Beta parameter for KL divergence, scales the regularization term.
     """
 
-    def __init__(self, approx, beta=1.):
+    def __init__(self, approx, beta=1.0):
         Operator.__init__(self, approx)
         self.beta = pm.floatX(beta)
 
     def apply(self, f):
         return -self.datalogp_norm + self.beta * (self.logq_norm - self.varlogp_norm)
+
 
 # SVGD Implementation
 
@@ -72,10 +70,10 @@ class KSDObjective(ObjectiveFunction):
 
     def __init__(self, op, tf):
         if not isinstance(op, KSD):
-            raise opvi.ParametrizationError('Op should be KSD')
+            raise opvi.ParametrizationError("Op should be KSD")
         ObjectiveFunction.__init__(self, op, tf)
 
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
         op = self.op  # type: KSD
         grad = op.apply(self.tf)
@@ -83,13 +81,15 @@ class KSDObjective(ObjectiveFunction):
             z = self.approx.joint_histogram
         else:
             z = self.approx.symbolic_random
-        if 'more_obj_params' in kwargs:
-            params = self.obj_params + kwargs['more_obj_params']
+        if "more_obj_params" in kwargs:
+            params = self.obj_params + kwargs["more_obj_params"]
         else:
-            params = self.test_params + kwargs['more_tf_params']
+            params = self.test_params + kwargs["more_tf_params"]
             grad *= pm.floatX(-1)
         grads = tt.grad(None, params, known_grads={z: grad})
-        return self.approx.set_size_and_deterministic(grads, nmc, 0, kwargs.get('more_replacements'))
+        return self.approx.set_size_and_deterministic(
+            grads, nmc, 0, kwargs.get("more_replacements")
+        )
 
 
 class KSD(Operator):
@@ -134,5 +134,6 @@ class KSD(Operator):
             approx=self.approx,
             kernel=f,
             use_histogram=self.approx.all_histograms,
-            temperature=self.temperature)
+            temperature=self.temperature,
+        )
         return pm.floatX(-1) * stein.grad

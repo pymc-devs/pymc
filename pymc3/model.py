@@ -971,9 +971,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         else:
             for var in grad_vars:
                 if var.dtype not in continuous_types:
-                    raise ValueError(
-                        "Can only compute the gradient of continuous types: %s" % var
-                    )
+                    raise ValueError("Can only compute the gradient of continuous types: %s" % var)
 
         if tempered:
             with self:
