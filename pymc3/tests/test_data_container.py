@@ -174,12 +174,11 @@ class TestData(SeededTest):
             x = pm.Data("x", [1.0, 2.0, 3.0])
             y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 10.0)
-            pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y)
+            pm.Normal("obs", beta * x, 0.1, observed=y)
             pm.sample(1000, init=None, tune=1000, chains=1)
 
         g = pm.model_to_graphviz(model)
 
-        print(g.source)
         # Data node rendered correctly?
         text = 'x [label="x\n~\nData" shape=box style="rounded, filled"]'
         assert text in g.source
