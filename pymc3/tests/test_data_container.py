@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import pymc3 as pm
+from ..theanof import floatX
 from .helpers import SeededTest
 import numpy as np
 import pandas as pd
@@ -174,13 +175,12 @@ class TestData(SeededTest):
             x = pm.Data("x", [1.0, 2.0, 3.0])
             y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 10.0)
-            obs_sigma = np.sqrt(1e-2)
+            obs_sigma = floatX(np.sqrt(1e-2))
             pm.Normal("obs", beta * x, obs_sigma, observed=y)
             pm.sample(1000, init=None, tune=1000, chains=1)
 
         g = pm.model_to_graphviz(model)
 
-        print(g.source)
         # Data node rendered correctly?
         text = 'x [label="x\n~\nData" shape=box style="rounded, filled"]'
         assert text in g.source
