@@ -644,25 +644,17 @@ class NegativeBinomial(Discrete):
             if n is not None:
                 alpha = n
             else:
-                raise ValueError(
-                    "Incompatible parametrization. Must specify either alpha or n."
-                )
+                raise ValueError("Incompatible parametrization. Must specify either alpha or n.")
         elif n is not None:
-            raise ValueError(
-                "Incompatible parametrization. Can't specify both alpha and n."
-            )
+            raise ValueError("Incompatible parametrization. Can't specify both alpha and n.")
 
         if mu is None:
             if p is not None:
                 mu = alpha * (1 - p) / p
             else:
-                raise ValueError(
-                    "Incompatible parametrization. Must specify either mu or p."
-                )
+                raise ValueError("Incompatible parametrization. Must specify either mu or p.")
         elif p is not None:
-            raise ValueError(
-                "Incompatible parametrization. Can't specify both mu and p."
-            )
+            raise ValueError("Incompatible parametrization. Can't specify both mu and p.")
 
         return mu, alpha
 

@@ -179,10 +179,7 @@ class Distribution:
 
         if formatting == "latex":
             param_string = ",~".join(
-                [
-                    fr"\mathit{{{name}}}={value}"
-                    for name, value in zip(param_names, param_values)
-                ]
+                [fr"\mathit{{{name}}}={value}" for name, value in zip(param_names, param_values)]
             )
             return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}({params})$".format(
                 var_name=name, distr_name=dist._distr_name_for_repr(), params=param_string
@@ -190,10 +187,7 @@ class Distribution:
         else:
             # 'plain' is default option
             param_string = ", ".join(
-                [
-                    f"{name}={value}"
-                    for name, value in zip(param_names, param_values)
-                ]
+                [f"{name}={value}" for name, value in zip(param_names, param_values)]
             )
             return "{var_name} ~ {distr_name}({params})".format(
                 var_name=name, distr_name=dist._distr_name_for_repr(), params=param_string
