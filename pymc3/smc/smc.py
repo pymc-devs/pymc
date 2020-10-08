@@ -27,6 +27,8 @@ from ..backends.ndarray import NDArray
 
 
 class SMC:
+    """Sequential Monte Carlo with Independent Metropolis-Hastings and ABC kernels."""
+
     def __init__(
         self,
         draws=2000,
@@ -37,6 +39,7 @@ class SMC:
         p_acc_rate=0.85,
         threshold=0.5,
         save_sim_data=False,
+        save_log_pseudolikelihood=True,
         model=None,
         random_seed=-1,
         chain=0,
@@ -50,6 +53,7 @@ class SMC:
         self.p_acc_rate = p_acc_rate
         self.threshold = threshold
         self.save_sim_data = save_sim_data
+        self.save_log_pseudolikelihood = save_log_pseudolikelihood
         self.model = model
         self.random_seed = random_seed
         self.chain = chain
@@ -67,11 +71,10 @@ class SMC:
         self.weights = np.ones(self.draws) / self.draws
         self.log_marginal_likelihood = 0
         self.sim_data = []
+        self.log_pseudolikelihood = []
 
     def initialize_population(self):
-        """
-        Create an initial population from the prior distribution
-        """
+        """Create an initial population from the prior distribution."""
         population = []
         var_info = OrderedDict()
         if self.start is None:
@@ -97,9 +100,7 @@ class SMC:
         self.var_info = var_info
 
     def setup_kernel(self):
-        """
-        Set up the likelihood logp function based on the chosen kernel
-        """
+        """Set up the likelihood logp function based on the chosen kernel."""
         shared = make_shared_replacements(self.variables, self.model)
 
         if self.kernel == "abc":
@@ -121,15 +122,14 @@ class SMC:
                 sum_stat,
                 self.draws,
                 self.save_sim_data,
+                self.save_log_pseudolikelihood,
             )
         elif self.kernel == "metropolis":
             self.prior_logp_func = logp_forw([self.model.varlogpt], self.variables, shared)
             self.likelihood_logp_func = logp_forw([self.model.datalogpt], self.variables, shared)
 
     def initialize_logp(self):
-        """
-        initialize the prior and likelihood log probabilities
-        """
+        """Initialize the prior and likelihood log probabilities."""
         priors = [self.prior_logp_func(sample) for sample in self.posterior]
         likelihoods = [self.likelihood_logp_func(sample) for sample in self.posterior]
 
@@ -139,10 +139,14 @@ class SMC:
         if self.kernel == "abc" and self.save_sim_data:
             self.sim_data = self.likelihood_logp_func.get_data()
 
+        if self.kernel == "abc" and self.save_log_pseudolikelihood:
+            self.log_pseudolikelihood = self.likelihood_logp_func.get_lpl()
+
     def update_weights_beta(self):
-        """
-        Calculate the next inverse temperature (beta), the importance weights based on current beta
-        and tempered likelihood and updates the marginal likelihood estimation
+        """Calculate the next inverse temperature (beta).
+
+        The importance weights based on current beta and tempered likelihood and updates the
+        marginal likelihood estimate.
         """
         low_beta = old_beta = self.beta
         up_beta = 2.0
@@ -169,9 +173,7 @@ class SMC:
         self.weights = np.exp(log_weights)
 
     def resample(self):
-        """
-        Resample particles based on importance weights
-        """
+        """Resample particles based on importance weights."""
         resampling_indexes = np.random.choice(
             np.arange(self.draws), size=self.draws, p=self.weights
         )
@@ -184,9 +186,7 @@ class SMC:
             self.sim_data = self.sim_data[resampling_indexes]
 
     def update_proposal(self):
-        """
-        Update proposal based on the covariance matrix from tempered posterior
-        """
+        """Update proposal based on the covariance matrix from tempered posterior."""
         cov = np.cov(self.posterior, ddof=0, aweights=self.weights, rowvar=0)
         cov = np.atleast_2d(cov)
         cov += 1e-6 * np.eye(cov.shape[0])
@@ -195,9 +195,7 @@ class SMC:
         self.cov = cov
 
     def tune(self):
-        """
-        Tune n_steps based on the acceptance rate.
-        """
+        """Tune n_steps based on the acceptance rate."""
         if self.tune_steps:
             acc_rate = max(1.0 / self.proposed, self.acc_rate)
             self.n_steps = min(
@@ -208,6 +206,7 @@ class SMC:
         self.proposed = self.draws * self.n_steps
 
     def mutate(self):
+        """Independent Metropolis-Hastings perturbation."""
         ac_ = np.empty((self.n_steps, self.draws))
 
         log_R = np.log(np.random.rand(self.n_steps, self.draws))
@@ -235,15 +234,17 @@ class SMC:
             self.posterior_logp[accepted] = proposal_logp[accepted]
             self.prior_logp[accepted] = pl[accepted]
             self.likelihood_logp[accepted] = ll[accepted]
+
             if self.kernel == "abc" and self.save_sim_data:
                 self.sim_data[accepted] = self.likelihood_logp_func.get_data()[accepted]
+
+            if self.kernel == "abc" and self.save_log_pseudolikelihood:
+                self.log_pseudolikelihood[accepted] = self.likelihood_logp_func.get_lpl()[accepted]
 
         self.acc_rate = np.mean(ac_)
 
     def posterior_to_trace(self):
-        """
-        Save results into a PyMC3 trace
-        """
+        """Save results into a PyMC3 trace."""
         lenght_pos = len(self.posterior)
         varnames = [v.name for v in self.variables]
 
@@ -281,7 +282,32 @@ def logp_forw(out_vars, vars, shared):
 
 class PseudoLikelihood:
     """
-    Pseudo Likelihood
+    Pseudo Likelihood.
+
+    epsilon: float
+        Standard deviation of the gaussian pseudo likelihood.
+    observations: array-like
+        observed data
+    function: python function
+        data simulator
+    params: list
+        names of the variables parameterizing the simulator.
+    model: PyMC3 model
+    var_info: dict
+        generated by ``SMC.initialize_population``
+    variables: list
+        Model variables.
+    distance : str or callable
+        Distance function.
+    sum_stat: str or callable
+        Summary statistics.
+    size : int
+        Number of simulated datasets to save. When this number is exceeded the counter will be
+        restored to zero and it will start saving again.
+    save_sim_data : bool
+        whether to save or not the simulated data.
+    save_log_pseudolikelihood : bool
+        whether to save or not the log pseudolikelihood values.
     """
 
     def __init__(
@@ -296,32 +322,9 @@ class PseudoLikelihood:
         distance,
         sum_stat,
         size,
-        save,
+        save_sim_data,
+        save_log_pseudolikelihood,
     ):
-        """
-        epsilon: float
-            Standard deviation of the gaussian pseudo likelihood.
-        observations: array-like
-            observed data
-        function: python function
-            data simulator
-        params: list
-            names of the variables parameterizing the simulator.
-        model: PyMC3 model
-        var_info: dict
-            generated by ``SMC.initialize_population``
-        variables: list
-            Model variables.
-        distance : str or callable
-            Distance function.
-        sum_stat: str or callable
-            Summary statistics.
-        size : int
-            Number of simulated datasets to save. When this number is exceeded the counter will be
-            restored to zero and it will start saving again.
-        save : bool
-            whether to save or not the simulated data.
-        """
         self.epsilon = epsilon
         self.function = function
         self.params = params
@@ -334,12 +337,16 @@ class PseudoLikelihood:
         self.unobserved_RVs = [v.name for v in self.model.unobserved_RVs]
         self.get_unobserved_fn = self.model.fastfn(self.model.unobserved_RVs)
         self.size = size
-        self.save = save
-        self.lista = []
+        self.save_sim_data = save_sim_data
+        self.save_log_pseudolikelihood = save_log_pseudolikelihood
+        self.sim_data_l = []
+        self.lpl_l = []
 
         self.observations = self.sum_stat(observations)
 
     def posterior_to_function(self, posterior):
+        """Turn posterior samples into function parameters to feed the simulator."""
+        model = self.model
         var_info = self.var_info
 
         varvalues = []
@@ -356,16 +363,32 @@ class PseudoLikelihood:
         return samples
 
     def save_data(self, sim_data):
-        if len(self.lista) == self.size:
-            self.lista = []
-        self.lista.append(sim_data)
+        """Save simulated data."""
+        if len(self.sim_data_l) == self.size:
+            self.sim_data_l = []
+        self.sim_data_l.append(sim_data)
 
     def get_data(self):
-        return np.array(self.lista)
+        """Get simulated data."""
+        return np.array(self.sim_data_l)
+
+    def save_lpl(self, elemwise):
+        """Save log pseudolikelihood values."""
+        if len(self.lpl_l) == self.size:
+            self.lpl_l = []
+        self.lpl_l.append(elemwise)
+
+    def get_lpl(self):
+        """Get log pseudolikelihood values."""
+        return np.array(self.lpl_l)
 
     def __call__(self, posterior):
+        """Compute the pseudolikelihood."""
         func_parameters = self.posterior_to_function(posterior)
         sim_data = self.function(**func_parameters)
-        if self.save:
+        if self.save_sim_data:
             self.save_data(sim_data)
-        return self.distance(self.epsilon, self.observations, self.sum_stat(sim_data))
+        elemwise = self.distance(self.epsilon, self.observations, self.sum_stat(sim_data))
+        if self.save_log_pseudolikelihood:
+            self.save_lpl(elemwise)
+        return elemwise.sum()
