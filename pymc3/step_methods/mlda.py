@@ -106,21 +106,21 @@ class MLDA(ArrayStepShared):
         ... datum = 1
         ...
         ... with pm.Model() as coarse_model:
-        ...     x = Normal("x", mu=0, sigma=10)
-        ...     y = Normal("y", mu=x, sigma=1, observed=datum - 0.1)
+        ...     x = pm.Normal("x", mu=0, sigma=10)
+        ...     y = pm.Normal("y", mu=x, sigma=1, observed=datum - 0.1)
         ...
         ... with pm.Model():
-        ...     x = Normal("x", mu=0, sigma=10)
-        ...     y = Normal("y", mu=x, sigma=1, observed=datum)
-        ...     step_method = pm.MLDA(coarse_models=[coarse_model]
+        ...     x = pm.Normal("x", mu=0, sigma=10)
+        ...     y = pm.Normal("y", mu=x, sigma=1, observed=datum)
+        ...     step_method = pm.MLDA(coarse_models=[coarse_model],
         ...                           subsampling_rates=5)
-        ...     trace = pm.sample(ndraws=500, chains=2,
+        ...     trace = pm.sample(500, chains=2,
         ...                       tune=100, step=step_method,
         ...                       random_seed=123)
         ...
-        ... pm.summary(trace)
-            mean     sd	     hpd_3%	   hpd_97%
-        x	1.011	 0.975	 -0.925	   2.824
+        ... pm.summary(trace, kind="stats")
+           mean     sd  hdi_3%  hdi_97%
+        x  0.99  0.987  -0.734    2.992
 
     References
     ----------
@@ -161,7 +161,7 @@ class MLDA(ArrayStepShared):
         mode: Optional = None,
         subsampling_rates: List[int] = 5,
         base_blocked: bool = False,
-        **kwargs
+        **kwargs,
     ) -> None:
 
         warnings.warn(
@@ -174,9 +174,7 @@ class MLDA(ArrayStepShared):
         # assign internal state
         self.coarse_models = coarse_models
         if not isinstance(coarse_models, list):
-            raise ValueError(
-                "MLDA step method cannot use coarse_models if it is not a list"
-            )
+            raise ValueError("MLDA step method cannot use coarse_models if it is not a list")
         if len(self.coarse_models) == 0:
             raise ValueError(
                 "MLDA step method was given an empty "
@@ -233,9 +231,7 @@ class MLDA(ArrayStepShared):
         if self.num_levels == 2:
             with self.next_model:
                 # make sure the correct variables are selected from next_model
-                vars_next = [
-                    var for var in self.next_model.vars if var.name in self.var_names
-                ]
+                vars_next = [var for var in self.next_model.vars if var.name in self.var_names]
                 # MetropolisMLDA sampler in base level (level=0), targeting self.next_model
                 self.next_step_method = pm.MetropolisMLDA(
                     vars=vars_next,
@@ -253,9 +249,7 @@ class MLDA(ArrayStepShared):
             next_subsampling_rates = self.subsampling_rates[:-1]
             with self.next_model:
                 # make sure the correct variables are selected from next_model
-                vars_next = [
-                    var for var in self.next_model.vars if var.name in self.var_names
-                ]
+                vars_next = [var for var in self.next_model.vars if var.name in self.var_names]
                 # MLDA sampler in some intermediate level, targeting self.next_model
                 self.next_step_method = pm.MLDA(
                     vars=vars_next,
@@ -335,9 +329,7 @@ class MLDA(ArrayStepShared):
             self.base_scaling_stats = {"base_scaling": np.array(scaling_list)}
         elif not isinstance(self.next_step_method, MLDA):
             # next method is any block sampler
-            self.base_scaling_stats = {
-                "base_scaling": np.array(self.next_step_method.scaling)
-            }
+            self.base_scaling_stats = {"base_scaling": np.array(self.next_step_method.scaling)}
         else:
             # next method is MLDA - propagate dict from lower levels
             self.base_scaling_stats = self.next_step_method.base_scaling_stats
@@ -366,19 +358,20 @@ class RecursiveDAProposal(Proposal):
     each of which is used to propose samples to the chain above.
     """
 
-    def __init__(self,
-                 next_step_method: Union[MLDA, Metropolis, CompoundStep],
-                 next_model: Model,
-                 tune: bool,
-                 subsampling_rate: int) -> None:
+    def __init__(
+        self,
+        next_step_method: Union[MLDA, Metropolis, CompoundStep],
+        next_model: Model,
+        tune: bool,
+        subsampling_rate: int,
+    ) -> None:
 
         self.next_step_method = next_step_method
         self.next_model = next_model
         self.tune = tune
         self.subsampling_rate = subsampling_rate
 
-    def __call__(self,
-                 q0_dict: dict) -> dict:
+    def __call__(self, q0_dict: dict) -> dict:
         """Returns proposed sample given the current sample
         in dictionary form (q0_dict).
         """
