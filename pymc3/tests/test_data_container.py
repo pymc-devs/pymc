@@ -179,6 +179,7 @@ class TestData(SeededTest):
 
         g = pm.model_to_graphviz(model)
 
+        print(g.source)
         # Data node rendered correctly?
         text = 'x [label="x\n~\nData" shape=box style="rounded, filled"]'
         assert text in g.source
