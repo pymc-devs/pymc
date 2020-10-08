@@ -805,33 +805,21 @@ class TestMatchesScipy(SeededTest):
     @pytest.mark.parametrize(
         "mu, p, alpha, n, expected",
         [
-            (5, None, None, None, "Incompatible parametrization. Must specify either alpha or n."),
-            (
-                None,
-                0.5,
-                None,
-                None,
-                "Incompatible parametrization. Must specify either alpha or n.",
-            ),
-            (
-                None,
-                None,
-                None,
-                None,
-                "Incompatible parametrization. Must specify either alpha or n.",
-            ),
-            (5, None, 2, 2, "Incompatible parametrization. Can't specify both alpha and n."),
-            (None, 0.5, 2, 2, "Incompatible parametrization. Can't specify both alpha and n."),
-            (None, None, 2, 2, "Incompatible parametrization. Can't specify both alpha and n."),
-            (None, None, 2, None, "Incompatible parametrization. Must specify either mu or p."),
-            (None, None, None, 2, "Incompatible parametrization. Must specify either mu or p."),
-            (5, 0.5, 2, None, "Incompatible parametrization. Can't specify both mu and p."),
-            (5, 0.5, None, 2, "Incompatible parametrization. Can't specify both mu and p."),
-        ],
+            (5, None, None, None, "Must specify either alpha or n."),
+            (None, .5, None, None, "Must specify either alpha or n."),
+            (None, None, None, None, "Must specify either alpha or n."),
+            (5, None, 2, 2, "Can't specify both alpha and n."),
+            (None, .5, 2, 2, "Can't specify both alpha and n."),
+            (None, None, 2, 2, "Can't specify both alpha and n."),
+            (None, None, 2, None, "Must specify either mu or p."),
+            (None, None, None, 2, "Must specify either mu or p."),
+            (5, .5, 2, None, "Can't specify both mu and p."),
+            (5, .5, None, 2, "Can't specify both mu and p."),
+        ]
     )
     def test_negative_binomial_init_fail(self, mu, p, alpha, n, expected):
         with Model():
-            with pytest.raises(ValueError, match=expected):
+            with pytest.raises(ValueError, match=f"Incompatible parametrization. {expected}"):
                 NegativeBinomial("x", mu=mu, p=p, alpha=alpha, n=n)
 
     def test_laplace(self):

@@ -266,7 +266,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
             errmsg = ["Mass matrix contains zeros on the diagonal. "]
             for ii in index:
                 errmsg.append(
-                    "The derivative of RV `{}`.ravel()[{}]" " is zero.".format(*name_slc[ii])
+                    "The derivative of RV `{}`.ravel()[{}] is zero.".format(*name_slc[ii])
                 )
             raise ValueError("\n".join(errmsg))
 
@@ -281,7 +281,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
             errmsg = ["Mass matrix contains non-finite values on the diagonal. "]
             for ii in index:
                 errmsg.append(
-                    "The derivative of RV `{}`.ravel()[{}]" " is non-finite.".format(*name_slc[ii])
+                    "The derivative of RV `{}`.ravel()[{}] is non-finite.".format(*name_slc[ii])
                 )
             raise ValueError("\n".join(errmsg))
 

@@ -367,7 +367,7 @@ class GeneratorOp(Op):
             t1 = (False,) * value.ndim
             t2 = self.generator.tensortype.broadcastable
             if not t1 == t2:
-                raise ValueError("Default value should have the " "same type as generator")
+                raise ValueError("Default value should have the same type as generator")
             self.default = value
 
 
