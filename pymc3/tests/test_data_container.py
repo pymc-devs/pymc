@@ -174,18 +174,20 @@ class TestData(SeededTest):
             x = pm.Data("x", [1.0, 2.0, 3.0])
             y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 10.0)
-            pm.Normal("obs", beta * x, 0.1, observed=y)
+            obs_sigma = np.sqrt(1e-2)
+            pm.Normal("obs", beta * x, obs_sigma, observed=y)
             pm.sample(1000, init=None, tune=1000, chains=1)
 
         g = pm.model_to_graphviz(model)
 
+        print(g.source)
         # Data node rendered correctly?
         text = 'x [label="x\n~\nData" shape=box style="rounded, filled"]'
         assert text in g.source
         # Didn't break ordinary variables?
         text = 'beta [label="beta\n~\nNormal(mu=0.0, sigma=10.0)"]'
         assert text in g.source
-        text = 'obs [label="obs\n~\nNormal(mu=f(f(beta), x), sigma=0.1)" style=filled]'
+        text = f'obs [label="obs\n~\nNormal(mu=f(f(beta), x), sigma={obs_sigma})" style=filled]'
         assert text in g.source
 
     def test_explicit_coords(self):
