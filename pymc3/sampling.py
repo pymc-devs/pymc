@@ -659,7 +659,14 @@ def _check_start_shape(model, start):
 
 
 def _sample_many(
-    draws, chain: int, chains: int, start: list, random_seed: list, step, callback=None, **kwargs,
+    draws,
+    chain: int,
+    chains: int,
+    start: list,
+    random_seed: list,
+    step,
+    callback=None,
+    **kwargs,
 ):
     """Samples all chains sequentially.
 
@@ -996,7 +1003,8 @@ def _iter_sample(
             if callback is not None:
                 warns = getattr(step, "warnings", None)
                 callback(
-                    trace=strace, draw=Draw(chain, i == draws, i, i < tune, stats, point, warns),
+                    trace=strace,
+                    draw=Draw(chain, i == draws, i, i < tune, stats, point, warns),
                 )
 
             yield strace, diverging
@@ -1949,7 +1957,13 @@ def sample_prior_predictive(
 
 
 def init_nuts(
-    init="auto", chains=1, n_init=500000, model=None, random_seed=None, progressbar=True, **kwargs,
+    init="auto",
+    chains=1,
+    n_init=500000,
+    model=None,
+    random_seed=None,
+    progressbar=True,
+    **kwargs,
 ):
     """Set up the mass matrix initialization for NUTS.
 

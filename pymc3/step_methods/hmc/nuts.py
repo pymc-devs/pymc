@@ -25,7 +25,7 @@ from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
 from ...distributions import BART
 
-__all__ = ['NUTS']
+__all__ = ["NUTS"]
 
 
 class NUTS(BaseHMC):

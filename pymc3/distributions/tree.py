@@ -12,7 +12,7 @@ class TreeNodeError(Exception):
 
 
 class Tree:
-    """ Full binary tree
+    """Full binary tree
     A full binary tree is a tree where each node has exactly zero or two children.
     This structure is used as the basic component of the Bayesian Additive Regression Tree (BART)
     Attributes

@@ -26,6 +26,7 @@ class PGBART(ArrayStepShared):
     upper: float
         Upper limit.
     """
+
     name = "bartsampler"
     default_blocked = False
 
