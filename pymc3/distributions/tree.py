@@ -487,7 +487,7 @@ class LeafNode(BaseNode):
 
     def prior_log_probability_node(self, alpha, beta):
         """
-        Calculate the log probability of the node being a LeafNode.
+        Calculate the log probability of the node being a LeafNode (1 - p(being SplitNode)).
         Taken from equation 7 in [Chipman2010].
 
         Parameters

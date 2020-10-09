@@ -5,7 +5,8 @@ from ..distributions import BART
 from ..distributions.tree import Tree
 from ..model import modelcontext
 from ..theanof import inputvars, make_shared_replacements, floatX
-from ..smc.smc import logp_forw
+
+# from ..smc.smc import logp_forw
 
 
 class PGBART(ArrayStepShared):
@@ -30,7 +31,7 @@ class PGBART(ArrayStepShared):
     name = "bartsampler"
     default_blocked = False
 
-    def __init__(self, vars=None, num_particles=10, max_stages=5000, model=None):
+    def __init__(self, vars=None, num_particles=10, max_stages=1, model=None):
         model = modelcontext(model)
         vars = inputvars(vars)
         self.bart = vars[0].distribution
@@ -54,7 +55,7 @@ class PGBART(ArrayStepShared):
         output = np.zeros((bart.m, num_observations))
         log_num_particles = np.log(self.num_particles)
         for idx, tree in enumerate(bart.trees):
-            R_j = bart.get_residuals(tree)
+            R_j = bart.get_residuals_loo(tree)
             bart.Y_shared.set_value(R_j)
             list_of_particles = self.init_particles(tree.tree_id, R_j, bart.num_observations)
             # Step 5 of algorithm
@@ -221,3 +222,25 @@ class Particle:
     def update_weight(self):
         # TODO
         pass
+
+
+from theano import function as theano_function
+from ..theanof import join_nonshared_inputs
+
+
+def logp_forw(out_vars, vars, shared):
+    """Compile Theano function of the model and the input and output variables.
+
+    Parameters
+    ----------
+    out_vars: List
+        containing :class:`pymc3.Distribution` for the output variables
+    vars: List
+        containing :class:`pymc3.Distribution` for the input variables
+    shared: List
+        containing :class:`theano.tensor.Tensor` for depended shared data
+    """
+    out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
+    f = theano_function([inarray0], out_list[0])
+    f.trust_input = True
+    return f

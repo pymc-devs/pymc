@@ -1,7 +1,7 @@
 import numpy as np
 from .distribution import NoDistribution
 from .tree import Tree, SplitNode, LeafNode
-from pymc3.util import get_variable_name
+from pymc3.util import get_var_name
 
 # from ..step_methods.bart.exceptions import (
 #    BARTParamsError,
@@ -89,7 +89,7 @@ class BaseBART(NoDistribution):
         # Taken from Section 3.1 of Kapelner, A and Bleich, J. bartMachine: A Powerful Tool for Machine Learning in R. ArXiv e-prints, 2013
         # The sum_trees_output will contain the sum of the predicted output for all trees.
         # When R_j is needed we subtract the current predicted output for tree T_j.
-        self.sum_trees_output = np.ones_like(self.Y) * self.Y.mean()
+        self.sum_trees_output = np.full_like(self.Y, self.Y.mean())
 
         return list_of_trees
 
@@ -190,8 +190,12 @@ class BaseBART(NoDistribution):
 
         return left_node_idx_data_points, right_node_idx_data_points
 
-    def get_residuals(self, tree):
+    def get_residuals_loo(self, tree):
         R_j = self.Y - (self.sum_trees_output - tree.predict_output(self.num_observations))
+        return R_j
+
+    def get_residuals(self):
+        R_j = self.Y - self.sum_trees_output
         return R_j
 
     def draw_leaf_value(self, tree, idx_data_points):
@@ -250,14 +254,12 @@ class BART(BaseBART):
         )
 
     def draw_leaf_value(self, tree, idx_data_points):
-        R_j = self.get_residuals(tree)
-        node_responses = R_j[idx_data_points]
+        R_j = self.get_residuals()[idx_data_points]
 
-        data_mean = (
-            node_responses.mean()
-        )  # for skewed distribution use median or sample from data-points?
-        data_std_scaled = node_responses.std() / self.m
-
-        draw = data_mean + self._normal_dist_sampler.sample() * data_std_scaled
+        # for skewed distribution use median or sample from data-points?
+        # data_mean = R_j.mean()
+        # data_std_scaled = R_j.std() / self.m
+        # draw = data_mean + self._normal_dist_sampler.sample() * data_std_scaled
+        draw = R_j.mean()
 
         return draw
