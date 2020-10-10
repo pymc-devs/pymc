@@ -1044,55 +1044,47 @@ class TestMLDA:
         _, model, _ = mv_simple()
         _, model_coarse, _ = mv_simple_coarse()
         with model:
-            sampler = MLDA(coarse_models=[model_coarse],
-                           base_sampler='Metropolis')
-            assert isinstance(sampler.proposal_dist,
-                              RecursiveDAProposal)
+            sampler = MLDA(coarse_models=[model_coarse], base_sampler="Metropolis")
+            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
             assert isinstance(sampler.step_method_below.proposal_dist, NormalProposal)
 
             sampler = MLDA(coarse_models=[model_coarse])
-            assert isinstance(sampler.proposal_dist,
-                              RecursiveDAProposal)
+            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(sampler.step_method_below.proposal_dist,
-                              UniformProposal)
+            assert isinstance(sampler.step_method_below.proposal_dist, UniformProposal)
 
             s = np.ones(model.ndim)
-            sampler = MLDA(coarse_models=[model_coarse],
-                           base_sampler='Metropolis', base_S=s)
-            assert isinstance(sampler.proposal_dist,
-                              RecursiveDAProposal)
+            sampler = MLDA(
+                coarse_models=[model_coarse], base_sampler="Metropolis", base_S=s
+            )
+            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
             assert isinstance(sampler.step_method_below.proposal_dist, NormalProposal)
 
-            sampler = MLDA(coarse_models=[model_coarse],
-                           base_S=s)
-            assert isinstance(sampler.proposal_dist,
-                              RecursiveDAProposal)
+            sampler = MLDA(coarse_models=[model_coarse], base_S=s)
+            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(sampler.step_method_below.proposal_dist,
-                              UniformProposal)
+            assert isinstance(sampler.step_method_below.proposal_dist, UniformProposal)
 
             s = np.diag(s)
-            sampler = MLDA(coarse_models=[model_coarse],
-                           base_sampler='Metropolis', base_S=s)
-            assert isinstance(sampler.proposal_dist,
-                              RecursiveDAProposal)
+            sampler = MLDA(
+                coarse_models=[model_coarse], base_sampler="Metropolis", base_S=s
+            )
+            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(sampler.step_method_below.proposal_dist, MultivariateNormalProposal)
+            assert isinstance(
+                sampler.step_method_below.proposal_dist, MultivariateNormalProposal
+            )
 
-            sampler = MLDA(coarse_models=[model_coarse],
-                           base_S=s)
-            assert isinstance(sampler.proposal_dist,
-                              RecursiveDAProposal)
+            sampler = MLDA(coarse_models=[model_coarse], base_S=s)
+            assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(sampler.step_method_below.proposal_dist,
-                              UniformProposal)
+            assert isinstance(sampler.step_method_below.proposal_dist, UniformProposal)
 
             s[0, 0] = -s[0, 0]
             with pytest.raises(np.linalg.LinAlgError):
-                MLDA(coarse_models=[model_coarse], base_sampler='Metropolis', base_S=s)
+                MLDA(coarse_models=[model_coarse], base_sampler="Metropolis", base_S=s)
 
     def test_step_methods_in_each_level(self):
         """Test that MLDA creates the correct hierarchy of step methods when no
@@ -1102,17 +1094,25 @@ class TestMLDA:
         _, model_very_coarse, _ = mv_simple_very_coarse()
         with model:
             s = np.ones(model.ndim) + 2.0
-            sampler = MLDA(coarse_models=[model_very_coarse, model_coarse],
-                           base_S=s, base_sampler='Metropolis')
+            sampler = MLDA(
+                coarse_models=[model_very_coarse, model_coarse],
+                base_S=s,
+                base_sampler="Metropolis",
+            )
             assert isinstance(sampler.step_method_below, MLDA)
             assert isinstance(sampler.step_method_below.step_method_below, Metropolis)
-            assert np.all(sampler.step_method_below.step_method_below.proposal_dist.s == s)
+            assert np.all(
+                sampler.step_method_below.step_method_below.proposal_dist.s == s
+            )
 
-            sampler = MLDA(coarse_models=[model_very_coarse, model_coarse],
-                           base_S=s)
+            sampler = MLDA(coarse_models=[model_very_coarse, model_coarse], base_S=s)
             assert isinstance(sampler.step_method_below, MLDA)
-            assert isinstance(sampler.step_method_below.step_method_below, DEMetropolisZ)
-            assert np.all(sampler.step_method_below.step_method_below.proposal_dist.s == s)
+            assert isinstance(
+                sampler.step_method_below.step_method_below, DEMetropolisZ
+            )
+            assert np.all(
+                sampler.step_method_below.step_method_below.proposal_dist.s == s
+            )
 
     def test_exceptions_coarse_models(self):
         """Test that MLDA generates the expected exceptions when no coarse_models arg
@@ -1161,9 +1161,9 @@ class TestMLDA:
                 step = stepper(coarse_models=[coarse_model])
                 trace = sample(chains=2, cores=2, draws=20, tune=0, step=step)
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
-                assert len(set(samples)) == 2, "Parallelized {} " "chains are identical.".format(
-                    stepper
-                )
+                assert (
+                    len(set(samples)) == 2
+                ), "Parallelized {} " "chains are identical.".format(stepper)
 
     def test_acceptance_rate_against_coarseness(self):
         """Test that the acceptance rate increases
@@ -1203,10 +1203,14 @@ class TestMLDA:
         _, model_coarse = simple_2model_continuous()
         with model:
             for stepper in self.steppers:
-                assert isinstance(stepper(coarse_models=[model_coarse],
-                                          base_sampler='Metropolis',
-                                          base_blocked=False).step_method_below,
-                                  CompoundStep)
+                assert isinstance(
+                    stepper(
+                        coarse_models=[model_coarse],
+                        base_sampler="Metropolis",
+                        base_blocked=False,
+                    ).step_method_below,
+                    CompoundStep,
+                )
 
     def test_mlda_blocked(self):
         """Test the type of base sampler instantiated
@@ -1217,16 +1221,26 @@ class TestMLDA:
         _, model_coarse = simple_2model_continuous()
         with model:
             for stepper in self.steppers:
-                assert not isinstance(stepper(coarse_models=[model_coarse],
-                                              base_sampler='Metropolis',
-                                              base_blocked=True).step_method_below,
-                                      CompoundStep)
-                assert isinstance(stepper(coarse_models=[model_coarse],
-                                          base_sampler='Metropolis',
-                                          base_blocked=True).step_method_below,
-                                  Metropolis)
-                assert isinstance(stepper(coarse_models=[model_coarse]).step_method_below,
-                                  DEMetropolisZ)
+                assert not isinstance(
+                    stepper(
+                        coarse_models=[model_coarse],
+                        base_sampler="Metropolis",
+                        base_blocked=True,
+                    ).step_method_below,
+                    CompoundStep,
+                )
+                assert isinstance(
+                    stepper(
+                        coarse_models=[model_coarse],
+                        base_sampler="Metropolis",
+                        base_blocked=True,
+                    ).step_method_below,
+                    Metropolis,
+                )
+                assert isinstance(
+                    stepper(coarse_models=[model_coarse]).step_method_below,
+                    DEMetropolisZ,
+                )
 
     def test_tuning_and_scaling_on(self):
         """Test that tune and base_scaling change as expected when
@@ -1239,10 +1253,12 @@ class TestMLDA:
             trace_0 = sample(
                 tune=ts,
                 draws=20,
-                step=MLDA(coarse_models=[model_coarse],
-                          base_sampler='Metropolis',
-                          base_tune_interval=50,
-                          base_scaling=100.),
+                step=MLDA(
+                    coarse_models=[model_coarse],
+                    base_sampler="Metropolis",
+                    base_tune_interval=50,
+                    base_scaling=100.0,
+                ),
                 chains=1,
                 discard_tuned_samples=False,
                 random_seed=1234,
@@ -1251,48 +1267,50 @@ class TestMLDA:
             trace_1 = sample(
                 tune=ts,
                 draws=20,
-                step=MLDA(coarse_models=[model_coarse],
-                          base_tune_target='scaling',
-                          base_tune_interval=50,
-                          base_scaling=100.),
+                step=MLDA(
+                    coarse_models=[model_coarse],
+                    base_tune_target="scaling",
+                    base_tune_interval=50,
+                    base_scaling=100.0,
+                ),
                 chains=1,
                 discard_tuned_samples=False,
-                random_seed=1234
+                random_seed=1234,
             )
 
             trace_2 = sample(
                 tune=ts,
                 draws=20,
-                step=MLDA(coarse_models=[model_coarse],
-                          base_tune_interval=50,
-                          base_lamb=100.),
+                step=MLDA(
+                    coarse_models=[model_coarse], base_tune_interval=50, base_lamb=100.0
+                ),
                 chains=1,
                 discard_tuned_samples=False,
-                random_seed=1234
+                random_seed=1234,
             )
 
-        assert trace_0.get_sampler_stats('tune', chains=0)[0]
-        assert trace_0.get_sampler_stats('tune', chains=0)[ts - 1]
-        assert not trace_0.get_sampler_stats('tune', chains=0)[ts]
-        assert not trace_0.get_sampler_stats('tune', chains=0)[-1]
-        assert trace_0.get_sampler_stats('base_scaling', chains=0)[0][0] == 100.
-        assert trace_0.get_sampler_stats('base_scaling', chains=0)[0][1] == 100.
-        assert trace_0.get_sampler_stats('base_scaling', chains=0)[-1][0] < 100.
-        assert trace_0.get_sampler_stats('base_scaling', chains=0)[-1][1] < 100.
+        assert trace_0.get_sampler_stats("tune", chains=0)[0]
+        assert trace_0.get_sampler_stats("tune", chains=0)[ts - 1]
+        assert not trace_0.get_sampler_stats("tune", chains=0)[ts]
+        assert not trace_0.get_sampler_stats("tune", chains=0)[-1]
+        assert trace_0.get_sampler_stats("base_scaling", chains=0)[0][0] == 100.0
+        assert trace_0.get_sampler_stats("base_scaling", chains=0)[0][1] == 100.0
+        assert trace_0.get_sampler_stats("base_scaling", chains=0)[-1][0] < 100.0
+        assert trace_0.get_sampler_stats("base_scaling", chains=0)[-1][1] < 100.0
 
-        assert trace_1.get_sampler_stats('tune', chains=0)[0]
-        assert trace_1.get_sampler_stats('tune', chains=0)[ts - 1]
-        assert not trace_1.get_sampler_stats('tune', chains=0)[ts]
-        assert not trace_1.get_sampler_stats('tune', chains=0)[-1]
-        assert trace_1.get_sampler_stats('base_scaling', chains=0)[0] == 100.
-        assert trace_1.get_sampler_stats('base_scaling', chains=0)[-1] < 100.
+        assert trace_1.get_sampler_stats("tune", chains=0)[0]
+        assert trace_1.get_sampler_stats("tune", chains=0)[ts - 1]
+        assert not trace_1.get_sampler_stats("tune", chains=0)[ts]
+        assert not trace_1.get_sampler_stats("tune", chains=0)[-1]
+        assert trace_1.get_sampler_stats("base_scaling", chains=0)[0] == 100.0
+        assert trace_1.get_sampler_stats("base_scaling", chains=0)[-1] < 100.0
 
-        assert trace_2.get_sampler_stats('tune', chains=0)[0]
-        assert trace_2.get_sampler_stats('tune', chains=0)[ts - 1]
-        assert not trace_2.get_sampler_stats('tune', chains=0)[ts]
-        assert not trace_2.get_sampler_stats('tune', chains=0)[-1]
-        assert trace_2.get_sampler_stats('base_lambda', chains=0)[0] == 100.
-        assert trace_2.get_sampler_stats('base_lambda', chains=0)[-1] < 100.
+        assert trace_2.get_sampler_stats("tune", chains=0)[0]
+        assert trace_2.get_sampler_stats("tune", chains=0)[ts - 1]
+        assert not trace_2.get_sampler_stats("tune", chains=0)[ts]
+        assert not trace_2.get_sampler_stats("tune", chains=0)[-1]
+        assert trace_2.get_sampler_stats("base_lambda", chains=0)[0] == 100.0
+        assert trace_2.get_sampler_stats("base_lambda", chains=0)[-1] < 100.0
 
     def test_tuning_and_scaling_off(self):
         """Test that tuning is deactivated when sample()'s tune=0 and that
@@ -1306,11 +1324,13 @@ class TestMLDA:
             trace_0 = sample(
                 tune=ts_0,
                 draws=100,
-                step=MLDA(coarse_models=[model_coarse],
-                          base_sampler='Metropolis',
-                          base_tune_interval=50,
-                          base_scaling=100.,
-                          tune=False),
+                step=MLDA(
+                    coarse_models=[model_coarse],
+                    base_sampler="Metropolis",
+                    base_tune_interval=50,
+                    base_scaling=100.0,
+                    tune=False,
+                ),
                 chains=1,
                 discard_tuned_samples=False,
                 random_seed=12345,
@@ -1321,11 +1341,13 @@ class TestMLDA:
             trace_1 = sample(
                 tune=ts_1,
                 draws=20,
-                step=MLDA(coarse_models=[model_coarse],
-                          base_sampler='Metropolis',
-                          base_tune_interval=50,
-                          base_scaling=100.,
-                          tune=False),
+                step=MLDA(
+                    coarse_models=[model_coarse],
+                    base_sampler="Metropolis",
+                    base_tune_interval=50,
+                    base_scaling=100.0,
+                    tune=False,
+                ),
                 chains=1,
                 discard_tuned_samples=False,
                 random_seed=12345,
@@ -1355,21 +1377,26 @@ class TestMLDA:
             trace_2 = sample(
                 tune=ts_2,
                 draws=100,
-                step=MLDA(coarse_models=[model_coarse],
-                          base_tune_interval=50,
-                          base_lamb=100.,
-                          base_tune_target=None),
+                step=MLDA(
+                    coarse_models=[model_coarse],
+                    base_tune_interval=50,
+                    base_lamb=100.0,
+                    base_tune_target=None,
+                ),
                 chains=1,
                 discard_tuned_samples=False,
-                random_seed=12345
+                random_seed=12345,
             )
 
-        assert not trace_2.get_sampler_stats('tune', chains=0)[0]
-        assert not trace_2.get_sampler_stats('tune', chains=0)[-1]
-        assert trace_2.get_sampler_stats('base_lambda', chains=0)[0] == \
-               trace_2.get_sampler_stats('base_lambda', chains=0)[-1] == \
-               trace_2.get_sampler_stats('base_lambda', chains=0)[0] == \
-               trace_2.get_sampler_stats('base_lambda', chains=0)[-1] == 100.
+        assert not trace_2.get_sampler_stats("tune", chains=0)[0]
+        assert not trace_2.get_sampler_stats("tune", chains=0)[-1]
+        assert (
+            trace_2.get_sampler_stats("base_lambda", chains=0)[0]
+            == trace_2.get_sampler_stats("base_lambda", chains=0)[-1]
+            == trace_2.get_sampler_stats("base_lambda", chains=0)[0]
+            == trace_2.get_sampler_stats("base_lambda", chains=0)[-1]
+            == 100.0
+        )
 
     def test_trace_length(self):
         """Check if trace length is as expected."""
@@ -1380,7 +1407,9 @@ class TestMLDA:
         with Model():
             Normal("n", 0, 2, shape=(3,))
             step = MLDA(coarse_models=[coarse_model])
-            trace = sample(tune=tune, draws=draws, step=step, chains=1, discard_tuned_samples=False)
+            trace = sample(
+                tune=tune, draws=draws, step=step, chains=1, discard_tuned_samples=False
+            )
             assert len(trace) == tune + draws
 
     @pytest.mark.parametrize(
@@ -1405,11 +1434,15 @@ class TestMLDA:
         with Model():
             Normal("n", 0, 2.0, shape=(3,))
 
-            step_1 = MLDA(coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=3)
+            step_1 = MLDA(
+                coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=3
+            )
             assert len(step_1.subsampling_rates) == 2
             assert step_1.subsampling_rates[0] == step_1.subsampling_rates[1] == 3
 
-            step_2 = MLDA(coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=[3, 4])
+            step_2 = MLDA(
+                coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=[3, 4]
+            )
             assert step_2.subsampling_rates[0] == 3
             assert step_2.subsampling_rates[1] == 4
 
@@ -1459,7 +1492,7 @@ class TestMLDA:
 
                 temp = intercept + x_coeff * x + self.pymc3_model.bias.get_value()
                 with self.pymc3_model:
-                    set_data({'model_output': temp})
+                    set_data({"model_output": temp})
                 outputs[0][0] = np.array(temp)
 
         # create the coarse models with separate biases
@@ -1467,72 +1500,76 @@ class TestMLDA:
         coarse_models = []
 
         with Model() as coarse_model_0:
-            mu_B = Data('mu_B', np.zeros(y.shape, dtype=p))
-            bias = Data('bias', 3.5 * np.ones(y.shape, dtype=p))
-            Sigma_B = Data('Sigma_B', np.zeros((y.shape[0], y.shape[0]), dtype=p))
-            model_output = Data('model_output', np.zeros(y.shape, dtype=p))
-            Sigma_e = Data('Sigma_e', s)
+            mu_B = Data("mu_B", np.zeros(y.shape, dtype=p))
+            bias = Data("bias", 3.5 * np.ones(y.shape, dtype=p))
+            Sigma_B = Data("Sigma_B", np.zeros((y.shape[0], y.shape[0]), dtype=p))
+            model_output = Data("model_output", np.zeros(y.shape, dtype=p))
+            Sigma_e = Data("Sigma_e", s)
 
             # Define priors
-            intercept = Normal('Intercept', 0, sigma=20)
-            x_coeff = Normal('x', 0, sigma=20)
+            intercept = Normal("Intercept", 0, sigma=20)
+            x_coeff = Normal("x", 0, sigma=20)
 
             theta = tt.as_tensor_variable([intercept, x_coeff])
 
             mout.append(ForwardModel(x, coarse_model_0))
 
             # Define likelihood
-            likelihood = MvNormal('y', mu=mout[0](theta) + mu_B,
-                                  cov=Sigma_e, observed=y)
+            likelihood = MvNormal(
+                "y", mu=mout[0](theta) + mu_B, cov=Sigma_e, observed=y
+            )
 
             coarse_models.append(coarse_model_0)
 
         with Model() as coarse_model_1:
-            mu_B = Data('mu_B', np.zeros(y.shape, dtype=p))
-            bias = Data('bias', 2.2 * np.ones(y.shape, dtype=p))
-            Sigma_B = Data('Sigma_B', np.zeros((y.shape[0], y.shape[0]), dtype=p))
-            model_output = Data('model_output', np.zeros(y.shape, dtype=p))
-            Sigma_e = Data('Sigma_e', s)
+            mu_B = Data("mu_B", np.zeros(y.shape, dtype=p))
+            bias = Data("bias", 2.2 * np.ones(y.shape, dtype=p))
+            Sigma_B = Data("Sigma_B", np.zeros((y.shape[0], y.shape[0]), dtype=p))
+            model_output = Data("model_output", np.zeros(y.shape, dtype=p))
+            Sigma_e = Data("Sigma_e", s)
 
             # Define priors
-            intercept = Normal('Intercept', 0, sigma=20)
-            x_coeff = Normal('x', 0, sigma=20)
+            intercept = Normal("Intercept", 0, sigma=20)
+            x_coeff = Normal("x", 0, sigma=20)
 
             theta = tt.as_tensor_variable([intercept, x_coeff])
 
             mout.append(ForwardModel(x, coarse_model_1))
 
             # Define likelihood
-            likelihood = MvNormal('y', mu=mout[1](theta) + mu_B,
-                                  cov=Sigma_e, observed=y)
+            likelihood = MvNormal(
+                "y", mu=mout[1](theta) + mu_B, cov=Sigma_e, observed=y
+            )
 
             coarse_models.append(coarse_model_1)
 
         # fine model and inference
         with Model() as model:
-            bias = Data('bias', np.zeros(y.shape, dtype=p))
-            model_output = Data('model_output', np.zeros(y.shape, dtype=p))
-            Sigma_e = Data('Sigma_e', s)
+            bias = Data("bias", np.zeros(y.shape, dtype=p))
+            model_output = Data("model_output", np.zeros(y.shape, dtype=p))
+            Sigma_e = Data("Sigma_e", s)
 
             # Define priors
-            intercept = Normal('Intercept', 0, sigma=20)
-            x_coeff = Normal('x', 0, sigma=20)
+            intercept = Normal("Intercept", 0, sigma=20)
+            x_coeff = Normal("x", 0, sigma=20)
 
             theta = tt.as_tensor_variable([intercept, x_coeff])
 
             mout.append(ForwardModel(x, model))
 
             # Define likelihood
-            likelihood = MvNormal('y', mu=mout[-1](theta),
-                                  cov=Sigma_e, observed=y)
+            likelihood = MvNormal("y", mu=mout[-1](theta), cov=Sigma_e, observed=y)
 
-            step_mlda = MLDA(coarse_models=coarse_models,
-                             adaptive_error_model=True)
+            step_mlda = MLDA(coarse_models=coarse_models, adaptive_error_model=True)
 
-            trace_mlda = sample(draws=100, step=step_mlda,
-                                chains=1, tune=200,
-                                discard_tuned_samples=True,
-                                random_seed=84759238)
+            trace_mlda = sample(
+                draws=100,
+                step=step_mlda,
+                chains=1,
+                tune=200,
+                discard_tuned_samples=True,
+                random_seed=84759238,
+            )
 
             m0 = step_mlda.step_method_below.model_below.mu_B.get_value()
             s0 = step_mlda.step_method_below.model_below.Sigma_B.get_value()
@@ -1602,7 +1639,9 @@ class TestMLDA:
 
                 temp = np.array(intercept + x_coeff * self.x, dtype=p)
                 self.pymc3_model.Q.set_value(np.array(x_coeff, dtype=p))
-                outputs[0][0] = np.array(- (0.5 / s ** 2) * np.sum((temp - self.y) ** 2, dtype=p), dtype=p)
+                outputs[0][0] = np.array(
+                    -(0.5 / s ** 2) * np.sum((temp - self.y) ** 2, dtype=p), dtype=p
+                )
 
         class Likelihood2(tt.Op):
             if theano.config.floatX == "float32":
@@ -1623,81 +1662,98 @@ class TestMLDA:
 
                 temp = np.array(intercept + x_coeff * self.x, dtype=p)
                 self.pymc3_model.Q.set_value(temp.mean(dtype=p))
-                outputs[0][0] = np.array(- (0.5 / s ** 2) * np.sum((temp - self.y) ** 2, dtype=p), dtype=p)
+                outputs[0][0] = np.array(
+                    -(0.5 / s ** 2) * np.sum((temp - self.y) ** 2, dtype=p), dtype=p
+                )
 
         # run four MLDA steppers for all combinations of
         # base_sampler and forward model
-        for stepper in ['Metropolis', 'DEMetropolisZ']:
+        for stepper in ["Metropolis", "DEMetropolisZ"]:
             for f in [Likelihood1, Likelihood2]:
                 mout = []
                 coarse_models = []
 
                 with Model() as coarse_model_0:
                     if theano.config.floatX == "float32":
-                        Q = Data('Q', np.float32(0.0))
+                        Q = Data("Q", np.float32(0.0))
                     else:
-                        Q = Data('Q', np.float64(0.0))
+                        Q = Data("Q", np.float64(0.0))
 
                     # Define priors
-                    intercept = Normal('Intercept', 0, sigma=20)
-                    x_coeff = Normal('x', 0, sigma=20)
+                    intercept = Normal("Intercept", 0, sigma=20)
+                    x_coeff = Normal("x", 0, sigma=20)
 
                     theta = tt.as_tensor_variable([intercept, x_coeff])
 
                     mout.append(f(x_coarse_0, y_coarse_0, coarse_model_0))
-                    Potential('likelihood', mout[0](theta))
+                    Potential("likelihood", mout[0](theta))
 
                     coarse_models.append(coarse_model_0)
 
                 with Model() as coarse_model_1:
                     if theano.config.floatX == "float32":
-                        Q = Data('Q', np.float32(0.0))
+                        Q = Data("Q", np.float32(0.0))
                     else:
-                        Q = Data('Q', np.float64(0.0))
+                        Q = Data("Q", np.float64(0.0))
 
                     # Define priors
-                    intercept = Normal('Intercept', 0, sigma=20)
-                    x_coeff = Normal('x', 0, sigma=20)
+                    intercept = Normal("Intercept", 0, sigma=20)
+                    x_coeff = Normal("x", 0, sigma=20)
 
                     theta = tt.as_tensor_variable([intercept, x_coeff])
 
                     mout.append(f(x_coarse_1, y_coarse_1, coarse_model_1))
-                    Potential('likelihood', mout[1](theta))
+                    Potential("likelihood", mout[1](theta))
 
                     coarse_models.append(coarse_model_1)
 
                 with Model() as model:
                     if theano.config.floatX == "float32":
-                        Q = Data('Q', np.float32(0.0))
+                        Q = Data("Q", np.float32(0.0))
                     else:
-                        Q = Data('Q', np.float64(0.0))
+                        Q = Data("Q", np.float64(0.0))
 
                     # Define priors
-                    intercept = Normal('Intercept', 0, sigma=20)
-                    x_coeff = Normal('x', 0, sigma=20)
+                    intercept = Normal("Intercept", 0, sigma=20)
+                    x_coeff = Normal("x", 0, sigma=20)
 
                     theta = tt.as_tensor_variable([intercept, x_coeff])
 
                     mout.append(f(x, y, model))
-                    Potential('likelihood', mout[-1](theta))
+                    Potential("likelihood", mout[-1](theta))
 
-                    step = MLDA(coarse_models=coarse_models,
-                                base_sampler=stepper,
-                                subsampling_rates=nsub,
-                                variance_reduction=True,
-                                store_Q_fine=True)
+                    step = MLDA(
+                        coarse_models=coarse_models,
+                        base_sampler=stepper,
+                        subsampling_rates=nsub,
+                        variance_reduction=True,
+                        store_Q_fine=True,
+                    )
 
-                    trace = sample(draws=ndraws, step=step,
-                                   chains=nchains, tune=ntune, cores=1,
-                                   discard_tuned_samples=True,
-                                   random_seed=seed)
+                    trace = sample(
+                        draws=ndraws,
+                        step=step,
+                        chains=nchains,
+                        tune=ntune,
+                        cores=1,
+                        discard_tuned_samples=True,
+                        random_seed=seed,
+                    )
 
                     Q_2 = trace.get_sampler_stats("Q_2").reshape((nchains, ndraws))
-                    Q_0 = np.concatenate(trace.get_sampler_stats("Q_0")).reshape((nchains, ndraws * nsub * nsub))
-                    Q_1_0 = np.concatenate(trace.get_sampler_stats("Q_1_0")).reshape((nchains, ndraws * nsub))
-                    Q_2_1 = np.concatenate(trace.get_sampler_stats("Q_2_1")).reshape((nchains, ndraws))
+                    Q_0 = np.concatenate(trace.get_sampler_stats("Q_0")).reshape(
+                        (nchains, ndraws * nsub * nsub)
+                    )
+                    Q_1_0 = np.concatenate(trace.get_sampler_stats("Q_1_0")).reshape(
+                        (nchains, ndraws * nsub)
+                    )
+                    Q_2_1 = np.concatenate(trace.get_sampler_stats("Q_2_1")).reshape(
+                        (nchains, ndraws)
+                    )
                     Q_mean_standard = Q_2.mean(axis=1).mean()
-                    Q_mean_vr = (Q_0.mean(axis=1) + Q_1_0.mean(axis=1) + Q_2_1.mean(axis=1)).mean()
+                    Q_mean_vr = (
+                        Q_0.mean(axis=1) + Q_1_0.mean(axis=1) + Q_2_1.mean(axis=1)
+                    ).mean()
 
                     ess_Q0 = az.ess(np.array(Q_0, np.float64))
                     ess_Q_1_0 = az.ess(np.array(Q_1_0, np.float64))
@@ -1712,5 +1768,9 @@ class TestMLDA:
                         assert Q_2_1.mean(axis=1) == 0.0
 
                     # check that the variance of VR is smaller
-                    assert Q_2.var() / ess_Q2 > Q_0.var() / ess_Q0 + \
-                           Q_1_0.var() / ess_Q_1_0 + Q_2_1.var() / ess_Q_2_1
+                    assert (
+                        Q_2.var() / ess_Q2
+                        > Q_0.var() / ess_Q0
+                        + Q_1_0.var() / ess_Q_1_0
+                        + Q_2_1.var() / ess_Q_2_1
+                    )

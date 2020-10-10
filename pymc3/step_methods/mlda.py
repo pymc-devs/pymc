@@ -27,7 +27,13 @@ from ..model import Model
 import pymc3 as pm
 from pymc3.theanof import floatX
 
-__all__ = ["MetropolisMLDA", "DEMetropolisZMLDA", "RecursiveDAProposal", "MLDA", "extract_Q_estimate"]
+__all__ = [
+    "MetropolisMLDA",
+    "DEMetropolisZMLDA",
+    "RecursiveDAProposal",
+    "MLDA",
+    "extract_Q_estimate",
+]
 
 
 class MetropolisMLDA(Metropolis):
@@ -78,18 +84,18 @@ class MetropolisMLDA(Metropolis):
         return
 
     def astep(self, q0):
-        
+
         q_new, stats = super().astep(q0)
-        
+
         # Add variance reduction functionality.
         if self.mlda_variance_reduction:
-            if stats[0]['accepted']:
+            if stats[0]["accepted"]:
                 self.Q_last = self.model.Q.get_value()
             if self.sub_counter == self.mlda_subsampling_rate_above:
                 self.sub_counter = 0
             self.Q_reg[self.sub_counter] = self.Q_last
             self.sub_counter += 1
-        
+
         return q_new, stats
 
 
@@ -144,18 +150,18 @@ class DEMetropolisZMLDA(DEMetropolisZ):
         return
 
     def astep(self, q0):
-        
+
         q_new, stats = super().astep(q0)
-        
+
         # Add variance reduction functionality.
         if self.mlda_variance_reduction:
-            if stats[0]['accepted']:
+            if stats[0]["accepted"]:
                 self.Q_last = self.model.Q.get_value()
             if self.sub_counter == self.mlda_subsampling_rate_above:
                 self.sub_counter = 0
             self.Q_reg[self.sub_counter] = self.Q_last
             self.sub_counter += 1
-        
+
         return q_new, stats
 
     def stop_tuning(self):
@@ -358,12 +364,12 @@ class MLDA(ArrayStepShared):
         self,
         coarse_models: List[Model],
         vars: Optional[list] = None,
-        base_sampler='DEMetropolisZ',
+        base_sampler="DEMetropolisZ",
         base_S: Optional = None,
         base_proposal_dist: Optional[Type[Proposal]] = None,
         base_scaling: Optional = None,
         tune: bool = True,
-        base_tune_target: str = 'lambda',
+        base_tune_target: str = "lambda",
         base_tune_interval: int = 100,
         base_lamb: Optional = None,
         base_tune_drop_fraction: float = 0.9,
@@ -374,7 +380,7 @@ class MLDA(ArrayStepShared):
         variance_reduction: bool = False,
         store_Q_fine: bool = False,
         adaptive_error_model: bool = False,
-        **kwargs
+        **kwargs,
     ) -> None:
 
         # this variable is used to identify MLDA objects which are
@@ -382,81 +388,92 @@ class MLDA(ArrayStepShared):
         self.is_child = kwargs.get("is_child", False)
         if not self.is_child:
             warnings.warn(
-                'The MLDA implementation in PyMC3 is still immature. You should be particularly critical of its results.'
+                "The MLDA implementation in PyMC3 is still immature. You should be particularly critical of its results."
             )
 
         if not isinstance(coarse_models, list):
-            raise ValueError(
-                "MLDA step method cannot use coarse_models if it is not a list"
-            )
+            raise ValueError("MLDA step method cannot use coarse_models if it is not a list")
         if len(coarse_models) == 0:
             raise ValueError(
                 "MLDA step method was given an empty "
                 "list of coarse models. Give at least "
                 "one coarse model."
             )
-        
+
         # assign internal state
         model = pm.modelcontext(model)
         self.model = model
         self.coarse_models = coarse_models
         self.model_below = self.coarse_models[-1]
         self.num_levels = len(self.coarse_models) + 1
-        
+
         # set up variance reduction.
         self.variance_reduction = variance_reduction
         self.store_Q_fine = store_Q_fine
-        
+
         # check that certain requirements hold
         # for the variance reduction feature to work
         if self.variance_reduction or self.store_Q_fine:
-            if not hasattr(self.model, 'Q'):
-                raise AttributeError("Model given to MLDA does not contain"
-                                     "variable 'Q'. You need to include"
-                                     "the variable in the model definition"
-                                     "for variance reduction to work or"
-                                     "for storing the fine Q."
-                                     "Use pm.Data() to define it.")
+            if not hasattr(self.model, "Q"):
+                raise AttributeError(
+                    "Model given to MLDA does not contain"
+                    "variable 'Q'. You need to include"
+                    "the variable in the model definition"
+                    "for variance reduction to work or"
+                    "for storing the fine Q."
+                    "Use pm.Data() to define it."
+                )
             if not isinstance(self.model.Q, tt.sharedvar.TensorSharedVariable):
-                raise TypeError("The variable 'Q' in the model definition is not of type "
-                                "'TensorSharedVariable'. Use pm.Data() to define the"
-                                "variable.")
-                                
+                raise TypeError(
+                    "The variable 'Q' in the model definition is not of type "
+                    "'TensorSharedVariable'. Use pm.Data() to define the"
+                    "variable."
+                )
+
         if self.is_child and self.variance_reduction:
             # this is the subsampling rate applied to the current level
             # it is stored in the level above and transferred here
             self.subsampling_rate_above = kwargs.pop("subsampling_rate_above", None)
-        
+
         # set up adaptive error model
         self.adaptive_error_model = adaptive_error_model
-        
+
         # check that certain requirements hold
         # for the adaptive error model feature to work
         if self.adaptive_error_model:
-            if not hasattr(self.model_below, 'mu_B'):
-                raise AttributeError("Model below in hierarchy does not contain"
-                                     "variable 'mu_B'. You need to include"
-                                     "the variable in the model definition"
-                                     "for adaptive error model to work."
-                                     "Use pm.Data() to define it.")
-            if not hasattr(self.model_below, 'Sigma_B'):
-                raise AttributeError("Model below in hierarchy does not contain"
-                                     "variable 'Sigma_B'. You need to include"
-                                     "the variable in the model definition"
-                                     "for adaptive error model to work."
-                                     "Use pm.Data() to define it.")
-            if not (isinstance(self.model_below.mu_B, tt.sharedvar.TensorSharedVariable) and
-                    isinstance(self.model_below.Sigma_B, tt.sharedvar.TensorSharedVariable)):
-                raise TypeError("At least one of the variables 'mu_B' and 'Sigma_B' "
-                                "in the definition of the below model is not of type "
-                                "'TensorSharedVariable'. Use pm.Data() to define those "
-                                "variables.")
+            if not hasattr(self.model_below, "mu_B"):
+                raise AttributeError(
+                    "Model below in hierarchy does not contain"
+                    "variable 'mu_B'. You need to include"
+                    "the variable in the model definition"
+                    "for adaptive error model to work."
+                    "Use pm.Data() to define it."
+                )
+            if not hasattr(self.model_below, "Sigma_B"):
+                raise AttributeError(
+                    "Model below in hierarchy does not contain"
+                    "variable 'Sigma_B'. You need to include"
+                    "the variable in the model definition"
+                    "for adaptive error model to work."
+                    "Use pm.Data() to define it."
+                )
+            if not (
+                isinstance(self.model_below.mu_B, tt.sharedvar.TensorSharedVariable)
+                and isinstance(self.model_below.Sigma_B, tt.sharedvar.TensorSharedVariable)
+            ):
+                raise TypeError(
+                    "At least one of the variables 'mu_B' and 'Sigma_B' "
+                    "in the definition of the below model is not of type "
+                    "'TensorSharedVariable'. Use pm.Data() to define those "
+                    "variables."
+                )
 
             # this object is used to recursively update the mean and
             # variance of the bias correction given new differences
             # between levels
-            self.bias = RecursiveSampleMoments(self.model_below.mu_B.get_value(),
-                                               self.model_below.Sigma_B.get_value())
+            self.bias = RecursiveSampleMoments(
+                self.model_below.mu_B.get_value(), self.model_below.Sigma_B.get_value()
+            )
 
             # this list holds the bias objects from all levels
             # it is gradually constructed when MLDA objects are
@@ -470,7 +487,7 @@ class MLDA(ArrayStepShared):
             # variables used for adaptive error model
             self.last_synced_output_diff = None
             self.adaptation_started = False
-        
+
         # set up subsampling rates.
         if isinstance(subsampling_rates, int):
             self.subsampling_rates = [subsampling_rates] * len(self.coarse_models)
@@ -482,7 +499,7 @@ class MLDA(ArrayStepShared):
                     f"were {len(subsampling_rates)}, {len(self.coarse_models)}"
                 )
             self.subsampling_rates = subsampling_rates
-        
+
         self.subsampling_rate = self.subsampling_rates[-1]
         self.subchain_selection = None
 
@@ -491,10 +508,10 @@ class MLDA(ArrayStepShared):
 
         # VR is not compatible with compound base samplers so an automatic conversion
         # to a block sampler happens here if
-        if self.variance_reduction and self.base_sampler == 'Metropolis' and not base_blocked:
+        if self.variance_reduction and self.base_sampler == "Metropolis" and not base_blocked:
             warnings.warn(
-                'Variance reduction is not compatible with non-blocked (compound) samplers.'
-                'Automatically switching to a blocked Metropolis sampler.'
+                "Variance reduction is not compatible with non-blocked (compound) samplers."
+                "Automatically switching to a blocked Metropolis sampler."
             )
             self.base_blocked = True
         else:
@@ -504,28 +521,30 @@ class MLDA(ArrayStepShared):
         self.base_proposal_dist = base_proposal_dist
 
         if base_scaling is None:
-            if self.base_sampler == 'Metropolis':
-                self.base_scaling = 1.
+            if self.base_sampler == "Metropolis":
+                self.base_scaling = 1.0
             else:
                 self.base_scaling = 0.001
         else:
             self.base_scaling = float(base_scaling)
 
         self.tune = tune
-        if not self.tune and self.base_sampler == 'DEMetropolisZ':
-            raise ValueError(f"The argument tune was set to False while using"
-                             f" a 'DEMetropolisZ' base sampler. 'DEMetropolisZ' "
-                             f" tune needs to be True.")
+        if not self.tune and self.base_sampler == "DEMetropolisZ":
+            raise ValueError(
+                f"The argument tune was set to False while using"
+                f" a 'DEMetropolisZ' base sampler. 'DEMetropolisZ' "
+                f" tune needs to be True."
+            )
 
         self.base_tune_target = base_tune_target
         self.base_tune_interval = base_tune_interval
         self.base_lamb = base_lamb
         self.base_tune_drop_fraction = float(base_tune_drop_fraction)
         self.base_scaling_stats = None
-        
+
         self.mode = mode
-        
-        if self.base_sampler == 'DEMetropolisZ':
+
+        if self.base_sampler == "DEMetropolisZ":
             self.base_lambda_stats = None
 
         # Process model variables
@@ -549,86 +568,95 @@ class MLDA(ArrayStepShared):
         vars_below = pm.inputvars(vars_below)
         shared_below = pm.make_shared_replacements(vars_below, model_below)
         self.delta_logp_below = delta_logp(model_below.logpt, vars_below, shared_below)
-        
+
         super().__init__(vars, shared)
 
         # initialise complete step method hierarchy
         if self.num_levels == 2:
             with self.model_below:
                 # make sure the correct variables are selected from model_below
-                vars_below = [
-                    var for var in self.model_below.vars if var.name in self.var_names
-                ]
+                vars_below = [var for var in self.model_below.vars if var.name in self.var_names]
 
                 # create kwargs
                 if self.variance_reduction:
-                    base_kwargs = {"mlda_subsampling_rate_above": self.subsampling_rate,
-                                   "mlda_variance_reduction": True}
+                    base_kwargs = {
+                        "mlda_subsampling_rate_above": self.subsampling_rate,
+                        "mlda_variance_reduction": True,
+                    }
                 else:
                     base_kwargs = {}
 
-                if self.base_sampler == 'Metropolis':
+                if self.base_sampler == "Metropolis":
                     # MetropolisMLDA sampler in base level (level=0), targeting self.model_below
-                    self.step_method_below = pm.MetropolisMLDA(vars=vars_below,
-                                                               proposal_dist=self.base_proposal_dist,
-                                                               S=self.base_S,
-                                                               scaling=self.base_scaling, tune=self.tune,
-                                                               tune_interval=self.base_tune_interval,
-                                                               model=None,
-                                                               mode=self.mode,
-                                                               blocked=self.base_blocked,
-                                                               ** base_kwargs)
+                    self.step_method_below = pm.MetropolisMLDA(
+                        vars=vars_below,
+                        proposal_dist=self.base_proposal_dist,
+                        S=self.base_S,
+                        scaling=self.base_scaling,
+                        tune=self.tune,
+                        tune_interval=self.base_tune_interval,
+                        model=None,
+                        mode=self.mode,
+                        blocked=self.base_blocked,
+                        **base_kwargs,
+                    )
                 else:
                     # DEMetropolisZMLDA sampler in base level (level=0), targeting self.model_below
-                    self.step_method_below = pm.DEMetropolisZMLDA(vars=vars_below,
-                                                                  S=self.base_S,
-                                                                  proposal_dist=self.base_proposal_dist,
-                                                                  lamb=self.base_lamb,
-                                                                  scaling=self.base_scaling,
-                                                                  tune=self.base_tune_target,
-                                                                  tune_interval=self.base_tune_interval,
-                                                                  tune_drop_fraction=self.base_tune_drop_fraction,
-                                                                  model=None,
-                                                                  mode=self.mode,
-                                                                  ** base_kwargs)
+                    self.step_method_below = pm.DEMetropolisZMLDA(
+                        vars=vars_below,
+                        S=self.base_S,
+                        proposal_dist=self.base_proposal_dist,
+                        lamb=self.base_lamb,
+                        scaling=self.base_scaling,
+                        tune=self.base_tune_target,
+                        tune_interval=self.base_tune_interval,
+                        tune_drop_fraction=self.base_tune_drop_fraction,
+                        model=None,
+                        mode=self.mode,
+                        **base_kwargs,
+                    )
         else:
             # drop the last coarse model
             coarse_models_below = self.coarse_models[:-1]
             subsampling_rates_below = self.subsampling_rates[:-1]
-            
+
             with self.model_below:
                 # make sure the correct variables are selected from model_below
-                vars_below = [
-                    var for var in self.model_below.vars if var.name in self.var_names
-                ]
+                vars_below = [var for var in self.model_below.vars if var.name in self.var_names]
 
                 # create kwargs
                 if self.variance_reduction:
-                    mlda_kwargs = {"is_child": True,
-                                   "subsampling_rate_above": self.subsampling_rate}
+                    mlda_kwargs = {
+                        "is_child": True,
+                        "subsampling_rate_above": self.subsampling_rate,
+                    }
                 else:
                     mlda_kwargs = {"is_child": True}
                 if self.adaptive_error_model:
                     mlda_kwargs = {**mlda_kwargs, **{"bias_all": self.bias_all}}
 
                 # MLDA sampler in some intermediate level, targeting self.model_below
-                self.step_method_below = pm.MLDA(vars=vars_below, base_S=self.base_S,
-                                                 base_sampler=self.base_sampler,
-                                                 base_proposal_dist=self.base_proposal_dist,
-                                                 base_scaling=self.base_scaling,
-                                                 tune=self.tune,
-                                                 base_tune_target=self.base_tune_target,
-                                                 base_tune_interval=self.base_tune_interval,
-                                                 base_lamb=self.base_lamb,
-                                                 base_tune_drop_fraction=self.base_tune_drop_fraction,
-                                                 model=None, mode=self.mode,
-                                                 subsampling_rates=subsampling_rates_below,
-                                                 coarse_models=coarse_models_below,
-                                                 base_blocked=self.base_blocked,
-                                                 variance_reduction=self.variance_reduction,
-                                                 store_Q_fine=False,
-                                                 adaptive_error_model=self.adaptive_error_model,
-                                                 **mlda_kwargs)
+                self.step_method_below = pm.MLDA(
+                    vars=vars_below,
+                    base_S=self.base_S,
+                    base_sampler=self.base_sampler,
+                    base_proposal_dist=self.base_proposal_dist,
+                    base_scaling=self.base_scaling,
+                    tune=self.tune,
+                    base_tune_target=self.base_tune_target,
+                    base_tune_interval=self.base_tune_interval,
+                    base_lamb=self.base_lamb,
+                    base_tune_drop_fraction=self.base_tune_drop_fraction,
+                    model=None,
+                    mode=self.mode,
+                    subsampling_rates=subsampling_rates_below,
+                    coarse_models=coarse_models_below,
+                    base_blocked=self.base_blocked,
+                    variance_reduction=self.variance_reduction,
+                    store_Q_fine=False,
+                    adaptive_error_model=self.adaptive_error_model,
+                    **mlda_kwargs,
+                )
 
         # instantiate the recursive DA proposal.
         # this is the main proposal used for
@@ -636,15 +664,12 @@ class MLDA(ArrayStepShared):
         # (except for level 0 where the step method is MetropolisMLDA
         # or DEMetropolisZMLDA - not MLDA)
         self.proposal_dist = RecursiveDAProposal(
-            self.step_method_below,
-            self.model_below,
-            self.tune,
-            self.subsampling_rate
+            self.step_method_below, self.model_below, self.tune, self.subsampling_rate
         )
 
         # add 'base_lambda' to stats if 'DEMetropolisZ' is used
-        if self.base_sampler == 'DEMetropolisZ':
-            self.stats_dtypes[0]['base_lambda'] = np.float64
+        if self.base_sampler == "DEMetropolisZ":
+            self.stats_dtypes[0]["base_lambda"] = np.float64
 
         # initialise necessary variables for doing variance reduction
         if self.variance_reduction:
@@ -656,15 +681,15 @@ class MLDA(ArrayStepShared):
                 self.Q_base_full = []
             if not self.is_child:
                 for level in range(self.num_levels - 1, 0, -1):
-                    self.stats_dtypes[0][f'Q_{level}_{level - 1}'] = object
-                self.stats_dtypes[0]['Q_0'] = object
+                    self.stats_dtypes[0][f"Q_{level}_{level - 1}"] = object
+                self.stats_dtypes[0]["Q_0"] = object
 
         # initialise necessary variables for doing variance reduction or storing fine Q
         if self.variance_reduction or self.store_Q_fine:
             self.Q_last = np.nan
             self.Q_diff_last = np.nan
         if self.store_Q_fine and not self.is_child:
-            self.stats_dtypes[0][f'Q_{self.num_levels - 1}'] = object
+            self.stats_dtypes[0][f"Q_{self.num_levels - 1}"] = object
 
     def astep(self, q0):
         """One MLDA step, given current sample q0"""
@@ -714,7 +739,7 @@ class MLDA(ArrayStepShared):
         q_new, accepted = metrop_select(accept, q, q0)
         if skipped_logp:
             accepted = False
-            
+
         # if sample is accepted, update self.Q_last with the sample's Q value
         # runs only for VR or when store_Q_fine is True
         if self.variance_reduction or self.store_Q_fine:
@@ -746,13 +771,9 @@ class MLDA(ArrayStepShared):
             self.base_scaling_stats = {"base_scaling": np.array(scaling_list)}
         elif not isinstance(self.step_method_below, MLDA):
             # below method is any block sampler
-            self.base_scaling_stats = {
-                "base_scaling": np.array(self.step_method_below.scaling)
-            }
+            self.base_scaling_stats = {"base_scaling": np.array(self.step_method_below.scaling)}
             if self.base_sampler == "DEMetropolisZ":
-                self.base_lambda_stats = {
-                    "base_lambda": self.step_method_below.lamb
-                }
+                self.base_lambda_stats = {"base_lambda": self.step_method_below.lamb}
         else:
             # below method is MLDA - propagate dict from lower levels
             self.base_scaling_stats = self.step_method_below.base_scaling_stats
@@ -770,17 +791,17 @@ class MLDA(ArrayStepShared):
                 m = self
                 for level in range(self.num_levels - 1, 0, -1):
                     # save the Q differences for this level and iteration
-                    q_stats[f'Q_{level}_{level - 1}'] = np.array(m.Q_diff)
+                    q_stats[f"Q_{level}_{level - 1}"] = np.array(m.Q_diff)
                     # this makes sure Q_diff is reset for
                     # the next iteration
                     m.Q_diff = []
                     if level == 1:
                         break
                     m = m.step_method_below
-                q_stats['Q_0'] = np.array(m.Q_base_full)
+                q_stats["Q_0"] = np.array(m.Q_base_full)
                 m.Q_base_full = []
             if self.store_Q_fine:
-                q_stats['Q_' + str(self.num_levels - 1)] = np.array(self.Q_last)
+                q_stats["Q_" + str(self.num_levels - 1)] = np.array(self.Q_last)
             stats = {**stats, **q_stats}
 
         return q_new, [stats]
@@ -817,8 +838,7 @@ class MLDA(ArrayStepShared):
         # proposed (selected) sample from the level below.
         # If sample is not accepted, just keep the latest accepted Q_diff
         if accepted and not skipped_logp:
-            self.Q_diff_last = self.Q_last -\
-                               self.step_method_below.Q_reg[self.subchain_selection]
+            self.Q_diff_last = self.Q_last - self.step_method_below.Q_reg[self.subchain_selection]
         # Add the last accepted Q_diff to the list
         self.Q_diff.append(self.Q_diff_last)
 
@@ -834,10 +854,11 @@ class MLDA(ArrayStepShared):
         if accepted and not skipped_logp:
             # this is the error (i.e. forward model output difference)
             # between the current level's model and the model in the level below
-            self.last_synced_output_diff = self.model.model_output.get_value() - \
-                                           self.model_below.model_output.get_value()
+            self.last_synced_output_diff = (
+                self.model.model_output.get_value() - self.model_below.model_output.get_value()
+            )
             self.adaptation_started = True
-        
+
         if self.adaptation_started:
             # update the internal recursive bias estimator with the last saved error
             self.bias.update(self.last_synced_output_diff)
@@ -848,10 +869,30 @@ class MLDA(ArrayStepShared):
             # sum of the bias corrections of all levels below and including
             # that level. This sum is updated here.
             with self.model_below:
-                pm.set_data({'mu_B': sum([bias.get_mu() for bias in
-                                          self.bias_all[:len(self.bias_all) - self.num_levels + 2]])})
-                pm.set_data({'Sigma_B': sum([bias.get_sigma() for bias in
-                                             self.bias_all[:len(self.bias_all) - self.num_levels + 2]])})
+                pm.set_data(
+                    {
+                        "mu_B": sum(
+                            [
+                                bias.get_mu()
+                                for bias in self.bias_all[
+                                    : len(self.bias_all) - self.num_levels + 2
+                                ]
+                            ]
+                        )
+                    }
+                )
+                pm.set_data(
+                    {
+                        "Sigma_B": sum(
+                            [
+                                bias.get_sigma()
+                                for bias in self.bias_all[
+                                    : len(self.bias_all) - self.num_levels + 2
+                                ]
+                            ]
+                        )
+                    }
+                )
 
     @staticmethod
     def competence(var, has_grad):
@@ -871,6 +912,7 @@ class RecursiveSampleMoments:
     and covariance of the bias of an MLDA
     coarse model.
     """
+
     def __init__(self, mu_0, sigma_0, t=1):
         self.mu = mu_0
         self.sigma = sigma_0
@@ -894,10 +936,11 @@ class RecursiveSampleMoments:
 
         self.mu = (1 / (self.t + 1)) * (self.t * mu_previous + x)
 
-        self.sigma = (self.t - 1) / self.t * self.sigma + 1 / self.t * \
-                     (self.t * np.outer(mu_previous, mu_previous) -
-                     (self.t + 1) * np.outer(self.mu, self.mu) +
-                     np.outer(x, x))
+        self.sigma = (self.t - 1) / self.t * self.sigma + 1 / self.t * (
+            self.t * np.outer(mu_previous, mu_previous)
+            - (self.t + 1) * np.outer(self.mu, self.mu)
+            + np.outer(x, x)
+        )
 
         self.t += 1
 
@@ -906,11 +949,11 @@ def delta_logp_inverse(logp, vars, shared):
     [logp0], inarray0 = pm.join_nonshared_inputs([logp], vars, shared)
 
     tensor_type = inarray0.type
-    inarray1 = tensor_type('inarray1')
+    inarray1 = tensor_type("inarray1")
 
     logp1 = pm.CallableTensor(logp0)(inarray1)
 
-    f = theano.function([inarray1, inarray0], - logp0 + logp1)
+    f = theano.function([inarray1, inarray0], -logp0 + logp1)
     f.trust_input = True
     return f
 
@@ -957,18 +1000,18 @@ def subsample(
     model=None,
     random_seed=None,
     callback=None,
-    **kwargs
+    **kwargs,
 ):
     """
     A stripped down version of sample(), which is called only
-    by the RecursiveDAProposal (which is the proposal used in the MLDA 
+    by the RecursiveDAProposal (which is the proposal used in the MLDA
     stepper). RecursiveDAProposal only requires a small set of the input
-    parameters and checks normally performed by sample(), and this 
+    parameters and checks normally performed by sample(), and this
     function thus skips some of the code in sampler(). It directly calls
-    _iter_sample(), rather than sample_many(). The result is a reduced 
+    _iter_sample(), rather than sample_many(). The result is a reduced
     overhead when running multiple levels in MLDA.
     """
-    
+
     model = pm.modelcontext(model)
     chain = 0
     random_seed = np.random.randint(2 ** 30)
@@ -985,7 +1028,9 @@ def subsample(
     if isinstance(step, list):
         step = CompoundStep(step)
 
-    sampling = pm.sampling._iter_sample(draws, step, start, trace, chain, tune, model, random_seed, callback)
+    sampling = pm.sampling._iter_sample(
+        draws, step, start, trace, chain, tune, model, random_seed, callback
+    )
 
     try:
         for it, (trace, _) in enumerate(sampling):
@@ -1009,11 +1054,14 @@ class RecursiveDAProposal(Proposal):
     Results in a hierarchy of chains each of which is used to propose
     samples to the chain above.
     """
-    def __init__(self,
-                 step_method_below: Union[MLDA, MetropolisMLDA, DEMetropolisZMLDA, CompoundStep],
-                 model_below: Model,
-                 tune: bool,
-                 subsampling_rate: int) -> None:
+
+    def __init__(
+        self,
+        step_method_below: Union[MLDA, MetropolisMLDA, DEMetropolisZMLDA, CompoundStep],
+        model_below: Model,
+        tune: bool,
+        subsampling_rate: int,
+    ) -> None:
 
         self.step_method_below = step_method_below
         self.model_below = model_below
@@ -1038,12 +1086,16 @@ class RecursiveDAProposal(Proposal):
             # to False (by MLDA's astep) when the burn-in
             # iterations of the highest-level MLDA sampler run out.
             # The change propagates to all levels.
-            
+
             if self.tune:
                 # Subsample in tuning mode
-                self.trace = subsample(draws=0, step=self.step_method_below,
-                                       start=q0_dict, trace=self.trace,
-                                       tune=self.subsampling_rate)
+                self.trace = subsample(
+                    draws=0,
+                    step=self.step_method_below,
+                    start=q0_dict,
+                    trace=self.trace,
+                    tune=self.subsampling_rate,
+                )
             else:
                 # Subsample in normal mode without tuning
                 # If DEMetropolisZMLDA is the base sampler a flag is raised to
@@ -1052,10 +1104,13 @@ class RecursiveDAProposal(Proposal):
                     if isinstance(self.step_method_below, DEMetropolisZMLDA):
                         self.step_method_below.tuning_end_trigger = True
                     self.tuning_end_trigger = False
-                
-                self.trace = subsample(draws=self.subsampling_rate,
-                                       step=self.step_method_below,
-                                       start=q0_dict, trace=self.trace)
+
+                self.trace = subsample(
+                    draws=self.subsampling_rate,
+                    step=self.step_method_below,
+                    start=q0_dict,
+                    trace=self.trace,
+                )
 
         # set logging back to normal
         _log.setLevel(logging.NOTSET)
@@ -1063,4 +1118,4 @@ class RecursiveDAProposal(Proposal):
         # return sample with index self.subchain_selection from the generated
         # sequence of length self.subsampling_rate. The index is set within
         # MLDA's astep() function
-        return self.trace.point(- self.subsampling_rate + self.subchain_selection)
+        return self.trace.point(-self.subsampling_rate + self.subchain_selection)
