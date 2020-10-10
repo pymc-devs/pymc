@@ -363,17 +363,17 @@ class MLDA(ArrayStepShared):
         base_proposal_dist: Optional[Type[Proposal]] = None,
         base_scaling: Optional = None,
         tune: bool = True,
-        base_tune_target='lambda',
+        base_tune_target: str = 'lambda',
         base_tune_interval: int = 100,
-        base_lamb=None,
-        base_tune_drop_fraction=0.9,
+        base_lamb: Optional = None,
+        base_tune_drop_fraction: float = 0.9,
         model: Optional[Model] = None,
         mode: Optional = None,
         subsampling_rates: List[int] = 5,
         base_blocked: bool = False,
-        variance_reduction=False,
-        store_Q_fine=False,
-        adaptive_error_model=False,
+        variance_reduction: bool = False,
+        store_Q_fine: bool = False,
+        adaptive_error_model: bool = False,
         **kwargs
     ) -> None:
 
