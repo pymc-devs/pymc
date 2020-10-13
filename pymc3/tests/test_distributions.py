@@ -1447,6 +1447,28 @@ class TestMatchesScipy(SeededTest):
             decimal=4,
         )
 
+    def test_batch_multinomial(self):
+        n = 10
+        vals = np.zeros((4, 5, 3))
+        p = np.zeros_like(vals)
+        inds = np.random.randint(vals.shape[-1], size=vals.shape[:-1])[..., None]
+        np.put_along_axis(vals, inds, n, axis=-1)
+        np.put_along_axis(p, inds, 1, axis=-1)
+
+        dist = Multinomial.dist(n=n, p=p, shape=vals.shape)
+        value = tt.tensor3()
+        value.tag.test_value = np.zeros_like(vals)
+        logp = tt.exp(dist.logp(value))
+        f = theano.function(inputs=[value], outputs=logp)
+        assert_almost_equal(
+            f(vals),
+            np.ones(vals.shape[:-1] + (1,)),
+            decimal=select_by_precision(float64=6, float32=3),
+        )
+
+        sample = dist.random(size=2)
+        assert_allclose(sample, np.stack([vals, vals], axis=0))
+
     def test_categorical_bounds(self):
         with Model():
             x = Categorical("x", p=np.array([0.2, 0.3, 0.5]))
