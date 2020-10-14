@@ -1,7 +1,7 @@
 """
 Check that given files all contain the PyMC3 watermark.
 
-This is intended to be used a pre-commit hook, see `.pre-commit-config.yaml`.
+This is intended to be used as a pre-commit hook, see `.pre-commit-config.yaml`.
 You can run it manually with `pre-commit run watermark --all`.
 """
 
