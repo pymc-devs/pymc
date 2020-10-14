@@ -597,12 +597,8 @@ class Multinomial(Discrete):
         super().__init__(*args, **kwargs)
 
         p = p / tt.sum(p, axis=-1, keepdims=True)
-        n = np.squeeze(n)  # works also if n is a tensor
 
         if len(self.shape) > 1:
-            self.n = tt.shape_padright(n)
-            self.p = p if p.ndim > 1 else tt.shape_padleft(p)
-        elif n.ndim == 1:
             self.n = tt.shape_padright(n)
             self.p = p if p.ndim > 1 else tt.shape_padleft(p)
         else:
