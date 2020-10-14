@@ -99,7 +99,7 @@
 
         <div class="card">
             <div class="image">
-                <img src="https://camo.githubusercontent.com/dbb5f926b3bfe7e2196044462ce2411ee3a001ee/68747470733a2f2f39623865303033322d612d36326362336131612d732d73697465732e676f6f676c6567726f7570732e636f6d2f736974652f646f696e67626179657369616e64617461616e616c797369732f776861742d732d6e65772d696e2d326e642d65642f436f7665724442444132452d46726f6e744f6e6c792d363030776964652e706e67">
+                <img src="https://lh5.googleusercontent.com/R1T8ZXbMi4vSO0JlnLQMkEQNvd2ncBb23OmHOsmw-t_oEOF6jJlfWuJoOK0MMmECSDymhUdfTS2yoMgkR2TY-xIiBTHCpeuYjzXqD3xhZ-MuIhs2ARcJ=w1280">
             </div>
             <div class="content">
                 <div class="header">Doing Bayesian Data Analysis</div>
@@ -112,7 +112,7 @@
                 <tbody>
                     <tr>
                         <td>
-                            <a href="http://doingbayesiandataanalysis.blogspot.com/">
+                            <a href="https://sites.google.com/site/doingbayesiandataanalysis/home">
                                 <i class="linkify icon"></i> Book website
                             </a>
                         </td>
