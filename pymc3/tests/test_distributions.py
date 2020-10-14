@@ -1449,15 +1449,15 @@ class TestMatchesScipy(SeededTest):
 
     def test_batch_multinomial(self):
         n = 10
-        vals = np.zeros((4, 5, 3))
-        p = np.zeros_like(vals)
+        vals = np.zeros((4, 5, 3), dtype="int32")
+        p = np.zeros_like(vals, dtype=theano.config.floatX)
         inds = np.random.randint(vals.shape[-1], size=vals.shape[:-1])[..., None]
         np.put_along_axis(vals, inds, n, axis=-1)
         np.put_along_axis(p, inds, 1, axis=-1)
 
         dist = Multinomial.dist(n=n, p=p, shape=vals.shape)
-        value = tt.tensor3()
-        value.tag.test_value = np.zeros_like(vals)
+        value = tt.tensor3(dtype="int32")
+        value.tag.test_value = np.zeros_like(vals, dtype="int32")
         logp = tt.exp(dist.logp(value))
         f = theano.function(inputs=[value], outputs=logp)
         assert_almost_equal(
