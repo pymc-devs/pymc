@@ -26,3 +26,10 @@ repos:
   rev: 20.8b1
   hooks:
     - id: black
+- repo: local
+  hooks:
+    - id: watermark
+      name: Check notebooks have watermark
+      types: [jupyter]
+      entry: python scripts/check_watermark.py
+      language: python
