@@ -310,7 +310,6 @@ class MLDA(ArrayStepShared):
     Examples
     ----------
     .. code:: ipython
-
         >>> import pymc3 as pm
         ... datum = 1
         ...
@@ -321,15 +320,15 @@ class MLDA(ArrayStepShared):
         ... with pm.Model():
         ...     x = pm.Normal("x", mu=0, sigma=10)
         ...     y = pm.Normal("y", mu=x, sigma=1, observed=datum)
-        ...     step_method = pm.MLDA(coarse_models=[coarse_model]
+        ...     step_method = pm.MLDA(coarse_models=[coarse_model],
         ...                           subsampling_rates=5)
-        ...     trace = pm.sample(draws=500, chains=2,
+        ...     trace = pm.sample(500, chains=2,
         ...                       tune=100, step=step_method,
         ...                       random_seed=123)
         ...
-        ... pm.summary(trace)
-            mean     sd	     hpd_3%	   hpd_97%
-        x	0.982	1.026	 -0.994	   2.902
+        ... pm.summary(trace, kind="stats")
+           mean     sd  hdi_3%  hdi_97%
+        x  0.99  0.987  -0.734    2.992
 
     References
     ----------
@@ -657,28 +656,28 @@ class MLDA(ArrayStepShared):
         self.proposal_dist = RecursiveDAProposal(
             self.step_method_below, self.model_below, self.tune, self.subsampling_rate
         )
-        
+
         # set up data types of stats.
         if isinstance(self.step_method_below, MLDA):
             # get the stat types from the level below if that level is MLDA
             self.stats_dtypes = self.step_method_below.stats_dtypes
-        
+
         else:
             # otherwise, set it up from scratch.
             self.stats_dtypes = [{"accept": np.float64, "accepted": np.bool, "tune": np.bool}]
-        
+
             if isinstance(self.step_method_below, MetropolisMLDA):
                 self.stats_dtypes.append({"base_scaling": np.float64})
             elif isinstance(self.step_method_below, DEMetropolisZMLDA):
-                self.stats_dtypes.append({"base_scaling": np.float64,
-                                          "base_lambda": np.float64})
+                self.stats_dtypes.append({"base_scaling": np.float64, "base_lambda": np.float64})
             elif isinstance(self.step_method_below, CompoundStep):
                 for method in self.step_method_below.methods:
                     if isinstance(method, MetropolisMLDA):
                         self.stats_dtypes.append({"base_scaling": np.float64})
                     elif isinstance(method, DEMetropolisZMLDA):
-                        self.stats_dtypes.append({"base_scaling": np.float64,
-                                                  "base_lambda": np.float64})
+                        self.stats_dtypes.append(
+                            {"base_scaling": np.float64, "base_lambda": np.float64}
+                        )
 
         # initialise necessary variables for doing variance reduction
         if self.variance_reduction:
@@ -776,37 +775,42 @@ class MLDA(ArrayStepShared):
                 m = self
                 for level in range(self.num_levels - 1, 0, -1):
                     # save the Q differences for this level and iteration
-                    q_stats[f'Q_{level}_{level - 1}'] = np.array(m.Q_diff)
+                    q_stats[f"Q_{level}_{level - 1}"] = np.array(m.Q_diff)
                     # this makes sure Q_diff is reset for
                     # the next iteration
                     m.Q_diff = []
                     if level == 1:
                         break
                     m = m.step_method_below
-                q_stats['Q_0'] = np.array(m.Q_base_full)
+                q_stats["Q_0"] = np.array(m.Q_base_full)
                 m.Q_base_full = []
             if self.store_Q_fine:
-                q_stats['Q_' + str(self.num_levels - 1)] = np.array(self.Q_last)
+                q_stats["Q_" + str(self.num_levels - 1)] = np.array(self.Q_last)
             stats = {**stats, **q_stats}
-        
+
         # Capture the base tuning stats from the level below.
         self.base_tuning_stats = []
-        
+
         if isinstance(self.step_method_below, MLDA):
             self.base_tuning_stats = self.step_method_below.base_tuning_stats
         elif isinstance(self.step_method_below, MetropolisMLDA):
             self.base_tuning_stats.append({"base_scaling": self.step_method_below.scaling[0]})
         elif isinstance(self.step_method_below, DEMetropolisZMLDA):
-            self.base_tuning_stats.append({"base_scaling": self.step_method_below.scaling[0],
-                                           "base_lambda": self.step_method_below.lamb})
+            self.base_tuning_stats.append(
+                {
+                    "base_scaling": self.step_method_below.scaling[0],
+                    "base_lambda": self.step_method_below.lamb,
+                }
+            )
         elif isinstance(self.step_method_below, CompoundStep):
             # Below method is CompoundStep
             for method in self.step_method_below.methods:
                 if isinstance(method, MetropolisMLDA):
                     self.base_tuning_stats.append({"base_scaling": method.scaling[0]})
                 elif isinstance(method, DEMetropolisZMLDA):
-                    self.base_tuning_stats.append({"base_scaling": method.scaling[0],
-                                                   "base_lambda": method.lamb})
+                    self.base_tuning_stats.append(
+                        {"base_scaling": method.scaling[0], "base_lambda": method.lamb}
+                    )
 
         return q_new, [stats] + self.base_tuning_stats
 

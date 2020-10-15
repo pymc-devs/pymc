@@ -1282,9 +1282,7 @@ class TestMLDA:
                 tune=ts,
                 draws=20,
                 step=MLDA(
-                    coarse_models=[model_coarse], 
-                    base_tune_interval=50, 
-                    base_lamb=100.0
+                    coarse_models=[model_coarse], base_tune_interval=50, base_lamb=100.0
                 ),
                 chains=1,
                 discard_tuned_samples=False,
@@ -1295,10 +1293,10 @@ class TestMLDA:
         assert trace_0.get_sampler_stats("tune", chains=0)[ts - 1]
         assert not trace_0.get_sampler_stats("tune", chains=0)[ts]
         assert not trace_0.get_sampler_stats("tune", chains=0)[-1]
-        assert trace_0.get_sampler_stats("base_scaling", chains=0)[0,0] == 100.0
-        assert trace_0.get_sampler_stats("base_scaling", chains=0)[0,1] == 100.0
-        assert trace_0.get_sampler_stats("base_scaling", chains=0)[-1,0] < 100.0
-        assert trace_0.get_sampler_stats("base_scaling", chains=0)[-1,1] < 100.0
+        assert trace_0.get_sampler_stats("base_scaling", chains=0)[0, 0] == 100.0
+        assert trace_0.get_sampler_stats("base_scaling", chains=0)[0, 1] == 100.0
+        assert trace_0.get_sampler_stats("base_scaling", chains=0)[-1, 0] < 100.0
+        assert trace_0.get_sampler_stats("base_scaling", chains=0)[-1, 1] < 100.0
 
         assert trace_1.get_sampler_stats("tune", chains=0)[0]
         assert trace_1.get_sampler_stats("tune", chains=0)[ts - 1]
@@ -1358,10 +1356,10 @@ class TestMLDA:
         assert not trace_0.get_sampler_stats("tune", chains=0)[0]
         assert not trace_0.get_sampler_stats("tune", chains=0)[-1]
         assert (
-            trace_0.get_sampler_stats("base_scaling", chains=0)[0,0]
-            == trace_0.get_sampler_stats("base_scaling", chains=0)[-1,0]
-            == trace_0.get_sampler_stats("base_scaling", chains=0)[0,1]
-            == trace_0.get_sampler_stats("base_scaling", chains=0)[-1,1]
+            trace_0.get_sampler_stats("base_scaling", chains=0)[0, 0]
+            == trace_0.get_sampler_stats("base_scaling", chains=0)[-1, 0]
+            == trace_0.get_sampler_stats("base_scaling", chains=0)[0, 1]
+            == trace_0.get_sampler_stats("base_scaling", chains=0)[-1, 1]
             == 100.0
         )
 
@@ -1369,10 +1367,10 @@ class TestMLDA:
         assert trace_1.get_sampler_stats("tune", chains=0)[ts_1 - 1]
         assert not trace_1.get_sampler_stats("tune", chains=0)[ts_1]
         assert not trace_1.get_sampler_stats("tune", chains=0)[-1]
-        assert trace_1.get_sampler_stats("base_scaling", chains=0)[0,0] == 100.0
-        assert trace_1.get_sampler_stats("base_scaling", chains=0)[0,1] == 100.0
-        assert trace_1.get_sampler_stats("base_scaling", chains=0)[-1,0] < 100.0
-        assert trace_1.get_sampler_stats("base_scaling", chains=0)[-1,1] < 100.0
+        assert trace_1.get_sampler_stats("base_scaling", chains=0)[0, 0] == 100.0
+        assert trace_1.get_sampler_stats("base_scaling", chains=0)[0, 1] == 100.0
+        assert trace_1.get_sampler_stats("base_scaling", chains=0)[-1, 0] < 100.0
+        assert trace_1.get_sampler_stats("base_scaling", chains=0)[-1, 1] < 100.0
 
         ts_2 = 0
         with model:
