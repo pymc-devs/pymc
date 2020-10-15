@@ -22,10 +22,9 @@ import theano.tensor as tt
 
 from .arraystep import ArrayStepShared, metrop_select, Competence
 from .compound import CompoundStep
-from .metropolis import Proposal, Metropolis, DEMetropolisZ, delta_logp, tune
+from .metropolis import Proposal, Metropolis, DEMetropolisZ, delta_logp
 from ..model import Model
 import pymc3 as pm
-from pymc3.theanof import floatX
 
 __all__ = [
     "MetropolisMLDA",

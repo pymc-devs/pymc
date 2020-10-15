@@ -1048,9 +1048,7 @@ class TestMLDA:
             assert isinstance(sampler.step_method_below.proposal_dist, UniformProposal)
 
             s = np.ones(model.ndim)
-            sampler = MLDA(
-                coarse_models=[model_coarse], base_sampler="Metropolis", base_S=s
-            )
+            sampler = MLDA(coarse_models=[model_coarse], base_sampler="Metropolis", base_S=s)
             assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
             assert isinstance(sampler.step_method_below.proposal_dist, NormalProposal)
@@ -1061,14 +1059,10 @@ class TestMLDA:
             assert isinstance(sampler.step_method_below.proposal_dist, UniformProposal)
 
             s = np.diag(s)
-            sampler = MLDA(
-                coarse_models=[model_coarse], base_sampler="Metropolis", base_S=s
-            )
+            sampler = MLDA(coarse_models=[model_coarse], base_sampler="Metropolis", base_S=s)
             assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
-            assert isinstance(
-                sampler.step_method_below.proposal_dist, MultivariateNormalProposal
-            )
+            assert isinstance(sampler.step_method_below.proposal_dist, MultivariateNormalProposal)
 
             sampler = MLDA(coarse_models=[model_coarse], base_S=s)
             assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
@@ -1094,18 +1088,12 @@ class TestMLDA:
             )
             assert isinstance(sampler.step_method_below, MLDA)
             assert isinstance(sampler.step_method_below.step_method_below, Metropolis)
-            assert np.all(
-                sampler.step_method_below.step_method_below.proposal_dist.s == s
-            )
+            assert np.all(sampler.step_method_below.step_method_below.proposal_dist.s == s)
 
             sampler = MLDA(coarse_models=[model_very_coarse, model_coarse], base_S=s)
             assert isinstance(sampler.step_method_below, MLDA)
-            assert isinstance(
-                sampler.step_method_below.step_method_below, DEMetropolisZ
-            )
-            assert np.all(
-                sampler.step_method_below.step_method_below.proposal_dist.s == s
-            )
+            assert isinstance(sampler.step_method_below.step_method_below, DEMetropolisZ)
+            assert np.all(sampler.step_method_below.step_method_below.proposal_dist.s == s)
 
     def test_exceptions_coarse_models(self):
         """Test that MLDA generates the expected exceptions when no coarse_models arg
@@ -1154,9 +1142,9 @@ class TestMLDA:
                 step = stepper(coarse_models=[coarse_model])
                 trace = sample(chains=2, cores=2, draws=20, tune=0, step=step)
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
-                assert (
-                    len(set(samples)) == 2
-                ), "Parallelized {} " "chains are identical.".format(stepper)
+                assert len(set(samples)) == 2, "Parallelized {} " "chains are identical.".format(
+                    stepper
+                )
 
     def test_acceptance_rate_against_coarseness(self):
         """Test that the acceptance rate increases
@@ -1274,9 +1262,7 @@ class TestMLDA:
             trace_2 = sample(
                 tune=ts,
                 draws=20,
-                step=MLDA(
-                    coarse_models=[model_coarse], base_tune_interval=50, base_lamb=100.0
-                ),
+                step=MLDA(coarse_models=[model_coarse], base_tune_interval=50, base_lamb=100.0),
                 chains=1,
                 discard_tuned_samples=False,
                 random_seed=1234,
@@ -1400,9 +1386,7 @@ class TestMLDA:
         with Model():
             Normal("n", 0, 2, shape=(3,))
             step = MLDA(coarse_models=[coarse_model])
-            trace = sample(
-                tune=tune, draws=draws, step=step, chains=1, discard_tuned_samples=False
-            )
+            trace = sample(tune=tune, draws=draws, step=step, chains=1, discard_tuned_samples=False)
             assert len(trace) == tune + draws
 
     @pytest.mark.parametrize(
@@ -1427,15 +1411,11 @@ class TestMLDA:
         with Model():
             Normal("n", 0, 2.0, shape=(3,))
 
-            step_1 = MLDA(
-                coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=3
-            )
+            step_1 = MLDA(coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=3)
             assert len(step_1.subsampling_rates) == 2
             assert step_1.subsampling_rates[0] == step_1.subsampling_rates[1] == 3
 
-            step_2 = MLDA(
-                coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=[3, 4]
-            )
+            step_2 = MLDA(coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=[3, 4])
             assert step_2.subsampling_rates[0] == 3
             assert step_2.subsampling_rates[1] == 4
 
@@ -1508,9 +1488,7 @@ class TestMLDA:
             mout.append(ForwardModel(x, coarse_model_0))
 
             # Define likelihood
-            likelihood = MvNormal(
-                "y", mu=mout[0](theta) + mu_B, cov=Sigma_e, observed=y
-            )
+            likelihood = MvNormal("y", mu=mout[0](theta) + mu_B, cov=Sigma_e, observed=y)
 
             coarse_models.append(coarse_model_0)
 
@@ -1530,9 +1508,7 @@ class TestMLDA:
             mout.append(ForwardModel(x, coarse_model_1))
 
             # Define likelihood
-            likelihood = MvNormal(
-                "y", mu=mout[1](theta) + mu_B, cov=Sigma_e, observed=y
-            )
+            likelihood = MvNormal("y", mu=mout[1](theta) + mu_B, cov=Sigma_e, observed=y)
 
             coarse_models.append(coarse_model_1)
 
@@ -1744,9 +1720,7 @@ class TestMLDA:
                         (nchains, ndraws)
                     )
                     Q_mean_standard = Q_2.mean(axis=1).mean()
-                    Q_mean_vr = (
-                        Q_0.mean(axis=1) + Q_1_0.mean(axis=1) + Q_2_1.mean(axis=1)
-                    ).mean()
+                    Q_mean_vr = (Q_0.mean(axis=1) + Q_1_0.mean(axis=1) + Q_2_1.mean(axis=1)).mean()
 
                     ess_Q0 = az.ess(np.array(Q_0, np.float64))
                     ess_Q_1_0 = az.ess(np.array(Q_1_0, np.float64))
@@ -1763,7 +1737,5 @@ class TestMLDA:
                     # check that the variance of VR is smaller
                     assert (
                         Q_2.var() / ess_Q2
-                        > Q_0.var() / ess_Q0
-                        + Q_1_0.var() / ess_Q_1_0
-                        + Q_2_1.var() / ess_Q_2_1
+                        > Q_0.var() / ess_Q0 + Q_1_0.var() / ess_Q_1_0 + Q_2_1.var() / ess_Q_2_1
                     )
