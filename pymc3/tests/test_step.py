@@ -29,15 +29,8 @@ from .models import (
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.parallel_sampling import ParallelSamplingError
 from pymc3.exceptions import SamplingError
-<<<<<<< HEAD
-<<<<<<< HEAD
 from pymc3.model import Model, Potential, set_data
-=======
-from pymc3.model import Model, Potential
->>>>>>> Add variance reduction feature to MLDA
-=======
-from pymc3.model import Model, Potential, set_data
->>>>>>> Add adaptive error model to MLDA
+
 from pymc3.step_methods import (
     NUTS,
     BinaryGibbsMetropolis,
