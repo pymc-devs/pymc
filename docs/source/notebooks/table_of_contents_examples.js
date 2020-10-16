@@ -60,5 +60,6 @@ Gallery.contents = {
     "ODE_API_introduction": "Inference in ODE models",
     "probabilistic_matrix_factorization": "Case Studies",
     "MLDA_simple_linear_regression": "MCMC",
-    "MLDA_gravity_surveying": "MCMC"
+    "MLDA_gravity_surveying": "MCMC",
+    "MLDA_variance_reduction_linear_regression": "MCMC"
 }

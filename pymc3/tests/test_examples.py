@@ -373,3 +373,8 @@ class TestMultilevelNormal(SeededTest):
         with model:
             step = pm.MLDA(subsampling_rates=2, coarse_models=coarse_models)
             pm.sample(draws=50, chains=2, tune=50, step=step)
+
+            step = pm.MLDA(
+                subsampling_rates=2, coarse_models=coarse_models, base_sampler="Metropolis"
+            )
+            pm.sample(draws=50, chains=2, tune=50, step=step)
