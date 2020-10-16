@@ -4,7 +4,7 @@ from .arraystep import ArrayStepShared, Competence
 from ..distributions import BART
 from ..distributions.tree import Tree
 from ..model import modelcontext
-from ..theanof import inputvars, make_shared_replacements, floatX
+from ..theanof import inputvars, make_shared_replacements
 
 # from ..smc.smc import logp_forw
 
@@ -31,13 +31,14 @@ class PGBART(ArrayStepShared):
     name = "bartsampler"
     default_blocked = False
 
-    def __init__(self, vars=None, num_particles=10, max_stages=1, model=None):
+    def __init__(self, vars=None, num_particles=10, max_stages=5000, model=None):
         model = modelcontext(model)
         vars = inputvars(vars)
         self.bart = vars[0].distribution
 
         self.num_particles = num_particles
         self.max_stages = max_stages
+        self.first_iteration = True
         self.previous_trees_particles_list = []
         for i in range(self.bart.m):
             p = Particle(self.bart.trees[i])
@@ -48,8 +49,18 @@ class PGBART(ArrayStepShared):
         super().__init__(vars, shared)
 
     def astep(self, q_0):
+        # For the first iteration we restrict max_stages to a low number, otherwise it is almsot sure
+        # we will reach max_stages given that our fist set of m trees is not good at all.
+        # maybe we can set max_stages by using some function of the number of variables/dimensions.
+        if self.first_iteration:
+            max_stages = 5
+            self.iteration = False
+        else:
+            max_stages = self.max_stages
+
         # Step 4 of algorithm
         bart = self.bart
+
         num_observations = bart.num_observations
         likelihood_logp = self.likelihood_logp
         output = np.zeros((bart.m, num_observations))
@@ -57,6 +68,8 @@ class PGBART(ArrayStepShared):
         for idx, tree in enumerate(bart.trees):
             R_j = bart.get_residuals_loo(tree)
             bart.Y_shared.set_value(R_j)
+            # generate an initial set of SMC particles
+            # At the end of the algorith we return one of these particles as a new tree
             list_of_particles = self.init_particles(tree.tree_id, R_j, bart.num_observations)
             # Step 5 of algorithm
             old_likelihoods = np.array(
@@ -77,7 +90,7 @@ class PGBART(ArrayStepShared):
             for p_idx, p in enumerate(list_of_particles):
                 p.log_weight = log_weights[p_idx]
 
-            for t in range(1, self.max_stages + 2):
+            for t in range(1, max_stages):
                 # Step 7 of algorithm
                 list_of_particles[0] = self.get_previous_tree_particle(tree.tree_id, t)
                 # This should be embarrassingly parallelizable

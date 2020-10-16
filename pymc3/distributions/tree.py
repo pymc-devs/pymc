@@ -3,14 +3,6 @@ import math
 from copy import deepcopy
 
 
-class TreeStructureError(Exception):
-    """Base (catch-all) tree structure exception."""
-
-
-class TreeNodeError(Exception):
-    """Base (catch-all) tree node exception."""
-
-
 class Tree:
     """Full binary tree
     A full binary tree is a tree where each node has exactly zero or two children.
@@ -158,43 +150,16 @@ class Tree:
         return deepcopy(self)
 
     def get_node(self, index):
-        if not isinstance(index, int) or index < 0:
-            raise TreeStructureError("Node index must be a non-negative int")
-        if index not in self.tree_structure:
-            raise TreeStructureError("Node missing at index {}".format(index))
         return self.tree_structure[index]
 
     def set_node(self, index, node):
-        if not isinstance(index, int) or index < 0:
-            raise TreeStructureError("Node index must be a non-negative int")
-        if not isinstance(node, SplitNode) and not isinstance(node, LeafNode):
-            raise TreeStructureError("Node class must be SplitNode or LeafNode")
-        if index in self.tree_structure:
-            raise TreeStructureError("Node index already exist in tree")
-        if self.num_nodes == 0 and index != 0:
-            raise TreeStructureError("Root node must have index zero")
-        parent_index = node.get_idx_parent_node()
-        if self.num_nodes != 0 and parent_index not in self.tree_structure:
-            raise TreeStructureError("Invalid index, node must have a parent node")
-        if self.num_nodes != 0 and not isinstance(self.get_node(parent_index), SplitNode):
-            raise TreeStructureError("Parent node must be of class SplitNode")
-        if index != node.index:
-            raise TreeStructureError("Node must have same index as tree index")
         self.tree_structure[index] = node
         self.num_nodes += 1
         if isinstance(node, LeafNode):
             self.idx_leaf_nodes.append(index)
 
     def delete_node(self, index):
-        if not isinstance(index, int) or index < 0:
-            raise TreeStructureError("Node index must be a non-negative int")
-        if index not in self.tree_structure:
-            raise TreeStructureError("Node missing at index {}".format(index))
         current_node = self.get_node(index)
-        left_child_idx = current_node.get_idx_left_child()
-        right_child_idx = current_node.get_idx_right_child()
-        if left_child_idx in self.tree_structure or right_child_idx in self.tree_structure:
-            raise TreeStructureError("Invalid removal of node, leaving two orphans nodes")
         if isinstance(current_node, LeafNode):
             self.idx_leaf_nodes.remove(index)
         del self.tree_structure[index]
@@ -314,12 +279,6 @@ class Tree:
         new_right_node : LeafNode
         """
         current_node = self.get_node(index_leaf_node)
-        if not isinstance(current_node, LeafNode):
-            raise TreeStructureError("The tree grows from the leaves")
-        if not isinstance(new_split_node, SplitNode):
-            raise TreeStructureError("The node that replaces the leaf node must be SplitNode")
-        if not isinstance(new_left_node, LeafNode) or not isinstance(new_right_node, LeafNode):
-            raise TreeStructureError("The new leaves must be LeafNode")
 
         self.delete_node(index_leaf_node)
         self.set_node(index_leaf_node, new_split_node)
@@ -369,8 +328,6 @@ class Tree:
 
 class BaseNode:
     def __init__(self, index):
-        if not isinstance(index, int) or index < 0:
-            raise TreeNodeError("Node index must be a non-negative int")
         self.index = index
         self.depth = int(math.floor(math.log(index + 1, 2)))
 
@@ -396,11 +353,6 @@ class BaseNode:
 class SplitNode(BaseNode):
     def __init__(self, index, idx_split_variable, split_value):
         super().__init__(index)
-
-        if not isinstance(idx_split_variable, int) or idx_split_variable < 0:
-            raise TreeNodeError("Index of split variable must be a non-negative int")
-        if not isinstance(split_value, float):
-            raise TreeNodeError("Node split value type must be float")
 
         self.idx_split_variable = idx_split_variable
         self.split_value = split_value
@@ -455,15 +407,6 @@ class SplitNode(BaseNode):
 class LeafNode(BaseNode):
     def __init__(self, index, value, idx_data_points):
         super().__init__(index)
-        if not isinstance(value, float):
-            raise TreeNodeError("Leaf node value type must be float")
-        if (
-            not isinstance(idx_data_points, np.ndarray)
-            or idx_data_points.dtype.type is not np.int32
-        ):
-            raise TreeNodeError("Index of data points must be a numpy.ndarray of np.int32")
-        if len(idx_data_points) == 0:
-            raise TreeNodeError("Index of data points can not be empty")
         self.value = value
         self.idx_data_points = idx_data_points
 

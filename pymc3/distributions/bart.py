@@ -1,11 +1,6 @@
 import numpy as np
 from .distribution import NoDistribution
 from .tree import Tree, SplitNode, LeafNode
-from pymc3.util import get_var_name
-
-# from ..step_methods.bart.exceptions import (
-#    BARTParamsError,
-# )
 
 # __all__ = ["BART"]
 
