@@ -48,6 +48,7 @@ from pymc3.step_methods import (
     DEMetropolisZ,
     MLDA,
 )
+from pymc3.step_methods.mlda import extract_Q_estimate
 from pymc3.theanof import floatX
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal, MvNormal
 from pymc3.data import Data
@@ -1709,33 +1710,25 @@ class TestMLDA:
                         random_seed=seed,
                     )
 
+                    # get fine level stats (standard method)
                     Q_2 = trace.get_sampler_stats("Q_2").reshape((nchains, ndraws))
-                    Q_0 = np.concatenate(trace.get_sampler_stats("Q_0")).reshape(
-                        (nchains, ndraws * nsub * nsub)
-                    )
-                    Q_1_0 = np.concatenate(trace.get_sampler_stats("Q_1_0")).reshape(
-                        (nchains, ndraws * nsub)
-                    )
-                    Q_2_1 = np.concatenate(trace.get_sampler_stats("Q_2_1")).reshape(
-                        (nchains, ndraws)
-                    )
                     Q_mean_standard = Q_2.mean(axis=1).mean()
-                    Q_mean_vr = (Q_0.mean(axis=1) + Q_1_0.mean(axis=1) + Q_2_1.mean(axis=1)).mean()
+                    Q_se_standard = np.sqrt(Q_2.var() / az.ess(np.array(Q_2, np.float64)))
 
-                    ess_Q0 = az.ess(np.array(Q_0, np.float64))
-                    ess_Q_1_0 = az.ess(np.array(Q_1_0, np.float64))
-                    ess_Q_2_1 = az.ess(np.array(Q_2_1, np.float64))
-                    ess_Q2 = az.ess(np.array(Q_2, np.float64))
+                    # get VR stats
+                    Q_mean_vr, Q_se_vr = extract_Q_estimate(trace, 3)
 
-                    # check that the standard and VR estimates are close
+                    # compare standard and VR
                     assert isclose(Q_mean_standard, Q_mean_vr, rel_tol=1e-1)
+                    assert Q_se_standard > Q_se_vr
 
+                    # check consistency of QoI acroess levels.
                     if isinstance(f, Likelihood1):
+                        Q_1_0 = np.concatenate(trace.get_sampler_stats("Q_1_0")).reshape(
+                            (nchains, ndraws * nsub)
+                        )
+                        Q_2_1 = np.concatenate(trace.get_sampler_stats("Q_2_1")).reshape(
+                            (nchains, ndraws)
+                        )
                         assert Q_1_0.mean(axis=1) == 0.0
                         assert Q_2_1.mean(axis=1) == 0.0
-
-                    # check that the variance of VR is smaller
-                    assert (
-                        Q_2.var() / ess_Q2
-                        > Q_0.var() / ess_Q0 + Q_1_0.var() / ess_Q_1_0 + Q_2_1.var() / ess_Q_2_1
-                    )
