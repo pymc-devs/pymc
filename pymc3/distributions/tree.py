@@ -381,28 +381,6 @@ class SplitNode(BaseNode):
         else:
             return x[self.idx_split_variable] <= self.split_value
 
-    def prior_log_probability_node(self, alpha, beta):
-        """
-        Calculate the log probability of the node being a SplitNode.
-        Taken from equation 7 in [Chipman2010].
-
-        Parameters
-        ----------
-        alpha : float
-        beta : float
-
-        Returns
-        -------
-        float
-
-        References
-        ----------
-        .. [Chipman2010] Chipman, H. A., George, E. I., & McCulloch, R. E. (2010). BART: Bayesian
-            additive regression trees. The Annals of Applied Statistics, 4(1), 266-298.,
-            `link <https://projecteuclid.org/download/pdfview_1/euclid.aoas/1273584455>`__
-        """
-        return np.log(alpha * np.power(1.0 + self.depth, -beta))
-
 
 class LeafNode(BaseNode):
     def __init__(self, index, value, idx_data_points):
@@ -427,25 +405,3 @@ class LeafNode(BaseNode):
             )
         else:
             return NotImplemented
-
-    def prior_log_probability_node(self, alpha, beta):
-        """
-        Calculate the log probability of the node being a LeafNode (1 - p(being SplitNode)).
-        Taken from equation 7 in [Chipman2010].
-
-        Parameters
-        ----------
-        alpha : float
-        beta : float
-
-        Returns
-        -------
-        float
-
-        References
-        ----------
-        .. [Chipman2010] Chipman, H. A., George, E. I., & McCulloch, R. E. (2010). BART: Bayesian
-            additive regression trees. The Annals of Applied Statistics, 4(1), 266-298.,
-            `link <https://projecteuclid.org/download/pdfview_1/euclid.aoas/1273584455>`__
-        """
-        return np.log(1.0 - alpha * np.power(1.0 + self.depth, -beta))

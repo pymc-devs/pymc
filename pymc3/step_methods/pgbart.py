@@ -35,13 +35,14 @@ class PGBART(ArrayStepShared):
         model = modelcontext(model)
         vars = inputvars(vars)
         self.bart = vars[0].distribution
+        self.prior_prob_leaf_node = _compute_prior_probability(self.bart.alpha)
 
         self.num_particles = num_particles
         self.max_stages = max_stages
         self.first_iteration = True
         self.previous_trees_particles_list = []
         for i in range(self.bart.m):
-            p = Particle(self.bart.trees[i])
+            p = Particle(self.bart.trees[i], self.prior_prob_leaf_node)
             self.previous_trees_particles_list.append(p)
 
         shared = make_shared_replacements(vars, model)
@@ -185,7 +186,7 @@ class PGBART(ArrayStepShared):
             idx_data_points=initial_idx_data_points_leaf_nodes,
         )
         for _ in range(self.num_particles):
-            new_particle = Particle(new_tree)
+            new_particle = Particle(new_tree, self.prior_prob_leaf_node)
             list_of_particles.append(new_particle)
         return list_of_particles
 
@@ -197,20 +198,24 @@ class PGBART(ArrayStepShared):
 
 
 class Particle:
-    def __init__(self, tree):
+    def __init__(self, tree, prior_prob_leaf_node):
         self.tree = tree.copy()  # Mantiene el arbol que nos interesa en este momento
         self.expansion_nodes = self.tree.idx_leaf_nodes.copy()  # This should be the array [0]
         self.tree_history = [self.tree.copy()]
         self.expansion_nodes_history = [self.expansion_nodes.copy()]
         self.log_weight = 0.0
+        self.prior_prob_leaf_node = prior_prob_leaf_node
 
     def sample_tree_sequential(self, bart):
         if self.expansion_nodes:
             index_leaf_node = self.expansion_nodes.pop(0)
             # Probability that this node will remain a leaf node
-            log_prob = self.tree[index_leaf_node].prior_log_probability_node(bart.alpha, bart.beta)
+            try:
+                prob_leaf = self.prior_prob_leaf_node[self.tree[index_leaf_node].depth]
+            except IndexError:
+                prob_leaf = 1
 
-            if np.exp(log_prob) < np.random.random():
+            if prob_leaf < np.random.random():
                 self.grow_successful = bart.grow_tree(self.tree, index_leaf_node)
                 # TODO: in case the grow_tree fails, should we try to sample the tree from another leaf node?
                 if self.grow_successful:
@@ -235,6 +240,34 @@ class Particle:
     def update_weight(self):
         # TODO
         pass
+
+
+def _compute_prior_probability(alpha):
+    """
+    Calculate the probability of the node being a LeafNode (1 - p(being SplitNode)).
+    Taken from equation 19 in [On Theory for BART]. XXX FIX reference below!
+
+    Parameters
+    ----------
+    alpha : float
+
+    Returns
+    -------
+    float
+
+    References
+    ----------
+    .. [Chipman2010] Chipman, H. A., George, E. I., & McCulloch, R. E. (2010). BART: Bayesian
+        additive regression trees. The Annals of Applied Statistics, 4(1), 266-298.,
+        `link <https://projecteuclid.org/download/pdfview_1/euclid.aoas/1273584455>`__
+    """
+    prior_leaf_prob = [0]
+    depth = 1
+    prob = 1
+    while prob < 1:
+        prob = 1 - alpha ** depth
+        depth += 1
+    return prior_leaf_prob
 
 
 from theano import function as theano_function

@@ -10,7 +10,7 @@ class BARTParamsError(Exception):
 
 
 class BaseBART(NoDistribution):
-    def __init__(self, X, Y, m=200, alpha=0.95, beta=2.0, cache_size=5000, *args, **kwargs):
+    def __init__(self, X, Y, m=200, alpha=0.25, cache_size=5000, *args, **kwargs):
 
         self.Y_shared = Y
         self.X = X
@@ -45,26 +45,16 @@ class BaseBART(NoDistribution):
             raise BARTParamsError(
                 "The type for the alpha parameter for the tree structure must be float"
             )
-        if alpha <= 0 or 1 <= alpha:
+        if alpha <= 0 or 0.5 <= alpha:
             raise BARTParamsError(
                 "The value for the alpha parameter for the tree structure "
-                "must be in the interval (0, 1)"
-            )
-        if not isinstance(beta, float):
-            raise BARTParamsError(
-                "The type for the beta parameter for the tree structure must be float"
-            )
-        if beta < 0:
-            raise BARTParamsError(
-                "The value for the beta parameter for the tree structure "
-                'must be in the interval [0, float("inf"))'
+                "must be in the interval (0, 0.5)"
             )
 
         self.num_observations = X.shape[0]
         self.number_variates = X.shape[1]
         self.m = m
         self.alpha = alpha
-        self.beta = beta
         self._normal_dist_sampler = NormalDistributionSampler(cache_size)
         self._disc_uniform_dist_sampler = DiscreteUniformDistributionSampler(cache_size)
         self.trees = self.init_list_of_trees()
@@ -231,8 +221,8 @@ class NormalDistributionSampler:
 
 
 class BART(BaseBART):
-    def __init__(self, X, Y, m=200, alpha=0.95, beta=2.0):
-        super().__init__(X, Y, m, alpha, beta)
+    def __init__(self, X, Y, m=200, alpha=0.25):
+        super().__init__(X, Y, m, alpha)
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
@@ -241,11 +231,10 @@ class BART(BaseBART):
         Y = (type(self.Y),)
         m = (self.m,)
         alpha = self.alpha
-        beta = self.beta
         m = self.m
         name = r"\text{%s}" % name
-        return r"""${} \sim \text{{BART}}(\mathit{{alpha}}={},~\mathit{{beta}}={},~\mathit{{m}}={})$""".format(
-            name, alpha, beta, m
+        return r"""${} \sim \text{{BART}}(\mathit{{alpha}}={},~\mathit{{m}}={})$""".format(
+            name, alpha, m
         )
 
     def draw_leaf_value(self, tree, idx_data_points):
