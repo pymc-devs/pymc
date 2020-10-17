@@ -13,7 +13,7 @@ large suite of problems.
 Check out the `getting started guide <http://docs.pymc.io/notebooks/getting_started>`__,  or
 `interact with live examples <https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks>`__
 using Binder!
-Or you can also check out `PyMC Discourse <https://discourse.pymc.io/>`__ which place to discuss Bayesian Computation using PyMC3 (current version) and probabilistic modelling in general.
+For questions on PyMC3, head on over to our `PyMC Discourse <https://discourse.pymc.io/>`__ forum.
 
 Features
 ========
