@@ -13,6 +13,7 @@ large suite of problems.
 Check out the `getting started guide <http://docs.pymc.io/notebooks/getting_started>`__,  or
 `interact with live examples <https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks>`__
 using Binder!
+For questions on PyMC3, head on over to our `PyMC Discourse <https://discourse.pymc.io/>`__ forum.
 
 Features
 ========
@@ -167,7 +168,7 @@ Contributors
 ============
 
 See the `GitHub contributor
-page <https://github.com/pymc-devs/pymc3/graphs/contributors>`__
+page <https://github.com/pymc-devs/pymc3/graphs/contributors>`__. Also read our `Code of Conduct <https://github.com/pymc-devs/pymc3/blob/master/CODE_OF_CONDUCT.md>`__ guidelines for a better contributing experience.
 
 Support
 =======
