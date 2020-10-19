@@ -210,10 +210,11 @@ class Particle:
         if self.expansion_nodes:
             index_leaf_node = self.expansion_nodes.pop(0)
             # Probability that this node will remain a leaf node
-            try:
-                prob_leaf = self.prior_prob_leaf_node[self.tree[index_leaf_node].depth]
-            except IndexError:
-                prob_leaf = 1
+            # try:
+            # print(self.tree[index_leaf_node].depth)
+            prob_leaf = self.prior_prob_leaf_node[self.tree[index_leaf_node].depth]
+            # except IndexError:
+            #    prob_leaf = 1
 
             if prob_leaf < np.random.random():
                 self.grow_successful = bart.grow_tree(self.tree, index_leaf_node)
@@ -263,9 +264,8 @@ def _compute_prior_probability(alpha):
     """
     prior_leaf_prob = [0]
     depth = 1
-    prob = 1
-    while prob < 1:
-        prob = 1 - alpha ** depth
+    while prior_leaf_prob[-1] < 1:
+        prior_leaf_prob.append(1 - alpha ** depth)
         depth += 1
     return prior_leaf_prob
 

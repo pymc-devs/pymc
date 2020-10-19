@@ -10,11 +10,12 @@ class BARTParamsError(Exception):
 
 
 class BaseBART(NoDistribution):
-    def __init__(self, X, Y, m=200, alpha=0.25, cache_size=5000, *args, **kwargs):
+    def __init__(self, X, Y, m=200, alpha=0.25, *args, **kwargs):
 
         self.Y_shared = Y
         self.X = X
         self.Y = Y.eval()
+        self.cache_size = 1000
         super().__init__(
             shape=X.shape[0], dtype="float64", testval=0, *args, **kwargs
         )  # FIXME dtype and testvalue are nonsensical
@@ -45,18 +46,17 @@ class BaseBART(NoDistribution):
             raise BARTParamsError(
                 "The type for the alpha parameter for the tree structure must be float"
             )
-        if alpha <= 0 or 0.5 <= alpha:
+        if alpha <= 0 or 1 <= alpha:
             raise BARTParamsError(
                 "The value for the alpha parameter for the tree structure "
-                "must be in the interval (0, 0.5)"
+                "must be in the interval (0, 1)"
             )
 
         self.num_observations = X.shape[0]
         self.number_variates = X.shape[1]
         self.m = m
         self.alpha = alpha
-        self._normal_dist_sampler = NormalDistributionSampler(cache_size)
-        self._disc_uniform_dist_sampler = DiscreteUniformDistributionSampler(cache_size)
+        self._disc_uniform_dist_sampler = DiscreteUniformDistributionSampler(self.cache_size)
         self.trees = self.init_list_of_trees()
 
     def init_list_of_trees(self):
@@ -206,21 +206,25 @@ class DiscreteUniformDistributionSampler:
         self._cache = list(np.random.random(size=self._cache_size))
 
 
-class NormalDistributionSampler:
-    def __init__(self, cache_size=1000):
-        self._cache_size = cache_size
-        self._cache = []
-
-    def sample(self):
-        if len(self._cache) == 0:
-            self.refresh_cache()
-        return self._cache.pop()
-
-    def refresh_cache(self):
-        self._cache = list(np.random.normal(size=self._cache_size))
-
-
 class BART(BaseBART):
+    """
+    BART distribution.
+
+    Distributon representing a sum over trees
+
+    Parameters
+    ----------
+    X :
+        The design matrix.
+    Y :
+        The response vector.
+    m : int
+        Number of trees
+    alpha : float
+        Control the prior probability over the depth of the trees. Must be in the interval (0, 1),
+        altought it is recomenned to be between in the interval (0, 0.5].
+    """
+
     def __init__(self, X, Y, m=200, alpha=0.25):
         super().__init__(X, Y, m, alpha)
 
