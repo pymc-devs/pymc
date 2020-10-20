@@ -2,7 +2,7 @@ import numpy as np
 from .distribution import NoDistribution
 from .tree import Tree, SplitNode, LeafNode
 
-# __all__ = ["BART"]
+__all__ = ["BART"]
 
 
 class BARTParamsError(Exception):
@@ -15,7 +15,6 @@ class BaseBART(NoDistribution):
         self.Y_shared = Y
         self.X = X
         self.Y = Y.eval()
-        self.cache_size = 1000
         super().__init__(
             shape=X.shape[0], dtype="float64", testval=0, *args, **kwargs
         )  # FIXME dtype and testvalue are nonsensical
@@ -27,11 +26,11 @@ class BaseBART(NoDistribution):
             )
         if self.X.ndim != 2:
             raise BARTParamsError("The design matrix X must have two dimensions")
-        if not isinstance(self.Y, np.ndarray) or self.Y.dtype.type is not np.float64:
-            raise BARTParamsError(
-                "The response matrix Y type must be numpy.ndarray where every item"
-                " type is numpy.float64"
-            )
+        # if not isinstance(self.Y, np.ndarray) or self.Y.dtype.type is not np.float64:
+        #    raise BARTParamsError(
+        #       "The response matrix Y type must be numpy.ndarray where every item"
+        #        " type is numpy.float64"
+        #    )
         if self.Y.ndim != 1:
             raise BARTParamsError("The response matrix Y must have one dimension")
         if self.X.shape[0] != self.Y.shape[0]:
@@ -42,10 +41,7 @@ class BaseBART(NoDistribution):
             raise BARTParamsError("The number of trees m type must be int")
         if m < 1:
             raise BARTParamsError("The number of trees m must be greater than zero")
-        if not isinstance(alpha, float):
-            raise BARTParamsError(
-                "The type for the alpha parameter for the tree structure must be float"
-            )
+
         if alpha <= 0 or 1 <= alpha:
             raise BARTParamsError(
                 "The value for the alpha parameter for the tree structure "
@@ -56,7 +52,6 @@ class BaseBART(NoDistribution):
         self.number_variates = X.shape[1]
         self.m = m
         self.alpha = alpha
-        self._disc_uniform_dist_sampler = DiscreteUniformDistributionSampler(self.cache_size)
         self.trees = self.init_list_of_trees()
 
     def init_list_of_trees(self):
@@ -83,18 +78,6 @@ class BaseBART(NoDistribution):
 
     def __repr_latex(self):
         raise NotImplementedError
-
-    def prediction_untransformed(self, x):
-        sum_of_trees = 0.0
-        for t in self.trees:
-            sum_of_trees += t.out_of_sample_predict(x=x)
-        return sum_of_trees
-
-    def sample_dist_splitting_variable(self, value):
-        return self._disc_uniform_dist_sampler.sample(0, value)
-
-    def sample_dist_splitting_rule_assignment(self, value):
-        return self._disc_uniform_dist_sampler.sample(0, value)
 
     def get_available_predictors(self, idx_data_points_split_node):
         possible_splitting_variables = []
@@ -125,15 +108,13 @@ class BaseBART(NoDistribution):
         if not available_predictors:
             return successful_grow_tree
 
-        index_selected_predictor = self.sample_dist_splitting_variable(len(available_predictors))
+        index_selected_predictor = discrete_uniform_sampler(len(available_predictors))
         selected_predictor = available_predictors[index_selected_predictor]
 
         available_splitting_rules, _ = self.get_available_splitting_rules(
             current_node.idx_data_points, selected_predictor
         )
-        index_selected_splitting_rule = self.sample_dist_splitting_rule_assignment(
-            len(available_splitting_rules)
-        )
+        index_selected_splitting_rule = discrete_uniform_sampler(len(available_splitting_rules))
         selected_splitting_rule = available_splitting_rules[index_selected_splitting_rule]
 
         new_split_node = SplitNode(
@@ -146,8 +127,8 @@ class BaseBART(NoDistribution):
             new_split_node, current_node.idx_data_points
         )
 
-        left_node_value = self.draw_leaf_value(tree, left_node_idx_data_points)
-        right_node_value = self.draw_leaf_value(tree, right_node_idx_data_points)
+        left_node_value = self.draw_leaf_value(left_node_idx_data_points)
+        right_node_value = self.draw_leaf_value(right_node_idx_data_points)
 
         new_left_node = LeafNode(
             index=current_node.get_idx_left_child(),
@@ -183,27 +164,16 @@ class BaseBART(NoDistribution):
         R_j = self.Y - self.sum_trees_output
         return R_j
 
-    def draw_leaf_value(self, tree, idx_data_points):
-        raise NotImplementedError
+    def draw_leaf_value(self, idx_data_points):
+        # draw the residual mean
+        R_j = self.get_residuals()[idx_data_points]
+        draw = R_j.mean()
+
+        return draw
 
 
-class DiscreteUniformDistributionSampler:
-    """
-    Draw samples from a discrete uniform distribution.
-    Samples are uniformly distributed over the half-open interval [low, high) (includes low, but excludes high).
-    """
-
-    def __init__(self, cache_size=1000):
-        self._cache_size = cache_size
-        self._cache = []
-
-    def sample(self, lower_limit, upper_limit):
-        if len(self._cache) == 0:
-            self.refresh_cache()
-        return int(lower_limit + (upper_limit - lower_limit) * self._cache.pop())
-
-    def refresh_cache(self):
-        self._cache = list(np.random.random(size=self._cache_size))
+def discrete_uniform_sampler(upper_value):
+    return int(np.random.random() * upper_value)
 
 
 class BART(BaseBART):
@@ -240,14 +210,3 @@ class BART(BaseBART):
         return r"""${} \sim \text{{BART}}(\mathit{{alpha}}={},~\mathit{{m}}={})$""".format(
             name, alpha, m
         )
-
-    def draw_leaf_value(self, tree, idx_data_points):
-        R_j = self.get_residuals()[idx_data_points]
-
-        # for skewed distribution use median or sample from data-points?
-        # data_mean = R_j.mean()
-        # data_std_scaled = R_j.std() / self.m
-        # draw = data_mean + self._normal_dist_sampler.sample() * data_std_scaled
-        draw = R_j.mean()
-
-        return draw

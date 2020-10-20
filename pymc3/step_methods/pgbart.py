@@ -199,10 +199,12 @@ class PGBART(ArrayStepShared):
 
 class Particle:
     def __init__(self, tree, prior_prob_leaf_node):
-        self.tree = tree.copy()  # Mantiene el arbol que nos interesa en este momento
-        self.expansion_nodes = self.tree.idx_leaf_nodes.copy()  # This should be the array [0]
-        self.tree_history = [self.tree.copy()]
-        self.expansion_nodes_history = [self.expansion_nodes.copy()]
+        self.tree = tree.copy()  # keeps the tree that we care at the moment
+        self.expansion_nodes = tree.idx_leaf_nodes.copy()  # This should be the array [0]
+        # self.tree_history = [self.tree.copy()]
+        # self.expansion_nodes_history = [self.expansion_nodes.copy()]
+        self.tree_history = [self.tree]
+        self.expansion_nodes_history = [self.expansion_nodes]
         self.log_weight = 0.0
         self.prior_prob_leaf_node = prior_prob_leaf_node
 
@@ -210,11 +212,7 @@ class Particle:
         if self.expansion_nodes:
             index_leaf_node = self.expansion_nodes.pop(0)
             # Probability that this node will remain a leaf node
-            # try:
-            # print(self.tree[index_leaf_node].depth)
             prob_leaf = self.prior_prob_leaf_node[self.tree[index_leaf_node].depth]
-            # except IndexError:
-            #    prob_leaf = 1
 
             if prob_leaf < np.random.random():
                 self.grow_successful = bart.grow_tree(self.tree, index_leaf_node)
@@ -223,8 +221,10 @@ class Particle:
                     # Add new leaf nodes indexes
                     new_indexes = self.tree.idx_leaf_nodes[-2:]
                     self.expansion_nodes.extend(new_indexes)
-            self.tree_history.append(self.tree.copy())
-            self.expansion_nodes_history.append(self.expansion_nodes.copy())
+            # self.tree_history.append(self.tree.copy())
+            # self.expansion_nodes_history.append(self.expansion_nodes.copy())
+            self.tree_history.append(self.tree)
+            self.expansion_nodes_history.append(self.expansion_nodes)
 
     def set_particle_to_step(self, t):
         if len(self.tree_history) <= t:
@@ -233,14 +233,6 @@ class Particle:
         else:
             self.tree = self.tree_history[t]
             self.expansion_nodes = self.expansion_nodes_history[t]
-
-    def init_weight(self):
-        # TODO
-        return 1.0
-
-    def update_weight(self):
-        # TODO
-        pass
 
 
 def _compute_prior_probability(alpha):
