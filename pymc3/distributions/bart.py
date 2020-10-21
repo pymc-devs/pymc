@@ -11,10 +11,8 @@ class BARTParamsError(Exception):
 
 class BaseBART(NoDistribution):
     def __init__(self, X, Y, m=200, alpha=0.25, *args, **kwargs):
-
-        self.Y_shared = Y
         self.X = X
-        self.Y = Y.eval()
+        self.Y = Y
         super().__init__(
             shape=X.shape[0], dtype="float64", testval=0, *args, **kwargs
         )  # FIXME dtype and testvalue are nonsensical
@@ -168,7 +166,6 @@ class BaseBART(NoDistribution):
         # draw the residual mean
         R_j = self.get_residuals()[idx_data_points]
         draw = R_j.mean()
-
         return draw
 
 

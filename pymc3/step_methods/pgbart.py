@@ -6,8 +6,6 @@ from ..distributions.tree import Tree
 from ..model import modelcontext
 from ..theanof import inputvars, make_shared_replacements
 
-# from ..smc.smc import logp_forw
-
 
 class PGBART(ArrayStepShared):
     """
@@ -31,15 +29,18 @@ class PGBART(ArrayStepShared):
     name = "bartsampler"
     default_blocked = False
 
-    def __init__(self, vars=None, num_particles=10, max_stages=5000, model=None):
+    def __init__(self, vars=None, num_particles=10, max_stages=100, chunk="auto", model=None):
         model = modelcontext(model)
         vars = inputvars(vars)
         self.bart = vars[0].distribution
         self.prior_prob_leaf_node = _compute_prior_probability(self.bart.alpha)
 
+        self.tune = True
+        self.idx = 0
+        if chunk == "auto":
+            self.chunk = min(1, int(self.bart.m * 0.10))
         self.num_particles = num_particles
         self.max_stages = max_stages
-        self.first_iteration = True
         self.previous_trees_particles_list = []
         for i in range(self.bart.m):
             p = Particle(self.bart.trees[i], self.prior_prob_leaf_node)
@@ -53,22 +54,27 @@ class PGBART(ArrayStepShared):
         # For the first iteration we restrict max_stages to a low number, otherwise it is almsot sure
         # we will reach max_stages given that our fist set of m trees is not good at all.
         # maybe we can set max_stages by using some function of the number of variables/dimensions.
-        if self.first_iteration:
+        bart = self.bart
+
+        if self.tune:
             max_stages = 5
-            self.iteration = False
         else:
             max_stages = self.max_stages
 
-        # Step 4 of algorithm
-        bart = self.bart
+        if self.idx == bart.m:
+            self.idx = 0
 
+        # Step 4 of algorithm
         num_observations = bart.num_observations
         likelihood_logp = self.likelihood_logp
-        output = np.zeros((bart.m, num_observations))
         log_num_particles = np.log(self.num_particles)
-        for idx, tree in enumerate(bart.trees):
+
+        for idx in range(self.idx, self.idx + self.chunk):
+            if idx > bart.m:
+                break
+            self.idx += 1
+            tree = bart.trees[idx]
             R_j = bart.get_residuals_loo(tree)
-            bart.Y_shared.set_value(R_j)
             # generate an initial set of SMC particles
             # At the end of the algorith we return one of these particles as a new tree
             list_of_particles = self.init_particles(tree.tree_id, R_j, bart.num_observations)
@@ -142,10 +148,9 @@ class PGBART(ArrayStepShared):
             self.previous_trees_particles_list[tree.tree_id] = new_tree
             bart.trees[idx] = new_tree.tree
             new_prediction = new_tree.tree.predict_output(num_observations)
-            output[idx] = new_prediction
             bart.sum_trees_output = bart.Y - R_j + new_prediction
 
-        return np.sum(output, axis=0)
+        return bart.sum_trees_output
 
     @staticmethod
     def competence(var, has_grad):
