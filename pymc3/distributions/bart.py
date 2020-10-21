@@ -4,31 +4,17 @@ from .tree import Tree, SplitNode, LeafNode
 
 __all__ = ["BART"]
 
-
-class BARTParamsError(Exception):
-    """Base (catch-all) BART hyper parameters exception."""
-
-
 class BaseBART(NoDistribution):
     def __init__(self, X, Y, m=200, alpha=0.25, *args, **kwargs):
         self.X = X
         self.Y = Y
         super().__init__(
             shape=X.shape[0], dtype="float64", testval=0, *args, **kwargs
-        )  # FIXME dtype and testvalue are nonsensical
+        )
 
-        if not isinstance(self.X, np.ndarray) or self.X.dtype.type is not np.float64:
-            raise BARTParamsError(
-                "The design matrix X type must be numpy.ndarray where every item"
-                " type is numpy.float64"
-            )
         if self.X.ndim != 2:
             raise BARTParamsError("The design matrix X must have two dimensions")
-        # if not isinstance(self.Y, np.ndarray) or self.Y.dtype.type is not np.float64:
-        #    raise BARTParamsError(
-        #       "The response matrix Y type must be numpy.ndarray where every item"
-        #        " type is numpy.float64"
-        #    )
+
         if self.Y.ndim != 1:
             raise BARTParamsError("The response matrix Y must have one dimension")
         if self.X.shape[0] != self.Y.shape[0]:
@@ -51,6 +37,7 @@ class BaseBART(NoDistribution):
         self.m = m
         self.alpha = alpha
         self.trees = self.init_list_of_trees()
+        self.mean = fast_mean()
 
     def init_list_of_trees(self):
         initial_value_leaf_nodes = self.Y.mean() / self.m
@@ -63,8 +50,8 @@ class BaseBART(NoDistribution):
                 idx_data_points=initial_idx_data_points_leaf_nodes,
             )
             list_of_trees.append(new_tree)
-        # Diff trick to speed computation of residuals.
-        # Taken from Section 3.1 of Kapelner, A and Bleich, J. bartMachine: A Powerful Tool for Machine Learning in R. ArXiv e-prints, 2013
+        # Diff trick to speed computation of residuals. From Section 3.1 of Kapelner, A and Bleich, J. 
+        # bartMachine: A Powerful Tool for Machine Learning in R. ArXiv e-prints, 2013
         # The sum_trees_output will contain the sum of the predicted output for all trees.
         # When R_j is needed we subtract the current predicted output for tree T_j.
         self.sum_trees_output = np.full_like(self.Y, self.Y.mean())
@@ -154,22 +141,44 @@ class BaseBART(NoDistribution):
 
         return left_node_idx_data_points, right_node_idx_data_points
 
-    def get_residuals_loo(self, tree):
-        R_j = self.Y - (self.sum_trees_output - tree.predict_output(self.num_observations))
-        return R_j
 
     def get_residuals(self):
+        """Compute the residuals."""
         R_j = self.Y - self.sum_trees_output
         return R_j
 
+    def get_residuals_loo(self, tree):
+        """Compute the residuals without leaving the passed tree out."""
+        R_j = self.Y - (self.sum_trees_output - tree.predict_output(self.num_observations))
+        return R_j
+
     def draw_leaf_value(self, idx_data_points):
-        # draw the residual mean
+        """ Draw the residual mean."""
         R_j = self.get_residuals()[idx_data_points]
-        draw = R_j.mean()
+        draw = self.mean(R_j)
         return draw
 
 
+def fast_mean():
+    """If available use Numba to speed up the computation of the mean."""
+    try:
+        from numba import jit
+    except ImportError:
+        return np.mean
+
+    @jit
+    def mean(a):
+        count = a.shape[0]
+        suma = 0
+        for i in range(count):
+            suma += a[i]
+        return suma / count
+
+    return mean
+
+
 def discrete_uniform_sampler(upper_value):
+    """Draw from the uniform distribuion with bounds [0, upper_value)."""
     return int(np.random.random() * upper_value)
 
 
@@ -177,7 +186,7 @@ class BART(BaseBART):
     """
     BART distribution.
 
-    Distributon representing a sum over trees
+    Distribution representing a sum over trees
 
     Parameters
     ----------
@@ -189,7 +198,7 @@ class BART(BaseBART):
         Number of trees
     alpha : float
         Control the prior probability over the depth of the trees. Must be in the interval (0, 1),
-        altought it is recomenned to be between in the interval (0, 0.5].
+        altought it is recomenned to be in the interval (0, 0.5].
     """
 
     def __init__(self, X, Y, m=200, alpha=0.25):
@@ -200,7 +209,6 @@ class BART(BaseBART):
             dist = self
         X = (type(self.X),)
         Y = (type(self.Y),)
-        m = (self.m,)
         alpha = self.alpha
         m = self.m
         name = r"\text{%s}" % name

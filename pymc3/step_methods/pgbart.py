@@ -9,21 +9,26 @@ from ..theanof import inputvars, make_shared_replacements
 
 class PGBART(ArrayStepShared):
     """
-    Write me!!!
+    Particle Gibss BART sampling step
+
+    Parameters
+    ----------)
+    vars: list
+        List of variables for sampler
+    num_particles : int
+        Number of particles for the SMC sampler. Defaults to 10
+    max_stages : int
+        Maximum number of Iterations of the SMC sampler Defaults to 100.
+    chunk = int
+        Number of trees fitted per step. Defaults to  "auto", which is the 10% of the `m` trees.
+    model: PyMC Model
+        Optional model for sampling step. Defaults to None (taken from context).
 
     References
     ----------
     .. [Lakshminarayanan2015] Lakshminarayanan, B. and Roy, D.M. and Teh, Y. W., (2015),
         Particle Gibbs for Bayesian Additive Regression Trees.
-        ArviX,
-        `link <https://arxiv.org/abs/1502.04622>`__
-
-    Parameters
-    ----------
-    lower: float
-        Lower limit.
-    upper: float
-        Upper limit.
+        ArviX, `link <https://arxiv.org/abs/1502.04622>`__
     """
 
     name = "bartsampler"
