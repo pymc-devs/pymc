@@ -38,7 +38,7 @@ class PGBART(ArrayStepShared):
         self.tune = True
         self.idx = 0
         if chunk == "auto":
-            self.chunk = min(1, int(self.bart.m * 0.10))
+            self.chunk = max(1, int(self.bart.m * 0.1))
         self.num_particles = num_particles
         self.max_stages = max_stages
         self.previous_trees_particles_list = []
