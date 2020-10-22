@@ -504,7 +504,7 @@ class TestMixtureSameFamily(SeededTest):
     def test_with_multinomial(self, batch_shape):
         p = np.random.uniform(size=(*batch_shape, self.mixture_comps, 3))
         n = 100 * np.ones((*batch_shape, 1))
-        w = np.ones((self.mixture_comps)) / self.mixture_comps
+        w = np.ones(self.mixture_comps) / self.mixture_comps
         mixture_axis = len(batch_shape)
         with pm.Model() as model:
             comp_dists = pm.Multinomial.dist(p=p, n=n, shape=(*batch_shape, self.mixture_comps, 3))
