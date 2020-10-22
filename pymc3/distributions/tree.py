@@ -83,7 +83,6 @@ class Tree:
         """
         current_node = self.get_node(node_index)
         if isinstance(current_node, SplitNode):
-            # if current_node.evaluate_splitting_rule(x):
             if x is not np.NaN:
                 left_child = current_node.get_idx_left_child()
                 final_node = self._traverse_tree(x, left_child)

@@ -13,7 +13,7 @@ class PGBART(ArrayStepShared):
     Particle Gibss BART sampling step
 
     Parameters
-    ----------)
+    ----------
     vars: list
         List of variables for sampler
     num_particles : int
@@ -49,10 +49,10 @@ class PGBART(ArrayStepShared):
         self.indices = list(range(1, num_particles))
 
         self.max_stages = max_stages
-        self.previous_trees_particles_list = []
+        self.old_trees_particles_list = []
         for i in range(self.bart.m):
             p = Particle(self.bart.trees[i], self.bart.prior_prob_leaf_node)
-            self.previous_trees_particles_list.append(p)
+            self.old_trees_particles_list.append(p)
 
         shared = make_shared_replacements(vars, model)
         self.likelihood_logp = logp([model.datalogpt], vars, shared)
@@ -60,20 +60,18 @@ class PGBART(ArrayStepShared):
 
     def astep(self, _):
         bart = self.bart
+        num_observations = bart.num_observations
 
         # For the tunning phase we restrict max_stages to a low number, otherwise it is almost sure
         # we will reach max_stages given that our first set of m trees is not good at all.
         # Can set max_stages as a function of the number of variables/dimensions?
-        # if self.tune:
-        #    max_stages = 5
-        # else:
-        #    max_stages = self.max_stages
+        if self.tune:
+            max_stages = 5
+        else:
+            max_stages = self.max_stages
 
         if self.idx == bart.m:
             self.idx = 0
-
-        # Step 4 of algorithm
-        num_observations = bart.num_observations
 
         for idx in range(self.idx, self.idx + self.chunk):
             if idx > bart.m:
@@ -81,19 +79,18 @@ class PGBART(ArrayStepShared):
             self.idx += 1
             tree = bart.trees[idx]
             R_j = bart.get_residuals_loo(tree)
-            # generate an initial set of SMC particles
-            # at the end of the algorithm we return one of these particles as a new tree
+            # Generate an initial set of SMC particles
+            # at the end of the algorithm we return one of these particles as the new tree
             particles = self.init_particles(tree.tree_id, R_j, bart.num_observations)
 
             for t in range(1, max_stages):
-                # get previous particle at stage t
-                particles[0] = self.get_previous_tree_particle(tree.tree_id, t)
+                # Get old particle at stage t
+                particles[0] = self.get_old_tree_particle(tree.tree_id, t)
                 # sample each particle (try to grow each tree)
                 for c in range(1, self.num_particles):
                     particles[c].sample_tree_sequential(bart)
-                # Update weights
-                # Since the prior is used as the proposal,the weights are updated additively
-                # as the ratio of the new and old log_likelihoods
+                # Update weights. Since the prior is used as the proposal,the weights
+                # are updated additively as the ratio of the new and old log_likelihoods
                 for p_idx, p in enumerate(particles):
                     new_likelihood = self.likelihood_logp(p.tree.predict_output(num_observations))
                     p.log_weight += new_likelihood - p.old_likelihood_logp
@@ -102,7 +99,7 @@ class PGBART(ArrayStepShared):
                 # Normalize weights
                 W, normalized_weights = self.normalize(particles)
 
-                # resample all but first particle
+                # Resample all but first particle
                 re_n_w = normalized_weights[1:] / normalized_weights[1:].sum()
                 new_indices = np.random.choice(self.indices, size=len(self.indices), p=re_n_w)
                 particles[1:] = particles[new_indices]
@@ -122,7 +119,7 @@ class PGBART(ArrayStepShared):
 
             # Get the new tree and update
             new_tree = np.random.choice(particles, p=normalized_weights)
-            self.previous_trees_particles_list[tree.tree_id] = new_tree
+            self.old_trees_particles_list[tree.tree_id] = new_tree
             bart.trees[idx] = new_tree.tree
             new_prediction = new_tree.tree.predict_output(num_observations)
             bart.sum_trees_output = bart.Y - R_j + new_prediction
@@ -154,19 +151,23 @@ class PGBART(ArrayStepShared):
 
         return W, normalized_weights
 
-    def get_previous_tree_particle(self, tree_id, t):
-        previous_tree_particle = self.previous_trees_particles_list[tree_id]
-        previous_tree_particle.set_particle_to_step(t)
-        return previous_tree_particle
+    def get_old_tree_particle(self, tree_id, t):
+        old_tree_particle = self.old_trees_particles_list[tree_id]
+        old_tree_particle.set_particle_to_step(t)
+        return old_tree_particle
 
     def init_particles(self, tree_id, R_j, num_observations):
-
-        prev_tree = self.get_previous_tree_particle(tree_id, 0)
+        """
+        Initialize particles
+        """
+        # The first particle is from the tree we are trying to replace
+        prev_tree = self.get_old_tree_particle(tree_id, 0)
         likelihood = self.likelihood_logp(prev_tree.tree.predict_output(num_observations))
         prev_tree.old_likelihood_logp = likelihood
         prev_tree.log_weight = likelihood - self.log_num_particles
         particles = [prev_tree]
 
+        # The rest of the particles are identically initialized
         initial_value_leaf_nodes = R_j.mean()
         initial_idx_data_points_leaf_nodes = np.arange(num_observations, dtype="int32")
         new_tree = Tree.init_tree(
@@ -183,12 +184,19 @@ class PGBART(ArrayStepShared):
 
         return np.array(particles)
 
-    def resample(self, particles, normalized_weights):
-        particles = np.random.choice(particles, size=len(particles), p=normalized_weights)
+    def resample(self, particles, weights):
+        """
+        resample a set of particles given its weights
+        """
+        particles = np.random.choice(particles, size=len(particles), p=weights)
         return particles
 
 
 class Particle:
+    """
+    Particle tree
+    """
+
     def __init__(self, tree, prior_prob_leaf_node, log_weight=0, likelihood=0):
         self.tree = tree.copy()  # keeps the tree that we care at the moment
         self.expansion_nodes = tree.idx_leaf_nodes.copy()  # This should be the array [0]
@@ -206,13 +214,11 @@ class Particle:
 
             if prob_leaf < np.random.random():
                 self.grow_successful = bart.grow_tree(self.tree, index_leaf_node)
-                # TODO: in case the grow_tree fails, should we try to sample the tree from another leaf node?
                 if self.grow_successful:
                     # Add new leaf nodes indexes
                     new_indexes = self.tree.idx_leaf_nodes[-2:]
                     self.expansion_nodes.extend(new_indexes)
-            # self.tree_history.append(self.tree.copy())
-            # self.expansion_nodes_history.append(self.expansion_nodes.copy())
+
             self.tree_history.append(self.tree)
             self.expansion_nodes_history.append(self.expansion_nodes)
 
