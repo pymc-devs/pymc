@@ -4,13 +4,12 @@ from .tree import Tree, SplitNode, LeafNode
 
 __all__ = ["BART"]
 
+
 class BaseBART(NoDistribution):
     def __init__(self, X, Y, m=200, alpha=0.25, *args, **kwargs):
         self.X = X
         self.Y = Y
-        super().__init__(
-            shape=X.shape[0], dtype="float64", testval=0, *args, **kwargs
-        )
+        super().__init__(shape=X.shape[0], dtype="float64", testval=0, *args, **kwargs)
 
         if self.X.ndim != 2:
             raise BARTParamsError("The design matrix X must have two dimensions")
@@ -38,6 +37,7 @@ class BaseBART(NoDistribution):
         self.alpha = alpha
         self.trees = self.init_list_of_trees()
         self.mean = fast_mean()
+        self.prior_prob_leaf_node = compute_prior_probability(alpha)
 
     def init_list_of_trees(self):
         initial_value_leaf_nodes = self.Y.mean() / self.m
@@ -50,7 +50,7 @@ class BaseBART(NoDistribution):
                 idx_data_points=initial_idx_data_points_leaf_nodes,
             )
             list_of_trees.append(new_tree)
-        # Diff trick to speed computation of residuals. From Section 3.1 of Kapelner, A and Bleich, J. 
+        # Diff trick to speed computation of residuals. From Section 3.1 of Kapelner, A and Bleich, J.
         # bartMachine: A Powerful Tool for Machine Learning in R. ArXiv e-prints, 2013
         # The sum_trees_output will contain the sum of the predicted output for all trees.
         # When R_j is needed we subtract the current predicted output for tree T_j.
@@ -141,7 +141,6 @@ class BaseBART(NoDistribution):
 
         return left_node_idx_data_points, right_node_idx_data_points
 
-
     def get_residuals(self):
         """Compute the residuals."""
         R_j = self.Y - self.sum_trees_output
@@ -157,6 +156,32 @@ class BaseBART(NoDistribution):
         R_j = self.get_residuals()[idx_data_points]
         draw = self.mean(R_j)
         return draw
+
+
+def compute_prior_probability(alpha):
+    """
+    Calculate the probability of the node being a LeafNode (1 - p(being SplitNode)).
+    Taken from equation 19 in [Rockova2018].
+
+    Parameters
+    ----------
+    alpha : float
+
+    Returns
+    -------
+    float
+
+    References
+    ----------
+    .. [Rockova2018] Veronika Rockova, Enakshi Saha (2018). On the theory of BART.
+    arXiv, `link <https://arxiv.org/abs/1810.00787>`__
+    """
+    prior_leaf_prob = [0]
+    depth = 1
+    while prior_leaf_prob[-1] < 1:
+        prior_leaf_prob.append(1 - alpha ** depth)
+        depth += 1
+    return prior_leaf_prob
 
 
 def fast_mean():
