@@ -4097,7 +4097,7 @@ class Interpolated(BoundedContinuous):
     def _random(self, size=None):
         return self._argcdf(np.random.uniform(size=size))
 
-    def random(self, size=None):
+    def random(self, point=None, size=None):
         """
         Draw random values from Interpolated distribution.
 
