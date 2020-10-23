@@ -1,3 +1,17 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import numpy as np
 from .distribution import NoDistribution
 from .tree import Tree, SplitNode, LeafNode
@@ -32,7 +46,7 @@ class BaseBART(NoDistribution):
             )
 
         self.num_observations = X.shape[0]
-        self.number_variates = X.shape[1]
+        self.num_variates = X.shape[1]
         self.m = m
         self.alpha = alpha
         self.trees = self.init_list_of_trees()
@@ -66,7 +80,7 @@ class BaseBART(NoDistribution):
 
     def get_available_predictors(self, idx_data_points_split_node):
         possible_splitting_variables = []
-        for j in range(self.number_variates):
+        for j in range(self.num_variates):
             x_j = self.X[idx_data_points_split_node, j]
             x_j = x_j[~np.isnan(x_j)]
             for i in range(1, len(x_j)):
@@ -169,7 +183,7 @@ def compute_prior_probability(alpha):
 
     Returns
     -------
-    float
+    list with probabilities for leaf nodes
 
     References
     ----------
@@ -203,7 +217,7 @@ def fast_mean():
 
 
 def discrete_uniform_sampler(upper_value):
-    """Draw from the uniform distribuion with bounds [0, upper_value)."""
+    """Draw from the uniform distribution with bounds [0, upper_value)."""
     return int(np.random.random() * upper_value)
 
 
@@ -229,14 +243,15 @@ class BART(BaseBART):
     def __init__(self, X, Y, m=200, alpha=0.25):
         super().__init__(X, Y, m, alpha)
 
-    def _repr_latex_(self, name=None, dist=None):
+    def _str_repr(self, name=None, dist=None, formatting="plain"):
         if dist is None:
             dist = self
         X = (type(self.X),)
         Y = (type(self.Y),)
         alpha = self.alpha
         m = self.m
-        name = r"\text{%s}" % name
-        return r"""${} \sim \text{{BART}}(\mathit{{alpha}}={},~\mathit{{m}}={})$""".format(
-            name, alpha, m
-        )
+
+        if formatting == "latex":
+            return f"$\\text{{{name}}} \\sim  \\text{{BART}}(\\text{{alpha = }}\\text{{{alpha}}}, \\text{{m = }}\\text{{{m}}})$"
+        else:
+            return f"{name} ~ BART(alpha = {alpha}, m = {m})"
