@@ -989,7 +989,8 @@ class TestScalarParameterSamples(SeededTest):
                     def __init__(self, **kwargs):
                         x_points = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 100)
                         pdf_points = st.norm.pdf(x_points, loc=mu, scale=sigma)
-                        super().__init__(x_points=x_points, pdf_points=pdf_points, **kwargs)
+                        super().__init__(
+                            x_points=pm.floatX(x_points), pdf_points=pm.floatX(pdf_points), **kwargs)
 
                 pymc3_random(TestedInterpolated, {}, ref_rand=ref_rand)
 
