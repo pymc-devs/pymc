@@ -19,7 +19,6 @@ import scipy.stats as st
 from scipy.special import expit
 from scipy import linalg
 import numpy.random as nr
-import theano
 
 import pymc3 as pm
 from pymc3.distributions.dist_math import clipped_beta_rvs
