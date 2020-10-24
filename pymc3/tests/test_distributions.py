@@ -174,7 +174,7 @@ def product(domains, n_samples=-1):
     try:
         names, domains = zip(*domains.items())
     except ValueError:  # domains.items() is empty
-        return []
+        return [{}]
     all_vals = [zip(names, val) for val in itertools.product(*[d.vals for d in domains])]
     if n_samples > 0 and len(all_vals) > n_samples:
         return (all_vals[j] for j in nr.choice(len(all_vals), n_samples, replace=False))
