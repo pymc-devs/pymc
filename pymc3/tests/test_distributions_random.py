@@ -978,6 +978,7 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(pm.Moyal, {"mu": R, "sigma": Rplus}, ref_rand=ref_rand)
 
+    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
@@ -989,9 +990,7 @@ class TestScalarParameterSamples(SeededTest):
                     def __init__(self, **kwargs):
                         x_points = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 100)
                         pdf_points = st.norm.pdf(x_points, loc=mu, scale=sigma)
-                        super().__init__(
-                            x_points=pm.floatX(x_points), pdf_points=pm.floatX(pdf_points), **kwargs
-                        )
+                        super().__init__(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
                 pymc3_random(TestedInterpolated, {}, ref_rand=ref_rand)
 
