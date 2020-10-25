@@ -5,7 +5,7 @@ repos:
     -   id: end-of-file-fixer
     -   id: check-toml
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 0.3.3
+  rev: 0.3.5
   hooks:
     - id: nbqa-black
     - id: nbqa-isort
