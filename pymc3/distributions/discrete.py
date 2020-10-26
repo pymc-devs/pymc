@@ -640,8 +640,11 @@ class NegativeBinomial(Discrete):
         self.mode = intX(tt.floor(mu))
 
     def get_mu_alpha(self, mu=None, alpha=None, p=None, n=None):
+        self._param_type = ["mu", "alpha"]
         if alpha is None:
             if n is not None:
+                self._param_type[1] = "n"
+                self.n = n
                 alpha = n
             else:
                 raise ValueError("Incompatible parametrization. Must specify either alpha or n.")
@@ -650,6 +653,8 @@ class NegativeBinomial(Discrete):
 
         if mu is None:
             if p is not None:
+                self._param_type[0] = "p"
+                self.p = p
                 mu = alpha * (1 - p) / p
             else:
                 raise ValueError("Incompatible parametrization. Must specify either mu or p.")
@@ -719,6 +724,9 @@ class NegativeBinomial(Discrete):
 
         # Return Poisson when alpha gets very large.
         return tt.switch(tt.gt(alpha, 1e10), Poisson.dist(self.mu).logp(value), negbinom)
+
+    def _distr_parameters_for_repr(self):
+        return self._param_type
 
 
 class Geometric(Discrete):
