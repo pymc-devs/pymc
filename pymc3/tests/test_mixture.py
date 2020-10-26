@@ -534,3 +534,49 @@ class TestMixtureSameFamily(SeededTest):
             log_sum_exp,
             rtol,
         )
+
+    # TODO: Handle case when `batch_shape` == `sample_shape`.
+    # See https://github.com/pymc-devs/pymc3/issues/4185 for details.
+    def test_with_mvnormal(self):
+        # 10 batch, 3-variate Gaussian
+        mu = np.random.randn(self.mixture_comps, 3)
+        mat = np.random.randn(3, 3)
+        cov = mat @ mat.T
+        chol = np.linalg.cholesky(cov)
+        w = np.ones(self.mixture_comps) / self.mixture_comps
+
+        with pm.Model() as model:
+            comp_dists = pm.MvNormal.dist(mu=mu, chol=chol, shape=(self.mixture_comps, 3))
+            mixture = pm.MixtureSameFamily(
+                "mixture", w=w, comp_dists=comp_dists, mixture_axis=0, shape=(3,)
+            )
+            prior = pm.sample_prior_predictive(samples=self.n_samples)
+
+        assert prior["mixture"].shape == (self.n_samples, 3)
+        assert mixture.random(size=self.size).shape == (self.size, 3)
+
+        if theano.config.floatX == "float32":
+            rtol = 1e-4
+        else:
+            rtol = 1e-7
+
+        comp_logp = comp_dists.logp(model.test_point["mixture"].reshape(1, 3))
+        log_sum_exp = logsumexp(
+            comp_logp.eval() + np.log(w)[..., None], axis=0, keepdims=True
+        ).sum()
+        assert_allclose(
+            model.logp(model.test_point),
+            log_sum_exp,
+            rtol,
+        )
+
+    def test_broadcasting_in_shape(self):
+        with pm.Model() as model:
+            mu = pm.Gamma("mu", 1.0, 1.0, shape=2)
+            comp_dists = pm.Poisson.dist(mu, shape=2)
+            mix = pm.MixtureSameFamily(
+                "mix", w=np.ones(2) / 2, comp_dists=comp_dists, shape=(1000,)
+            )
+            prior = pm.sample_prior_predictive(samples=self.n_samples)
+
+        assert prior["mix"].shape == (self.n_samples, 1000)

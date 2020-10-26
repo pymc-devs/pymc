@@ -767,12 +767,53 @@ class MixtureSameFamily(Distribution):
         # We now draw random choices from those weights.
         # However, we have to ensure that the number of choices has the
         # sample_shape present.
-        choice_shape = (
-            w.shape[:-1]
-            if w.shape[: len(sample_shape)] == sample_shape
-            else sample_shape + w.shape[:-1]
-        )
-        choices = random_choice(p=w, size=choice_shape)
+        w_shape = w.shape
+        batch_shape = self.comp_dists.shape[: mixture_axis + 1]
+        param_shape = np.broadcast(np.empty(w_shape), np.empty(batch_shape)).shape
+        event_shape = self.comp_dists.shape[mixture_axis + 1 :]
+
+        if np.asarray(self.shape).size != 0:
+            comp_dists_ndim = len(self.comp_dists.shape)
+
+            # If event_shape of both comp_dists and supplied shape matches,
+            # broadcast only batch_shape
+            # else broadcast the entire given shape with batch_shape.
+            if list(self.shape[mixture_axis - comp_dists_ndim + 1 :]) == list(event_shape):
+                dist_shape = np.broadcast(
+                    np.empty(self.shape[:mixture_axis]), np.empty(param_shape[:mixture_axis])
+                ).shape
+            else:
+                dist_shape = np.broadcast(
+                    np.empty(self.shape), np.empty(param_shape[:mixture_axis])
+                ).shape
+        else:
+            dist_shape = param_shape[:mixture_axis]
+
+        # Try to determine the size that must be used to get the mixture
+        # components (i.e. get random choices using w).
+        # 1. There must be size independent choices based on w.
+        # 2. There must also be independent draws for each non singleton axis
+        # of w.
+        # 3. There must also be independent draws for each dimension added by
+        # self.shape with respect to the w.ndim. These usually correspond to
+        # observed variables with batch shapes
+        wsh = (1,) * (len(dist_shape) - len(w_shape) + 1) + w_shape[:mixture_axis]
+        psh = (1,) * (len(dist_shape) - len(param_shape) + 1) + param_shape[:mixture_axis]
+        w_sample_size = []
+        # Loop through the dist_shape to get the conditions 2 and 3 first
+        for i in range(len(dist_shape)):
+            if dist_shape[i] != psh[i] and wsh[i] == 1:
+                # self.shape[i] is a non singleton dimension (usually caused by
+                # observed data)
+                sh = dist_shape[i]
+            else:
+                sh = wsh[i]
+            w_sample_size.append(sh)
+
+        if sample_shape is not None and w_sample_size[: len(sample_shape)] != sample_shape:
+            w_sample_size = sample_shape + tuple(w_sample_size)
+
+        choices = random_choice(p=w, size=w_sample_size)
 
         # We now draw samples from the mixture components random method
         comp_samples = self.comp_dists.random(point=point, size=size)
@@ -791,8 +832,6 @@ class MixtureSameFamily(Distribution):
         # choices array.
         # We also need to make sure that the batch_shapes of both the comp_samples
         # and choices broadcast with each other.
-
-        event_shape = self.comp_dists.shape[mixture_axis + 1 :]
 
         choices = np.reshape(choices, choices.shape + (1,) * (1 + len(event_shape)))
 
