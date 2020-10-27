@@ -644,7 +644,7 @@ class NegativeBinomial(Discrete):
         if alpha is None:
             if n is not None:
                 self._param_type[1] = "n"
-                self.n = n
+                self.n = tt.as_tensor_variable(intX(n))
                 alpha = n
             else:
                 raise ValueError("Incompatible parametrization. Must specify either alpha or n.")
@@ -654,7 +654,7 @@ class NegativeBinomial(Discrete):
         if mu is None:
             if p is not None:
                 self._param_type[0] = "p"
-                self.p = p
+                self.p = tt.as_tensor_variable(floatX(p))
                 mu = alpha * (1 - p) / p
             else:
                 raise ValueError("Incompatible parametrization. Must specify either mu or p.")

@@ -1880,6 +1880,17 @@ class TestBugfixes:
         assert actual_a.shape == (X.shape[0],)
         pass
 
+    def test_issue_4186(self):
+        with pm.Model():
+            nb = pm.NegativeBinomial(
+                "nb", mu=pm.Normal("mu"), alpha=pm.Gamma("alpha", mu=6, sigma=1)
+            )
+        assert str(nb) == "nb ~ NegativeBinomial(mu=mu, alpha=alpha)"
+
+        with pm.Model():
+            nb = pm.NegativeBinomial("nb", p=pm.Uniform("p"), n=10)
+        assert str(nb) == "nb ~ NegativeBinomial(p=p, n=10)"
+
 
 def test_serialize_density_dist():
     def func(x):
