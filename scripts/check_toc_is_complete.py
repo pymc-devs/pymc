@@ -1,5 +1,5 @@
 """
-Check that given Jupyter notebooks all contain a final watermark cell to facilite reproducibility.
+Check that given Jupyter notebooks all appear in the table of contents.
 
 This is intended to be used as a pre-commit hook, see `.pre-commit-config.yaml`.
 You can run it manually with `pre-commit run check-toc --all`.
