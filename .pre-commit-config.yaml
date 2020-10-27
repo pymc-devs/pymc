@@ -1,0 +1,28 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.2.0
+  hooks:
+    -   id: end-of-file-fixer
+    -   id: check-toml
+- repo: https://github.com/nbQA-dev/nbQA
+  rev: 0.3.2
+  hooks:
+    - id: nbqa-black
+    - id: nbqa-isort
+    - id: nbqa-pyupgrade
+- repo: https://github.com/asottile/pyupgrade
+  rev: v2.7.2
+  hooks:
+    - id: pyupgrade
+      args: [--py36-plus]
+- repo: https://github.com/psf/black
+  rev: 20.8b1
+  hooks:
+    - id: black
+- repo: local
+  hooks:
+    - id: watermark
+      name: Check notebooks have watermark
+      types: [jupyter]
+      entry: python scripts/check_watermark.py
+      language: python

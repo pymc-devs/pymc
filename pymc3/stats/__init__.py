@@ -23,6 +23,7 @@ import warnings
 
 import arviz as az
 
+
 def map_args(func):
     swaps = [("varnames", "var_names")]
 

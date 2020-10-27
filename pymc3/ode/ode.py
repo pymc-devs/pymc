@@ -20,7 +20,7 @@ import theano.tensor as tt
 from ..ode import utils
 from ..exceptions import ShapeError, DtypeError
 
-_log = logging.getLogger('pymc3')
+_log = logging.getLogger("pymc3")
 floatX = theano.config.floatX
 
 
@@ -48,24 +48,26 @@ class DifferentialEquation(theano.Op):
 
     Examples
     --------
-    
+
     .. code-block:: python
 
         def odefunc(y, t, p):
             #Logistic differential equation
             return p[0] * y[0] * (1 - y[0])
-       
+
         times = np.arange(0.5, 5, 0.5)
 
         ode_model = DifferentialEquation(func=odefunc, times=times, n_states=1, n_theta=1, t0=0)
     """
     _itypes = [
-        tt.TensorType(floatX, (False,)),                  # y0 as 1D floatX vector
-        tt.TensorType(floatX, (False,))                   # theta as 1D floatX vector
+        tt.TensorType(floatX, (False,)),  # y0 as 1D floatX vector
+        tt.TensorType(floatX, (False,)),  # theta as 1D floatX vector
     ]
     _otypes = [
-        tt.TensorType(floatX, (False, False)),            # model states as floatX of shape (T, S)
-        tt.TensorType(floatX, (False, False, False)),     # sensitivities as floatX of shape (T, S, len(y0) + len(theta))
+        tt.TensorType(floatX, (False, False)),  # model states as floatX of shape (T, S)
+        tt.TensorType(
+            floatX, (False, False, False)
+        ),  # sensitivities as floatX of shape (T, S, len(y0) + len(theta))
     ]
     __props__ = ("func", "times", "n_states", "n_theta", "t0")
 
@@ -107,7 +109,7 @@ class DifferentialEquation(theano.Op):
         p : array
             parameter vector (y0, theta)
         """
-        dydt, ddt_dydp = self._augmented_func(Y[:self.n_states], t, p, Y[self.n_states:])
+        dydt, ddt_dydp = self._augmented_func(Y[: self.n_states], t, p, Y[self.n_states :])
         derivatives = np.concatenate([dydt, ddt_dydp])
         return derivatives
 
@@ -120,16 +122,16 @@ class DifferentialEquation(theano.Op):
             func=self._system, y0=s0, t=self._augmented_times, args=(np.concatenate([y0, theta]),)
         ).astype(floatX)
         # The solution
-        y = sol[1:, :self.n_states]
+        y = sol[1:, : self.n_states]
 
         # The sensitivities, reshaped to be a sequence of matrices
-        sens = sol[1:, self.n_states:].reshape(self.n_times, self.n_states, self.n_p)
+        sens = sol[1:, self.n_states :].reshape(self.n_times, self.n_states, self.n_p)
 
         return y, sens
 
     def make_node(self, y0, theta):
         inputs = (y0, theta)
-        _log.debug('make_node for inputs {}'.format(hash(inputs)))
+        _log.debug("make_node for inputs {}".format(hash(inputs)))
         states = self._otypes[0]()
         sens = self._otypes[1]()
 
@@ -139,46 +141,65 @@ class DifferentialEquation(theano.Op):
 
     def __call__(self, y0, theta, return_sens=False, **kwargs):
         if isinstance(y0, (list, tuple)) and not len(y0) == self.n_states:
-            raise ShapeError('Length of y0 is wrong.', actual=(len(y0),), expected=(self.n_states,))
+            raise ShapeError("Length of y0 is wrong.", actual=(len(y0),), expected=(self.n_states,))
         if isinstance(theta, (list, tuple)) and not len(theta) == self.n_theta:
-            raise ShapeError('Length of theta is wrong.', actual=(len(theta),), expected=(self.n_theta,))
-            
+            raise ShapeError(
+                "Length of theta is wrong.", actual=(len(theta),), expected=(self.n_theta,)
+            )
+
         # convert inputs to tensors (and check their types)
         y0 = tt.cast(tt.unbroadcast(tt.as_tensor_variable(y0), 0), floatX)
         theta = tt.cast(tt.unbroadcast(tt.as_tensor_variable(theta), 0), floatX)
         inputs = [y0, theta]
         for i, (input_val, itype) in enumerate(zip(inputs, self._itypes)):
             if not input_val.type == itype:
-                raise ValueError('Input {} of type {} does not have the expected type of {}'.format(i, input_val.type, itype))
-        
+                raise ValueError(
+                    f"Input {i} of type {input_val.type} does not have the expected type of {itype}"
+                )
+
         # use default implementation to prepare symbolic outputs (via make_node)
         states, sens = super(theano.Op, self).__call__(y0, theta, **kwargs)
 
-        if theano.config.compute_test_value != 'off':
+        if theano.config.compute_test_value != "off":
             # compute test values from input test values
             test_states, test_sens = self._simulate(
-                y0=self._get_test_value(y0),
-                theta=self._get_test_value(theta)
+                y0=self._get_test_value(y0), theta=self._get_test_value(theta)
             )
 
             # check types of simulation result
             if not test_states.dtype == self._otypes[0].dtype:
-                raise DtypeError('Simulated states have the wrong type.', actual=test_states.dtype, expected=self._otypes[0].dtype)
+                raise DtypeError(
+                    "Simulated states have the wrong type.",
+                    actual=test_states.dtype,
+                    expected=self._otypes[0].dtype,
+                )
             if not test_sens.dtype == self._otypes[1].dtype:
-                raise DtypeError('Simulated sensitivities have the wrong type.', actual=test_sens.dtype, expected=self._otypes[1].dtype)
+                raise DtypeError(
+                    "Simulated sensitivities have the wrong type.",
+                    actual=test_sens.dtype,
+                    expected=self._otypes[1].dtype,
+                )
 
             # check shapes of simulation result
             expected_states_shape = (self.n_times, self.n_states)
             expected_sens_shape = (self.n_times, self.n_states, self.n_p)
             if not test_states.shape == expected_states_shape:
-                raise ShapeError('Simulated states have the wrong shape.', test_states.shape, expected_states_shape)
+                raise ShapeError(
+                    "Simulated states have the wrong shape.",
+                    test_states.shape,
+                    expected_states_shape,
+                )
             if not test_sens.shape == expected_sens_shape:
-                raise ShapeError('Simulated sensitivities have the wrong shape.', test_sens.shape, expected_sens_shape)
+                raise ShapeError(
+                    "Simulated sensitivities have the wrong shape.",
+                    test_sens.shape,
+                    expected_sens_shape,
+                )
 
             # attach results as test values to the outputs
             states.tag.test_value = test_states
             sens.tag.test_value = test_sens
-        
+
         if return_sens:
             return states, sens
         return states
@@ -194,25 +215,22 @@ class DifferentialEquation(theano.Op):
         return output_shapes
 
     def grad(self, inputs, output_grads):
-        _log.debug('grad w.r.t. inputs {}'.format(hash(tuple(inputs))))
-        
+        _log.debug("grad w.r.t. inputs {}".format(hash(tuple(inputs))))
+
         # fetch symbolic sensitivity output node from cache
         ihash = hash(tuple(inputs))
         if ihash in self._output_sensitivities:
             sens = self._output_sensitivities[ihash]
         else:
-            _log.debug('No cached sensitivities found!')
+            _log.debug("No cached sensitivities found!")
             _, sens = self.__call__(*inputs, return_sens=True)
         ograds = output_grads[0]
-        
+
         # for each parameter, multiply sensitivities with the output gradient and sum the result
         # sens is (n_times, n_states, n_p)
         # ograds is (n_times, n_states)
-        grads = [
-            tt.sum(sens[:,:,p] * ograds)
-            for p in range(self.n_p)
-        ]
-        
+        grads = [tt.sum(sens[:, :, p] * ograds) for p in range(self.n_p)]
+
         # return separate gradient tensors for y0 and theta inputs
-        result = tt.stack(grads[:self.n_states]), tt.stack(grads[self.n_states:])
+        result = tt.stack(grads[: self.n_states]), tt.stack(grads[self.n_states :])
         return result

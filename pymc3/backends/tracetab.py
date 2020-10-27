@@ -21,7 +21,7 @@ import warnings
 
 from ..util import get_default_varnames
 
-__all__ = ['trace_to_dataframe']
+__all__ = ["trace_to_dataframe"]
 
 
 def trace_to_dataframe(trace, chains=None, varnames=None, include_transformed=False):
@@ -41,16 +41,15 @@ def trace_to_dataframe(trace, chains=None, varnames=None, include_transformed=Fa
         DataFrame.
     """
     warnings.warn(
-        'The `trace_to_dataframe` function will soon be removed. '
-        'Please use ArviZ to save traces. '
-        'If you have good reasons for using the `trace_to_dataframe` function, file an issue and tell us about them. ',
+        "The `trace_to_dataframe` function will soon be removed. "
+        "Please use ArviZ to save traces. "
+        "If you have good reasons for using the `trace_to_dataframe` function, file an issue and tell us about them. ",
         DeprecationWarning,
     )
     var_shapes = trace._straces[0].var_shapes
 
     if varnames is None:
-        varnames = get_default_varnames(var_shapes.keys(),
-                                        include_transformed=include_transformed)
+        varnames = get_default_varnames(var_shapes.keys(), include_transformed=include_transformed)
 
     flat_names = {v: create_flat_names(v, var_shapes[v]) for v in varnames}
 
@@ -77,13 +76,13 @@ def create_flat_names(varname, shape):
         return [varname]
     labels = (np.ravel(xs).tolist() for xs in np.indices(shape))
     labels = (map(str, xs) for xs in labels)
-    return ['{}__{}'.format(varname, '_'.join(idxs)) for idxs in zip(*labels)]
+    return ["{}__{}".format(varname, "_".join(idxs)) for idxs in zip(*labels)]
 
 
 def _create_shape(flat_names):
     """Determine shape from `create_flat_names` output."""
     try:
-        _, shape_str = flat_names[-1].rsplit('__', 1)
+        _, shape_str = flat_names[-1].rsplit("__", 1)
     except ValueError:
         return ()
-    return tuple(int(i) + 1 for i in shape_str.split('_'))
+    return tuple(int(i) + 1 for i in shape_str.split("_"))

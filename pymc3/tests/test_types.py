@@ -18,7 +18,7 @@ import theano
 
 from pymc3.sampling import sample
 from pymc3.model import Model
-from pymc3.step_methods import NUTS, Metropolis, Slice, HamiltonianMC
+from pymc3.step_methods import NUTS, Metropolis, Slice, HamiltonianMC, MLDA
 from pymc3.distributions import Normal
 from pymc3.theanof import change_flags
 
@@ -36,28 +36,64 @@ class TestType:
         # restore theano config
         theano.config = self.theano_config
 
-    @change_flags({'floatX': 'float64', 'warn_float64': 'ignore'})
+    @change_flags({"floatX": "float64", "warn_float64": "ignore"})
     def test_float64(self):
         with Model() as model:
-            x = Normal('x', testval=np.array(1., dtype='float64'))
-            obs = Normal('obs', mu=x, sigma=1., observed=np.random.randn(5))
+            x = Normal("x", testval=np.array(1.0, dtype="float64"))
+            obs = Normal("obs", mu=x, sigma=1.0, observed=np.random.randn(5))
 
-        assert x.dtype == 'float64'
-        assert obs.dtype == 'float64'
+        assert x.dtype == "float64"
+        assert obs.dtype == "float64"
 
         for sampler in self.samplers:
             with model:
                 sample(10, sampler())
 
-    @change_flags({'floatX': 'float32', 'warn_float64': 'warn'})
+    @change_flags({"floatX": "float32", "warn_float64": "warn"})
     def test_float32(self):
         with Model() as model:
-            x = Normal('x', testval=np.array(1., dtype='float32'))
-            obs = Normal('obs', mu=x, sigma=1., observed=np.random.randn(5).astype('float32'))
+            x = Normal("x", testval=np.array(1.0, dtype="float32"))
+            obs = Normal("obs", mu=x, sigma=1.0, observed=np.random.randn(5).astype("float32"))
 
-        assert x.dtype == 'float32'
-        assert obs.dtype == 'float32'
+        assert x.dtype == "float32"
+        assert obs.dtype == "float32"
 
         for sampler in self.samplers:
             with model:
                 sample(10, sampler())
+
+    @change_flags({"floatX": "float64", "warn_float64": "ignore"})
+    def test_float64_MLDA(self):
+        data = np.random.randn(5)
+
+        with Model() as coarse_model:
+            x = Normal("x", testval=np.array(1.0, dtype="float64"))
+            obs = Normal("obs", mu=x, sigma=1.0, observed=data + 0.5)
+
+        with Model() as model:
+            x = Normal("x", testval=np.array(1.0, dtype="float64"))
+            obs = Normal("obs", mu=x, sigma=1.0, observed=data)
+
+        assert x.dtype == "float64"
+        assert obs.dtype == "float64"
+
+        with model:
+            sample(10, MLDA(coarse_models=[coarse_model]))
+
+    @change_flags({"floatX": "float32", "warn_float64": "warn"})
+    def test_float32_MLDA(self):
+        data = np.random.randn(5).astype("float32")
+
+        with Model() as coarse_model:
+            x = Normal("x", testval=np.array(1.0, dtype="float32"))
+            obs = Normal("obs", mu=x, sigma=1.0, observed=data + 0.5)
+
+        with Model() as model:
+            x = Normal("x", testval=np.array(1.0, dtype="float32"))
+            obs = Normal("obs", mu=x, sigma=1.0, observed=data)
+
+        assert x.dtype == "float32"
+        assert obs.dtype == "float32"
+
+        with model:
+            sample(10, MLDA(coarse_models=[coarse_model]))

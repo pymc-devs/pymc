@@ -109,18 +109,16 @@ class _Process:
             "or forkserver."
         )
         if self._step_method_is_pickled:
-            if self._pickle_backend == 'pickle':
+            if self._pickle_backend == "pickle":
                 try:
                     self._step_method = pickle.loads(self._step_method)
                 except Exception:
                     raise ValueError(unpickle_error)
-            elif self._pickle_backend == 'dill':
+            elif self._pickle_backend == "dill":
                 try:
                     import dill
                 except ImportError:
-                    raise ValueError(
-                        "dill must be installed for pickle_backend='dill'."
-                    )
+                    raise ValueError("dill must be installed for pickle_backend='dill'.")
                 try:
                     self._step_method = dill.loads(self._step_method)
                 except Exception:
@@ -206,9 +204,7 @@ class _Process:
                     warns = self._collect_warnings()
                 else:
                     warns = None
-                self._msg_pipe.send(
-                    ("writing_done", is_last, draw, tuning, stats, warns)
-                )
+                self._msg_pipe.send(("writing_done", is_last, draw, tuning, stats, warns))
                 draw += 1
             else:
                 raise ValueError("Unknown message " + msg[0])
@@ -289,7 +285,7 @@ class ProcessAdapter:
                 tune,
                 seed,
                 pickle_backend,
-            )
+            ),
         )
         self._process.start()
         # Close the remote pipe, so that we get notified if the other
@@ -318,11 +314,7 @@ class ProcessAdapter:
             if message is not None and message[0] == "error":
                 warns, old_error = message[1:]
                 if warns is not None:
-                    error = ParallelSamplingError(
-                        str(old_error),
-                        self.chain,
-                        warns
-                    )
+                    error = ParallelSamplingError(str(old_error), self.chain, warns)
                 else:
                     error = RuntimeError("Chain %s failed." % self.chain)
                 raise error from old_error
@@ -387,8 +379,7 @@ class ProcessAdapter:
                 process.join(timeout)
         except multiprocessing.TimeoutError:
             logger.warn(
-                "Chain processes did not terminate as expected. "
-                "Terminating forcefully..."
+                "Chain processes did not terminate as expected. " "Terminating forcefully..."
             )
             for process in processes:
                 process.terminate()
@@ -396,9 +387,7 @@ class ProcessAdapter:
                 process.join()
 
 
-Draw = namedtuple(
-    "Draw", ["chain", "is_last", "draw_idx", "tuning", "stats", "point", "warnings"]
-)
+Draw = namedtuple("Draw", ["chain", "is_last", "draw_idx", "tuning", "stats", "point", "warnings"])
 
 
 class ParallelSampler:
@@ -414,7 +403,7 @@ class ParallelSampler:
         start_chain_num: int = 0,
         progressbar: bool = True,
         mp_ctx=None,
-        pickle_backend: str = 'pickle',
+        pickle_backend: str = "pickle",
     ):
 
         if any(len(arg) != chains for arg in [seeds, start_points]):
@@ -422,21 +411,19 @@ class ParallelSampler:
 
         if mp_ctx is None or isinstance(mp_ctx, str):
             # Closes issue https://github.com/pymc-devs/pymc3/issues/3849
-            if platform.system() == 'Darwin':
+            if platform.system() == "Darwin":
                 mp_ctx = "forkserver"
             mp_ctx = multiprocessing.get_context(mp_ctx)
 
         step_method_pickled = None
-        if mp_ctx.get_start_method() != 'fork':
-            if pickle_backend == 'pickle':
+        if mp_ctx.get_start_method() != "fork":
+            if pickle_backend == "pickle":
                 step_method_pickled = pickle.dumps(step_method, protocol=-1)
-            elif pickle_backend == 'dill':
+            elif pickle_backend == "dill":
                 try:
                     import dill
                 except ImportError:
-                    raise ValueError(
-                        "dill must be installed for pickle_backend='dill'."
-                    )
+                    raise ValueError("dill must be installed for pickle_backend='dill'.")
                 step_method_pickled = dill.dumps(step_method, protocol=-1)
 
         self._samplers = [
@@ -449,7 +436,7 @@ class ParallelSampler:
                 seed,
                 start,
                 mp_ctx,
-                pickle_backend
+                pickle_backend,
             )
             for chain, seed, start in zip(range(chains), seeds, start_points)
         ]
@@ -468,9 +455,7 @@ class ParallelSampler:
         self._desc = "Sampling {0._chains:d} chains, {0._divergences:,d} divergences"
         self._chains = chains
         if progressbar:
-            self._progress = progress_bar(
-                range(chains * (draws + tune)), display=progressbar
-            )
+            self._progress = progress_bar(range(chains * (draws + tune)), display=progressbar)
             self._progress.comment = self._desc.format(self)
 
     def _make_active(self):

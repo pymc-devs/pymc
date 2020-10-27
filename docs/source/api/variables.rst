@@ -25,4 +25,3 @@ The normal PyMC3 programmer will typically not need to interact with these class
 
 .. autoclass:: TransformedRV
     :members:
-

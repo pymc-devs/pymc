@@ -1,0 +1,18 @@
+[tool.black]
+line-length = 100
+
+[tool.nbqa.config]
+isort = "setup.cfg"
+black = "pyproject.toml"
+
+[tool.nbqa.mutate]
+isort = 1
+black = 1
+pyupgrade = 1
+
+[tool.nbqa.addopts]
+isort = ["--treat-comment-as-code", "# %%"]
+pyupgrade = ["--py36-plus"]
+
+[tool.nbqa.ignore_cells]
+black = "%%cython"

@@ -21,7 +21,7 @@ from ..model import modelcontext
 from ..theanof import inputvars
 from ..distributions import draw_values
 
-__all__ = ['EllipticalSlice']
+__all__ = ["EllipticalSlice"]
 
 
 def get_chol(cov, chol):
@@ -41,7 +41,7 @@ def get_chol(cov, chol):
     """
 
     if len([i for i in [cov, chol] if i is not None]) != 1:
-        raise ValueError('Must pass exactly one of cov or chol')
+        raise ValueError("Must pass exactly one of cov or chol")
 
     if cov is not None:
         chol = tt.slinalg.cholesky(cov)
@@ -83,8 +83,7 @@ class EllipticalSlice(ArrayStep):
 
     default_blocked = True
 
-    def __init__(self, vars=None, prior_cov=None, prior_chol=None, model=None,
-                 **kwargs):
+    def __init__(self, vars=None, prior_cov=None, prior_chol=None, model=None, **kwargs):
         self.model = modelcontext(model)
         chol = get_chol(prior_cov, prior_chol)
         self.prior_chol = tt.as_tensor_variable(chol)

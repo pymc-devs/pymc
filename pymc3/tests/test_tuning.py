@@ -20,7 +20,7 @@ from . import models
 
 
 def test_adjust_precision():
-    a = np.array([-10, -.01, 0, 10, 1e300, -inf, inf])
+    a = np.array([-10, -0.01, 0, 10, 1e300, -inf, inf])
     a1 = scaling.adjust_precision(a)
     assert all((a1 > 0) & (a1 < 1e200))
 
@@ -39,7 +39,7 @@ def test_mle_jacobian():
     with model:
         map_estimate = find_MAP(method="BFGS", model=model)
 
-    rtol = 1E-5  # this rtol should work on both floatX precisions
+    rtol = 1e-5  # this rtol should work on both floatX precisions
     np.testing.assert_allclose(map_estimate["mu_i"], truth, rtol=rtol)
 
     start, model, _ = models.simple_normal(bounded_prior=True)

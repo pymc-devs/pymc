@@ -19,7 +19,6 @@ import theano.tensor as tt
 from theano import scan
 import numpy as np
 
-from pymc3.util import get_variable_name
 from .continuous import get_tau_sigma, Normal, Flat
 from .shape_utils import to_tuple
 from . import multivariate
@@ -80,16 +79,6 @@ class AR1(distribution.Continuous):
         innov_like = Normal.dist(k * x_im1, tau=tau_e).logp(x_i)
         return boundary(x[0]) + tt.sum(innov_like)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        k = dist.k
-        tau_e = dist.tau_e
-        name = r"\text{%s}" % name
-        return r"${} \sim \text{{AR1}}(\mathit{{k}}={},~\mathit{{tau_e}}={})$".format(
-            name, get_variable_name(k), get_variable_name(tau_e)
-        )
-
 
 class AR(distribution.Continuous):
     r"""
@@ -123,15 +112,7 @@ class AR(distribution.Continuous):
     """
 
     def __init__(
-        self,
-        rho,
-        sigma=None,
-        tau=None,
-        constant=False,
-        init=Flat.dist(),
-        sd=None,
-        *args,
-        **kwargs
+        self, rho, sigma=None, tau=None, constant=False, init=Flat.dist(), sd=None, *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
         if sd is not None:
@@ -181,10 +162,7 @@ class AR(distribution.Continuous):
         """
         if self.constant:
             x = tt.add(
-                *[
-                    self.rho[i + 1] * value[self.p - (i + 1) : -(i + 1)]
-                    for i in range(self.p)
-                ]
+                *[self.rho[i + 1] * value[self.p - (i + 1) : -(i + 1)] for i in range(self.p)]
             )
             eps = value[self.p :] - self.rho[0] - x
         else:
@@ -192,10 +170,7 @@ class AR(distribution.Continuous):
                 x = self.rho * value[:-1]
             else:
                 x = tt.add(
-                    *[
-                        self.rho[i] * value[self.p - (i + 1) : -(i + 1)]
-                        for i in range(self.p)
-                    ]
+                    *[self.rho[i] * value[self.p - (i + 1) : -(i + 1)] for i in range(self.p)]
                 )
             eps = value[self.p :] - x
 
@@ -230,15 +205,11 @@ class GaussianRandomWalk(distribution.Continuous):
         distribution for initial value (Defaults to Flat())
     """
 
-    def __init__(
-        self, tau=None, init=Flat.dist(), sigma=None, mu=0.0, sd=None, *args, **kwargs
-    ):
+    def __init__(self, tau=None, init=Flat.dist(), sigma=None, mu=0.0, sd=None, *args, **kwargs):
         kwargs.setdefault("shape", 1)
         super().__init__(*args, **kwargs)
         if sum(self.shape) == 0:
-            raise TypeError(
-                "GaussianRandomWalk must be supplied a non-zero shape argument!"
-            )
+            raise TypeError("GaussianRandomWalk must be supplied a non-zero shape argument!")
         if sd is not None:
             sigma = sd
             warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
@@ -295,9 +266,7 @@ class GaussianRandomWalk(distribution.Continuous):
         -------
         array
         """
-        sigma, mu = distribution.draw_values(
-            [self.sigma, self.mu], point=point, size=size
-        )
+        sigma, mu = distribution.draw_values([self.sigma, self.mu], point=point, size=size)
         return distribution.generate_samples(
             self._random,
             sigma=sigma,
@@ -320,22 +289,15 @@ class GaussianRandomWalk(distribution.Continuous):
         rv = stats.norm(mu, sigma)
         data = rv.rvs(size).cumsum(axis=axis)
         data = np.array(data)
-        if len(data.shape)>1:
+        if len(data.shape) > 1:
             for i in range(data.shape[0]):
                 data[i] = data[i] - data[i][0]
         else:
             data = data - data[0]
         return data
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        mu = dist.mu
-        sigma = dist.sigma
-        name = r"\text{%s}" % name
-        return r"${} \sim \text{{GaussianRandomWalk}}(\mathit{{mu}}={},~\mathit{{sigma}}={})$".format(
-            name, get_variable_name(mu), get_variable_name(sigma)
-        )
+    def _distr_parameters_for_repr(self):
+        return ["mu", "sigma"]
 
 
 class GARCH11(distribution.Continuous):
@@ -401,19 +363,8 @@ class GARCH11(distribution.Continuous):
         vol = self.get_volatility(x)
         return tt.sum(Normal.dist(0.0, sigma=vol).logp(x))
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        omega = dist.omega
-        alpha_1 = dist.alpha_1
-        beta_1 = dist.beta_1
-        name = r"\text{%s}" % name
-        return r"${} \sim \text{GARCH}(1,~1,~\mathit{{omega}}={},~\mathit{{alpha_1}}={},~\mathit{{beta_1}}={})$".format(
-            name,
-            get_variable_name(omega),
-            get_variable_name(alpha_1),
-            get_variable_name(beta_1),
-        )
+    def _distr_parameters_for_repr(self):
+        return ["omega", "alpha_1", "beta_1"]
 
 
 class EulerMaruyama(distribution.Continuous):
@@ -455,14 +406,8 @@ class EulerMaruyama(distribution.Continuous):
         sd = tt.sqrt(self.dt) * g
         return tt.sum(Normal.dist(mu=mu, sigma=sd).logp(x[1:]))
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        dt = dist.dt
-        name = r"\text{%s}" % name
-        return r"${} \sim \text{EulerMaruyama}(\mathit{{dt}}={})$".format(
-            name, get_variable_name(dt)
-        )
+    def _distr_parameters_for_repr(self):
+        return ["dt"]
 
 
 class MvGaussianRandomWalk(distribution.Continuous):
@@ -489,15 +434,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
     """
 
     def __init__(
-        self,
-        mu=0.0,
-        cov=None,
-        tau=None,
-        chol=None,
-        lower=True,
-        init=Flat.dist(),
-        *args,
-        **kwargs
+        self, mu=0.0, cov=None, tau=None, chol=None, lower=True, init=Flat.dist(), *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
 
@@ -525,15 +462,8 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
         return self.init.logp_sum(x[0]) + self.innov.logp_sum(x_i - x_im1)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        mu = dist.innov.mu
-        cov = dist.innov.cov
-        name = r"\text{%s}" % name
-        return r"${} \sim \text{MvGaussianRandomWalk}(\mathit{{mu}}={},~\mathit{{cov}}={})$".format(
-            name, get_variable_name(mu), get_variable_name(cov)
-        )
+    def _distr_parameters_for_repr(self):
+        return ["mu", "cov"]
 
 
 class MvStudentTRandomWalk(MvGaussianRandomWalk):
@@ -560,13 +490,5 @@ class MvStudentTRandomWalk(MvGaussianRandomWalk):
         self.nu = tt.as_tensor_variable(nu)
         self.innov = multivariate.MvStudentT.dist(self.nu, None, *self.innovArgs)
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        nu = dist.innov.nu
-        mu = dist.innov.mu
-        cov = dist.innov.cov
-        name = r"\text{%s}" % name
-        return r"${} \sim \text{MvStudentTRandomWalk}(\mathit{{nu}}={},~\mathit{{mu}}={},~\mathit{{cov}}={})$".format(
-            name, get_variable_name(nu), get_variable_name(mu), get_variable_name(cov)
-        )
+    def _distr_parameters_for_repr(self):
+        return ["nu", "mu", "cov"]

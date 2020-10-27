@@ -18,9 +18,7 @@ import matplotlib.pyplot as plt
 from matplotlib import image
 
 DOC_SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_IMG_LOC = os.path.join(
-            os.path.dirname(DOC_SRC), "logos", "PyMC3.png"
-        )
+DEFAULT_IMG_LOC = os.path.join(os.path.dirname(DOC_SRC), "logos", "PyMC3.png")
 TABLE_OF_CONTENTS_FILENAME = "table_of_contents_{}.js"
 
 INDEX_TEMPLATE = """
@@ -69,14 +67,10 @@ class NotebookGenerator:
     def __init__(self, filename, target_dir):
         self.basename = os.path.basename(filename)
         self.stripped_name = os.path.splitext(self.basename)[0]
-        self.output_html = os.path.join(
-            "..", "notebooks", "{}.html".format(self.stripped_name)
-        )
+        self.output_html = os.path.join("..", "notebooks", f"{self.stripped_name}.html")
         self.image_dir = os.path.join(target_dir, "_images")
-        self.png_path = os.path.join(
-            self.image_dir, "{}.png".format(self.stripped_name)
-        )
-        with open(filename, "r") as fid:
+        self.png_path = os.path.join(self.image_dir, f"{self.stripped_name}.png")
+        with open(filename) as fid:
             self.json_source = json.load(fid)
         self.pagetitle = self.extract_title()
         self.default_image_loc = DEFAULT_IMG_LOC
@@ -89,7 +83,7 @@ class NotebookGenerator:
 
             self.gen_previews()
         else:
-            print("skipping {0}".format(filename))
+            print(f"skipping {filename}")
 
     def extract_preview_pic(self):
         """By default, just uses the last image in the notebook."""
@@ -136,13 +130,12 @@ def build_gallery(srcdir, gallery):
     working_dir = os.getcwd()
     os.chdir(srcdir)
     static_dir = os.path.join(srcdir, "_static")
-    target_dir = os.path.join(srcdir, "nb_{}".format(gallery))
+    target_dir = os.path.join(srcdir, f"nb_{gallery}")
     image_dir = os.path.join(target_dir, "_images")
     source_dir = os.path.abspath(
         os.path.join(os.path.dirname(os.path.dirname(srcdir)), "notebooks")
     )
-    table_of_contents_file = os.path.join(
-        source_dir, TABLE_OF_CONTENTS_FILENAME.format(gallery))
+    table_of_contents_file = os.path.join(source_dir, TABLE_OF_CONTENTS_FILENAME.format(gallery))
     tocjs = TableOfContentsJS()
     tocjs.load(table_of_contents_file)
 
@@ -157,7 +150,7 @@ def build_gallery(srcdir, gallery):
 
     if not os.path.exists(source_dir):
         os.makedirs(source_dir)
-    
+
     # Create default image
     default_png_path = os.path.join(os.path.join(target_dir, "_images"), "default.png")
     shutil.copy(DEFAULT_IMG_LOC, default_png_path)
@@ -178,27 +171,25 @@ def build_gallery(srcdir, gallery):
             filename = basename.split(".")[0]
             data[basename] = {
                 "title": " ".join(filename.split("_")),
-                "url": os.path.join(os.sep, gallery, "../"+filename+".html"),
+                "url": os.path.join(os.sep, gallery, "../" + filename + ".html"),
                 "thumb": os.path.basename(default_png_path),
             }
 
-    js_file = os.path.join(image_dir, "gallery_{}_contents.js".format(gallery))
-    with open(table_of_contents_file, "r") as toc:
+    js_file = os.path.join(image_dir, f"gallery_{gallery}_contents.js")
+    with open(table_of_contents_file) as toc:
         table_of_contents = toc.read()
 
-    js_contents = "Gallery.examples = {}\n{}".format(
-        json.dumps(data), table_of_contents
-    )
+    js_contents = "Gallery.examples = {}\n{}".format(json.dumps(data), table_of_contents)
 
     with open(js_file, "w") as js:
         js.write(js_contents)
 
     with open(os.path.join(target_dir, "index.rst"), "w") as index:
-        index.write(INDEX_TEMPLATE.format(
-            sphinx_tag="notebook_gallery",
-            gallery=gallery,
-            Gallery=gallery.title().rstrip("s")
-        ))
+        index.write(
+            INDEX_TEMPLATE.format(
+                sphinx_tag="notebook_gallery", gallery=gallery, Gallery=gallery.title().rstrip("s")
+            )
+        )
 
     os.chdir(working_dir)
 

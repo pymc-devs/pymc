@@ -20,10 +20,7 @@ from ..model import Model, Deterministic
 from .utils import any_to_tensor_and_labels
 
 
-__all__ = [
-    'LinearComponent',
-    'GLM'
-]
+__all__ = ["LinearComponent", "GLM"]
 
 
 class LinearComponent(Model):
@@ -46,15 +43,28 @@ class LinearComponent(Model):
         this can be used to specify an a priori known component to be
         included in the linear predictor during fitting.
     """
-    default_regressor_prior = Normal.dist(mu=0, tau=1.0E-6)
+
+    default_regressor_prior = Normal.dist(mu=0, tau=1.0e-6)
     default_intercept_prior = Flat.dist()
 
-    def __init__(self, x, y, intercept=True, labels=None,
-                 priors=None, vars=None, name='', model=None, offset=0.):
+    def __init__(
+        self,
+        x,
+        y,
+        intercept=True,
+        labels=None,
+        priors=None,
+        vars=None,
+        name="",
+        model=None,
+        offset=0.0,
+    ):
         super().__init__(name, model)
         if len(y.shape) > 1:
-            err_msg = 'Only one-dimensional observed variable objects (i.e.'\
-                       ' of shape `(n, )`) are supported'
+            err_msg = (
+                "Only one-dimensional observed variable objects (i.e."
+                " of shape `(n, )`) are supported"
+            )
             raise TypeError(err_msg)
         if priors is None:
             priors = {}
@@ -63,24 +73,15 @@ class LinearComponent(Model):
         x, labels = any_to_tensor_and_labels(x, labels)
         # now we have x, shape and labels
         if intercept:
-            x = tt.concatenate(
-                [tt.ones((x.shape[0], 1), x.dtype), x],
-                axis=1
-            )
-            labels = ['Intercept'] + labels
+            x = tt.concatenate([tt.ones((x.shape[0], 1), x.dtype), x], axis=1)
+            labels = ["Intercept"] + labels
         coeffs = list()
         for name in labels:
-            if name == 'Intercept':
+            if name == "Intercept":
                 if name in vars:
                     v = Deterministic(name, vars[name])
                 else:
-                    v = self.Var(
-                        name=name,
-                        dist=priors.get(
-                            name,
-                            self.default_intercept_prior
-                        )
-                    )
+                    v = self.Var(name=name, dist=priors.get(name, self.default_intercept_prior))
                 coeffs.append(v)
             else:
                 if name in vars:
@@ -89,20 +90,17 @@ class LinearComponent(Model):
                     v = self.Var(
                         name=name,
                         dist=priors.get(
-                            name,
-                            priors.get(
-                                'Regressor',
-                                self.default_regressor_prior
-                            )
-                        )
+                            name, priors.get("Regressor", self.default_regressor_prior)
+                        ),
                     )
                 coeffs.append(v)
         self.coeffs = tt.stack(coeffs, axis=0)
         self.y_est = x.dot(self.coeffs) + offset
 
     @classmethod
-    def from_formula(cls, formula, data, priors=None, vars=None,
-                     name='', model=None, offset=0., eval_env=0):
+    def from_formula(
+        cls, formula, data, priors=None, vars=None, name="", model=None, offset=0.0, eval_env=0
+    ):
         """Creates linear component from `patsy` formula.
 
         Parameters
@@ -116,12 +114,21 @@ class LinearComponent(Model):
         Other arguments are documented in the constructor.
         """
         import patsy
+
         eval_env = patsy.EvalEnvironment.capture(eval_env, reference=1)
         y, x = patsy.dmatrices(formula, data, eval_env=eval_env)
         labels = x.design_info.column_names
-        return cls(np.asarray(x), np.asarray(y)[:, -1], intercept=False,
-                   labels=labels, priors=priors, vars=vars, name=name,
-                   model=model, offset=offset)
+        return cls(
+            np.asarray(x),
+            np.asarray(y)[:, -1],
+            intercept=False,
+            labels=labels,
+            priors=priors,
+            vars=vars,
+            name=name,
+            model=model,
+            offset=offset,
+        )
 
 
 class GLM(LinearComponent):
@@ -146,13 +153,30 @@ class GLM(LinearComponent):
         this can be used to specify an a priori known component to be
         included in the linear predictor during fitting.
     """
-    def __init__(self, x, y, intercept=True, labels=None,
-                 priors=None, vars=None, family='normal', name='',
-                 model=None, offset=0.):
+
+    def __init__(
+        self,
+        x,
+        y,
+        intercept=True,
+        labels=None,
+        priors=None,
+        vars=None,
+        family="normal",
+        name="",
+        model=None,
+        offset=0.0,
+    ):
         super().__init__(
-            x, y, intercept=intercept, labels=labels,
-            priors=priors, vars=vars, name=name,
-            model=model, offset=offset
+            x,
+            y,
+            intercept=intercept,
+            labels=labels,
+            priors=priors,
+            vars=vars,
+            name=name,
+            model=model,
+            offset=offset,
         )
 
         _families = dict(
@@ -164,14 +188,21 @@ class GLM(LinearComponent):
         )
         if isinstance(family, str):
             family = _families[family]()
-        self.y_est = family.create_likelihood(
-            name='', y_est=self.y_est,
-            y_data=y, model=self)
+        self.y_est = family.create_likelihood(name="", y_est=self.y_est, y_data=y, model=self)
 
     @classmethod
-    def from_formula(cls, formula, data, priors=None,
-                     vars=None, family='normal', name='',
-                     model=None, offset=0., eval_env=0):
+    def from_formula(
+        cls,
+        formula,
+        data,
+        priors=None,
+        vars=None,
+        family="normal",
+        name="",
+        model=None,
+        offset=0.0,
+        eval_env=0,
+    ):
         """
         Creates GLM from formula.
 
@@ -186,12 +217,22 @@ class GLM(LinearComponent):
         Other arguments are documented in the constructor.
         """
         import patsy
+
         eval_env = patsy.EvalEnvironment.capture(eval_env, reference=1)
         y, x = patsy.dmatrices(formula, data, eval_env=eval_env)
         labels = x.design_info.column_names
-        return cls(np.asarray(x), np.asarray(y)[:, -1], intercept=False,
-                   labels=labels, priors=priors, vars=vars, family=family,
-                   name=name, model=model, offset=offset)
+        return cls(
+            np.asarray(x),
+            np.asarray(y)[:, -1],
+            intercept=False,
+            labels=labels,
+            priors=priors,
+            vars=vars,
+            family=family,
+            name=name,
+            model=model,
+            offset=offset,
+        )
 
 
 glm = GLM

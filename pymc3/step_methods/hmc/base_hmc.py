@@ -29,15 +29,9 @@ from pymc3.exceptions import SamplingError
 
 logger = logging.getLogger("pymc3")
 
-HMCStepData = namedtuple(
-    "HMCStepData",
-    "end, accept_stat, divergence_info, stats"
-)
+HMCStepData = namedtuple("HMCStepData", "end, accept_stat, divergence_info, stats")
 
-DivergenceInfo = namedtuple(
-    "DivergenceInfo",
-    "message, exec_info, state, state_div"
-)
+DivergenceInfo = namedtuple("DivergenceInfo", "message, exec_info, state, state_div")
 
 
 class BaseHMC(arraystep.GradientSharedStep):
@@ -121,9 +115,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         else:
             self.potential = quad_potential(scaling, is_cov)
 
-        self.integrator = integration.CpuLeapfrogIntegrator(
-            self.potential, self._logp_dlogp_func
-        )
+        self.integrator = integration.CpuLeapfrogIntegrator(self.potential, self._logp_dlogp_func)
 
         self._step_rand = step_rand
         self._warnings = []
@@ -154,8 +146,7 @@ class BaseHMC(arraystep.GradientSharedStep):
             self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
             message_energy = (
                 "Bad initial energy, check any log probabilities that "
-                "are inf or -inf, nan or very small:\n{}"
-                .format(error_logp.to_string())
+                "are inf or -inf, nan or very small:\n{}".format(error_logp.to_string())
             )
             warning = SamplerWarning(
                 WarningType.BAD_ENERGY,
@@ -194,9 +185,7 @@ class BaseHMC(arraystep.GradientSharedStep):
                 if self._num_divs_sample < 100 and info.state is not None:
                     point = self._logp_dlogp_func.array_to_dict(info.state.q)
                 if self._num_divs_sample < 100 and info.state_div is not None:
-                    point_dest = self._logp_dlogp_func.array_to_dict(
-                        info.state_div.q
-                    )
+                    point_dest = self._logp_dlogp_func.array_to_dict(info.state_div.q)
                 if self._num_divs_sample < 100:
                     info_store = info
             warning = SamplerWarning(
@@ -246,8 +235,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         n_divs = self._num_divs_sample
         if n_divs and self._samples_after_tune == n_divs:
             message = (
-                "The chain contains only diverging samples. The model "
-                "is probably misspecified."
+                "The chain contains only diverging samples. The model " "is probably misspecified."
             )
         elif n_divs == 1:
             message = (

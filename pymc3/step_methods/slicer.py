@@ -22,9 +22,9 @@ from ..model import modelcontext
 from ..theanof import inputvars
 from ..vartypes import continuous_types
 
-__all__ = ['Slice']
+__all__ = ["Slice"]
 
-LOOP_ERR_MSG = 'max slicer iters %d exceeded'
+LOOP_ERR_MSG = "max slicer iters %d exceeded"
 
 
 class Slice(ArrayStep):
@@ -43,15 +43,15 @@ class Slice(ArrayStep):
         Optional model for sampling step. Defaults to None (taken from context).
 
     """
-    name = 'slice'
+
+    name = "slice"
     default_blocked = False
 
-    def __init__(self, vars=None, w=1., tune=True, model=None,
-                 iter_limit=np.inf, **kwargs):
+    def __init__(self, vars=None, w=1.0, tune=True, model=None, iter_limit=np.inf, **kwargs):
         self.model = modelcontext(model)
         self.w = w
         self.tune = tune
-        self.n_tunes = 0.
+        self.n_tunes = 0.0
         self.iter_limit = iter_limit
 
         if vars is None:
@@ -72,13 +72,13 @@ class Slice(ArrayStep):
             qr[i] = q[i] + self.w[i]
             # Stepping out procedure
             cnt = 0
-            while(y <= logp(ql)):  # changed lt to leq  for locally uniform posteriors
+            while y <= logp(ql):  # changed lt to leq  for locally uniform posteriors
                 ql[i] -= self.w[i]
                 cnt += 1
                 if cnt > self.iter_limit:
                     raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
             cnt = 0
-            while(y <= logp(qr)):
+            while y <= logp(qr):
                 qr[i] += self.w[i]
                 cnt += 1
                 if cnt > self.iter_limit:
@@ -97,11 +97,14 @@ class Slice(ArrayStep):
                 if cnt > self.iter_limit:
                     raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
 
-            if self.tune:  # I was under impression from MacKays lectures that slice width can be tuned without
+            if (
+                self.tune
+            ):  # I was under impression from MacKays lectures that slice width can be tuned without
                 # breaking markovianness. Can we do it regardless of self.tune?(@madanh)
-                self.w[i] = self.w[i] * (self.n_tunes / (self.n_tunes + 1)) +\
-                    (qr[i] - ql[i]) / (self.n_tunes + 1)  # same as before
-            # unobvious and important: return qr and ql to the same point
+                self.w[i] = self.w[i] * (self.n_tunes / (self.n_tunes + 1)) + (qr[i] - ql[i]) / (
+                    self.n_tunes + 1
+                )  # same as before
+                # unobvious and important: return qr and ql to the same point
                 qr[i] = q[i]
                 ql[i] = q[i]
         if self.tune:

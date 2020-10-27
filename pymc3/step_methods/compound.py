@@ -12,11 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-'''
+"""
 Created on Mar 7, 2011
 
 @author: johnsalvatier
-'''
+"""
 from collections import namedtuple
 import numpy as np
 
@@ -27,8 +27,7 @@ class CompoundStep:
 
     def __init__(self, methods):
         self.methods = list(methods)
-        self.generates_stats = any(
-            method.generates_stats for method in self.methods)
+        self.generates_stats = any(method.generates_stats for method in self.methods)
         self.stats_dtypes = []
         for method in self.methods:
             if method.generates_stats:
@@ -47,7 +46,7 @@ class CompoundStep:
             # one. Pop all others (if dict), or set to np.nan (if namedtuple).
             for state in states[:-1]:
                 if isinstance(state, dict):
-                    state.pop('model_logp', None)
+                    state.pop("model_logp", None)
                 elif isinstance(state, namedtuple):
                     state = state._replace(logp=np.nan)
             return point, states
@@ -59,7 +58,7 @@ class CompoundStep:
     def warnings(self):
         warns = []
         for method in self.methods:
-            if hasattr(method, 'warnings'):
+            if hasattr(method, "warnings"):
                 warns.extend(method.warnings())
         return warns
 
@@ -69,7 +68,7 @@ class CompoundStep:
 
     def reset_tuning(self):
         for method in self.methods:
-            if hasattr(method, 'reset_tuning'):
+            if hasattr(method, "reset_tuning"):
                 method.reset_tuning()
 
     @property

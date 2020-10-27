@@ -21,7 +21,7 @@ from pymc3.model import modelcontext
 
 class TestModelContext:
     def test_thread_safety(self):
-        """ Regression test for issue #1552: Thread safety of model context manager
+        """Regression test for issue #1552: Thread safety of model context manager
 
         This test creates two threads that attempt to construct two
         unrelated models at the same time.
@@ -29,21 +29,24 @@ class TestModelContext:
         that thread A enters the context manager first, then B,
         then A attempts to declare a variable while B is still in the context manager.
         """
-        aInCtxt,bInCtxt,aDone = [threading.Event() for _ in range(3)]
+        aInCtxt, bInCtxt, aDone = [threading.Event() for _ in range(3)]
         modelA = Model()
         modelB = Model()
+
         def make_model_a():
             with modelA:
                 aInCtxt.set()
                 bInCtxt.wait()
-                Normal('a',0,1)
+                Normal("a", 0, 1)
             aDone.set()
+
         def make_model_b():
             aInCtxt.wait()
             with modelB:
                 bInCtxt.set()
                 aDone.wait()
-                Normal('b', 0, 1)
+                Normal("b", 0, 1)
+
         threadA = threading.Thread(target=make_model_a)
         threadB = threading.Thread(target=make_model_b)
         threadA.start()
@@ -56,9 +59,10 @@ class TestModelContext:
         # - A leaves it's model context before B attempts to declare b. A's context manager
         #   takes B from the stack, such that b ends up in model A
         assert (
-                list(modelA.named_vars),
-                list(modelB.named_vars),
-            ) == (['a'],['b'])
+            list(modelA.named_vars),
+            list(modelB.named_vars),
+        ) == (["a"], ["b"])
+
 
 def test_mixed_contexts():
     modelA = Model()

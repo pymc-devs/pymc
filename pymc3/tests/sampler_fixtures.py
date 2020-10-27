@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import pymc3 as pm
+from pymc3.util import get_var_name
 import numpy as np
 import numpy.testing as npt
 from scipy import stats
@@ -43,12 +44,12 @@ class KnownCDF:
         for varname, cdf in self.cdfs.items():
             samples = self.samples[varname]
             if samples.ndim == 1:
-                t, p = stats.kstest(samples[::self.ks_thin], cdf=cdf)
+                t, p = stats.kstest(samples[:: self.ks_thin], cdf=cdf)
                 assert self.alpha < p
             elif samples.ndim == 2:
                 pvals = []
                 for samples_, cdf_ in zip(samples.T, cdf):
-                    t, p = stats.kstest(samples_[::self.ks_thin], cdf=cdf_)
+                    t, p = stats.kstest(samples_[:: self.ks_thin], cdf=cdf_)
                     pvals.append(p)
                 t, p = stats.combine_pvalues(pvals)
                 assert self.alpha < p
@@ -56,11 +57,10 @@ class KnownCDF:
                 raise NotImplementedError()
 
 
-
 class UniformFixture(KnownMean, KnownVariance, KnownCDF):
-    means = {'a': 0}
-    variances = {'a': 1.0 / 3}
-    cdfs = {'a': stats.uniform(-1, 2).cdf}
+    means = {"a": 0}
+    variances = {"a": 1.0 / 3}
+    cdfs = {"a": stats.uniform(-1, 2).cdf}
 
     @classmethod
     def make_model(cls):
@@ -71,9 +71,9 @@ class UniformFixture(KnownMean, KnownVariance, KnownCDF):
 
 
 class NormalFixture(KnownMean, KnownVariance, KnownCDF):
-    means = {'a': 2 * np.ones(10)}
-    variances = {'a': 3 * np.ones(10)}
-    cdfs = {'a': [stats.norm(2, np.sqrt(3)).cdf for _ in range(10)]}
+    means = {"a": 2 * np.ones(10)}
+    variances = {"a": 3 * np.ones(10)}
+    cdfs = {"a": [stats.norm(2, np.sqrt(3)).cdf for _ in range(10)]}
 
     @classmethod
     def make_model(cls):
@@ -83,20 +83,19 @@ class NormalFixture(KnownMean, KnownVariance, KnownCDF):
 
 
 class BetaBinomialFixture(KnownCDF):
-    cdfs = {'p': [stats.beta(a, b).cdf
-                  for a, b in zip([1.5, 2.5, 10], [3.5, 10.5, 1])]}
+    cdfs = {"p": [stats.beta(a, b).cdf for a, b in zip([1.5, 2.5, 10], [3.5, 10.5, 1])]}
 
     @classmethod
     def make_model(cls):
         with pm.Model() as model:
-            p = pm.Beta("p", [0.5, 0.5, 1.], [0.5, 0.5, 1.], shape=3)
+            p = pm.Beta("p", [0.5, 0.5, 1.0], [0.5, 0.5, 1.0], shape=3)
             pm.Binomial("y", p=p, n=[4, 12, 9], observed=[1, 2, 9])
         return model
 
 
 class StudentTFixture(KnownMean, KnownCDF):
-    means = {'a': 0}
-    cdfs = {'a': stats.t(df=4).cdf}
+    means = {"a": 0}
+    cdfs = {"a": stats.t(df=4).cdf}
     ks_thin = 10
 
     @classmethod
@@ -108,30 +107,26 @@ class StudentTFixture(KnownMean, KnownCDF):
 
 class LKJCholeskyCovFixture(KnownCDF):
     cdfs = {
-        'log_stds': [stats.norm(loc=x, scale=x / 10.).cdf
-                     for x in [1, 2, 3, 4, 5]],
+        "log_stds": [stats.norm(loc=x, scale=x / 10.0).cdf for x in [1, 2, 3, 4, 5]],
         # The entries of the correlation matrix should follow
         # beta(eta - 1 + d/2, eta - 1 + d/2) on (-1, 1).
         # See https://arxiv.org/abs/1309.7268
-        'corr_entries_unit': [
-            stats.beta(3 - 1 + 2.5, 3 - 1 + 2.5).cdf
-            for _ in range(10)
-        ],
+        "corr_entries_unit": [stats.beta(3 - 1 + 2.5, 3 - 1 + 2.5).cdf for _ in range(10)],
     }
 
     @classmethod
     def make_model(cls):
         with pm.Model() as model:
             sd_mu = np.array([1, 2, 3, 4, 5])
-            sd_dist = pm.Lognormal.dist(mu=sd_mu, sigma=sd_mu / 10., shape=5)
-            chol_packed = pm.LKJCholeskyCov('chol_packed', eta=3, n=5, sd_dist=sd_dist)
+            sd_dist = pm.Lognormal.dist(mu=sd_mu, sigma=sd_mu / 10.0, shape=5)
+            chol_packed = pm.LKJCholeskyCov("chol_packed", eta=3, n=5, sd_dist=sd_dist)
             chol = pm.expand_packed_triangular(5, chol_packed, lower=True)
             cov = tt.dot(chol, chol.T)
             stds = tt.sqrt(tt.diag(cov))
-            pm.Deterministic('log_stds', tt.log(stds))
+            pm.Deterministic("log_stds", tt.log(stds))
             corr = cov / stds[None, :] / stds[:, None]
             corr_entries_unit = (corr[np.tril_indices(5, -1)] + 1) / 2
-            pm.Deterministic('corr_entries_unit', corr_entries_unit)
+            pm.Deterministic("corr_entries_unit", corr_entries_unit)
         return model
 
 
@@ -145,16 +140,16 @@ class BaseSampler(SeededTest):
             cls.trace = pm.sample(cls.n_samples, tune=cls.tune, step=cls.step, cores=cls.chains)
         cls.samples = {}
         for var in cls.model.unobserved_RVs:
-            cls.samples[str(var)] = cls.trace.get_values(var, burn=cls.burn)
+            cls.samples[get_var_name(var)] = cls.trace.get_values(var, burn=cls.burn)
 
     def test_neff(self):
-        if hasattr(self, 'min_n_eff'):
-            n_eff = pm.ess(self.trace[self.burn:])
+        if hasattr(self, "min_n_eff"):
+            n_eff = pm.ess(self.trace[self.burn :])
             for var in n_eff:
                 npt.assert_array_less(self.min_n_eff, n_eff[var])
 
     def test_Rhat(self):
-        rhat = pm.rhat(self.trace[self.burn:])
+        rhat = pm.rhat(self.trace[self.burn :])
         for var in rhat:
             npt.assert_allclose(rhat[var], 1, rtol=0.01)
 
@@ -163,16 +158,16 @@ class NutsFixture(BaseSampler):
     @classmethod
     def make_step(cls):
         args = {}
-        if hasattr(cls, 'step_args'):
+        if hasattr(cls, "step_args"):
             args.update(cls.step_args)
-        if 'scaling' not in args:
+        if "scaling" not in args:
             _, step = pm.sampling.init_nuts(n_init=10000, **args)
         else:
             step = pm.NUTS(**args)
         return step
 
     def test_target_accept(self):
-        accept = self.trace[self.burn:]['mean_tree_accept']
+        accept = self.trace[self.burn :]["mean_tree_accept"]
         npt.assert_allclose(accept.mean(), self.step.target_accept, 1)
 
 
@@ -180,7 +175,7 @@ class MetropolisFixture(BaseSampler):
     @classmethod
     def make_step(cls):
         args = {}
-        if hasattr(cls, 'step_args'):
+        if hasattr(cls, "step_args"):
             args.update(cls.step_args)
         return pm.Metropolis(**args)
 
@@ -189,6 +184,6 @@ class SliceFixture(BaseSampler):
     @classmethod
     def make_step(cls):
         args = {}
-        if hasattr(cls, 'step_args'):
+        if hasattr(cls, "step_args"):
             args.update(cls.step_args)
         return pm.Slice(**args)
