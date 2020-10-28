@@ -28,6 +28,6 @@ repos:
       language: python
     - id: check-toc
       name: Check all notebooks appear in table of contents
+      types: [jupyter]
       entry: python scripts/check_toc_is_complete.py
       language: python
-      types: [jupyter]
