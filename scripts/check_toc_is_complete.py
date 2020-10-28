@@ -7,16 +7,18 @@ You can run it manually with `pre-commit run check-toc --all`.
 
 import json
 from pathlib import Path
+import argparse
 
 if __name__ == "__main__":
-    notebooks = (Path("docs") / "source/notebooks").glob("*.ipynb")
     toc_examples = (Path("docs") / "source/notebooks/table_of_contents_examples.js").read_text()
     toc_tutorials = (Path("docs") / "source/notebooks/table_of_contents_tutorials.js").read_text()
     toc_keys = {
         **json.loads(toc_examples[toc_examples.find("{") :]),
         **json.loads(toc_tutorials[toc_tutorials.find("{") :]),
     }.keys()
-    for notebook in notebooks:
-        assert (
-            notebook.stem in toc_keys
-        ), f"Notebook {notebook.name} not added to table of contents!"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filenames", nargs="*")
+    args = parser.parse_args()
+    for file_ in args.filenames:
+        stem = Path(file_).stem
+        assert stem in toc_keys, f"Notebook '{stem}' not added to table of contents!"

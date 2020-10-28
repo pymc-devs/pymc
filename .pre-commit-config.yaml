@@ -30,4 +30,4 @@ repos:
       name: Check all notebooks appear in table of contents
       entry: python scripts/check_toc_is_complete.py
       language: python
-      pass_filenames: false
+      types: [jupyter]
