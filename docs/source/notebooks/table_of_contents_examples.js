@@ -34,6 +34,7 @@ Gallery.contents = {
     "gaussian_process": "Gaussian Processes",
     "conditional-autoregressive-model": "Gaussian Processes",
     "log-gaussian-cox-process":"Gaussian Processes",
+    "GP-Circular": "Gaussian Processes",
     "dependent_density_regression": "Mixture Models",
     "dp_mix": "Mixture Models",
     "gaussian-mixture-model-advi": "Mixture Models",
@@ -59,6 +60,7 @@ Gallery.contents = {
     "ODE_with_manual_gradients": "Inference in ODE models",
     "ODE_API_introduction": "Inference in ODE models",
     "probabilistic_matrix_factorization": "Case Studies",
+    "MLDA_introduction": "MCMC",
     "MLDA_simple_linear_regression": "MCMC",
     "MLDA_gravity_surveying": "MCMC",
     "MLDA_variance_reduction_linear_regression": "MCMC"

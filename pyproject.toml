@@ -13,6 +13,3 @@ pyupgrade = 1
 [tool.nbqa.addopts]
 isort = ["--treat-comment-as-code", "# %%"]
 pyupgrade = ["--py36-plus"]
-
-[tool.nbqa.ignore_cells]
-black = "%%cython"
