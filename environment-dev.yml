@@ -21,6 +21,7 @@ dependencies:
   - nose>=1.3
   - nose-parameterized>=0.6
   - numpydoc>=0.9
+  - pre-commit>=2.8.0
   - pycodestyle>=2.3
   - pyflakes>=1.5
   - pylint>=1.7

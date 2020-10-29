@@ -1,17 +1,17 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v3.2.0
+  rev: v3.3.0
   hooks:
     -   id: end-of-file-fixer
     -   id: check-toml
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 0.3.2
+  rev: 0.3.5
   hooks:
     - id: nbqa-black
     - id: nbqa-isort
     - id: nbqa-pyupgrade
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.7.2
+  rev: v2.7.3
   hooks:
     - id: pyupgrade
       args: [--py36-plus]
@@ -28,3 +28,8 @@ repos:
       language: pygrep
       args: [--negate, --multiline]
       minimum_pre_commit_version: 2.8.0
+    - id: check-toc
+      name: Check all notebooks appear in table of contents
+      types: [jupyter]
+      entry: python scripts/check_toc_is_complete.py
+      language: python
