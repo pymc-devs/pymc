@@ -31,9 +31,9 @@ class PGBART(ArrayStepShared):
     vars: list
         List of variables for sampler
     num_particles : int
-        Number of particles for the SMC sampler. Defaults to 10
+        Number of particles for the conditional SMC sampler. Defaults to 10
     max_stages : int
-        Maximum number of Iterations of the SMC sampler Defaults to 100.
+        Maximum number of iterations of the conditional SMC sampler. Defaults to 100.
     chunk = int
         Number of trees fitted per step. Defaults to  "auto", which is the 10% of the `m` trees.
     model: PyMC Model
@@ -48,6 +48,8 @@ class PGBART(ArrayStepShared):
 
     name = "bartsampler"
     default_blocked = False
+    generates_stats = True
+    stats_dtypes = [{"variable_inclusion": np.ndarray}]
 
     def __init__(self, vars=None, num_particles=10, max_stages=5000, chunk="auto", model=None):
         model = modelcontext(model)
@@ -58,14 +60,14 @@ class PGBART(ArrayStepShared):
         self.idx = 0
         if chunk == "auto":
             self.chunk = max(1, int(self.bart.m * 0.1))
+        self.variable_inclusion = np.zeros(self.bart.num_variates)
         self.num_particles = num_particles
         self.log_num_particles = np.log(num_particles)
         self.indices = list(range(1, num_particles))
-
         self.max_stages = max_stages
         self.old_trees_particles_list = []
         for i in range(self.bart.m):
-            p = Particle(self.bart.trees[i], self.bart.prior_prob_leaf_node)
+            p = ParticleTree(self.bart.trees[i], self.bart.prior_prob_leaf_node)
             self.old_trees_particles_list.append(p)
 
         shared = make_shared_replacements(vars, model)
@@ -138,7 +140,13 @@ class PGBART(ArrayStepShared):
             new_prediction = new_tree.tree.predict_output(num_observations)
             bart.sum_trees_output = bart.Y - R_j + new_prediction
 
-        return bart.sum_trees_output
+            if not self.tune:
+                for index in new_tree.used_variates:
+                    self.variable_inclusion[index] += 1
+
+        stats = {"variable_inclusion": self.variable_inclusion}
+
+        return bart.sum_trees_output, [stats]
 
     @staticmethod
     def competence(var, has_grad):
@@ -193,7 +201,7 @@ class PGBART(ArrayStepShared):
         log_weight = likelihood_logp - self.log_num_particles
         for i in range(1, self.num_particles):
             particles.append(
-                Particle(new_tree, self.bart.prior_prob_leaf_node, log_weight, likelihood_logp)
+                ParticleTree(new_tree, self.bart.prior_prob_leaf_node, log_weight, likelihood_logp)
             )
 
         return np.array(particles)
@@ -206,7 +214,7 @@ class PGBART(ArrayStepShared):
         return particles
 
 
-class Particle:
+class ParticleTree:
     """
     Particle tree
     """
@@ -219,6 +227,7 @@ class Particle:
         self.log_weight = 0
         self.prior_prob_leaf_node = prior_prob_leaf_node
         self.old_likelihood_logp = likelihood
+        self.used_variates = []
 
     def sample_tree_sequential(self, bart):
         if self.expansion_nodes:
@@ -227,11 +236,14 @@ class Particle:
             prob_leaf = self.prior_prob_leaf_node[self.tree[index_leaf_node].depth]
 
             if prob_leaf < np.random.random():
-                self.grow_successful = bart.grow_tree(self.tree, index_leaf_node)
-                if self.grow_successful:
+                grow_successful, index_selected_predictor = bart.grow_tree(
+                    self.tree, index_leaf_node
+                )
+                if grow_successful:
                     # Add new leaf nodes indexes
                     new_indexes = self.tree.idx_leaf_nodes[-2:]
                     self.expansion_nodes.extend(new_indexes)
+                    self.used_variates.append(index_selected_predictor)
 
             self.tree_history.append(self.tree)
             self.expansion_nodes_history.append(self.expansion_nodes)

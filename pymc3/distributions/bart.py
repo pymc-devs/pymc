@@ -99,23 +99,20 @@ class BaseBART(NoDistribution):
 
     def grow_tree(self, tree, index_leaf_node):
         # This can be unsuccessful when there are not available predictors
-        successful_grow_tree = False
         current_node = tree.get_node(index_leaf_node)
 
         available_predictors = self.get_available_predictors(current_node.idx_data_points)
 
         if not available_predictors:
-            return successful_grow_tree
+            return False, None
 
         index_selected_predictor = discrete_uniform_sampler(len(available_predictors))
         selected_predictor = available_predictors[index_selected_predictor]
-
         available_splitting_rules, _ = self.get_available_splitting_rules(
             current_node.idx_data_points, selected_predictor
         )
         index_selected_splitting_rule = discrete_uniform_sampler(len(available_splitting_rules))
         selected_splitting_rule = available_splitting_rules[index_selected_splitting_rule]
-
         new_split_node = SplitNode(
             index=index_leaf_node,
             idx_split_variable=selected_predictor,
@@ -140,9 +137,8 @@ class BaseBART(NoDistribution):
             idx_data_points=right_node_idx_data_points,
         )
         tree.grow_tree(index_leaf_node, new_split_node, new_left_node, new_right_node)
-        successful_grow_tree = True
 
-        return successful_grow_tree
+        return True, index_selected_predictor
 
     def get_new_idx_data_points(self, current_split_node, idx_data_points):
         idx_split_variable = current_split_node.idx_split_variable

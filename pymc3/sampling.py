@@ -606,6 +606,10 @@ def sample(
     trace.report._n_draws = n_draws
     trace.report._t_sampling = t_sampling
 
+    if "variable_inclusion" in trace.stat_names:
+        variable_inclusion = trace.get_sampler_stats("variable_inclusion")[::-draws]
+        trace.report.variable_importance = np.mean([vi / vi.sum() for vi in variable_inclusion], 0)
+
     n_chains = len(trace.chains)
     _log.info(
         f'Sampling {n_chains} chain{"s" if n_chains > 1 else ""} for {n_tune:_d} tune and {n_draws:_d} draw iterations '
