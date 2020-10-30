@@ -22,7 +22,7 @@ repos:
 - repo: local
   hooks:
     - id: watermark
-      name: Check notebooks have watermark
+      name: Check notebooks have watermark (see Jupyter style guide from PyMC3 Wiki)
       types: [jupyter]
       entry: '%load_ext watermark.*%watermark -n -u -v -iv -w'
       language: pygrep
