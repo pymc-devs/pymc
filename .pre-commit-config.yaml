@@ -22,10 +22,12 @@ repos:
 - repo: local
   hooks:
     - id: watermark
-      name: Check notebooks have watermark
+      name: Check notebooks have watermark (see Jupyter style guide from PyMC3 Wiki)
       types: [jupyter]
-      entry: python scripts/check_watermark.py
-      language: python
+      entry: '%load_ext watermark.*%watermark -n -u -v -iv -w'
+      language: pygrep
+      args: [--negate, --multiline]
+      minimum_pre_commit_version: 2.8.0
     - id: check-toc
       name: Check all notebooks appear in table of contents
       types: [jupyter]
