@@ -913,6 +913,10 @@ class TestMatchesScipy(SeededTest):
             lambda value, alpha, beta: sp.gamma.logcdf(value, alpha, scale=1.0 / beta),
         )
 
+    @pytest.mark.xfail(
+        condition=(theano.config.floatX == "float32"),
+        reason="Fails on float32 due to numerical issues",
+    )
     def test_inverse_gamma(self):
         self.pymc3_matches_scipy(
             InverseGamma,
