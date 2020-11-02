@@ -923,7 +923,7 @@ class TestMatchesScipy(SeededTest):
         self.check_logcdf(
             InverseGamma,
             Rplus,
-            {'alpha': Rplusbig, 'beta': Rplusbig},
+            {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.invgamma.logcdf(value, alpha, scale=beta),
         )
 
