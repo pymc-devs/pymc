@@ -289,7 +289,6 @@ class MvNormal(_QuadFormBase):
             raise ValueError(f"Shapes for mu and {self._cov_type} don't match")
 
         if self._cov_type == "cov":
-            # Calculate mu + L * samples, L = chol(cov)
             chol = linalg.cholesky(param, lower=True)
             standard_normal = np.random.standard_normal(output_shape)
             return mu + np.einsum("...ij,...j->...i", chol, standard_normal)
@@ -297,7 +296,6 @@ class MvNormal(_QuadFormBase):
             standard_normal = np.random.standard_normal(output_shape)
             return mu + np.einsum("...ij,...j->...i", param, standard_normal)
         else:
-            # Calculate mu + L^{-T} * samples, L = chol(tau)
             try:
                 chol = linalg.cholesky(param, lower=True)
             except linalg.LinAlgError:
