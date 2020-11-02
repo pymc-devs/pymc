@@ -2655,17 +2655,8 @@ class InverseGamma(PositiveContinuous):
             tt.log(tt.gammaincc(alpha, beta / value)),
             value >= 0,
             alpha > 0,
-            beta > 0)
-
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        beta = dist.beta
-        alpha = dist.alpha
-        name = r'\text{%s}' % name
-        return r'${} \sim \text{{InverseGamma}}(\mathit{{alpha}}={},~\mathit{{beta}}={})$'.format(name,
-                                                                get_variable_name(alpha),
-                                                                get_variable_name(beta))
+            beta > 0,
+        )
 
 
 class ChiSquared(Gamma):
