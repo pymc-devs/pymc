@@ -261,9 +261,14 @@ class MvNormal(_QuadFormBase):
 
         param_attribute = "chol_cov" if self._cov_type == "chol" else self._cov_type
         mu, param = draw_values([self.mu, getattr(self, param_attribute)], point=point, size=size)
+        # self.shape can be event or batch+event. So if it is given,
+        # deterministic nature of random method can be obtained by appending it to sample_shape.
         output_shape = size + tuple(self.shape)
         extra_dims = len(output_shape) - mu.ndim
 
+        # It was not a good idea to check mu.shape[:len(size)] == size,
+        # because it can get mixed among batch and event dimensions. Here, we explicitly chop off
+        # the size (sample_shape) and only broadcast batch and event dimensions.
         if is_fast_drawable(self.mu):
             mu = mu.reshape((1,) * extra_dims + mu.shape)
         else:
@@ -275,6 +280,7 @@ class MvNormal(_QuadFormBase):
             raise ValueError(f"Shapes for mu and {self._cov_type} don't match")
 
         if self._cov_type == "cov":
+            # Calculate mu + L * samples, L = chol(cov)
             chol = linalg.cholesky(param, lower=True)
             standard_normal = np.random.standard_normal(output_shape)
             return mu + np.einsum("...ij,...j->...i", chol, standard_normal)
@@ -282,6 +288,7 @@ class MvNormal(_QuadFormBase):
             standard_normal = np.random.standard_normal(output_shape)
             return mu + np.einsum("...ij,...j->...i", param, standard_normal)
         else:
+            # Calculate mu + L^{-T} * samples, L = chol(tau)
             try:
                 chol = linalg.cholesky(param, lower=True)
             except linalg.LinAlgError:
