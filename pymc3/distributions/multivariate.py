@@ -261,9 +261,18 @@ class MvNormal(_QuadFormBase):
 
         param_attribute = "chol_cov" if self._cov_type == "chol" else self._cov_type
         mu, param = draw_values([self.mu, getattr(self, param_attribute)], point=point, size=size)
+        if tuple(self.shape):
+            dist_shape = tuple(self.shape)
+        else:
+            if is_fast_drawable(self.mu):
+                batch_shape = mu.shape[:-1]
+            else:
+                batch_shape = mu.shape[len(size) : -1]
+            dist_shape = batch_shape + param.shape[-1:]
+
         # self.shape can be event or batch+event. So if it is given,
         # deterministic nature of random method can be obtained by appending it to sample_shape.
-        output_shape = size + tuple(self.shape)
+        output_shape = size + dist_shape
         extra_dims = len(output_shape) - mu.ndim
 
         # It was not a good idea to check mu.shape[:len(size)] == size,
