@@ -270,7 +270,7 @@ class MvNormal(_QuadFormBase):
                 batch_shape = mu.shape[len(size) : -1]
             dist_shape = batch_shape + param.shape[-1:]
 
-        # self.shape can be event or batch+event. So if it is given,
+        # First, distribution shape (batch+event) is computed and then
         # deterministic nature of random method can be obtained by appending it to sample_shape.
         output_shape = size + dist_shape
         extra_dims = len(output_shape) - mu.ndim
