@@ -26,21 +26,21 @@ class BaseBART(NoDistribution):
         super().__init__(shape=X.shape[0], dtype="float64", testval=0, *args, **kwargs)
 
         if self.X.ndim != 2:
-            raise BARTParamsError("The design matrix X must have two dimensions")
+            raise ValueError("The design matrix X must have two dimensions")
 
         if self.Y.ndim != 1:
-            raise BARTParamsError("The response matrix Y must have one dimension")
+            raise ValueError("The response matrix Y must have one dimension")
         if self.X.shape[0] != self.Y.shape[0]:
-            raise BARTParamsError(
+            raise ValueError(
                 "The design matrix X and the response matrix Y must have the same number of elements"
             )
         if not isinstance(m, int):
-            raise BARTParamsError("The number of trees m type must be int")
+            raise ValueError("The number of trees m type must be int")
         if m < 1:
-            raise BARTParamsError("The number of trees m must be greater than zero")
+            raise ValueError("The number of trees m must be greater than zero")
 
         if alpha <= 0 or 1 <= alpha:
-            raise BARTParamsError(
+            raise ValueError(
                 "The value for the alpha parameter for the tree structure "
                 "must be in the interval (0, 1)"
             )
