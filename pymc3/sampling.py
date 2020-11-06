@@ -607,8 +607,11 @@ def sample(
     trace.report._t_sampling = t_sampling
 
     if "variable_inclusion" in trace.stat_names:
-        variable_inclusion = trace.get_sampler_stats("variable_inclusion")[::-draws]
-        trace.report.variable_importance = np.mean([vi / vi.sum() for vi in variable_inclusion], 0)
+        variable_inclusion = np.vstack(trace.get_sampler_stats("variable_inclusion"))
+        variable_inclusion = np.split(variable_inclusion, 50)
+        dada = np.vstack([v.sum(0) / v.sum() for v in variable_inclusion])
+        trace.report.variable_importance_m = dada.mean(0)
+        trace.report.variable_importance_s = dada.std(0)
 
     n_chains = len(trace.chains)
     _log.info(

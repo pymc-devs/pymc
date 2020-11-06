@@ -144,10 +144,9 @@ class BaseBART(NoDistribution):
         idx_split_variable = current_split_node.idx_split_variable
         split_value = current_split_node.split_value
 
-        left_idx = np.nonzero(self.X[idx_data_points, idx_split_variable] <= split_value)
+        left_idx = self.X[idx_data_points, idx_split_variable] <= split_value
         left_node_idx_data_points = idx_data_points[left_idx]
-        right_idx = np.nonzero(~(self.X[idx_data_points, idx_split_variable] <= split_value))
-        right_node_idx_data_points = idx_data_points[right_idx]
+        right_node_idx_data_points = idx_data_points[~left_idx]
 
         return left_node_idx_data_points, right_node_idx_data_points
 
