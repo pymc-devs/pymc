@@ -264,7 +264,7 @@ class MvNormal(_QuadFormBase):
         if tuple(self.shape):
             dist_shape = tuple(self.shape)
         else:
-            if is_fast_drawable(self.mu):
+            if is_fast_drawable(self.mu) or point:
                 batch_shape = mu.shape[:-1]
             else:
                 batch_shape = mu.shape[len(size) : -1]
@@ -278,7 +278,7 @@ class MvNormal(_QuadFormBase):
         # It was not a good idea to check mu.shape[:len(size)] == size,
         # because it can get mixed among batch and event dimensions. Here, we explicitly chop off
         # the size (sample_shape) and only broadcast batch and event dimensions.
-        if is_fast_drawable(self.mu):
+        if is_fast_drawable(self.mu) or point:
             mu = mu.reshape((1,) * extra_dims + mu.shape)
         else:
             mu = mu.reshape(size + (1,) * extra_dims + mu.shape[len(size) :])
