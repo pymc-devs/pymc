@@ -983,6 +983,7 @@ def generate_samples(generator, *args, **kwargs):
     Any remaining args and kwargs are passed on to the generator function.
     """
     dist_shape = kwargs.pop("dist_shape", ())
+    # TODO: the following variable is no longer used !!
     one_d = _is_one_d(dist_shape)
     size = kwargs.pop("size", None)
     broadcast_shape = kwargs.pop("broadcast_shape", None)
@@ -1059,23 +1060,5 @@ def generate_samples(generator, *args, **kwargs):
         samples = generator(size=dist_bcast_shape, *args, **kwargs)
     else:
         samples = generator(size=size_tup + dist_bcast_shape, *args, **kwargs)
-    samples = np.asarray(samples)
 
-    # reshape samples here
-    if samples.ndim > 0 and samples.shape[0] == 1 and size_tup == (1,):
-        if (
-            len(samples.shape) > len(dist_shape)
-            and samples.shape[-len(dist_shape) :] == dist_shape[-len(dist_shape) :]
-        ):
-            raise ValueError(f"This SHOULD be unreachable code. DON'T MERGE UNTIL THIS ENTIRE BLOCK WAS REMOVED. {samples.shape}, {size_tup}")
-            samples = samples.reshape(samples.shape[1:])
-
-    if (
-        one_d
-        and samples.ndim > 0
-        and samples.shape[-1] == 1
-        and (samples.shape != size_tup or size_tup == tuple() or size_tup == (1,))
-    ):
-        raise ValueError(f"This SHOULD be unreachable code. DON'T MERGE UNTIL THIS ENTIRE BLOCK WAS REMOVED. {samples.shape}, {size_tup}")
-        samples = samples.reshape(samples.shape[:-1])
     return np.asarray(samples)
