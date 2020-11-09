@@ -204,6 +204,7 @@ class BaseTestCases:
             self.model = pm.Model()
 
         def get_random_variable(self, shape, with_vector_params=False, name=None):
+            """ Creates a RandomVariable of the parametrized distribution. """
             if with_vector_params:
                 params = {
                     key: value * np.ones(self.shape, dtype=np.dtype(type(value)))
@@ -226,79 +227,40 @@ class BaseTestCases:
 
         @staticmethod
         def sample_random_variable(random_variable, size):
+            """ Draws samples from a RandomVariable using its .random() method. """
             try:
                 return random_variable.random(size=size)
             except AttributeError:
                 return random_variable.distribution.random(size=size)
 
-        @pytest.mark.parametrize("size", [None, 5, (4, 5)], ids=str)
-        def test_scalar_parameter_shape(self, size):
-            rv = self.get_random_variable(None)
-            if size is None:
-                expected = (1,)
-            else:
-                expected = np.atleast_1d(size).tolist()
-            actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
-            assert tuple(expected) == actual
-
-        @pytest.mark.parametrize("size", [None, 5, (4, 5)], ids=str)
-        def test_scalar_shape(self, size):
-            shape = 10
+        @pytest.mark.parametrize("size", [None, (), 1, (1,), 5, (4, 5)], ids=str)
+        @pytest.mark.parametrize("shape", [None, ()], ids=str)
+        def test_scalar_distribution_shape(self, shape, size):
+            """ Draws samples of different [size] from a scalar [shape] RV. """
             rv = self.get_random_variable(shape)
+            expected = () if size in {None, ()} else tuple(np.atleast_1d(size))
+            actual = np.shape(self.sample_random_variable(rv, size))
+            assert expected == actual, f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
 
-            if size is None:
-                expected = []
-            else:
-                expected = np.atleast_1d(size).tolist()
-            expected.append(shape)
-            actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
-            assert tuple(expected) == actual
+        @pytest.mark.parametrize("size", [None, ()], ids=str)
+        @pytest.mark.parametrize("shape", [None, (), (1,), (1, 1), (1, 2), (10, 11, 1), (9, 10, 2)], ids=str)
+        def test_scalar_sample_shape(self, shape, size):
+            """ Draws samples of scalar [size] from a [shape] RV. """
+            rv = self.get_random_variable(shape)
+            expected = () if shape in {None, ()} else tuple(np.atleast_1d(shape))
+            actual = np.shape(self.sample_random_variable(rv, size))
+            assert expected == actual, f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
 
-        @pytest.mark.parametrize("size", [None, 5, (4, 5)], ids=str)
-        def test_parameters_1d_shape(self, size):
-            rv = self.get_random_variable(self.shape, with_vector_params=True)
-            if size is None:
-                expected = []
-            else:
-                expected = np.atleast_1d(size).tolist()
-            expected.append(self.shape)
-            actual = self.sample_random_variable(rv, size).shape
-            assert tuple(expected) == actual
-
-        @pytest.mark.parametrize("size", [None, 5, (4, 5)], ids=str)
-        def test_broadcast_shape(self, size):
-            broadcast_shape = (2 * self.shape, self.shape)
-            rv = self.get_random_variable(broadcast_shape, with_vector_params=True)
-            if size is None:
-                expected = []
-            else:
-                expected = np.atleast_1d(size).tolist()
-            expected.extend(broadcast_shape)
-            actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
-            assert tuple(expected) == actual
-
-        @pytest.mark.parametrize(
-            "shape", [(), (1,), (1, 1), (1, 2), (10, 10, 1), (10, 10, 2)], ids=str
-        )
-        def test_different_shapes_and_sample_sizes(self, shape):
-            prefix = self.distribution.__name__
-
-            rv = self.get_random_variable(shape, name=f"{prefix}_{shape}")
-            for size in (None, 1, 5, (4, 5)):
-                if size is None:
-                    s = []
-                else:
-                    try:
-                        s = list(size)
-                    except TypeError:
-                        s = [size]
-                    if s == [1]:
-                        s = []
-                if shape not in ((), (1,)):
-                    s.extend(shape)
-                e = tuple(s)
-                a = self.sample_random_variable(rv, size).shape
-                assert e == a
+        @pytest.mark.parametrize("size", [None, 3, (4, 5)], ids=str)
+        @pytest.mark.parametrize("shape", [None, 1, (10, 11, 1)], ids=str)
+        def test_vector_params(self, shape, size):
+            shape = self.shape
+            rv = self.get_random_variable(shape, with_vector_params=True)
+            exp_shape = () if shape in {None, ()} else tuple(np.atleast_1d(shape))
+            exp_size = () if size in {None, ()} else tuple(np.atleast_1d(size))
+            expected = exp_size + exp_shape
+            actual = np.shape(self.sample_random_variable(rv, size))
+            assert expected == actual, f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
 
 
 class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
