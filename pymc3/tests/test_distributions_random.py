@@ -198,6 +198,12 @@ class TestDrawValuesContext:
 class BaseTestCases:
     class BaseTestCase(SeededTest):
         shape = 5
+        # the following are the default values of the distribution that take effect
+        # when the parametrized shape/size in the test case is None.
+        # For every distribution that defaults to non-scalar shapes they must be
+        # specified by the inheriting Test class. example: TestGaussianRandomWalk
+        default_shape = ()
+        default_size = ()
 
         def setup_method(self, *args, **kwargs):
             super().setup_method(*args, **kwargs)
@@ -215,30 +221,39 @@ class BaseTestCases:
             if name is None:
                 name = self.distribution.__name__
             with self.model:
-                if shape is None:
-                    return self.distribution(name, transform=None, **params)
-                else:
-                    try:
+                try:
+                    if shape is None:
+                        # in the test case parametrization "None" means "no specified (default)"
+                        return self.distribution(name, transform=None, **params)
+                    else:
                         return self.distribution(name, shape=shape, transform=None, **params)
-                    except TypeError:
-                        if np.sum(np.atleast_1d(shape)) == 0:
-                            pytest.skip("Timeseries must have positive shape")
-                        raise
+                except TypeError:
+                    if np.sum(np.atleast_1d(shape)) == 0:
+                        pytest.skip("Timeseries must have positive shape")
+                    raise
 
         @staticmethod
         def sample_random_variable(random_variable, size):
             """ Draws samples from a RandomVariable using its .random() method. """
             try:
-                return random_variable.random(size=size)
+                if size is None:
+                    return random_variable.random()
+                else:
+                    return random_variable.random(size=size)
             except AttributeError:
-                return random_variable.distribution.random(size=size)
+                if size is None:
+                    return random_variable.distribution.random()
+                else:
+                    return random_variable.distribution.random(size=size)
 
         @pytest.mark.parametrize("size", [None, (), 1, (1,), 5, (4, 5)], ids=str)
         @pytest.mark.parametrize("shape", [None, ()], ids=str)
         def test_scalar_distribution_shape(self, shape, size):
             """ Draws samples of different [size] from a scalar [shape] RV. """
             rv = self.get_random_variable(shape)
-            expected = () if size in {None, ()} else tuple(np.atleast_1d(size))
+            exp_shape = self.default_shape if shape is None else tuple(np.atleast_1d(shape))
+            exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
+            expected = exp_size + exp_shape
             actual = np.shape(self.sample_random_variable(rv, size))
             assert expected == actual, f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
 
@@ -247,7 +262,9 @@ class BaseTestCases:
         def test_scalar_sample_shape(self, shape, size):
             """ Draws samples of scalar [size] from a [shape] RV. """
             rv = self.get_random_variable(shape)
-            expected = () if shape in {None, ()} else tuple(np.atleast_1d(shape))
+            exp_shape = self.default_shape if shape is None else tuple(np.atleast_1d(shape))
+            exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
+            expected = exp_size + exp_shape
             actual = np.shape(self.sample_random_variable(rv, size))
             assert expected == actual, f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
 
@@ -256,8 +273,8 @@ class BaseTestCases:
         def test_vector_params(self, shape, size):
             shape = self.shape
             rv = self.get_random_variable(shape, with_vector_params=True)
-            exp_shape = () if shape in {None, ()} else tuple(np.atleast_1d(shape))
-            exp_size = () if size in {None, ()} else tuple(np.atleast_1d(size))
+            exp_shape = self.default_shape if shape is None else tuple(np.atleast_1d(shape))
+            exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
             expected = exp_size + exp_shape
             actual = np.shape(self.sample_random_variable(rv, size))
             assert expected == actual, f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
@@ -266,10 +283,7 @@ class BaseTestCases:
 class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
     distribution = pm.GaussianRandomWalk
     params = {"mu": 1.0, "sigma": 1.0}
-
-    @pytest.mark.xfail(reason="Supporting this makes a nasty API")
-    def test_broadcast_shape(self):
-        super().test_broadcast_shape()
+    default_shape = (1,)
 
 
 class TestNormal(BaseTestCases.BaseTestCase):
