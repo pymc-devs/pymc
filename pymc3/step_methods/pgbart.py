@@ -60,7 +60,6 @@ class PGBART(ArrayStepShared):
         self.idx = 0
         if chunk == "auto":
             self.chunk = max(1, int(self.bart.m * 0.1))
-        self.variable_inclusion = np.zeros(self.bart.num_variates, dtype="int")
         self.num_particles = num_particles
         self.log_num_particles = np.log(num_particles)
         self.indices = list(range(1, num_particles))
@@ -77,7 +76,7 @@ class PGBART(ArrayStepShared):
     def astep(self, _):
         bart = self.bart
         num_observations = bart.num_observations
-        variable_inclusion = self.variable_inclusion
+        variable_inclusion = np.zeros(bart.num_variates, dtype="int")
 
         # For the tunning phase we restrict max_stages to a low number, otherwise it is almost sure
         # we will reach max_stages given that our first set of m trees is not good at all.
@@ -142,7 +141,6 @@ class PGBART(ArrayStepShared):
             bart.sum_trees_output = bart.Y - R_j + new_prediction
 
             if not self.tune:
-                variable_inclusion = self.variable_inclusion
                 for index in new_tree.used_variates:
                     variable_inclusion[index] += 1
 

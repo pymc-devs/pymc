@@ -608,10 +608,12 @@ def sample(
 
     if "variable_inclusion" in trace.stat_names:
         variable_inclusion = np.vstack(trace.get_sampler_stats("variable_inclusion"))
-        variable_inclusion = np.split(variable_inclusion, 50)
-        dada = np.vstack([v.sum(0) / v.sum() for v in variable_inclusion])
-        trace.report.variable_importance_m = dada.mean(0)
-        trace.report.variable_importance_s = dada.std(0)
+        variable_inclusion = np.vstack(
+            [v.sum(0) / v.sum() for v in np.array_split(variable_inclusion, 50)]
+        )
+        trace.report.variable_importance = np.empty((variable_inclusion.shape[1], 3))
+        trace.report.variable_importance[:, 0] = variable_inclusion.mean(0)
+        trace.report.variable_importance[:, 1:3] = arviz.hdi(variable_inclusion, hdi_prob=0.68)
 
     n_chains = len(trace.chains)
     _log.info(
