@@ -972,7 +972,7 @@ class Categorical(Discrete):
         return generate_samples(
             random_choice,
             p=p,
-            broadcast_shape=p.shape[:-1] or (1,),
+            broadcast_shape=p.shape[:-1],
             dist_shape=self.shape,
             size=size,
         )
