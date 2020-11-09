@@ -200,7 +200,7 @@ class BetaBinomial(Discrete):
         self.mode = tt.cast(tround(alpha / (alpha + beta)), "int8")
 
     def _random(self, alpha, beta, n, size=None):
-        size = size or 1
+        size = size or ()
         p = stats.beta.rvs(a=alpha, b=beta, size=size).flatten()
         # Sometimes scipy.beta returns nan. Ugh.
         while np.any(np.isnan(p)):
