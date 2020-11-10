@@ -28,6 +28,8 @@ from pymc3.distributions.distribution import (
 from pymc3.distributions import transforms
 from pymc3.distributions.dist_math import bound
 
+from pymc3.theanof import floatX
+
 __all__ = ["Bound"]
 
 
@@ -187,12 +189,10 @@ class _ContinuousBounded(_Bounded, Continuous):
     """
 
     def __init__(self, distribution, lower, upper, transform="infer", *args, **kwargs):
-        dtype = kwargs.get("dtype", theano.config.floatX)
-
         if lower is not None:
-            lower = tt.as_tensor_variable(lower).astype(dtype)
+            lower = tt.as_tensor_variable(floatX(lower))
         if upper is not None:
-            upper = tt.as_tensor_variable(upper).astype(dtype)
+            upper = tt.as_tensor_variable(floatX(upper))
 
         if transform == "infer":
             if lower is None and upper is None:
