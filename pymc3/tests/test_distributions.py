@@ -1780,7 +1780,7 @@ class TestStrAndLatexRepr:
             mu = Deterministic("mu", floatX(alpha + tt.dot(X, b)))
 
             # add a bounded variable as well
-            bound_var = Bound(Normal, lower=1.0)('bound_var', mu=0, sigma=10)
+            bound_var = Bound(Normal, lower=1.0)("bound_var", mu=0, sigma=10)
 
             # Likelihood (sampling distribution) of observations
             Y_obs = Normal("Y_obs", mu=mu, sigma=sigma, observed=Y)
