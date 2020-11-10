@@ -158,7 +158,7 @@ class _Bounded(Distribution):
     def _str_repr(self, **kwargs):
         distr_repr = self._wrapped._str_repr(**{**kwargs, "dist": self._wrapped})
         if "formatting" in kwargs and kwargs["formatting"] == "latex":
-            distr_repr = distr_repr[distr_repr.index(" \sim") + 6 :]
+            distr_repr = distr_repr[distr_repr.index(r" \sim") + 6 :]
         else:
             distr_repr = distr_repr[distr_repr.index(" ~") + 3 :]
         self_repr = super()._str_repr(**kwargs)
