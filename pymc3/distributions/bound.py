@@ -16,7 +16,6 @@ from numbers import Real
 
 import numpy as np
 import theano.tensor as tt
-import theano
 
 from pymc3.distributions.distribution import (
     Distribution,
