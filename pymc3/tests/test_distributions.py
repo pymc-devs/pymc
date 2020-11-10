@@ -1792,7 +1792,7 @@ class TestStrAndLatexRepr:
             r"$\text{beta} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
             r"$\text{Z} \sim \text{MvNormal}(\mathit{mu}=array,~\mathit{chol_cov}=array)$",
             r"$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sigma}=f(\text{sigma}))$",
-            r"$\\text{bound_var} \\sim \\text{Bound}(\\mathit{lower}=1.0,~\\mathit{upper}=\\text{None})$ -- \\text{Normal}(\\mathit{mu}=0.0,~\\mathit{sigma}=10.0)$",
+            r"$\text{bound_var} \sim \text{Bound}(\mathit{lower}=1.0,~\mathit{upper}=\text{None})$ -- \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
         )
         self.expected_str = (
             r"alpha ~ Normal(mu=0.0, sigma=10.0)",
