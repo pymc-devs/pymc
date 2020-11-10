@@ -211,9 +211,6 @@ class TestSamplesBroadcasting:
 def test_sample_generate_values(fixture_model, fixture_sizes):
     model, RVs = fixture_model
     size = to_tuple(fixture_sizes)
-    if size == (1,):
-        # Single draws are interpreted as scalars for backwards compatibility
-        size = tuple()
     with model:
         prior = pm.sample_prior_predictive(samples=fixture_sizes)
         for rv in RVs:

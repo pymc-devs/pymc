@@ -558,8 +558,6 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
             shape: Tuple[int, ...],
         ) -> np.ndarray:
             val = meth(point=point, size=size)
-            if size == 1:
-                val = np.expand_dims(val, axis=0)
             try:
                 assert val.shape == (size,) + shape, (
                     "Sampling from random of %s yields wrong shape" % param
