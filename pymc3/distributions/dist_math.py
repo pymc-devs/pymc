@@ -25,7 +25,7 @@ import theano.tensor as tt
 import theano
 from theano.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from theano.tensor.slinalg import Cholesky
-from theano.scan_module import until
+from theano.scan import until
 from theano import scan
 from .shape_utils import to_tuple
 
