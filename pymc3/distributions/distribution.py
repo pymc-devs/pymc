@@ -943,9 +943,9 @@ def _draw_value(param, point=None, givens=None, size=None):
 
 
 def _is_one_d(dist_shape):
-    if hasattr(dist_shape, "dshape") and dist_shape.dshape in { (), }:
+    if hasattr(dist_shape, "dshape") and dist_shape.dshape in {()}:
         return True
-    elif hasattr(dist_shape, "shape") and dist_shape.shape in { (), }:
+    elif hasattr(dist_shape, "shape") and dist_shape.shape in {()}:
         return True
     return False
 

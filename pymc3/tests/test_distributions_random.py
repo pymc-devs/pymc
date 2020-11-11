@@ -255,10 +255,14 @@ class BaseTestCases:
             exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
             expected = exp_size + exp_shape
             actual = np.shape(self.sample_random_variable(rv, size))
-            assert expected == actual, f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
+            assert (
+                expected == actual
+            ), f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
 
         @pytest.mark.parametrize("size", [None, ()], ids=str)
-        @pytest.mark.parametrize("shape", [None, (), (1,), (1, 1), (1, 2), (10, 11, 1), (9, 10, 2)], ids=str)
+        @pytest.mark.parametrize(
+            "shape", [None, (), (1,), (1, 1), (1, 2), (10, 11, 1), (9, 10, 2)], ids=str
+        )
         def test_scalar_sample_shape(self, shape, size):
             """ Draws samples of scalar [size] from a [shape] RV. """
             rv = self.get_random_variable(shape)
@@ -266,7 +270,9 @@ class BaseTestCases:
             exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
             expected = exp_size + exp_shape
             actual = np.shape(self.sample_random_variable(rv, size))
-            assert expected == actual, f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
+            assert (
+                expected == actual
+            ), f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
 
         @pytest.mark.parametrize("size", [None, 3, (4, 5)], ids=str)
         @pytest.mark.parametrize("shape", [None, 1, (10, 11, 1)], ids=str)
@@ -277,7 +283,9 @@ class BaseTestCases:
             exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
             expected = exp_size + exp_shape
             actual = np.shape(self.sample_random_variable(rv, size))
-            assert expected == actual, f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
+            assert (
+                expected == actual
+            ), f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
 
 
 class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
