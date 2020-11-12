@@ -1721,7 +1721,7 @@ def sample_posterior_predictive(
                     param = cast(MultiTrace, _trace)._straces[chain_idx % nchain].point(point_idx)
                 # ... or a PointList
                 else:
-                    param = cast(PointList, _trace)[idx % len_trace]
+                    param = cast(PointList, _trace)[idx % (len_trace * nchain)]
             # there's only a single chain, but the index might hit it multiple times if
             # the number of indices is greater than the length of the trace.
             else:
@@ -1730,7 +1730,6 @@ def sample_posterior_predictive(
             values = draw_values(vars, point=param, size=size)
             for k, v in zip(vars, values):
                 ppc_trace_t.insert(k.name, v, idx)
-
     except KeyboardInterrupt:
         pass
 

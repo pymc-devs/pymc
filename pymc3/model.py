@@ -1797,7 +1797,7 @@ class ObservedRV(Factor, PyMC3Variable):
 
             # make this RV a view on the combined missing/nonmissing array
             theano.gof.Apply(theano.compile.view_op, inputs=[data], outputs=[self])
-            self.tag.test_value = theano.compile.view_op(data).tag.test_value
+            self.tag.test_value = theano.compile.view_op(data).tag.test_value.astype(self.dtype)
             self.scaling = _get_scaling(total_size, data.shape, data.ndim)
 
     @property
