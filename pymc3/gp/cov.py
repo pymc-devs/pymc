@@ -294,6 +294,61 @@ class WhiteNoise(Covariance):
             return tt.alloc(0.0, X.shape[0], Xs.shape[0])
 
 
+class Circular(Covariance):
+    R"""
+    Circular Kernel.
+
+    .. math::
+
+        k_g(x, y) = W_\pi(\operatorname{dist}_{\mathit{geo}}(x, y)),
+
+    with
+
+    .. math::
+
+        W_c(t) = \left(1 + \tau \frac{t}{c}\right)\left(1-\frac{t}{c}\right)^\tau_+
+
+    where :math:`c` is maximum value for :math:`t` and :math:`\tau\ge 4`.
+    :math:`\tau` controls for correlation strength, larger :math:`\tau` leads to less smooth functions
+    See [1]_ for more explanations and use cases.
+
+    Parameters
+    ----------
+    period : scalar
+        defines the circular interval :math:`[0, \mathit{bound})`
+    tau : scalar
+        :math:`\tau\ge 4` defines correlation strength, the larger,
+        the smaller correlation is. Minimum value is :math:`4`
+
+    References
+    ----------
+    .. [1] Espéran Padonou, O Roustant, "Polar Gaussian Processes for Predicting on Circular Domains"
+    https://hal.archives-ouvertes.fr/hal-01119942v1/document
+    """
+
+    def __init__(self, input_dim, period, tau=4, active_dims=None):
+        super().__init__(input_dim, active_dims)
+        self.c = tt.as_tensor_variable(period / 2)
+        self.tau = tau
+
+    def dist(self, X, Xs):
+        if Xs is None:
+            Xs = tt.transpose(X)
+        else:
+            Xs = tt.transpose(Xs)
+        return tt.abs_((X - Xs + self.c) % (self.c * 2) - self.c)
+
+    def weinland(self, t):
+        return (1 + self.tau * t / self.c) * tt.clip(1 - t / self.c, 0, np.inf) ** self.tau
+
+    def full(self, X, Xs=None):
+        X, Xs = self._slice(X, Xs)
+        return self.weinland(self.dist(X, Xs))
+
+    def diag(self, X):
+        return tt.alloc(1.0, X.shape[0])
+
+
 class Stationary(Covariance):
     r"""
     Base class for stationary kernels/covariance functions.

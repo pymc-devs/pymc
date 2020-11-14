@@ -38,6 +38,12 @@ from .dist_math import bound, logpow, factln
 from .shape_utils import to_tuple
 from ..math import kron_dot, kron_diag, kron_solve_lower, kronecker
 
+# TODO: Remove this once the theano-pymc dependency is above 1.0.9
+try:
+    from theano.gof.utils import TestValueError
+except ImportError:
+    TestValueError = AttributeError
+
 
 __all__ = [
     "MvNormal",
@@ -477,7 +483,7 @@ class Dirichlet(Continuous):
             )
             try:
                 kwargs["shape"] = np.shape(get_test_value(a))
-            except AttributeError:
+            except TestValueError:
                 pass
 
         super().__init__(transform=transform, *args, **kwargs)
@@ -597,12 +603,8 @@ class Multinomial(Discrete):
         super().__init__(*args, **kwargs)
 
         p = p / tt.sum(p, axis=-1, keepdims=True)
-        n = np.squeeze(n)  # works also if n is a tensor
 
         if len(self.shape) > 1:
-            self.n = tt.shape_padright(n)
-            self.p = p if p.ndim > 1 else tt.shape_padleft(p)
-        elif n.ndim == 1:
             self.n = tt.shape_padright(n)
             self.p = p if p.ndim > 1 else tt.shape_padleft(p)
         else:

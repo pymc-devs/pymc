@@ -490,3 +490,93 @@ class TestMixtureVsLatent(SeededTest):
             logps.append(z_logp + latent_mix.logp(test_point))
         latent_mix_logp = logsumexp(np.array(logps), axis=0)
         assert_allclose(mix_logp, latent_mix_logp, rtol=rtol)
+
+
+class TestMixtureSameFamily(SeededTest):
+    @classmethod
+    def setup_class(cls):
+        super().setup_class()
+        cls.size = 50
+        cls.n_samples = 1000
+        cls.mixture_comps = 10
+
+    @pytest.mark.parametrize("batch_shape", [(3, 4), (20,)], ids=str)
+    def test_with_multinomial(self, batch_shape):
+        p = np.random.uniform(size=(*batch_shape, self.mixture_comps, 3))
+        n = 100 * np.ones((*batch_shape, 1))
+        w = np.ones(self.mixture_comps) / self.mixture_comps
+        mixture_axis = len(batch_shape)
+        with pm.Model() as model:
+            comp_dists = pm.Multinomial.dist(p=p, n=n, shape=(*batch_shape, self.mixture_comps, 3))
+            mixture = pm.MixtureSameFamily(
+                "mixture",
+                w=w,
+                comp_dists=comp_dists,
+                mixture_axis=mixture_axis,
+                shape=(*batch_shape, 3),
+            )
+            prior = pm.sample_prior_predictive(samples=self.n_samples)
+
+        assert prior["mixture"].shape == (self.n_samples, *batch_shape, 3)
+        assert mixture.random(size=self.size).shape == (self.size, *batch_shape, 3)
+
+        if theano.config.floatX == "float32":
+            rtol = 1e-4
+        else:
+            rtol = 1e-7
+
+        comp_logp = comp_dists.logp(model.test_point["mixture"].reshape(*batch_shape, 1, 3))
+        log_sum_exp = logsumexp(
+            comp_logp.eval() + np.log(w)[..., None], axis=mixture_axis, keepdims=True
+        ).sum()
+        assert_allclose(
+            model.logp(model.test_point),
+            log_sum_exp,
+            rtol,
+        )
+
+    # TODO: Handle case when `batch_shape` == `sample_shape`.
+    # See https://github.com/pymc-devs/pymc3/issues/4185 for details.
+    def test_with_mvnormal(self):
+        # 10 batch, 3-variate Gaussian
+        mu = np.random.randn(self.mixture_comps, 3)
+        mat = np.random.randn(3, 3)
+        cov = mat @ mat.T
+        chol = np.linalg.cholesky(cov)
+        w = np.ones(self.mixture_comps) / self.mixture_comps
+
+        with pm.Model() as model:
+            comp_dists = pm.MvNormal.dist(mu=mu, chol=chol, shape=(self.mixture_comps, 3))
+            mixture = pm.MixtureSameFamily(
+                "mixture", w=w, comp_dists=comp_dists, mixture_axis=0, shape=(3,)
+            )
+            prior = pm.sample_prior_predictive(samples=self.n_samples)
+
+        assert prior["mixture"].shape == (self.n_samples, 3)
+        assert mixture.random(size=self.size).shape == (self.size, 3)
+
+        if theano.config.floatX == "float32":
+            rtol = 1e-4
+        else:
+            rtol = 1e-7
+
+        comp_logp = comp_dists.logp(model.test_point["mixture"].reshape(1, 3))
+        log_sum_exp = logsumexp(
+            comp_logp.eval() + np.log(w)[..., None], axis=0, keepdims=True
+        ).sum()
+        assert_allclose(
+            model.logp(model.test_point),
+            log_sum_exp,
+            rtol,
+        )
+
+    def test_broadcasting_in_shape(self):
+        with pm.Model() as model:
+            mu = pm.Gamma("mu", 1.0, 1.0, shape=2)
+            comp_dists = pm.Poisson.dist(mu, shape=2)
+            mix = pm.MixtureSameFamily(
+                "mix", w=np.ones(2) / 2, comp_dists=comp_dists, shape=(1000,)
+            )
+            prior = pm.sample_prior_predictive(samples=self.n_samples)
+
+        assert prior["mix"].shape == (self.n_samples, 1000)

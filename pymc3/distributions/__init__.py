@@ -79,6 +79,7 @@ from .simulator import Simulator
 
 from .mixture import Mixture
 from .mixture import NormalMixture
+from .mixture import MixtureSameFamily
 
 from .multivariate import MvNormal
 from .multivariate import MatrixNormal
@@ -167,6 +168,7 @@ __all__ = [
     "SkewNormal",
     "Mixture",
     "NormalMixture",
+    "MixtureSameFamily",
     "Triangular",
     "DiscreteWeibull",
     "Gumbel",
