@@ -166,7 +166,7 @@ class TestSample(SeededTest):
             assert isinstance(trace.report.t_sampling, float)
         pass
 
-    def test_trace_report_bart():
+    def test_trace_report_bart(self):
         X = np.random.normal(0, 1, size=(3, 250)).T
         Y = np.random.normal(0, 1, size=250)
         X[:, 0] = np.random.normal(Y, 0.1)
@@ -175,7 +175,7 @@ class TestSample(SeededTest):
             mu = pm.BART("mu", X, Y, m=20)
             sigma = pm.HalfNormal("sigma", 1)
             y = pm.Normal("y", mu, sigma, observed=Y)
-            trace = pm.sample(500, tune=100, chains=1, random_seed=3415)
+            trace = pm.sample(500, tune=100, random_seed=3415)
         var_imp = trace.report.variable_importance
         assert var_imp[0] > var_imp[1:].sum()
         npt.assert_almost_equal(var_imp.sum(), 1)
