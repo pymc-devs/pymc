@@ -1997,10 +1997,12 @@ def as_iterargs(data):
 
 
 def all_continuous(vars):
-    """Check that vars not include discrete variables, excepting
-    ObservedRVs."""
+    """Check that vars not include discrete variables or BART variables, excepting ObservedRVs."""
+
     vars_ = [var for var in vars if not isinstance(var, pm.model.ObservedRV)]
-    if any([var.dtype in pm.discrete_types for var in vars_]):
+    if any(
+        [(var.dtype in pm.discrete_types or isinstance(var.distribution, pm.BART)) for var in vars_]
+    ):
         return False
     else:
         return True
