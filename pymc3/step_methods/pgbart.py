@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import logging
+
 import numpy as np
 from theano import function as theano_function
 
@@ -20,6 +22,8 @@ from ..distributions import BART
 from ..distributions.tree import Tree
 from ..model import modelcontext
 from ..theanof import inputvars, make_shared_replacements, join_nonshared_inputs
+
+_log = logging.getLogger("pymc3")
 
 
 class PGBART(ArrayStepShared):
@@ -52,6 +56,7 @@ class PGBART(ArrayStepShared):
     stats_dtypes = [{"variable_inclusion": np.ndarray}]
 
     def __init__(self, vars=None, num_particles=10, max_stages=5000, chunk="auto", model=None):
+        _log.warning("The BART model is experimental. Use with caution.")
         model = modelcontext(model)
         vars = inputvars(vars)
         self.bart = vars[0].distribution
