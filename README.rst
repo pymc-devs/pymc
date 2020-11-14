@@ -15,6 +15,18 @@ Check out the `getting started guide <http://docs.pymc.io/notebooks/getting_star
 using Binder!
 For questions on PyMC3, head on over to our `PyMC Discourse <https://discourse.pymc.io/>`__ forum.
 
+The future of PyMC3 & Theano
+============================
+
+There have been many questions and uncertainty around the future of PyMC3 since Theano
+stopped getting developed by the original authors, and we started experiments with PyMC4.
+
+We are happy to announce that PyMC3 on Theano (which we are `developing further <https://github.com/pymc-devs/Theano-PyMC>`__) 
+with a new JAX backend is the future. PyMC4 will not be developed further. 
+
+See the `full announcement <https://pymc-devs.medium.com/the-future-of-pymc3-or-theano-is-dead-long-live-theano-d8005f8a0e9b>`__
+for more details. 
+
 Features
 ========
 

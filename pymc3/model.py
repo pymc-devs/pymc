@@ -1797,7 +1797,7 @@ class ObservedRV(Factor, PyMC3Variable):
 
             # make this RV a view on the combined missing/nonmissing array
             theano.gof.Apply(theano.compile.view_op, inputs=[data], outputs=[self])
-            self.tag.test_value = theano.compile.view_op(data).tag.test_value
+            self.tag.test_value = theano.compile.view_op(data).tag.test_value.astype(self.dtype)
             self.scaling = _get_scaling(total_size, data.shape, data.ndim)
 
     @property
@@ -1997,10 +1997,12 @@ def as_iterargs(data):
 
 
 def all_continuous(vars):
-    """Check that vars not include discrete variables, excepting
-    ObservedRVs."""
+    """Check that vars not include discrete variables or BART variables, excepting ObservedRVs."""
+
     vars_ = [var for var in vars if not isinstance(var, pm.model.ObservedRV)]
-    if any([var.dtype in pm.discrete_types for var in vars_]):
+    if any(
+        [(var.dtype in pm.discrete_types or isinstance(var.distribution, pm.BART)) for var in vars_]
+    ):
         return False
     else:
         return True
