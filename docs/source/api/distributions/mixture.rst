@@ -6,6 +6,7 @@ Mixture
 .. autosummary::
    Mixture
    NormalMixture
+   MixtureSameFamily
 
 .. automodule:: pymc3.distributions.mixture
    :members:

@@ -174,7 +174,7 @@ def product(domains, n_samples=-1):
     try:
         names, domains = zip(*domains.items())
     except ValueError:  # domains.items() is empty
-        return []
+        return [{}]
     all_vals = [zip(names, val) for val in itertools.product(*[d.vals for d in domains])]
     if n_samples > 0 and len(all_vals) > n_samples:
         return (all_vals[j] for j in nr.choice(len(all_vals), n_samples, replace=False))
@@ -1447,6 +1447,28 @@ class TestMatchesScipy(SeededTest):
             decimal=4,
         )
 
+    def test_batch_multinomial(self):
+        n = 10
+        vals = np.zeros((4, 5, 3), dtype="int32")
+        p = np.zeros_like(vals, dtype=theano.config.floatX)
+        inds = np.random.randint(vals.shape[-1], size=vals.shape[:-1])[..., None]
+        np.put_along_axis(vals, inds, n, axis=-1)
+        np.put_along_axis(p, inds, 1, axis=-1)
+
+        dist = Multinomial.dist(n=n, p=p, shape=vals.shape)
+        value = tt.tensor3(dtype="int32")
+        value.tag.test_value = np.zeros_like(vals, dtype="int32")
+        logp = tt.exp(dist.logp(value))
+        f = theano.function(inputs=[value], outputs=logp)
+        assert_almost_equal(
+            f(vals),
+            np.ones(vals.shape[:-1] + (1,)),
+            decimal=select_by_precision(float64=6, float32=3),
+        )
+
+        sample = dist.random(size=2)
+        assert_allclose(sample, np.stack([vals, vals], axis=0))
+
     def test_categorical_bounds(self):
         with Model():
             x = Categorical("x", p=np.array([0.2, 0.3, 0.5]))
@@ -1857,6 +1879,17 @@ class TestBugfixes:
         assert isinstance(actual_a, np.ndarray)
         assert actual_a.shape == (X.shape[0],)
         pass
+
+    def test_issue_4186(self):
+        with pm.Model():
+            nb = pm.NegativeBinomial(
+                "nb", mu=pm.Normal("mu"), alpha=pm.Gamma("alpha", mu=6, sigma=1)
+            )
+        assert str(nb) == "nb ~ NegativeBinomial(mu=mu, alpha=alpha)"
+
+        with pm.Model():
+            nb = pm.NegativeBinomial("nb", p=pm.Uniform("p"), n=10)
+        assert str(nb) == "nb ~ NegativeBinomial(p=p, n=10)"
 
 
 def test_serialize_density_dist():
