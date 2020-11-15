@@ -1675,6 +1675,11 @@ class FreeRV(Factor, PyMC3Variable):
 
 
 def pandas_to_array(data):
+    """Convert a Pandas object to a NumPy array.
+
+    XXX: When `data` is a generator, this will return a Theano tensor!
+
+    """
     if hasattr(data, "values"):  # pandas
         if data.isnull().any().any():  # missing values
             ret = np.ma.MaskedArray(data.values, data.isnull().values)
@@ -1776,7 +1781,10 @@ class ObservedRV(Factor, PyMC3Variable):
 
         if type is None:
             data = pandas_to_array(data)
-            type = TensorType(distribution.dtype, data.shape)
+            if isinstance(data, theano.gof.graph.Variable):
+                type = data.type
+            else:
+                type = TensorType(distribution.dtype, data.shape)
 
         self.observations = data
 
