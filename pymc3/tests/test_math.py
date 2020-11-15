@@ -185,7 +185,7 @@ class TestLogDet(SeededTest):
 def test_expand_packed_triangular():
     with pytest.raises(ValueError):
         x = tt.matrix("x")
-        x.tag.test_value = np.array([[1.0]])
+        x.tag.test_value = np.array([[1.0]], dtype=theano.config.floatX)
         expand_packed_triangular(5, x)
     N = 5
     packed = tt.vector("packed")
