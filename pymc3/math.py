@@ -194,6 +194,9 @@ def invlogit(x, eps=sys.float_info.epsilon):
     """The inverse of the logit function, 1 / (1 + exp(-x))."""
     return (1.0 - 2.0 * eps) / (1.0 + tt.exp(-x)) + eps
 
+def softmax(x):
+    """Generalization of the inverse logit function to multiple dimensions."""   
+    return tt.nnet.softmax(x)
 
 def logbern(log_p):
     if np.isnan(log_p):
