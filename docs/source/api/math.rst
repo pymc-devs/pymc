@@ -58,6 +58,7 @@ expressions rather than NumPy or Python code.
    logsumexp
    invlogit
    logit
+   softmax
 
 .. automodule:: pymc3.math
    :members:
