@@ -1,17 +1,20 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v3.2.0
+  rev: v3.3.0
   hooks:
     -   id: end-of-file-fixer
     -   id: check-toml
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 0.3.2
+  rev: 0.4.1
   hooks:
     - id: nbqa-black
+      additional_dependencies: [black==20.8b1]
     - id: nbqa-isort
+      additional_dependencies: [isort==5.6.4]
     - id: nbqa-pyupgrade
+      additional_dependencies: [pyupgrade==2.7.4]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.7.2
+  rev: v2.7.4
   hooks:
     - id: pyupgrade
       args: [--py36-plus]
@@ -22,7 +25,14 @@ repos:
 - repo: local
   hooks:
     - id: watermark
-      name: Check notebooks have watermark
+      name: Check notebooks have watermark (see Jupyter style guide from PyMC3 Wiki)
       types: [jupyter]
-      entry: python scripts/check_watermark.py
+      entry: '%load_ext watermark.*%watermark -n -u -v -iv -w'
+      language: pygrep
+      args: [--negate, --multiline]
+      minimum_pre_commit_version: 2.8.0
+    - id: check-toc
+      name: Check all notebooks appear in table of contents
+      types: [jupyter]
+      entry: python scripts/check_toc_is_complete.py
       language: python

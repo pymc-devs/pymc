@@ -750,7 +750,7 @@ def test_remove_scan_op():
         inference = ADVI()
         buff = io.StringIO()
         inference.run_profiling(n=10).summary(buff)
-        assert "theano.scan_module.scan_op.Scan" not in buff.getvalue()
+        assert "theano.scan.op.Scan" not in buff.getvalue()
         buff.close()
 
 

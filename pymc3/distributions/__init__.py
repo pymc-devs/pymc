@@ -99,7 +99,10 @@ from .timeseries import GARCH11
 from .timeseries import MvGaussianRandomWalk
 from .timeseries import MvStudentTRandomWalk
 
+from .bart import BART
+
 from .bound import Bound
+
 
 __all__ = [
     "Uniform",
@@ -177,4 +180,5 @@ __all__ = [
     "Moyal",
     "Simulator",
     "fast_sample_posterior_predictive",
+    "BART",
 ]

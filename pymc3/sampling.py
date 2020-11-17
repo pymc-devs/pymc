@@ -51,6 +51,7 @@ from .step_methods import (
     Slice,
     CompoundStep,
     arraystep,
+    PGBART,
 )
 from .util import (
     update_start_vals,
@@ -90,6 +91,7 @@ STEP_METHODS = (
     BinaryGibbsMetropolis,
     Slice,
     CategoricalGibbsMetropolis,
+    PGBART,
 )
 
 ArrayLike = Union[np.ndarray, List[float]]
@@ -603,6 +605,10 @@ def sample(
     trace.report._n_tune = n_tune
     trace.report._n_draws = n_draws
     trace.report._t_sampling = t_sampling
+
+    if "variable_inclusion" in trace.stat_names:
+        variable_inclusion = np.stack(trace.get_sampler_stats("variable_inclusion")).mean(0)
+        trace.report.variable_importance = variable_inclusion / variable_inclusion.sum()
 
     n_chains = len(trace.chains)
     _log.info(
@@ -1721,7 +1727,7 @@ def sample_posterior_predictive(
                     param = cast(MultiTrace, _trace)._straces[chain_idx % nchain].point(point_idx)
                 # ... or a PointList
                 else:
-                    param = cast(PointList, _trace)[idx % len_trace]
+                    param = cast(PointList, _trace)[idx % (len_trace * nchain)]
             # there's only a single chain, but the index might hit it multiple times if
             # the number of indices is greater than the length of the trace.
             else:
@@ -1730,7 +1736,6 @@ def sample_posterior_predictive(
             values = draw_values(vars, point=param, size=size)
             for k, v in zip(vars, values):
                 ppc_trace_t.insert(k.name, v, idx)
-
     except KeyboardInterrupt:
         pass
 
