@@ -7,11 +7,13 @@ when you do model reparameterization. It's similar to `target += u;` in
 Stan.
 """
 
+
 def build_model():
     with pm.Model() as model:
-        x = pm.Normal('x', 1, 1)
-        x2 = pm.Potential('x2', -x ** 2)
+        x = pm.Normal("x", 1, 1)
+        x2 = pm.Potential("x2", -(x ** 2))
     return model
+
 
 def run(n=1000):
     model = build_model()
@@ -20,5 +22,6 @@ def run(n=1000):
     with model:
         pm.sample(n)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     run()

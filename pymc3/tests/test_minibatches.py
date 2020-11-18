@@ -31,8 +31,9 @@ class _DataSampler:
     """
     Not for users
     """
-    def __init__(self, data, batchsize=50, random_seed=42, dtype='floatX'):
-        self.dtype = theano.config.floatX if dtype == 'floatX' else dtype
+
+    def __init__(self, data, batchsize=50, random_seed=42, dtype="floatX"):
+        self.dtype = theano.config.floatX if dtype == "floatX" else dtype
         self.rng = np.random.RandomState(random_seed)
         self.data = data
         self.n = batchsize
@@ -41,17 +42,15 @@ class _DataSampler:
         return self
 
     def __next__(self):
-        idx = (self.rng
-               .uniform(size=self.n,
-                        low=0.0,
-                        high=self.data.shape[0] - 1e-16)
-               .astype('int64'))
+        idx = self.rng.uniform(size=self.n, low=0.0, high=self.data.shape[0] - 1e-16).astype(
+            "int64"
+        )
         return np.asarray(self.data[idx], self.dtype)
 
     next = __next__
 
 
-@pytest.fixture('module')
+@pytest.fixture(scope="module")
 def datagen():
     return _DataSampler(np.random.uniform(size=(1000, 10)))
 
@@ -70,9 +69,8 @@ def integers_ndim(ndim):
         i += 1
 
 
-@pytest.mark.usefixtures('strict_float32')
+@pytest.mark.usefixtures("strict_float32")
 class TestGenerator:
-
     def test_basic(self):
         generator = GeneratorAdapter(integers())
         gop = GeneratorOp(generator)()
@@ -144,7 +142,7 @@ class TestGenerator:
         res, _ = theano.scan(lambda x: x.sum(), X, n_steps=X.shape[0])
         assert res.eval().shape == (50,)
         shared = theano.shared(datagen.data.astype(gen.dtype))
-        res2 = theano.clone(res, {gen: shared**2})
+        res2 = theano.clone(res, {gen: shared ** 2})
         assert res2.eval().shape == (1000,)
 
 
@@ -166,13 +164,14 @@ class TestScaling:
     """
     Related to minibatch training
     """
+
     def test_density_scaling(self):
         with pm.Model() as model1:
-            Normal('n', observed=[[1]], total_size=1)
+            Normal("n", observed=[[1]], total_size=1)
             p1 = theano.function([], model1.logpt)
 
         with pm.Model() as model2:
-            Normal('n', observed=[[1]], total_size=2)
+            Normal("n", observed=[[1]], total_size=2)
             p2 = theano.function([], model2.logpt)
         assert p1() * 2 == p2()
 
@@ -183,15 +182,16 @@ class TestScaling:
             g = gen1()
             for i, point in enumerate(g):
                 yield stats.norm.logpdf(point).sum() * 10
+
         t = true_dens()
         # We have same size models
         with pm.Model() as model1:
-            Normal('n', observed=gen1(), total_size=100)
+            Normal("n", observed=gen1(), total_size=100)
             p1 = theano.function([], model1.logpt)
 
         with pm.Model() as model2:
             gen_var = generator(gen2())
-            Normal('n', observed=gen_var, total_size=100)
+            Normal("n", observed=gen_var, total_size=100)
             p2 = theano.function([], model2.logpt)
 
         for i in range(10):
@@ -204,13 +204,13 @@ class TestScaling:
     def test_gradient_with_scaling(self):
         with pm.Model() as model1:
             genvar = generator(gen1())
-            m = Normal('m')
-            Normal('n', observed=genvar, total_size=1000)
+            m = Normal("m")
+            Normal("n", observed=genvar, total_size=1000)
             grad1 = theano.function([m], tt.grad(model1.logpt, m))
         with pm.Model() as model2:
-            m = Normal('m')
+            m = Normal("m")
             shavar = theano.shared(np.ones((1000, 100)))
-            Normal('n', observed=shavar)
+            Normal("n", observed=shavar)
             grad2 = theano.function([m], tt.grad(model2.logpt, m))
 
         for i in range(10):
@@ -221,85 +221,80 @@ class TestScaling:
 
     def test_multidim_scaling(self):
         with pm.Model() as model0:
-            Normal('n', observed=[[1, 1],
-                                  [1, 1]], total_size=[])
+            Normal("n", observed=[[1, 1], [1, 1]], total_size=[])
             p0 = theano.function([], model0.logpt)
 
         with pm.Model() as model1:
-            Normal('n', observed=[[1, 1],
-                                  [1, 1]], total_size=[2, 2])
+            Normal("n", observed=[[1, 1], [1, 1]], total_size=[2, 2])
             p1 = theano.function([], model1.logpt)
 
         with pm.Model() as model2:
-            Normal('n', observed=[[1],
-                                  [1]], total_size=[2, 2])
+            Normal("n", observed=[[1], [1]], total_size=[2, 2])
             p2 = theano.function([], model2.logpt)
 
         with pm.Model() as model3:
-            Normal('n', observed=[[1, 1]], total_size=[2, 2])
+            Normal("n", observed=[[1, 1]], total_size=[2, 2])
             p3 = theano.function([], model3.logpt)
 
         with pm.Model() as model4:
-            Normal('n', observed=[[1]], total_size=[2, 2])
+            Normal("n", observed=[[1]], total_size=[2, 2])
             p4 = theano.function([], model4.logpt)
 
         with pm.Model() as model5:
-            Normal('n', observed=[[1]], total_size=[2, Ellipsis, 2])
+            Normal("n", observed=[[1]], total_size=[2, Ellipsis, 2])
             p5 = theano.function([], model5.logpt)
         _p0 = p0()
         assert (
-            np.allclose(_p0, p1()) and
-            np.allclose(_p0, p2()) and
-            np.allclose(_p0, p3()) and
-            np.allclose(_p0, p4()) and
-            np.allclose(_p0, p5())
+            np.allclose(_p0, p1())
+            and np.allclose(_p0, p2())
+            and np.allclose(_p0, p3())
+            and np.allclose(_p0, p4())
+            and np.allclose(_p0, p5())
         )
 
     def test_common_errors(self):
         with pm.Model():
             with pytest.raises(ValueError) as e:
-                Normal('n', observed=[[1]], total_size=[2, Ellipsis, 2, 2])
-            assert 'Length of' in str(e.value)
+                Normal("n", observed=[[1]], total_size=[2, Ellipsis, 2, 2])
+            assert "Length of" in str(e.value)
             with pytest.raises(ValueError) as e:
-                Normal('n', observed=[[1]], total_size=[2, 2, 2])
-            assert 'Length of' in str(e.value)
+                Normal("n", observed=[[1]], total_size=[2, 2, 2])
+            assert "Length of" in str(e.value)
             with pytest.raises(TypeError) as e:
-                Normal('n', observed=[[1]], total_size='foo')
-            assert 'Unrecognized' in str(e.value)
+                Normal("n", observed=[[1]], total_size="foo")
+            assert "Unrecognized" in str(e.value)
             with pytest.raises(TypeError) as e:
-                Normal('n', observed=[[1]], total_size=['foo'])
-            assert 'Unrecognized' in str(e.value)
+                Normal("n", observed=[[1]], total_size=["foo"])
+            assert "Unrecognized" in str(e.value)
             with pytest.raises(ValueError) as e:
-                Normal('n', observed=[[1]], total_size=[Ellipsis, Ellipsis])
-            assert 'Double Ellipsis' in str(e.value)
+                Normal("n", observed=[[1]], total_size=[Ellipsis, Ellipsis])
+            assert "Double Ellipsis" in str(e.value)
 
     def test_mixed1(self):
         with pm.Model():
             data = np.random.rand(10, 20, 30, 40, 50)
             mb = pm.Minibatch(data, [2, None, 20, Ellipsis, 10])
-            Normal('n', observed=mb, total_size=(10, None, 30, Ellipsis, 50))
+            Normal("n", observed=mb, total_size=(10, None, 30, Ellipsis, 50))
 
     def test_mixed2(self):
         with pm.Model():
             data = np.random.rand(10, 20, 30, 40, 50)
             mb = pm.Minibatch(data, [2, None, 20])
-            Normal('n', observed=mb, total_size=(10, None, 30))
+            Normal("n", observed=mb, total_size=(10, None, 30))
 
     def test_free_rv(self):
         with pm.Model() as model4:
-            Normal('n', observed=[[1, 1],
-                                  [1, 1]], total_size=[2, 2])
+            Normal("n", observed=[[1, 1], [1, 1]], total_size=[2, 2])
             p4 = theano.function([], model4.logpt)
 
         with pm.Model() as model5:
-            Normal('n', total_size=[2, Ellipsis, 2], shape=(1, 1), broadcastable=(False, False))
+            Normal("n", total_size=[2, Ellipsis, 2], shape=(1, 1), broadcastable=(False, False))
             p5 = theano.function([model5.n], model5.logpt)
         assert p4() == p5(pm.floatX([[1]]))
-        assert p4() == p5(pm.floatX([[1, 1],
-                                     [1, 1]]))
+        assert p4() == p5(pm.floatX([[1, 1], [1, 1]]))
 
 
-@pytest.mark.usefixtures('strict_float32')
+@pytest.mark.usefixtures("strict_float32")
 class TestMinibatch:
     data = np.random.rand(30, 10, 40, 10, 50)
 

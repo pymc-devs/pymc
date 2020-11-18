@@ -126,9 +126,7 @@ def test_random_dense():
             quadpotential.QuadPotentialFullInv(inv),
         ]
         if quadpotential.chol_available:
-            pot = quadpotential.QuadPotential_Sparse(
-                scipy.sparse.csc_matrix(cov)
-            )
+            pot = quadpotential.QuadPotential_Sparse(scipy.sparse.csc_matrix(cov))
             pots.append(pot)
         for pot in pots:
             cov_ = np.cov(np.array([pot.random() for _ in range(1000)]).T)
@@ -219,9 +217,7 @@ def test_full_adapt_sample_p(seed=4566):
 def test_full_adapt_update_window(seed=1123):
     np.random.seed(seed)
     init_cov = np.array([[1.0, 0.02], [0.02, 0.8]])
-    pot = quadpotential.QuadPotentialFullAdapt(
-        2, np.zeros(2), init_cov, 1, update_window=50
-    )
+    pot = quadpotential.QuadPotentialFullAdapt(2, np.zeros(2), init_cov, 1, update_window=50)
     assert np.allclose(pot._cov, init_cov)
     for i in range(49):
         pot.update(np.random.randn(2), None, True)
@@ -276,16 +272,12 @@ def test_full_adapt_sampling(seed=289586):
     with pymc3.Model() as model:
         pymc3.MvNormal("a", mu=np.zeros(len(L)), chol=L, shape=len(L))
 
-        pot = quadpotential.QuadPotentialFullAdapt(
-            model.ndim, np.zeros(model.ndim)
-        )
+        pot = quadpotential.QuadPotentialFullAdapt(model.ndim, np.zeros(model.ndim))
         step = pymc3.NUTS(model=model, potential=pot)
-        pymc3.sample(
-            draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1
-        )
+        pymc3.sample(draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1)
 
-        
+
 def test_issue_3965():
     with pymc3.Model():
-        pymc3.Normal('n')
-        pymc3.sample(100, tune=300, chains=1, init='advi+adapt_diag_grad')
+        pymc3.Normal("n")
+        pymc3.sample(100, tune=300, chains=1, init="advi+adapt_diag_grad")

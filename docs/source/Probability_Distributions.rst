@@ -46,7 +46,7 @@ Custom distributions
 
 Despite the fact that PyMC3 ships with a large set of the most common probability distributions, some problems may require the use of functional forms that are less common, and not available in ``pm.distributions``. One example of this is in survival analysis, where time-to-event data is modeled using probability densities that are designed to accommodate censored data. 
 
-An exponential survival function is defined by:
+An exponential survival function, where :math:`c=0` denotes failure (or non-survival), is defined by:
 
 .. math::
 

@@ -24,18 +24,22 @@ import warnings
 
 import arviz as az
 
+
 def map_args(func):
-    swaps = [
-        ('varnames', 'var_names')
-    ]
+    swaps = [("varnames", "var_names")]
+
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
         for (old, new) in swaps:
             if old in kwargs and new not in kwargs:
-                warnings.warn('Keyword argument `{old}` renamed to `{new}`, and will be removed in pymc3 3.8'.format(old=old, new=new))
+                warnings.warn(
+                    f"Keyword argument `{old}` renamed to `{new}`, and will be removed in pymc3 3.8"
+                )
                 kwargs[new] = kwargs.pop(old)
             return func(*args, **kwargs)
+
     return wrapped
+
 
 # pymc3 custom plots: override these names for custom behavior
 autocorrplot = map_args(az.plot_autocorr)
@@ -51,41 +55,51 @@ pairplot = map_args(az.plot_pair)
 @functools.wraps(az.plot_trace)
 def traceplot(*args, **kwargs):
     try:
-        kwargs.setdefault('compact', True)
+        kwargs.setdefault("compact", True)
         return az.plot_trace(*args, **kwargs)
     except TypeError:
-        kwargs.pop('compact')
+        kwargs.pop("compact")
         return az.plot_trace(*args, **kwargs)
+
 
 # addition arg mapping for compare plot
 @functools.wraps(az.plot_compare)
 def compareplot(*args, **kwargs):
-    if 'comp_df' in kwargs:
-        comp_df = kwargs['comp_df'].copy()
+    if "comp_df" in kwargs:
+        comp_df = kwargs["comp_df"].copy()
     else:
         args = list(args)
         comp_df = args[0].copy()
-    if 'WAIC' in comp_df.columns:
-        comp_df = comp_df.rename(index=str,
-                                 columns={'WAIC': 'waic',
-                                          'pWAIC': 'p_waic',
-                                          'dWAIC': 'd_waic',
-                                          'SE': 'se',
-                                          'dSE': 'dse',
-                                          'var_warn': 'warning'})
-    elif 'LOO' in comp_df.columns:
-        comp_df = comp_df.rename(index=str,
-                                 columns={'LOO': 'loo',
-                                          'pLOO': 'p_loo',
-                                          'dLOO': 'd_loo',
-                                          'SE': 'se',
-                                          'dSE': 'dse',
-                                          'shape_warn': 'warning'})
-    if 'comp_df' in kwargs:
-        kwargs['comp_df'] = comp_df
+    if "WAIC" in comp_df.columns:
+        comp_df = comp_df.rename(
+            index=str,
+            columns={
+                "WAIC": "waic",
+                "pWAIC": "p_waic",
+                "dWAIC": "d_waic",
+                "SE": "se",
+                "dSE": "dse",
+                "var_warn": "warning",
+            },
+        )
+    elif "LOO" in comp_df.columns:
+        comp_df = comp_df.rename(
+            index=str,
+            columns={
+                "LOO": "loo",
+                "pLOO": "p_loo",
+                "dLOO": "d_loo",
+                "SE": "se",
+                "dSE": "dse",
+                "shape_warn": "warning",
+            },
+        )
+    if "comp_df" in kwargs:
+        kwargs["comp_df"] = comp_df
     else:
         args[0] = comp_df
     return az.plot_compare(*args, **kwargs)
+
 
 from .posteriorplot import plot_posterior_predictive_glm
 
@@ -95,14 +109,14 @@ for plot in az.plots.__all__:
     setattr(sys.modules[__name__], plot, map_args(getattr(az.plots, plot)))
 
 __all__ = tuple(az.plots.__all__) + (
-    'autocorrplot',
-    'compareplot',
-    'forestplot',
-    'kdeplot',
-    'plot_posterior',
-    'traceplot',
-    'energyplot',
-    'densityplot',
-    'pairplot',
-    'plot_posterior_predictive_glm',
+    "autocorrplot",
+    "compareplot",
+    "forestplot",
+    "kdeplot",
+    "plot_posterior",
+    "traceplot",
+    "energyplot",
+    "densityplot",
+    "pairplot",
+    "plot_posterior_predictive_glm",
 )

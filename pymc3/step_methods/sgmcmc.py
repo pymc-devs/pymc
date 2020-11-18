@@ -23,8 +23,10 @@ import theano
 
 __all__ = []
 
-EXPERIMENTAL_WARNING = "Warning: Stochastic Gradient based sampling methods are experimental step methods and not yet"\
+EXPERIMENTAL_WARNING = (
+    "Warning: Stochastic Gradient based sampling methods are experimental step methods and not yet"
     " recommended for use in PyMC3!"
+)
 
 
 def _value_error(cond, str):
@@ -34,18 +36,14 @@ def _value_error(cond, str):
 
 
 def _check_minibatches(minibatch_tensors, minibatches):
-    _value_error(
-        isinstance(minibatch_tensors, list),
-        'minibatch_tensors must be a list.')
+    _value_error(isinstance(minibatch_tensors, list), "minibatch_tensors must be a list.")
 
-    _value_error(
-        hasattr(minibatches, "__iter__"), 'minibatches must be an iterator.')
+    _value_error(hasattr(minibatches, "__iter__"), "minibatches must be an iterator.")
 
 
 def prior_dlogp(vars, model, flat_view):
     """Returns the gradient of the prior on the parameters as a vector of size D x 1"""
-    terms = tt.concatenate(
-        [theano.grad(var.logpt, var).flatten() for var in vars], axis=0)
+    terms = tt.concatenate([theano.grad(var.logpt, var).flatten() for var in vars], axis=0)
     dlogp = theano.clone(terms, flat_view.replacements, strict=False)
 
     return dlogp
@@ -59,16 +57,16 @@ def elemwise_dlogL(vars, model, flat_view):
     # select one observed random variable
     obs_var = model.observed_RVs[0]
     # tensor of shape (batch_size,)
-    logL = obs_var.logp_elemwiset.sum(
-        axis=tuple(range(1, obs_var.logp_elemwiset.ndim)))
+    logL = obs_var.logp_elemwiset.sum(axis=tuple(range(1, obs_var.logp_elemwiset.ndim)))
     # calculate fisher information
     terms = []
     for var in vars:
-        output, _ =  theano.scan(lambda i, logX=logL, v=var: theano.grad(logX[i], v).flatten(),\
-                           sequences=[tt.arange(logL.shape[0])])
+        output, _ = theano.scan(
+            lambda i, logX=logL, v=var: theano.grad(logX[i], v).flatten(),
+            sequences=[tt.arange(logL.shape[0])],
+        )
         terms.append(output)
-    dlogL = theano.clone(
-        tt.concatenate(terms, axis=1), flat_view.replacements, strict=False)
+    dlogL = theano.clone(tt.concatenate(terms, axis=1), flat_view.replacements, strict=False)
     return dlogL
 
 
@@ -111,16 +109,18 @@ class BaseStochasticGradient(ArrayStepShared):
             Returns None it creates class variables which are required for the training fn
     """
 
-    def __init__(self,
-                 vars=None,
-                 batch_size=None,
-                 total_size=None,
-                 step_size=1.0,
-                 model=None,
-                 random_seed=None,
-                 minibatches=None,
-                 minibatch_tensors=None,
-                 **kwargs):
+    def __init__(
+        self,
+        vars=None,
+        batch_size=None,
+        total_size=None,
+        step_size=1.0,
+        model=None,
+        random_seed=None,
+        minibatches=None,
+        minibatch_tensors=None,
+        **kwargs
+    ):
         warnings.warn(EXPERIMENTAL_WARNING)
 
         model = modelcontext(model)
@@ -136,7 +136,8 @@ class BaseStochasticGradient(ArrayStepShared):
         self.total_size = total_size
         _value_error(
             total_size != None or batch_size != None,
-            'total_size and batch_size of training data have to be specified')
+            "total_size and batch_size of training data have to be specified",
+        )
         self.expected_iter = int(total_size / batch_size)
 
         # set random stream
@@ -168,12 +169,10 @@ class BaseStochasticGradient(ArrayStepShared):
             def is_shared(t):
                 return isinstance(t, theano.compile.sharedvalue.SharedVariable)
 
-            tensors = [(t.type() if is_shared(t) else t)
-                       for t in minibatch_tensors]
-            updates = OrderedDict({
-                t: t_
-                for t, t_ in zip(minibatch_tensors, tensors) if is_shared(t)
-            })
+            tensors = [(t.type() if is_shared(t) else t) for t in minibatch_tensors]
+            updates = OrderedDict(
+                {t: t_ for t, t_ in zip(minibatch_tensors, tensors) if is_shared(t)}
+            )
             self.minibatch_tensors = tensors
             self.inarray += self.minibatch_tensors
             self.updates.update(updates)
@@ -207,7 +206,7 @@ class BaseStochasticGradient(ArrayStepShared):
         -------
         q
         """
-        if hasattr(self, 'minibatch_tensors'):
+        if hasattr(self, "minibatch_tensors"):
             return q0 + self.training_fn(q0, *next(self.minibatches))
         else:
             return q0 + self.training_fn(q0)

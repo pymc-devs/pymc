@@ -14,7 +14,7 @@
 
 import numpy as np
 import theano
-from theano import theano, scalar, tensor as tt
+from theano import scalar, tensor as tt
 from theano.configparser import change_flags
 from theano.gof import Op
 from theano.gof.graph import inputs
@@ -24,22 +24,24 @@ from .blocking import ArrayOrdering
 from .data import GeneratorAdapter
 from .vartypes import typefilter, continuous_types, int_types
 
-__all__ = ['gradient',
-           'hessian',
-           'hessian_diag',
-           'inputvars',
-           'cont_inputs',
-           'floatX',
-           'intX',
-           'smartfloatX',
-           'jacobian',
-           'CallableTensor',
-           'join_nonshared_inputs',
-           'make_shared_replacements',
-           'generator',
-           'set_tt_rng',
-           'tt_rng',
-           'take_along_axis']
+__all__ = [
+    "gradient",
+    "hessian",
+    "hessian_diag",
+    "inputvars",
+    "cont_inputs",
+    "floatX",
+    "intX",
+    "smartfloatX",
+    "jacobian",
+    "CallableTensor",
+    "join_nonshared_inputs",
+    "make_shared_replacements",
+    "generator",
+    "set_tt_rng",
+    "tt_rng",
+    "take_along_axis",
+]
 
 
 def inputvars(a):
@@ -83,10 +85,7 @@ def floatX(X):
         return np.asarray(X, dtype=theano.config.floatX)
 
 
-_conversion_map = {'float64': 'int32',
-                   'float32': 'int16',
-                   'float16': 'int8',
-                   'float8': 'int8'}
+_conversion_map = {"float64": "int32", "float32": "int16", "float16": "int8", "float8": "int8"}
 
 
 def intX(X):
@@ -105,9 +104,10 @@ def smartfloatX(x):
     """
     Converts numpy float values to floatX and leaves values of other types unchanged.
     """
-    if str(x.dtype).startswith('float'):
+    if str(x.dtype).startswith("float"):
         x = floatX(x)
     return x
+
 
 """
 Theano derivative functions
@@ -116,10 +116,10 @@ Theano derivative functions
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
-    return tt.flatten(tt.grad(f, v, disconnected_inputs='warn'))
+    return tt.flatten(tt.grad(f, v, disconnected_inputs="warn"))
 
 
-empty_gradient = tt.zeros(0, dtype='float32')
+empty_gradient = tt.zeros(0, dtype="float32")
 
 
 def gradient(f, vars=None):
@@ -135,7 +135,7 @@ def gradient(f, vars=None):
 def jacobian1(f, v):
     """jacobian of f wrt v"""
     f = tt.flatten(f)
-    idx = tt.arange(f.shape[0], dtype='int32')
+    idx = tt.arange(f.shape[0], dtype="int32")
 
     def grad_i(i):
         return gradient1(f[i], v)
@@ -154,25 +154,23 @@ def jacobian(f, vars=None):
 
 
 def jacobian_diag(f, x):
-    idx = tt.arange(f.shape[0], dtype='int32')
+    idx = tt.arange(f.shape[0], dtype="int32")
 
     def grad_ii(i):
         return theano.grad(f[i], x)[i]
 
-    return theano.scan(grad_ii, sequences=[idx],
-                       n_steps=f.shape[0],
-                       name='jacobian_diag')[0]
+    return theano.scan(grad_ii, sequences=[idx], n_steps=f.shape[0], name="jacobian_diag")[0]
 
 
-@change_flags(compute_test_value='ignore')
+@change_flags(compute_test_value="ignore")
 def hessian(f, vars=None):
     return -jacobian(gradient(f, vars), vars)
 
 
-@change_flags(compute_test_value='ignore')
+@change_flags(compute_test_value="ignore")
 def hessian_diag1(f, v):
     g = gradient1(f, v)
-    idx = tt.arange(g.shape[0], dtype='int32')
+    idx = tt.arange(g.shape[0], dtype="int32")
 
     def hess_ii(i):
         return gradient1(g[i], v)[i]
@@ -180,7 +178,7 @@ def hessian_diag1(f, v):
     return theano.map(hess_ii, idx)[0]
 
 
-@change_flags(compute_test_value='ignore')
+@change_flags(compute_test_value="ignore")
 def hessian_diag(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
@@ -199,7 +197,6 @@ def makeiter(a):
 
 
 class IdentityOp(scalar.UnaryScalarOp):
-
     @staticmethod
     def st_impl(x):
         return x
@@ -237,7 +234,7 @@ def make_shared_replacements(vars, model):
     Dict of variable -> new shared variable
     """
     othervars = set(model.vars) - set(vars)
-    return {var: theano.shared(var.tag.test_value, var.name + '_shared') for var in othervars}
+    return {var: theano.shared(var.tag.test_value, var.name + "_shared") for var in othervars}
 
 
 def join_nonshared_inputs(xs, vars, shared, make_shared=False):
@@ -256,15 +253,15 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
     inarray: vector of inputs
     """
     if not vars:
-        raise ValueError('Empty list of variables.')
+        raise ValueError("Empty list of variables.")
 
     joined = tt.concatenate([var.ravel() for var in vars])
 
     if not make_shared:
         tensor_type = joined.type
-        inarray = tensor_type('inarray')
+        inarray = tensor_type("inarray")
     else:
-        inarray = theano.shared(joined.tag.test_value, 'inarray')
+        inarray = theano.shared(joined.tag.test_value, "inarray")
 
     ordering = ArrayOrdering(vars)
     inarray.tag.test_value = joined.tag.test_value
@@ -272,7 +269,8 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
     get_var = {var.name: var for var in vars}
     replace = {
         get_var[var]: reshape_t(inarray[slc], shp).astype(dtyp)
-        for var, slc, shp, dtyp in ordering.vmap}
+        for var, slc, shp, dtyp in ordering.vmap
+    }
 
     replace.update(shared)
 
@@ -297,18 +295,18 @@ class CallableTensor:
         self.tensor = tensor
 
     def __call__(self, input):
-        """ Replaces the single input of symbolic variable to be the passed argument.
+        """Replaces the single input of symbolic variable to be the passed argument.
 
         Parameters
         ----------
         input: TensorVariable
         """
-        oldinput, = inputvars(self.tensor)
+        (oldinput,) = inputvars(self.tensor)
         return theano.clone(self.tensor, {oldinput: input}, strict=False)
 
 
-scalar_identity = IdentityOp(scalar.upgrade_to_float, name='scalar_identity')
-identity = tt.Elemwise(scalar_identity, name='identity')
+scalar_identity = IdentityOp(scalar.upgrade_to_float, name="scalar_identity")
+identity = tt.Elemwise(scalar_identity, name="identity")
 
 
 class GeneratorOp(Op):
@@ -329,7 +327,8 @@ class GeneratorOp(Op):
         and yields np.arrays with same types
     default: np.array with the same type as generator produces
     """
-    __props__ = ('generator',)
+
+    __props__ = ("generator",)
 
     def __init__(self, gen, default=None):
         super().__init__()
@@ -351,13 +350,13 @@ class GeneratorOp(Op):
     def do_constant_folding(self, node):
         return False
 
-    __call__ = change_flags(compute_test_value='off')(Op.__call__)
+    __call__ = change_flags(compute_test_value="off")(Op.__call__)
 
     def set_gen(self, gen):
         if not isinstance(gen, GeneratorAdapter):
             gen = GeneratorAdapter(gen)
         if not gen.tensortype == self.generator.tensortype:
-            raise ValueError('New generator should yield the same type')
+            raise ValueError("New generator should yield the same type")
         self.generator = gen
 
     def set_default(self, value):
@@ -368,8 +367,7 @@ class GeneratorOp(Op):
             t1 = (False,) * value.ndim
             t2 = self.generator.tensortype.broadcastable
             if not t1 == t2:
-                raise ValueError('Default value should have the '
-                                 'same type as generator')
+                raise ValueError("Default value should have the same type as generator")
             self.default = value
 
 
@@ -484,24 +482,24 @@ def ix_(*args):
         new = tt.as_tensor(new)
         if new.ndim != 1:
             raise ValueError("Cross index must be 1 dimensional")
-        new = new.reshape((1,)*k + (new.size,) + (1,)*(nd-k-1))
+        new = new.reshape((1,) * k + (new.size,) + (1,) * (nd - k - 1))
         out.append(new)
     return tuple(out)
 
 
 def largest_common_dtype(tensors):
-    dtypes = set(str(t.dtype) if hasattr(t, 'dtype')
-                 else smartfloatX(np.asarray(t)).dtype
-                 for t in tensors)
+    dtypes = {
+        str(t.dtype) if hasattr(t, "dtype") else smartfloatX(np.asarray(t)).dtype for t in tensors
+    }
     return np.stack([np.ones((), dtype=dtype) for dtype in dtypes]).dtype
 
 
 def _make_along_axis_idx(arr_shape, indices, axis):
     # compute dimensions to iterate over
     if str(indices.dtype) not in int_types:
-        raise IndexError('`indices` must be an integer array')
+        raise IndexError("`indices` must be an integer array")
     shape_ones = (1,) * indices.ndim
-    dest_dims = list(range(axis)) + [None] + list(range(axis+1, indices.ndim))
+    dest_dims = list(range(axis)) + [None] + list(range(axis + 1, indices.ndim))
 
     # build a fancy index, consisting of orthogonal aranges, with the
     # requested index inserted at the right location
@@ -510,7 +508,7 @@ def _make_along_axis_idx(arr_shape, indices, axis):
         if dim is None:
             fancy_index.append(indices)
         else:
-            ind_shape = shape_ones[:dim] + (-1,) + shape_ones[dim+1:]
+            ind_shape = shape_ones[:dim] + (-1,) + shape_ones[dim + 1 :]
             fancy_index.append(tt.arange(n).reshape(ind_shape))
 
     return tuple(fancy_index)
@@ -545,9 +543,7 @@ def take_along_axis(arr, indices, axis=0):
             )
         arr_shape = arr.shape
     if arr.ndim != indices.ndim:
-        raise ValueError(
-            "`indices` and `arr` must have the same number of dimensions"
-        )
+        raise ValueError("`indices` and `arr` must have the same number of dimensions")
 
     # use the fancy index
     return arr[_make_along_axis_idx(arr_shape, indices, _axis)]

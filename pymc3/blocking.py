@@ -21,10 +21,12 @@ import copy
 import numpy as np
 import collections
 
-__all__ = ['ArrayOrdering', 'DictToArrayBijection', 'DictToVarBijection']
+from .util import get_var_name
 
-VarMap = collections.namedtuple('VarMap', 'var, slc, shp, dtyp')
-DataMap = collections.namedtuple('DataMap', 'list_ind, slc, shp, dtype, name')
+__all__ = ["ArrayOrdering", "DictToArrayBijection", "DictToVarBijection"]
+
+VarMap = collections.namedtuple("VarMap", "var, slc, shp, dtyp")
+DataMap = collections.namedtuple("DataMap", "list_ind, slc, shp, dtype, name")
 
 
 # TODO Classes and methods need to be fully documented.
@@ -43,11 +45,11 @@ class ArrayOrdering:
         for var in vars:
             name = var.name
             if name is None:
-                raise ValueError('Unnamed variable in ArrayOrdering.')
+                raise ValueError("Unnamed variable in ArrayOrdering.")
             if name in self.by_name:
-                raise ValueError('Name of variable not unique: %s.' % name)
-            if not hasattr(var, 'dshape') or not hasattr(var, 'dsize'):
-                raise ValueError('Shape of variable not known %s' % name)
+                raise ValueError("Name of variable not unique: %s." % name)
+            if not hasattr(var, "dshape") or not hasattr(var, "dsize"):
+                raise ValueError("Shape of variable not known %s" % name)
 
             slc = slice(self.size, self.size + var.dsize)
             varmap = VarMap(name, slc, var.dshape, var.dtype)
@@ -69,12 +71,12 @@ class DictToArrayBijection:
         self.dpt = dpoint
 
         # determine smallest float dtype that will fit all data
-        if all([x.dtyp == 'float16' for x in ordering.vmap]):
-            self.array_dtype = 'float16'
-        elif all([x.dtyp == 'float32' for x in ordering.vmap]):
-            self.array_dtype = 'float32'
+        if all([x.dtyp == "float16" for x in ordering.vmap]):
+            self.array_dtype = "float16"
+        elif all([x.dtyp == "float32" for x in ordering.vmap]):
+            self.array_dtype = "float32"
         else:
-            self.array_dtype = 'float64'
+            self.array_dtype = "float64"
 
     def map(self, dpt):
         """
@@ -133,22 +135,21 @@ class ListArrayOrdering:
         defining the input type 'tensor' or 'numpy'
     """
 
-    def __init__(self, list_arrays, intype='numpy'):
-        if intype not in {'tensor', 'numpy'}:
+    def __init__(self, list_arrays, intype="numpy"):
+        if intype not in {"tensor", "numpy"}:
             raise ValueError("intype not in {'tensor', 'numpy'}")
         self.vmap = []
         self.intype = intype
         self.size = 0
         for array in list_arrays:
-            if self.intype == 'tensor':
+            if self.intype == "tensor":
                 name = array.name
                 array = array.tag.test_value
             else:
-                name = 'numpy'
+                name = "numpy"
 
             slc = slice(self.size, self.size + array.size)
-            self.vmap.append(DataMap(
-                len(self.vmap), slc, array.shape, array.dtype, name))
+            self.vmap.append(DataMap(len(self.vmap), slc, array.shape, array.dtype, name))
             self.size += array.size
 
 
@@ -225,8 +226,7 @@ class ListToArrayBijection:
         a_list = copy.copy(self.list_arrays)
 
         for list_ind, slc, shp, dtype, _ in self.ordering.vmap:
-            a_list[list_ind] = np.atleast_1d(
-                                    array)[slc].reshape(shp).astype(dtype)
+            a_list[list_ind] = np.atleast_1d(array)[slc].reshape(shp).astype(dtype)
 
         return a_list
 
@@ -237,7 +237,7 @@ class DictToVarBijection:
     """
 
     def __init__(self, var, idx, dpoint):
-        self.var = str(var)
+        self.var = get_var_name(var)
         self.idx = idx
         self.dpt = dpoint
 

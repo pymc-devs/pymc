@@ -21,7 +21,7 @@ from theano.gof.graph import stack_search
 from theano.compile import SharedVariable
 from theano.tensor import Tensor
 
-from .util import get_default_varnames
+from .util import get_default_varnames, get_var_name
 from .model import ObservedRV
 import pymc3 as pm
 
@@ -31,28 +31,30 @@ class ModelGraph:
         self.model = model
         self.var_names = get_default_varnames(self.model.named_vars, include_transformed=False)
         self.var_list = self.model.named_vars.values()
-        self.transform_map = {v.transformed: v.name for v in self.var_list if hasattr(v, 'transformed')}
+        self.transform_map = {
+            v.transformed: v.name for v in self.var_list if hasattr(v, "transformed")
+        }
         self._deterministics = None
 
     def get_deterministics(self, var):
         """Compute the deterministic nodes of the graph, **not** including var itself."""
         deterministics = []
-        attrs = ('transformed', 'logpt')
+        attrs = ("transformed", "logpt")
         for v in self.var_list:
             if v != var and all(not hasattr(v, attr) for attr in attrs):
                 deterministics.append(v)
         return deterministics
 
     def _get_ancestors(self, var: Tensor, func) -> Set[Tensor]:
-        """Get all ancestors of a function, doing some accounting for deterministics.
-        """
+        """Get all ancestors of a function, doing some accounting for deterministics."""
 
         # this contains all of the variables in the model EXCEPT var...
         vars = set(self.var_list)
         vars.remove(var)
 
-        blockers = set() # type: Set[Tensor]
+        blockers = set()  # type: Set[Tensor]
         retval = set()  # type: Set[Tensor]
+
         def _expand(node) -> Optional[Iterator[Tensor]]:
             if node in blockers:
                 return None
@@ -66,14 +68,12 @@ class ModelGraph:
             else:
                 return None
 
-        stack_search(start = deque([func]),
-                     expand=_expand,
-                     mode='bfs')
+        stack_search(start=deque([func]), expand=_expand, mode="bfs")
         return retval
 
     def _filter_parents(self, var, parents) -> Set[VarName]:
         """Get direct parents of a var, as strings"""
-        keep = set() # type: Set[VarName]
+        keep = set()  # type: Set[VarName]
         for p in parents:
             if p == var:
                 continue
@@ -83,14 +83,14 @@ class ModelGraph:
                 if self.transform_map[p] != var.name:
                     keep.add(self.transform_map[p])
             else:
-                raise AssertionError('Do not know what to do with {}'.format(str(p)))
+                raise AssertionError("Do not know what to do with {}".format(get_var_name(p)))
         return keep
 
     def get_parents(self, var: Tensor) -> Set[VarName]:
         """Get the named nodes that are direct inputs to the var"""
-        if hasattr(var, 'transformed'):
+        if hasattr(var, "transformed"):
             func = var.transformed.logpt
-        elif hasattr(var, 'logpt'):
+        elif hasattr(var, "logpt"):
             func = var.logpt
         else:
             func = var
@@ -100,7 +100,8 @@ class ModelGraph:
 
     def make_compute_graph(self) -> Dict[str, Set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
-        input_map = {} # type: Dict[str, Set[VarName]]
+        input_map = {}  # type: Dict[str, Set[VarName]]
+
         def update_input_map(key: str, val: Set[VarName]):
             if key in input_map:
                 input_map[key] = input_map[key].union(val)
@@ -114,8 +115,8 @@ class ModelGraph:
                 try:
                     obs_name = var.observations.name
                     if obs_name:
-                        input_map[var_name] = input_map[var_name].difference(set([obs_name]))
-                        update_input_map(obs_name, set([var_name]))
+                        input_map[var_name] = input_map[var_name].difference({obs_name})
+                        update_input_map(obs_name, {var_name})
                 except AttributeError:
                     pass
         return input_map
@@ -127,31 +128,30 @@ class ModelGraph:
         # styling for node
         attrs = {}
         if isinstance(v, pm.model.ObservedRV):
-            attrs['style'] = 'filled'
+            attrs["style"] = "filled"
 
         # make Data be roundtangle, instead of rectangle
         if isinstance(v, SharedVariable):
-            attrs['style'] = 'rounded, filled'
+            attrs["style"] = "rounded, filled"
 
-        # Get name for node
+        # determine the shape for this node (default (Distribution) is ellipse)
         if v in self.model.potentials:
-            distribution = 'Potential'
-            attrs['shape'] = 'octagon'
-        elif hasattr(v, 'distribution'):
-            distribution = v.distribution.__class__.__name__
-        elif isinstance(v, SharedVariable):
-            distribution = 'Data'
-            attrs['shape'] = 'box'
-        else:
-            distribution = 'Deterministic'
-            attrs['shape'] = 'box'
+            attrs["shape"] = "octagon"
+        elif isinstance(v, SharedVariable) or not hasattr(v, "distribution"):
+            # shared variables and Deterministic represented by a box
+            attrs["shape"] = "box"
 
-        graph.node(var_name.replace(':', '&'),
-                '{var_name}\n~\n{distribution}'.format(var_name=var_name, distribution=distribution),
-                **attrs)
+        if v in self.model.potentials:
+            label = f"{var_name}\n~\nPotential"
+        elif isinstance(v, SharedVariable):
+            label = f"{var_name}\n~\nData"
+        else:
+            label = str(v).replace(" ~ ", "\n~\n")
+
+        graph.node(var_name.replace(":", "&"), label, **attrs)
 
     def get_plates(self):
-        """ Rough but surprisingly accurate plate detection.
+        """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong
         if there are two plates with the same shape.
@@ -163,14 +163,14 @@ class ModelGraph:
         plates = {}
         for var_name in self.var_names:
             v = self.model[var_name]
-            if hasattr(v, 'observations'):
+            if hasattr(v, "observations"):
                 try:
                     # To get shape of _observed_ data container `pm.Data`
                     # (wrapper for theano.SharedVariable) we evaluate it.
                     shape = tuple(v.observations.shape.eval())
                 except AttributeError:
                     shape = v.observations.shape
-            elif hasattr(v, 'dshape'):
+            elif hasattr(v, "dshape"):
                 shape = v.dshape
             else:
                 shape = v.tag.test_value.shape
@@ -191,28 +191,30 @@ class ModelGraph:
         try:
             import graphviz
         except ImportError:
-            raise ImportError('This function requires the python library graphviz, along with binaries. '
-                              'The easiest way to install all of this is by running\n\n'
-                              '\tconda install -c conda-forge python-graphviz')
+            raise ImportError(
+                "This function requires the python library graphviz, along with binaries. "
+                "The easiest way to install all of this is by running\n\n"
+                "\tconda install -c conda-forge python-graphviz"
+            )
         graph = graphviz.Digraph(self.model.name)
         for shape, var_names in self.get_plates().items():
             if isinstance(shape, SharedVariable):
                 shape = shape.eval()
-            label = ' x '.join(map('{:,d}'.format, shape))
+            label = " x ".join(map("{:,d}".format, shape))
             if label:
                 # must be preceded by 'cluster' to get a box around it
-                with graph.subgraph(name='cluster' + label) as sub:
+                with graph.subgraph(name="cluster" + label) as sub:
                     for var_name in var_names:
                         self._make_node(var_name, sub)
                     # plate label goes bottom right
-                    sub.attr(label=label, labeljust='r', labelloc='b', style='rounded')
+                    sub.attr(label=label, labeljust="r", labelloc="b", style="rounded")
             else:
                 for var_name in var_names:
                     self._make_node(var_name, graph)
 
         for key, values in self.make_compute_graph().items():
             for value in values:
-                graph.edge(value.replace(':', '&'), key.replace(':', '&'))
+                graph.edge(value.replace(":", "&"), key.replace(":", "&"))
         return graph
 
 

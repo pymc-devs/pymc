@@ -130,6 +130,14 @@ class TestSMCABC(SeededTest):
                 observed=self.data,
             )
 
+        with pm.Model() as self.SMABC_potential:
+            a = pm.Normal("a", mu=0, sigma=1)
+            b = pm.HalfNormal("b", sigma=1)
+            c = pm.Potential("c", pm.math.switch(a > 0, 0, -np.inf))
+            s = pm.Simulator(
+                "s", normal_sim, params=(a, b), sum_stat="sort", epsilon=1, observed=self.data
+            )
+
     def test_one_gaussian(self):
         with self.SMABC_test:
             trace = pm.sample_smc(draws=1000, kernel="ABC")
@@ -157,38 +165,25 @@ class TestSMCABC(SeededTest):
         with self.SMABC_test2:
             trace = pm.sample_smc(draws=1000, kernel="ABC")
 
+    def test_potential(self):
+        with self.SMABC_potential:
+            trace = pm.sample_smc(draws=1000, kernel="ABC")
+            assert np.all(trace["a"] >= 0)
+
     def test_automatic_use_of_sort(self):
         with pm.Model() as model:
-            s_g = pm.Simulator(
-                "s_g",
+            s_k = pm.Simulator(
+                "s_k",
                 None,
                 params=None,
-                distance="gaussian_kernel",
-                sum_stat="mean",
+                distance="kullback_leibler",
+                sum_stat="sort",
                 observed=self.data,
             )
-            s_w = pm.Simulator(
-                "s_w",
-                None,
-                params=None,
-                distance="wasserstein",
-                sum_stat="identity",
-                observed=self.data,
-            )
-            s_e = pm.Simulator(
-                "s_e",
-                None,
-                params=None,
-                distance="energy",
-                sum_stat="identity",
-                observed=self.data,
-            )
-        assert s_g.distribution.sum_stat is np.mean
-        assert s_w.distribution.sum_stat is np.sort
-        assert s_e.distribution.sum_stat is np.sort
+        assert s_k.distribution.sum_stat is pm.distributions.simulator.identity
 
     def test_repr_latex(self):
-        expected = "$\\text{s} \\sim  \\text{Simulator}(\\text{normal_sim}(a, b), \\text{gaussian_kernel}, \\text{sort})$"
+        expected = "$\\text{s} \\sim  \\text{Simulator}(\\text{normal_sim}(a, b), \\text{gaussian}, \\text{sort})$"
         assert expected == self.s._repr_latex_()
         assert self.s._repr_latex_() == self.s.__latex__()
         assert self.SMABC_test.model._repr_latex_() == self.SMABC_test.model.__latex__()

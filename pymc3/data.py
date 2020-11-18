@@ -85,9 +85,7 @@ class GeneratorAdapter:
         # make pickling potentially possible
         self._yielded_test_value = False
         self.gen = generator
-        self.tensortype = tt.TensorType(
-            self.test_value.dtype, ((False,) * self.test_value.ndim)
-        )
+        self.tensortype = tt.TensorType(self.test_value.dtype, ((False,) * self.test_value.ndim))
 
     # python3 generator
     def __next__(self):
@@ -306,9 +304,7 @@ class Minibatch(tt.TensorVariable):
         in_memory_slc = self.make_static_slices(in_memory_size)
         self.shared = theano.shared(data[in_memory_slc])
         self.update_shared_f = update_shared_f
-        self.random_slc = self.make_random_slices(
-            self.shared.shape, batch_size, random_seed
-        )
+        self.random_slc = self.make_random_slices(self.shared.shape, batch_size, random_seed)
         minibatch = self.shared[self.random_slc]
         if broadcastable is None:
             broadcastable = (False,) * minibatch.ndim
@@ -324,9 +320,7 @@ class Minibatch(tt.TensorVariable):
         elif isinstance(size, int):
             rng = pm.tt_rng(seed)
             Minibatch.RNG[id(self)].append(rng)
-            return rng.uniform(
-                size=(size,), low=0.0, high=pm.floatX(total) - 1e-16
-            ).astype("int64")
+            return rng.uniform(size=(size,), low=0.0, high=pm.floatX(total) - 1e-16).astype("int64")
         else:
             raise TypeError("Unrecognized size type, %r" % size)
 
@@ -384,10 +378,7 @@ class Minibatch(tt.TensorVariable):
                     "int or List[int|tuple(size, random_seed)] where "
                     "size and random seed are both ints, got %r" % batch_size
                 )
-            batch_size = [
-                (i, default_random_seed) if isinstance(i, int) else i
-                for i in batch_size
-            ]
+            batch_size = [(i, default_random_seed) if isinstance(i, int) else i for i in batch_size]
             shape = in_memory_shape
             if Ellipsis in batch_size:
                 sep = batch_size.index(Ellipsis)
@@ -395,8 +386,7 @@ class Minibatch(tt.TensorVariable):
                 end = batch_size[sep + 1 :]
                 if Ellipsis in end:
                     raise ValueError(
-                        "Double Ellipsis in `batch_size` is restricted, got %r"
-                        % batch_size
+                        "Double Ellipsis in `batch_size` is restricted, got %r" % batch_size
                     )
                 if len(end) > 0:
                     shp_mid = shape[sep : -len(end)]
@@ -418,15 +408,11 @@ class Minibatch(tt.TensorVariable):
                 shp_end = np.asarray([])
             shp_begin = shape[: len(begin)]
             slc_begin = [
-                self.rslice(shp_begin[i], t[0], t[1])
-                if t is not None
-                else tt.arange(shp_begin[i])
+                self.rslice(shp_begin[i], t[0], t[1]) if t is not None else tt.arange(shp_begin[i])
                 for i, t in enumerate(begin)
             ]
             slc_end = [
-                self.rslice(shp_end[i], t[0], t[1])
-                if t is not None
-                else tt.arange(shp_end[i])
+                self.rslice(shp_end[i], t[0], t[1]) if t is not None else tt.arange(shp_end[i])
                 for i, t in enumerate(end)
             ]
             slc = slc_begin + mid + slc_end
@@ -534,7 +520,8 @@ class Data:
         if not (dims is None or len(dims) == shared_object.ndim):
             raise pm.exceptions.ShapeError(
                 "Length of `dims` must match the dimensions of the dataset.",
-                actual=len(dims), expected=shared_object.ndim
+                actual=len(dims),
+                expected=shared_object.ndim,
             )
 
         coords = self.set_coords(model, value, dims)
@@ -550,7 +537,8 @@ class Data:
             if shared_object.dshape != shape_dims:
                 raise pm.exceptions.ShapeError(
                     "Data shape does not match with specified `dims`.",
-                    actual=shared_object.dshape, expected=shape_dims
+                    actual=shared_object.dshape,
+                    expected=shape_dims,
                 )
 
         model.add_random_variable(shared_object, dims=dims)
@@ -586,7 +574,8 @@ class Data:
                 raise pm.exceptions.ShapeError(
                     "Invalid data shape. The rank of the dataset must match the "
                     "length of `dims`.",
-                    actual=value.shape, expected=value.ndim
+                    actual=value.shape,
+                    expected=value.ndim,
                 )
             for size, dim in zip(value.shape, dims):
                 coord = model.coords.get(dim, None)

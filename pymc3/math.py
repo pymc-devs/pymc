@@ -132,7 +132,7 @@ def kron_matrix_op(krons, m, op):
     if m.ndim == 1:
         m = m[:, None]  # Treat 1D array as Nx1 matrix
     if m.ndim != 2:  # Has not been tested otherwise
-        raise ValueError("m must have ndim <= 2, not {}".format(m.ndim))
+        raise ValueError(f"m must have ndim <= 2, not {m.ndim}")
     res = kron_vector_op(m)
     res_shape = res.shape
     return tt.reshape(res, (res_shape[1], res_shape[0])).T
@@ -261,7 +261,7 @@ class LogDet(Op):
             log_det = np.sum(np.log(np.abs(s)))
             z[0] = np.asarray(log_det, dtype=x.dtype)
         except Exception:
-            print("Failed to compute logdet of {}.".format(x))
+            print(f"Failed to compute logdet of {x}.")
             raise
 
     def grad(self, inputs, g_outputs):
@@ -382,9 +382,7 @@ class BlockDiagonalMatrix(Op):
 
     def __init__(self, sparse=False, format="csr"):
         if format not in ("csr", "csc"):
-            raise ValueError(
-                "format must be one of: 'csr', 'csc', got {}".format(format)
-            )
+            raise ValueError(f"format must be one of: 'csr', 'csc', got {format}")
         self.sparse = sparse
         self.format = format
 
@@ -395,9 +393,7 @@ class BlockDiagonalMatrix(Op):
         if any(mat.type.ndim != 2 for mat in matrices):
             raise TypeError("all data arguments must be matrices")
         if self.sparse:
-            out_type = theano.sparse.matrix(
-                self.format, dtype=largest_common_dtype(matrices)
-            )
+            out_type = theano.sparse.matrix(self.format, dtype=largest_common_dtype(matrices))
         else:
             out_type = theano.tensor.matrix(dtype=largest_common_dtype(matrices))
         return tt.Apply(self, matrices, [out_type])

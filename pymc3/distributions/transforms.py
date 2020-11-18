@@ -12,13 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import theano
+import warnings
 import theano.tensor as tt
 
 from ..model import FreeRV
 from ..theanof import gradient, floatX
 from . import distribution
-from ..math import logit, invlogit
+from ..math import logit, invlogit, logsumexp
 from .distribution import draw_values
 import numpy as np
 from scipy.special import logit as nplogit
@@ -36,7 +36,6 @@ __all__ = [
     "ordered",
     "log",
     "sum_to_1",
-    "t_stick_breaking",
     "circular",
     "CholeskyCovPacked",
     "Chain",
@@ -106,7 +105,8 @@ class Transform:
         raise NotImplementedError
 
     def jacobian_det(self, x):
-        """Calculates logarithm of the absolute value of the Jacobian determinant for input `x`.
+        """Calculates logarithm of the absolute value of the Jacobian determinant
+        of the backward transformation for input `x`.
 
         Parameters
         ----------
@@ -147,7 +147,6 @@ class TransformedDistribution(distribution.Distribution):
             arguments to Distribution"""
         forward = transform.forward
         testval = forward(dist.default())
-        forward_val = transform.forward_val
 
         self.dist = dist
         self.transform_used = transform
@@ -196,6 +195,14 @@ class TransformedDistribution(distribution.Distribution):
         """
         return self.dist.logp(self.transform_used.backward(x))
 
+    def _repr_latex_(self, **kwargs):
+        # prevent TransformedDistributions from ending up in LaTeX representations
+        # of models
+        return None
+
+    def _distr_parameters_for_repr(self):
+        return []
+
 
 transform = Transform
 
@@ -228,8 +235,8 @@ class LogExpM1(ElemwiseTransform):
     def forward(self, x):
         """Inverse operation of softplus.
 
-            y = Log(Exp(x) - 1)
-              = Log(1 - Exp(-x)) + x
+        y = Log(Exp(x) - 1)
+          = Log(1 - Exp(-x)) + x
         """
         return tt.log(1.0 - tt.exp(-x)) + x
 
@@ -423,78 +430,59 @@ sum_to_1 = SumTo1()
 class StickBreaking(Transform):
     """
     Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of real values.
-    Primarily borrowed from the Stan implementation.
-
-    Parameters
-    ----------
-    eps: float, positive value
-        A small value for numerical stability in invlogit.
+    This is a variant of the isometric logration transformation:
+        Egozcue, J.J., Pawlowsky-Glahn, V., Mateu-Figueras, G. et al.
+        Isometric Logratio Transformations for Compositional Data Analysis.
+        Mathematical Geology 35, 279–300 (2003). https://doi.org/10.1023/A:1023818214614
     """
 
     name = "stickbreaking"
 
-    def __init__(self, eps=floatX(np.finfo(theano.config.floatX).eps)):
-        self.eps = eps
+    def __init__(self, eps=None):
+        if eps is not None:
+            warnings.warn(
+                "The argument `eps` is deprecated and will not be used.", DeprecationWarning
+            )
 
     def forward(self, x_):
         x = x_.T
-        # reverse cumsum
-        x0 = x[:-1]
-        s = tt.extra_ops.cumsum(x0[::-1], 0)[::-1] + x[-1]
-        z = x0 / s
-        Km1 = x.shape[0] - 1
-        k = tt.arange(Km1)[(slice(None),) + (None,) * (x.ndim - 1)]
-        eq_share = logit(1.0 / (Km1 + 1 - k).astype(str(x_.dtype)))
-        y = logit(z) - eq_share
+        n = x.shape[0]
+        lx = tt.log(x)
+        shift = tt.sum(lx, 0, keepdims=True) / n
+        y = lx[:-1] - shift
         return floatX(y.T)
 
     def forward_val(self, x_, point=None):
         x = x_.T
-        # reverse cumsum
-        x0 = x[:-1]
-        s = np.cumsum(x0[::-1], 0)[::-1] + x[-1]
-        z = x0 / s
-        Km1 = x.shape[0] - 1
-        k = np.arange(Km1)[(slice(None),) + (None,) * (x.ndim - 1)]
-        eq_share = nplogit(1.0 / (Km1 + 1 - k).astype(str(x_.dtype)))
-        y = nplogit(z) - eq_share
+        n = x.shape[0]
+        lx = np.log(x)
+        shift = np.sum(lx, 0, keepdims=True) / n
+        y = lx[:-1] - shift
         return floatX(y.T)
 
     def backward(self, y_):
         y = y_.T
-        Km1 = y.shape[0]
-        k = tt.arange(Km1)[(slice(None),) + (None,) * (y.ndim - 1)]
-        eq_share = logit(1.0 / (Km1 + 1 - k).astype(str(y_.dtype)))
-        z = invlogit(y + eq_share, self.eps)
-        yl = tt.concatenate([z, tt.ones(y[:1].shape)])
-        yu = tt.concatenate([tt.ones(y[:1].shape), 1 - z])
-        S = tt.extra_ops.cumprod(yu, 0)
-        x = S * yl
+        y = tt.concatenate([y, -tt.sum(y, 0, keepdims=True)])
+        # "softmax" with vector support and no deprication warning:
+        e_y = tt.exp(y - tt.max(y, 0, keepdims=True))
+        x = e_y / tt.sum(e_y, 0, keepdims=True)
         return floatX(x.T)
 
     def jacobian_det(self, y_):
         y = y_.T
-        Km1 = y.shape[0]
-        k = tt.arange(Km1)[(slice(None),) + (None,) * (y.ndim - 1)]
-        eq_share = logit(1.0 / (Km1 + 1 - k).astype(str(y_.dtype)))
-        yl = y + eq_share
-        yu = tt.concatenate([tt.ones(y[:1].shape), 1 - invlogit(yl, self.eps)])
-        S = tt.extra_ops.cumprod(yu, 0)
-        return tt.sum(tt.log(S[:-1]) - tt.log1p(tt.exp(yl)) - tt.log1p(tt.exp(-yl)), 0).T
+        Km1 = y.shape[0] + 1
+        sy = tt.sum(y, 0, keepdims=True)
+        r = tt.concatenate([y + sy, tt.zeros(sy.shape)])
+        sr = logsumexp(r, 0, keepdims=True)
+        d = tt.log(Km1) + (Km1 * sy) - (Km1 * sr)
+        return tt.sum(d, 0).T
 
 
 stick_breaking = StickBreaking()
 
 
-def t_stick_breaking(eps: float) -> StickBreaking:
-    """Return a new :class:`StickBreaking` transform with specified eps(ilon),
-    instead of the default."""
-    return StickBreaking(eps)
-
-
 class Circular(ElemwiseTransform):
-    """Transforms a linear space into a circular one.
-    """
+    """Transforms a linear space into a circular one."""
 
     name = "circular"
 
