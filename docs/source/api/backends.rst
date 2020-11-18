@@ -15,22 +15,6 @@ ndarray
 .. automodule:: pymc3.backends.ndarray
    :members:
 
-sqlite
-^^^^^^
-
-.. currentmodule:: pymc3.backends.sqlite
-
-.. automodule:: pymc3.backends.sqlite
-   :members:
-
-text
-^^^^
-
-.. currentmodule:: pymc3.backends.text
-
-.. automodule:: pymc3.backends.text
-   :members:
-
 tracetab
 ^^^^^^^^
 

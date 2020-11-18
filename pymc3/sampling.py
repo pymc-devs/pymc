@@ -305,8 +305,6 @@ def sample(
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
         number ``chain``. If None or a list of variables, the NDArray backend is used.
-        Passing either "text" or "sqlite" is taken as a shortcut to set up the corresponding
-        backend (with "mcmc" used as the base name).
     chain_idx : int
         Chain number used to store sample in backend. If ``chains`` is greater than one, chain
         numbers will start here.
@@ -1339,20 +1337,18 @@ def _iter_population(draws, tune, popstep, steppers, traces, points):
                 steppers[c].report._finalize(strace)
 
 
-def _choose_backend(trace, chain, shortcuts=None, **kwds):
-    """Selects or creates a trace backend (NDArray, Text, etc) for a particular chain.
+def _choose_backend(trace, chain, **kwds):
+    """Selects or creates a NDArray trace backend for a particular chain.
 
     Parameters
     ----------
-    trace : backend, list, MultiTrace, or None
-        This should be a BaseTrace, backend name (e.g. text, sqlite, or hdf5),
-        list of variables to track, or a MultiTrace object with past values.
+    trace : BaseTrace, list, MultiTrace, or None
+        This should be a BaseTrace, list of variables to track, 
+        or a MultiTrace object with past values.
         If a MultiTrace object is given, it must contain samples for the chain number ``chain``.
         If None or a list of variables, the NDArray backend is used.
     chain : int
         Number of the chain of interest.
-    shortcuts : dict, optional
-        maps backend names to a dict of backend class and name (defaults to pm.backends._shortcuts)
     **kwds :
         keyword arguments to forward to the backend creation
 
@@ -1368,21 +1364,7 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
     if trace is None:
         return NDArray(**kwds)
 
-    if shortcuts is None:
-        shortcuts = pm.backends._shortcuts
-
-    try:
-        backend = shortcuts[trace]["backend"]
-        name = shortcuts[trace]["name"]
-        warnings.warn(
-            "The use of non-NDArray backends has been deprecated, and will be removed in a future version.",
-            DeprecationWarning,
-        )
-        return backend(name, **kwds)
-    except TypeError:
-        return NDArray(vars=trace, **kwds)
-    except KeyError:
-        raise ValueError("Argument `trace` is invalid.")
+    return NDArray(vars=trace, **kwds)
 
 
 def _mp_sample(
@@ -1425,7 +1407,7 @@ def _mp_sample(
         Starting points for each chain.
     progressbar : bool
         Whether or not to display a progress bar in the command line.
-    trace : backend, list, MultiTrace or None
+    trace : BaseTrace, list, MultiTrace or None
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
         number ``chain``. If None or a list of variables, the NDArray backend is used.
