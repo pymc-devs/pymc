@@ -67,6 +67,7 @@ from .exceptions import *
 from . import sampling
 
 from .backends.tracetab import *
+from .backends import save_trace, load_trace
 
 from .plots import *
 from .tests import test
