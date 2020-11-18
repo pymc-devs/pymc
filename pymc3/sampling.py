@@ -1343,7 +1343,7 @@ def _choose_backend(trace, chain, **kwds):
     Parameters
     ----------
     trace : BaseTrace, list, MultiTrace, or None
-        This should be a BaseTrace, list of variables to track, 
+        This should be a BaseTrace, list of variables to track,
         or a MultiTrace object with past values.
         If a MultiTrace object is given, it must contain samples for the chain number ``chain``.
         If None or a list of variables, the NDArray backend is used.
