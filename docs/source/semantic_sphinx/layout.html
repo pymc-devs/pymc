@@ -1,5 +1,6 @@
 {% extends "basic/layout.html" %}
 
+
 {% set script_files = script_files + [
 '_static/highlight.min.js',
 '_static/semantic.min.js',
@@ -13,6 +14,11 @@
 {% endif %}
 
 {%- block extrahead %}
+<script>
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-176578023-1']);
+  _gaq.push(['_trackPageview']);
+</script>
 <script>hljs.initHighlightingOnLoad();</script>
 <meta charset='utf-8'>
 <meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
@@ -111,6 +117,19 @@ such as on Chrome for documents on localhost #}
         <a href="https://github.com/pymc-devs/pymc3"><i class="github icon large"></i></a>
         <a href="https://twitter.com/pymc_devs"><i class="twitter icon large"></i></a>
         <a href="https://discourse.pymc.io/"><i class="discourse icon large"></i></a>
+    </div>
+    <div class="ui center aligned container">This page uses <a href="https://analytics.google.com/">
+    Google Analytics</a> to collect statistics. You can disable it by blocking
+    the JavaScript coming from www.google-analytics.com.
+    <script>
+      (function() {
+        var ga = document.createElement('script');
+        ga.src = ('https:' == document.location.protocol ?
+                  'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        ga.setAttribute('async', 'true');
+        document.documentElement.firstChild.appendChild(ga);
+      })();
+    </script>
     </div>
     <div class="ui center aligned container">
 

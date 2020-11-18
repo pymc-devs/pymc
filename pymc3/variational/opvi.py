@@ -56,22 +56,14 @@ import theano.tensor as tt
 import pymc3 as pm
 from pymc3.util import get_transformed
 from .updates import adagrad_window
-from ..blocking import (
-    ArrayOrdering, DictToArrayBijection, VarMap
-)
+from ..blocking import ArrayOrdering, DictToArrayBijection, VarMap
 from ..backends import NDArray, Text, SQLite, HDF5
 from ..model import modelcontext
 from ..theanof import tt_rng, change_flags, identity
 from ..util import get_default_varnames
 from ..memoize import WithMemoization, memoize
 
-__all__ = [
-    'ObjectiveFunction',
-    'Operator',
-    'TestFunction',
-    'Group',
-    'Approximation'
-]
+__all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximation"]
 
 
 class VariationalInferenceError(Exception):
@@ -111,23 +103,27 @@ def append_name(name):
             res = f(*args, **kwargs)
             res.name = name
             return res
+
         return inner
+
     return wrap
 
 
 def node_property(f):
-    """A shortcut for wrapping method to accessible tensor
-    """
+    """A shortcut for wrapping method to accessible tensor"""
     if isinstance(f, str):
 
         def wrapper(fn):
-            return property(memoize(change_flags(compute_test_value='off')(append_name(f)(fn)), bound=True))
+            return property(
+                memoize(change_flags(compute_test_value="off")(append_name(f)(fn)), bound=True)
+            )
+
         return wrapper
     else:
-        return property(memoize(change_flags(compute_test_value='off')(f), bound=True))
+        return property(memoize(change_flags(compute_test_value="off")(f), bound=True))
 
 
-@change_flags(compute_test_value='ignore')
+@change_flags(compute_test_value="ignore")
 def try_to_set_test_value(node_in, node_out, s):
     _s = s
     if s is None:
@@ -138,8 +134,8 @@ def try_to_set_test_value(node_in, node_out, s):
     if not isinstance(node_out, (list, tuple)):
         node_out = [node_out]
     for i, o in zip(node_in, node_out):
-        if hasattr(i.tag, 'test_value'):
-            if not hasattr(s.tag, 'test_value'):
+        if hasattr(i.tag, "test_value"):
+            if not hasattr(s.tag, "test_value"):
                 continue
             else:
                 tv = i.tag.test_value[None, ...]
@@ -150,13 +146,13 @@ def try_to_set_test_value(node_in, node_out, s):
 
 
 class ObjectiveUpdates(theano.OrderedUpdates):
-    """OrderedUpdates extension for storing loss
-    """
+    """OrderedUpdates extension for storing loss"""
+
     loss = None
 
 
 def _warn_not_used(smth, where):
-    warnings.warn('`%s` is not used for %s and ignored' % (smth, where))
+    warnings.warn(f"`{smth}` is not used for {where} and ignored")
 
 
 class ObjectiveFunction:
@@ -178,9 +174,18 @@ class ObjectiveFunction:
     test_params = property(lambda self: self.tf.params)
     approx = property(lambda self: self.op.approx)
 
-    def updates(self, obj_n_mc=None, tf_n_mc=None, obj_optimizer=adagrad_window, test_optimizer=adagrad_window,
-                more_obj_params=None, more_tf_params=None, more_updates=None,
-                more_replacements=None, total_grad_norm_constraint=None):
+    def updates(
+        self,
+        obj_n_mc=None,
+        tf_n_mc=None,
+        obj_optimizer=adagrad_window,
+        test_optimizer=adagrad_window,
+        more_obj_params=None,
+        more_tf_params=None,
+        more_updates=None,
+        more_replacements=None,
+        total_grad_norm_constraint=None,
+    ):
         """Calculate gradients for objective function, test function and then
         constructs updates for optimization step
 
@@ -219,67 +224,83 @@ class ObjectiveFunction:
                 test_optimizer=test_optimizer,
                 more_tf_params=more_tf_params,
                 more_replacements=more_replacements,
-                total_grad_norm_constraint=total_grad_norm_constraint
+                total_grad_norm_constraint=total_grad_norm_constraint,
             )
         else:
             if tf_n_mc is not None:
-                _warn_not_used('tf_n_mc', self.op)
+                _warn_not_used("tf_n_mc", self.op)
             if more_tf_params:
-                _warn_not_used('more_tf_params', self.op)
+                _warn_not_used("more_tf_params", self.op)
         self.add_obj_updates(
             resulting_updates,
             obj_n_mc=obj_n_mc,
             obj_optimizer=obj_optimizer,
             more_obj_params=more_obj_params,
             more_replacements=more_replacements,
-            total_grad_norm_constraint=total_grad_norm_constraint
+            total_grad_norm_constraint=total_grad_norm_constraint,
         )
         resulting_updates.update(more_updates)
         return resulting_updates
 
-    def add_test_updates(self, updates, tf_n_mc=None, test_optimizer=adagrad_window,
-                         more_tf_params=None, more_replacements=None,
-                         total_grad_norm_constraint=None):
+    def add_test_updates(
+        self,
+        updates,
+        tf_n_mc=None,
+        test_optimizer=adagrad_window,
+        more_tf_params=None,
+        more_replacements=None,
+        total_grad_norm_constraint=None,
+    ):
         if more_tf_params is None:
             more_tf_params = []
         if more_replacements is None:
             more_replacements = dict()
-        tf_target = self(tf_n_mc, more_tf_params=more_tf_params, more_replacements=more_replacements)
+        tf_target = self(
+            tf_n_mc, more_tf_params=more_tf_params, more_replacements=more_replacements
+        )
         grads = pm.updates.get_or_compute_grads(tf_target, self.obj_params + more_tf_params)
         if total_grad_norm_constraint is not None:
             grads = pm.total_norm_constraint(grads, total_grad_norm_constraint)
-        updates.update(
-            test_optimizer(
-                grads,
-                self.test_params +
-                more_tf_params))
+        updates.update(test_optimizer(grads, self.test_params + more_tf_params))
 
-    def add_obj_updates(self, updates, obj_n_mc=None, obj_optimizer=adagrad_window,
-                        more_obj_params=None, more_replacements=None,
-                        total_grad_norm_constraint=None):
+    def add_obj_updates(
+        self,
+        updates,
+        obj_n_mc=None,
+        obj_optimizer=adagrad_window,
+        more_obj_params=None,
+        more_replacements=None,
+        total_grad_norm_constraint=None,
+    ):
         if more_obj_params is None:
             more_obj_params = []
         if more_replacements is None:
             more_replacements = dict()
-        obj_target = self(obj_n_mc, more_obj_params=more_obj_params, more_replacements=more_replacements)
+        obj_target = self(
+            obj_n_mc, more_obj_params=more_obj_params, more_replacements=more_replacements
+        )
         grads = pm.updates.get_or_compute_grads(obj_target, self.obj_params + more_obj_params)
         if total_grad_norm_constraint is not None:
             grads = pm.total_norm_constraint(grads, total_grad_norm_constraint)
-        updates.update(
-            obj_optimizer(
-                grads,
-                self.obj_params +
-                more_obj_params))
+        updates.update(obj_optimizer(grads, self.obj_params + more_obj_params))
         if self.op.returns_loss:
             updates.loss = obj_target
 
-    @change_flags(compute_test_value='off')
-    def step_function(self, obj_n_mc=None, tf_n_mc=None,
-                      obj_optimizer=adagrad_window, test_optimizer=adagrad_window,
-                      more_obj_params=None, more_tf_params=None,
-                      more_updates=None, more_replacements=None,
-                      total_grad_norm_constraint=None,
-                      score=False, fn_kwargs=None):
+    @change_flags(compute_test_value="off")
+    def step_function(
+        self,
+        obj_n_mc=None,
+        tf_n_mc=None,
+        obj_optimizer=adagrad_window,
+        test_optimizer=adagrad_window,
+        more_obj_params=None,
+        more_tf_params=None,
+        more_updates=None,
+        more_replacements=None,
+        total_grad_norm_constraint=None,
+        score=False,
+        fn_kwargs=None,
+    ):
         R"""Step function that should be called on each optimization step.
 
         Generally it solves the following problem:
@@ -320,24 +341,28 @@ class ObjectiveFunction:
         if fn_kwargs is None:
             fn_kwargs = {}
         if score and not self.op.returns_loss:
-            raise NotImplementedError('%s does not have loss' % self.op)
-        updates = self.updates(obj_n_mc=obj_n_mc, tf_n_mc=tf_n_mc,
-                               obj_optimizer=obj_optimizer,
-                               test_optimizer=test_optimizer,
-                               more_obj_params=more_obj_params,
-                               more_tf_params=more_tf_params,
-                               more_updates=more_updates,
-                               more_replacements=more_replacements,
-                               total_grad_norm_constraint=total_grad_norm_constraint)
+            raise NotImplementedError("%s does not have loss" % self.op)
+        updates = self.updates(
+            obj_n_mc=obj_n_mc,
+            tf_n_mc=tf_n_mc,
+            obj_optimizer=obj_optimizer,
+            test_optimizer=test_optimizer,
+            more_obj_params=more_obj_params,
+            more_tf_params=more_tf_params,
+            more_updates=more_updates,
+            more_replacements=more_replacements,
+            total_grad_norm_constraint=total_grad_norm_constraint,
+        )
         if score:
-            step_fn = theano.function(
-                [], updates.loss, updates=updates, **fn_kwargs)
+            step_fn = theano.function([], updates.loss, updates=updates, **fn_kwargs)
         else:
             step_fn = theano.function([], None, updates=updates, **fn_kwargs)
         return step_fn
 
-    @change_flags(compute_test_value='off')
-    def score_function(self, sc_n_mc=None, more_replacements=None, fn_kwargs=None):   # pragma: no cover
+    @change_flags(compute_test_value="off")
+    def score_function(
+        self, sc_n_mc=None, more_replacements=None, fn_kwargs=None
+    ):  # pragma: no cover
         R"""Compile scoring function that operates which takes no inputs and returns Loss
 
         Parameters
@@ -356,20 +381,20 @@ class ObjectiveFunction:
         if fn_kwargs is None:
             fn_kwargs = {}
         if not self.op.returns_loss:
-            raise NotImplementedError('%s does not have loss' % self.op)
+            raise NotImplementedError("%s does not have loss" % self.op)
         if more_replacements is None:
             more_replacements = {}
         loss = self(sc_n_mc, more_replacements=more_replacements)
         return theano.function([], loss, **fn_kwargs)
 
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
-        if 'more_tf_params' in kwargs:
-            m = -1.
+        if "more_tf_params" in kwargs:
+            m = -1.0
         else:
-            m = 1.
+            m = 1.0
         a = self.op.apply(self.tf)
-        a = self.approx.set_size_and_deterministic(a, nmc, 0, kwargs.get('more_replacements'))
+        a = self.approx.set_size_and_deterministic(a, nmc, 0, kwargs.get("more_replacements"))
         return m * self.op.T(a)
 
 
@@ -396,11 +421,14 @@ class Operator:
     def __init__(self, approx):
         self.approx = approx
         if not self.supports_aevb and approx.has_local:
-            raise AEVBInferenceError('%s does not support AEVB, '
-                                     'please change inference method' % self)
+            raise AEVBInferenceError(
+                "%s does not support AEVB, " "please change inference method" % self
+            )
         if self.require_logq and not approx.has_logq:
-            raise ExplicitInferenceError('%s requires logq, but %s does not implement it'
-                                         'please change inference method' % (self, approx))
+            raise ExplicitInferenceError(
+                "%s requires logq, but %s does not implement it"
+                "please change inference method" % (self, approx)
+            )
 
     inputs = property(lambda self: self.approx.inputs)
     logp = property(lambda self: self.approx.logp)
@@ -413,7 +441,7 @@ class Operator:
     logq_norm = property(lambda self: self.approx.logq_norm)
     model = property(lambda self: self.approx.model)
 
-    def apply(self, f):   # pragma: no cover
+    def apply(self, f):  # pragma: no cover
         R"""Operator itself
 
         .. math::
@@ -436,24 +464,23 @@ class Operator:
     def __call__(self, f=None):
         if self.has_test_function:
             if f is None:
-                raise ParametrizationError('Operator %s requires TestFunction' % self)
+                raise ParametrizationError("Operator %s requires TestFunction" % self)
             else:
                 if not isinstance(f, TestFunction):
                     f = TestFunction.from_function(f)
         else:
             if f is not None:
-                warnings.warn(
-                    'TestFunction for %s is redundant and removed' %
-                    self, stacklevel=3)
+                warnings.warn("TestFunction for %s is redundant and removed" % self, stacklevel=3)
             else:
                 pass
             f = TestFunction()
         f.setup(self.approx)
         return self.objective_class(self, f)
 
-    def __str__(self):    # pragma: no cover
-        return '%(op)s[%(ap)s]' % dict(op=self.__class__.__name__,
-                                       ap=self.approx.__class__.__name__)
+    def __str__(self):  # pragma: no cover
+        return "%(op)s[%(ap)s]" % dict(
+            op=self.__class__.__name__, ap=self.approx.__class__.__name__
+        )
 
 
 def collect_shared_to_list(params):
@@ -470,14 +497,14 @@ def collect_shared_to_list(params):
     """
     if isinstance(params, dict):
         return list(
-            t[1] for t in sorted(params.items(), key=lambda t: t[0])
+            t[1]
+            for t in sorted(params.items(), key=lambda t: t[0])
             if isinstance(t[1], theano.compile.SharedVariable)
         )
     elif params is None:
         return []
     else:
-        raise TypeError(
-            'Unknown type %s for %r, need dict or None')
+        raise TypeError("Unknown type %s for %r, need dict or None")
 
 
 class TestFunction:
@@ -498,7 +525,7 @@ class TestFunction:
     @classmethod
     def from_function(cls, f):
         if not callable(f):
-            raise ParametrizationError('Need callable, got %r' % f)
+            raise ParametrizationError("Need callable, got %r" % f)
         obj = TestFunction()
         obj.__call__ = f
         return obj
@@ -728,24 +755,26 @@ class Group(WithMemoization):
     has_logq = True
 
     # some important defaults
-    initial_dist_name = 'normal'
-    initial_dist_map = 0.
+    initial_dist_name = "normal"
+    initial_dist_map = 0.0
 
     # for handy access using class methods
     __param_spec__ = dict()
-    short_name = ''
+    short_name = ""
     alias_names = frozenset()
     __param_registry = dict()
     __name_registry = dict()
 
     @classmethod
     def register(cls, sbcls):
-        assert frozenset(sbcls.__param_spec__) not in cls.__param_registry, 'Duplicate __param_spec__'
+        assert (
+            frozenset(sbcls.__param_spec__) not in cls.__param_registry
+        ), "Duplicate __param_spec__"
         cls.__param_registry[frozenset(sbcls.__param_spec__)] = sbcls
-        assert sbcls.short_name not in cls.__name_registry, 'Duplicate short_name'
+        assert sbcls.short_name not in cls.__name_registry, "Duplicate short_name"
         cls.__name_registry[sbcls.short_name] = sbcls
         for alias in sbcls.alias_names:
-            assert alias not in cls.__name_registry, 'Duplicate alias_name'
+            assert alias not in cls.__name_registry, "Duplicate alias_name"
             cls.__name_registry[alias] = sbcls
         return sbcls
 
@@ -754,9 +783,10 @@ class Group(WithMemoization):
         if pm.variational.flows.seems_like_flow_params(params):
             return pm.variational.approximations.NormalizingFlowGroup
         if frozenset(params) not in cls.__param_registry:
-            raise KeyError('No such group for the following params: {!r}, '
-                           'only the following are supported\n\n{}'
-                           .format(params, cls.__param_registry))
+            raise KeyError(
+                "No such group for the following params: {!r}, "
+                "only the following are supported\n\n{}".format(params, cls.__param_registry)
+            )
         return cls.__param_registry[frozenset(params)]
 
     @classmethod
@@ -764,37 +794,41 @@ class Group(WithMemoization):
         if pm.variational.flows.seems_like_formula(name):
             return pm.variational.approximations.NormalizingFlowGroup
         if name.lower() not in cls.__name_registry:
-            raise KeyError('No such group: {!r}, '
-                           'only the following are supported\n\n{}'
-                           .format(name, cls.__name_registry))
+            raise KeyError(
+                "No such group: {!r}, "
+                "only the following are supported\n\n{}".format(name, cls.__name_registry)
+            )
         return cls.__name_registry[name.lower()]
 
     def __new__(cls, group=None, vfam=None, params=None, *args, **kwargs):
         if cls is Group:
             if vfam is not None and params is not None:
-                raise TypeError('Cannot call Group with both `vfam` and `params` provided')
+                raise TypeError("Cannot call Group with both `vfam` and `params` provided")
             elif vfam is not None:
                 return super().__new__(cls.group_for_short_name(vfam))
             elif params is not None:
                 return super().__new__(cls.group_for_params(params))
             else:
-                raise TypeError('Need to call Group with either `vfam` or `params` provided')
+                raise TypeError("Need to call Group with either `vfam` or `params` provided")
         else:
             return super().__new__(cls)
 
-    def __init__(self, group,
-                 vfam=None,
-                 params=None,
-                 random_seed=None,
-                 model=None,
-                 local=False,
-                 rowwise=False,
-                 options=None,
-                 **kwargs):
+    def __init__(
+        self,
+        group,
+        vfam=None,
+        params=None,
+        random_seed=None,
+        model=None,
+        local=False,
+        rowwise=False,
+        options=None,
+        **kwargs,
+    ):
         if local and not self.supports_batched:
-            raise LocalGroupError('%s does not support local groups' % self.__class__)
+            raise LocalGroupError("%s does not support local groups" % self.__class__)
         if local and rowwise:
-            raise LocalGroupError('%s does not support local grouping in rowwise mode')
+            raise LocalGroupError("%s does not support local grouping in rowwise mode")
         if isinstance(vfam, str):
             vfam = vfam.lower()
         if options is None:
@@ -838,22 +872,24 @@ class Group(WithMemoization):
         if user_params is None:
             return False
         if not isinstance(user_params, dict):
-            raise TypeError('params should be a dict')
+            raise TypeError("params should be a dict")
         givens = set(user_params.keys())
         needed = set(self.__param_spec__)
         if givens != needed:
             raise ParametrizationError(
-                'Passed parameters do not have a needed set of keys, '
-                'they should be equal, got {givens}, needed {needed}'.format(
-                    givens=givens, needed=needed))
+                "Passed parameters do not have a needed set of keys, "
+                "they should be equal, got {givens}, needed {needed}".format(
+                    givens=givens, needed=needed
+                )
+            )
         self._user_params = dict()
-        spec = self.get_param_spec_for(d=self.ddim, **kwargs.pop('spec_kw', {}))
+        spec = self.get_param_spec_for(d=self.ddim, **kwargs.pop("spec_kw", {}))
         for name, param in self.user_params.items():
             shape = spec[name]
             if self.local:
-                shape = (-1, ) + shape
+                shape = (-1,) + shape
             elif self.batched:
-                shape = (self.bdim, ) + shape
+                shape = (self.bdim,) + shape
             self._user_params[name] = tt.as_tensor(param).reshape(shape)
         return True
 
@@ -889,24 +925,24 @@ class Group(WithMemoization):
         else:
             return tt.vector(name)
 
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def __init_group__(self, group):
         if not group:
-            raise GroupError('Got empty group')
+            raise GroupError("Got empty group")
         if self.group is None:
             # delayed init
             self.group = group
         if self.batched and len(group) > 1:
             if self.local:  # better error message
-                raise LocalGroupError('Local groups with more than 1 variable are not supported')
+                raise LocalGroupError("Local groups with more than 1 variable are not supported")
             else:
-                raise BatchedGroupError('Batched groups with more than 1 variable are not supported')
+                raise BatchedGroupError(
+                    "Batched groups with more than 1 variable are not supported"
+                )
         self.symbolic_initial = self._initial_type(
-            self.__class__.__name__ + '_symbolic_initial_tensor'
+            self.__class__.__name__ + "_symbolic_initial_tensor"
         )
-        self.input = self._input_type(
-            self.__class__.__name__ + '_symbolic_input'
-        )
+        self.input = self._input_type(self.__class__.__name__ + "_symbolic_input")
         # I do some staff that is not supported by standard __init__
         # so I have to to it by myself
         self.ordering = ArrayOrdering([])
@@ -914,18 +950,17 @@ class Group(WithMemoization):
         self.group = [get_transformed(var) for var in self.group]
         for var in self.group:
             if isinstance(var.distribution, pm.Discrete):
-                raise ParametrizationError('Discrete variables are not supported by VI: {}'
-                                           .format(var))
+                raise ParametrizationError(f"Discrete variables are not supported by VI: {var}")
             begin = self.ddim
             if self.batched:
                 if var.ndim < 1:
                     if self.local:
-                        raise LocalGroupError('Local variable should not be scalar')
+                        raise LocalGroupError("Local variable should not be scalar")
                     else:
-                        raise BatchedGroupError('Batched variable should not be scalar')
+                        raise BatchedGroupError("Batched variable should not be scalar")
                 self.ordering.size += (np.prod(var.dshape[1:])).astype(int)
                 if self.local:
-                    shape = (-1, ) + var.dshape[1:]
+                    shape = (-1,) + var.dshape[1:]
                 else:
                     shape = var.dshape
             else:
@@ -936,13 +971,12 @@ class Group(WithMemoization):
             self.ordering.vmap.append(vmap)
             self.ordering.by_name[vmap.var] = vmap
             vr = self.input[..., vmap.slc].reshape(shape).astype(vmap.dtyp)
-            vr.name = vmap.var + '_vi_replacement'
+            vr.name = vmap.var + "_vi_replacement"
             self.replacements[var] = vr
         self.bij = DictToArrayBijection(self.ordering, {})
 
     def _finalize_init(self):
-        """*Dev* - clean up after init
-        """
+        """*Dev* - clean up after init"""
         del self._kwargs
 
     local = property(lambda self: self._local)
@@ -1034,11 +1068,7 @@ class Group(WithMemoization):
             size = 1
         if not isinstance(deterministic, tt.Variable):
             deterministic = np.int8(deterministic)
-        dim, dist_name, dist_map = (
-            self.ddim,
-            self.initial_dist_name,
-            self.initial_dist_map
-        )
+        dim, dist_name, dist_map = (self.ddim, self.initial_dist_name, self.initial_dist_map)
         dtype = self.symbolic_initial.dtype
         dim = tt.as_tensor(dim)
         size = tt.as_tensor(size)
@@ -1051,11 +1081,7 @@ class Group(WithMemoization):
                 return getattr(self._rng, dist_name)(shape)
         else:
             sample = getattr(self._rng, dist_name)(shape)
-            initial = tt.switch(
-                deterministic,
-                tt.ones(shape, dtype) * dist_map,
-                sample
-            )
+            initial = tt.switch(deterministic, tt.ones(shape, dtype) * dist_map, sample)
             return initial
 
     @node_property
@@ -1080,7 +1106,7 @@ class Group(WithMemoization):
         else:
             return self.symbolic_random
 
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def set_size_and_deterministic(self, node, s, d, more_replacements=None):
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
@@ -1106,8 +1132,7 @@ class Group(WithMemoization):
         return node_out
 
     def to_flat_input(self, node):
-        """*Dev* - replace vars with flattened view stored in `self.inputs`
-        """
+        """*Dev* - replace vars with flattened view stored in `self.inputs`"""
         return theano.clone(node, self.replacements)
 
     def symbolic_sample_over_posterior(self, node):
@@ -1121,8 +1146,7 @@ class Group(WithMemoization):
         def sample(post):
             return theano.clone(node, {self.input: post})
 
-        nodes, _ = theano.scan(
-            sample, random)
+        nodes, _ = theano.scan(sample, random)
         return nodes
 
     def symbolic_single_sample(self, node):
@@ -1133,9 +1157,7 @@ class Group(WithMemoization):
         node = self.to_flat_input(node)
         random = self.symbolic_random.astype(self.symbolic_initial.dtype)
         random = tt.patternbroadcast(random, self.symbolic_initial.broadcastable)
-        return theano.clone(
-            node, {self.input: random[0]}
-        )
+        return theano.clone(node, {self.input: random[0]})
 
     def make_size_and_deterministic_replacements(self, s, d, more_replacements=None):
         """*Dev* - creates correct replacements for initial depending on
@@ -1163,8 +1185,7 @@ class Group(WithMemoization):
     @node_property
     def symbolic_normalizing_constant(self):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`"""
-        t = self.to_flat_input(
-            tt.max([v.scaling for v in self.group]))
+        t = self.to_flat_input(tt.max([v.scaling for v in self.group]))
         t = self.symbolic_single_sample(t)
         return pm.floatX(t)
 
@@ -1178,8 +1199,7 @@ class Group(WithMemoization):
 
     @node_property
     def symbolic_logq(self):
-        """*Dev* - correctly scaled `self.symbolic_logq_not_scaled`
-        """
+        """*Dev* - correctly scaled `self.symbolic_logq_not_scaled`"""
         if self.local:
             s = self.group[0].scaling
             s = self.to_flat_input(s)
@@ -1200,14 +1220,14 @@ class Group(WithMemoization):
 
     def __str__(self):
         if self.group is None:
-            shp = 'undefined'
+            shp = "undefined"
         else:
             shp = str(self.ddim)
             if self.local:
-                shp = 'None, ' + shp
+                shp = "None, " + shp
             elif self.batched:
-                shp = str(self.bdim) + ', ' + shp
-        return '{cls}[{shp}]'.format(shp=shp, cls=self.__class__.__name__)
+                shp = str(self.bdim) + ", " + shp
+        return f"{self.__class__.__name__}[{shp}]"
 
     @node_property
     def std(self):
@@ -1260,25 +1280,24 @@ class Approximation(WithMemoization):
         self._scale_cost_to_minibatch = theano.shared(np.int8(1))
         model = modelcontext(model)
         if not model.free_RVs:
-            raise TypeError('Model does not have FreeRVs')
+            raise TypeError("Model does not have FreeRVs")
         self.groups = list()
         seen = set()
         rest = None
         for g in groups:
             if g.group is None:
                 if rest is not None:
-                    raise GroupError('More than one group is specified for '
-                                     'the rest variables')
+                    raise GroupError("More than one group is specified for " "the rest variables")
                 else:
                     rest = g
             else:
                 if set(g.group) & seen:
-                    raise GroupError('Found duplicates in groups')
+                    raise GroupError("Found duplicates in groups")
                 seen.update(g.group)
                 self.groups.append(g)
         if set(model.free_RVs) - seen:
             if rest is None:
-                raise GroupError('No approximation is specified for the rest variables')
+                raise GroupError("No approximation is specified for the rest variables")
             else:
                 rest.__init_group__(list(set(model.free_RVs) - seen))
                 self.groups.append(rest)
@@ -1286,22 +1305,22 @@ class Approximation(WithMemoization):
 
     @property
     def has_logq(self):
-        return all(self.collect('has_logq'))
+        return all(self.collect("has_logq"))
 
-    def collect(self, item, part='total'):
-        if part == 'total':
+    def collect(self, item, part="total"):
+        if part == "total":
             return [getattr(g, item) for g in self.groups]
-        elif part == 'local':
+        elif part == "local":
             return [getattr(g, item) for g in self.groups if g.local]
-        elif part == 'global':
+        elif part == "global":
             return [getattr(g, item) for g in self.groups if not g.local]
-        elif part == 'batched':
+        elif part == "batched":
             return [getattr(g, item) for g in self.groups if g.batched]
         else:
             raise ValueError("unknown part %s, expected {'local', 'global', 'total', 'batched'}")
 
-    inputs = property(lambda self: self.collect('input'))
-    symbolic_randoms = property(lambda self: self.collect('symbolic_random'))
+    inputs = property(lambda self: self.collect("input"))
+    symbolic_randoms = property(lambda self: self.collect("symbolic_random"))
 
     @property
     def scale_cost_to_minibatch(self):
@@ -1318,22 +1337,21 @@ class Approximation(WithMemoization):
         Here the effect is controlled by `self.scale_cost_to_minibatch`
         """
         t = tt.max(
-            self.collect('symbolic_normalizing_constant') + [
-                var.scaling for var in self.model.observed_RVs
-            ])
-        t = tt.switch(self._scale_cost_to_minibatch, t,
-                      tt.constant(1, dtype=t.dtype))
+            self.collect("symbolic_normalizing_constant")
+            + [var.scaling for var in self.model.observed_RVs]
+        )
+        t = tt.switch(self._scale_cost_to_minibatch, t, tt.constant(1, dtype=t.dtype))
         return pm.floatX(t)
 
     @node_property
     def symbolic_logq(self):
         """*Dev* - collects `symbolic_logq` for all groups"""
-        return tt.add(*self.collect('symbolic_logq'))
+        return tt.add(*self.collect("symbolic_logq"))
 
     @node_property
     def logq(self):
         """*Dev* - collects `logQ` for all groups"""
-        return tt.add(*self.collect('logq'))
+        return tt.add(*self.collect("logq"))
 
     @node_property
     def logq_norm(self):
@@ -1344,7 +1362,8 @@ class Approximation(WithMemoization):
     def _sized_symbolic_varlogp_and_datalogp(self):
         """*Dev* - computes sampled prior term from model via `theano.scan`"""
         varlogp_s, datalogp_s = self.symbolic_sample_over_posterior(
-            [self.model.varlogpt, self.model.datalogpt])
+            [self.model.varlogpt, self.model.datalogpt]
+        )
         return varlogp_s, datalogp_s  # both shape (s,)
 
     @node_property
@@ -1380,8 +1399,7 @@ class Approximation(WithMemoization):
     @node_property
     def _single_symbolic_varlogp_and_datalogp(self):
         """*Dev* - computes sampled prior term from model via `theano.scan`"""
-        varlogp, datalogp = self.symbolic_single_sample(
-            [self.model.varlogpt, self.model.datalogpt])
+        varlogp, datalogp = self.symbolic_single_sample([self.model.varlogpt, self.model.datalogpt])
         return varlogp, datalogp
 
     @node_property
@@ -1420,9 +1438,9 @@ class Approximation(WithMemoization):
     @property
     def replacements(self):
         """*Dev* - all replacements from groups to replace PyMC random variables with approximation"""
-        return collections.OrderedDict(itertools.chain.from_iterable(
-            g.replacements.items() for g in self.groups
-        ))
+        return collections.OrderedDict(
+            itertools.chain.from_iterable(g.replacements.items() for g in self.groups)
+        )
 
     def make_size_and_deterministic_replacements(self, s, d, more_replacements=None):
         """*Dev* - creates correct replacements for initial depending on
@@ -1449,7 +1467,7 @@ class Approximation(WithMemoization):
         flat2rand.update(more_replacements)
         return flat2rand
 
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def set_size_and_deterministic(self, node, s, d, more_replacements=None):
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
@@ -1478,8 +1496,7 @@ class Approximation(WithMemoization):
         return node
 
     def to_flat_input(self, node):
-        """*Dev* - replace vars with flattened view stored in `self.inputs`
-        """
+        """*Dev* - replace vars with flattened view stored in `self.inputs`"""
         return theano.clone(node, self.replacements)
 
     def symbolic_sample_over_posterior(self, node):
@@ -1491,8 +1508,7 @@ class Approximation(WithMemoization):
         def sample(*post):
             return theano.clone(node, dict(zip(self.inputs, post)))
 
-        nodes, _ = theano.scan(
-            sample, self.symbolic_randoms)
+        nodes, _ = theano.scan(sample, self.symbolic_randoms)
         return nodes
 
     def symbolic_single_sample(self, node):
@@ -1503,9 +1519,7 @@ class Approximation(WithMemoization):
         node = self.to_flat_input(node)
         post = [v[0] for v in self.symbolic_randoms]
         inp = self.inputs
-        return theano.clone(
-            node, dict(zip(inp, post))
-        )
+        return theano.clone(node, dict(zip(inp, post)))
 
     def get_optimization_replacements(self, s, d):
         """*Dev* - optimizations for logP. If sample size is static and equal to 1:
@@ -1518,10 +1532,8 @@ class Approximation(WithMemoization):
             repl[self.datalogp] = self.single_symbolic_datalogp
         return repl
 
-    @change_flags(compute_test_value='off')
-    def sample_node(self, node, size=None,
-                    deterministic=False,
-                    more_replacements=None):
+    @change_flags(compute_test_value="off")
+    def sample_node(self, node, size=None, deterministic=False, more_replacements=None):
         """Samples given node or nodes over shared posterior
 
         Parameters
@@ -1553,24 +1565,25 @@ class Approximation(WithMemoization):
         """*Dev* - vectorized sampling for named random variable without call to `theano.scan`.
         This node still needs :func:`set_size_and_deterministic` to be evaluated
         """
+
         def vars_names(vs):
             return {v.name for v in vs}
+
         for vars_, random, ordering in zip(
-                self.collect('group'),
-                self.symbolic_randoms,
-                self.collect('ordering')):
+            self.collect("group"), self.symbolic_randoms, self.collect("ordering")
+        ):
             if name in vars_names(vars_):
                 name_, slc, shape, dtype = ordering[name]
-                found = random[..., slc].reshape((random.shape[0], ) + shape).astype(dtype)
-                found.name = name + '_vi_random_slice'
+                found = random[..., slc].reshape((random.shape[0],) + shape).astype(dtype)
+                found.name = name + "_vi_random_slice"
                 break
         else:
-            raise KeyError('%r not found' % name)
+            raise KeyError("%r not found" % name)
         return found
 
     @property
     @memoize(bound=True)
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def sample_dict_fn(self):
         s = tt.iscalar()
         names = [v.name for v in self.model.free_RVs]
@@ -1580,12 +1593,11 @@ class Approximation(WithMemoization):
 
         def inner(draws=100):
             _samples = sample_fn(draws)
-            return dict([(v_.name, s_) for v_, s_ in zip(self.model.free_RVs, _samples)])
+            return {v_.name: s_ for v_, s_ in zip(self.model.free_RVs, _samples)}
 
         return inner
 
-    def sample(self, draws=500, include_transformed=True, backend='ndarray', 
-               name=None):
+    def sample(self, draws=500, include_transformed=True, backend="ndarray", name=None):
         """Draw samples from variational posterior.
 
         Parameters
@@ -1605,15 +1617,19 @@ class Approximation(WithMemoization):
         trace: :class:`pymc3.backends.base.MultiTrace`
             Samples drawn from variational posterior.
         """
-        vars_sampled = get_default_varnames(self.model.unobserved_RVs,
-                                            include_transformed=include_transformed)
+        vars_sampled = get_default_varnames(
+            self.model.unobserved_RVs, include_transformed=include_transformed
+        )
         samples = self.sample_dict_fn(draws)  # type: dict
         points = ({name: records[i] for name, records in samples.items()} for i in range(draws))
         _backends = dict(ndarray=NDArray, text=Text, hdf5=HDF5, sqlite=SQLite)
 
-        trace = _backends[backend](name=name, model=self.model, vars=vars_sampled, test_point={
-                name: records[0] for name, records in samples.items()
-        })
+        trace = _backends[backend](
+            name=name,
+            model=self.model,
+            vars=vars_sampled,
+            test_point={name: records[0] for name, records in samples.items()},
+        )
         try:
             trace.setup(draws=draws, chain=0)
             for point in points:
@@ -1624,34 +1640,34 @@ class Approximation(WithMemoization):
 
     @property
     def ndim(self):
-        return sum(self.collect('ndim'))
+        return sum(self.collect("ndim"))
 
     @property
     def ddim(self):
-        return sum(self.collect('ddim'))
+        return sum(self.collect("ddim"))
 
     @property
     def has_local(self):
-        return any(self.collect('local'))
+        return any(self.collect("local"))
 
     @property
     def has_global(self):
-        return any(not c for c in self.collect('local'))
+        return any(not c for c in self.collect("local"))
 
     @property
     def has_batched(self):
-        return any(not c for c in self.collect('batched'))
+        return any(not c for c in self.collect("batched"))
 
     @node_property
     def symbolic_random(self):
-        return tt.concatenate(self.collect('symbolic_random2d'), axis=-1)
+        return tt.concatenate(self.collect("symbolic_random2d"), axis=-1)
 
     def __str__(self):
         if len(self.groups) < 5:
-            return 'Approximation{' + ' & '.join(map(str, self.groups)) + '}'
+            return "Approximation{" + " & ".join(map(str, self.groups)) + "}"
         else:
-            forprint = self.groups[:2] + ['...'] + self.groups[-2:]
-            return 'Approximation{' + ' & '.join(map(str, forprint)) + '}'
+            forprint = self.groups[:2] + ["..."] + self.groups[-2:]
+            return "Approximation{" + " & ".join(map(str, forprint)) + "}"
 
     @property
     def all_histograms(self):
@@ -1664,9 +1680,9 @@ class Approximation(WithMemoization):
     @node_property
     def joint_histogram(self):
         if not self.all_histograms:
-            raise VariationalInferenceError('%s does not consist of all Empirical approximations')
-        return tt.concatenate(self.collect('histogram'), axis=-1)
+            raise VariationalInferenceError("%s does not consist of all Empirical approximations")
+        return tt.concatenate(self.collect("histogram"), axis=-1)
 
     @property
     def params(self):
-        return sum(self.collect('params'), [])
+        return sum(self.collect("params"), [])

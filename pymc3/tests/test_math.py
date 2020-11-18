@@ -43,9 +43,7 @@ def test_kronecker():
 
     custom = kronecker(a, b, c)  # Custom version
     nested = tt.slinalg.kron(a, tt.slinalg.kron(b, c))
-    np.testing.assert_array_almost_equal(
-        custom.eval(), nested.eval()  # Standard nested version
-    )
+    np.testing.assert_array_almost_equal(custom.eval(), nested.eval())  # Standard nested version
 
 
 def test_cartesian():
@@ -203,18 +201,9 @@ def test_expand_packed_triangular():
     upper_packed = floatX(vals[upper != 0])
     expand_lower = expand_packed_triangular(N, packed, lower=True)
     expand_upper = expand_packed_triangular(N, packed, lower=False)
-    expand_diag_lower = expand_packed_triangular(
-        N, packed, lower=True, diagonal_only=True
-    )
-    expand_diag_upper = expand_packed_triangular(
-        N, packed, lower=False, diagonal_only=True
-    )
+    expand_diag_lower = expand_packed_triangular(N, packed, lower=True, diagonal_only=True)
+    expand_diag_upper = expand_packed_triangular(N, packed, lower=False, diagonal_only=True)
     assert np.all(expand_lower.eval({packed: lower_packed}) == lower)
     assert np.all(expand_upper.eval({packed: upper_packed}) == upper)
-    assert np.all(
-        expand_diag_lower.eval({packed: lower_packed}) == floatX(np.diag(vals))
-    )
-    assert np.all(
-        expand_diag_upper.eval({packed: upper_packed}) == floatX(np.diag(vals))
-    )
-
+    assert np.all(expand_diag_lower.eval({packed: lower_packed}) == floatX(np.diag(vals)))
+    assert np.all(expand_diag_upper.eval({packed: upper_packed}) == floatX(np.diag(vals)))

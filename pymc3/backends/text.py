@@ -59,17 +59,18 @@ class Text(base.BaseTrace):
 
     def __init__(self, name, model=None, vars=None, test_point=None):
         warnings.warn(
-            'The `Text` backend will soon be removed. '
-            'Please switch to a different backend. '
-            'If you have good reasons for using the Text backend, file an issue and tell us about them. ',
+            "The `Text` backend will soon be removed. "
+            "Please switch to a different backend. "
+            "If you have good reasons for using the Text backend, file an issue and tell us about them. ",
             DeprecationWarning,
         )
         if not os.path.exists(name):
             os.mkdir(name)
         super().__init__(name, model, vars, test_point)
 
-        self.flat_names = {v: ttab.create_flat_names(v, shape)
-                           for v, shape in self.var_shapes.items()}
+        self.flat_names = {
+            v: ttab.create_flat_names(v, shape) for v, shape in self.var_shapes.items()
+        }
 
         self.filename = None
         self._fh = None
@@ -91,21 +92,22 @@ class Text(base.BaseTrace):
             self._fh.close()
 
         self.chain = chain
-        self.filename = os.path.join(self.name, 'chain-{}.csv'.format(chain))
+        self.filename = os.path.join(self.name, f"chain-{chain}.csv")
 
         cnames = [fv for v in self.varnames for fv in self.flat_names[v]]
 
         if os.path.exists(self.filename):
             with open(self.filename) as fh:
-                prev_cnames = next(fh).strip().split(',')
+                prev_cnames = next(fh).strip().split(",")
             if prev_cnames != cnames:
                 raise base.BackendError(
                     "Previous file '{}' has different variables names "
-                    "than current model.".format(self.filename))
-            self._fh = open(self.filename, 'a')
+                    "than current model.".format(self.filename)
+                )
+            self._fh = open(self.filename, "a")
         else:
-            self._fh = open(self.filename, 'w')
-            self._fh.write(','.join(cnames) + '\n')
+            self._fh = open(self.filename, "w")
+            self._fh.write(",".join(cnames) + "\n")
 
     def record(self, point):
         """Record results of a sampling iteration.
@@ -119,7 +121,7 @@ class Text(base.BaseTrace):
         for varname, value in zip(self.varnames, self.fn(point)):
             vals[varname] = value.ravel()
         columns = [str(val) for var in self.varnames for val in vals[var]]
-        self._fh.write(','.join(columns) + '\n')
+        self._fh.write(",".join(columns) + "\n")
 
     def close(self):
         if self._fh is not None:
@@ -162,7 +164,7 @@ class Text(base.BaseTrace):
 
     def _slice(self, idx):
         if idx.stop is not None:
-            raise ValueError('Stop value in slice not supported.')
+            raise ValueError("Stop value in slice not supported.")
         return ndarray._slice_as_ndarray(self, idx)
 
     def point(self, idx):
@@ -193,19 +195,19 @@ def load(name, model=None):
     A MultiTrace instance
     """
     warnings.warn(
-        'The `load` function will soon be removed. '
-        'Please use `arviz.from_netcdf` to load traces. '
-        'If you have good reasons for using the `load` function, file an issue and tell us about them. ',
+        "The `load` function will soon be removed. "
+        "Please use `arviz.from_netcdf` to load traces. "
+        "If you have good reasons for using the `load` function, file an issue and tell us about them. ",
         DeprecationWarning,
     )
-    files = glob(os.path.join(name, 'chain-*.csv'))
+    files = glob(os.path.join(name, "chain-*.csv"))
 
     if len(files) == 0:
-        raise ValueError('No files present in directory {}'.format(name))
+        raise ValueError(f"No files present in directory {name}")
 
     straces = []
     for f in files:
-        chain = int(os.path.splitext(f)[0].rsplit('-', 1)[1])
+        chain = int(os.path.splitext(f)[0].rsplit("-", 1)[1])
         model_vars_in_chain = _parse_chain_vars(f, model)
         strace = Text(name, model=model, vars=model_vars_in_chain)
         strace.chain = chain
@@ -238,9 +240,9 @@ def dump(name, trace, chains=None):
         Chains to dump. If None, all chains are dumped.
     """
     warnings.warn(
-        'The `dump` function will soon be removed. '
-        'Please use `arviz.to_netcdf` to save traces. '
-        'If you have good reasons for using the `dump` function, file an issue and tell us about them. ',
+        "The `dump` function will soon be removed. "
+        "Please use `arviz.to_netcdf` to save traces. "
+        "If you have good reasons for using the `dump` function, file an issue and tell us about them. ",
         DeprecationWarning,
     )
     if not os.path.exists(name):
@@ -249,7 +251,6 @@ def dump(name, trace, chains=None):
         chains = trace.chains
 
     for chain in chains:
-        filename = os.path.join(name, 'chain-{}.csv'.format(chain))
-        df = ttab.trace_to_dataframe(
-            trace, chains=chain, include_transformed=True)
+        filename = os.path.join(name, f"chain-{chain}.csv")
+        df = ttab.trace_to_dataframe(trace, chains=chain, include_transformed=True)
         df.to_csv(filename, index=False)

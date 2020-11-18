@@ -20,7 +20,7 @@ import theano.tensor as tt
 from ..model import modelcontext
 from .. import distributions as pm_dists
 
-__all__ = ['Normal', 'StudentT', 'Binomial', 'Poisson', 'NegativeBinomial']
+__all__ = ["Normal", "StudentT", "Binomial", "Poisson", "NegativeBinomial"]
 
 # Define link functions
 
@@ -29,9 +29,9 @@ __all__ = ['Normal', 'StudentT', 'Binomial', 'Poisson', 'NegativeBinomial']
 
 
 class Identity:
-
     def __call__(self, x):
         return x
+
 
 identity = Identity()
 logit = tt.nnet.sigmoid
@@ -40,21 +40,21 @@ exp = tt.exp
 
 
 class Family:
-    """Base class for Family of likelihood distribution and link functions.
-    """
+    """Base class for Family of likelihood distribution and link functions."""
+
     priors = {}
     link = None
 
     def __init__(self, **kwargs):
         # Overwrite defaults
         for key, val in kwargs.items():
-            if key == 'priors':
+            if key == "priors":
                 self.priors = copy(self.priors)
                 self.priors.update(val)
             else:
                 setattr(self, key, val)
 
-    def _get_priors(self, model=None, name=''):
+    def _get_priors(self, model=None, name=""):
         """Return prior distributions of the likelihood.
 
         Returns
@@ -62,14 +62,14 @@ class Family:
         dict: mapping name -> pymc3 distribution
         """
         if name:
-            name = '{}_'.format(name)
+            name = f"{name}_"
         model = modelcontext(model)
         priors = {}
         for key, val in self.priors.items():
             if isinstance(val, (numbers.Number, np.ndarray, np.generic)):
                 priors[key] = val
             else:
-                priors[key] = model.Var('{}{}'.format(name, key), val)
+                priors[key] = model.Var(f"{name}{key}", val)
 
         return priors
 
@@ -87,48 +87,55 @@ class Family:
         # Wrap y_est in link function
         priors[self.parent] = self.link(y_est)
         if name:
-            name = '{}_'.format(name)
-        return self.likelihood('{}y'.format(name), observed=y_data, **priors)
+            name = f"{name}_"
+        return self.likelihood(f"{name}y", observed=y_data, **priors)
 
     def __repr__(self):
         return """Family {klass}:
     Likelihood  : {likelihood}({parent})
     Priors      : {priors}
-    Link function: {link}.""".format(klass=self.__class__, likelihood=self.likelihood.__name__, parent=self.parent, priors=self.priors, link=self.link)
+    Link function: {link}.""".format(
+            klass=self.__class__,
+            likelihood=self.likelihood.__name__,
+            parent=self.parent,
+            priors=self.priors,
+            link=self.link,
+        )
 
 
 class StudentT(Family):
     link = identity
     likelihood = pm_dists.StudentT
-    parent = 'mu'
-    priors = {'lam': pm_dists.HalfCauchy.dist(beta=10, testval=1.),
-              'nu': 1}
+    parent = "mu"
+    priors = {"lam": pm_dists.HalfCauchy.dist(beta=10, testval=1.0), "nu": 1}
 
 
 class Normal(Family):
     link = identity
     likelihood = pm_dists.Normal
-    parent = 'mu'
-    priors = {'sd': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
+    parent = "mu"
+    priors = {"sd": pm_dists.HalfCauchy.dist(beta=10, testval=1.0)}
 
 
 class Binomial(Family):
     link = logit
     likelihood = pm_dists.Binomial
-    parent = 'p'
-    priors = {'n': 1}
+    parent = "p"
+    priors = {"n": 1}
 
 
 class Poisson(Family):
     link = exp
     likelihood = pm_dists.Poisson
-    parent = 'mu'
-    priors = {'mu': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
+    parent = "mu"
+    priors = {"mu": pm_dists.HalfCauchy.dist(beta=10, testval=1.0)}
 
 
 class NegativeBinomial(Family):
     link = exp
     likelihood = pm_dists.NegativeBinomial
-    parent = 'mu'
-    priors = {'mu': pm_dists.HalfCauchy.dist(beta=10, testval=1.),
-              'alpha': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
+    parent = "mu"
+    priors = {
+        "mu": pm_dists.HalfCauchy.dist(beta=10, testval=1.0),
+        "alpha": pm_dists.HalfCauchy.dist(beta=10, testval=1.0),
+    }

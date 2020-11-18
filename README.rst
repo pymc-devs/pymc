@@ -13,6 +13,19 @@ large suite of problems.
 Check out the `getting started guide <http://docs.pymc.io/notebooks/getting_started>`__,  or
 `interact with live examples <https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks>`__
 using Binder!
+For questions on PyMC3, head on over to our `PyMC Discourse <https://discourse.pymc.io/>`__ forum.
+
+The future of PyMC3 & Theano
+============================
+
+There have been many questions and uncertainty around the future of PyMC3 since Theano
+stopped getting developed by the original authors, and we started experiments with PyMC4.
+
+We are happy to announce that PyMC3 on Theano (which we are `developing further <https://github.com/pymc-devs/Theano-PyMC>`__) 
+with a new JAX backend is the future. PyMC4 will not be developed further. 
+
+See the `full announcement <https://pymc-devs.medium.com/the-future-of-pymc3-or-theano-is-dead-long-live-theano-d8005f8a0e9b>`__
+for more details. 
 
 Features
 ========
@@ -78,12 +91,7 @@ Or via conda-forge:
 
     conda install -c conda-forge pymc3
 
-Plotting is done using `ArviZ <https://arviz-devs.github.io/arviz/>`__
-which may be installed separately, or along with PyMC3:
-
-::
-
-    pip install pymc3[plots]
+Plotting is done using `ArviZ <https://arviz-devs.github.io/arviz/>`__ - if you follow the installation instructions above, then it will be installed alongside ``PyMC3``.
 
 The current development branch of PyMC3 can be installed from GitHub, also using ``pip``:
 
@@ -172,7 +180,7 @@ Contributors
 ============
 
 See the `GitHub contributor
-page <https://github.com/pymc-devs/pymc3/graphs/contributors>`__
+page <https://github.com/pymc-devs/pymc3/graphs/contributors>`__. Also read our `Code of Conduct <https://github.com/pymc-devs/pymc3/blob/master/CODE_OF_CONDUCT.md>`__ guidelines for a better contributing experience.
 
 Support
 =======

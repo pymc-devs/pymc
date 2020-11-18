@@ -20,6 +20,8 @@ import xarray
 import arviz
 from numpy import asscalar, ndarray
 
+from theano.tensor import TensorVariable
+
 
 LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
 
@@ -64,7 +66,7 @@ def get_transformed_name(name, transform):
     str
         A string to use for the transformed variable
     """
-    return "{}_{}__".format(name, transform.name)
+    return f"{name}_{transform.name}__"
 
 
 def is_transformed_name(name):
@@ -99,7 +101,7 @@ def get_untransformed_name(name):
         String with untransformed version of the name.
     """
     if not is_transformed_name(name):
-        raise ValueError("{} does not appear to be a transformed name".format(name))
+        raise ValueError(f"{name} does not appear to be a transformed name")
     return "_".join(name.split("_")[:-3])
 
 
@@ -121,29 +123,51 @@ def get_default_varnames(var_iterator, include_transformed):
     if include_transformed:
         return list(var_iterator)
     else:
-        return [var for var in var_iterator if not is_transformed_name(str(var))]
+        return [var for var in var_iterator if not is_transformed_name(get_var_name(var))]
 
 
-def get_variable_name(variable):
-    r"""Returns the variable data type if it is a constant, otherwise
-    returns the argument name.
-    """
+def get_repr_for_variable(variable, formatting="plain"):
+    """Build a human-readable string representation for a variable."""
     name = variable.name
     if name is None:
         if hasattr(variable, "get_parents"):
             try:
                 names = [
-                    get_variable_name(item) for item in variable.get_parents()[0].inputs
+                    get_repr_for_variable(item, formatting=formatting)
+                    for item in variable.get_parents()[0].inputs
                 ]
                 # do not escape_latex these, since it is not idempotent
-                return "f(%s)" % ",~".join([n for n in names if isinstance(n, str)])
+                if formatting == "latex":
+                    return "f({args})".format(
+                        args=",~".join([n for n in names if isinstance(n, str)])
+                    )
+                else:
+                    return "f({args})".format(
+                        args=", ".join([n for n in names if isinstance(n, str)])
+                    )
             except IndexError:
                 pass
         value = variable.eval()
-        if not value.shape:
+        if not value.shape or value.shape == (1,):
             return asscalar(value)
         return "array"
-    return r"\text{%s}" % name
+
+    if formatting == "latex":
+        return fr"\text{{{name}}}"
+    else:
+        return name
+
+
+def get_var_name(var):
+    """Get an appropriate, plain variable name for a variable. Necessary
+    because we override theano.tensor.TensorVariable.__str__ to give informative
+    string representations to our pymc3.PyMC3Variables, yet we want to use the
+    plain name as e.g. keys in dicts.
+    """
+    if isinstance(var, TensorVariable):
+        return super(TensorVariable, var).__str__()
+    else:
+        return str(var)
 
 
 def update_start_vals(a, b, model):
@@ -204,9 +228,7 @@ def dataset_to_point_dict(ds: xarray.Dataset) -> List[Dict[str, ndarray]]:
     return points
 
 
-def chains_and_samples(
-    data: Union[xarray.Dataset, arviz.InferenceData]
-) -> Tuple[int, int]:
+def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tuple[int, int]:
     """Extract and return number of chains and samples in xarray or arviz traces."""
     dataset: xarray.Dataset
     if isinstance(data, xarray.Dataset):

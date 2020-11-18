@@ -17,7 +17,7 @@ __all__ = [
     "IncorrectArgumentsError",
     "TraceDirectoryError",
     "ImputationWarning",
-    "ShapeError"
+    "ShapeError",
 ]
 
 
@@ -43,25 +43,27 @@ class ImputationWarning(UserWarning):
 
 class ShapeError(Exception):
     """Error that the shape of a variable is incorrect."""
+
     def __init__(self, message, actual=None, expected=None):
         if actual is not None and expected is not None:
-            super().__init__('{} (actual {} != expected {})'.format(message, actual, expected))
+            super().__init__(f"{message} (actual {actual} != expected {expected})")
         elif actual is not None and expected is None:
-            super().__init__('{} (actual {})'.format(message, actual))
+            super().__init__(f"{message} (actual {actual})")
         elif actual is None and expected is not None:
-            super().__init__('{} (expected {})'.format(message, expected))
+            super().__init__(f"{message} (expected {expected})")
         else:
             super().__init__(message)
 
 
 class DtypeError(TypeError):
     """Error that the dtype of a variable is incorrect."""
+
     def __init__(self, message, actual=None, expected=None):
         if actual is not None and expected is not None:
-            super().__init__('{} (actual {} != expected {})'.format(message, actual, expected))
+            super().__init__(f"{message} (actual {actual} != expected {expected})")
         elif actual is not None and expected is None:
-            super().__init__('{} (actual {})'.format(message, actual))
+            super().__init__(f"{message} (actual {actual})")
         elif actual is None and expected is not None:
-            super().__init__('{} (expected {})'.format(message, expected))
+            super().__init__(f"{message} (expected {expected})")
         else:
             super().__init__(message)

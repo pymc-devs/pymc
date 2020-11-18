@@ -32,7 +32,7 @@ class TestGLM(SeededTest):
         super().setup_class()
         cls.intercept = 1
         cls.slope = 3
-        cls.sd = .05
+        cls.sd = 0.05
         x_linear, cls.y_linear = generate_data(cls.intercept, cls.slope, size=1000)
         cls.y_linear += np.random.normal(size=1000, scale=cls.sd)
         cls.data_linear = dict(x=x_linear, y=cls.y_linear)
@@ -43,86 +43,68 @@ class TestGLM(SeededTest):
         cls.data_logistic = dict(x=x_logistic, y=bern_trials)
 
     def test_linear_component(self):
-        vars_to_create = {
-            'sigma',
-            'sigma_interval__',
-            'y_obs',
-            'lm_x0',
-            'lm_Intercept'
-        }
+        vars_to_create = {"sigma", "sigma_interval__", "y_obs", "lm_x0", "lm_Intercept"}
         with Model() as model:
             lm = LinearComponent(
-                self.data_linear['x'],
-                self.data_linear['y'],
-                name='lm'
-            )   # yields lm_x0, lm_Intercept
-            sigma = Uniform('sigma', 0, 20)     # yields sigma_interval__
-            Normal('y_obs', mu=lm.y_est, sigma=sigma, observed=self.y_linear)  # yields y_obs
+                self.data_linear["x"], self.data_linear["y"], name="lm"
+            )  # yields lm_x0, lm_Intercept
+            sigma = Uniform("sigma", 0, 20)  # yields sigma_interval__
+            Normal("y_obs", mu=lm.y_est, sigma=sigma, observed=self.y_linear)  # yields y_obs
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
-            trace = sample(500, tune=0, step=step, start=start,
-                           progressbar=False, random_seed=self.random_seed)
+            trace = sample(
+                500, tune=0, step=step, start=start, progressbar=False, random_seed=self.random_seed
+            )
 
-            assert round(abs(np.mean(trace['lm_Intercept'])-self.intercept), 1) == 0
-            assert round(abs(np.mean(trace['lm_x0'])-self.slope), 1) == 0
-            assert round(abs(np.mean(trace['sigma'])-self.sd), 1) == 0
+            assert round(abs(np.mean(trace["lm_Intercept"]) - self.intercept), 1) == 0
+            assert round(abs(np.mean(trace["lm_x0"]) - self.slope), 1) == 0
+            assert round(abs(np.mean(trace["sigma"]) - self.sd), 1) == 0
         assert vars_to_create == set(model.named_vars.keys())
 
     def test_linear_component_from_formula(self):
         with Model() as model:
-            lm = LinearComponent.from_formula('y ~ x', self.data_linear)
-            sigma = Uniform('sigma', 0, 20)
-            Normal('y_obs', mu=lm.y_est, sigma=sigma, observed=self.y_linear)
+            lm = LinearComponent.from_formula("y ~ x", self.data_linear)
+            sigma = Uniform("sigma", 0, 20)
+            Normal("y_obs", mu=lm.y_est, sigma=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
-            trace = sample(500, tune=0, step=step, start=start,
-                           progressbar=False,
-                           random_seed=self.random_seed)
+            trace = sample(
+                500, tune=0, step=step, start=start, progressbar=False, random_seed=self.random_seed
+            )
 
-            assert round(abs(np.mean(trace['Intercept'])-self.intercept), 1) == 0
-            assert round(abs(np.mean(trace['x'])-self.slope), 1) == 0
-            assert round(abs(np.mean(trace['sigma'])-self.sd), 1) == 0
+            assert round(abs(np.mean(trace["Intercept"]) - self.intercept), 1) == 0
+            assert round(abs(np.mean(trace["x"]) - self.slope), 1) == 0
+            assert round(abs(np.mean(trace["sigma"]) - self.sd), 1) == 0
 
     def test_glm(self):
         with Model() as model:
-            vars_to_create = {
-                'glm_sd',
-                'glm_sd_log__',
-                'glm_y',
-                'glm_x0',
-                'glm_Intercept'
-            }
-            GLM(
-                self.data_linear['x'],
-                self.data_linear['y'],
-                name='glm'
-            )
+            vars_to_create = {"glm_sd", "glm_sd_log__", "glm_y", "glm_x0", "glm_Intercept"}
+            GLM(self.data_linear["x"], self.data_linear["y"], name="glm")
             start = find_MAP()
             step = Slice(model.vars)
-            trace = sample(500, tune=0, step=step, start=start,
-                           progressbar=False, random_seed=self.random_seed)
-            assert round(abs(np.mean(trace['glm_Intercept'])-self.intercept), 1) == 0
-            assert round(abs(np.mean(trace['glm_x0'])-self.slope), 1) == 0
-            assert round(abs(np.mean(trace['glm_sd'])-self.sd), 1) == 0
+            trace = sample(
+                500, tune=0, step=step, start=start, progressbar=False, random_seed=self.random_seed
+            )
+            assert round(abs(np.mean(trace["glm_Intercept"]) - self.intercept), 1) == 0
+            assert round(abs(np.mean(trace["glm_x0"]) - self.slope), 1) == 0
+            assert round(abs(np.mean(trace["glm_sd"]) - self.sd), 1) == 0
             assert vars_to_create == set(model.named_vars.keys())
 
     def test_glm_from_formula(self):
         with Model() as model:
-            NAME = 'glm'
-            GLM.from_formula('y ~ x', self.data_linear, name=NAME)
+            NAME = "glm"
+            GLM.from_formula("y ~ x", self.data_linear, name=NAME)
             start = find_MAP()
             step = Slice(model.vars)
-            trace = sample(500, tune=0, step=step, start=start,
-                           progressbar=False, random_seed=self.random_seed)
+            trace = sample(
+                500, tune=0, step=step, start=start, progressbar=False, random_seed=self.random_seed
+            )
 
-            assert round(abs(np.mean(trace['%s_Intercept' % NAME])-self.intercept), 1) == 0
-            assert round(abs(np.mean(trace['%s_x' % NAME])-self.slope), 1) == 0
-            assert round(abs(np.mean(trace['%s_sd' % NAME])-self.sd), 1) == 0
+            assert round(abs(np.mean(trace["%s_Intercept" % NAME]) - self.intercept), 1) == 0
+            assert round(abs(np.mean(trace["%s_x" % NAME]) - self.slope), 1) == 0
+            assert round(abs(np.mean(trace["%s_sd" % NAME]) - self.sd), 1) == 0
 
     def test_strange_types(self):
         with Model():
-            with pytest.raises(
-                ValueError):
-                GLM(1,
-                self.data_linear['y'],
-                name='lm')
+            with pytest.raises(ValueError):
+                GLM(1, self.data_linear["y"], name="lm")

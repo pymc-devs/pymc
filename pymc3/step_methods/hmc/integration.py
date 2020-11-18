@@ -18,7 +18,7 @@ import numpy as np
 from scipy import linalg
 
 
-State = namedtuple("State", 'q, p, v, q_grad, energy, model_logp')
+State = namedtuple("State", "q, p, v, q_grad, energy, model_logp")
 
 
 class IntegrationError(RuntimeError):
@@ -32,14 +32,15 @@ class CpuLeapfrogIntegrator:
         self._logp_dlogp_func = logp_dlogp_func
         self._dtype = self._logp_dlogp_func.dtype
         if self._potential.dtype != self._dtype:
-            raise ValueError("dtypes of potential (%s) and logp function (%s)"
-                             "don't match."
-                             % (self._potential.dtype, self._dtype))
+            raise ValueError(
+                "dtypes of potential (%s) and logp function (%s)"
+                "don't match." % (self._potential.dtype, self._dtype)
+            )
 
     def compute_state(self, q, p):
         """Compute Hamiltonian functions using a position and momentum."""
         if q.dtype != self._dtype or p.dtype != self._dtype:
-            raise ValueError('Invalid dtype. Must be %s' % self._dtype)
+            raise ValueError("Invalid dtype. Must be %s" % self._dtype)
         logp, dlogp = self._logp_dlogp_func(q)
         v = self._potential.velocity(p)
         kinetic = self._potential.energy(p, velocity=v)
@@ -79,7 +80,7 @@ class CpuLeapfrogIntegrator:
                 raise
 
     def _step(self, epsilon, state):
-        axpy = linalg.blas.get_blas_funcs('axpy', dtype=self._dtype)
+        axpy = linalg.blas.get_blas_funcs("axpy", dtype=self._dtype)
         pot = self._potential
 
         q_new = state.q.copy()

@@ -87,10 +87,13 @@ class Covariance:
 
     def _slice(self, X, Xs):
         if self.input_dim != X.shape[-1]:
-            warnings.warn(f"Only {self.input_dim} column(s) out of {X.shape[-1]} are"
-                          " being used to compute the covariance function. If this"
-                          " is not intended, increase 'input_dim' parameter to"
-                          " the number of columns to use. Ignore otherwise.", UserWarning)
+            warnings.warn(
+                f"Only {self.input_dim} column(s) out of {X.shape[-1]} are"
+                " being used to compute the covariance function. If this"
+                " is not intended, increase 'input_dim' parameter to"
+                " the number of columns to use. Ignore otherwise.",
+                UserWarning,
+            )
         X = tt.as_tensor_variable(X[:, self.active_dims])
         if Xs is not None:
             Xs = tt.as_tensor_variable(Xs[:, self.active_dims])
@@ -109,9 +112,9 @@ class Covariance:
         return self.__mul__(other)
 
     def __pow__(self, other):
-        if(
-            isinstance(other, theano.compile.SharedVariable) and
-            other.get_value().squeeze().shape == ()
+        if (
+            isinstance(other, theano.compile.SharedVariable)
+            and other.get_value().squeeze().shape == ()
         ):
             other = tt.squeeze(other)
             return Exponentiated(self, other)
@@ -123,7 +126,6 @@ class Covariance:
 
         raise ValueError("A covariance function can only be exponentiated by a scalar value")
 
-
     def __array_wrap__(self, result):
         """
         Required to allow radd/rmul by numpy arrays.
@@ -132,7 +134,9 @@ class Covariance:
         if len(result.shape) <= 1:
             result = result.reshape(1, 1)
         elif len(result.shape) > 2:
-            raise ValueError(f"cannot combine a covariance function with array of shape {result.shape}")
+            raise ValueError(
+                f"cannot combine a covariance function with array of shape {result.shape}"
+            )
         r, c = result.shape
         A = np.zeros((r, c))
         for i in range(r):
@@ -149,11 +153,7 @@ class Covariance:
 class Combination(Covariance):
     def __init__(self, factor_list):
         input_dim = max(
-            [
-                factor.input_dim
-                for factor in factor_list
-                if isinstance(factor, Covariance)
-            ]
+            [factor.input_dim for factor in factor_list if isinstance(factor, Covariance)]
         )
         super().__init__(input_dim=input_dim)
         self.factor_list = []
@@ -205,10 +205,7 @@ class Exponentiated(Covariance):
     def __init__(self, kernel, power):
         self.kernel = kernel
         self.power = power
-        super().__init__(
-            input_dim=self.kernel.input_dim,
-            active_dims=self.kernel.active_dims
-        )
+        super().__init__(input_dim=self.kernel.input_dim, active_dims=self.kernel.active_dims)
 
     def __call__(self, X, Xs=None, diag=False):
         return self.kernel(X, Xs, diag=diag) ** self.power
@@ -247,9 +244,7 @@ class Kron(Covariance):
 
     def __call__(self, X, Xs=None, diag=False):
         X_split, Xs_split = self._split(X, Xs)
-        covs = [
-            cov(x, xs, diag) for cov, x, xs in zip(self.factor_list, X_split, Xs_split)
-        ]
+        covs = [cov(x, xs, diag) for cov, x, xs in zip(self.factor_list, X_split, Xs_split)]
         return reduce(mul, covs)
 
 
@@ -297,6 +292,61 @@ class WhiteNoise(Covariance):
             return tt.diag(self.diag(X))
         else:
             return tt.alloc(0.0, X.shape[0], Xs.shape[0])
+
+
+class Circular(Covariance):
+    R"""
+    Circular Kernel.
+
+    .. math::
+
+        k_g(x, y) = W_\pi(\operatorname{dist}_{\mathit{geo}}(x, y)),
+
+    with
+
+    .. math::
+
+        W_c(t) = \left(1 + \tau \frac{t}{c}\right)\left(1-\frac{t}{c}\right)^\tau_+
+
+    where :math:`c` is maximum value for :math:`t` and :math:`\tau\ge 4`.
+    :math:`\tau` controls for correlation strength, larger :math:`\tau` leads to less smooth functions
+    See [1]_ for more explanations and use cases.
+
+    Parameters
+    ----------
+    period : scalar
+        defines the circular interval :math:`[0, \mathit{bound})`
+    tau : scalar
+        :math:`\tau\ge 4` defines correlation strength, the larger,
+        the smaller correlation is. Minimum value is :math:`4`
+
+    References
+    ----------
+    .. [1] Espéran Padonou, O Roustant, "Polar Gaussian Processes for Predicting on Circular Domains"
+    https://hal.archives-ouvertes.fr/hal-01119942v1/document
+    """
+
+    def __init__(self, input_dim, period, tau=4, active_dims=None):
+        super().__init__(input_dim, active_dims)
+        self.c = tt.as_tensor_variable(period / 2)
+        self.tau = tau
+
+    def dist(self, X, Xs):
+        if Xs is None:
+            Xs = tt.transpose(X)
+        else:
+            Xs = tt.transpose(Xs)
+        return tt.abs_((X - Xs + self.c) % (self.c * 2) - self.c)
+
+    def weinland(self, t):
+        return (1 + self.tau * t / self.c) * tt.clip(1 - t / self.c, 0, np.inf) ** self.tau
+
+    def full(self, X, Xs=None):
+        X, Xs = self._slice(X, Xs)
+        return self.weinland(self.dist(X, Xs))
+
+    def diag(self, X):
+        return tt.alloc(1.0, X.shape[0])
 
 
 class Stationary(Covariance):
@@ -431,9 +481,7 @@ class Matern52(Stationary):
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
         r = self.euclidean_dist(X, Xs)
-        return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * tt.square(r)) * tt.exp(
-            -1.0 * np.sqrt(5.0) * r
-        )
+        return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * tt.square(r)) * tt.exp(-1.0 * np.sqrt(5.0) * r)
 
 
 class Matern32(Stationary):
@@ -605,14 +653,10 @@ class Gibbs(Covariance):
         super().__init__(input_dim, active_dims)
         if active_dims is not None:
             if len(active_dims) > 1:
-                raise NotImplementedError(
-                    ("Higher dimensional inputs ", "are untested")
-                )
+                raise NotImplementedError(("Higher dimensional inputs ", "are untested"))
         else:
             if input_dim != 1:
-                raise NotImplementedError(
-                    ("Higher dimensional inputs ", "are untested")
-                )
+                raise NotImplementedError(("Higher dimensional inputs ", "are untested"))
         if not callable(lengthscale_func):
             raise TypeError("lengthscale_func must be callable")
         self.lfunc = handle_args(lengthscale_func, args)
@@ -642,9 +686,7 @@ class Gibbs(Covariance):
             r2 = self.square_dist(X, Xs)
         rx2 = tt.reshape(tt.square(rx), (-1, 1))
         rz2 = tt.reshape(tt.square(rz), (1, -1))
-        return tt.sqrt((2.0 * tt.outer(rx, rz)) / (rx2 + rz2)) * tt.exp(
-            -1.0 * r2 / (rx2 + rz2)
-        )
+        return tt.sqrt((2.0 * tt.outer(rx, rz)) / (rx2 + rz2)) * tt.exp(-1.0 * r2 / (rx2 + rz2))
 
     def diag(self, X):
         return tt.alloc(1.0, X.shape[0])
@@ -734,9 +776,7 @@ class Coregion(Covariance):
             raise ValueError("Coregion requires exactly one dimension to be active")
         make_B = W is not None or kappa is not None
         if make_B and B is not None:
-            raise ValueError(
-                "Exactly one of (W, kappa) and B must be provided to Coregion"
-            )
+            raise ValueError("Exactly one of (W, kappa) and B must be provided to Coregion")
         if make_B:
             self.W = tt.as_tensor_variable(W)
             self.kappa = tt.as_tensor_variable(kappa)
@@ -744,9 +784,7 @@ class Coregion(Covariance):
         elif B is not None:
             self.B = tt.as_tensor_variable(B)
         else:
-            raise ValueError(
-                "Exactly one of (W, kappa) and B must be provided to Coregion"
-            )
+            raise ValueError("Exactly one of (W, kappa) and B must be provided to Coregion")
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)

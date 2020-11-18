@@ -14,7 +14,7 @@
 
 import theano.tensor as tt
 
-__all__ = ['Zero', 'Constant', 'Linear']
+__all__ = ["Zero", "Constant", "Linear"]
 
 
 class Mean:
@@ -47,6 +47,7 @@ class Zero(Mean):
 
     def __call__(self, X):
         return tt.alloc(0.0, X.shape[0])
+
 
 class Constant(Mean):
     R"""
@@ -105,4 +106,3 @@ class Prod(Mean):
 
     def __call__(self, X):
         return tt.mul(self.m1(X), self.m2(X))
-

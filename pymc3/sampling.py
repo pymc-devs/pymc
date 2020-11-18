@@ -230,7 +230,7 @@ def _print_step_hierarchy(s, level=0):
                 for v in s.vars
             ]
         )
-        _log.info(">" * level + "{}: [{}]".format(s.__class__.__name__, varnames))
+        _log.info(">" * level + f"{s.__class__.__name__}: [{varnames}]")
 
 
 def sample(
@@ -286,6 +286,7 @@ def sample(
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
         * map: Use the MAP as starting point. This is discouraged.
         * adapt_full: Adapt a dense mass matrix using the sample covariances
+
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically.  By default the NUTS step
@@ -337,11 +338,11 @@ def sample(
         is drawn from.
 
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
-    return_inferencedata : bool, optional, default=False
-        Whether to return the trace as an `arviz.InferenceData` (True) object or a `MultiTrace` (False)
+    return_inferencedata : bool, default=False
+        Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
         Defaults to `False`, but we'll switch to `True` in an upcoming release.
     idata_kwargs : dict, optional
-        Keyword arguments for `arviz.from_pymc3`
+        Keyword arguments for :func:`arviz:arviz.from_pymc3`
     mp_ctx : multiprocessing.context.BaseContent
         A multiprocessing context for parallel sampling. See multiprocessing
         documentation for details.
@@ -415,6 +416,7 @@ def sample(
         >>> pm.summary(trace)
                mean        sd  mc_error   hpd_2.5  hpd_97.5
         p  0.604625  0.047086   0.00078  0.510498  0.694774
+
     """
     model = modelcontext(model)
 
@@ -534,7 +536,7 @@ def sample(
     parallel = cores > 1 and chains > 1 and not has_population_samplers
     t_start = time.time()
     if parallel:
-        _log.info("Multiprocess sampling ({} chains in {} jobs)".format(chains, cores))
+        _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
         _print_step_hierarchy(step)
         try:
             trace = _mp_sample(**sample_args, **parallel_args)
@@ -557,7 +559,7 @@ def sample(
                     for m in (step.methods if isinstance(step, CompoundStep) else [step])
                 ]
             )
-            _log.info("Population sampling ({} chains)".format(chains))
+            _log.info(f"Population sampling ({chains} chains)")
             if has_demcmc and chains < 3:
                 raise ValueError(
                     "DEMetropolis requires at least 3 chains. "
@@ -574,7 +576,7 @@ def sample(
             _print_step_hierarchy(step)
             trace = _sample_population(**sample_args, parallelize=cores > 1)
         else:
-            _log.info("Sequential sampling ({} chains in 1 job)".format(chains))
+            _log.info(f"Sequential sampling ({chains} chains in 1 job)")
             _print_step_hierarchy(step)
             trace = _sample_many(**sample_args)
 
@@ -651,11 +653,18 @@ def _check_start_shape(model, start):
                     )
 
     if e != "":
-        raise ValueError("Bad shape for start argument:{}".format(e))
+        raise ValueError(f"Bad shape for start argument:{e}")
 
 
 def _sample_many(
-    draws, chain: int, chains: int, start: list, random_seed: list, step, callback=None, **kwargs,
+    draws,
+    chain: int,
+    chains: int,
+    start: list,
+    random_seed: list,
+    step,
+    callback=None,
+    **kwargs,
 ):
     """Samples all chains sequentially.
 
@@ -992,7 +1001,8 @@ def _iter_sample(
             if callback is not None:
                 warns = getattr(step, "warnings", None)
                 callback(
-                    trace=strace, draw=Draw(chain, i == draws, i, i < tune, stats, point, warns),
+                    trace=strace,
+                    draw=Draw(chain, i == draws, i, i < tune, stats, point, warns),
                 )
 
             yield strace, diverging
@@ -1053,7 +1063,7 @@ class PopulationStepper:
                     process = multiprocessing.Process(
                         target=self.__class__._run_secondary,
                         args=(c, stepper_dumps, secondary_end),
-                        name="ChainWalker{}".format(c),
+                        name=f"ChainWalker{c}",
                     )
                     # we want the child process to exit if the parent is terminated
                     process.daemon = True
@@ -1132,7 +1142,7 @@ class PopulationStepper:
                 update = stepper.step(population[c])
                 secondary_end.send(update)
         except Exception:
-            _log.exception("ChainWalker{}".format(c))
+            _log.exception(f"ChainWalker{c}")
         return
 
     def step(self, tune_stop, population):
@@ -1664,7 +1674,7 @@ def sample_posterior_predictive(
     if samples is None:
         if isinstance(_trace, MultiTrace):
             samples = sum(len(v) for v in _trace._straces.values())
-        elif isinstance(_trace, list) and all((isinstance(x, dict) for x in _trace)):
+        elif isinstance(_trace, list) and all(isinstance(x, dict) for x in _trace):
             # this is a list of points
             samples = len(_trace)
         else:
@@ -1711,7 +1721,7 @@ def sample_posterior_predictive(
                     param = cast(MultiTrace, _trace)._straces[chain_idx % nchain].point(point_idx)
                 # ... or a PointList
                 else:
-                    param = cast(PointList, _trace)[idx % len_trace]
+                    param = cast(PointList, _trace)[idx % (len_trace * nchain)]
             # there's only a single chain, but the index might hit it multiple times if
             # the number of indices is greater than the length of the trace.
             else:
@@ -1720,7 +1730,6 @@ def sample_posterior_predictive(
             values = draw_values(vars, point=param, size=size)
             for k, v in zip(vars, values):
                 ppc_trace_t.insert(k.name, v, idx)
-
     except KeyboardInterrupt:
         pass
 
@@ -1746,7 +1755,7 @@ def sample_posterior_predictive_w(
     Parameters
     ----------
     traces : list or list of lists
-        List of traces generated from MCMC sampling (xarray.Dataset, arviz.InferenceData, or 
+        List of traces generated from MCMC sampling (xarray.Dataset, arviz.InferenceData, or
         MultiTrace), or a list of list containing dicts from find_MAP() or points. The number of
         traces should be equal to the number of weights.
     samples : int, optional
@@ -1831,7 +1840,7 @@ def sample_posterior_predictive_w(
     obs = [x for m in models for x in m.observed_RVs]
     variables = np.repeat(obs, n)
 
-    lengths = list(set([np.atleast_1d(observed).shape for observed in obs]))
+    lengths = list({np.atleast_1d(observed).shape for observed in obs})
 
     if len(lengths) == 1:
         size = [None for i in variables]
@@ -1945,7 +1954,13 @@ def sample_prior_predictive(
 
 
 def init_nuts(
-    init="auto", chains=1, n_init=500000, model=None, random_seed=None, progressbar=True, **kwargs,
+    init="auto",
+    chains=1,
+    n_init=500000,
+    model=None,
+    random_seed=None,
+    progressbar=True,
+    **kwargs,
 ):
     """Set up the mass matrix initialization for NUTS.
 
@@ -1978,6 +1993,7 @@ def init_nuts(
           test value (usually the prior mean) as starting point.
         * jitter+adapt_full: Same as ``adapt_full`, but use test value plus a uniform jitter in
           [-1, 1] as starting point in each chain.
+
     chains : int
         Number of jobs to start.
     n_init : int
@@ -2012,7 +2028,7 @@ def init_nuts(
     if init == "auto":
         init = "jitter+adapt_diag"
 
-    _log.info("Initializing NUTS using {}...".format(init))
+    _log.info(f"Initializing NUTS using {init}...")
 
     if random_seed is not None:
         random_seed = int(np.atleast_1d(random_seed)[0])
@@ -2126,7 +2142,7 @@ def init_nuts(
         cov = np.eye(model.ndim)
         potential = quadpotential.QuadPotentialFullAdapt(model.ndim, mean, cov, 10)
     else:
-        raise ValueError("Unknown initializer: {}.".format(init))
+        raise ValueError(f"Unknown initializer: {init}.")
 
     step = pm.NUTS(potential=potential, model=model, **kwargs)
 

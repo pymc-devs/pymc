@@ -17,8 +17,9 @@ from numpy import exp, log, sqrt
 from ..model import modelcontext, Point
 from ..theanof import hessian_diag, inputvars
 from ..blocking import DictToArrayBijection, ArrayOrdering
+from ..util import get_var_name
 
-__all__ = ['find_hessian', 'trace_cov', 'guess_scaling']
+__all__ = ["find_hessian", "trace_cov", "guess_scaling"]
 
 
 def fixed_hessian(point, vars=None, model=None):
@@ -98,8 +99,8 @@ def adjust_scaling(s, scaling_bound):
 def adjust_precision(tau, scaling_bound=1e-8):
     mag = sqrt(abs(tau))
 
-    bounded = bound(log(mag), log(scaling_bound), log(1./scaling_bound))
-    return exp(bounded)**2
+    bounded = bound(log(mag), log(scaling_bound), log(1.0 / scaling_bound))
+    return exp(bounded) ** 2
 
 
 def bound(a, l, u):
@@ -135,7 +136,7 @@ def trace_cov(trace, vars=None, model=None):
         vars = trace.varnames
 
     def flat_t(var):
-        x = trace[str(var)]
+        x = trace[get_var_name(var)]
         return x.reshape((x.shape[0], np.prod(x.shape[1:], dtype=int)))
 
     return np.cov(np.concatenate(list(map(flat_t, vars)), 1).T)
