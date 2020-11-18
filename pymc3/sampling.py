@@ -1374,6 +1374,10 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
     try:
         backend = shortcuts[trace]["backend"]
         name = shortcuts[trace]["name"]
+        warnings.warn(
+            "The use of non-NDArray backends has been deprecated, and will be removed in a future version.",
+            DeprecationWarning,
+        )
         return backend(name, **kwds)
     except TypeError:
         return NDArray(vars=trace, **kwds)
