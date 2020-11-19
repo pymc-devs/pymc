@@ -51,4 +51,4 @@ def test_plot_posterior_predictive_glm_non_defaults(inferencedata):
         np.testing.assert_array_equal(x_axis, expected_xvalues)
         np.testing.assert_array_equal(y_axis, expected_yvalues)
         assert line.get_lw() == 0.3
-        assert line.get_c() == "k"
+        assert line.get_c() == "b"
