@@ -1,0 +1,26 @@
+{
+    "codecov": {
+        "require_ci_to_pass": true
+    },
+    "comment": {
+        "layout": "reach, diff, flags, files",
+        "behavior": "default",
+        "branches": null,
+        "require_base": false,
+        "require_head": true,
+        "require_changes": false
+    },
+    "coverage": {
+        "range": [
+            70,
+            100
+        ],
+        "round": "up",
+        "status": {
+            "patch": true,
+            "changes": false,
+            "project": true
+        },
+        "precision": 1
+    }
+}
