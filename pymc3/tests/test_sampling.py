@@ -355,16 +355,6 @@ class TestChooseBackend:
             pm.sampling._choose_backend(["var1", "var2"], "chain")
         nd.assert_called_with(vars=["var1", "var2"])
 
-    def test_choose_backend_invalid(self):
-        with pytest.raises(ValueError):
-            pm.sampling._choose_backend("invalid", "chain")
-
-    def test_choose_backend_shortcut(self):
-        backend = mock.Mock()
-        shortcuts = {"test_backend": {"backend": backend, "name": None}}
-        pm.sampling._choose_backend("test_backend", "chain", shortcuts=shortcuts)
-        assert backend.called
-
 
 class TestSamplePPC(SeededTest):
     def test_normal_scalar(self):
