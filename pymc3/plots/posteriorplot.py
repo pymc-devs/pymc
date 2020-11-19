@@ -49,12 +49,12 @@ def plot_posterior_predictive_glm(trace, eval=None, lm=None, samples=30, **kwarg
     if "c" not in kwargs and "color" not in kwargs:
         kwargs["c"] = "k"
 
-    plotting_fn = plot_multitrace if isinstance(trace, MultiTrace) else plot_inferencedata
+    plotting_fn = _plot_multitrace if isinstance(trace, MultiTrace) else _plot_inferencedata
     plotting_fn(trace, eval, lm, samples, kwargs)
     plt.title("Posterior predictive")
 
 
-def plot_multitrace(trace, eval, lm, samples, kwargs):
+def _plot_multitrace(trace, eval, lm, samples, kwargs):
     for rand_loc in np.random.randint(0, len(trace), samples):
         rand_sample = trace[rand_loc]
         plt.plot(eval, lm(eval, rand_sample), **kwargs)
@@ -62,7 +62,7 @@ def plot_multitrace(trace, eval, lm, samples, kwargs):
         kwargs.pop("label", None)
 
 
-def plot_inferencedata(trace, eval, lm, samples, kwargs):
+def _plot_inferencedata(trace, eval, lm, samples, kwargs):
     trace_df = trace.posterior.to_dataframe()
     for rand_loc in np.random.randint(0, len(trace_df), samples):
         rand_sample = trace_df.iloc[rand_loc]
