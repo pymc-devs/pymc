@@ -5,13 +5,17 @@ import numpy as np
 
 import pymc3 as pm
 import matplotlib.pyplot as plt
+from arviz import from_pymc3
 
 
-def test_plot_posterior_predictive_glm_multitrace():
+@pytest.mark.parametrize("inferencedata", [True, False])
+def test_plot_posterior_predictive_glm_defaults(inferencedata):
     with pm.Model() as model:
         pm.Normal("x")
         pm.Normal("Intercept")
     trace = point_list_to_multitrace([{"x": np.array([1]), "Intercept": np.array([1])}], model)
+    if inferencedata:
+        trace = from_pymc3(trace, model=model)
     _, ax = plt.subplots()
     plot_posterior_predictive_glm(trace, samples=1)
     lines = ax.get_lines()
@@ -19,6 +23,30 @@ def test_plot_posterior_predictive_glm_multitrace():
     expected_yvalues = np.linspace(1, 2, 100)
     for line in lines:
         x_axis, y_axis = line.get_data()
-        # check x-axis
         np.testing.assert_array_equal(x_axis, expected_xvalues)
         np.testing.assert_array_equal(y_axis, expected_yvalues)
+        assert line.get_lw() == 0.2
+        assert line.get_c() == "k"
+
+
+@pytest.mark.parametrize("inferencedata", [True, False])
+def test_plot_posterior_predictive_glm_non_defaults(inferencedata):
+    with pm.Model() as model:
+        pm.Normal("x")
+        pm.Normal("Intercept")
+    trace = point_list_to_multitrace([{"x": np.array([1]), "Intercept": np.array([1])}], model)
+    if inferencedata:
+        trace = from_pymc3(trace, model=model)
+    _, ax = plt.subplots()
+    plot_posterior_predictive_glm(
+        trace, samples=1, lm=lambda x, _: x, eval=np.linspace(0, 1, 10), lw=0.3, c="b"
+    )
+    lines = ax.get_lines()
+    expected_xvalues = np.linspace(0, 1, 10)
+    expected_yvalues = np.linspace(0, 1, 10)
+    for line in lines:
+        x_axis, y_axis = line.get_data()
+        np.testing.assert_array_equal(x_axis, expected_xvalues)
+        np.testing.assert_array_equal(y_axis, expected_yvalues)
+        assert line.get_lw() == 0.3
+        assert line.get_c() == "k"
