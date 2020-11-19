@@ -66,6 +66,7 @@ from ..distributions import (
     Gumbel,
     Logistic,
     OrderedLogistic,
+    OrderedProbit,
     LogitNormal,
     Interpolated,
     ZeroInflatedBinomial,
@@ -89,7 +90,7 @@ import pytest
 from scipy import integrate
 import scipy.stats.distributions as sp
 import scipy.stats
-from scipy.special import logit
+from scipy.special import logit, erf, erfcx
 import theano
 import theano.tensor as tt
 from ..math import kronecker
@@ -425,6 +426,17 @@ def invlogit(x, eps=sys.float_info.epsilon):
 def orderedlogistic_logpdf(value, eta, cutpoints):
     c = np.concatenate(([-np.inf], cutpoints, [np.inf]))
     ps = np.array([invlogit(eta - cc) - invlogit(eta - cc1) for cc, cc1 in zip(c[:-1], c[1:])])
+    p = ps[value]
+    return np.where(np.all(ps >= 0), np.log(p), -np.inf)
+
+
+def invprobit(x):
+    return (erf(x / np.sqrt(2)) + 1) / 2
+
+
+def orderedprobit_logpdf(value, eta, cutpoints):
+    c = np.concatenate(([-np.inf], cutpoints, [np.inf]))
+    ps = np.array([invprobit(eta - cc) - invprobit(eta - cc1) for cc, cc1 in zip(c[:-1], c[1:])])
     p = ps[value]
     return np.where(np.all(ps >= 0), np.log(p), -np.inf)
 
@@ -1514,6 +1526,15 @@ class TestMatchesScipy(SeededTest):
             Domain(range(n), "int64"),
             {"eta": R, "cutpoints": Vector(R, n - 1)},
             lambda value, eta, cutpoints: orderedlogistic_logpdf(value, eta, cutpoints),
+        )
+
+    @pytest.mark.parametrize("n", [2, 3, 4])
+    def test_orderedprobit(self, n):
+        self.pymc3_matches_scipy(
+            OrderedProbit,
+            Domain(range(n), "int64"),
+            {"eta": R, "cutpoints": SortedVector(n - 1)},
+            lambda value, eta, cutpoints: orderedprobit_logpdf(value, eta, cutpoints),
         )
 
     def test_densitydist(self):

@@ -133,6 +133,46 @@ def normal_lccdf(mu, sigma, x):
     )
 
 
+def log_diff_normal_cdf(mu, sigma, x, y):
+    """
+    Compute :math:`log(\Phi(\frac{x - \mu}{\sigma}) - \Phi(\frac{y - \mu}{\sigma}))` safely in log space.
+
+    Parameters
+    ----------
+    mu: float
+        mean
+    sigma: float
+        std
+
+    x: float
+
+    y: float
+        must be strictly less than x.
+
+    Returns
+    -------
+    log (\Phi(x) - \Phi(y))
+
+    """
+    x = (x - mu) / sigma / tt.sqrt(2.0)
+    y = (y - mu) / sigma / tt.sqrt(2.0)
+
+    # To stabilize the computation, consider these three regions:
+    # 1) x > y > 0 => Use erf(x) = 1 - e^{-x^2} erfcx(x) and erf(y) =1 - e^{-y^2} erfcx(y)
+    # 2) 0 > x > 0 => Use erf(x) = e^{-x^2} erfcx(-x) and erf(y) = e^{-y^2} erfcx(-y)
+    # 3) x > 0 > y => Naive formula log( (erf(x) - erf(y)) / 2 ) works fine.
+    return tt.log(0.5) + tt.switch(
+        tt.gt(y, 0),
+        -tt.square(y) + tt.log(tt.erfcx(y) - tt.exp(tt.square(y) - tt.square(x)) * tt.erfcx(x)),
+        tt.switch(
+            tt.lt(x, 0),  # 0 > x > y
+            -tt.square(x)
+            + tt.log(tt.erfcx(-x) - tt.exp(tt.square(x) - tt.square(y)) * tt.erfcx(-y)),
+            tt.log(tt.erf(x) - tt.erf(y)),  # x >0 > y
+        ),
+    )
+
+
 def sigma2rho(sigma):
     """
     `sigma -> rho` theano converter
