@@ -259,12 +259,16 @@ class MvNormal(_QuadFormBase):
         """
         size = to_tuple(size)
 
-        param_attribute = "chol_cov" if self._cov_type == "chol" else self._cov_type
-        mu, param = draw_values([self.mu, getattr(self, param_attribute)], point=point, size=size)
+        param_attribute = getattr(self, "chol_cov" if self._cov_type == "chol" else self._cov_type)
+        mu, param = draw_values([self.mu, param_attribute], point=point, size=size)
+        check_fast_drawable_or_point = lambda param, point: is_fast_drawable(param) or (
+            point and hasattr(param, "model") and param.name in point
+        )
         if tuple(self.shape):
             dist_shape = tuple(self.shape)
+            batch_shape = dist_shape[:-1]
         else:
-            if is_fast_drawable(self.mu) or point:
+            if check_fast_drawable_or_point(self.mu, point):
                 batch_shape = mu.shape[:-1]
             else:
                 batch_shape = mu.shape[len(size) : -1]
@@ -278,32 +282,30 @@ class MvNormal(_QuadFormBase):
         # It was not a good idea to check mu.shape[:len(size)] == size,
         # because it can get mixed among batch and event dimensions. Here, we explicitly chop off
         # the size (sample_shape) and only broadcast batch and event dimensions.
-        if is_fast_drawable(self.mu) or point:
+        if check_fast_drawable_or_point(self.mu, point):
             mu = mu.reshape((1,) * extra_dims + mu.shape)
         else:
             mu = mu.reshape(size + (1,) * extra_dims + mu.shape[len(size) :])
 
-        mu = np.broadcast_to(mu, output_shape)
+        # Adding batch dimensions to parametrization
+        if not check_fast_drawable_or_point(param_attribute, point):
+            param = param.reshape(size + (1,) * len(batch_shape) + param.shape[-2:])
 
+        mu = np.broadcast_to(mu, output_shape)
+        param = np.broadcast_to(param, output_shape + param.shape[-1:])
         if mu.shape[-1] != param.shape[-1]:
             raise ValueError(f"Shapes for mu and {self._cov_type} don't match")
 
         if self._cov_type == "cov":
-            chol = linalg.cholesky(param, lower=True)
-            standard_normal = np.random.standard_normal(output_shape)
-            return mu + np.einsum("...ij,...j->...i", chol, standard_normal)
+            chol = np.linalg.cholesky(param)
         elif self._cov_type == "chol":
-            standard_normal = np.random.standard_normal(output_shape)
-            return mu + np.einsum("...ij,...j->...i", param, standard_normal)
+            chol = param
         else:
-            try:
-                chol = linalg.cholesky(param, lower=True)
-            except linalg.LinAlgError:
-                return np.nan * np.zeros(output_shape)
+            inverse = np.linalg.inv(param)
+            chol = np.linalg.cholesky(inverse)
 
-            standard_normal = np.random.standard_normal(output_shape)
-            transformed = linalg.solve_triangular(chol, standard_normal.T, lower=True)
-            return mu + transformed.T
+        standard_normal = np.random.standard_normal(output_shape)
+        return mu + np.einsum("...ij,...j->...i", chol, standard_normal)
 
     def logp(self, value):
         """
