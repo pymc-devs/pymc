@@ -16,10 +16,11 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:  # mpl is optional
     pass
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Union
+
 import numpy as np
 
 from pymc3.backends.base import MultiTrace
-from typing import Callable, Dict, Optional, Union, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from arviz.data.inference_data import InferenceData
