@@ -1,15 +1,23 @@
 codecov:
-  require_ci_to_pass: yes
+  require_ci_to_pass: no
 
 coverage:
   precision: 2
   round: down
   range: "70...100"
-
   status:
-    project: yes
-    patch: yes
-    changes: no
+    project:
+      default:
+        # basic
+        target: auto
+        threshold: 1%
+        base: auto 
+    patch:
+      default:
+        # basic
+        target: 50%
+        threshold: 1%
+        base: auto 
 
 comment:
   layout: "reach, diff, flags, files"
