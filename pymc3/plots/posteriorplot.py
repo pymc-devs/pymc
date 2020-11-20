@@ -19,13 +19,24 @@ except ImportError:  # mpl is optional
 import numpy as np
 
 from pymc3.backends.base import MultiTrace
+from typing import Callable, Dict, Optional, Union, Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from arviz.data.inference_data import InferenceData
+    from pandas import Series
 
 
-def plot_posterior_predictive_glm(trace, eval=None, lm=None, samples=30, **kwargs):
+def plot_posterior_predictive_glm(
+    trace: Union["InferenceData", MultiTrace],
+    eval: Optional[np.ndarray] = None,
+    lm: Optional[Callable] = None,
+    samples: int = 30,
+    **kwargs: Any
+) -> None:
     """Plot posterior predictive of a linear model.
     :Arguments:
-        trace: <array>
-            Array of posterior samples with columns
+        trace: InferenceData or MultiTrace
+            Output of pm.sample()
         eval: <array>
             Array over which to evaluate lm
         lm: function <default: linear function>
@@ -54,7 +65,13 @@ def plot_posterior_predictive_glm(trace, eval=None, lm=None, samples=30, **kwarg
     plt.title("Posterior predictive")
 
 
-def _plot_multitrace(trace, eval, lm, samples, kwargs):
+def _plot_multitrace(
+    trace: MultiTrace,
+    eval: np.ndarray,
+    lm: Callable[[np.ndarray, Dict[str, float]], float],
+    samples: int,
+    kwargs: Dict[str, Any],
+) -> None:
     for rand_loc in np.random.randint(0, len(trace), samples):
         rand_sample = trace[rand_loc]
         plt.plot(eval, lm(eval, rand_sample), **kwargs)
@@ -62,7 +79,13 @@ def _plot_multitrace(trace, eval, lm, samples, kwargs):
         kwargs.pop("label", None)
 
 
-def _plot_inferencedata(trace, eval, lm, samples, kwargs):
+def _plot_inferencedata(
+    trace: InferenceData,
+    eval: np.ndarray,
+    lm: Callable[[np.ndarray, "Series"], float],
+    samples: int,
+    kwargs: Dict[str, Any],
+) -> None:
     trace_df = trace.posterior.to_dataframe()
     for rand_loc in np.random.randint(0, len(trace_df), samples):
         rand_sample = trace_df.iloc[rand_loc]
