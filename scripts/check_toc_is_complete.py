@@ -17,8 +17,8 @@ if __name__ == "__main__":
         **json.loads(toc_tutorials[toc_tutorials.find("{") :]),
     }.keys()
     parser = argparse.ArgumentParser()
-    parser.add_argument("filenames", nargs="*")
+    parser.add_argument("paths", nargs="*", type=Path)
     args = parser.parse_args()
-    for file_ in args.filenames:
-        stem = Path(file_).stem
+    for path in args.paths:
+        stem = path.stem
         assert stem in toc_keys, f"Notebook '{stem}' not added to table of contents!"

@@ -36,3 +36,9 @@ repos:
       types: [jupyter]
       entry: python scripts/check_toc_is_complete.py
       language: python
+    - id: copyright
+      name: Check source code files contain copyright notice
+      types: [python]
+      entry: python scripts/add_copyright_notice.py
+      language: python
+      files: ^pymc3/
