@@ -12,10 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-try:
-    import matplotlib.pyplot as plt
-except ImportError:  # mpl is optional
-    pass
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Union
 
 import numpy as np
@@ -25,6 +21,11 @@ from pymc3.backends.base import MultiTrace
 if TYPE_CHECKING:
     from arviz.data.inference_data import InferenceData
     from pandas import Series
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:  # mpl is optional
+    pass
 
 
 def plot_posterior_predictive_glm(
