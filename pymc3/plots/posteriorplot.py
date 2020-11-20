@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 import numpy as np
 
@@ -20,7 +20,6 @@ from pymc3.backends.base import MultiTrace
 
 if TYPE_CHECKING:
     from arviz.data.inference_data import InferenceData
-    from pandas import Series
 
 try:
     import matplotlib.pyplot as plt
@@ -62,35 +61,12 @@ def plot_posterior_predictive_glm(
     if "c" not in kwargs and "color" not in kwargs:
         kwargs["c"] = "k"
 
-    plotting_fn = _plot_multitrace if isinstance(trace, MultiTrace) else _plot_inferencedata
-    plotting_fn(trace, eval, lm, samples, kwargs)
-    plt.title("Posterior predictive")
+    if not isinstance(trace, MultiTrace):
+        trace = trace.posterior.to_dataframe().to_dict(orient="records")
 
-
-def _plot_multitrace(
-    trace: MultiTrace,
-    eval: np.ndarray,
-    lm: Callable[[np.ndarray, Dict[str, float]], float],
-    samples: int,
-    kwargs: Dict[str, Any],
-) -> None:
     for rand_loc in np.random.randint(0, len(trace), samples):
         rand_sample = trace[rand_loc]
         plt.plot(eval, lm(eval, rand_sample), **kwargs)
         # Make sure to not plot label multiple times
         kwargs.pop("label", None)
-
-
-def _plot_inferencedata(
-    trace: InferenceData,
-    eval: np.ndarray,
-    lm: Callable[[np.ndarray, "Series"], float],
-    samples: int,
-    kwargs: Dict[str, Any],
-) -> None:
-    trace_df = trace.posterior.to_dataframe()
-    for rand_loc in np.random.randint(0, len(trace_df), samples):
-        rand_sample = trace_df.iloc[rand_loc]
-        plt.plot(eval, lm(eval, rand_sample), **kwargs)
-        # Make sure to not plot label multiple times
-        kwargs.pop("label", None)
+    plt.title("Posterior predictive")
