@@ -69,4 +69,5 @@ def plot_posterior_predictive_glm(
         plt.plot(eval, lm(eval, rand_sample), **kwargs)
         # Make sure to not plot label multiple times
         kwargs.pop("label", None)
+
     plt.title("Posterior predictive")
