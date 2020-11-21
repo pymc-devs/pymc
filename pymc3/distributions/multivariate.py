@@ -262,8 +262,9 @@ class MvNormal(_QuadFormBase):
         param_attribute = getattr(self, "chol_cov" if self._cov_type == "chol" else self._cov_type)
         mu, param = draw_values([self.mu, param_attribute], point=point, size=size)
         check_fast_drawable_or_point = lambda param, point: is_fast_drawable(param) or (
-            point and hasattr(param, "model") and param.name in point
+            point and param.name in point
         )
+
         if tuple(self.shape):
             dist_shape = tuple(self.shape)
             batch_shape = dist_shape[:-1]
@@ -288,7 +289,7 @@ class MvNormal(_QuadFormBase):
             mu = mu.reshape(size + (1,) * extra_dims + mu.shape[len(size) :])
 
         # Adding batch dimensions to parametrization
-        if not check_fast_drawable_or_point(param_attribute, point):
+        if size and param.shape[:-2] == size:
             param = param.reshape(size + (1,) * len(batch_shape) + param.shape[-2:])
 
         mu = np.broadcast_to(mu, output_shape)
