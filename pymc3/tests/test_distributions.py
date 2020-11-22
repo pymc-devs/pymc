@@ -1785,11 +1785,16 @@ class TestStrAndLatexRepr:
             # KroneckerNormal
             n, m = 3, 4
             covs = [np.eye(n), np.eye(m)]
-            kron_normal = KroneckerNormal('kron_normal', mu=np.zeros(n*m), covs=covs, shape=n*m)
+            kron_normal = KroneckerNormal("kron_normal", mu=np.zeros(n * m), covs=covs, shape=n * m)
 
             # MatrixNormal
-            matrix_normal = MatrixNormal('mat_normal', mu=np.random.normal(size=n), rowcov=np.eye(n),
-                colchol=np.linalg.cholesky(np.eye(n)), shape=(n, n))
+            matrix_normal = MatrixNormal(
+                "mat_normal",
+                mu=np.random.normal(size=n),
+                rowcov=np.eye(n),
+                colchol=np.linalg.cholesky(np.eye(n)),
+                shape=(n, n),
+            )
 
             # Likelihood (sampling distribution) of observations
             Y_obs = Normal("Y_obs", mu=mu, sigma=sigma, observed=Y)

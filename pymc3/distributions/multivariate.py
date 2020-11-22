@@ -1452,6 +1452,7 @@ class LKJCorr(Continuous):
     def _distr_parameters_for_repr(self):
         return ["eta", "n"]
 
+
 class MatrixNormal(Continuous):
     R"""
     Matrix-valued normal log-likelihood.
