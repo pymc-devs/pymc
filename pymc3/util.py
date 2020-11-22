@@ -18,7 +18,7 @@ from typing import List, Dict, Tuple, Union
 
 import xarray
 import arviz
-from numpy import asscalar, ndarray
+from numpy import ndarray
 
 from theano.tensor import TensorVariable
 
@@ -149,7 +149,7 @@ def get_repr_for_variable(variable, formatting="plain"):
                 pass
         value = variable.eval()
         if not value.shape or value.shape == (1,):
-            return asscalar(value)
+            return value.item()
         return "array"
 
     if formatting == "latex":

@@ -827,7 +827,7 @@ class Wishart(Continuous):
         """
         nu, V = draw_values([self.nu, self.V], point=point, size=size)
         size = 1 if size is None else size
-        return generate_samples(stats.wishart.rvs, np.asscalar(nu), V, broadcast_shape=(size,))
+        return generate_samples(stats.wishart.rvs, nu.item(), V, broadcast_shape=(size,))
 
     def logp(self, X):
         """
