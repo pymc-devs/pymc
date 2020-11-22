@@ -1782,8 +1782,18 @@ class TestStrAndLatexRepr:
             # add a bounded variable as well
             bound_var = Bound(Normal, lower=1.0)("bound_var", mu=0, sigma=10)
 
+            # KroneckerNormal
+            n, m = 3, 4
+            covs = [np.eye(n), np.eye(m)]
+            kron_normal = KroneckerNormal('kron_normal', mu=np.zeros(n*m), covs=covs, shape=n*m)
+
+            # MatrixNormal
+            matrix_normal = MatrixNormal('mat_normal', mu=np.random.normal(size=n), rowcov=np.eye(n),
+                colchol=np.linalg.cholesky(np.eye(n)), shape=(n, n))
+
             # Likelihood (sampling distribution) of observations
             Y_obs = Normal("Y_obs", mu=mu, sigma=sigma, observed=Y)
+
         self.distributions = [alpha, sigma, mu, b, Z, Y_obs, bound_var]
         self.expected_latex = (
             r"$\text{alpha} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
@@ -1793,6 +1803,8 @@ class TestStrAndLatexRepr:
             r"$\text{Z} \sim \text{MvNormal}(\mathit{mu}=array,~\mathit{chol_cov}=array)$",
             r"$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sigma}=f(\text{sigma}))$",
             r"$\text{bound_var} \sim \text{Bound}(\mathit{lower}=1.0,~\mathit{upper}=\text{None})$ -- \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
+            r"$\text{kron_normal} \sim \text{KroneckerNormal}(\mathit{mu}=array)$",
+            r"$\text{mat_normal} \sim \text{MatrixNormal}(\mathit{mu}=array,~\mathit{rowcov}=array,~\mathit{colchol_cov}=array)$",
         )
         self.expected_str = (
             r"alpha ~ Normal(mu=0.0, sigma=10.0)",
@@ -1802,6 +1814,8 @@ class TestStrAndLatexRepr:
             r"Z ~ MvNormal(mu=array, chol_cov=array)",
             r"Y_obs ~ Normal(mu=mu, sigma=f(sigma))",
             r"bound_var ~ Bound(lower=1.0, upper=None)-Normal(mu=0.0, sigma=10.0)",
+            r"kron_normal ~ KroneckerNormal(mu=array)",
+            r"mat_normal ~ MatrixNormal(mu=array, rowcov=array, colchol_cov=array)",
         )
 
     def test__repr_latex_(self):
