@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 try:
     import matplotlib.pyplot as plt
-except ImportError:  # mpl is optional
+except ImportError:  # pragma: nocover (mpl is optional)
     pass
 
 
