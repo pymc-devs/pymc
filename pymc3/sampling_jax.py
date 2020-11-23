@@ -1,30 +1,32 @@
+import warnings
 import os
 import re
 xla_flags = os.getenv('XLA_FLAGS', '').lstrip('--')
 xla_flags = re.sub(r'xla_force_host_platform_device_count=.+\s', '', xla_flags).split()
 os.environ['XLA_FLAGS'] = ' '.join(['--xla_force_host_platform_device_count={}'.format(100)])
 
-import theano
 import numpy as np
+import pandas as pd
+
+import theano
+import theano.sandbox.jax_linker
+import theano.sandbox.jaxify
+import jax
+
+import arviz as az
 import pymc3 as pm
+from pymc3 import modelcontext
+
+warnings.warn("This module is experimental.")
 
 # Disable C compilation by default
 # theano.config.cxx = ""
-
 # This will make the JAX Linker the default
 # theano.config.mode = "JAX"
 
-import jax
-from tensorflow_probability.substrates import jax as tfp
-import theano.sandbox.jax_linker
-import theano.sandbox.jaxify
-import arviz as az
-
-import pandas as pd
-
 def sample_tfp_nuts(draws=1000, tune=1000, chains=4, target_accept=0.8, random_seed=10, model=None,
                     num_tuning_epoch=2, num_compute_step_size=500):
-    from pymc3 import modelcontext
+    from tensorflow_probability.substrates import jax as tfp
     model = modelcontext(model)
     
     seed = jax.random.PRNGKey(random_seed)
@@ -99,15 +101,11 @@ def sample_tfp_nuts(draws=1000, tune=1000, chains=4, target_accept=0.8, random_s
     return az_trace #, leapfrog_num, tic3 - tic2
 
     import jax
-from numpyro.infer import MCMC, NUTS
-import theano.sandbox.jax_linker
-import theano.sandbox.jaxify
-import arviz as az
-
-import pandas as pd
 
 def sample_numpyro_nuts(
     draws=1000, tune=1000, chains=4, target_accept=0.8, random_seed=10, model=None, progress_bar=True):
+    from numpyro.infer import MCMC, NUTS
+
     from pymc3 import modelcontext
     model = modelcontext(model)
     
