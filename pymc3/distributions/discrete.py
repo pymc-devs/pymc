@@ -38,6 +38,7 @@ __all__ = [
     "ZeroInflatedNegativeBinomial",
     "DiscreteUniform",
     "Geometric",
+    "HyperGeometric",
     "Categorical",
     "OrderedLogistic",
 ]
@@ -807,6 +808,115 @@ class Geometric(Discrete):
         """
         p = self.p
         return bound(tt.log(p) + logpow(1 - p, value - 1), 0 <= p, p <= 1, value >= 1)
+
+
+class HyperGeometric(Discrete):
+    R"""
+    Discrete hypergeometric distribution.
+
+    The probability of :math:`x` successes in a sequence of :math:`n` bernoulli
+    trials taken without replacement from a population of :math:`N` objects,
+    containing :math:`k` good (or successful or Type I) objects.
+    The pmf of this distribution is
+
+    .. math:: f(x \mid N, n, k) = \frac{\binom{k}{x}\binom{N-k}{n-x}}{\binom{N}{n}}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(1, 15)
+        N = 50
+        k = 10
+        for n in [20, 25]:
+            pmf = st.hypergeom.pmf(x, N, k, n)
+            plt.plot(x, pmf, '-o', label='n = {}'.format(n))
+        plt.plot(x, pmf, '-o', label='N = {}'.format(N))
+        plt.plot(x, pmf, '-o', label='k = {}'.format(k))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  =============================
+
+    Support   :math:`x in [max(0, n - \mathbb{N} + k), min(k, n)]`
+    Mean      :math:`\dfrac{nk}{N}`
+    Variance  :math:`\dfrac{(N-n)nk(N-k)}{(N-1)N^2}`
+    ========  =============================
+
+    Parameters
+    ----------
+    N : integer
+        Total size of the population
+    n : integer
+        Number of samples drawn from the population
+    k : integer
+        Number of successful individuals in the population
+    """
+
+    def __init__(self, N, k, n, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.N = intX(N)
+        self.k = intX(k)
+        self.n = intX(n)
+        self.mode = intX(tt.floor((n + 1) * (k + 1) / (N + 2)))
+
+    def random(self, point=None, size=None):
+        r"""
+        Draw random values from HyperGeometric distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        N, n, k = draw_values([self.N, self.n, self.k], point=point, size=size)
+        return generate_samples(
+            np.random.hypergeometric, N, n, k, dist_shape=self.shape, size=size
+        )
+
+    def logp(self, value):
+        r"""
+        Calculate log-probability of HyperGeometric distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        N = self.N
+        k = self.k
+        n = self.n
+        tot, good = N, k
+        bad = tot - good
+        result = (
+            betaln(good + 1, 1)
+            + betaln(bad + 1, 1)
+            + betaln(tot - n + 1, n + 1)
+            - betaln(value + 1, good - value + 1)
+            - betaln(n - value + 1, bad - n + value + 1)
+            - betaln(tot + 1, 1)
+        )
+        lower = tt.switch(tt.gt(n - N + k, 0), n - N + k, 0)
+        upper = tt.switch(tt.lt(k, n), k, n)
+        nonint_value = (value != intX(tt.floor(value)))
+        return bound(result, lower <= value, value <= upper, nonint_value)
 
 
 class DiscreteUniform(Discrete):
