@@ -65,5 +65,5 @@ Gallery.contents = {
     "MLDA_simple_linear_regression": "MCMC",
     "MLDA_gravity_surveying": "MCMC",
     "MLDA_variance_reduction_linear_regression": "MCMC",
-    "GLM-hierarhical-jax": "MCMC",
+    "GLM-hierarhical-jax": "MCMC"
 }
