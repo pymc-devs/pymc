@@ -210,7 +210,7 @@ class DifferentialEquation(theano.Op):
         # simulate states and sensitivities in one forward pass
         output_storage[0][0], output_storage[1][0] = self._simulate(y0, theta)
 
-    def infer_shape(self, node, input_shapes):
+    def infer_shape(self, fgraph, node, input_shapes):
         s_y0, s_theta = input_shapes
         output_shapes = [(self.n_times, self.n_states), (self.n_times, self.n_states, self.n_p)]
         return output_shapes

@@ -740,7 +740,7 @@ class PosDefMatrix(theano.Op):
             pm._log.exception("Failed to check if %s positive definite", x)
             raise
 
-    def infer_shape(self, node, shapes):
+    def infer_shape(self, fgraph, node, shapes):
         return [[]]
 
     def grad(self, inp, grads):
