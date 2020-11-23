@@ -142,6 +142,7 @@ __all__ = [
     "ZeroInflatedBinomial",
     "DiscreteUniform",
     "Geometric",
+    "HyperGeometric",
     "Categorical",
     "OrderedLogistic",
     "DensityDist",
