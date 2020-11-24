@@ -30,7 +30,7 @@ class DualAverageAdaptation:
     def reset(self):
         self._log_step = np.log(self._initial_step)
         self._log_bar = self._log_step
-        self._hbar = 0.
+        self._hbar = 0.0
         self._count = 1
         self._mu = np.log(10 * self._initial_step)
         self._tuned_stats = []
@@ -47,8 +47,8 @@ class DualAverageAdaptation:
             return
 
         count, k, t0 = self._count, self._k, self._t0
-        w = 1. / (count + t0)
-        self._hbar = ((1 - w) * self._hbar + w * (self._target - accept_stat))
+        w = 1.0 / (count + t0)
+        self._hbar = (1 - w) * self._hbar + w * (self._target - accept_stat)
 
         self._log_step = self._mu - self._hbar * np.sqrt(count) / self._gamma
         mk = count ** -k
@@ -57,8 +57,8 @@ class DualAverageAdaptation:
 
     def stats(self):
         return {
-            'step_size': np.exp(self._log_step),
-            'step_size_bar': np.exp(self._log_bar),
+            "step_size": np.exp(self._log_step),
+            "step_size_bar": np.exp(self._log_bar),
         }
 
     def warnings(self):
@@ -71,13 +71,13 @@ class DualAverageAdaptation:
         n_good, n_bad = mean_accept * n_bound, (1 - mean_accept) * n_bound
         lower, upper = stats.beta(n_good + 1, n_bad + 1).interval(0.95)
         if target_accept < lower or target_accept > upper:
-            msg = ('The acceptance probability does not match the target. It '
-                   'is %s, but should be close to %s. Try to increase the '
-                   'number of tuning steps.'
-                   % (mean_accept, target_accept))
-            info = {'target': target_accept, 'actual': mean_accept}
-            warning = SamplerWarning(
-                WarningType.BAD_ACCEPTANCE, msg, 'warn', extra=info)
+            msg = (
+                "The acceptance probability does not match the target. It "
+                "is %s, but should be close to %s. Try to increase the "
+                "number of tuning steps." % (mean_accept, target_accept)
+            )
+            info = {"target": target_accept, "actual": mean_accept}
+            warning = SamplerWarning(WarningType.BAD_ACCEPTANCE, msg, "warn", extra=info)
             return [warning]
         else:
             return []

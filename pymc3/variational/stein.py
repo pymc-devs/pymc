@@ -12,15 +12,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from theano import theano, tensor as tt
+import theano
+import theano.tensor as tt
 from pymc3.variational.opvi import node_property
 from pymc3.variational.test_functions import rbf
 from pymc3.theanof import floatX, change_flags
 from pymc3.memoize import WithMemoization, memoize
 
-__all__ = [
-    'Stein'
-]
+__all__ = ["Stein"]
 
 
 class Stein(WithMemoization):
@@ -40,27 +39,24 @@ class Stein(WithMemoization):
     @node_property
     def approx_symbolic_matrices(self):
         if self.use_histogram:
-            return self.approx.collect('histogram')
+            return self.approx.collect("histogram")
         else:
             return self.approx.symbolic_randoms
 
     @node_property
     def dlogp(self):
-        grad = tt.grad(
-            self.logp_norm.sum(),
-            self.approx_symbolic_matrices
-        )
+        grad = tt.grad(self.logp_norm.sum(), self.approx_symbolic_matrices)
 
         def flatten2(tensor):
             return tensor.flatten(2)
+
         return tt.concatenate(list(map(flatten2, grad)), -1)
 
     @node_property
     def grad(self):
         n = floatX(self.input_joint_matrix.shape[0])
         temperature = self.temperature
-        svgd_grad = (self.density_part_grad / temperature +
-                     self.repulsive_part_grad)
+        svgd_grad = self.density_part_grad / temperature + self.repulsive_part_grad
         return svgd_grad / n
 
     @node_property
@@ -89,11 +85,11 @@ class Stein(WithMemoization):
         if self.use_histogram:
             sized_symbolic_logp = theano.clone(
                 sized_symbolic_logp,
-                dict(zip(self.approx.symbolic_randoms, self.approx.collect('histogram')))
+                dict(zip(self.approx.symbolic_randoms, self.approx.collect("histogram"))),
             )
         return sized_symbolic_logp / self.approx.symbolic_normalizing_constant
 
     @memoize
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def _kernel(self):
         return self._kernel_f(self.input_joint_matrix)

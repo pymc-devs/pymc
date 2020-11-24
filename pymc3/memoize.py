@@ -16,6 +16,7 @@ import functools
 import pickle
 import collections
 from .util import biwrap
+
 CACHE_REGISTRY = []
 
 
@@ -37,14 +38,15 @@ def memoize(obj, bound=False):
         else:
             # bound methods have self as first argument, remove it to compute key
             key = (hashable(args[1:]), hashable(kwargs))
-            if not hasattr(args[0], '_cache'):
-                setattr(args[0], '_cache', collections.defaultdict(dict))
+            if not hasattr(args[0], "_cache"):
+                setattr(args[0], "_cache", collections.defaultdict(dict))
                 # do not add to cache regestry
-            cache = getattr(args[0], '_cache')[obj.__name__]
+            cache = getattr(args[0], "_cache")[obj.__name__]
         if key not in cache:
             cache[key] = obj(*args, **kwargs)
 
         return cache[key]
+
     return memoizer
 
 
@@ -54,7 +56,7 @@ def clear_cache(obj=None):
             c.clear()
     else:
         if isinstance(obj, WithMemoization):
-            for v in getattr(obj, '_cache', {}).values():
+            for v in getattr(obj, "_cache", {}).values():
                 v.clear()
         else:
             obj.cache.clear()
@@ -66,7 +68,7 @@ class WithMemoization:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        state.pop('_cache', None)
+        state.pop("_cache", None)
         return state
 
     def __setstate__(self, state):
@@ -87,7 +89,7 @@ def hashable(a):
     try:
         return hash(pickle.dumps(a))
     except Exception:
-        if hasattr(a, '__dict__'):
+        if hasattr(a, "__dict__"):
             return hashable(a.__dict__)
         else:
             return id(a)

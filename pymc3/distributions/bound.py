@@ -16,7 +16,6 @@ from numbers import Real
 
 import numpy as np
 import theano.tensor as tt
-import theano
 
 from pymc3.distributions.distribution import (
     Distribution,
@@ -27,6 +26,8 @@ from pymc3.distributions.distribution import (
 )
 from pymc3.distributions import transforms
 from pymc3.distributions.dist_math import bound
+
+from pymc3.theanof import floatX
 
 __all__ = ["Bound"]
 
@@ -82,16 +83,13 @@ class _Bounded(Distribution):
         upper = np.asarray(upper)
         if lower.size > 1 or upper.size > 1:
             raise ValueError(
-                "Drawing samples from distributions with "
-                "array-valued bounds is not supported."
+                "Drawing samples from distributions with array-valued bounds is not supported."
             )
         total_size = np.prod(size).astype(np.int)
         samples = []
         s = 0
         while s < total_size:
-            sample = np.atleast_1d(
-                self._wrapped.random(point=point, size=total_size)
-            ).flatten()
+            sample = np.atleast_1d(self._wrapped.random(point=point, size=total_size)).flatten()
 
             select = sample[np.logical_and(sample >= lower, sample <= upper)]
             samples.append(select)
@@ -128,7 +126,7 @@ class _Bounded(Distribution):
                 upper,
                 dist_shape=self.shape,
                 size=size,
-                not_broadcast_kwargs={'point': point},
+                not_broadcast_kwargs={"point": point},
             )
         elif self.lower is not None:
             lower = draw_values([self.lower], point=point, size=size)
@@ -138,7 +136,7 @@ class _Bounded(Distribution):
                 np.inf,
                 dist_shape=self.shape,
                 size=size,
-                not_broadcast_kwargs={'point': point},
+                not_broadcast_kwargs={"point": point},
             )
         else:
             upper = draw_values([self.upper], point=point, size=size)
@@ -148,8 +146,27 @@ class _Bounded(Distribution):
                 upper,
                 dist_shape=self.shape,
                 size=size,
-                not_broadcast_kwargs={'point': point},
+                not_broadcast_kwargs={"point": point},
             )
+
+    def _distr_parameters_for_repr(self):
+        return ["lower", "upper"]
+
+    def _distr_name_for_repr(self):
+        return "Bound"
+
+    def _str_repr(self, **kwargs):
+        distr_repr = self._wrapped._str_repr(**{**kwargs, "dist": self._wrapped})
+        if "formatting" in kwargs and kwargs["formatting"] == "latex":
+            distr_repr = distr_repr[distr_repr.index(r" \sim") + 6 :]
+        else:
+            distr_repr = distr_repr[distr_repr.index(" ~") + 3 :]
+        self_repr = super()._str_repr(**kwargs)
+
+        if "formatting" in kwargs and kwargs["formatting"] == "latex":
+            return self_repr + " -- " + distr_repr
+        else:
+            return self_repr + "-" + distr_repr
 
 
 class _DiscreteBounded(_Bounded, Discrete):
@@ -168,9 +185,7 @@ class _DiscreteBounded(_Bounded, Discrete):
         if lower is not None:
             default = lower + 1
 
-        super().__init__(
-            distribution, lower, upper, default, *args, transform=transform, **kwargs
-        )
+        super().__init__(distribution, lower, upper, default, *args, transform=transform, **kwargs)
 
 
 class _ContinuousBounded(_Bounded, Continuous):
@@ -192,12 +207,10 @@ class _ContinuousBounded(_Bounded, Continuous):
     """
 
     def __init__(self, distribution, lower, upper, transform="infer", *args, **kwargs):
-        dtype = kwargs.get("dtype", theano.config.floatX)
-
         if lower is not None:
-            lower = tt.as_tensor_variable(lower).astype(dtype)
+            lower = tt.as_tensor_variable(floatX(lower))
         if upper is not None:
-            upper = tt.as_tensor_variable(upper).astype(dtype)
+            upper = tt.as_tensor_variable(floatX(upper))
 
         if transform == "infer":
             if lower is None and upper is None:
@@ -215,9 +228,7 @@ class _ContinuousBounded(_Bounded, Continuous):
         else:
             default = None
 
-        super().__init__(
-            distribution, lower, upper, default, *args, transform=transform, **kwargs
-        )
+        super().__init__(distribution, lower, upper, default, *args, transform=transform, **kwargs)
 
 
 class Bound:
@@ -277,30 +288,17 @@ class Bound:
                 "Observed Bound distributions are not supported. "
                 "If you want to model truncated data "
                 "you can use a pm.Potential in combination "
-                "with the cumulative probability function. See "
-                "pymc3/examples/censored_data.py for an example."
+                "with the cumulative probability function."
             )
 
         transform = kwargs.pop("transform", "infer")
         if issubclass(self.distribution, Continuous):
             return _ContinuousBounded(
-                name,
-                self.distribution,
-                self.lower,
-                self.upper,
-                transform,
-                *args,
-                **kwargs
+                name, self.distribution, self.lower, self.upper, transform, *args, **kwargs
             )
         elif issubclass(self.distribution, Discrete):
             return _DiscreteBounded(
-                name,
-                self.distribution,
-                self.lower,
-                self.upper,
-                transform,
-                *args,
-                **kwargs
+                name, self.distribution, self.lower, self.upper, transform, *args, **kwargs
             )
         else:
             raise ValueError("Distribution is neither continuous nor discrete.")
@@ -312,9 +310,6 @@ class Bound:
             )
 
         elif issubclass(self.distribution, Discrete):
-            return _DiscreteBounded.dist(
-                self.distribution, self.lower, self.upper, *args, **kwargs
-            )
+            return _DiscreteBounded.dist(self.distribution, self.lower, self.upper, *args, **kwargs)
         else:
             raise ValueError("Distribution is neither continuous nor discrete.")
-

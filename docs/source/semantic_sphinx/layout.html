@@ -1,5 +1,6 @@
 {% extends "basic/layout.html" %}
 
+
 {% set script_files = script_files + [
 '_static/highlight.min.js',
 '_static/semantic.min.js',
@@ -13,6 +14,11 @@
 {% endif %}
 
 {%- block extrahead %}
+<script>
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-176578023-1']);
+  _gaq.push(['_trackPageview']);
+</script>
 <script>hljs.initHighlightingOnLoad();</script>
 <meta charset='utf-8'>
 <meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
@@ -80,17 +86,18 @@ such as on Chrome for documents on localhost #}
 <div class="ui container" role="main">
     {% if pagename == 'index' %}
     <div class="ui vertical segment">
-        <a class="ui image" href="https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks">
-            <img src="https://mybinder.org/badge.svg">
-        </a>
         <a class="ui image" href="https://travis-ci.org/pymc-devs/pymc3">
             <img src="https://travis-ci.org/pymc-devs/pymc3.svg?branch=master">
         </a>
         <a class="ui image" href="https://coveralls.io/github/pymc-devs/pymc3?branch=master">
             <img src="https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master">
         </a>
+        <a class="ui image" href="https://tidelift.com/subscription/pkg/pypi-pymc3?utm_source=pypi-pymc3&utm_medium=referral&utm_campaign=enterprise">
         <a class="ui image" href="https://www.numfocus.org/">
             <img src="https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A">
+        </a>
+        <a class="ui image" href="https://mybinder.org/v2/gh/pymc-devs/pymc3/master?filepath=%2Fdocs%2Fsource%2Fnotebooks">
+            <img src="https://mybinder.org/badge_logo.svg">
         </a>
         <a class="ui image" href="https://hub.docker.com/r/pymc/pymc3">
             <img src="https://img.shields.io/docker/automated/pymc/pymc3.svg">
@@ -110,6 +117,19 @@ such as on Chrome for documents on localhost #}
         <a href="https://github.com/pymc-devs/pymc3"><i class="github icon large"></i></a>
         <a href="https://twitter.com/pymc_devs"><i class="twitter icon large"></i></a>
         <a href="https://discourse.pymc.io/"><i class="discourse icon large"></i></a>
+    </div>
+    <div class="ui center aligned container">This page uses <a href="https://analytics.google.com/">
+    Google Analytics</a> to collect statistics. You can disable it by blocking
+    the JavaScript coming from www.google-analytics.com.
+    <script>
+      (function() {
+        var ga = document.createElement('script');
+        ga.src = ('https:' == document.location.protocol ?
+                  'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        ga.setAttribute('async', 'true');
+        document.documentElement.firstChild.appendChild(ga);
+      })();
+    </script>
     </div>
     <div class="ui center aligned container">
 

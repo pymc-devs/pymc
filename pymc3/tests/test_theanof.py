@@ -16,7 +16,8 @@ import collections
 import pytest
 from itertools import product
 
-from theano import theano, tensor as tt
+import theano
+import theano.tensor as tt
 import numpy as np
 
 from pymc3.theanof import set_theano_conf, take_along_axis, _conversion_map
@@ -30,9 +31,9 @@ INTX = str(_conversion_map[FLOATX])
 def _make_along_axis_idx(arr_shape, indices, axis):
     # compute dimensions to iterate over
     if str(indices.dtype) not in int_types:
-        raise IndexError('`indices` must be an integer array')
+        raise IndexError("`indices` must be an integer array")
     shape_ones = (1,) * indices.ndim
-    dest_dims = list(range(axis)) + [None] + list(range(axis+1, indices.ndim))
+    dest_dims = list(range(axis)) + [None] + list(range(axis + 1, indices.ndim))
 
     # build a fancy index, consisting of orthogonal aranges, with the
     # requested index inserted at the right location
@@ -41,7 +42,7 @@ def _make_along_axis_idx(arr_shape, indices, axis):
         if dim is None:
             fancy_index.append(indices)
         else:
-            ind_shape = shape_ones[:dim] + (-1,) + shape_ones[dim+1:]
+            ind_shape = shape_ones[:dim] + (-1,) + shape_ones[dim + 1 :]
             fancy_index.append(np.arange(n).reshape(ind_shape))
 
     return tuple(fancy_index)
@@ -50,6 +51,7 @@ def _make_along_axis_idx(arr_shape, indices, axis):
 if hasattr(np, "take_along_axis"):
     np_take_along_axis = np.take_along_axis
 else:
+
     def np_take_along_axis(arr, indices, axis):
         if arr.shape[axis] <= 32:
             # We can safely test with numpy's choose
@@ -66,35 +68,32 @@ else:
             else:
                 _axis = axis
             if _axis < 0 or _axis >= arr.ndim:
-                raise ValueError(
-                    "Supplied axis {} is out of bounds".format(axis)
-                )
+                raise ValueError(f"Supplied axis {axis} is out of bounds")
             return arr[_make_along_axis_idx(arr.shape, indices, _axis)]
 
 
 class TestSetTheanoConfig:
     def test_invalid_key(self):
         with pytest.raises(ValueError) as e:
-            set_theano_conf({'bad_key': True})
-        e.match('Unknown')
+            set_theano_conf({"bad_key": True})
+        e.match("Unknown")
 
     def test_restore_when_bad_key(self):
-        with theano.configparser.change_flags(compute_test_value='off'):
+        with theano.configparser.change_flags(compute_test_value="off"):
             with pytest.raises(ValueError):
-                conf = collections.OrderedDict(
-                    [('compute_test_value', 'raise'), ('bad_key', True)])
+                conf = collections.OrderedDict([("compute_test_value", "raise"), ("bad_key", True)])
                 set_theano_conf(conf)
-            assert theano.config.compute_test_value == 'off'
+            assert theano.config.compute_test_value == "off"
 
     def test_restore(self):
-        with theano.configparser.change_flags(compute_test_value='off'):
-            conf = set_theano_conf({'compute_test_value': 'raise'})
-            assert conf == {'compute_test_value': 'off'}
+        with theano.configparser.change_flags(compute_test_value="off"):
+            conf = set_theano_conf({"compute_test_value": "raise"})
+            assert conf == {"compute_test_value": "off"}
             conf = set_theano_conf(conf)
-            assert conf == {'compute_test_value': 'raise'}
+            assert conf == {"compute_test_value": "raise"}
 
 
-class TestTakeAlongAxis():
+class TestTakeAlongAxis:
     def setup_class(self):
         self.inputs_buffer = dict()
         self.output_buffer = dict()
@@ -150,9 +149,7 @@ class TestTakeAlongAxis():
         size = list(shape)
         size[axis] = samples
         size = tuple(size)
-        indices = np.random.randint(
-            low=0, high=shape[axis], size=size, dtype=INTX
-        )
+        indices = np.random.randint(low=0, high=shape[axis], size=size, dtype=INTX)
         return arr, indices
 
     @pytest.mark.parametrize(
@@ -179,10 +176,7 @@ class TestTakeAlongAxis():
     def test_take_along_axis(self, shape, axis, samples):
         arr, indices = self.get_input_values(shape, axis, samples)
         func = self.get_function(shape, axis)
-        assert np.allclose(
-            np_take_along_axis(arr, indices, axis=axis),
-            func(arr, indices)[0]
-        )
+        assert np.allclose(np_take_along_axis(arr, indices, axis=axis), func(arr, indices)[0])
 
     @pytest.mark.parametrize(
         ["shape", "axis", "samples"],
@@ -213,7 +207,7 @@ class TestTakeAlongAxis():
         # Setup the theano function
         t_arr, t_indices = self.get_input_tensors(shape)
         t_out2 = theano.grad(
-            tt.sum(self._output_tensor(t_arr**2, t_indices, axis)),
+            tt.sum(self._output_tensor(t_arr ** 2, t_indices, axis)),
             t_arr,
         )
         func = theano.function([t_arr, t_indices], [t_out2])
@@ -224,9 +218,7 @@ class TestTakeAlongAxis():
         slicer = [slice(None)] * len(shape)
         for i in range(indices.shape[axis]):
             slicer[axis] = i
-            inds = indices[slicer].reshape(
-                shape[:_axis] + (1,) + shape[_axis + 1:]
-            )
+            inds = indices[slicer].reshape(shape[:_axis] + (1,) + shape[_axis + 1 :])
             inds = _make_along_axis_idx(shape, inds, _axis)
             expected_grad[inds] += 1
         expected_grad *= 2 * arr

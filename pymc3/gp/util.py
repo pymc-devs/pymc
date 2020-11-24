@@ -18,9 +18,9 @@ import theano.tensor as tt
 import warnings
 
 cholesky = tt.slinalg.cholesky
-solve_lower = tt.slinalg.Solve(A_structure='lower_triangular')
-solve_upper = tt.slinalg.Solve(A_structure='upper_triangular')
-solve = tt.slinalg.Solve(A_structure='general')
+solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
+solve_upper = tt.slinalg.Solve(A_structure="upper_triangular")
+solve = tt.slinalg.Solve(A_structure="general")
 
 
 def infer_shape(X, n_points=None):
@@ -44,10 +44,12 @@ def kmeans_inducing_points(n_inducing, X):
     elif isinstance(X, (np.ndarray, tuple, list)):
         X = np.asarray(X)
     else:
-        raise TypeError(("To use K-means initialization, "
-                         "please provide X as a type that "
-                         "can be cast to np.ndarray, instead "
-                         "of {}".format(type(X))))
+        raise TypeError(
+            "To use K-means initialization, "
+            "please provide X as a type that "
+            "can be cast to np.ndarray, instead "
+            "of {}".format(type(X))
+        )
     scaling = np.std(X, 0)
     # if std of a column is very small (zero), don't normalize that column
     scaling[scaling <= 1e-6] = 1.0
@@ -58,35 +60,51 @@ def kmeans_inducing_points(n_inducing, X):
 
 def conditioned_vars(varnames):
     """ Decorator for validating attrs that are conditioned on. """
+
     def gp_wrapper(cls):
         def make_getter(name):
             def getter(self):
                 value = getattr(self, name, None)
                 if value is None:
-                    raise AttributeError(("'{}' not set.  Provide as argument "
-                                          "to condition, or call 'prior' "
-                                          "first".format(name.lstrip("_"))))
+                    raise AttributeError(
+                        "'{}' not set.  Provide as argument "
+                        "to condition, or call 'prior' "
+                        "first".format(name.lstrip("_"))
+                    )
                 else:
                     return value
                 return getattr(self, name)
+
             return getter
 
         def make_setter(name):
             def setter(self, val):
                 setattr(self, name, val)
+
             return setter
 
         for name in varnames:
-            getter = make_getter('_' + name)
-            setter = make_setter('_' + name)
+            getter = make_getter("_" + name)
+            setter = make_setter("_" + name)
             setattr(cls, name, property(getter, setter))
         return cls
+
     return gp_wrapper
 
 
-def plot_gp_dist(ax, samples:np.ndarray, x:np.ndarray, plot_samples=True, palette="Reds", fill_alpha=0.8, samples_alpha=0.1, fill_kwargs=None, samples_kwargs=None):
-    """ A helper function for plotting 1D GP posteriors from trace 
-    
+def plot_gp_dist(
+    ax,
+    samples: np.ndarray,
+    x: np.ndarray,
+    plot_samples=True,
+    palette="Reds",
+    fill_alpha=0.8,
+    samples_alpha=0.1,
+    fill_kwargs=None,
+    samples_kwargs=None,
+):
+    """A helper function for plotting 1D GP posteriors from trace
+
         Parameters
     ----------
     ax: axes
@@ -95,7 +113,7 @@ def plot_gp_dist(ax, samples:np.ndarray, x:np.ndarray, plot_samples=True, palett
         Array of S posterior predictive sample from a GP.
         Expected shape: (S, X)
     x: numpy.ndarray
-        Grid of X values corresponding to the samples. 
+        Grid of X values corresponding to the samples.
         Expected shape: (X,) or (X, 1), or (1, X)
     plot_samples: bool
         Plot the GP samples along with posterior (defaults True).
@@ -123,9 +141,9 @@ def plot_gp_dist(ax, samples:np.ndarray, x:np.ndarray, plot_samples=True, palett
         samples_kwargs = {}
     if np.any(np.isnan(samples)):
         warnings.warn(
-            'There are `nan` entries in the [samples] arguments. '
-            'The plot will not contain a band!',
-            UserWarning
+            "There are `nan` entries in the [samples] arguments. "
+            "The plot will not contain a band!",
+            UserWarning,
         )
 
     cmap = plt.get_cmap(palette)
@@ -135,13 +153,12 @@ def plot_gp_dist(ax, samples:np.ndarray, x:np.ndarray, plot_samples=True, palett
     x = x.flatten()
     for i, p in enumerate(percs[::-1]):
         upper = np.percentile(samples, p, axis=1)
-        lower = np.percentile(samples, 100-p, axis=1)
+        lower = np.percentile(samples, 100 - p, axis=1)
         color_val = colors[i]
         ax.fill_between(x, upper, lower, color=cmap(color_val), alpha=fill_alpha, **fill_kwargs)
     if plot_samples:
         # plot a few samples
         idx = np.random.randint(0, samples.shape[1], 30)
-        ax.plot(x, samples[:,idx], color=cmap(0.9), lw=1, alpha=samples_alpha,
-                **samples_kwargs)
+        ax.plot(x, samples[:, idx], color=cmap(0.9), lw=1, alpha=samples_alpha, **samples_kwargs)
 
     return ax

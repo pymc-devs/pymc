@@ -18,6 +18,7 @@ except ImportError:  # mpl is optional
     pass
 import numpy as np
 
+
 def plot_posterior_predictive_glm(trace, eval=None, lm=None, samples=30, **kwargs):
     """Plot posterior predictive of a linear model.
     :Arguments:
@@ -35,21 +36,21 @@ def plot_posterior_predictive_glm(trace, eval=None, lm=None, samples=30, **kwarg
     Additional keyword arguments are passed to pylab.plot().
     """
     if lm is None:
-        lm = lambda x, sample: sample['Intercept'] + sample['x'] * x
+        lm = lambda x, sample: sample["Intercept"] + sample["x"] * x
 
     if eval is None:
         eval = np.linspace(0, 1, 100)
 
     # Set default plotting arguments
-    if 'lw' not in kwargs and 'linewidth' not in kwargs:
-        kwargs['lw'] = .2
-    if 'c' not in kwargs and 'color' not in kwargs:
-        kwargs['c'] = 'k'
+    if "lw" not in kwargs and "linewidth" not in kwargs:
+        kwargs["lw"] = 0.2
+    if "c" not in kwargs and "color" not in kwargs:
+        kwargs["c"] = "k"
 
     for rand_loc in np.random.randint(0, len(trace), samples):
         rand_sample = trace[rand_loc]
         plt.plot(eval, lm(eval, rand_sample), **kwargs)
-    # Make sure to not plot label multiple times
-        kwargs.pop('label', None)
+        # Make sure to not plot label multiple times
+        kwargs.pop("label", None)
 
-    plt.title('Posterior predictive')
+    plt.title("Posterior predictive")

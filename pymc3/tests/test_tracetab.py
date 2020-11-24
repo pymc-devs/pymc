@@ -21,7 +21,7 @@ from pymc3.backends import tracetab as ttab
 
 class TestTraceToDf(bf.ModelBackendSampledTestCase):
     backend = ndarray.NDArray
-    name = 'text-db'
+    name = "text-db"
     shape = (2, 3)
 
     def test_trace_to_dataframe(self):
@@ -36,9 +36,9 @@ class TestTraceToDf(bf.ModelBackendSampledTestCase):
             # `shape`.
             if vararr.shape[1:] != self.shape:
                 continue
-            npt.assert_equal(vararr[:, 0, 0], df[varname + '__0_0'].values)
-            npt.assert_equal(vararr[:, 1, 0], df[varname + '__1_0'].values)
-            npt.assert_equal(vararr[:, 1, 2], df[varname + '__1_2'].values)
+            npt.assert_equal(vararr[:, 0, 0], df[varname + "__0_0"].values)
+            npt.assert_equal(vararr[:, 1, 0], df[varname + "__1_0"].values)
+            npt.assert_equal(vararr[:, 1, 2], df[varname + "__1_2"].values)
             checked = True
         assert checked
 
@@ -54,38 +54,37 @@ class TestTraceToDf(bf.ModelBackendSampledTestCase):
             # `shape`.
             if vararr.shape[1:] != self.shape:
                 continue
-            npt.assert_equal(vararr[:, 0, 0], df[varname + '__0_0'].values)
-            npt.assert_equal(vararr[:, 1, 0], df[varname + '__1_0'].values)
-            npt.assert_equal(vararr[:, 1, 2], df[varname + '__1_2'].values)
+            npt.assert_equal(vararr[:, 0, 0], df[varname + "__0_0"].values)
+            npt.assert_equal(vararr[:, 1, 0], df[varname + "__1_0"].values)
+            npt.assert_equal(vararr[:, 1, 2], df[varname + "__1_2"].values)
             checked = True
         assert checked
 
 
 def test_create_flat_names_0d():
     shape = ()
-    result = ttab.create_flat_names('x', shape)
-    expected = ['x']
+    result = ttab.create_flat_names("x", shape)
+    expected = ["x"]
     assert result == expected
     assert ttab._create_shape(result) == shape
 
 
 def test_create_flat_names_1d():
-    shape = 2,
-    result = ttab.create_flat_names('x', shape)
-    expected = ['x__0', 'x__1']
+    shape = (2,)
+    result = ttab.create_flat_names("x", shape)
+    expected = ["x__0", "x__1"]
     assert result == expected
     assert ttab._create_shape(result) == shape
 
 
 def test_create_flat_names_2d():
     shape = 2, 3
-    result = ttab.create_flat_names('x', shape)
-    expected = ['x__0_0', 'x__0_1', 'x__0_2',
-                'x__1_0', 'x__1_1', 'x__1_2']
+    result = ttab.create_flat_names("x", shape)
+    expected = ["x__0_0", "x__0_1", "x__0_2", "x__1_0", "x__1_1", "x__1_2"]
     assert result == expected
     assert ttab._create_shape(result) == shape
 
 
 def test_create_flat_names_3d():
     shape = 2, 3, 4
-    assert ttab._create_shape(ttab.create_flat_names('x', shape)) == shape
+    assert ttab._create_shape(ttab.create_flat_names("x", shape)) == shape

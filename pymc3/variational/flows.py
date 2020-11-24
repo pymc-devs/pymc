@@ -22,14 +22,7 @@ from ..memoize import WithMemoization
 from .opvi import node_property, collect_shared_to_list
 from . import opvi
 
-__all__ = [
-    'Formula',
-    'PlanarFlow',
-    'HouseholderFlow',
-    'RadialFlow',
-    'LocFlow',
-    'ScaleFlow'
-]
+__all__ = ["Formula", "PlanarFlow", "HouseholderFlow", "RadialFlow", "LocFlow", "ScaleFlow"]
 
 
 class Formula:
@@ -53,9 +46,9 @@ class Formula:
     """
 
     def __init__(self, formula):
-        identifiers = formula.lower().replace(' ', '').split('-')
-        self.formula = '-'.join(identifiers)
-        identifiers = [idf.split('*') for idf in identifiers]
+        identifiers = formula.lower().replace(" ", "").split("-")
+        self.formula = "-".join(identifiers)
+        identifiers = [idf.split("*") for idf in identifiers]
         self.flows = []
 
         for tup in identifiers:
@@ -64,25 +57,27 @@ class Formula:
             elif len(tup) == 2:
                 self.flows.extend([flow_for_short_name(tup[0])] * int(tup[1]))
             else:
-                raise ValueError('Wrong format: %s' % formula)
+                raise ValueError("Wrong format: %s" % formula)
         if len(self.flows) == 0:
-            raise ValueError('No flows in formula')
+            raise ValueError("No flows in formula")
 
-    def __call__(self, z0=None, dim=None, jitter=.001, params=None, batch_size=None):
+    def __call__(self, z0=None, dim=None, jitter=0.001, params=None, batch_size=None):
         if len(self.flows) == 0:
-            raise ValueError('No flows in formula')
+            raise ValueError("No flows in formula")
         if params is None:
             params = dict()
         flow = z0
         for i, flow_cls in enumerate(self.flows):
-            flow = flow_cls(dim=dim, jitter=jitter, z0=flow, batch_size=batch_size, **params.get(i, {}))
+            flow = flow_cls(
+                dim=dim, jitter=jitter, z0=flow, batch_size=batch_size, **params.get(i, {})
+            )
         return flow
 
     def __reduce__(self):
         return self.__class__, self.formula
 
     def __latex__(self):
-        return r'Formula{\mathcal{N}(0, 1) -> %s}' % self.formula
+        return r"Formula{\mathcal{N}(0, 1) -> %s}" % self.formula
 
     __repr__ = _latex_repr_ = __latex__
 
@@ -117,35 +112,39 @@ def seems_like_flow_params(params):
 class AbstractFlow(WithMemoization):
     shared_params = None
     __param_spec__ = dict()
-    short_name = ''
+    short_name = ""
     __param_registry = dict()
     __name_registry = dict()
 
     @classmethod
     def register(cls, sbcls):
-        assert frozenset(sbcls.__param_spec__) not in cls.__param_registry, 'Duplicate __param_spec__'
+        assert (
+            frozenset(sbcls.__param_spec__) not in cls.__param_registry
+        ), "Duplicate __param_spec__"
         cls.__param_registry[frozenset(sbcls.__param_spec__)] = sbcls
-        assert sbcls.short_name not in cls.__name_registry, 'Duplicate short_name'
+        assert sbcls.short_name not in cls.__name_registry, "Duplicate short_name"
         cls.__name_registry[sbcls.short_name] = sbcls
         return sbcls
 
     @classmethod
     def flow_for_params(cls, params):
         if frozenset(params) not in cls.__param_registry:
-            raise KeyError('No such flow for the following params: {!r}, '
-                           'only the following are supported\n\n{}'
-                           .format(params, cls.__param_registry))
+            raise KeyError(
+                "No such flow for the following params: {!r}, "
+                "only the following are supported\n\n{}".format(params, cls.__param_registry)
+            )
         return cls.__param_registry[frozenset(params)]
 
     @classmethod
     def flow_for_short_name(cls, name):
         if name.lower() not in cls.__name_registry:
-            raise KeyError('No such flow: {!r}, '
-                           'only the following are supported\n\n{}'
-                           .format(name, cls.__name_registry))
+            raise KeyError(
+                "No such flow: {!r}, "
+                "only the following are supported\n\n{}".format(name, cls.__name_registry)
+            )
         return cls.__name_registry[name.lower()]
 
-    def __init__(self, z0=None, dim=None, jitter=.001, batch_size=None, local=False):
+    def __init__(self, z0=None, dim=None, jitter=0.001, batch_size=None, local=False):
         self.local = local
         self.batch_size = batch_size
         self.__jitter = jitter
@@ -158,29 +157,30 @@ class AbstractFlow(WithMemoization):
         if dim is not None:
             self.dim = dim
         else:
-            raise ValueError('Cannot infer dimension of flow, '
-                             'please provide dim or Flow instance as z0')
+            raise ValueError(
+                "Cannot infer dimension of flow, " "please provide dim or Flow instance as z0"
+            )
         if z0 is None:
             self.z0 = tt.matrix()  # type: tt.TensorVariable
         else:
             self.z0 = tt.as_tensor(z0)
         self.parent = parent
 
-    def add_param(self, user=None, name=None, ref=0., dtype='floatX'):
-        if dtype == 'floatX':
+    def add_param(self, user=None, name=None, ref=0.0, dtype="floatX"):
+        if dtype == "floatX":
             dtype = theano.config.floatX
         spec = self.__param_spec__[name]
-        shape = tuple(eval(s, {'d': self.dim}) for s in spec)
+        shape = tuple(eval(s, {"d": self.dim}) for s in spec)
         if user is None:
             if self.local:
-                raise opvi.LocalGroupError('Need parameters for local group flow')
+                raise opvi.LocalGroupError("Need parameters for local group flow")
             if self.batched:
                 if self.batch_size is None:
-                    raise opvi.BatchedGroupError('Need batch size to infer parameter shape')
+                    raise opvi.BatchedGroupError("Need batch size to infer parameter shape")
                 shape = (self.batch_size,) + shape
             return theano.shared(
                 np.asarray(np.random.normal(size=shape) * self.__jitter + ref).astype(dtype),
-                name=name
+                name=name,
             )
 
         else:
@@ -205,7 +205,7 @@ class AbstractFlow(WithMemoization):
         return params
 
     @property
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def sum_logdets(self):
         dets = [self.logdet]
         current = self
@@ -222,13 +222,13 @@ class AbstractFlow(WithMemoization):
     def logdet(self):
         raise NotImplementedError
 
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def forward_pass(self, z0):
         ret = theano.clone(self.forward, {self.root.z0: z0})
         try:
-            ret.tag.test_value = np.random.normal(
-                size=z0.tag.test_value.shape
-            ).astype(self.z0.dtype)
+            ret.tag.test_value = np.random.normal(size=z0.tag.test_value.shape).astype(
+                self.z0.dtype
+            )
         except AttributeError:
             ret.tag.test_value = self.root.z0.tag.test_value
         return ret
@@ -248,7 +248,7 @@ class AbstractFlow(WithMemoization):
         current = self
         while not current.isroot:
             current = current.parent
-            f = current.short_name + '-' + f
+            f = current.short_name + "-" + f
         return f
 
     @property
@@ -267,7 +267,7 @@ class AbstractFlow(WithMemoization):
         return res
 
     def __repr__(self):
-        return 'Flow{%s}' % self.short_name
+        return "Flow{%s}" % self.short_name
 
     def __str__(self):
         return self.short_name
@@ -295,49 +295,49 @@ class FlowFn:
 
 
 class LinearFlow(AbstractFlow):
-    __param_spec__ = dict(u=('d', ), w=('d', ), b=())
+    __param_spec__ = dict(u=("d",), w=("d",), b=())
 
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def __init__(self, h, u=None, w=None, b=None, **kwargs):
         self.h = h
         super().__init__(**kwargs)
-        u = self.add_param(u, 'u')
-        w = self.add_param(w, 'w')
-        b = self.add_param(b, 'b')
+        u = self.add_param(u, "u")
+        w = self.add_param(w, "w")
+        b = self.add_param(b, "b")
         self.shared_params = dict(u=u, w=w, b=b)
         self.u_, self.w_ = self.make_uw(self.u, self.w)
 
-    u = property(lambda self: self.shared_params['u'])
-    w = property(lambda self: self.shared_params['w'])
-    b = property(lambda self: self.shared_params['b'])
+    u = property(lambda self: self.shared_params["u"])
+    w = property(lambda self: self.shared_params["w"])
+    b = property(lambda self: self.shared_params["b"])
 
     def make_uw(self, u, w):
-        raise NotImplementedError('Need to implement valid U, W transform')
+        raise NotImplementedError("Need to implement valid U, W transform")
 
     @node_property
     def forward(self):
         z = self.z0  # sxd
-        u = self.u_   # d
-        w = self.w_   # d
-        b = self.b   # .
-        h = self.h   # f
+        u = self.u_  # d
+        w = self.w_  # d
+        b = self.b  # .
+        h = self.h  # f
         # h(sxd \dot d + .)  = s
         if not self.batched:
             hwz = h(z.dot(w) + b)  # s
             # sxd + (s \outer d) = sxd
-            z1 = z + tt.outer(hwz,  u)  # sxd
+            z1 = z + tt.outer(hwz, u)  # sxd
             return z1
         else:
             z = z.swapaxes(0, 1)
             # z bxsxd
             # u bxd
             # w bxd
-            b = b.dimshuffle(0, 'x')
+            b = b.dimshuffle(0, "x")
             # b bx-
             hwz = h(tt.batched_dot(z, w) + b)  # bxs
             # bxsxd + (bxsx- * bx-xd) = bxsxd
-            hwz = hwz.dimshuffle(0, 1, 'x')  # bxsx-
-            u = u.dimshuffle(0, 'x', 1)  # bx-xd
+            hwz = hwz.dimshuffle(0, 1, "x")  # bxsx-
+            u = u.dimshuffle(0, "x", 1)  # bx-xd
             z1 = z + hwz * u  # bxsxd
             return z1.swapaxes(0, 1)  # sxbxd
 
@@ -350,21 +350,21 @@ class LinearFlow(AbstractFlow):
         deriv = self.h.deriv  # f'
         if not self.batched:
             # f'(sxd \dot d + .) * -xd = sxd
-            phi = deriv(z.dot(w) + b).dimshuffle(0, 'x') * w.dimshuffle('x', 0)
+            phi = deriv(z.dot(w) + b).dimshuffle(0, "x") * w.dimshuffle("x", 0)
             # \abs(. + sxd \dot d) = s
-            det = tt.abs_(1. + phi.dot(u))
+            det = tt.abs_(1.0 + phi.dot(u))
             return tt.log(det)
         else:
             z = z.swapaxes(0, 1)
-            b = b.dimshuffle(0, 'x')
+            b = b.dimshuffle(0, "x")
             # z bxsxd
             # u bxd
             # w bxd
             # b bx-x-
             # f'(bxsxd \bdot bxd + bx-x-) * bx-xd = bxsxd
-            phi = deriv(tt.batched_dot(z, w) + b).dimshuffle(0, 1, 'x') * w.dimshuffle(0, 'x', 1)
+            phi = deriv(tt.batched_dot(z, w) + b).dimshuffle(0, 1, "x") * w.dimshuffle(0, "x", 1)
             # \abs(. + bxsxd \bdot bxd) = bxs
-            det = tt.abs_(1. + tt.batched_dot(phi, u))  # bxs
+            det = tt.abs_(1.0 + tt.batched_dot(phi, u))  # bxs
             return tt.log(det).sum(0)  # s
 
 
@@ -374,13 +374,13 @@ class Tanh(FlowFn):
 
     @staticmethod
     def deriv(*args):
-        x, = args
-        return 1. - tt.tanh(x) ** 2
+        (x,) = args
+        return 1.0 - tt.tanh(x) ** 2
 
 
 @AbstractFlow.register
 class PlanarFlow(LinearFlow):
-    short_name = 'planar'
+    short_name = "planar"
 
     def __init__(self, **kwargs):
         super().__init__(h=Tanh(), **kwargs)
@@ -390,55 +390,44 @@ class PlanarFlow(LinearFlow):
             # u_: d
             # w_: d
             wu = u.dot(w)  # .
-            mwu = -1. + tt.nnet.softplus(wu)  # .
+            mwu = -1.0 + tt.nnet.softplus(wu)  # .
             # d + (. - .) * d / .
-            u_h = (
-                u+(mwu-wu) *
-                w/((w**2).sum()+1e-10)
-            )
+            u_h = u + (mwu - wu) * w / ((w ** 2).sum() + 1e-10)
             return u_h, w
         else:
             # u_: bxd
             # w_: bxd
-            wu = (u*w).sum(-1, keepdims=True)  # bx-
-            mwu = -1. + tt.nnet.softplus(wu)  # bx-
+            wu = (u * w).sum(-1, keepdims=True)  # bx-
+            mwu = -1.0 + tt.nnet.softplus(wu)  # bx-
             # bxd + (bx- - bx-) * bxd / bx- = bxd
-            u_h = (
-                u
-                + (mwu - wu)
-                * w / ((w ** 2).sum(-1, keepdims=True) + 1e-10)
-            )
+            u_h = u + (mwu - wu) * w / ((w ** 2).sum(-1, keepdims=True) + 1e-10)
             return u_h, w
 
 
 class ReferencePointFlow(AbstractFlow):
-    __param_spec__ = dict(a=(), b=(), z_ref=('d', ))
+    __param_spec__ = dict(a=(), b=(), z_ref=("d",))
 
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def __init__(self, h, a=None, b=None, z_ref=None, **kwargs):
         super().__init__(**kwargs)
-        a = self.add_param(a, 'a')
-        b = self.add_param(b, 'b')
-        if hasattr(self.z0, 'tag') and hasattr(self.z0.tag, 'test_value'):
+        a = self.add_param(a, "a")
+        b = self.add_param(b, "b")
+        if hasattr(self.z0, "tag") and hasattr(self.z0.tag, "test_value"):
             z_ref = self.add_param(
-                z_ref, 'z_ref',
-                ref=self.z0.tag.test_value[0],
-                dtype=self.z0.dtype
+                z_ref, "z_ref", ref=self.z0.tag.test_value[0], dtype=self.z0.dtype
             )
         else:
-            z_ref = self.add_param(
-                z_ref, 'z_ref', dtype=self.z0.dtype
-            )
+            z_ref = self.add_param(z_ref, "z_ref", dtype=self.z0.dtype)
         self.h = h
         self.shared_params = dict(a=a, b=b, z_ref=z_ref)
         self.a_, self.b_ = self.make_ab(self.a, self.b)
 
-    a = property(lambda self: self.shared_params['a'])
-    b = property(lambda self: self.shared_params['b'])
-    z_ref = property(lambda self: self.shared_params['z_ref'])
+    a = property(lambda self: self.shared_params["a"])
+    b = property(lambda self: self.shared_params["b"])
+    z_ref = property(lambda self: self.shared_params["z_ref"])
 
     def make_ab(self, a, b):
-        raise NotImplementedError('Need to specify how to get a, b')
+        raise NotImplementedError("Need to specify how to get a, b")
 
     @node_property
     def forward(self):
@@ -453,13 +442,13 @@ class ReferencePointFlow(AbstractFlow):
             # z bxsxd
             # z_ref bx-xd
             z = z.swapaxes(0, 1)
-            a = a.dimshuffle(0, 'x', 'x')
-            b = b.dimshuffle(0, 'x', 'x')
-            z_ref = z_ref.dimshuffle(0, 'x', 1)
+            a = a.dimshuffle(0, "x", "x")
+            b = b.dimshuffle(0, "x", "x")
+            z_ref = z_ref.dimshuffle(0, "x", 1)
         r = (z - z_ref).norm(2, axis=-1, keepdims=True)  # sx- (bxsx-)
         # global: sxd + . * h(., sx-) * (sxd - sxd) = sxd
         # local: bxsxd + b * h(b, bxsx-) * (bxsxd - bxsxd) = bxsxd
-        z1 = z + b * h(a, r) * (z-z_ref)
+        z1 = z + b * h(a, r) * (z - z_ref)
         if self.batched:
             z1 = z1.swapaxes(0, 1)
         return z1
@@ -475,9 +464,9 @@ class ReferencePointFlow(AbstractFlow):
         deriv = self.h.deriv  # h'(a, r)
         if self.batched:
             z = z.swapaxes(0, 1)
-            a = a.dimshuffle(0, 'x', 'x')
-            b = b.dimshuffle(0, 'x', 'x')
-            z_ref = z_ref.dimshuffle(0, 'x', 1)
+            a = a.dimshuffle(0, "x", "x")
+            b = b.dimshuffle(0, "x", "x")
+            z_ref = z_ref.dimshuffle(0, "x", 1)
             # a bx-x-
             # b bx-x-
             # z bxsxd
@@ -485,7 +474,7 @@ class ReferencePointFlow(AbstractFlow):
         r = (z - z_ref).norm(2, axis=-1, keepdims=True)  # s
         har = h(a, r)
         dar = deriv(a, r)
-        logdet = tt.log((1. + b*har)**(d-1.) * (1. + b*har + b*dar*r))
+        logdet = tt.log((1.0 + b * har) ** (d - 1.0) * (1.0 + b * har + b * dar * r))
         if self.batched:
             return logdet.sum([0, -1])
         else:
@@ -496,22 +485,22 @@ class Radial(FlowFn):
     @staticmethod
     def fn(*args):
         a, r = args
-        return 1./(a+r)
+        return 1.0 / (a + r)
 
     @staticmethod
     def inv(*args):
         a, y = args
-        return 1./y - a
+        return 1.0 / y - a
 
     @staticmethod
     def deriv(*args):
         a, r = args
-        return -1. / (a + r) ** 2
+        return -1.0 / (a + r) ** 2
 
 
 @AbstractFlow.register
 class RadialFlow(ReferencePointFlow):
-    short_name = 'radial'
+    short_name = "radial"
 
     def __init__(self, **kwargs):
         super().__init__(Radial(), **kwargs)
@@ -524,15 +513,15 @@ class RadialFlow(ReferencePointFlow):
 
 @AbstractFlow.register
 class LocFlow(AbstractFlow):
-    __param_spec__ = dict(loc=('d', ))
-    short_name = 'loc'
+    __param_spec__ = dict(loc=("d",))
+    short_name = "loc"
 
     def __init__(self, loc=None, **kwargs):
         super().__init__(**kwargs)
-        loc = self.add_param(loc, 'loc')
+        loc = self.add_param(loc, "loc")
         self.shared_params = dict(loc=loc)
 
-    loc = property(lambda self: self.shared_params['loc'])
+    loc = property(lambda self: self.shared_params["loc"])
 
     @node_property
     def forward(self):
@@ -547,17 +536,17 @@ class LocFlow(AbstractFlow):
 
 @AbstractFlow.register
 class ScaleFlow(AbstractFlow):
-    __param_spec__ = dict(rho=('d', ))
-    short_name = 'scale'
+    __param_spec__ = dict(rho=("d",))
+    short_name = "scale"
 
-    @change_flags(compute_test_value='off')
+    @change_flags(compute_test_value="off")
     def __init__(self, rho=None, **kwargs):
         super().__init__(**kwargs)
-        rho = self.add_param(rho, 'rho')
+        rho = self.add_param(rho, "rho")
         self.scale = rho2sigma(rho)
         self.shared_params = dict(rho=rho)
 
-    log_scale = property(lambda self: self.shared_params['log_scale'])
+    log_scale = property(lambda self: self.shared_params["log_scale"])
 
     @node_property
     def forward(self):
@@ -572,28 +561,28 @@ class ScaleFlow(AbstractFlow):
 
 @AbstractFlow.register
 class HouseholderFlow(AbstractFlow):
-    __param_spec__ = dict(v=('d', ))
-    short_name = 'hh'
+    __param_spec__ = dict(v=("d",))
+    short_name = "hh"
 
-    @change_flags(compute_test_value='raise')
+    @change_flags(compute_test_value="raise")
     def __init__(self, v=None, **kwargs):
         super().__init__(**kwargs)
-        v = self.add_param(v, 'v')
+        v = self.add_param(v, "v")
         self.shared_params = dict(v=v)
         if self.batched:
-            vv = v.dimshuffle(0, 1, 'x') * v.dimshuffle(0, 'x', 1)
-            I = tt.eye(self.dim).dimshuffle('x', 0, 1)
-            vvn = (1e-10+(v**2).sum(-1)).dimshuffle(0, 'x', 'x')
+            vv = v.dimshuffle(0, 1, "x") * v.dimshuffle(0, "x", 1)
+            I = tt.eye(self.dim).dimshuffle("x", 0, 1)
+            vvn = (1e-10 + (v ** 2).sum(-1)).dimshuffle(0, "x", "x")
         else:
             vv = tt.outer(v, v)
             I = tt.eye(self.dim)
-            vvn = ((v**2).sum(-1)+1e-10)
-        self.H = I - 2. * vv / vvn
+            vvn = (v ** 2).sum(-1) + 1e-10
+        self.H = I - 2.0 * vv / vvn
 
     @node_property
     def forward(self):
         z = self.z0  # sxd
-        H = self.H   # dxd
+        H = self.H  # dxd
         if self.batched:
             return tt.batched_dot(z.swapaxes(0, 1), H).swapaxes(0, 1)
         else:

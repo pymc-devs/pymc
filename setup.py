@@ -55,13 +55,13 @@ test_reqs = ["pytest", "pytest-cov"]
 
 def get_version():
     VERSIONFILE = join("pymc3", "__init__.py")
-    lines = open(VERSIONFILE, "rt").readlines()
+    lines = open(VERSIONFILE).readlines()
     version_regex = r"^__version__ = ['\"]([^'\"]*)['\"]"
     for line in lines:
         mo = re.search(version_regex, line, re.M)
         if mo:
             return mo.group(1)
-    raise RuntimeError("Unable to find version in %s." % (VERSIONFILE,))
+    raise RuntimeError(f"Unable to find version in {VERSIONFILE}.")
 
 
 if __name__ == "__main__":

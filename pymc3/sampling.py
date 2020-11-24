@@ -51,6 +51,7 @@ from .step_methods import (
     Slice,
     CompoundStep,
     arraystep,
+    PGBART,
 )
 from .util import (
     update_start_vals,
@@ -90,6 +91,7 @@ STEP_METHODS = (
     BinaryGibbsMetropolis,
     Slice,
     CategoricalGibbsMetropolis,
+    PGBART,
 )
 
 ArrayLike = Union[np.ndarray, List[float]]
@@ -226,13 +228,11 @@ def _print_step_hierarchy(s, level=0):
     else:
         varnames = ", ".join(
             [
-                get_untransformed_name(v.name)
-                if is_transformed_name(v.name)
-                else v.name
+                get_untransformed_name(v.name) if is_transformed_name(v.name) else v.name
                 for v in s.vars
             ]
         )
-        _log.info(">" * level + "{}: [{}]".format(s.__class__.__name__, varnames))
+        _log.info(">" * level + f"{s.__class__.__name__}: [{varnames}]")
 
 
 def sample(
@@ -288,6 +288,7 @@ def sample(
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
         * map: Use the MAP as starting point. This is discouraged.
         * adapt_full: Adapt a dense mass matrix using the sample covariances
+
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically.  By default the NUTS step
@@ -304,8 +305,6 @@ def sample(
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
         number ``chain``. If None or a list of variables, the NDArray backend is used.
-        Passing either "text" or "sqlite" is taken as a shortcut to set up the corresponding
-        backend (with "mcmc" used as the base name).
     chain_idx : int
         Chain number used to store sample in backend. If ``chains`` is greater than one, chain
         numbers will start here.
@@ -339,11 +338,11 @@ def sample(
         is drawn from.
 
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
-    return_inferencedata : bool, optional, default=False
-        Whether to return the trace as an `arviz.InferenceData` (True) object or a `MultiTrace` (False)
+    return_inferencedata : bool, default=False
+        Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
         Defaults to `False`, but we'll switch to `True` in an upcoming release.
     idata_kwargs : dict, optional
-        Keyword arguments for `arviz.from_pymc3`
+        Keyword arguments for :func:`arviz:arviz.from_pymc3`
     mp_ctx : multiprocessing.context.BaseContent
         A multiprocessing context for parallel sampling. See multiprocessing
         documentation for details.
@@ -417,6 +416,7 @@ def sample(
         >>> pm.summary(trace)
                mean        sd  mc_error   hpd_2.5  hpd_97.5
         p  0.604625  0.047086   0.00078  0.510498  0.694774
+
     """
     model = modelcontext(model)
 
@@ -491,10 +491,7 @@ def sample(
                 start = start_
         except (AttributeError, NotImplementedError, tg.NullTypeGradError):
             # gradient computation failed
-            _log.info(
-                "Initializing NUTS failed. "
-                "Falling back to elementwise auto-assignment."
-            )
+            _log.info("Initializing NUTS failed. " "Falling back to elementwise auto-assignment.")
             _log.debug("Exception in init nuts", exec_info=True)
             step = assign_step_methods(model, step, step_kwargs=kwargs)
     else:
@@ -539,7 +536,7 @@ def sample(
     parallel = cores > 1 and chains > 1 and not has_population_samplers
     t_start = time.time()
     if parallel:
-        _log.info("Multiprocess sampling ({} chains in {} jobs)".format(chains, cores))
+        _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
         _print_step_hierarchy(step)
         try:
             trace = _mp_sample(**sample_args, **parallel_args)
@@ -559,12 +556,10 @@ def sample(
             has_demcmc = np.any(
                 [
                     isinstance(m, DEMetropolis)
-                    for m in (
-                        step.methods if isinstance(step, CompoundStep) else [step]
-                    )
+                    for m in (step.methods if isinstance(step, CompoundStep) else [step])
                 ]
             )
-            _log.info("Population sampling ({} chains)".format(chains))
+            _log.info(f"Population sampling ({chains} chains)")
             if has_demcmc and chains < 3:
                 raise ValueError(
                     "DEMetropolis requires at least 3 chains. "
@@ -581,7 +576,7 @@ def sample(
             _print_step_hierarchy(step)
             trace = _sample_population(**sample_args, parallelize=cores > 1)
         else:
-            _log.info("Sequential sampling ({} chains in 1 job)".format(chains))
+            _log.info(f"Sequential sampling ({chains} chains in 1 job)")
             _print_step_hierarchy(step)
             trace = _sample_many(**sample_args)
 
@@ -609,6 +604,10 @@ def sample(
     trace.report._n_draws = n_draws
     trace.report._t_sampling = t_sampling
 
+    if "variable_inclusion" in trace.stat_names:
+        variable_inclusion = np.stack(trace.get_sampler_stats("variable_inclusion")).mean(0)
+        trace.report.variable_importance = variable_inclusion / variable_inclusion.sum()
+
     n_chains = len(trace.chains)
     _log.info(
         f'Sampling {n_chains} chain{"s" if n_chains > 1 else ""} for {n_tune:_d} tune and {n_draws:_d} draw iterations '
@@ -625,9 +624,7 @@ def sample(
 
     if compute_convergence_checks:
         if draws - tune < 100:
-            warnings.warn(
-                "The number of samples is too small to check convergence reliably."
-            )
+            warnings.warn("The number of samples is too small to check convergence reliably.")
         else:
             trace.report._run_convergence_checks(idata, model)
     trace.report._log_summary()
@@ -660,7 +657,7 @@ def _check_start_shape(model, start):
                     )
 
     if e != "":
-        raise ValueError("Bad shape for start argument:{}".format(e))
+        raise ValueError(f"Bad shape for start argument:{e}")
 
 
 def _sample_many(
@@ -833,9 +830,7 @@ def _sample(
     """
     skip_first = kwargs.get("skip_first", 0)
 
-    sampling = _iter_sample(
-        draws, step, start, trace, chain, tune, model, random_seed, callback
-    )
+    sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed, callback)
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
     if progressbar:
@@ -909,9 +904,7 @@ def iter_sample(
         for trace in iter_sample(500, step):
             ...
     """
-    sampling = _iter_sample(
-        draws, step, start, trace, chain, tune, model, random_seed, callback
-    )
+    sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed, callback)
     for i, (strace, _) in enumerate(sampling):
         yield MultiTrace([strace[: i + 1]])
 
@@ -1067,16 +1060,14 @@ class PopulationStepper:
                 import multiprocessing
 
                 for c, stepper in (
-                    enumerate(progress_bar(steppers))
-                    if progressbar
-                    else enumerate(steppers)
+                    enumerate(progress_bar(steppers)) if progressbar else enumerate(steppers)
                 ):
                     secondary_end, primary_end = multiprocessing.Pipe()
                     stepper_dumps = pickle.dumps(stepper, protocol=4)
                     process = multiprocessing.Process(
                         target=self.__class__._run_secondary,
                         args=(c, stepper_dumps, secondary_end),
-                        name="ChainWalker{}".format(c),
+                        name=f"ChainWalker{c}",
                     )
                     # we want the child process to exit if the parent is terminated
                     process.daemon = True
@@ -1136,9 +1127,7 @@ class PopulationStepper:
             # but rather a CompoundStep. PopulationArrayStepShared.population
             # has to be updated, therefore we identify the substeppers first.
             population_steppers = []
-            for sm in (
-                stepper.methods if isinstance(stepper, CompoundStep) else [stepper]
-            ):
+            for sm in stepper.methods if isinstance(stepper, CompoundStep) else [stepper]:
                 if isinstance(sm, arraystep.PopulationArrayStepShared):
                     population_steppers.append(sm)
             while True:
@@ -1157,7 +1146,7 @@ class PopulationStepper:
                 update = stepper.step(population[c])
                 secondary_end.send(update)
         except Exception:
-            _log.exception("ChainWalker{}".format(c))
+            _log.exception(f"ChainWalker{c}")
         return
 
     def step(self, tune_stop, population):
@@ -1348,20 +1337,18 @@ def _iter_population(draws, tune, popstep, steppers, traces, points):
                 steppers[c].report._finalize(strace)
 
 
-def _choose_backend(trace, chain, shortcuts=None, **kwds):
-    """Selects or creates a trace backend (NDArray, Text, etc) for a particular chain.
+def _choose_backend(trace, chain, **kwds):
+    """Selects or creates a NDArray trace backend for a particular chain.
 
     Parameters
     ----------
-    trace : backend, list, MultiTrace, or None
-        This should be a BaseTrace, backend name (e.g. text, sqlite, or hdf5),
-        list of variables to track, or a MultiTrace object with past values.
+    trace : BaseTrace, list, MultiTrace, or None
+        This should be a BaseTrace, list of variables to track,
+        or a MultiTrace object with past values.
         If a MultiTrace object is given, it must contain samples for the chain number ``chain``.
         If None or a list of variables, the NDArray backend is used.
     chain : int
         Number of the chain of interest.
-    shortcuts : dict, optional
-        maps backend names to a dict of backend class and name (defaults to pm.backends._shortcuts)
     **kwds :
         keyword arguments to forward to the backend creation
 
@@ -1377,17 +1364,7 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
     if trace is None:
         return NDArray(**kwds)
 
-    if shortcuts is None:
-        shortcuts = pm.backends._shortcuts
-
-    try:
-        backend = shortcuts[trace]["backend"]
-        name = shortcuts[trace]["name"]
-        return backend(name, **kwds)
-    except TypeError:
-        return NDArray(vars=trace, **kwds)
-    except KeyError:
-        raise ValueError("Argument `trace` is invalid.")
+    return NDArray(vars=trace, **kwds)
 
 
 def _mp_sample(
@@ -1430,7 +1407,7 @@ def _mp_sample(
         Starting points for each chain.
     progressbar : bool
         Whether or not to display a progress bar in the command line.
-    trace : backend, list, MultiTrace or None
+    trace : BaseTrace, list, MultiTrace or None
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
         number ``chain``. If None or a list of variables, the NDArray backend is used.
@@ -1682,18 +1659,14 @@ def sample_posterior_predictive(
             nchain = 1
 
     if keep_size and samples is not None:
-        raise IncorrectArgumentsError(
-            "Should not specify both keep_size and samples arguments"
-        )
+        raise IncorrectArgumentsError("Should not specify both keep_size and samples arguments")
     if keep_size and size is not None:
-        raise IncorrectArgumentsError(
-            "Should not specify both keep_size and size arguments"
-        )
+        raise IncorrectArgumentsError("Should not specify both keep_size and size arguments")
 
     if samples is None:
         if isinstance(_trace, MultiTrace):
             samples = sum(len(v) for v in _trace._straces.values())
-        elif isinstance(_trace, list) and all((isinstance(x, dict) for x in _trace)):
+        elif isinstance(_trace, list) and all(isinstance(x, dict) for x in _trace):
             # this is a list of points
             samples = len(_trace)
         else:
@@ -1714,15 +1687,11 @@ def sample_posterior_predictive(
 
     if var_names is not None:
         if vars is not None:
-            raise IncorrectArgumentsError(
-                "Should not specify both vars and var_names arguments."
-            )
+            raise IncorrectArgumentsError("Should not specify both vars and var_names arguments.")
         else:
             vars = [model[x] for x in var_names]
     elif vars is not None:  # var_names is None, and vars is not.
-        warnings.warn(
-            "vars argument is deprecated in favor of var_names.", DeprecationWarning
-        )
+        warnings.warn("vars argument is deprecated in favor of var_names.", DeprecationWarning)
     if vars is None:
         vars = model.observed_RVs
 
@@ -1741,14 +1710,10 @@ def sample_posterior_predictive(
                 # the trace object will either be a MultiTrace (and have _straces)...
                 if hasattr(_trace, "_straces"):
                     chain_idx, point_idx = np.divmod(idx, len_trace)
-                    param = (
-                        cast(MultiTrace, _trace)
-                        ._straces[chain_idx % nchain]
-                        .point(point_idx)
-                    )
+                    param = cast(MultiTrace, _trace)._straces[chain_idx % nchain].point(point_idx)
                 # ... or a PointList
                 else:
-                    param = cast(PointList, _trace)[idx % len_trace]
+                    param = cast(PointList, _trace)[idx % (len_trace * nchain)]
             # there's only a single chain, but the index might hit it multiple times if
             # the number of indices is greater than the length of the trace.
             else:
@@ -1757,7 +1722,6 @@ def sample_posterior_predictive(
             values = draw_values(vars, point=param, size=size)
             for k, v in zip(vars, values):
                 ppc_trace_t.insert(k.name, v, idx)
-
     except KeyboardInterrupt:
         pass
 
@@ -1783,9 +1747,9 @@ def sample_posterior_predictive_w(
     Parameters
     ----------
     traces : list or list of lists
-        List of traces generated from MCMC sampling, or a list of list
-        containing dicts from find_MAP() or points. The number of traces should
-        be equal to the number of weights.
+        List of traces generated from MCMC sampling (xarray.Dataset, arviz.InferenceData, or
+        MultiTrace), or a list of list containing dicts from find_MAP() or points. The number of
+        traces should be equal to the number of weights.
     samples : int, optional
         Number of posterior predictive samples to generate. Defaults to the
         length of the shorter trace in traces.
@@ -1811,6 +1775,17 @@ def sample_posterior_predictive_w(
     """
     np.random.seed(random_seed)
 
+    if isinstance(traces[0], InferenceData):
+        n_samples = [
+            trace.posterior.sizes["chain"] * trace.posterior.sizes["draw"] for trace in traces
+        ]
+        traces = [dataset_to_point_dict(trace.posterior) for trace in traces]
+    elif isinstance(traces[0], xarray.Dataset):
+        n_samples = [trace.sizes["chain"] * trace.sizes["draw"] for trace in traces]
+        traces = [dataset_to_point_dict(trace) for trace in traces]
+    else:
+        n_samples = [len(i) * i.nchains for i in traces]
+
     if models is None:
         models = [modelcontext(models)] * len(traces)
 
@@ -1830,7 +1805,7 @@ def sample_posterior_predictive_w(
     weights = np.asarray(weights)
     p = weights / np.sum(weights)
 
-    min_tr = min([len(i) * i.nchains for i in traces])
+    min_tr = min(n_samples)
 
     n = (min_tr * p).astype("int")
     # ensure n sum up to min_tr
@@ -1857,7 +1832,7 @@ def sample_posterior_predictive_w(
     obs = [x for m in models for x in m.observed_RVs]
     variables = np.repeat(obs, n)
 
-    lengths = list(set([np.atleast_1d(observed).shape for observed in obs]))
+    lengths = list({np.atleast_1d(observed).shape for observed in obs})
 
     if len(lengths) == 1:
         size = [None for i in variables]
@@ -1933,8 +1908,7 @@ def sample_prior_predictive(
     if vars is None and var_names is None:
         prior_pred_vars = model.observed_RVs
         prior_vars = (
-            get_default_varnames(model.unobserved_RVs, include_transformed=True)
-            + model.potentials
+            get_default_varnames(model.unobserved_RVs, include_transformed=True) + model.potentials
         )
         vars_ = [var.name for var in prior_vars + prior_pred_vars]
         vars = set(vars_)
@@ -1942,9 +1916,7 @@ def sample_prior_predictive(
         vars = var_names
         vars_ = vars
     elif vars is not None:
-        warnings.warn(
-            "vars argument is deprecated in favor of var_names.", DeprecationWarning
-        )
+        warnings.warn("vars argument is deprecated in favor of var_names.", DeprecationWarning)
         vars_ = vars
     else:
         raise ValueError("Cannot supply both vars and var_names arguments.")
@@ -2013,6 +1985,7 @@ def init_nuts(
           test value (usually the prior mean) as starting point.
         * jitter+adapt_full: Same as ``adapt_full`, but use test value plus a uniform jitter in
           [-1, 1] as starting point in each chain.
+
     chains : int
         Number of jobs to start.
     n_init : int
@@ -2036,9 +2009,7 @@ def init_nuts(
     if set(vars) != set(model.vars):
         raise ValueError("Must use init_nuts on all variables of a model.")
     if not all_continuous(vars):
-        raise ValueError(
-            "init_nuts can only be used for models with only " "continuous variables."
-        )
+        raise ValueError("init_nuts can only be used for models with only " "continuous variables.")
 
     if not isinstance(init, str):
         raise TypeError("init must be a string.")
@@ -2049,7 +2020,7 @@ def init_nuts(
     if init == "auto":
         init = "jitter+adapt_diag"
 
-    _log.info("Initializing NUTS using {}...".format(init))
+    _log.info(f"Initializing NUTS using {init}...")
 
     if random_seed is not None:
         random_seed = int(np.atleast_1d(random_seed)[0])
@@ -2092,9 +2063,7 @@ def init_nuts(
         mean = approx.bij.rmap(approx.mean.get_value())
         mean = model.dict_to_array(mean)
         weight = 50
-        potential = quadpotential.QuadPotentialDiagAdaptGrad(
-            model.ndim, mean, cov, weight
-        )
+        potential = quadpotential.QuadPotentialDiagAdaptGrad(model.ndim, mean, cov, weight)
     elif init == "advi+adapt_diag":
         approx = pm.fit(
             random_seed=random_seed,
@@ -2165,7 +2134,7 @@ def init_nuts(
         cov = np.eye(model.ndim)
         potential = quadpotential.QuadPotentialFullAdapt(model.ndim, mean, cov, 10)
     else:
-        raise ValueError("Unknown initializer: {}.".format(init))
+        raise ValueError(f"Unknown initializer: {init}.")
 
     step = pm.NUTS(potential=potential, model=model, **kwargs)
 

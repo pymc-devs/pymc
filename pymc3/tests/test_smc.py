@@ -104,13 +104,86 @@ class TestSMCABC(SeededTest):
             return np.random.normal(a, b, 1000)
 
         with pm.Model() as self.SMABC_test:
-            a = pm.Normal("a", mu=0, sd=5)
-            b = pm.HalfNormal("b", sd=2)
-            s = pm.Simulator("s", normal_sim, params=(a, b), observed=self.data)
+            a = pm.Normal("a", mu=0, sigma=1)
+            b = pm.HalfNormal("b", sigma=1)
+            s = pm.Simulator(
+                "s", normal_sim, params=(a, b), sum_stat="sort", epsilon=1, observed=self.data
+            )
+            self.s = s
+
+        def quantiles(x):
+            return np.quantile(x, [0.25, 0.5, 0.75])
+
+        def abs_diff(eps, obs_data, sim_data):
+            return np.mean(np.abs((obs_data - sim_data) / eps))
+
+        with pm.Model() as self.SMABC_test2:
+            a = pm.Normal("a", mu=0, sigma=1)
+            b = pm.HalfNormal("b", sigma=1)
+            s = pm.Simulator(
+                "s",
+                normal_sim,
+                params=(a, b),
+                distance=abs_diff,
+                sum_stat=quantiles,
+                epsilon=1,
+                observed=self.data,
+            )
+
+        with pm.Model() as self.SMABC_potential:
+            a = pm.Normal("a", mu=0, sigma=1)
+            b = pm.HalfNormal("b", sigma=1)
+            c = pm.Potential("c", pm.math.switch(a > 0, 0, -np.inf))
+            s = pm.Simulator(
+                "s", normal_sim, params=(a, b), sum_stat="sort", epsilon=1, observed=self.data
+            )
 
     def test_one_gaussian(self):
         with self.SMABC_test:
-            trace = pm.sample_smc(draws=1000, kernel="ABC", sum_stat="sorted", epsilon=1)
+            trace = pm.sample_smc(draws=1000, kernel="ABC")
 
         np.testing.assert_almost_equal(self.data.mean(), trace["a"].mean(), decimal=2)
         np.testing.assert_almost_equal(self.data.std(), trace["b"].mean(), decimal=1)
+
+    def test_sim_data_ppc(self):
+        with self.SMABC_test:
+            trace, sim_data = pm.sample_smc(draws=1000, kernel="ABC", chains=2, save_sim_data=True)
+            pr_p = pm.sample_prior_predictive(1000)
+            po_p = pm.sample_posterior_predictive(trace, 1000)
+
+        assert sim_data["s"].shape == (2, 1000, 1000)
+        np.testing.assert_almost_equal(self.data.mean(), sim_data["s"].mean(), decimal=2)
+        np.testing.assert_almost_equal(self.data.std(), sim_data["s"].std(), decimal=1)
+        assert pr_p["s"].shape == (1000, 1000)
+        np.testing.assert_almost_equal(0, pr_p["s"].mean(), decimal=1)
+        np.testing.assert_almost_equal(1.4, pr_p["s"].std(), decimal=1)
+        assert po_p["s"].shape == (1000, 1000)
+        np.testing.assert_almost_equal(0, po_p["s"].mean(), decimal=2)
+        np.testing.assert_almost_equal(1, po_p["s"].std(), decimal=1)
+
+    def test_custom_dist_sum(self):
+        with self.SMABC_test2:
+            trace = pm.sample_smc(draws=1000, kernel="ABC")
+
+    def test_potential(self):
+        with self.SMABC_potential:
+            trace = pm.sample_smc(draws=1000, kernel="ABC")
+            assert np.all(trace["a"] >= 0)
+
+    def test_automatic_use_of_sort(self):
+        with pm.Model() as model:
+            s_k = pm.Simulator(
+                "s_k",
+                None,
+                params=None,
+                distance="kullback_leibler",
+                sum_stat="sort",
+                observed=self.data,
+            )
+        assert s_k.distribution.sum_stat is pm.distributions.simulator.identity
+
+    def test_repr_latex(self):
+        expected = "$\\text{s} \\sim  \\text{Simulator}(\\text{normal_sim}(a, b), \\text{gaussian}, \\text{sort})$"
+        assert expected == self.s._repr_latex_()
+        assert self.s._repr_latex_() == self.s.__latex__()
+        assert self.SMABC_test.model._repr_latex_() == self.SMABC_test.model.__latex__()

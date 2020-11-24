@@ -87,9 +87,7 @@ class Inference:
         score = self._maybe_score(score)
         fn_kwargs = kwargs.pop("fn_kwargs", dict())
         fn_kwargs["profile"] = True
-        step_func = self.objective.step_function(
-            score=score, fn_kwargs=fn_kwargs, **kwargs
-        )
+        step_func = self.objective.step_function(score=score, fn_kwargs=fn_kwargs, **kwargs)
         progress = progress_bar(range(n))
         try:
             for _ in progress:
@@ -239,12 +237,12 @@ class Inference:
                     raise FloatingPointError("\n".join(errmsg))
                 scores[i] = e
                 if i % 10 == 0:
-                    avg_loss = _infmean(scores[max(0, i - 1000): i + 1])
-                    if hasattr(progress, 'comment'):
-                        progress.comment = "Average Loss = {:,.5g}".format(avg_loss)
-                    avg_loss = scores[max(0, i - 1000): i + 1].mean()
-                    if hasattr(progress, 'comment'):
-                        progress.comment = "Average Loss = {:,.5g}".format(avg_loss)
+                    avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
+                    if hasattr(progress, "comment"):
+                        progress.comment = f"Average Loss = {avg_loss:,.5g}"
+                    avg_loss = scores[max(0, i - 1000) : i + 1].mean()
+                    if hasattr(progress, "comment"):
+                        progress.comment = f"Average Loss = {avg_loss:,.5g}"
                 for callback in callbacks:
                     callback(self.approx, scores[: i + 1], i + s + 1)
         except (KeyboardInterrupt, StopIteration) as e:  # pragma: no cover
@@ -259,7 +257,7 @@ class Inference:
                     )
                 )
             else:
-                avg_loss = _infmean(scores[min(0, i - 1000): i + 1])
+                avg_loss = _infmean(scores[min(0, i - 1000) : i + 1])
                 logger.info(
                     "Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}".format(
                         i, 100 * i // n, avg_loss
@@ -269,14 +267,13 @@ class Inference:
             if n < 10:
                 logger.info("Finished [100%]: Loss = {:,.5g}".format(scores[-1]))
             else:
-                avg_loss = _infmean(scores[max(0, i - 1000): i + 1])
-                logger.info("Finished [100%]: Average Loss = {:,.5g}".format(avg_loss))
+                avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
+                logger.info(f"Finished [100%]: Average Loss = {avg_loss:,.5g}")
         self.hist = np.concatenate([self.hist, scores])
         return State(i + s, step=step_func, callbacks=callbacks, score=True)
 
     def refine(self, n, progressbar=True):
-        """Refine the solution using the last compiled step function
-        """
+        """Refine the solution using the last compiled step function"""
         if self.state is None:
             raise TypeError("Need to call `.fit` first")
         i, step, callbacks, score = self.state
@@ -816,9 +813,7 @@ def fit(
         inf_kwargs["start"] = start
     if model is None:
         model = pm.modelcontext(model)
-    _select = dict(
-        advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD, asvgd=ASVGD, nfvi=NFVI
-    )
+    _select = dict(advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD, asvgd=ASVGD, nfvi=NFVI)
     if isinstance(method, str):
         method = method.lower()
         if method.startswith("nfvi="):
@@ -828,13 +823,9 @@ def fit(
 
             inference = _select[method](model=model, **inf_kwargs)
         else:
-            raise KeyError(
-                f"method should be one of {set(_select.keys())} or Inference instance"
-            )
+            raise KeyError(f"method should be one of {set(_select.keys())} or Inference instance")
     elif isinstance(method, Inference):
         inference = method
     else:
-        raise TypeError(
-            f"method should be one of {set(_select.keys())} or Inference instance"
-        )
+        raise TypeError(f"method should be one of {set(_select.keys())} or Inference instance")
     return inference.fit(n, **kwargs)

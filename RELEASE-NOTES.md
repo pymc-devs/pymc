@@ -3,15 +3,48 @@
 ## PyMC3 3.9.x (on deck)
 
 ### Maintenance
-- Fix an error on Windows and Mac where error message from unpickling models did not show up in the notebook, or where sampling froze when a worker process crashed (see [#3991](https://github.com/pymc-devs/pymc3/pull/3991)).
+- Removed non-NDArray (Text, SQLite, HDF5) backends and associated tests.
+- Switch the dependency of Theano to our own fork, [Theano-PyMC](https://github.com/pymc-devs/Theano-PyMC).
+- Mentioned the way to do any random walk with `theano.tensor.cumsum()` in `GaussianRandomWalk` docstrings (see [#4048](https://github.com/pymc-devs/pymc3/pull/4048)).
+- Fixed numerical instability in ExGaussian's logp by preventing `logpow` from returning `-inf` (see [#4050](https://github.com/pymc-devs/pymc3/pull/4050)).
+- Use dill to serialize user defined logp functions in `DensityDist`. The previous serialization code fails if it is used in notebooks on Windows and Mac. `dill` is now a required dependency. (see [#3844](https://github.com/pymc-devs/pymc3/issues/3844)).
+- Numerically improved stickbreaking transformation - e.g. for the `Dirichlet` distribution. [#4129](https://github.com/pymc-devs/pymc3/pull/4129)
+- Enabled the `Multinomial` distribution to handle batch sizes that have more than 2 dimensions. [#4169](https://github.com/pymc-devs/pymc3/pull/4169)
 
 ### Documentation
-- Notebook on [multilevel modeling](https://docs.pymc.io/notebooks/multilevel_modeling.html) has been rewritten to showcase ArviZ and xarray usage for inference result analysis (see [#3963](https://github.com/pymc-devs/pymc3/pull/3963))
+
+* Added a new notebook demonstrating how to incorporate sampling from a conjugate Dirichlet-multinomial posterior density in conjunction with other step methods (see [#4199](https://github.com/pymc-devs/pymc3/pull/4199)).
 
 ### New features
-- Introduce optional arguments to `pm.sample`: `mp_ctx` to control how the processes for parallel sampling are started, and `pickle_backend` to specify which library is used to pickle models in parallel sampling when the multiprocessing cnotext is not of type `fork`. (see [#3991](https://github.com/pymc-devs/pymc3/pull/3991))
+- `sample_posterior_predictive_w` can now feed on `xarray.Dataset` - e.g. from `InferenceData.posterior`. (see [#4042](https://github.com/pymc-devs/pymc3/pull/4042))
+- Added `pymc3.gp.cov.Circular` kernel for Gaussian Processes on circular domains, e.g. the unit circle (see [#4082](https://github.com/pymc-devs/pymc3/pull/4082)).
+- Add MLDA, a new stepper for multilevel sampling. MLDA can be used when a hierarchy of approximate posteriors of varying accuracy is available, offering improved sampling efficiency especially in high-dimensional problems and/or where gradients are not available (see [#3926](https://github.com/pymc-devs/pymc3/pull/3926))
+- Change SMC metropolis kernel to independent metropolis kernel [#4115](https://github.com/pymc-devs/pymc3/pull/4115))
+- Add alternative parametrization to NegativeBinomial distribution in terms of n and p (see [#4126](https://github.com/pymc-devs/pymc3/issues/4126))
+- Add Bayesian Additive Regression Trees (BARTs) [#4183](https://github.com/pymc-devs/pymc3/pull/4183))
+- Added a new `MixtureSameFamily` distribution to handle mixtures of arbitrary dimensions in vectorized form (see [#4185](https://github.com/pymc-devs/pymc3/issues/4185)).
+- Added semantically meaningful `str` representations to PyMC3 objects for console, notebook, and GraphViz use (see [#4076](https://github.com/pymc-devs/pymc3/pull/4076), [#4065](https://github.com/pymc-devs/pymc3/pull/4065), [#4159](https://github.com/pymc-devs/pymc3/pull/4159), and [#4217](https://github.com/pymc-devs/pymc3/pull/4217))
+
+
+
+## PyMC3 3.9.3 (11 August 2020)
+
+### Maintenance
+- Fix an error on Windows and Mac where error message from unpickling models did not show up in the notebook, or where sampling froze when a worker process crashed (see [#3991](https://github.com/pymc-devs/pymc3/pull/3991)).
+- Require Theano >= 1.0.5 (see [#4032](https://github.com/pymc-devs/pymc3/pull/4032)).
+
+### Documentation
+- Notebook on [multilevel modeling](https://docs.pymc.io/notebooks/multilevel_modeling.html) has been rewritten to showcase ArviZ and xarray usage for inference result analysis (see [#3963](https://github.com/pymc-devs/pymc3/pull/3963)).
+
+### New features
+- Introduce optional arguments to `pm.sample`: `mp_ctx` to control how the processes for parallel sampling are started, and `pickle_backend` to specify which library is used to pickle models in parallel sampling when the multiprocessing context is not of type `fork` (see [#3991](https://github.com/pymc-devs/pymc3/pull/3991)).
 - Add sampler stats `process_time_diff`, `perf_counter_diff` and `perf_counter_start`, that record wall and CPU times for each NUTS and HMC sample (see [ #3986](https://github.com/pymc-devs/pymc3/pull/3986)).
-- Extend `keep_size` argument handling for `sample_posterior_predictive` and `fast_sample_posterior_predictive`, to work on arviz InferenceData and xarray Dataset input values. (see [PR #4006](https://github.com/pymc-devs/pymc3/pull/4006) and [Issue #4004](https://github.com/pymc-devs/pymc3/issues/4004).
+- Extend `keep_size` argument handling for `sample_posterior_predictive` and `fast_sample_posterior_predictive`, to work on ArviZ `InferenceData` and xarray `Dataset` input values (see [PR #4006](https://github.com/pymc-devs/pymc3/pull/4006) and issue [#4004](https://github.com/pymc-devs/pymc3/issues/4004)).
+- SMC-ABC: add the Wasserstein and energy distance functions. Refactor API, the distance, sum_stats and epsilon arguments are now passed `pm.Simulator` instead of `pm.sample_smc`. Add random method to `pm.Simulator`. Add option to save the simulated data. Improved LaTeX representation [#3996](https://github.com/pymc-devs/pymc3/pull/3996).
+- SMC-ABC: Allow use of potentials by adding them to the prior term. [#4016](https://github.com/pymc-devs/pymc3/pull/4016).
+
+_NB: The `docs/*` folder is still removed from the tarball due to an upload size limit on PyPi._
+
 
 ## PyMC3 3.9.2 (24 June 2020)
 ### Maintenance
@@ -19,6 +52,7 @@
 - Pass the `tune` argument from `sample` when using `advi+adapt_diag_grad` (see issue [#3965](https://github.com/pymc-devs/pymc3/issues/3965), fixed by [#3979](https://github.com/pymc-devs/pymc3/pull/3979)).
 - Add simple test case for new coords and dims feature in `pm.Model` (see [#3977](https://github.com/pymc-devs/pymc3/pull/3977)).
 - Require ArviZ >= 0.9.0 (see [#3977](https://github.com/pymc-devs/pymc3/pull/3977)).
+- Fixed issue [#3962](https://github.com/pymc-devs/pymc3/issues/3962) by making a change in the `_random()` method of `GaussianRandomWalk` class (see PR [#3985](https://github.com/pymc-devs/pymc3/pull/3985)). Further testing revealed a new issue which is being tracked by [#4010](https://github.com/pymc-devs/pymc3/issues/4010).
 
 _NB: The `docs/*` folder is still removed from the tarball due to an upload size limit on PyPi._
 

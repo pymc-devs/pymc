@@ -49,16 +49,12 @@ def test_gradients():
     # I used CAS to get these derivatives
     y0_sensitivity = np.exp(-a * t)
     a_sensitivity = (
-        -(np.exp(t * (a - 1)) - 1 + (a - 1) * (y0 * a - y0 - 1) * t)
-        * np.exp(-a * t)
-        / (a - 1) ** 2
+        -(np.exp(t * (a - 1)) - 1 + (a - 1) * (y0 * a - y0 - 1) * t) * np.exp(-a * t) / (a - 1) ** 2
     )
 
     sensitivity = np.c_[y0_sensitivity, a_sensitivity]
 
-    integrated_solutions = odeint(
-        func=augmented_system, y0=[y0, 1, 0], t=t.ravel(), args=(p,)
-    )
+    integrated_solutions = odeint(func=augmented_system, y0=[y0, 1, 0], t=t.ravel(), args=(p,))
     simulated_sensitivity = integrated_solutions[:, 1:]
 
     np.testing.assert_allclose(sensitivity, simulated_sensitivity, rtol=1e-5)
@@ -78,18 +74,16 @@ def test_simulate():
     y = 1.0 / (a - 1) * (np.exp(-t) - np.exp(-a * t))
 
     # Instantiate ODE model
-    ode_model = DifferentialEquation(
-        func=ode_func, t0=0, times=t, n_states=1, n_theta=1
-    )
+    ode_model = DifferentialEquation(func=ode_func, t0=0, times=t, n_states=1, n_theta=1)
 
     simulated_y, sens = ode_model._simulate([y0], [a])
-    
-    assert simulated_y.shape == (len(t),1)
-    assert sens.shape == (len(t), 1, 1+1)
+
+    assert simulated_y.shape == (len(t), 1)
+    assert sens.shape == (len(t), 1, 1 + 1)
     np.testing.assert_allclose(y, simulated_y, rtol=1e-5)
 
 
-class TestSensitivityInitialCondition(object):
+class TestSensitivityInitialCondition:
 
     t = np.arange(0, 12, 0.25).reshape(-1, 1)
 
@@ -102,9 +96,7 @@ class TestSensitivityInitialCondition(object):
 
         # Instantiate ODE model
         # Instantiate ODE model
-        model1 = DifferentialEquation(
-            func=ode_func_1, t0=0, times=self.t, n_states=1, n_theta=1
-        )
+        model1 = DifferentialEquation(func=ode_func_1, t0=0, times=self.t, n_states=1, n_theta=1)
 
         # Sensitivity initial condition for this model should be 1 by 2
         model1_sens_ic = np.array([1, 0])
@@ -117,9 +109,7 @@ class TestSensitivityInitialCondition(object):
             return p[0] * np.exp(-p[0] * t) - p[1] * y[0]
 
         # Instantiate ODE model
-        model2 = DifferentialEquation(
-            func=ode_func_2, t0=0, times=self.t, n_states=1, n_theta=2
-        )
+        model2 = DifferentialEquation(func=ode_func_2, t0=0, times=self.t, n_states=1, n_theta=2)
 
         model2_sens_ic = np.array([1, 0, 0])
 
@@ -134,14 +124,9 @@ class TestSensitivityInitialCondition(object):
             return [ds, di]
 
         # Instantiate ODE model
-        model3 = DifferentialEquation(
-            func=ode_func_3, t0=0, times=self.t, n_states=2, n_theta=1
-        )
+        model3 = DifferentialEquation(func=ode_func_3, t0=0, times=self.t, n_states=2, n_theta=1)
 
-        model3_sens_ic = np.array([
-            1, 0, 0,
-            0, 1, 0
-        ])
+        model3_sens_ic = np.array([1, 0, 0, 0, 1, 0])
 
         np.testing.assert_array_equal(model3_sens_ic, model3._sens_ic)
 
@@ -154,14 +139,9 @@ class TestSensitivityInitialCondition(object):
             return [ds, di]
 
         # Instantiate ODE model
-        model4 = DifferentialEquation(
-            func=ode_func_4, t0=0, times=self.t, n_states=2, n_theta=2
-        )
+        model4 = DifferentialEquation(func=ode_func_4, t0=0, times=self.t, n_states=2, n_theta=2)
 
-        model4_sens_ic = np.array([
-            1, 0, 0, 0,
-            0, 1, 0, 0
-        ])
+        model4_sens_ic = np.array([1, 0, 0, 0, 0, 1, 0, 0])
 
         np.testing.assert_array_equal(model4_sens_ic, model4._sens_ic)
 
@@ -175,18 +155,12 @@ class TestSensitivityInitialCondition(object):
             return [dx, ds, dz]
 
         # Instantiate ODE model
-        model5 = DifferentialEquation(
-            func=ode_func_5, t0=0, times=self.t, n_states=3, n_theta=3
-        )
+        model5 = DifferentialEquation(func=ode_func_5, t0=0, times=self.t, n_states=3, n_theta=3)
 
         # First three columns are derivatives with respect to ode parameters
         # Last three coluimns are derivatives with repsect to initial condition
         # So identity matrix should appear in last 3 columns
-        model5_sens_ic = np.array([
-            [1, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0]
-        ])
+        model5_sens_ic = np.array([[1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0]])
 
         np.testing.assert_array_equal(np.ravel(model5_sens_ic), model5._sens_ic)
 
@@ -203,25 +177,18 @@ def test_logp_scalar_ode():
     y0 = 0.0
     times = np.arange(0.5, 8, 0.5)
 
-    yobs = np.array([
-        0.30, 0.56, 0.51, 0.55, 0.47, 0.42, 0.38, 0.30,
-        0.26, 0.21, 0.22, 0.13, 0.13, 0.09, 0.09
-    ])[:,np.newaxis]
+    yobs = np.array(
+        [0.30, 0.56, 0.51, 0.55, 0.47, 0.42, 0.38, 0.30, 0.26, 0.21, 0.22, 0.13, 0.13, 0.09, 0.09]
+    )[:, np.newaxis]
 
-    ode_model = DifferentialEquation(
-        func=system_1, t0=0, times=times, n_theta=1, n_states=1
-    )
+    ode_model = DifferentialEquation(func=system_1, t0=0, times=times, n_theta=1, n_states=1)
 
     integrated_solution, *_ = ode_model._simulate([y0], [alpha])
 
     assert integrated_solution.shape == yobs.shape
 
     # compare automatic and manual logp values
-    manual_logp = norm.logpdf(
-        x=np.ravel(yobs),
-        loc=np.ravel(integrated_solution),
-        scale=1
-    ).sum()
+    manual_logp = norm.logpdf(x=np.ravel(yobs), loc=np.ravel(integrated_solution), scale=1).sum()
     with pm.Model() as model_1:
         forward = ode_model(theta=[alpha], y0=[y0])
         y = pm.Normal("y", mu=forward, sd=1, observed=yobs)
@@ -230,7 +197,7 @@ def test_logp_scalar_ode():
     np.testing.assert_allclose(manual_logp, pymc3_logp)
 
 
-class TestErrors(object):
+class TestErrors:
     """Test running model for a scalar ODE with 1 parameter"""
 
     def system(y, t, p):
@@ -238,9 +205,7 @@ class TestErrors(object):
 
     times = np.arange(0, 9)
 
-    ode_model = DifferentialEquation(
-        func=system, t0=0, times=times, n_states=1, n_theta=1
-    )
+    ode_model = DifferentialEquation(func=system, t0=0, times=times, n_states=1, n_theta=1)
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_too_many_params(self):
@@ -264,24 +229,18 @@ class TestErrors(object):
 
     def test_func_callable(self):
         with pytest.raises(ValueError):
-            DifferentialEquation(
-                func=1, t0=0, times=self.times, n_states=1, n_theta=1
-            )
+            DifferentialEquation(func=1, t0=0, times=self.times, n_states=1, n_theta=1)
 
     def test_number_of_states(self):
         with pytest.raises(ValueError):
-            DifferentialEquation(
-                func=self.system, t0=0, times=self.times, n_states=0, n_theta=1
-            )
+            DifferentialEquation(func=self.system, t0=0, times=self.times, n_states=0, n_theta=1)
 
     def test_number_of_params(self):
         with pytest.raises(ValueError):
-            DifferentialEquation(
-                func=self.system, t0=0, times=self.times, n_states=1, n_theta=0
-            )
+            DifferentialEquation(func=self.system, t0=0, times=self.times, n_states=1, n_theta=0)
 
 
-class TestDiffEqModel(object):
+class TestDiffEqModel:
     def test_op_equality(self):
         """Tests that the equality of mathematically identical Ops evaluates True"""
 
@@ -294,7 +253,9 @@ class TestDiffEqModel(object):
         # Instantiate two Ops
         op_1 = DifferentialEquation(func=ode_func, t0=0, times=t, n_states=1, n_theta=1)
         op_2 = DifferentialEquation(func=ode_func, t0=0, times=t, n_states=1, n_theta=1)
-        op_other = DifferentialEquation(func=ode_func, t0=0, times=np.linspace(0, 2, 16), n_states=1, n_theta=1)
+        op_other = DifferentialEquation(
+            func=ode_func, t0=0, times=np.linspace(0, 2, 16), n_states=1, n_theta=1
+        )
 
         assert op_1 == op_2
         assert op_1 != op_other
@@ -310,14 +271,11 @@ class TestDiffEqModel(object):
             [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5]
         )
 
-        yobs = np.array([
-                0.31, 0.57, 0.51, 0.55, 0.47, 0.42, 0.38, 0.3,
-                0.26, 0.22, 0.22, 0.14, 0.14, 0.09, 0.1
-        ])[:,np.newaxis]
+        yobs = np.array(
+            [0.31, 0.57, 0.51, 0.55, 0.47, 0.42, 0.38, 0.3, 0.26, 0.22, 0.22, 0.14, 0.14, 0.09, 0.1]
+        )[:, np.newaxis]
 
-        ode_model = DifferentialEquation(
-            func=system, t0=0, times=times, n_states=1, n_theta=1
-        )
+        ode_model = DifferentialEquation(func=system, t0=0, times=times, n_states=1, n_theta=1)
 
         with pm.Model() as model:
             alpha = pm.HalfCauchy("alpha", 1)
@@ -341,14 +299,11 @@ class TestDiffEqModel(object):
             [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5]
         )
 
-        yobs = np.array([
-                0.31, 0.57, 0.51, 0.55, 0.47, 0.42, 0.38, 0.3,
-                0.26, 0.22, 0.22, 0.14, 0.14, 0.09, 0.1
-        ])[:,np.newaxis]
+        yobs = np.array(
+            [0.31, 0.57, 0.51, 0.55, 0.47, 0.42, 0.38, 0.3, 0.26, 0.22, 0.22, 0.14, 0.14, 0.09, 0.1]
+        )[:, np.newaxis]
 
-        ode_model = DifferentialEquation(
-            func=system, t0=0, times=times, n_states=1, n_theta=2
-        )
+        ode_model = DifferentialEquation(func=system, t0=0, times=times, n_states=1, n_theta=2)
 
         with pm.Model() as model:
             alpha = pm.HalfCauchy("alpha", 1)
@@ -375,23 +330,23 @@ class TestDiffEqModel(object):
 
         times = np.array([0.0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6, 6.4, 7.2, 8.0])
 
-        yobs = np.array([
-            [1.02, 0.02],
-            [0.86, 0.12],
-            [0.43, 0.37],
-            [0.14, 0.42],
-            [0.05, 0.43],
-            [0.03, 0.14],
-            [0.02, 0.08],
-            [0.02, 0.04],
-            [0.02, 0.01],
-            [0.02, 0.01],
-            [0.02, 0.01],
-        ])
-
-        ode_model = DifferentialEquation(
-            func=system, t0=0, times=times, n_states=2, n_theta=1
+        yobs = np.array(
+            [
+                [1.02, 0.02],
+                [0.86, 0.12],
+                [0.43, 0.37],
+                [0.14, 0.42],
+                [0.05, 0.43],
+                [0.03, 0.14],
+                [0.02, 0.08],
+                [0.02, 0.04],
+                [0.02, 0.01],
+                [0.02, 0.01],
+                [0.02, 0.01],
+            ]
         )
+
+        ode_model = DifferentialEquation(func=system, t0=0, times=times, n_states=2, n_theta=1)
 
         with pm.Model() as model:
             R = pm.Lognormal("R", 1, 5)
@@ -413,24 +368,24 @@ class TestDiffEqModel(object):
             return [ds, di]
 
         times = np.array([0.0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6, 6.4, 7.2, 8.0])
-        
-        yobs = np.array([
-            [1.02, 0.02],
-            [0.86, 0.12],
-            [0.43, 0.37],
-            [0.14, 0.42],
-            [0.05, 0.43],
-            [0.03, 0.14],
-            [0.02, 0.08],
-            [0.02, 0.04],
-            [0.02, 0.01],
-            [0.02, 0.01],
-            [0.02, 0.01],
-        ])
 
-        ode_model = DifferentialEquation(
-            func=system, t0=0, times=times, n_states=2, n_theta=2
+        yobs = np.array(
+            [
+                [1.02, 0.02],
+                [0.86, 0.12],
+                [0.43, 0.37],
+                [0.14, 0.42],
+                [0.05, 0.43],
+                [0.03, 0.14],
+                [0.02, 0.08],
+                [0.02, 0.04],
+                [0.02, 0.01],
+                [0.02, 0.01],
+                [0.02, 0.01],
+            ]
         )
+
+        ode_model = DifferentialEquation(func=system, t0=0, times=times, n_states=2, n_theta=2)
 
         with pm.Model() as model:
             beta = pm.HalfCauchy("beta", 1)
