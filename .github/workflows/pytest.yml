@@ -1,0 +1,89 @@
+name: tox
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  tox:
+    strategy:
+      matrix:
+        python-version: ["3.7"]
+        os: [ubuntu-18.04]
+        floatx: ["float32", "float64"]
+        test-subset:
+          - '
+            --ignore=pymc3/tests/test_examples.py
+            --ignore=pymc3/tests/test_distributions_random.py
+            --ignore=pymc3/tests/test_variational_inference.py
+            --ignore=pymc3/tests/test_shared.py
+            --ignore=pymc3/tests/test_smc.py
+            --ignore=pymc3/tests/test_updates.py
+            --ignore=pymc3/tests/test_posteriors.py
+            --ignore=pymc3/tests/test_sampling.py
+            --ignore=pymc3/tests/test_parallel_sampling.py
+            --ignore=pymc3/tests/test_dist_math.py
+            --ignore=pymc3/tests/test_distribution_defaults.py
+            --ignore=pymc3/tests/test_distributions_timeseries.py
+            --ignore=pymc3/tests/test_random.py
+            --ignore=pymc3/tests/test_gp.py
+            --ignore=pymc3/tests/test_shape_handling
+            --ignore=pymc3/tests/test_quadpotential.py
+            '
+          - '
+            pymc3/tests/test_distributions_random.py
+            pymc3/tests/test_shared.py
+            pymc3/tests/test_smc.py
+            pymc3/tests/test_sampling.py
+            pymc3/tests/test_parallel_sampling.py
+            pymc3/tests/test_dist_math.py
+            pymc3/tests/test_distribution_defaults.py
+            pymc3/tests/test_distributions_timeseries.py
+            pymc3/tests/test_random.py
+            '
+          - '
+            pymc3/tests/test_examples.py
+            pymc3/tests/test_posteriors.py
+            pymc3/tests/test_gp.py
+            pymc3/tests/test_quadpotential.py
+            '
+          - '
+            pymc3/tests/test_variational_inference.py
+            pymc3/tests/test_updates.py
+            pymc3/tests/test_shape_handling.py
+            '
+    env:
+      TEST_SUBSET: ${{ matrix.test-subset }}
+      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=native'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Cache multiple paths
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/pip
+            $RUNNER_TOOL_CACHE/Python/*
+            ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}
+      - name: upgrade-pip
+        run: python -m pip install --upgrade pip
+      - name: install-libblas
+        run: sudo apt-get install -y libblas-dev
+      - name: install-pymc3
+        run: pip install -e .
+      - name: instsall-dev-reqs
+        run: pip install -r requirements-dev.txt
+      - name: run-tests
+        run: pytest -v --cov=pymc3 --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        if: matrix.python-version == '3.7' && matrix.os == 'ubuntu-18.04'
+        with:
+          env_vars: OS,PYTHON
+          name: codecov-umbrella
+          fail_ci_if_error: true
