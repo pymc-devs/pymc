@@ -1,5 +1,11 @@
 # Release Notes
 
+## PyMC3 3.10.0
+
+### Maintenance
+- Test model logp before starting any MCMC chains (see [#4116](https://github.com/pymc-devs/pymc3/issues/4116))
+- Fix bug in `model.check_test_point` that caused the `test_point` argument to be ignored. (see [PR #4211](https://github.com/pymc-devs/pymc3/pull/4211#issuecomment-727142721))
+
 ## PyMC3 3.9.x (on deck)
 
 ### Maintenance

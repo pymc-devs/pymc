@@ -53,6 +53,7 @@ from .step_methods import (
     arraystep,
 )
 from .util import (
+    check_start_vals,
     update_start_vals,
     get_untransformed_name,
     is_transformed_name,
@@ -419,7 +420,16 @@ def sample(
 
     """
     model = modelcontext(model)
+    if start is None:
+        start = model.test_point
+    else:
+        if isinstance(start, dict):
+            update_start_vals(start, model.test_point, model)
+        else:
+            for chain_start_vals in start:
+                update_start_vals(chain_start_vals, model.test_point, model)
 
+    check_start_vals(start, model)
     if cores is None:
         cores = min(4, _cpu_count())
 
@@ -487,6 +497,7 @@ def sample(
                 progressbar=progressbar,
                 **kwargs,
             )
+            check_start_vals(start_)
             if start is None:
                 start = start_
         except (AttributeError, NotImplementedError, tg.NullTypeGradError):

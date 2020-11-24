@@ -1365,7 +1365,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             test_point = self.test_point
 
         return Series(
-            {RV.name: np.round(RV.logp(self.test_point), round_vals) for RV in self.basic_RVs},
+            {RV.name: np.round(RV.logp(test_point), round_vals) for RV in self.basic_RVs},
             name="Log-probability of test_point",
         )
 
