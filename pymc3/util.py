@@ -192,6 +192,7 @@ def update_start_vals(a, b, model):
 def check_start_vals(start, model):
     r"""Check that the starting values for MCMC do not cause the relevant log probability
     to evaluate to something invalid (e.g. Inf or NaN)
+
     Parameters
     ----------
     start : dict, or array of dict
