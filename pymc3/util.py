@@ -19,7 +19,6 @@ from typing import List, Dict, Tuple, Union
 import numpy as np
 import xarray
 import arviz
-from numpy import ndarray
 
 from pymc3.exceptions import SamplingError
 from theano.tensor import TensorVariable
