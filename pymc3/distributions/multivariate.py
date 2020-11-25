@@ -1449,6 +1449,9 @@ class LKJCorr(Continuous):
             broadcast_conditions=False,
         )
 
+    def _distr_parameters_for_repr(self):
+        return ["eta", "n"]
+
 
 class MatrixNormal(Continuous):
     R"""
@@ -1712,6 +1715,10 @@ class MatrixNormal(Continuous):
         norm = -0.5 * m * n * pm.floatX(np.log(2 * np.pi))
         return norm - 0.5 * trquaddist - m * half_collogdet - n * half_rowlogdet
 
+    def _distr_parameters_for_repr(self):
+        mapping = {"tau": "tau", "cov": "cov", "chol": "chol_cov"}
+        return ["mu", "row" + mapping[self._rowcov_type], "col" + mapping[self._colcov_type]]
+
 
 class KroneckerNormal(Continuous):
     R"""
@@ -1954,3 +1961,6 @@ class KroneckerNormal(Continuous):
         """
         quad, logdet = self._quaddist(value)
         return -(quad + logdet + self.N * tt.log(2 * np.pi)) / 2.0
+
+    def _distr_parameters_for_repr(self):
+        return ["mu"]
