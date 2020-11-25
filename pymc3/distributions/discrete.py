@@ -913,7 +913,7 @@ class HyperGeometric(Discrete):
             - betaln(n - value + 1, bad - n + value + 1)
             - betaln(tot + 1, 1)
         )
-        lower = tt.switch(tt.gt(n - N + k, 0), n - N + k, 0)
+        lower = tt.clip(n - N + k, 0, n - N + k)
         upper = tt.switch(tt.lt(k, n), k, n)
         nonint_value = (value != intX(tt.floor(value)))
         return bound(result, lower <= value, value <= upper, nonint_value)
