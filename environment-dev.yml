@@ -24,6 +24,7 @@ dependencies:
   - pre-commit>=2.8.0
   - pytest-cov>=2.5
   - pytest>=3.0
+  - pytest-xdist
   - recommonmark>=0.4
   - seaborn>=0.8
   - sphinx-autobuild>=0.7
