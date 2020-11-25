@@ -509,7 +509,7 @@ class TestGeometric(BaseTestCases.BaseTestCase):
 
 class TestHyperGeometric(BaseTestCases.BaseTestCase):
     distribution = pm.HyperGeometric
-    params = {"N": 50, "n": 25, "k": 10}
+    params = {"N": 50, "k": 25, "n": 10}
 
 
 class TestMoyal(BaseTestCases.BaseTestCase):
@@ -751,8 +751,8 @@ class TestScalarParameterSamples(SeededTest):
         pymc3_random_discrete(
             pm.HyperGeometric,
             {"N": Nat, "k": Nat, "n": Nat},
-            size=100,
-            fails=50,
+            size=500,
+            fails=100,
             ref_rand=ref_rand,
         )
 
