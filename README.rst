@@ -39,7 +39,7 @@ Features
 -  **Variational inference**: `ADVI <http://www.jmlr.org/papers/v18/16-107.html>`__
    for fast approximate posterior estimation as well as mini-batch ADVI
    for large data sets.
--  Relies on `Theano <http://deeplearning.net/software/theano/>`__ which provides:
+-  Relies on `Theano <https://theano-pymc.readthedocs.io/en/latest/>`__ which provides:
     *  Computation optimization and dynamic C compilation
     *  Numpy broadcasting and advanced indexing
     *  Linear algebra operators
