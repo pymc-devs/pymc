@@ -80,7 +80,10 @@ class PyMC3Variable(TensorVariable):
         return self._str_repr(formatting="latex", **kwargs)
 
     def __str__(self, **kwargs):
-        return self._str_repr(formatting="plain", **kwargs)
+        try:
+            return self._str_repr(formatting="plain", **kwargs)
+        except:
+            return super().__str__()
 
     __latex__ = _repr_latex_
 
