@@ -22,6 +22,12 @@ repos:
   rev: 20.8b1
   hooks:
     - id: black
+- repo: https://github.com/PyCQA/pylint
+  rev: pylint-2.6.0
+  hooks:
+    - id: pylint
+      args: [--rcfile=.pylintrc]
+      files: ^pymc3/
 - repo: local
   hooks:
     - id: watermark
