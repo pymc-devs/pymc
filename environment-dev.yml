@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.6
+  - python>=3.6
   - arviz>=0.9
   - theano-pymc==1.0.11
   - numpy>=1.13
@@ -22,9 +22,6 @@ dependencies:
   - nose-parameterized>=0.6
   - numpydoc>=0.9
   - pre-commit>=2.8.0
-  - pycodestyle>=2.3
-  - pyflakes>=1.5
-  - pylint>=1.7
   - pytest-cov>=2.5
   - pytest>=3.0
   - recommonmark>=0.4
@@ -33,12 +30,9 @@ dependencies:
   - sphinx>=1.5
   - watermark
   - parameterized
-  - black
   - ipywidgets
   - dataclasses  # python_version < 3.7
   - contextvars  # python_version < 3.7
   - mkl-service
   - dill
   - libblas=*=*mkl
-  - pip:
-    - black_nbconvert
