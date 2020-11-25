@@ -497,7 +497,7 @@ def sample(
                 progressbar=progressbar,
                 **kwargs,
             )
-            check_start_vals(start_)
+            check_start_vals(start_, model)
             if start is None:
                 start = start_
         except (AttributeError, NotImplementedError, tg.NullTypeGradError):
