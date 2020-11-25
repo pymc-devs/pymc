@@ -851,10 +851,10 @@ class HyperGeometric(Discrete):
     ----------
     N : integer
         Total size of the population
-    n : integer
-        Number of samples drawn from the population
     k : integer
         Number of successful individuals in the population
+    n : integer
+        Number of samples drawn from the population
     """
 
     def __init__(self, N, k, n, *args, **kwargs):
@@ -881,10 +881,8 @@ class HyperGeometric(Discrete):
         -------
         array
         """
-        N, n, k = draw_values([self.N, self.n, self.k], point=point, size=size)
-        return generate_samples(
-            np.random.hypergeometric, N, n, k, dist_shape=self.shape, size=size
-        )
+        N, k, n = draw_values([self.N, self.k, self.n], point=point, size=size)
+        return generate_samples(np.random.hypergeometric, N, k, n, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         r"""
@@ -913,10 +911,7 @@ class HyperGeometric(Discrete):
             - betaln(n - value + 1, bad - n + value + 1)
             - betaln(tot + 1, 1)
         )
-        lower = tt.clip(n - N + k, 0, n - N + k)
-        upper = tt.switch(tt.lt(k, n), k, n)
-        nonint_value = (value != intX(tt.floor(value)))
-        return bound(result, lower <= value, value <= upper, nonint_value)
+        return result
 
 
 class DiscreteUniform(Discrete):

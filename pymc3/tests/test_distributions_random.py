@@ -745,14 +745,14 @@ class TestScalarParameterSamples(SeededTest):
         pymc3_random_discrete(pm.Geometric, {"p": Unit}, size=500, fails=50, ref_rand=nr.geometric)
 
     def test_hypergeometric(self):
-        def ref_rand(size, N, n, k):
-            return nr.hypergeometric(ngood=k, nbad=N-k, nsample=n, size=size)
+        def ref_rand(size, N, k, n):
+            return st.hypergeom.rvs(M=N, n=k, N=n, size=size)
 
         pymc3_random_discrete(
-            pm.HyperGeometric, 
-            {"N": Nat, "n": Nat, "k": Nat}, 
-            size=500, 
-            fails=50, 
+            pm.HyperGeometric,
+            {"N": Nat, "k": Nat, "n": Nat},
+            size=100,
+            fails=50,
             ref_rand=ref_rand,
         )
 

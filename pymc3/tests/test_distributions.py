@@ -795,8 +795,8 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(
             HyperGeometric,
             Nat,
-            {"N": NatSmall, "n": NatSmall, "k": NatSmall},
-            lambda value, N, n, k: sp.hypergeom.logpmf(value, N, k, n),
+            {"N": NatSmall, "k": NatSmall, "n": NatSmall},
+            lambda value, N, k, n: sp.hypergeom.logpmf(value, N, k, n),
         )
 
     def test_negative_binomial(self):
