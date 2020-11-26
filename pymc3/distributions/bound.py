@@ -157,13 +157,13 @@ class _Bounded(Distribution):
 
     def _str_repr(self, **kwargs):
         distr_repr = self._wrapped._str_repr(**{**kwargs, "dist": self._wrapped})
-        if "formatting" in kwargs and kwargs["formatting"] == "latex":
+        if "formatting" in kwargs and "latex" in kwargs["formatting"]:
             distr_repr = distr_repr[distr_repr.index(r" \sim") + 6 :]
         else:
             distr_repr = distr_repr[distr_repr.index(" ~") + 3 :]
         self_repr = super()._str_repr(**kwargs)
 
-        if "formatting" in kwargs and kwargs["formatting"] == "latex":
+        if "formatting" in kwargs and "latex" in kwargs["formatting"]:
             return self_repr + " -- " + distr_repr
         else:
             return self_repr + "-" + distr_repr

@@ -216,9 +216,9 @@ class Distribution:
         except:
             return super().__str__()
 
-    def _repr_latex_(self, **kwargs):
+    def _repr_latex_(self, *, formatting="latex_with_params", **kwargs):
         """Magic method name for IPython to use for LaTeX formatting."""
-        return self._str_repr(formatting="latex_with_params", **kwargs)
+        return self._str_repr(formatting=formatting, **kwargs)
 
     def logp_nojac(self, *args, **kwargs):
         """Return the logp, but do not include a jacobian term for transforms.

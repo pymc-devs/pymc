@@ -1800,58 +1800,83 @@ class TestStrAndLatexRepr:
             Y_obs = Normal("Y_obs", mu=mu, sigma=sigma, observed=Y)
 
         self.distributions = [alpha, sigma, mu, b, Z, Y_obs, bound_var]
-        self.expected_latex = (
-            r"$\text{alpha} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
-            r"$\text{sigma} \sim \text{HalfNormal}(\mathit{sigma}=1.0)$",
-            r"$\text{mu} \sim \text{Deterministic}(\text{alpha},~\text{Constant},~\text{beta})$",
-            r"$\text{beta} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
-            r"$\text{Z} \sim \text{MvNormal}(\mathit{mu}=array,~\mathit{chol_cov}=array)$",
-            r"$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sigma}=f(\text{sigma}))$",
-            r"$\text{bound_var} \sim \text{Bound}(\mathit{lower}=1.0,~\mathit{upper}=\text{None})$ -- \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
-            r"$\text{kron_normal} \sim \text{KroneckerNormal}(\mathit{mu}=array)$",
-            r"$\text{mat_normal} \sim \text{MatrixNormal}(\mathit{mu}=array,~\mathit{rowcov}=array,~\mathit{colchol_cov}=array)$",
-        )
-        self.expected_str = (
-            r"alpha ~ Normal(mu=0.0, sigma=10.0)",
-            r"sigma ~ HalfNormal(sigma=1.0)",
-            r"mu ~ Deterministic(alpha, Constant, beta)",
-            r"beta ~ Normal(mu=0.0, sigma=10.0)",
-            r"Z ~ MvNormal(mu=array, chol_cov=array)",
-            r"Y_obs ~ Normal(mu=mu, sigma=f(sigma))",
-            r"bound_var ~ Bound(lower=1.0, upper=None)-Normal(mu=0.0, sigma=10.0)",
-            r"kron_normal ~ KroneckerNormal(mu=array)",
-            r"mat_normal ~ MatrixNormal(mu=array, rowcov=array, colchol_cov=array)",
-        )
+        self.expected = {
+            "latex": (
+                r"$\text{alpha} \sim \text{Normal}$",
+                r"$\text{sigma} \sim \text{HalfNormal}$",
+                r"$\text{mu} \sim \text{Deterministic}$",
+                r"$\text{beta} \sim \text{Normal}$",
+                r"$\text{Z} \sim \text{MvNormal}$",
+                r"$\text{Y_obs} \sim \text{Normal}$",
+                r"$\text{bound_var} \sim \text{Bound}$ -- \text{Normal}$",
+                r"$\text{kron_normal} \sim \text{KroneckerNormal}$",
+                r"$\text{mat_normal} \sim \text{MatrixNormal}$",
+            ),
+            "plain": (
+                r"alpha ~ Normal",
+                r"sigma ~ HalfNormal",
+                r"mu ~ Deterministic",
+                r"beta ~ Normal",
+                r"Z ~ MvNormal",
+                r"Y_obs ~ Normal",
+                r"bound_var ~ Bound-Normal",
+                r"kron_normal ~ KroneckerNormal",
+                r"mat_normal ~ MatrixNormal",
+            ),
+            "latex_with_params": (
+                r"$\text{alpha} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
+                r"$\text{sigma} \sim \text{HalfNormal}(\mathit{sigma}=1.0)$",
+                r"$\text{mu} \sim \text{Deterministic}(\text{alpha},~\text{Constant},~\text{beta})$",
+                r"$\text{beta} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
+                r"$\text{Z} \sim \text{MvNormal}(\mathit{mu}=array,~\mathit{chol_cov}=array)$",
+                r"$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sigma}=f(\text{sigma}))$",
+                r"$\text{bound_var} \sim \text{Bound}(\mathit{lower}=1.0,~\mathit{upper}=\text{None})$ -- \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
+                r"$\text{kron_normal} \sim \text{KroneckerNormal}(\mathit{mu}=array)$",
+                r"$\text{mat_normal} \sim \text{MatrixNormal}(\mathit{mu}=array,~\mathit{rowcov}=array,~\mathit{colchol_cov}=array)$",
+            ),
+            "plain_with_params": (
+                r"alpha ~ Normal(mu=0.0, sigma=10.0)",
+                r"sigma ~ HalfNormal(sigma=1.0)",
+                r"mu ~ Deterministic(alpha, Constant, beta)",
+                r"beta ~ Normal(mu=0.0, sigma=10.0)",
+                r"Z ~ MvNormal(mu=array, chol_cov=array)",
+                r"Y_obs ~ Normal(mu=mu, sigma=f(sigma))",
+                r"bound_var ~ Bound(lower=1.0, upper=None)-Normal(mu=0.0, sigma=10.0)",
+                r"kron_normal ~ KroneckerNormal(mu=array)",
+                r"mat_normal ~ MatrixNormal(mu=array, rowcov=array, colchol_cov=array)",
+            ),
+        }
 
     def test__repr_latex_(self):
-        for distribution, tex in zip(self.distributions, self.expected_latex):
+        for distribution, tex in zip(self.distributions, self.expected["latex_with_params"]):
             assert distribution._repr_latex_() == tex
 
         model_tex = self.model._repr_latex_()
 
-        for tex in self.expected_latex:  # make sure each variable is in the model
+        # make sure each variable is in the model
+        for tex in self.expected["latex"]:
             for segment in tex.strip("$").split(r"\sim"):
                 assert segment in model_tex
 
     def test___latex__(self):
-        for distribution, tex in zip(self.distributions, self.expected_latex):
+        for distribution, tex in zip(self.distributions, self.expected["latex_with_params"]):
             assert distribution._repr_latex_() == distribution.__latex__()
         assert self.model._repr_latex_() == self.model.__latex__()
 
     def test___str__(self):
-        for distribution, str_repr in zip(self.distributions, self.expected_str):
+        for distribution, str_repr in zip(self.distributions, self.expected["plain"]):
             assert distribution.__str__() == str_repr
 
         model_str = self.model.__str__()
-        for str_repr in self.expected_str:
+        for str_repr in self.expected["plain"]:
             assert str_repr in model_str
 
     def test_str(self):
-        for distribution, str_repr in zip(self.distributions, self.expected_str):
+        for distribution, str_repr in zip(self.distributions, self.expected["plain"]):
             assert str(distribution) == str_repr
 
         model_str = str(self.model)
-        for str_repr in self.expected_str:
+        for str_repr in self.expected["plain"]:
             assert str_repr in model_str
 
 

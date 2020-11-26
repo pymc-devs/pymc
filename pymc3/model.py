@@ -65,7 +65,7 @@ class PyMC3Variable(TensorVariable):
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):
         if getattr(self, "distribution", None) is None:
-            if formatting == "latex":
+            if "latex" in formatting:
                 return None
             else:
                 return super().__str__()
@@ -76,8 +76,8 @@ class PyMC3Variable(TensorVariable):
             dist = self.distribution
         return self.distribution._str_repr(name=name, dist=dist, formatting=formatting)
 
-    def _repr_latex_(self, **kwargs):
-        return self._str_repr(formatting="latex", **kwargs)
+    def _repr_latex_(self, *, formatting="latex_with_params", **kwargs):
+        return self._str_repr(formatting=formatting, **kwargs)
 
     def __str__(self, **kwargs):
         try:
@@ -1375,8 +1375,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def _str_repr(self, formatting="plain", **kwargs):
         all_rv = itertools.chain(self.unobserved_RVs, self.observed_RVs)
 
-        if formatting == "latex":
-            rv_reprs = [rv.__latex__() for rv in all_rv]
+        if "latex" in formatting:
+            rv_reprs = [rv.__latex__(formatting=formatting) for rv in all_rv]
             rv_reprs = [
                 rv_repr.replace(r"\sim", r"&\sim &").strip("$")
                 for rv_repr in rv_reprs
@@ -1407,8 +1407,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def __str__(self, **kwargs):
         return self._str_repr(formatting="plain", **kwargs)
 
-    def _repr_latex_(self, **kwargs):
-        return self._str_repr(formatting="latex", **kwargs)
+    def _repr_latex_(self, *, formatting="latex", **kwargs):
+        return self._str_repr(formatting=formatting, **kwargs)
 
     __latex__ = _repr_latex_
 
@@ -1893,8 +1893,8 @@ class DeterministicWrapper(tt.TensorVariable):
                 return f"{self.name} ~ Deterministic({args})"
             return f"{self.name} ~ Deterministic"
 
-    def _repr_latex_(self):
-        return self._str_repr(formatting="latex_with_params")
+    def _repr_latex_(self, *, formatting="latex_with_params", **kwargs):
+        return self._str_repr(formatting=formatting)
 
     __latex__ = _repr_latex_
 
