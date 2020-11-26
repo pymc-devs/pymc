@@ -111,7 +111,7 @@ def instantiate_steppers(_model, steps, selected_steps, step_kwargs=None):
     ----------
     model : Model object
         A fully-specified model object; legacy argument -- ignored
-    steps : step function or vector of step functions
+    steps : sequence of step functions
         One or more step functions that have been assigned to some subset of
         the model's parameters.
     selected_steps : dictionary of step methods and variables
