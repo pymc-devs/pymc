@@ -14,11 +14,11 @@
 
 from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 from pymc3.backends.base import MultiTrace
 
-import matplotlib.pyplot as plt
 
 if TYPE_CHECKING:  # pragma: nocover
     from arviz.data.inference_data import InferenceData
