@@ -30,6 +30,7 @@ jobs:
             --ignore=pymc3/tests/test_gp.py
             --ignore=pymc3/tests/test_shape_handling
             --ignore=pymc3/tests/test_quadpotential.py
+            --ignore=pymc3/tests/test_distributions.py
           - |
             pymc3/tests/test_distributions_random.py
             pymc3/tests/test_shared.py
@@ -49,6 +50,8 @@ jobs:
             pymc3/tests/test_variational_inference.py
             pymc3/tests/test_updates.py
             pymc3/tests/test_shape_handling.py
+          - |
+            pymc3/tests/test_distributions.py
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
