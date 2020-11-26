@@ -274,7 +274,7 @@ class TestLatentOccupancy(SeededTest):
             # Estimated mean count
             theta = pm.Uniform("theta", 0, 100)
             # Poisson likelihood
-            pm.ZeroInflatedPoisson("y", theta, psi, observed=self.y)
+            pm.ZeroInflatedPoisson("y", psi, theta, observed=self.y)
         return model
 
     def test_run(self):
