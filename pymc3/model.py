@@ -1874,24 +1874,27 @@ def _walk_up_rv(rv, formatting="plain"):
             all_rvs.extend(_walk_up_rv(parent, formatting=formatting))
     else:
         name = rv.name if rv.name else "Constant"
-        fmt = r"\text{{{name}}}" if formatting == "latex" else "{name}"
+        fmt = r"\text{{{name}}}" if "latex" in formatting else "{name}"
         all_rvs.append(fmt.format(name=name))
     return all_rvs
 
 
 class DeterministicWrapper(tt.TensorVariable):
     def _str_repr(self, formatting="plain"):
-        if formatting == "latex":
-            return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
-                name=self.name, args=r",~".join(_walk_up_rv(self, formatting=formatting))
-            )
+        if "latex" in formatting:
+            if formatting == "latex_with_params":
+                return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
+                    name=self.name, args=r",~".join(_walk_up_rv(self, formatting=formatting))
+                )
+            return fr"$\text{{{self.name}}} \sim \text{{Deterministic}}$"
         else:
-            return "{name} ~ Deterministic({args})".format(
-                name=self.name, args=", ".join(_walk_up_rv(self, formatting=formatting))
-            )
+            if formatting == "plain_with_params":
+                args = ", ".join(_walk_up_rv(self, formatting=formatting))
+                return f"{self.name} ~ Deterministic({args})"
+            return f"{self.name} ~ Deterministic"
 
     def _repr_latex_(self):
-        return self._str_repr(formatting="latex")
+        return self._str_repr(formatting="latex_with_params")
 
     __latex__ = _repr_latex_
 

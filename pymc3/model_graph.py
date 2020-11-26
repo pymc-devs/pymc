@@ -121,7 +121,7 @@ class ModelGraph:
                     pass
         return input_map
 
-    def _make_node(self, var_name, graph):
+    def _make_node(self, var_name, graph, *, formatting: str = "plain"):
         """Attaches the given variable to a graphviz Digraph"""
         v = self.model[var_name]
 
@@ -146,7 +146,7 @@ class ModelGraph:
         elif isinstance(v, SharedVariable):
             label = f"{var_name}\n~\nData"
         else:
-            label = str(v).replace(" ~ ", "\n~\n")
+            label = v._str_repr(formatting=formatting).replace(" ~ ", "\n~\n")
 
         graph.node(var_name.replace(":", "&"), label, **attrs)
 
@@ -181,7 +181,7 @@ class ModelGraph:
             plates[shape].add(var_name)
         return plates
 
-    def make_graph(self):
+    def make_graph(self, formatting: str = "plain"):
         """Make graphviz Digraph of PyMC3 model
 
         Returns
@@ -205,12 +205,12 @@ class ModelGraph:
                 # must be preceded by 'cluster' to get a box around it
                 with graph.subgraph(name="cluster" + label) as sub:
                     for var_name in var_names:
-                        self._make_node(var_name, sub)
+                        self._make_node(var_name, sub, formatting=formatting)
                     # plate label goes bottom right
                     sub.attr(label=label, labeljust="r", labelloc="b", style="rounded")
             else:
                 for var_name in var_names:
-                    self._make_node(var_name, graph)
+                    self._make_node(var_name, graph, formatting=formatting)
 
         for key, values in self.make_compute_graph().items():
             for value in values:
@@ -218,7 +218,7 @@ class ModelGraph:
         return graph
 
 
-def model_to_graphviz(model=None):
+def model_to_graphviz(model=None, *, formatting: str = "plain"):
     """Produce a graphviz Digraph from a PyMC3 model.
 
     Requires graphviz, which may be installed most easily with
@@ -228,6 +228,15 @@ def model_to_graphviz(model=None):
     and then `pip install graphviz` to get the python bindings.  See
     http://graphviz.readthedocs.io/en/stable/manual.html
     for more information.
+
+    Parameters
+    ----------
+    model : pm.Model
+        The model to plot. Not required when called from inside a modelcontext.
+    formatting : str
+        one of { "plain", "plain_with_params" }
     """
+    if not "plain" in formatting:
+        raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
     model = pm.modelcontext(model)
-    return ModelGraph(model).make_graph()
+    return ModelGraph(model).make_graph(formatting=formatting)
