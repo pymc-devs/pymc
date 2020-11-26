@@ -176,12 +176,10 @@ def three_var_approx_single_group_mf(three_var_model):
     return MeanField(model=three_var_model)
 
 
-@pytest.fixture(
-    params=[("ndarray", None), ("text", "test"), ("sqlite", "test.sqlite"), ("hdf5", "test.h5")]
-)
+@pytest.fixture
 def test_sample_simple(three_var_approx, request):
     backend, name = request.param
-    trace = three_var_approx.sample(100, backend=backend, name=name)
+    trace = three_var_approx.sample(100, name=name)
     assert set(trace.varnames) == {"one", "one_log__", "three", "two"}
     assert len(trace) == 100
     assert trace[0]["one"].shape == (10, 2)
@@ -750,7 +748,7 @@ def test_remove_scan_op():
         inference = ADVI()
         buff = io.StringIO()
         inference.run_profiling(n=10).summary(buff)
-        assert "theano.scan_module.scan_op.Scan" not in buff.getvalue()
+        assert "theano.scan.op.Scan" not in buff.getvalue()
         buff.close()
 
 

@@ -80,7 +80,10 @@ class PyMC3Variable(TensorVariable):
         return self._str_repr(formatting="latex", **kwargs)
 
     def __str__(self, **kwargs):
-        return self._str_repr(formatting="plain", **kwargs)
+        try:
+            return self._str_repr(formatting="plain", **kwargs)
+        except:
+            return super().__str__()
 
     __latex__ = _repr_latex_
 
@@ -1675,6 +1678,11 @@ class FreeRV(Factor, PyMC3Variable):
 
 
 def pandas_to_array(data):
+    """Convert a Pandas object to a NumPy array.
+
+    XXX: When `data` is a generator, this will return a Theano tensor!
+
+    """
     if hasattr(data, "values"):  # pandas
         if data.isnull().any().any():  # missing values
             ret = np.ma.MaskedArray(data.values, data.isnull().values)
@@ -1776,7 +1784,10 @@ class ObservedRV(Factor, PyMC3Variable):
 
         if type is None:
             data = pandas_to_array(data)
-            type = TensorType(distribution.dtype, data.shape)
+            if isinstance(data, theano.gof.graph.Variable):
+                type = data.type
+            else:
+                type = TensorType(distribution.dtype, data.shape)
 
         self.observations = data
 
@@ -1797,7 +1808,7 @@ class ObservedRV(Factor, PyMC3Variable):
 
             # make this RV a view on the combined missing/nonmissing array
             theano.gof.Apply(theano.compile.view_op, inputs=[data], outputs=[self])
-            self.tag.test_value = theano.compile.view_op(data).tag.test_value
+            self.tag.test_value = theano.compile.view_op(data).tag.test_value.astype(self.dtype)
             self.scaling = _get_scaling(total_size, data.shape, data.ndim)
 
     @property
@@ -1997,10 +2008,12 @@ def as_iterargs(data):
 
 
 def all_continuous(vars):
-    """Check that vars not include discrete variables, excepting
-    ObservedRVs."""
+    """Check that vars not include discrete variables or BART variables, excepting ObservedRVs."""
+
     vars_ = [var for var in vars if not isinstance(var, pm.model.ObservedRV)]
-    if any([var.dtype in pm.discrete_types for var in vars_]):
+    if any(
+        [(var.dtype in pm.discrete_types or isinstance(var.distribution, pm.BART)) for var in vars_]
+    ):
         return False
     else:
         return True

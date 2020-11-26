@@ -16,7 +16,6 @@ from numbers import Real
 
 import numpy as np
 import theano.tensor as tt
-import theano
 
 from pymc3.distributions.distribution import (
     Distribution,
@@ -27,6 +26,8 @@ from pymc3.distributions.distribution import (
 )
 from pymc3.distributions import transforms
 from pymc3.distributions.dist_math import bound
+
+from pymc3.theanof import floatX
 
 __all__ = ["Bound"]
 
@@ -148,6 +149,25 @@ class _Bounded(Distribution):
                 not_broadcast_kwargs={"point": point},
             )
 
+    def _distr_parameters_for_repr(self):
+        return ["lower", "upper"]
+
+    def _distr_name_for_repr(self):
+        return "Bound"
+
+    def _str_repr(self, **kwargs):
+        distr_repr = self._wrapped._str_repr(**{**kwargs, "dist": self._wrapped})
+        if "formatting" in kwargs and kwargs["formatting"] == "latex":
+            distr_repr = distr_repr[distr_repr.index(r" \sim") + 6 :]
+        else:
+            distr_repr = distr_repr[distr_repr.index(" ~") + 3 :]
+        self_repr = super()._str_repr(**kwargs)
+
+        if "formatting" in kwargs and kwargs["formatting"] == "latex":
+            return self_repr + " -- " + distr_repr
+        else:
+            return self_repr + "-" + distr_repr
+
 
 class _DiscreteBounded(_Bounded, Discrete):
     def __init__(self, distribution, lower, upper, transform="infer", *args, **kwargs):
@@ -187,12 +207,10 @@ class _ContinuousBounded(_Bounded, Continuous):
     """
 
     def __init__(self, distribution, lower, upper, transform="infer", *args, **kwargs):
-        dtype = kwargs.get("dtype", theano.config.floatX)
-
         if lower is not None:
-            lower = tt.as_tensor_variable(lower).astype(dtype)
+            lower = tt.as_tensor_variable(floatX(lower))
         if upper is not None:
-            upper = tt.as_tensor_variable(upper).astype(dtype)
+            upper = tt.as_tensor_variable(floatX(upper))
 
         if transform == "infer":
             if lower is None and upper is None:

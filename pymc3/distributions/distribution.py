@@ -194,7 +194,10 @@ class Distribution:
             )
 
     def __str__(self, **kwargs):
-        return self._str_repr(formatting="plain", **kwargs)
+        try:
+            return self._str_repr(formatting="plain", **kwargs)
+        except:
+            return super().__str__()
 
     def _repr_latex_(self, **kwargs):
         """Magic method name for IPython to use for LaTeX formatting."""

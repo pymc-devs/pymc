@@ -18,7 +18,7 @@ from typing import List, Dict, Tuple, Union
 
 import xarray
 import arviz
-from numpy import asscalar, ndarray
+from numpy import ndarray
 
 from theano.tensor import TensorVariable
 
@@ -128,8 +128,8 @@ def get_default_varnames(var_iterator, include_transformed):
 
 def get_repr_for_variable(variable, formatting="plain"):
     """Build a human-readable string representation for a variable."""
-    name = variable.name
-    if name is None:
+    name = variable.name if variable is not None else None
+    if name is None and variable is not None:
         if hasattr(variable, "get_parents"):
             try:
                 names = [
@@ -149,7 +149,7 @@ def get_repr_for_variable(variable, formatting="plain"):
                 pass
         value = variable.eval()
         if not value.shape or value.shape == (1,):
-            return asscalar(value)
+            return value.item()
         return "array"
 
     if formatting == "latex":
