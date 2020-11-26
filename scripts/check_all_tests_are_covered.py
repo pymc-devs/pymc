@@ -19,3 +19,6 @@ if __name__ == "__main__":
     assert (
         ignored_tests <= non_ignored_tests
     ), f"The following tests are ignored by the first job but not run by the others: {ignored_tests.difference(non_ignored_tests)}"
+    assert (
+        ignored_tests >= non_ignored_tests
+    ), f"The following tests are run by multiple jobs: {non_ignored_tests.difference(ignored_tests)}"
