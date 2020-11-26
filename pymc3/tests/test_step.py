@@ -27,7 +27,6 @@ from .models import (
     simple_2model_continuous,
 )
 from pymc3.sampling import assign_step_methods, sample
-from pymc3.parallel_sampling import ParallelSamplingError
 from pymc3.exceptions import SamplingError
 from pymc3.model import Model, Potential, set_data
 
