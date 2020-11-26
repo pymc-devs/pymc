@@ -19,7 +19,6 @@ import numpy as np
 
 from pymc3.backends.base import MultiTrace
 
-
 if TYPE_CHECKING:  # pragma: nocover
     from arviz.data.inference_data import InferenceData
 
