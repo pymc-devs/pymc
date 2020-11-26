@@ -18,13 +18,10 @@ import numpy as np
 
 from pymc3.backends.base import MultiTrace
 
+import matplotlib.pyplot as plt
+
 if TYPE_CHECKING:  # pragma: nocover
     from arviz.data.inference_data import InferenceData
-
-try:
-    import matplotlib.pyplot as plt
-except ImportError:  # pragma: nocover (mpl is optional)
-    pass
 
 
 def plot_posterior_predictive_glm(
