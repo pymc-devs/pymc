@@ -130,8 +130,6 @@ def instantiate_steppers(_model, steps, selected_steps, step_kwargs=None):
 
     used_keys = set()
     for step_class, vars in selected_steps.items():
-        if len(vars) == 0:
-            continue
         args = step_kwargs.get(step_class.name, {})
         used_keys.add(step_class.name)
         step = step_class(vars=vars, **args)
