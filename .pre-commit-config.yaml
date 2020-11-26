@@ -41,9 +41,11 @@ repos:
       entry: python scripts/check_toc_is_complete.py
       language: python
       name: Check all notebooks appear in table of contents
+      pass_filenames: false
       types: [jupyter]
     - id: check-no-tests-are-ignored
       entry: python scripts/check_all_tests_are_covered.py
       files: ^\.github/workflows/pytest\.yml$
       language: python
       name: Check no tests are ignored
+      pass_filenames: false

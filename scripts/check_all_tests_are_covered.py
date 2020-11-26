@@ -1,3 +1,12 @@
+"""
+In .github/workflows/pytest.yml, tests are split between multiple jobs.
+
+Here, we check that the jobs ignored by the first job actually end up getting
+run by the other jobs.
+This is intended to be used as a pre-commit hook, see `.pre-commit-config.yaml`.
+You can run it manually with `pre-commit run check-no-tests-are-ignored --all`.
+"""
+
 from pathlib import Path
 
 import re
