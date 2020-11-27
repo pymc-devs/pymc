@@ -111,11 +111,11 @@ def instantiate_steppers(_model, steps, selected_steps, step_kwargs=None):
     ----------
     model : Model object
         A fully-specified model object; legacy argument -- ignored
-    steps : sequence of step functions
-        One or more step functions that have been assigned to some subset of
+    steps : list
+        A list of zero or more step function instances that have been assigned to some subset of
         the model's parameters.
-    selected_steps : dictionary of step methods and variables
-        The step methods and the (possibly zero) variables that have were assigned to them.
+    selected_steps : dict
+        A dictionary that maps a step method class to a list of zero or more model variables.
     step_kwargs : dict
         Parameters for the samplers. Keys are the lower case names of
         the step method, values a dict of arguments. Defaults to None.
