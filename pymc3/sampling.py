@@ -14,10 +14,7 @@
 
 """Functions for MCMC sampling."""
 
-from typing import Dict, List, Optional, TYPE_CHECKING, cast, Union, Any
-
-if TYPE_CHECKING:
-    from typing import Tuple
+from typing import Dict, List, Optional, cast, Union, Any, Tuple
 from typing import Iterable as TIterable
 from collections.abc import Iterable
 from collections import defaultdict
@@ -218,11 +215,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
 
 
 def _print_step_hierarchy(s, level=0):
-    if isinstance(s, (list, tuple)):
-        _log.info(">" * level + "list")
-        for i in s:
-            _print_step_hierarchy(i, level + 1)
-    elif isinstance(s, CompoundStep):
+    if isinstance(s, CompoundStep):
         _log.info(">" * level + "CompoundStep")
         for i in s.methods:
             _print_step_hierarchy(i, level + 1)
@@ -458,7 +451,7 @@ def sample(
 
     if return_inferencedata is None:
         v = packaging.version.parse(pm.__version__)
-        if v.release[0] > 3 or v.release[1] >= 10:
+        if v.release[0] > 3 or v.release[1] >= 10:  # type: ignore
             warnings.warn(
                 "In an upcoming release, pm.sample will return an `arviz.InferenceData` object instead of a `MultiTrace` by default. "
                 "You can pass return_inferencedata=True or return_inferencedata=False to be safe and silence this warning.",
@@ -585,7 +578,7 @@ def sample(
                     UserWarning,
                 )
             _print_step_hierarchy(step)
-            trace = _sample_population(**sample_args, parallelize=cores > 1)
+            trace = _sample_population(parallelize=cores > 1, **sample_args)
         else:
             _log.info(f"Sequential sampling ({chains} chains in 1 job)")
             _print_step_hierarchy(step)
@@ -770,11 +763,9 @@ def _sample_population(
     trace : MultiTrace
         Contains samples of all chains
     """
-    # create the generator that iterates all chains in parallel
-    chains = [chain + c for c in range(chains)]
     sampling = _prepare_iter_population(
         draws,
-        chains,
+        [chain + c for c in range(chains)],
         step,
         start,
         parallelize,
@@ -1583,7 +1574,7 @@ class _DefaultTrace:
             The index of the sample we are inserting into the trace.
         """
         if hasattr(v, "shape"):
-            value_shape = tuple(v.shape)  # type: Tuple[int, ...]
+            value_shape: Tuple[int, ...] = tuple(v.shape)
         else:
             value_shape = ()
 

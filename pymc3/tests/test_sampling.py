@@ -13,14 +13,9 @@
 #   limitations under the License.
 
 from itertools import combinations
-import packaging
 from typing import Tuple
 import numpy as np
-
-try:
-    import unittest.mock as mock  # py3
-except ImportError:
-    from unittest import mock
+import unittest.mock as mock
 
 import numpy.testing as npt
 import arviz as az
@@ -180,13 +175,9 @@ class TestSample(SeededTest):
         assert var_imp[0] > var_imp[1:].sum()
         npt.assert_almost_equal(var_imp.sum(), 1)
 
-    def test_return_inferencedata(self):
+    def test_return_inferencedata(self, monkeypatch):
         with self.model:
             kwargs = dict(draws=100, tune=50, cores=1, chains=2, step=pm.Metropolis())
-            v = packaging.version.parse(pm.__version__)
-            if v.major > 3 or v.minor >= 10:
-                with pytest.warns(FutureWarning, match="pass return_inferencedata"):
-                    result = pm.sample(**kwargs)
 
             # trace with tuning
             with pytest.warns(UserWarning, match="will be included"):
@@ -203,13 +194,25 @@ class TestSample(SeededTest):
             assert result.posterior.sizes["chain"] == 2
             assert len(result._groups_warmup) > 0
 
-            # inferencedata without tuning
-            result = pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=True)
+            # inferencedata without tuning, with idata_kwargs
+            prior = pm.sample_prior_predictive()
+            result = pm.sample(
+                **kwargs,
+                return_inferencedata=True,
+                discard_tuned_samples=True,
+                idata_kwargs={"prior": prior},
+                random_seed=-1
+            )
+            assert "prior" in result
             assert isinstance(result, az.InferenceData)
             assert result.posterior.sizes["draw"] == 100
             assert result.posterior.sizes["chain"] == 2
             assert len(result._groups_warmup) == 0
-        pass
+
+            # check warning for version 3.10 onwards
+            monkeypatch.setattr("pymc3.__version__", "3.10")
+            with pytest.warns(FutureWarning, match="pass return_inferencedata"):
+                result = pm.sample(**kwargs)
 
     @pytest.mark.parametrize("cores", [1, 2])
     def test_sampler_stat_tune(self, cores):
