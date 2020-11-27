@@ -28,7 +28,7 @@ from ..model import modelcontext, Point
 from ..theanof import inputvars
 import theano.gradient as tg
 from ..blocking import DictToArrayBijection, ArrayOrdering
-from ..util import update_start_vals, get_default_varnames, get_var_name
+from ..util import check_start_vals, update_start_vals, get_default_varnames, get_var_name
 
 import warnings
 from inspect import getargspec
@@ -89,13 +89,7 @@ def find_MAP(
     else:
         update_start_vals(start, model.test_point, model)
 
-    if not set(start.keys()).issubset(model.named_vars.keys()):
-        extra_keys = ", ".join(set(start.keys()) - set(model.named_vars.keys()))
-        valid_keys = ", ".join(model.named_vars.keys())
-        raise KeyError(
-            "Some start parameters do not appear in the model!\n"
-            "Valid keys are: {}, but {} was supplied".format(valid_keys, extra_keys)
-        )
+    check_start_vals(start, model)
 
     if vars is None:
         vars = model.cont_vars
