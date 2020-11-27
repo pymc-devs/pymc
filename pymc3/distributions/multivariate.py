@@ -31,14 +31,7 @@ import pymc3 as pm
 
 from pymc3.theanof import floatX
 from . import transforms
-from .distribution import (
-    Continuous,
-    Discrete,
-    draw_values,
-    generate_samples,
-    _DrawValuesContext,
-    is_fast_drawable,
-)
+from .distribution import Continuous, Discrete, draw_values, generate_samples, _DrawValuesContext
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
