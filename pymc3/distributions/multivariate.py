@@ -43,7 +43,7 @@ from ..model import Deterministic
 from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln
-from .shape_utils import to_tuple
+from .shape_utils import to_tuple, broadcast_dist_samples_to
 from ..math import kron_dot, kron_diag, kron_solve_lower, kronecker
 
 
@@ -261,50 +261,23 @@ class MvNormal(_QuadFormBase):
 
         param_attribute = getattr(self, "chol_cov" if self._cov_type == "chol" else self._cov_type)
         mu, param = draw_values([self.mu, param_attribute], point=point, size=size)
-        check_fast_drawable_or_point = lambda param, point: is_fast_drawable(param) or (
-            point and param.name in point
-        )
 
-        if tuple(self.shape):
-            dist_shape = tuple(self.shape)
-            batch_shape = dist_shape[:-1]
-        else:
-            if check_fast_drawable_or_point(self.mu, point):
-                batch_shape = mu.shape[:-1]
-            else:
-                batch_shape = mu.shape[len(size) : -1]
-            dist_shape = batch_shape + param.shape[-1:]
-
-        # First, distribution shape (batch+event) is computed and then
-        # deterministic nature of random method can be obtained by appending it to sample_shape.
-        output_shape = size + dist_shape
-        extra_dims = len(output_shape) - mu.ndim
-
-        # It was not a good idea to check mu.shape[:len(size)] == size,
-        # because it can get mixed among batch and event dimensions. Here, we explicitly chop off
-        # the size (sample_shape) and only broadcast batch and event dimensions.
-        if check_fast_drawable_or_point(self.mu, point):
-            mu = mu.reshape((1,) * extra_dims + mu.shape)
-        else:
-            mu = mu.reshape(size + (1,) * extra_dims + mu.shape[len(size) :])
-
-        # Adding batch dimensions to parametrization
-        if size and param.shape[:-2] == size:
-            param = param.reshape(size + (1,) * len(batch_shape) + param.shape[-2:])
-
-        mu = np.broadcast_to(mu, output_shape)
-        param = np.broadcast_to(param, output_shape + param.shape[-1:])
-        if mu.shape[-1] != param.shape[-1]:
-            raise ValueError(f"Shapes for mu and {self._cov_type} don't match")
+        dist_shape = to_tuple(self.shape)
+        mu = broadcast_dist_samples_to(to_shape=dist_shape, samples=[mu], size=size)[0]
+        param = broadcast_dist_samples_to(
+            to_shape=dist_shape + dist_shape[-1:], samples=[param], size=size
+        )[0]
 
         if self._cov_type == "cov":
             chol = np.linalg.cholesky(param)
         elif self._cov_type == "chol":
             chol = param
-        else:
-            inverse = np.linalg.inv(param)
-            chol = np.linalg.cholesky(inverse)
+        else:  # tau -> chol -> swapaxes (chol, -1, -2) -> inv ...
+            lower_chol = np.linalg.cholesky(param)
+            upper_chol = np.swapaxes(lower_chol, -1, -2)
+            chol = np.linalg.inv(upper_chol)
 
+        output_shape = size + dist_shape
         standard_normal = np.random.standard_normal(output_shape)
         return mu + np.einsum("...ij,...j->...i", chol, standard_normal)
 
@@ -404,13 +377,13 @@ class MvStudentT(_QuadFormBase):
             nu, mu = draw_values([self.nu, self.mu], point=point, size=size)
             if self._cov_type == "cov":
                 (cov,) = draw_values([self.cov], point=point, size=size)
-                dist = MvNormal.dist(mu=np.zeros_like(mu), cov=cov)
+                dist = MvNormal.dist(mu=np.zeros_like(mu), cov=cov, shape=self.shape)
             elif self._cov_type == "tau":
                 (tau,) = draw_values([self.tau], point=point, size=size)
-                dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau)
+                dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau, shape=self.shape)
             else:
                 (chol,) = draw_values([self.chol_cov], point=point, size=size)
-                dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol)
+                dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol, shape=self.shape)
 
             samples = dist.random(point, size)
 
@@ -1920,6 +1893,7 @@ class KroneckerNormal(Continuous):
         """
         # Expand params into terms MvNormal can understand to force consistency
         self._setup_random()
+        self.mv_params["shape"] = self.shape
         dist = MvNormal.dist(**self.mv_params)
         return dist.random(point, size)
 
