@@ -164,41 +164,61 @@ class Distribution:
         return self.__class__.__name__
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):
-        """Generate string representation for this distribution, optionally
+        """
+        Generate string representation for this distribution, optionally
         including LaTeX markup (formatting='latex').
+
+        Parameters
+        ----------
+        name : str
+            name of the distribution
+        dist : Distribution
+            the distribution object
+        formatting : str
+            one of { "latex", "plain", "latex_with_params", "plain_with_params" }
         """
         if dist is None:
             dist = self
         if name is None:
             name = "[unnamed]"
+        supported_formattings = {"latex", "plain", "latex_with_params", "plain_with_params"}
+        if not formatting in supported_formattings:
+            raise ValueError(f"Unsupported formatting ''. Choose one of {supported_formattings}.")
 
         param_names = self._distr_parameters_for_repr()
         param_values = [
             get_repr_for_variable(getattr(dist, x), formatting=formatting) for x in param_names
         ]
 
-        if formatting == "latex":
+        if "latex" in formatting:
             param_string = ",~".join(
                 [fr"\mathit{{{name}}}={value}" for name, value in zip(param_names, param_values)]
             )
-            return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}({params})$".format(
-                var_name=name, distr_name=dist._distr_name_for_repr(), params=param_string
+            if formatting == "latex_with_params":
+                return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}({params})$".format(
+                    var_name=name, distr_name=dist._distr_name_for_repr(), params=param_string
+                )
+            return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}$".format(
+                var_name=name, distr_name=dist._distr_name_for_repr()
             )
         else:
-            # 'plain' is default option
+            # one of the plain formattings
             param_string = ", ".join(
                 [f"{name}={value}" for name, value in zip(param_names, param_values)]
             )
-            return "{var_name} ~ {distr_name}({params})".format(
-                var_name=name, distr_name=dist._distr_name_for_repr(), params=param_string
-            )
+            if formatting == "plain_with_params":
+                return f"{name} ~ {dist._distr_name_for_repr()}({param_string})"
+            return f"{name} ~ {dist._distr_name_for_repr()}"
 
     def __str__(self, **kwargs):
-        return self._str_repr(formatting="plain", **kwargs)
+        try:
+            return self._str_repr(formatting="plain", **kwargs)
+        except:
+            return super().__str__()
 
-    def _repr_latex_(self, **kwargs):
+    def _repr_latex_(self, *, formatting="latex_with_params", **kwargs):
         """Magic method name for IPython to use for LaTeX formatting."""
-        return self._str_repr(formatting="latex", **kwargs)
+        return self._str_repr(formatting=formatting, **kwargs)
 
     def logp_nojac(self, *args, **kwargs):
         """Return the logp, but do not include a jacobian term for transforms.

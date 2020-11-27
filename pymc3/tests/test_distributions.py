@@ -1776,63 +1776,121 @@ class TestStrAndLatexRepr:
             # Test Cholesky parameterization
             Z = MvNormal("Z", mu=np.zeros(2), chol=np.eye(2), shape=(2,))
 
+            # NegativeBinomial representations to test issue 4186
+            nb1 = pm.NegativeBinomial(
+                "nb_with_mu_alpha", mu=pm.Normal("nbmu"), alpha=pm.Gamma("nbalpha", mu=6, sigma=1)
+            )
+            nb2 = pm.NegativeBinomial("nb_with_p_n", p=pm.Uniform("nbp"), n=10)
+
             # Expected value of outcome
             mu = Deterministic("mu", floatX(alpha + tt.dot(X, b)))
 
             # add a bounded variable as well
             bound_var = Bound(Normal, lower=1.0)("bound_var", mu=0, sigma=10)
 
+            # KroneckerNormal
+            n, m = 3, 4
+            covs = [np.eye(n), np.eye(m)]
+            kron_normal = KroneckerNormal("kron_normal", mu=np.zeros(n * m), covs=covs, shape=n * m)
+
+            # MatrixNormal
+            matrix_normal = MatrixNormal(
+                "mat_normal",
+                mu=np.random.normal(size=n),
+                rowcov=np.eye(n),
+                colchol=np.linalg.cholesky(np.eye(n)),
+                shape=(n, n),
+            )
+
             # Likelihood (sampling distribution) of observations
             Y_obs = Normal("Y_obs", mu=mu, sigma=sigma, observed=Y)
-        self.distributions = [alpha, sigma, mu, b, Z, Y_obs, bound_var]
-        self.expected_latex = (
-            r"$\text{alpha} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
-            r"$\text{sigma} \sim \text{HalfNormal}(\mathit{sigma}=1.0)$",
-            r"$\text{mu} \sim \text{Deterministic}(\text{alpha},~\text{Constant},~\text{beta})$",
-            r"$\text{beta} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
-            r"$\text{Z} \sim \text{MvNormal}(\mathit{mu}=array,~\mathit{chol_cov}=array)$",
-            r"$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sigma}=f(\text{sigma}))$",
-            r"$\text{bound_var} \sim \text{Bound}(\mathit{lower}=1.0,~\mathit{upper}=\text{None})$ -- \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
-        )
-        self.expected_str = (
-            r"alpha ~ Normal(mu=0.0, sigma=10.0)",
-            r"sigma ~ HalfNormal(sigma=1.0)",
-            r"mu ~ Deterministic(alpha, Constant, beta)",
-            r"beta ~ Normal(mu=0.0, sigma=10.0)",
-            r"Z ~ MvNormal(mu=array, chol_cov=array)",
-            r"Y_obs ~ Normal(mu=mu, sigma=f(sigma))",
-            r"bound_var ~ Bound(lower=1.0, upper=None)-Normal(mu=0.0, sigma=10.0)",
-        )
+
+        self.distributions = [alpha, sigma, mu, b, Z, nb1, nb2, Y_obs, bound_var]
+        self.expected = {
+            "latex": (
+                r"$\text{alpha} \sim \text{Normal}$",
+                r"$\text{sigma} \sim \text{HalfNormal}$",
+                r"$\text{mu} \sim \text{Deterministic}$",
+                r"$\text{beta} \sim \text{Normal}$",
+                r"$\text{Z} \sim \text{MvNormal}$",
+                r"$\text{nb_with_mu_alpha} \sim \text{NegativeBinomial}$",
+                r"$\text{nb_with_p_n} \sim \text{NegativeBinomial}$",
+                r"$\text{Y_obs} \sim \text{Normal}$",
+                r"$\text{bound_var} \sim \text{Bound}$ -- \text{Normal}$",
+                r"$\text{kron_normal} \sim \text{KroneckerNormal}$",
+                r"$\text{mat_normal} \sim \text{MatrixNormal}$",
+            ),
+            "plain": (
+                r"alpha ~ Normal",
+                r"sigma ~ HalfNormal",
+                r"mu ~ Deterministic",
+                r"beta ~ Normal",
+                r"Z ~ MvNormal",
+                r"nb_with_mu_alpha ~ NegativeBinomial",
+                r"nb_with_p_n ~ NegativeBinomial",
+                r"Y_obs ~ Normal",
+                r"bound_var ~ Bound-Normal",
+                r"kron_normal ~ KroneckerNormal",
+                r"mat_normal ~ MatrixNormal",
+            ),
+            "latex_with_params": (
+                r"$\text{alpha} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
+                r"$\text{sigma} \sim \text{HalfNormal}(\mathit{sigma}=1.0)$",
+                r"$\text{mu} \sim \text{Deterministic}(\text{alpha},~\text{Constant},~\text{beta})$",
+                r"$\text{beta} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
+                r"$\text{Z} \sim \text{MvNormal}(\mathit{mu}=array,~\mathit{chol_cov}=array)$",
+                r"$\text{nb_with_mu_alpha} \sim \text{NegativeBinomial}(\mathit{mu}=\text{nbmu},~\mathit{alpha}=\text{nbalpha})$",
+                r"$\text{nb_with_p_n} \sim \text{NegativeBinomial}(\mathit{p}=\text{nbp},~\mathit{n}=10)$",
+                r"$\text{Y_obs} \sim \text{Normal}(\mathit{mu}=\text{mu},~\mathit{sigma}=f(\text{sigma}))$",
+                r"$\text{bound_var} \sim \text{Bound}(\mathit{lower}=1.0,~\mathit{upper}=\text{None})$ -- \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
+                r"$\text{kron_normal} \sim \text{KroneckerNormal}(\mathit{mu}=array)$",
+                r"$\text{mat_normal} \sim \text{MatrixNormal}(\mathit{mu}=array,~\mathit{rowcov}=array,~\mathit{colchol_cov}=array)$",
+            ),
+            "plain_with_params": (
+                r"alpha ~ Normal(mu=0.0, sigma=10.0)",
+                r"sigma ~ HalfNormal(sigma=1.0)",
+                r"mu ~ Deterministic(alpha, Constant, beta)",
+                r"beta ~ Normal(mu=0.0, sigma=10.0)",
+                r"Z ~ MvNormal(mu=array, chol_cov=array)",
+                r"nb_with_mu_alpha ~ NegativeBinomial(mu=nbmu, alpha=nbalpha)",
+                r"nb_with_p_n ~ NegativeBinomial(p=nbp, n=10)",
+                r"Y_obs ~ Normal(mu=mu, sigma=f(sigma))",
+                r"bound_var ~ Bound(lower=1.0, upper=None)-Normal(mu=0.0, sigma=10.0)",
+                r"kron_normal ~ KroneckerNormal(mu=array)",
+                r"mat_normal ~ MatrixNormal(mu=array, rowcov=array, colchol_cov=array)",
+            ),
+        }
 
     def test__repr_latex_(self):
-        for distribution, tex in zip(self.distributions, self.expected_latex):
+        for distribution, tex in zip(self.distributions, self.expected["latex_with_params"]):
             assert distribution._repr_latex_() == tex
 
         model_tex = self.model._repr_latex_()
 
-        for tex in self.expected_latex:  # make sure each variable is in the model
+        # make sure each variable is in the model
+        for tex in self.expected["latex"]:
             for segment in tex.strip("$").split(r"\sim"):
                 assert segment in model_tex
 
     def test___latex__(self):
-        for distribution, tex in zip(self.distributions, self.expected_latex):
+        for distribution, tex in zip(self.distributions, self.expected["latex_with_params"]):
             assert distribution._repr_latex_() == distribution.__latex__()
         assert self.model._repr_latex_() == self.model.__latex__()
 
     def test___str__(self):
-        for distribution, str_repr in zip(self.distributions, self.expected_str):
+        for distribution, str_repr in zip(self.distributions, self.expected["plain"]):
             assert distribution.__str__() == str_repr
 
         model_str = self.model.__str__()
-        for str_repr in self.expected_str:
+        for str_repr in self.expected["plain"]:
             assert str_repr in model_str
 
     def test_str(self):
-        for distribution, str_repr in zip(self.distributions, self.expected_str):
+        for distribution, str_repr in zip(self.distributions, self.expected["plain"]):
             assert str(distribution) == str_repr
 
         model_str = str(self.model)
-        for str_repr in self.expected_str:
+        for str_repr in self.expected["plain"]:
             assert str_repr in model_str
 
 
@@ -1884,17 +1942,6 @@ class TestBugfixes:
         assert isinstance(actual_a, np.ndarray)
         assert actual_a.shape == (X.shape[0],)
         pass
-
-    def test_issue_4186(self):
-        with pm.Model():
-            nb = pm.NegativeBinomial(
-                "nb", mu=pm.Normal("mu"), alpha=pm.Gamma("alpha", mu=6, sigma=1)
-            )
-        assert str(nb) == "nb ~ NegativeBinomial(mu=mu, alpha=alpha)"
-
-        with pm.Model():
-            nb = pm.NegativeBinomial("nb", p=pm.Uniform("p"), n=10)
-        assert str(nb) == "nb ~ NegativeBinomial(p=p, n=10)"
 
 
 def test_serialize_density_dist():

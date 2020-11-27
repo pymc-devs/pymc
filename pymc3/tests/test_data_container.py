@@ -179,16 +179,28 @@ class TestData(SeededTest):
             pm.Normal("obs", beta * x, obs_sigma, observed=y)
             pm.sample(1000, init=None, tune=1000, chains=1)
 
-        g = pm.model_to_graphviz(model)
+        for formatting in {"latex", "latex_with_params"}:
+            with pytest.raises(ValueError, match="Unsupported formatting"):
+                pm.model_to_graphviz(model, formatting=formatting)
 
-        # Data node rendered correctly?
-        text = 'x [label="x\n~\nData" shape=box style="rounded, filled"]'
-        assert text in g.source
-        # Didn't break ordinary variables?
-        text = 'beta [label="beta\n~\nNormal(mu=0.0, sigma=10.0)"]'
-        assert text in g.source
-        text = f'obs [label="obs\n~\nNormal(mu=f(f(beta), x), sigma={obs_sigma})" style=filled]'
-        assert text in g.source
+        exp_without = [
+            'x [label="x\n~\nData" shape=box style="rounded, filled"]',
+            'beta [label="beta\n~\nNormal"]',
+            'obs [label="obs\n~\nNormal" style=filled]',
+        ]
+        exp_with = [
+            'x [label="x\n~\nData" shape=box style="rounded, filled"]',
+            'beta [label="beta\n~\nNormal(mu=0.0, sigma=10.0)"]',
+            f'obs [label="obs\n~\nNormal(mu=f(f(beta), x), sigma={obs_sigma})" style=filled]',
+        ]
+        for formatting, expected_substrings in [
+            ("plain", exp_without),
+            ("plain_with_params", exp_with),
+        ]:
+            g = pm.model_to_graphviz(model, formatting=formatting)
+            # check formatting of RV nodes
+            for expected in expected_substrings:
+                assert expected in g.source
 
     def test_explicit_coords(self):
         N_rows = 5

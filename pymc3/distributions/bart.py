@@ -246,7 +246,7 @@ class BART(BaseBART):
         alpha = self.alpha
         m = self.m
 
-        if formatting == "latex":
+        if "latex" in formatting:
             return f"$\\text{{{name}}} \\sim  \\text{{BART}}(\\text{{alpha = }}\\text{{{alpha}}}, \\text{{m = }}\\text{{{m}}})$"
         else:
             return f"{name} ~ BART(alpha = {alpha}, m = {m})"
