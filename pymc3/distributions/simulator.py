@@ -126,7 +126,7 @@ class Simulator(NoDistribution):
         sum_stat = self.sum_stat.__name__ if hasattr(self.sum_stat, "__call__") else self.sum_stat
         distance = getattr(self.distance, "__name__", self.distance.__class__.__name__)
 
-        if formatting == "latex":
+        if "latex" in formatting:
             return f"$\\text{{{name}}} \\sim  \\text{{Simulator}}(\\text{{{function}}}({params}), \\text{{{distance}}}, \\text{{{sum_stat}}})$"
         else:
             return f"{name} ~ Simulator({function}({params}), {distance}, {sum_stat})"

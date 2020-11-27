@@ -137,7 +137,7 @@ def get_repr_for_variable(variable, formatting="plain"):
                     for item in variable.get_parents()[0].inputs
                 ]
                 # do not escape_latex these, since it is not idempotent
-                if formatting == "latex":
+                if "latex" in formatting:
                     return "f({args})".format(
                         args=",~".join([n for n in names if isinstance(n, str)])
                     )
@@ -152,7 +152,7 @@ def get_repr_for_variable(variable, formatting="plain"):
             return value.item()
         return "array"
 
-    if formatting == "latex":
+    if "latex" in formatting:
         return fr"\text{{{name}}}"
     else:
         return name
