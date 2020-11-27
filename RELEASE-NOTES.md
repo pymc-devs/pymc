@@ -82,6 +82,8 @@ _NB: The `docs/*` folder is still removed from the tarball due to an upload size
 
 _NB: The `docs/*` folder is still removed from the tarball due to an upload size limit on PyPi._
 
+**Release manager** for 3.9.2: Alex Andorra ([@AlexAndorra](https://github.com/AlexAndorra))
+
 ## PyMC3 3.9.1 (16 June 2020)
 The `v3.9.0` upload to PyPI didn't include a tarball, which is fixed in this release.
 Though we had to temporarily remove the `docs/*` folder from the tarball due to a size limit.
