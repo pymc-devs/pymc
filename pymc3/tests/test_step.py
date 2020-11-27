@@ -27,7 +27,6 @@ from .models import (
     simple_2model_continuous,
 )
 from pymc3.sampling import assign_step_methods, sample
-from pymc3.parallel_sampling import ParallelSamplingError
 from pymc3.exceptions import SamplingError
 from pymc3.model import Model, Potential, set_data
 
@@ -963,15 +962,15 @@ class TestNutsCheckTrace:
             HalfNormal("a", sigma=1, testval=-1, transform=None)
             with pytest.raises(SamplingError) as error:
                 sample(init=None, chains=1, random_seed=1)
-            error.match("Bad initial")
+            error.match("Initial evaluation")
 
     @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
     def test_bad_init_parallel(self):
         with Model():
             HalfNormal("a", sigma=1, testval=-1, transform=None)
-            with pytest.raises(ParallelSamplingError) as error:
+            with pytest.raises(SamplingError) as error:
                 sample(init=None, cores=2, random_seed=1)
-            error.match("Bad initial")
+            error.match("Initial evaluation")
 
     def test_linalg(self, caplog):
         with Model():
