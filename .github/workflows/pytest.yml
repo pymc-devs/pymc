@@ -80,7 +80,7 @@ jobs:
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - run: |
           conda activate testenv
-          python -m pytest -v --cov=pymc3 --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET -n auto
+          python -m pytest -vv --cov=pymc3 --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET -n auto
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
