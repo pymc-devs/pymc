@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8"]
-        os: [ubuntu-18.04]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         floatx: [float64]
         test-subset:
           - pymc3/tests/test_sampling.py
