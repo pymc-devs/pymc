@@ -39,12 +39,10 @@ jobs:
             pymc3/tests/test_distributions_timeseries.py
             pymc3/tests/test_parallel_sampling.py
             pymc3/tests/test_random.py
-            pymc3/tests/test_sampling.py
             pymc3/tests/test_shared.py
             pymc3/tests/test_smc.py
           - |
             pymc3/tests/test_examples.py
-            pymc3/tests/test_gp.py
             pymc3/tests/test_mixture.py
             pymc3/tests/test_posteriors.py
             pymc3/tests/test_quadpotential.py
@@ -54,6 +52,8 @@ jobs:
             pymc3/tests/test_variational_inference.py
           - |
             pymc3/tests/test_distributions.py
+            pymc3/tests/test_gp.py
+            pymc3/tests/test_sampling.py
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
