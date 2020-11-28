@@ -9,15 +9,15 @@ jobs:
   pytest:
     strategy:
       matrix:
-        python-version: ["3.8"]
-        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.7"]
+        os: [windows-latest]
         floatx: [float64]
         test-subset:
           - pymc3/tests/test_sampling.py
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=native'
+      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=core2'
     defaults:
       run:
         shell: bash -l {0}
