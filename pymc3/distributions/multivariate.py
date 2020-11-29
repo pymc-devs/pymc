@@ -256,10 +256,18 @@ class MvNormal(_QuadFormBase):
         mu, param = draw_values([self.mu, param_attribute], point=point, size=size)
 
         dist_shape = to_tuple(self.shape)
-        mu = broadcast_dist_samples_to(to_shape=dist_shape, samples=[mu], size=size)[0]
-        param = broadcast_dist_samples_to(
-            to_shape=dist_shape + dist_shape[-1:], samples=[param], size=size
-        )[0]
+        output_shape = size + dist_shape
+
+        # Simple, there can be only be 1 batch dimension, only available from `mu`.
+        # Insert it into `param` before events, if there is a sample shape in front.
+        if param.ndim > 2 and dist_shape[:-1]:
+            param = param.reshape(size + (1,) + param.shape[-2:])
+
+        mu = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)[0]
+        param = np.broadcast_to(param, shape=output_shape + dist_shape[-1:])
+
+        assert mu.shape == output_shape
+        assert param.shape == output_shape + dist_shape[-1:]
 
         if self._cov_type == "cov":
             chol = np.linalg.cholesky(param)
@@ -270,7 +278,6 @@ class MvNormal(_QuadFormBase):
             upper_chol = np.swapaxes(lower_chol, -1, -2)
             chol = np.linalg.inv(upper_chol)
 
-        output_shape = size + dist_shape
         standard_normal = np.random.standard_normal(output_shape)
         return mu + np.einsum("...ij,...j->...i", chol, standard_normal)
 
