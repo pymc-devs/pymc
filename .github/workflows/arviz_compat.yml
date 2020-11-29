@@ -13,6 +13,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         floatx: [float64]
         test-subset:
+          - pymc3/tests/test_distributions_random.py
           - pymc3/tests/test_sampling.py
     runs-on: ${{ matrix.os }}
     env:
