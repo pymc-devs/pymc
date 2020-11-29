@@ -213,6 +213,7 @@ class TestSample(SeededTest):
             monkeypatch.setattr("pymc3.__version__", "3.10")
             with pytest.warns(FutureWarning, match="pass return_inferencedata"):
                 result = pm.sample(**kwargs)
+        pass
 
     @pytest.mark.parametrize("cores", [1, 2])
     def test_sampler_stat_tune(self, cores):

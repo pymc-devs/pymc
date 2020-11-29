@@ -14,7 +14,7 @@
 
 """Functions for MCMC sampling."""
 
-from typing import Dict, List, Optional, cast, Union, Any, Tuple
+from typing import Dict, List, Optional, cast, Union, Any
 from typing import Iterable as TIterable
 from collections.abc import Iterable
 from collections import defaultdict
@@ -1573,10 +1573,7 @@ class _DefaultTrace:
         ids: int
             The index of the sample we are inserting into the trace.
         """
-        if hasattr(v, "shape"):
-            value_shape: Tuple[int, ...] = tuple(v.shape)
-        else:
-            value_shape = ()
+        value_shape = np.shape(v)
 
         # initialize if necessary
         if k not in self.trace_dict:
