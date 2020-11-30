@@ -54,6 +54,7 @@ jobs:
             pymc3/tests/test_distributions.py
             pymc3/tests/test_gp.py
             pymc3/tests/test_sampling.py
+      fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
