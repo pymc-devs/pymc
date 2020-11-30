@@ -21,3 +21,4 @@ dependencies:
   - mkl-service
   - dill
   - libblas=*=*mkl
+  - watermark
