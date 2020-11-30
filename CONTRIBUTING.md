@@ -46,7 +46,8 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
 4. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``. The easiest (and recommended) way to set up a development environment is via [miniconda](https://docs.conda.io/en/latest/miniconda.html):
 
   ```bash
-  $ conda env create -f environment-dev.yml
+  $ conda create -n pymc3-dev python=3.6  # check setup.py for which versions of Python you can use
+  $ conda env update -f environment-dev.yml
   $ conda activate pymc3-dev
   $ pip install -e .
   ```

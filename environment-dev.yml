@@ -3,7 +3,6 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python>=3.6
   - arviz>=0.9
   - theano-pymc==1.0.11
   - numpy>=1.13
