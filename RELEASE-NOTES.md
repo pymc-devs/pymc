@@ -51,6 +51,7 @@ This new version of `Theano-PyMC` comes with an experimental JAX backend which, 
 - Added a new notebook demonstrating how to incorporate sampling from a conjugate Dirichlet-multinomial posterior density in conjunction with other step methods (see [#4199](https://github.com/pymc-devs/pymc3/pull/4199)).
 - Mentioned the way to do any random walk with `theano.tensor.cumsum()` in `GaussianRandomWalk` docstrings (see [#4048](https://github.com/pymc-devs/pymc3/pull/4048)).
 
+**Release manager** for 3.10.0: Eelke Spaak ([@Spaak](https://github.com/Spaak))
 
 ## PyMC3 3.9.3 (11 August 2020)
 
@@ -70,6 +71,7 @@ This new version of `Theano-PyMC` comes with an experimental JAX backend which, 
 
 _NB: The `docs/*` folder is still removed from the tarball due to an upload size limit on PyPi._
 
+**Release manager** for 3.9.3: Kyle Beauchamp ([@kyleabeauchamp](https://github.com/kyleabeauchamp))
 
 ## PyMC3 3.9.2 (24 June 2020)
 
@@ -82,9 +84,13 @@ _NB: The `docs/*` folder is still removed from the tarball due to an upload size
 
 _NB: The `docs/*` folder is still removed from the tarball due to an upload size limit on PyPi._
 
+**Release manager** for 3.9.2: Alex Andorra ([@AlexAndorra](https://github.com/AlexAndorra))
+
 ## PyMC3 3.9.1 (16 June 2020)
 The `v3.9.0` upload to PyPI didn't include a tarball, which is fixed in this release.
 Though we had to temporarily remove the `docs/*` folder from the tarball due to a size limit.
+
+**Release manager** for 3.9.1: Michael Osthege ([@michaelosthege](https://github.com/michaelosthege))
 
 ## PyMC3 3.9.0 (16 June 2020)
 
@@ -131,6 +137,7 @@ Though we had to temporarily remove the `docs/*` folder from the tarball due to 
 - Dropped some deprecated kwargs and functions (see [#3906](https://github.com/pymc-devs/pymc3/pull/3906))
 - Dropped the outdated 'nuts' initialization method for `pm.sample` (see [#3863](https://github.com/pymc-devs/pymc3/pull/3863)).
 
+**Release manager** for 3.9.0: Michael Osthege ([@michaelosthege](https://github.com/michaelosthege))
 
 ## PyMC3 3.8 (November 29 2019)
 
