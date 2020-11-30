@@ -17,8 +17,6 @@ dependencies:
   - pytest-cov>=2.5
   - pytest>=3.0
   - watermark
-  - dataclasses  # python_version < 3.7
-  - contextvars  # python_version < 3.7
   - mkl-service
   - dill
   - libblas=*=*mkl

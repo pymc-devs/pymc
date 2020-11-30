@@ -79,10 +79,13 @@ jobs:
           channel-priority: strict
           environment-file: environment-dev.yml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          python-version: ${{ matrix.python-version }}
       - name: Install-pymc3
         run: |
           conda activate pymc3-dev
+          conda install -c conda-forge dataclasses contextvars
           pip install -e .
+          python --version
       - name: Run tests
         run: |
           conda activate pymc3-dev

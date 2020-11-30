@@ -53,11 +53,23 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
    $ pip install -e .
    ```
 
+   If you use Python3.6, you will also need to install `dataclasses` and `contextvars`:
+
+   ```bash
+   conda install -c conda-forge dataclasses contextvars
+   ```
+
    _Alternatively_ you may (probably in a [virtual environment](https://docs.python-guide.org/dev/virtualenvs/)) run:
 
    ```bash
    $ pip install -e .
    $ pip install -r requirements-dev.txt
+   ```
+
+   If you use Python3.6, you will still need to install `dataclasses` and `contextvars`:
+
+   ```bash
+   pip install dataclasses contextvars
    ```
 
    Yet another alternative is to create a docker environment for development. See: [Developing in Docker](#Developing-in-Docker).
