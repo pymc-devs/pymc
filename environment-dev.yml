@@ -8,7 +8,8 @@ dependencies:
   - theano-pymc==1.0.11
   - numpy>=1.13
   - scipy>=0.18
-  - pandas >=0.18
+  - pandas>=0.18
+  - patsy>=0.5
   - fastprogress>=0.2
   - h5py>=2.7
   - typing-extensions>=3.7
