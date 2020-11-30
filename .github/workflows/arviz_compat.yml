@@ -46,7 +46,7 @@ jobs:
       - name: Install latest arviz
         run: |
           conda activate pymc3-dev
-          pip uninstall arviz -y
+          conda remove arviz -y
           pip install git+git://github.com/arviz-devs/arviz.git
       - name: Run tests
         run: |
