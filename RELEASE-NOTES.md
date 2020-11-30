@@ -70,6 +70,7 @@ This new version of `Theano-PyMC` comes with an experimental JAX backend which, 
 
 _NB: The `docs/*` folder is still removed from the tarball due to an upload size limit on PyPi._
 
+**Release manager** for 3.9.3: Kyle Beauchamp ([@kyleabeauchamp](https://github.com/kyleabeauchamp))
 
 ## PyMC3 3.9.2 (24 June 2020)
 
