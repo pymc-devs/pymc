@@ -1,4 +1,4 @@
-name: testenv
+name: pymc3-dev
 channels:
   - conda-forge
   - defaults

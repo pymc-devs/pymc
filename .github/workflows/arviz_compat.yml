@@ -34,17 +34,17 @@ jobs:
             hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: testenv
+          activate-environment: pymc3-dev
           channel-priority: strict
           environment-file: environment-dev.yml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install pymc3
         run: |
-          conda activate testenv
+          conda activate pymc3-dev
           pip install -e .
       - name: Install latest arviz
         run: |
-          conda activate testenv
+          conda activate pymc3-dev
           pip uninstall arviz -y
           pip install git+git://github.com/arviz-devs/arviz.git
       - name: Run tests
