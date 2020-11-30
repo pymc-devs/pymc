@@ -9,7 +9,6 @@ jobs:
   pytest:
     strategy:
       matrix:
-        python-version: ["3.8"]
         os: [ubuntu-18.04]
         floatx: [float64]
         test-subset:
@@ -35,17 +34,14 @@ jobs:
             hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          auto-update-conda: true
           activate-environment: pymc3-dev
           channel-priority: strict
           environment-file: environment-dev.yml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          python-version: ${{ matrix.python-version }}
       - name: Install pymc3
         run: |
           conda activate pymc3-dev
           pip install -e .
-          python --version
       - name: Install latest arviz
         run: |
           conda activate pymc3-dev

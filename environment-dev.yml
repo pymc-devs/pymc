@@ -3,13 +3,22 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - python3.6
+  - arviz>=0.9
   - theano-pymc==1.0.11
-  - patsy>=0.5
+  - numpy>=1.13
+  - scipy>=0.18
+  - pandas >=0.18
+  - fastprogress>=0.2
   - h5py>=2.7
+  - typing-extensions>=3.7
   - python-graphviz
   - ipython>=7.16
   - pytest-cov>=2.5
   - pytest>=3.0
   - watermark
+  - dataclasses  # python_version < 3.7
+  - contextvars  # python_version < 3.7
   - mkl-service
+  - dill
   - libblas=*=*mkl

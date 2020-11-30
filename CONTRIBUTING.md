@@ -46,17 +46,9 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
 4. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``. The easiest (and recommended) way to set up a development environment is via [miniconda](https://docs.conda.io/en/latest/miniconda.html):
 
    ```bash
-   $ conda create -n pymc3-dev python=3.6  # check setup.py for which versions of Python you can use
-   $ conda activate pymc3-dev
-   $ conda env update -f environment-dev.yml
+   $ conda env create -f environment-dev.yml
    $ conda activate pymc3-dev
    $ pip install -e .
-   ```
-
-   If you use Python3.6, you will also need to install `dataclasses` and `contextvars`:
-
-   ```bash
-   conda install -c conda-forge dataclasses contextvars
    ```
 
    _Alternatively_ you may (probably in a [virtual environment](https://docs.python-guide.org/dev/virtualenvs/)) run:
@@ -64,12 +56,6 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
    ```bash
    $ pip install -e .
    $ pip install -r requirements-dev.txt
-   ```
-
-   If you use Python3.6, you will still need to install `dataclasses` and `contextvars`:
-
-   ```bash
-   pip install dataclasses contextvars
    ```
 
    Yet another alternative is to create a docker environment for development. See: [Developing in Docker](#Developing-in-Docker).
