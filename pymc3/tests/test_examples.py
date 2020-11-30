@@ -70,7 +70,6 @@ class TestARM5_4(SeededTest):
         return model
 
     def test_run(self):
-        1 / 0
         model = self.build_model()
         with model:
             pm.sample(50, tune=50)
