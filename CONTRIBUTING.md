@@ -53,14 +53,14 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
    $ pip install -e .
    ```
 
-  _Alternatively_ you may (probably in a [virtual environment](https://docs.python-guide.org/dev/virtualenvs/)) run:
+   _Alternatively_ you may (probably in a [virtual environment](https://docs.python-guide.org/dev/virtualenvs/)) run:
 
    ```bash
    $ pip install -e .
    $ pip install -r requirements-dev.txt
    ```
 
-  Yet another alternative is to create a docker environment for development. See: [Developing in Docker](#Developing-in-Docker).
+   Yet another alternative is to create a docker environment for development. See: [Developing in Docker](#Developing-in-Docker).
 
 5. Develop the feature on your feature branch. Add changed files using ``git add`` and then ``git commit`` files:
 
