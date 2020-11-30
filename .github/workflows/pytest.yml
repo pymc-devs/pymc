@@ -75,6 +75,7 @@ jobs:
             hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          auto-update-conda: true
           activate-environment: pymc3-dev
           channel-priority: strict
           environment-file: environment-dev.yml
@@ -83,7 +84,7 @@ jobs:
       - name: Install-pymc3
         run: |
           conda activate pymc3-dev
-          conda install -c conda-forge dataclasses contextvars
+          pip install dataclasses contextvars
           pip install -e .
           python --version
       - name: Run tests

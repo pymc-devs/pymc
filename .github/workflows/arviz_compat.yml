@@ -35,6 +35,7 @@ jobs:
             hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          auto-update-conda: true
           activate-environment: pymc3-dev
           channel-priority: strict
           environment-file: environment-dev.yml
