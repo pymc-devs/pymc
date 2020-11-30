@@ -105,7 +105,7 @@ elementary. As long as you have a well-behaved density function, we can
 use it in the model to build the model log-likelihood function. Random
 number generation is great to have, but sometimes there might not be
 efficient random number generator for some densities. Since a function
-is all you need, you can wrap almost any thenao function into a
+is all you need, you can wrap almost any theano function into a
 distribution using ``pm.DensityDist``
 https://docs.pymc.io/Probability\_Distributions.html#custom-distributions
 
@@ -919,7 +919,7 @@ kernels in TFP do not flatten the tensors, see eg docstring of
 Dynamic HMC
 ^^^^^^^^^^^
 
-We love NUTS, or to be more precise Dynamic HMC with complex stoping
+We love NUTS, or to be more precise Dynamic HMC with complex stopping
 rules. This part is actually all done outside of Theano, for NUTS, it
 includes: the leapfrog, dual averaging, tunning of mass matrix and step
 size, the tree building, sampler related statistics like divergence and
@@ -976,7 +976,7 @@ Multivariate Gaussian. In another word, we are approximating each elements in
         super(ADVI, self).__init__(MeanField(*args, **kwargs))
     # ==> In the super class KLqp
         super(KLqp, self).__init__(KL, MeanField(*args, **kwargs), None, beta=beta)
-    # ==> In the super class Inferece
+    # ==> In the super class Inference
         ...
         self.objective = KL(MeanField(*args, **kwargs))(None)
         ...
