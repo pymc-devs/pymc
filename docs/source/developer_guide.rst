@@ -105,7 +105,7 @@ elementary. As long as you have a well-behaved density function, we can
 use it in the model to build the model log-likelihood function. Random
 number generation is great to have, but sometimes there might not be
 efficient random number generator for some densities. Since a function
-is all you need, you can wrap almost any theano function into a
+is all you need, you can wrap almost any Theano function into a
 distribution using ``pm.DensityDist``
 https://docs.pymc.io/Probability\_Distributions.html#custom-distributions
 
