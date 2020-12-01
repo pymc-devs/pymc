@@ -47,7 +47,7 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
 
    ```bash
    $ conda env create -f conda-envs/environment-dev-py36.yml  # or py37 or py38
-   $ conda activate pymc3-dev
+   $ conda activate pymc3-dev-py36
    $ pip install -e .
    ```
 
