@@ -82,6 +82,7 @@ jobs:
         run: |
           conda activate pymc3-dev-py36
           pip install -e .
+          python --version
       - name: Run tests
         run: |
           conda activate pymc3-dev-py36
