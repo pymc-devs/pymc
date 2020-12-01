@@ -1,38 +1,29 @@
-name: testenv
+name: pymc3-dev-py37
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - python>=3.6
+  - python=3.7
   - arviz>=0.9
   - theano-pymc==1.0.11
   - numpy>=1.13
   - scipy>=0.18
-  - pandas >=0.18
+  - pandas>=0.18
   - patsy>=0.5
   - fastprogress>=0.2
   - h5py>=2.7
   - typing-extensions>=3.7
-  - bokeh>=0.12
-  - coverage>=5.1
   - python-graphviz
   - ipython>=7.16
   - nbsphinx>=0.4
-  - nose>=1.3
-  - nose-parameterized>=0.6
   - numpydoc>=0.9
   - pre-commit>=2.8.0
   - pytest-cov>=2.5
   - pytest>=3.0
   - recommonmark>=0.4
-  - seaborn>=0.8
   - sphinx-autobuild>=0.7
   - sphinx>=1.5
   - watermark
-  - parameterized
-  - ipywidgets
-  - dataclasses  # python_version < 3.7
-  - contextvars  # python_version < 3.7
   - mkl-service
   - dill
   - libblas=*=*mkl
