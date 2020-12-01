@@ -705,29 +705,53 @@ class TestSamplePPC(SeededTest):
 
 class TestSamplePPCW(SeededTest):
     def test_sample_posterior_predictive_w(self):
-        data0 = np.random.normal(0, 1, size=500)
+        data0 = np.random.normal(0, 1, size=50)
+        warning_msg = "The number of samples is too small to check convergence reliably"
 
         with pm.Model() as model_0:
             mu = pm.Normal("mu", mu=0, sigma=1)
             y = pm.Normal("y", mu=mu, sigma=1, observed=data0)
-            trace_0 = pm.sample()
+            with pytest.warns(UserWarning, match=warning_msg):
+                trace_0 = pm.sample(10, tune=0, chains=2, return_inferencedata=False)
             idata_0 = az.from_pymc3(trace_0)
 
         with pm.Model() as model_1:
             mu = pm.Normal("mu", mu=0, sigma=1, shape=len(data0))
             y = pm.Normal("y", mu=mu, sigma=1, observed=data0)
-            trace_1 = pm.sample()
+            with pytest.warns(UserWarning, match=warning_msg):
+                trace_1 = pm.sample(10, tune=0, chains=2, return_inferencedata=False)
             idata_1 = az.from_pymc3(trace_1)
+
+        with pm.Model() as model_2:
+            # Model with no observed RVs.
+            mu = pm.Normal("mu", mu=0, sigma=1)
+            with pytest.warns(UserWarning, match=warning_msg):
+                trace_2 = pm.sample(10, tune=0, return_inferencedata=False)
 
         traces = [trace_0, trace_1]
         idatas = [idata_0, idata_1]
         models = [model_0, model_1]
 
         ppc = pm.sample_posterior_predictive_w(traces, 100, models)
-        assert ppc["y"].shape == (100, 500)
+        assert ppc["y"].shape == (100, 50)
 
         ppc = pm.sample_posterior_predictive_w(idatas, 100, models)
-        assert ppc["y"].shape == (100, 500)
+        assert ppc["y"].shape == (100, 50)
+
+        with model_0:
+            ppc = pm.sample_posterior_predictive_w([idata_0.posterior], None)
+            assert ppc["y"].shape == (20, 50)
+
+        with pytest.raises(ValueError, match="The number of traces and weights should be the same"):
+            pm.sample_posterior_predictive_w([idata_0.posterior], 100, models, weights=[0.5, 0.5])
+
+        with pytest.raises(ValueError, match="The number of models and weights should be the same"):
+            pm.sample_posterior_predictive_w([idata_0.posterior], 100, models)
+
+        with pytest.raises(
+            ValueError, match="The number of observed RVs should be the same for all models"
+        ):
+            pm.sample_posterior_predictive_w([trace_0, trace_2], 100, [model_0, model_2])
 
 
 @pytest.mark.parametrize(

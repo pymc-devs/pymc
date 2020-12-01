@@ -1869,8 +1869,8 @@ def sample_posterior_predictive_w(
 
     except KeyboardInterrupt:
         pass
-
-    return {k: np.asarray(v) for k, v in ppc.items()}
+    else:
+        return {k: np.asarray(v) for k, v in ppc.items()}
 
 
 def sample_prior_predictive(
