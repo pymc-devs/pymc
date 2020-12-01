@@ -35,7 +35,6 @@ jobs:
             pymc3/tests/test_dist_math.py
             pymc3/tests/test_distribution_defaults.py
             pymc3/tests/test_distributions_random.py
-            pymc3/tests/test_distributions_timeseries.py
             pymc3/tests/test_parallel_sampling.py
             pymc3/tests/test_random.py
             pymc3/tests/test_shared.py
@@ -46,6 +45,7 @@ jobs:
             pymc3/tests/test_posteriors.py
             pymc3/tests/test_quadpotential.py
           - |
+            pymc3/tests/test_distributions_timeseries.py
             pymc3/tests/test_shape_handling.py
             pymc3/tests/test_updates.py
             pymc3/tests/test_variational_inference.py
