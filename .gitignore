@@ -21,9 +21,6 @@ _build
 # Merge tool
 *.orig
 
-# Test artifacts
-mcmc.sqlite
-
 # Docker development
 # notebooks/
 
@@ -41,3 +38,6 @@ benchmarks/results/
 pytestdebug.log
 .dir-locals.el
 .pycheckers
+
+# Codespaces
+pythonenv*

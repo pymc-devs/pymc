@@ -14,10 +14,7 @@
 
 """Functions for MCMC sampling."""
 
-from typing import Dict, List, Optional, TYPE_CHECKING, cast, Union, Any
-
-if TYPE_CHECKING:
-    from typing import Tuple
+from typing import Dict, List, Optional, cast, Union, Any
 from typing import Iterable as TIterable
 from collections.abc import Iterable
 from collections import defaultdict
@@ -51,8 +48,10 @@ from .step_methods import (
     Slice,
     CompoundStep,
     arraystep,
+    PGBART,
 )
 from .util import (
+    check_start_vals,
     update_start_vals,
     get_untransformed_name,
     is_transformed_name,
@@ -90,6 +89,7 @@ STEP_METHODS = (
     BinaryGibbsMetropolis,
     Slice,
     CategoricalGibbsMetropolis,
+    PGBART,
 )
 
 ArrayLike = Union[np.ndarray, List[float]]
@@ -109,31 +109,31 @@ def instantiate_steppers(_model, steps, selected_steps, step_kwargs=None):
     ----------
     model : Model object
         A fully-specified model object; legacy argument -- ignored
-    steps : step function or vector of step functions
-        One or more step functions that have been assigned to some subset of
-        the model's parameters. Defaults to None (no assigned variables).
-    selected_steps : dictionary of step methods and variables
-        The step methods and the variables that have were assigned to them.
+    steps : list
+        A list of zero or more step function instances that have been assigned to some subset of
+        the model's parameters.
+    selected_steps : dict
+        A dictionary that maps a step method class to a list of zero or more model variables.
     step_kwargs : dict
         Parameters for the samplers. Keys are the lower case names of
-        the step method, values a dict of arguments.
+        the step method, values a dict of arguments. Defaults to None.
 
     Returns
     -------
-    methods : list
-        List of step methods associated with the model's variables.
+    methods : list or step
+        List of step methods associated with the model's variables, or step method
+        if there is only one.
     """
     if step_kwargs is None:
         step_kwargs = {}
 
     used_keys = set()
     for step_class, vars in selected_steps.items():
-        if len(vars) == 0:
-            continue
-        args = step_kwargs.get(step_class.name, {})
-        used_keys.add(step_class.name)
-        step = step_class(vars=vars, **args)
-        steps.append(step)
+        if vars:
+            args = step_kwargs.get(step_class.name, {})
+            used_keys.add(step_class.name)
+            step = step_class(vars=vars, **args)
+            steps.append(step)
 
     unused_args = set(step_kwargs).difference(used_keys)
     if unused_args:
@@ -215,11 +215,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
 
 
 def _print_step_hierarchy(s, level=0):
-    if isinstance(s, (list, tuple)):
-        _log.info(">" * level + "list")
-        for i in s:
-            _print_step_hierarchy(i, level + 1)
-    elif isinstance(s, CompoundStep):
+    if isinstance(s, CompoundStep):
         _log.info(">" * level + "CompoundStep")
         for i in s.methods:
             _print_step_hierarchy(i, level + 1)
@@ -303,8 +299,6 @@ def sample(
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
         number ``chain``. If None or a list of variables, the NDArray backend is used.
-        Passing either "text" or "sqlite" is taken as a shortcut to set up the corresponding
-        backend (with "mcmc" used as the base name).
     chain_idx : int
         Chain number used to store sample in backend. If ``chains`` is greater than one, chain
         numbers will start here.
@@ -419,7 +413,16 @@ def sample(
 
     """
     model = modelcontext(model)
+    if start is None:
+        start = model.test_point
+    else:
+        if isinstance(start, dict):
+            update_start_vals(start, model.test_point, model)
+        else:
+            for chain_start_vals in start:
+                update_start_vals(chain_start_vals, model.test_point, model)
 
+    check_start_vals(start, model)
     if cores is None:
         cores = min(4, _cpu_count())
 
@@ -448,7 +451,7 @@ def sample(
 
     if return_inferencedata is None:
         v = packaging.version.parse(pm.__version__)
-        if v.release[0] > 3 or v.release[1] >= 10:
+        if v.release[0] > 3 or v.release[1] >= 10:  # type: ignore
             warnings.warn(
                 "In an upcoming release, pm.sample will return an `arviz.InferenceData` object instead of a `MultiTrace` by default. "
                 "You can pass return_inferencedata=True or return_inferencedata=False to be safe and silence this warning.",
@@ -487,6 +490,7 @@ def sample(
                 progressbar=progressbar,
                 **kwargs,
             )
+            check_start_vals(start_, model)
             if start is None:
                 start = start_
         except (AttributeError, NotImplementedError, tg.NullTypeGradError):
@@ -574,7 +578,7 @@ def sample(
                     UserWarning,
                 )
             _print_step_hierarchy(step)
-            trace = _sample_population(**sample_args, parallelize=cores > 1)
+            trace = _sample_population(parallelize=cores > 1, **sample_args)
         else:
             _log.info(f"Sequential sampling ({chains} chains in 1 job)")
             _print_step_hierarchy(step)
@@ -603,6 +607,10 @@ def sample(
     trace.report._n_tune = n_tune
     trace.report._n_draws = n_draws
     trace.report._t_sampling = t_sampling
+
+    if "variable_inclusion" in trace.stat_names:
+        variable_inclusion = np.stack(trace.get_sampler_stats("variable_inclusion")).mean(0)
+        trace.report.variable_importance = variable_inclusion / variable_inclusion.sum()
 
     n_chains = len(trace.chains)
     _log.info(
@@ -755,11 +763,9 @@ def _sample_population(
     trace : MultiTrace
         Contains samples of all chains
     """
-    # create the generator that iterates all chains in parallel
-    chains = [chain + c for c in range(chains)]
     sampling = _prepare_iter_population(
         draws,
-        chains,
+        [chain + c for c in range(chains)],
         step,
         start,
         parallelize,
@@ -1333,20 +1339,18 @@ def _iter_population(draws, tune, popstep, steppers, traces, points):
                 steppers[c].report._finalize(strace)
 
 
-def _choose_backend(trace, chain, shortcuts=None, **kwds):
-    """Selects or creates a trace backend (NDArray, Text, etc) for a particular chain.
+def _choose_backend(trace, chain, **kwds):
+    """Selects or creates a NDArray trace backend for a particular chain.
 
     Parameters
     ----------
-    trace : backend, list, MultiTrace, or None
-        This should be a BaseTrace, backend name (e.g. text, sqlite, or hdf5),
-        list of variables to track, or a MultiTrace object with past values.
+    trace : BaseTrace, list, MultiTrace, or None
+        This should be a BaseTrace, list of variables to track,
+        or a MultiTrace object with past values.
         If a MultiTrace object is given, it must contain samples for the chain number ``chain``.
         If None or a list of variables, the NDArray backend is used.
     chain : int
         Number of the chain of interest.
-    shortcuts : dict, optional
-        maps backend names to a dict of backend class and name (defaults to pm.backends._shortcuts)
     **kwds :
         keyword arguments to forward to the backend creation
 
@@ -1362,17 +1366,7 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
     if trace is None:
         return NDArray(**kwds)
 
-    if shortcuts is None:
-        shortcuts = pm.backends._shortcuts
-
-    try:
-        backend = shortcuts[trace]["backend"]
-        name = shortcuts[trace]["name"]
-        return backend(name, **kwds)
-    except TypeError:
-        return NDArray(vars=trace, **kwds)
-    except KeyError:
-        raise ValueError("Argument `trace` is invalid.")
+    return NDArray(vars=trace, **kwds)
 
 
 def _mp_sample(
@@ -1415,7 +1409,7 @@ def _mp_sample(
         Starting points for each chain.
     progressbar : bool
         Whether or not to display a progress bar in the command line.
-    trace : backend, list, MultiTrace or None
+    trace : BaseTrace, list, MultiTrace or None
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
         number ``chain``. If None or a list of variables, the NDArray backend is used.
@@ -1579,10 +1573,7 @@ class _DefaultTrace:
         ids: int
             The index of the sample we are inserting into the trace.
         """
-        if hasattr(v, "shape"):
-            value_shape = tuple(v.shape)  # type: Tuple[int, ...]
-        else:
-            value_shape = ()
+        value_shape = np.shape(v)
 
         # initialize if necessary
         if k not in self.trace_dict:
@@ -1721,7 +1712,7 @@ def sample_posterior_predictive(
                     param = cast(MultiTrace, _trace)._straces[chain_idx % nchain].point(point_idx)
                 # ... or a PointList
                 else:
-                    param = cast(PointList, _trace)[idx % len_trace]
+                    param = cast(PointList, _trace)[idx % (len_trace * nchain)]
             # there's only a single chain, but the index might hit it multiple times if
             # the number of indices is greater than the length of the trace.
             else:
@@ -1730,7 +1721,6 @@ def sample_posterior_predictive(
             values = draw_values(vars, point=param, size=size)
             for k, v in zip(vars, values):
                 ppc_trace_t.insert(k.name, v, idx)
-
     except KeyboardInterrupt:
         pass
 

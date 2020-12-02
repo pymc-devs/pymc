@@ -60,8 +60,10 @@ Gallery.contents = {
     "ODE_with_manual_gradients": "Inference in ODE models",
     "ODE_API_introduction": "Inference in ODE models",
     "probabilistic_matrix_factorization": "Case Studies",
+    "sampling_conjugate_step":"MCMC",
     "MLDA_introduction": "MCMC",
     "MLDA_simple_linear_regression": "MCMC",
     "MLDA_gravity_surveying": "MCMC",
-    "MLDA_variance_reduction_linear_regression": "MCMC"
+    "MLDA_variance_reduction_linear_regression": "MCMC",
+    "GLM-hierarchical-jax": "MCMC"
 }

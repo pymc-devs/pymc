@@ -14,19 +14,18 @@
 
 """Base backend for traces
 
-See the docstring for pymc3.backends for more information (including
-creating custom backends).
+See the docstring for pymc3.backends for more information
 """
 import itertools as itl
 import logging
-from typing import Dict, List, Optional
+from typing import List
 from abc import ABC
 
 import numpy as np
 import warnings
 import theano.tensor as tt
 
-from ..model import modelcontext, Model
+from ..model import modelcontext
 from .report import SamplerReport, merge_reports
 from ..util import get_var_name
 
