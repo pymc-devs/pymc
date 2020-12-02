@@ -414,15 +414,15 @@ def sample(
     """
     model = modelcontext(model)
     if start is None:
-        start = model.test_point
+        check_start_vals(model.test_point, model)
     else:
         if isinstance(start, dict):
             update_start_vals(start, model.test_point, model)
         else:
             for chain_start_vals in start:
                 update_start_vals(chain_start_vals, model.test_point, model)
+        check_start_vals(start, model)
 
-    check_start_vals(start, model)
     if cores is None:
         cores = min(4, _cpu_count())
 
