@@ -38,7 +38,7 @@ def sample_tfp_nuts(
     num_compute_step_size=500,
 ):
     from tensorflow_probability.substrates import jax as tfp
-
+    import jax
     model = modelcontext(model)
 
     seed = jax.random.PRNGKey(random_seed)
@@ -97,8 +97,6 @@ def sample_tfp_nuts(
     tic2 = pd.Timestamp.now()
     map_seed = jax.random.split(seed, chains)
     mcmc_samples, leapfrog_num = _sample(init_state_batched, map_seed)
-    tic3 = pd.Timestamp.now()
-    print("Compilation + sampling time = ", tic3 - tic2)
 
     # map_seed = jax.random.split(seed, chains)
     # mcmc_samples = _sample(init_state_batched, map_seed)
@@ -108,9 +106,9 @@ def sample_tfp_nuts(
     posterior = {k: v for k, v in zip(rv_names, mcmc_samples)}
 
     az_trace = az.from_dict(posterior=posterior)
+    tic3 = pd.Timestamp.now()
+    print("Compilation + sampling time = ", tic3 - tic2)
     return az_trace  # , leapfrog_num, tic3 - tic2
-
-    import jax
 
 
 def sample_numpyro_nuts(
@@ -169,9 +167,6 @@ def sample_numpyro_nuts(
     tic2 = pd.Timestamp.now()
     map_seed = jax.random.split(seed, chains)
     mcmc_samples, leapfrogs_taken = _sample(init_state_batched, map_seed)
-    tic3 = pd.Timestamp.now()
-    print("Compilation + sampling time = ", tic3 - tic2)
-
     # map_seed = jax.random.split(seed, chains)
     # mcmc_samples = _sample(init_state_batched, map_seed)
     # tic4 = pd.Timestamp.now()
@@ -180,4 +175,6 @@ def sample_numpyro_nuts(
     posterior = {k: v for k, v in zip(rv_names, mcmc_samples)}
 
     az_trace = az.from_dict(posterior=posterior)
+    tic3 = pd.Timestamp.now()
+    print("Compilation + sampling time = ", tic3 - tic2)
     return az_trace  # , leapfrogs_taken, tic3 - tic2
