@@ -750,7 +750,11 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random_discrete(
             pm.HyperGeometric,
-            {"N": Nat, "k": Nat, "n": Nat},
+            {
+                "N": Domain([10, 11, 12, 13], "int64"),
+                "k": Domain([4, 5, 6, 7], "int64"),
+                "n": Domain([6, 7, 8, 9], "int64"),
+            },
             size=500,
             fails=50,
             ref_rand=ref_rand,
