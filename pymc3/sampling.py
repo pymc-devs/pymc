@@ -490,8 +490,8 @@ def sample(
                 progressbar=progressbar,
                 **kwargs,
             )
-            check_start_vals(start_, model)
             if start is None:
+                check_start_vals(start_, model)
                 start = start_
         except (AttributeError, NotImplementedError, tg.NullTypeGradError):
             # gradient computation failed

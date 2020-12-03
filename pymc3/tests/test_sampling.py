@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from contextlib import nullcontext as does_not_raise
 from itertools import combinations
 from typing import Tuple
 import numpy as np
@@ -25,7 +26,7 @@ from theano import shared
 import theano
 from pymc3.tests.models import simple_init
 from pymc3.tests.helpers import SeededTest
-from pymc3.exceptions import IncorrectArgumentsError
+from pymc3.exceptions import IncorrectArgumentsError, SamplingError
 from scipy import stats
 import pytest
 
@@ -759,6 +760,26 @@ def test_exec_nuts_init(method):
         assert len(start) == 2
         assert isinstance(start[0], dict)
         assert "a" in start[0] and "b_log__" in start[0]
+
+
+@pytest.mark.parametrize(
+    "init, start, expectation",
+    [
+        ("auto", None, pytest.raises(SamplingError)),
+        ("jitter+adapt_diag", None, pytest.raises(SamplingError)),
+        ("auto", {"x": 0}, does_not_raise()),
+        ("jitter+adapt_diag", {'x': 0}, does_not_raise()),
+    ],
+)
+def test_default_sample_nuts_jitter(init, start, expectation):
+    # Random seed was selected to make sure initialization with "jitter+adapt_diag" would fail.
+    # This will need to be changed in the future if initialization or randomization method changes
+    # or if default initialization is made more robust.
+    with pm.Model() as m:
+        x = pm.HalfNormal('x', transform=None)
+        with expectation:
+            pm.sample(tune=1, draws=0, chains=4, random_seed=7,
+                      init=init, start=start)
 
 
 @pytest.fixture(scope="class")
