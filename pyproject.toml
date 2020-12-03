@@ -1,9 +1,12 @@
 [tool.black]
 line-length = 100
 
-[tool.nbqa.config]
-isort = "setup.cfg"
-black = "pyproject.toml"
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: nocover",
+  "raise NotImplementedError",
+  "if TYPE_CHECKING:",
+]
 
 [tool.nbqa.mutate]
 isort = 1
@@ -11,5 +14,4 @@ black = 1
 pyupgrade = 1
 
 [tool.nbqa.addopts]
-isort = ["--treat-comment-as-code", "# %%"]
 pyupgrade = ["--py36-plus"]

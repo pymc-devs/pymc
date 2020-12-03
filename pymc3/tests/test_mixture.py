@@ -368,7 +368,7 @@ class TestMixture(SeededTest):
                     )
                 )
                 chol.append(pm.expand_packed_triangular(D, packed_chol[i], lower=True))
-                comp_dist.append(pm.MvNormal.dist(mu=mu[i], chol=chol[i]))
+                comp_dist.append(pm.MvNormal.dist(mu=mu[i], chol=chol[i], shape=D))
 
             pm.Mixture("x_obs", pi, comp_dist, observed=X)
         with model:
