@@ -12,6 +12,7 @@ pyflakes>=1.5.0
 pylint>=1.7.4
 pytest-cov>=2.5.1
 pytest>=3.0.7
+pytest-xdist
 recommonmark>=0.4.0
 seaborn>=0.8.1
 sphinx-autobuild==0.7.1

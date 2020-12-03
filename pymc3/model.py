@@ -65,7 +65,7 @@ class PyMC3Variable(TensorVariable):
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):
         if getattr(self, "distribution", None) is None:
-            if formatting == "latex":
+            if "latex" in formatting:
                 return None
             else:
                 return super().__str__()
@@ -76,11 +76,14 @@ class PyMC3Variable(TensorVariable):
             dist = self.distribution
         return self.distribution._str_repr(name=name, dist=dist, formatting=formatting)
 
-    def _repr_latex_(self, **kwargs):
-        return self._str_repr(formatting="latex", **kwargs)
+    def _repr_latex_(self, *, formatting="latex_with_params", **kwargs):
+        return self._str_repr(formatting=formatting, **kwargs)
 
     def __str__(self, **kwargs):
-        return self._str_repr(formatting="plain", **kwargs)
+        try:
+            return self._str_repr(formatting="plain", **kwargs)
+        except:
+            return super().__str__()
 
     __latex__ = _repr_latex_
 
@@ -1365,15 +1368,15 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             test_point = self.test_point
 
         return Series(
-            {RV.name: np.round(RV.logp(self.test_point), round_vals) for RV in self.basic_RVs},
+            {RV.name: np.round(RV.logp(test_point), round_vals) for RV in self.basic_RVs},
             name="Log-probability of test_point",
         )
 
     def _str_repr(self, formatting="plain", **kwargs):
         all_rv = itertools.chain(self.unobserved_RVs, self.observed_RVs)
 
-        if formatting == "latex":
-            rv_reprs = [rv.__latex__() for rv in all_rv]
+        if "latex" in formatting:
+            rv_reprs = [rv.__latex__(formatting=formatting) for rv in all_rv]
             rv_reprs = [
                 rv_repr.replace(r"\sim", r"&\sim &").strip("$")
                 for rv_repr in rv_reprs
@@ -1404,8 +1407,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def __str__(self, **kwargs):
         return self._str_repr(formatting="plain", **kwargs)
 
-    def _repr_latex_(self, **kwargs):
-        return self._str_repr(formatting="latex", **kwargs)
+    def _repr_latex_(self, *, formatting="latex", **kwargs):
+        return self._str_repr(formatting=formatting, **kwargs)
 
     __latex__ = _repr_latex_
 
@@ -1871,24 +1874,27 @@ def _walk_up_rv(rv, formatting="plain"):
             all_rvs.extend(_walk_up_rv(parent, formatting=formatting))
     else:
         name = rv.name if rv.name else "Constant"
-        fmt = r"\text{{{name}}}" if formatting == "latex" else "{name}"
+        fmt = r"\text{{{name}}}" if "latex" in formatting else "{name}"
         all_rvs.append(fmt.format(name=name))
     return all_rvs
 
 
 class DeterministicWrapper(tt.TensorVariable):
     def _str_repr(self, formatting="plain"):
-        if formatting == "latex":
-            return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
-                name=self.name, args=r",~".join(_walk_up_rv(self, formatting=formatting))
-            )
+        if "latex" in formatting:
+            if formatting == "latex_with_params":
+                return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
+                    name=self.name, args=r",~".join(_walk_up_rv(self, formatting=formatting))
+                )
+            return fr"$\text{{{self.name}}} \sim \text{{Deterministic}}$"
         else:
-            return "{name} ~ Deterministic({args})".format(
-                name=self.name, args=", ".join(_walk_up_rv(self, formatting=formatting))
-            )
+            if formatting == "plain_with_params":
+                args = ", ".join(_walk_up_rv(self, formatting=formatting))
+                return f"{self.name} ~ Deterministic({args})"
+            return f"{self.name} ~ Deterministic"
 
-    def _repr_latex_(self):
-        return self._str_repr(formatting="latex")
+    def _repr_latex_(self, *, formatting="latex_with_params", **kwargs):
+        return self._str_repr(formatting=formatting)
 
     __latex__ = _repr_latex_
 

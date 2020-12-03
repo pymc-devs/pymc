@@ -1,0 +1,95 @@
+name: pytest
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  pytest:
+    strategy:
+      matrix:
+        os: [ubuntu-18.04]
+        floatx: [float32, float64]
+        test-subset:
+          - |
+            --ignore=pymc3/tests/test_dist_math.py
+            --ignore=pymc3/tests/test_distribution_defaults.py
+            --ignore=pymc3/tests/test_distributions.py
+            --ignore=pymc3/tests/test_distributions_random.py
+            --ignore=pymc3/tests/test_distributions_timeseries.py
+            --ignore=pymc3/tests/test_examples.py
+            --ignore=pymc3/tests/test_gp.py
+            --ignore=pymc3/tests/test_mixture.py
+            --ignore=pymc3/tests/test_parallel_sampling.py
+            --ignore=pymc3/tests/test_posteriors.py
+            --ignore=pymc3/tests/test_quadpotential.py
+            --ignore=pymc3/tests/test_random.py
+            --ignore=pymc3/tests/test_sampling.py
+            --ignore=pymc3/tests/test_shape_handling.py
+            --ignore=pymc3/tests/test_shared.py
+            --ignore=pymc3/tests/test_smc.py
+            --ignore=pymc3/tests/test_updates.py
+            --ignore=pymc3/tests/test_variational_inference.py
+          - |
+            pymc3/tests/test_dist_math.py
+            pymc3/tests/test_distribution_defaults.py
+            pymc3/tests/test_distributions_random.py
+            pymc3/tests/test_parallel_sampling.py
+            pymc3/tests/test_random.py
+            pymc3/tests/test_shared.py
+            pymc3/tests/test_smc.py
+          - |
+            pymc3/tests/test_examples.py
+            pymc3/tests/test_mixture.py
+            pymc3/tests/test_posteriors.py
+            pymc3/tests/test_quadpotential.py
+          - |
+            pymc3/tests/test_distributions_timeseries.py
+            pymc3/tests/test_shape_handling.py
+            pymc3/tests/test_updates.py
+            pymc3/tests/test_variational_inference.py
+          - |
+            pymc3/tests/test_distributions.py
+            pymc3/tests/test_gp.py
+            pymc3/tests/test_sampling.py
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    env:
+      TEST_SUBSET: ${{ matrix.test-subset }}
+      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=native'
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache conda
+        uses: actions/cache@v1
+        env:
+          # Increase this value to reset cache if environment-dev-py36.yml has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/environment-dev-py36.yml') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: pymc3-dev-py36
+          channel-priority: strict
+          environment-file: conda-envs/environment-dev-py36.yml
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Install-pymc3
+        run: |
+          conda activate pymc3-dev-py36
+          pip install -e .
+          python --version
+      - name: Run tests
+        run: |
+          conda activate pymc3-dev-py36
+          python -m pytest -vv --cov=pymc3 --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          env_vars: OS,PYTHON
+          name: codecov-umbrella
+          fail_ci_if_error: false

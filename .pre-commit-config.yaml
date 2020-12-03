@@ -22,17 +22,30 @@ repos:
   rev: 20.8b1
   hooks:
     - id: black
+- repo: https://github.com/PyCQA/pylint
+  rev: pylint-2.6.0
+  hooks:
+    - id: pylint
+      args: [--rcfile=.pylintrc]
+      files: ^pymc3/
 - repo: local
   hooks:
     - id: watermark
-      name: Check notebooks have watermark (see Jupyter style guide from PyMC3 Wiki)
-      types: [jupyter]
+      args: [--negate, --multiline]
       entry: '%load_ext watermark.*%watermark -n -u -v -iv -w'
       language: pygrep
-      args: [--negate, --multiline]
       minimum_pre_commit_version: 2.8.0
-    - id: check-toc
-      name: Check all notebooks appear in table of contents
+      name: Check notebooks have watermark (see Jupyter style guide from PyMC3 Wiki)
       types: [jupyter]
+    - id: check-toc
       entry: python scripts/check_toc_is_complete.py
       language: python
+      name: Check all notebooks appear in table of contents
+      pass_filenames: false
+      types: [jupyter]
+    - id: check-no-tests-are-ignored
+      entry: python scripts/check_all_tests_are_covered.py
+      files: ^\.github/workflows/pytest\.yml$
+      language: python
+      name: Check no tests are ignored
+      pass_filenames: false

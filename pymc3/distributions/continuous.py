@@ -2634,6 +2634,30 @@ class InverseGamma(PositiveContinuous):
     def _distr_parameters_for_repr(self):
         return ["alpha", "beta"]
 
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Inverse Gamma distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        alpha = self.alpha
+        beta = self.beta
+        return bound(
+            tt.log(tt.gammaincc(alpha, beta / value)),
+            value >= 0,
+            alpha > 0,
+            beta > 0,
+        )
+
 
 class ChiSquared(Gamma):
     r"""

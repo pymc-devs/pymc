@@ -13,14 +13,9 @@
 #   limitations under the License.
 
 from itertools import combinations
-import packaging
 from typing import Tuple
 import numpy as np
-
-try:
-    import unittest.mock as mock  # py3
-except ImportError:
-    from unittest import mock
+import unittest.mock as mock
 
 import numpy.testing as npt
 import arviz as az
@@ -180,13 +175,9 @@ class TestSample(SeededTest):
         assert var_imp[0] > var_imp[1:].sum()
         npt.assert_almost_equal(var_imp.sum(), 1)
 
-    def test_return_inferencedata(self):
+    def test_return_inferencedata(self, monkeypatch):
         with self.model:
             kwargs = dict(draws=100, tune=50, cores=1, chains=2, step=pm.Metropolis())
-            v = packaging.version.parse(pm.__version__)
-            if v.major > 3 or v.minor >= 10:
-                with pytest.warns(FutureWarning, match="pass return_inferencedata"):
-                    result = pm.sample(**kwargs)
 
             # trace with tuning
             with pytest.warns(UserWarning, match="will be included"):
@@ -203,12 +194,25 @@ class TestSample(SeededTest):
             assert result.posterior.sizes["chain"] == 2
             assert len(result._groups_warmup) > 0
 
-            # inferencedata without tuning
-            result = pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=True)
+            # inferencedata without tuning, with idata_kwargs
+            prior = pm.sample_prior_predictive()
+            result = pm.sample(
+                **kwargs,
+                return_inferencedata=True,
+                discard_tuned_samples=True,
+                idata_kwargs={"prior": prior},
+                random_seed=-1
+            )
+            assert "prior" in result
             assert isinstance(result, az.InferenceData)
             assert result.posterior.sizes["draw"] == 100
             assert result.posterior.sizes["chain"] == 2
             assert len(result._groups_warmup) == 0
+
+            # check warning for version 3.10 onwards
+            monkeypatch.setattr("pymc3.__version__", "3.10")
+            with pytest.warns(FutureWarning, match="pass return_inferencedata"):
+                result = pm.sample(**kwargs)
         pass
 
     @pytest.mark.parametrize("cores", [1, 2])
@@ -354,16 +358,6 @@ class TestChooseBackend:
         with mock.patch("pymc3.sampling.NDArray") as nd:
             pm.sampling._choose_backend(["var1", "var2"], "chain")
         nd.assert_called_with(vars=["var1", "var2"])
-
-    def test_choose_backend_invalid(self):
-        with pytest.raises(ValueError):
-            pm.sampling._choose_backend("invalid", "chain")
-
-    def test_choose_backend_shortcut(self):
-        backend = mock.Mock()
-        shortcuts = {"test_backend": {"backend": backend, "name": None}}
-        pm.sampling._choose_backend("test_backend", "chain", shortcuts=shortcuts)
-        assert backend.called
 
 
 class TestSamplePPC(SeededTest):
@@ -597,7 +591,7 @@ class TestSamplePPC(SeededTest):
 
         expected_p = np.array([logistic.eval({coeff: val}) for val in trace["x"][:samples]])
         assert post_pred["obs"].shape == (samples, 3)
-        assert np.allclose(post_pred["p"], expected_p)
+        npt.assert_allclose(post_pred["p"], expected_p)
 
         # fast version
         samples = 100
@@ -608,11 +602,12 @@ class TestSamplePPC(SeededTest):
 
         expected_p = np.array([logistic.eval({coeff: val}) for val in trace["x"][:samples]])
         assert post_pred["obs"].shape == (samples, 3)
-        assert np.allclose(post_pred["p"], expected_p)
+        npt.assert_allclose(post_pred["p"], expected_p)
 
     def test_deterministic_of_observed(self):
-        meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(100))
-        meas_in_2 = pm.theanof.floatX(5 + 4 * np.random.randn(100))
+        meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(10))
+        meas_in_2 = pm.theanof.floatX(5 + 4 * np.random.randn(10))
+        nchains = 2
         with pm.Model() as model:
             mu_in_1 = pm.Normal("mu_in_1", 0, 1)
             sigma_in_1 = pm.HalfNormal("sd_in_1", 1)
@@ -624,40 +619,38 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            trace = pm.sample(100)
-            ppc_trace = pm.trace_to_dataframe(
-                trace, varnames=[n for n in trace.varnames if n != "out"]
-            ).to_dict("records")
+            trace = pm.sample(100, chains=nchains)
+            np.random.seed(0)
             with pytest.warns(DeprecationWarning):
                 ppc = pm.sample_posterior_predictive(
                     model=model,
-                    trace=ppc_trace,
-                    samples=len(ppc_trace),
+                    trace=trace,
+                    samples=len(trace) * nchains,
                     vars=(model.deterministics + model.basic_RVs),
                 )
 
-            rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3
-            assert np.allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
+            rtol = 1e-5 if theano.config.floatX == "float64" else 1e-4
+            npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
+            np.random.seed(0)
             ppc = pm.sample_posterior_predictive(
                 model=model,
-                trace=ppc_trace,
-                samples=len(ppc_trace),
+                trace=trace,
+                samples=len(trace) * nchains,
                 var_names=[var.name for var in (model.deterministics + model.basic_RVs)],
             )
 
-            rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3
-            assert np.allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
+            npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
+            np.random.seed(0)
             ppc = pm.fast_sample_posterior_predictive(
                 model=model,
-                trace=ppc_trace,
-                samples=len(ppc_trace),
+                trace=trace,
+                samples=len(trace) * nchains,
                 var_names=[var.name for var in (model.deterministics + model.basic_RVs)],
             )
 
-            rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3
-            assert np.allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
+            npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
     def test_deterministic_of_observed_modified_interface(self):
         meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(100))
@@ -685,7 +678,7 @@ class TestSamplePPC(SeededTest):
             )
 
             rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3
-            assert np.allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
+            npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
             ppc = pm.fast_sample_posterior_predictive(
                 model=model,
@@ -695,7 +688,7 @@ class TestSamplePPC(SeededTest):
             )
 
             rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3
-            assert np.allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
+            npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
     def test_variable_type(self):
         with pm.Model() as model:
