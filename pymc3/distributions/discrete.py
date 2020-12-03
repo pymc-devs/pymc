@@ -841,7 +841,6 @@ class HyperGeometric(Discrete):
         plt.show()
 
     ========  =============================
-
     Support   :math:`x \in \left[\max(0, n - N + k), \min(k, n)\right]`
     Mean      :math:`\dfrac{nk}{N}`
     Variance  :math:`\dfrac{(N-n)nk(N-k)}{(N-1)N^2}`
