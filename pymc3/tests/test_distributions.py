@@ -90,7 +90,7 @@ import pytest
 from scipy import integrate
 import scipy.stats.distributions as sp
 import scipy.stats
-from scipy.special import logit, erf, erfcx
+from scipy.special import logit, erf
 import theano
 import theano.tensor as tt
 from ..math import kronecker

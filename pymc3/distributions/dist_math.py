@@ -135,7 +135,7 @@ def normal_lccdf(mu, sigma, x):
 
 def log_diff_normal_cdf(mu, sigma, x, y):
     """
-    Compute :math:`log(\Phi(\frac{x - \mu}{\sigma}) - \Phi(\frac{y - \mu}{\sigma}))` safely in log space.
+    Compute :math:`\\log(\\Phi(\frac{x - \\mu}{\\sigma}) - \\Phi(\frac{y - \\mu}{\\sigma}))` safely in log space.
 
     Parameters
     ----------
@@ -151,7 +151,7 @@ def log_diff_normal_cdf(mu, sigma, x, y):
 
     Returns
     -------
-    log (\Phi(x) - \Phi(y))
+    log (\\Phi(x) - \\Phi(y))
 
     """
     x = (x - mu) / sigma / tt.sqrt(2.0)
