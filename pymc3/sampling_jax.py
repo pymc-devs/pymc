@@ -39,6 +39,7 @@ def sample_tfp_nuts(
 ):
     from tensorflow_probability.substrates import jax as tfp
     import jax
+
     model = modelcontext(model)
 
     seed = jax.random.PRNGKey(random_seed)
