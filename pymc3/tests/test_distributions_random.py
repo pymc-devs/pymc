@@ -109,7 +109,6 @@ def pymc3_random_discrete(
                 p = 1.0
             else:
                 _, p = st.chisquare(k[:, 0], k[:, 1])
-                print(p)
             f -= 1
         assert p > alpha, str(pt)
 
