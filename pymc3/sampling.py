@@ -491,8 +491,8 @@ def sample(
                 **kwargs,
             )
             if start is None:
-                check_start_vals(start_, model)
                 start = start_
+                check_start_vals(start, model)
         except (AttributeError, NotImplementedError, tg.NullTypeGradError):
             # gradient computation failed
             _log.info("Initializing NUTS failed. " "Falling back to elementwise auto-assignment.")
