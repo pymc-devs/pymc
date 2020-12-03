@@ -769,11 +769,15 @@ def test_exec_nuts_init(method):
         ("jitter+adapt_diag", None, pytest.raises(SamplingError)),
         ("auto", {"x": 0}, does_not_raise()),
         ("jitter+adapt_diag", {"x": 0}, does_not_raise()),
+        ("adapt_diag", None, does_not_raise()),
     ],
 )
 def test_default_sample_nuts_jitter(init, start, expectation):
-    # Random seed was selected to make sure initialization with "jitter+adapt_diag" would fail.
-    # This will need to be changed in the future if initialization or randomization method changes
+    # This test tries to check whether the starting points returned by init_nuts are actually being
+    # used when pm.sample() is called without specifying an explicit start point (see
+    # https://github.com/pymc-devs/pymc3/pull/4285).
+    # A random seed was selected to make sure the initialization with "jitter+adapt_diag" would fail.
+    # This will need to be changed in the future if the initialization or randomization method changes
     # or if default initialization is made more robust.
     with pm.Model() as m:
         x = pm.HalfNormal("x", transform=None)
