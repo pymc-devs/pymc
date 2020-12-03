@@ -777,13 +777,14 @@ def test_default_sample_nuts_jitter(init, start, expectation, monkeypatch):
     # being used when pm.sample() is called without specifying an explicit start point (see
     # https://github.com/pymc-devs/pymc3/pull/4285).
     def _mocked_init_nuts(*args, **kwargs):
-        if init == 'adapt_diag':
-            start_ = [{'x': np.array(0.79788456)}]
+        if init == "adapt_diag":
+            start_ = [{"x": np.array(0.79788456)}]
         else:
-            start_ = [{'x': np.array(-0.04949886)}]
+            start_ = [{"x": np.array(-0.04949886)}]
         _, step = pm.init_nuts(*args, **kwargs)
         return start_, step
-    monkeypatch.setattr('pymc3.sampling.init_nuts', _mocked_init_nuts)
+
+    monkeypatch.setattr("pymc3.sampling.init_nuts", _mocked_init_nuts)
     with pm.Model() as m:
         x = pm.HalfNormal("x", transform=None)
         with expectation:
