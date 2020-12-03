@@ -1543,7 +1543,7 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(
             OrderedProbit,
             Domain(range(n), "int64"),
-            {"eta": R, "cutpoints": SortedVector(n - 1)},
+            {"eta": Runif, "cutpoints": UnitSortedVector(n - 1)},
             lambda value, eta, cutpoints: orderedprobit_logpdf(value, eta, cutpoints),
         )
 
