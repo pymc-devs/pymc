@@ -772,17 +772,22 @@ def test_exec_nuts_init(method):
         ("adapt_diag", None, does_not_raise()),
     ],
 )
-def test_default_sample_nuts_jitter(init, start, expectation):
-    # This test tries to check whether the starting points returned by init_nuts are actually being
-    # used when pm.sample() is called without specifying an explicit start point (see
+def test_default_sample_nuts_jitter(init, start, expectation, monkeypatch):
+    # This test tries to check whether the starting points returned by init_nuts are actually
+    # being used when pm.sample() is called without specifying an explicit start point (see
     # https://github.com/pymc-devs/pymc3/pull/4285).
-    # A random seed was selected to make sure the initialization with "jitter+adapt_diag" would fail.
-    # This will need to be changed in the future if the initialization or randomization method changes
-    # or if default initialization is made more robust.
+    def _mocked_init_nuts(*args, **kwargs):
+        if init == 'adapt_diag':
+            start_ = [{'x': np.array(0.79788456)}]
+        else:
+            start_ = [{'x': np.array(-0.04949886)}]
+        _, step = pm.init_nuts(*args, **kwargs)
+        return start_, step
+    monkeypatch.setattr('pymc3.sampling.init_nuts', _mocked_init_nuts)
     with pm.Model() as m:
         x = pm.HalfNormal("x", transform=None)
         with expectation:
-            pm.sample(tune=1, draws=0, chains=1, random_seed=7, init=init, start=start)
+            pm.sample(tune=1, draws=0, chains=1, init=init, start=start)
 
 
 @pytest.fixture(scope="class")
