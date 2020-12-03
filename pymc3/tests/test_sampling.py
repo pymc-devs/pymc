@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from contextlib import nullcontext as does_not_raise
+from contextlib import ExitStack as does_not_raise
 from itertools import combinations
 from typing import Tuple
 import numpy as np
@@ -778,7 +778,7 @@ def test_default_sample_nuts_jitter(init, start, expectation):
     with pm.Model() as m:
         x = pm.HalfNormal('x', transform=None)
         with expectation:
-            pm.sample(tune=1, draws=0, chains=4, random_seed=7,
+            pm.sample(tune=1, draws=0, chains=1, random_seed=7,
                       init=init, start=start)
 
 
