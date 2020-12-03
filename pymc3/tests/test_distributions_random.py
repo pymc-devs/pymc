@@ -109,6 +109,7 @@ def pymc3_random_discrete(
                 p = 1.0
             else:
                 _, p = st.chisquare(k[:, 0], k[:, 1])
+                print(p)
             f -= 1
         assert p > alpha, str(pt)
 
@@ -752,7 +753,7 @@ class TestScalarParameterSamples(SeededTest):
             pm.HyperGeometric,
             {"N": Nat, "k": Nat, "n": Nat},
             size=500,
-            fails=100,
+            fails=50,
             ref_rand=ref_rand,
         )
 

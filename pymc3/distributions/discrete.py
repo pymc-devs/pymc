@@ -881,8 +881,17 @@ class HyperGeometric(Discrete):
         -------
         array
         """
+
         N, k, n = draw_values([self.N, self.k, self.n], point=point, size=size)
-        return generate_samples(np.random.hypergeometric, N, k, n, dist_shape=self.shape, size=size)
+        return generate_samples(self._random, N, k, n, dist_shape=self.shape, size=size)
+
+    def _random(self, M, n, N, size=None):
+        r"""Wrapper around scipy stat's hypergeom.rvs"""
+        try:
+            samples = stats.hypergeom.rvs(M=M, n=n, N=N, size=size)
+            return samples
+        except ValueError:
+            raise ValueError("Domain error in arguments")
 
     def logp(self, value):
         r"""
