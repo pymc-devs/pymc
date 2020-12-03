@@ -273,14 +273,14 @@ class MultiTrace:
 
     Attributes
     ----------
-        nchains: int
-            Number of chains in the `MultiTrace`.
-        chains: `List[int]`
-            List of chain indices
-        report: str
-            Report on the sampling process.
-        varnames: `List[str]`
-            List of variable names in the trace(s)
+    nchains: int
+        Number of chains in the `MultiTrace`.
+    chains: `List[int]`
+        List of chain indices
+    report: str
+        Report on the sampling process.
+    varnames: `List[str]`
+        List of variable names in the trace(s)
     """
 
     def __init__(self, straces):
