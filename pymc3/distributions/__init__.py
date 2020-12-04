@@ -63,6 +63,7 @@ from .discrete import ZeroInflatedNegativeBinomial
 from .discrete import ZeroInflatedBinomial
 from .discrete import DiscreteUniform
 from .discrete import Geometric
+from .discrete import HyperGeometric
 from .discrete import Categorical
 from .discrete import OrderedLogistic
 
@@ -141,6 +142,7 @@ __all__ = [
     "ZeroInflatedBinomial",
     "DiscreteUniform",
     "Geometric",
+    "HyperGeometric",
     "Categorical",
     "OrderedLogistic",
     "DensityDist",

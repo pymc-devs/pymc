@@ -253,7 +253,7 @@ def sample(
     pickle_backend: str = "pickle",
     **kwargs,
 ):
-    """Draw samples from the posterior using the given step methods.
+    r"""Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
 
@@ -330,7 +330,6 @@ def sample(
         called with the trace and the current draw and will contain all samples for a single trace.
         the ``draw.chain`` argument can be used to determine which of the active chains the sample
         is drawn from.
-
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
     return_inferencedata : bool, default=False
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
@@ -353,7 +352,7 @@ def sample(
     Notes
     -----
     Optional keyword arguments can be passed to ``sample`` to be delivered to the
-    ``step_method``s used during sampling.
+    ``step_method``\ s used during sampling.
 
     If your model uses only one step method, you can address step method kwargs
     directly. In particular, the NUTS step method has several options including:
@@ -368,26 +367,29 @@ def sample(
     If your model uses multiple step methods, aka a Compound Step, then you have
     two ways to address arguments to each step method:
 
-        A: If you let ``sample()`` automatically assign the ``step_method``s,
-         and you can correctly anticipate what they will be, then you can wrap
-         step method kwargs in a dict and pass that to sample() with a kwarg set
-         to the name of the step method.
-         e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
-         you could send:
-            1. ``target_accept`` to NUTS: nuts={'target_accept':0.9}
-            2. ``transit_p`` to BinaryGibbsMetropolis: binary_gibbs_metropolis={'transit_p':.7}
+    A. If you let ``sample()`` automatically assign the ``step_method``\ s,
+       and you can correctly anticipate what they will be, then you can wrap
+       step method kwargs in a dict and pass that to sample() with a kwarg set
+       to the name of the step method.
+       e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
+       you could send:
 
-         Note that available names are:
-            ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
-            ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
-            ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
+       1. ``target_accept`` to NUTS: nuts={'target_accept':0.9}
+       2. ``transit_p`` to BinaryGibbsMetropolis: binary_gibbs_metropolis={'transit_p':.7}
 
-        B: If you manually declare the ``step_method``s, within the ``step``
-         kwarg, then you can address the ``step_method`` kwargs directly.
-         e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
-         you could send:
-            step=[pm.NUTS([freeRV1, freeRV2], target_accept=0.9),
-                  pm.BinaryGibbsMetropolis([freeRV3], transit_p=.7)]
+       Note that available names are:
+
+        ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
+        ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
+        ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
+
+    B. If you manually declare the ``step_method``\ s, within the ``step``
+       kwarg, then you can address the ``step_method`` kwargs directly.
+       e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
+       you could send ::
+
+        step=[pm.NUTS([freeRV1, freeRV2], target_accept=0.9),
+              pm.BinaryGibbsMetropolis([freeRV3], transit_p=.7)]
 
     You can find a full list of arguments in the docstring of the step methods.
 
@@ -395,22 +397,22 @@ def sample(
     --------
     .. code:: ipython
 
-        >>> import pymc3 as pm
-        ... n = 100
-        ... h = 61
-        ... alpha = 2
-        ... beta = 2
+        In [1]: import pymc3 as pm
+           ...: n = 100
+           ...: h = 61
+           ...: alpha = 2
+           ...: beta = 2
 
-    .. code:: ipython
+        In [2]: with pm.Model() as model: # context management
+           ...:     p = pm.Beta("p", alpha=alpha, beta=beta)
+           ...:     y = pm.Binomial("y", n=n, p=p, observed=h)
+           ...:     trace = pm.sample()
 
-        >>> with pm.Model() as model: # context management
-        ...     p = pm.Beta('p', alpha=alpha, beta=beta)
-        ...     y = pm.Binomial('y', n=n, p=p, observed=h)
-        ...     trace = pm.sample()
-        >>> pm.summary(trace)
-               mean        sd  mc_error   hpd_2.5  hpd_97.5
-        p  0.604625  0.047086   0.00078  0.510498  0.694774
+        In [3]: pm.summary(trace, kind="stats")
 
+        Out[3]:
+            mean     sd  hdi_3%  hdi_97%
+        p  0.609  0.047   0.528    0.699
     """
     model = modelcontext(model)
     if start is None:
@@ -1869,8 +1871,8 @@ def sample_posterior_predictive_w(
 
     except KeyboardInterrupt:
         pass
-
-    return {k: np.asarray(v) for k, v in ppc.items()}
+    else:
+        return {k: np.asarray(v) for k, v in ppc.items()}
 
 
 def sample_prior_predictive(
@@ -1982,7 +1984,7 @@ def init_nuts(
         * map: Use the MAP as starting point. This is discouraged.
         * adapt_full: Adapt a dense mass matrix using the sample covariances. All chains use the
           test value (usually the prior mean) as starting point.
-        * jitter+adapt_full: Same as ``adapt_full`, but use test value plus a uniform jitter in
+        * jitter+adapt_full: Same as ``adapt_full``, but use test value plus a uniform jitter in
           [-1, 1] as starting point in each chain.
 
     chains : int
