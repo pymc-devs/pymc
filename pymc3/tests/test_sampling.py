@@ -72,14 +72,22 @@ class TestSample(SeededTest):
             for cores in test_cores:
                 for steps in [1, 10, 300]:
                     pm.sample(
-                        steps, tune=0, step=self.step, cores=cores, random_seed=self.random_seed,
+                        steps,
+                        tune=0,
+                        step=self.step,
+                        cores=cores,
+                        random_seed=self.random_seed,
                     )
 
     def test_sample_init(self):
         with self.model:
             for init in ("advi", "advi_map", "map"):
                 pm.sample(
-                    init=init, tune=0, n_init=1000, draws=50, random_seed=self.random_seed,
+                    init=init,
+                    tune=0,
+                    n_init=1000,
+                    draws=50,
+                    random_seed=self.random_seed,
                 )
 
     def test_sample_args(self):
@@ -99,7 +107,11 @@ class TestSample(SeededTest):
     def test_iter_sample(self):
         with self.model:
             samps = pm.sampling.iter_sample(
-                draws=5, step=self.step, start=self.start, tune=0, random_seed=self.random_seed,
+                draws=5,
+                step=self.step,
+                start=self.start,
+                tune=0,
+                random_seed=self.random_seed,
             )
             for i, trace in enumerate(samps):
                 assert i == len(trace) - 1, "Trace does not have correct length."

@@ -289,7 +289,8 @@ def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tupl
         dataset = data.posterior
     else:
         raise ValueError(
-            "Argument must be xarray Dataset or arviz InferenceData. Got %s", data.__class__,
+            "Argument must be xarray Dataset or arviz InferenceData. Got %s",
+            data.__class__,
         )
 
     coords = dataset.coords

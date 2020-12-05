@@ -52,7 +52,10 @@ def test_hashing_of_rv_tuples():
         mu = pm.Normal("mu", 0, 1)
         sd = pm.Gamma("sd", 1, 2)
         dd = pm.DensityDist(
-            "dd", pm.Normal.dist(mu, sd).logp, random=pm.Normal.dist(mu, sd).random, observed=obs,
+            "dd",
+            pm.Normal.dist(mu, sd).logp,
+            random=pm.Normal.dist(mu, sd).random,
+            observed=obs,
         )
         print()
         for freerv in [mu, sd, dd] + pmodel.free_RVs:
