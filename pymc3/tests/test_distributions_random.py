@@ -1171,7 +1171,7 @@ class TestDensityDist:
                 shape=shape,
                 random=normal_dist.random,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         size = 100
@@ -1194,7 +1194,7 @@ class TestDensityDist:
                 random=normal_dist.random,
                 wrap_random_with_dist_shape=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         with pytest.raises(RuntimeError):
@@ -1217,7 +1217,7 @@ class TestDensityDist:
                 wrap_random_with_dist_shape=False,
                 check_shape_in_random=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model)
@@ -1240,7 +1240,7 @@ class TestDensityDist:
                 random=rvs,
                 wrap_random_with_dist_shape=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         size = 100
@@ -1260,7 +1260,7 @@ class TestDensityDist:
                 random=rvs,
                 wrap_random_with_dist_shape=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         size = 100
@@ -1273,7 +1273,7 @@ class TestDensityDist:
             mu = pm.Normal("mu", 0, 1)
             normal_dist = pm.Normal.dist(mu, 1)
             pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         with pytest.raises(ValueError):

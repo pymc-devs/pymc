@@ -12,11 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import multiprocessing
 import numbers
 import contextvars
 import dill
 import inspect
+import sys
+import types
 from typing import TYPE_CHECKING
+import warnings
 
 if TYPE_CHECKING:
     from typing import Optional, Callable
@@ -505,6 +509,19 @@ class DensityDist(Distribution):
             dtype = theano.config.floatX
         super().__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
+        if type(self.logp) == types.MethodType:
+            if sys.platform != "linux":
+                warnings.warn(
+                    "You are passing a bound method as logp for DensityDist, this can lead to "
+                    + "errors when sampling on platforms other than Linux. Consider using a "
+                    + "plain function instead, or subclass Distribution."
+                )
+            elif type(multiprocessing.get_context()) != multiprocessing.context.ForkContext:
+                warnings.warn(
+                    "You are passing a bound method as logp for DensityDist, this can lead to "
+                    + "errors when sampling when multiprocessing cannot rely on forking. Consider using a "
+                    + "plain function instead, or subclass Distribution."
+                )
         self.rand = random
         self.wrap_random_with_dist_shape = wrap_random_with_dist_shape
         self.check_shape_in_random = check_shape_in_random
@@ -513,7 +530,15 @@ class DensityDist(Distribution):
         # We use dill to serialize the logp function, as this is almost
         # always defined in the notebook and won't be pickled correctly.
         # Fix https://github.com/pymc-devs/pymc3/issues/3844
-        logp = dill.dumps(self.logp)
+        try:
+            logp = dill.dumps(self.logp)
+        except RecursionError as err:
+            if type(self.logp) == types.MethodType:
+                raise ValueError(
+                    "logp for DensityDist is a bound method, leading to RecursionError while serializing"
+                ) from err
+            else:
+                raise err
         vals = self.__dict__.copy()
         vals["logp"] = logp
         return vals
