@@ -815,6 +815,28 @@ def test_default_sample_nuts_jitter(init, start, expectation, monkeypatch):
             pm.sample(tune=1, draws=0, chains=1, init=init, start=start)
 
 
+@pytest.mark.parametrize(
+    "testval, jitter_max_retries, expectation",
+    [
+        (0, 0, pytest.raises(SamplingError)),
+        (0, 1, pytest.raises(SamplingError)),
+        (0, 4, does_not_raise()),
+        (0, 10, does_not_raise()),
+        (1, 0, does_not_raise()),
+    ],
+)
+def test_init_jitter(testval, jitter_max_retries, expectation):
+    with pm.Model() as m:
+        pm.HalfNormal("x", transform=None, testval=testval)
+
+    with expectation:
+        # Starting value is negative (invalid) when np.random.rand returns 0 (jitter = -1)
+        # and positive (valid) when it returns 1 (jitter = 1)
+        with mock.patch("numpy.random.rand", side_effect=[0, 0, 0, 1, 0]):
+            start = pm.sampling._init_jitter(m, chains=1, jitter_max_retries=jitter_max_retries)
+            pm.util.check_start_vals(start, m)
+
+
 @pytest.fixture(scope="class")
 def point_list_arg_bug_fixture() -> Tuple[pm.Model, pm.backends.base.MultiTrace]:
     with pm.Model() as pmodel:
