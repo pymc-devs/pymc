@@ -1273,7 +1273,7 @@ class TestDensityDist:
             mu = pm.Normal("mu", 0, 1)
             normal_dist = pm.Normal.dist(mu, 1)
             pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         with pytest.raises(ValueError):
