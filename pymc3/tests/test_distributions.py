@@ -75,6 +75,7 @@ from ..distributions import (
     Rice,
     Kumaraswamy,
     Moyal,
+    HyperGeometric,
 )
 
 from ..distributions import continuous
@@ -790,6 +791,14 @@ class TestMatchesScipy(SeededTest):
             Geometric, Nat, {"p": Unit}, lambda value, p: np.log(sp.geom.pmf(value, p))
         )
 
+    def test_hypergeometric(self):
+        self.pymc3_matches_scipy(
+            HyperGeometric,
+            Nat,
+            {"N": NatSmall, "k": NatSmall, "n": NatSmall},
+            lambda value, N, k, n: sp.hypergeom.logpmf(value, N, k, n),
+        )
+
     def test_negative_binomial(self):
         def test_fun(value, mu, alpha):
             return sp.nbinom.logpmf(value, alpha, 1 - mu / (mu + alpha))
@@ -913,12 +922,22 @@ class TestMatchesScipy(SeededTest):
             lambda value, alpha, beta: sp.gamma.logcdf(value, alpha, scale=1.0 / beta),
         )
 
+    @pytest.mark.xfail(
+        condition=(theano.config.floatX == "float32"),
+        reason="Fails on float32 due to numerical issues",
+    )
     def test_inverse_gamma(self):
         self.pymc3_matches_scipy(
             InverseGamma,
             Rplus,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.invgamma.logpdf(value, alpha, scale=beta),
+        )
+        self.check_logcdf(
+            InverseGamma,
+            Rplus,
+            {"alpha": Rplus, "beta": Rplus},
+            lambda value, alpha, beta: sp.invgamma.logcdf(value, alpha, scale=beta),
         )
 
     @pytest.mark.xfail(

@@ -14,10 +14,7 @@
 
 """Functions for MCMC sampling."""
 
-from typing import Dict, List, Optional, TYPE_CHECKING, cast, Union, Any
-
-if TYPE_CHECKING:
-    from typing import Tuple
+from typing import Dict, List, Optional, cast, Union, Any
 from typing import Iterable as TIterable
 from collections.abc import Iterable
 from collections import defaultdict
@@ -218,11 +215,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
 
 
 def _print_step_hierarchy(s, level=0):
-    if isinstance(s, (list, tuple)):
-        _log.info(">" * level + "list")
-        for i in s:
-            _print_step_hierarchy(i, level + 1)
-    elif isinstance(s, CompoundStep):
+    if isinstance(s, CompoundStep):
         _log.info(">" * level + "CompoundStep")
         for i in s.methods:
             _print_step_hierarchy(i, level + 1)
@@ -260,7 +253,7 @@ def sample(
     pickle_backend: str = "pickle",
     **kwargs,
 ):
-    """Draw samples from the posterior using the given step methods.
+    r"""Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
 
@@ -337,7 +330,6 @@ def sample(
         called with the trace and the current draw and will contain all samples for a single trace.
         the ``draw.chain`` argument can be used to determine which of the active chains the sample
         is drawn from.
-
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
     return_inferencedata : bool, default=False
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
@@ -360,7 +352,7 @@ def sample(
     Notes
     -----
     Optional keyword arguments can be passed to ``sample`` to be delivered to the
-    ``step_method``s used during sampling.
+    ``step_method``\ s used during sampling.
 
     If your model uses only one step method, you can address step method kwargs
     directly. In particular, the NUTS step method has several options including:
@@ -375,26 +367,29 @@ def sample(
     If your model uses multiple step methods, aka a Compound Step, then you have
     two ways to address arguments to each step method:
 
-        A: If you let ``sample()`` automatically assign the ``step_method``s,
-         and you can correctly anticipate what they will be, then you can wrap
-         step method kwargs in a dict and pass that to sample() with a kwarg set
-         to the name of the step method.
-         e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
-         you could send:
-            1. ``target_accept`` to NUTS: nuts={'target_accept':0.9}
-            2. ``transit_p`` to BinaryGibbsMetropolis: binary_gibbs_metropolis={'transit_p':.7}
+    A. If you let ``sample()`` automatically assign the ``step_method``\ s,
+       and you can correctly anticipate what they will be, then you can wrap
+       step method kwargs in a dict and pass that to sample() with a kwarg set
+       to the name of the step method.
+       e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
+       you could send:
 
-         Note that available names are:
-            ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
-            ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
-            ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
+       1. ``target_accept`` to NUTS: nuts={'target_accept':0.9}
+       2. ``transit_p`` to BinaryGibbsMetropolis: binary_gibbs_metropolis={'transit_p':.7}
 
-        B: If you manually declare the ``step_method``s, within the ``step``
-         kwarg, then you can address the ``step_method`` kwargs directly.
-         e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
-         you could send:
-            step=[pm.NUTS([freeRV1, freeRV2], target_accept=0.9),
-                  pm.BinaryGibbsMetropolis([freeRV3], transit_p=.7)]
+       Note that available names are:
+
+        ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
+        ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
+        ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
+
+    B. If you manually declare the ``step_method``\ s, within the ``step``
+       kwarg, then you can address the ``step_method`` kwargs directly.
+       e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
+       you could send ::
+
+        step=[pm.NUTS([freeRV1, freeRV2], target_accept=0.9),
+              pm.BinaryGibbsMetropolis([freeRV3], transit_p=.7)]
 
     You can find a full list of arguments in the docstring of the step methods.
 
@@ -402,34 +397,34 @@ def sample(
     --------
     .. code:: ipython
 
-        >>> import pymc3 as pm
-        ... n = 100
-        ... h = 61
-        ... alpha = 2
-        ... beta = 2
+        In [1]: import pymc3 as pm
+           ...: n = 100
+           ...: h = 61
+           ...: alpha = 2
+           ...: beta = 2
 
-    .. code:: ipython
+        In [2]: with pm.Model() as model: # context management
+           ...:     p = pm.Beta("p", alpha=alpha, beta=beta)
+           ...:     y = pm.Binomial("y", n=n, p=p, observed=h)
+           ...:     trace = pm.sample()
 
-        >>> with pm.Model() as model: # context management
-        ...     p = pm.Beta('p', alpha=alpha, beta=beta)
-        ...     y = pm.Binomial('y', n=n, p=p, observed=h)
-        ...     trace = pm.sample()
-        >>> pm.summary(trace)
-               mean        sd  mc_error   hpd_2.5  hpd_97.5
-        p  0.604625  0.047086   0.00078  0.510498  0.694774
+        In [3]: pm.summary(trace, kind="stats")
 
+        Out[3]:
+            mean     sd  hdi_3%  hdi_97%
+        p  0.609  0.047   0.528    0.699
     """
     model = modelcontext(model)
     if start is None:
-        start = model.test_point
+        check_start_vals(model.test_point, model)
     else:
         if isinstance(start, dict):
             update_start_vals(start, model.test_point, model)
         else:
             for chain_start_vals in start:
                 update_start_vals(chain_start_vals, model.test_point, model)
+        check_start_vals(start, model)
 
-    check_start_vals(start, model)
     if cores is None:
         cores = min(4, _cpu_count())
 
@@ -458,7 +453,7 @@ def sample(
 
     if return_inferencedata is None:
         v = packaging.version.parse(pm.__version__)
-        if v.release[0] > 3 or v.release[1] >= 10:
+        if v.release[0] > 3 or v.release[1] >= 10:  # type: ignore
             warnings.warn(
                 "In an upcoming release, pm.sample will return an `arviz.InferenceData` object instead of a `MultiTrace` by default. "
                 "You can pass return_inferencedata=True or return_inferencedata=False to be safe and silence this warning.",
@@ -497,9 +492,9 @@ def sample(
                 progressbar=progressbar,
                 **kwargs,
             )
-            check_start_vals(start_, model)
             if start is None:
                 start = start_
+                check_start_vals(start, model)
         except (AttributeError, NotImplementedError, tg.NullTypeGradError):
             # gradient computation failed
             _log.info("Initializing NUTS failed. " "Falling back to elementwise auto-assignment.")
@@ -585,7 +580,7 @@ def sample(
                     UserWarning,
                 )
             _print_step_hierarchy(step)
-            trace = _sample_population(**sample_args, parallelize=cores > 1)
+            trace = _sample_population(parallelize=cores > 1, **sample_args)
         else:
             _log.info(f"Sequential sampling ({chains} chains in 1 job)")
             _print_step_hierarchy(step)
@@ -770,11 +765,9 @@ def _sample_population(
     trace : MultiTrace
         Contains samples of all chains
     """
-    # create the generator that iterates all chains in parallel
-    chains = [chain + c for c in range(chains)]
     sampling = _prepare_iter_population(
         draws,
-        chains,
+        [chain + c for c in range(chains)],
         step,
         start,
         parallelize,
@@ -1582,10 +1575,7 @@ class _DefaultTrace:
         ids: int
             The index of the sample we are inserting into the trace.
         """
-        if hasattr(v, "shape"):
-            value_shape = tuple(v.shape)  # type: Tuple[int, ...]
-        else:
-            value_shape = ()
+        value_shape = np.shape(v)
 
         # initialize if necessary
         if k not in self.trace_dict:
@@ -1881,8 +1871,8 @@ def sample_posterior_predictive_w(
 
     except KeyboardInterrupt:
         pass
-
-    return {k: np.asarray(v) for k, v in ppc.items()}
+    else:
+        return {k: np.asarray(v) for k, v in ppc.items()}
 
 
 def sample_prior_predictive(
@@ -1994,7 +1984,7 @@ def init_nuts(
         * map: Use the MAP as starting point. This is discouraged.
         * adapt_full: Adapt a dense mass matrix using the sample covariances. All chains use the
           test value (usually the prior mean) as starting point.
-        * jitter+adapt_full: Same as ``adapt_full`, but use test value plus a uniform jitter in
+        * jitter+adapt_full: Same as ``adapt_full``, but use test value plus a uniform jitter in
           [-1, 1] as starting point in each chain.
 
     chains : int

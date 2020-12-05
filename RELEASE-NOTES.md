@@ -35,6 +35,7 @@ This new version of `Theano-PyMC` comes with an experimental JAX backend which, 
 - Change SMC metropolis kernel to independent metropolis kernel [#4115](https://github.com/pymc-devs/pymc3/pull/4115))
 - Add alternative parametrization to NegativeBinomial distribution in terms of n and p (see [#4126](https://github.com/pymc-devs/pymc3/issues/4126))
 - Added semantically meaningful `str` representations to PyMC3 objects for console, notebook, and GraphViz use (see [#4076](https://github.com/pymc-devs/pymc3/pull/4076), [#4065](https://github.com/pymc-devs/pymc3/pull/4065), [#4159](https://github.com/pymc-devs/pymc3/pull/4159), [#4217](https://github.com/pymc-devs/pymc3/pull/4217), and [#4243](https://github.com/pymc-devs/pymc3/pull/4243)).
+- Add Discrete HyperGeometric Distribution (see [#4249](https://github.com/pymc-devs/pymc3/pull/#4249))
 
 ### Maintenance
 - Switch the dependency of Theano to our own fork, [Theano-PyMC](https://github.com/pymc-devs/Theano-PyMC).
@@ -45,11 +46,14 @@ This new version of `Theano-PyMC` comes with an experimental JAX backend which, 
 - Enabled the `Multinomial` distribution to handle batch sizes that have more than 2 dimensions. [#4169](https://github.com/pymc-devs/pymc3/pull/4169)
 - Test model logp before starting any MCMC chains (see [#4116](https://github.com/pymc-devs/pymc3/issues/4116))
 - Fix bug in `model.check_test_point` that caused the `test_point` argument to be ignored. (see [PR #4211](https://github.com/pymc-devs/pymc3/pull/4211#issuecomment-727142721))
+- Refactored MvNormal.random method with better handling of sample, batch and event shapes. [#4207](https://github.com/pymc-devs/pymc3/pull/4207)
+- The `InverseGamma` distribution now implements a `logcdf`. [#3944](https://github.com/pymc-devs/pymc3/pull/3944)
 
 ### Documentation
 - Added a new notebook demonstrating how to incorporate sampling from a conjugate Dirichlet-multinomial posterior density in conjunction with other step methods (see [#4199](https://github.com/pymc-devs/pymc3/pull/4199)).
 - Mentioned the way to do any random walk with `theano.tensor.cumsum()` in `GaussianRandomWalk` docstrings (see [#4048](https://github.com/pymc-devs/pymc3/pull/4048)).
 
+**Release manager** for 3.10.0: Eelke Spaak ([@Spaak](https://github.com/Spaak))
 
 ## PyMC3 3.9.3 (11 August 2020)
 
@@ -69,6 +73,7 @@ This new version of `Theano-PyMC` comes with an experimental JAX backend which, 
 
 _NB: The `docs/*` folder is still removed from the tarball due to an upload size limit on PyPi._
 
+**Release manager** for 3.9.3: Kyle Beauchamp ([@kyleabeauchamp](https://github.com/kyleabeauchamp))
 
 ## PyMC3 3.9.2 (24 June 2020)
 
@@ -81,9 +86,13 @@ _NB: The `docs/*` folder is still removed from the tarball due to an upload size
 
 _NB: The `docs/*` folder is still removed from the tarball due to an upload size limit on PyPi._
 
+**Release manager** for 3.9.2: Alex Andorra ([@AlexAndorra](https://github.com/AlexAndorra))
+
 ## PyMC3 3.9.1 (16 June 2020)
 The `v3.9.0` upload to PyPI didn't include a tarball, which is fixed in this release.
 Though we had to temporarily remove the `docs/*` folder from the tarball due to a size limit.
+
+**Release manager** for 3.9.1: Michael Osthege ([@michaelosthege](https://github.com/michaelosthege))
 
 ## PyMC3 3.9.0 (16 June 2020)
 
@@ -130,6 +139,7 @@ Though we had to temporarily remove the `docs/*` folder from the tarball due to 
 - Dropped some deprecated kwargs and functions (see [#3906](https://github.com/pymc-devs/pymc3/pull/3906))
 - Dropped the outdated 'nuts' initialization method for `pm.sample` (see [#3863](https://github.com/pymc-devs/pymc3/pull/3863)).
 
+**Release manager** for 3.9.0: Michael Osthege ([@michaelosthege](https://github.com/michaelosthege))
 
 ## PyMC3 3.8 (November 29 2019)
 

@@ -602,7 +602,29 @@ class NormalMixture(Mixture):
         of the mixture distribution, with one axis being
         the number of components.
 
-    Note: You only have to pass in sigma or tau, but not both.
+    Notes
+    -----
+    You only have to pass in sigma or tau, but not both.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        n_components = 3
+
+        with pm.Model() as gauss_mix:
+            μ = pm.Normal(
+                "μ",
+                data.mean(),
+                10,
+                shape=n_components,
+                transform=pm.transforms.ordered,
+                testval=[1, 2, 3],
+            )
+            σ = pm.HalfNormal("σ", 10, shape=n_components)
+            weights = pm.Dirichlet("w", np.ones(n_components))
+
+            pm.NormalMixture("y", w=weights, mu=μ, sigma=σ, observed=data)
     """
 
     def __init__(self, w, mu, sigma=None, tau=None, sd=None, comp_shape=(), *args, **kwargs):

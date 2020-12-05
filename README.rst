@@ -168,6 +168,7 @@ Software using PyMC3
 - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
 - `pymc-learn <https://github.com/pymc-learn/pymc-learn>`__: Custom PyMC models built on top of pymc3_models/scikit-learn API
 - `fenics-pymc3 <https://github.com/IvanYashchuk/fenics-pymc3>`__: Differentiable interface to FEniCS, a library for solving partial differential equations.
+- `cell2location <https://github.com/BayraktarLab/cell2location>`__: Comprehensive mapping of tissue cell architecture via integrated single cell and spatial transcriptomics.
 
 Please contact us if your software is not listed here.
 

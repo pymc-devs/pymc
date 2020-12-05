@@ -12,15 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from contextlib import ExitStack as does_not_raise
 from itertools import combinations
-import packaging
 from typing import Tuple
 import numpy as np
-
-try:
-    import unittest.mock as mock  # py3
-except ImportError:
-    from unittest import mock
+import unittest.mock as mock
 
 import numpy.testing as npt
 import arviz as az
@@ -30,7 +26,7 @@ from theano import shared
 import theano
 from pymc3.tests.models import simple_init
 from pymc3.tests.helpers import SeededTest
-from pymc3.exceptions import IncorrectArgumentsError
+from pymc3.exceptions import IncorrectArgumentsError, SamplingError
 from scipy import stats
 import pytest
 
@@ -180,13 +176,9 @@ class TestSample(SeededTest):
         assert var_imp[0] > var_imp[1:].sum()
         npt.assert_almost_equal(var_imp.sum(), 1)
 
-    def test_return_inferencedata(self):
+    def test_return_inferencedata(self, monkeypatch):
         with self.model:
             kwargs = dict(draws=100, tune=50, cores=1, chains=2, step=pm.Metropolis())
-            v = packaging.version.parse(pm.__version__)
-            if v.major > 3 or v.minor >= 10:
-                with pytest.warns(FutureWarning, match="pass return_inferencedata"):
-                    result = pm.sample(**kwargs)
 
             # trace with tuning
             with pytest.warns(UserWarning, match="will be included"):
@@ -203,12 +195,25 @@ class TestSample(SeededTest):
             assert result.posterior.sizes["chain"] == 2
             assert len(result._groups_warmup) > 0
 
-            # inferencedata without tuning
-            result = pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=True)
+            # inferencedata without tuning, with idata_kwargs
+            prior = pm.sample_prior_predictive()
+            result = pm.sample(
+                **kwargs,
+                return_inferencedata=True,
+                discard_tuned_samples=True,
+                idata_kwargs={"prior": prior},
+                random_seed=-1
+            )
+            assert "prior" in result
             assert isinstance(result, az.InferenceData)
             assert result.posterior.sizes["draw"] == 100
             assert result.posterior.sizes["chain"] == 2
             assert len(result._groups_warmup) == 0
+
+            # check warning for version 3.10 onwards
+            monkeypatch.setattr("pymc3.__version__", "3.10")
+            with pytest.warns(FutureWarning, match="pass return_inferencedata"):
+                result = pm.sample(**kwargs)
         pass
 
     @pytest.mark.parametrize("cores", [1, 2])
@@ -701,29 +706,53 @@ class TestSamplePPC(SeededTest):
 
 class TestSamplePPCW(SeededTest):
     def test_sample_posterior_predictive_w(self):
-        data0 = np.random.normal(0, 1, size=500)
+        data0 = np.random.normal(0, 1, size=50)
+        warning_msg = "The number of samples is too small to check convergence reliably"
 
         with pm.Model() as model_0:
             mu = pm.Normal("mu", mu=0, sigma=1)
             y = pm.Normal("y", mu=mu, sigma=1, observed=data0)
-            trace_0 = pm.sample()
+            with pytest.warns(UserWarning, match=warning_msg):
+                trace_0 = pm.sample(10, tune=0, chains=2, return_inferencedata=False)
             idata_0 = az.from_pymc3(trace_0)
 
         with pm.Model() as model_1:
             mu = pm.Normal("mu", mu=0, sigma=1, shape=len(data0))
             y = pm.Normal("y", mu=mu, sigma=1, observed=data0)
-            trace_1 = pm.sample()
+            with pytest.warns(UserWarning, match=warning_msg):
+                trace_1 = pm.sample(10, tune=0, chains=2, return_inferencedata=False)
             idata_1 = az.from_pymc3(trace_1)
+
+        with pm.Model() as model_2:
+            # Model with no observed RVs.
+            mu = pm.Normal("mu", mu=0, sigma=1)
+            with pytest.warns(UserWarning, match=warning_msg):
+                trace_2 = pm.sample(10, tune=0, return_inferencedata=False)
 
         traces = [trace_0, trace_1]
         idatas = [idata_0, idata_1]
         models = [model_0, model_1]
 
         ppc = pm.sample_posterior_predictive_w(traces, 100, models)
-        assert ppc["y"].shape == (100, 500)
+        assert ppc["y"].shape == (100, 50)
 
         ppc = pm.sample_posterior_predictive_w(idatas, 100, models)
-        assert ppc["y"].shape == (100, 500)
+        assert ppc["y"].shape == (100, 50)
+
+        with model_0:
+            ppc = pm.sample_posterior_predictive_w([idata_0.posterior], None)
+            assert ppc["y"].shape == (20, 50)
+
+        with pytest.raises(ValueError, match="The number of traces and weights should be the same"):
+            pm.sample_posterior_predictive_w([idata_0.posterior], 100, models, weights=[0.5, 0.5])
+
+        with pytest.raises(ValueError, match="The number of models and weights should be the same"):
+            pm.sample_posterior_predictive_w([idata_0.posterior], 100, models)
+
+        with pytest.raises(
+            ValueError, match="The number of observed RVs should be the same for all models"
+        ):
+            pm.sample_posterior_predictive_w([trace_0, trace_2], 100, [model_0, model_2])
 
 
 @pytest.mark.parametrize(
@@ -755,6 +784,35 @@ def test_exec_nuts_init(method):
         assert len(start) == 2
         assert isinstance(start[0], dict)
         assert "a" in start[0] and "b_log__" in start[0]
+
+
+@pytest.mark.parametrize(
+    "init, start, expectation",
+    [
+        ("auto", None, pytest.raises(SamplingError)),
+        ("jitter+adapt_diag", None, pytest.raises(SamplingError)),
+        ("auto", {"x": 0}, does_not_raise()),
+        ("jitter+adapt_diag", {"x": 0}, does_not_raise()),
+        ("adapt_diag", None, does_not_raise()),
+    ],
+)
+def test_default_sample_nuts_jitter(init, start, expectation, monkeypatch):
+    # This test tries to check whether the starting points returned by init_nuts are actually
+    # being used when pm.sample() is called without specifying an explicit start point (see
+    # https://github.com/pymc-devs/pymc3/pull/4285).
+    def _mocked_init_nuts(*args, **kwargs):
+        if init == "adapt_diag":
+            start_ = [{"x": np.array(0.79788456)}]
+        else:
+            start_ = [{"x": np.array(-0.04949886)}]
+        _, step = pm.init_nuts(*args, **kwargs)
+        return start_, step
+
+    monkeypatch.setattr("pymc3.sampling.init_nuts", _mocked_init_nuts)
+    with pm.Model() as m:
+        x = pm.HalfNormal("x", transform=None)
+        with expectation:
+            pm.sample(tune=1, draws=0, chains=1, init=init, start=start)
 
 
 @pytest.fixture(scope="class")

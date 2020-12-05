@@ -38,19 +38,27 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
 3. Create a ``feature`` branch to hold your development changes:
 
    ```bash
-   $ git checkout -b my-feature
+   $ git switch -c my-feature
    ```
 
    Always use a ``feature`` branch. It's good practice to never routinely work on the ``master`` branch of any repository.
 
-4. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``.  To set up a development environment, you may (probably in a [virtual environment](https://docs.python-guide.org/dev/virtualenvs/)) run:
+4. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``. The easiest (and recommended) way to set up a development environment is via [miniconda](https://docs.conda.io/en/latest/miniconda.html):
 
    ```bash
-   $ pip install -r requirements.txt
+   $ conda env create -f conda-envs/environment-dev-py36.yml  # or py37 or py38
+   $ conda activate pymc3-dev-py36
+   $ pip install -e .
+   ```
+
+   _Alternatively_ you may (probably in a [virtual environment](https://docs.python-guide.org/dev/virtualenvs/)) run:
+
+   ```bash
+   $ pip install -e .
    $ pip install -r requirements-dev.txt
    ```
 
-Alternatively, there is a script to create a docker environment for development.  See: [Developing in Docker](#Developing-in-Docker).
+   Yet another alternative is to create a docker environment for development. See: [Developing in Docker](#Developing-in-Docker).
 
 5. Develop the feature on your feature branch. Add changed files using ``git add`` and then ``git commit`` files:
 
@@ -103,26 +111,7 @@ tools:
   $ pytest --cov=pymc3 pymc3/tests/<name of test>.py
   ```
 
-* No `pyflakes` warnings, check with:
-
-  ```bash
-  $ pip install pyflakes
-  $ pyflakes path/to/module.py
-  ```
-
-* No PEP8 warnings, check with:
-
-  ```bash
-  $ pip install pycodestyle
-  $ pycodestyle path/to/module.py
-  ```
-
-* AutoPEP8 can help you fix some of the easy redundant errors:
-
-  ```bash
-  $ pip install autopep8
-  $ autopep8 path/to/pep8.py
-  ```
+* No `pre-commit` errors: see the [Python code style](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Python-Code-Style) and [Jupyter Notebook style](https://github.com/pymc-devs/pymc3/wiki/PyMC's-Jupyter-Notebook-Style) page from our Wiki on how to install and run it.
 
 ## Developing in Docker
 
