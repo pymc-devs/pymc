@@ -1961,7 +1961,7 @@ def _init_jitter(model, chains, jitter_max_retries):
 
     Parameters
     ----------
-    model : Model
+    model : pymc3.Model
     chains : int
     jitter_max_retries : int
         Maximum number of repeated attempts at initializing values (per chain).
