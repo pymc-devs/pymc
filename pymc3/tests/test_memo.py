@@ -11,21 +11,56 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import numpy as np
+import pymc3 as pm
 
-from pymc3.memoize import memoize
-
-
-def getmemo():
-    @memoize
-    def f(a, b=("a")):
-        return str(a) + str(b)
-
-    return f
+from pymc3 import memoize
 
 
 def test_memo():
-    f = getmemo()
+    def fun(inputs, suffix="_a"):
+        return str(inputs) + str(suffix)
+    inputs = ["i1", "i2"]
+    assert fun(inputs) == "['i1', 'i2']_a"
+    assert fun(inputs, "_b") == "['i1', 'i2']_b"
 
-    assert f("x", ["y", "z"]) == "x['y', 'z']"
-    assert f("x", ["a", "z"]) == "x['a', 'z']"
-    assert f("x", ["y", "z"]) == "x['y', 'z']"
+    funmem = memoize.memoize(fun)
+    assert hasattr(fun, "cache")
+    assert isinstance(fun.cache, dict)
+    assert len(fun.cache) == 0
+    
+    assert funmem(inputs) == "['i1', 'i2']_a"
+    assert funmem(inputs) == "['i1', 'i2']_a"
+    assert len(fun.cache) == 1
+    assert funmem(inputs, "_b") == "['i1', 'i2']_b"
+    assert funmem(inputs, "_b") == "['i1', 'i2']_b"
+    assert len(fun.cache) == 2
+
+    # add items to the inputs list (the list instance remains identical !!)
+    inputs.append("i3")
+    assert funmem(inputs) == "['i1', 'i2', 'i3']_a"
+    assert funmem(inputs) == "['i1', 'i2', 'i3']_a"
+    assert len(fun.cache) == 3
+
+
+def test_hashing_of_rv_tuples():
+    obs = np.random.normal(-1, 0.1, size=10)
+    with pm.Model() as pmodel:
+        mu = pm.Normal("mu", 0, 1)
+        sd = pm.Gamma("sd", 1, 2)
+        dd = pm.DensityDist(
+            "dd",
+            pm.Normal.dist(mu, sd).logp,
+            random=pm.Normal.dist(mu, sd).random,
+            observed=obs,
+        )
+        print()
+        for freerv in [mu, sd, dd] + pmodel.free_RVs:
+            for structure in [
+                freerv,
+                dict(alpha=freerv, omega=None),
+                [freerv, []],
+                (freerv, []),
+            ]:
+                print(f"testing hashing of: {structure}")
+                assert isinstance(memoize.hashable(structure), int)

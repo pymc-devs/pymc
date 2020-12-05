@@ -930,9 +930,7 @@ class TestSamplePriorPredictive(SeededTest):
 
         assert gen2["y"].shape == (draws, n2)
 
-    @pytest.mark.skipif(sys.platform.startswith("win"), reason="Stackoverflow error on Windows")
     def test_density_dist(self):
-
         obs = np.random.normal(-1, 0.1, size=10)
         with pm.Model():
             mu = pm.Normal("mu", 0, 1)
