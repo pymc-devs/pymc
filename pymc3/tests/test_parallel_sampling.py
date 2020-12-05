@@ -177,10 +177,8 @@ def test_spawn_densitydist_bound_method():
         mu = pm.Normal("mu", 0, 1)
         normal_dist = pm.Normal.dist(mu, 1)
         obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
-        with pytest.raises(
-            ValueError,
-            match="logp for DensityDist is a bound method, leading to RecursionError while serializing",
-        ):
+        msg = "logp for DensityDist is a bound method, leading to RecursionError while serializing"
+        with pytest.raises(ValueError, match=msg):
             trace = pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
 
 
