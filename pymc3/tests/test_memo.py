@@ -20,6 +20,7 @@ from pymc3 import memoize
 def test_memo():
     def fun(inputs, suffix="_a"):
         return str(inputs) + str(suffix)
+
     inputs = ["i1", "i2"]
     assert fun(inputs) == "['i1', 'i2']_a"
     assert fun(inputs, "_b") == "['i1', 'i2']_b"
@@ -28,7 +29,9 @@ def test_memo():
     assert hasattr(fun, "cache")
     assert isinstance(fun.cache, dict)
     assert len(fun.cache) == 0
-    
+
+    # call the memoized function with a list input
+    # and check the size of the cache!
     assert funmem(inputs) == "['i1', 'i2']_a"
     assert funmem(inputs) == "['i1', 'i2']_a"
     assert len(fun.cache) == 1
@@ -49,10 +52,7 @@ def test_hashing_of_rv_tuples():
         mu = pm.Normal("mu", 0, 1)
         sd = pm.Gamma("sd", 1, 2)
         dd = pm.DensityDist(
-            "dd",
-            pm.Normal.dist(mu, sd).logp,
-            random=pm.Normal.dist(mu, sd).random,
-            observed=obs,
+            "dd", pm.Normal.dist(mu, sd).logp, random=pm.Normal.dist(mu, sd).random, observed=obs,
         )
         print()
         for freerv in [mu, sd, dd] + pmodel.free_RVs:

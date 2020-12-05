@@ -261,7 +261,7 @@ def biwrap(wrapper):
 def dataset_to_point_dict(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
     warnings.warn(
         "dataset_to_point_dict was renamed to dataset_to_point_list and will be removed!.",
-        DeprecationWarning
+        DeprecationWarning,
     )
     return dataset_to_point_list(ds)
 
@@ -289,8 +289,7 @@ def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tupl
         dataset = data.posterior
     else:
         raise ValueError(
-            "Argument must be xarray Dataset or arviz InferenceData. Got %s",
-            data.__class__,
+            "Argument must be xarray Dataset or arviz InferenceData. Got %s", data.__class__,
         )
 
     coords = dataset.coords
