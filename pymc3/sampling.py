@@ -332,7 +332,7 @@ def sample(
         the ``draw.chain`` argument can be used to determine which of the active chains the sample
         is drawn from.
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
-    jitter_max_retries: int
+    jitter_max_retries : int
         Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform jitter
         that yields a finite probability. This applies to ``jitter+adapt_diag`` and ``jitter+adapt_full``
         init methods.
@@ -1957,13 +1957,13 @@ def _init_jitter(model, chains, jitter_max_retries):
 
     pymc3.util.check_start_vals is used to test whether the jittered starting values produce
     a finite log probability. Invalid values are resampled unless `jitter_max_retries` is achieved,
-    in which case the last sampled values are returned
+    in which case the last sampled values are returned.
 
     Parameters
     ----------
     model : Model
     chains : int
-    jitter_max_retries: int
+    jitter_max_retries : int
         Maximum number of repeated attempts at initializing values (per chain).
 
     Returns
@@ -2039,7 +2039,7 @@ def init_nuts(
     model : Model (optional if in ``with`` context)
     progressbar : bool
         Whether or not to display a progressbar for advi sampling.
-    jitter_max_retries: int
+    jitter_max_retries : int
         Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform jitter
         that yields a finite probability. This applies to ``jitter+adapt_diag`` and ``jitter+adapt_full``
         init methods.
