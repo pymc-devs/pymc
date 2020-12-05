@@ -17,7 +17,6 @@ from itertools import combinations
 from typing import Tuple
 import numpy as np
 import unittest.mock as mock
-import sys
 
 import numpy.testing as npt
 import arviz as az
