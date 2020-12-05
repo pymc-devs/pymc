@@ -17,6 +17,7 @@ from itertools import combinations
 from typing import Tuple
 import numpy as np
 import unittest.mock as mock
+import sys
 
 import numpy.testing as npt
 import arviz as az
@@ -31,7 +32,6 @@ from scipy import stats
 import pytest
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestSample(SeededTest):
     def setup_method(self):
@@ -930,6 +930,9 @@ class TestSamplePriorPredictive(SeededTest):
 
         assert gen2["y"].shape == (draws, n2)
 
+    @pytest.mark.xfail(
+        condition=(sys.platform.startswith("win")), reason="Stackoverflow error on Windows"
+    )
     def test_density_dist(self):
 
         obs = np.random.normal(-1, 0.1, size=10)
