@@ -172,24 +172,25 @@ def test_spawn_densitydist_function():
         trace = pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
 
 
-@pytest.mark.xfail(raises=ValueError)
 def test_spawn_densitydist_bound_method():
     with pm.Model() as model:
         mu = pm.Normal("mu", 0, 1)
         normal_dist = pm.Normal.dist(mu, 1)
         obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
-        trace = pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
+        with pytest.raises(
+            ValueError,
+            match="logp for DensityDist is a bound method, leading to RecursionError while serializing",
+        ):
+            trace = pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
 
 
-# cannot test this properly: monkeypatching sys.platform messes up Theano
-# def test_spawn_densitydist_syswarning(monkeypatch):
-#     monkeypatch.setattr(sys, "platform", "win32")
-#     with pm.Model() as model:
-#         mu = pm.Normal('mu', 0, 1)
-#         normal_dist = pm.Normal.dist(mu, 1)
-#         with pytest.warns(UserWarning) as w:
-#             obs = pm.DensityDist('density_dist', normal_dist.logp, observed=np.random.randn(100))
-#         assert len(w) == 1 and "errors when sampling on platforms" in w[0].message.args[0]
+def test_spawn_densitydist_syswarning(monkeypatch):
+    monkeypatch.setattr("pymc3.distributions.distribution.PLATFORM", "win32")
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+        normal_dist = pm.Normal.dist(mu, 1)
+        with pytest.warns(UserWarning, match="errors when sampling on platforms"):
+            obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
 
 
 def test_spawn_densitydist_mpctxwarning(monkeypatch):
@@ -198,6 +199,5 @@ def test_spawn_densitydist_mpctxwarning(monkeypatch):
     with pm.Model() as model:
         mu = pm.Normal("mu", 0, 1)
         normal_dist = pm.Normal.dist(mu, 1)
-        with pytest.warns(UserWarning) as w:
+        with pytest.warns(UserWarning, match="errors when sampling when multiprocessing"):
             obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
-        assert len(w) == 1 and "errors when sampling when multiprocessing" in w[0].message.args[0]

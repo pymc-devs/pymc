@@ -54,6 +54,8 @@ vectorized_ppc = contextvars.ContextVar(
     "vectorized_ppc", default=None
 )  # type: contextvars.ContextVar[Optional[Callable]]
 
+PLATFORM = sys.platform
+
 
 class _Unpickling:
     pass
@@ -510,17 +512,17 @@ class DensityDist(Distribution):
         super().__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
         if type(self.logp) == types.MethodType:
-            if sys.platform != "linux":
+            if PLATFORM != "linux":
                 warnings.warn(
                     "You are passing a bound method as logp for DensityDist, this can lead to "
-                    + "errors when sampling on platforms other than Linux. Consider using a "
-                    + "plain function instead, or subclass Distribution."
+                    "errors when sampling on platforms other than Linux. Consider using a "
+                    "plain function instead, or subclass Distribution."
                 )
             elif type(multiprocessing.get_context()) != multiprocessing.context.ForkContext:
                 warnings.warn(
                     "You are passing a bound method as logp for DensityDist, this can lead to "
-                    + "errors when sampling when multiprocessing cannot rely on forking. Consider using a "
-                    + "plain function instead, or subclass Distribution."
+                    "errors when sampling when multiprocessing cannot rely on forking. Consider using a "
+                    "plain function instead, or subclass Distribution."
                 )
         self.rand = random
         self.wrap_random_with_dist_shape = wrap_random_with_dist_shape
