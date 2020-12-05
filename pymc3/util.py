@@ -15,6 +15,7 @@
 import re
 import functools
 from typing import List, Dict, Tuple, Union
+import warnings
 
 import numpy as np
 import xarray
@@ -258,6 +259,14 @@ def biwrap(wrapper):
 # FIXME: this function is poorly named, because it returns a LIST of
 # points, not a dictionary of points.
 def dataset_to_point_dict(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
+    warnings.warn(
+        "dataset_to_point_dict was renamed to dataset_to_point_list and will be removed!.",
+        DeprecationWarning
+    )
+    return dataset_to_point_list(ds)
+
+
+def dataset_to_point_list(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
     # grab posterior samples for each variable
     _samples: Dict[str, np.ndarray] = {vn: ds[vn].values for vn in ds.keys()}
     # make dicts
