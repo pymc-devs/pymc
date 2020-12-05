@@ -34,12 +34,12 @@ jobs:
             hashFiles('conda-envs/environment-dev-py37.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: testenv
+          activate-environment: pymc3-dev-py37
           channel-priority: strict
           environment-file: conda-envs/environment-dev-py37.yml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - run: |
-          conda activate testenv
+          conda activate pymc3-dev-py37
           conda remove arviz -y
           pip install git+git://github.com/arviz-devs/arviz.git
           python -m pytest -vv --cov=pymc3 --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
