@@ -1,3 +1,8 @@
+:orphan:
+
+..
+    _"learn" is referenced in html_theme_options docs/source/conf.py
+
 .. title:: Learning Resources
 
 .. raw:: html
@@ -99,7 +104,7 @@
 
         <div class="card">
             <div class="image">
-                <img src="https://lh5.googleusercontent.com/R1T8ZXbMi4vSO0JlnLQMkEQNvd2ncBb23OmHOsmw-t_oEOF6jJlfWuJoOK0MMmECSDymhUdfTS2yoMgkR2TY-xIiBTHCpeuYjzXqD3xhZ-MuIhs2ARcJ=w1280">
+                <img src="https://lh5.googleusercontent.com/Ms2ssellxl7cM6OEL_kpiKRojcj2E4ZaUWDXOa8zEwi-v9orJGYuhjczbwFSDJNsEb_ruiwtCJONNjoo7T1c7qorZm3LsAnroMAm4S5WzNT_PVqWz9aE=w1280">
             </div>
             <div class="content">
                 <div class="header">Doing Bayesian Data Analysis</div>

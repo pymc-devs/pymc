@@ -1,3 +1,8 @@
+:orphan:
+
+..
+    _href from docs/source/index.rst
+
 ================
 PyMC3 and Theano
 ================
