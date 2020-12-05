@@ -713,6 +713,10 @@ class TestScalarParameterSamples(SeededTest):
     def test_binomial(self):
         pymc3_random_discrete(pm.Binomial, {"n": Nat, "p": Unit}, ref_rand=st.binom.rvs)
 
+    @pytest.mark.xfail(
+        sys.platform.startswith("win"),
+        reason="Known issue: https://github.com/pymc-devs/pymc3/pull/4269",
+    )
     def test_beta_binomial(self):
         pymc3_random_discrete(
             pm.BetaBinomial, {"n": Nat, "alpha": Rplus, "beta": Rplus}, ref_rand=self._beta_bin
