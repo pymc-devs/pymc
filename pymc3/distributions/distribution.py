@@ -511,13 +511,17 @@ class DensityDist(Distribution):
         self.logp = logp
         if type(self.logp) == types.MethodType:
             if sys.platform != "linux":
-                warnings.warn("You are passing a bound method as logp for DensityDist, this can lead to " +
-                    "errors when sampling on platforms other than Linux. Consider using a " +
-                    "plain function instead, or subclass Distribution.")
+                warnings.warn(
+                    "You are passing a bound method as logp for DensityDist, this can lead to "
+                    + "errors when sampling on platforms other than Linux. Consider using a "
+                    + "plain function instead, or subclass Distribution."
+                )
             elif type(multiprocessing.get_context()) != multiprocessing.context.ForkContext:
-                warnings.warn("You are passing a bound method as logp for DensityDist, this can lead to " +
-                    "errors when sampling when multiprocessing cannot rely on forking. Consider using a " +
-                    "plain function instead, or subclass Distribution.")
+                warnings.warn(
+                    "You are passing a bound method as logp for DensityDist, this can lead to "
+                    + "errors when sampling when multiprocessing cannot rely on forking. Consider using a "
+                    + "plain function instead, or subclass Distribution."
+                )
         self.rand = random
         self.wrap_random_with_dist_shape = wrap_random_with_dist_shape
         self.check_shape_in_random = check_shape_in_random
@@ -530,7 +534,9 @@ class DensityDist(Distribution):
             logp = dill.dumps(self.logp)
         except RecursionError as err:
             if type(self.logp) == types.MethodType:
-                raise ValueError("logp for DensityDist is a bound method, leading to RecursionError while serializing") from err
+                raise ValueError(
+                    "logp for DensityDist is a bound method, leading to RecursionError while serializing"
+                ) from err
             else:
                 raise err
         vals = self.__dict__.copy()
