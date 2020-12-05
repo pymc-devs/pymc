@@ -9,10 +9,10 @@ jobs:
   pytest:
     strategy:
       matrix:
-        python-version: ["3.7"]
         os: [windows-latest]
         floatx: [float64]
         test-subset:
+          - pymc3/tests/test_distributions_random.py
           - pymc3/tests/test_sampling.py
     runs-on: ${{ matrix.os }}
     env:
@@ -26,17 +26,17 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v1
         env:
-          # Increase this value to reset cache if environment-dev.yml has not changed
+          # Increase this value to reset cache if conda-envs/environment-dev-py37.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('environment-dev.yml') }}
+            hashFiles('conda-envs/environment-dev-py37.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: testenv
           channel-priority: strict
-          environment-file: environment-dev.yml
+          environment-file: conda-envs/environment-dev-py37.yml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - run: |
           conda activate testenv
