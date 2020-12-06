@@ -260,7 +260,7 @@ def biwrap(wrapper):
 # points, not a dictionary of points.
 def dataset_to_point_dict(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
     warnings.warn(
-        "dataset_to_point_dict was renamed to dataset_to_point_list and will be removed!.",
+        "dataset_to_point_dict was renamed to dataset_to_point_list and will be removed!",
         DeprecationWarning,
     )
     return dataset_to_point_list(ds)
