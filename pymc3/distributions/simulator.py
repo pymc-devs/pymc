@@ -115,10 +115,10 @@ class Simulator(NoDistribution):
         array
         """
         params = draw_values([*self.params], point=point, size=size)
-        if size is None:
+        if not size:
             return self.function(*params)
         else:
-            return np.array([self.function(*params) for _ in range(size)])
+            return np.array([self.function(*params) for _ in range(size[0])])
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):
         if dist is None:
