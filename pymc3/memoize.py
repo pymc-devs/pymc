@@ -96,7 +96,7 @@ def hashable(a) -> int:
     if isinstance(a, (tuple, list)):
         # lists are mutable and not hashable by default
         # for memoization, we need the hash to depend on the items
-        return hash(tuple(map(hashable, a)))
+        return hash(tuple(hashable(i) for i in a))
     try:
         return hash(a)
     except TypeError:

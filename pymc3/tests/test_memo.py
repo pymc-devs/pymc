@@ -57,13 +57,11 @@ def test_hashing_of_rv_tuples():
             random=pm.Normal.dist(mu, sd).random,
             observed=obs,
         )
-        print()
         for freerv in [mu, sd, dd] + pmodel.free_RVs:
             for structure in [
                 freerv,
-                dict(alpha=freerv, omega=None),
+                {"alpha": freerv, "omega": None},
                 [freerv, []],
                 (freerv, []),
             ]:
-                print(f"testing hashing of: {structure}")
                 assert isinstance(memoize.hashable(structure), int)
