@@ -7,7 +7,7 @@ on:
 
 jobs:
   pytest:
-    if: contains(toJson(github.event.commits), '[skip ci]') == false
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
     strategy:
       matrix:
         os: [ubuntu-18.04]
