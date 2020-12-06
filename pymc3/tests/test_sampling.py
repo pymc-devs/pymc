@@ -32,7 +32,6 @@ import pytest
 
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestSample(SeededTest):
     def setup_method(self):
         super().setup_method()
@@ -953,7 +952,6 @@ class TestSamplePriorPredictive(SeededTest):
         assert gen2["y"].shape == (draws, n2)
 
     def test_density_dist(self):
-
         obs = np.random.normal(-1, 0.1, size=10)
         with pm.Model():
             mu = pm.Normal("mu", 0, 1)

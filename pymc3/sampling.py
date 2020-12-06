@@ -56,7 +56,7 @@ from .util import (
     get_untransformed_name,
     is_transformed_name,
     get_default_varnames,
-    dataset_to_point_dict,
+    dataset_to_point_list,
     chains_and_samples,
 )
 from .vartypes import discrete_types
@@ -1648,9 +1648,9 @@ def sample_posterior_predictive(
 
     _trace: Union[MultiTrace, PointList]
     if isinstance(trace, InferenceData):
-        _trace = dataset_to_point_dict(trace.posterior)
+        _trace = dataset_to_point_list(trace.posterior)
     elif isinstance(trace, xarray.Dataset):
-        _trace = dataset_to_point_dict(trace)
+        _trace = dataset_to_point_list(trace)
     else:
         _trace = trace
 
@@ -1786,10 +1786,10 @@ def sample_posterior_predictive_w(
         n_samples = [
             trace.posterior.sizes["chain"] * trace.posterior.sizes["draw"] for trace in traces
         ]
-        traces = [dataset_to_point_dict(trace.posterior) for trace in traces]
+        traces = [dataset_to_point_list(trace.posterior) for trace in traces]
     elif isinstance(traces[0], xarray.Dataset):
         n_samples = [trace.sizes["chain"] * trace.sizes["draw"] for trace in traces]
-        traces = [dataset_to_point_dict(trace) for trace in traces]
+        traces = [dataset_to_point_list(trace) for trace in traces]
     else:
         n_samples = [len(i) * i.nchains for i in traces]
 

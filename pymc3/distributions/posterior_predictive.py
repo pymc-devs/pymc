@@ -42,7 +42,7 @@ from ..model import (
 )
 from ..exceptions import IncorrectArgumentsError
 from ..vartypes import theano_constant
-from ..util import dataset_to_point_dict, chains_and_samples, get_var_name
+from ..util import dataset_to_point_list, chains_and_samples, get_var_name
 
 # Failing tests:
 #    test_mixture_random_shape::test_mixture_random_shape
@@ -209,10 +209,10 @@ def fast_sample_posterior_predictive(
 
     if isinstance(trace, InferenceData):
         nchains, ndraws = chains_and_samples(trace)
-        trace = dataset_to_point_dict(trace.posterior)
+        trace = dataset_to_point_list(trace.posterior)
     elif isinstance(trace, Dataset):
         nchains, ndraws = chains_and_samples(trace)
-        trace = dataset_to_point_dict(trace)
+        trace = dataset_to_point_list(trace)
     elif isinstance(trace, MultiTrace):
         nchains = trace.nchains
         ndraws = len(trace)
