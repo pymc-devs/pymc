@@ -1664,6 +1664,10 @@ class TestMvNormal(SeededTest):
         for var in "abcd":
             assert not np.isnan(np.std(samples[var]))
 
+        for var in "bcd":
+            std = np.std(samples[var] - samples["a"])
+            np.testing.assert_allclose(std, 1, rtol=1e-2)
+
     def test_issue_3829(self):
         with pm.Model() as model:
             x = pm.MvNormal("x", mu=np.zeros(5), cov=np.eye(5), shape=(2, 5))
