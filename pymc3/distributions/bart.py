@@ -61,9 +61,9 @@ class BaseBART(NoDistribution):
 
     def preprocess_XY(self, X, Y):
         if isinstance(Y, (Series, DataFrame)):
-            Y = Y.values
+            Y = Y.to_numpy()
         if isinstance(X, (Series, DataFrame)):
-            X = X.values
+            X = X.to_numpy()
         missing_data = np.any(np.isnan(X))
         X = np.random.normal(X, np.std(X, 0) / 100)
         return X, Y, missing_data
