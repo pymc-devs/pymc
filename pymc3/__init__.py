@@ -38,16 +38,16 @@ def __set_compiler_flags():
 
 __set_compiler_flags()
 
-from . import gp, ode, sampling
-from .backends import load_trace, save_trace
-from .backends.tracetab import *
-from .blocking import *
-from .data import *
-from .distributions import *
-from .distributions import transforms
-from .exceptions import *
-from .glm import *
-from .math import (
+from pymc3 import gp, ode, sampling
+from pymc3.backends import load_trace, save_trace
+from pymc3.backends.tracetab import *
+from pymc3.blocking import *
+from pymc3.data import *
+from pymc3.distributions import *
+from pymc3.distributions import transforms
+from pymc3.exceptions import *
+from pymc3.glm import *
+from pymc3.math import (
     expand_packed_triangular,
     invlogit,
     invprobit,
@@ -56,15 +56,15 @@ from .math import (
     logsumexp,
     probit,
 )
-from .model import *
-from .model_graph import model_to_graphviz
-from .plots import *
-from .sampling import *
-from .smc import *
-from .stats import *
-from .step_methods import *
-from .tests import test
-from .theanof import *
-from .tuning import *
-from .variational import *
-from .vartypes import *
+from pymc3.model import *
+from pymc3.model_graph import model_to_graphviz
+from pymc3.plots import *
+from pymc3.sampling import *
+from pymc3.smc import *
+from pymc3.stats import *
+from pymc3.step_methods import *
+from pymc3.tests import test
+from pymc3.theanof import *
+from pymc3.tuning import *
+from pymc3.variational import *
+from pymc3.vartypes import *

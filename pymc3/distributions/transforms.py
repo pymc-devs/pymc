@@ -19,11 +19,11 @@ import theano.tensor as tt
 
 from scipy.special import logit as nplogit
 
-from ..math import invlogit, logit, logsumexp
-from ..model import FreeRV
-from ..theanof import floatX, gradient
-from . import distribution
-from .distribution import draw_values
+from pymc3.distributions import distribution
+from pymc3.distributions.distribution import draw_values
+from pymc3.math import invlogit, logit, logsumexp
+from pymc3.model import FreeRV
+from pymc3.theanof import floatX, gradient
 
 __all__ = [
     "Transform",

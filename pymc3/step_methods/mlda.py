@@ -24,10 +24,15 @@ import theano.tensor as tt
 
 import pymc3 as pm
 
-from ..model import Model
-from .arraystep import ArrayStepShared, Competence, metrop_select
-from .compound import CompoundStep
-from .metropolis import DEMetropolisZ, Metropolis, Proposal, delta_logp
+from pymc3.model import Model
+from pymc3.step_methods.arraystep import ArrayStepShared, Competence, metrop_select
+from pymc3.step_methods.compound import CompoundStep
+from pymc3.step_methods.metropolis import (
+    DEMetropolisZ,
+    Metropolis,
+    Proposal,
+    delta_logp,
+)
 
 __all__ = [
     "MetropolisMLDA",

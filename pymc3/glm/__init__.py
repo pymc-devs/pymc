@@ -12,5 +12,5 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from . import families
-from .linear import GLM, LinearComponent
+from pymc3.glm import families
+from pymc3.glm.linear import GLM, LinearComponent

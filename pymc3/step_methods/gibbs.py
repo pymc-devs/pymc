@@ -34,9 +34,9 @@ from numpy.random import uniform
 from theano.gof.graph import inputs
 from theano.tensor import add
 
-from ..distributions.discrete import Categorical
-from ..model import modelcontext
-from .arraystep import ArrayStep, Competence
+from pymc3.distributions.discrete import Categorical
+from pymc3.model import modelcontext
+from pymc3.step_methods.arraystep import ArrayStep, Competence
 
 __all__ = ["ElemwiseCategorical"]
 

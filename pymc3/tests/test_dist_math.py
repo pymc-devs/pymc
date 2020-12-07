@@ -22,8 +22,8 @@ from scipy import interpolate, stats
 
 import pymc3 as pm
 
-from ..distributions import Discrete
-from ..distributions.dist_math import (
+from pymc3.distributions import Discrete
+from pymc3.distributions.dist_math import (
     MvNormalLogp,
     SplineWrapper,
     alltrue_scalar,
@@ -32,8 +32,8 @@ from ..distributions.dist_math import (
     factln,
     i0e,
 )
-from ..theanof import floatX
-from .helpers import verify_grad
+from pymc3.tests.helpers import verify_grad
+from pymc3.theanof import floatX
 
 
 def test_bound():

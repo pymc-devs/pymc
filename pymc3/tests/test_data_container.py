@@ -18,8 +18,8 @@ import pytest
 
 import pymc3 as pm
 
-from ..theanof import floatX
-from .helpers import SeededTest
+from pymc3.tests.helpers import SeededTest
+from pymc3.theanof import floatX
 
 
 class TestData(SeededTest):

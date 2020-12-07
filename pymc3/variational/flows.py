@@ -17,11 +17,11 @@ import theano
 
 from theano import tensor as tt
 
-from ..distributions.dist_math import rho2sigma
-from ..memoize import WithMemoization
-from ..theanof import change_flags
-from . import opvi
-from .opvi import collect_shared_to_list, node_property
+from pymc3.distributions.dist_math import rho2sigma
+from pymc3.memoize import WithMemoization
+from pymc3.theanof import change_flags
+from pymc3.variational import opvi
+from pymc3.variational.opvi import collect_shared_to_list, node_property
 
 __all__ = ["Formula", "PlanarFlow", "HouseholderFlow", "RadialFlow", "LocFlow", "ScaleFlow"]
 

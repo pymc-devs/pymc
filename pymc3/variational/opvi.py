@@ -55,15 +55,13 @@ import theano.tensor as tt
 
 import pymc3 as pm
 
-from pymc3.util import get_transformed
-
-from ..backends import NDArray
-from ..blocking import ArrayOrdering, DictToArrayBijection, VarMap
-from ..memoize import WithMemoization, memoize
-from ..model import modelcontext
-from ..theanof import change_flags, identity, tt_rng
-from ..util import get_default_varnames
-from .updates import adagrad_window
+from pymc3.backends import NDArray
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection, VarMap
+from pymc3.memoize import WithMemoization, memoize
+from pymc3.model import modelcontext
+from pymc3.theanof import change_flags, identity, tt_rng
+from pymc3.util import get_default_varnames, get_transformed
+from pymc3.variational.updates import adagrad_window
 
 __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximation"]
 

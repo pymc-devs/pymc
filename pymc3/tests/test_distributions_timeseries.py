@@ -15,16 +15,16 @@
 import numpy as np
 import pytest
 
-from ..distributions.continuous import Flat, Normal
-from ..distributions.timeseries import AR, AR1, GARCH11, EulerMaruyama
-from ..model import Model
-from ..sampling import (
+from pymc3.distributions.continuous import Flat, Normal
+from pymc3.distributions.timeseries import AR, AR1, GARCH11, EulerMaruyama
+from pymc3.model import Model
+from pymc3.sampling import (
     fast_sample_posterior_predictive,
     sample,
     sample_posterior_predictive,
 )
-from ..theanof import floatX
-from .helpers import select_by_precision
+from pymc3.tests.helpers import select_by_precision
+from pymc3.theanof import floatX
 
 pytestmark = pytest.mark.usefixtures("seeded_test")
 
