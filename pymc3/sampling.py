@@ -14,60 +14,63 @@
 
 """Functions for MCMC sampling."""
 
-from typing import Dict, List, Optional, cast, Union, Any
-from typing import Iterable as TIterable
-from collections.abc import Iterable
-from collections import defaultdict
-from copy import copy
-import packaging
-import pickle
 import logging
+import pickle
+import sys
 import time
 import warnings
 
+from collections import defaultdict
+from collections.abc import Iterable
+from copy import copy
+from typing import Any, Dict
+from typing import Iterable as TIterable
+from typing import List, Optional, Union, cast
+
 import arviz
-from arviz import InferenceData
 import numpy as np
+import packaging
 import theano.gradient as tg
-from theano.tensor import Tensor
 import xarray
+
+from arviz import InferenceData
+from fastprogress.fastprogress import progress_bar
+from theano.tensor import Tensor
+
+import pymc3 as pm
+
+from pymc3.step_methods.hmc import quadpotential
 
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .distributions.distribution import draw_values
 from .distributions.posterior_predictive import fast_sample_posterior_predictive
-from .model import modelcontext, Point, all_continuous, Model
+from .exceptions import IncorrectArgumentsError, SamplingError
+from .model import Model, Point, all_continuous, modelcontext
+from .parallel_sampling import Draw, _cpu_count
 from .step_methods import (
     NUTS,
+    PGBART,
+    BinaryGibbsMetropolis,
+    BinaryMetropolis,
+    CategoricalGibbsMetropolis,
+    CompoundStep,
+    DEMetropolis,
     HamiltonianMC,
     Metropolis,
-    BinaryMetropolis,
-    BinaryGibbsMetropolis,
-    CategoricalGibbsMetropolis,
-    DEMetropolis,
     Slice,
-    CompoundStep,
     arraystep,
-    PGBART,
 )
 from .util import (
+    chains_and_samples,
     check_start_vals,
-    update_start_vals,
+    dataset_to_point_list,
+    get_default_varnames,
     get_untransformed_name,
     is_transformed_name,
-    get_default_varnames,
-    dataset_to_point_list,
-    chains_and_samples,
+    update_start_vals,
 )
 from .vartypes import discrete_types
-from .exceptions import IncorrectArgumentsError, SamplingError
-from .parallel_sampling import _cpu_count, Draw
-from pymc3.step_methods.hmc import quadpotential
-import pymc3 as pm
-from fastprogress.fastprogress import progress_bar
-
-
-import sys
 
 sys.setrecursionlimit(10000)
 

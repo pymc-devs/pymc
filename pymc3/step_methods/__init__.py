@@ -13,26 +13,23 @@
 #   limitations under the License.
 
 from .compound import CompoundStep
-
-from .hmc import HamiltonianMC, NUTS
-
-from .metropolis import Metropolis
-from .metropolis import DEMetropolis, DEMetropolisZ
-from .metropolis import BinaryMetropolis
-from .metropolis import BinaryGibbsMetropolis
-from .metropolis import CategoricalGibbsMetropolis
-from .mlda import MLDA, MetropolisMLDA, DEMetropolisZMLDA, RecursiveDAProposal
-from .metropolis import NormalProposal
-from .metropolis import UniformProposal
-from .metropolis import CauchyProposal
-from .metropolis import LaplaceProposal
-from .metropolis import PoissonProposal
-from .metropolis import MultivariateNormalProposal
-
-from .gibbs import ElemwiseCategorical
-
-from .slicer import Slice
-
 from .elliptical_slice import EllipticalSlice
-
+from .gibbs import ElemwiseCategorical
+from .hmc import NUTS, HamiltonianMC
+from .metropolis import (
+    BinaryGibbsMetropolis,
+    BinaryMetropolis,
+    CategoricalGibbsMetropolis,
+    CauchyProposal,
+    DEMetropolis,
+    DEMetropolisZ,
+    LaplaceProposal,
+    Metropolis,
+    MultivariateNormalProposal,
+    NormalProposal,
+    PoissonProposal,
+    UniformProposal,
+)
+from .mlda import MLDA, DEMetropolisZMLDA, MetropolisMLDA, RecursiveDAProposal
 from .pgbart import PGBART
+from .slicer import Slice

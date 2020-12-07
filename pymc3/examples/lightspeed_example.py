@@ -1,4 +1,5 @@
 import numpy as np
+
 import pymc3 as pm
 
 light_speed = np.array(

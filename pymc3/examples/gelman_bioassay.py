@@ -1,5 +1,6 @@
+from numpy import array, ones
+
 import pymc3 as pm
-from numpy import ones, array
 
 # Samples for each dose level
 n = 5 * ones(4, dtype=int)

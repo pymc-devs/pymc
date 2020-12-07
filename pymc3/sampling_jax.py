@@ -37,8 +37,9 @@ def sample_tfp_nuts(
     num_tuning_epoch=2,
     num_compute_step_size=500,
 ):
-    from tensorflow_probability.substrates import jax as tfp
     import jax
+
+    from tensorflow_probability.substrates import jax as tfp
 
     model = modelcontext(model)
 

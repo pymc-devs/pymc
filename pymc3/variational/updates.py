@@ -109,14 +109,14 @@ Notes
 Taken from the Lasagne project: http://lasagne.readthedocs.io/en/latest/
 
 """
-from functools import partial
 from collections import OrderedDict
-import numpy as np
+from functools import partial
 
+import numpy as np
 import theano
 import theano.tensor as tt
-import pymc3 as pm
 
+import pymc3 as pm
 
 __all__ = [
     "sgd",

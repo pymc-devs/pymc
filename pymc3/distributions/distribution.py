@@ -12,31 +12,42 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import contextvars
+import inspect
 import multiprocessing
 import numbers
-import contextvars
-import dill
-import inspect
 import sys
 import types
-from typing import TYPE_CHECKING
 import warnings
+
+from typing import TYPE_CHECKING
+
+import dill
 
 if TYPE_CHECKING:
     from typing import Optional, Callable
 
 import numpy as np
-import theano.tensor as tt
-from theano import function
-from ..util import get_repr_for_variable, get_var_name
 import theano
+import theano.tensor as tt
+
+from theano import function
+
 from ..memoize import memoize
-from ..model import Model, build_named_node_tree, FreeRV, ObservedRV, MultiObservedRV, ContextMeta
+from ..model import (
+    ContextMeta,
+    FreeRV,
+    Model,
+    MultiObservedRV,
+    ObservedRV,
+    build_named_node_tree,
+)
+from ..util import get_repr_for_variable, get_var_name
 from ..vartypes import string_types, theano_constant
 from .shape_utils import (
-    to_tuple,
-    get_broadcastable_dist_samples,
     broadcast_dist_samples_shape,
+    get_broadcastable_dist_samples,
+    to_tuple,
 )
 
 __all__ = [

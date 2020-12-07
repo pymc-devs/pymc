@@ -15,12 +15,15 @@
 import matplotlib
 import numpy as np
 import pandas as pd
-import pymc3 as pm
-import theano.tensor as tt
 import pytest
 import theano
-from pymc3.theanof import floatX
+import theano.tensor as tt
+
 from packaging import version
+
+import pymc3 as pm
+
+from pymc3.theanof import floatX
 
 from .helpers import SeededTest
 

@@ -12,5 +12,5 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from .scaling import find_hessian, guess_scaling, trace_cov
 from .starting import find_MAP
-from .scaling import find_hessian, trace_cov, guess_scaling

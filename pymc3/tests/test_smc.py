@@ -12,9 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pymc3 as pm
 import numpy as np
 import theano.tensor as tt
+
+import pymc3 as pm
+
 from .helpers import SeededTest
 
 

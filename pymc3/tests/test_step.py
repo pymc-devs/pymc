@@ -13,54 +13,64 @@
 #   limitations under the License.
 
 import shutil
-import tempfile
 import sys
+import tempfile
 
-from .checks import close_to
-from .models import (
-    simple_categorical,
-    mv_simple,
-    mv_simple_coarse,
-    mv_simple_very_coarse,
-    mv_simple_discrete,
-    mv_prior_simple,
-    simple_2model_continuous,
-)
-from pymc3.sampling import assign_step_methods, sample
-from pymc3.exceptions import SamplingError
-from pymc3.model import Model, Potential, set_data
+from math import isclose
 
-from pymc3.step_methods import (
-    NUTS,
-    BinaryGibbsMetropolis,
-    CategoricalGibbsMetropolis,
-    Metropolis,
-    Slice,
-    CompoundStep,
-    NormalProposal,
-    UniformProposal,
-    MultivariateNormalProposal,
-    RecursiveDAProposal,
-    HamiltonianMC,
-    EllipticalSlice,
-    DEMetropolis,
-    DEMetropolisZ,
-    MLDA,
-)
-from pymc3.step_methods.mlda import extract_Q_estimate
-from pymc3.theanof import floatX
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal, MvNormal
-from pymc3.data import Data
-
-from numpy.testing import assert_array_almost_equal
 import arviz as az
 import numpy as np
 import numpy.testing as npt
 import pytest
 import theano
 import theano.tensor as tt
+
+from numpy.testing import assert_array_almost_equal
+
+from pymc3.data import Data
+from pymc3.distributions import (
+    Bernoulli,
+    Beta,
+    Binomial,
+    Categorical,
+    HalfNormal,
+    MvNormal,
+    Normal,
+)
+from pymc3.exceptions import SamplingError
+from pymc3.model import Model, Potential, set_data
+from pymc3.sampling import assign_step_methods, sample
+from pymc3.step_methods import (
+    MLDA,
+    NUTS,
+    BinaryGibbsMetropolis,
+    CategoricalGibbsMetropolis,
+    CompoundStep,
+    DEMetropolis,
+    DEMetropolisZ,
+    EllipticalSlice,
+    HamiltonianMC,
+    Metropolis,
+    MultivariateNormalProposal,
+    NormalProposal,
+    RecursiveDAProposal,
+    Slice,
+    UniformProposal,
+)
+from pymc3.step_methods.mlda import extract_Q_estimate
+from pymc3.theanof import floatX
+
+from .checks import close_to
 from .helpers import select_by_precision
-from math import isclose
+from .models import (
+    mv_prior_simple,
+    mv_simple,
+    mv_simple_coarse,
+    mv_simple_discrete,
+    mv_simple_very_coarse,
+    simple_2model_continuous,
+    simple_categorical,
+)
 
 
 class TestStepMethods:  # yield test doesn't work subclassing object

@@ -12,17 +12,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import time
 import logging
-import warnings
-from collections.abc import Iterable
 import multiprocessing as mp
+import time
+import warnings
+
+from collections.abc import Iterable
+
 import numpy as np
 
-from .smc import SMC
-from ..model import modelcontext
 from ..backends.base import MultiTrace
+from ..model import modelcontext
 from ..parallel_sampling import _cpu_count
+from .smc import SMC
 
 
 def sample_smc(

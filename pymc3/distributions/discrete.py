@@ -12,17 +12,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numpy as np
-import theano.tensor as tt
-from scipy import stats
 import warnings
 
-from .dist_math import bound, factln, binomln, betaln, logpow, random_choice
+import numpy as np
+import theano.tensor as tt
+
+from scipy import stats
+
+from pymc3.math import log1pexp, logaddexp, logit, sigmoid, tround
+
+from ..theanof import floatX, intX, take_along_axis
+from .dist_math import betaln, binomln, bound, factln, logpow, random_choice
 from .distribution import Discrete, draw_values, generate_samples
 from .shape_utils import broadcast_distribution_samples
-from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
-from ..theanof import floatX, intX, take_along_axis
-
 
 __all__ = [
     "Binomial",

@@ -12,14 +12,17 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import logging
+
 import numpy as np
 import numpy.testing as npt
 
-from . import models
-from pymc3.step_methods.hmc.base_hmc import BaseHMC
 import pymc3
-import logging
+
+from pymc3.step_methods.hmc.base_hmc import BaseHMC
 from pymc3.theanof import floatX
+
+from . import models
 
 logger = logging.getLogger("pymc3")
 

@@ -7,11 +7,13 @@ normalized effective sampling rates.
 """
 
 
-import numpy as np
 import time
+
+import numpy as np
 import pandas as pd
-import pymc3 as pm
 import theano.tensor as tt
+
+import pymc3 as pm
 
 # with this flag one can switch between defining the bivariate normal as
 # either a 2D MvNormal (USE_XY = False) split up the two dimensions into

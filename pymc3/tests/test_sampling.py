@@ -12,23 +12,27 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import unittest.mock as mock
+
 from contextlib import ExitStack as does_not_raise
 from itertools import combinations
 from typing import Tuple
-import numpy as np
-import unittest.mock as mock
 
-import numpy.testing as npt
 import arviz as az
-import pymc3 as pm
-import theano.tensor as tt
-from theano import shared
-import theano
-from pymc3.tests.models import simple_init
-from pymc3.tests.helpers import SeededTest
-from pymc3.exceptions import IncorrectArgumentsError, SamplingError
-from scipy import stats
+import numpy as np
+import numpy.testing as npt
 import pytest
+import theano
+import theano.tensor as tt
+
+from scipy import stats
+from theano import shared
+
+import pymc3 as pm
+
+from pymc3.exceptions import IncorrectArgumentsError, SamplingError
+from pymc3.tests.helpers import SeededTest
+from pymc3.tests.models import simple_init
 
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")

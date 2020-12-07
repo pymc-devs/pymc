@@ -12,12 +12,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pymc3 as pm
-from ..theanof import floatX
-from .helpers import SeededTest
 import numpy as np
 import pandas as pd
 import pytest
+
+import pymc3 as pm
+
+from ..theanof import floatX
+from .helpers import SeededTest
 
 
 class TestData(SeededTest):

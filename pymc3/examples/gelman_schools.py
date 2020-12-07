@@ -1,5 +1,6 @@
-from pymc3 import HalfCauchy, Normal, sample, Model, loo
 import numpy as np
+
+from pymc3 import HalfCauchy, Model, Normal, loo, sample
 
 """Original Stan model
 

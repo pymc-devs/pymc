@@ -12,29 +12,31 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 from collections.abc import Iterable
+
 import numpy as np
 import theano
 import theano.tensor as tt
-import warnings
 
 from ..math import logsumexp
+from ..theanof import _conversion_map, take_along_axis
+from .continuous import Normal, get_tau_sigma
 from .dist_math import bound, random_choice
 from .distribution import (
     Discrete,
     Distribution,
-    draw_values,
-    generate_samples,
     _DrawValuesContext,
     _DrawValuesContextBlocker,
+    draw_values,
+    generate_samples,
 )
 from .shape_utils import (
-    to_tuple,
     broadcast_distribution_samples,
     get_broadcastable_dist_samples,
+    to_tuple,
 )
-from .continuous import get_tau_sigma, Normal
-from ..theanof import _conversion_map, take_along_axis
 
 __all__ = ["Mixture", "NormalMixture", "MixtureSameFamily"]
 
