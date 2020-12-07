@@ -15,6 +15,7 @@
 import numpy as np
 
 from pandas import DataFrame, Series
+
 from .distribution import NoDistribution
 from .tree import LeafNode, SplitNode, Tree
 
