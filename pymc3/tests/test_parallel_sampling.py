@@ -14,12 +14,13 @@
 import multiprocessing
 import os
 
+import numpy as np
 import pytest
-import pymc3.parallel_sampling as ps
-import pymc3 as pm
 import theano
 import theano.tensor as tt
-import numpy as np
+
+import pymc3 as pm
+import pymc3.parallel_sampling as ps
 
 
 def test_context():

@@ -5,9 +5,10 @@ This is intended to be used as a pre-commit hook, see `.pre-commit-config.yaml`.
 You can run it manually with `pre-commit run check-toc --all`.
 """
 
-from pathlib import Path
 import argparse
 import ast
+
+from pathlib import Path
 
 if __name__ == "__main__":
     toc_examples = (Path("docs") / "source/notebooks/table_of_contents_examples.js").read_text()

@@ -18,16 +18,17 @@ See the docstring for pymc3.backends for more information
 """
 import itertools as itl
 import logging
-from typing import List
+import warnings
+
 from abc import ABC
+from typing import List
 
 import numpy as np
-import warnings
 import theano.tensor as tt
 
 from ..model import modelcontext
-from .report import SamplerReport, merge_reports
 from ..util import get_var_name
+from .report import SamplerReport, merge_reports
 
 logger = logging.getLogger("pymc3")
 

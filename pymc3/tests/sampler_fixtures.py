@@ -12,12 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pymc3 as pm
-from pymc3.util import get_var_name
 import numpy as np
 import numpy.testing as npt
-from scipy import stats
 import theano.tensor as tt
+
+from scipy import stats
+
+import pymc3 as pm
+
+from pymc3.util import get_var_name
 
 from .helpers import SeededTest
 

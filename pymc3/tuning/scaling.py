@@ -13,10 +13,12 @@
 #   limitations under the License.
 
 import numpy as np
+
 from numpy import exp, log, sqrt
-from ..model import modelcontext, Point
+
+from ..blocking import ArrayOrdering, DictToArrayBijection
+from ..model import Point, modelcontext
 from ..theanof import hessian_diag, inputvars
-from ..blocking import DictToArrayBijection, ArrayOrdering
 from ..util import get_var_name
 
 __all__ = ["find_hessian", "trace_cov", "guess_scaling"]

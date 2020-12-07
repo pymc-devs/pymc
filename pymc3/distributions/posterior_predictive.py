@@ -1,48 +1,50 @@
+import contextvars
+import logging
 import numbers
+import warnings
+
+from collections import UserDict
+from contextlib import AbstractContextManager
 from typing import (
-    List,
-    Dict,
+    TYPE_CHECKING,
     Any,
+    Callable,
+    Dict,
+    List,
     Optional,
+    Set,
     Tuple,
     Union,
     cast,
-    TYPE_CHECKING,
-    Callable,
     overload,
-    Set,
 )
-import warnings
-import logging
-from collections import UserDict
-from contextlib import AbstractContextManager
-import contextvars
-from typing_extensions import Protocol, Literal
 
 import numpy as np
 import theano
 import theano.tensor as tt
-from xarray import Dataset
+
 from arviz import InferenceData
+from typing_extensions import Literal, Protocol
+from xarray import Dataset
 
 from ..backends.base import MultiTrace
+from ..exceptions import IncorrectArgumentsError
+from ..model import (
+    Model,
+    MultiObservedRV,
+    ObservedRV,
+    get_named_nodes_and_relations,
+    modelcontext,
+)
+from ..util import chains_and_samples, dataset_to_point_list, get_var_name
+from ..vartypes import theano_constant
 from .distribution import (
+    _compile_theano_function,
     _DrawValuesContext,
     _DrawValuesContextBlocker,
     is_fast_drawable,
-    _compile_theano_function,
     vectorized_ppc,
 )
-from ..model import (
-    Model,
-    get_named_nodes_and_relations,
-    ObservedRV,
-    MultiObservedRV,
-    modelcontext,
-)
-from ..exceptions import IncorrectArgumentsError
-from ..vartypes import theano_constant
-from ..util import dataset_to_point_list, chains_and_samples, get_var_name
 
 # Failing tests:
 #    test_mixture_random_shape::test_mixture_random_shape

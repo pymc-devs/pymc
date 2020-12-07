@@ -12,14 +12,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from ..model import Model
-from ..distributions.continuous import Flat, Normal
-from ..distributions.timeseries import EulerMaruyama, AR1, AR, GARCH11
-from ..sampling import sample, sample_posterior_predictive, fast_sample_posterior_predictive
-from ..theanof import floatX
-
 import numpy as np
 import pytest
+
+from ..distributions.continuous import Flat, Normal
+from ..distributions.timeseries import AR, AR1, GARCH11, EulerMaruyama
+from ..model import Model
+from ..sampling import (
+    fast_sample_posterior_predictive,
+    sample,
+    sample_posterior_predictive,
+)
+from ..theanof import floatX
 from .helpers import select_by_precision
 
 pytestmark = pytest.mark.usefixtures("seeded_test")

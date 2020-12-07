@@ -12,18 +12,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import re
 import functools
-from typing import List, Dict, Tuple, Union
+import re
 import warnings
 
+from typing import Dict, List, Tuple, Union
+
+import arviz
 import numpy as np
 import xarray
-import arviz
 
-from pymc3.exceptions import SamplingError
 from theano.tensor import TensorVariable
 
+from pymc3.exceptions import SamplingError
 
 LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
 

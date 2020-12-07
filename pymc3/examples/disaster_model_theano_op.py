@@ -5,10 +5,12 @@ Note that gradient based samplers will not work.
 """
 
 
-import pymc3 as pm
-from theano.compile.ops import as_op
 import theano.tensor as tt
+
 from numpy import arange, array, empty
+from theano.compile.ops import as_op
+
+import pymc3 as pm
 
 __all__ = ["disasters_data", "switchpoint", "early_mean", "late_mean", "rate", "disasters"]
 

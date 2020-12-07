@@ -13,45 +13,49 @@
 #   limitations under the License.
 
 import itertools
-import pytest
-import numpy as np
-import numpy.testing as npt
-import scipy.stats as st
-from scipy.special import expit
-from scipy import linalg
-import numpy.random as nr
-import theano
 import sys
 
+import numpy as np
+import numpy.random as nr
+import numpy.testing as npt
+import pytest
+import scipy.stats as st
+import theano
+
+from scipy import linalg
+from scipy.special import expit
+
 import pymc3 as pm
+
 from pymc3.distributions.dist_math import clipped_beta_rvs
 from pymc3.distributions.distribution import (
-    draw_values,
     _DrawValuesContext,
     _DrawValuesContextBlocker,
+    draw_values,
     to_tuple,
 )
+
 from .helpers import SeededTest
 from .test_distributions import (
-    build_model,
     Domain,
-    product,
-    R,
-    Rplus,
-    Rplusbig,
-    Runif,
-    Rplusdunif,
-    Unit,
+    I,
     Nat,
     NatSmall,
-    I,
-    Simplex,
-    Vector,
     PdMatrix,
     PdMatrixChol,
     PdMatrixCholUpper,
-    RealMatrix,
+    R,
     RandomPdMatrix,
+    RealMatrix,
+    Rplus,
+    Rplusbig,
+    Rplusdunif,
+    Runif,
+    Simplex,
+    Unit,
+    Vector,
+    build_model,
+    product,
 )
 
 

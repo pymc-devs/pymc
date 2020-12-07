@@ -13,9 +13,14 @@
 #   limitations under the License.
 
 import threading
+
 from pytest import raises
+
 from pymc3 import Model, Normal
-from pymc3.distributions.distribution import _DrawValuesContext, _DrawValuesContextBlocker
+from pymc3.distributions.distribution import (
+    _DrawValuesContext,
+    _DrawValuesContextBlocker,
+)
 from pymc3.model import modelcontext
 
 

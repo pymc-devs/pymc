@@ -12,12 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from theano import function
+import numpy as np
+import scipy.special as ss
 import theano.tensor as tt
 
+from theano import function
+
 import pymc3.distributions.special as ps
-import scipy.special as ss
-import numpy as np
 
 from .checks import close_to
 

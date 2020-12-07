@@ -17,10 +17,10 @@
 import numpy as np
 import numpy.random as nr
 
-from .arraystep import ArrayStep, Competence
 from ..model import modelcontext
 from ..theanof import inputvars
 from ..vartypes import continuous_types
+from .arraystep import ArrayStep, Competence
 
 __all__ = ["Slice"]
 

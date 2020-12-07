@@ -17,9 +17,10 @@ pymc3.blocking
 
 Classes for working with subsets of parameters.
 """
-import copy
-import numpy as np
 import collections
+import copy
+
+import numpy as np
 
 from .util import get_var_name
 

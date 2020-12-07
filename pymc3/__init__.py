@@ -38,38 +38,33 @@ def __set_compiler_flags():
 
 __set_compiler_flags()
 
+from . import gp, ode, sampling
+from .backends import load_trace, save_trace
+from .backends.tracetab import *
 from .blocking import *
+from .data import *
 from .distributions import *
 from .distributions import transforms
+from .exceptions import *
 from .glm import *
-from . import gp
 from .math import (
-    logaddexp,
-    logsumexp,
-    logit,
-    invlogit,
     expand_packed_triangular,
-    probit,
+    invlogit,
     invprobit,
+    logaddexp,
+    logit,
+    logsumexp,
+    probit,
 )
 from .model import *
 from .model_graph import model_to_graphviz
-from . import ode
-from .stats import *
+from .plots import *
 from .sampling import *
-from .step_methods import *
 from .smc import *
+from .stats import *
+from .step_methods import *
+from .tests import test
 from .theanof import *
 from .tuning import *
 from .variational import *
 from .vartypes import *
-from .exceptions import *
-from . import sampling
-
-from .backends.tracetab import *
-from .backends import save_trace, load_trace
-
-from .plots import *
-from .tests import test
-
-from .data import *

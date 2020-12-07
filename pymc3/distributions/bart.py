@@ -13,8 +13,9 @@
 #   limitations under the License.
 
 import numpy as np
+
 from .distribution import NoDistribution
-from .tree import Tree, SplitNode, LeafNode
+from .tree import LeafNode, SplitNode, Tree
 
 __all__ = ["BART"]
 
