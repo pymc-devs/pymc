@@ -255,14 +255,6 @@ class sample_splitting_variable:
                     return i
 
 
-# def dirichlet(p):
-#     """Draw from a dirichlet distribution."""
-
-#     a = np.random.beta(0.5, 1)
-#     concentration = [(-(p * a) / (-1 + a)) / p] * p
-#     return np.random.dirichlet(alpha=concentration).argmax()
-
-
 class BART(BaseBART):
     """
     BART distribution.
