@@ -14,15 +14,14 @@
 
 from copy import copy
 
+import numpy as np
 import theano
 
-from pymc3.sampling import sample
-from pymc3.model import Model
-from pymc3.step_methods import NUTS, Metropolis, Slice, HamiltonianMC, MLDA
 from pymc3.distributions import Normal
+from pymc3.model import Model
+from pymc3.sampling import sample
+from pymc3.step_methods import MLDA, NUTS, HamiltonianMC, Metropolis, Slice
 from pymc3.theanof import change_flags
-
-import numpy as np
 
 
 class TestType:

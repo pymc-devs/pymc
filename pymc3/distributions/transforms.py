@@ -13,16 +13,17 @@
 #   limitations under the License.
 
 import warnings
+
+import numpy as np
 import theano.tensor as tt
 
-from ..model import FreeRV
-from ..theanof import gradient, floatX
-from . import distribution
-from ..math import logit, invlogit, logsumexp
-from .distribution import draw_values
-import numpy as np
 from scipy.special import logit as nplogit
 
+from ..math import invlogit, logit, logsumexp
+from ..model import FreeRV
+from ..theanof import floatX, gradient
+from . import distribution
+from .distribution import draw_values
 
 __all__ = [
     "Transform",

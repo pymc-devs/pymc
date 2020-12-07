@@ -14,16 +14,15 @@
 
 import warnings
 
-from scipy import stats
-import theano.tensor as tt
-from theano import scan
 import numpy as np
+import theano.tensor as tt
 
-from .continuous import get_tau_sigma, Normal, Flat
+from scipy import stats
+from theano import scan
+
+from . import distribution, multivariate
+from .continuous import Flat, Normal, get_tau_sigma
 from .shape_utils import to_tuple
-from . import multivariate
-from . import distribution
-
 
 __all__ = [
     "AR1",

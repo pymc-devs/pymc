@@ -13,16 +13,16 @@
 #   limitations under the License.
 
 import collections
-import pytest
+
 from itertools import product
 
+import numpy as np
+import pytest
 import theano
 import theano.tensor as tt
-import numpy as np
 
-from pymc3.theanof import set_theano_conf, take_along_axis, _conversion_map
+from pymc3.theanof import _conversion_map, set_theano_conf, take_along_axis
 from pymc3.vartypes import int_types
-
 
 FLOATX = str(theano.config.floatX)
 INTX = str(_conversion_map[FLOATX])

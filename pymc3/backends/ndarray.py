@@ -20,14 +20,16 @@ import glob
 import json
 import os
 import shutil
-from typing import Optional, Dict, Any, List
 import warnings
 
+from typing import Any, Dict, List, Optional
+
 import numpy as np
+
 from pymc3.backends import base
 from pymc3.backends.base import MultiTrace
-from pymc3.model import Model, modelcontext
 from pymc3.exceptions import TraceDirectoryError
+from pymc3.model import Model, modelcontext
 
 
 def save_trace(trace: MultiTrace, directory: Optional[str] = None, overwrite=False) -> str:

@@ -12,27 +12,42 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numbers
 import contextvars
-import dill
 import inspect
+import multiprocessing
+import numbers
+import sys
+import types
+import warnings
+
 from typing import TYPE_CHECKING
+
+import dill
 
 if TYPE_CHECKING:
     from typing import Optional, Callable
 
 import numpy as np
-import theano.tensor as tt
-from theano import function
-from ..util import get_repr_for_variable, get_var_name
 import theano
+import theano.tensor as tt
+
+from theano import function
+
 from ..memoize import memoize
-from ..model import Model, build_named_node_tree, FreeRV, ObservedRV, MultiObservedRV, ContextMeta
+from ..model import (
+    ContextMeta,
+    FreeRV,
+    Model,
+    MultiObservedRV,
+    ObservedRV,
+    build_named_node_tree,
+)
+from ..util import get_repr_for_variable, get_var_name
 from ..vartypes import string_types, theano_constant
 from .shape_utils import (
-    to_tuple,
-    get_broadcastable_dist_samples,
     broadcast_dist_samples_shape,
+    get_broadcastable_dist_samples,
+    to_tuple,
 )
 
 __all__ = [
@@ -49,6 +64,8 @@ __all__ = [
 vectorized_ppc = contextvars.ContextVar(
     "vectorized_ppc", default=None
 )  # type: contextvars.ContextVar[Optional[Callable]]
+
+PLATFORM = sys.platform
 
 
 class _Unpickling:
@@ -505,6 +522,19 @@ class DensityDist(Distribution):
             dtype = theano.config.floatX
         super().__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
+        if type(self.logp) == types.MethodType:
+            if PLATFORM != "linux":
+                warnings.warn(
+                    "You are passing a bound method as logp for DensityDist, this can lead to "
+                    "errors when sampling on platforms other than Linux. Consider using a "
+                    "plain function instead, or subclass Distribution."
+                )
+            elif type(multiprocessing.get_context()) != multiprocessing.context.ForkContext:
+                warnings.warn(
+                    "You are passing a bound method as logp for DensityDist, this can lead to "
+                    "errors when sampling when multiprocessing cannot rely on forking. Consider using a "
+                    "plain function instead, or subclass Distribution."
+                )
         self.rand = random
         self.wrap_random_with_dist_shape = wrap_random_with_dist_shape
         self.check_shape_in_random = check_shape_in_random
@@ -513,7 +543,15 @@ class DensityDist(Distribution):
         # We use dill to serialize the logp function, as this is almost
         # always defined in the notebook and won't be pickled correctly.
         # Fix https://github.com/pymc-devs/pymc3/issues/3844
-        logp = dill.dumps(self.logp)
+        try:
+            logp = dill.dumps(self.logp)
+        except RecursionError as err:
+            if type(self.logp) == types.MethodType:
+                raise ValueError(
+                    "logp for DensityDist is a bound method, leading to RecursionError while serializing"
+                ) from err
+            else:
+                raise err
         vals = self.__dict__.copy()
         vals["logp"] = logp
         return vals

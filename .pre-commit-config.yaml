@@ -13,6 +13,12 @@ repos:
       additional_dependencies: [isort==5.6.4]
     - id: nbqa-pyupgrade
       additional_dependencies: [pyupgrade==2.7.4]
+
+- repo: https://github.com/PyCQA/isort
+  rev: 5.6.4
+  hooks:
+    - id: isort
+      name: isort (python)
 - repo: https://github.com/asottile/pyupgrade
   rev: v2.7.4
   hooks:
@@ -41,7 +47,6 @@ repos:
       entry: python scripts/check_toc_is_complete.py
       language: python
       name: Check all notebooks appear in table of contents
-      pass_filenames: false
       types: [jupyter]
     - id: check-no-tests-are-ignored
       entry: python scripts/check_all_tests_are_covered.py

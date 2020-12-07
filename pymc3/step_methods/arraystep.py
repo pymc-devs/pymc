@@ -12,14 +12,17 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from .compound import CompoundStep
+from enum import IntEnum, unique
+
+import numpy as np
+
+from numpy.random import uniform
+
+from ..blocking import ArrayOrdering, DictToArrayBijection
 from ..model import modelcontext
 from ..theanof import inputvars
-from ..blocking import ArrayOrdering, DictToArrayBijection
 from ..util import get_var_name
-import numpy as np
-from numpy.random import uniform
-from enum import IntEnum, unique
+from .compound import CompoundStep
 
 __all__ = ["ArrayStep", "ArrayStepShared", "metrop_select", "Competence"]
 

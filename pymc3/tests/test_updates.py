@@ -12,20 +12,22 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytest
 import numpy as np
+import pytest
 import theano
+
 from theano.configparser import change_flags
+
 from pymc3.variational.updates import (
-    sgd,
-    momentum,
-    nesterov_momentum,
-    adagrad,
-    rmsprop,
     adadelta,
+    adagrad,
+    adagrad_window,
     adam,
     adamax,
-    adagrad_window,
+    momentum,
+    nesterov_momentum,
+    rmsprop,
+    sgd,
 )
 
 _a = theano.shared(1.0)

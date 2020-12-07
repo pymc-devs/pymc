@@ -4,11 +4,11 @@ Sphinx plugin to run generate a gallery for notebooks
 Modified from the seaborn project, which modified the mpld3 project.
 """
 import base64
+import glob
 import json
 import os
-import glob
-import shutil
 import runpy
+import shutil
 
 import matplotlib
 

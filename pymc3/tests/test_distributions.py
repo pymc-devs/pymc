@@ -15,85 +15,87 @@
 import itertools
 import sys
 
-from .helpers import SeededTest, select_by_precision
-from ..vartypes import continuous_types
-from ..model import Model, Point, Deterministic
+import numpy as np
+import numpy.random as nr
+import pytest
+import scipy.stats
+import scipy.stats.distributions as sp
+import theano
+import theano.tensor as tt
+
+from numpy import array, exp, inf, log
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+from scipy import integrate
+from scipy.special import logit
+
+import pymc3 as pm
+
+from pymc3.theanof import floatX
+
 from ..blocking import DictToVarBijection
 from ..distributions import (
-    DensityDist,
-    Categorical,
-    Multinomial,
-    VonMises,
-    Dirichlet,
-    MvStudentT,
-    MvNormal,
-    MatrixNormal,
-    ZeroInflatedPoisson,
-    ZeroInflatedNegativeBinomial,
-    Constant,
-    Poisson,
+    AR1,
     Bernoulli,
     Beta,
     BetaBinomial,
-    HalfStudentT,
-    StudentT,
-    Weibull,
-    Pareto,
-    InverseGamma,
-    Gamma,
-    Cauchy,
-    HalfCauchy,
-    Lognormal,
-    Laplace,
-    NegativeBinomial,
-    Geometric,
-    Exponential,
-    ExGaussian,
-    Normal,
-    TruncatedNormal,
-    Flat,
-    LKJCorr,
-    Wald,
-    ChiSquared,
-    HalfNormal,
-    DiscreteUniform,
-    Bound,
-    Uniform,
-    Triangular,
     Binomial,
-    SkewNormal,
+    Bound,
+    Categorical,
+    Cauchy,
+    ChiSquared,
+    Constant,
+    DensityDist,
+    Dirichlet,
+    DiscreteUniform,
     DiscreteWeibull,
+    ExGaussian,
+    Exponential,
+    Flat,
+    Gamma,
+    Geometric,
     Gumbel,
-    Logistic,
-    OrderedLogistic,
-    LogitNormal,
-    Interpolated,
-    ZeroInflatedBinomial,
+    HalfCauchy,
     HalfFlat,
-    AR1,
-    KroneckerNormal,
-    Rice,
-    Kumaraswamy,
-    Moyal,
+    HalfNormal,
+    HalfStudentT,
     HyperGeometric,
+    Interpolated,
+    InverseGamma,
+    KroneckerNormal,
+    Kumaraswamy,
+    Laplace,
+    LKJCorr,
+    Logistic,
+    LogitNormal,
+    Lognormal,
+    MatrixNormal,
+    Moyal,
+    Multinomial,
+    MvNormal,
+    MvStudentT,
+    NegativeBinomial,
+    Normal,
+    OrderedLogistic,
+    Pareto,
+    Poisson,
+    Rice,
+    SkewNormal,
+    StudentT,
+    Triangular,
+    TruncatedNormal,
+    Uniform,
+    VonMises,
+    Wald,
+    Weibull,
+    ZeroInflatedBinomial,
+    ZeroInflatedNegativeBinomial,
+    ZeroInflatedPoisson,
+    continuous,
 )
-
-from ..distributions import continuous
-from pymc3.theanof import floatX
-import pymc3 as pm
-from numpy import array, inf, log, exp
-from numpy.testing import assert_almost_equal, assert_allclose, assert_equal
-import numpy.random as nr
-import numpy as np
-import pytest
-
-from scipy import integrate
-import scipy.stats.distributions as sp
-import scipy.stats
-from scipy.special import logit
-import theano
-import theano.tensor as tt
 from ..math import kronecker
+from ..model import Deterministic, Model, Point
+from ..vartypes import continuous_types
+from .helpers import SeededTest, select_by_precision
 
 
 def get_lkj_cases():

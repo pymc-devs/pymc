@@ -14,60 +14,63 @@
 
 """Functions for MCMC sampling."""
 
-from typing import Dict, List, Optional, cast, Union, Any
-from typing import Iterable as TIterable
-from collections.abc import Iterable
-from collections import defaultdict
-from copy import copy
-import packaging
-import pickle
 import logging
+import pickle
+import sys
 import time
 import warnings
 
+from collections import defaultdict
+from collections.abc import Iterable
+from copy import copy
+from typing import Any, Dict
+from typing import Iterable as TIterable
+from typing import List, Optional, Union, cast
+
 import arviz
-from arviz import InferenceData
 import numpy as np
+import packaging
 import theano.gradient as tg
-from theano.tensor import Tensor
 import xarray
+
+from arviz import InferenceData
+from fastprogress.fastprogress import progress_bar
+from theano.tensor import Tensor
+
+import pymc3 as pm
+
+from pymc3.step_methods.hmc import quadpotential
 
 from .backends.base import BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .distributions.distribution import draw_values
 from .distributions.posterior_predictive import fast_sample_posterior_predictive
-from .model import modelcontext, Point, all_continuous, Model
+from .exceptions import IncorrectArgumentsError, SamplingError
+from .model import Model, Point, all_continuous, modelcontext
+from .parallel_sampling import Draw, _cpu_count
 from .step_methods import (
     NUTS,
+    PGBART,
+    BinaryGibbsMetropolis,
+    BinaryMetropolis,
+    CategoricalGibbsMetropolis,
+    CompoundStep,
+    DEMetropolis,
     HamiltonianMC,
     Metropolis,
-    BinaryMetropolis,
-    BinaryGibbsMetropolis,
-    CategoricalGibbsMetropolis,
-    DEMetropolis,
     Slice,
-    CompoundStep,
     arraystep,
-    PGBART,
 )
 from .util import (
+    chains_and_samples,
     check_start_vals,
-    update_start_vals,
+    dataset_to_point_list,
+    get_default_varnames,
     get_untransformed_name,
     is_transformed_name,
-    get_default_varnames,
-    dataset_to_point_dict,
-    chains_and_samples,
+    update_start_vals,
 )
 from .vartypes import discrete_types
-from .exceptions import IncorrectArgumentsError
-from .parallel_sampling import _cpu_count, Draw
-from pymc3.step_methods.hmc import quadpotential
-import pymc3 as pm
-from fastprogress.fastprogress import progress_bar
-
-
-import sys
 
 sys.setrecursionlimit(10000)
 
@@ -246,6 +249,7 @@ def sample(
     discard_tuned_samples=True,
     compute_convergence_checks=True,
     callback=None,
+    jitter_max_retries=10,
     *,
     return_inferencedata=None,
     idata_kwargs: dict = None,
@@ -331,6 +335,10 @@ def sample(
         the ``draw.chain`` argument can be used to determine which of the active chains the sample
         is drawn from.
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
+    jitter_max_retries : int
+        Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform jitter
+        that yields a finite probability. This applies to ``jitter+adapt_diag`` and ``jitter+adapt_full``
+        init methods.
     return_inferencedata : bool, default=False
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
         Defaults to `False`, but we'll switch to `True` in an upcoming release.
@@ -416,15 +424,15 @@ def sample(
     """
     model = modelcontext(model)
     if start is None:
-        start = model.test_point
+        check_start_vals(model.test_point, model)
     else:
         if isinstance(start, dict):
             update_start_vals(start, model.test_point, model)
         else:
             for chain_start_vals in start:
                 update_start_vals(chain_start_vals, model.test_point, model)
+        check_start_vals(start, model)
 
-    check_start_vals(start, model)
     if cores is None:
         cores = min(4, _cpu_count())
 
@@ -490,11 +498,12 @@ def sample(
                 model=model,
                 random_seed=random_seed,
                 progressbar=progressbar,
+                jitter_max_retries=jitter_max_retries,
                 **kwargs,
             )
-            check_start_vals(start_, model)
             if start is None:
                 start = start_
+                check_start_vals(start, model)
         except (AttributeError, NotImplementedError, tg.NullTypeGradError):
             # gradient computation failed
             _log.info("Initializing NUTS failed. " "Falling back to elementwise auto-assignment.")
@@ -1642,9 +1651,9 @@ def sample_posterior_predictive(
 
     _trace: Union[MultiTrace, PointList]
     if isinstance(trace, InferenceData):
-        _trace = dataset_to_point_dict(trace.posterior)
+        _trace = dataset_to_point_list(trace.posterior)
     elif isinstance(trace, xarray.Dataset):
-        _trace = dataset_to_point_dict(trace)
+        _trace = dataset_to_point_list(trace)
     else:
         _trace = trace
 
@@ -1780,10 +1789,10 @@ def sample_posterior_predictive_w(
         n_samples = [
             trace.posterior.sizes["chain"] * trace.posterior.sizes["draw"] for trace in traces
         ]
-        traces = [dataset_to_point_dict(trace.posterior) for trace in traces]
+        traces = [dataset_to_point_list(trace.posterior) for trace in traces]
     elif isinstance(traces[0], xarray.Dataset):
         n_samples = [trace.sizes["chain"] * trace.sizes["draw"] for trace in traces]
-        traces = [dataset_to_point_dict(trace) for trace in traces]
+        traces = [dataset_to_point_list(trace) for trace in traces]
     else:
         n_samples = [len(i) * i.nchains for i in traces]
 
@@ -1946,6 +1955,44 @@ def sample_prior_predictive(
     return prior
 
 
+def _init_jitter(model, chains, jitter_max_retries):
+    """Apply a uniform jitter in [-1, 1] to the test value as starting point in each chain.
+
+    pymc3.util.check_start_vals is used to test whether the jittered starting values produce
+    a finite log probability. Invalid values are resampled unless `jitter_max_retries` is achieved,
+    in which case the last sampled values are returned.
+
+    Parameters
+    ----------
+    model : pymc3.Model
+    chains : int
+    jitter_max_retries : int
+        Maximum number of repeated attempts at initializing values (per chain).
+
+    Returns
+    -------
+    start : ``pymc3.model.Point``
+        Starting point for sampler
+    """
+    start = []
+    for _ in range(chains):
+        for i in range(jitter_max_retries + 1):
+            mean = {var: val.copy() for var, val in model.test_point.items()}
+            for val in mean.values():
+                val[...] += 2 * np.random.rand(*val.shape) - 1
+
+            if i < jitter_max_retries:
+                try:
+                    check_start_vals(mean, model)
+                except SamplingError:
+                    pass
+                else:
+                    break
+
+        start.append(mean)
+    return start
+
+
 def init_nuts(
     init="auto",
     chains=1,
@@ -1953,6 +2000,7 @@ def init_nuts(
     model=None,
     random_seed=None,
     progressbar=True,
+    jitter_max_retries=10,
     **kwargs,
 ):
     """Set up the mass matrix initialization for NUTS.
@@ -1967,7 +2015,7 @@ def init_nuts(
         Initialization method to use.
 
         * auto: Choose a default initialization method automatically.
-          Currently, this is `'jitter+adapt_diag'`, but this can change in the future. If you
+          Currently, this is ``jitter+adapt_diag``, but this can change in the future. If you
           depend on the exact behaviour, choose an initialization method explicitly.
         * adapt_diag: Start with a identity mass matrix and then adapt a diagonal based on the
           variance of the tuning samples. All chains use the test value (usually the prior mean)
@@ -1994,6 +2042,10 @@ def init_nuts(
     model : Model (optional if in ``with`` context)
     progressbar : bool
         Whether or not to display a progressbar for advi sampling.
+    jitter_max_retries : int
+        Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform jitter
+        that yields a finite probability. This applies to ``jitter+adapt_diag`` and ``jitter+adapt_full``
+        init methods.
     **kwargs : keyword arguments
         Extra keyword arguments are forwarded to pymc3.NUTS.
 
@@ -2038,12 +2090,7 @@ def init_nuts(
         var = np.ones_like(mean)
         potential = quadpotential.QuadPotentialDiagAdapt(model.ndim, mean, var, 10)
     elif init == "jitter+adapt_diag":
-        start = []
-        for _ in range(chains):
-            mean = {var: val.copy() for var, val in model.test_point.items()}
-            for val in mean.values():
-                val[...] += 2 * np.random.rand(*val.shape) - 1
-            start.append(mean)
+        start = _init_jitter(model, chains, jitter_max_retries)
         mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
         var = np.ones_like(mean)
         potential = quadpotential.QuadPotentialDiagAdapt(model.ndim, mean, var, 10)
@@ -2125,12 +2172,7 @@ def init_nuts(
         cov = np.eye(model.ndim)
         potential = quadpotential.QuadPotentialFullAdapt(model.ndim, mean, cov, 10)
     elif init == "jitter+adapt_full":
-        start = []
-        for _ in range(chains):
-            mean = {var: val.copy() for var, val in model.test_point.items()}
-            for val in mean.values():
-                val[...] += 2 * np.random.rand(*val.shape) - 1
-            start.append(mean)
+        start = _init_jitter(model, chains, jitter_max_retries)
         mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
         cov = np.eye(model.ndim)
         potential = quadpotential.QuadPotentialFullAdapt(model.ndim, mean, cov, 10)

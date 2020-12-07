@@ -54,14 +54,16 @@ import theano
 import theano.tensor as tt
 
 import pymc3 as pm
+
 from pymc3.util import get_transformed
-from .updates import adagrad_window
-from ..blocking import ArrayOrdering, DictToArrayBijection, VarMap
+
 from ..backends import NDArray
-from ..model import modelcontext
-from ..theanof import tt_rng, change_flags, identity
-from ..util import get_default_varnames
+from ..blocking import ArrayOrdering, DictToArrayBijection, VarMap
 from ..memoize import WithMemoization, memoize
+from ..model import modelcontext
+from ..theanof import change_flags, identity, tt_rng
+from ..util import get_default_varnames
+from .updates import adagrad_window
 
 __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximation"]
 

@@ -103,7 +103,6 @@ def compareplot(*args, **kwargs):
 
 from .posteriorplot import plot_posterior_predictive_glm
 
-
 # Access to arviz plots: base plots provided by arviz
 for plot in az.plots.__all__:
     setattr(sys.modules[__name__], plot, map_args(getattr(az.plots, plot)))

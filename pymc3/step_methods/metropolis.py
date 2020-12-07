@@ -14,19 +14,21 @@
 
 import numpy as np
 import numpy.random as nr
-import theano
 import scipy.linalg
+import theano
+
+import pymc3 as pm
+
+from pymc3.theanof import floatX
 
 from ..distributions import draw_values
 from .arraystep import (
-    ArrayStepShared,
-    PopulationArrayStepShared,
     ArrayStep,
-    metrop_select,
+    ArrayStepShared,
     Competence,
+    PopulationArrayStepShared,
+    metrop_select,
 )
-import pymc3 as pm
-from pymc3.theanof import floatX
 
 __all__ = [
     "Metropolis",

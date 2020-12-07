@@ -12,19 +12,22 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import logging
+import warnings
+
+from typing import List, Optional, Type, Union
+
 import arviz as az
 import numpy as np
-import warnings
-import logging
-from typing import Union, List, Optional, Type
 import theano
 import theano.tensor as tt
 
-from .arraystep import ArrayStepShared, metrop_select, Competence
-from .compound import CompoundStep
-from .metropolis import Proposal, Metropolis, DEMetropolisZ, delta_logp
-from ..model import Model
 import pymc3 as pm
+
+from ..model import Model
+from .arraystep import ArrayStepShared, Competence, metrop_select
+from .compound import CompoundStep
+from .metropolis import DEMetropolisZ, Metropolis, Proposal, delta_logp
 
 __all__ = [
     "MetropolisMLDA",

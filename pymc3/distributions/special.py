@@ -14,8 +14,9 @@
 
 import numpy as np
 import theano.tensor as tt
-from theano.scalar.basic_scipy import GammaLn, Psi
+
 from theano import scalar
+from theano.scalar.basic_scipy import GammaLn, Psi
 
 __all__ = ["gammaln", "multigammaln", "psi", "log_i0"]
 

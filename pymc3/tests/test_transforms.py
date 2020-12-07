@@ -12,29 +12,29 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pymc3.distributions.transforms as tr
-import pymc3 as pm
 import numpy as np
 import pytest
-
 import theano
 import theano.tensor as tt
+
+import pymc3 as pm
+import pymc3.distributions.transforms as tr
+
+from ..theanof import jacobian
+from .checks import close_to, close_to_logical
 from .helpers import SeededTest
 from .test_distributions import (
-    Simplex,
-    Rplusbig,
-    Rminusbig,
-    Unit,
-    R,
-    Vector,
-    MultiSimplex,
     Circ,
+    MultiSimplex,
+    R,
+    Rminusbig,
+    Rplusbig,
+    Simplex,
     SortedVector,
+    Unit,
     UnitSortedVector,
+    Vector,
 )
-from .checks import close_to, close_to_logical
-from ..theanof import jacobian
-
 
 # some transforms (stick breaking) require additon of small slack in order to be numerically
 # stable. The minimal addable slack for float32 is higher thus we need to be less strict

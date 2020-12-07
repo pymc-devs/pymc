@@ -13,17 +13,18 @@
 #   limitations under the License.
 
 from collections import deque
-from typing import Dict, Iterator, Set, Optional
+from typing import Dict, Iterator, Optional, Set
 
 VarName = str
 
-from theano.gof.graph import stack_search
 from theano.compile import SharedVariable
+from theano.gof.graph import stack_search
 from theano.tensor import Tensor
 
-from .util import get_default_varnames, get_var_name
-from .model import ObservedRV
 import pymc3 as pm
+
+from .model import ObservedRV
+from .util import get_default_varnames, get_var_name
 
 
 class ModelGraph:

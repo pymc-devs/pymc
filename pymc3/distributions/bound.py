@@ -17,16 +17,15 @@ from numbers import Real
 import numpy as np
 import theano.tensor as tt
 
+from pymc3.distributions import transforms
+from pymc3.distributions.dist_math import bound
 from pymc3.distributions.distribution import (
-    Distribution,
-    Discrete,
     Continuous,
+    Discrete,
+    Distribution,
     draw_values,
     generate_samples,
 )
-from pymc3.distributions import transforms
-from pymc3.distributions.dist_math import bound
-
 from pymc3.theanof import floatX
 
 __all__ = ["Bound"]

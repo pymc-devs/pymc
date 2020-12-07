@@ -17,12 +17,14 @@ import pickle
 
 import numpy as np
 import pytest
-from scipy import stats as stats
-from theano import tensor as tt
 import theano
 
+from scipy import stats as stats
+from theano import tensor as tt
+
 import pymc3 as pm
-from pymc3 import floatX, GeneratorAdapter, generator, tt_rng, Normal
+
+from pymc3 import GeneratorAdapter, Normal, floatX, generator, tt_rng
 from pymc3.tests.helpers import select_by_precision
 from pymc3.theanof import GeneratorOp
 

@@ -16,7 +16,7 @@ import numpy as np
 from pandas import DataFrame, Series
 from scipy.stats import multinomial
 from .distribution import NoDistribution
-from .tree import Tree, SplitNode, LeafNode
+from .tree import LeafNode, SplitNode, Tree
 
 __all__ = ["BART"]
 

@@ -15,9 +15,10 @@
 """Functions for converting traces into a table-like format
 """
 
+import warnings
+
 import numpy as np
 import pandas as pd
-import warnings
 
 from ..util import get_default_varnames
 

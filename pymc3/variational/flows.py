@@ -14,13 +14,14 @@
 
 import numpy as np
 import theano
+
 from theano import tensor as tt
 
 from ..distributions.dist_math import rho2sigma
-from ..theanof import change_flags
 from ..memoize import WithMemoization
-from .opvi import node_property, collect_shared_to_list
+from ..theanof import change_flags
 from . import opvi
+from .opvi import collect_shared_to_list, node_property
 
 __all__ = ["Formula", "PlanarFlow", "HouseholderFlow", "RadialFlow", "LocFlow", "ScaleFlow"]
 

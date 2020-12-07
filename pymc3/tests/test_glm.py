@@ -13,13 +13,26 @@
 #   limitations under the License.
 
 import numpy as np
+import pandas as pd
+
 from numpy.testing import assert_equal
 
-from .helpers import SeededTest
 import pymc3
-from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
-from pymc3 import families, GLM, LinearComponent
-import pandas as pd
+
+from pymc3 import (
+    GLM,
+    LinearComponent,
+    Model,
+    Normal,
+    Slice,
+    Uniform,
+    families,
+    find_MAP,
+    sample,
+)
+
+from .helpers import SeededTest
+
 
 # Generate data
 def generate_data(intercept, slope, size=700):
