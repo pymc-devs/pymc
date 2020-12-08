@@ -1,3 +1,8 @@
+:orphan:
+
+..
+    _referenced in html_theme_options docs/source/conf.py
+
 =====================
 PyMC3 Developer Guide
 =====================
