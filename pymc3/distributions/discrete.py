@@ -26,8 +26,8 @@ from pymc3.distributions.dist_math import (
     factln,
     log_diff_normal_cdf,
     logpow,
-    normal_lcdf,
     normal_lccdf,
+    normal_lcdf,
     random_choice,
 )
 from pymc3.distributions.distribution import Discrete, draw_values, generate_samples

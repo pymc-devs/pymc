@@ -26,7 +26,7 @@ import theano.tensor as tt
 from numpy import array, exp, inf, log
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 from scipy import integrate
-from scipy.special import logit, erf
+from scipy.special import erf, logit
 
 import pymc3 as pm
 
