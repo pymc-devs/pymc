@@ -5,7 +5,7 @@ channels:
 dependencies:
   - python=3.8
   - arviz>=0.9
-  - theano-pymc==1.0.11
+  - theano-pymc==1.0.12
   - numpy>=1.13
   - scipy>=0.18
   - pandas>=0.18
