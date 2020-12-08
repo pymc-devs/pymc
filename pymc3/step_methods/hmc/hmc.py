@@ -14,11 +14,10 @@
 
 import numpy as np
 
+from pymc3.step_methods.arraystep import Competence
 from pymc3.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
 from pymc3.step_methods.hmc.integration import IntegrationError
 from pymc3.vartypes import discrete_types
-
-from ..arraystep import Competence
 
 __all__ = ["HamiltonianMC"]
 

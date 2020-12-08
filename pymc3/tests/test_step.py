@@ -58,11 +58,9 @@ from pymc3.step_methods import (
     UniformProposal,
 )
 from pymc3.step_methods.mlda import extract_Q_estimate
-from pymc3.theanof import floatX
-
-from .checks import close_to
-from .helpers import select_by_precision
-from .models import (
+from pymc3.tests.checks import close_to
+from pymc3.tests.helpers import select_by_precision
+from pymc3.tests.models import (
     mv_prior_simple,
     mv_simple,
     mv_simple_coarse,
@@ -71,6 +69,7 @@ from .models import (
     simple_2model_continuous,
     simple_categorical,
 )
+from pymc3.theanof import floatX
 
 
 class TestStepMethods:  # yield test doesn't work subclassing object

@@ -61,3 +61,8 @@ repos:
       language: python
       name: Check no tests are ignored
       pass_filenames: false
+    - id: no-relative-imports
+      name: No relative imports
+      entry: from \.[\.\w]* import
+      types: [python]
+      language: pygrep

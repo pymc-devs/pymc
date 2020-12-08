@@ -17,8 +17,7 @@ import pytest
 
 from pymc3 import Model, Normal, Slice, Uniform, find_MAP, sample
 from pymc3.glm import GLM, LinearComponent
-
-from .helpers import SeededTest
+from pymc3.tests.helpers import SeededTest
 
 
 # Generate data

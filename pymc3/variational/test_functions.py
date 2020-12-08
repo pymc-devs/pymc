@@ -15,8 +15,7 @@
 from theano import tensor as tt
 
 from pymc3.theanof import floatX
-
-from .opvi import TestFunction
+from pymc3.variational.opvi import TestFunction
 
 __all__ = ["rbf"]
 

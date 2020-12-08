@@ -38,9 +38,8 @@ from pymc3 import (
     sample,
 )
 from pymc3.distributions.shape_utils import to_tuple
+from pymc3.tests.helpers import SeededTest
 from pymc3.theanof import floatX
-
-from .helpers import SeededTest
 
 
 # Generate data

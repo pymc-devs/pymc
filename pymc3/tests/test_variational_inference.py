@@ -25,6 +25,8 @@ import pymc3 as pm
 import pymc3.memoize
 import pymc3.util
 
+from pymc3.tests import models
+from pymc3.tests.helpers import not_raises
 from pymc3.theanof import change_flags, intX
 from pymc3.variational import flows, opvi
 from pymc3.variational.approximations import (
@@ -39,9 +41,6 @@ from pymc3.variational.approximations import (
 )
 from pymc3.variational.inference import ADVI, ASVGD, NFVI, SVGD, FullRankADVI, fit
 from pymc3.variational.opvi import Approximation, Group
-
-from . import models
-from .helpers import not_raises
 
 pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
 

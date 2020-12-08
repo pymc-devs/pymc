@@ -15,8 +15,8 @@
 import numpy as np
 import pytest
 
-from ..distributions import Categorical, Continuous, DiscreteUniform
-from ..model import Model
+from pymc3.distributions import Categorical, Continuous, DiscreteUniform
+from pymc3.model import Model
 
 
 class DistTest(Continuous):

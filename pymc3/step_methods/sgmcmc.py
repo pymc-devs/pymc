@@ -19,9 +19,9 @@ from collections import OrderedDict
 import theano
 import theano.tensor as tt
 
-from ..model import inputvars, modelcontext
-from ..theanof import make_shared_replacements, tt_rng
-from .arraystep import ArrayStepShared
+from pymc3.model import inputvars, modelcontext
+from pymc3.step_methods.arraystep import ArrayStepShared
+from pymc3.theanof import make_shared_replacements, tt_rng
 
 __all__ = []
 

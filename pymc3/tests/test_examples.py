@@ -23,9 +23,8 @@ from packaging import version
 
 import pymc3 as pm
 
+from pymc3.tests.helpers import SeededTest
 from pymc3.theanof import floatX
-
-from .helpers import SeededTest
 
 if version.parse(matplotlib.__version__) < version.parse("3.3"):
     matplotlib.use("Agg", warn=False)

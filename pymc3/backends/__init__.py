@@ -60,4 +60,9 @@ Loading a saved backend
 Saved backends can be loaded using `arviz.from_netcdf`
 
 """
-from ..backends.ndarray import NDArray, load_trace, point_list_to_multitrace, save_trace
+from pymc3.backends.ndarray import (
+    NDArray,
+    load_trace,
+    point_list_to_multitrace,
+    save_trace,
+)

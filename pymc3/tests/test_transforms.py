@@ -20,10 +20,9 @@ import theano.tensor as tt
 import pymc3 as pm
 import pymc3.distributions.transforms as tr
 
-from ..theanof import jacobian
-from .checks import close_to, close_to_logical
-from .helpers import SeededTest
-from .test_distributions import (
+from pymc3.tests.checks import close_to, close_to_logical
+from pymc3.tests.helpers import SeededTest
+from pymc3.tests.test_distributions import (
     Circ,
     MultiSimplex,
     R,
@@ -35,6 +34,7 @@ from .test_distributions import (
     UnitSortedVector,
     Vector,
 )
+from pymc3.theanof import jacobian
 
 # some transforms (stick breaking) require additon of small slack in order to be numerically
 # stable. The minimal addable slack for float32 is higher thus we need to be less strict

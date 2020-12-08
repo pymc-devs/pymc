@@ -20,8 +20,7 @@ from numpy.testing import assert_almost_equal
 import pymc3 as pm
 
 from pymc3.distributions.transforms import Transform
-
-from .helpers import SeededTest
+from pymc3.tests.helpers import SeededTest
 
 
 class TestTransformName:

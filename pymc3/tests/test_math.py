@@ -32,9 +32,8 @@ from pymc3.math import (
     logdet,
     probit,
 )
+from pymc3.tests.helpers import SeededTest, verify_grad
 from pymc3.theanof import floatX
-
-from .helpers import SeededTest, verify_grad
 
 
 def test_kronecker():
