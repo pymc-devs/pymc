@@ -2,8 +2,8 @@
 Math
 ====
 
-This submodule contains various mathematical functions. Most of them are imported directly 
-from theano.tensor (see there for more details). Doing any kind of math with PyMC3 random 
+This submodule contains various mathematical functions. Most of them are imported directly
+from theano.tensor (see there for more details). Doing any kind of math with PyMC3 random
 variables, or defining custom likelihoods or priors requires you to use these theano
 expressions rather than NumPy or Python code.
 
