@@ -12,14 +12,17 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from .compound import CompoundStep
-from ..model import modelcontext
-from ..theanof import inputvars
-from ..blocking import ArrayOrdering, DictToArrayBijection
-from ..util import get_var_name
-import numpy as np
-from numpy.random import uniform
 from enum import IntEnum, unique
+
+import numpy as np
+
+from numpy.random import uniform
+
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.model import modelcontext
+from pymc3.step_methods.compound import CompoundStep
+from pymc3.theanof import inputvars
+from pymc3.util import get_var_name
 
 __all__ = ["ArrayStep", "ArrayStepShared", "metrop_select", "Competence"]
 

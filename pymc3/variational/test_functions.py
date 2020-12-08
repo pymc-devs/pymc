@@ -13,8 +13,9 @@
 #   limitations under the License.
 
 from theano import tensor as tt
-from .opvi import TestFunction
+
 from pymc3.theanof import floatX
+from pymc3.variational.opvi import TestFunction
 
 __all__ = ["rbf"]
 

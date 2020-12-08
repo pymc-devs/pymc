@@ -16,10 +16,10 @@ import numpy as np
 import numpy.random as nr
 import theano.tensor as tt
 
-from .arraystep import ArrayStep, Competence
-from ..model import modelcontext
-from ..theanof import inputvars
-from ..distributions import draw_values
+from pymc3.distributions import draw_values
+from pymc3.model import modelcontext
+from pymc3.step_methods.arraystep import ArrayStep, Competence
+from pymc3.theanof import inputvars
 
 __all__ = ["EllipticalSlice"]
 

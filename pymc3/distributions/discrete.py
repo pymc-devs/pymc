@@ -12,27 +12,28 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numpy as np
-import theano.tensor as tt
-from scipy import stats
 import warnings
 
-from .dist_math import (
+import numpy as np
+import theano.tensor as tt
+
+from scipy import stats
+
+from pymc3.distributions.dist_math import (
+    betaln,
+    binomln,
     bound,
     factln,
-    binomln,
-    betaln,
+    log_diff_normal_cdf,
     logpow,
-    random_choice,
     normal_lcdf,
     normal_lccdf,
-    log_diff_normal_cdf,
+    random_choice,
 )
-from .distribution import Discrete, draw_values, generate_samples
-from .shape_utils import broadcast_distribution_samples
-from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
-from ..theanof import floatX, intX, take_along_axis
-
+from pymc3.distributions.distribution import Discrete, draw_values, generate_samples
+from pymc3.distributions.shape_utils import broadcast_distribution_samples
+from pymc3.math import log1pexp, logaddexp, logit, sigmoid, tround
+from pymc3.theanof import floatX, intX, take_along_axis
 
 __all__ = [
     "Binomial",
@@ -48,6 +49,7 @@ __all__ = [
     "ZeroInflatedNegativeBinomial",
     "DiscreteUniform",
     "Geometric",
+    "HyperGeometric",
     "Categorical",
     "OrderedLogistic",
 ]
@@ -817,6 +819,118 @@ class Geometric(Discrete):
         """
         p = self.p
         return bound(tt.log(p) + logpow(1 - p, value - 1), 0 <= p, p <= 1, value >= 1)
+
+
+class HyperGeometric(Discrete):
+    R"""
+    Discrete hypergeometric distribution.
+
+    The probability of :math:`x` successes in a sequence of :math:`n` bernoulli
+    trials taken without replacement from a population of :math:`N` objects,
+    containing :math:`k` good (or successful or Type I) objects.
+    The pmf of this distribution is
+
+    .. math:: f(x \mid N, n, k) = \frac{\binom{k}{x}\binom{N-k}{n-x}}{\binom{N}{n}}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(1, 15)
+        N = 50
+        k = 10
+        for n in [20, 25]:
+            pmf = st.hypergeom.pmf(x, N, k, n)
+            plt.plot(x, pmf, '-o', label='n = {}'.format(n))
+        plt.plot(x, pmf, '-o', label='N = {}'.format(N))
+        plt.plot(x, pmf, '-o', label='k = {}'.format(k))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  =============================
+    Support   :math:`x \in \left[\max(0, n - N + k), \min(k, n)\right]`
+    Mean      :math:`\dfrac{nk}{N}`
+    Variance  :math:`\dfrac{(N-n)nk(N-k)}{(N-1)N^2}`
+    ========  =============================
+
+    Parameters
+    ----------
+    N : integer
+        Total size of the population
+    k : integer
+        Number of successful individuals in the population
+    n : integer
+        Number of samples drawn from the population
+    """
+
+    def __init__(self, N, k, n, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.N = intX(N)
+        self.k = intX(k)
+        self.n = intX(n)
+        self.mode = intX(tt.floor((n + 1) * (k + 1) / (N + 2)))
+
+    def random(self, point=None, size=None):
+        r"""
+        Draw random values from HyperGeometric distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+
+        N, k, n = draw_values([self.N, self.k, self.n], point=point, size=size)
+        return generate_samples(self._random, N, k, n, dist_shape=self.shape, size=size)
+
+    def _random(self, M, n, N, size=None):
+        r"""Wrapper around scipy stat's hypergeom.rvs"""
+        try:
+            samples = stats.hypergeom.rvs(M=M, n=n, N=N, size=size)
+            return samples
+        except ValueError:
+            raise ValueError("Domain error in arguments")
+
+    def logp(self, value):
+        r"""
+        Calculate log-probability of HyperGeometric distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        N = self.N
+        k = self.k
+        n = self.n
+        tot, good = N, k
+        bad = tot - good
+        result = (
+            betaln(good + 1, 1)
+            + betaln(bad + 1, 1)
+            + betaln(tot - n + 1, n + 1)
+            - betaln(value + 1, good - value + 1)
+            - betaln(n - value + 1, bad - n + value + 1)
+            - betaln(tot + 1, 1)
+        )
+        return result
 
 
 class DiscreteUniform(Discrete):

@@ -15,15 +15,21 @@
 from collections import OrderedDict
 
 import numpy as np
+import theano.tensor as tt
+
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 from theano import function as theano_function
-import theano.tensor as tt
 
-from ..model import modelcontext, Point
-from ..theanof import floatX, inputvars, make_shared_replacements, join_nonshared_inputs
-from ..sampling import sample_prior_predictive
-from ..backends.ndarray import NDArray
+from pymc3.backends.ndarray import NDArray
+from pymc3.model import Point, modelcontext
+from pymc3.sampling import sample_prior_predictive
+from pymc3.theanof import (
+    floatX,
+    inputvars,
+    join_nonshared_inputs,
+    make_shared_replacements,
+)
 
 
 class SMC:

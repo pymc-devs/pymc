@@ -18,21 +18,22 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 """
 import platform
+
 import numpy as np
 import scipy.linalg
 import scipy.stats
-import theano.tensor as tt
 import theano
-from theano.scalar import UnaryScalarOp, upgrade_to_float_no_complex
-from theano.tensor.slinalg import Cholesky
-from theano.compile.builders import OpFromGraph
-from theano.scan import until
+import theano.tensor as tt
+
 from theano import scan
-from .shape_utils import to_tuple
+from theano.compile.builders import OpFromGraph
+from theano.scalar import UnaryScalarOp, upgrade_to_float_no_complex
+from theano.scan import until
+from theano.tensor.slinalg import Cholesky
 
-from .special import gammaln
+from pymc3.distributions.shape_utils import to_tuple
+from pymc3.distributions.special import gammaln
 from pymc3.theanof import floatX
-
 
 f = floatX
 c = -0.5 * np.log(2.0 * np.pi)

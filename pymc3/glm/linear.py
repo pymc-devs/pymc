@@ -12,13 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import theano.tensor as tt
 import numpy as np
-from ..distributions import Normal, Flat
-from . import families
-from ..model import Model, Deterministic
-from .utils import any_to_tensor_and_labels
+import theano.tensor as tt
 
+from pymc3.distributions import Flat, Normal
+from pymc3.glm import families
+from pymc3.glm.utils import any_to_tensor_and_labels
+from pymc3.model import Deterministic, Model
 
 __all__ = ["LinearComponent", "GLM"]
 

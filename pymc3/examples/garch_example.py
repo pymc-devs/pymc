@@ -1,6 +1,7 @@
-from pymc3 import Normal, sample, Model, Uniform, summary
-import theano.tensor as tt
 import numpy as np
+import theano.tensor as tt
+
+from pymc3 import Model, Normal, Uniform, sample, summary
 
 """
 Example from Stan - slightly altered

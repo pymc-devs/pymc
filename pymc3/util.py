@@ -12,17 +12,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import re
 import functools
-from typing import List, Dict, Tuple, Union
+import re
+import warnings
 
+from typing import Dict, List, Tuple, Union
+
+import arviz
 import numpy as np
 import xarray
-import arviz
 
-from pymc3.exceptions import SamplingError
 from theano.tensor import TensorVariable
 
+from pymc3.exceptions import SamplingError
 
 LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
 
@@ -258,6 +260,14 @@ def biwrap(wrapper):
 # FIXME: this function is poorly named, because it returns a LIST of
 # points, not a dictionary of points.
 def dataset_to_point_dict(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
+    warnings.warn(
+        "dataset_to_point_dict was renamed to dataset_to_point_list and will be removed!",
+        DeprecationWarning,
+    )
+    return dataset_to_point_list(ds)
+
+
+def dataset_to_point_list(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
     # grab posterior samples for each variable
     _samples: Dict[str, np.ndarray] = {vn: ds[vn].values for vn in ds.keys()}
     # make dicts

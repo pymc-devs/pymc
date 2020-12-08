@@ -13,16 +13,17 @@
 #   limitations under the License.
 
 import warnings
+
+import numpy as np
 import theano.tensor as tt
 
-from ..model import FreeRV
-from ..theanof import gradient, floatX
-from . import distribution
-from ..math import logit, invlogit, logsumexp
-from .distribution import draw_values
-import numpy as np
 from scipy.special import logit as nplogit
 
+from pymc3.distributions import distribution
+from pymc3.distributions.distribution import draw_values
+from pymc3.math import invlogit, logit, logsumexp
+from pymc3.model import FreeRV
+from pymc3.theanof import floatX, gradient
 
 __all__ = [
     "Transform",
@@ -430,7 +431,8 @@ sum_to_1 = SumTo1()
 class StickBreaking(Transform):
     """
     Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of real values.
-    This is a variant of the isometric logration transformation:
+    This is a variant of the isometric logration transformation ::
+
         Egozcue, J.J., Pawlowsky-Glahn, V., Mateu-Figueras, G. et al.
         Isometric Logratio Transformations for Compositional Data Analysis.
         Mathematical Geology 35, 279–300 (2003). https://doi.org/10.1023/A:1023818214614

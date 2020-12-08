@@ -12,10 +12,12 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pymc3 as pm
-from .helpers import SeededTest
 import numpy as np
 import theano
+
+import pymc3 as pm
+
+from pymc3.tests.helpers import SeededTest
 
 
 class TestShared(SeededTest):

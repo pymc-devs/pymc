@@ -21,11 +21,11 @@ The future of PyMC3 & Theano
 There have been many questions and uncertainty around the future of PyMC3 since Theano
 stopped getting developed by the original authors, and we started experiments with PyMC4.
 
-We are happy to announce that PyMC3 on Theano (which we are `developing further <https://github.com/pymc-devs/Theano-PyMC>`__) 
-with a new JAX backend is the future. PyMC4 will not be developed further. 
+We are happy to announce that PyMC3 on Theano (which we are `developing further <https://github.com/pymc-devs/Theano-PyMC>`__)
+with a new JAX backend is the future. PyMC4 will not be developed further.
 
 See the `full announcement <https://pymc-devs.medium.com/the-future-of-pymc3-or-theano-is-dead-long-live-theano-d8005f8a0e9b>`__
-for more details. 
+for more details.
 
 Features
 ========
@@ -119,8 +119,9 @@ Another option is to clone the repository and install PyMC3 using
 Dependencies
 ============
 
-PyMC3 is tested on Python 3.6 and depends on Theano, NumPy,
-SciPy, and Pandas (see ``requirements.txt`` for version
+PyMC3 is tested on Python 3.6, 3.7, and 3.8 and depends on `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__,
+NumPy, SciPy, and Pandas
+(see `requirements.txt <https://github.com/pymc-devs/pymc3/blob/master/requirements.txt>`__ for version
 information).
 
 Optional
@@ -168,6 +169,7 @@ Software using PyMC3
 - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
 - `pymc-learn <https://github.com/pymc-learn/pymc-learn>`__: Custom PyMC models built on top of pymc3_models/scikit-learn API
 - `fenics-pymc3 <https://github.com/IvanYashchuk/fenics-pymc3>`__: Differentiable interface to FEniCS, a library for solving partial differential equations.
+- `cell2location <https://github.com/BayraktarLab/cell2location>`__: Comprehensive mapping of tissue cell architecture via integrated single cell and spatial transcriptomics.
 
 Please contact us if your software is not listed here.
 

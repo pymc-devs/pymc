@@ -14,24 +14,26 @@
 
 import numpy as np
 import numpy.testing as npt
-import theano.tensor as tt
-import theano
-import pymc3 as pm
-from scipy import stats, interpolate
 import pytest
+import theano
+import theano.tensor as tt
 
-from ..theanof import floatX
-from ..distributions import Discrete
-from ..distributions.dist_math import (
-    bound,
-    factln,
-    alltrue_scalar,
+from scipy import interpolate, stats
+
+import pymc3 as pm
+
+from pymc3.distributions import Discrete
+from pymc3.distributions.dist_math import (
     MvNormalLogp,
     SplineWrapper,
-    i0e,
+    alltrue_scalar,
+    bound,
     clipped_beta_rvs,
+    factln,
+    i0e,
 )
-from .helpers import verify_grad
+from pymc3.tests.helpers import verify_grad
+from pymc3.theanof import floatX
 
 
 def test_bound():

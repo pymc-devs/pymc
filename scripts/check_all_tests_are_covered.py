@@ -7,9 +7,9 @@ This is intended to be used as a pre-commit hook, see `.pre-commit-config.yaml`.
 You can run it manually with `pre-commit run check-no-tests-are-ignored --all`.
 """
 
-from pathlib import Path
-
 import re
+
+from pathlib import Path
 
 if __name__ == "__main__":
     pytest_ci_job = Path(".github") / "workflows/pytest.yml"

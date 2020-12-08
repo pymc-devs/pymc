@@ -13,11 +13,13 @@
 #   limitations under the License.
 
 import numpy as np
+
 from numpy import exp, log, sqrt
-from ..model import modelcontext, Point
-from ..theanof import hessian_diag, inputvars
-from ..blocking import DictToArrayBijection, ArrayOrdering
-from ..util import get_var_name
+
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.model import Point, modelcontext
+from pymc3.theanof import hessian_diag, inputvars
+from pymc3.util import get_var_name
 
 __all__ = ["find_hessian", "trace_cov", "guess_scaling"]
 

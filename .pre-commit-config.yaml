@@ -1,11 +1,19 @@
+exclude: ^(docs/logos|pymc3/examples/data)/
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v3.3.0
   hooks:
-    -   id: end-of-file-fixer
+    -   id: check-merge-conflict
     -   id: check-toml
+    -   id: check-yaml
+    -   id: debug-statements
+    -   id: end-of-file-fixer
+    -   id: no-commit-to-branch
+        args: [--branch, master]
+    -   id: requirements-txt-fixer
+    -   id: trailing-whitespace
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 0.4.1
+  rev: 0.5.4
   hooks:
     - id: nbqa-black
       additional_dependencies: [black==20.8b1]
@@ -13,6 +21,11 @@ repos:
       additional_dependencies: [isort==5.6.4]
     - id: nbqa-pyupgrade
       additional_dependencies: [pyupgrade==2.7.4]
+- repo: https://github.com/PyCQA/isort
+  rev: 5.6.4
+  hooks:
+    - id: isort
+      name: isort
 - repo: https://github.com/asottile/pyupgrade
   rev: v2.7.4
   hooks:
@@ -41,7 +54,6 @@ repos:
       entry: python scripts/check_toc_is_complete.py
       language: python
       name: Check all notebooks appear in table of contents
-      pass_filenames: false
       types: [jupyter]
     - id: check-no-tests-are-ignored
       entry: python scripts/check_all_tests_are_covered.py
@@ -49,3 +61,8 @@ repos:
       language: python
       name: Check no tests are ignored
       pass_filenames: false
+    - id: no-relative-imports
+      name: No relative imports
+      entry: from \.[\.\w]* import
+      types: [python]
+      language: pygrep

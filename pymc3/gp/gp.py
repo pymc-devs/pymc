@@ -18,20 +18,28 @@ import warnings
 import numpy as np
 import theano.tensor as tt
 
+from theano.tensor.nlinalg import eigh
+
 import pymc3 as pm
-from pymc3.gp.cov import Covariance, Constant
+
+from pymc3.distributions import draw_values
+from pymc3.gp.cov import Constant, Covariance
 from pymc3.gp.mean import Zero
 from pymc3.gp.util import (
+    cholesky,
     conditioned_vars,
     infer_shape,
-    stabilize,
-    cholesky,
     solve_lower,
     solve_upper,
+    stabilize,
 )
-from pymc3.distributions import draw_values
-from theano.tensor.nlinalg import eigh
-from ..math import cartesian, kron_dot, kron_diag, kron_solve_lower, kron_solve_upper
+from pymc3.math import (
+    cartesian,
+    kron_diag,
+    kron_dot,
+    kron_solve_lower,
+    kron_solve_upper,
+)
 
 __all__ = ["Latent", "Marginal", "TP", "MarginalSparse", "LatentKron", "MarginalKron"]
 

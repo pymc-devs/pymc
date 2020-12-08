@@ -16,27 +16,36 @@ import collections
 import itertools
 import threading
 import warnings
-from typing import Optional, TypeVar, Type, List, Union, TYPE_CHECKING, Any, cast
+
 from sys import modules
+from typing import TYPE_CHECKING, Any, List, Optional, Type, TypeVar, Union, cast
 
 import numpy as np
-from pandas import Series
 import scipy.sparse as sps
-import theano.sparse as sparse
 import theano
+import theano.sparse as sparse
 import theano.tensor as tt
-from theano.tensor.var import TensorVariable
-from theano.compile import SharedVariable
 
-from pymc3.theanof import set_theano_conf, floatX
+from pandas import Series
+from theano.compile import SharedVariable
+from theano.tensor.var import TensorVariable
+
 import pymc3 as pm
+
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
-from .memoize import memoize, WithMemoization
-from .theanof import gradient, hessian, inputvars, generator
-from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
-from .blocking import DictToArrayBijection, ArrayOrdering
-from .util import get_transformed_name, get_var_name
-from .exceptions import ImputationWarning
+from pymc3.memoize import WithMemoization, memoize
+from pymc3.theanof import (
+    floatX,
+    generator,
+    gradient,
+    hessian,
+    inputvars,
+    set_theano_conf,
+)
+from pymc3.util import get_transformed_name, get_var_name
+from pymc3.vartypes import continuous_types, discrete_types, isgenerator, typefilter
 
 __all__ = [
     "Model",
@@ -618,7 +627,7 @@ class ValueGradFunction:
         compute_grads=True,
         **kwargs,
     ):
-        from .distributions import TensorType
+        from pymc3.distributions import TensorType
 
         if extra_vars is None:
             extra_vars = []
@@ -1725,7 +1734,7 @@ def as_tensor(data, name, model, distribution):
             " sampling distribution.".format(name=name)
         )
         warnings.warn(impute_message, ImputationWarning)
-        from .distributions import NoDistribution
+        from pymc3.distributions import NoDistribution
 
         testval = np.broadcast_to(distribution.default(), data.shape)[data.mask]
         fakedist = NoDistribution.dist(
@@ -1777,7 +1786,7 @@ class ObservedRV(Factor, PyMC3Variable):
         total_size: scalar Tensor (optional)
             needed for upscaling logp
         """
-        from .distributions import TensorType
+        from pymc3.distributions import TensorType
 
         if hasattr(data, "type") and isinstance(data.type, tt.TensorType):
             type = data.type

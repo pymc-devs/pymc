@@ -12,98 +12,94 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from . import timeseries
-from . import transforms
-from . import shape_utils
-
-from .posterior_predictive import fast_sample_posterior_predictive
-
-from .continuous import Uniform
-from .continuous import Flat
-from .continuous import HalfFlat
-from .continuous import TruncatedNormal
-from .continuous import Normal
-from .continuous import Beta
-from .continuous import Kumaraswamy
-from .continuous import Exponential
-from .continuous import Laplace
-from .continuous import StudentT
-from .continuous import Cauchy
-from .continuous import HalfCauchy
-from .continuous import Gamma
-from .continuous import Weibull
-from .continuous import HalfStudentT
-from .continuous import Lognormal
-from .continuous import ChiSquared
-from .continuous import HalfNormal
-from .continuous import Wald
-from .continuous import Pareto
-from .continuous import InverseGamma
-from .continuous import ExGaussian
-from .continuous import VonMises
-from .continuous import SkewNormal
-from .continuous import Triangular
-from .continuous import Gumbel
-from .continuous import Logistic
-from .continuous import LogitNormal
-from .continuous import Interpolated
-from .continuous import Rice
-from .continuous import Moyal
-
-from .discrete import Binomial
-from .discrete import BetaBinomial
-from .discrete import Bernoulli
-from .discrete import DiscreteWeibull
-from .discrete import Poisson
-from .discrete import NegativeBinomial
-from .discrete import ConstantDist
-from .discrete import Constant
-from .discrete import ZeroInflatedPoisson
-from .discrete import ZeroInflatedNegativeBinomial
-from .discrete import ZeroInflatedBinomial
-from .discrete import DiscreteUniform
-from .discrete import Geometric
-from .discrete import Categorical
-from .discrete import OrderedLogistic
-from .discrete import OrderedProbit
-
-from .distribution import DensityDist
-from .distribution import Distribution
-from .distribution import Continuous
-from .distribution import Discrete
-from .distribution import NoDistribution
-from .distribution import TensorType
-from .distribution import draw_values
-from .distribution import generate_samples
-
-from .simulator import Simulator
-
-from .mixture import Mixture
-from .mixture import NormalMixture
-from .mixture import MixtureSameFamily
-
-from .multivariate import MvNormal
-from .multivariate import MatrixNormal
-from .multivariate import KroneckerNormal
-from .multivariate import MvStudentT
-from .multivariate import Dirichlet
-from .multivariate import Multinomial
-from .multivariate import Wishart
-from .multivariate import WishartBartlett
-from .multivariate import LKJCholeskyCov
-from .multivariate import LKJCorr
-
-from .timeseries import AR1
-from .timeseries import AR
-from .timeseries import GaussianRandomWalk
-from .timeseries import GARCH11
-from .timeseries import MvGaussianRandomWalk
-from .timeseries import MvStudentTRandomWalk
-
-from .bart import BART
-
-from .bound import Bound
-
+from pymc3.distributions import shape_utils, timeseries, transforms
+from pymc3.distributions.bart import BART
+from pymc3.distributions.bound import Bound
+from pymc3.distributions.continuous import (
+    Beta,
+    Cauchy,
+    ChiSquared,
+    ExGaussian,
+    Exponential,
+    Flat,
+    Gamma,
+    Gumbel,
+    HalfCauchy,
+    HalfFlat,
+    HalfNormal,
+    HalfStudentT,
+    Interpolated,
+    InverseGamma,
+    Kumaraswamy,
+    Laplace,
+    Logistic,
+    LogitNormal,
+    Lognormal,
+    Moyal,
+    Normal,
+    Pareto,
+    Rice,
+    SkewNormal,
+    StudentT,
+    Triangular,
+    TruncatedNormal,
+    Uniform,
+    VonMises,
+    Wald,
+    Weibull,
+)
+from pymc3.distributions.discrete import (
+    Bernoulli,
+    BetaBinomial,
+    Binomial,
+    Categorical,
+    Constant,
+    ConstantDist,
+    DiscreteUniform,
+    DiscreteWeibull,
+    Geometric,
+    HyperGeometric,
+    NegativeBinomial,
+    OrderedLogistic,
+    OrderedProbit,
+    Poisson,
+    ZeroInflatedBinomial,
+    ZeroInflatedNegativeBinomial,
+    ZeroInflatedPoisson,
+)
+from pymc3.distributions.distribution import (
+    Continuous,
+    DensityDist,
+    Discrete,
+    Distribution,
+    NoDistribution,
+    TensorType,
+    draw_values,
+    generate_samples,
+)
+from pymc3.distributions.mixture import Mixture, MixtureSameFamily, NormalMixture
+from pymc3.distributions.multivariate import (
+    Dirichlet,
+    KroneckerNormal,
+    LKJCholeskyCov,
+    LKJCorr,
+    MatrixNormal,
+    Multinomial,
+    MvNormal,
+    MvStudentT,
+    Wishart,
+    WishartBartlett,
+)
+from pymc3.distributions.posterior_predictive import fast_sample_posterior_predictive
+from pymc3.distributions.simulator import Simulator
+from pymc3.distributions.timeseries import (
+    AR,
+    AR1,
+    GARCH11,
+    GaussianRandomWalk,
+    MvGaussianRandomWalk,
+    MvStudentTRandomWalk,
+)
 
 __all__ = [
     "Uniform",
@@ -142,6 +138,7 @@ __all__ = [
     "ZeroInflatedBinomial",
     "DiscreteUniform",
     "Geometric",
+    "HyperGeometric",
     "Categorical",
     "OrderedLogistic",
     "OrderedProbit",

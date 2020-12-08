@@ -13,9 +13,12 @@
 #   limitations under the License.
 
 import logging
+
 import numpy as np
-from .distribution import NoDistribution, draw_values
+
 from scipy.spatial import cKDTree
+
+from pymc3.distributions.distribution import NoDistribution, draw_values
 
 __all__ = ["Simulator"]
 

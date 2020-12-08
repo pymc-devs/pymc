@@ -17,9 +17,10 @@ import timeit
 
 import numpy as np
 import pandas as pd
-import pymc3 as pm
 import theano
 import theano.tensor as tt
+
+import pymc3 as pm
 
 
 def glm_hierarchical_model(random_seed=123):

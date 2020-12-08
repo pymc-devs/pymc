@@ -17,11 +17,12 @@ pymc3.blocking
 
 Classes for working with subsets of parameters.
 """
-import copy
-import numpy as np
 import collections
+import copy
 
-from .util import get_var_name
+import numpy as np
+
+from pymc3.util import get_var_name
 
 __all__ = ["ArrayOrdering", "DictToArrayBijection", "DictToVarBijection"]
 

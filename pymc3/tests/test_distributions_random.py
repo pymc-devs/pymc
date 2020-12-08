@@ -13,44 +13,48 @@
 #   limitations under the License.
 
 import itertools
-import pytest
+import sys
+
 import numpy as np
-import numpy.testing as npt
-import scipy.stats as st
-from scipy.special import expit
-from scipy import linalg
 import numpy.random as nr
+import numpy.testing as npt
+import pytest
+import scipy.stats as st
 import theano
 
+from scipy import linalg
+from scipy.special import expit
+
 import pymc3 as pm
+
 from pymc3.distributions.dist_math import clipped_beta_rvs
 from pymc3.distributions.distribution import (
-    draw_values,
     _DrawValuesContext,
     _DrawValuesContextBlocker,
+    draw_values,
     to_tuple,
 )
-from .helpers import SeededTest
-from .test_distributions import (
-    build_model,
+from pymc3.tests.helpers import SeededTest
+from pymc3.tests.test_distributions import (
     Domain,
-    product,
-    R,
-    Rplus,
-    Rplusbig,
-    Runif,
-    Rplusdunif,
-    Unit,
+    I,
     Nat,
     NatSmall,
-    I,
-    Simplex,
-    Vector,
     PdMatrix,
     PdMatrixChol,
     PdMatrixCholUpper,
-    RealMatrix,
+    R,
     RandomPdMatrix,
+    RealMatrix,
+    Rplus,
+    Rplusbig,
+    Rplusdunif,
+    Runif,
+    Simplex,
+    Unit,
+    Vector,
+    build_model,
+    product,
 )
 
 
@@ -507,6 +511,11 @@ class TestGeometric(BaseTestCases.BaseTestCase):
     params = {"p": 0.5}
 
 
+class TestHyperGeometric(BaseTestCases.BaseTestCase):
+    distribution = pm.HyperGeometric
+    params = {"N": 50, "k": 25, "n": 10}
+
+
 class TestMoyal(BaseTestCases.BaseTestCase):
     distribution = pm.Moyal
     params = {"mu": 0.0, "sigma": 1.0}
@@ -708,6 +717,10 @@ class TestScalarParameterSamples(SeededTest):
     def test_binomial(self):
         pymc3_random_discrete(pm.Binomial, {"n": Nat, "p": Unit}, ref_rand=st.binom.rvs)
 
+    @pytest.mark.xfail(
+        sys.platform.startswith("win"),
+        reason="Known issue: https://github.com/pymc-devs/pymc3/pull/4269",
+    )
     def test_beta_binomial(self):
         pymc3_random_discrete(
             pm.BetaBinomial, {"n": Nat, "alpha": Rplus, "beta": Rplus}, ref_rand=self._beta_bin
@@ -738,6 +751,22 @@ class TestScalarParameterSamples(SeededTest):
 
     def test_geometric(self):
         pymc3_random_discrete(pm.Geometric, {"p": Unit}, size=500, fails=50, ref_rand=nr.geometric)
+
+    def test_hypergeometric(self):
+        def ref_rand(size, N, k, n):
+            return st.hypergeom.rvs(M=N, n=k, N=n, size=size)
+
+        pymc3_random_discrete(
+            pm.HyperGeometric,
+            {
+                "N": Domain([10, 11, 12, 13], "int64"),
+                "k": Domain([4, 5, 6, 7], "int64"),
+                "n": Domain([6, 7, 8, 9], "int64"),
+            },
+            size=500,
+            fails=50,
+            ref_rand=ref_rand,
+        )
 
     def test_discrete_uniform(self):
         def ref_rand(size, lower, upper):
@@ -1150,7 +1179,7 @@ class TestDensityDist:
                 shape=shape,
                 random=normal_dist.random,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         size = 100
@@ -1173,7 +1202,7 @@ class TestDensityDist:
                 random=normal_dist.random,
                 wrap_random_with_dist_shape=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         with pytest.raises(RuntimeError):
@@ -1196,7 +1225,7 @@ class TestDensityDist:
                 wrap_random_with_dist_shape=False,
                 check_shape_in_random=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model)
@@ -1219,7 +1248,7 @@ class TestDensityDist:
                 random=rvs,
                 wrap_random_with_dist_shape=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         size = 100
@@ -1239,7 +1268,7 @@ class TestDensityDist:
                 random=rvs,
                 wrap_random_with_dist_shape=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         size = 100
@@ -1252,7 +1281,7 @@ class TestDensityDist:
             mu = pm.Normal("mu", 0, 1)
             normal_dist = pm.Normal.dist(mu, 1)
             pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         with pytest.raises(ValueError):

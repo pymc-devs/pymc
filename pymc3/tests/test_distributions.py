@@ -15,85 +15,87 @@
 import itertools
 import sys
 
-from .helpers import SeededTest, select_by_precision
-from ..vartypes import continuous_types
-from ..model import Model, Point, Deterministic
-from ..blocking import DictToVarBijection
-from ..distributions import (
-    DensityDist,
-    Categorical,
-    Multinomial,
-    VonMises,
-    Dirichlet,
-    MvStudentT,
-    MvNormal,
-    MatrixNormal,
-    ZeroInflatedPoisson,
-    ZeroInflatedNegativeBinomial,
-    Constant,
-    Poisson,
+import numpy as np
+import numpy.random as nr
+import pytest
+import scipy.stats
+import scipy.stats.distributions as sp
+import theano
+import theano.tensor as tt
+
+from numpy import array, exp, inf, log
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+from scipy import integrate
+from scipy.special import logit, erf
+
+import pymc3 as pm
+
+from pymc3.blocking import DictToVarBijection
+from pymc3.distributions import (
+    AR1,
     Bernoulli,
     Beta,
     BetaBinomial,
-    HalfStudentT,
-    StudentT,
-    Weibull,
-    Pareto,
-    InverseGamma,
-    Gamma,
-    Cauchy,
-    HalfCauchy,
-    Lognormal,
-    Laplace,
-    NegativeBinomial,
-    Geometric,
-    Exponential,
-    ExGaussian,
-    Normal,
-    TruncatedNormal,
-    Flat,
-    LKJCorr,
-    Wald,
-    ChiSquared,
-    HalfNormal,
-    DiscreteUniform,
-    Bound,
-    Uniform,
-    Triangular,
     Binomial,
-    SkewNormal,
+    Bound,
+    Categorical,
+    Cauchy,
+    ChiSquared,
+    Constant,
+    DensityDist,
+    Dirichlet,
+    DiscreteUniform,
     DiscreteWeibull,
+    ExGaussian,
+    Exponential,
+    Flat,
+    Gamma,
+    Geometric,
     Gumbel,
+    HalfCauchy,
+    HalfFlat,
+    HalfNormal,
+    HalfStudentT,
+    HyperGeometric,
+    Interpolated,
+    InverseGamma,
+    KroneckerNormal,
+    Kumaraswamy,
+    Laplace,
+    LKJCorr,
     Logistic,
+    LogitNormal,
+    Lognormal,
+    MatrixNormal,
+    Moyal,
+    Multinomial,
+    MvNormal,
+    MvStudentT,
+    NegativeBinomial,
+    Normal,
     OrderedLogistic,
     OrderedProbit,
-    LogitNormal,
-    Interpolated,
-    ZeroInflatedBinomial,
-    HalfFlat,
-    AR1,
-    KroneckerNormal,
+    Pareto,
+    Poisson,
     Rice,
-    Kumaraswamy,
-    Moyal,
+    SkewNormal,
+    StudentT,
+    Triangular,
+    TruncatedNormal,
+    Uniform,
+    VonMises,
+    Wald,
+    Weibull,
+    ZeroInflatedBinomial,
+    ZeroInflatedNegativeBinomial,
+    ZeroInflatedPoisson,
+    continuous,
 )
-
-from ..distributions import continuous
+from pymc3.math import kronecker
+from pymc3.model import Deterministic, Model, Point
+from pymc3.tests.helpers import SeededTest, select_by_precision
 from pymc3.theanof import floatX
-import pymc3 as pm
-from numpy import array, inf, log, exp
-from numpy.testing import assert_almost_equal, assert_allclose, assert_equal
-import numpy.random as nr
-import numpy as np
-import pytest
-
-from scipy import integrate
-import scipy.stats.distributions as sp
-import scipy.stats
-from scipy.special import logit, erf
-import theano
-import theano.tensor as tt
-from ..math import kronecker
+from pymc3.vartypes import continuous_types
 
 
 def get_lkj_cases():
@@ -800,6 +802,14 @@ class TestMatchesScipy(SeededTest):
     def test_geometric(self):
         self.pymc3_matches_scipy(
             Geometric, Nat, {"p": Unit}, lambda value, p: np.log(sp.geom.pmf(value, p))
+        )
+
+    def test_hypergeometric(self):
+        self.pymc3_matches_scipy(
+            HyperGeometric,
+            Nat,
+            {"N": NatSmall, "k": NatSmall, "n": NatSmall},
+            lambda value, N, k, n: sp.hypergeom.logpmf(value, N, k, n),
         )
 
     def test_negative_binomial(self):

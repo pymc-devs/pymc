@@ -12,23 +12,24 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import collections
 import logging
 import warnings
-import collections
 
 import numpy as np
+
 from fastprogress.fastprogress import progress_bar
 
 import pymc3 as pm
-from pymc3.variational import test_functions
+
+from pymc3.variational import opvi, test_functions
 from pymc3.variational.approximations import (
-    MeanField,
-    FullRank,
     Empirical,
+    FullRank,
+    MeanField,
     NormalizingFlow,
 )
 from pymc3.variational.operators import KL, KSD
-from . import opvi
 
 logger = logging.getLogger(__name__)
 

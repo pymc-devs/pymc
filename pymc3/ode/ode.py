@@ -13,13 +13,16 @@
 #   limitations under the License.
 
 import logging
+
 import numpy as np
 import scipy
 import theano
 import theano.tensor as tt
+
 from theano.gof.op import get_test_value
-from ..ode import utils
-from ..exceptions import ShapeError, DtypeError
+
+from pymc3.exceptions import DtypeError, ShapeError
+from pymc3.ode import utils
 
 _log = logging.getLogger("pymc3")
 floatX = theano.config.floatX

@@ -16,29 +16,35 @@
 # -*- coding: utf-8 -*-
 
 import warnings
+
 import numpy as np
 import scipy
 import theano
 import theano.tensor as tt
 
-from scipy import stats, linalg
-
+from scipy import linalg, stats
 from theano.gof.op import get_test_value
 from theano.gof.utils import TestValueError
-from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
+from theano.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from theano.tensor.slinalg import Cholesky
+
 import pymc3 as pm
 
+from pymc3.distributions import transforms
+from pymc3.distributions.continuous import ChiSquared, Normal
+from pymc3.distributions.dist_math import bound, factln, logpow
+from pymc3.distributions.distribution import (
+    Continuous,
+    Discrete,
+    _DrawValuesContext,
+    draw_values,
+    generate_samples,
+)
+from pymc3.distributions.shape_utils import broadcast_dist_samples_to, to_tuple
+from pymc3.distributions.special import gammaln, multigammaln
+from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
+from pymc3.model import Deterministic
 from pymc3.theanof import floatX
-from . import transforms
-from .distribution import Continuous, Discrete, draw_values, generate_samples, _DrawValuesContext
-from ..model import Deterministic
-from .continuous import ChiSquared, Normal
-from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln
-from .shape_utils import to_tuple, broadcast_dist_samples_to
-from ..math import kron_dot, kron_diag, kron_solve_lower, kronecker
-
 
 __all__ = [
     "MvNormal",

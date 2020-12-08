@@ -15,13 +15,14 @@
 import logging
 
 import numpy as np
+
 from theano import function as theano_function
 
-from .arraystep import ArrayStepShared, Competence
-from ..distributions import BART
-from ..distributions.tree import Tree
-from ..model import modelcontext
-from ..theanof import inputvars, make_shared_replacements, join_nonshared_inputs
+from pymc3.distributions import BART
+from pymc3.distributions.tree import Tree
+from pymc3.model import modelcontext
+from pymc3.step_methods.arraystep import ArrayStepShared, Competence
+from pymc3.theanof import inputvars, join_nonshared_inputs, make_shared_replacements
 
 _log = logging.getLogger("pymc3")
 

@@ -13,12 +13,14 @@
 #   limitations under the License.
 
 import numbers
-import numpy as np
+
 from copy import copy
 
+import numpy as np
 import theano.tensor as tt
-from ..model import modelcontext
-from .. import distributions as pm_dists
+
+from pymc3 import distributions as pm_dists
+from pymc3.model import modelcontext
 
 __all__ = ["Normal", "StudentT", "Binomial", "Poisson", "NegativeBinomial"]
 

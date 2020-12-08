@@ -13,10 +13,12 @@
 #   limitations under the License.
 
 import numpy as np
-import pymc3 as pm
 import theano as th
+
+import pymc3 as pm
+
 from pymc3.model_graph import ModelGraph, model_to_graphviz
-from .helpers import SeededTest
+from pymc3.tests.helpers import SeededTest
 
 
 def radon_model():

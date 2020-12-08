@@ -12,16 +12,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pymc3 as pm
 import numpy as np
-from numpy import random as nr
 import numpy.testing as npt
 import pytest
-import theano.tensor as tt
 import theano
+import theano.tensor as tt
+
+from numpy import random as nr
+
+import pymc3 as pm
 
 from pymc3.distributions.distribution import _draw_value, draw_values
-from .helpers import SeededTest
+from pymc3.tests.helpers import SeededTest
 
 
 def test_draw_value():

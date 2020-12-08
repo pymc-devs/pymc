@@ -18,16 +18,17 @@ See the docstring for pymc3.backends for more information
 """
 import itertools as itl
 import logging
-from typing import List
+import warnings
+
 from abc import ABC
+from typing import List
 
 import numpy as np
-import warnings
 import theano.tensor as tt
 
-from ..model import modelcontext
-from .report import SamplerReport, merge_reports
-from ..util import get_var_name
+from pymc3.backends.report import SamplerReport, merge_reports
+from pymc3.model import modelcontext
+from pymc3.util import get_var_name
 
 logger = logging.getLogger("pymc3")
 
@@ -273,14 +274,14 @@ class MultiTrace:
 
     Attributes
     ----------
-        nchains: int
-            Number of chains in the `MultiTrace`.
-        chains: `List[int]`
-            List of chain indices
-        report: str
-            Report on the sampling process.
-        varnames: `List[str]`
-            List of variable names in the trace(s)
+    nchains: int
+        Number of chains in the `MultiTrace`.
+    chains: `List[int]`
+        List of chain indices
+    report: str
+        Report on the sampling process.
+    varnames: `List[str]`
+        List of variable names in the trace(s)
     """
 
     def __init__(self, straces):
