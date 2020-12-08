@@ -17,10 +17,9 @@ from theano import tensor as tt
 import pymc3 as pm
 
 from pymc3.theanof import change_flags
+from pymc3.variational import opvi
 from pymc3.variational.opvi import ObjectiveFunction, Operator
 from pymc3.variational.stein import Stein
-
-from . import opvi
 
 __all__ = ["KL", "KSD"]
 

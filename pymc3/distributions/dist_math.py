@@ -31,10 +31,9 @@ from theano.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from theano.scan import until
 from theano.tensor.slinalg import Cholesky
 
+from pymc3.distributions.shape_utils import to_tuple
+from pymc3.distributions.special import gammaln
 from pymc3.theanof import floatX
-
-from .shape_utils import to_tuple
-from .special import gammaln
 
 f = floatX
 c = -0.5 * np.log(2.0 * np.pi)

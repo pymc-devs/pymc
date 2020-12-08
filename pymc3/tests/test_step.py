@@ -58,11 +58,9 @@ from pymc3.step_methods import (
     UniformProposal,
 )
 from pymc3.step_methods.mlda import extract_Q_estimate
-from pymc3.theanof import floatX
-
-from .checks import close_to
-from .helpers import select_by_precision
-from .models import (
+from pymc3.tests.checks import close_to
+from pymc3.tests.helpers import select_by_precision
+from pymc3.tests.models import (
     mv_prior_simple,
     mv_simple,
     mv_simple_coarse,
@@ -71,6 +69,7 @@ from .models import (
     simple_2model_continuous,
     simple_categorical,
 )
+from pymc3.theanof import floatX
 
 
 class TestStepMethods:  # yield test doesn't work subclassing object
@@ -1133,7 +1132,7 @@ class TestMLDA:
             Normal("x", 0, 1)
             for stepper in TestMLDA.steppers:
                 step = stepper(coarse_models=[coarse_model])
-                trace = sample(chains=2, cores=1, draws=20, tune=0, step=step)
+                trace = sample(chains=2, cores=1, draws=20, tune=0, step=step, random_seed=1)
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
                 assert (
                     len(set(samples)) == 2
@@ -1150,7 +1149,7 @@ class TestMLDA:
             Normal("x", 0, 1)
             for stepper in TestMLDA.steppers:
                 step = stepper(coarse_models=[coarse_model])
-                trace = sample(chains=2, cores=2, draws=20, tune=0, step=step)
+                trace = sample(chains=2, cores=2, draws=20, tune=0, step=step, random_seed=1)
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
                 assert len(set(samples)) == 2, "Parallelized {} " "chains are identical.".format(
                     stepper
@@ -1176,7 +1175,7 @@ class TestMLDA:
             Normal("x", 5.0, 1.0)
             for coarse_model in possible_coarse_models:
                 step = MLDA(coarse_models=[coarse_model], subsampling_rates=3)
-                trace = sample(chains=1, draws=500, tune=100, step=step)
+                trace = sample(chains=1, draws=500, tune=100, step=step, random_seed=1)
                 acc.append(trace.get_sampler_stats("accepted").mean())
             assert acc[0] > acc[1] > acc[2], (
                 "Acceptance rate is not "

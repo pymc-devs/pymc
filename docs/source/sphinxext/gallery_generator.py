@@ -22,6 +22,11 @@ DEFAULT_IMG_LOC = os.path.join(os.path.dirname(DOC_SRC), "logos", "PyMC3.png")
 TABLE_OF_CONTENTS_FILENAME = "table_of_contents_{}.js"
 
 INDEX_TEMPLATE = """
+:orphan:
+
+..
+    _href from docs/source/conf.py
+
 .. _{sphinx_tag}:
 
 .. title:: {gallery}_notebooks

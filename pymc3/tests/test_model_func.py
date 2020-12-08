@@ -17,8 +17,8 @@ import scipy.stats as sp
 
 import pymc3 as pm
 
-from .checks import close_to
-from .models import mv_simple, simple_model
+from pymc3.tests.checks import close_to
+from pymc3.tests.models import mv_simple, simple_model
 
 tol = 2.0 ** -11
 

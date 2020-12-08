@@ -23,8 +23,8 @@ from theano.tensor import Tensor
 
 import pymc3 as pm
 
-from .model import ObservedRV
-from .util import get_default_varnames, get_var_name
+from pymc3.model import ObservedRV
+from pymc3.util import get_default_varnames, get_var_name
 
 
 class ModelGraph:

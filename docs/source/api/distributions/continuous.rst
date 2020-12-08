@@ -21,7 +21,7 @@ Continuous
    Cauchy
    HalfCauchy
    Gamma
-   InverseGamma 
+   InverseGamma
    Weibull
    Lognormal
    ChiSquared

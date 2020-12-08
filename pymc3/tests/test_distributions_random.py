@@ -34,9 +34,8 @@ from pymc3.distributions.distribution import (
     draw_values,
     to_tuple,
 )
-
-from .helpers import SeededTest
-from .test_distributions import (
+from pymc3.tests.helpers import SeededTest
+from pymc3.tests.test_distributions import (
     Domain,
     I,
     Nat,

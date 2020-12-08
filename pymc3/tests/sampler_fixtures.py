@@ -20,9 +20,8 @@ from scipy import stats
 
 import pymc3 as pm
 
+from pymc3.tests.helpers import SeededTest
 from pymc3.util import get_var_name
-
-from .helpers import SeededTest
 
 
 class KnownMean:

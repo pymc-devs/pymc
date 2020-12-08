@@ -19,8 +19,8 @@ from copy import copy
 import numpy as np
 import theano.tensor as tt
 
-from .. import distributions as pm_dists
-from ..model import modelcontext
+from pymc3 import distributions as pm_dists
+from pymc3.model import modelcontext
 
 __all__ = ["Normal", "StudentT", "Binomial", "Poisson", "NegativeBinomial"]
 
