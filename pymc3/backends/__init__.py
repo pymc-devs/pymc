@@ -12,34 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Backends for traces
+"""Storage backends for traces
 
-Available backends
-------------------
-
-1. NumPy array (pymc3.backends.NDArray)
-2. Text files (pymc3.backends.Text)
-3. SQLite (pymc3.backends.SQLite)
-
-The NDArray backend holds the entire trace in memory, whereas the Text
-and SQLite backends store the values while sampling.
-
-Selecting a backend
--------------------
-
-By default, a NumPy array is used as the backend. To specify a different
-backend, pass a backend instance to `sample`.
-
-For example, the following would save the sampling values to CSV files
-in the directory 'test'.
-
-    >>> import pymc3 as pm
-    >>> with pm.Model():
-    >>>      db = pm.backends.Text('test')
-    >>>      trace = pm.sample(..., trace=db)
-
-Note that as in the example above, one must have an active model context,
-or pass a `model` parameter in order to create a backend.
+The NDArray (pymc3.backends.NDArray) backend holds the entire trace in memory.
 
 Selecting values from a backend
 -------------------------------
@@ -77,67 +52,12 @@ iterations for all traces and variables.
     >>> sliced_trace = trace[1000:]
 
 The backend for the new trace is always NDArray, regardless of the
-type of original trace.  Only the NDArray backend supports a stop
-value in the slice.
+type of original trace. 
 
 Loading a saved backend
 -----------------------
 
-Saved backends can be loaded using `load` function in the module for the
-specific backend.
+Saved backends can be loaded using `arviz.from_netcdf`
 
-    >>> trace = pm.backends.text.load('test')
-
-Writing custom backends
------------------------
-
-Backends consist of a class that handles sampling storage and value
-selection. Three sampling methods of backend will be called:
-
-- setup: Before sampling is started, the `setup` method will be called
-  with two arguments: the number of draws and the chain number. This is
-  useful setting up any structure for storing the sampling values that
-  require the above information.
-
-- record: Record the sampling results for the current draw. This method
-  will be called with a dictionary of values mapped to the variable
-  names. This is the only sampling function that *must* do something to
-  have a meaningful backend.
-
-- close: This method is called following sampling and should perform any
-  actions necessary for finalizing and cleaning up the backend.
-
-The base storage class `backends.base.BaseTrace` provides common model
-setup that is used by all the PyMC backends.
-
-Several selection methods must also be defined:
-
-- get_values: This is the core method for selecting values from the
-  backend. It can be called directly and is used by __getitem__ when the
-  backend is indexed with a variable name or object.
-
-- _slice: Defines how the backend returns a slice of itself. This
-  is called if the backend is indexed with a slice range.
-
-- point: Returns values for each variable at a single iteration. This is
-  called if the backend is indexed with a single integer.
-
-- __len__: This should return the number of draws.
-
-When `pymc3.sample` finishes, it wraps all trace objects in a MultiTrace
-object that provides a consistent selection interface for all backends.
-If the traces are stored on disk, then a `load` function should also be
-defined that returns a MultiTrace object.
-
-For specific examples, see pymc3.backends.{ndarray,text,sqlite}.py.
 """
 from ..backends.ndarray import NDArray, save_trace, load_trace, point_list_to_multitrace
-from ..backends.text import Text
-from ..backends.sqlite import SQLite
-from ..backends.hdf5 import HDF5
-
-_shortcuts = {
-    "text": {"backend": Text, "name": "mcmc"},
-    "sqlite": {"backend": SQLite, "name": "mcmc.sqlite"},
-    "hdf5": {"backend": HDF5, "name": "mcmc.hdf5"},
-}

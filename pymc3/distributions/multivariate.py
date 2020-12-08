@@ -24,6 +24,7 @@ import theano.tensor as tt
 from scipy import stats, linalg
 
 from theano.gof.op import get_test_value
+from theano.gof.utils import TestValueError
 from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
 from theano.tensor.slinalg import Cholesky
 import pymc3 as pm
@@ -37,12 +38,6 @@ from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln
 from .shape_utils import to_tuple
 from ..math import kron_dot, kron_diag, kron_solve_lower, kronecker
-
-# TODO: Remove this once the theano-pymc dependency is above 1.0.9
-try:
-    from theano.gof.utils import TestValueError
-except ImportError:
-    TestValueError = AttributeError
 
 
 __all__ = [
@@ -832,7 +827,7 @@ class Wishart(Continuous):
         """
         nu, V = draw_values([self.nu, self.V], point=point, size=size)
         size = 1 if size is None else size
-        return generate_samples(stats.wishart.rvs, np.asscalar(nu), V, broadcast_shape=(size,))
+        return generate_samples(stats.wishart.rvs, nu.item(), V, broadcast_shape=(size,))
 
     def logp(self, X):
         """

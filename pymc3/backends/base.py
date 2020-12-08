@@ -14,8 +14,7 @@
 
 """Base backend for traces
 
-See the docstring for pymc3.backends for more information (including
-creating custom backends).
+See the docstring for pymc3.backends for more information
 """
 import itertools as itl
 import logging

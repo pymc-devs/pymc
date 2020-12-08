@@ -16,7 +16,6 @@ import numpy as np
 import numpy.testing as npt
 import theano
 import theano.tensor as tt
-from theano.tests import unittest_tools as utt
 from pymc3.math import (
     LogDet,
     logdet,
@@ -31,7 +30,7 @@ from pymc3.math import (
     kron_dot,
     kron_solve_lower,
 )
-from .helpers import SeededTest
+from .helpers import SeededTest, verify_grad
 import pytest
 from pymc3.theanof import floatX
 
@@ -153,7 +152,7 @@ def test_log1mexp():
 class TestLogDet(SeededTest):
     def setup_method(self):
         super().setup_method()
-        utt.seed_rng()
+        np.random.seed(899853)
         self.op_class = LogDet
         self.op = logdet
 
@@ -166,10 +165,10 @@ class TestLogDet(SeededTest):
         numpy_out = np.sum(np.log(np.abs(svd_diag)))
 
         # Compare the result computed to the expected value.
-        utt.assert_allclose(numpy_out, out)
+        np.allclose(numpy_out, out)
 
         # Test gradient:
-        utt.verify_grad(self.op, [input_mat])
+        verify_grad(self.op, [input_mat])
 
     @pytest.mark.skipif(
         theano.config.device in ["cuda", "gpu"],
@@ -186,7 +185,7 @@ class TestLogDet(SeededTest):
 def test_expand_packed_triangular():
     with pytest.raises(ValueError):
         x = tt.matrix("x")
-        x.tag.test_value = np.array([[1.0]])
+        x.tag.test_value = np.array([[1.0]], dtype=theano.config.floatX)
         expand_packed_triangular(5, x)
     N = 5
     packed = tt.vector("packed")
