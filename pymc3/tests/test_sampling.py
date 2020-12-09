@@ -30,6 +30,7 @@ from theano import shared
 
 import pymc3 as pm
 
+from pymc3.backends.ndarray import NDArray
 from pymc3.exceptions import IncorrectArgumentsError, SamplingError
 from pymc3.tests.helpers import SeededTest
 from pymc3.tests.models import simple_init
@@ -297,6 +298,31 @@ def test_partial_trace_sample():
         a = pm.Normal("a", mu=0, sigma=1)
         b = pm.Normal("b", mu=0, sigma=1)
         trace = pm.sample(trace=[a])
+
+
+@pytest.mark.parametrize(
+    "points_0, points_1, expected_length, expected_n_traces",
+    [
+        ([1, 4, 2, 8, 5, 7], [3, 1, 4, 1], 4, 2),
+        ([1, 4, 2, 8, 5, 7], [3, 1], 6, 1),
+    ],
+)
+def test_choose_chains(points_0, points_1, expected_length, expected_n_traces):
+    trace_0_points = tuple({"a": i} for i in points_0)
+    trace_1_points = tuple({"a": i} for i in points_1)
+    with pm.Model() as model:
+        a = pm.Normal("a", mu=0, sigma=1)
+        trace_0 = NDArray(model)
+        trace_1 = NDArray(model)
+        trace_0.setup(6, 1)
+        trace_1.setup(4, 1)
+        for point in trace_0_points:
+            trace_0.record(point)
+        for point in trace_1_points:
+            trace_1.record(point)
+        traces, length = pm.sampling._choose_chains([trace_0, trace_1], tune=1)
+    assert length == expected_length
+    assert expected_n_traces == len(traces)
 
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
