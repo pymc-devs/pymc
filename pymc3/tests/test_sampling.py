@@ -301,26 +301,28 @@ def test_partial_trace_sample():
 
 
 @pytest.mark.parametrize(
-    "points_0, points_1, expected_length, expected_n_traces",
+    "n_points, tune, expected_length, expected_n_traces",
     [
-        ([1, 4, 2, 8, 5, 7], [3, 1, 4, 1], 4, 2),
-        ([1, 4, 2, 8, 5, 7], [3, 1], 6, 1),
+        ((5, 2, 2), 0, 2, 3),
+        ((6, 1, 1), 1, 6, 1),
     ],
 )
-def test_choose_chains(points_0, points_1, expected_length, expected_n_traces):
-    trace_0_points = tuple({"a": i} for i in points_0)
-    trace_1_points = tuple({"a": i} for i in points_1)
+def test_choose_chains(n_points, tune, expected_length, expected_n_traces):
     with pm.Model() as model:
         a = pm.Normal("a", mu=0, sigma=1)
         trace_0 = NDArray(model)
         trace_1 = NDArray(model)
-        trace_0.setup(6, 1)
-        trace_1.setup(4, 1)
-        for point in trace_0_points:
-            trace_0.record(point)
-        for point in trace_1_points:
-            trace_1.record(point)
-        traces, length = pm.sampling._choose_chains([trace_0, trace_1], tune=1)
+        trace_2 = NDArray(model)
+        trace_0.setup(n_points[0], 1)
+        trace_1.setup(n_points[1], 1)
+        trace_2.setup(n_points[2], 1)
+        for _ in range(n_points[0]):
+            trace_0.record({"a": 0})
+        for _ in range(n_points[1]):
+            trace_1.record({"a": 0})
+        for _ in range(n_points[2]):
+            trace_2.record({"a": 0})
+        traces, length = pm.sampling._choose_chains([trace_0, trace_1, trace_2], tune=tune)
     assert length == expected_length
     assert expected_n_traces == len(traces)
 
