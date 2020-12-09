@@ -1,5 +1,9 @@
 # Release Notes
 
+## PyMC3 3.10.1 (on deck)
+### Maintenance
+- Fixed bug whereby partial traces returns after keyboard interrupt during parallel sampling had smaller effective size than would've been available [#4318](https://github.com/pymc-devs/pymc3/pull/4318)
+
 ## PyMC3 3.10.0 (7 December 2020)
 
 This is a major release with many exciting new features. The biggest change is that we now rely on our own fork of [Theano-PyMC](https://github.com/pymc-devs/Theano-PyMC). This is in line with our [big announcement about our commitment to PyMC3 and Theano](https://pymc-devs.medium.com/the-future-of-pymc3-or-theano-is-dead-long-live-theano-d8005f8a0e9b).
