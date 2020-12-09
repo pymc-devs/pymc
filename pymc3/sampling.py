@@ -1527,7 +1527,7 @@ def _choose_chains(traces, tune):
         raise ValueError("Not enough samples to build a trace.")
 
     idxs = np.argsort(lengths)
-    l_sort = np.sort(lengths)
+    l_sort = lengths[idxs]
 
     use_until = np.argmax(l_sort * np.arange(1, l_sort.shape[0] + 1)[::-1])
     final_length = l_sort[use_until]
