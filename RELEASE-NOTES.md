@@ -2,7 +2,7 @@
 
 ## PyMC3 3.10.1 (on deck)
 ### Maintenance
-- Fixed bug whereby partial traces returns after keyboard interrupt during parallel sampling had smaller effective size than would've been available [#4318](https://github.com/pymc-devs/pymc3/pull/4318)
+- Fixed bug whereby partial traces returns after keyboard interrupt during parallel sampling had fewer draws than would've been available [#4318](https://github.com/pymc-devs/pymc3/pull/4318)
 
 ## PyMC3 3.10.0 (7 December 2020)
 
