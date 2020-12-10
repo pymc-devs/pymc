@@ -67,7 +67,7 @@ repos:
       entry: python scripts/sort_conda_envs.py
       files: ^conda-envs/
       language: python
-      name: Sort dependencies in conda sort-conda-envs
+      name: Sort dependencies in conda envs
       types: [yaml]
     - id: pin-theano-pymc
       additional_dependencies: [pyyaml]
