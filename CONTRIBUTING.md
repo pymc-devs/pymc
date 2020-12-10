@@ -15,7 +15,7 @@ We appreciate being notified of problems with the existing PyMC code. We prefer 
 
 Please verify that your issue is not being currently addressed by other issues or pull requests by using the GitHub search tool to look for key words in the project issue tracker.
 
-Filter on the "beginner friendly" for issues which are good for new contributors.
+Filter on the ["beginner friendly"](https://github.com/pymc-devs/pymc3/issues?q=is%3Aopen+is%3Aissue+label%3A%22beginner+friendly%22) label for issues which are good for new contributors.
 
 # Contributing code via pull requests
 
