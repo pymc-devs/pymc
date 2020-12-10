@@ -115,7 +115,7 @@ class Simulator(NoDistribution):
         array
         """
         params = draw_values([*self.params], point=point, size=size)
-        if not size:
+        if (size is None) or (len(size) == 0):
             return self.function(*params)
         else:
             return np.array([self.function(*params) for _ in range(size[0])])
