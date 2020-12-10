@@ -11,6 +11,7 @@ repos:
     -   id: no-commit-to-branch
         args: [--branch, master]
     -   id: requirements-txt-fixer
+        exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
 - repo: https://github.com/nbQA-dev/nbQA
   rev: 0.5.4
@@ -60,6 +61,27 @@ repos:
       files: ^\.github/workflows/pytest\.yml$
       language: python
       name: Check no tests are ignored
+      pass_filenames: false
+    - id: conda-env-sort
+      additional_dependencies: [pyyaml]
+      entry: python scripts/sort_conda_envs.py
+      files: ^conda-envs/
+      language: python
+      name: Sort dependencies in conda sort-conda-envs
+      types: [yaml]
+    - id: pin-theano-pymc
+      additional_dependencies: [pyyaml]
+      entry: python scripts/pin_theano.py
+      files: ^conda-envs/
+      language: python
+      name: Check theano-pymc versions match the one in requirements.txt
+      types: [yaml]
+    - id: pip-to-conda
+      additional_dependencies: [pyyaml]
+      entry: python scripts/generate_pip_deps_from_conda.py
+      files: ^(conda-envs/environment-dev-py38\.yml|requirements-dev\.txt)$
+      language: python
+      name: Generate pip dependency from conda
       pass_filenames: false
     - id: no-relative-imports
       name: No relative imports
