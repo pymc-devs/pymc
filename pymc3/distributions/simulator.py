@@ -18,7 +18,7 @@ import numpy as np
 
 from scipy.spatial import cKDTree
 
-from pymc3.distributions.distribution import NoDistribution, draw_values
+from pymc3.distributions.distribution import NoDistribution, draw_values, to_tuple
 
 __all__ = ["Simulator"]
 
@@ -114,8 +114,9 @@ class Simulator(NoDistribution):
         -------
         array
         """
+        size = to_tuple(size)
         params = draw_values([*self.params], point=point, size=size)
-        if (size is None) or (len(size) == 0):
+        if len(size) == 0:
             return self.function(*params)
         else:
             return np.array([self.function(*params) for _ in range(size[0])])
