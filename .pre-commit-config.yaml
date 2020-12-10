@@ -69,13 +69,6 @@ repos:
       language: python
       name: Sort dependencies in conda envs
       types: [yaml]
-    - id: pin-theano-pymc
-      additional_dependencies: [pyyaml]
-      entry: python scripts/pin_theano.py
-      files: ^conda-envs/
-      language: python
-      name: Check theano-pymc versions match the one in requirements.txt
-      types: [yaml]
     - id: pip-to-conda
       additional_dependencies: [pyyaml]
       entry: python scripts/generate_pip_deps_from_conda.py
