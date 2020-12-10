@@ -31,17 +31,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-Convert the conda environment.yml to the pip requirements-dev.txt,
-or check that they have the same packages (for the CI)
+Check requirements-dev.txt has been generated from conda-envs/environment-dev-py38.yml
 
-Usage:
-
-    Generate `requirements-dev.txt`
-    $ python scripts/generate_pip_deps_from_conda.py
-
-    Compare and fail (exit status != 0) if `requirements-dev.txt` has not been
-    generated with this script:
-    $ python scripts/generate_pip_deps_from_conda.py --compare
+This is intended to be used as a pre-commit hook, see `.pre-commit-config.yaml`.
+You can run it manually with `pre-commit run pip-to-conda --all`.
 """
 import os
 import re
