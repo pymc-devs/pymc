@@ -1,3 +1,10 @@
+"""
+Check that the theano-pymc pins are consistent.
+
+This is intended to be used as a pre-commit hook, see `.pre-commit-config.yaml`.
+You can run it manually with `pre-commit run pin-theano-pymc --all`.
+"""
+
 import argparse
 
 from pathlib import Path
