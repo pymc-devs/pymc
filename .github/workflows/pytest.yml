@@ -21,6 +21,7 @@ jobs:
             --ignore=pymc3/tests/test_examples.py
             --ignore=pymc3/tests/test_gp.py
             --ignore=pymc3/tests/test_mixture.py
+            --ignore=pymc3/tests/test_ode.py
             --ignore=pymc3/tests/test_parallel_sampling.py
             --ignore=pymc3/tests/test_posteriors.py
             --ignore=pymc3/tests/test_quadpotential.py
@@ -43,6 +44,7 @@ jobs:
           - |
             pymc3/tests/test_examples.py
             pymc3/tests/test_mixture.py
+            pymc3/tests/test_ode.py
             pymc3/tests/test_posteriors.py
             pymc3/tests/test_quadpotential.py
           - |
