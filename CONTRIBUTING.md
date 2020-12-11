@@ -15,6 +15,8 @@ We appreciate being notified of problems with the existing PyMC code. We prefer 
 
 Please verify that your issue is not being currently addressed by other issues or pull requests by using the GitHub search tool to look for key words in the project issue tracker.
 
+Filter on the ["beginner friendly"](https://github.com/pymc-devs/pymc3/issues?q=is%3Aopen+is%3Aissue+label%3A%22beginner+friendly%22) label for issues which are good for new contributors.
+
 # Contributing code via pull requests
 
 While issue reporting is valuable, we strongly encourage users who are inclined to do so to submit patches for new or existing issues via pull requests. This is particularly the case for simple fixes, such as typos or tweaks to documentation, which do not require a heavy investment of time and attention.
@@ -38,7 +40,7 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
 3. Create a ``feature`` branch to hold your development changes:
 
    ```bash
-   $ git switch -c my-feature
+   $ git checkout -b my-feature
    ```
 
    Always use a ``feature`` branch. It's good practice to never routinely work on the ``master`` branch of any repository.
@@ -146,5 +148,7 @@ docker exec -it pymc3 jupyter notebook list
 Follow [TensorFlow's style guide](https://www.tensorflow.org/community/contribute/code_style) or the [Google style guide](https://google.github.io/styleguide/pyguide.html) for writing code, which more or less follows PEP 8.
 
 For documentation strings, we *prefer* [numpy style](https://numpydoc.readthedocs.io/en/latest/format.html) to comply with the style that predominates in our upstream dependencies.
+
+Finally, see the [PyMC3 Python Code Style](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Python-Code-Style) and the [PyMC's Jupyter Notebook Style](https://github.com/pymc-devs/pymc3/wiki/PyMC's-Jupyter-Notebook-Style) guides.
 
 #### This guide was derived from the [scikit-learn guide to contributing](https://github.com/scikit-learn/scikit-learn/blob/master/CONTRIBUTING.md)
