@@ -69,13 +69,12 @@ repos:
       language: python
       name: Sort dependencies in conda envs
       types: [yaml]
-    - id: pip-to-conda
+    - id: pip-from-conda
       additional_dependencies: [pyyaml]
       entry: python scripts/generate_pip_deps_from_conda.py
-      files: ^(conda-envs/environment-dev-py38\.yml|requirements-dev\.txt)$
+      files: ^conda-envs/
       language: python
       name: Generate pip dependency from conda
-      pass_filenames: false
     - id: no-relative-imports
       name: No relative imports
       entry: from \.[\.\w]* import
