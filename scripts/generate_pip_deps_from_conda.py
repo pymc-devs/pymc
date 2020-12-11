@@ -128,7 +128,4 @@ if __name__ == "__main__":
     parser.add_argument("files", nargs="*")
     args = parser.parse_args()
     for file in args.files:
-        main(
-            file,
-            "requirements-dev.txt",
-        )
+        main(file, "requirements-dev.txt")
