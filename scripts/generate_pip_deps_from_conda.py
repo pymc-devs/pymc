@@ -31,12 +31,12 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-Check requirements-dev.txt has been generated from conda-envs/environment-dev-py38.yml
+Check requirements-dev.txt has been generated from conda-envs/environment-dev-py3*.yml
 
 This is intended to be used as a pre-commit hook, see `.pre-commit-config.yaml`.
 You can run it manually with `pre-commit run pip-to-conda --all`.
 """
-import os
+import argparse
 import re
 
 import yaml
@@ -113,10 +113,9 @@ def main(conda_fname, pip_fname):
         else:
             raise ValueError(f"Unexpected dependency {dep}")
 
-    fname = os.path.split(conda_fname)[1]
     header = (
-        f"# This file is auto-generated from {fname}, do not modify.\n"
-        "# See that file for comments about the need/usage of each dependency.\n\n"
+        f"# This file is auto-generated from by scripts/generate_pip_deps_from_conda.py, "
+        "do not modify.\n# See that file for comments about the need/usage of each dependency.\n\n"
     )
     pip_content = header + "\n".join(pip_deps) + "\n"
 
@@ -125,7 +124,11 @@ def main(conda_fname, pip_fname):
 
 
 if __name__ == "__main__":
-    main(
-        os.path.join("conda-envs", "environment-dev-py38.yml"),
-        "requirements-dev.txt",
-    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument("files", nargs="*")
+    args = parser.parse_args()
+    for file in args.files:
+        main(
+            file,
+            "requirements-dev.txt",
+        )
