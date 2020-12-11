@@ -1,6 +1,6 @@
 # Release Notes
 
-## PyMC3 3.10.x
+## PyMC3 3.10.1 (on deck)
 
 ### Maintenance
 - Make `sample_shape` same across all contexts in `draw_values` (see [#4305](https://github.com/pymc-devs/pymc3/pull/4305)).
