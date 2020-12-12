@@ -1509,7 +1509,7 @@ def _mp_sample(
 
 def _choose_chains(traces, tune):
     """
-    Pick traces such that the effective sample size is maximised.
+    Filter and slice traces such that (n_traces * len(shortest_trace)) is maximized.
 
     We get here after a ``KeyboardInterrupt``, and so the different
     traces have different lengths. We therefore pick the number of
