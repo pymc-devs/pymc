@@ -36,13 +36,7 @@ from pymc3.blocking import ArrayOrdering, DictToArrayBijection
 from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
 from pymc3.memoize import WithMemoization, memoize
-from pymc3.theanof import (
-    floatX,
-    generator,
-    gradient,
-    hessian,
-    inputvars,
-)
+from pymc3.theanof import floatX, generator, gradient, hessian, inputvars
 from pymc3.util import get_transformed_name, get_var_name
 from pymc3.vartypes import continuous_types, discrete_types, isgenerator, typefilter
 
