@@ -14,24 +14,25 @@
 
 import numpy as np
 import numpy.testing as npt
+import pytest
 import theano
 import theano.tensor as tt
+
 from pymc3.math import (
     LogDet,
-    logdet,
-    probit,
-    invprobit,
-    expand_packed_triangular,
-    log1pexp,
-    log1mexp,
-    log1mexp_numpy,
-    kronecker,
     cartesian,
+    expand_packed_triangular,
+    invprobit,
     kron_dot,
     kron_solve_lower,
+    kronecker,
+    log1mexp,
+    log1mexp_numpy,
+    log1pexp,
+    logdet,
+    probit,
 )
-from .helpers import SeededTest, verify_grad
-import pytest
+from pymc3.tests.helpers import SeededTest, verify_grad
 from pymc3.theanof import floatX
 
 

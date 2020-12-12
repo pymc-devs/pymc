@@ -101,8 +101,7 @@ def compareplot(*args, **kwargs):
     return az.plot_compare(*args, **kwargs)
 
 
-from .posteriorplot import plot_posterior_predictive_glm
-
+from pymc3.plots.posteriorplot import plot_posterior_predictive_glm
 
 # Access to arviz plots: base plots provided by arviz
 for plot in az.plots.__all__:

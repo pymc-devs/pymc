@@ -12,11 +12,12 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-#!/usr/bin/env python
-from codecs import open
-from os.path import realpath, dirname, join
-from setuptools import setup, find_packages
 import re
+
+from codecs import open
+from os.path import dirname, join, realpath
+
+from setuptools import find_packages, setup
 
 DISTNAME = "pymc3"
 DESCRIPTION = "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"

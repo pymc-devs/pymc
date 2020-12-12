@@ -12,43 +12,49 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytest
+import itertools
+import sys
+
 import numpy as np
-import numpy.testing as npt
-import scipy.stats as st
-from scipy.special import expit
-from scipy import linalg
 import numpy.random as nr
+import numpy.testing as npt
+import pytest
+import scipy.stats as st
 import theano
 
+from scipy import linalg
+from scipy.special import expit
+
 import pymc3 as pm
+
 from pymc3.distributions.dist_math import clipped_beta_rvs
 from pymc3.distributions.distribution import (
-    draw_values,
     _DrawValuesContext,
     _DrawValuesContextBlocker,
+    draw_values,
+    to_tuple,
 )
-from .helpers import SeededTest
-from .test_distributions import (
-    build_model,
+from pymc3.tests.helpers import SeededTest
+from pymc3.tests.test_distributions import (
     Domain,
-    product,
-    R,
-    Rplus,
-    Rplusbig,
-    Runif,
-    Rplusdunif,
-    Unit,
+    I,
     Nat,
     NatSmall,
-    I,
-    Simplex,
-    Vector,
     PdMatrix,
     PdMatrixChol,
     PdMatrixCholUpper,
-    RealMatrix,
+    R,
     RandomPdMatrix,
+    RealMatrix,
+    Rplus,
+    Rplusbig,
+    Rplusdunif,
+    Runif,
+    Simplex,
+    Unit,
+    Vector,
+    build_model,
+    product,
 )
 
 
@@ -489,6 +495,11 @@ class TestGeometric(BaseTestCases.BaseTestCase):
     params = {"p": 0.5}
 
 
+class TestHyperGeometric(BaseTestCases.BaseTestCase):
+    distribution = pm.HyperGeometric
+    params = {"N": 50, "k": 25, "n": 10}
+
+
 class TestMoyal(BaseTestCases.BaseTestCase):
     distribution = pm.Moyal
     params = {"mu": 0.0, "sigma": 1.0}
@@ -690,6 +701,10 @@ class TestScalarParameterSamples(SeededTest):
     def test_binomial(self):
         pymc3_random_discrete(pm.Binomial, {"n": Nat, "p": Unit}, ref_rand=st.binom.rvs)
 
+    @pytest.mark.xfail(
+        sys.platform.startswith("win"),
+        reason="Known issue: https://github.com/pymc-devs/pymc3/pull/4269",
+    )
     def test_beta_binomial(self):
         pymc3_random_discrete(
             pm.BetaBinomial, {"n": Nat, "alpha": Rplus, "beta": Rplus}, ref_rand=self._beta_bin
@@ -720,6 +735,22 @@ class TestScalarParameterSamples(SeededTest):
 
     def test_geometric(self):
         pymc3_random_discrete(pm.Geometric, {"p": Unit}, size=500, fails=50, ref_rand=nr.geometric)
+
+    def test_hypergeometric(self):
+        def ref_rand(size, N, k, n):
+            return st.hypergeom.rvs(M=N, n=k, N=n, size=size)
+
+        pymc3_random_discrete(
+            pm.HyperGeometric,
+            {
+                "N": Domain([10, 11, 12, 13], "int64"),
+                "k": Domain([4, 5, 6, 7], "int64"),
+                "n": Domain([6, 7, 8, 9], "int64"),
+            },
+            size=500,
+            fails=50,
+            ref_rand=ref_rand,
+        )
 
     def test_discrete_uniform(self):
         def ref_rand(size, lower, upper):
@@ -1132,7 +1163,7 @@ class TestDensityDist:
                 shape=shape,
                 random=normal_dist.random,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         size = 100
@@ -1155,7 +1186,7 @@ class TestDensityDist:
                 random=normal_dist.random,
                 wrap_random_with_dist_shape=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         with pytest.raises(RuntimeError):
@@ -1178,7 +1209,7 @@ class TestDensityDist:
                 wrap_random_with_dist_shape=False,
                 check_shape_in_random=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model)
@@ -1201,7 +1232,7 @@ class TestDensityDist:
                 random=rvs,
                 wrap_random_with_dist_shape=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         size = 100
@@ -1221,7 +1252,7 @@ class TestDensityDist:
                 random=rvs,
                 wrap_random_with_dist_shape=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         size = 100
@@ -1234,7 +1265,7 @@ class TestDensityDist:
             mu = pm.Normal("mu", 0, 1)
             normal_dist = pm.Normal.dist(mu, 1)
             pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         with pytest.raises(ValueError):
@@ -1528,3 +1559,116 @@ class TestNestedRandom(SeededTest):
             prior_samples=prior_samples,
         )
         assert prior["target"].shape == (prior_samples,) + shape
+
+
+def generate_shapes(include_params=False, xfail=False):
+    # fmt: off
+    mudim_as_event = [
+        [None, 1, 3, 10, (10, 3), 100],
+        [(3,)],
+        [(1,), (3,)],
+        ["cov", "chol", "tau"]
+    ]
+    # fmt: on
+    mudim_as_dist = [
+        [None, 1, 3, 10, (10, 3), 100],
+        [(10, 3)],
+        [(1,), (3,), (1, 1), (1, 3), (10, 1), (10, 3)],
+        ["cov", "chol", "tau"],
+    ]
+    if not include_params:
+        del mudim_as_event[-1]
+        del mudim_as_dist[-1]
+    data = itertools.chain(itertools.product(*mudim_as_event), itertools.product(*mudim_as_dist))
+    if xfail:
+        data = list(data)
+        for index in range(len(data)):
+            if data[index][0] in (None, 1):
+                data[index] = pytest.param(
+                    *data[index], marks=pytest.mark.xfail(reason="wait for PR #4214")
+                )
+    return data
+
+
+class TestMvNormal(SeededTest):
+    @pytest.mark.parametrize(
+        ["sample_shape", "dist_shape", "mu_shape", "param"],
+        generate_shapes(include_params=True, xfail=False),
+        ids=str,
+    )
+    def test_with_np_arrays(self, sample_shape, dist_shape, mu_shape, param):
+        dist = pm.MvNormal.dist(mu=np.ones(mu_shape), **{param: np.eye(3)}, shape=dist_shape)
+        output_shape = to_tuple(sample_shape) + dist_shape
+        assert dist.random(size=sample_shape).shape == output_shape
+
+    @pytest.mark.parametrize(
+        ["sample_shape", "dist_shape", "mu_shape"],
+        generate_shapes(include_params=False, xfail=True),
+        ids=str,
+    )
+    def test_with_chol_rv(self, sample_shape, dist_shape, mu_shape):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            chol, corr, stds = pm.LKJCholeskyCov(
+                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            mv = pm.MvNormal("mv", mu, chol=chol, shape=dist_shape)
+            prior = pm.sample_prior_predictive(samples=sample_shape)
+
+        assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape
+
+    @pytest.mark.parametrize(
+        ["sample_shape", "dist_shape", "mu_shape"],
+        generate_shapes(include_params=False, xfail=True),
+        ids=str,
+    )
+    def test_with_cov_rv(self, sample_shape, dist_shape, mu_shape):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            chol, corr, stds = pm.LKJCholeskyCov(
+                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            mv = pm.MvNormal("mv", mu, cov=pm.math.dot(chol, chol.T), shape=dist_shape)
+            prior = pm.sample_prior_predictive(samples=sample_shape)
+
+        assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape
+
+    def test_issue_3758(self):
+        np.random.seed(42)
+        ndim = 50
+        with pm.Model() as model:
+            a = pm.Normal("a", sigma=100, shape=ndim)
+            b = pm.Normal("b", mu=a, sigma=1, shape=ndim)
+            c = pm.MvNormal("c", mu=a, chol=np.linalg.cholesky(np.eye(ndim)), shape=ndim)
+            d = pm.MvNormal("d", mu=a, cov=np.eye(ndim), shape=ndim)
+            samples = pm.sample_prior_predictive(1000)
+
+        for var in "abcd":
+            assert not np.isnan(np.std(samples[var]))
+
+        for var in "bcd":
+            std = np.std(samples[var] - samples["a"])
+            np.testing.assert_allclose(std, 1, rtol=1e-2)
+
+    def test_issue_3829(self):
+        with pm.Model() as model:
+            x = pm.MvNormal("x", mu=np.zeros(5), cov=np.eye(5), shape=(2, 5))
+            trace_pp = pm.sample_prior_predictive(50)
+
+        assert np.shape(trace_pp["x"][0]) == (2, 5)
+
+    def test_issue_3706(self):
+        N = 10
+        Sigma = np.eye(2)
+
+        with pm.Model() as model:
+
+            X = pm.MvNormal("X", mu=np.zeros(2), cov=Sigma, shape=(N, 2))
+            betas = pm.Normal("betas", 0, 1, shape=2)
+            y = pm.Deterministic("y", pm.math.dot(X, betas))
+
+            prior_pred = pm.sample_prior_predictive(1)
+
+        assert prior_pred["X"].shape == (1, N, 2)

@@ -12,9 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc3.distributions import multivariate as mv
-import theano
 import numpy as np
+import theano
+
+from pymc3.distributions import multivariate as mv
 
 
 def test_posdef_symmetric1():

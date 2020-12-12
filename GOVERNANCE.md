@@ -13,7 +13,7 @@ developed openly and hosted in public GitHub repositories under the
 [GitHub organization](https://github.com/pymc-devs/pymc3). Examples of
 Project Software include the PyMC3 code and the Documentation, etc. The Services run by the
 Project consist of public websites and web-services that are hosted
-at [http://pymc-devs.github.io/pymc3/](http://pymc-devs.github.io/pymc3/) 
+at [http://pymc-devs.github.io/pymc3/](http://pymc-devs.github.io/pymc3/)
 The Project is developed by a team of distributed developers, called
 Contributors. Contributors are individuals who have contributed code,
 documentation, designs or other work to one or more Project repositories.
@@ -131,7 +131,7 @@ The current Steering Council membership comprises:
 - Junpeng Lao
 - Osvaldo Martin
 - Austin Rochford
-- Adrian Seyboldt 
+- Adrian Seyboldt
 - Thomas Wiecki
 
 ### Council membership

@@ -18,6 +18,7 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 """
 from collections import namedtuple
+
 import numpy as np
 
 

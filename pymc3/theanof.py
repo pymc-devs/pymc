@@ -14,15 +14,17 @@
 
 import numpy as np
 import theano
-from theano import scalar, tensor as tt
+
+from theano import scalar
+from theano import tensor as tt
 from theano.configparser import change_flags
 from theano.gof import Op
 from theano.gof.graph import inputs
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
-from .blocking import ArrayOrdering
-from .data import GeneratorAdapter
-from .vartypes import typefilter, continuous_types, int_types
+from pymc3.blocking import ArrayOrdering
+from pymc3.data import GeneratorAdapter
+from pymc3.vartypes import continuous_types, int_types, typefilter
 
 __all__ = [
     "gradient",

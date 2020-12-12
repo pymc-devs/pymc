@@ -12,13 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import numpy as np
 import pytest
 
-import pymc3 as pm
-import numpy as np
 from numpy.testing import assert_almost_equal
-from .helpers import SeededTest
+
+import pymc3 as pm
+
 from pymc3.distributions.transforms import Transform
+from pymc3.tests.helpers import SeededTest
 
 
 class TestTransformName:
@@ -93,6 +95,40 @@ class TestUpdateStartVals(SeededTest):
         assert_almost_equal(start["lower_interval__"], test_point["lower_interval__"])
         assert_almost_equal(start["upper_interval__"], test_point["upper_interval__"])
         assert_almost_equal(start["interv_interval__"], test_point["interv_interval__"])
+
+
+class TestCheckStartVals(SeededTest):
+    def setup_method(self):
+        super().setup_method()
+
+    def test_valid_start_point(self):
+        with pm.Model() as model:
+            a = pm.Uniform("a", lower=0.0, upper=1.0)
+            b = pm.Uniform("b", lower=2.0, upper=3.0)
+
+        start = {"a": 0.3, "b": 2.1}
+        pm.util.update_start_vals(start, model.test_point, model)
+        pm.util.check_start_vals(start, model)
+
+    def test_invalid_start_point(self):
+        with pm.Model() as model:
+            a = pm.Uniform("a", lower=0.0, upper=1.0)
+            b = pm.Uniform("b", lower=2.0, upper=3.0)
+
+        start = {"a": np.nan, "b": np.nan}
+        pm.util.update_start_vals(start, model.test_point, model)
+        with pytest.raises(pm.exceptions.SamplingError):
+            pm.util.check_start_vals(start, model)
+
+    def test_invalid_variable_name(self):
+        with pm.Model() as model:
+            a = pm.Uniform("a", lower=0.0, upper=1.0)
+            b = pm.Uniform("b", lower=2.0, upper=3.0)
+
+        start = {"a": 0.3, "b": 2.1, "c": 1.0}
+        pm.util.update_start_vals(start, model.test_point, model)
+        with pytest.raises(KeyError):
+            pm.util.check_start_vals(start, model)
 
 
 class TestExceptions:

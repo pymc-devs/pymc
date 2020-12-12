@@ -13,55 +13,63 @@
 #   limitations under the License.
 
 import shutil
-import tempfile
 import sys
+import tempfile
 
-from .checks import close_to
-from .models import (
-    simple_categorical,
-    mv_simple,
-    mv_simple_coarse,
-    mv_simple_very_coarse,
-    mv_simple_discrete,
-    mv_prior_simple,
-    simple_2model_continuous,
-)
-from pymc3.sampling import assign_step_methods, sample
-from pymc3.parallel_sampling import ParallelSamplingError
-from pymc3.exceptions import SamplingError
-from pymc3.model import Model, Potential, set_data
+from math import isclose
 
-from pymc3.step_methods import (
-    NUTS,
-    BinaryGibbsMetropolis,
-    CategoricalGibbsMetropolis,
-    Metropolis,
-    Slice,
-    CompoundStep,
-    NormalProposal,
-    UniformProposal,
-    MultivariateNormalProposal,
-    RecursiveDAProposal,
-    HamiltonianMC,
-    EllipticalSlice,
-    DEMetropolis,
-    DEMetropolisZ,
-    MLDA,
-)
-from pymc3.step_methods.mlda import extract_Q_estimate
-from pymc3.theanof import floatX
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal, MvNormal
-from pymc3.data import Data
-
-from numpy.testing import assert_array_almost_equal
 import arviz as az
 import numpy as np
 import numpy.testing as npt
 import pytest
 import theano
 import theano.tensor as tt
-from .helpers import select_by_precision
-from math import isclose
+
+from numpy.testing import assert_array_almost_equal
+
+from pymc3.data import Data
+from pymc3.distributions import (
+    Bernoulli,
+    Beta,
+    Binomial,
+    Categorical,
+    HalfNormal,
+    MvNormal,
+    Normal,
+)
+from pymc3.exceptions import SamplingError
+from pymc3.model import Model, Potential, set_data
+from pymc3.sampling import assign_step_methods, sample
+from pymc3.step_methods import (
+    MLDA,
+    NUTS,
+    BinaryGibbsMetropolis,
+    CategoricalGibbsMetropolis,
+    CompoundStep,
+    DEMetropolis,
+    DEMetropolisZ,
+    EllipticalSlice,
+    HamiltonianMC,
+    Metropolis,
+    MultivariateNormalProposal,
+    NormalProposal,
+    RecursiveDAProposal,
+    Slice,
+    UniformProposal,
+)
+from pymc3.step_methods.mlda import extract_Q_estimate
+from pymc3.tests.checks import close_to
+from pymc3.tests.helpers import select_by_precision
+from pymc3.tests.models import (
+    mv_prior_simple,
+    mv_simple,
+    mv_simple_coarse,
+    mv_simple_discrete,
+    mv_simple_very_coarse,
+    simple_2model_continuous,
+    simple_categorical,
+)
+from pymc3.theanof import floatX
 
 
 class TestStepMethods:  # yield test doesn't work subclassing object
@@ -963,15 +971,15 @@ class TestNutsCheckTrace:
             HalfNormal("a", sigma=1, testval=-1, transform=None)
             with pytest.raises(SamplingError) as error:
                 sample(init=None, chains=1, random_seed=1)
-            error.match("Bad initial")
+            error.match("Initial evaluation")
 
     @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
     def test_bad_init_parallel(self):
         with Model():
             HalfNormal("a", sigma=1, testval=-1, transform=None)
-            with pytest.raises(ParallelSamplingError) as error:
+            with pytest.raises(SamplingError) as error:
                 sample(init=None, cores=2, random_seed=1)
-            error.match("Bad initial")
+            error.match("Initial evaluation")
 
     def test_linalg(self, caplog):
         with Model():
@@ -1124,7 +1132,7 @@ class TestMLDA:
             Normal("x", 0, 1)
             for stepper in TestMLDA.steppers:
                 step = stepper(coarse_models=[coarse_model])
-                trace = sample(chains=2, cores=1, draws=20, tune=0, step=step)
+                trace = sample(chains=2, cores=1, draws=20, tune=0, step=step, random_seed=1)
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
                 assert (
                     len(set(samples)) == 2
@@ -1141,7 +1149,7 @@ class TestMLDA:
             Normal("x", 0, 1)
             for stepper in TestMLDA.steppers:
                 step = stepper(coarse_models=[coarse_model])
-                trace = sample(chains=2, cores=2, draws=20, tune=0, step=step)
+                trace = sample(chains=2, cores=2, draws=20, tune=0, step=step, random_seed=1)
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
                 assert len(set(samples)) == 2, "Parallelized {} " "chains are identical.".format(
                     stepper
@@ -1167,7 +1175,7 @@ class TestMLDA:
             Normal("x", 5.0, 1.0)
             for coarse_model in possible_coarse_models:
                 step = MLDA(coarse_models=[coarse_model], subsampling_rates=3)
-                trace = sample(chains=1, draws=500, tune=100, step=step)
+                trace = sample(chains=1, draws=500, tune=100, step=step, random_seed=1)
                 acc.append(trace.get_sampler_stats("accepted").mean())
             assert acc[0] > acc[1] > acc[2], (
                 "Acceptance rate is not "

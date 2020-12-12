@@ -1,6 +1,8 @@
-import theano.tensor as tt
 import numpy as np
+import theano.tensor as tt
+
 from numpy.random import multivariate_normal
+
 import pymc3 as pm
 
 # Generate some multivariate normal data:

@@ -14,11 +14,12 @@
 
 import numpy as np
 import numpy.testing as npt
-from pymc3.tests import backend_fixtures as bf
-from pymc3.backends import base, ndarray
-import pymc3 as pm
 import pytest
 
+import pymc3 as pm
+
+from pymc3.backends import base, ndarray
+from pymc3.tests import backend_fixtures as bf
 
 STATS1 = [{"a": np.float64, "b": np.bool}]
 

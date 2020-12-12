@@ -1,3 +1,8 @@
+:orphan:
+
+..
+    _"api" is referenced in html_theme_options docs/source/conf.py
+
 .. _api:
 
 ***************

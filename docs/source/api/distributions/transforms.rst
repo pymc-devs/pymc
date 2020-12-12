@@ -24,7 +24,6 @@ implemented as ``pm.distributions.transforms.``\*X*.
    ordered
    log
    sum_to_1
-   t_stick_breaking
    circular
    CholeskyCovPacked
    Chain
@@ -92,10 +91,6 @@ below.
     Instantiation of
     :class:`~pymc3.distributions.transforms.Circular` :class:`~pymc3.distributions.transforms.Transform` class
     for use in the ``transform`` argument of a random variable.
-
-
-.. autofunction::  t_stick_breaking
-
 
 Transform Base Classes
 ~~~~~~~~~~~~~~~~~~~~~~

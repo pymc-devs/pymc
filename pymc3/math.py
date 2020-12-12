@@ -13,63 +13,67 @@
 #   limitations under the License.
 
 import sys
-import theano.tensor as tt
 
-# pylint: disable=unused-import
-import theano
-from theano.tensor import (
-    constant,
-    flatten,
-    zeros_like,
-    ones_like,
-    stack,
-    concatenate,
-    sum,
-    prod,
-    lt,
-    gt,
-    le,
-    ge,
-    eq,
-    neq,
-    switch,
-    clip,
-    where,
-    and_,
-    or_,
-    abs_,
-    exp,
-    log,
-    cos,
-    sin,
-    tan,
-    cosh,
-    sinh,
-    tanh,
-    sqr,
-    sqrt,
-    erf,
-    erfc,
-    erfinv,
-    erfcinv,
-    dot,
-    maximum,
-    minimum,
-    sgn,
-    ceil,
-    floor,
-)
-from theano.tensor.nlinalg import det, matrix_inverse, extract_diag, matrix_dot, trace
-import theano.tensor.slinalg
-import theano.sparse
-from theano.tensor.nnet import sigmoid
-from theano.gof import Op, Apply
+from functools import partial, reduce
+
 import numpy as np
 import scipy as sp
-import scipy.sparse
+import scipy.sparse  # pylint: disable=unused-import
+import theano
+import theano.sparse
+import theano.tensor as tt
+import theano.tensor.slinalg  # pylint: disable=unused-import
+
 from scipy.linalg import block_diag as scipy_block_diag
-from pymc3.theanof import floatX, largest_common_dtype, ix_
-from functools import reduce, partial
+from theano.gof import Apply, Op
+
+# pylint: disable=unused-import
+from theano.tensor import (
+    abs_,
+    and_,
+    ceil,
+    clip,
+    concatenate,
+    constant,
+    cos,
+    cosh,
+    dot,
+    eq,
+    erf,
+    erfc,
+    erfcinv,
+    erfinv,
+    exp,
+    flatten,
+    floor,
+    ge,
+    gt,
+    le,
+    log,
+    lt,
+    maximum,
+    minimum,
+    neq,
+    ones_like,
+    or_,
+    prod,
+    sgn,
+    sin,
+    sinh,
+    sqr,
+    sqrt,
+    stack,
+    sum,
+    switch,
+    tan,
+    tanh,
+    where,
+    zeros_like,
+)
+from theano.tensor.nlinalg import det, extract_diag, matrix_dot, matrix_inverse, trace
+from theano.tensor.nnet import sigmoid
+
+from pymc3.theanof import floatX, ix_, largest_common_dtype
 
 # pylint: enable=unused-import
 
@@ -359,7 +363,7 @@ class BatchedDiag(tt.Op):
         idx = tt.arange(gz.shape[-1])
         return [gz[..., idx, idx]]
 
-    def infer_shape(self, nodes, shapes):
+    def infer_shape(self, fgraph, nodes, shapes):
         return [(shapes[0][0],) + (shapes[0][1],) * 2]
 
 
@@ -418,7 +422,7 @@ class BlockDiagonalMatrix(Op):
         ]
         return [gout[0][slc] for slc in slices]
 
-    def infer_shape(self, nodes, shapes):
+    def infer_shape(self, fgraph, nodes, shapes):
         first, second = zip(*shapes)
         return [(tt.add(*first), tt.add(*second))]
 
