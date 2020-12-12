@@ -1508,6 +1508,14 @@ def _mp_sample(
 
 
 def _choose_chains(traces, tune):
+    """
+    Filter and slice traces such that (n_traces * len(shortest_trace)) is maximized.
+
+    We get here after a ``KeyboardInterrupt``, and so the different
+    traces have different lengths. We therefore pick the number of
+    traces such that (number of traces) * (length of shortest trace)
+    is maximised.
+    """
     if tune is None:
         tune = 0
 
@@ -1518,22 +1526,13 @@ def _choose_chains(traces, tune):
     if not sum(lengths):
         raise ValueError("Not enough samples to build a trace.")
 
-    idxs = np.argsort(lengths)[::-1]
+    idxs = np.argsort(lengths)
     l_sort = np.array(lengths)[idxs]
 
-    final_length = l_sort[0]
-    last_total = 0
-    for i, length in enumerate(l_sort):
-        total = (i + 1) * length
-        if total < last_total:
-            use_until = i
-            break
-        last_total = total
-        final_length = length
-    else:
-        use_until = len(lengths)
+    use_until = np.argmax(l_sort * np.arange(1, l_sort.shape[0] + 1)[::-1])
+    final_length = l_sort[use_until]
 
-    return [traces[idx] for idx in idxs[:use_until]], final_length + tune
+    return [traces[idx] for idx in idxs[use_until:]], final_length + tune
 
 
 def stop_tuning(step):
