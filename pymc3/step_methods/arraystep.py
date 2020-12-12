@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 from enum import IntEnum, unique
+from typing import Dict, List
 
 import numpy as np
 
@@ -46,6 +47,7 @@ class Competence(IntEnum):
 class BlockedStep:
 
     generates_stats = False
+    stats_dtypes: List[Dict[str, np.dtype]] = []
 
     def __new__(cls, *args, **kwargs):
         blocked = kwargs.get("blocked")
