@@ -23,7 +23,7 @@ import warnings
 
 from collections import defaultdict
 from copy import copy
-from typing import Any, Dict, Iterable, List, Optional, Union, cast
+from typing import Any, Dict, Iterable, List, Optional, Set, Union, cast
 
 import arviz
 import numpy as np
@@ -56,7 +56,7 @@ from pymc3.step_methods import (
     Metropolis,
     Slice,
 )
-from pymc3.step_methods.arraystep import PopulationArrayStepShared
+from pymc3.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc3.step_methods.hmc import quadpotential
 from pymc3.util import (
     chains_and_samples,
@@ -91,18 +91,7 @@ STEP_METHODS = (
     CategoricalGibbsMetropolis,
     PGBART,
 )
-Step = Union[
-    NUTS,
-    HamiltonianMC,
-    Metropolis,
-    BinaryMetropolis,
-    BinaryGibbsMetropolis,
-    Slice,
-    CategoricalGibbsMetropolis,
-    PGBART,
-    CompoundStep,
-]
-
+Step = Union[BlockedStep, CompoundStep]
 
 ArrayLike = Union[np.ndarray, List[float]]
 PointType = Dict[str, np.ndarray]
@@ -1898,7 +1887,6 @@ def sample_posterior_predictive_w(
 def sample_prior_predictive(
     samples=500,
     model: Optional[Model] = None,
-    vars: Optional[Iterable[str]] = None,
     var_names: Optional[Iterable[str]] = None,
     random_seed=None,
 ) -> Dict[str, np.ndarray]:
@@ -1909,9 +1897,6 @@ def sample_prior_predictive(
     samples : int
         Number of samples from the prior predictive to generate. Defaults to 500.
     model : Model (optional if in ``with`` context)
-    vars : Iterable[str]
-        A list of names of variables for which to compute the posterior predictive
-        samples.  *DEPRECATED* - Use ``var_names`` argument instead.
     var_names : Iterable[str]
         A list of names of variables for which to compute the posterior predictive
         samples. Defaults to both observed and unobserved RVs.
@@ -1926,20 +1911,14 @@ def sample_prior_predictive(
     """
     model = modelcontext(model)
 
-    if vars is None and var_names is None:
+    if var_names is None:
         prior_pred_vars = model.observed_RVs
         prior_vars = (
             get_default_varnames(model.unobserved_RVs, include_transformed=True) + model.potentials
         )
-        vars_: Iterable[str] = [var.name for var in prior_vars + prior_pred_vars]
-    elif vars is None:
-        assert var_names is not None  # help mypy
-        vars_ = var_names
-    elif var_names is None:
-        warnings.warn("vars argument is deprecated in favor of var_names.", DeprecationWarning)
-        vars_ = vars
+        vars_: Set[str] = {var.name for var in prior_vars + prior_pred_vars}
     else:
-        raise ValueError("Cannot supply both vars and var_names arguments.")
+        vars_ = set(var_names)
 
     if random_seed is not None:
         np.random.seed(random_seed)
