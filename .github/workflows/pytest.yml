@@ -70,12 +70,12 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v1
         env:
-          # Increase this value to reset cache if environment-dev-py36.yml has not changed
+          # Increase this value to reset cache if environment-dev-py39.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/environment-dev-py36.yml') }}
+            hashFiles('conda-envs/environment-dev-py39.yml') }}
       - name: Cache multiple paths
         uses: actions/cache@v2
         env:
@@ -90,18 +90,18 @@ jobs:
             hashFiles('requirements.txt') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: pymc3-dev-py36
+          activate-environment: pymc3-dev-py39
           channel-priority: strict
-          environment-file: conda-envs/environment-dev-py36.yml
+          environment-file: conda-envs/environment-dev-py39.yml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install-pymc3
         run: |
-          conda activate pymc3-dev-py36
+          conda activate pymc3-dev-py39
           pip install -e .
           python --version
       - name: Run tests
         run: |
-          conda activate pymc3-dev-py36
+          conda activate pymc3-dev-py39
           python -m pytest -vv --cov=pymc3 --cov-report=xml --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
