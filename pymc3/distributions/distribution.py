@@ -107,6 +107,12 @@ class Distribution:
                 dims = (dims,)
             shape = model.shape_from_dims(dims)
 
+        # failsafe against 0-shapes
+        if shape is not None and any(np.atleast_1d(shape) <= 0):
+            raise ValueError(
+                f"Distribution initialized with invalid shape {shape}. This is not allowed."
+            )
+
         # Some distributions do not accept shape=None
         if has_shape or shape is not None:
             dist = cls.dist(*args, **kwargs, shape=shape)

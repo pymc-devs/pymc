@@ -264,6 +264,9 @@ class BaseTestCases:
             assert (
                 expected == actual
             ), f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
+            # check that negative size raises an error
+            with pytest.raises(ValueError, match="not allowed"):
+                rv.random(size=-2)
 
         @pytest.mark.parametrize("size", [None, ()], ids=str)
         @pytest.mark.parametrize(
@@ -292,6 +295,11 @@ class BaseTestCases:
             assert (
                 expected == actual
             ), f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
+
+        @pytest.mark.parametrize("shape", [-2, 0, (0,), (2, 0), (5, 0, 3)])
+        def test_shape_error_on_zero_shape_rv(self, shape):
+            with pytest.raises(ValueError, match="not allowed"):
+                self.get_random_variable(shape)
 
 
 class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
