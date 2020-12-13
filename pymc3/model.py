@@ -36,14 +36,7 @@ from pymc3.blocking import ArrayOrdering, DictToArrayBijection
 from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
 from pymc3.memoize import WithMemoization, memoize
-from pymc3.theanof import (
-    floatX,
-    generator,
-    gradient,
-    hessian,
-    inputvars,
-    set_theano_conf,
-)
+from pymc3.theanof import floatX, generator, gradient, hessian, inputvars
 from pymc3.util import get_transformed_name, get_var_name
 from pymc3.vartypes import continuous_types, discrete_types, isgenerator, typefilter
 
@@ -288,15 +281,17 @@ class ContextMeta(type):
         def __enter__(self):
             self.__class__.context_class.get_contexts().append(self)
             # self._theano_config is set in Model.__new__
+            self._config_context = None
             if hasattr(self, "_theano_config"):
-                self._old_theano_config = set_theano_conf(self._theano_config)
+                self._config_context = theano.change_flags(**self._theano_config)
+                self._config_context.__enter__()
             return self
 
         def __exit__(self, typ, value, traceback):  # pylint: disable=unused-argument
             self.__class__.context_class.get_contexts().pop()
             # self._theano_config is set in Model.__new__
-            if hasattr(self, "_old_theano_config"):
-                set_theano_conf(self._old_theano_config)
+            if self._config_context:
+                self._config_context.__exit__(typ, value, traceback)
 
         dct[__enter__.__name__] = __enter__
         dct[__exit__.__name__] = __exit__
