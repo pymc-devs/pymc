@@ -903,9 +903,8 @@ class TestSamplePriorPredictive(SeededTest):
             with pm.Model():
                 mu = pm.Gamma("mu", 3, 1, shape=1)
                 goals = pm.Poisson("goals", mu, shape=shape)
-                with pytest.warns(DeprecationWarning):
-                    trace1 = pm.sample_prior_predictive(10, vars=["mu", "goals"])
-                    trace2 = pm.sample_prior_predictive(10, var_names=["mu", "goals"])
+                trace1 = pm.sample_prior_predictive(10, var_names=["mu", "mu", "goals"])
+                trace2 = pm.sample_prior_predictive(10, var_names=["mu", "goals"])
             if shape == 2:  # want to test shape as an int
                 shape = (2,)
             assert trace1["goals"].shape == (10,) + shape
