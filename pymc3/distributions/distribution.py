@@ -1007,14 +1007,6 @@ def _draw_value(param, point=None, givens=None, size=None):
     raise ValueError("Unexpected type in draw_value: %s" % type(param))
 
 
-def _is_one_d(dist_shape):
-    if hasattr(dist_shape, "dshape") and dist_shape.dshape in {()}:
-        return True
-    elif hasattr(dist_shape, "shape") and dist_shape.shape in {()}:
-        return True
-    return False
-
-
 def generate_samples(generator, *args, **kwargs):
     """Generate samples from the distribution of a random variable.
 
@@ -1048,8 +1040,6 @@ def generate_samples(generator, *args, **kwargs):
     Any remaining args and kwargs are passed on to the generator function.
     """
     dist_shape = kwargs.pop("dist_shape", ())
-    # TODO: the following variable is no longer used !!
-    one_d = _is_one_d(dist_shape)
     size = kwargs.pop("size", None)
     broadcast_shape = kwargs.pop("broadcast_shape", None)
     not_broadcast_kwargs = kwargs.pop("not_broadcast_kwargs", None)
