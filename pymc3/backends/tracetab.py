@@ -26,7 +26,7 @@ __all__ = ["trace_to_dataframe"]
 
 
 def trace_to_dataframe(trace, chains=None, varnames=None, include_transformed=False):
-    """Convert trace to Pandas DataFrame.
+    """Convert trace to pandas DataFrame.
 
     Parameters
     ----------
