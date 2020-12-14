@@ -1,6 +1,8 @@
 # Release Notes
 
-## PyMC3 3.10.1 (on deck)
+## PyMC3 4.0.0 (on deck)
+
+This is the first release to support Python3.9 and to drop Python3.6.
 
 ### Maintenance
 - Fixed bug whereby partial traces returns after keyboard interrupt during parallel sampling had fewer draws than would've been available [#4318](https://github.com/pymc-devs/pymc3/pull/4318)
