@@ -462,7 +462,7 @@ class Data:
         A value to associate with this variable
     dims: {str, tuple of str}, optional, default=None
         Dimension names of the random variables (as opposed to the shapes of these
-        random variables). Use this when `value` is a Pandas Series or DataFrame. The
+        random variables). Use this when `value` is a pandas Series or DataFrame. The
         `dims` will then be the name of the Series / DataFrame's columns. See ArviZ
         documentation for more information about dimensions and coordinates:
         https://arviz-devs.github.io/arviz/notebooks/Introduction.html

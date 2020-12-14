@@ -1,10 +1,8 @@
-name: pymc3-dev-py36
+name: pymc3-dev-py39
 channels:
 - conda-forge
 - defaults
 dependencies:
-- contextvars
-- dataclasses
 - h5py>=2.7
 - ipython>=7.16
 - libblas=*=*mkl
@@ -15,7 +13,7 @@ dependencies:
 - pytest-cov>=2.5
 - pytest>=3.0
 - python-graphviz
-- python=3.6
+- python=3.9
 - recommonmark>=0.4
 - sphinx-autobuild>=0.7
 - sphinx>=1.5

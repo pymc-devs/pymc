@@ -14,7 +14,7 @@ repos:
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 0.5.4
+  rev: 0.5.5
   hooks:
     - id: nbqa-black
       additional_dependencies: [black==20.8b1]
@@ -22,6 +22,7 @@ repos:
       additional_dependencies: [isort==5.6.4]
     - id: nbqa-pyupgrade
       additional_dependencies: [pyupgrade==2.7.4]
+      args: [--py37-plus]
 - repo: https://github.com/PyCQA/isort
   rev: 5.6.4
   hooks:
@@ -31,7 +32,7 @@ repos:
   rev: v2.7.4
   hooks:
     - id: pyupgrade
-      args: [--py36-plus]
+      args: [--py37-plus]
 - repo: https://github.com/psf/black
   rev: 20.8b1
   hooks:

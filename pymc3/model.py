@@ -1682,7 +1682,7 @@ class FreeRV(Factor, PyMC3Variable):
 
 
 def pandas_to_array(data):
-    """Convert a Pandas object to a NumPy array.
+    """Convert a pandas object to a NumPy array.
 
     XXX: When `data` is a generator, this will return a Theano tensor!
 

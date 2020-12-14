@@ -120,7 +120,7 @@ Dependencies
 ============
 
 PyMC3 is tested on Python 3.6, 3.7, and 3.8 and depends on `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__,
-NumPy, SciPy, and Pandas
+NumPy, SciPy, and pandas
 (see `requirements.txt <https://github.com/pymc-devs/pymc3/blob/master/requirements.txt>`__ for version
 information).
 
