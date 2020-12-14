@@ -265,8 +265,10 @@ class BaseTestCases:
                 expected == actual
             ), f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
             # check that negative size raises an error
-            with pytest.raises(ValueError, match="not allowed"):
-                rv.random(size=-2)
+            with pytest.raises(ValueError):
+                self.sample_random_variable(rv, size=-2)
+            with pytest.raises(ValueError):
+                self.sample_random_variable(rv, size=(3, -2))
 
         @pytest.mark.parametrize("size", [None, ()], ids=str)
         @pytest.mark.parametrize(
