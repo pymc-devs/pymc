@@ -406,8 +406,7 @@ class TestSamplePPC(SeededTest):
             ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
             ppc0 = pm.fast_sample_posterior_predictive([model.test_point], samples=10)
             # deprecated argument is not introduced to fast version [2019/08/20:rpg]
-            with pytest.warns(DeprecationWarning):
-                ppc = pm.sample_posterior_predictive(trace, vars=[a])
+            ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
             # test empty ppc
             ppc = pm.sample_posterior_predictive(trace, var_names=[])
             assert len(ppc) == 0
@@ -518,8 +517,6 @@ class TestSamplePPC(SeededTest):
             # Not for fast_sample_posterior_predictive
             with pytest.raises(IncorrectArgumentsError):
                 ppc = pm.sample_posterior_predictive(trace, size=4, keep_size=True)
-            with pytest.raises(IncorrectArgumentsError):
-                ppc = pm.sample_posterior_predictive(trace, vars=[a], var_names=["a"])
             # test wrong type argument
             bad_trace = {"mu": stats.norm.rvs(size=1000)}
             with pytest.raises(TypeError):
@@ -653,16 +650,7 @@ class TestSamplePPC(SeededTest):
 
             trace = pm.sample(100, chains=nchains)
             np.random.seed(0)
-            with pytest.warns(DeprecationWarning):
-                ppc = pm.sample_posterior_predictive(
-                    model=model,
-                    trace=trace,
-                    samples=len(trace) * nchains,
-                    vars=(model.deterministics + model.basic_RVs),
-                )
-
             rtol = 1e-5 if theano.config.floatX == "float64" else 1e-4
-            npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
             np.random.seed(0)
             ppc = pm.sample_posterior_predictive(
