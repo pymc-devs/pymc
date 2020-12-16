@@ -33,7 +33,6 @@ import xarray
 
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
-from theano.tensor import Tensor
 
 import pymc3 as pm
 
@@ -561,12 +560,11 @@ def sample(
             _log.debug("Pickling error:", exec_info=True)
             parallel = False
         except AttributeError as e:
-            if str(e).startswith("AttributeError: Can't pickle"):
-                _log.warning("Could not pickle model, sampling singlethreaded.")
-                _log.debug("Pickling error:", exec_info=True)
-                parallel = False
-            else:
+            if not str(e).startswith("AttributeError: Can't pickle"):
                 raise
+            _log.warning("Could not pickle model, sampling singlethreaded.")
+            _log.debug("Pickling error:", exec_info=True)
+            parallel = False
     if not parallel:
         if has_population_samplers:
             has_demcmc = np.any(
@@ -1602,7 +1600,6 @@ def sample_posterior_predictive(
     trace,
     samples: Optional[int] = None,
     model: Optional[Model] = None,
-    vars: Optional[Iterable[Tensor]] = None,
     var_names: Optional[List[str]] = None,
     size: Optional[int] = None,
     keep_size: Optional[bool] = False,
@@ -1696,14 +1693,9 @@ def sample_posterior_predictive(
     model = modelcontext(model)
 
     if var_names is not None:
-        if vars is not None:
-            raise IncorrectArgumentsError("Should not specify both vars and var_names arguments.")
-        else:
-            vars = [model[x] for x in var_names]
-    elif vars is not None:  # var_names is None, and vars is not.
-        warnings.warn("vars argument is deprecated in favor of var_names.", DeprecationWarning)
-    if vars is None:
-        vars = model.observed_RVs
+        vars_ = [model[x] for x in var_names]
+    else:
+        vars_ = model.observed_RVs
 
     if random_seed is not None:
         np.random.seed(random_seed)
@@ -1729,8 +1721,8 @@ def sample_posterior_predictive(
             else:
                 param = _trace[idx % len_trace]
 
-            values = draw_values(vars, point=param, size=size)
-            for k, v in zip(vars, values):
+            values = draw_values(vars_, point=param, size=size)
+            for k, v in zip(vars_, values):
                 ppc_trace_t.insert(k.name, v, idx)
     except KeyboardInterrupt:
         pass
@@ -1809,7 +1801,7 @@ def sample_posterior_predictive_w(
         raise ValueError("The number of models and weights should be the same")
 
     length_morv = len(models[0].observed_RVs)
-    if not all(len(i.observed_RVs) == length_morv for i in models):
+    if any(len(i.observed_RVs) != length_morv for i in models):
         raise ValueError("The number of observed RVs should be the same for all models")
 
     weights = np.asarray(weights)
