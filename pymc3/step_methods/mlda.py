@@ -356,10 +356,6 @@ class MLDA(ArrayStepShared):
     default_blocked = True
     generates_stats = True
 
-    # stat data types are different, depending on the base sampler.
-    # these are assigned in the init method.
-    stats_dtypes = None
-
     def __init__(
         self,
         coarse_models: List[Model],

@@ -1,4 +1,4 @@
-name: pymc3-dev-py37
+name: pymc3-dev-py39
 channels:
 - conda-forge
 - defaults
@@ -13,7 +13,7 @@ dependencies:
 - pytest-cov>=2.5
 - pytest>=3.0
 - python-graphviz
-- python=3.7
+- python=3.9
 - recommonmark>=0.4
 - sphinx-autobuild>=0.7
 - sphinx>=1.5
