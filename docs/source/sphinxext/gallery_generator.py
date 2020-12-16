@@ -138,7 +138,9 @@ def build_gallery(srcdir, gallery):
     target_dir = os.path.join(srcdir, f"nb_{gallery}")
     image_dir = os.path.join(target_dir, "_images")
     source_dir = os.path.abspath(
-        os.path.join(os.path.dirname(os.path.dirname(srcdir)), "notebooks")
+        os.path.join(
+            os.path.dirname(os.path.dirname(srcdir)), "docs", "source", "pymc-examples", "notebooks"
+        )
     )
     table_of_contents_file = os.path.join(source_dir, TABLE_OF_CONTENTS_FILENAME.format(gallery))
     tocjs = TableOfContentsJS()

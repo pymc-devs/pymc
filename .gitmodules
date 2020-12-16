@@ -1,0 +1,3 @@
+[submodule "docs/source/pymc-examples"]
+	path = docs/source/pymc-examples
+	url = git@github.com:pymc-devs/pymc-examples.git
