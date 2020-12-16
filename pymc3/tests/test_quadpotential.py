@@ -13,13 +13,14 @@
 #   limitations under the License.
 
 import numpy as np
+import numpy.testing as npt
+import pytest
 import scipy.sparse
 
-from pymc3.step_methods.hmc import quadpotential
 import pymc3
+
+from pymc3.step_methods.hmc import quadpotential
 from pymc3.theanof import floatX
-import pytest
-import numpy.testing as npt
 
 
 def test_elemwise_posdef():

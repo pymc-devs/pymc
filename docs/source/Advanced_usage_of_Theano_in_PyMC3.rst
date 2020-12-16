@@ -1,3 +1,8 @@
+:orphan:
+
+..
+    _referenced in docs/source/notebooks/table_of_contents_tutorials.js
+
 =================================
 Advanced usage of Theano in PyMC3
 =================================

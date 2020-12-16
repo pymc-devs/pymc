@@ -13,13 +13,16 @@
 #   limitations under the License.
 
 import logging
+
 import numpy as np
 import scipy
 import theano
 import theano.tensor as tt
+
 from theano.gof.op import get_test_value
-from ..ode import utils
-from ..exceptions import ShapeError, DtypeError
+
+from pymc3.exceptions import DtypeError, ShapeError
+from pymc3.ode import utils
 
 _log = logging.getLogger("pymc3")
 floatX = theano.config.floatX
@@ -210,7 +213,7 @@ class DifferentialEquation(theano.Op):
         # simulate states and sensitivities in one forward pass
         output_storage[0][0], output_storage[1][0] = self._simulate(y0, theta)
 
-    def infer_shape(self, node, input_shapes):
+    def infer_shape(self, fgraph, node, input_shapes):
         s_y0, s_theta = input_shapes
         output_shapes = [(self.n_times, self.n_states), (self.n_times, self.n_states, self.n_p)]
         return output_shapes

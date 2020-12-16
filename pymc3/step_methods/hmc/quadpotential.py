@@ -13,14 +13,15 @@
 #   limitations under the License.
 
 import warnings
+
 import numpy as np
-from numpy.random import normal
 import scipy.linalg
-from scipy.sparse import issparse
 import theano
 
-from pymc3.theanof import floatX
+from numpy.random import normal
+from scipy.sparse import issparse
 
+from pymc3.theanof import floatX
 
 __all__ = [
     "quad_potential",

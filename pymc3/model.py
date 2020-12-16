@@ -16,27 +16,29 @@ import collections
 import itertools
 import threading
 import warnings
-from typing import Optional, TypeVar, Type, List, Union, TYPE_CHECKING, Any, cast
+
 from sys import modules
+from typing import TYPE_CHECKING, Any, List, Optional, Type, TypeVar, Union, cast
 
 import numpy as np
-from pandas import Series
 import scipy.sparse as sps
-import theano.sparse as sparse
 import theano
+import theano.sparse as sparse
 import theano.tensor as tt
-from theano.tensor.var import TensorVariable
-from theano.compile import SharedVariable
 
-from pymc3.theanof import set_theano_conf, floatX
+from pandas import Series
+from theano.compile import SharedVariable
+from theano.tensor.var import TensorVariable
+
 import pymc3 as pm
+
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
-from .memoize import memoize, WithMemoization
-from .theanof import gradient, hessian, inputvars, generator
-from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
-from .blocking import DictToArrayBijection, ArrayOrdering
-from .util import get_transformed_name, get_var_name
-from .exceptions import ImputationWarning
+from pymc3.memoize import WithMemoization, memoize
+from pymc3.theanof import floatX, generator, gradient, hessian, inputvars
+from pymc3.util import get_transformed_name, get_var_name
+from pymc3.vartypes import continuous_types, discrete_types, isgenerator, typefilter
 
 __all__ = [
     "Model",
@@ -65,7 +67,7 @@ class PyMC3Variable(TensorVariable):
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):
         if getattr(self, "distribution", None) is None:
-            if formatting == "latex":
+            if "latex" in formatting:
                 return None
             else:
                 return super().__str__()
@@ -76,8 +78,8 @@ class PyMC3Variable(TensorVariable):
             dist = self.distribution
         return self.distribution._str_repr(name=name, dist=dist, formatting=formatting)
 
-    def _repr_latex_(self, **kwargs):
-        return self._str_repr(formatting="latex", **kwargs)
+    def _repr_latex_(self, *, formatting="latex_with_params", **kwargs):
+        return self._str_repr(formatting=formatting, **kwargs)
 
     def __str__(self, **kwargs):
         try:
@@ -279,15 +281,17 @@ class ContextMeta(type):
         def __enter__(self):
             self.__class__.context_class.get_contexts().append(self)
             # self._theano_config is set in Model.__new__
+            self._config_context = None
             if hasattr(self, "_theano_config"):
-                self._old_theano_config = set_theano_conf(self._theano_config)
+                self._config_context = theano.change_flags(**self._theano_config)
+                self._config_context.__enter__()
             return self
 
         def __exit__(self, typ, value, traceback):  # pylint: disable=unused-argument
             self.__class__.context_class.get_contexts().pop()
             # self._theano_config is set in Model.__new__
-            if hasattr(self, "_old_theano_config"):
-                set_theano_conf(self._old_theano_config)
+            if self._config_context:
+                self._config_context.__exit__(typ, value, traceback)
 
         dct[__enter__.__name__] = __enter__
         dct[__exit__.__name__] = __exit__
@@ -618,7 +622,7 @@ class ValueGradFunction:
         compute_grads=True,
         **kwargs,
     ):
-        from .distributions import TensorType
+        from pymc3.distributions import TensorType
 
         if extra_vars is None:
             extra_vars = []
@@ -1368,15 +1372,15 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             test_point = self.test_point
 
         return Series(
-            {RV.name: np.round(RV.logp(self.test_point), round_vals) for RV in self.basic_RVs},
+            {RV.name: np.round(RV.logp(test_point), round_vals) for RV in self.basic_RVs},
             name="Log-probability of test_point",
         )
 
     def _str_repr(self, formatting="plain", **kwargs):
         all_rv = itertools.chain(self.unobserved_RVs, self.observed_RVs)
 
-        if formatting == "latex":
-            rv_reprs = [rv.__latex__() for rv in all_rv]
+        if "latex" in formatting:
+            rv_reprs = [rv.__latex__(formatting=formatting) for rv in all_rv]
             rv_reprs = [
                 rv_repr.replace(r"\sim", r"&\sim &").strip("$")
                 for rv_repr in rv_reprs
@@ -1407,8 +1411,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def __str__(self, **kwargs):
         return self._str_repr(formatting="plain", **kwargs)
 
-    def _repr_latex_(self, **kwargs):
-        return self._str_repr(formatting="latex", **kwargs)
+    def _repr_latex_(self, *, formatting="latex", **kwargs):
+        return self._str_repr(formatting=formatting, **kwargs)
 
     __latex__ = _repr_latex_
 
@@ -1678,7 +1682,7 @@ class FreeRV(Factor, PyMC3Variable):
 
 
 def pandas_to_array(data):
-    """Convert a Pandas object to a NumPy array.
+    """Convert a pandas object to a NumPy array.
 
     XXX: When `data` is a generator, this will return a Theano tensor!
 
@@ -1725,7 +1729,7 @@ def as_tensor(data, name, model, distribution):
             " sampling distribution.".format(name=name)
         )
         warnings.warn(impute_message, ImputationWarning)
-        from .distributions import NoDistribution
+        from pymc3.distributions import NoDistribution
 
         testval = np.broadcast_to(distribution.default(), data.shape)[data.mask]
         fakedist = NoDistribution.dist(
@@ -1777,7 +1781,7 @@ class ObservedRV(Factor, PyMC3Variable):
         total_size: scalar Tensor (optional)
             needed for upscaling logp
         """
-        from .distributions import TensorType
+        from pymc3.distributions import TensorType
 
         if hasattr(data, "type") and isinstance(data.type, tt.TensorType):
             type = data.type
@@ -1874,24 +1878,27 @@ def _walk_up_rv(rv, formatting="plain"):
             all_rvs.extend(_walk_up_rv(parent, formatting=formatting))
     else:
         name = rv.name if rv.name else "Constant"
-        fmt = r"\text{{{name}}}" if formatting == "latex" else "{name}"
+        fmt = r"\text{{{name}}}" if "latex" in formatting else "{name}"
         all_rvs.append(fmt.format(name=name))
     return all_rvs
 
 
 class DeterministicWrapper(tt.TensorVariable):
     def _str_repr(self, formatting="plain"):
-        if formatting == "latex":
-            return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
-                name=self.name, args=r",~".join(_walk_up_rv(self, formatting=formatting))
-            )
+        if "latex" in formatting:
+            if formatting == "latex_with_params":
+                return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
+                    name=self.name, args=r",~".join(_walk_up_rv(self, formatting=formatting))
+                )
+            return fr"$\text{{{self.name}}} \sim \text{{Deterministic}}$"
         else:
-            return "{name} ~ Deterministic({args})".format(
-                name=self.name, args=", ".join(_walk_up_rv(self, formatting=formatting))
-            )
+            if formatting == "plain_with_params":
+                args = ", ".join(_walk_up_rv(self, formatting=formatting))
+                return f"{self.name} ~ Deterministic({args})"
+            return f"{self.name} ~ Deterministic"
 
-    def _repr_latex_(self):
-        return self._str_repr(formatting="latex")
+    def _repr_latex_(self, *, formatting="latex_with_params", **kwargs):
+        return self._str_repr(formatting=formatting)
 
     __latex__ = _repr_latex_
 

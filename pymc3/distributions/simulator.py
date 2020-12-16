@@ -13,9 +13,12 @@
 #   limitations under the License.
 
 import logging
+
 import numpy as np
-from .distribution import NoDistribution, draw_values
+
 from scipy.spatial import cKDTree
+
+from pymc3.distributions.distribution import NoDistribution, draw_values, to_tuple
 
 __all__ = ["Simulator"]
 
@@ -111,11 +114,12 @@ class Simulator(NoDistribution):
         -------
         array
         """
+        size = to_tuple(size)
         params = draw_values([*self.params], point=point, size=size)
-        if size is None:
+        if len(size) == 0:
             return self.function(*params)
         else:
-            return np.array([self.function(*params) for _ in range(size)])
+            return np.array([self.function(*params) for _ in range(size[0])])
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):
         if dist is None:
@@ -126,7 +130,7 @@ class Simulator(NoDistribution):
         sum_stat = self.sum_stat.__name__ if hasattr(self.sum_stat, "__call__") else self.sum_stat
         distance = getattr(self.distance, "__name__", self.distance.__class__.__name__)
 
-        if formatting == "latex":
+        if "latex" in formatting:
             return f"$\\text{{{name}}} \\sim  \\text{{Simulator}}(\\text{{{function}}}({params}), \\text{{{distance}}}, \\text{{{sum_stat}}})$"
         else:
             return f"{name} ~ Simulator({function}({params}), {distance}, {sum_stat})"

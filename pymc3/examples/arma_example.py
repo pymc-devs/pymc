@@ -1,7 +1,8 @@
-import pymc3 as pm
+import numpy as np
+
 from theano import scan, shared
 
-import numpy as np
+import pymc3 as pm
 
 """
 ARMA example

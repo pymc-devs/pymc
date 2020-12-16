@@ -13,12 +13,14 @@
 #   limitations under the License.
 
 import warnings
+
+from functools import reduce
+from numbers import Number
+from operator import add, mul
+
 import numpy as np
 import theano
 import theano.tensor as tt
-from functools import reduce
-from operator import mul, add
-from numbers import Number
 
 __all__ = [
     "Constant",

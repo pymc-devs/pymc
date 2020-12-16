@@ -12,29 +12,31 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 from collections.abc import Iterable
+
 import numpy as np
 import theano
 import theano.tensor as tt
-import warnings
 
-from ..math import logsumexp
-from .dist_math import bound, random_choice
-from .distribution import (
+from pymc3.distributions.continuous import Normal, get_tau_sigma
+from pymc3.distributions.dist_math import bound, random_choice
+from pymc3.distributions.distribution import (
     Discrete,
     Distribution,
-    draw_values,
-    generate_samples,
     _DrawValuesContext,
     _DrawValuesContextBlocker,
+    draw_values,
+    generate_samples,
 )
-from .shape_utils import (
-    to_tuple,
+from pymc3.distributions.shape_utils import (
     broadcast_distribution_samples,
     get_broadcastable_dist_samples,
+    to_tuple,
 )
-from .continuous import get_tau_sigma, Normal
-from ..theanof import _conversion_map, take_along_axis
+from pymc3.math import logsumexp
+from pymc3.theanof import _conversion_map, take_along_axis
 
 __all__ = ["Mixture", "NormalMixture", "MixtureSameFamily"]
 
@@ -602,7 +604,29 @@ class NormalMixture(Mixture):
         of the mixture distribution, with one axis being
         the number of components.
 
-    Note: You only have to pass in sigma or tau, but not both.
+    Notes
+    -----
+    You only have to pass in sigma or tau, but not both.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        n_components = 3
+
+        with pm.Model() as gauss_mix:
+            μ = pm.Normal(
+                "μ",
+                data.mean(),
+                10,
+                shape=n_components,
+                transform=pm.transforms.ordered,
+                testval=[1, 2, 3],
+            )
+            σ = pm.HalfNormal("σ", 10, shape=n_components)
+            weights = pm.Dirichlet("w", np.ones(n_components))
+
+            pm.NormalMixture("y", w=weights, mu=μ, sigma=σ, observed=data)
     """
 
     def __init__(self, w, mu, sigma=None, tau=None, sd=None, comp_shape=(), *args, **kwargs):

@@ -13,9 +13,10 @@
 #   limitations under the License.
 
 import numpy as np
-import theano
-import pymc3 as pm
 import pytest
+import theano
+
+import pymc3 as pm
 
 
 @pytest.fixture(scope="function", autouse=True)

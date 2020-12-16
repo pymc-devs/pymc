@@ -1,6 +1,8 @@
-import pymc3 as pm
 import pandas as pd
+
 from numpy.ma import masked_values
+
+import pymc3 as pm
 
 # Import data, filling missing values with sentinels (-999)
 test_scores = pd.read_csv(pm.get_data("test_scores.csv")).fillna(-999)

@@ -12,28 +12,43 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numbers
 import contextvars
-import dill
 import inspect
+import multiprocessing
+import numbers
+import sys
+import types
+import warnings
+
 from typing import TYPE_CHECKING
+
+import dill
 
 if TYPE_CHECKING:
     from typing import Optional, Callable
 
 import numpy as np
-import theano.tensor as tt
-from theano import function
-from ..util import get_repr_for_variable, get_var_name
 import theano
-from ..memoize import memoize
-from ..model import Model, build_named_node_tree, FreeRV, ObservedRV, MultiObservedRV, ContextMeta
-from ..vartypes import string_types, theano_constant
-from .shape_utils import (
-    to_tuple,
-    get_broadcastable_dist_samples,
+import theano.tensor as tt
+
+from theano import function
+
+from pymc3.distributions.shape_utils import (
     broadcast_dist_samples_shape,
+    get_broadcastable_dist_samples,
+    to_tuple,
 )
+from pymc3.memoize import memoize
+from pymc3.model import (
+    ContextMeta,
+    FreeRV,
+    Model,
+    MultiObservedRV,
+    ObservedRV,
+    build_named_node_tree,
+)
+from pymc3.util import get_repr_for_variable, get_var_name
+from pymc3.vartypes import string_types, theano_constant
 
 __all__ = [
     "DensityDist",
@@ -49,6 +64,8 @@ __all__ = [
 vectorized_ppc = contextvars.ContextVar(
     "vectorized_ppc", default=None
 )  # type: contextvars.ContextVar[Optional[Callable]]
+
+PLATFORM = sys.platform
 
 
 class _Unpickling:
@@ -164,34 +181,51 @@ class Distribution:
         return self.__class__.__name__
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):
-        """Generate string representation for this distribution, optionally
+        """
+        Generate string representation for this distribution, optionally
         including LaTeX markup (formatting='latex').
+
+        Parameters
+        ----------
+        name : str
+            name of the distribution
+        dist : Distribution
+            the distribution object
+        formatting : str
+            one of { "latex", "plain", "latex_with_params", "plain_with_params" }
         """
         if dist is None:
             dist = self
         if name is None:
             name = "[unnamed]"
+        supported_formattings = {"latex", "plain", "latex_with_params", "plain_with_params"}
+        if not formatting in supported_formattings:
+            raise ValueError(f"Unsupported formatting ''. Choose one of {supported_formattings}.")
 
         param_names = self._distr_parameters_for_repr()
         param_values = [
             get_repr_for_variable(getattr(dist, x), formatting=formatting) for x in param_names
         ]
 
-        if formatting == "latex":
+        if "latex" in formatting:
             param_string = ",~".join(
                 [fr"\mathit{{{name}}}={value}" for name, value in zip(param_names, param_values)]
             )
-            return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}({params})$".format(
-                var_name=name, distr_name=dist._distr_name_for_repr(), params=param_string
+            if formatting == "latex_with_params":
+                return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}({params})$".format(
+                    var_name=name, distr_name=dist._distr_name_for_repr(), params=param_string
+                )
+            return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}$".format(
+                var_name=name, distr_name=dist._distr_name_for_repr()
             )
         else:
-            # 'plain' is default option
+            # one of the plain formattings
             param_string = ", ".join(
                 [f"{name}={value}" for name, value in zip(param_names, param_values)]
             )
-            return "{var_name} ~ {distr_name}({params})".format(
-                var_name=name, distr_name=dist._distr_name_for_repr(), params=param_string
-            )
+            if formatting == "plain_with_params":
+                return f"{name} ~ {dist._distr_name_for_repr()}({param_string})"
+            return f"{name} ~ {dist._distr_name_for_repr()}"
 
     def __str__(self, **kwargs):
         try:
@@ -199,9 +233,9 @@ class Distribution:
         except:
             return super().__str__()
 
-    def _repr_latex_(self, **kwargs):
+    def _repr_latex_(self, *, formatting="latex_with_params", **kwargs):
         """Magic method name for IPython to use for LaTeX formatting."""
-        return self._str_repr(formatting="latex", **kwargs)
+        return self._str_repr(formatting=formatting, **kwargs)
 
     def logp_nojac(self, *args, **kwargs):
         """Return the logp, but do not include a jacobian term for transforms.
@@ -488,6 +522,19 @@ class DensityDist(Distribution):
             dtype = theano.config.floatX
         super().__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
+        if type(self.logp) == types.MethodType:
+            if PLATFORM != "linux":
+                warnings.warn(
+                    "You are passing a bound method as logp for DensityDist, this can lead to "
+                    "errors when sampling on platforms other than Linux. Consider using a "
+                    "plain function instead, or subclass Distribution."
+                )
+            elif type(multiprocessing.get_context()) != multiprocessing.context.ForkContext:
+                warnings.warn(
+                    "You are passing a bound method as logp for DensityDist, this can lead to "
+                    "errors when sampling when multiprocessing cannot rely on forking. Consider using a "
+                    "plain function instead, or subclass Distribution."
+                )
         self.rand = random
         self.wrap_random_with_dist_shape = wrap_random_with_dist_shape
         self.check_shape_in_random = check_shape_in_random
@@ -496,7 +543,15 @@ class DensityDist(Distribution):
         # We use dill to serialize the logp function, as this is almost
         # always defined in the notebook and won't be pickled correctly.
         # Fix https://github.com/pymc-devs/pymc3/issues/3844
-        logp = dill.dumps(self.logp)
+        try:
+            logp = dill.dumps(self.logp)
+        except RecursionError as err:
+            if type(self.logp) == types.MethodType:
+                raise ValueError(
+                    "logp for DensityDist is a bound method, leading to RecursionError while serializing"
+                ) from err
+            else:
+                raise err
         vals = self.__dict__.copy()
         vals["logp"] = logp
         return vals
@@ -635,6 +690,7 @@ def draw_values(params, point=None, size=None):
     """
     # The following check intercepts and redirects calls to
     # draw_values in the context of sample_posterior_predictive
+    size = to_tuple(size)
     ppc_sampler = vectorized_ppc.get(None)
     if ppc_sampler is not None:
         # this is being done inside new, vectorized sample_posterior_predictive

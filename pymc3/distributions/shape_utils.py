@@ -19,7 +19,6 @@ samples from probability distributions for stochastic nodes in PyMC.
 """
 import numpy as np
 
-
 __all__ = [
     "to_tuple",
     "shapes_broadcasting",

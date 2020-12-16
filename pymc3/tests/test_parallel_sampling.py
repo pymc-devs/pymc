@@ -14,12 +14,13 @@
 import multiprocessing
 import os
 
+import numpy as np
 import pytest
-import pymc3.parallel_sampling as ps
-import pymc3 as pm
 import theano
 import theano.tensor as tt
-import numpy as np
+
+import pymc3 as pm
+import pymc3.parallel_sampling as ps
 
 
 def test_context():
@@ -159,3 +160,43 @@ def test_iterator():
     with sampler:
         for draw in sampler:
             pass
+
+
+def test_spawn_densitydist_function():
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+
+        def func(x):
+            return -2 * (x ** 2).sum()
+
+        obs = pm.DensityDist("density_dist", func, observed=np.random.randn(100))
+        trace = pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
+
+
+def test_spawn_densitydist_bound_method():
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+        normal_dist = pm.Normal.dist(mu, 1)
+        obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
+        msg = "logp for DensityDist is a bound method, leading to RecursionError while serializing"
+        with pytest.raises(ValueError, match=msg):
+            trace = pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
+
+
+def test_spawn_densitydist_syswarning(monkeypatch):
+    monkeypatch.setattr("pymc3.distributions.distribution.PLATFORM", "win32")
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+        normal_dist = pm.Normal.dist(mu, 1)
+        with pytest.warns(UserWarning, match="errors when sampling on platforms"):
+            obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
+
+
+def test_spawn_densitydist_mpctxwarning(monkeypatch):
+    ctx = multiprocessing.get_context("spawn")
+    monkeypatch.setattr(multiprocessing, "get_context", lambda: ctx)
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+        normal_dist = pm.Normal.dist(mu, 1)
+        with pytest.warns(UserWarning, match="errors when sampling when multiprocessing"):
+            obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))

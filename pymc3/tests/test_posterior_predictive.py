@@ -1,8 +1,9 @@
-import pymc3 as pm
-from pymc3.distributions.posterior_predictive import _TraceDict
 import numpy as np
 
+import pymc3 as pm
+
 from pymc3.backends.ndarray import point_list_to_multitrace
+from pymc3.distributions.posterior_predictive import _TraceDict
 
 
 def test_translate_point_list():

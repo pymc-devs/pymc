@@ -12,13 +12,17 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc3 import Model, Normal, Categorical, Metropolis
-import numpy as np
-import pymc3 as pm
 from itertools import product
-import theano.tensor as tt
+
+import numpy as np
 import theano
+import theano.tensor as tt
+
 from theano.compile.ops import as_op
+
+import pymc3 as pm
+
+from pymc3 import Categorical, Metropolis, Model, Normal
 from pymc3.theanof import floatX_array
 
 

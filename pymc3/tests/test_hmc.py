@@ -12,15 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import logging
+
 import numpy as np
 import numpy.testing as npt
 
-from . import models
-from pymc3.step_methods.hmc.base_hmc import BaseHMC
-from pymc3.exceptions import SamplingError
 import pymc3
-import pytest
-import logging
+
+from pymc3.step_methods.hmc.base_hmc import BaseHMC
+from pymc3.tests import models
 from pymc3.theanof import floatX
 
 logger = logging.getLogger("pymc3")
@@ -57,16 +57,3 @@ def test_nuts_tuning():
 
     assert not step.tune
     assert np.all(trace["step_size"][5:] == trace["step_size"][5])
-
-
-def test_nuts_error_reporting(caplog):
-    model = pymc3.Model()
-    with caplog.at_level(logging.CRITICAL) and pytest.raises(SamplingError):
-        with model:
-            pymc3.HalfNormal("a", sigma=1, transform=None, testval=-1)
-            pymc3.HalfNormal("b", sigma=1, transform=None)
-            trace = pymc3.sample(init="adapt_diag", chains=1)
-        assert (
-            "Bad initial energy, check any log  probabilities that are inf or -inf: a        -inf\nb"
-            in caplog.text
-        )

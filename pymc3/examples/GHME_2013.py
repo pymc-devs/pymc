@@ -1,6 +1,6 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 from pymc3 import HalfCauchy, Model, Normal, get_data, sample
 from pymc3.distributions.timeseries import GaussianRandomWalk

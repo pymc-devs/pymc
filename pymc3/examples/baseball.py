@@ -3,8 +3,9 @@
 # See http://mc-stan.org/documentation/case-studies/pool-binary-trials.html for more details
 #
 
-import pymc3 as pm
 import numpy as np
+
+import pymc3 as pm
 
 
 def build_model():
