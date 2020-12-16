@@ -1697,7 +1697,7 @@ class OrderedProbit(Categorical):
                             2*np.ones(n2_c),
                             3*np.ones(n3_c))) - 1
 
-        # Ordered logistic regression
+        # Ordered probit regression
         with pm.Model() as model:
             cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
                                   transform=pm.distributions.transforms.ordered)

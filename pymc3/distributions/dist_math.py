@@ -160,7 +160,7 @@ def log_diff_normal_cdf(mu, sigma, x, y):
 
     # To stabilize the computation, consider these three regions:
     # 1) x > y > 0 => Use erf(x) = 1 - e^{-x^2} erfcx(x) and erf(y) =1 - e^{-y^2} erfcx(y)
-    # 2) 0 > x > 0 => Use erf(x) = e^{-x^2} erfcx(-x) and erf(y) = e^{-y^2} erfcx(-y)
+    # 2) 0 > x > y => Use erf(x) = e^{-x^2} erfcx(-x) and erf(y) = e^{-y^2} erfcx(-y)
     # 3) x > 0 > y => Naive formula log( (erf(x) - erf(y)) / 2 ) works fine.
     return tt.log(0.5) + tt.switch(
         tt.gt(y, 0),
