@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 import matplotlib.pyplot as plt
@@ -19,12 +21,12 @@ import numpy as np
 
 from pymc3.backends.base import MultiTrace
 
-if TYPE_CHECKING:  # pragma: nocover
+if TYPE_CHECKING:
     from arviz.data.inference_data import InferenceData
 
 
 def plot_posterior_predictive_glm(
-    trace: Union["InferenceData", MultiTrace],
+    trace: Union[InferenceData, MultiTrace],
     eval: Optional[np.ndarray] = None,
     lm: Optional[Callable] = None,
     samples: int = 30,
