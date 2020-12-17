@@ -12,17 +12,28 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numpy as np
-import theano.tensor as tt
-from scipy import stats
 import warnings
 
-from .dist_math import bound, factln, binomln, betaln, logpow, random_choice
-from .distribution import Discrete, draw_values, generate_samples
-from .shape_utils import broadcast_distribution_samples
-from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
-from ..theanof import floatX, intX, take_along_axis
+import numpy as np
+import theano.tensor as tt
 
+from scipy import stats
+
+from pymc3.distributions.dist_math import (
+    betaln,
+    binomln,
+    bound,
+    factln,
+    log_diff_normal_cdf,
+    logpow,
+    normal_lccdf,
+    normal_lcdf,
+    random_choice,
+)
+from pymc3.distributions.distribution import Discrete, draw_values, generate_samples
+from pymc3.distributions.shape_utils import broadcast_distribution_samples
+from pymc3.math import log1pexp, logaddexp, logit, sigmoid, tround
+from pymc3.theanof import floatX, intX, take_along_axis
 
 __all__ = [
     "Binomial",
@@ -38,6 +49,7 @@ __all__ = [
     "ZeroInflatedNegativeBinomial",
     "DiscreteUniform",
     "Geometric",
+    "HyperGeometric",
     "Categorical",
     "OrderedLogistic",
 ]
@@ -809,6 +821,118 @@ class Geometric(Discrete):
         return bound(tt.log(p) + logpow(1 - p, value - 1), 0 <= p, p <= 1, value >= 1)
 
 
+class HyperGeometric(Discrete):
+    R"""
+    Discrete hypergeometric distribution.
+
+    The probability of :math:`x` successes in a sequence of :math:`n` bernoulli
+    trials taken without replacement from a population of :math:`N` objects,
+    containing :math:`k` good (or successful or Type I) objects.
+    The pmf of this distribution is
+
+    .. math:: f(x \mid N, n, k) = \frac{\binom{k}{x}\binom{N-k}{n-x}}{\binom{N}{n}}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(1, 15)
+        N = 50
+        k = 10
+        for n in [20, 25]:
+            pmf = st.hypergeom.pmf(x, N, k, n)
+            plt.plot(x, pmf, '-o', label='n = {}'.format(n))
+        plt.plot(x, pmf, '-o', label='N = {}'.format(N))
+        plt.plot(x, pmf, '-o', label='k = {}'.format(k))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  =============================
+    Support   :math:`x \in \left[\max(0, n - N + k), \min(k, n)\right]`
+    Mean      :math:`\dfrac{nk}{N}`
+    Variance  :math:`\dfrac{(N-n)nk(N-k)}{(N-1)N^2}`
+    ========  =============================
+
+    Parameters
+    ----------
+    N : integer
+        Total size of the population
+    k : integer
+        Number of successful individuals in the population
+    n : integer
+        Number of samples drawn from the population
+    """
+
+    def __init__(self, N, k, n, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.N = intX(N)
+        self.k = intX(k)
+        self.n = intX(n)
+        self.mode = intX(tt.floor((n + 1) * (k + 1) / (N + 2)))
+
+    def random(self, point=None, size=None):
+        r"""
+        Draw random values from HyperGeometric distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+
+        N, k, n = draw_values([self.N, self.k, self.n], point=point, size=size)
+        return generate_samples(self._random, N, k, n, dist_shape=self.shape, size=size)
+
+    def _random(self, M, n, N, size=None):
+        r"""Wrapper around scipy stat's hypergeom.rvs"""
+        try:
+            samples = stats.hypergeom.rvs(M=M, n=n, N=N, size=size)
+            return samples
+        except ValueError:
+            raise ValueError("Domain error in arguments")
+
+    def logp(self, value):
+        r"""
+        Calculate log-probability of HyperGeometric distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        N = self.N
+        k = self.k
+        n = self.n
+        tot, good = N, k
+        bad = tot - good
+        result = (
+            betaln(good + 1, 1)
+            + betaln(bad + 1, 1)
+            + betaln(tot - n + 1, n + 1)
+            - betaln(value + 1, good - value + 1)
+            - betaln(n - value + 1, bad - n + value + 1)
+            - betaln(tot + 1, 1)
+        )
+        return result
+
+
 class DiscreteUniform(Discrete):
     R"""
     Discrete uniform distribution.
@@ -1517,3 +1641,131 @@ class OrderedLogistic(Categorical):
         p = p_cum[..., 1:] - p_cum[..., :-1]
 
         super().__init__(p=p, *args, **kwargs)
+
+
+class OrderedProbit(Categorical):
+    R"""
+    Ordered Probit log-likelihood.
+
+    Useful for regression on ordinal data values whose values range
+    from 1 to K as a function of some predictor, :math:`\eta`. The
+    cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
+    mapped to which of the K observed dependent variables.  The number
+    of cutpoints is K - 1.  It is recommended that the cutpoints are
+    constrained to be ordered.
+
+    In order to stabilize the computation, log-likelihood is computed
+    in log space using the scaled error function `erfcx`.
+
+    .. math::
+
+       f(k \mid \eta, c) = \left\{
+         \begin{array}{l}
+           1 - \text{normal_cdf}(0, \sigma, \eta - c_1)
+             \,, \text{if } k = 0 \\
+           \text{normal_cdf}(0, \sigma, \eta - c_{k - 1}) -
+           \text{normal_cdf}(0, \sigma, \eta - c_{k})
+             \,, \text{if } 0 < k < K \\
+           \text{normal_cdf}(0, \sigma, \eta - c_{K - 1})
+             \,, \text{if } k = K \\
+         \end{array}
+       \right.
+
+    Parameters
+    ----------
+    eta : float
+        The predictor.
+    c : array
+        The length K - 1 array of cutpoints which break :math:`\eta` into
+        ranges.  Do not explicitly set the first and last elements of
+        :math:`c` to negative and positive infinity.
+
+    sigma: float
+         The standard deviation of probit function.
+    Example
+    --------
+    .. code:: python
+
+        # Generate data for a simple 1 dimensional example problem
+        n1_c = 300; n2_c = 300; n3_c = 300
+        cluster1 = np.random.randn(n1_c) + -1
+        cluster2 = np.random.randn(n2_c) + 0
+        cluster3 = np.random.randn(n3_c) + 2
+
+        x = np.concatenate((cluster1, cluster2, cluster3))
+        y = np.concatenate((1*np.ones(n1_c),
+                            2*np.ones(n2_c),
+                            3*np.ones(n3_c))) - 1
+
+        # Ordered probit regression
+        with pm.Model() as model:
+            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
+                                  transform=pm.distributions.transforms.ordered)
+            y_ = pm.OrderedProbit("y", cutpoints=cutpoints, eta=x, observed=y)
+            tr = pm.sample(1000)
+
+        # Plot the results
+        plt.hist(cluster1, 30, alpha=0.5);
+        plt.hist(cluster2, 30, alpha=0.5);
+        plt.hist(cluster3, 30, alpha=0.5);
+        plt.hist(tr["cutpoints"][:,0], 80, alpha=0.2, color='k');
+        plt.hist(tr["cutpoints"][:,1], 80, alpha=0.2, color='k');
+
+    """
+
+    def __init__(self, eta, cutpoints, *args, **kwargs):
+
+        self.eta = tt.as_tensor_variable(floatX(eta))
+        self.cutpoints = tt.as_tensor_variable(cutpoints)
+
+        probits = tt.shape_padright(self.eta) - self.cutpoints
+        _log_p = tt.concatenate(
+            [
+                tt.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
+                log_diff_normal_cdf(0, 1, probits[..., :-1], probits[..., 1:]),
+                tt.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
+            ],
+            axis=-1,
+        )
+        _log_p = tt.as_tensor_variable(floatX(_log_p))
+
+        self._log_p = _log_p
+        self.mode = tt.argmax(_log_p, axis=-1)
+        p = tt.exp(_log_p)
+
+        super().__init__(p=p, *args, **kwargs)
+
+    def logp(self, value):
+        r"""
+        Calculate log-probability of Ordered Probit distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        logp = self._log_p
+        k = self.k
+
+        # Clip values before using them for indexing
+        value_clip = tt.clip(value, 0, k - 1)
+
+        if logp.ndim > 1:
+            if logp.ndim > value_clip.ndim:
+                value_clip = tt.shape_padleft(value_clip, logp.ndim - value_clip.ndim)
+            elif logp.ndim < value_clip.ndim:
+                logp = tt.shape_padleft(logp, value_clip.ndim - logp.ndim)
+            pattern = (logp.ndim - 1,) + tuple(range(logp.ndim - 1))
+            a = take_along_axis(
+                logp.dimshuffle(pattern),
+                value_clip,
+            )
+        else:
+            a = logp[value_clip]
+
+        return bound(a, value >= 0, value <= (k - 1))

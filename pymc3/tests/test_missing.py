@@ -12,11 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytest
-from numpy import ma, array
 import numpy
 import pandas as pd
-from pymc3 import Model, Normal, sample_prior_predictive, sample, ImputationWarning
+import pytest
+
+from numpy import array, ma
+
+from pymc3 import ImputationWarning, Model, Normal, sample, sample_prior_predictive
 
 
 def test_missing():

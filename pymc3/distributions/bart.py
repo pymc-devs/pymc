@@ -13,8 +13,9 @@
 #   limitations under the License.
 
 import numpy as np
-from .distribution import NoDistribution
-from .tree import Tree, SplitNode, LeafNode
+
+from pymc3.distributions.distribution import NoDistribution
+from pymc3.distributions.tree import LeafNode, SplitNode, Tree
 
 __all__ = ["BART"]
 
@@ -246,7 +247,7 @@ class BART(BaseBART):
         alpha = self.alpha
         m = self.m
 
-        if formatting == "latex":
+        if "latex" in formatting:
             return f"$\\text{{{name}}} \\sim  \\text{{BART}}(\\text{{alpha = }}\\text{{{alpha}}}, \\text{{m = }}\\text{{{m}}})$"
         else:
             return f"{name} ~ BART(alpha = {alpha}, m = {m})"

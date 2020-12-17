@@ -12,14 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import logging
-import enum
-from typing import Any, Optional
 import dataclasses
+import enum
+import logging
 
-from ..util import is_transformed_name, get_untransformed_name
+from typing import Any, Optional
 
 import arviz
+
+from pymc3.util import get_untransformed_name, is_transformed_name
 
 logger = logging.getLogger("pymc3")
 

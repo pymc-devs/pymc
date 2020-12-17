@@ -17,21 +17,29 @@ Created on Mar 12, 2011
 
 @author: johnsalvatier
 """
-from scipy.optimize import minimize
-import numpy as np
-from numpy import isfinite, nan_to_num
-from fastprogress.fastprogress import progress_bar
-from fastprogress.fastprogress import ProgressBar
-import pymc3 as pm
-from ..vartypes import discrete_types, typefilter
-from ..model import modelcontext, Point
-from ..theanof import inputvars
-import theano.gradient as tg
-from ..blocking import DictToArrayBijection, ArrayOrdering
-from ..util import update_start_vals, get_default_varnames, get_var_name
-
 import warnings
+
 from inspect import getargspec
+
+import numpy as np
+import theano.gradient as tg
+
+from fastprogress.fastprogress import ProgressBar, progress_bar
+from numpy import isfinite, nan_to_num
+from scipy.optimize import minimize
+
+import pymc3 as pm
+
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.model import Point, modelcontext
+from pymc3.theanof import inputvars
+from pymc3.util import (
+    check_start_vals,
+    get_default_varnames,
+    get_var_name,
+    update_start_vals,
+)
+from pymc3.vartypes import discrete_types, typefilter
 
 __all__ = ["find_MAP"]
 
@@ -89,13 +97,7 @@ def find_MAP(
     else:
         update_start_vals(start, model.test_point, model)
 
-    if not set(start.keys()).issubset(model.named_vars.keys()):
-        extra_keys = ", ".join(set(start.keys()) - set(model.named_vars.keys()))
-        valid_keys = ", ".join(model.named_vars.keys())
-        raise KeyError(
-            "Some start parameters do not appear in the model!\n"
-            "Valid keys are: {}, but {} was supplied".format(valid_keys, extra_keys)
-        )
+    check_start_vals(start, model)
 
     if vars is None:
         vars = model.cont_vars

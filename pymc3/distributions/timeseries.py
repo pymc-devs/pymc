@@ -14,16 +14,15 @@
 
 import warnings
 
-from scipy import stats
-import theano.tensor as tt
-from theano import scan
 import numpy as np
+import theano.tensor as tt
 
-from .continuous import get_tau_sigma, Normal, Flat
-from .shape_utils import to_tuple
-from . import multivariate
-from . import distribution
+from scipy import stats
+from theano import scan
 
+from pymc3.distributions import distribution, multivariate
+from pymc3.distributions.continuous import Flat, Normal, get_tau_sigma
+from pymc3.distributions.shape_utils import to_tuple
 
 __all__ = [
     "AR1",

@@ -3,6 +3,7 @@ Plots
 *****
 
 .. currentmodule:: pymc3.plots
+
 Plots are delegated to the
 `ArviZ <https://arviz-devs.github.io/arviz/index.html>`_.
 library, a general purpose library for

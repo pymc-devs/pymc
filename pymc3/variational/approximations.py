@@ -14,17 +14,17 @@
 
 import numpy as np
 import theano
+
 from theano import tensor as tt
 
 import pymc3 as pm
-from pymc3.distributions.dist_math import rho2sigma
-from . import opvi
-from pymc3.variational.opvi import Group, Approximation, node_property
-from pymc3.util import update_start_vals
-from pymc3.theanof import change_flags
-from pymc3.math import batched_diag
-from pymc3.variational import flows
 
+from pymc3.distributions.dist_math import rho2sigma
+from pymc3.math import batched_diag
+from pymc3.theanof import change_flags
+from pymc3.util import update_start_vals
+from pymc3.variational import flows, opvi
+from pymc3.variational.opvi import Approximation, Group, node_property
 
 __all__ = ["MeanField", "FullRank", "Empirical", "NormalizingFlow", "sample_approx"]
 

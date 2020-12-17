@@ -12,10 +12,12 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import functools
-import pickle
 import collections
-from .util import biwrap
+import functools
+
+import dill
+
+from pymc3.util import biwrap
 
 CACHE_REGISTRY = []
 
@@ -23,7 +25,16 @@ CACHE_REGISTRY = []
 @biwrap
 def memoize(obj, bound=False):
     """
-    An expensive memoizer that works with unhashables
+    Decorator to apply memoization to expensive functions.
+    It uses a custom `hashable` helper function to hash typically unhashable Python objects.
+
+    Parameters
+    ----------
+    obj : callable
+        the function to apply the caching to
+    bound : bool
+        indicates if the [obj] is a bound method (self as first argument)
+        For bound methods, the cache is kept in a `_cache` attribute on [self].
     """
     # this is declared not to be a bound method, so just attach new attr to obj
     if not bound:
@@ -40,7 +51,7 @@ def memoize(obj, bound=False):
             key = (hashable(args[1:]), hashable(kwargs))
             if not hasattr(args[0], "_cache"):
                 setattr(args[0], "_cache", collections.defaultdict(dict))
-                # do not add to cache regestry
+                # do not add to cache registry
             cache = getattr(args[0], "_cache")[obj.__name__]
         if key not in cache:
             cache[key] = obj(*args, **kwargs)
@@ -75,19 +86,26 @@ class WithMemoization:
         self.__dict__.update(state)
 
 
-def hashable(a):
+def hashable(a) -> int:
     """
-    Turn some unhashable objects into hashable ones.
+    Hashes many kinds of objects, including some that are unhashable through the builtin `hash` function.
+    Lists and tuples are hashed based on their elements.
     """
     if isinstance(a, dict):
-        return hashable(tuple((hashable(a1), hashable(a2)) for a1, a2 in a.items()))
+        # first hash the keys and values with hashable
+        # then hash the tuple of int-tuples with the builtin
+        return hash(tuple((hashable(k), hashable(v)) for k, v in a.items()))
+    if isinstance(a, (tuple, list)):
+        # lists are mutable and not hashable by default
+        # for memoization, we need the hash to depend on the items
+        return hash(tuple(hashable(i) for i in a))
     try:
         return hash(a)
     except TypeError:
         pass
     # Not hashable >>>
     try:
-        return hash(pickle.dumps(a))
+        return hash(dill.dumps(a))
     except Exception:
         if hasattr(a, "__dict__"):
             return hashable(a.__dict__)

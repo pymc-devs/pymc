@@ -14,14 +14,17 @@
 
 #  pylint:disable=unused-variable
 from functools import reduce
-from ..math import cartesian, kronecker
 from operator import add
-import pymc3 as pm
-import theano
-import theano.tensor as tt
+
 import numpy as np
 import numpy.testing as npt
 import pytest
+import theano
+import theano.tensor as tt
+
+import pymc3 as pm
+
+from pymc3.math import cartesian, kronecker
 
 np.random.seed(101)
 
@@ -1143,8 +1146,8 @@ class TestMarginalKron:
             f = kron_gp.marginal_likelihood("f", self.Xs, self.y, sigma=self.sigma, shape=self.N)
             p = kron_gp.conditional("p", self.Xnew)
             mu, cov = kron_gp.predict(self.Xnew)
-        npt.assert_allclose(mu, self.mu, atol=0, rtol=1e-2)
-        npt.assert_allclose(cov, self.cov, atol=0, rtol=1e-2)
+        npt.assert_allclose(mu, self.mu, atol=1e-5, rtol=1e-2)
+        npt.assert_allclose(cov, self.cov, atol=1e-5, rtol=1e-2)
 
     def testMarginalKronvsMarginal(self):
         with pm.Model() as kron_model:

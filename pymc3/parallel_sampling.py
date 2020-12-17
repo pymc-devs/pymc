@@ -12,21 +12,23 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import ctypes
+import logging
 import multiprocessing
 import multiprocessing.sharedctypes
-import ctypes
-import time
-import logging
 import pickle
-from collections import namedtuple
-import traceback
 import platform
-from pymc3.exceptions import SamplingError
+import time
+import traceback
+
+from collections import namedtuple
 
 import numpy as np
+
 from fastprogress.fastprogress import progress_bar
 
-from . import theanof
+from pymc3 import theanof
+from pymc3.exceptions import SamplingError
 
 logger = logging.getLogger("pymc3")
 

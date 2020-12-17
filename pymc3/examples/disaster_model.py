@@ -9,10 +9,11 @@ disasters[t] ~ Poi(early_mean if t <= switchpoint, late_mean otherwise)
 """
 
 
-import pymc3 as pm
 import theano.tensor as tt
+
 from numpy import arange, array
 
+import pymc3 as pm
 
 __all__ = ["disasters_data", "switchpoint", "early_mean", "late_mean", "rate", "disasters"]
 

@@ -13,17 +13,19 @@
 #   limitations under the License.
 
 import collections
-from copy import copy
 import io
 import os
 import pkgutil
-from typing import Dict, List, Any
+
+from copy import copy
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
-import pymc3 as pm
-import theano.tensor as tt
 import theano
+import theano.tensor as tt
+
+import pymc3 as pm
 
 __all__ = [
     "get_data",
@@ -460,7 +462,7 @@ class Data:
         A value to associate with this variable
     dims: {str, tuple of str}, optional, default=None
         Dimension names of the random variables (as opposed to the shapes of these
-        random variables). Use this when `value` is a Pandas Series or DataFrame. The
+        random variables). Use this when `value` is a pandas Series or DataFrame. The
         `dims` will then be the name of the Series / DataFrame's columns. See ArviZ
         documentation for more information about dimensions and coordinates:
         https://arviz-devs.github.io/arviz/notebooks/Introduction.html

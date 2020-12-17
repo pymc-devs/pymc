@@ -12,17 +12,20 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytest
 import numpy as np
+import pytest
+
 from theano import tensor as tt
+
 import pymc3 as pm
+
 from pymc3.distributions.shape_utils import (
-    to_tuple,
-    shapes_broadcasting,
     broadcast_dist_samples_shape,
-    get_broadcastable_dist_samples,
-    broadcast_distribution_samples,
     broadcast_dist_samples_to,
+    broadcast_distribution_samples,
+    get_broadcastable_dist_samples,
+    shapes_broadcasting,
+    to_tuple,
 )
 
 test_shapes = [

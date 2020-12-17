@@ -15,6 +15,8 @@ We appreciate being notified of problems with the existing PyMC code. We prefer 
 
 Please verify that your issue is not being currently addressed by other issues or pull requests by using the GitHub search tool to look for key words in the project issue tracker.
 
+Filter on the ["beginner friendly"](https://github.com/pymc-devs/pymc3/issues?q=is%3Aopen+is%3Aissue+label%3A%22beginner+friendly%22) label for issues which are good for new contributors.
+
 # Contributing code via pull requests
 
 While issue reporting is valuable, we strongly encourage users who are inclined to do so to submit patches for new or existing issues via pull requests. This is particularly the case for simple fixes, such as typos or tweaks to documentation, which do not require a heavy investment of time and attention.
@@ -43,14 +45,22 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
 
    Always use a ``feature`` branch. It's good practice to never routinely work on the ``master`` branch of any repository.
 
-4. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``.  To set up a development environment, you may (probably in a [virtual environment](https://docs.python-guide.org/dev/virtualenvs/)) run:
+4. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``. The easiest (and recommended) way to set up a development environment is via [miniconda](https://docs.conda.io/en/latest/miniconda.html):
 
    ```bash
-   $ pip install -r requirements.txt
+   $ conda env create -f conda-envs/environment-dev-py37.yml  # or py38 or py39
+   $ conda activate pymc3-dev-py37
+   $ pip install -e .
+   ```
+
+   _Alternatively_ you may (probably in a [virtual environment](https://docs.python-guide.org/dev/virtualenvs/)) run:
+
+   ```bash
+   $ pip install -e .
    $ pip install -r requirements-dev.txt
    ```
 
-Alternatively, there is a script to create a docker environment for development.  See: [Developing in Docker](#Developing-in-Docker).
+   Yet another alternative is to create a docker environment for development. See: [Developing in Docker](#Developing-in-Docker).
 
 5. Develop the feature on your feature branch. Add changed files using ``git add`` and then ``git commit`` files:
 
@@ -103,26 +113,7 @@ tools:
   $ pytest --cov=pymc3 pymc3/tests/<name of test>.py
   ```
 
-* No `pyflakes` warnings, check with:
-
-  ```bash
-  $ pip install pyflakes
-  $ pyflakes path/to/module.py
-  ```
-
-* No PEP8 warnings, check with:
-
-  ```bash
-  $ pip install pycodestyle
-  $ pycodestyle path/to/module.py
-  ```
-
-* AutoPEP8 can help you fix some of the easy redundant errors:
-
-  ```bash
-  $ pip install autopep8
-  $ autopep8 path/to/pep8.py
-  ```
+* No `pre-commit` errors: see the [Python code style](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Python-Code-Style) and [Jupyter Notebook style](https://github.com/pymc-devs/pymc3/wiki/PyMC's-Jupyter-Notebook-Style) page from our Wiki on how to install and run it.
 
 ## Developing in Docker
 
@@ -157,5 +148,7 @@ docker exec -it pymc3 jupyter notebook list
 Follow [TensorFlow's style guide](https://www.tensorflow.org/community/contribute/code_style) or the [Google style guide](https://google.github.io/styleguide/pyguide.html) for writing code, which more or less follows PEP 8.
 
 For documentation strings, we *prefer* [numpy style](https://numpydoc.readthedocs.io/en/latest/format.html) to comply with the style that predominates in our upstream dependencies.
+
+Finally, see the [PyMC3 Python Code Style](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Python-Code-Style) and the [PyMC's Jupyter Notebook Style](https://github.com/pymc-devs/pymc3/wiki/PyMC's-Jupyter-Notebook-Style) guides.
 
 #### This guide was derived from the [scikit-learn guide to contributing](https://github.com/scikit-learn/scikit-learn/blob/master/CONTRIBUTING.md)

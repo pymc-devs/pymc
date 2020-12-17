@@ -10,9 +10,9 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import theano.tensor as tt
 
 import pymc3 as pm
-import theano.tensor as tt
 
 np.random.seed(42)
 theta_true = (25, 0.5)

@@ -17,16 +17,15 @@ from numbers import Real
 import numpy as np
 import theano.tensor as tt
 
+from pymc3.distributions import transforms
+from pymc3.distributions.dist_math import bound
 from pymc3.distributions.distribution import (
-    Distribution,
-    Discrete,
     Continuous,
+    Discrete,
+    Distribution,
     draw_values,
     generate_samples,
 )
-from pymc3.distributions import transforms
-from pymc3.distributions.dist_math import bound
-
 from pymc3.theanof import floatX
 
 __all__ = ["Bound"]
@@ -157,13 +156,13 @@ class _Bounded(Distribution):
 
     def _str_repr(self, **kwargs):
         distr_repr = self._wrapped._str_repr(**{**kwargs, "dist": self._wrapped})
-        if "formatting" in kwargs and kwargs["formatting"] == "latex":
+        if "formatting" in kwargs and "latex" in kwargs["formatting"]:
             distr_repr = distr_repr[distr_repr.index(r" \sim") + 6 :]
         else:
             distr_repr = distr_repr[distr_repr.index(" ~") + 3 :]
         self_repr = super()._str_repr(**kwargs)
 
-        if "formatting" in kwargs and kwargs["formatting"] == "latex":
+        if "formatting" in kwargs and "latex" in kwargs["formatting"]:
             return self_repr + " -- " + distr_repr
         else:
             return self_repr + "-" + distr_repr

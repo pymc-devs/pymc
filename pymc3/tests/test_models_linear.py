@@ -13,10 +13,11 @@
 #   limitations under the License.
 
 import numpy as np
-from .helpers import SeededTest
-from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
-from pymc3.glm import LinearComponent, GLM
 import pytest
+
+from pymc3 import Model, Normal, Slice, Uniform, find_MAP, sample
+from pymc3.glm import GLM, LinearComponent
+from pymc3.tests.helpers import SeededTest
 
 
 # Generate data

@@ -13,8 +13,9 @@
 #   limitations under the License.
 
 import pytest
-from . import sampler_fixtures as sf
 import theano
+
+from pymc3.tests import sampler_fixtures as sf
 
 
 @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")

@@ -18,21 +18,22 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 """
 import platform
+
 import numpy as np
 import scipy.linalg
 import scipy.stats
-import theano.tensor as tt
 import theano
-from theano.scalar import UnaryScalarOp, upgrade_to_float_no_complex
-from theano.tensor.slinalg import Cholesky
-from theano.compile.builders import OpFromGraph
-from theano.scan import until
+import theano.tensor as tt
+
 from theano import scan
-from .shape_utils import to_tuple
+from theano.compile.builders import OpFromGraph
+from theano.scalar import UnaryScalarOp, upgrade_to_float_no_complex
+from theano.scan import until
+from theano.tensor.slinalg import Cholesky
 
-from .special import gammaln
+from pymc3.distributions.shape_utils import to_tuple
+from pymc3.distributions.special import gammaln
 from pymc3.theanof import floatX
-
 
 f = floatX
 c = -0.5 * np.log(2.0 * np.pi)
@@ -130,6 +131,46 @@ def normal_lccdf(mu, sigma, x):
         tt.gt(z, 1.0),
         tt.log(tt.erfcx(z / tt.sqrt(2.0)) / 2.0) - tt.sqr(z) / 2.0,
         tt.log1p(-tt.erfc(-z / tt.sqrt(2.0)) / 2.0),
+    )
+
+
+def log_diff_normal_cdf(mu, sigma, x, y):
+    """
+    Compute :math:`\\log(\\Phi(\frac{x - \\mu}{\\sigma}) - \\Phi(\frac{y - \\mu}{\\sigma}))` safely in log space.
+
+    Parameters
+    ----------
+    mu: float
+        mean
+    sigma: float
+        std
+
+    x: float
+
+    y: float
+        must be strictly less than x.
+
+    Returns
+    -------
+    log (\\Phi(x) - \\Phi(y))
+
+    """
+    x = (x - mu) / sigma / tt.sqrt(2.0)
+    y = (y - mu) / sigma / tt.sqrt(2.0)
+
+    # To stabilize the computation, consider these three regions:
+    # 1) x > y > 0 => Use erf(x) = 1 - e^{-x^2} erfcx(x) and erf(y) =1 - e^{-y^2} erfcx(y)
+    # 2) 0 > x > y => Use erf(x) = e^{-x^2} erfcx(-x) and erf(y) = e^{-y^2} erfcx(-y)
+    # 3) x > 0 > y => Naive formula log( (erf(x) - erf(y)) / 2 ) works fine.
+    return tt.log(0.5) + tt.switch(
+        tt.gt(y, 0),
+        -tt.square(y) + tt.log(tt.erfcx(y) - tt.exp(tt.square(y) - tt.square(x)) * tt.erfcx(x)),
+        tt.switch(
+            tt.lt(x, 0),  # 0 > x > y
+            -tt.square(x)
+            + tt.log(tt.erfcx(-x) - tt.exp(tt.square(x) - tt.square(y)) * tt.erfcx(-y)),
+            tt.log(tt.erf(x) - tt.erf(y)),  # x >0 > y
+        ),
     )
 
 

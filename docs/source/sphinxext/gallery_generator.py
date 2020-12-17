@@ -4,11 +4,11 @@ Sphinx plugin to run generate a gallery for notebooks
 Modified from the seaborn project, which modified the mpld3 project.
 """
 import base64
+import glob
 import json
 import os
-import glob
-import shutil
 import runpy
+import shutil
 
 import matplotlib
 
@@ -22,6 +22,11 @@ DEFAULT_IMG_LOC = os.path.join(os.path.dirname(DOC_SRC), "logos", "PyMC3.png")
 TABLE_OF_CONTENTS_FILENAME = "table_of_contents_{}.js"
 
 INDEX_TEMPLATE = """
+:orphan:
+
+..
+    _href from docs/source/conf.py
+
 .. _{sphinx_tag}:
 
 .. title:: {gallery}_notebooks

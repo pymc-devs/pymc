@@ -1,3 +1,8 @@
+:orphan:
+
+..
+    _href from docs/source/index.rst
+
 ================
 PyMC3 and Theano
 ================
@@ -11,8 +16,12 @@ build up a Theano function from the space of our parameters to
 their posterior probability density up to a constant factor. We then use
 symbolic manipulations of this function to also get access to its gradient.
 
+Note that the original developers have stopped maintaining Theano, so
+PyMC3 uses `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`_,
+a fork of Theano maintained by the PyMC3 developers.
+
 For a thorough introduction to Theano see the
-`theano docs <http://deeplearning.net/software/theano/introduction.html>`_,
+`theano docs <https://theano-pymc.readthedocs.io/en/latest/>`_,
 but for the most part you don't need detailed knowledge about it as long
 as you are not trying to define new distributions or other extensions
 of PyMC3. But let's look at a simple example to get a rough

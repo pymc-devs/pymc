@@ -15,17 +15,18 @@
 """Functions for converting traces into a table-like format
 """
 
-import numpy as np
-import pandas as pd
 import warnings
 
-from ..util import get_default_varnames
+import numpy as np
+import pandas as pd
+
+from pymc3.util import get_default_varnames
 
 __all__ = ["trace_to_dataframe"]
 
 
 def trace_to_dataframe(trace, chains=None, varnames=None, include_transformed=False):
-    """Convert trace to Pandas DataFrame.
+    """Convert trace to pandas DataFrame.
 
     Parameters
     ----------

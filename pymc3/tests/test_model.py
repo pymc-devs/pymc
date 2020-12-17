@@ -12,20 +12,22 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import pickle
+import unittest
+
+import numpy as np
+import numpy.testing as npt
+import pandas as pd
 import pytest
 import theano
 import theano.tensor as tt
-import numpy as np
-import pickle
-import pandas as pd
-import numpy.testing as npt
-import unittest
 
 import pymc3 as pm
+
+from pymc3 import Deterministic, Potential
 from pymc3.distributions import HalfCauchy, Normal, transforms
-from pymc3 import Potential, Deterministic
 from pymc3.model import ValueGradFunction
-from .helpers import select_by_precision
+from pymc3.tests.helpers import select_by_precision
 
 
 class NewModel(pm.Model):

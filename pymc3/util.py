@@ -12,16 +12,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import re
 import functools
-from typing import List, Dict, Tuple, Union
+import re
+import warnings
 
-import xarray
+from typing import Dict, List, Tuple, Union
+
 import arviz
-from numpy import ndarray
+import numpy as np
+import xarray
 
 from theano.tensor import TensorVariable
 
+from pymc3.exceptions import SamplingError
 
 LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
 
@@ -137,7 +140,7 @@ def get_repr_for_variable(variable, formatting="plain"):
                     for item in variable.get_parents()[0].inputs
                 ]
                 # do not escape_latex these, since it is not idempotent
-                if formatting == "latex":
+                if "latex" in formatting:
                     return "f({args})".format(
                         args=",~".join([n for n in names if isinstance(n, str)])
                     )
@@ -152,7 +155,7 @@ def get_repr_for_variable(variable, formatting="plain"):
             return value.item()
         return "array"
 
-    if formatting == "latex":
+    if "latex" in formatting:
         return fr"\text{{{name}}}"
     else:
         return name
@@ -188,6 +191,48 @@ def update_start_vals(a, b, model):
     a.update({k: v for k, v in b.items() if k not in a})
 
 
+def check_start_vals(start, model):
+    r"""Check that the starting values for MCMC do not cause the relevant log probability
+    to evaluate to something invalid (e.g. Inf or NaN)
+
+    Parameters
+    ----------
+    start : dict, or array of dict
+        Starting point in parameter space (or partial point)
+        Defaults to ``trace.point(-1))`` if there is a trace provided and model.test_point if not
+        (defaults to empty dict). Initialization methods for NUTS (see ``init`` keyword) can
+        overwrite the default.
+    model : Model object
+    Raises
+    ______
+    KeyError if the parameters provided by `start` do not agree with the parameters contained
+        within `model`
+    pymc3.exceptions.SamplingError if the evaluation of the parameters in `start` leads to an
+        invalid (i.e. non-finite) state
+    Returns
+    -------
+    None
+    """
+    start_points = [start] if isinstance(start, dict) else start
+    for elem in start_points:
+        if not set(elem.keys()).issubset(model.named_vars.keys()):
+            extra_keys = ", ".join(set(elem.keys()) - set(model.named_vars.keys()))
+            valid_keys = ", ".join(model.named_vars.keys())
+            raise KeyError(
+                "Some start parameters do not appear in the model!\n"
+                "Valid keys are: {}, but {} was supplied".format(valid_keys, extra_keys)
+            )
+
+        initial_eval = model.check_test_point(test_point=elem)
+
+        if not np.all(np.isfinite(initial_eval)):
+            raise SamplingError(
+                "Initial evaluation of model at starting point failed!\n"
+                "Starting values:\n{}\n\n"
+                "Initial evaluation results:\n{}".format(elem, str(initial_eval))
+            )
+
+
 def get_transformed(z):
     if hasattr(z, "transformed"):
         z = z.transformed
@@ -214,13 +259,21 @@ def biwrap(wrapper):
 
 # FIXME: this function is poorly named, because it returns a LIST of
 # points, not a dictionary of points.
-def dataset_to_point_dict(ds: xarray.Dataset) -> List[Dict[str, ndarray]]:
+def dataset_to_point_dict(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
+    warnings.warn(
+        "dataset_to_point_dict was renamed to dataset_to_point_list and will be removed!",
+        DeprecationWarning,
+    )
+    return dataset_to_point_list(ds)
+
+
+def dataset_to_point_list(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
     # grab posterior samples for each variable
-    _samples: Dict[str, ndarray] = {vn: ds[vn].values for vn in ds.keys()}
+    _samples: Dict[str, np.ndarray] = {vn: ds[vn].values for vn in ds.keys()}
     # make dicts
-    points: List[Dict[str, ndarray]] = []
+    points: List[Dict[str, np.ndarray]] = []
     vn: str
-    s: ndarray
+    s: np.ndarray
     for c in ds.chain:
         for d in ds.draw:
             points.append({vn: s[c, d] for vn, s in _samples.items()})
