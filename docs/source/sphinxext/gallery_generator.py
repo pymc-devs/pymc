@@ -72,7 +72,9 @@ class NotebookGenerator:
     def __init__(self, filename, target_dir):
         self.basename = os.path.basename(filename)
         self.stripped_name = os.path.splitext(self.basename)[0]
-        self.output_html = os.path.join("..", "notebooks", f"{self.stripped_name}.html")
+        self.output_html = os.path.join(
+            "..", "pymc-examples", "notebooks", f"{self.stripped_name}.html"
+        )
         self.image_dir = os.path.join(target_dir, "_images")
         self.png_path = os.path.join(self.image_dir, f"{self.stripped_name}.png")
         with open(filename) as fid:
