@@ -72,12 +72,10 @@ class NotebookGenerator:
 
     def __init__(self, filename, target_dir):
         self.basename = os.path.basename(filename)
-        self.stripped_name = os.path.splitext(self.basename)[0]
-        self.output_html = str(
-            Path("..") / Path(filename).relative_to(Path.cwd()).with_suffix(".html")
-        )
+        stripped_name = os.path.splitext(self.basename)[0]
+        self.output_html = str(".." / Path(filename).relative_to(Path.cwd()).with_suffix(".html"))
         self.image_dir = os.path.join(target_dir, "_images")
-        self.png_path = os.path.join(self.image_dir, f"{self.stripped_name}.png")
+        self.png_path = os.path.join(self.image_dir, f"{stripped_name}.png")
         with open(filename) as fid:
             self.json_source = json.load(fid)
         self.pagetitle = self.extract_title()
@@ -188,6 +186,7 @@ def build_gallery(srcdir, gallery):
     js_file = os.path.join(image_dir, f"gallery_{gallery}_contents.js")
     with open(table_of_contents_file) as toc:
         table_of_contents = toc.read()
+
     js_contents = "Gallery.examples = {}\n{}".format(json.dumps(data), table_of_contents)
 
     with open(js_file, "w") as js:
