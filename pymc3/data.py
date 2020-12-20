@@ -16,6 +16,7 @@ import collections
 import io
 import os
 import pkgutil
+import urllib.request
 
 from copy import copy
 from typing import Any, Dict, List
@@ -34,6 +35,7 @@ __all__ = [
     "align_minibatches",
     "Data",
 ]
+BASE_URL = "https://raw.githubusercontent.com/pymc-devs/pymc-examples/main/examples/data/{filename}"
 
 
 def get_data(filename):
@@ -48,8 +50,13 @@ def get_data(filename):
     -------
     BytesIO of the data
     """
-    data_pkg = "pymc3.examples"
-    return io.BytesIO(pkgutil.get_data(data_pkg, os.path.join("data", filename)))
+    data_pkg = "pymc3.tests"
+    try:
+        content = pkgutil.get_data(data_pkg, os.path.join("data", filename))
+    except FileNotFoundError:
+        with urllib.request.urlopen(BASE_URL.format(filename=filename)) as handle:
+            content = handle.read()
+    return io.BytesIO(content)
 
 
 class GenTensorVariable(tt.TensorVariable):

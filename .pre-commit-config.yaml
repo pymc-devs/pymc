@@ -1,4 +1,4 @@
-exclude: ^(docs/logos|pymc3/examples/data)/
+exclude: ^(docs/logos|pymc3/tests/data)/
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v3.3.0
