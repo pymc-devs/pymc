@@ -870,12 +870,6 @@ class MixtureSameFamily(Distribution):
 
         # The `samples` array still has the `mixture_axis`, so we must remove it:
         output = samples[(..., 0) + (slice(None),) * len(event_shape)]
-
-        # Final oddity: if size == 1, pymc3 defaults to reducing the sample_shape dimension
-        # We do this to stay consistent with the rest of the package even though
-        # we shouldn't have to do it.
-        if size == 1:
-            output = output[0]
         return output
 
     def _distr_parameters_for_repr(self):

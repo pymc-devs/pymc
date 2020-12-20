@@ -107,6 +107,12 @@ class Distribution:
                 dims = (dims,)
             shape = model.shape_from_dims(dims)
 
+        # failsafe against 0-shapes
+        if shape is not None and any(np.atleast_1d(shape) <= 0):
+            raise ValueError(
+                f"Distribution initialized with invalid shape {shape}. This is not allowed."
+            )
+
         # Some distributions do not accept shape=None
         if has_shape or shape is not None:
             dist = cls.dist(*args, **kwargs, shape=shape)
@@ -1001,16 +1007,6 @@ def _draw_value(param, point=None, givens=None, size=None):
     raise ValueError("Unexpected type in draw_value: %s" % type(param))
 
 
-def _is_one_d(dist_shape):
-    if hasattr(dist_shape, "dshape") and dist_shape.dshape in ((), (0,), (1,)):
-        return True
-    elif hasattr(dist_shape, "shape") and dist_shape.shape in ((), (0,), (1,)):
-        return True
-    elif to_tuple(dist_shape) == ():
-        return True
-    return False
-
-
 def generate_samples(generator, *args, **kwargs):
     """Generate samples from the distribution of a random variable.
 
@@ -1044,7 +1040,6 @@ def generate_samples(generator, *args, **kwargs):
     Any remaining args and kwargs are passed on to the generator function.
     """
     dist_shape = kwargs.pop("dist_shape", ())
-    one_d = _is_one_d(dist_shape)
     size = kwargs.pop("size", None)
     broadcast_shape = kwargs.pop("broadcast_shape", None)
     not_broadcast_kwargs = kwargs.pop("not_broadcast_kwargs", None)
@@ -1120,21 +1115,5 @@ def generate_samples(generator, *args, **kwargs):
         samples = generator(size=dist_bcast_shape, *args, **kwargs)
     else:
         samples = generator(size=size_tup + dist_bcast_shape, *args, **kwargs)
-    samples = np.asarray(samples)
 
-    # reshape samples here
-    if samples.ndim > 0 and samples.shape[0] == 1 and size_tup == (1,):
-        if (
-            len(samples.shape) > len(dist_shape)
-            and samples.shape[-len(dist_shape) :] == dist_shape[-len(dist_shape) :]
-        ):
-            samples = samples.reshape(samples.shape[1:])
-
-    if (
-        one_d
-        and samples.ndim > 0
-        and samples.shape[-1] == 1
-        and (samples.shape != size_tup or size_tup == tuple() or size_tup == (1,))
-    ):
-        samples = samples.reshape(samples.shape[:-1])
     return np.asarray(samples)

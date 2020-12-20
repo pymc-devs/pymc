@@ -1,7 +1,19 @@
 # Release Notes
 
 ## PyMC3 vNext (on deck)
-This is the first release to support Python3.9 and to drop Python3.6.
+This release breaks some APIs w.r.t. `3.10.0`.
+It also brings some dreadfully awaited fixes, so be sure to go through the changes below.
+(Or latest when you run into problems.)
+
+### Breaking Changes
+- Python 3.6 support was dropped (by no longer testing) and Python 3.9 was added (see [#4332](https://github.com/pymc-devs/pymc3/pull/4332)).
+- Changed shape behavior: __No longer collapse length 1 vector shape into scalars.__ (see [#4206](https://github.com/pymc-devs/pymc3/issue/4206) and [#4214](https://github.com/pymc-devs/pymc3/pull/4214))
+  - __Applies to random variables and also the `.random(size=...)` kwarg!__
+  - To create scalar variables you must now use `shape=None` or `shape=()`.
+  - __`shape=(1,)` and `shape=1` now become vectors.__ Previously they were collapsed into scalars
+  - 0-length dimensions are now ruled illegal for random variables and raise a `ValueError`.
+- In `sample_prior_predictive` the `vars` kwarg was removed in favor of `var_names` (see [#4327](https://github.com/pymc-devs/pymc3/pull/4327)).
+- Removed `theanof.set_theano_config` because it illegally changed Theano's internal state (see [#4329](https://github.com/pymc-devs/pymc3/pull/4329)).
 
 ### New Features
 - `OrderedProbit` distribution added (see [#4232](https://github.com/pymc-devs/pymc3/pull/4232)).
@@ -10,8 +22,6 @@ This is the first release to support Python3.9 and to drop Python3.6.
 ### Maintenance
 - Fixed bug whereby partial traces returns after keyboard interrupt during parallel sampling had fewer draws than would've been available [#4318](https://github.com/pymc-devs/pymc3/pull/4318)
 - Make `sample_shape` same across all contexts in `draw_values` (see [#4305](https://github.com/pymc-devs/pymc3/pull/4305)).
-- Removed `theanof.set_theano_config` because it illegally touched Theano's privates (see [#4329](https://github.com/pymc-devs/pymc3/pull/4329)).
-- In `sample_posterior_predictive` the `vars` kwarg was removed in favor of `var_names` (see [#4343](https://github.com/pymc-devs/pymc3/pull/4343)).
 - The notebook gallery has been moved to https://github.com/pymc-devs/pymc-examples (see [#4348](https://github.com/pymc-devs/pymc3/pull/4348)).
 - `math.logsumexp` now matches `scipy.special.logsumexp` when arrays contain infinite values (see [#4360](https://github.com/pymc-devs/pymc3/pull/4360)).
 - Fixed mathematical formulation in `MvStudentT` random method. (see [#4359](https://github.com/pymc-devs/pymc3/pull/4359))

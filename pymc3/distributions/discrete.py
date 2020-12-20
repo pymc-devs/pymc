@@ -212,7 +212,7 @@ class BetaBinomial(Discrete):
         self.mode = tt.cast(tround(alpha / (alpha + beta)), "int8")
 
     def _random(self, alpha, beta, n, size=None):
-        size = size or 1
+        size = size or ()
         p = stats.beta.rvs(a=alpha, b=beta, size=size).flatten()
         # Sometimes scipy.beta returns nan. Ugh.
         while np.any(np.isnan(p)):
@@ -1096,7 +1096,7 @@ class Categorical(Discrete):
         return generate_samples(
             random_choice,
             p=p,
-            broadcast_shape=p.shape[:-1] or (1,),
+            broadcast_shape=p.shape[:-1],
             dist_shape=self.shape,
             size=size,
         )
