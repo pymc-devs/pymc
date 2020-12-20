@@ -13,7 +13,7 @@ It also brings some dreadfully awaited fixes, so be sure to go through the chang
   - __`shape=(1,)` and `shape=1` now become vectors.__ Previously they were collapsed into scalars
   - 0-length dimensions are now ruled illegal for random variables and raise a `ValueError`.
 - In `sample_prior_predictive` the `vars` kwarg was removed in favor of `var_names` (see [#4327](https://github.com/pymc-devs/pymc3/pull/4327)).
-- Removed `theanof.set_theano_config` because it illegally touched Theano's privates (see [#4329](https://github.com/pymc-devs/pymc3/pull/4329)).
+- Removed `theanof.set_theano_config` because it illegally changed Theano's internal state (see [#4329](https://github.com/pymc-devs/pymc3/pull/4329)).
 
 ### New Features
 - `OrderedProbit` distribution added (see [#4232](https://github.com/pymc-devs/pymc3/pull/4232)).
