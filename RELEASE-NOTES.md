@@ -1,6 +1,6 @@
 # Release Notes
 
-## PyMC3 3.11.0 (on deck)
+## PyMC3 vNext (on deck)
 This release breaks some APIs w.r.t. `3.10.0`.
 It also brings some dreadfully awaited fixes, so be sure to go through the changes below.
 (Or latest when you run into problems.)
@@ -16,11 +16,13 @@ It also brings some dreadfully awaited fixes, so be sure to go through the chang
 - Removed `theanof.set_theano_config` because it illegally touched Theano's privates (see [#4329](https://github.com/pymc-devs/pymc3/pull/4329)).
 
 ### New Features
-- ...
+- `OrderedProbit` distribution added (see [#4232](https://github.com/pymc-devs/pymc3/pull/4232)).
+- `plot_posterior_predictive_glm` now works with `arviz.InferenceData` as well (see [#4234](https://github.com/pymc-devs/pymc3/pull/4234))
 
 ### Maintenance
 - Fixed bug whereby partial traces returns after keyboard interrupt during parallel sampling had fewer draws than would've been available [#4318](https://github.com/pymc-devs/pymc3/pull/4318)
 - Make `sample_shape` same across all contexts in `draw_values` (see [#4305](https://github.com/pymc-devs/pymc3/pull/4305)).
+- The notebook gallery has been moved to https://github.com/pymc-devs/pymc-examples (see [#4348](https://github.com/pymc-devs/pymc3/pull/4348)).
 
 
 ## PyMC3 3.10.0 (7 December 2020)

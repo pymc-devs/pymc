@@ -1571,7 +1571,7 @@ class TestNestedRandom(SeededTest):
         assert prior["target"].shape == (prior_samples,) + shape
 
 
-def generate_shapes(include_params=False, xfail=False):
+def generate_shapes(include_params=False):
     # fmt: off
     mudim_as_event = [
         [None, 1, 3, 10, (10, 3), 100],
@@ -1590,20 +1590,13 @@ def generate_shapes(include_params=False, xfail=False):
         del mudim_as_event[-1]
         del mudim_as_dist[-1]
     data = itertools.chain(itertools.product(*mudim_as_event), itertools.product(*mudim_as_dist))
-    if xfail:
-        data = list(data)
-        for index in range(len(data)):
-            if data[index][0] in (None, 1):
-                data[index] = pytest.param(
-                    *data[index], marks=pytest.mark.xfail(reason="wait for PR #4214")
-                )
     return data
 
 
 class TestMvNormal(SeededTest):
     @pytest.mark.parametrize(
         ["sample_shape", "dist_shape", "mu_shape", "param"],
-        generate_shapes(include_params=True, xfail=False),
+        generate_shapes(include_params=True),
         ids=str,
     )
     def test_with_np_arrays(self, sample_shape, dist_shape, mu_shape, param):
@@ -1613,7 +1606,7 @@ class TestMvNormal(SeededTest):
 
     @pytest.mark.parametrize(
         ["sample_shape", "dist_shape", "mu_shape"],
-        generate_shapes(include_params=False, xfail=True),
+        generate_shapes(include_params=False),
         ids=str,
     )
     def test_with_chol_rv(self, sample_shape, dist_shape, mu_shape):
@@ -1630,7 +1623,7 @@ class TestMvNormal(SeededTest):
 
     @pytest.mark.parametrize(
         ["sample_shape", "dist_shape", "mu_shape"],
-        generate_shapes(include_params=False, xfail=True),
+        generate_shapes(include_params=False),
         ids=str,
     )
     def test_with_cov_rv(self, sample_shape, dist_shape, mu_shape):

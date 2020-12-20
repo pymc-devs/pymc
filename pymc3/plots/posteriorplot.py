@@ -12,18 +12,30 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-try:
-    import matplotlib.pyplot as plt
-except ImportError:  # mpl is optional
-    pass
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
+
+import matplotlib.pyplot as plt
 import numpy as np
 
+from pymc3.backends.base import MultiTrace
 
-def plot_posterior_predictive_glm(trace, eval=None, lm=None, samples=30, **kwargs):
+if TYPE_CHECKING:
+    from arviz.data.inference_data import InferenceData
+
+
+def plot_posterior_predictive_glm(
+    trace: Union[InferenceData, MultiTrace],
+    eval: Optional[np.ndarray] = None,
+    lm: Optional[Callable] = None,
+    samples: int = 30,
+    **kwargs: Any
+) -> None:
     """Plot posterior predictive of a linear model.
     :Arguments:
-        trace: <array>
-            Array of posterior samples with columns
+        trace: InferenceData or MultiTrace
+            Output of pm.sample()
         eval: <array>
             Array over which to evaluate lm
         lm: function <default: linear function>
@@ -46,6 +58,9 @@ def plot_posterior_predictive_glm(trace, eval=None, lm=None, samples=30, **kwarg
         kwargs["lw"] = 0.2
     if "c" not in kwargs and "color" not in kwargs:
         kwargs["c"] = "k"
+
+    if not isinstance(trace, MultiTrace):
+        trace = trace.posterior.to_dataframe().to_dict(orient="records")
 
     for rand_loc in np.random.randint(0, len(trace), samples):
         rand_sample = trace[rand_loc]

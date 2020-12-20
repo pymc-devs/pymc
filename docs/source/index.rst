@@ -96,7 +96,7 @@
                     </div>
                 </a>
 
-                <a class="ui link card" href="/notebooks/variational_api_quickstart.html">
+                <a class="ui link card" href="/pymc-examples/examples/variational_inference/variational_api_quickstart.html">
                     <div class="content">
                         <div class="header">Variational Inference</div>
                         <div class="description">Variational inference saves computational cost by turning a problem of integration into one of optimization. PyMC3's variational API supports a number of cutting edge algorithms, as well as minibatch for scaling to large datasets.
