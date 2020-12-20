@@ -947,9 +947,9 @@ class TestScalarParameterSamples(SeededTest):
 
     def test_mv_t(self):
         def ref_rand(size, nu, Sigma, mu):
-            normal = st.multivariate_normal.rvs(cov=Sigma, size=size).T
-            chi2 = st.chi2.rvs(df=nu, size=size)
-            return mu + np.sqrt(nu) * (normal / chi2).T
+            normal = st.multivariate_normal.rvs(cov=Sigma, size=size)
+            chi2 = st.chi2.rvs(df=nu, size=size)[..., None]
+            return mu + (normal / np.sqrt(chi2 / nu))
 
         for n in [2, 3]:
             pymc3_random(

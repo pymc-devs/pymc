@@ -324,10 +324,10 @@ class MvStudentT(_QuadFormBase):
                1+\frac{1}{\nu}
                ({\mathbf x}-{\mu})^T
                {\Sigma}^{-1}({\mathbf x}-{\mu})
-             \right]^{(\nu+p)/2}}
+             \right]^{-(\nu+p)/2}}
 
     ========  =============================================
-    Support   :math:`x \in \mathbb{R}^k`
+    Support   :math:`x \in \mathbb{R}^p`
     Mean      :math:`\mu` if :math:`\nu > 1` else undefined
     Variance  :math:`\frac{\nu}{\mu-2}\Sigma`
                   if :math:`\nu>2` else undefined
@@ -393,8 +393,10 @@ class MvStudentT(_QuadFormBase):
 
             samples = dist.random(point, size)
 
-        chi2 = np.random.chisquare
-        return (np.sqrt(nu) * samples.T / chi2(nu, size)).T + mu
+        chi2_samples = np.random.chisquare(nu, size)
+        # Add distribution shape to chi2 samples
+        chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(self.shape))
+        return (samples / np.sqrt(chi2_samples / nu)) + mu
 
     def logp(self, value):
         """
