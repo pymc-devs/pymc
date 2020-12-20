@@ -15,9 +15,10 @@
 import numpy as np
 import numpy.testing as npt
 import pytest
-from scipy.special import logsumexp as scipy_logsumexp
 import theano
 import theano.tensor as tt
+
+from scipy.special import logsumexp as scipy_logsumexp
 
 from pymc3.math import (
     LogDet,
@@ -31,8 +32,8 @@ from pymc3.math import (
     log1mexp_numpy,
     log1pexp,
     logdet,
-    probit,
     logsumexp,
+    probit,
 )
 from pymc3.tests.helpers import SeededTest, verify_grad
 from pymc3.theanof import floatX
@@ -226,10 +227,10 @@ def test_expand_packed_triangular():
         (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 0, False),
         (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 1, False),
         (np.array([[-2, np.inf], [-np.inf, -np.inf]]), 0, True),
-    ]
+    ],
 )
 def test_logsumexp(values, axis, keepdims):
     npt.assert_almost_equal(
         logsumexp(values, axis=axis, keepdims=keepdims).eval(),
-        scipy_logsumexp(values, axis=axis, keepdims=keepdims)
+        scipy_logsumexp(values, axis=axis, keepdims=keepdims),
     )
