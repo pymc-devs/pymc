@@ -53,7 +53,7 @@ def sample_smc(
         independent chains. Defaults to 2000.
     kernel: str
         Kernel method for the SMC sampler. Available option are ``metropolis`` (default) and `ABC`.
-        Use `ABC` for likelihood free inference togheter with a ``pm.Simulator``.
+        Use `ABC` for likelihood free inference together with a ``pm.Simulator``.
     n_steps: int
         The number of steps of each Markov Chain. If ``tune_steps == True`` ``n_steps`` will be used
         for the first stage and for the others it will be determined automatically based on the
