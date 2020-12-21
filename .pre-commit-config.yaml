@@ -1,7 +1,7 @@
 exclude: ^(docs/logos|pymc3/tests/data)/
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v3.3.0
+  rev: v3.4.0
   hooks:
     -   id: check-merge-conflict
     -   id: check-toml
