@@ -362,7 +362,7 @@ class PseudoLikelihood:
             shape, new_size = var_info[var.name]
             varvalues.append(posterior[size : size + new_size].reshape(shape))
             size += new_size
-        point = {k: v for k, v in zip(self.varnames, varvalues)}
+        point = dict(zip(self.varnames, varvalues))
         for varname, value in zip(self.unobserved_RVs, self.get_unobserved_fn(point)):
             if varname in self.params:
                 samples[varname] = value
