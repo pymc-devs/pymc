@@ -255,7 +255,7 @@ class SMC:
         varnames = [v.name for v in self.variables]
 
         with self.model:
-            strace = NDArray(self.model)
+            strace = NDArray(self.model.name)
             strace.setup(lenght_pos, self.chain)
         for i in range(lenght_pos):
             value = []
