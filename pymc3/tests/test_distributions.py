@@ -805,11 +805,15 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_hypergeometric(self):
+        def modified_scipy_hypergeom_logpmf(value, N, k, n):
+            original_res = sp.hypergeom.logpmf(value, N, k, n)
+            return original_res if not np.isnan(original_res) else -np.inf
+
         self.pymc3_matches_scipy(
             HyperGeometric,
             Nat,
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
-            lambda value, N, k, n: sp.hypergeom.logpmf(value, N, k, n),
+            lambda value, N, k, n: modified_scipy_hypergeom_logpmf(value, N, k, n),
         )
 
     def test_negative_binomial(self):

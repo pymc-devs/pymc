@@ -930,7 +930,9 @@ class HyperGeometric(Discrete):
             - betaln(n - value + 1, bad - n + value + 1)
             - betaln(tot + 1, 1)
         )
-        return result
+        lower = tt.max([0, n - N + k])
+        upper = tt.min([k, n])
+        return bound(result, lower <= value, value <= upper)
 
 
 class DiscreteUniform(Discrete):
