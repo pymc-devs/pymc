@@ -1689,11 +1689,11 @@ def test_matrix_normal_random_with_random_variables():
     lambd = 1.0
     with pm.Model() as model:
         sd_dist = pm.HalfCauchy.dist(beta=2.5)
-        packedL = pm.LKJCholeskyCov(f"packedL", eta=2, n=D, sd_dist=sd_dist)
+        packedL = pm.LKJCholeskyCov("packedL", eta=2, n=D, sd_dist=sd_dist)
         L = pm.expand_packed_triangular(D, packedL, lower=True)
-        Sigma = pm.Deterministic(f"Sigma", L.dot(L.T))  # D x D covariance
+        Sigma = pm.Deterministic("Sigma", L.dot(L.T))  # D x D covariance
         mu = pm.MatrixNormal(
-            f"mu", mu=mu_0, rowcov=(1 / lambd) * Sigma, colcov=np.eye(K), shape=(D, K)
+            "mu", mu=mu_0, rowcov=(1 / lambd) * Sigma, colcov=np.eye(K), shape=(D, K)
         )
         prior = pm.sample_prior_predictive(2)
 

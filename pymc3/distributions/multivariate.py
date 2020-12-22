@@ -1642,7 +1642,7 @@ class MatrixNormal(Continuous):
         output_shape = size + dist_shape
 
         # Broadcasting all parameters
-        mu = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)[0]
+        (mu,) = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)
         rowchol = np.broadcast_to(rowchol, shape=size + rowchol.shape[-2:])
 
         colchol = np.broadcast_to(colchol, shape=size + colchol.shape[-2:])
