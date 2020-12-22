@@ -989,7 +989,7 @@ class TestScalarParameterSamples(SeededTest):
                 ref_rand=ref_rand,
             )
 
-    def test_dirichletmultinomial(self):
+    def test_dirichlet_multinomial(self):
         def ref_rand(size, n, alpha):
             p = st.dirichlet.rvs(alpha, size=size)
             res = np.empty((size, *alpha.shape))
