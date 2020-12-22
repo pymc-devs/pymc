@@ -722,6 +722,21 @@ class DirichletMultinomial(Discrete):
     """
 
     def __init__(self, n, alpha, *args, **kwargs):
+
+        if kwargs.get("shape") is None:
+            warnings.warn(
+                (
+                    "Shape not explicitly set. "
+                    "Please, set the value using the `shape` keyword argument. "
+                    "Using the test value to infer the shape."
+                ),
+                DeprecationWarning,
+            )
+            try:
+                kwargs["shape"] = np.shape(get_test_value(alpha))
+            except TestValueError:
+                pass
+
         super().__init__(*args, **kwargs)
         self.alpha = tt.as_tensor_variable(alpha)
         self.n = tt.as_tensor_variable(n)
