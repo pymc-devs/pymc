@@ -1703,12 +1703,6 @@ class TestMatchesScipy(SeededTest):
             decimal=4,
         )
 
-        assert_almost_equal(
-            sum([multinomial_logpdf(val, n, p) for val, p in zip(vals, ps)]),
-            model.fastlogp({'m': vals}),
-            decimal=4
-        )
-
     def test_batch_multinomial(self):
         n = 10
         vals = np.zeros((4, 5, 3), dtype="int32")
