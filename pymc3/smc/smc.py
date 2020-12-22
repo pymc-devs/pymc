@@ -177,6 +177,11 @@ class SMC:
         self.log_marginal_likelihood += logsumexp(log_weights_un) - np.log(self.draws)
         self.beta = new_beta
         self.weights = np.exp(log_weights)
+        weight_err = 1 - self.weights.sum()
+        if np.abs(weight_err) > 1e-13:
+            # It is possible that self.weights doesn't sum to 1
+            # due to building up numerical errors.
+            self.weights += weight_err / self.weights.shape[0]
 
     def resample(self):
         """Resample particles based on importance weights."""
