@@ -1675,3 +1675,21 @@ class TestMvNormal(SeededTest):
             prior_pred = pm.sample_prior_predictive(1)
 
         assert prior_pred["X"].shape == (1, N, 2)
+
+
+def test_issue_3585():
+    K = 3
+    D = 15
+    mu_0 = np.zeros((D, K))
+    lambd = 1.0
+    with pm.Model() as model:
+        sd_dist = pm.HalfCauchy.dist(beta=2.5)
+        packedL = pm.LKJCholeskyCov(f"packedL", eta=2, n=D, sd_dist=sd_dist)
+        L = pm.expand_packed_triangular(D, packedL, lower=True)
+        Sigma = pm.Deterministic(f"Sigma", L.dot(L.T))  # D x D covariance
+        mu = pm.MatrixNormal(
+            f"mu", mu=mu_0, rowcov=(1 / lambd) * Sigma, colcov=np.eye(K), shape=(D, K)
+        )
+        prior = pm.sample_prior_predictive(2)
+
+    assert prior["mu"].shape == (2, D, K)
