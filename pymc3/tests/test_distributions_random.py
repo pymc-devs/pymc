@@ -1677,7 +1677,12 @@ class TestMvNormal(SeededTest):
         assert prior_pred["X"].shape == (1, N, 2)
 
 
-def test_issue_3585():
+def test_matrix_normal_random_with_random_variables():
+    """
+    This test checks for shape correctness when using MatrixNormal distribution
+    with parameters as random variables.
+    Originally reported - https://github.com/pymc-devs/pymc3/issues/3585
+    """
     K = 3
     D = 15
     mu_0 = np.zeros((D, K))
