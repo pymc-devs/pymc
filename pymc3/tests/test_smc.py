@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import numpy as np
+import pytest
 import theano.tensor as tt
 
 import pymc3 as pm
@@ -189,3 +190,23 @@ class TestSMCABC(SeededTest):
         assert expected == self.s._repr_latex_()
         assert self.s._repr_latex_() == self.s.__latex__()
         assert self.SMABC_test.model._repr_latex_() == self.SMABC_test.model.__latex__()
+
+    def test_name_is_string_type(self):
+        with self.SMABC_potential:
+            assert not self.SMABC_potential.name
+            trace = pm.sample_smc(draws=10, kernel="ABC")
+            assert isinstance(trace._straces[0].name, str)
+
+    def test_named_models_are_unsupported(self):
+        def normal_sim(a, b):
+            return np.random.normal(a, b, 1000)
+
+        with pm.Model(name="NamedModel"):
+            a = pm.Normal("a", mu=0, sigma=1)
+            b = pm.HalfNormal("b", sigma=1)
+            c = pm.Potential("c", pm.math.switch(a > 0, 0, -np.inf))
+            s = pm.Simulator(
+                "s", normal_sim, params=(a, b), sum_stat="sort", epsilon=1, observed=self.data
+            )
+            with pytest.raises(NotImplementedError, match="named models"):
+                pm.sample_smc(draws=10, kernel="ABC")

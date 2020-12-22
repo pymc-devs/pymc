@@ -141,6 +141,11 @@ def sample_smc(
     _log.info("Initializing SMC sampler...")
 
     model = modelcontext(model)
+    if model.name:
+        raise NotImplementedError(
+            "The SMC implementation currently does not support named models. "
+            "See https://github.com/pymc-devs/pymc3/pull/4365."
+        )
     if cores is None:
         cores = _cpu_count()
 
