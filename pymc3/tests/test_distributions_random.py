@@ -455,12 +455,6 @@ class TestBetaBinomial(BaseTestCases.BaseTestCase):
     params = {"n": 5, "alpha": 1.0, "beta": 1.0}
 
 
-class TestDirichletMultinomial(BaseTestCases.BaseTestCase):
-    distribution = pm.DirichletMultinomial
-    params = {'n': [5], 'alpha': [[1., 1., 1., 1.]]}
-    default_shape = (1, 4)
-
-
 class TestBernoulli(BaseTestCases.BaseTestCase):
     distribution = pm.Bernoulli
     params = {"p": 0.5}
@@ -991,6 +985,23 @@ class TestScalarParameterSamples(SeededTest):
                 pm.Dirichlet,
                 {"a": Vector(Rplus, n)},
                 valuedomain=Simplex(n),
+                size=100,
+                ref_rand=ref_rand,
+            )
+
+    def test_dirichletmultinomial(self):
+        def ref_rand(size, n, alpha):
+            p = st.dirichlet.rvs(alpha, size=size)
+            res = np.empty((size, *alpha.shape))
+            for i in range(size):
+                res[i, :] = st.multinomial(p=p[i], n=n).rvs()
+            return res
+
+        for n in [2, 3]:
+            pymc3_random_discrete(
+                pm.DirichletMultinomial,
+                {"n": Vector(Nat, 1), "alpha": Vector(Rplus, np.array([1, n]))},
+                valuedomain=Vector(Nat, np.array([1, n])),
                 size=100,
                 ref_rand=ref_rand,
             )

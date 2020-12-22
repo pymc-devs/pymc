@@ -768,11 +768,20 @@ class DirichletMultinomial(Discrete):
 
     def random(self, point=None, size=None, repeat=None):
         alpha, n = draw_values([self.alpha, self.n], point=point, size=size)
-        out = np.empty_like(alpha)
-        for i in range(len(n)):
-            p = np.random.dirichlet(alpha[i, :])
-            x = np.random.multinomial(n[i], p)
-            out[i, :] = x
+        if size is not None:
+            out = np.empty((size, *alpha.shape))
+            for j in range(size):
+                for i in range(len(n)):
+                    p = np.random.dirichlet(alpha[i, :])
+                    x = np.random.multinomial(n[i], p)
+                    out[j, i, :] = x
+        else:
+            out = np.empty_like(alpha)
+            for i in range(len(n)):
+                p = np.random.dirichlet(alpha[i, :])
+                x = np.random.multinomial(n[i], p)
+                out[i, :] = x
+
         return out
 
     def _repr_latex_(self, name=None, dist=None):
