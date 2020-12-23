@@ -71,9 +71,8 @@ def bound(logp, *conditions, **kwargs):
 
     # If called inside a model context, see if bounds check is disabled
     model = modelcontext(kwargs.get("model"))
-    if model is not None:
-        if model.disable_bounds_check:
-            return logp
+    if model is not None and model.disable_bounds_check:
+        return logp
 
     broadcast_conditions = kwargs.get("broadcast_conditions", True)
 
