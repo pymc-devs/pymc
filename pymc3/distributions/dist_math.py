@@ -33,6 +33,7 @@ from theano.tensor.slinalg import Cholesky
 
 from pymc3.distributions.shape_utils import to_tuple
 from pymc3.distributions.special import gammaln
+from pymc3.model import modelcontext
 from pymc3.theanof import floatX
 
 f = floatX
@@ -67,6 +68,15 @@ def bound(logp, *conditions, **kwargs):
     -------
     logp with elements set to -inf where any condition is False
     """
+
+    # If called inside a model context, see if bounds check is disabled
+    try:
+        model = modelcontext(kwargs.get("model"))
+        if model.disable_bounds_check:
+            return logp
+    except TypeError:  # No model found
+        pass
+
     broadcast_conditions = kwargs.get("broadcast_conditions", True)
 
     if broadcast_conditions:
