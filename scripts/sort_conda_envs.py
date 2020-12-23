@@ -7,15 +7,24 @@ You can run it manually with `pre-commit run conda-env-sort --all`.
 
 import argparse
 
-import yaml
+from pathlib import Path
+from typing import Optional, Sequence
+
+import ruamel.yaml
+
+yaml = ruamel.yaml.YAML()
+
+
+def main(argv: Optional[Sequence[str]] = None) -> None:
+    """Sort dependencies in conda environment files."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("paths", nargs="*", type=Path)
+    args = parser.parse_args(argv)
+    for path in args.paths:
+        doc = yaml.load(path)
+        doc["dependencies"].sort()
+        yaml.dump(doc, path)
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("files", nargs="*")
-    args = parser.parse_args()
-    for file_ in args.files:
-        with open(file_) as fd:
-            doc = yaml.safe_load(fd)
-            doc["dependencies"].sort()
-        with open(file_, "w") as fd:
-            yaml.dump(doc, fd, sort_keys=False)
+    main()
