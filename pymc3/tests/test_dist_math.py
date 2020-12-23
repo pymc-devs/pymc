@@ -60,6 +60,13 @@ def test_bound():
     assert np.prod(bound(logp, cond).eval()) == -np.inf
 
 
+def test_bound_disabled():
+    with pm.Model(disable_bounds_check=True):
+        logp = tt.ones(3)
+        cond = np.array([1, 0, 1])
+        assert np.all(bound(logp, cond).eval() == logp.eval())
+
+
 def test_alltrue_scalar():
     assert alltrue_scalar([]).eval()
     assert alltrue_scalar([True]).eval()
