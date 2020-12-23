@@ -16,6 +16,7 @@ It also brings some dreadfully awaited fixes, so be sure to go through the chang
 - Removed `theanof.set_theano_config` because it illegally changed Theano's internal state (see [#4329](https://github.com/pymc-devs/pymc3/pull/4329)).
 
 ### New Features
+- Option to `disable_bounds_check=True` when instantiating `pymc3.Model()` for faster sampling for models that cannot violate boundary constraints (which are most of them; see [#4377](https://github.com/pymc-devs/pymc3/pull/4377)).
 - `OrderedProbit` distribution added (see [#4232](https://github.com/pymc-devs/pymc3/pull/4232)).
 - `plot_posterior_predictive_glm` now works with `arviz.InferenceData` as well (see [#4234](https://github.com/pymc-devs/pymc3/pull/4234))
 
