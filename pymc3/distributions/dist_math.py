@@ -74,7 +74,7 @@ def bound(logp, *conditions, **kwargs):
         model = modelcontext(kwargs.get("model"))
         if model.disable_bounds_check:
             return logp
-    except TypeError:
+    except TypeError:  # No model found
         pass
 
     broadcast_conditions = kwargs.get("broadcast_conditions", True)
