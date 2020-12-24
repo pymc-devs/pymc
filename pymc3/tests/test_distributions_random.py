@@ -849,6 +849,12 @@ class TestScalarParameterSamples(SeededTest):
                 size, mu, rowcov=np.dot(rowchol, rowchol.T), colcov=np.dot(colchol, colchol.T)
             )
 
+        def ref_rand_chol_transpose(size, mu, rowchol, colchol):
+            colchol = colchol.T
+            return ref_rand(
+                size, mu, rowcov=np.dot(rowchol, rowchol.T), colcov=np.dot(colchol, colchol.T)
+            )
+
         def ref_rand_uchol(size, mu, rowchol, colchol):
             return ref_rand(
                 size, mu, rowcov=np.dot(rowchol.T, rowchol), colcov=np.dot(colchol.T, colchol)
@@ -858,7 +864,7 @@ class TestScalarParameterSamples(SeededTest):
             pymc3_random(
                 pm.MatrixNormal,
                 {"mu": RealMatrix(n, n), "rowcov": PdMatrix(n), "colcov": PdMatrix(n)},
-                size=n,
+                size=100,
                 valuedomain=RealMatrix(n, n),
                 ref_rand=ref_rand,
             )
@@ -867,7 +873,7 @@ class TestScalarParameterSamples(SeededTest):
             pymc3_random(
                 pm.MatrixNormal,
                 {"mu": RealMatrix(n, n), "rowchol": PdMatrixChol(n), "colchol": PdMatrixChol(n)},
-                size=n,
+                size=100,
                 valuedomain=RealMatrix(n, n),
                 ref_rand=ref_rand_chol,
             )
@@ -877,6 +883,22 @@ class TestScalarParameterSamples(SeededTest):
             #     size=n, valuedomain=RealMatrix(n, n), ref_rand=ref_rand_uchol,
             #     extra_args={'lower': False}
             # )
+
+            # 2 sample test fails because cov becomes different if chol is transposed beforehand.
+            # This implicity means we need transpose of chol after drawing values in
+            # MatrixNormal.random method to match stats.matrix_normal.rvs method
+            with pytest.raises(AssertionError):
+                pymc3_random(
+                    pm.MatrixNormal,
+                    {
+                        "mu": RealMatrix(n, n),
+                        "rowchol": PdMatrixChol(n),
+                        "colchol": PdMatrixChol(n),
+                    },
+                    size=100,
+                    valuedomain=RealMatrix(n, n),
+                    ref_rand=ref_rand_chol_transpose,
+                )
 
     def test_kronecker_normal(self):
         def ref_rand(size, mu, covs, sigma):
