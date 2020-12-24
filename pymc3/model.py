@@ -900,7 +900,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         instance._theano_config = theano_config
         return instance
 
-    def __init__(self, name="", model=None, theano_config=None, coords=None, check_bounds=False):
+    def __init__(self, name="", model=None, theano_config=None, coords=None, check_bounds=True):
         self.name = name
         self.coords = {}
         self.RV_dims = {}
