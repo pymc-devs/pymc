@@ -61,7 +61,7 @@ def test_bound():
 
 
 def test_bound_disabled():
-    with pm.Model(disable_bounds_check=True):
+    with pm.Model(bounds_check=False):
         logp = tt.ones(3)
         cond = np.array([1, 0, 1])
         assert np.all(bound(logp, cond).eval() == logp.eval())
