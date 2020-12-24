@@ -809,7 +809,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         temporarily in the model context. See the documentation
         of theano for a complete list. Set config key
         ``compute_test_value`` to `raise` if it is None.
-    bounds_check: bool
+    check_bounds: bool
         Ensure that input parameters to distributions are in a valid
         range. If your model is built in a way where you know your
         parameters can only take on valid values you can set this to
@@ -900,12 +900,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         instance._theano_config = theano_config
         return instance
 
-    def __init__(self, name="", model=None, theano_config=None, coords=None, bounds_check=False):
+    def __init__(self, name="", model=None, theano_config=None, coords=None, check_bounds=False):
         self.name = name
         self.coords = {}
         self.RV_dims = {}
         self.add_coords(coords)
-        self.bounds_check = bounds_check
+        self.check_bounds = check_bounds
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
