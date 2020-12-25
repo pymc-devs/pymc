@@ -19,7 +19,7 @@ from theano import change_flags, scalar
 from theano import tensor as tt
 from theano.gof import Op
 from theano.gof.graph import inputs
-from theano.sandbox.rng_mrg import MRG_RandomStreams
+from theano.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 
 from pymc3.blocking import ArrayOrdering
 from pymc3.data import GeneratorAdapter
@@ -394,7 +394,7 @@ def generator(gen, default=None):
     return GeneratorOp(gen, default)()
 
 
-_tt_rng = MRG_RandomStreams()
+_tt_rng = RandomStream()
 
 
 def tt_rng(random_seed=None):
@@ -409,14 +409,14 @@ def tt_rng(random_seed=None):
 
     Returns
     -------
-    `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
-        `theano.sandbox.rng_mrg.MRG_RandomStreams`
+    `theano.tensor.random.utils.RandomStream` instance
+        `theano.tensor.random.utils.RandomStream`
         instance passed to the most recent call of `set_tt_rng`
     """
     if random_seed is None:
         return _tt_rng
     else:
-        ret = MRG_RandomStreams(random_seed)
+        ret = RandomStream(random_seed)
         return ret
 
 
@@ -426,14 +426,14 @@ def set_tt_rng(new_rng):
 
     Parameters
     ----------
-    new_rng: `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
+    new_rng: `theano.tensor.random.utils.RandomStream` instance
         The random number generator to use.
     """
     # pylint: disable=global-statement
     global _tt_rng
     # pylint: enable=global-statement
     if isinstance(new_rng, int):
-        new_rng = MRG_RandomStreams(new_rng)
+        new_rng = RandomStream(new_rng)
     _tt_rng = new_rng
 
 

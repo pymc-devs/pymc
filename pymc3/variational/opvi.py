@@ -1078,9 +1078,9 @@ class Group(WithMemoization):
             if deterministic:
                 return tt.ones(shape, dtype) * dist_map
             else:
-                return getattr(self._rng, dist_name)(shape)
+                return getattr(self._rng, dist_name)(size=shape)
         else:
-            sample = getattr(self._rng, dist_name)(shape)
+            sample = getattr(self._rng, dist_name)(size=shape)
             initial = tt.switch(deterministic, tt.ones(shape, dtype) * dist_map, sample)
             return initial
 
