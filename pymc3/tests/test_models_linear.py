@@ -33,7 +33,7 @@ class TestGLM(SeededTest):
         super().setup_class()
         cls.intercept = 1
         cls.slope = 3
-        cls.sd = 0.05
+        cls.sigma = 0.05
         x_linear, cls.y_linear = generate_data(cls.intercept, cls.slope, size=1000)
         cls.y_linear += np.random.normal(size=1000, scale=cls.sd)
         cls.data_linear = dict(x=x_linear, y=cls.y_linear)
