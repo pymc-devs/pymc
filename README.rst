@@ -72,6 +72,7 @@ PyMC3 talks
 -----------
 
 There are also several talks on PyMC3 which are gathered in this `YouTube playlist <https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy>`__
+and as part of `PyMCon 2020 <https://discourse.pymc.io/c/pymcon/2020talks/15>`__
 
 Installation
 ============
