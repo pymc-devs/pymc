@@ -72,7 +72,7 @@ def bound(logp, *conditions, **kwargs):
     # If called inside a model context, see if bounds check is disabled
     try:
         model = modelcontext(kwargs.get("model"))
-        if model.disable_bounds_check:
+        if not model.check_bounds:
             return logp
     except TypeError:  # No model found
         pass

@@ -60,8 +60,8 @@ def test_bound():
     assert np.prod(bound(logp, cond).eval()) == -np.inf
 
 
-def test_bound_disabled():
-    with pm.Model(disable_bounds_check=True):
+def test_check_bounds_false():
+    with pm.Model(check_bounds=False):
         logp = tt.ones(3)
         cond = np.array([1, 0, 1])
         assert np.all(bound(logp, cond).eval() == logp.eval())
