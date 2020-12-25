@@ -12,8 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import warnings
-
 from collections.abc import Iterable
 
 import numpy as np
@@ -632,11 +630,10 @@ class NormalMixture(Mixture):
     def __init__(self, w, mu, sigma=None, tau=None, sd=None, comp_shape=(), *args, **kwargs):
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
         self.mu = mu = tt.as_tensor_variable(mu)
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
+        self.sigma = sigma = tt.as_tensor_variable(sigma)
 
         super().__init__(w, Normal.dist(mu, sigma=sigma, shape=comp_shape), *args, **kwargs)
 

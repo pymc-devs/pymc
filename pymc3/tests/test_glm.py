@@ -73,7 +73,7 @@ class TestGLM(SeededTest):
 
             assert round(abs(np.mean(trace["Intercept"]) - self.intercept), 1) == 0
             assert round(abs(np.mean(trace["x"]) - self.slope), 1) == 0
-            assert round(abs(np.mean(trace["sigma"]) - self.sd), 1) == 0
+            assert round(abs(np.mean(trace["sigma"]) - self.sigma), 1) == 0
 
     def test_glm(self):
         with Model() as model:
@@ -83,7 +83,7 @@ class TestGLM(SeededTest):
 
             assert round(abs(np.mean(trace["Intercept"]) - self.intercept), 1) == 0
             assert round(abs(np.mean(trace["x"]) - self.slope), 1) == 0
-            assert round(abs(np.mean(trace["sd"]) - self.sd), 1) == 0
+            assert round(abs(np.mean(trace["sd"]) - self.sigma), 1) == 0
 
     def test_glm_offset(self):
         offset = 1.0
