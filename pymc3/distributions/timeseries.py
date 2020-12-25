@@ -275,7 +275,7 @@ class GaussianRandomWalk(distribution.Continuous):
         """Implement a Gaussian random walk as a cumulative sum of normals.
         axis = len(size) - 1 denotes the axis along which cumulative sum would be calculated.
         This might need to be corrected in future when issue #4010 is fixed.
-        Lines 318-322 ties the starting point of each instance of random walk to 0"
+        Lines 291-295 set the starting point of each instance of the random walk to 0."
         """
         if size[len(sample_shape)] == sample_shape:
             axis = len(sample_shape)
