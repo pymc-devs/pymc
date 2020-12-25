@@ -461,6 +461,74 @@ class MvGaussianRandomWalk(distribution.Continuous):
         return ["mu", "cov"]
 
 
+    def random(self, point=None, size=None):
+        """
+        Draw random values from MvGaussianRandomWalk.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+
+        param_attribute = getattr(self.innov, "chol_cov" if self.innov._cov_type == "chol" else self.innov._cov_type)
+        mu, param = distribution.draw_values([self.innov.mu, param_attribute], point=point, size=size)
+        return distribution.generate_samples(
+            self._random, 
+            size=size,
+            dist_shape=self.shape,
+            not_broadcast_kwargs={
+                "sample_shape": to_tuple(size),
+                "param": param,
+                "mu": mu,
+                "cov_type": self.innov._cov_type
+                }
+        )
+
+    def _random(self, mu, param, size, sample_shape, cov_type):     
+        """
+        Implements the multivariate Gaussian random walk as a cumulative
+        sum of i.i.d. multivariate Gaussians.
+        Assumes that
+        size is of the form (samples, time, dims).
+        """       
+
+        if cov_type == "chol":
+            cov = np.matmul(param, param.transpose()) 
+        elif cov_type == "tau":
+            cov = np.linalg.inv(param) 
+        else:
+            cov = param
+
+        # time axis comes after the sample axis
+        time_axis = len(sample_shape) 
+
+        # spatial axis is last
+        spatial_axis = -1 
+
+        rv = stats.multivariate_normal(mean=mu, cov=cov) 
+
+        # only feed in sample and time dimensions since stats.multivariate_normal
+        # automatically adds back in the spatial dimensions to the end when it samples.
+        data = rv.rvs(size[:spatial_axis]).cumsum(axis=time_axis) 
+
+        # shift the walk to start at zero
+        if len(data.shape) > 2:
+            for i in range(size[0]):
+                data[i] = data[i] - data[i][0]
+        else:
+            data = data - data[0]
+        return data
+
+
 class MvStudentTRandomWalk(MvGaussianRandomWalk):
     r"""
     Multivariate Random Walk with StudentT innovations
