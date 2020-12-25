@@ -40,7 +40,7 @@ Features
    for fast approximate posterior estimation as well as mini-batch ADVI
    for large data sets.
 -  Relies on `Theano-PyMC <https://theano-pymc.readthedocs.io/en/latest/>`__ which provides:
-    *  Computation optimization and dynamic C or Jax compilation
+    *  Computation optimization and dynamic C or JAX compilation
     *  Numpy broadcasting and advanced indexing
     *  Linear algebra operators
     *  Simple extensibility
