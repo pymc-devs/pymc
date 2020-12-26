@@ -116,7 +116,7 @@ class AR(distribution.Continuous):
             sigma = sd
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = tt.as_tensor_variable(sigma)
+        self.sigma = self.sd = tt.as_tensor_variable(sigma)
         self.tau = tt.as_tensor_variable(tau)
 
         self.mean = tt.as_tensor_variable(0.0)
@@ -211,7 +211,7 @@ class GaussianRandomWalk(distribution.Continuous):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.tau = tt.as_tensor_variable(tau)
         sigma = tt.as_tensor_variable(sigma)
-        self.sigma = sigma
+        self.sigma = self.sd = sigma
         self.mu = tt.as_tensor_variable(mu)
         self.init = init
         self.mean = tt.as_tensor_variable(0.0)

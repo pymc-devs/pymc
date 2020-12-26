@@ -633,7 +633,7 @@ class NormalMixture(Mixture):
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
         self.mu = mu = tt.as_tensor_variable(mu)
-        self.sigma = sigma = tt.as_tensor_variable(sigma)
+        self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
 
         super().__init__(w, Normal.dist(mu, sigma=sigma, shape=comp_shape), *args, **kwargs)
 
