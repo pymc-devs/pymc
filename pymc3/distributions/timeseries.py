@@ -460,7 +460,6 @@ class MvGaussianRandomWalk(distribution.Continuous):
     def _distr_parameters_for_repr(self):
         return ["mu", "cov"]
 
-
     def random(self, point=None, size=None):
         """
         Draw random values from MvGaussianRandomWalk.
@@ -477,48 +476,61 @@ class MvGaussianRandomWalk(distribution.Continuous):
         Returns
         -------
         array
+
+
+        Examples
+        -------
+        Create one sample from a 2-dimensional Gaussian random walk with 10 timesteps::
+
+            mu = np.array([1.0, 0.0])
+            cov = np.array([[1.0, 0.0], [0.0, 2.0]])
+            sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=1)
         """
 
-        param_attribute = getattr(self.innov, "chol_cov" if self.innov._cov_type == "chol" else self.innov._cov_type)
-        mu, param = distribution.draw_values([self.innov.mu, param_attribute], point=point, size=size)
+        param_attribute = getattr(
+            self.innov, "chol_cov" if self.innov._cov_type == "chol" else self.innov._cov_type
+        )
+        mu, param = distribution.draw_values(
+            [self.innov.mu, param_attribute], point=point, size=size
+        )
         return distribution.generate_samples(
-            self._random, 
+            self._random,
             size=size,
             dist_shape=self.shape,
             not_broadcast_kwargs={
                 "sample_shape": to_tuple(size),
                 "param": param,
                 "mu": mu,
-                "cov_type": self.innov._cov_type
-                }
+                "cov_type": self.innov._cov_type,
+            },
         )
 
-    def _random(self, mu, param, size, sample_shape, cov_type):     
+    def _random(self, mu, param, size, sample_shape, cov_type):
         """
         Implements the multivariate Gaussian random walk as a cumulative
         sum of i.i.d. multivariate Gaussians.
         Assumes that
         size is of the form (samples, time, dims).
-        """       
+        """
 
         if cov_type == "chol":
-            cov = np.matmul(param, param.transpose()) 
+            cov = np.matmul(param, param.transpose())
         elif cov_type == "tau":
-            cov = np.linalg.inv(param) 
+            cov = np.linalg.inv(param)
         else:
             cov = param
 
         # time axis comes after the sample axis
-        time_axis = len(sample_shape) 
+        time_axis = len(sample_shape)
 
         # spatial axis is last
-        spatial_axis = -1 
+        spatial_axis = -1
 
-        rv = stats.multivariate_normal(mean=mu, cov=cov) 
+        rv = stats.multivariate_normal(mean=mu, cov=cov)
 
         # only feed in sample and time dimensions since stats.multivariate_normal
         # automatically adds back in the spatial dimensions to the end when it samples.
-        data = rv.rvs(size[:spatial_axis]).cumsum(axis=time_axis) 
+        data = rv.rvs(size[:spatial_axis]).cumsum(axis=time_axis)
 
         # shift the walk to start at zero
         if len(data.shape) > 2:
