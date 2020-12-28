@@ -1254,10 +1254,10 @@ class DiscreteUniform(Discrete):
         upper = self.upper
         lower = self.lower
 
-        return tt.switch(
-            tt.lt(upper, lower),
-            -np.inf,
+        return bound(
             tt.log(tt.minimum(tt.floor(value), upper) - lower + 1) - tt.log(upper - lower + 1),
+            lower <= value,
+            lower <= upper,
         )
 
 
