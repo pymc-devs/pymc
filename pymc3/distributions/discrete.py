@@ -168,15 +168,16 @@ class Binomial(Discrete):
         p = self.p
         value = tt.floor(value)
 
-        return tt.switch(
-            tt.lt(value, n),
-            bound(
+        return bound(
+            tt.switch(
+                tt.lt(value, n),
                 tt.log(incomplete_beta(n - value, value + 1, 1 - p)),
-                n > 0,
-                0 <= p,
-                p <= 1,
+                0,
             ),
-            0,
+            0 <= value,
+            0 < n,
+            0 <= p,
+            p <= 1,
         )
 
 
@@ -326,16 +327,19 @@ class BetaBinomial(Discrete):
         TensorVariable
         """
         # TODO: fix for multiple values
+        alpha = self.alpha
+        beta = self.beta
         n = self.n
 
-        return tt.switch(
-            tt.lt(value, 0),
-            -np.inf,
+        return bound(
             tt.switch(
                 tt.lt(value, n),
                 logsumexp(self.logp(tt.arange(0, value + 1)), keepdims=False),
                 0,
             ),
+            0 <= value,
+            0 < alpha,
+            0 < beta,
         )
 
 
@@ -452,14 +456,15 @@ class Bernoulli(Discrete):
         """
         p = self.p
 
-        return tt.switch(
-            tt.lt(value, 0),
-            -np.inf,
+        return bound(
             tt.switch(
                 tt.lt(value, 1),
-                tt.log(1 - p),
+                tt.log1p(-p),
                 0,
             ),
+            0 <= value,
+            0 <= p,
+            p <= 1,
         )
 
     def _distr_parameters_for_repr(self):
@@ -589,15 +594,12 @@ class DiscreteWeibull(Discrete):
         q = self.q
         beta = self.beta
 
-        return tt.switch(
-            tt.lt(value, 0),
-            -np.inf,
-            bound(
-                tt.log(1 - tt.power(q, tt.power(value + 1, beta))),
-                0 < q,
-                q < 1,
-                0 < beta,
-            ),
+        return bound(
+            tt.log(1 - tt.power(q, tt.power(value + 1, beta))),
+            0 <= value,
+            0 < q,
+            q < 1,
+            0 < beta,
         )
 
 
@@ -707,8 +709,8 @@ class Poisson(Discrete):
 
         return bound(
             tt.log(tt.gammaincc(value + 1, mu)),
-            value >= 0,
-            mu >= 0,
+            0 <= value,
+            0 <= mu,
         )
 
 
@@ -888,7 +890,8 @@ class NegativeBinomial(Discrete):
 
         return bound(
             tt.log(incomplete_beta(alpha, tt.floor(value) + 1, p)),
-            alpha > 0,
+            0 <= value,
+            0 < alpha,
             0 <= p,
             p <= 1,
         )
@@ -993,7 +996,7 @@ class Geometric(Discrete):
 
         return bound(
             log1mexp(-tt.log1p(-p) * value),
-            value >= 0,
+            0 <= value,
             0 <= p,
             p <= 1,
         )
@@ -1126,25 +1129,23 @@ class HyperGeometric(Discrete):
         TensorVariable
         """
         # TODO: fix for multiple values
+        # TODO: Use lower upper in locgdf for smarter logsumexp?
         N = self.N
         n = self.n
         k = self.k
 
-        return tt.switch(
-            tt.lt(value, 0),
-            -np.inf,
+        return bound(
             tt.switch(
                 tt.lt(value, n),
                 logsumexp(self.logp(tt.arange(0, value + 1)), keepdims=False),
-                bound(
-                    0,
-                    N > 0,
-                    k >= 0,
-                    n >= 0,
-                    k <= N,
-                    n <= N,
-                ),
+                0,
             ),
+            0 <= value,
+            0 < N,
+            0 <= k,
+            0 <= n,
+            k <= N,
+            n <= N,
         )
 
 
@@ -1253,7 +1254,11 @@ class DiscreteUniform(Discrete):
         upper = self.upper
         lower = self.lower
 
-        return tt.log(tt.minimum(tt.floor(value), upper) - lower + 1) - tt.log(upper - lower + 1)
+        return tt.switch(
+            tt.lt(upper, lower),
+            -np.inf,
+            tt.log(tt.minimum(tt.floor(value), upper) - lower + 1) - tt.log(upper - lower + 1),
+        )
 
 
 class Categorical(Discrete):
