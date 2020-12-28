@@ -332,7 +332,9 @@ class BetaBinomial(Discrete):
             tt.lt(value, 0),
             -np.inf,
             tt.switch(
-                tt.lt(value, n), logsumexp(self.logp(tt.arange(0, value + 1)), keepdims=False), 0
+                tt.lt(value, n),
+                logsumexp(self.logp(tt.arange(0, value + 1)), keepdims=False),
+                0,
             ),
         )
 
