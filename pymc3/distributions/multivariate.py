@@ -1646,9 +1646,7 @@ class MatrixNormal(Continuous):
         rowchol = np.broadcast_to(rowchol, shape=size + rowchol.shape[-2:])
 
         colchol = np.broadcast_to(colchol, shape=size + colchol.shape[-2:])
-        perm = np.arange(len(output_shape))
-        perm[-2:] = [perm[-1], perm[-2]]
-        colchol = np.transpose(colchol, perm)
+        colchol = np.swapaxes(colchol, -1, -2)  # Take transpose
 
         standard_normal = np.random.standard_normal(output_shape)
         samples = mu + np.matmul(rowchol, np.matmul(standard_normal, colchol))
