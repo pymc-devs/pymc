@@ -435,7 +435,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
         self.init = init
         self.innovArgs = (mu, cov, tau, chol, lower)
-        self.innov = multivariate.MvNormal.dist(*self.innovArgs, shape=self.shape[-1])
+        self.innov = multivariate.MvNormal.dist(*self.innovArgs, shape=self.shape)
         self.mean = tt.as_tensor_variable(0.0)
 
     def logp(self, x):
@@ -452,6 +452,10 @@ class MvGaussianRandomWalk(distribution.Continuous):
         -------
         TensorVariable
         """
+
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+
         x_im1 = x[:-1]
         x_i = x[1:]
 
@@ -500,27 +504,32 @@ class MvGaussianRandomWalk(distribution.Continuous):
             sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=(2, 2))
         """
 
-        time_steps = self.shape[0]
-        size = to_tuple(size)
-
         # for each draw specified by the size input, we need to draw time_steps many
         # samples from MvNormal.
-        size_time_steps = size + to_tuple(time_steps)
 
-        multivariate_samples = self.innov.random(point=point, size=size_time_steps)
-        # this has shape (size, time_steps, MvNormal_shape)
+        size = to_tuple(size)
+        multivariate_samples = self.innov.random(point=point, size=size)
+        # this has shape (size, self.shape)
 
-        time_axis = len(size)
+        if len(self.shape) >= 2:
+            # have time dimension in first slot of shape. Therefore the time
+            # component can be accessed with the index equal to the length of size.
+            time_axis = len(size)
+            multivariate_samples = multivariate_samples.cumsum(axis=time_axis)
 
-        multivariate_samples = multivariate_samples.cumsum(axis=time_axis)
+            if time_axis:
+                # this for loop covers the case where size is a tuple
+                for idx in np.ndindex(size):
+                    multivariate_samples[idx] = (
+                        multivariate_samples[idx] - multivariate_samples[idx][0]
+                    )
+            else:
+                # size was passed as None
+                multivariate_samples = multivariate_samples - multivariate_samples[0]
 
-        # shift the walk to start at zero
-        if len(multivariate_samples.shape) > 2:
-            # this for loop covers the case where size is a tuple
-            for idx in np.ndindex(size):
-                multivariate_samples[idx] = multivariate_samples[idx] - multivariate_samples[idx][0]
-        else:
-            multivariate_samples = multivariate_samples - multivariate_samples[0]
+        # if the above if statement fails, then only a spatial dimension was passed in for self.shape.
+        # Therefore don't subtract off the initial value since otherwise you get all zeros
+        # as your output.
         return multivariate_samples
 
 
