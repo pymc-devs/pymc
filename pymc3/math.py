@@ -226,7 +226,7 @@ def log1mexp(x):
     For details, see
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
     """
-    return tt.switch(tt.lt(x, 0.683), tt.log(-tt.expm1(-x)), tt.log1p(-tt.exp(-x)))
+    return tt.switch(tt.lt(x, 0.693147), tt.log(-tt.expm1(-x)), tt.log1p(-tt.exp(-x)))
 
 
 def log1mexp_numpy(x):
@@ -235,7 +235,7 @@ def log1mexp_numpy(x):
     For details, see
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
     """
-    return np.where(x < 0.683, np.log(-np.expm1(-x)), np.log1p(-np.exp(-x)))
+    return np.where(x < 0.693147, np.log(-np.expm1(-x)), np.log1p(-np.exp(-x)))
 
 
 def flatten_list(tensors):
