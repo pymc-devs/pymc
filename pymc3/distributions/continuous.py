@@ -286,13 +286,16 @@ class Uniform(BoundedContinuous):
         -------
         TensorVariable
         """
+        lower = self.lower
+        upper = self.upper
+
         return tt.switch(
-            tt.or_(tt.lt(value, self.lower), tt.gt(value, self.upper)),
+            tt.or_(tt.lt(value, lower), tt.lt(upper, lower)),
             -np.inf,
             tt.switch(
-                tt.eq(value, self.upper),
+                tt.lt(value, upper),
+                tt.log(value - lower) - tt.log(upper - lower),
                 0,
-                tt.log(value - self.lower) - tt.log(self.upper - self.lower),
             ),
         )
 
@@ -910,10 +913,10 @@ class HalfNormal(PositiveContinuous):
         """
         sigma = self.sigma
         z = zvalue(value, mu=0, sigma=sigma)
-        return tt.switch(
-            tt.lt(z, -1.0),
-            tt.log(tt.erfcx(-z / tt.sqrt(2.0))) - tt.sqr(z),
+        return bound(
             tt.log1p(-tt.erfc(z / tt.sqrt(2.0))),
+            0 <= value,
+            0 < sigma,
         )
 
 
@@ -2478,7 +2481,17 @@ class Gamma(PositiveContinuous):
         """
         alpha = self.alpha
         beta = self.beta
-        return bound(tt.log(tt.gammainc(alpha, beta * value)), value >= 0, alpha > 0, beta > 0)
+        # To avoid issue with #4340
+        safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
+        safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
+        safe_value = tt.switch(tt.lt(value, 0), 0, value)
+
+        return bound(
+            tt.log(tt.gammainc(safe_alpha, safe_beta * safe_value)),
+            value >= 0,
+            alpha > 0,
+            beta > 0,
+        )
 
     def _distr_parameters_for_repr(self):
         return ["alpha", "beta"]
@@ -2642,8 +2655,13 @@ class InverseGamma(PositiveContinuous):
         """
         alpha = self.alpha
         beta = self.beta
+        # To avoid issue with #4340
+        safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
+        safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
+        safe_value = tt.switch(tt.lt(value, 0), 0, value)
+
         return bound(
-            tt.log(tt.gammaincc(alpha, beta / value)),
+            tt.log(tt.gammaincc(safe_alpha, safe_beta / safe_value)),
             value >= 0,
             alpha > 0,
             beta > 0,
