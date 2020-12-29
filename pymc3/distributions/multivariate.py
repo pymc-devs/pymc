@@ -722,30 +722,22 @@ class DirichletMultinomial(Discrete):
     """
 
     def __init__(self, n, alpha, *args, **kwargs):
-
-        if kwargs.get("shape") is None:
-            warnings.warn(
-                (
-                    "Shape not explicitly set. "
-                    "Please, set the value using the `shape` keyword argument. "
-                    "Using the test value to infer the shape."
-                ),
-                DeprecationWarning,
-            )
-            try:
-                kwargs["shape"] = np.shape(get_test_value(alpha))
-            except TestValueError:
-                pass
-
         super().__init__(*args, **kwargs)
-        self.alpha = tt.as_tensor_variable(alpha)
-        self.n = tt.as_tensor_variable(n)
+        n = tt.as_tensor_variable(n)
+        alpha = tt.as_tensor_variable(alpha)
+        p = alpha / alpha.sum(-1, keepdims=True)
 
-        p = self.alpha / self.alpha.sum(-1, keepdims=True)
-        self.mean = tt.shape_padright(self.n) * p
+        if len(self.shape) > 1:
+            self.n = tt.shape_padright(n)
+            self.alpha = alpha if alpha.ndim > 1 else tt.shape_padleft(alpha)
+        else:
+            # n is a scalar, p is a 1d array
+            self.n = n
+            self.alpha = alpha
 
+        self.mean = self.n * p
         mode = tt.cast(tt.round(self.mean), 'int32')
-        diff = tt.shape_padright(self.n) - tt.sum(mode, axis=-1, keepdims=True)
+        diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
         inc_bool_arr = tt.abs_(diff) > 0
         mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()],
                                 diff[inc_bool_arr.nonzero()])
