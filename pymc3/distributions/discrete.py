@@ -330,11 +330,12 @@ class BetaBinomial(Discrete):
         alpha = self.alpha
         beta = self.beta
         n = self.n
+        safe_lower = tt.switch(tt.lt(value, 0), value, 0)
 
         return bound(
             tt.switch(
                 tt.lt(value, n),
-                logsumexp(self.logp(tt.arange(0, value + 1)), keepdims=False),
+                logsumexp(self.logp(tt.arange(safe_lower, value + 1)), keepdims=False),
                 0,
             ),
             0 <= value,
@@ -706,9 +707,12 @@ class Poisson(Discrete):
         """
         mu = self.mu
         value = tt.floor(value)
+        # To avoid issue with #4340
+        safe_mu = tt.switch(tt.lt(mu, 0), 0, mu)
+        safe_value = tt.switch(tt.lt(value, 0), 0, value)
 
         return bound(
-            tt.log(tt.gammaincc(value + 1, mu)),
+            tt.log(tt.gammaincc(safe_value + 1, safe_mu)),
             0 <= value,
             0 <= mu,
         )
@@ -1133,11 +1137,12 @@ class HyperGeometric(Discrete):
         N = self.N
         n = self.n
         k = self.k
+        safe_lower = tt.switch(tt.lt(value, 0), value, 0)
 
         return bound(
             tt.switch(
                 tt.lt(value, n),
-                logsumexp(self.logp(tt.arange(0, value + 1)), keepdims=False),
+                logsumexp(self.logp(tt.arange(safe_lower, value + 1)), keepdims=False),
                 0,
             ),
             0 <= value,
