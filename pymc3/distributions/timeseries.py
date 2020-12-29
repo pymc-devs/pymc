@@ -435,7 +435,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
         self.init = init
         self.innovArgs = (mu, cov, tau, chol, lower)
-        self.innov = multivariate.MvNormal.dist(*self.innovArgs)
+        self.innov = multivariate.MvNormal.dist(*self.innovArgs, shape=self.shape[-1])
         self.mean = tt.as_tensor_variable(0.0)
 
     def logp(self, x):
@@ -469,7 +469,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
         point: dict, optional
             Dict of variable values on which random values are to be
             conditioned (uses default point if not specified).
-        size: int, optional
+        size: int or tuple of ints, optional
             Desired size of random sample (returns one sample if not
             specified).
 
@@ -484,61 +484,44 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
             mu = np.array([1.0, 0.0])
             cov = np.array([[1.0, 0.0], [0.0, 2.0]])
-            sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=1)
+            sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random()
+
+        Create three samples from a 2-dimensional Gaussian random walk with 10 timesteps::
+
+            mu = np.array([1.0, 0.0])
+            cov = np.array([[1.0, 0.0], [0.0, 2.0]])
+            sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=3)
+
+        Create four samples from a 2-dimensional Gaussian random walk with 10
+        timesteps, indexed with a (2, 2) array::
+
+            mu = np.array([1.0, 0.0])
+            cov = np.array([[1.0, 0.0], [0.0, 2.0]])
+            sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=(2, 2))
         """
 
-        param_attribute = getattr(
-            self.innov, "chol_cov" if self.innov._cov_type == "chol" else self.innov._cov_type
-        )
-        mu, param = distribution.draw_values(
-            [self.innov.mu, param_attribute], point=point, size=size
-        )
-        return distribution.generate_samples(
-            self._random,
-            size=size,
-            dist_shape=self.shape,
-            not_broadcast_kwargs={
-                "sample_shape": to_tuple(size),
-                "param": param,
-                "mu": mu,
-                "cov_type": self.innov._cov_type,
-            },
-        )
+        time_steps = self.shape[0]
+        size = to_tuple(size)
 
-    def _random(self, mu, param, size, sample_shape, cov_type):
-        """
-        Implements the multivariate Gaussian random walk as a cumulative
-        sum of i.i.d. multivariate Gaussians.
-        Assumes that
-        size is of the form (samples, time, dims).
-        """
+        # for each draw specified by the size input, we need to draw time_steps many
+        # samples from MvNormal.
+        size_time_steps = size + to_tuple(time_steps)
 
-        if cov_type == "chol":
-            cov = np.matmul(param, param.transpose())
-        elif cov_type == "tau":
-            cov = np.linalg.inv(param)
-        else:
-            cov = param
+        multivariate_samples = self.innov.random(point=point, size=size_time_steps)
+        # this has shape (size, time_steps, MvNormal_shape)
 
-        # time axis comes after the sample axis
-        time_axis = len(sample_shape)
+        time_axis = len(size)
 
-        # spatial axis is last
-        spatial_axis = -1
-
-        rv = stats.multivariate_normal(mean=mu, cov=cov)
-
-        # only feed in sample and time dimensions since stats.multivariate_normal
-        # automatically adds back in the spatial dimensions to the end when it samples.
-        data = rv.rvs(size[:spatial_axis]).cumsum(axis=time_axis)
+        multivariate_samples = multivariate_samples.cumsum(axis=time_axis)
 
         # shift the walk to start at zero
-        if len(data.shape) > 2:
-            for i in range(size[0]):
-                data[i] = data[i] - data[i][0]
+        if len(multivariate_samples.shape) > 2:
+            # this for loop covers the case where size is a tuple
+            for idx in np.ndindex(size):
+                multivariate_samples[idx] = multivariate_samples[idx] - multivariate_samples[idx][0]
         else:
-            data = data - data[0]
-        return data
+            multivariate_samples = multivariate_samples - multivariate_samples[0]
+        return multivariate_samples
 
 
 class MvStudentTRandomWalk(MvGaussianRandomWalk):
