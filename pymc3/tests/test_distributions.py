@@ -588,7 +588,7 @@ class TestMatchesScipy(SeededTest):
         for pt in product(domains, n_samples=n_samples):
             params = dict(pt)
             value = params.pop("value")
-            values = np.arange(0, value + 1)
+            values = np.arange(domain.lower, value + 1)
             dist = distribution.dist(**params)
             assert_almost_equal(
                 dist.logcdf(value).tag.test_value,
@@ -673,8 +673,7 @@ class TestMatchesScipy(SeededTest):
         self.check_selfconsistency_discrete_logcdf(
             DiscreteUniform,
             Rdunif,
-            # Using lower = Bool, as this unittest assumes the distribution domain starts at zero.
-            {"lower": Bool, "upper": Rplusdunif},
+            {"lower": -Rplusdunif, "upper": Rplusdunif},
         )
 
     def test_flat(self):
