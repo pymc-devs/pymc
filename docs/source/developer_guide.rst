@@ -145,9 +145,7 @@ follows a Gaussian distribution, and
 density function <https://en.wikipedia.org/wiki/Probability_density_function>`__ that takes input :math:`x`
 
 .. math::
-    X:=f(x) = \frac{1}{\sigma \sqrt{(2 * \pi)}} * \exp^{- 0.5 * (\frac{x - \mu}{\sigma})^2} = \frac{1}{\sqrt{(2 * \pi)}} * \exp^{- 0.5 * x^2},
-    
-    \text{where }\mu = 0, \sigma = 1.
+    X:=f(x) = \frac{1}{\sigma \sqrt{(2 \pi)}} * \exp^{- 0.5 * (\frac{x - \mu}{\sigma})^2} = \frac{1}{\sqrt{(2 \pi)}} * \exp^{- 0.5 * x^2}\vert_{\mu = 0, \sigma=1}
 
 Within a model context, RVs are essentially Theano tensors (more on that
 below). This is different than TFP and pyro, where you need to be more
