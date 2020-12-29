@@ -33,6 +33,7 @@ import pymc3 as pm
 from pymc3.blocking import DictToVarBijection
 from pymc3.distributions import (
     AR1,
+    AsymmetricLaplace,
     Bernoulli,
     Beta,
     BetaBinomial,
@@ -206,6 +207,7 @@ PosNat = Domain([1, 2, 3, 2000], "int64")
 
 Bool = Domain([0, 0, 1, 1], "int64")
 
+Scale = Domain([0.5,1,1.5])
 
 def build_model(distfam, valuedomain, vardomains, extra_args=None):
     if extra_args is None:
@@ -218,7 +220,12 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
         distfam("value", shape=valuedomain.shape, transform=None, **vals)
     return m
 
-
+def laplace_asymmetric_logpdf(value, symmetry,scale = None):
+    kapinv = 1/symmetry
+    lPx = value * np.where(value >= 0, -symmetry, kapinv)
+    lPx -=np.log((symmetry+kapinv))
+    return lPx
+    
 def integrate_nd(f, domain, shape, dtype):
     if shape == () or shape == (1,):
         if dtype in continuous_types:
@@ -986,7 +993,13 @@ class TestMatchesScipy(SeededTest):
             {"mu": R, "b": Rplus},
             lambda value, mu, b: sp.laplace.logcdf(value, mu, b),
         )
-
+    def test_laplace_asymmetric(self):
+        self.pymc3_matches_scipy(
+            AsymmetricLaplace,
+            R,
+            {"scale":Scale,"symmetry":Rplus},
+            laplace_asymmetric_logpdf,
+            )
     def test_lognormal(self):
         self.pymc3_matches_scipy(
             Lognormal,
