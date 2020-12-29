@@ -310,6 +310,12 @@ class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
     default_shape = (1,)
 
 
+class TestMvGaussianRandomWalk(BaseTestCases.BaseTestCase):
+    distribution = pm.MvGaussianRandomWalk
+    params = {"mu": np.array([1.0, 0.0]), "cov": np.array([[1.0, 0.0], [0.0, 2.0]])}
+    default_shape = (10, 2)
+
+
 class TestNormal(BaseTestCases.BaseTestCase):
     distribution = pm.Normal
     params = {"mu": 0.0, "tau": 1.0}
