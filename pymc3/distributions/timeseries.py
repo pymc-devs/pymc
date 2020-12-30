@@ -515,8 +515,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
             # component can be accessed with the index equal to the length of size.
             time_axis = len(size)
             multivariate_samples = multivariate_samples.cumsum(axis=time_axis)
-
-            if time_axis:
+            if time_axis != 0:
                 # this for loop covers the case where size is a tuple
                 for idx in np.ndindex(size):
                     multivariate_samples[idx] = (
