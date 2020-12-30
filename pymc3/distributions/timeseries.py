@@ -526,7 +526,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
                 # size was passed as None
                 multivariate_samples = multivariate_samples - multivariate_samples[0]
 
-        # if the above if statement fails, then only a spatial dimension was passed in for self.shape.
+        # if the above statement fails, then only a spatial dimension was passed in for self.shape.
         # Therefore don't subtract off the initial value since otherwise you get all zeros
         # as your output.
         return multivariate_samples
