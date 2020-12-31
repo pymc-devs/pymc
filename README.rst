@@ -39,8 +39,8 @@ Features
 -  **Variational inference**: `ADVI <http://www.jmlr.org/papers/v18/16-107.html>`__
    for fast approximate posterior estimation as well as mini-batch ADVI
    for large data sets.
--  Relies on `Theano <https://theano-pymc.readthedocs.io/en/latest/>`__ which provides:
-    *  Computation optimization and dynamic C compilation
+-  Relies on `Theano-PyMC <https://theano-pymc.readthedocs.io/en/latest/>`__ which provides:
+    *  Computation optimization and dynamic C or JAX compilation
     *  Numpy broadcasting and advanced indexing
     *  Linear algebra operators
     *  Simple extensibility
@@ -72,6 +72,7 @@ PyMC3 talks
 -----------
 
 There are also several talks on PyMC3 which are gathered in this `YouTube playlist <https://www.youtube.com/playlist?list=PL1Ma_1DBbE82OVW8Fz_6Ts1oOeyOAiovy>`__
+and as part of `PyMCon 2020 <https://discourse.pymc.io/c/pymcon/2020talks/15>`__
 
 Installation
 ============

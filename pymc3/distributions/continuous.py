@@ -478,7 +478,6 @@ class Normal(Continuous):
     def __init__(self, mu=0, sigma=None, tau=None, sd=None, **kwargs):
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
         self.tau = tt.as_tensor_variable(tau)
@@ -640,7 +639,6 @@ class TruncatedNormal(BoundedContinuous):
     ):
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
         self.tau = tt.as_tensor_variable(tau)
@@ -835,7 +833,6 @@ class HalfNormal(PositiveContinuous):
     def __init__(self, sigma=None, tau=None, sd=None, *args, **kwargs):
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         super().__init__(*args, **kwargs)
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
@@ -1218,7 +1215,6 @@ class Beta(UnitContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sigma)
         self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
         self.beta = beta = tt.as_tensor_variable(floatX(beta))
@@ -1724,7 +1720,6 @@ class Lognormal(PositiveContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
@@ -1885,10 +1880,8 @@ class StudentT(Continuous):
 
     def __init__(self, nu, mu=0, lam=None, sigma=None, sd=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         self.nu = nu = tt.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
         self.lam = lam = tt.as_tensor_variable(lam)
@@ -2397,7 +2390,6 @@ class Gamma(PositiveContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sigma)
         self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
@@ -2545,7 +2537,6 @@ class InverseGamma(PositiveContinuous):
 
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         alpha, beta = InverseGamma._get_alpha_beta(alpha, beta, mu, sigma)
         self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
@@ -2902,7 +2893,6 @@ class HalfStudentT(PositiveContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         self.mode = tt.as_tensor_variable(0)
         lam, sigma = get_tau_sigma(lam, sigma)
@@ -3041,7 +3031,6 @@ class ExGaussian(Continuous):
 
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
         self.sigma = self.sd = sigma = tt.as_tensor_variable(floatX(sigma))
@@ -3317,7 +3306,6 @@ class SkewNormal(Continuous):
 
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
@@ -3721,7 +3709,6 @@ class Rice(PositiveContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         nu, b, sigma = self.get_nu_b(nu, b, sigma)
         self.nu = nu = tt.as_tensor_variable(floatX(nu))
@@ -3994,7 +3981,6 @@ class LogitNormal(UnitContinuous):
     def __init__(self, mu=0, sigma=None, tau=None, sd=None, **kwargs):
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)

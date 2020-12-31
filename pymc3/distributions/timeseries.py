@@ -12,8 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import warnings
-
 import numpy as np
 import theano.tensor as tt
 
@@ -116,7 +114,6 @@ class AR(distribution.Continuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
@@ -211,7 +208,6 @@ class GaussianRandomWalk(distribution.Continuous):
             raise TypeError("GaussianRandomWalk must be supplied a non-zero shape argument!")
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.tau = tt.as_tensor_variable(tau)
         sigma = tt.as_tensor_variable(sigma)

@@ -16,6 +16,7 @@ It also brings some dreadfully awaited fixes, so be sure to go through the chang
 - Removed `theanof.set_theano_config` because it illegally changed Theano's internal state (see [#4329](https://github.com/pymc-devs/pymc3/pull/4329)).
 
 ### New Features
+- Option to set `check_bounds=False` when instantiating `pymc3.Model()`. This turns off bounds checks that ensure that input parameters of distributions are valid. For correctly specified models, this is unneccessary as all parameters get automatically transformed so that all values are valid. Turning this off should lead to faster sampling (see [#4377](https://github.com/pymc-devs/pymc3/pull/4377)).
 - `OrderedProbit` distribution added (see [#4232](https://github.com/pymc-devs/pymc3/pull/4232)).
 - `plot_posterior_predictive_glm` now works with `arviz.InferenceData` as well (see [#4234](https://github.com/pymc-devs/pymc3/pull/4234))
 
@@ -26,6 +27,7 @@ It also brings some dreadfully awaited fixes, so be sure to go through the chang
 - `math.logsumexp` now matches `scipy.special.logsumexp` when arrays contain infinite values (see [#4360](https://github.com/pymc-devs/pymc3/pull/4360)).
 - Fixed mathematical formulation in `MvStudentT` random method. (see [#4359](https://github.com/pymc-devs/pymc3/pull/4359))
 - Fix issue in `logp` method of `HyperGeometric`. It now returns `-inf` for invalid parameters (see [4367](https://github.com/pymc-devs/pymc3/pull/4367))
+- Fixed `MatrixNormal` random method to work with parameters as random variables. (see [#4368](https://github.com/pymc-devs/pymc3/pull/4368))
 
 ## PyMC3 3.10.0 (7 December 2020)
 

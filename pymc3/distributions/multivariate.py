@@ -1445,7 +1445,7 @@ class MatrixNormal(Continuous):
 
     .. math::
        f(x \mid \mu, U, V) =
-           \frac{1}{(2\pi |U|^n |V|^m)^{1/2}}
+           \frac{1}{(2\pi^{m n} |U|^n |V|^m)^{1/2}}
            \exp\left\{
                 -\frac{1}{2} \mathrm{Tr}[ V^{-1} (x-\mu)^{\prime} U^{-1} (x-\mu)]
             \right\}
@@ -1637,27 +1637,19 @@ class MatrixNormal(Continuous):
         mu, colchol, rowchol = draw_values(
             [self.mu, self.colchol_cov, self.rowchol_cov], point=point, size=size
         )
-        if size is None:
-            size = ()
-        if size in (None, ()):
-            standard_normal = np.random.standard_normal((self.shape[0], colchol.shape[-1]))
-            samples = mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T))
-        else:
-            samples = []
-            size = tuple(np.atleast_1d(size))
-            if mu.shape == tuple(self.shape):
-                for _ in range(np.prod(size)):
-                    standard_normal = np.random.standard_normal((self.shape[0], colchol.shape[-1]))
-                    samples.append(mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T)))
-            else:
-                for j in range(np.prod(size)):
-                    standard_normal = np.random.standard_normal(
-                        (self.shape[0], colchol[j].shape[-1])
-                    )
-                    samples.append(
-                        mu[j] + np.matmul(rowchol[j], np.matmul(standard_normal, colchol[j].T))
-                    )
-            samples = np.array(samples).reshape(size + tuple(self.shape))
+        size = to_tuple(size)
+        dist_shape = to_tuple(self.shape)
+        output_shape = size + dist_shape
+
+        # Broadcasting all parameters
+        (mu,) = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)
+        rowchol = np.broadcast_to(rowchol, shape=size + rowchol.shape[-2:])
+
+        colchol = np.broadcast_to(colchol, shape=size + colchol.shape[-2:])
+        colchol = np.swapaxes(colchol, -1, -2)  # Take transpose
+
+        standard_normal = np.random.standard_normal(output_shape)
+        samples = mu + np.matmul(rowchol, np.matmul(standard_normal, colchol))
         return samples
 
     def _trquaddist(self, value):

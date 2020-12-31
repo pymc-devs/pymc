@@ -12,8 +12,8 @@ import jax
 import numpy as np
 import pandas as pd
 import theano
-import theano.sandbox.jax_linker
-import theano.sandbox.jaxify
+
+from theano.link.jax.jax_dispatch import jax_funcify
 
 import pymc3 as pm
 
@@ -46,7 +46,7 @@ def sample_tfp_nuts(
     seed = jax.random.PRNGKey(random_seed)
 
     fgraph = theano.gof.FunctionGraph(model.free_RVs, [model.logpt])
-    fns = theano.sandbox.jaxify.jax_funcify(fgraph)
+    fns = jax_funcify(fgraph)
     logp_fn_jax = fns[0]
 
     rv_names = [rv.name for rv in model.free_RVs]
@@ -131,7 +131,7 @@ def sample_numpyro_nuts(
     seed = jax.random.PRNGKey(random_seed)
 
     fgraph = theano.gof.FunctionGraph(model.free_RVs, [model.logpt])
-    fns = theano.sandbox.jaxify.jax_funcify(fgraph)
+    fns = jax_funcify(fgraph)
     logp_fn_jax = fns[0]
 
     rv_names = [rv.name for rv in model.free_RVs]
