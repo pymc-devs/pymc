@@ -615,6 +615,15 @@ class TestMatchesScipy(SeededTest):
                 err_msg=str(above_domain),
             )
 
+        # TODO: Test that logcdf wih invalid parameters is always evaluated to -inf
+
+        # Test that method works with multiple values or raises informative TypeError
+        try:
+            dist.logcdf(np.array([value, value])).tag.test_value
+        except TypeError as err:
+            if not str(err).endswith(".logcdf expects a scalar value but received a 1-dimensional object."):
+                raise
+
     def check_int_to_1(self, model, value, domain, paramdomains):
         pdf = model.fastfn(exp(model.logpt))
         for pt in product(paramdomains, n_samples=10):

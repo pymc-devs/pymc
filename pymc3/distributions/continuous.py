@@ -290,7 +290,7 @@ class Uniform(BoundedContinuous):
         upper = self.upper
 
         return tt.switch(
-            tt.or_(tt.lt(value, lower), tt.lt(upper, lower)),
+            tt.lt(value, lower) | tt.lt(upper, lower),
             -np.inf,
             tt.switch(
                 tt.lt(value, upper),
@@ -1307,13 +1307,26 @@ class Beta(UnitContinuous):
         -------
         TensorVariable
         """
-        value = floatX(tt.as_tensor(value))
-        a = floatX(tt.as_tensor(self.alpha))
-        b = floatX(tt.as_tensor(self.beta))
-        return tt.switch(
-            tt.le(value, 0),
-            -np.inf,
-            tt.switch(tt.ge(value, 1), 0, tt.log(incomplete_beta(a, b, value))),
+        # incomplete_beta function can only handle scalar values (see #4342)
+        if np.ndim(value):
+            raise TypeError(
+                "Beta.logcdf expects a scalar value but received a {}-dimensional object.".format(
+                    np.ndim(value)
+                )
+            )
+
+        a = self.alpha
+        b = self.beta
+
+        return bound(
+            tt.switch(
+                tt.lt(value, 1),
+                tt.log(incomplete_beta(a, b, value)),
+                0
+            ),
+            0 <= value,
+            0 < a,
+            0 < b,
         )
 
     def _distr_parameters_for_repr(self):
@@ -1965,13 +1978,28 @@ class StudentT(Continuous):
         -------
         TensorVariable
         """
+        # incomplete_beta function can only handle scalar values (see #4342)
+        if np.ndim(value):
+            raise TypeError(
+                "StudentT.logcdf expects a scalar value but received a {}-dimensional object.".format(
+                    np.ndim(value)
+                )
+            )
+
         nu = self.nu
         mu = self.mu
         sigma = self.sigma
+        lam = self.lam
         t = (value - mu) / sigma
         sqrt_t2_nu = tt.sqrt(t ** 2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
-        return tt.log(incomplete_beta(nu / 2.0, nu / 2.0, x))
+
+        return bound(
+            tt.log(incomplete_beta(nu / 2.0, nu / 2.0, x)),
+            0 < nu,
+            0 < sigma,
+            0 < lam,
+        )
 
 
 class Pareto(Continuous):
@@ -2481,16 +2509,16 @@ class Gamma(PositiveContinuous):
         """
         alpha = self.alpha
         beta = self.beta
-        # To avoid issue with #4340
+        # To avoid gammainc C-assertion when given invalid values (#4340)
         safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
         safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
         safe_value = tt.switch(tt.lt(value, 0), 0, value)
 
         return bound(
             tt.log(tt.gammainc(safe_alpha, safe_beta * safe_value)),
-            value >= 0,
-            alpha > 0,
-            beta > 0,
+            0 <= value,
+            0 < alpha,
+            0 < beta,
         )
 
     def _distr_parameters_for_repr(self):
@@ -2655,16 +2683,16 @@ class InverseGamma(PositiveContinuous):
         """
         alpha = self.alpha
         beta = self.beta
-        # To avoid issue with #4340
+        # To avoid gammaincc C-assertion when given invalid values (#4340)
         safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
         safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
         safe_value = tt.switch(tt.lt(value, 0), 0, value)
 
         return bound(
             tt.log(tt.gammaincc(safe_alpha, safe_beta / safe_value)),
-            value >= 0,
-            alpha > 0,
-            beta > 0,
+            0 <= value,
+            0 < alpha,
+            0 < beta,
         )
 
 
@@ -3532,6 +3560,7 @@ class Triangular(BoundedContinuous):
         l = self.lower
         u = self.upper
         c = self.c
+
         return tt.switch(
             tt.le(value, l),
             -np.inf,
