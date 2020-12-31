@@ -310,12 +310,6 @@ class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
     default_shape = (1,)
 
 
-class TestMvGaussianRandomWalk(BaseTestCases.BaseTestCase):
-    distribution = pm.MvGaussianRandomWalk
-    params = {"mu": np.array([1.0, 0.0]), "cov": np.array([[1.0, 0.0], [0.0, 2.0]])}
-    default_shape = (10, 2)
-
-
 class TestNormal(BaseTestCases.BaseTestCase):
     distribution = pm.Normal
     params = {"mu": 0.0, "tau": 1.0}
@@ -1726,3 +1720,17 @@ def test_matrix_normal_random_with_random_variables():
         prior = pm.sample_prior_predictive(2)
 
     assert prior["mu"].shape == (2, D, K)
+
+
+class TestMvGaussianRandomWalk(SeededTest):
+    @pytest.mark.parametrize(
+        ["sample_shape", "dist_shape", "mu_shape", "param"],
+        generate_shapes(include_params=True),
+        ids=str,
+    )
+    def test_with_np_arrays(self, sample_shape, dist_shape, mu_shape, param):
+        dist = pm.MvGaussianRandomWalk.dist(
+            mu=np.ones(mu_shape), **{param: np.eye(3)}, shape=dist_shape
+        )
+        output_shape = to_tuple(sample_shape) + dist_shape
+        assert dist.random(size=sample_shape).shape == output_shape
