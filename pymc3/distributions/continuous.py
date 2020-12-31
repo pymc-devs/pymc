@@ -1661,58 +1661,84 @@ class Laplace(Continuous):
             tt.switch(tt.gt(y, 1), tt.log1p(-0.5 * tt.exp(-y)), tt.log(1 - 0.5 * tt.exp(-y))),
         )
 
+
 class AsymmetricLaplace(Continuous):
-    """
-    Assymetric Laplace Distribution
+    r"""
+    Asymmetric-Laplace log-likelihood.
+
+    The pdf of this distribution is
+
+    ..math::
+        {f(x|\\b,\kappa) =
+            \left({\frac{\\b}{\kappa + 1/\kappa}}\right)\,e^{-(x)\\b\,s\kappa ^{s}}}
+        where s = sgn(x)
+
+
     See also: https://en.wikipedia.org/wiki/Asymmetric_Laplace_distribution
     """
 
-    def __init__(self, scale, symmetry, testval=0.0, *args, **kwargs):
-        """
-        Constructor
-        :param scale: scale parameter
-        :param symmetry: asymmetry parameter. Reduces to a normal laplace distribution with value 1
-        """
-        self.scale = tt.as_tensor_variable(scale)
-        self.symmetry = tt.as_tensor_variable(symmetry)
+    def __init__(self, b, kappa, testval=0.0, *args, **kwargs):
+        self.b = tt.as_tensor_variable(b)
+        self.kappa = tt.as_tensor_variable(kappa)
 
         super().__init__(*args, **kwargs, testval=testval)
+
+    def _random(self, b, kappa, size=None):
+        if size is not None:
+            u = np.random.uniform(size=size)
+            x = -np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b) * (
+                u > ((kappa ** 2) / (1 + kappa ** 2))
+            ) + kappa * np.log(u * (1 + kappa ** 2) / (kappa ** 2)) / b * (
+                u < ((kappa ** 2) / (1 + kappa ** 2))
+            )
+            return x
+
+        u = np.random.uniform()
+        if u > (kappa ** 2) / (1 + kappa ** 2):
+            x = -np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
+        else:
+            x = kappa * np.log(u * (1 + kappa ** 2) / (kappa ** 2)) / b
+
+        return x
 
     def random(self, point=None, size=None):
         """
         Draw random samples from this distribution, using the inverse CDF method.
-        :param point: not used
-        :param size: size of sample to draw
-        :return: Samples
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size:int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
         """
-        if point is not None:
-            raise NotImplementedError('Random not implemented with point specified')
-
-        if size is not None:
-            u = np.random.uniform(size=size)
-            x = - tt.log((1 - u) * (1 + self.symmetry ** 2)) / (self.symmetry * self.scale) * (
-                    u > ((self.symmetry ** 2) / (1 + self.symmetry ** 2))) + self.symmetry * tt.log(
-                u * (1 + self.symmetry ** 2) / (self.symmetry ** 2)) / self.scale * (
-                        u < ((self.symmetry ** 2) / (1 + self.symmetry ** 2)))
-
-            return x
-
-        u = np.random.uniform()
-        if u > (self.symmetry ** 2) / (1 + self.symmetry ** 2):
-            x = - tt.log((1 - u) * (1 + self.symmetry ** 2)) / (self.symmetry * self.scale)
-        else:
-            x = self.symmetry * tt.log(u * (1 + self.symmetry ** 2) / (self.symmetry ** 2)) / self.scale
-
-        return x
+        b, kappa = draw_values([self.b, self.kappa], point=point, size=size)
+        return generate_samples(self._random, b, kappa, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
-        Compute logp.
-        :param value: evaluation point
-        :return: log probability at evaluation point
+        Calculate log-probability of Asymmetric-Laplace distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
         """
-        return tt.log(self.scale / (self.symmetry + (self.symmetry ** -1))) + (
-                -value * self.scale * tt.sgn(value) * (self.symmetry ** tt.sgn(value)))
+        return tt.log(self.b / (self.kappa + (self.kappa ** -1))) + (
+            -value * self.b * tt.sgn(value) * (self.kappa ** tt.sgn(value))
+        )
+
 
 class Lognormal(PositiveContinuous):
     r"""
