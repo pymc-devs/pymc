@@ -91,7 +91,7 @@ from pymc3.distributions import (
     ZeroInflatedPoisson,
     continuous,
 )
-from pymc3.math import kronecker
+from pymc3.math import kronecker, logsumexp
 from pymc3.model import Deterministic, Model, Point
 from pymc3.tests.helpers import SeededTest, select_by_precision
 from pymc3.theanof import floatX
@@ -575,6 +575,28 @@ class TestMatchesScipy(SeededTest):
                 err_msg=str(pt),
             )
 
+    def check_selfconsistency_discrete_logcdf(
+        self, distribution, domain, paramdomains, decimal=None, n_samples=100
+    ):
+        """
+        Check that logcdf of discrete distributions matches sum of logps up to value
+        """
+        domains = paramdomains.copy()
+        domains["value"] = domain
+        if decimal is None:
+            decimal = select_by_precision(float64=6, float32=3)
+        for pt in product(domains, n_samples=n_samples):
+            params = dict(pt)
+            value = params.pop("value")
+            values = np.arange(domain.lower, value + 1)
+            dist = distribution.dist(**params)
+            assert_almost_equal(
+                dist.logcdf(value).tag.test_value,
+                logsumexp(dist.logp(values), keepdims=False).tag.test_value,
+                decimal=decimal,
+                err_msg=str(pt),
+            )
+
     def check_int_to_1(self, model, value, domain, paramdomains):
         pdf = model.fastfn(exp(model.logpt))
         for pt in product(paramdomains, n_samples=10):
@@ -641,6 +663,17 @@ class TestMatchesScipy(SeededTest):
             Rdunif,
             {"lower": -Rplusdunif, "upper": Rplusdunif},
             lambda value, lower, upper: sp.randint.logpmf(value, lower, upper + 1),
+        )
+        self.check_logcdf(
+            DiscreteUniform,
+            Rdunif,
+            {"lower": -Rplusdunif, "upper": Rplusdunif},
+            lambda value, lower, upper: sp.randint.logcdf(value, lower, upper + 1),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            DiscreteUniform,
+            Rdunif,
+            {"lower": -Rplusdunif, "upper": Rplusdunif},
         )
 
     def test_flat(self):
@@ -801,31 +834,94 @@ class TestMatchesScipy(SeededTest):
 
     def test_geometric(self):
         self.pymc3_matches_scipy(
-            Geometric, Nat, {"p": Unit}, lambda value, p: np.log(sp.geom.pmf(value, p))
+            Geometric,
+            Nat,
+            {"p": Unit},
+            lambda value, p: np.log(sp.geom.pmf(value, p)),
+        )
+        self.check_logcdf(
+            Geometric,
+            Nat,
+            {"p": Unit},
+            lambda value, p: sp.geom.logcdf(value, p),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            Geometric,
+            Nat,
+            {"p": Unit},
         )
 
     def test_hypergeometric(self):
         def modified_scipy_hypergeom_logpmf(value, N, k, n):
+            # Convert nan to -np.inf
             original_res = sp.hypergeom.logpmf(value, N, k, n)
+            return original_res if not np.isnan(original_res) else -np.inf
+
+        def modified_scipy_hypergeom_logcdf(value, N, k, n):
+            # Convert nan to -np.inf
+            original_res = sp.hypergeom.logcdf(value, N, k, n)
+
+            # Correct for scipy bug in logcdf method (see https://github.com/scipy/scipy/issues/13280)
+            if not np.isnan(original_res):
+                pmfs = sp.hypergeom.logpmf(np.arange(value + 1), N, k, n)
+                if np.all(np.isnan(pmfs)):
+                    original_res = np.nan
+
             return original_res if not np.isnan(original_res) else -np.inf
 
         self.pymc3_matches_scipy(
             HyperGeometric,
             Nat,
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
-            lambda value, N, k, n: modified_scipy_hypergeom_logpmf(value, N, k, n),
+            modified_scipy_hypergeom_logpmf,
+        )
+        self.check_logcdf(
+            HyperGeometric,
+            Nat,
+            {"N": NatSmall, "k": NatSmall, "n": NatSmall},
+            modified_scipy_hypergeom_logcdf,
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            HyperGeometric,
+            Nat,
+            {"N": NatSmall, "k": NatSmall, "n": NatSmall},
         )
 
     def test_negative_binomial(self):
-        def test_fun(value, mu, alpha):
+        def scipy_mu_alpha_logpmf(value, mu, alpha):
             return sp.nbinom.logpmf(value, alpha, 1 - mu / (mu + alpha))
 
-        self.pymc3_matches_scipy(NegativeBinomial, Nat, {"mu": Rplus, "alpha": Rplus}, test_fun)
+        def scipy_mu_alpha_logcdf(value, mu, alpha):
+            return sp.nbinom.logcdf(value, alpha, 1 - mu / (mu + alpha))
+
+        self.pymc3_matches_scipy(
+            NegativeBinomial,
+            Nat,
+            {"mu": Rplus, "alpha": Rplus},
+            scipy_mu_alpha_logpmf,
+        )
         self.pymc3_matches_scipy(
             NegativeBinomial,
             Nat,
             {"p": Unit, "n": Rplus},
             lambda value, p, n: sp.nbinom.logpmf(value, n, p),
+        )
+        self.check_logcdf(
+            NegativeBinomial,
+            Nat,
+            {"mu": Rplus, "alpha": Rplus},
+            scipy_mu_alpha_logcdf,
+        )
+        self.check_logcdf(
+            NegativeBinomial,
+            Nat,
+            {"p": Unit, "n": Rplus},
+            lambda value, p, n: sp.nbinom.logcdf(value, n, p),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            NegativeBinomial,
+            Nat,
+            {"mu": Rplus, "alpha": Rplus},
         )
 
     @pytest.mark.parametrize(
@@ -1024,11 +1120,43 @@ class TestMatchesScipy(SeededTest):
             {"n": NatSmall, "p": Unit},
             lambda value, n, p: sp.binom.logpmf(value, n, p),
         )
+        self.check_logcdf(
+            Binomial,
+            Nat,
+            {"n": NatSmall, "p": Unit},
+            lambda value, n, p: sp.binom.logcdf(value, n, p),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            Binomial,
+            Nat,
+            {"n": NatSmall, "p": Unit},
+        )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_beta_binomial(self):
-        self.checkd(BetaBinomial, Nat, {"alpha": Rplus, "beta": Rplus, "n": NatSmall})
+        self.checkd(
+            BetaBinomial,
+            Nat,
+            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
+        )
+        self.pymc3_matches_scipy(
+            BetaBinomial,
+            Nat,
+            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
+            lambda value, alpha, beta, n: sp.betabinom.logpmf(value, a=alpha, b=beta, n=n),
+        )
+        self.check_logcdf(
+            BetaBinomial,
+            Nat,
+            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
+            lambda value, alpha, beta, n: sp.betabinom.logcdf(value, a=alpha, b=beta, n=n),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            BetaBinomial,
+            Nat,
+            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
+        )
 
     def test_bernoulli(self):
         self.pymc3_matches_scipy(
@@ -1038,7 +1166,27 @@ class TestMatchesScipy(SeededTest):
             lambda value, logit_p: sp.bernoulli.logpmf(value, scipy.special.expit(logit_p)),
         )
         self.pymc3_matches_scipy(
-            Bernoulli, Bool, {"p": Unit}, lambda value, p: sp.bernoulli.logpmf(value, p)
+            Bernoulli,
+            Bool,
+            {"p": Unit},
+            lambda value, p: sp.bernoulli.logpmf(value, p),
+        )
+        self.check_logcdf(
+            Bernoulli,
+            Bool,
+            {"p": Unit},
+            lambda value, p: sp.bernoulli.logcdf(value, p),
+        )
+        self.check_logcdf(
+            Bernoulli,
+            Bool,
+            {"logit_p": R},
+            lambda value, logit_p: sp.bernoulli.logcdf(value, scipy.special.expit(logit_p)),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            Bernoulli,
+            Bool,
+            {"p": Unit},
         )
 
     def test_discrete_weibull(self):
@@ -1048,10 +1196,29 @@ class TestMatchesScipy(SeededTest):
             {"q": Unit, "beta": Rplusdunif},
             discrete_weibull_logpmf,
         )
+        self.check_selfconsistency_discrete_logcdf(
+            DiscreteWeibull,
+            Nat,
+            {"q": Unit, "beta": Rplusdunif},
+        )
 
     def test_poisson(self):
         self.pymc3_matches_scipy(
-            Poisson, Nat, {"mu": Rplus}, lambda value, mu: sp.poisson.logpmf(value, mu)
+            Poisson,
+            Nat,
+            {"mu": Rplus},
+            lambda value, mu: sp.poisson.logpmf(value, mu),
+        )
+        self.check_logcdf(
+            Poisson,
+            Nat,
+            {"mu": Rplus},
+            lambda value, mu: sp.poisson.logcdf(value, mu),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            Poisson,
+            Nat,
+            {"mu": Rplus},
         )
 
     def test_bound_poisson(self):
@@ -1073,7 +1240,16 @@ class TestMatchesScipy(SeededTest):
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_zeroinflatedpoisson(self):
-        self.checkd(ZeroInflatedPoisson, Nat, {"theta": Rplus, "psi": Unit})
+        self.checkd(
+            ZeroInflatedPoisson,
+            Nat,
+            {"theta": Rplus, "psi": Unit},
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            ZeroInflatedPoisson,
+            Nat,
+            {"theta": Rplus, "psi": Unit},
+        )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
@@ -1083,11 +1259,25 @@ class TestMatchesScipy(SeededTest):
             Nat,
             {"mu": Rplusbig, "alpha": Rplusbig, "psi": Unit},
         )
+        self.check_selfconsistency_discrete_logcdf(
+            ZeroInflatedNegativeBinomial,
+            Nat,
+            {"mu": Rplusbig, "alpha": Rplusbig, "psi": Unit},
+        )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_zeroinflatedbinomial(self):
-        self.checkd(ZeroInflatedBinomial, Nat, {"n": NatSmall, "p": Unit, "psi": Unit})
+        self.checkd(
+            ZeroInflatedBinomial,
+            Nat,
+            {"n": NatSmall, "p": Unit, "psi": Unit},
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            ZeroInflatedBinomial,
+            Nat,
+            {"n": NatSmall, "p": Unit, "psi": Unit},
+        )
 
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_mvnormal(self, n):
