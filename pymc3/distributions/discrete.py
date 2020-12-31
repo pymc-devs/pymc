@@ -614,7 +614,7 @@ class DiscreteWeibull(Discrete):
         beta = self.beta
 
         return bound(
-            tt.log(1 - tt.power(q, tt.power(value + 1, beta))),
+            tt.log1p(-tt.power(q, tt.power(value + 1, beta))),
             0 <= value,
             0 < q,
             q < 1,
@@ -727,7 +727,7 @@ class Poisson(Discrete):
         """
         mu = self.mu
         value = tt.floor(value)
-        # To avoid issue with #4340
+        # To avoid gammaincc C-assertion when given invalid values (#4340)
         safe_mu = tt.switch(tt.lt(mu, 0), 0, mu)
         safe_value = tt.switch(tt.lt(value, 0), 0, value)
 
@@ -1612,7 +1612,7 @@ class ZeroInflatedPoisson(Discrete):
         psi = self.psi
 
         return bound(
-            tt.log(1 - psi + psi * tt.exp(self.pois.logcdf(value))),
+            logaddexp(tt.log1p(-psi), tt.log(psi) + self.pois.logcdf(value)),
             0 <= value,
             0 <= psi,
             psi <= 1,
@@ -1751,7 +1751,7 @@ class ZeroInflatedBinomial(Discrete):
         psi = self.psi
 
         return bound(
-            tt.log(1 - psi + psi * tt.exp(self.bin.logcdf(value))),
+            logaddexp(tt.log1p(-psi), tt.log(psi) + self.bin.logcdf(value)),
             0 <= value,
             0 <= psi,
             psi <= 1,
@@ -1920,7 +1920,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         psi = self.psi
 
         return bound(
-            tt.log(1 - psi + psi * tt.exp(self.nb.logcdf(value))),
+            logaddexp(tt.log1p(-psi), tt.log(psi) + self.nb.logcdf(value)),
             0 <= value,
             0 <= psi,
             psi <= 1,
