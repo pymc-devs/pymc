@@ -510,7 +510,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
         size = to_tuple(size)
         multivariate_samples = self.innov.random(point=point, size=size)
         # this has shape (size, self.shape)
-        if len(self.shape) == 2
+        if len(self.shape) == 2:
             # have time dimension in first slot of shape. Therefore the time
             # component can be accessed with the index equal to the length of size.
             time_axis = len(size)
