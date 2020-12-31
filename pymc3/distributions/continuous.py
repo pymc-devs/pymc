@@ -2800,12 +2800,6 @@ class Weibull(PositiveContinuous):
         Compute the log of the cumulative distribution function for Weibull distribution
         at the specified value.
 
-        References
-        ----------
-        .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing `\log(1-\exp(- \mid a \mid))` Assessed by the Rmpfr
-            package"
-
         Parameters
         ----------
         value: numeric
@@ -2822,7 +2816,7 @@ class Weibull(PositiveContinuous):
         return tt.switch(
             tt.le(value, 0.0),
             -np.inf,
-            tt.switch(tt.le(a, tt.log(2.0)), tt.log(-tt.expm1(-a)), tt.log1p(-tt.exp(-a))),
+            log1mexp(a),
         )
 
 
@@ -3902,7 +3896,7 @@ class Logistic(Continuous):
 
         References
         ----------
-        .. [Machler2012] Martin Mächler (2012).
+        .. [Machler2012] c.
             "Accurately computing :math:  `\log(1-\exp(- \mid a \mid<))` Assessed by the Rmpfr
             package"
 
@@ -3916,6 +3910,7 @@ class Logistic(Continuous):
         -------
         TensorVariable
         """
+        # TODO: Check possible redundant (or improved) reimplementation of log1pexp
         mu = self.mu
         s = self.s
         a = -(value - mu) / s
