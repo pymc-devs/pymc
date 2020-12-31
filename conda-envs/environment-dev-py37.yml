@@ -8,7 +8,7 @@ dependencies:
 - libblas=*=*mkl
 - mkl-service
 - nbsphinx>=0.4
-- numpy=1.13.0
+- numpy=1.13
 - numpydoc>=0.9
 - pre-commit>=2.8.0
 - pytest-cov>=2.5
