@@ -163,7 +163,14 @@ class Binomial(Discrete):
         -------
         TensorVariable
         """
-        # TODO: work with multiple values (see #4342)
+        # incomplete_beta function can only handle scalar values (see #4342)
+        if np.ndim(value):
+            raise TypeError(
+                "Binomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
+                    np.ndim(value)
+                )
+            )
+
         n = self.n
         p = self.p
         value = tt.floor(value)
@@ -326,7 +333,14 @@ class BetaBinomial(Discrete):
         -------
         TensorVariable
         """
-        # TODO: fix for multiple values
+        # logcdf can only handle scalar values at the moment
+        if np.ndim(value):
+            raise TypeError(
+                "BetaBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
+                    np.ndim(value)
+                )
+            )
+
         alpha = self.alpha
         beta = self.beta
         n = self.n
@@ -446,11 +460,13 @@ class Bernoulli(Discrete):
         """
         Compute the log of the cumulative distribution function for Bernoulli distribution
         at the specified value.
+
         Parameters
         ----------
         value: numeric
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
+
         Returns
         -------
         TensorVariable
@@ -583,11 +599,13 @@ class DiscreteWeibull(Discrete):
         """
         Compute the log of the cumulative distribution function for Discrete Weibull distribution
         at the specified value.
+
         Parameters
         ----------
         value: numeric
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
+
         Returns
         -------
         TensorVariable
@@ -696,11 +714,13 @@ class Poisson(Discrete):
         """
         Compute the log of the cumulative distribution function for Poisson distribution
         at the specified value.
+
         Parameters
         ----------
         value: numeric
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
+
         Returns
         -------
         TensorVariable
@@ -887,7 +907,14 @@ class NegativeBinomial(Discrete):
         -------
         TensorVariable
         """
-        # TODO: work with multiple values (see #4342)
+        # incomplete_beta function can only handle scalar values (see #4342)
+        if np.ndim(value):
+            raise TypeError(
+                "NegativeBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
+                    np.ndim(value)
+                )
+            )
+
         # TODO: avoid `p` recomputation if distribution was defined in terms of `p`
         alpha = self.alpha
         p = alpha / (self.mu + alpha)
@@ -987,11 +1014,13 @@ class Geometric(Discrete):
         """
         Compute the log of the cumulative distribution function for Geometric distribution
         at the specified value.
+
         Parameters
         ----------
         value: numeric
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
+
         Returns
         -------
         TensorVariable
@@ -1124,15 +1153,24 @@ class HyperGeometric(Discrete):
         """
         Compute the log of the cumulative distribution function for HyperGeometric distribution
         at the specified value.
+
         Parameters
         ----------
         value: numeric
             Value for which log CDF is calculated.
+
         Returns
         -------
         TensorVariable
         """
-        # TODO: fix for multiple values
+        # logcdf can only handle scalar values at the moment
+        if np.ndim(value):
+            raise TypeError(
+                "BetaBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
+                    np.ndim(value)
+                )
+            )
+
         # TODO: Use lower upper in locgdf for smarter logsumexp?
         N = self.N
         n = self.n
@@ -1247,11 +1285,13 @@ class DiscreteUniform(Discrete):
         """
         Compute the log of the cumulative distribution function for Discrete uniform distribution
         at the specified value.
+
         Parameters
         ----------
         value: numeric
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
+
         Returns
         -------
         TensorVariable
@@ -1558,11 +1598,13 @@ class ZeroInflatedPoisson(Discrete):
         """
         Compute the log of the cumulative distribution function for ZeroInflatedPoisson distribution
         at the specified value.
+
         Parameters
         ----------
         value: numeric
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
+
         Returns
         -------
         TensorVariable
@@ -1698,7 +1740,14 @@ class ZeroInflatedBinomial(Discrete):
         -------
         TensorVariable
         """
-        # TODO: work with multiple values (see #4342)
+        # logcdf can only handle scalar values due to limitation in Binomial.logcdf
+        if np.ndim(value):
+            raise TypeError(
+                "ZeroInflatedBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
+                    np.ndim(value)
+                )
+            )
+
         psi = self.psi
 
         return bound(
@@ -1861,7 +1910,13 @@ class ZeroInflatedNegativeBinomial(Discrete):
         -------
         TensorVariable
         """
-        # TODO: work with multiple values (see #4342)
+        # logcdf can only handle scalar values due to limitation in NegativeBinomial.logcdf
+        if np.ndim(value):
+            raise TypeError(
+                "ZeroInflatedNegativeBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
+                    np.ndim(value)
+                )
+            )
         psi = self.psi
 
         return bound(
