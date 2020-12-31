@@ -1,7 +1,7 @@
 codecov:
   require_ci_to_pass: no
   notify:
-      after_n_builds: 9
+      after_n_builds: 16
 
 coverage:
   precision: 2
