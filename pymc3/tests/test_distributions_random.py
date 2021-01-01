@@ -89,9 +89,10 @@ def pymc3_random(
 
 
 def pymc3_random_discrete(
-    dist, paramdomains, valuedomain=Domain([0]), ref_rand=None, size=100000, alpha=0.05, fails=20
+    dist, paramdomains, valuedomain=Domain([0]), ref_rand=None, size=100000, alpha=0.05, fails=20,
+    extra_args=None,
 ):
-    model = build_model(dist, valuedomain, paramdomains)
+    model = build_model(dist, valuedomain, paramdomains, extra_args=extra_args)
     domains = paramdomains.copy()
     for pt in product(domains, n_samples=100):
         pt = pm.Point(pt, model=model)
@@ -990,19 +991,25 @@ class TestScalarParameterSamples(SeededTest):
             )
 
     def test_dirichlet_multinomial(self):
-        def ref_rand(size, n, alpha):
-            p = st.dirichlet.rvs(alpha, size=size)
-            res = np.empty((size, *alpha.shape))
+        def ref_rand(size, alpha, n):
+            k = alpha.shape[-1]
+            out = np.empty((size, k), dtype=int)
+            # debug_p = np.empty((size, k))
+            # FIXME: Vectorize this?
             for i in range(size):
-                res[i, :] = st.multinomial(p=p[i], n=n).rvs()
-            return res
+                p = nr.dirichlet(alpha)
+                x = nr.multinomial(n=n, pvals=p)
+                out[i, :] = x
+                # debug_p[i, :] = p
+            # breakpoint()
+            return out
 
         for n in [2, 3]:
             pymc3_random_discrete(
                 pm.DirichletMultinomial,
-                {"n": Vector(Nat, 1), "alpha": Vector(Rplus, np.array([1, n]))},
-                valuedomain=Vector(Nat, np.array([1, n])),
-                size=100,
+                {"alpha": Vector(Rplus, n), "n": Nat},
+                valuedomain=Vector(Nat, n),
+                size=1000,
                 ref_rand=ref_rand,
             )
 

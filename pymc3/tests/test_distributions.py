@@ -266,6 +266,21 @@ def multinomial_logpdf(value, n, p):
         return -inf
 
 
+def dirichlet_multinomial_logpmf(value, n, alpha):
+    value, n, alpha = [np.asarray(x) for x in [value, n, alpha]]
+    assert value.ndim == 1
+    assert n.ndim == 0
+    assert alpha.shape == value.shape
+    gammaln = scipy.special.gammaln
+    if value.sum() == n and (0 <= value).all() and (value <= n).all():
+        sum_alpha = alpha.sum(axis=-1)
+        const = gammaln(n + 1) + gammaln(sum_alpha) - gammaln(n + sum_alpha)
+        series = gammaln(value + alpha) - gammaln(value + 1) - gammaln(alpha)
+        return const + series.sum(axis=-1)
+    else:
+        return -inf
+
+
 def beta_mu_sigma(value, mu, sigma):
     kappa = mu * (1 - mu) / sigma ** 2 - 1
     if kappa > 0:
@@ -1725,53 +1740,155 @@ class TestMatchesScipy(SeededTest):
         sample = dist.random(size=2)
         assert_allclose(sample, np.stack([vals, vals], axis=0))
 
-    @pytest.mark.parametrize('alpha,n', [
-        [[[.25, .25, .25, .25]], [1]],
-        [[[.3, .6, .05, .05]], [2]],
-        [[[.3, .6, .05, .05]], [10]],
-        [[[.3, .6, .05, .05],
-          [.25, .25, .25, .25]],
-         [10, 2]],
-    ])
+    @pytest.mark.parametrize("n", [2, 3])
+    def test_dirichlet_multinomial(self, n):
+        self.pymc3_matches_scipy(
+            DirichletMultinomial, Vector(Nat, n), {"alpha": Vector(Rplus, n), "n": Nat}, dirichlet_multinomial_logpmf
+        )
+
+    @pytest.mark.parametrize(
+        "alpha, n",
+        [
+            [[0.25, 0.25, 0.25, 0.25], 1],
+            [[0.3, 0.6, 0.05, 0.05], 2],
+            [[0.3, 0.6, 0.05, 0.05], 10],
+        ],
+    )
     def test_dirichlet_multinomial_mode(self, alpha, n):
-        alpha = np.array(alpha)
-        n = np.array(n)
+        _alpha = np.array(alpha)
         with Model() as model:
-            m = DirichletMultinomial('m', n, alpha,
-                                     shape=alpha.shape)
+            m = DirichletMultinomial("m", n, _alpha, _alpha.shape)
+        assert_allclose(m.distribution.mode.eval().sum(), n)
+        _alpha = np.array([alpha, alpha])
+        with Model() as model:
+            m = DirichletMultinomial("m", n, _alpha, _alpha.shape)
         assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
 
-    @pytest.mark.parametrize('alpha,n,enum', [
-        [[[.25, .25, .25, .25]], [1], [[1, 0, 0, 0],
-                                       [0, 1, 0, 0],
-                                       [0, 0, 1, 0],
-                                       [0, 0, 0, 1]]]
-    ])
-    def test_dirichlet_multinomial_pmf(self, alpha, n, enum):
-        alpha = np.array(alpha)
-        n = np.array(n)
+    @pytest.mark.parametrize(
+        "alpha, shape, n",
+        [
+            [[0.25, 0.25, 0.25, 0.25], 4, 2],
+            [[0.25, 0.25, 0.25, 0.25], (1, 4), 3],
+            # 3: expect to fail
+            # [[.25, .25, .25, .25], (10, 4)],
+            [[0.25, 0.25, 0.25, 0.25], (10, 1, 4), 5],
+            # 5: expect to fail
+            # [[[.25, .25, .25, .25]], (2, 4), [7, 11]],
+            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), 13],
+            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (1, 2, 4), [23, 29]],
+            [
+                [[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]],
+                (10, 2, 4),
+                [31, 37],
+            ],
+            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), [17, 19]],
+        ],
+    )
+    def test_dirichlet_multinomial_random(self, alpha, shape, n):
+        alpha = np.asarray(alpha)
         with Model() as model:
-            m = DirichletMultinomial('m', n=n, alpha=alpha,
-                                     shape=alpha.shape)
-        logp = lambda x: m.distribution.logp(np.array([x])).eval()
-        p_all_poss = [np.exp(logp(x)) for x in enum]
-        assert_almost_equal(np.sum(p_all_poss), 1)
-
-    @pytest.mark.parametrize('alpha,n', [
-        [[[.25, .25, .25, .25]], [1]],
-        [[[.3, .6, .05, .05]], [2]],
-        [[[.3, .6, .05, .05]], [10]],
-        [[[.3, .6, .05, .05],
-          [.25, .25, .25, .25]],
-         [10, 2]],
-    ])
-    def test_dirichlet_multinomial_random(self, alpha, n):
-        alpha = np.array(alpha)
-        n = np.array(n)
-        with Model() as model:
-            m = DirichletMultinomial('m', n=n, alpha=alpha,
-                                     shape=alpha.shape)
+            m = DirichletMultinomial("m", n=n, alpha=alpha, shape=shape)
         m.random()
+
+    def test_dirichlet_multinomial_mode_with_shape(self):
+        n = [1, 10]
+        alpha = np.asarray([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]])
+        with Model() as model:
+            m = DirichletMultinomial("m", n=n, alpha=alpha, shape=(2, 4))
+        assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
+
+    def test_dirichlet_multinomial_vec(self):
+        vals = np.array([[2, 4, 4], [3, 3, 4]])
+        alpha = np.array([0.2, 0.3, 0.5])
+        n = 10
+
+        with Model() as model_single:
+            DirichletMultinomial("m", n=n, alpha=alpha, shape=len(alpha))
+
+        with Model() as model_many:
+            DirichletMultinomial("m", n=n, alpha=alpha, shape=vals.shape)
+
+        assert_almost_equal(
+            np.asarray([dirichlet_multinomial_logpmf(v, n, alpha) for v in vals]),
+            np.asarray([model_single.fastlogp({"m": val}) for val in vals]),
+            decimal=4,
+        )
+
+        assert_almost_equal(
+            np.asarray([dirichlet_multinomial_logpmf(v, n, alpha) for v in vals]),
+            model_many.free_RVs[0].logp_elemwise({"m": vals}).squeeze(),
+            decimal=4,
+        )
+
+        assert_almost_equal(
+            sum([model_single.fastlogp({"m": val}) for val in vals]),
+            model_many.fastlogp({"m": vals}),
+            decimal=4,
+        )
+
+    def test_dirichlet_multinomial_vec_1d_n(self):
+        vals = np.array([[2, 4, 4], [4, 3, 4]])
+        alpha = np.array([0.2, 0.3, 0.5])
+        ns = np.array([10, 11])
+
+        with Model() as model:
+            DirichletMultinomial("m", n=ns, alpha=alpha, shape=vals.shape)
+
+        assert_almost_equal(
+            sum([dirichlet_multinomial_logpmf(val, n, alpha) for val, n in zip(vals, ns)]),
+            model.fastlogp({"m": vals}),
+            decimal=4,
+        )
+
+    def test_dirichlet_multinomial_vec_1d_n_2d_alpha(self):
+        vals = np.array([[2, 4, 4], [4, 3, 4]])
+        alphas = np.array([[0.2, 0.3, 0.5], [0.9, 0.09, 0.01]])
+        ns = np.array([10, 11])
+
+        with Model() as model:
+            DirichletMultinomial("m", n=ns, alpha=alphas, shape=vals.shape)
+
+        assert_almost_equal(
+            sum([dirichlet_multinomial_logpmf(val, n, alpha) for val, n, alpha in zip(vals, ns, alphas)]),
+            model.fastlogp({"m": vals}),
+            decimal=4,
+        )
+
+    def test_dirichlet_multinomial_vec_2d_alpha(self):
+        vals = np.array([[2, 4, 4], [3, 3, 4]])
+        alphas = np.array([[0.2, 0.3, 0.5], [0.3, 0.3, 0.4]])
+        n = 10
+
+        with Model() as model:
+            DirichletMultinomial("m", n=n, alpha=alphas, shape=vals.shape)
+
+        assert_almost_equal(
+            sum([dirichlet_multinomial_logpmf(val, n, alpha) for val, alpha in zip(vals, alphas)]),
+            model.fastlogp({"m": vals}),
+            decimal=4,
+        )
+
+    def test_batch_dirichlet_multinomial(self):
+        n = 10
+        vals = np.zeros((4, 5, 3), dtype="int32")
+        alpha = np.zeros_like(vals, dtype=theano.config.floatX)
+        inds = np.random.randint(vals.shape[-1], size=vals.shape[:-1])[..., None]
+        np.put_along_axis(vals, inds, n, axis=-1)
+        np.put_along_axis(alpha, inds, 1, axis=-1)
+
+        dist = DirichletMultinomial.dist(n=n, alpha=alpha, shape=vals.shape)
+        value = tt.tensor3(dtype="int32")
+        value.tag.test_value = np.zeros_like(vals, dtype="int32")
+        logp = tt.exp(dist.logp(value))
+        f = theano.function(inputs=[value], outputs=logp)
+        assert_almost_equal(
+            f(vals),
+            np.ones(vals.shape[:-1] + (1,)),
+            decimal=select_by_precision(float64=6, float32=3),
+        )
+
+        sample = dist.random(size=2)
+        assert_allclose(sample, np.stack([vals, vals], axis=0))
 
     def test_categorical_bounds(self):
         with Model():
