@@ -723,17 +723,16 @@ class DirichletMultinomial(Discrete):
 
     def __init__(self, n, alpha, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        n = tt.as_tensor_variable(n)
-        alpha = tt.as_tensor_variable(alpha)
-        p = alpha / alpha.sum(-1, keepdims=True)
 
         if len(self.shape) > 1:
             self.n = tt.shape_padright(n)
-            self.alpha = alpha if alpha.ndim > 1 else tt.shape_padleft(alpha)
+            self.alpha = tt.as_tensor_variable(alpha) if alpha.ndim > 1 else tt.shape_padleft(alpha)
         else:
             # n is a scalar, p is a 1d array
-            self.n = n
-            self.alpha = alpha
+            self.n = tt.as_tensor_variable(n)
+            self.alpha = tt.as_tensor_variable(alpha)
+
+        p = self.alpha / self.alpha.sum(-1, keepdims=True)
 
         self.mean = self.n * p
         mode = tt.cast(tt.round(self.mean), 'int32')
@@ -746,35 +745,83 @@ class DirichletMultinomial(Discrete):
     def logp(self, x):
         alpha = self.alpha
         n = self.n
-        sum_alpha = alpha.sum(axis=-1)
+        sum_alpha = alpha.sum(axis=-1, keepdims=True)
 
         const = (gammaln(n + 1) + gammaln(sum_alpha)) - gammaln(n + sum_alpha)
         series = gammaln(x + alpha) - (gammaln(x + 1) + gammaln(alpha))
-        result = const + series.sum(axis=-1)
+        result = const + series.sum(axis=-1, keepdims=True)
         return bound(result,
                      tt.all(tt.ge(x, 0)),
                      tt.all(tt.gt(alpha, 0)),
                      tt.all(tt.ge(n, 0)),
-                     tt.all(tt.eq(x.sum(axis=-1), n)),
+                     tt.all(tt.eq(x.sum(axis=-1, keepdims=True), n)),
                      broadcast_conditions=False)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random0(self, point=None, size=None, repeat=None):
         alpha, n = draw_values([self.alpha, self.n], point=point, size=size)
-        if size is not None:
-            out = np.empty((size, *alpha.shape))
-            for j in range(size):
-                for i in range(len(n)):
-                    p = np.random.dirichlet(alpha[i, :])
-                    x = np.random.multinomial(n[i], p)
-                    out[j, i, :] = x
-        else:
-            out = np.empty_like(alpha)
-            for i in range(len(n)):
-                p = np.random.dirichlet(alpha[i, :])
-                x = np.random.multinomial(n[i], p)
-                out[i, :] = x
+        if size is None:
+            size = 1
+
+        out = np.empty((size, alpha.shape[-1]))
+        # FIXME: Vectorize this?
+        for i in range(size):
+            p = np.random.dirichlet(alpha)
+            x = np.random.multinomial(n, p)
+            out[i, :] = x
 
         return out
+
+    def _random(self, n, alpha, size=None):
+        original_dtype = alpha.dtype
+        # Set float type to float64 for numpy. This change is related to numpy issue #8317 (https://github.com/numpy/numpy/issues/8317)
+        alpha = alpha.astype("float64")
+        # Now, re-normalize all of the values in float64 precision. This is done inside the conditionals
+        alpha /= np.sum(alpha, axis=-1, keepdims=True)
+
+        size_ = size if len(size) > 1 else (1, size[0])
+        # Thanks to the default shape handling done in generate_values, the last
+        # axis of n is a dummy axis that allows it to broadcast well with p
+        n = np.broadcast_to(n, size_)
+        alpha = np.broadcast_to(alpha, size_)
+        n = n[..., 0]
+
+        # Unlike the multinomial random_, here we need to draw values
+        # of p from np.random.dirichlet.
+        p = np.array([np.random.dirichlet(aa) for aa in alpha])
+
+        samples = np.array(
+            [np.random.multinomial(nn, pp) for nn, pp in zip(n, p)]
+        )
+        # We cast back to the original dtype
+        return samples.astype(original_dtype)
+
+    def random(self, point=None, size=None):
+        """
+        Draw random values from Dirichlet-Multinomial distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        n, alpha = draw_values([self.n, self.alpha], point=point, size=size)
+        samples = generate_samples(
+            self._random,
+            n,
+            alpha,
+            dist_shape=self.shape,
+            # not_broadcast_kwargs={"raw_size": size},
+            size=size,
+        )
+        return samples
 
     def _repr_latex_(self, name=None, dist=None):
         if dist is None:
