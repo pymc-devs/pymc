@@ -278,7 +278,7 @@ class Uniform(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -286,13 +286,16 @@ class Uniform(BoundedContinuous):
         -------
         TensorVariable
         """
+        lower = self.lower
+        upper = self.upper
+
         return tt.switch(
-            tt.or_(tt.lt(value, self.lower), tt.gt(value, self.upper)),
+            tt.lt(value, lower) | tt.lt(upper, lower),
             -np.inf,
             tt.switch(
-                tt.eq(value, self.upper),
+                tt.lt(value, upper),
+                tt.log(value - lower) - tt.log(upper - lower),
                 0,
-                tt.log(value - self.lower) - tt.log(self.upper - self.lower),
             ),
         )
 
@@ -344,7 +347,7 @@ class Flat(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -401,7 +404,7 @@ class HalfFlat(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -542,7 +545,7 @@ class Normal(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -900,7 +903,7 @@ class HalfNormal(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -910,10 +913,10 @@ class HalfNormal(PositiveContinuous):
         """
         sigma = self.sigma
         z = zvalue(value, mu=0, sigma=sigma)
-        return tt.switch(
-            tt.lt(z, -1.0),
-            tt.log(tt.erfcx(-z / tt.sqrt(2.0))) - tt.sqr(z),
+        return bound(
             tt.log1p(-tt.erfc(z / tt.sqrt(2.0))),
+            0 <= value,
+            0 < sigma,
         )
 
 
@@ -1106,7 +1109,7 @@ class Wald(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1297,20 +1300,30 @@ class Beta(UnitContinuous):
         Parameters
         ----------
         value: numeric
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            Value(s) for which log CDF is calculated.
 
         Returns
         -------
         TensorVariable
         """
-        value = floatX(tt.as_tensor(value))
-        a = floatX(tt.as_tensor(self.alpha))
-        b = floatX(tt.as_tensor(self.beta))
-        return tt.switch(
-            tt.le(value, 0),
-            -np.inf,
-            tt.switch(tt.ge(value, 1), 0, tt.log(incomplete_beta(a, b, value))),
+        # incomplete_beta function can only handle scalar values (see #4342)
+        if np.ndim(value):
+            raise TypeError(
+                f"Beta.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
+        a = self.alpha
+        b = self.beta
+
+        return bound(
+            tt.switch(
+                tt.lt(value, 1),
+                tt.log(incomplete_beta(a, b, value)),
+                0,
+            ),
+            0 <= value,
+            0 < a,
+            0 < b,
         )
 
     def _distr_parameters_for_repr(self):
@@ -1515,7 +1528,7 @@ class Exponential(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1630,7 +1643,7 @@ class Laplace(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1786,7 +1799,7 @@ class Lognormal(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1949,20 +1962,32 @@ class StudentT(Continuous):
         Parameters
         ----------
         value: numeric
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            Value(s) for which log CDF is calculated.
 
         Returns
         -------
         TensorVariable
         """
+        # incomplete_beta function can only handle scalar values (see #4342)
+        if np.ndim(value):
+            raise TypeError(
+                f"StudentT.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
         nu = self.nu
         mu = self.mu
         sigma = self.sigma
+        lam = self.lam
         t = (value - mu) / sigma
         sqrt_t2_nu = tt.sqrt(t ** 2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
-        return tt.log(incomplete_beta(nu / 2.0, nu / 2.0, x))
+
+        return bound(
+            tt.log(incomplete_beta(nu / 2.0, nu / 2.0, x)),
+            0 < nu,
+            0 < sigma,
+            0 < lam,
+        )
 
 
 class Pareto(Continuous):
@@ -2084,7 +2109,7 @@ class Pareto(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2203,7 +2228,7 @@ class Cauchy(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2311,7 +2336,7 @@ class HalfCauchy(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2462,7 +2487,7 @@ class Gamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2472,7 +2497,17 @@ class Gamma(PositiveContinuous):
         """
         alpha = self.alpha
         beta = self.beta
-        return bound(tt.log(tt.gammainc(alpha, beta * value)), value >= 0, alpha > 0, beta > 0)
+        # Avoid C-assertion when the gammainc function is called with invalid values (#4340)
+        safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
+        safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
+        safe_value = tt.switch(tt.lt(value, 0), 0, value)
+
+        return bound(
+            tt.log(tt.gammainc(safe_alpha, safe_beta * safe_value)),
+            0 <= value,
+            0 < alpha,
+            0 < beta,
+        )
 
     def _distr_parameters_for_repr(self):
         return ["alpha", "beta"]
@@ -2626,7 +2661,7 @@ class InverseGamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2636,11 +2671,16 @@ class InverseGamma(PositiveContinuous):
         """
         alpha = self.alpha
         beta = self.beta
+        # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
+        safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
+        safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
+        safe_value = tt.switch(tt.lt(value, 0), 0, value)
+
         return bound(
-            tt.log(tt.gammaincc(alpha, beta / value)),
-            value >= 0,
-            alpha > 0,
-            beta > 0,
+            tt.log(tt.gammaincc(safe_alpha, safe_beta / safe_value)),
+            0 <= value,
+            0 < alpha,
+            0 < beta,
         )
 
 
@@ -2802,7 +2842,7 @@ class Weibull(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -3102,7 +3142,7 @@ class ExGaussian(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -3491,7 +3531,7 @@ class Triangular(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -3620,7 +3660,7 @@ class Gumbel(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -3902,7 +3942,7 @@ class Logistic(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -4244,7 +4284,7 @@ class Moyal(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 

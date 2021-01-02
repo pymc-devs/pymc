@@ -166,9 +166,7 @@ class Binomial(Discrete):
         # incomplete_beta function can only handle scalar values (see #4342)
         if np.ndim(value):
             raise TypeError(
-                "Binomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"Binomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
         n = self.n
@@ -336,9 +334,7 @@ class BetaBinomial(Discrete):
         # logcdf can only handle scalar values at the moment
         if np.ndim(value):
             raise TypeError(
-                "BetaBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"BetaBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
         alpha = self.alpha
@@ -463,7 +459,7 @@ class Bernoulli(Discrete):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -602,7 +598,7 @@ class DiscreteWeibull(Discrete):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -717,7 +713,7 @@ class Poisson(Discrete):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -727,7 +723,7 @@ class Poisson(Discrete):
         """
         mu = self.mu
         value = tt.floor(value)
-        # To avoid gammaincc C-assertion when given invalid values (#4340)
+        # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
         safe_mu = tt.switch(tt.lt(mu, 0), 0, mu)
         safe_value = tt.switch(tt.lt(value, 0), 0, value)
 
@@ -910,9 +906,7 @@ class NegativeBinomial(Discrete):
         # incomplete_beta function can only handle scalar values (see #4342)
         if np.ndim(value):
             raise TypeError(
-                "NegativeBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"NegativeBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
         # TODO: avoid `p` recomputation if distribution was defined in terms of `p`
@@ -1017,7 +1011,7 @@ class Geometric(Discrete):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1166,9 +1160,7 @@ class HyperGeometric(Discrete):
         # logcdf can only handle scalar values at the moment
         if np.ndim(value):
             raise TypeError(
-                "BetaBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"HyperGeometric.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
         # TODO: Use lower upper in locgdf for smarter logsumexp?
@@ -1288,7 +1280,7 @@ class DiscreteUniform(Discrete):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1300,7 +1292,11 @@ class DiscreteUniform(Discrete):
         lower = self.lower
 
         return bound(
-            tt.log(tt.minimum(tt.floor(value), upper) - lower + 1) - tt.log(upper - lower + 1),
+            tt.switch(
+                tt.lt(value, upper),
+                tt.log(tt.minimum(tt.floor(value), upper) - lower + 1) - tt.log(upper - lower + 1),
+                0,
+            ),
             lower <= value,
             lower <= upper,
         )
@@ -1601,7 +1597,7 @@ class ZeroInflatedPoisson(Discrete):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1743,9 +1739,7 @@ class ZeroInflatedBinomial(Discrete):
         # logcdf can only handle scalar values due to limitation in Binomial.logcdf
         if np.ndim(value):
             raise TypeError(
-                "ZeroInflatedBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"ZeroInflatedBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
         psi = self.psi
@@ -1913,9 +1907,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         # logcdf can only handle scalar values due to limitation in NegativeBinomial.logcdf
         if np.ndim(value):
             raise TypeError(
-                "ZeroInflatedNegativeBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"ZeroInflatedNegativeBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
         psi = self.psi
 

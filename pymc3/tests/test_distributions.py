@@ -575,6 +575,35 @@ class TestMatchesScipy(SeededTest):
                 err_msg=str(pt),
             )
 
+        # Test that values below domain evaluate to -np.inf
+        if np.isfinite(domain.lower):
+            below_domain = domain.lower - 1
+            assert_equal(
+                dist.logcdf(below_domain).tag.test_value,
+                -np.inf,
+                err_msg=str(below_domain),
+            )
+
+        # Test that values above domain evaluate to 0
+        # Natural domains do not have inf as the upper edge, but should also be ignored
+        not_nat_domain = domain not in (NatSmall, Nat, NatBig, PosNat)
+        if not_nat_domain and np.isfinite(domain.upper):
+            above_domain = domain.upper + 1
+            assert_equal(
+                dist.logcdf(above_domain).tag.test_value,
+                0,
+                err_msg=str(above_domain),
+            )
+
+        # Test that method works with multiple values or raises informative TypeError
+        try:
+            dist.logcdf(np.array([value, value])).tag.test_value
+        except TypeError as err:
+            if not str(err).endswith(
+                ".logcdf expects a scalar value but received a 1-dimensional object."
+            ):
+                raise
+
     def check_selfconsistency_discrete_logcdf(
         self, distribution, domain, paramdomains, decimal=None, n_samples=100
     ):
@@ -681,7 +710,7 @@ class TestMatchesScipy(SeededTest):
         with Model():
             x = Flat("a")
             assert_allclose(x.tag.test_value, 0)
-        self.check_logcdf(Flat, Runif, {}, lambda value: np.log(0.5))
+        self.check_logcdf(Flat, R, {}, lambda value: np.log(0.5))
         # Check infinite cases individually.
         assert 0.0 == Flat.dist().logcdf(np.inf).tag.test_value
         assert -np.inf == Flat.dist().logcdf(-np.inf).tag.test_value
@@ -692,7 +721,7 @@ class TestMatchesScipy(SeededTest):
             x = HalfFlat("a", shape=2)
             assert_allclose(x.tag.test_value, 1)
             assert x.tag.test_value.shape == (2,)
-        self.check_logcdf(HalfFlat, Runif, {}, lambda value: -np.inf)
+        self.check_logcdf(HalfFlat, Rplus, {}, lambda value: -np.inf)
         # Check infinite cases individually.
         assert 0.0 == HalfFlat.dist().logcdf(np.inf).tag.test_value
         assert -np.inf == HalfFlat.dist().logcdf(-np.inf).tag.test_value
