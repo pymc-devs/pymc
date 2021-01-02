@@ -2507,7 +2507,7 @@ class Gamma(PositiveContinuous):
         """
         alpha = self.alpha
         beta = self.beta
-        # To avoid gammainc C-assertion when given invalid values (#4340)
+        # Avoid C-assertion when the gammainc function is called with invalid values (#4340)
         safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
         safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
         safe_value = tt.switch(tt.lt(value, 0), 0, value)
@@ -2681,7 +2681,7 @@ class InverseGamma(PositiveContinuous):
         """
         alpha = self.alpha
         beta = self.beta
-        # To avoid gammaincc C-assertion when given invalid values (#4340)
+        # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
         safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
         safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
         safe_value = tt.switch(tt.lt(value, 0), 0, value)

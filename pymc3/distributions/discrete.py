@@ -727,7 +727,7 @@ class Poisson(Discrete):
         """
         mu = self.mu
         value = tt.floor(value)
-        # To avoid gammaincc C-assertion when given invalid values (#4340)
+        # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
         safe_mu = tt.switch(tt.lt(mu, 0), 0, mu)
         safe_value = tt.switch(tt.lt(value, 0), 0, value)
 

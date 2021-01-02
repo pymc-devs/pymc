@@ -615,8 +615,6 @@ class TestMatchesScipy(SeededTest):
                 err_msg=str(above_domain),
             )
 
-        # TODO: Test that logcdf wih invalid parameters is always evaluated to -inf
-
         # Test that method works with multiple values or raises informative TypeError
         try:
             dist.logcdf(np.array([value, value])).tag.test_value
