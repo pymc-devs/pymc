@@ -1527,7 +1527,7 @@ class Exponential(PositiveContinuous):
         lam = self.lam
         a = lam * value
         return tt.switch(
-            tt.or_(tt.le(value, 0.0), tt.le(lam, 0)),
+            tt.le(value, 0.0) | tt.le(lam, 0),
             -np.inf,
             log1mexp(a),
         )
@@ -3896,7 +3896,7 @@ class Logistic(Continuous):
 
         References
         ----------
-        .. [Machler2012] c.
+        .. [Machler2012] Martin Mächler (2012).
             "Accurately computing :math:  `\log(1-\exp(- \mid a \mid<))` Assessed by the Rmpfr
             package"
 
@@ -3910,7 +3910,6 @@ class Logistic(Continuous):
         -------
         TensorVariable
         """
-        # TODO: Check possible redundant (or improved) reimplementation of log1pexp
         mu = self.mu
         s = self.s
         a = -(value - mu) / s
