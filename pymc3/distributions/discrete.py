@@ -1292,7 +1292,11 @@ class DiscreteUniform(Discrete):
         lower = self.lower
 
         return bound(
-            tt.log(tt.minimum(tt.floor(value), upper) - lower + 1) - tt.log(upper - lower + 1),
+            tt.switch(
+                tt.lt(value, upper),
+                tt.log(tt.minimum(tt.floor(value), upper) - lower + 1) - tt.log(upper - lower + 1),
+                0,
+            ),
             lower <= value,
             lower <= upper,
         )
