@@ -1673,6 +1673,12 @@ class AsymmetricLaplace(Continuous):
             \left({\frac{\\b}{\kappa + 1/\kappa}}\right)\,e^{-(x)\\b\,s\kappa ^{s}}}
         where s = sgn(x)
 
+    Parameters
+    ----------
+    b:
+        Scale parameter (b > 0)
+    kappa:
+        Symmetry parameter (kappa > 0)
 
     See also: https://en.wikipedia.org/wiki/Asymmetric_Laplace_distribution
     """
@@ -1735,8 +1741,11 @@ class AsymmetricLaplace(Continuous):
         -------
         TensorVariable
         """
-        return tt.log(self.b / (self.kappa + (self.kappa ** -1))) + (
-            -value * self.b * tt.sgn(value) * (self.kappa ** tt.sgn(value))
+        return bound(
+            tt.log(self.b / (self.kappa + (self.kappa ** -1)))
+            + (-value * self.b * tt.sgn(value) * (self.kappa ** tt.sgn(value))),
+            0 < self.b,
+            0 < self.kappa,
         )
 
 
