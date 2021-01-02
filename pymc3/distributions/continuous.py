@@ -1309,9 +1309,7 @@ class Beta(UnitContinuous):
         # incomplete_beta function can only handle scalar values (see #4342)
         if np.ndim(value):
             raise TypeError(
-                "Beta.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"Beta.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
         a = self.alpha
@@ -1979,9 +1977,7 @@ class StudentT(Continuous):
         # incomplete_beta function can only handle scalar values (see #4342)
         if np.ndim(value):
             raise TypeError(
-                "StudentT.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"StudentT.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
         nu = self.nu

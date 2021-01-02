@@ -166,9 +166,7 @@ class Binomial(Discrete):
         # incomplete_beta function can only handle scalar values (see #4342)
         if np.ndim(value):
             raise TypeError(
-                "Binomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"Binomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
         n = self.n
@@ -336,9 +334,7 @@ class BetaBinomial(Discrete):
         # logcdf can only handle scalar values at the moment
         if np.ndim(value):
             raise TypeError(
-                "BetaBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"BetaBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
         alpha = self.alpha
@@ -910,9 +906,7 @@ class NegativeBinomial(Discrete):
         # incomplete_beta function can only handle scalar values (see #4342)
         if np.ndim(value):
             raise TypeError(
-                "NegativeBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"NegativeBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
         # TODO: avoid `p` recomputation if distribution was defined in terms of `p`
@@ -1166,9 +1160,7 @@ class HyperGeometric(Discrete):
         # logcdf can only handle scalar values at the moment
         if np.ndim(value):
             raise TypeError(
-                "BetaBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"HyperGeometric.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
         # TODO: Use lower upper in locgdf for smarter logsumexp?
@@ -1743,9 +1735,7 @@ class ZeroInflatedBinomial(Discrete):
         # logcdf can only handle scalar values due to limitation in Binomial.logcdf
         if np.ndim(value):
             raise TypeError(
-                "ZeroInflatedBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"ZeroInflatedBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
         psi = self.psi
@@ -1913,9 +1903,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         # logcdf can only handle scalar values due to limitation in NegativeBinomial.logcdf
         if np.ndim(value):
             raise TypeError(
-                "ZeroInflatedNegativeBinomial.logcdf expects a scalar value but received a {}-dimensional object.".format(
-                    np.ndim(value)
-                )
+                f"ZeroInflatedNegativeBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
         psi = self.psi
 
