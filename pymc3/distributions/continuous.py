@@ -3560,7 +3560,6 @@ class Triangular(BoundedContinuous):
         l = self.lower
         u = self.upper
         c = self.c
-
         return tt.switch(
             tt.le(value, l),
             -np.inf,
