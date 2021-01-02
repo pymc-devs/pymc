@@ -575,6 +575,35 @@ class TestMatchesScipy(SeededTest):
                 err_msg=str(pt),
             )
 
+        # Test that values below domain evaluate to -np.inf
+        if np.isfinite(domain.lower):
+            below_domain = domain.lower - 1
+            assert_equal(
+                dist.logcdf(below_domain).tag.test_value,
+                -np.inf,
+                err_msg=str(below_domain),
+            )
+
+        # Test that values above domain evaluate to 0
+        # Natural domains do not have inf as the upper edge, but should also be ignored
+        not_nat_domain = domain not in (NatSmall, Nat, NatBig, PosNat)
+        if not_nat_domain and np.isfinite(domain.upper):
+            above_domain = domain.upper + 1
+            assert_equal(
+                dist.logcdf(above_domain).tag.test_value,
+                0,
+                err_msg=str(above_domain),
+            )
+
+        # Test that method works with multiple values or raises informative TypeError
+        try:
+            dist.logcdf(np.array([value, value])).tag.test_value
+        except TypeError as err:
+            if not str(err).endswith(
+                ".logcdf expects a scalar value but received a 1-dimensional object."
+            ):
+                raise
+
     def check_selfconsistency_discrete_logcdf(
         self, distribution, domain, paramdomains, decimal=None, n_samples=100
     ):
@@ -596,33 +625,6 @@ class TestMatchesScipy(SeededTest):
                 decimal=decimal,
                 err_msg=str(pt),
             )
-
-        # Test that values below domain evaluate to -np.inf
-        if np.isfinite(domain.lower):
-            below_domain = domain.lower - 1
-            assert_equal(
-                dist.logcdf(below_domain).tag.test_value,
-                -np.inf,
-                err_msg=str(below_domain),
-            )
-
-        # Test that values above domain evaluate to 0
-        if np.isfinite(domain.upper):
-            above_domain = domain.upper + 1
-            assert_equal(
-                dist.logcdf(above_domain).tag.test_value,
-                0,
-                err_msg=str(above_domain),
-            )
-
-        # Test that method works with multiple values or raises informative TypeError
-        try:
-            dist.logcdf(np.array([value, value])).tag.test_value
-        except TypeError as err:
-            if not str(err).endswith(
-                ".logcdf expects a scalar value but received a 1-dimensional object."
-            ):
-                raise
 
     def check_int_to_1(self, model, value, domain, paramdomains):
         pdf = model.fastfn(exp(model.logpt))
