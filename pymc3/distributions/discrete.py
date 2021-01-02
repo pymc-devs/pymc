@@ -463,7 +463,7 @@ class Bernoulli(Discrete):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -602,7 +602,7 @@ class DiscreteWeibull(Discrete):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -717,7 +717,7 @@ class Poisson(Discrete):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1017,7 +1017,7 @@ class Geometric(Discrete):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1288,7 +1288,7 @@ class DiscreteUniform(Discrete):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1601,7 +1601,7 @@ class ZeroInflatedPoisson(Discrete):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 

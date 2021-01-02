@@ -278,7 +278,7 @@ class Uniform(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -347,7 +347,7 @@ class Flat(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -404,7 +404,7 @@ class HalfFlat(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -545,7 +545,7 @@ class Normal(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -903,7 +903,7 @@ class HalfNormal(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1109,7 +1109,7 @@ class Wald(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1300,8 +1300,7 @@ class Beta(UnitContinuous):
         Parameters
         ----------
         value: numeric
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            Value(s) for which log CDF is calculated.
 
         Returns
         -------
@@ -1322,7 +1321,7 @@ class Beta(UnitContinuous):
             tt.switch(
                 tt.lt(value, 1),
                 tt.log(incomplete_beta(a, b, value)),
-                0
+                0,
             ),
             0 <= value,
             0 < a,
@@ -1537,7 +1536,7 @@ class Exponential(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1652,7 +1651,7 @@ class Laplace(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1808,7 +1807,7 @@ class Lognormal(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1971,8 +1970,7 @@ class StudentT(Continuous):
         Parameters
         ----------
         value: numeric
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            Value(s) for which log CDF is calculated.
 
         Returns
         -------
@@ -2121,7 +2119,7 @@ class Pareto(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2240,7 +2238,7 @@ class Cauchy(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2348,7 +2346,7 @@ class HalfCauchy(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2499,7 +2497,7 @@ class Gamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2673,7 +2671,7 @@ class InverseGamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2860,7 +2858,7 @@ class Weibull(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -3160,7 +3158,7 @@ class ExGaussian(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -3549,7 +3547,7 @@ class Triangular(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -3678,7 +3676,7 @@ class Gumbel(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -3960,7 +3958,7 @@ class Logistic(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -4302,7 +4300,7 @@ class Moyal(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 

@@ -621,7 +621,9 @@ class TestMatchesScipy(SeededTest):
         try:
             dist.logcdf(np.array([value, value])).tag.test_value
         except TypeError as err:
-            if not str(err).endswith(".logcdf expects a scalar value but received a 1-dimensional object."):
+            if not str(err).endswith(
+                ".logcdf expects a scalar value but received a 1-dimensional object."
+            ):
                 raise
 
     def check_int_to_1(self, model, value, domain, paramdomains):
