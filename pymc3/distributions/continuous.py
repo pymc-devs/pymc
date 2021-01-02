@@ -45,7 +45,7 @@ from pymc3.distributions.dist_math import (
 )
 from pymc3.distributions.distribution import Continuous, draw_values, generate_samples
 from pymc3.distributions.special import log_i0
-from pymc3.math import invlogit, logdiffexp, logit
+from pymc3.math import invlogit, log1mexp, logdiffexp, logit
 from pymc3.theanof import floatX
 
 __all__ = [
@@ -1513,12 +1513,6 @@ class Exponential(PositiveContinuous):
         Compute the log of cumulative distribution function for the Exponential distribution
         at the specified value.
 
-        References
-        ----------
-        .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing :math:`\log(1-\exp(-\mid a \mid))` Assessed by the Rmpfr
-            package"
-
         Parameters
         ----------
         value: numeric
@@ -1533,9 +1527,9 @@ class Exponential(PositiveContinuous):
         lam = self.lam
         a = lam * value
         return tt.switch(
-            tt.le(value, 0.0),
+            tt.le(value, 0.0) | tt.le(lam, 0),
             -np.inf,
-            tt.switch(tt.le(a, tt.log(2.0)), tt.log(-tt.expm1(-a)), tt.log1p(-tt.exp(-a))),
+            log1mexp(a),
         )
 
 
@@ -2806,12 +2800,6 @@ class Weibull(PositiveContinuous):
         Compute the log of the cumulative distribution function for Weibull distribution
         at the specified value.
 
-        References
-        ----------
-        .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing `\log(1-\exp(- \mid a \mid))` Assessed by the Rmpfr
-            package"
-
         Parameters
         ----------
         value: numeric
@@ -2828,7 +2816,7 @@ class Weibull(PositiveContinuous):
         return tt.switch(
             tt.le(value, 0.0),
             -np.inf,
-            tt.switch(tt.le(a, tt.log(2.0)), tt.log(-tt.expm1(-a)), tt.log1p(-tt.exp(-a))),
+            log1mexp(a),
         )
 
 

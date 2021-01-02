@@ -219,14 +219,21 @@ def log1pexp(x):
 
 
 def log1mexp(x):
-    """Return log(1 - exp(-x)).
+    r"""Return log(1 - exp(-x)).
 
     This function is numerically more stable than the naive approach.
 
     For details, see
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
+
+    References
+        ----------
+        .. [Machler2012] Martin Mächler (2012).
+            "Accurately computing `\log(1-\exp(- \mid a \mid))` Assessed by the Rmpfr
+            package"
+
     """
-    return tt.switch(tt.lt(x, 0.683), tt.log(-tt.expm1(-x)), tt.log1p(-tt.exp(-x)))
+    return tt.switch(tt.lt(x, 0.6931471805599453), tt.log(-tt.expm1(-x)), tt.log1p(-tt.exp(-x)))
 
 
 def log1mexp_numpy(x):
@@ -235,7 +242,7 @@ def log1mexp_numpy(x):
     For details, see
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
     """
-    return np.where(x < 0.683, np.log(-np.expm1(-x)), np.log1p(-np.exp(-x)))
+    return np.where(x < 0.6931471805599453, np.log(-np.expm1(-x)), np.log1p(-np.exp(-x)))
 
 
 def flatten_list(tensors):
