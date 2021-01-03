@@ -757,41 +757,37 @@ class DirichletMultinomial(Discrete):
                      tt.all(tt.eq(x.sum(axis=-1, keepdims=True), n)),
                      broadcast_conditions=False)
 
-    def random0(self, point=None, size=None, repeat=None):
-        alpha, n = draw_values([self.alpha, self.n], point=point, size=size)
-        if size is None:
-            size = 1
-
-        out = np.empty((size, alpha.shape[-1]))
-        # FIXME: Vectorize this?
-        for i in range(size):
-            p = np.random.dirichlet(alpha)
-            x = np.random.multinomial(n, p)
-            out[i, :] = x
-
-        return out
-
-    def _random(self, n, alpha, size=None):
+    def _random(self, n, alpha, size=None, raw_size=None):
         original_dtype = alpha.dtype
         # Set float type to float64 for numpy. This change is related to numpy issue #8317 (https://github.com/numpy/numpy/issues/8317)
         alpha = alpha.astype("float64")
-        # Now, re-normalize all of the values in float64 precision. This is done inside the conditionals
-        alpha /= np.sum(alpha, axis=-1, keepdims=True)
 
-        size_ = size if len(size) > 1 else (1, size[0])
         # Thanks to the default shape handling done in generate_values, the last
-        # axis of n is a dummy axis that allows it to broadcast well with p
-        n = np.broadcast_to(n, size_)
-        alpha = np.broadcast_to(alpha, size_)
+        # axis of n is a dummy axis that allows it to broadcast well with alpha
+        n = np.broadcast_to(n, size)
+        alpha = np.broadcast_to(alpha, size)
         n = n[..., 0]
 
-        # Unlike the multinomial random_, here we need to draw values
-        # of p from np.random.dirichlet.
-        p = np.array([np.random.dirichlet(aa) for aa in alpha])
-
-        samples = np.array(
-            [np.random.multinomial(nn, pp) for nn, pp in zip(n, p)]
-        )
+        # np.random.multinomial needs `n` to be a scalar int and `alpha` a
+        # sequence so we semi flatten them and iterate over them
+        size_ = to_tuple(raw_size)
+        if alpha.ndim > len(size_) and alpha.shape[: len(size_)] == size_:
+            # alpha and n have the size_ prepend so we don't need it in np.random
+            n_ = n.reshape([-1])
+            alpha_ = alpha.reshape([-1, alpha.shape[-1]])
+            p_ = np.array([np.random.dirichlet(aa) for aa in alpha_])
+            samples = np.array([np.random.multinomial(nn, pp) for nn, pp in zip(n_, p_)])
+            samples = samples.reshape(alpha.shape)
+        else:
+            # alpha and n don't have the size prepend
+            n_ = n.reshape([-1])
+            alpha_ = alpha.reshape([-1, alpha.shape[-1]])
+            p_ = np.array([np.random.dirichlet(aa) for aa in alpha_])
+            samples = np.array(
+                [np.random.multinomial(nn, pp, size=size_) for nn, pp in zip(n_, p_)]
+            )
+            samples = np.moveaxis(samples, 0, -1)
+            samples = samples.reshape(size + alpha.shape)
         # We cast back to the original dtype
         return samples.astype(original_dtype)
 
@@ -818,7 +814,7 @@ class DirichletMultinomial(Discrete):
             n,
             alpha,
             dist_shape=self.shape,
-            # not_broadcast_kwargs={"raw_size": size},
+            not_broadcast_kwargs={"raw_size": size},
             size=size,
         )
         return samples
