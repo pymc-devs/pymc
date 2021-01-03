@@ -485,24 +485,22 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
         Examples
         -------
-        Create one sample from a 2-dimensional Gaussian random walk with 10 timesteps::
+        .. code-block:: python
 
-            mu = np.array([1.0, 0.0])
-            cov = np.array([[1.0, 0.0], [0.0, 2.0]])
-            sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random()
+            with pm.Model():
+                mu = np.array([1.0, 0.0])
+                cov = np.array([[1.0, 0.0],
+                                [0.0, 2.0]])
 
-        Create three samples from a 2-dimensional Gaussian random walk with 10 timesteps::
+                # draw one sample from a 2-dimensional Gaussian random walk with 10 timesteps
+                sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random()
 
-            mu = np.array([1.0, 0.0])
-            cov = np.array([[1.0, 0.0], [0.0, 2.0]])
-            sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=3)
+                # draw three samples from a 2-dimensional Gaussian random walk with 10 timesteps
+                sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=3)
 
-        Create four samples from a 2-dimensional Gaussian random walk with 10
-        timesteps, indexed with a (2, 2) array::
-
-            mu = np.array([1.0, 0.0])
-            cov = np.array([[1.0, 0.0], [0.0, 2.0]])
-            sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=(2, 2))
+                # draw four samples from a 2-dimensional Gaussian random walk with 10 timesteps,
+                # indexed with a (2, 2) array
+                sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=(2, 2))
         """
 
         # for each draw specified by the size input, we need to draw time_steps many
