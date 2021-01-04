@@ -89,16 +89,9 @@ def pymc3_random(
 
 
 def pymc3_random_discrete(
-    dist,
-    paramdomains,
-    valuedomain=Domain([0]),
-    ref_rand=None,
-    size=100000,
-    alpha=0.05,
-    fails=20,
-    extra_args=None,
+    dist, paramdomains, valuedomain=Domain([0]), ref_rand=None, size=100000, alpha=0.05, fails=20
 ):
-    model = build_model(dist, valuedomain, paramdomains, extra_args=extra_args)
+    model = build_model(dist, valuedomain, paramdomains)
     domains = paramdomains.copy()
     for pt in product(domains, n_samples=100):
         pt = pm.Point(pt, model=model)
