@@ -25,7 +25,8 @@ import theano.tensor as tt
 import theano.tensor.slinalg  # pylint: disable=unused-import
 
 from scipy.linalg import block_diag as scipy_block_diag
-from theano.gof import Apply, Op
+from theano.gof.graph import Apply
+from theano.gof.op import Op
 
 # pylint: disable=unused-import
 from theano.tensor import (
@@ -340,7 +341,7 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
         return tt.set_subtensor(out[idxs], packed)
 
 
-class BatchedDiag(tt.Op):
+class BatchedDiag(Op):
     """
     Fast BatchedDiag allocation
     """
@@ -352,7 +353,7 @@ class BatchedDiag(tt.Op):
         if diag.type.ndim != 2:
             raise TypeError("data argument must be a matrix", diag.type)
 
-        return tt.Apply(self, [diag], [tt.tensor3(dtype=diag.dtype)])
+        return Apply(self, [diag], [tt.tensor3(dtype=diag.dtype)])
 
     def perform(self, node, ins, outs, params=None):
         (C,) = ins
@@ -408,7 +409,7 @@ class BlockDiagonalMatrix(Op):
             out_type = theano.sparse.matrix(self.format, dtype=largest_common_dtype(matrices))
         else:
             out_type = theano.tensor.matrix(dtype=largest_common_dtype(matrices))
-        return tt.Apply(self, matrices, [out_type])
+        return Apply(self, matrices, [out_type])
 
     def perform(self, node, inputs, output_storage, params=None):
         dtype = largest_common_dtype(inputs)

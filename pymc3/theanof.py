@@ -18,7 +18,7 @@ import theano
 from theano import change_flags, scalar
 from theano import tensor as tt
 from theano.gof import Op
-from theano.gof.graph import inputs
+from theano.gof.graph import Apply, inputs
 from theano.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 
 from pymc3.blocking import ArrayOrdering
@@ -340,7 +340,7 @@ class GeneratorOp(Op):
 
     def make_node(self, *inputs):
         gen_var = self.generator.make_variable(self)
-        return theano.Apply(self, [], [gen_var])
+        return Apply(self, [], [gen_var])
 
     def perform(self, node, inputs, output_storage, params=None):
         if self.default is not None:

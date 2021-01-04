@@ -158,7 +158,7 @@ We can now use `scipy.optimize.newton` to find the root::
     def mu_from_theta(theta):
         return optimize.newton(func, 1, fprime=jac, args=(theta,))
 
-We could wrap `mu_from_theta` with `tt.as_op` and use gradient-free
+We could wrap `mu_from_theta` with `theano.compile.ops.as_op` and use gradient-free
 methods like Metropolis, but to get NUTS and ADVI working, we also
 need to define the derivative of `mu_from_theta`. We can find this
 derivative using the implicit function theorem, or equivalently we
@@ -186,8 +186,9 @@ Now, we use this to define a theano op, that also computes the gradient::
     import theano
     import theano.tensor as tt
     import theano.tests.unittest_tools
+    from theano.gof.op import Op
 
-    class MuFromTheta(tt.Op):
+    class MuFromTheta(Op):
         itypes = [tt.dscalar]
         otypes = [tt.dscalar]
 
