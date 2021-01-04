@@ -741,23 +741,6 @@ class DirichletMultinomial(Discrete):
         mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         self.mode = mode
 
-    def logp(self, x):
-        a = self.a
-        n = self.n
-        sum_a = a.sum(axis=-1, keepdims=True)
-
-        const = (gammaln(n + 1) + gammaln(sum_a)) - gammaln(n + sum_a)
-        series = gammaln(x + a) - (gammaln(x + 1) + gammaln(a))
-        result = const + series.sum(axis=-1, keepdims=True)
-        return bound(
-            result,
-            tt.all(tt.ge(x, 0)),
-            tt.all(tt.gt(a, 0)),
-            tt.all(tt.ge(n, 0)),
-            tt.all(tt.eq(x.sum(axis=-1, keepdims=True), n)),
-            broadcast_conditions=False,
-        )
-
     def _random(self, n, a, size=None, raw_size=None):
         original_dtype = a.dtype
         # Set float type to float64 for numpy. This change is related to numpy issue #8317 (https://github.com/numpy/numpy/issues/8317)
@@ -819,6 +802,23 @@ class DirichletMultinomial(Discrete):
             size=size,
         )
         return samples
+
+    def logp(self, x):
+        a = self.a
+        n = self.n
+        sum_a = a.sum(axis=-1, keepdims=True)
+
+        const = (gammaln(n + 1) + gammaln(sum_a)) - gammaln(n + sum_a)
+        series = gammaln(x + a) - (gammaln(x + 1) + gammaln(a))
+        result = const + series.sum(axis=-1, keepdims=True)
+        return bound(
+            result,
+            tt.all(tt.ge(x, 0)),
+            tt.all(tt.gt(a, 0)),
+            tt.all(tt.ge(n, 0)),
+            tt.all(tt.eq(x.sum(axis=-1, keepdims=True), n)),
+            broadcast_conditions=False,
+        )
 
     def _distr_parameters_for_repr(self):
         return ["n", "a"]
