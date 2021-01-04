@@ -1743,7 +1743,10 @@ class TestMatchesScipy(SeededTest):
     @pytest.mark.parametrize("n", [2, 3])
     def test_dirichlet_multinomial(self, n):
         self.pymc3_matches_scipy(
-            DirichletMultinomial, Vector(Nat, n), {"a": Vector(Rplus, n), "n": Nat}, dirichlet_multinomial_logpmf
+            DirichletMultinomial,
+            Vector(Nat, n),
+            {"a": Vector(Rplus, n), "n": Nat},
+            dirichlet_multinomial_logpmf,
         )
 
     @pytest.mark.parametrize(

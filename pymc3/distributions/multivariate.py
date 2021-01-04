@@ -735,11 +735,10 @@ class DirichletMultinomial(Discrete):
         p = self.a / self.a.sum(-1, keepdims=True)
 
         self.mean = self.n * p
-        mode = tt.cast(tt.round(self.mean), 'int32')
+        mode = tt.cast(tt.round(self.mean), "int32")
         diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
         inc_bool_arr = tt.abs_(diff) > 0
-        mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()],
-                                diff[inc_bool_arr.nonzero()])
+        mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         self.mode = mode
 
     def logp(self, x):
@@ -750,12 +749,14 @@ class DirichletMultinomial(Discrete):
         const = (gammaln(n + 1) + gammaln(sum_a)) - gammaln(n + sum_a)
         series = gammaln(x + a) - (gammaln(x + 1) + gammaln(a))
         result = const + series.sum(axis=-1, keepdims=True)
-        return bound(result,
-                     tt.all(tt.ge(x, 0)),
-                     tt.all(tt.gt(a, 0)),
-                     tt.all(tt.ge(n, 0)),
-                     tt.all(tt.eq(x.sum(axis=-1, keepdims=True), n)),
-                     broadcast_conditions=False)
+        return bound(
+            result,
+            tt.all(tt.ge(x, 0)),
+            tt.all(tt.gt(a, 0)),
+            tt.all(tt.ge(n, 0)),
+            tt.all(tt.eq(x.sum(axis=-1, keepdims=True), n)),
+            broadcast_conditions=False,
+        )
 
     def _random(self, n, a, size=None, raw_size=None):
         original_dtype = a.dtype

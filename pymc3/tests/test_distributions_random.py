@@ -89,7 +89,13 @@ def pymc3_random(
 
 
 def pymc3_random_discrete(
-    dist, paramdomains, valuedomain=Domain([0]), ref_rand=None, size=100000, alpha=0.05, fails=20,
+    dist,
+    paramdomains,
+    valuedomain=Domain([0]),
+    ref_rand=None,
+    size=100000,
+    alpha=0.05,
+    fails=20,
     extra_args=None,
 ):
     model = build_model(dist, valuedomain, paramdomains, extra_args=extra_args)
