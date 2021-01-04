@@ -19,7 +19,8 @@ import scipy
 import theano
 import theano.tensor as tt
 
-from theano.gof.op import get_test_value
+from theano.gof.graph import Apply
+from theano.gof.op import Op, get_test_value
 
 from pymc3.exceptions import DtypeError, ShapeError
 from pymc3.ode import utils
@@ -28,7 +29,7 @@ _log = logging.getLogger("pymc3")
 floatX = theano.config.floatX
 
 
-class DifferentialEquation(theano.Op):
+class DifferentialEquation(Op):
     r"""
     Specify an ordinary differential equation
 
@@ -141,7 +142,7 @@ class DifferentialEquation(theano.Op):
 
         # store symbolic output in dictionary such that it can be accessed in the grad method
         self._output_sensitivities[hash(inputs)] = sens
-        return theano.Apply(self, inputs, (states, sens))
+        return Apply(self, inputs, (states, sens))
 
     def __call__(self, y0, theta, return_sens=False, **kwargs):
         if isinstance(y0, (list, tuple)) and not len(y0) == self.n_states:
@@ -162,7 +163,7 @@ class DifferentialEquation(theano.Op):
                 )
 
         # use default implementation to prepare symbolic outputs (via make_node)
-        states, sens = super(theano.Op, self).__call__(y0, theta, **kwargs)
+        states, sens = super().__call__(y0, theta, **kwargs)
 
         if theano.config.compute_test_value != "off":
             # compute test values from input test values

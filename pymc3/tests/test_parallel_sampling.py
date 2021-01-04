@@ -19,6 +19,8 @@ import pytest
 import theano
 import theano.tensor as tt
 
+from theano.compile.ops import as_op
+
 import pymc3 as pm
 import pymc3.parallel_sampling as ps
 
@@ -61,7 +63,7 @@ def test_bad_unpickle():
 tt_vector = tt.TensorType(theano.config.floatX, [False])
 
 
-@theano.as_op([tt_vector, tt.iscalar], [tt_vector])
+@as_op([tt_vector, tt.iscalar], [tt_vector])
 def _crash_remote_process(a, master_pid):
     if os.getpid() != master_pid:
         os.exit(0)

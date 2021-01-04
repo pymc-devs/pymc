@@ -26,6 +26,8 @@ import pandas as pd
 import theano
 import theano.tensor as tt
 
+from theano.gof.graph import Apply
+
 import pymc3 as pm
 
 __all__ = [
@@ -320,7 +322,7 @@ class Minibatch(tt.TensorVariable):
         minibatch = tt.patternbroadcast(minibatch, broadcastable)
         self.minibatch = minibatch
         super().__init__(self.minibatch.type, None, None, name=name)
-        theano.Apply(theano.compile.view_op, inputs=[self.minibatch], outputs=[self])
+        Apply(theano.compile.view_op, inputs=[self.minibatch], outputs=[self])
         self.tag.test_value = copy(self.minibatch.tag.test_value)
 
     def rslice(self, total, size, seed):

@@ -27,6 +27,8 @@ import theano.tensor as tt
 
 from theano import scan
 from theano.compile.builders import OpFromGraph
+from theano.gof.graph import Apply
+from theano.gof.op import Op
 from theano.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from theano.scan import until
 from theano.tensor.slinalg import Cholesky
@@ -312,7 +314,7 @@ def MvNormalLogp():
     return OpFromGraph([cov, delta], [logp], grad_overrides=dlogp, inline=True)
 
 
-class SplineWrapper(theano.Op):
+class SplineWrapper(Op):
     """
     Creates a theano operation from scipy.interpolate.UnivariateSpline
     """
@@ -324,7 +326,7 @@ class SplineWrapper(theano.Op):
 
     def make_node(self, x):
         x = tt.as_tensor_variable(x)
-        return tt.Apply(self, [x], [x.type()])
+        return Apply(self, [x], [x.type()])
 
     @property
     def grad_op(self):

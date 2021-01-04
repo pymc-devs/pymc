@@ -26,6 +26,8 @@ import theano
 import theano.tensor as tt
 
 from numpy.testing import assert_array_almost_equal
+from theano.compile.ops import as_op
+from theano.gof.op import Op
 
 from pymc3.data import Data
 from pymc3.distributions import (
@@ -719,7 +721,7 @@ class TestAssignStepMethods:
             itypes = [tt.dscalar] if is_64 else [tt.fscalar]
             otypes = [tt.dscalar] if is_64 else [tt.fscalar]
 
-            @theano.as_op(itypes, otypes)
+            @as_op(itypes, otypes)
             def kill_grad(x):
                 return x
 
@@ -1456,7 +1458,7 @@ class TestMLDA:
         np.fill_diagonal(s, sigma ** 2)
 
         # forward model Op - here, just the regression equation
-        class ForwardModel(tt.Op):
+        class ForwardModel(Op):
             if theano.config.floatX == "float32":
                 itypes = [tt.fvector]
                 otypes = [tt.fvector]
@@ -1598,7 +1600,7 @@ class TestMLDA:
         nchains = 1
 
         # define likelihoods with different Q
-        class Likelihood1(tt.Op):
+        class Likelihood1(Op):
             if theano.config.floatX == "float32":
                 itypes = [tt.fvector]
                 otypes = [tt.fscalar]
@@ -1621,7 +1623,7 @@ class TestMLDA:
                     -(0.5 / s ** 2) * np.sum((temp - self.y) ** 2, dtype=p), dtype=p
                 )
 
-        class Likelihood2(tt.Op):
+        class Likelihood2(Op):
             if theano.config.floatX == "float32":
                 itypes = [tt.fvector]
                 otypes = [tt.fscalar]

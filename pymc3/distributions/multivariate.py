@@ -23,7 +23,8 @@ import theano
 import theano.tensor as tt
 
 from scipy import linalg, stats
-from theano.gof.op import get_test_value
+from theano.gof.graph import Apply
+from theano.gof.op import Op, get_test_value
 from theano.gof.utils import TestValueError
 from theano.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from theano.tensor.slinalg import Cholesky
@@ -835,7 +836,7 @@ def posdef(AA):
         return 0
 
 
-class PosDefMatrix(theano.Op):
+class PosDefMatrix(Op):
     """
     Check if input is positive definite. Input should be a square matrix.
 
@@ -850,7 +851,7 @@ class PosDefMatrix(theano.Op):
         x = tt.as_tensor_variable(x)
         assert x.ndim == 2
         o = tt.TensorType(dtype="int8", broadcastable=[])()
-        return theano.Apply(self, [x], [o])
+        return Apply(self, [x], [o])
 
     # Python implementation:
     def perform(self, node, inputs, outputs):

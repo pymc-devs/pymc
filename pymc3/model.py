@@ -28,6 +28,7 @@ import theano.tensor as tt
 
 from pandas import Series
 from theano.compile import SharedVariable
+from theano.gof.graph import Apply
 from theano.tensor.var import TensorVariable
 
 import pymc3 as pm
@@ -1817,7 +1818,7 @@ class ObservedRV(Factor, PyMC3Variable):
             self.distribution = distribution
 
             # make this RV a view on the combined missing/nonmissing array
-            theano.gof.Apply(theano.compile.view_op, inputs=[data], outputs=[self])
+            Apply(theano.compile.view_op, inputs=[data], outputs=[self])
             self.tag.test_value = theano.compile.view_op(data).tag.test_value.astype(self.dtype)
             self.scaling = _get_scaling(total_size, data.shape, data.ndim)
 
@@ -1997,7 +1998,7 @@ class TransformedRV(PyMC3Variable):
 
             normalRV = transform.backward(self.transformed)
 
-            theano.Apply(theano.compile.view_op, inputs=[normalRV], outputs=[self])
+            Apply(theano.compile.view_op, inputs=[normalRV], outputs=[self])
             self.tag.test_value = normalRV.tag.test_value
             self.scaling = _get_scaling(total_size, self.shape, self.ndim)
             incorporate_methods(
