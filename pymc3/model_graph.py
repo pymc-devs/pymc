@@ -69,7 +69,7 @@ class ModelGraph:
             else:
                 return None
 
-        stack_search(nodes=deque([func]), expand=_expand, bfs=True)
+        stack_search(start=deque([func]), expand=_expand, mode="bfs")
         return retval
 
     def _filter_parents(self, var, parents) -> Set[VarName]:
