@@ -698,16 +698,16 @@ class DirichletMultinomial(Discrete):
 
     .. math::
 
-    f(x \mid n, \alpha) = \frac{\Gamma(n + 1)\Gamma(\sum\alpha_k)}
-                              {\Gamma(\n + \sum\alpha_k)}
+    f(x \mid n, a) = \frac{\Gamma(n + 1)\Gamma(\sum a_k)}
+                              {\Gamma(\n + \sum a_k)}
                          \prod_{k=1}^K
-                         \frac{\Gamma(x_k + \alpha_k)}
-                              {\Gamma(x_k + 1)\Gamma(alpha_k)}
+                         \frac{\Gamma(x_k +  a_k)}
+                              {\Gamma(x_k + 1)\Gamma(a_k)}
 
     ==========  ===========================================
     Support     :math:`x \in \{0, 1, \ldots, n\}` such that
                 :math:`\sum x_i = n`
-    Mean        :math:`n \frac{\alpha_i}{\sum{\alpha_k}}`
+    Mean        :math:`n \frac{a_i}{\sum{a_k}}`
     ==========  ===========================================
 
     Parameters
@@ -719,7 +719,7 @@ class DirichletMultinomial(Discrete):
     a : one- or two-dimensional array
         Dirichlet parameter.  Elements must be non-negative.
         Dimension of each element of the distribution is the length
-        of the second dimension of alpha.
+        of the second dimension of *a*.
     """
 
     def __init__(self, n, a, *args, **kwargs):
@@ -748,12 +748,12 @@ class DirichletMultinomial(Discrete):
         a = a.astype("float64")
 
         # Thanks to the default shape handling done in generate_values, the last
-        # axis of n is a dummy axis that allows it to broadcast well with alpha
+        # axis of n is a dummy axis that allows it to broadcast well with `a`
         n = np.broadcast_to(n, size)
         a = np.broadcast_to(a, size)
         n = n[..., 0]
 
-        # np.random.multinomial needs `n` to be a scalar int and `alpha` a
+        # np.random.multinomial needs `n` to be a scalar int and `a` a
         # sequence so we semi flatten them and iterate over them
         size_ = to_tuple(raw_size)
         if a.ndim > len(size_) and a.shape[: len(size_)] == size_:
