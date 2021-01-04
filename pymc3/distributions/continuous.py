@@ -45,7 +45,7 @@ from pymc3.distributions.dist_math import (
 )
 from pymc3.distributions.distribution import Continuous, draw_values, generate_samples
 from pymc3.distributions.special import log_i0
-from pymc3.math import invlogit, log1mexp, logdiffexp, logit
+from pymc3.math import invlogit, log1mexp, log1pexp, logdiffexp, logit
 from pymc3.theanof import floatX
 
 __all__ = [
@@ -3887,25 +3887,6 @@ class Logistic(Continuous):
         self.mean = self.mode = mu
         self.variance = s ** 2 * np.pi ** 2 / 3.0
 
-    def logp(self, value):
-        """
-        Calculate log-probability of Logistic distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-        mu = self.mu
-        s = self.s
-
-        return bound(-(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)), s > 0)
-
     def random(self, point=None, size=None):
         """
         Draw random values from Logistic distribution.
@@ -3929,16 +3910,32 @@ class Logistic(Continuous):
             stats.logistic.rvs, loc=mu, scale=s, dist_shape=self.shape, size=size
         )
 
+    def logp(self, value):
+        """
+        Calculate log-probability of Logistic distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        mu = self.mu
+        s = self.s
+
+        return bound(
+            -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)),
+            s > 0,
+        )
+
     def logcdf(self, value):
         r"""
         Compute the log of the cumulative distribution function for Logistic distribution
         at the specified value.
-
-        References
-        ----------
-        .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing :math:  `\log(1-\exp(- \mid a \mid<))` Assessed by the Rmpfr
-            package"
 
         Parameters
         ----------
@@ -3952,14 +3949,7 @@ class Logistic(Continuous):
         """
         mu = self.mu
         s = self.s
-        a = -(value - mu) / s
-        return -tt.switch(
-            tt.le(a, -37),
-            tt.exp(a),
-            tt.switch(
-                tt.le(a, 18), tt.log1p(tt.exp(a)), tt.switch(tt.le(a, 33.3), tt.exp(-a) + a, a)
-            ),
-        )
+        return -log1pexp(-(value - mu) / s)
 
 
 class LogitNormal(UnitContinuous):
