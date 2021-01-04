@@ -642,9 +642,7 @@ class TestScalarParameterSamples(SeededTest):
 
             return x
 
-        pymc3_random(
-            pm.AsymmetricLaplace, {"b": Domain([0, 1, np.inf]), "kappa": Rplus}, ref_rand=ref_rand
-        )
+        pymc3_random(pm.AsymmetricLaplace, {"b": Rplus, "kappa": Rplus}, ref_rand=ref_rand)
 
     def test_lognormal(self):
         def ref_rand(size, mu, tau):

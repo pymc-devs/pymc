@@ -220,10 +220,10 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
     return m
 
 
-def laplace_asymmetric_logpdf(value, kappa, b=None):
+def laplace_asymmetric_logpdf(value, kappa, b):
     kapinv = 1 / kappa
-    lPx = value * np.where(value >= 0, -kappa, kapinv)
-    lPx -= np.log(kappa + kapinv)
+    lPx = value * b * np.where(value >= 0, -kappa, kapinv)
+    lPx += np.log(b / (kappa + kapinv))
     return lPx
 
 
@@ -999,7 +999,7 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(
             AsymmetricLaplace,
             R,
-            {"b": Domain([0, 1, inf]), "kappa": Rplus},
+            {"b": Rplus, "kappa": Rplus},
             laplace_asymmetric_logpdf,
         )
 

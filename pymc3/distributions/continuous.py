@@ -1668,44 +1668,53 @@ class AsymmetricLaplace(Continuous):
 
     The pdf of this distribution is
 
-    ..math::
+    .. math::
         {f(x|\\b,\kappa) =
             \left({\frac{\\b}{\kappa + 1/\kappa}}\right)\,e^{-(x)\\b\,s\kappa ^{s}}}
-        where s = sgn(x)
+
+    where
+
+    .. math::
+
+        s = sgn(x)
+
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu-\frac{\\\kappa-1/\kappa}b`
+    Variance  :math:`\frac{1+\kappa^{4}}{b^2\kappa^2 }`
+    ========  ========================
 
     Parameters
     ----------
-    b:
+    b: float
         Scale parameter (b > 0)
-    kappa:
+    kappa: float
         Symmetry parameter (kappa > 0)
+    mu: float
+        Location parameter
 
-    See also: https://en.wikipedia.org/wiki/Asymmetric_Laplace_distribution
+    See Also:
+    --------
+    `Reference <https://en.wikipedia.org/wiki/Asymmetric_Laplace_distribution>`_
     """
 
-    def __init__(self, b, kappa, testval=0.0, *args, **kwargs):
-        self.b = tt.as_tensor_variable(b)
-        self.kappa = tt.as_tensor_variable(kappa)
+    def __init__(self, b, kappa, mu=0, *args, **kwargs):
+        self.b = tt.as_tensor_variable(floatX(b))
+        self.kappa = tt.as_tensor_variable(floatX(kappa))
+        self.mu = mu = tt.as_tensor_variable(floatX(mu))
 
-        super().__init__(*args, **kwargs, testval=testval)
+        self.mean = self.mu - (self.kappa - 1 / self.kappa) / b
+        self.variance = (1 + self.kappa ** 4) / (self.kappa ** 2 * self.b ** 2)
+
+        super().__init__(*args, **kwargs)
 
     def _random(self, b, kappa, size=None):
-        if size is not None:
-            u = np.random.uniform(size=size)
-            x = -np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b) * (
-                u > ((kappa ** 2) / (1 + kappa ** 2))
-            ) + kappa * np.log(u * (1 + kappa ** 2) / (kappa ** 2)) / b * (
-                u < ((kappa ** 2) / (1 + kappa ** 2))
-            )
-            return x
-
-        u = np.random.uniform()
-        if u > (kappa ** 2) / (1 + kappa ** 2):
-            x = -np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
-        else:
-            x = kappa * np.log(u * (1 + kappa ** 2) / (kappa ** 2)) / b
-
-        return x
+        u = np.random.uniform(size=size)
+        switch = kappa ** 2 / (1 + kappa ** 2)
+        non_positive_x = kappa * np.log(u * (1 / switch)) / b
+        positive_x = -np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
+        draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
+        return draws
 
     def random(self, point=None, size=None):
         """
@@ -1741,6 +1750,7 @@ class AsymmetricLaplace(Continuous):
         -------
         TensorVariable
         """
+        value = value - self.mu
         return bound(
             tt.log(self.b / (self.kappa + (self.kappa ** -1)))
             + (-value * self.b * tt.sgn(value) * (self.kappa ** tt.sgn(value))),
