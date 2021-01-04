@@ -92,7 +92,7 @@ While strongly discouraged due to installation problems you could try to install
 
     pip install pymc3
 
-The reason installation via PyPI is difficult, especially on Windows and OSX, is that `Theano` requires compilation against MKL, which is difficult to set up, while Conda comes with its own compilers and MKL installation.
+The reason installation via PyPI is difficult, especially on Windows and OSX, is that ``Theano`` requires compilation against MKL, which is difficult to set up, while Conda comes with its own compilers and MKL installation.
 .. note::
 
     Running ``pip install pymc`` will install PyMC 2.3, not PyMC3, from PyPI.
