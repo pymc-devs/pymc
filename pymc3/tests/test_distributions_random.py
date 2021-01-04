@@ -991,13 +991,13 @@ class TestScalarParameterSamples(SeededTest):
             )
 
     def test_dirichlet_multinomial(self):
-        def ref_rand(size, alpha, n):
-            k = alpha.shape[-1]
+        def ref_rand(size, a, n):
+            k = a.shape[-1]
             out = np.empty((size, k), dtype=int)
             # debug_p = np.empty((size, k))
             # FIXME: Vectorize this?
             for i in range(size):
-                p = nr.dirichlet(alpha)
+                p = nr.dirichlet(a)
                 x = nr.multinomial(n=n, pvals=p)
                 out[i, :] = x
                 # debug_p[i, :] = p
@@ -1007,7 +1007,7 @@ class TestScalarParameterSamples(SeededTest):
         for n in [2, 3]:
             pymc3_random_discrete(
                 pm.DirichletMultinomial,
-                {"alpha": Vector(Rplus, n), "n": Nat},
+                {"a": Vector(Rplus, n), "n": Nat},
                 valuedomain=Vector(Nat, n),
                 size=1000,
                 ref_rand=ref_rand,

@@ -712,27 +712,27 @@ class DirichletMultinomial(Discrete):
 
     Parameters
     ----------
-    alpha : two-dimensional array
+    a : two-dimensional array
         Dirichlet parameter.  Elements must be non-negative.
         Dimension of each element of the distribution is the length
         of the second dimension of alpha.
-    n     : one-dimensional array
+    n : one-dimensional array
         Total counts in each replicate.
 
     """
 
-    def __init__(self, n, alpha, *args, **kwargs):
+    def __init__(self, n, a, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         if len(self.shape) > 1:
             self.n = tt.shape_padright(n)
-            self.alpha = tt.as_tensor_variable(alpha) if alpha.ndim > 1 else tt.shape_padleft(alpha)
+            self.a = tt.as_tensor_variable(a) if a.ndim > 1 else tt.shape_padleft(a)
         else:
             # n is a scalar, p is a 1d array
             self.n = tt.as_tensor_variable(n)
-            self.alpha = tt.as_tensor_variable(alpha)
+            self.a = tt.as_tensor_variable(a)
 
-        p = self.alpha / self.alpha.sum(-1, keepdims=True)
+        p = self.a / self.a.sum(-1, keepdims=True)
 
         self.mean = self.n * p
         mode = tt.cast(tt.round(self.mean), 'int32')
@@ -743,51 +743,51 @@ class DirichletMultinomial(Discrete):
         self.mode = mode
 
     def logp(self, x):
-        alpha = self.alpha
+        a = self.a
         n = self.n
-        sum_alpha = alpha.sum(axis=-1, keepdims=True)
+        sum_a = a.sum(axis=-1, keepdims=True)
 
-        const = (gammaln(n + 1) + gammaln(sum_alpha)) - gammaln(n + sum_alpha)
-        series = gammaln(x + alpha) - (gammaln(x + 1) + gammaln(alpha))
+        const = (gammaln(n + 1) + gammaln(sum_a)) - gammaln(n + sum_a)
+        series = gammaln(x + a) - (gammaln(x + 1) + gammaln(a))
         result = const + series.sum(axis=-1, keepdims=True)
         return bound(result,
                      tt.all(tt.ge(x, 0)),
-                     tt.all(tt.gt(alpha, 0)),
+                     tt.all(tt.gt(a, 0)),
                      tt.all(tt.ge(n, 0)),
                      tt.all(tt.eq(x.sum(axis=-1, keepdims=True), n)),
                      broadcast_conditions=False)
 
-    def _random(self, n, alpha, size=None, raw_size=None):
-        original_dtype = alpha.dtype
+    def _random(self, n, a, size=None, raw_size=None):
+        original_dtype = a.dtype
         # Set float type to float64 for numpy. This change is related to numpy issue #8317 (https://github.com/numpy/numpy/issues/8317)
-        alpha = alpha.astype("float64")
+        a = a.astype("float64")
 
         # Thanks to the default shape handling done in generate_values, the last
         # axis of n is a dummy axis that allows it to broadcast well with alpha
         n = np.broadcast_to(n, size)
-        alpha = np.broadcast_to(alpha, size)
+        a = np.broadcast_to(a, size)
         n = n[..., 0]
 
         # np.random.multinomial needs `n` to be a scalar int and `alpha` a
         # sequence so we semi flatten them and iterate over them
         size_ = to_tuple(raw_size)
-        if alpha.ndim > len(size_) and alpha.shape[: len(size_)] == size_:
-            # alpha and n have the size_ prepend so we don't need it in np.random
+        if a.ndim > len(size_) and a.shape[: len(size_)] == size_:
+            # a and n have the size_ prepend so we don't need it in np.random
             n_ = n.reshape([-1])
-            alpha_ = alpha.reshape([-1, alpha.shape[-1]])
-            p_ = np.array([np.random.dirichlet(aa) for aa in alpha_])
+            a_ = a.reshape([-1, a.shape[-1]])
+            p_ = np.array([np.random.dirichlet(aa) for aa in a_])
             samples = np.array([np.random.multinomial(nn, pp) for nn, pp in zip(n_, p_)])
-            samples = samples.reshape(alpha.shape)
+            samples = samples.reshape(a.shape)
         else:
-            # alpha and n don't have the size prepend
+            # a and n don't have the size prepend
             n_ = n.reshape([-1])
-            alpha_ = alpha.reshape([-1, alpha.shape[-1]])
-            p_ = np.array([np.random.dirichlet(aa) for aa in alpha_])
+            a_ = a.reshape([-1, a.shape[-1]])
+            p_ = np.array([np.random.dirichlet(aa) for aa in a_])
             samples = np.array(
                 [np.random.multinomial(nn, pp, size=size_) for nn, pp in zip(n_, p_)]
             )
             samples = np.moveaxis(samples, 0, -1)
-            samples = samples.reshape(size + alpha.shape)
+            samples = samples.reshape(size + a.shape)
         # We cast back to the original dtype
         return samples.astype(original_dtype)
 
@@ -808,25 +808,19 @@ class DirichletMultinomial(Discrete):
         -------
         array
         """
-        n, alpha = draw_values([self.n, self.alpha], point=point, size=size)
+        n, a = draw_values([self.n, self.a], point=point, size=size)
         samples = generate_samples(
             self._random,
             n,
-            alpha,
+            a,
             dist_shape=self.shape,
             not_broadcast_kwargs={"raw_size": size},
             size=size,
         )
         return samples
 
-    def _repr_latex_(self, name=None, dist=None):
-        if dist is None:
-            dist = self
-        n = dist.n
-        alpha = dist.alpha
-        return (r'${} \sim \text{{DirichletMultinomial}}('
-                r'\matit{{n}}={} \mathit{{\alpha}}={})$'
-                ).format(name, get_variable_name(n), get_variable_name(alpha))
+    def _distr_parameters_for_repr(self):
+        return ["n", "a"]
 
 
 def posdef(AA):
