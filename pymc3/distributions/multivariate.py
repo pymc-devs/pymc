@@ -712,13 +712,14 @@ class DirichletMultinomial(Discrete):
 
     Parameters
     ----------
-    a : two-dimensional array
+    n : int or array
+        Total counts in each replicate. If n is an array its shape must be (N,)
+        with N = a.shape[0]
+
+    a : one- or two-dimensional array
         Dirichlet parameter.  Elements must be non-negative.
         Dimension of each element of the distribution is the length
         of the second dimension of alpha.
-    n : one-dimensional array
-        Total counts in each replicate.
-
     """
 
     def __init__(self, n, a, *args, **kwargs):
