@@ -1000,14 +1000,10 @@ class TestScalarParameterSamples(SeededTest):
         def ref_rand(size, a, n):
             k = a.shape[-1]
             out = np.empty((size, k), dtype=int)
-            # debug_p = np.empty((size, k))
-            # FIXME: Vectorize this?
             for i in range(size):
                 p = nr.dirichlet(a)
                 x = nr.multinomial(n=n, pvals=p)
                 out[i, :] = x
-                # debug_p[i, :] = p
-            # breakpoint()
             return out
 
         for n in [2, 3]:
