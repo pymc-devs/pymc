@@ -963,8 +963,8 @@ class _LKJCholeskyCov(Continuous):
     """
 
     def __init__(self, eta, n, sd_dist, *args, **kwargs):
-        self.n = n
-        self.eta = eta
+        self.n = tt.as_tensor_variable(n)
+        self.eta = tt.as_tensor_variable(eta)
 
         if "transform" in kwargs and kwargs["transform"] is not None:
             raise ValueError("Invalid parameter: transform.")
@@ -1128,6 +1128,9 @@ class _LKJCholeskyCov(Continuous):
         else:
             samples = np.reshape(samples, size + sample_shape)
         return samples
+
+    def _distr_parameters_for_repr(self):
+        return ["eta", "n"]
 
 
 def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=True, *args, **kwargs):
