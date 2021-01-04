@@ -103,19 +103,20 @@ The current development branch of PyMC3 can be installed from GitHub, also using
 
     pip install git+https://github.com/pymc-devs/pymc3
 
-To ensure the development branch of Theano is installed alongside PyMC3
-(recommended), see the Theano Installation section, below.
+To ensure the development branch of `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__ is installed alongside PyMC3
+(recommended), see the `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__ Installation section, below.
 
 Lastly, another option is to clone the repository and install PyMC3 using
 ``python setup.py install`` or ``python setup.py develop``.
 
-Theano Installation
--------------------
+Theano-PyMC Installation
+------------------------
 
-PyMC3 is tested on Python 3.6, 3.7, and 3.8 and depends on `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__,
-NumPy, SciPy, and pandas
+PyMC3 is tested on Python 3.6, 3.7, and 3.8 and depends on NumPy, SciPy, and pandas
 (see `requirements.txt <https://github.com/pymc-devs/pymc3/blob/master/requirements.txt>`__ for version
 information).
+
+Moreover, as of Late 2020, PyMC3 now requires `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__ instead of `Theano <https://github.com/Theano/Theano>`__.
 
 That being said, you can install PyMC3 using the ``requirements.txt``
 file.
@@ -129,7 +130,12 @@ This requires cloning the repository to your computer:
     pip install -r requirements.txt
 
 .. note::
-   If you already have `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__ installed, then re-install the module, as such
+
+   * If you have Theano installed, please remove it and install Theano-PyMC via Conda Forge, seen below:
+
+    ``conda remove theano``
+
+   * If you have an outdated version of Theano-PyMC, then re-install the module via Conda Forge:
 
     ``conda remove theano-pymc -y``
 
