@@ -80,6 +80,7 @@ __all__ = [
     "Interpolated",
     "Rice",
     "Moyal",
+    "AsymmetricLaplace",
 ]
 
 
@@ -1658,6 +1659,106 @@ class Laplace(Continuous):
             tt.le(value, a),
             tt.log(0.5) + y,
             tt.switch(tt.gt(y, 1), tt.log1p(-0.5 * tt.exp(-y)), tt.log(1 - 0.5 * tt.exp(-y))),
+        )
+
+
+class AsymmetricLaplace(Continuous):
+    r"""
+    Asymmetric-Laplace log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+        {f(x|\\b,\kappa,\mu) =
+            \left({\frac{\\b}{\kappa + 1/\kappa}}\right)\,e^{-(x-\mu)\\b\,s\kappa ^{s}}}
+
+    where
+
+    .. math::
+
+        s = sgn(x-\mu)
+
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu-\frac{\\\kappa-1/\kappa}b`
+    Variance  :math:`\frac{1+\kappa^{4}}{b^2\kappa^2 }`
+    ========  ========================
+
+    Parameters
+    ----------
+    b: float
+        Scale parameter (b > 0)
+    kappa: float
+        Symmetry parameter (kappa > 0)
+    mu: float
+        Location parameter
+
+    See Also:
+    --------
+    `Reference <https://en.wikipedia.org/wiki/Asymmetric_Laplace_distribution>`_
+    """
+
+    def __init__(self, b, kappa, mu=0, *args, **kwargs):
+        self.b = tt.as_tensor_variable(floatX(b))
+        self.kappa = tt.as_tensor_variable(floatX(kappa))
+        self.mu = mu = tt.as_tensor_variable(floatX(mu))
+
+        self.mean = self.mu - (self.kappa - 1 / self.kappa) / b
+        self.variance = (1 + self.kappa ** 4) / (self.kappa ** 2 * self.b ** 2)
+
+        assert_negative_support(kappa, "kappa", "AsymmetricLaplace")
+        assert_negative_support(b, "b", "AsymmetricLaplace")
+
+        super().__init__(*args, **kwargs)
+
+    def _random(self, b, kappa, mu, size=None):
+        u = np.random.uniform(size=size)
+        switch = kappa ** 2 / (1 + kappa ** 2)
+        non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
+        positive_x = mu - np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
+        draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
+        return draws
+
+    def random(self, point=None, size=None):
+        """
+        Draw random samples from this distribution, using the inverse CDF method.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size:int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        b, kappa, mu = draw_values([self.b, self.kappa, self.mu], point=point, size=size)
+        return generate_samples(self._random, b, kappa, mu, dist_shape=self.shape, size=size)
+
+    def logp(self, value):
+        """
+        Calculate log-probability of Asymmetric-Laplace distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        value = value - self.mu
+        return bound(
+            tt.log(self.b / (self.kappa + (self.kappa ** -1)))
+            + (-value * self.b * tt.sgn(value) * (self.kappa ** tt.sgn(value))),
+            0 < self.b,
+            0 < self.kappa,
         )
 
 

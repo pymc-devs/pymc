@@ -35,6 +35,7 @@ import pymc3 as pm
 from pymc3.blocking import DictToVarBijection
 from pymc3.distributions import (
     AR1,
+    AsymmetricLaplace,
     Bernoulli,
     Beta,
     BetaBinomial,
@@ -221,6 +222,14 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
         vals.update(extra_args)
         distfam("value", shape=valuedomain.shape, transform=None, **vals)
     return m
+
+
+def laplace_asymmetric_logpdf(value, kappa, b, mu):
+    kapinv = 1 / kappa
+    value = value - mu
+    lPx = value * b * np.where(value >= 0, -kappa, kapinv)
+    lPx += np.log(b / (kappa + kapinv))
+    return lPx
 
 
 def integrate_nd(f, domain, shape, dtype):
@@ -989,6 +998,14 @@ class TestMatchesScipy(SeededTest):
             R,
             {"mu": R, "b": Rplus},
             lambda value, mu, b: sp.laplace.logcdf(value, mu, b),
+        )
+
+    def test_laplace_asymmetric(self):
+        self.pymc3_matches_scipy(
+            AsymmetricLaplace,
+            R,
+            {"b": Rplus, "kappa": Rplus, "mu": R},
+            laplace_asymmetric_logpdf,
         )
 
     def test_lognormal(self):
