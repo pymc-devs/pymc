@@ -791,6 +791,13 @@ class DirichletMultinomial(Discrete):
             not_broadcast_kwargs={"raw_size": size},
             size=size,
         )
+
+        if size is not None:
+            expect_shape = (size, *self.shape)
+        else:
+            expect_shape = self.shape
+        assert tuple(samples.shape) == tuple(expect_shape)
+
         return samples
 
     def logp(self, x):
