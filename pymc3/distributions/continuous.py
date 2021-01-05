@@ -20,7 +20,6 @@ nodes in PyMC.
 import warnings
 
 import numpy as np
-import theano
 import theano.tensor as tt
 
 from scipy import stats
