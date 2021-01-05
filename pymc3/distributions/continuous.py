@@ -20,7 +20,6 @@ nodes in PyMC.
 import warnings
 
 import numpy as np
-import theano
 import theano.tensor as tt
 
 from scipy import stats
@@ -37,10 +36,10 @@ from pymc3.distributions.dist_math import (
     gammaln,
     i0e,
     incomplete_beta,
+    log_normal,
     logpow,
     normal_lccdf,
     normal_lcdf,
-    std_cdf,
     zvalue,
 )
 from pymc3.distributions.distribution import Continuous, draw_values, generate_samples
@@ -3214,21 +3213,21 @@ class ExGaussian(Continuous):
         sigma = self.sigma
         nu = self.nu
 
-        standardized_val = (value - mu) / sigma
-        cdf_val = std_cdf(standardized_val - sigma / nu)
-        cdf_val_safe = tt.switch(tt.eq(cdf_val, 0), np.finfo(theano.config.floatX).eps, cdf_val)
-
-        # This condition is suggested by exGAUS.R from gamlss
-        lp = tt.switch(
-            tt.gt(nu, 0.05 * sigma),
-            -tt.log(nu) + (mu - value) / nu + 0.5 * (sigma / nu) ** 2 + logpow(cdf_val_safe, 1.0),
-            -tt.log(sigma * tt.sqrt(2 * np.pi)) - 0.5 * standardized_val ** 2,
+        # Alogithm is adapted from dexGAUS.R from gamlss
+        return bound(
+            tt.switch(
+                tt.gt(nu, 0.05 * sigma),
+                (
+                    -tt.log(nu)
+                    + (mu - value) / nu
+                    + 0.5 * (sigma / nu) ** 2
+                    + normal_lcdf(mu + (sigma ** 2) / nu, sigma, value)
+                ),
+                log_normal(value, mean=mu, sigma=sigma),
+            ),
+            0 < sigma,
+            0 < nu,
         )
-
-        return bound(lp, sigma > 0.0, nu > 0.0)
-
-    def _distr_parameters_for_repr(self):
-        return ["mu", "sigma", "nu"]
 
     def logcdf(self, value):
         """
@@ -3253,21 +3252,24 @@ class ExGaussian(Continuous):
         """
         mu = self.mu
         sigma = self.sigma
-        sigma_2 = sigma ** 2
         nu = self.nu
-        z = value - mu - sigma_2 / nu
+
+        # Alogithm is adapted from pexGAUS.R from gamlss
         return tt.switch(
             tt.gt(nu, 0.05 * sigma),
-            tt.log(
-                std_cdf((value - mu) / sigma)
-                - std_cdf(z / sigma)
-                * tt.exp(
-                    ((mu + (sigma_2 / nu)) ** 2 - (mu ** 2) - 2 * value * ((sigma_2) / nu))
-                    / (2 * sigma_2)
-                )
+            logdiffexp(
+                normal_lcdf(mu, sigma, value),
+                (
+                    (mu - value) / nu
+                    + 0.5 * (sigma / nu) ** 2
+                    + normal_lcdf(mu + (sigma ** 2) / nu, sigma, value)
+                ),
             ),
             normal_lcdf(mu, sigma, value),
         )
+
+    def _distr_parameters_for_repr(self):
+        return ["mu", "sigma", "nu"]
 
 
 class VonMises(Continuous):

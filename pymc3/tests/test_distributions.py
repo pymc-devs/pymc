@@ -1825,6 +1825,9 @@ class TestMatchesScipy(SeededTest):
             (15.0, 5.000, 7.500, 7.500, -3.3093854),
             (50.0, 50.000, 10.000, 10.000, -3.6436067),
             (1000.0, 500.000, 10.000, 20.000, -27.8707323),
+            (-1.0, 1.0, 20.0, 0.9, -3.91967108),  # Fails in scipy version
+            (0.01, 0.01, 100.0, 0.01, -5.5241087),  # Fails in scipy version
+            (-1.0, 0.0, 0.1, 0.1, -51.022349),  # Fails in previous pymc3 version
         ],
     )
     def test_ex_gaussian(self, value, mu, sigma, nu, logp):
@@ -1851,6 +1854,9 @@ class TestMatchesScipy(SeededTest):
             (15.0, 5.000, 7.500, 7.500, -0.4545255),
             (50.0, 50.000, 10.000, 10.000, -1.433714),
             (1000.0, 500.000, 10.000, 20.000, -1.573708e-11),
+            (0.01, 0.01, 100.0, 0.01, -0.69314718),  # Fails in scipy version
+            (-0.43402407, 0.0, 0.1, 0.1, -13.59615423),  # Previous 32-bit version failed here
+            (-0.72402009, 0.0, 0.1, 0.1, -31.26571842),  # Previous 64-bit version failed here
         ],
     )
     def test_ex_gaussian_cdf(self, value, mu, sigma, nu, logcdf):
