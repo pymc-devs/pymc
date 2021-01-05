@@ -104,7 +104,7 @@ The current development branch of PyMC3 can be installed from GitHub, also using
     pip install git+https://github.com/pymc-devs/pymc3
 
 Make sure to install the `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__ version that is pegged in ``PyMC3``'s ``requirements.txt``.
-(recommended), see the `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__ Installation section, below.
+For more information, see the `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__ Installation section, below.
 
 Lastly, another option is to clone the repository and install PyMC3 using
 ``python setup.py install`` or ``python setup.py develop``.
