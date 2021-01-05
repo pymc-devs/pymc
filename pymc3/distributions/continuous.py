@@ -1669,14 +1669,14 @@ class AsymmetricLaplace(Continuous):
     The pdf of this distribution is
 
     .. math::
-        {f(x|\\b,\kappa) =
-            \left({\frac{\\b}{\kappa + 1/\kappa}}\right)\,e^{-(x)\\b\,s\kappa ^{s}}}
+        {f(x|\\b,\kappa,\mu) =
+            \left({\frac{\\b}{\kappa + 1/\kappa}}\right)\,e^{-(x-\mu)\\b\,s\kappa ^{s}}}
 
     where
 
     .. math::
 
-        s = sgn(x)
+        s = sgn(x-\mu)
 
     ========  ========================
     Support   :math:`x \in \mathbb{R}`
@@ -1706,13 +1706,16 @@ class AsymmetricLaplace(Continuous):
         self.mean = self.mu - (self.kappa - 1 / self.kappa) / b
         self.variance = (1 + self.kappa ** 4) / (self.kappa ** 2 * self.b ** 2)
 
+        assert_negative_support(kappa, "kappa", "AsymmetricLaplace")
+        assert_negative_support(b, "b", "AsymmetricLaplace")
+
         super().__init__(*args, **kwargs)
 
-    def _random(self, b, kappa, size=None):
+    def _random(self, b, kappa, mu, size=None):
         u = np.random.uniform(size=size)
         switch = kappa ** 2 / (1 + kappa ** 2)
-        non_positive_x = kappa * np.log(u * (1 / switch)) / b
-        positive_x = -np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
+        non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
+        positive_x = mu - np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
         draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
         return draws
 
@@ -1733,8 +1736,8 @@ class AsymmetricLaplace(Continuous):
         -------
         array
         """
-        b, kappa = draw_values([self.b, self.kappa], point=point, size=size)
-        return generate_samples(self._random, b, kappa, dist_shape=self.shape, size=size)
+        b, kappa, mu = draw_values([self.b, self.kappa, self.mu], point=point, size=size)
+        return generate_samples(self._random, b, kappa, mu, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """

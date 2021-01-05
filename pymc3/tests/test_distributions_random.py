@@ -377,7 +377,7 @@ class TestLaplace(BaseTestCases.BaseTestCase):
 
 class TestAsymmetricLaplace(BaseTestCases.BaseTestCase):
     distribution = pm.AsymmetricLaplace
-    params = {"kappa": 1.0, "b": 1.0}
+    params = {"kappa": 1.0, "b": 1.0, "mu": 0.0}
 
 
 class TestLognormal(BaseTestCases.BaseTestCase):
@@ -632,17 +632,15 @@ class TestScalarParameterSamples(SeededTest):
         pymc3_random(pm.Laplace, {"mu": R, "b": Rplus}, ref_rand=ref_rand)
 
     def test_laplace_asymmetric(self):
-        def ref_rand(size, kappa, b):
+        def ref_rand(size, kappa, b, mu):
             u = np.random.uniform(size=size)
-            x = -np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b) * (
-                u > ((kappa ** 2) / (1 + kappa ** 2))
-            ) + kappa * np.log(u * (1 + kappa ** 2) / (kappa ** 2)) / b * (
-                u < ((kappa ** 2) / (1 + kappa ** 2))
-            )
+            switch = kappa ** 2 / (1 + kappa ** 2)
+            non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
+            positive_x = mu - np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
+            draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
+            return draws
 
-            return x
-
-        pymc3_random(pm.AsymmetricLaplace, {"b": Rplus, "kappa": Rplus}, ref_rand=ref_rand)
+        pymc3_random(pm.AsymmetricLaplace, {"b": Rplus, "kappa": Rplus, "mu": R}, ref_rand=ref_rand)
 
     def test_lognormal(self):
         def ref_rand(size, mu, tau):
