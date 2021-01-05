@@ -559,7 +559,6 @@ class TestMatchesScipy(SeededTest):
         logp = model.fastlogp
         for pt in product(domains, n_samples=100):
             pt = Point(pt, model=model)
-            print(pt)
             if decimal is None:
                 decimal = select_by_precision(float64=6, float32=3)
             assert_almost_equal(logp(pt), logp_reference(pt), decimal=decimal, err_msg=str(pt))
@@ -579,7 +578,6 @@ class TestMatchesScipy(SeededTest):
             decimal = select_by_precision(float64=6, float32=3)
         for pt in product(domains, n_samples=n_samples):
             params = dict(pt)
-            print(params)
             scipy_cdf = scipy_logcdf(**params)
             value = params.pop("value")
             dist = pymc3_dist.dist(**params)
