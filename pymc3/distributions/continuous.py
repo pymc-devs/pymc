@@ -41,7 +41,6 @@ from pymc3.distributions.dist_math import (
     logpow,
     normal_lccdf,
     normal_lcdf,
-    std_cdf,
     zvalue,
 )
 from pymc3.distributions.distribution import Continuous, draw_values, generate_samples
