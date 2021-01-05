@@ -92,12 +92,12 @@ from pymc3.distributions import (
     ZeroInflatedPoisson,
     continuous,
 )
+from pymc3.distributions.shape_utils import to_tuple
 from pymc3.math import kronecker, logsumexp
 from pymc3.model import Deterministic, Model, Point
 from pymc3.tests.helpers import SeededTest, select_by_precision
 from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
-from pymc3.distributions.shape_utils import to_tuple
 
 
 def get_lkj_cases():
