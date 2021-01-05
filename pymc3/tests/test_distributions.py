@@ -97,6 +97,7 @@ from pymc3.model import Deterministic, Model, Point
 from pymc3.tests.helpers import SeededTest, select_by_precision
 from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
+from pymc3.distributions.shape_utils import to_tuple
 
 
 def get_lkj_cases():
@@ -1798,7 +1799,14 @@ class TestMatchesScipy(SeededTest):
         a = np.asarray(a)
         with Model() as model:
             m = DirichletMultinomial("m", n=n, a=a, shape=shape)
-        m.random()
+        samp0 = m.random()
+        samp1 = m.random(size=1)
+        samp2 = m.random(size=2)
+
+        shape_ = to_tuple(shape)
+        assert to_tuple(samp0.shape) == shape_
+        assert to_tuple(samp1.shape) == (1, *shape_)
+        assert to_tuple(samp2.shape) == (2, *shape_)
 
     def test_dirichlet_multinomial_mode_with_shape(self):
         n = [1, 10]
