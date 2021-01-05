@@ -756,23 +756,12 @@ class DirichletMultinomial(Discrete):
         # np.random.multinomial needs `n` to be a scalar int and `a` a
         # sequence so we semi flatten them and iterate over them
         size_ = to_tuple(raw_size)
-        if a.ndim > len(size_) and a.shape[: len(size_)] == size_:
-            # a and n have the size_ prepend so we don't need it in np.random
-            n_ = n.reshape([-1])
-            a_ = a.reshape([-1, a.shape[-1]])
-            p_ = np.array([np.random.dirichlet(aa) for aa in a_])
-            samples = np.array([np.random.multinomial(nn, pp) for nn, pp in zip(n_, p_)])
-            samples = samples.reshape(a.shape)
-        else:
-            # a and n don't have the size prepend
-            n_ = n.reshape([-1])
-            a_ = a.reshape([-1, a.shape[-1]])
-            p_ = np.array([np.random.dirichlet(aa) for aa in a_])
-            samples = np.array(
-                [np.random.multinomial(nn, pp, size=size_) for nn, pp in zip(n_, p_)]
-            )
-            samples = np.moveaxis(samples, 0, -1)
-            samples = samples.reshape(size + a.shape)
+        # a and n have the size_ prepend so we don't need it in np.random
+        n_ = n.reshape([-1])
+        a_ = a.reshape([-1, a.shape[-1]])
+        p_ = np.array([np.random.dirichlet(aa) for aa in a_])
+        samples = np.array([np.random.multinomial(nn, pp) for nn, pp in zip(n_, p_)])
+        samples = samples.reshape(a.shape)
         # We cast back to the original dtype
         return samples.astype(original_dtype)
 
