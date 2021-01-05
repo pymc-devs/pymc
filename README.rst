@@ -77,22 +77,25 @@ and as part of `PyMCon 2020 <https://discourse.pymc.io/c/pymcon/2020talks/15>`__
 Installation
 ============
 
-The latest release of PyMC3 can be installed from PyPI using ``pip``:
+PyMC3 Installation
+------------------
 
-::
-
-    pip install pymc3
-
-**Note:** Running ``pip install pymc`` will install PyMC 2.3, not PyMC3,
-from PyPI.
-
-Or via conda-forge:
+The latest release of PyMC3 can be installed from Conda Forge (conda-forge):
 
 ::
 
     conda install -c conda-forge pymc3
 
-Plotting is done using `ArviZ <https://arviz-devs.github.io/arviz/>`__ - if you follow the installation instructions above, then it will be installed alongside ``PyMC3``.
+While strongly discouraged due to installation problems you could try to install PyMC3 and its dependencies via PyPI using ``pip``:
+
+::
+
+    pip install pymc3
+
+The reason installation via PyPI is difficult, especially on Windows and OSX, is that ``Theano`` requires compilation against MKL, which is difficult to set up, while Conda comes with its own compilers and MKL installation.
+.. note::
+
+    Running ``pip install pymc`` will install PyMC 2.3, not PyMC3, from PyPI.
 
 The current development branch of PyMC3 can be installed from GitHub, also using ``pip``:
 
@@ -100,9 +103,25 @@ The current development branch of PyMC3 can be installed from GitHub, also using
 
     pip install git+https://github.com/pymc-devs/pymc3
 
-To ensure the development branch of Theano is installed alongside PyMC3
-(recommended), you can install PyMC3 using the ``requirements.txt``
-file. This requires cloning the repository to your computer:
+Make sure to install the `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__ version that is pegged in ``PyMC3``'s ``requirements.txt``.
+For more information, see the `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__ Installation section, below.
+
+Lastly, another option is to clone the repository and install PyMC3 using
+``python setup.py install`` or ``python setup.py develop``.
+
+Theano-PyMC Installation
+------------------------
+
+PyMC3 is tested on Python 3.6, 3.7, and 3.8 and depends on NumPy, SciPy, and pandas
+(see `requirements.txt <https://github.com/pymc-devs/pymc3/blob/master/requirements.txt>`__ for version
+information).
+
+Moreover, as of Late 2020, PyMC3 now requires `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__ instead of `Theano <https://github.com/Theano/Theano>`__.
+
+That being said, you can install PyMC3 using the ``requirements.txt``
+file.
+
+This requires cloning the repository to your computer:
 
 ::
 
@@ -110,20 +129,22 @@ file. This requires cloning the repository to your computer:
     cd pymc3
     pip install -r requirements.txt
 
-However, if a recent version of Theano has already been installed on
-your system, you can install PyMC3 directly from GitHub.
+.. note::
 
-Another option is to clone the repository and install PyMC3 using
-``python setup.py install`` or ``python setup.py develop``.
+   * If you have Theano installed, please remove it and install Theano-PyMC via Conda Forge, seen below:
 
+    ``conda remove theano``
 
-Dependencies
-============
+   * If you have an outdated version of Theano-PyMC, then re-install the module via Conda Forge:
 
-PyMC3 is tested on Python 3.6, 3.7, and 3.8 and depends on `Theano-PyMC <https://github.com/pymc-devs/Theano-PyMC>`__,
-NumPy, SciPy, and pandas
-(see `requirements.txt <https://github.com/pymc-devs/pymc3/blob/master/requirements.txt>`__ for version
-information).
+    ``conda remove theano-pymc -y``
+
+    ``conda install -c conda-forge theano-pymc -y``
+
+Arviz Installation
+------------------
+
+Plotting is done using `ArviZ <https://arviz-devs.github.io/arviz/>`__ - if you follow the installation instructions above, then it will be installed alongside ``PyMC3``.
 
 Optional
 --------
