@@ -44,7 +44,7 @@ repos:
     - id: conda-env-sort
       additional_dependencies: [pyyaml]
       entry: python scripts/sort_conda_envs.py
-      files: ^conda-envs/
+      files: ^conda-envs/environment-dev-py37\.yml$
       language: python
       name: Sort dependencies in conda envs
       types: [yaml]

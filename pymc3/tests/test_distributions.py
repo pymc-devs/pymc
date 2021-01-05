@@ -25,6 +25,8 @@ import theano.tensor as tt
 
 from numpy import array, exp, inf, log
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+from packaging.version import parse
+from scipy import __version__ as scipy_version
 from scipy import integrate
 from scipy.special import erf, logit
 
@@ -96,6 +98,8 @@ from pymc3.model import Deterministic, Model, Point
 from pymc3.tests.helpers import SeededTest, select_by_precision
 from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
+
+SCIPY_VERSION = parse(scipy_version)
 
 
 def get_lkj_cases():
@@ -1163,6 +1167,9 @@ class TestMatchesScipy(SeededTest):
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(
+        condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
+    )
     def test_beta_binomial(self):
         self.checkd(
             BetaBinomial,
