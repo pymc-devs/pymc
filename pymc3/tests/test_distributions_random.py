@@ -1720,3 +1720,53 @@ def test_matrix_normal_random_with_random_variables():
         prior = pm.sample_prior_predictive(2)
 
     assert prior["mu"].shape == (2, D, K)
+
+
+class TestMvGaussianRandomWalk(SeededTest):
+    @pytest.mark.parametrize(
+        ["sample_shape", "dist_shape", "mu_shape", "param"],
+        generate_shapes(include_params=True),
+        ids=str,
+    )
+    def test_with_np_arrays(self, sample_shape, dist_shape, mu_shape, param):
+        dist = pm.MvGaussianRandomWalk.dist(
+            mu=np.ones(mu_shape), **{param: np.eye(3)}, shape=dist_shape
+        )
+        output_shape = to_tuple(sample_shape) + dist_shape
+        assert dist.random(size=sample_shape).shape == output_shape
+
+    @pytest.mark.xfail
+    @pytest.mark.parametrize(
+        ["sample_shape", "dist_shape", "mu_shape"],
+        generate_shapes(include_params=False),
+        ids=str,
+    )
+    def test_with_chol_rv(self, sample_shape, dist_shape, mu_shape):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            chol, corr, stds = pm.LKJCholeskyCov(
+                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            mv = pm.MvGaussianRandomWalk("mv", mu, chol=chol, shape=dist_shape)
+            prior = pm.sample_prior_predictive(samples=sample_shape)
+
+        assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape
+
+    @pytest.mark.xfail
+    @pytest.mark.parametrize(
+        ["sample_shape", "dist_shape", "mu_shape"],
+        generate_shapes(include_params=False),
+        ids=str,
+    )
+    def test_with_cov_rv(self, sample_shape, dist_shape, mu_shape):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            chol, corr, stds = pm.LKJCholeskyCov(
+                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            mv = pm.MvGaussianRandomWalk("mv", mu, cov=pm.math.dot(chol, chol.T), shape=dist_shape)
+            prior = pm.sample_prior_predictive(samples=sample_shape)
+
+        assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape

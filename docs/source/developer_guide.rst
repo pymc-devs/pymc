@@ -134,16 +134,18 @@ below), and x.dist() as the associated density/mass function
 (distribution in the mathematical sense). It is not perfect, and now
 after a few years learning Bayesian statistics I also realized these
 subtleties (i.e., the distinction between *random variable* and
-*distribution*). But when I was learning probabilistic modelling as a
+*distribution*).
+
+But when I was learning probabilistic modelling as a
 beginner, I did find this approach to be the easiest and most
 straightforward. In a perfect world, we should have
 :math:`x \sim \text{Normal}(0, 1)` which defines a random variable that
 follows a Gaussian distribution, and
-:math:`\chi = \text{Normal}(0, 1), x \sim \chi` which define a scalar
-density function that takes input :math:`x`
+:math:`\chi = \text{Normal}(0, 1), x \sim \chi` which define a `probability
+density function <https://en.wikipedia.org/wiki/Probability_density_function>`__ that takes input :math:`x`
 
 .. math::
-    (``X:=f(x) = 1/sqrt(2*pi) * exp(-.5*x**2)``)
+    X:=f(x) = \frac{1}{\sigma \sqrt{2 \pi}} \exp^{- 0.5 (\frac{x - \mu}{\sigma})^2}\vert_{\mu = 0, \sigma=1} = \frac{1}{\sqrt{2 \pi}} \exp^{- 0.5 x^2}
 
 Within a model context, RVs are essentially Theano tensors (more on that
 below). This is different than TFP and pyro, where you need to be more
