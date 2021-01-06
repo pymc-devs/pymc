@@ -743,9 +743,8 @@ class DirichletMultinomial(Discrete):
         self.mode = mode
 
     def _random(self, n, a, size=None, raw_size=None):
+        # numpy will cast dirichlet and multinomial samples to float64 by default
         original_dtype = a.dtype
-        # Set float type to float64 for numpy. This change is related to numpy issue #8317 (https://github.com/numpy/numpy/issues/8317)
-        a = a.astype("float64")
 
         # Thanks to the default shape handling done in generate_values, the last
         # axis of n is a dummy axis that allows it to broadcast well with `a`
@@ -755,13 +754,12 @@ class DirichletMultinomial(Discrete):
 
         # np.random.multinomial needs `n` to be a scalar int and `a` a
         # sequence so we semi flatten them and iterate over them
-        size_ = to_tuple(raw_size)
-        # a and n have the size_ prepend so we don't need it in np.random
         n_ = n.reshape([-1])
         a_ = a.reshape([-1, a.shape[-1]])
         p_ = np.array([np.random.dirichlet(aa) for aa in a_])
         samples = np.array([np.random.multinomial(nn, pp) for nn, pp in zip(n_, p_)])
         samples = samples.reshape(a.shape)
+
         # We cast back to the original dtype
         return samples.astype(original_dtype)
 
