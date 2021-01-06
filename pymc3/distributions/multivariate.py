@@ -731,12 +731,7 @@ class DirichletMultinomial(Discrete):
 
         if len(self.shape) > 1:
             self.n = tt.shape_padright(n)
-            # Be forgiving if users pass a list instead of np.array
-            # TODO: Find more elegant apprach or simply remove forgiveness
-            try:
-                self.a = tt.as_tensor_variable(a) if a.ndim > 1 else tt.shape_padleft(a)
-            except AttributeError:
-                self.a = tt.as_tensor_variable(a) if np.asarray(a).ndim > 1 else tt.shape_padleft(a)
+            self.a = tt.as_tensor_variable(a) if np.ndim(a) > 1 else tt.shape_padleft(a)
         else:
             # n is a scalar, p is a 1d array
             self.n = tt.as_tensor_variable(n)
