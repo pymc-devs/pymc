@@ -1760,28 +1760,20 @@ class TestMatchesScipy(SeededTest):
         assert_allclose(bb_logp, dm_logp)
 
     @pytest.mark.parametrize(
-        "a, n",
+        "a, n, shape",
         [
-            [[0.25, 0.25, 0.25, 0.25], 1],
-            [[0.3, 0.6, 0.05, 0.05], 2],
-            [[0.3, 0.6, 0.05, 0.05], 10],
+            [[0.25, 0.25, 0.25, 0.25], 1, (1, 4)],
+            [[0.3, 0.6, 0.05, 0.05], 2, (1, 4)],
+            [[0.3, 0.6, 0.05, 0.05], 10, (1, 4)],
+            [[0.25, 0.25, 0.25, 0.25], 1, (2, 4)],
+            [[0.3, 0.6, 0.05, 0.05], 2, (3, 4)],
+            [[[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]], [1, 10], (2, 4)],
         ],
     )
-    def test_dirichlet_multinomial_mode(self, a, n):
-        _a = np.array(a)
+    def test_dirichlet_multinomial_mode(self, a, n, shape):
+        a = np.asarray(a)
         with Model() as model:
-            m = DirichletMultinomial("m", n, _a, _a.shape)
-        assert_allclose(m.distribution.mode.eval().sum(), n)
-        _a = np.array([a, a])
-        with Model() as model:
-            m = DirichletMultinomial("m", n, _a, _a.shape)
-        assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
-
-    def test_dirichlet_multinomial_mode_with_shape(self):
-        n = [1, 10]
-        a = np.asarray([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]])
-        with Model() as model:
-            m = DirichletMultinomial("m", n=n, a=a, shape=(2, 4))
+            m = DirichletMultinomial("m", n=n, a=a, shape=shape)
         assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
 
     def test_dirichlet_multinomial_vec(self):
@@ -1854,37 +1846,6 @@ class TestMatchesScipy(SeededTest):
             model.fastlogp({"m": vals}),
             decimal=4,
         )
-
-    @pytest.mark.parametrize(
-        "a, shape, n",
-        [
-            [[0.25, 0.25, 0.25, 0.25], 4, 2],
-            [[0.25, 0.25, 0.25, 0.25], (1, 4), 3],
-            [[0.25, 0.25, 0.25, 0.25], (10, 4), [2] * 10],
-            [[0.25, 0.25, 0.25, 0.25], (10, 1, 4), 5],
-            [[[0.25, 0.25, 0.25, 0.25]], (2, 4), [7, 11]],
-            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), 13],
-            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (1, 2, 4), [23, 29]],
-            [
-                [[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]],
-                (10, 2, 4),
-                [31, 37],
-            ],
-            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), [17, 19]],
-        ],
-    )
-    def test_dirichlet_multinomial_random(self, a, shape, n):
-        a = np.asarray(a)
-        with Model() as model:
-            m = DirichletMultinomial("m", n=n, a=a, shape=shape)
-        samp0 = m.random()
-        samp1 = m.random(size=1)
-        samp2 = m.random(size=2)
-
-        shape_ = to_tuple(shape)
-        assert to_tuple(samp0.shape) == shape_
-        assert to_tuple(samp1.shape) == (1, *shape_)
-        assert to_tuple(samp2.shape) == (2, *shape_)
 
     def test_batch_dirichlet_multinomial(self):
         # Test that DM can handle a 3d array for `a`
