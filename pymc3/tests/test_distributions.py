@@ -1755,7 +1755,9 @@ class TestMatchesScipy(SeededTest):
         ns = np.arange(n + 1)
         ns_dm = np.vstack((ns, n - ns)).T  # covert ns=1 to ns_dm=[1, 4], for all ns...
         bb_logp = pm.BetaBinomial.dist(n=n, alpha=a, beta=b).logp(ns).tag.test_value
-        dm_logp = pm.DirichletMultinomial.dist(n=n, a=[a, b]).logp(ns_dm).tag.test_value
+        dm_logp = (
+            pm.DirichletMultinomial.dist(n=n, a=[a, b], shape=(1, 2)).logp(ns_dm).tag.test_value
+        )
         dm_logp = dm_logp.ravel()
         assert_allclose(bb_logp, dm_logp)
 

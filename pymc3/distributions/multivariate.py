@@ -720,14 +720,23 @@ class DirichletMultinomial(Discrete):
         Dirichlet parameter.  Elements must be non-negative.
         Dimension of each element of the distribution is the length
         of the second dimension of *a*.
+
+    shape : numerical tuple
+        Describes shape of distribution. For example if n=array([5, 10]), and
+        p=array([1, 1, 1]), shape should be (2, 3).
     """
 
-    def __init__(self, n, a, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, n, a, shape, *args, **kwargs):
+        super().__init__(shape, *args, **kwargs)
 
         if len(self.shape) > 1:
             self.n = tt.shape_padright(n)
-            self.a = tt.as_tensor_variable(a) if a.ndim > 1 else tt.shape_padleft(a)
+            # Be forgiving if users pass a list instead of np.array
+            # TODO: Find more elegant apprach or simply remove forgiveness
+            try:
+                self.a = tt.as_tensor_variable(a) if a.ndim > 1 else tt.shape_padleft(a)
+            except AttributeError:
+                self.a = tt.as_tensor_variable(a) if np.asarray(a).ndim > 1 else tt.shape_padleft(a)
         else:
             # n is a scalar, p is a 1d array
             self.n = tt.as_tensor_variable(n)
