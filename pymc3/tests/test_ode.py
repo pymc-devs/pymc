@@ -12,14 +12,17 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from ..ode import DifferentialEquation
-from ..ode.utils import augment_system
 import numpy as np
+import pytest
+import theano
+
 from scipy.integrate import odeint
 from scipy.stats import norm
+
 import pymc3 as pm
-import theano
-import pytest
+
+from pymc3.ode import DifferentialEquation
+from pymc3.ode.utils import augment_system
 
 
 def test_gradients():

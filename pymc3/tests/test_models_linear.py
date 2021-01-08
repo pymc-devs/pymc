@@ -13,10 +13,11 @@
 #   limitations under the License.
 
 import numpy as np
-from .helpers import SeededTest
-from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
-from pymc3.glm import LinearComponent, GLM
 import pytest
+
+from pymc3 import Model, Normal, Slice, Uniform, find_MAP, sample
+from pymc3.glm import GLM, LinearComponent
+from pymc3.tests.helpers import SeededTest
 
 
 # Generate data
@@ -32,9 +33,9 @@ class TestGLM(SeededTest):
         super().setup_class()
         cls.intercept = 1
         cls.slope = 3
-        cls.sd = 0.05
+        cls.sigma = 0.05
         x_linear, cls.y_linear = generate_data(cls.intercept, cls.slope, size=1000)
-        cls.y_linear += np.random.normal(size=1000, scale=cls.sd)
+        cls.y_linear += np.random.normal(size=1000, scale=cls.sigma)
         cls.data_linear = dict(x=x_linear, y=cls.y_linear)
 
         x_logistic, y_logistic = generate_data(cls.intercept, cls.slope, size=3000)
@@ -58,7 +59,7 @@ class TestGLM(SeededTest):
 
             assert round(abs(np.mean(trace["lm_Intercept"]) - self.intercept), 1) == 0
             assert round(abs(np.mean(trace["lm_x0"]) - self.slope), 1) == 0
-            assert round(abs(np.mean(trace["sigma"]) - self.sd), 1) == 0
+            assert round(abs(np.mean(trace["sigma"]) - self.sigma), 1) == 0
         assert vars_to_create == set(model.named_vars.keys())
 
     def test_linear_component_from_formula(self):
@@ -74,7 +75,7 @@ class TestGLM(SeededTest):
 
             assert round(abs(np.mean(trace["Intercept"]) - self.intercept), 1) == 0
             assert round(abs(np.mean(trace["x"]) - self.slope), 1) == 0
-            assert round(abs(np.mean(trace["sigma"]) - self.sd), 1) == 0
+            assert round(abs(np.mean(trace["sigma"]) - self.sigma), 1) == 0
 
     def test_glm(self):
         with Model() as model:
@@ -87,7 +88,7 @@ class TestGLM(SeededTest):
             )
             assert round(abs(np.mean(trace["glm_Intercept"]) - self.intercept), 1) == 0
             assert round(abs(np.mean(trace["glm_x0"]) - self.slope), 1) == 0
-            assert round(abs(np.mean(trace["glm_sd"]) - self.sd), 1) == 0
+            assert round(abs(np.mean(trace["glm_sd"]) - self.sigma), 1) == 0
             assert vars_to_create == set(model.named_vars.keys())
 
     def test_glm_from_formula(self):
@@ -102,7 +103,7 @@ class TestGLM(SeededTest):
 
             assert round(abs(np.mean(trace["%s_Intercept" % NAME]) - self.intercept), 1) == 0
             assert round(abs(np.mean(trace["%s_x" % NAME]) - self.slope), 1) == 0
-            assert round(abs(np.mean(trace["%s_sd" % NAME]) - self.sd), 1) == 0
+            assert round(abs(np.mean(trace["%s_sd" % NAME]) - self.sigma), 1) == 0
 
     def test_strange_types(self):
         with Model():

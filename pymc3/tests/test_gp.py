@@ -14,14 +14,17 @@
 
 #  pylint:disable=unused-variable
 from functools import reduce
-from ..math import cartesian, kronecker
 from operator import add
-import pymc3 as pm
-import theano
-import theano.tensor as tt
+
 import numpy as np
 import numpy.testing as npt
 import pytest
+import theano
+import theano.tensor as tt
+
+import pymc3 as pm
+
+from pymc3.math import cartesian, kronecker
 
 np.random.seed(101)
 

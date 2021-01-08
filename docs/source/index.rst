@@ -23,12 +23,14 @@
 
     X, y = linear_training_data()
     with pm.Model() as linear_model:
-        weights = pm.Normal('weights', mu=0, sigma=1)
-        noise = pm.Gamma('noise', alpha=2, beta=1)
-        y_observed = pm.Normal('y_observed',
-                    mu=X @ weights,
-                    sigma=noise,
-                    observed=y)
+        weights = pm.Normal("weights", mu=0, sigma=1)
+        noise = pm.Gamma("noise", alpha=2, beta=1)
+        y_observed = pm.Normal(
+            "y_observed",
+            mu=X @ weights,
+            sigma=noise,
+            observed=y,
+        )
 
         prior = pm.sample_prior_predictive()
         posterior = pm.sample()
@@ -52,13 +54,6 @@
 
     conda install -c conda-forge pymc3
 
-.. raw:: html
-
-                    <h3 class="ui header">Via pypi:</h3>
-
-.. code-block:: bash
-
-    pip install pymc3
 
 .. raw:: html
 
@@ -94,7 +89,7 @@
                     </div>
                 </a>
 
-                <a class="ui link card" href="/notebooks/variational_api_quickstart.html">
+                <a class="ui link card" href="/pymc-examples/examples/variational_inference/variational_api_quickstart.html">
                     <div class="content">
                         <div class="header">Variational Inference</div>
                         <div class="description">Variational inference saves computational cost by turning a problem of integration into one of optimization. PyMC3's variational API supports a number of cutting edge algorithms, as well as minibatch for scaling to large datasets.

@@ -13,17 +13,20 @@
 #   limitations under the License.
 
 import collections
-from copy import copy
 import io
 import os
 import pkgutil
-from typing import Dict, List, Any
+import urllib.request
+
+from copy import copy
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
-import pymc3 as pm
-import theano.tensor as tt
 import theano
+import theano.tensor as tt
+
+import pymc3 as pm
 
 __all__ = [
     "get_data",
@@ -32,6 +35,7 @@ __all__ = [
     "align_minibatches",
     "Data",
 ]
+BASE_URL = "https://raw.githubusercontent.com/pymc-devs/pymc-examples/main/examples/data/{filename}"
 
 
 def get_data(filename):
@@ -46,8 +50,13 @@ def get_data(filename):
     -------
     BytesIO of the data
     """
-    data_pkg = "pymc3.examples"
-    return io.BytesIO(pkgutil.get_data(data_pkg, os.path.join("data", filename)))
+    data_pkg = "pymc3.tests"
+    try:
+        content = pkgutil.get_data(data_pkg, os.path.join("data", filename))
+    except FileNotFoundError:
+        with urllib.request.urlopen(BASE_URL.format(filename=filename)) as handle:
+            content = handle.read()
+    return io.BytesIO(content)
 
 
 class GenTensorVariable(tt.TensorVariable):
@@ -460,7 +469,7 @@ class Data:
         A value to associate with this variable
     dims: {str, tuple of str}, optional, default=None
         Dimension names of the random variables (as opposed to the shapes of these
-        random variables). Use this when `value` is a Pandas Series or DataFrame. The
+        random variables). Use this when `value` is a pandas Series or DataFrame. The
         `dims` will then be the name of the Series / DataFrame's columns. See ArviZ
         documentation for more information about dimensions and coordinates:
         https://arviz-devs.github.io/arviz/notebooks/Introduction.html

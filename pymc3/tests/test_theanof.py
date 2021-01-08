@@ -12,17 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import collections
-import pytest
 from itertools import product
 
+import numpy as np
+import pytest
 import theano
 import theano.tensor as tt
-import numpy as np
 
-from pymc3.theanof import set_theano_conf, take_along_axis, _conversion_map
+from pymc3.theanof import _conversion_map, take_along_axis
 from pymc3.vartypes import int_types
-
 
 FLOATX = str(theano.config.floatX)
 INTX = str(_conversion_map[FLOATX])
@@ -70,27 +68,6 @@ else:
             if _axis < 0 or _axis >= arr.ndim:
                 raise ValueError(f"Supplied axis {axis} is out of bounds")
             return arr[_make_along_axis_idx(arr.shape, indices, _axis)]
-
-
-class TestSetTheanoConfig:
-    def test_invalid_key(self):
-        with pytest.raises(ValueError) as e:
-            set_theano_conf({"bad_key": True})
-        e.match("Unknown")
-
-    def test_restore_when_bad_key(self):
-        with theano.configparser.change_flags(compute_test_value="off"):
-            with pytest.raises(ValueError):
-                conf = collections.OrderedDict([("compute_test_value", "raise"), ("bad_key", True)])
-                set_theano_conf(conf)
-            assert theano.config.compute_test_value == "off"
-
-    def test_restore(self):
-        with theano.configparser.change_flags(compute_test_value="off"):
-            conf = set_theano_conf({"compute_test_value": "raise"})
-            assert conf == {"compute_test_value": "off"}
-            conf = set_theano_conf(conf)
-            assert conf == {"compute_test_value": "raise"}
 
 
 class TestTakeAlongAxis:

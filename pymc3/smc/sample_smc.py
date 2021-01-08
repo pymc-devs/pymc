@@ -12,17 +12,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import time
 import logging
-import warnings
-from collections.abc import Iterable
 import multiprocessing as mp
+import time
+import warnings
+
+from collections.abc import Iterable
+
 import numpy as np
 
-from .smc import SMC
-from ..model import modelcontext
-from ..backends.base import MultiTrace
-from ..parallel_sampling import _cpu_count
+from pymc3.backends.base import MultiTrace
+from pymc3.model import modelcontext
+from pymc3.parallel_sampling import _cpu_count
+from pymc3.smc.smc import SMC
 
 
 def sample_smc(
@@ -51,7 +53,7 @@ def sample_smc(
         independent chains. Defaults to 2000.
     kernel: str
         Kernel method for the SMC sampler. Available option are ``metropolis`` (default) and `ABC`.
-        Use `ABC` for likelihood free inference togheter with a ``pm.Simulator``.
+        Use `ABC` for likelihood free inference together with a ``pm.Simulator``.
     n_steps: int
         The number of steps of each Markov Chain. If ``tune_steps == True`` ``n_steps`` will be used
         for the first stage and for the others it will be determined automatically based on the

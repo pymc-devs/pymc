@@ -12,9 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from theano.tensor import Constant as tensor_constant
 from theano.gof.graph import Constant as graph_constant
-
+from theano.tensor import Constant as tensor_constant
 
 __all__ = [
     "bool_types",

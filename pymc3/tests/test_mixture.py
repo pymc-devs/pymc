@@ -12,32 +12,35 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytest
 import numpy as np
-from numpy.testing import assert_allclose
+import pytest
+import scipy.stats as st
+import theano
 
-from .helpers import SeededTest
+from numpy.testing import assert_allclose
+from scipy.special import logsumexp
+from theano import tensor as tt
+
 import pymc3 as pm
+
 from pymc3 import (
     Dirichlet,
-    Gamma,
-    Normal,
-    Lognormal,
-    Poisson,
     Exponential,
-    Mixture,
-    NormalMixture,
-    MvNormal,
-    sample,
+    Gamma,
+    Lognormal,
     Metropolis,
+    Mixture,
     Model,
+    MvNormal,
+    Normal,
+    NormalMixture,
+    Poisson,
+    sample,
 )
-import scipy.stats as st
-from scipy.special import logsumexp
-from pymc3.theanof import floatX
-import theano
-from theano import tensor as tt
 from pymc3.distributions.shape_utils import to_tuple
+from pymc3.tests.helpers import SeededTest
+from pymc3.theanof import floatX
+
 
 # Generate data
 def generate_normal_mixture_data(w, mu, sd, size=1000):

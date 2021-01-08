@@ -12,14 +12,16 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from collections import OrderedDict
 import warnings
 
-from .arraystep import ArrayStepShared
-from ..model import modelcontext, inputvars
-import theano.tensor as tt
-from ..theanof import tt_rng, make_shared_replacements
+from collections import OrderedDict
+
 import theano
+import theano.tensor as tt
+
+from pymc3.model import inputvars, modelcontext
+from pymc3.step_methods.arraystep import ArrayStepShared
+from pymc3.theanof import make_shared_replacements, tt_rng
 
 __all__ = []
 

@@ -6,9 +6,10 @@ Modified from the seaborn project, which modified the mpld3 project.
 import base64
 import json
 import os
-import glob
-import shutil
 import runpy
+import shutil
+
+from pathlib import Path
 
 import matplotlib
 
@@ -22,6 +23,11 @@ DEFAULT_IMG_LOC = os.path.join(os.path.dirname(DOC_SRC), "logos", "PyMC3.png")
 TABLE_OF_CONTENTS_FILENAME = "table_of_contents_{}.js"
 
 INDEX_TEMPLATE = """
+:orphan:
+
+..
+    _href from docs/source/conf.py
+
 .. _{sphinx_tag}:
 
 .. title:: {gallery}_notebooks
@@ -66,10 +72,10 @@ class NotebookGenerator:
 
     def __init__(self, filename, target_dir):
         self.basename = os.path.basename(filename)
-        self.stripped_name = os.path.splitext(self.basename)[0]
-        self.output_html = os.path.join("..", "notebooks", f"{self.stripped_name}.html")
+        stripped_name = os.path.splitext(self.basename)[0]
+        self.output_html = str(".." / Path(filename).relative_to(Path.cwd()).with_suffix(".html"))
         self.image_dir = os.path.join(target_dir, "_images")
-        self.png_path = os.path.join(self.image_dir, f"{self.stripped_name}.png")
+        self.png_path = os.path.join(self.image_dir, f"{stripped_name}.png")
         with open(filename) as fid:
             self.json_source = json.load(fid)
         self.pagetitle = self.extract_title()
@@ -133,7 +139,9 @@ def build_gallery(srcdir, gallery):
     target_dir = os.path.join(srcdir, f"nb_{gallery}")
     image_dir = os.path.join(target_dir, "_images")
     source_dir = os.path.abspath(
-        os.path.join(os.path.dirname(os.path.dirname(srcdir)), "notebooks")
+        os.path.join(
+            os.path.dirname(os.path.dirname(srcdir)), "docs", "source", "pymc-examples", "examples"
+        )
     )
     table_of_contents_file = os.path.join(source_dir, TABLE_OF_CONTENTS_FILENAME.format(gallery))
     tocjs = TableOfContentsJS()
@@ -162,7 +170,7 @@ def build_gallery(srcdir, gallery):
         if basename.find(".rst") < 1:
             filename = os.path.join(source_dir, basename + ".ipynb")
             ex = NotebookGenerator(filename, target_dir)
-            data[ex.stripped_name] = {
+            data[basename] = {
                 "title": ex.pagetitle,
                 "url": os.path.join(os.sep, gallery, ex.output_html),
                 "thumb": os.path.basename(ex.png_path),

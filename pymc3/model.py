@@ -16,27 +16,29 @@ import collections
 import itertools
 import threading
 import warnings
-from typing import Optional, TypeVar, Type, List, Union, TYPE_CHECKING, Any, cast
+
 from sys import modules
+from typing import TYPE_CHECKING, Any, List, Optional, Type, TypeVar, Union, cast
 
 import numpy as np
-from pandas import Series
 import scipy.sparse as sps
-import theano.sparse as sparse
 import theano
+import theano.sparse as sparse
 import theano.tensor as tt
-from theano.tensor.var import TensorVariable
-from theano.compile import SharedVariable
 
-from pymc3.theanof import set_theano_conf, floatX
+from pandas import Series
+from theano.compile import SharedVariable
+from theano.tensor.var import TensorVariable
+
 import pymc3 as pm
+
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
-from .memoize import memoize, WithMemoization
-from .theanof import gradient, hessian, inputvars, generator
-from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
-from .blocking import DictToArrayBijection, ArrayOrdering
-from .util import get_transformed_name, get_var_name
-from .exceptions import ImputationWarning
+from pymc3.memoize import WithMemoization, memoize
+from pymc3.theanof import floatX, generator, gradient, hessian, inputvars
+from pymc3.util import get_transformed_name, get_var_name
+from pymc3.vartypes import continuous_types, discrete_types, isgenerator, typefilter
 
 __all__ = [
     "Model",
@@ -279,15 +281,17 @@ class ContextMeta(type):
         def __enter__(self):
             self.__class__.context_class.get_contexts().append(self)
             # self._theano_config is set in Model.__new__
+            self._config_context = None
             if hasattr(self, "_theano_config"):
-                self._old_theano_config = set_theano_conf(self._theano_config)
+                self._config_context = theano.change_flags(**self._theano_config)
+                self._config_context.__enter__()
             return self
 
         def __exit__(self, typ, value, traceback):  # pylint: disable=unused-argument
             self.__class__.context_class.get_contexts().pop()
             # self._theano_config is set in Model.__new__
-            if hasattr(self, "_old_theano_config"):
-                set_theano_conf(self._old_theano_config)
+            if self._config_context:
+                self._config_context.__exit__(typ, value, traceback)
 
         dct[__enter__.__name__] = __enter__
         dct[__exit__.__name__] = __exit__
@@ -618,7 +622,7 @@ class ValueGradFunction:
         compute_grads=True,
         **kwargs,
     ):
-        from .distributions import TensorType
+        from pymc3.distributions import TensorType
 
         if extra_vars is None:
             extra_vars = []
@@ -805,6 +809,11 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         temporarily in the model context. See the documentation
         of theano for a complete list. Set config key
         ``compute_test_value`` to `raise` if it is None.
+    check_bounds: bool
+        Ensure that input parameters to distributions are in a valid
+        range. If your model is built in a way where you know your
+        parameters can only take on valid values you can set this to
+        False for increased speed.
 
     Examples
     --------
@@ -891,11 +900,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         instance._theano_config = theano_config
         return instance
 
-    def __init__(self, name="", model=None, theano_config=None, coords=None):
+    def __init__(self, name="", model=None, theano_config=None, coords=None, check_bounds=True):
         self.name = name
         self.coords = {}
         self.RV_dims = {}
         self.add_coords(coords)
+        self.check_bounds = check_bounds
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
@@ -1678,7 +1688,7 @@ class FreeRV(Factor, PyMC3Variable):
 
 
 def pandas_to_array(data):
-    """Convert a Pandas object to a NumPy array.
+    """Convert a pandas object to a NumPy array.
 
     XXX: When `data` is a generator, this will return a Theano tensor!
 
@@ -1725,7 +1735,7 @@ def as_tensor(data, name, model, distribution):
             " sampling distribution.".format(name=name)
         )
         warnings.warn(impute_message, ImputationWarning)
-        from .distributions import NoDistribution
+        from pymc3.distributions import NoDistribution
 
         testval = np.broadcast_to(distribution.default(), data.shape)[data.mask]
         fakedist = NoDistribution.dist(
@@ -1777,7 +1787,7 @@ class ObservedRV(Factor, PyMC3Variable):
         total_size: scalar Tensor (optional)
             needed for upscaling logp
         """
-        from .distributions import TensorType
+        from pymc3.distributions import TensorType
 
         if hasattr(data, "type") and isinstance(data.type, tt.TensorType):
             type = data.type

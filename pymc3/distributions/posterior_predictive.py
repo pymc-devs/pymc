@@ -1,54 +1,57 @@
+from __future__ import annotations
+
+import contextvars
+import logging
 import numbers
+import warnings
+
+from collections import UserDict
+from contextlib import AbstractContextManager
 from typing import (
-    List,
-    Dict,
+    TYPE_CHECKING,
     Any,
+    Callable,
+    Dict,
+    List,
     Optional,
+    Set,
     Tuple,
     Union,
     cast,
-    TYPE_CHECKING,
-    Callable,
     overload,
-    Set,
 )
-import warnings
-import logging
-from collections import UserDict
-from contextlib import AbstractContextManager
-import contextvars
-from typing_extensions import Protocol, Literal
 
 import numpy as np
 import theano
 import theano.tensor as tt
-from xarray import Dataset
-from arviz import InferenceData
 
-from ..backends.base import MultiTrace
-from .distribution import (
+from arviz import InferenceData
+from typing_extensions import Literal, Protocol
+from xarray import Dataset
+
+from pymc3.backends.base import MultiTrace
+from pymc3.distributions.distribution import (
+    _compile_theano_function,
     _DrawValuesContext,
     _DrawValuesContextBlocker,
     is_fast_drawable,
-    _compile_theano_function,
     vectorized_ppc,
 )
-from ..model import (
+from pymc3.exceptions import IncorrectArgumentsError
+from pymc3.model import (
     Model,
-    get_named_nodes_and_relations,
-    ObservedRV,
     MultiObservedRV,
+    ObservedRV,
+    get_named_nodes_and_relations,
     modelcontext,
 )
-from ..exceptions import IncorrectArgumentsError
-from ..vartypes import theano_constant
-from ..util import dataset_to_point_dict, chains_and_samples, get_var_name
+from pymc3.util import chains_and_samples, dataset_to_point_list, get_var_name
+from pymc3.vartypes import theano_constant
 
 # Failing tests:
 #    test_mixture_random_shape::test_mixture_random_shape
 #
 
-PosteriorPredictiveTrace = Dict[str, np.ndarray]
 Point = Dict[str, np.ndarray]
 
 
@@ -56,13 +59,7 @@ class HasName(Protocol):
     name: str
 
 
-if TYPE_CHECKING:
-    _TraceDictParent = UserDict[str, np.ndarray]
-else:
-    _TraceDictParent = UserDict
-
-
-class _TraceDict(_TraceDictParent):
+class _TraceDict(UserDict):
     """This class extends the standard trace-based representation
     of traces by adding some helpful attributes used in posterior predictive
     sampling.
@@ -73,24 +70,24 @@ class _TraceDict(_TraceDictParent):
 
     varnames: List[str]
     _len: int
-    data: Dict[str, np.ndarray]
+    data: Point
 
     def __init__(
         self,
-        point_list: Optional[List[Dict[str, np.ndarray]]] = None,
+        point_list: Optional[List[Point]] = None,
         multi_trace: Optional[MultiTrace] = None,
-        dict: Optional[Dict[str, np.ndarray]] = None,
+        dict_: Optional[Point] = None,
     ):
         """"""
         if multi_trace:
-            assert point_list is None and dict is None
-            self.data = {}  # Dict[str, np.ndarray]
+            assert point_list is None and dict_ is None
+            self.data = {}
             self._len = sum(len(multi_trace._straces[chain]) for chain in multi_trace.chains)
             self.varnames = multi_trace.varnames
             for vn in multi_trace.varnames:
                 self.data[vn] = multi_trace.get_values(vn)
         if point_list is not None:
-            assert multi_trace is None and dict is None
+            assert multi_trace is None and dict_ is None
             self.varnames = varnames = list(point_list[0].keys())
             rep_values = [point_list[0][varname] for varname in varnames]
             # translate the point list.
@@ -112,18 +109,18 @@ class _TraceDict(_TraceDictParent):
             for i, point in enumerate(point_list):
                 for var, value in point.items():
                     self.data[var][i] = value
-        if dict is not None:
+        if dict_ is not None:
             assert point_list is None and multi_trace is None
-            self.data = dict
-            self.varnames = list(dict.keys())
-            self._len = dict[self.varnames[0]].shape[0]
+            self.data = dict_
+            self.varnames = list(dict_.keys())
+            self._len = dict_[self.varnames[0]].shape[0]
         assert self.varnames is not None and self._len is not None and self.data is not None
 
     def __len__(self) -> int:
         return self._len
 
-    def _extract_slice(self, slc: slice) -> "_TraceDict":
-        sliced_dict: Dict[str, np.ndarray] = {}
+    def _extract_slice(self, slc: slice) -> _TraceDict:
+        sliced_dict: Point = {}
 
         def apply_slice(arr: np.ndarray) -> np.ndarray:
             if len(arr.shape) == 1:
@@ -133,14 +130,14 @@ class _TraceDict(_TraceDictParent):
 
         for vn, arr in self.data.items():
             sliced_dict[vn] = apply_slice(arr)
-        return _TraceDict(dict=sliced_dict)
+        return _TraceDict(dict_=sliced_dict)
 
     @overload
     def __getitem__(self, item: Union[str, HasName]) -> np.ndarray:
         ...
 
     @overload
-    def __getitem__(self, item: Union[slice, int]) -> "_TraceDict":
+    def __getitem__(self, item: Union[slice, int]) -> _TraceDict:
         ...
 
     def __getitem__(self, item):
@@ -149,7 +146,7 @@ class _TraceDict(_TraceDictParent):
         elif isinstance(item, slice):
             return self._extract_slice(item)
         elif isinstance(item, int):
-            return _TraceDict(dict={k: np.atleast_1d(v[item]) for k, v in self.data.items()})
+            return _TraceDict(dict_={k: np.atleast_1d(v[item]) for k, v in self.data.items()})
         elif hasattr(item, "name"):
             return super().__getitem__(item.name)
         else:
@@ -209,10 +206,10 @@ def fast_sample_posterior_predictive(
 
     if isinstance(trace, InferenceData):
         nchains, ndraws = chains_and_samples(trace)
-        trace = dataset_to_point_dict(trace.posterior)
+        trace = dataset_to_point_list(trace.posterior)
     elif isinstance(trace, Dataset):
         nchains, ndraws = chains_and_samples(trace)
-        trace = dataset_to_point_dict(trace)
+        trace = dataset_to_point_list(trace)
     elif isinstance(trace, MultiTrace):
         nchains = trace.nchains
         ndraws = len(trace)
@@ -300,12 +297,10 @@ def fast_sample_posterior_predictive(
             except KeyboardInterrupt:
                 pass
 
-        if keep_size:
-            return {
-                k: ary.reshape((nchains, ndraws, *ary.shape[1:])) for k, ary in ppc_trace.items()
-            }
-        # this gets us a Dict[str, np.ndarray] instead of my wrapped equiv.
-        return ppc_trace.data
+    if keep_size:
+        return {k: ary.reshape((nchains, ndraws, *ary.shape[1:])) for k, ary in ppc_trace.items()}
+    # this gets us a Dict[str, np.ndarray] instead of my wrapped equiv.
+    return ppc_trace.data
 
 
 def posterior_predictive_draw_values(
@@ -558,8 +553,6 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
             shape: Tuple[int, ...],
         ) -> np.ndarray:
             val = meth(point=point, size=size)
-            if size == 1:
-                val = np.expand_dims(val, axis=0)
             try:
                 assert val.shape == (size,) + shape, (
                     "Sampling from random of %s yields wrong shape" % param

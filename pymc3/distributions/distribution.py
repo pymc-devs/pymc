@@ -12,28 +12,43 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numbers
 import contextvars
-import dill
 import inspect
+import multiprocessing
+import numbers
+import sys
+import types
+import warnings
+
 from typing import TYPE_CHECKING
+
+import dill
 
 if TYPE_CHECKING:
     from typing import Optional, Callable
 
 import numpy as np
-import theano.tensor as tt
-from theano import function
-from ..util import get_repr_for_variable, get_var_name
 import theano
-from ..memoize import memoize
-from ..model import Model, build_named_node_tree, FreeRV, ObservedRV, MultiObservedRV, ContextMeta
-from ..vartypes import string_types, theano_constant
-from .shape_utils import (
-    to_tuple,
-    get_broadcastable_dist_samples,
+import theano.tensor as tt
+
+from theano import function
+
+from pymc3.distributions.shape_utils import (
     broadcast_dist_samples_shape,
+    get_broadcastable_dist_samples,
+    to_tuple,
 )
+from pymc3.memoize import memoize
+from pymc3.model import (
+    ContextMeta,
+    FreeRV,
+    Model,
+    MultiObservedRV,
+    ObservedRV,
+    build_named_node_tree,
+)
+from pymc3.util import get_repr_for_variable, get_var_name
+from pymc3.vartypes import string_types, theano_constant
 
 __all__ = [
     "DensityDist",
@@ -49,6 +64,8 @@ __all__ = [
 vectorized_ppc = contextvars.ContextVar(
     "vectorized_ppc", default=None
 )  # type: contextvars.ContextVar[Optional[Callable]]
+
+PLATFORM = sys.platform
 
 
 class _Unpickling:
@@ -89,6 +106,12 @@ class Distribution:
             if isinstance(dims, string_types):
                 dims = (dims,)
             shape = model.shape_from_dims(dims)
+
+        # failsafe against 0-shapes
+        if shape is not None and any(np.atleast_1d(shape) <= 0):
+            raise ValueError(
+                f"Distribution initialized with invalid shape {shape}. This is not allowed."
+            )
 
         # Some distributions do not accept shape=None
         if has_shape or shape is not None:
@@ -505,6 +528,19 @@ class DensityDist(Distribution):
             dtype = theano.config.floatX
         super().__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
+        if type(self.logp) == types.MethodType:
+            if PLATFORM != "linux":
+                warnings.warn(
+                    "You are passing a bound method as logp for DensityDist, this can lead to "
+                    "errors when sampling on platforms other than Linux. Consider using a "
+                    "plain function instead, or subclass Distribution."
+                )
+            elif type(multiprocessing.get_context()) != multiprocessing.context.ForkContext:
+                warnings.warn(
+                    "You are passing a bound method as logp for DensityDist, this can lead to "
+                    "errors when sampling when multiprocessing cannot rely on forking. Consider using a "
+                    "plain function instead, or subclass Distribution."
+                )
         self.rand = random
         self.wrap_random_with_dist_shape = wrap_random_with_dist_shape
         self.check_shape_in_random = check_shape_in_random
@@ -513,7 +549,15 @@ class DensityDist(Distribution):
         # We use dill to serialize the logp function, as this is almost
         # always defined in the notebook and won't be pickled correctly.
         # Fix https://github.com/pymc-devs/pymc3/issues/3844
-        logp = dill.dumps(self.logp)
+        try:
+            logp = dill.dumps(self.logp)
+        except RecursionError as err:
+            if type(self.logp) == types.MethodType:
+                raise ValueError(
+                    "logp for DensityDist is a bound method, leading to RecursionError while serializing"
+                ) from err
+            else:
+                raise err
         vals = self.__dict__.copy()
         vals["logp"] = logp
         return vals
@@ -652,6 +696,7 @@ def draw_values(params, point=None, size=None):
     """
     # The following check intercepts and redirects calls to
     # draw_values in the context of sample_posterior_predictive
+    size = to_tuple(size)
     ppc_sampler = vectorized_ppc.get(None)
     if ppc_sampler is not None:
         # this is being done inside new, vectorized sample_posterior_predictive
@@ -962,16 +1007,6 @@ def _draw_value(param, point=None, givens=None, size=None):
     raise ValueError("Unexpected type in draw_value: %s" % type(param))
 
 
-def _is_one_d(dist_shape):
-    if hasattr(dist_shape, "dshape") and dist_shape.dshape in ((), (0,), (1,)):
-        return True
-    elif hasattr(dist_shape, "shape") and dist_shape.shape in ((), (0,), (1,)):
-        return True
-    elif to_tuple(dist_shape) == ():
-        return True
-    return False
-
-
 def generate_samples(generator, *args, **kwargs):
     """Generate samples from the distribution of a random variable.
 
@@ -1005,7 +1040,6 @@ def generate_samples(generator, *args, **kwargs):
     Any remaining args and kwargs are passed on to the generator function.
     """
     dist_shape = kwargs.pop("dist_shape", ())
-    one_d = _is_one_d(dist_shape)
     size = kwargs.pop("size", None)
     broadcast_shape = kwargs.pop("broadcast_shape", None)
     not_broadcast_kwargs = kwargs.pop("not_broadcast_kwargs", None)
@@ -1081,21 +1115,5 @@ def generate_samples(generator, *args, **kwargs):
         samples = generator(size=dist_bcast_shape, *args, **kwargs)
     else:
         samples = generator(size=size_tup + dist_bcast_shape, *args, **kwargs)
-    samples = np.asarray(samples)
 
-    # reshape samples here
-    if samples.ndim > 0 and samples.shape[0] == 1 and size_tup == (1,):
-        if (
-            len(samples.shape) > len(dist_shape)
-            and samples.shape[-len(dist_shape) :] == dist_shape[-len(dist_shape) :]
-        ):
-            samples = samples.reshape(samples.shape[1:])
-
-    if (
-        one_d
-        and samples.ndim > 0
-        and samples.shape[-1] == 1
-        and (samples.shape != size_tup or size_tup == tuple() or size_tup == (1,))
-    ):
-        samples = samples.reshape(samples.shape[:-1])
     return np.asarray(samples)

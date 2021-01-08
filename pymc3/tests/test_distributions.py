@@ -15,85 +15,92 @@
 import itertools
 import sys
 
-from .helpers import SeededTest, select_by_precision
-from ..vartypes import continuous_types
-from ..model import Model, Point, Deterministic
-from ..blocking import DictToVarBijection
-from ..distributions import (
-    DensityDist,
-    Categorical,
-    Multinomial,
-    VonMises,
-    Dirichlet,
-    MvStudentT,
-    MvNormal,
-    MatrixNormal,
-    ZeroInflatedPoisson,
-    ZeroInflatedNegativeBinomial,
-    Constant,
-    Poisson,
+import numpy as np
+import numpy.random as nr
+import pytest
+import scipy.stats
+import scipy.stats.distributions as sp
+import theano
+import theano.tensor as tt
+
+from numpy import array, exp, inf, log
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+from packaging.version import parse
+from scipy import __version__ as scipy_version
+from scipy import integrate
+from scipy.special import erf, logit
+
+import pymc3 as pm
+
+from pymc3.blocking import DictToVarBijection
+from pymc3.distributions import (
+    AR1,
+    AsymmetricLaplace,
     Bernoulli,
     Beta,
     BetaBinomial,
-    HalfStudentT,
-    StudentT,
-    Weibull,
-    Pareto,
-    InverseGamma,
-    Gamma,
-    Cauchy,
-    HalfCauchy,
-    Lognormal,
-    Laplace,
-    NegativeBinomial,
-    Geometric,
-    Exponential,
-    ExGaussian,
-    Normal,
-    TruncatedNormal,
-    Flat,
-    LKJCorr,
-    Wald,
-    ChiSquared,
-    HalfNormal,
-    DiscreteUniform,
-    Bound,
-    Uniform,
-    Triangular,
     Binomial,
-    SkewNormal,
+    Bound,
+    Categorical,
+    Cauchy,
+    ChiSquared,
+    Constant,
+    DensityDist,
+    Dirichlet,
+    DiscreteUniform,
     DiscreteWeibull,
+    ExGaussian,
+    Exponential,
+    Flat,
+    Gamma,
+    Geometric,
     Gumbel,
-    Logistic,
-    OrderedLogistic,
-    LogitNormal,
-    Interpolated,
-    ZeroInflatedBinomial,
+    HalfCauchy,
     HalfFlat,
-    AR1,
-    KroneckerNormal,
-    Rice,
-    Kumaraswamy,
-    Moyal,
+    HalfNormal,
+    HalfStudentT,
     HyperGeometric,
+    Interpolated,
+    InverseGamma,
+    KroneckerNormal,
+    Kumaraswamy,
+    Laplace,
+    LKJCorr,
+    Logistic,
+    LogitNormal,
+    Lognormal,
+    MatrixNormal,
+    Moyal,
+    Multinomial,
+    MvNormal,
+    MvStudentT,
+    NegativeBinomial,
+    Normal,
+    OrderedLogistic,
+    OrderedProbit,
+    Pareto,
+    Poisson,
+    Rice,
+    SkewNormal,
+    StudentT,
+    Triangular,
+    TruncatedNormal,
+    Uniform,
+    VonMises,
+    Wald,
+    Weibull,
+    ZeroInflatedBinomial,
+    ZeroInflatedNegativeBinomial,
+    ZeroInflatedPoisson,
+    continuous,
 )
-
-from ..distributions import continuous
+from pymc3.math import kronecker, logsumexp
+from pymc3.model import Deterministic, Model, Point
+from pymc3.tests.helpers import SeededTest, select_by_precision
 from pymc3.theanof import floatX
-import pymc3 as pm
-from numpy import array, inf, log, exp
-from numpy.testing import assert_almost_equal, assert_allclose, assert_equal
-import numpy.random as nr
-import numpy as np
-import pytest
+from pymc3.vartypes import continuous_types
 
-from scipy import integrate
-import scipy.stats.distributions as sp
-import scipy.stats
-from scipy.special import logit
-import theano
-import theano.tensor as tt
-from ..math import kronecker
+SCIPY_VERSION = parse(scipy_version)
 
 
 def get_lkj_cases():
@@ -215,6 +222,14 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
         vals.update(extra_args)
         distfam("value", shape=valuedomain.shape, transform=None, **vals)
     return m
+
+
+def laplace_asymmetric_logpdf(value, kappa, b, mu):
+    kapinv = 1 / kappa
+    value = value - mu
+    lPx = value * b * np.where(value >= 0, -kappa, kapinv)
+    lPx += np.log(b / (kappa + kapinv))
+    return lPx
 
 
 def integrate_nd(f, domain, shape, dtype):
@@ -430,6 +445,17 @@ def orderedlogistic_logpdf(value, eta, cutpoints):
     return np.where(np.all(ps >= 0), np.log(p), -np.inf)
 
 
+def invprobit(x):
+    return (erf(x / np.sqrt(2)) + 1) / 2
+
+
+def orderedprobit_logpdf(value, eta, cutpoints):
+    c = np.concatenate(([-np.inf], cutpoints, [np.inf]))
+    ps = np.array([invprobit(eta - cc) - invprobit(eta - cc1) for cc, cc1 in zip(c[:-1], c[1:])])
+    p = ps[value]
+    return np.where(np.all(ps >= 0), np.log(p), -np.inf)
+
+
 class Simplex:
     def __init__(self, n):
         self.vals = list(simplex_values(n))
@@ -562,6 +588,57 @@ class TestMatchesScipy(SeededTest):
                 err_msg=str(pt),
             )
 
+        # Test that values below domain evaluate to -np.inf
+        if np.isfinite(domain.lower):
+            below_domain = domain.lower - 1
+            assert_equal(
+                dist.logcdf(below_domain).tag.test_value,
+                -np.inf,
+                err_msg=str(below_domain),
+            )
+
+        # Test that values above domain evaluate to 0
+        # Natural domains do not have inf as the upper edge, but should also be ignored
+        not_nat_domain = domain not in (NatSmall, Nat, NatBig, PosNat)
+        if not_nat_domain and np.isfinite(domain.upper):
+            above_domain = domain.upper + 1
+            assert_equal(
+                dist.logcdf(above_domain).tag.test_value,
+                0,
+                err_msg=str(above_domain),
+            )
+
+        # Test that method works with multiple values or raises informative TypeError
+        try:
+            dist.logcdf(np.array([value, value])).tag.test_value
+        except TypeError as err:
+            if not str(err).endswith(
+                ".logcdf expects a scalar value but received a 1-dimensional object."
+            ):
+                raise
+
+    def check_selfconsistency_discrete_logcdf(
+        self, distribution, domain, paramdomains, decimal=None, n_samples=100
+    ):
+        """
+        Check that logcdf of discrete distributions matches sum of logps up to value
+        """
+        domains = paramdomains.copy()
+        domains["value"] = domain
+        if decimal is None:
+            decimal = select_by_precision(float64=6, float32=3)
+        for pt in product(domains, n_samples=n_samples):
+            params = dict(pt)
+            value = params.pop("value")
+            values = np.arange(domain.lower, value + 1)
+            dist = distribution.dist(**params)
+            assert_almost_equal(
+                dist.logcdf(value).tag.test_value,
+                logsumexp(dist.logp(values), keepdims=False).tag.test_value,
+                decimal=decimal,
+                err_msg=str(pt),
+            )
+
     def check_int_to_1(self, model, value, domain, paramdomains):
         pdf = model.fastfn(exp(model.logpt))
         for pt in product(paramdomains, n_samples=10):
@@ -629,13 +706,24 @@ class TestMatchesScipy(SeededTest):
             {"lower": -Rplusdunif, "upper": Rplusdunif},
             lambda value, lower, upper: sp.randint.logpmf(value, lower, upper + 1),
         )
+        self.check_logcdf(
+            DiscreteUniform,
+            Rdunif,
+            {"lower": -Rplusdunif, "upper": Rplusdunif},
+            lambda value, lower, upper: sp.randint.logcdf(value, lower, upper + 1),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            DiscreteUniform,
+            Rdunif,
+            {"lower": -Rplusdunif, "upper": Rplusdunif},
+        )
 
     def test_flat(self):
         self.pymc3_matches_scipy(Flat, Runif, {}, lambda value: 0)
         with Model():
             x = Flat("a")
             assert_allclose(x.tag.test_value, 0)
-        self.check_logcdf(Flat, Runif, {}, lambda value: np.log(0.5))
+        self.check_logcdf(Flat, R, {}, lambda value: np.log(0.5))
         # Check infinite cases individually.
         assert 0.0 == Flat.dist().logcdf(np.inf).tag.test_value
         assert -np.inf == Flat.dist().logcdf(-np.inf).tag.test_value
@@ -646,7 +734,7 @@ class TestMatchesScipy(SeededTest):
             x = HalfFlat("a", shape=2)
             assert_allclose(x.tag.test_value, 1)
             assert x.tag.test_value.shape == (2,)
-        self.check_logcdf(HalfFlat, Runif, {}, lambda value: -np.inf)
+        self.check_logcdf(HalfFlat, Rplus, {}, lambda value: -np.inf)
         # Check infinite cases individually.
         assert 0.0 == HalfFlat.dist().logcdf(np.inf).tag.test_value
         assert -np.inf == HalfFlat.dist().logcdf(-np.inf).tag.test_value
@@ -788,27 +876,94 @@ class TestMatchesScipy(SeededTest):
 
     def test_geometric(self):
         self.pymc3_matches_scipy(
-            Geometric, Nat, {"p": Unit}, lambda value, p: np.log(sp.geom.pmf(value, p))
+            Geometric,
+            Nat,
+            {"p": Unit},
+            lambda value, p: np.log(sp.geom.pmf(value, p)),
+        )
+        self.check_logcdf(
+            Geometric,
+            Nat,
+            {"p": Unit},
+            lambda value, p: sp.geom.logcdf(value, p),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            Geometric,
+            Nat,
+            {"p": Unit},
         )
 
     def test_hypergeometric(self):
+        def modified_scipy_hypergeom_logpmf(value, N, k, n):
+            # Convert nan to -np.inf
+            original_res = sp.hypergeom.logpmf(value, N, k, n)
+            return original_res if not np.isnan(original_res) else -np.inf
+
+        def modified_scipy_hypergeom_logcdf(value, N, k, n):
+            # Convert nan to -np.inf
+            original_res = sp.hypergeom.logcdf(value, N, k, n)
+
+            # Correct for scipy bug in logcdf method (see https://github.com/scipy/scipy/issues/13280)
+            if not np.isnan(original_res):
+                pmfs = sp.hypergeom.logpmf(np.arange(value + 1), N, k, n)
+                if np.all(np.isnan(pmfs)):
+                    original_res = np.nan
+
+            return original_res if not np.isnan(original_res) else -np.inf
+
         self.pymc3_matches_scipy(
             HyperGeometric,
             Nat,
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
-            lambda value, N, k, n: sp.hypergeom.logpmf(value, N, k, n),
+            modified_scipy_hypergeom_logpmf,
+        )
+        self.check_logcdf(
+            HyperGeometric,
+            Nat,
+            {"N": NatSmall, "k": NatSmall, "n": NatSmall},
+            modified_scipy_hypergeom_logcdf,
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            HyperGeometric,
+            Nat,
+            {"N": NatSmall, "k": NatSmall, "n": NatSmall},
         )
 
     def test_negative_binomial(self):
-        def test_fun(value, mu, alpha):
+        def scipy_mu_alpha_logpmf(value, mu, alpha):
             return sp.nbinom.logpmf(value, alpha, 1 - mu / (mu + alpha))
 
-        self.pymc3_matches_scipy(NegativeBinomial, Nat, {"mu": Rplus, "alpha": Rplus}, test_fun)
+        def scipy_mu_alpha_logcdf(value, mu, alpha):
+            return sp.nbinom.logcdf(value, alpha, 1 - mu / (mu + alpha))
+
+        self.pymc3_matches_scipy(
+            NegativeBinomial,
+            Nat,
+            {"mu": Rplus, "alpha": Rplus},
+            scipy_mu_alpha_logpmf,
+        )
         self.pymc3_matches_scipy(
             NegativeBinomial,
             Nat,
             {"p": Unit, "n": Rplus},
             lambda value, p, n: sp.nbinom.logpmf(value, n, p),
+        )
+        self.check_logcdf(
+            NegativeBinomial,
+            Nat,
+            {"mu": Rplus, "alpha": Rplus},
+            scipy_mu_alpha_logcdf,
+        )
+        self.check_logcdf(
+            NegativeBinomial,
+            Nat,
+            {"p": Unit, "n": Rplus},
+            lambda value, p, n: sp.nbinom.logcdf(value, n, p),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            NegativeBinomial,
+            Nat,
+            {"mu": Rplus, "alpha": Rplus},
         )
 
     @pytest.mark.parametrize(
@@ -843,6 +998,14 @@ class TestMatchesScipy(SeededTest):
             R,
             {"mu": R, "b": Rplus},
             lambda value, mu, b: sp.laplace.logcdf(value, mu, b),
+        )
+
+    def test_laplace_asymmetric(self):
+        self.pymc3_matches_scipy(
+            AsymmetricLaplace,
+            R,
+            {"b": Rplus, "kappa": Rplus, "mu": R},
+            laplace_asymmetric_logpdf,
         )
 
     def test_lognormal(self):
@@ -1007,11 +1170,46 @@ class TestMatchesScipy(SeededTest):
             {"n": NatSmall, "p": Unit},
             lambda value, n, p: sp.binom.logpmf(value, n, p),
         )
+        self.check_logcdf(
+            Binomial,
+            Nat,
+            {"n": NatSmall, "p": Unit},
+            lambda value, n, p: sp.binom.logcdf(value, n, p),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            Binomial,
+            Nat,
+            {"n": NatSmall, "p": Unit},
+        )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(
+        condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
+    )
     def test_beta_binomial(self):
-        self.checkd(BetaBinomial, Nat, {"alpha": Rplus, "beta": Rplus, "n": NatSmall})
+        self.checkd(
+            BetaBinomial,
+            Nat,
+            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
+        )
+        self.pymc3_matches_scipy(
+            BetaBinomial,
+            Nat,
+            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
+            lambda value, alpha, beta, n: sp.betabinom.logpmf(value, a=alpha, b=beta, n=n),
+        )
+        self.check_logcdf(
+            BetaBinomial,
+            Nat,
+            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
+            lambda value, alpha, beta, n: sp.betabinom.logcdf(value, a=alpha, b=beta, n=n),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            BetaBinomial,
+            Nat,
+            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
+        )
 
     def test_bernoulli(self):
         self.pymc3_matches_scipy(
@@ -1021,7 +1219,27 @@ class TestMatchesScipy(SeededTest):
             lambda value, logit_p: sp.bernoulli.logpmf(value, scipy.special.expit(logit_p)),
         )
         self.pymc3_matches_scipy(
-            Bernoulli, Bool, {"p": Unit}, lambda value, p: sp.bernoulli.logpmf(value, p)
+            Bernoulli,
+            Bool,
+            {"p": Unit},
+            lambda value, p: sp.bernoulli.logpmf(value, p),
+        )
+        self.check_logcdf(
+            Bernoulli,
+            Bool,
+            {"p": Unit},
+            lambda value, p: sp.bernoulli.logcdf(value, p),
+        )
+        self.check_logcdf(
+            Bernoulli,
+            Bool,
+            {"logit_p": R},
+            lambda value, logit_p: sp.bernoulli.logcdf(value, scipy.special.expit(logit_p)),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            Bernoulli,
+            Bool,
+            {"p": Unit},
         )
 
     def test_discrete_weibull(self):
@@ -1031,10 +1249,29 @@ class TestMatchesScipy(SeededTest):
             {"q": Unit, "beta": Rplusdunif},
             discrete_weibull_logpmf,
         )
+        self.check_selfconsistency_discrete_logcdf(
+            DiscreteWeibull,
+            Nat,
+            {"q": Unit, "beta": Rplusdunif},
+        )
 
     def test_poisson(self):
         self.pymc3_matches_scipy(
-            Poisson, Nat, {"mu": Rplus}, lambda value, mu: sp.poisson.logpmf(value, mu)
+            Poisson,
+            Nat,
+            {"mu": Rplus},
+            lambda value, mu: sp.poisson.logpmf(value, mu),
+        )
+        self.check_logcdf(
+            Poisson,
+            Nat,
+            {"mu": Rplus},
+            lambda value, mu: sp.poisson.logcdf(value, mu),
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            Poisson,
+            Nat,
+            {"mu": Rplus},
         )
 
     def test_bound_poisson(self):
@@ -1056,7 +1293,16 @@ class TestMatchesScipy(SeededTest):
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_zeroinflatedpoisson(self):
-        self.checkd(ZeroInflatedPoisson, Nat, {"theta": Rplus, "psi": Unit})
+        self.checkd(
+            ZeroInflatedPoisson,
+            Nat,
+            {"theta": Rplus, "psi": Unit},
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            ZeroInflatedPoisson,
+            Nat,
+            {"theta": Rplus, "psi": Unit},
+        )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
@@ -1066,11 +1312,25 @@ class TestMatchesScipy(SeededTest):
             Nat,
             {"mu": Rplusbig, "alpha": Rplusbig, "psi": Unit},
         )
+        self.check_selfconsistency_discrete_logcdf(
+            ZeroInflatedNegativeBinomial,
+            Nat,
+            {"mu": Rplusbig, "alpha": Rplusbig, "psi": Unit},
+        )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_zeroinflatedbinomial(self):
-        self.checkd(ZeroInflatedBinomial, Nat, {"n": NatSmall, "p": Unit, "psi": Unit})
+        self.checkd(
+            ZeroInflatedBinomial,
+            Nat,
+            {"n": NatSmall, "p": Unit, "psi": Unit},
+        )
+        self.check_selfconsistency_discrete_logcdf(
+            ZeroInflatedBinomial,
+            Nat,
+            {"n": NatSmall, "p": Unit, "psi": Unit},
+        )
 
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_mvnormal(self, n):
@@ -1535,6 +1795,15 @@ class TestMatchesScipy(SeededTest):
             lambda value, eta, cutpoints: orderedlogistic_logpdf(value, eta, cutpoints),
         )
 
+    @pytest.mark.parametrize("n", [2, 3, 4])
+    def test_orderedprobit(self, n):
+        self.pymc3_matches_scipy(
+            OrderedProbit,
+            Domain(range(n), "int64"),
+            {"eta": Runif, "cutpoints": UnitSortedVector(n - 1)},
+            lambda value, eta, cutpoints: orderedprobit_logpdf(value, eta, cutpoints),
+        )
+
     def test_densitydist(self):
         def logp(x):
             return -log(2 * 0.5) - abs(x - 0.5) / 0.5
@@ -1556,6 +1825,9 @@ class TestMatchesScipy(SeededTest):
             (15.0, 5.000, 7.500, 7.500, -3.3093854),
             (50.0, 50.000, 10.000, 10.000, -3.6436067),
             (1000.0, 500.000, 10.000, 20.000, -27.8707323),
+            (-1.0, 1.0, 20.0, 0.9, -3.91967108),  # Fails in scipy version
+            (0.01, 0.01, 100.0, 0.01, -5.5241087),  # Fails in scipy version
+            (-1.0, 0.0, 0.1, 0.1, -51.022349),  # Fails in previous pymc3 version
         ],
     )
     def test_ex_gaussian(self, value, mu, sigma, nu, logp):
@@ -1582,6 +1854,9 @@ class TestMatchesScipy(SeededTest):
             (15.0, 5.000, 7.500, 7.500, -0.4545255),
             (50.0, 50.000, 10.000, 10.000, -1.433714),
             (1000.0, 500.000, 10.000, 20.000, -1.573708e-11),
+            (0.01, 0.01, 100.0, 0.01, -0.69314718),  # Fails in scipy version
+            (-0.43402407, 0.0, 0.1, 0.1, -13.59615423),  # Previous 32-bit version failed here
+            (-0.72402009, 0.0, 0.1, 0.1, -31.26571842),  # Previous 64-bit version failed here
         ],
     )
     def test_ex_gaussian_cdf(self, value, mu, sigma, nu, logcdf):

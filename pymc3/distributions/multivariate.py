@@ -16,29 +16,35 @@
 # -*- coding: utf-8 -*-
 
 import warnings
+
 import numpy as np
 import scipy
 import theano
 import theano.tensor as tt
 
-from scipy import stats, linalg
-
+from scipy import linalg, stats
 from theano.gof.op import get_test_value
 from theano.gof.utils import TestValueError
-from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
+from theano.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from theano.tensor.slinalg import Cholesky
+
 import pymc3 as pm
 
+from pymc3.distributions import transforms
+from pymc3.distributions.continuous import ChiSquared, Normal
+from pymc3.distributions.dist_math import bound, factln, logpow
+from pymc3.distributions.distribution import (
+    Continuous,
+    Discrete,
+    _DrawValuesContext,
+    draw_values,
+    generate_samples,
+)
+from pymc3.distributions.shape_utils import broadcast_dist_samples_to, to_tuple
+from pymc3.distributions.special import gammaln, multigammaln
+from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
+from pymc3.model import Deterministic
 from pymc3.theanof import floatX
-from . import transforms
-from .distribution import Continuous, Discrete, draw_values, generate_samples, _DrawValuesContext
-from ..model import Deterministic
-from .continuous import ChiSquared, Normal
-from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln
-from .shape_utils import to_tuple, broadcast_dist_samples_to
-from ..math import kron_dot, kron_diag, kron_solve_lower, kronecker
-
 
 __all__ = [
     "MvNormal",
@@ -318,10 +324,10 @@ class MvStudentT(_QuadFormBase):
                1+\frac{1}{\nu}
                ({\mathbf x}-{\mu})^T
                {\Sigma}^{-1}({\mathbf x}-{\mu})
-             \right]^{(\nu+p)/2}}
+             \right]^{-(\nu+p)/2}}
 
     ========  =============================================
-    Support   :math:`x \in \mathbb{R}^k`
+    Support   :math:`x \in \mathbb{R}^p`
     Mean      :math:`\mu` if :math:`\nu > 1` else undefined
     Variance  :math:`\frac{\nu}{\mu-2}\Sigma`
                   if :math:`\nu>2` else undefined
@@ -387,8 +393,10 @@ class MvStudentT(_QuadFormBase):
 
             samples = dist.random(point, size)
 
-        chi2 = np.random.chisquare
-        return (np.sqrt(nu) * samples.T / chi2(nu, size)).T + mu
+        chi2_samples = np.random.chisquare(nu, size)
+        # Add distribution shape to chi2 samples
+        chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(self.shape))
+        return (samples / np.sqrt(chi2_samples / nu)) + mu
 
     def logp(self, value):
         """
@@ -718,7 +726,7 @@ class PosDefMatrix(theano.Op):
             pm._log.exception("Failed to check if %s positive definite", x)
             raise
 
-    def infer_shape(self, node, shapes):
+    def infer_shape(self, fgraph, node, shapes):
         return [[]]
 
     def grad(self, inp, grads):
@@ -955,8 +963,8 @@ class _LKJCholeskyCov(Continuous):
     """
 
     def __init__(self, eta, n, sd_dist, *args, **kwargs):
-        self.n = n
-        self.eta = eta
+        self.n = tt.as_tensor_variable(n)
+        self.eta = tt.as_tensor_variable(eta)
 
         if "transform" in kwargs and kwargs["transform"] is not None:
             raise ValueError("Invalid parameter: transform.")
@@ -1120,6 +1128,9 @@ class _LKJCholeskyCov(Continuous):
         else:
             samples = np.reshape(samples, size + sample_shape)
         return samples
+
+    def _distr_parameters_for_repr(self):
+        return ["eta", "n"]
 
 
 def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=True, *args, **kwargs):
@@ -1437,7 +1448,7 @@ class MatrixNormal(Continuous):
 
     .. math::
        f(x \mid \mu, U, V) =
-           \frac{1}{(2\pi |U|^n |V|^m)^{1/2}}
+           \frac{1}{(2\pi^{m n} |U|^n |V|^m)^{1/2}}
            \exp\left\{
                 -\frac{1}{2} \mathrm{Tr}[ V^{-1} (x-\mu)^{\prime} U^{-1} (x-\mu)]
             \right\}
@@ -1629,27 +1640,19 @@ class MatrixNormal(Continuous):
         mu, colchol, rowchol = draw_values(
             [self.mu, self.colchol_cov, self.rowchol_cov], point=point, size=size
         )
-        if size is None:
-            size = ()
-        if size in (None, ()):
-            standard_normal = np.random.standard_normal((self.shape[0], colchol.shape[-1]))
-            samples = mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T))
-        else:
-            samples = []
-            size = tuple(np.atleast_1d(size))
-            if mu.shape == tuple(self.shape):
-                for _ in range(np.prod(size)):
-                    standard_normal = np.random.standard_normal((self.shape[0], colchol.shape[-1]))
-                    samples.append(mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T)))
-            else:
-                for j in range(np.prod(size)):
-                    standard_normal = np.random.standard_normal(
-                        (self.shape[0], colchol[j].shape[-1])
-                    )
-                    samples.append(
-                        mu[j] + np.matmul(rowchol[j], np.matmul(standard_normal, colchol[j].T))
-                    )
-            samples = np.array(samples).reshape(size + tuple(self.shape))
+        size = to_tuple(size)
+        dist_shape = to_tuple(self.shape)
+        output_shape = size + dist_shape
+
+        # Broadcasting all parameters
+        (mu,) = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)
+        rowchol = np.broadcast_to(rowchol, shape=size + rowchol.shape[-2:])
+
+        colchol = np.broadcast_to(colchol, shape=size + colchol.shape[-2:])
+        colchol = np.swapaxes(colchol, -1, -2)  # Take transpose
+
+        standard_normal = np.random.standard_normal(output_shape)
+        samples = mu + np.matmul(rowchol, np.matmul(standard_normal, colchol))
         return samples
 
     def _trquaddist(self, value):

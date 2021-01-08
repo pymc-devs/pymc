@@ -16,12 +16,12 @@ import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
 import pandas as pd
-import pymc3 as pm
 import scipy.sparse as sps
-
 import theano
-import theano.tensor as tt
 import theano.sparse as sparse
+import theano.tensor as tt
+
+import pymc3 as pm
 
 
 class TestHelperFunc:

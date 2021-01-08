@@ -14,24 +14,26 @@
 
 import numpy as np
 import numpy.testing as npt
-import theano.tensor as tt
-import theano
-import pymc3 as pm
-from scipy import stats, interpolate
 import pytest
+import theano
+import theano.tensor as tt
 
-from ..theanof import floatX
-from ..distributions import Discrete
-from ..distributions.dist_math import (
-    bound,
-    factln,
-    alltrue_scalar,
+from scipy import interpolate, stats
+
+import pymc3 as pm
+
+from pymc3.distributions import Discrete
+from pymc3.distributions.dist_math import (
     MvNormalLogp,
     SplineWrapper,
-    i0e,
+    alltrue_scalar,
+    bound,
     clipped_beta_rvs,
+    factln,
+    i0e,
 )
-from .helpers import verify_grad
+from pymc3.tests.helpers import verify_grad
+from pymc3.theanof import floatX
 
 
 def test_bound():
@@ -56,6 +58,13 @@ def test_bound():
     cond = np.array([[1, 1, 1], [1, 0, 1]])
     assert not np.all(bound(logp, cond).eval() == 1)
     assert np.prod(bound(logp, cond).eval()) == -np.inf
+
+
+def test_check_bounds_false():
+    with pm.Model(check_bounds=False):
+        logp = tt.ones(3)
+        cond = np.array([1, 0, 1])
+        assert np.all(bound(logp, cond).eval() == logp.eval())
 
 
 def test_alltrue_scalar():

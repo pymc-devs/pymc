@@ -12,27 +12,29 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from .compound import CompoundStep
-
-from .hmc import HamiltonianMC, NUTS
-
-from .metropolis import Metropolis
-from .metropolis import DEMetropolis, DEMetropolisZ
-from .metropolis import BinaryMetropolis
-from .metropolis import BinaryGibbsMetropolis
-from .metropolis import CategoricalGibbsMetropolis
-from .mlda import MLDA, MetropolisMLDA, DEMetropolisZMLDA, RecursiveDAProposal
-from .metropolis import NormalProposal
-from .metropolis import UniformProposal
-from .metropolis import CauchyProposal
-from .metropolis import LaplaceProposal
-from .metropolis import PoissonProposal
-from .metropolis import MultivariateNormalProposal
-
-from .gibbs import ElemwiseCategorical
-
-from .slicer import Slice
-
-from .elliptical_slice import EllipticalSlice
-
-from .pgbart import PGBART
+from pymc3.step_methods.compound import CompoundStep
+from pymc3.step_methods.elliptical_slice import EllipticalSlice
+from pymc3.step_methods.gibbs import ElemwiseCategorical
+from pymc3.step_methods.hmc import NUTS, HamiltonianMC
+from pymc3.step_methods.metropolis import (
+    BinaryGibbsMetropolis,
+    BinaryMetropolis,
+    CategoricalGibbsMetropolis,
+    CauchyProposal,
+    DEMetropolis,
+    DEMetropolisZ,
+    LaplaceProposal,
+    Metropolis,
+    MultivariateNormalProposal,
+    NormalProposal,
+    PoissonProposal,
+    UniformProposal,
+)
+from pymc3.step_methods.mlda import (
+    MLDA,
+    DEMetropolisZMLDA,
+    MetropolisMLDA,
+    RecursiveDAProposal,
+)
+from pymc3.step_methods.pgbart import PGBART
+from pymc3.step_methods.slicer import Slice

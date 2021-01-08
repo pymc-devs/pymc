@@ -12,14 +12,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from .compound import CompoundStep
-from ..model import modelcontext
-from ..theanof import inputvars
-from ..blocking import ArrayOrdering, DictToArrayBijection
-from ..util import get_var_name
-import numpy as np
-from numpy.random import uniform
 from enum import IntEnum, unique
+from typing import Dict, List
+
+import numpy as np
+
+from numpy.random import uniform
+
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.model import PyMC3Variable, modelcontext
+from pymc3.step_methods.compound import CompoundStep
+from pymc3.theanof import inputvars
+from pymc3.util import get_var_name
 
 __all__ = ["ArrayStep", "ArrayStepShared", "metrop_select", "Competence"]
 
@@ -43,6 +47,8 @@ class Competence(IntEnum):
 class BlockedStep:
 
     generates_stats = False
+    stats_dtypes: List[Dict[str, np.dtype]] = []
+    vars: List[PyMC3Variable] = []
 
     def __new__(cls, *args, **kwargs):
         blocked = kwargs.get("blocked")

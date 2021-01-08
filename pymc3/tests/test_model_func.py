@@ -12,12 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pymc3 as pm
 import numpy as np
 import scipy.stats as sp
-from .checks import close_to
-from .models import simple_model, mv_simple
 
+import pymc3 as pm
+
+from pymc3.tests.checks import close_to
+from pymc3.tests.models import mv_simple, simple_model
 
 tol = 2.0 ** -11
 

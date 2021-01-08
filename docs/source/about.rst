@@ -1,3 +1,8 @@
+:orphan:
+
+..
+    _href from docs/source/index.rst
+
 .. _about:
 
 ***********

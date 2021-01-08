@@ -16,12 +16,13 @@ Continuous
    Kumaraswamy
    Exponential
    Laplace
+   AsymmetricLaplace
    StudentT
    HalfStudentT
    Cauchy
    HalfCauchy
    Gamma
-   InverseGamma 
+   InverseGamma
    Weibull
    Lognormal
    ChiSquared

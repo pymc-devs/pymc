@@ -12,11 +12,12 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-#!/usr/bin/env python
-from codecs import open
-from os.path import realpath, dirname, join
-from setuptools import setup, find_packages
 import re
+
+from codecs import open
+from os.path import dirname, join, realpath
+
+from setuptools import find_packages, setup
 
 DISTNAME = "pymc3"
 DESCRIPTION = "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
@@ -29,9 +30,9 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
     "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering",
@@ -81,8 +82,7 @@ if __name__ == "__main__":
         # package_data={'docs': ['*']},
         include_package_data=True,
         classifiers=classifiers,
-        python_requires=">=3.6",
+        python_requires=">=3.7",
         install_requires=install_reqs,
         tests_require=test_reqs,
-        test_suite="nose.collector",
     )

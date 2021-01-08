@@ -12,17 +12,29 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numpy as np
-import theano.tensor as tt
-from scipy import stats
 import warnings
 
-from .dist_math import bound, factln, binomln, betaln, logpow, random_choice
-from .distribution import Discrete, draw_values, generate_samples
-from .shape_utils import broadcast_distribution_samples
-from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
-from ..theanof import floatX, intX, take_along_axis
+import numpy as np
+import theano.tensor as tt
 
+from scipy import stats
+
+from pymc3.distributions.dist_math import (
+    betaln,
+    binomln,
+    bound,
+    factln,
+    incomplete_beta,
+    log_diff_normal_cdf,
+    logpow,
+    normal_lccdf,
+    normal_lcdf,
+    random_choice,
+)
+from pymc3.distributions.distribution import Discrete, draw_values, generate_samples
+from pymc3.distributions.shape_utils import broadcast_distribution_samples
+from pymc3.math import log1mexp, log1pexp, logaddexp, logit, logsumexp, sigmoid, tround
+from pymc3.theanof import floatX, intX, take_along_axis
 
 __all__ = [
     "Binomial",
@@ -137,6 +149,42 @@ class Binomial(Discrete):
             p <= 1,
         )
 
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Binomial distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log CDF is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # incomplete_beta function can only handle scalar values (see #4342)
+        if np.ndim(value):
+            raise TypeError(
+                f"Binomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
+        n = self.n
+        p = self.p
+        value = tt.floor(value)
+
+        return bound(
+            tt.switch(
+                tt.lt(value, n),
+                tt.log(incomplete_beta(n - value, value + 1, 1 - p)),
+                0,
+            ),
+            0 <= value,
+            0 < n,
+            0 <= p,
+            p <= 1,
+        )
+
 
 class BetaBinomial(Discrete):
     R"""
@@ -201,7 +249,7 @@ class BetaBinomial(Discrete):
         self.mode = tt.cast(tround(alpha / (alpha + beta)), "int8")
 
     def _random(self, alpha, beta, n, size=None):
-        size = size or 1
+        size = size or ()
         p = stats.beta.rvs(a=alpha, b=beta, size=size).flatten()
         # Sometimes scipy.beta returns nan. Ugh.
         while np.any(np.isnan(p)):
@@ -260,14 +308,49 @@ class BetaBinomial(Discrete):
         """
         alpha = self.alpha
         beta = self.beta
+        n = self.n
         return bound(
-            binomln(self.n, value)
-            + betaln(value + alpha, self.n - value + beta)
-            - betaln(alpha, beta),
+            binomln(n, value) + betaln(value + alpha, n - value + beta) - betaln(alpha, beta),
             value >= 0,
-            value <= self.n,
+            value <= n,
             alpha > 0,
             beta > 0,
+        )
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for BetaBinomial distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log CDF is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # logcdf can only handle scalar values at the moment
+        if np.ndim(value):
+            raise TypeError(
+                f"BetaBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
+        alpha = self.alpha
+        beta = self.beta
+        n = self.n
+        safe_lower = tt.switch(tt.lt(value, 0), value, 0)
+
+        return bound(
+            tt.switch(
+                tt.lt(value, n),
+                logsumexp(self.logp(tt.arange(safe_lower, value + 1)), keepdims=False),
+                0,
+            ),
+            0 <= value,
+            0 < alpha,
+            0 < beta,
         )
 
 
@@ -369,6 +452,34 @@ class Bernoulli(Discrete):
                 tt.switch(value, tt.log(p), tt.log(1 - p)), value >= 0, value <= 1, p >= 0, p <= 1
             )
 
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Bernoulli distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or theano.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        p = self.p
+
+        return bound(
+            tt.switch(
+                tt.lt(value, 1),
+                tt.log1p(-p),
+                0,
+            ),
+            0 <= value,
+            0 <= p,
+            p <= 1,
+        )
+
     def _distr_parameters_for_repr(self):
         return ["p"]
 
@@ -415,35 +526,10 @@ class DiscreteWeibull(Discrete):
     def __init__(self, q, beta, *args, **kwargs):
         super().__init__(*args, defaults=("median",), **kwargs)
 
-        self.q = q = tt.as_tensor_variable(floatX(q))
-        self.beta = beta = tt.as_tensor_variable(floatX(beta))
+        self.q = tt.as_tensor_variable(floatX(q))
+        self.beta = tt.as_tensor_variable(floatX(beta))
 
         self.median = self._ppf(0.5)
-
-    def logp(self, value):
-        r"""
-        Calculate log-probability of DiscreteWeibull distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-        q = self.q
-        beta = self.beta
-
-        return bound(
-            tt.log(tt.power(q, tt.power(value, beta)) - tt.power(q, tt.power(value + 1, beta))),
-            0 <= value,
-            0 < q,
-            q < 1,
-            0 < beta,
-        )
 
     def _ppf(self, p):
         r"""
@@ -480,6 +566,56 @@ class DiscreteWeibull(Discrete):
         q, beta = draw_values([self.q, self.beta], point=point, size=size)
 
         return generate_samples(self._random, q, beta, dist_shape=self.shape, size=size)
+
+    def logp(self, value):
+        r"""
+        Calculate log-probability of DiscreteWeibull distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        q = self.q
+        beta = self.beta
+        return bound(
+            tt.log(tt.power(q, tt.power(value, beta)) - tt.power(q, tt.power(value + 1, beta))),
+            0 <= value,
+            0 < q,
+            q < 1,
+            0 < beta,
+        )
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Discrete Weibull distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or theano.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        q = self.q
+        beta = self.beta
+
+        return bound(
+            tt.log1p(-tt.power(q, tt.power(value + 1, beta))),
+            0 <= value,
+            0 < q,
+            q < 1,
+            0 < beta,
+        )
 
 
 class Poisson(Discrete):
@@ -569,6 +705,33 @@ class Poisson(Discrete):
         log_prob = bound(logpow(mu, value) - factln(value) - mu, mu >= 0, value >= 0)
         # Return zero when mu and value are both zero
         return tt.switch(tt.eq(mu, 0) * tt.eq(value, 0), 0, log_prob)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Poisson distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or theano.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        mu = self.mu
+        value = tt.floor(value)
+        # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
+        safe_mu = tt.switch(tt.lt(mu, 0), 0, mu)
+        safe_value = tt.switch(tt.lt(value, 0), 0, value)
+
+        return bound(
+            tt.log(tt.gammaincc(safe_value + 1, safe_mu)),
+            0 <= value,
+            0 <= mu,
+        )
 
 
 class NegativeBinomial(Discrete):
@@ -726,6 +889,38 @@ class NegativeBinomial(Discrete):
         # Return Poisson when alpha gets very large.
         return tt.switch(tt.gt(alpha, 1e10), Poisson.dist(self.mu).logp(value), negbinom)
 
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for NegativeBinomial distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log CDF is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # incomplete_beta function can only handle scalar values (see #4342)
+        if np.ndim(value):
+            raise TypeError(
+                f"NegativeBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
+        # TODO: avoid `p` recomputation if distribution was defined in terms of `p`
+        alpha = self.alpha
+        p = alpha / (self.mu + alpha)
+
+        return bound(
+            tt.log(incomplete_beta(alpha, tt.floor(value) + 1, p)),
+            0 <= value,
+            0 < alpha,
+            0 <= p,
+            p <= 1,
+        )
+
     def _distr_parameters_for_repr(self):
         return self._param_type
 
@@ -808,6 +1003,30 @@ class Geometric(Discrete):
         """
         p = self.p
         return bound(tt.log(p) + logpow(1 - p, value - 1), 0 <= p, p <= 1, value >= 1)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Geometric distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or theano.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        p = self.p
+
+        return bound(
+            log1mexp(-tt.log1p(-p) * value),
+            0 <= value,
+            0 <= p,
+            p <= 1,
+        )
 
 
 class HyperGeometric(Discrete):
@@ -919,7 +1138,50 @@ class HyperGeometric(Discrete):
             - betaln(n - value + 1, bad - n + value + 1)
             - betaln(tot + 1, 1)
         )
-        return result
+        # value in [max(0, n - N + k), min(k, n)]
+        lower = tt.switch(tt.gt(n - N + k, 0), n - N + k, 0)
+        upper = tt.switch(tt.lt(k, n), k, n)
+        return bound(result, lower <= value, value <= upper)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for HyperGeometric distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log CDF is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # logcdf can only handle scalar values at the moment
+        if np.ndim(value):
+            raise TypeError(
+                f"HyperGeometric.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
+        # TODO: Use lower upper in locgdf for smarter logsumexp?
+        N = self.N
+        n = self.n
+        k = self.k
+        safe_lower = tt.switch(tt.lt(value, 0), value, 0)
+
+        return bound(
+            tt.switch(
+                tt.lt(value, n),
+                logsumexp(self.logp(tt.arange(safe_lower, value + 1)), keepdims=False),
+                0,
+            ),
+            0 <= value,
+            0 < N,
+            0 <= k,
+            0 <= n,
+            k <= N,
+            n <= N,
+        )
 
 
 class DiscreteUniform(Discrete):
@@ -1011,6 +1273,34 @@ class DiscreteUniform(Discrete):
         lower = self.lower
         return bound(-tt.log(upper - lower + 1), lower <= value, value <= upper)
 
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Discrete uniform distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or theano.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        upper = self.upper
+        lower = self.lower
+
+        return bound(
+            tt.switch(
+                tt.lt(value, upper),
+                tt.log(tt.minimum(tt.floor(value), upper) - lower + 1) - tt.log(upper - lower + 1),
+                0,
+            ),
+            lower <= value,
+            lower <= upper,
+        )
+
 
 class Categorical(Discrete):
     R"""
@@ -1085,7 +1375,7 @@ class Categorical(Discrete):
         return generate_samples(
             random_choice,
             p=p,
-            broadcast_shape=p.shape[:-1] or (1,),
+            broadcast_shape=p.shape[:-1],
             dist_shape=self.shape,
             size=size,
         )
@@ -1249,7 +1539,7 @@ class ZeroInflatedPoisson(Discrete):
     def __init__(self, psi, theta, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.theta = theta = tt.as_tensor_variable(floatX(theta))
-        self.psi = psi = tt.as_tensor_variable(floatX(psi))
+        self.psi = tt.as_tensor_variable(floatX(psi))
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
 
@@ -1299,6 +1589,30 @@ class ZeroInflatedPoisson(Discrete):
         )
 
         return bound(logp_val, 0 <= value, 0 <= psi, psi <= 1, 0 <= theta)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for ZeroInflatedPoisson distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or theano.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or theano tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        psi = self.psi
+
+        return bound(
+            logaddexp(tt.log1p(-psi), tt.log(psi) + self.pois.logcdf(value)),
+            0 <= value,
+            0 <= psi,
+            psi <= 1,
+        )
 
 
 class ZeroInflatedBinomial(Discrete):
@@ -1407,6 +1721,35 @@ class ZeroInflatedBinomial(Discrete):
         )
 
         return bound(logp_val, 0 <= value, value <= n, 0 <= psi, psi <= 1, 0 <= p, p <= 1)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for ZeroInflatedBinomial distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log CDF is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # logcdf can only handle scalar values due to limitation in Binomial.logcdf
+        if np.ndim(value):
+            raise TypeError(
+                f"ZeroInflatedBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
+        psi = self.psi
+
+        return bound(
+            logaddexp(tt.log1p(-psi), tt.log(psi) + self.bin.logcdf(value)),
+            0 <= value,
+            0 <= psi,
+            psi <= 1,
+        )
 
 
 class ZeroInflatedNegativeBinomial(Discrete):
@@ -1547,6 +1890,34 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
         return bound(logp_val, 0 <= value, 0 <= psi, psi <= 1, mu > 0, alpha > 0)
 
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for ZeroInflatedNegativeBinomial distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log CDF is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # logcdf can only handle scalar values due to limitation in NegativeBinomial.logcdf
+        if np.ndim(value):
+            raise TypeError(
+                f"ZeroInflatedNegativeBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+        psi = self.psi
+
+        return bound(
+            logaddexp(tt.log1p(-psi), tt.log(psi) + self.nb.logcdf(value)),
+            0 <= value,
+            0 <= psi,
+            psi <= 1,
+        )
+
 
 class OrderedLogistic(Categorical):
     R"""
@@ -1630,3 +2001,131 @@ class OrderedLogistic(Categorical):
         p = p_cum[..., 1:] - p_cum[..., :-1]
 
         super().__init__(p=p, *args, **kwargs)
+
+
+class OrderedProbit(Categorical):
+    R"""
+    Ordered Probit log-likelihood.
+
+    Useful for regression on ordinal data values whose values range
+    from 1 to K as a function of some predictor, :math:`\eta`. The
+    cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
+    mapped to which of the K observed dependent variables.  The number
+    of cutpoints is K - 1.  It is recommended that the cutpoints are
+    constrained to be ordered.
+
+    In order to stabilize the computation, log-likelihood is computed
+    in log space using the scaled error function `erfcx`.
+
+    .. math::
+
+       f(k \mid \eta, c) = \left\{
+         \begin{array}{l}
+           1 - \text{normal_cdf}(0, \sigma, \eta - c_1)
+             \,, \text{if } k = 0 \\
+           \text{normal_cdf}(0, \sigma, \eta - c_{k - 1}) -
+           \text{normal_cdf}(0, \sigma, \eta - c_{k})
+             \,, \text{if } 0 < k < K \\
+           \text{normal_cdf}(0, \sigma, \eta - c_{K - 1})
+             \,, \text{if } k = K \\
+         \end{array}
+       \right.
+
+    Parameters
+    ----------
+    eta : float
+        The predictor.
+    c : array
+        The length K - 1 array of cutpoints which break :math:`\eta` into
+        ranges.  Do not explicitly set the first and last elements of
+        :math:`c` to negative and positive infinity.
+
+    sigma: float
+         The standard deviation of probit function.
+    Example
+    --------
+    .. code:: python
+
+        # Generate data for a simple 1 dimensional example problem
+        n1_c = 300; n2_c = 300; n3_c = 300
+        cluster1 = np.random.randn(n1_c) + -1
+        cluster2 = np.random.randn(n2_c) + 0
+        cluster3 = np.random.randn(n3_c) + 2
+
+        x = np.concatenate((cluster1, cluster2, cluster3))
+        y = np.concatenate((1*np.ones(n1_c),
+                            2*np.ones(n2_c),
+                            3*np.ones(n3_c))) - 1
+
+        # Ordered probit regression
+        with pm.Model() as model:
+            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
+                                  transform=pm.distributions.transforms.ordered)
+            y_ = pm.OrderedProbit("y", cutpoints=cutpoints, eta=x, observed=y)
+            tr = pm.sample(1000)
+
+        # Plot the results
+        plt.hist(cluster1, 30, alpha=0.5);
+        plt.hist(cluster2, 30, alpha=0.5);
+        plt.hist(cluster3, 30, alpha=0.5);
+        plt.hist(tr["cutpoints"][:,0], 80, alpha=0.2, color='k');
+        plt.hist(tr["cutpoints"][:,1], 80, alpha=0.2, color='k');
+
+    """
+
+    def __init__(self, eta, cutpoints, *args, **kwargs):
+
+        self.eta = tt.as_tensor_variable(floatX(eta))
+        self.cutpoints = tt.as_tensor_variable(cutpoints)
+
+        probits = tt.shape_padright(self.eta) - self.cutpoints
+        _log_p = tt.concatenate(
+            [
+                tt.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
+                log_diff_normal_cdf(0, 1, probits[..., :-1], probits[..., 1:]),
+                tt.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
+            ],
+            axis=-1,
+        )
+        _log_p = tt.as_tensor_variable(floatX(_log_p))
+
+        self._log_p = _log_p
+        self.mode = tt.argmax(_log_p, axis=-1)
+        p = tt.exp(_log_p)
+
+        super().__init__(p=p, *args, **kwargs)
+
+    def logp(self, value):
+        r"""
+        Calculate log-probability of Ordered Probit distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        logp = self._log_p
+        k = self.k
+
+        # Clip values before using them for indexing
+        value_clip = tt.clip(value, 0, k - 1)
+
+        if logp.ndim > 1:
+            if logp.ndim > value_clip.ndim:
+                value_clip = tt.shape_padleft(value_clip, logp.ndim - value_clip.ndim)
+            elif logp.ndim < value_clip.ndim:
+                logp = tt.shape_padleft(logp, value_clip.ndim - logp.ndim)
+            pattern = (logp.ndim - 1,) + tuple(range(logp.ndim - 1))
+            a = take_along_axis(
+                logp.dimshuffle(pattern),
+                value_clip,
+            )
+        else:
+            a = logp[value_clip]
+
+        return bound(a, value >= 0, value <= (k - 1))

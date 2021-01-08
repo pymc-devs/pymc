@@ -12,13 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import numpy as np
 import pytest
 
-import pymc3 as pm
-import numpy as np
 from numpy.testing import assert_almost_equal
-from .helpers import SeededTest
+
+import pymc3 as pm
+
 from pymc3.distributions.transforms import Transform
+from pymc3.tests.helpers import SeededTest
 
 
 class TestTransformName:

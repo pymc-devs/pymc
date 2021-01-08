@@ -14,24 +14,28 @@
 
 import numpy as np
 import numpy.testing as npt
+import pytest
 import theano
 import theano.tensor as tt
+
+from scipy.special import logsumexp as scipy_logsumexp
+
 from pymc3.math import (
     LogDet,
-    logdet,
-    probit,
-    invprobit,
-    expand_packed_triangular,
-    log1pexp,
-    log1mexp,
-    log1mexp_numpy,
-    kronecker,
     cartesian,
+    expand_packed_triangular,
+    invprobit,
     kron_dot,
     kron_solve_lower,
+    kronecker,
+    log1mexp,
+    log1mexp_numpy,
+    log1pexp,
+    logdet,
+    logsumexp,
+    probit,
 )
-from .helpers import SeededTest, verify_grad
-import pytest
+from pymc3.tests.helpers import SeededTest, verify_grad
 from pymc3.theanof import floatX
 
 
@@ -206,3 +210,27 @@ def test_expand_packed_triangular():
     assert np.all(expand_upper.eval({packed: upper_packed}) == upper)
     assert np.all(expand_diag_lower.eval({packed: lower_packed}) == floatX(np.diag(vals)))
     assert np.all(expand_diag_upper.eval({packed: upper_packed}) == floatX(np.diag(vals)))
+
+
+@pytest.mark.parametrize(
+    "values, axis, keepdims",
+    [
+        (np.array([-4, -2]), None, True),
+        (np.array([-np.inf, -2]), None, True),
+        (np.array([-2, np.inf]), None, True),
+        (np.array([-np.inf, -np.inf]), None, True),
+        (np.array([np.inf, np.inf]), None, True),
+        (np.array([-np.inf, np.inf]), None, True),
+        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), None, True),
+        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 0, True),
+        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 1, True),
+        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 0, False),
+        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 1, False),
+        (np.array([[-2, np.inf], [-np.inf, -np.inf]]), 0, True),
+    ],
+)
+def test_logsumexp(values, axis, keepdims):
+    npt.assert_almost_equal(
+        logsumexp(values, axis=axis, keepdims=keepdims).eval(),
+        scipy_logsumexp(values, axis=axis, keepdims=keepdims),
+    )

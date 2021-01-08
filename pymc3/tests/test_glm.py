@@ -13,13 +13,25 @@
 #   limitations under the License.
 
 import numpy as np
+import pandas as pd
+
 from numpy.testing import assert_equal
 
-from .helpers import SeededTest
 import pymc3
-from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
-from pymc3 import families, GLM, LinearComponent
-import pandas as pd
+
+from pymc3 import (
+    GLM,
+    LinearComponent,
+    Model,
+    Normal,
+    Slice,
+    Uniform,
+    families,
+    find_MAP,
+    sample,
+)
+from pymc3.tests.helpers import SeededTest
+
 
 # Generate data
 def generate_data(intercept, slope, size=700):
@@ -34,9 +46,9 @@ class TestGLM(SeededTest):
         super().setup_class()
         cls.intercept = 1
         cls.slope = 3
-        cls.sd = 0.05
+        cls.sigma = 0.05
         x_linear, cls.y_linear = generate_data(cls.intercept, cls.slope, size=1000)
-        cls.y_linear += np.random.normal(size=1000, scale=cls.sd)
+        cls.y_linear += np.random.normal(size=1000, scale=cls.sigma)
         cls.data_linear = pd.DataFrame(dict(x=x_linear, y=cls.y_linear))
 
         x_logistic, y_logistic = generate_data(cls.intercept, cls.slope, size=3000)
@@ -61,7 +73,7 @@ class TestGLM(SeededTest):
 
             assert round(abs(np.mean(trace["Intercept"]) - self.intercept), 1) == 0
             assert round(abs(np.mean(trace["x"]) - self.slope), 1) == 0
-            assert round(abs(np.mean(trace["sigma"]) - self.sd), 1) == 0
+            assert round(abs(np.mean(trace["sigma"]) - self.sigma), 1) == 0
 
     def test_glm(self):
         with Model() as model:
@@ -71,7 +83,7 @@ class TestGLM(SeededTest):
 
             assert round(abs(np.mean(trace["Intercept"]) - self.intercept), 1) == 0
             assert round(abs(np.mean(trace["x"]) - self.slope), 1) == 0
-            assert round(abs(np.mean(trace["sd"]) - self.sd), 1) == 0
+            assert round(abs(np.mean(trace["sd"]) - self.sigma), 1) == 0
 
     def test_glm_offset(self):
         offset = 1.0

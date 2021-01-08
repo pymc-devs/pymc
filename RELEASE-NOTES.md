@@ -1,6 +1,40 @@
 # Release Notes
 
-## PyMC3 3.10.0 (on deck)
+## PyMC3 vNext (on deck)
+This release breaks some APIs w.r.t. `3.10.0`.
+It also brings some dreadfully awaited fixes, so be sure to go through the changes below.
+(Or latest when you run into problems.)
+
+### Breaking Changes
+- Python 3.6 support was dropped (by no longer testing) and Python 3.9 was added (see [#4332](https://github.com/pymc-devs/pymc3/pull/4332)).
+- Changed shape behavior: __No longer collapse length 1 vector shape into scalars.__ (see [#4206](https://github.com/pymc-devs/pymc3/issue/4206) and [#4214](https://github.com/pymc-devs/pymc3/pull/4214))
+  - __Applies to random variables and also the `.random(size=...)` kwarg!__
+  - To create scalar variables you must now use `shape=None` or `shape=()`.
+  - __`shape=(1,)` and `shape=1` now become vectors.__ Previously they were collapsed into scalars
+  - 0-length dimensions are now ruled illegal for random variables and raise a `ValueError`.
+- In `sample_prior_predictive` the `vars` kwarg was removed in favor of `var_names` (see [#4327](https://github.com/pymc-devs/pymc3/pull/4327)).
+- Removed `theanof.set_theano_config` because it illegally changed Theano's internal state (see [#4329](https://github.com/pymc-devs/pymc3/pull/4329)).
+
+### New Features
+- Option to set `check_bounds=False` when instantiating `pymc3.Model()`. This turns off bounds checks that ensure that input parameters of distributions are valid. For correctly specified models, this is unneccessary as all parameters get automatically transformed so that all values are valid. Turning this off should lead to faster sampling (see [#4377](https://github.com/pymc-devs/pymc3/pull/4377)).
+- `OrderedProbit` distribution added (see [#4232](https://github.com/pymc-devs/pymc3/pull/4232)).
+- `plot_posterior_predictive_glm` now works with `arviz.InferenceData` as well (see [#4234](https://github.com/pymc-devs/pymc3/pull/4234))
+- Add `logcdf` method to all univariate discrete distributions (see [#4387](https://github.com/pymc-devs/pymc3/pull/4387)).
+- Add `random` method to `MvGaussianRandomWalk` (see [#4388](https://github.com/pymc-devs/pymc3/pull/4388))
+- `AsymmetricLaplace` distribution added (see [#4392](https://github.com/pymc-devs/pymc3/pull/4392)).
+
+### Maintenance
+- Fixed bug whereby partial traces returns after keyboard interrupt during parallel sampling had fewer draws than would've been available [#4318](https://github.com/pymc-devs/pymc3/pull/4318)
+- Make `sample_shape` same across all contexts in `draw_values` (see [#4305](https://github.com/pymc-devs/pymc3/pull/4305)).
+- The notebook gallery has been moved to https://github.com/pymc-devs/pymc-examples (see [#4348](https://github.com/pymc-devs/pymc3/pull/4348)).
+- `math.logsumexp` now matches `scipy.special.logsumexp` when arrays contain infinite values (see [#4360](https://github.com/pymc-devs/pymc3/pull/4360)).
+- Fixed mathematical formulation in `MvStudentT` random method. (see [#4359](https://github.com/pymc-devs/pymc3/pull/4359))
+- Fix issue in `logp` method of `HyperGeometric`. It now returns `-inf` for invalid parameters (see [4367](https://github.com/pymc-devs/pymc3/pull/4367))
+- Fixed `MatrixNormal` random method to work with parameters as random variables. (see [#4368](https://github.com/pymc-devs/pymc3/pull/4368))
+- Update the `logcdf` method of several continuous distributions to return -inf for invalid parameters and values, and raise an informative error when multiple values cannot be evaluated in a single call. (see [4393](https://github.com/pymc-devs/pymc3/pull/4393))
+- Improve numerical stability in `logp` and `logcdf` methods of `ExGaussian` (see [#4407](https://github.com/pymc-devs/pymc3/pull/4407))
+
+## PyMC3 3.10.0 (7 December 2020)
 
 This is a major release with many exciting new features. The biggest change is that we now rely on our own fork of [Theano-PyMC](https://github.com/pymc-devs/Theano-PyMC). This is in line with our [big announcement about our commitment to PyMC3 and Theano](https://pymc-devs.medium.com/the-future-of-pymc3-or-theano-is-dead-long-live-theano-d8005f8a0e9b).
 
@@ -34,7 +68,7 @@ This new version of `Theano-PyMC` comes with an experimental JAX backend which, 
 - `sample_posterior_predictive_w` can now feed on `xarray.Dataset` - e.g. from `InferenceData.posterior`. (see [#4042](https://github.com/pymc-devs/pymc3/pull/4042))
 - Change SMC metropolis kernel to independent metropolis kernel [#4115](https://github.com/pymc-devs/pymc3/pull/4115))
 - Add alternative parametrization to NegativeBinomial distribution in terms of n and p (see [#4126](https://github.com/pymc-devs/pymc3/issues/4126))
-- Added semantically meaningful `str` representations to PyMC3 objects for console, notebook, and GraphViz use (see [#4076](https://github.com/pymc-devs/pymc3/pull/4076), [#4065](https://github.com/pymc-devs/pymc3/pull/4065), [#4159](https://github.com/pymc-devs/pymc3/pull/4159), [#4217](https://github.com/pymc-devs/pymc3/pull/4217), and [#4243](https://github.com/pymc-devs/pymc3/pull/4243)).
+- Added semantically meaningful `str` representations to PyMC3 objects for console, notebook, and GraphViz use (see [#4076](https://github.com/pymc-devs/pymc3/pull/4076), [#4065](https://github.com/pymc-devs/pymc3/pull/4065), [#4159](https://github.com/pymc-devs/pymc3/pull/4159), [#4217](https://github.com/pymc-devs/pymc3/pull/4217), [#4243](https://github.com/pymc-devs/pymc3/pull/4243), and [#4260](https://github.com/pymc-devs/pymc3/pull/4260)).
 - Add Discrete HyperGeometric Distribution (see [#4249](https://github.com/pymc-devs/pymc3/pull/#4249))
 
 ### Maintenance
@@ -44,10 +78,11 @@ This new version of `Theano-PyMC` comes with an experimental JAX backend which, 
 - Fixed numerical instability in ExGaussian's logp by preventing `logpow` from returning `-inf` (see [#4050](https://github.com/pymc-devs/pymc3/pull/4050)).
 - Numerically improved stickbreaking transformation - e.g. for the `Dirichlet` distribution. [#4129](https://github.com/pymc-devs/pymc3/pull/4129)
 - Enabled the `Multinomial` distribution to handle batch sizes that have more than 2 dimensions. [#4169](https://github.com/pymc-devs/pymc3/pull/4169)
-- Test model logp before starting any MCMC chains (see [#4116](https://github.com/pymc-devs/pymc3/issues/4116))
+- Test model logp before starting any MCMC chains (see [#4211](https://github.com/pymc-devs/pymc3/pull/4211))
 - Fix bug in `model.check_test_point` that caused the `test_point` argument to be ignored. (see [PR #4211](https://github.com/pymc-devs/pymc3/pull/4211#issuecomment-727142721))
 - Refactored MvNormal.random method with better handling of sample, batch and event shapes. [#4207](https://github.com/pymc-devs/pymc3/pull/4207)
 - The `InverseGamma` distribution now implements a `logcdf`. [#3944](https://github.com/pymc-devs/pymc3/pull/3944)
+- Make starting jitter methods for nuts sampling more robust by resampling values that lead to non-finite probabilities. A new optional argument `jitter-max-retries` can be passed to `pm.sample()` and `pm.init_nuts()` to control the maximum number of retries per chain. [4298](https://github.com/pymc-devs/pymc3/pull/4298)
 
 ### Documentation
 - Added a new notebook demonstrating how to incorporate sampling from a conjugate Dirichlet-multinomial posterior density in conjunction with other step methods (see [#4199](https://github.com/pymc-devs/pymc3/pull/4199)).

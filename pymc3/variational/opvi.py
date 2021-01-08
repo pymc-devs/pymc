@@ -54,14 +54,14 @@ import theano
 import theano.tensor as tt
 
 import pymc3 as pm
-from pymc3.util import get_transformed
-from .updates import adagrad_window
-from ..blocking import ArrayOrdering, DictToArrayBijection, VarMap
-from ..backends import NDArray
-from ..model import modelcontext
-from ..theanof import tt_rng, change_flags, identity
-from ..util import get_default_varnames
-from ..memoize import WithMemoization, memoize
+
+from pymc3.backends import NDArray
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection, VarMap
+from pymc3.memoize import WithMemoization, memoize
+from pymc3.model import modelcontext
+from pymc3.theanof import change_flags, identity, tt_rng
+from pymc3.util import get_default_varnames, get_transformed
+from pymc3.variational.updates import adagrad_window
 
 __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximation"]
 
@@ -1078,9 +1078,9 @@ class Group(WithMemoization):
             if deterministic:
                 return tt.ones(shape, dtype) * dist_map
             else:
-                return getattr(self._rng, dist_name)(shape)
+                return getattr(self._rng, dist_name)(size=shape)
         else:
-            sample = getattr(self._rng, dist_name)(shape)
+            sample = getattr(self._rng, dist_name)(size=shape)
             initial = tt.switch(deterministic, tt.ones(shape, dtype) * dist_map, sample)
             return initial
 

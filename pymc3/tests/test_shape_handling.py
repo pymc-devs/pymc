@@ -12,17 +12,20 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytest
 import numpy as np
+import pytest
+
 from theano import tensor as tt
+
 import pymc3 as pm
+
 from pymc3.distributions.shape_utils import (
-    to_tuple,
-    shapes_broadcasting,
     broadcast_dist_samples_shape,
-    get_broadcastable_dist_samples,
-    broadcast_distribution_samples,
     broadcast_dist_samples_to,
+    broadcast_distribution_samples,
+    get_broadcastable_dist_samples,
+    shapes_broadcasting,
+    to_tuple,
 )
 
 test_shapes = [
@@ -211,9 +214,6 @@ class TestSamplesBroadcasting:
 def test_sample_generate_values(fixture_model, fixture_sizes):
     model, RVs = fixture_model
     size = to_tuple(fixture_sizes)
-    if size == (1,):
-        # Single draws are interpreted as scalars for backwards compatibility
-        size = tuple()
     with model:
         prior = pm.sample_prior_predictive(samples=fixture_sizes)
         for rv in RVs:

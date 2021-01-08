@@ -20,33 +20,32 @@ nodes in PyMC.
 import warnings
 
 import numpy as np
-import theano
 import theano.tensor as tt
 
-from . import transforms
-from .dist_math import (
+from scipy import stats
+from scipy.interpolate import InterpolatedUnivariateSpline
+from scipy.special import expit
+
+from pymc3.distributions import transforms
+from pymc3.distributions.dist_math import (
+    SplineWrapper,
     alltrue_elemwise,
     betaln,
     bound,
+    clipped_beta_rvs,
     gammaln,
     i0e,
     incomplete_beta,
+    log_normal,
     logpow,
     normal_lccdf,
     normal_lcdf,
-    SplineWrapper,
-    std_cdf,
     zvalue,
-    clipped_beta_rvs,
 )
-from .distribution import Continuous, draw_values, generate_samples
-from .special import log_i0
-from ..math import invlogit, logit, logdiffexp
-
+from pymc3.distributions.distribution import Continuous, draw_values, generate_samples
+from pymc3.distributions.special import log_i0
+from pymc3.math import invlogit, log1mexp, log1pexp, logdiffexp, logit
 from pymc3.theanof import floatX
-from scipy import stats
-from scipy.special import expit
-from scipy.interpolate import InterpolatedUnivariateSpline
 
 __all__ = [
     "Uniform",
@@ -80,6 +79,7 @@ __all__ = [
     "Interpolated",
     "Rice",
     "Moyal",
+    "AsymmetricLaplace",
 ]
 
 
@@ -278,7 +278,7 @@ class Uniform(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -286,13 +286,16 @@ class Uniform(BoundedContinuous):
         -------
         TensorVariable
         """
+        lower = self.lower
+        upper = self.upper
+
         return tt.switch(
-            tt.or_(tt.lt(value, self.lower), tt.gt(value, self.upper)),
+            tt.lt(value, lower) | tt.lt(upper, lower),
             -np.inf,
             tt.switch(
-                tt.eq(value, self.upper),
+                tt.lt(value, upper),
+                tt.log(value - lower) - tt.log(upper - lower),
                 0,
-                tt.log(value - self.lower) - tt.log(self.upper - self.lower),
             ),
         )
 
@@ -344,7 +347,7 @@ class Flat(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -401,7 +404,7 @@ class HalfFlat(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -478,7 +481,6 @@ class Normal(Continuous):
     def __init__(self, mu=0, sigma=None, tau=None, sd=None, **kwargs):
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
         self.tau = tt.as_tensor_variable(tau)
@@ -543,7 +545,7 @@ class Normal(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -640,7 +642,6 @@ class TruncatedNormal(BoundedContinuous):
     ):
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
         self.tau = tt.as_tensor_variable(tau)
@@ -835,7 +836,6 @@ class HalfNormal(PositiveContinuous):
     def __init__(self, sigma=None, tau=None, sd=None, *args, **kwargs):
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         super().__init__(*args, **kwargs)
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
@@ -903,7 +903,7 @@ class HalfNormal(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -913,10 +913,10 @@ class HalfNormal(PositiveContinuous):
         """
         sigma = self.sigma
         z = zvalue(value, mu=0, sigma=sigma)
-        return tt.switch(
-            tt.lt(z, -1.0),
-            tt.log(tt.erfcx(-z / tt.sqrt(2.0))) - tt.sqr(z),
+        return bound(
             tt.log1p(-tt.erfc(z / tt.sqrt(2.0))),
+            0 <= value,
+            0 < sigma,
         )
 
 
@@ -1109,7 +1109,7 @@ class Wald(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1218,7 +1218,6 @@ class Beta(UnitContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sigma)
         self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
         self.beta = beta = tt.as_tensor_variable(floatX(beta))
@@ -1301,20 +1300,30 @@ class Beta(UnitContinuous):
         Parameters
         ----------
         value: numeric
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            Value(s) for which log CDF is calculated.
 
         Returns
         -------
         TensorVariable
         """
-        value = floatX(tt.as_tensor(value))
-        a = floatX(tt.as_tensor(self.alpha))
-        b = floatX(tt.as_tensor(self.beta))
-        return tt.switch(
-            tt.le(value, 0),
-            -np.inf,
-            tt.switch(tt.ge(value, 1), 0, tt.log(incomplete_beta(a, b, value))),
+        # incomplete_beta function can only handle scalar values (see #4342)
+        if np.ndim(value):
+            raise TypeError(
+                f"Beta.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
+        a = self.alpha
+        b = self.beta
+
+        return bound(
+            tt.switch(
+                tt.lt(value, 1),
+                tt.log(incomplete_beta(a, b, value)),
+                0,
+            ),
+            0 <= value,
+            0 < a,
+            0 < b,
         )
 
     def _distr_parameters_for_repr(self):
@@ -1517,15 +1526,9 @@ class Exponential(PositiveContinuous):
         Compute the log of cumulative distribution function for the Exponential distribution
         at the specified value.
 
-        References
-        ----------
-        .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing :math:`\log(1-\exp(-\mid a \mid))` Assessed by the Rmpfr
-            package"
-
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1537,9 +1540,9 @@ class Exponential(PositiveContinuous):
         lam = self.lam
         a = lam * value
         return tt.switch(
-            tt.le(value, 0.0),
+            tt.le(value, 0.0) | tt.le(lam, 0),
             -np.inf,
-            tt.switch(tt.le(a, tt.log(2.0)), tt.log(-tt.expm1(-a)), tt.log1p(-tt.exp(-a))),
+            log1mexp(a),
         )
 
 
@@ -1640,7 +1643,7 @@ class Laplace(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1655,6 +1658,106 @@ class Laplace(Continuous):
             tt.le(value, a),
             tt.log(0.5) + y,
             tt.switch(tt.gt(y, 1), tt.log1p(-0.5 * tt.exp(-y)), tt.log(1 - 0.5 * tt.exp(-y))),
+        )
+
+
+class AsymmetricLaplace(Continuous):
+    r"""
+    Asymmetric-Laplace log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+        {f(x|\\b,\kappa,\mu) =
+            \left({\frac{\\b}{\kappa + 1/\kappa}}\right)\,e^{-(x-\mu)\\b\,s\kappa ^{s}}}
+
+    where
+
+    .. math::
+
+        s = sgn(x-\mu)
+
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu-\frac{\\\kappa-1/\kappa}b`
+    Variance  :math:`\frac{1+\kappa^{4}}{b^2\kappa^2 }`
+    ========  ========================
+
+    Parameters
+    ----------
+    b: float
+        Scale parameter (b > 0)
+    kappa: float
+        Symmetry parameter (kappa > 0)
+    mu: float
+        Location parameter
+
+    See Also:
+    --------
+    `Reference <https://en.wikipedia.org/wiki/Asymmetric_Laplace_distribution>`_
+    """
+
+    def __init__(self, b, kappa, mu=0, *args, **kwargs):
+        self.b = tt.as_tensor_variable(floatX(b))
+        self.kappa = tt.as_tensor_variable(floatX(kappa))
+        self.mu = mu = tt.as_tensor_variable(floatX(mu))
+
+        self.mean = self.mu - (self.kappa - 1 / self.kappa) / b
+        self.variance = (1 + self.kappa ** 4) / (self.kappa ** 2 * self.b ** 2)
+
+        assert_negative_support(kappa, "kappa", "AsymmetricLaplace")
+        assert_negative_support(b, "b", "AsymmetricLaplace")
+
+        super().__init__(*args, **kwargs)
+
+    def _random(self, b, kappa, mu, size=None):
+        u = np.random.uniform(size=size)
+        switch = kappa ** 2 / (1 + kappa ** 2)
+        non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
+        positive_x = mu - np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
+        draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
+        return draws
+
+    def random(self, point=None, size=None):
+        """
+        Draw random samples from this distribution, using the inverse CDF method.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size:int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        b, kappa, mu = draw_values([self.b, self.kappa, self.mu], point=point, size=size)
+        return generate_samples(self._random, b, kappa, mu, dist_shape=self.shape, size=size)
+
+    def logp(self, value):
+        """
+        Calculate log-probability of Asymmetric-Laplace distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        value = value - self.mu
+        return bound(
+            tt.log(self.b / (self.kappa + (self.kappa ** -1)))
+            + (-value * self.b * tt.sgn(value) * (self.kappa ** tt.sgn(value))),
+            0 < self.b,
+            0 < self.kappa,
         )
 
 
@@ -1724,7 +1827,6 @@ class Lognormal(PositiveContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
@@ -1797,7 +1899,7 @@ class Lognormal(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -1885,10 +1987,8 @@ class StudentT(Continuous):
 
     def __init__(self, nu, mu=0, lam=None, sigma=None, sd=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         self.nu = nu = tt.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
         self.lam = lam = tt.as_tensor_variable(lam)
@@ -1962,20 +2062,32 @@ class StudentT(Continuous):
         Parameters
         ----------
         value: numeric
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            Value(s) for which log CDF is calculated.
 
         Returns
         -------
         TensorVariable
         """
+        # incomplete_beta function can only handle scalar values (see #4342)
+        if np.ndim(value):
+            raise TypeError(
+                f"StudentT.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
         nu = self.nu
         mu = self.mu
         sigma = self.sigma
+        lam = self.lam
         t = (value - mu) / sigma
         sqrt_t2_nu = tt.sqrt(t ** 2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
-        return tt.log(incomplete_beta(nu / 2.0, nu / 2.0, x))
+
+        return bound(
+            tt.log(incomplete_beta(nu / 2.0, nu / 2.0, x)),
+            0 < nu,
+            0 < sigma,
+            0 < lam,
+        )
 
 
 class Pareto(Continuous):
@@ -2097,7 +2209,7 @@ class Pareto(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2216,7 +2328,7 @@ class Cauchy(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2324,7 +2436,7 @@ class HalfCauchy(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2397,7 +2509,6 @@ class Gamma(PositiveContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sigma)
         self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
@@ -2476,7 +2587,7 @@ class Gamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2486,7 +2597,17 @@ class Gamma(PositiveContinuous):
         """
         alpha = self.alpha
         beta = self.beta
-        return bound(tt.log(tt.gammainc(alpha, beta * value)), value >= 0, alpha > 0, beta > 0)
+        # Avoid C-assertion when the gammainc function is called with invalid values (#4340)
+        safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
+        safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
+        safe_value = tt.switch(tt.lt(value, 0), 0, value)
+
+        return bound(
+            tt.log(tt.gammainc(safe_alpha, safe_beta * safe_value)),
+            0 <= value,
+            0 < alpha,
+            0 < beta,
+        )
 
     def _distr_parameters_for_repr(self):
         return ["alpha", "beta"]
@@ -2545,7 +2666,6 @@ class InverseGamma(PositiveContinuous):
 
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         alpha, beta = InverseGamma._get_alpha_beta(alpha, beta, mu, sigma)
         self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
@@ -2641,7 +2761,7 @@ class InverseGamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2651,11 +2771,16 @@ class InverseGamma(PositiveContinuous):
         """
         alpha = self.alpha
         beta = self.beta
+        # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
+        safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
+        safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
+        safe_value = tt.switch(tt.lt(value, 0), 0, value)
+
         return bound(
-            tt.log(tt.gammaincc(alpha, beta / value)),
-            value >= 0,
-            alpha > 0,
-            beta > 0,
+            tt.log(tt.gammaincc(safe_alpha, safe_beta / safe_value)),
+            0 <= value,
+            0 < alpha,
+            0 < beta,
         )
 
 
@@ -2815,15 +2940,9 @@ class Weibull(PositiveContinuous):
         Compute the log of the cumulative distribution function for Weibull distribution
         at the specified value.
 
-        References
-        ----------
-        .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing `\log(1-\exp(- \mid a \mid))` Assessed by the Rmpfr
-            package"
-
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -2837,7 +2956,7 @@ class Weibull(PositiveContinuous):
         return tt.switch(
             tt.le(value, 0.0),
             -np.inf,
-            tt.switch(tt.le(a, tt.log(2.0)), tt.log(-tt.expm1(-a)), tt.log1p(-tt.exp(-a))),
+            log1mexp(a),
         )
 
 
@@ -2902,7 +3021,6 @@ class HalfStudentT(PositiveContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         self.mode = tt.as_tensor_variable(0)
         lam, sigma = get_tau_sigma(lam, sigma)
@@ -3041,7 +3159,6 @@ class ExGaussian(Continuous):
 
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
         self.sigma = self.sd = sigma = tt.as_tensor_variable(floatX(sigma))
@@ -3096,21 +3213,21 @@ class ExGaussian(Continuous):
         sigma = self.sigma
         nu = self.nu
 
-        standardized_val = (value - mu) / sigma
-        cdf_val = std_cdf(standardized_val - sigma / nu)
-        cdf_val_safe = tt.switch(tt.eq(cdf_val, 0), np.finfo(theano.config.floatX).eps, cdf_val)
-
-        # This condition is suggested by exGAUS.R from gamlss
-        lp = tt.switch(
-            tt.gt(nu, 0.05 * sigma),
-            -tt.log(nu) + (mu - value) / nu + 0.5 * (sigma / nu) ** 2 + logpow(cdf_val_safe, 1.0),
-            -tt.log(sigma * tt.sqrt(2 * np.pi)) - 0.5 * standardized_val ** 2,
+        # Alogithm is adapted from dexGAUS.R from gamlss
+        return bound(
+            tt.switch(
+                tt.gt(nu, 0.05 * sigma),
+                (
+                    -tt.log(nu)
+                    + (mu - value) / nu
+                    + 0.5 * (sigma / nu) ** 2
+                    + normal_lcdf(mu + (sigma ** 2) / nu, sigma, value)
+                ),
+                log_normal(value, mean=mu, sigma=sigma),
+            ),
+            0 < sigma,
+            0 < nu,
         )
-
-        return bound(lp, sigma > 0.0, nu > 0.0)
-
-    def _distr_parameters_for_repr(self):
-        return ["mu", "sigma", "nu"]
 
     def logcdf(self, value):
         """
@@ -3125,7 +3242,7 @@ class ExGaussian(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -3135,21 +3252,24 @@ class ExGaussian(Continuous):
         """
         mu = self.mu
         sigma = self.sigma
-        sigma_2 = sigma ** 2
         nu = self.nu
-        z = value - mu - sigma_2 / nu
+
+        # Alogithm is adapted from pexGAUS.R from gamlss
         return tt.switch(
             tt.gt(nu, 0.05 * sigma),
-            tt.log(
-                std_cdf((value - mu) / sigma)
-                - std_cdf(z / sigma)
-                * tt.exp(
-                    ((mu + (sigma_2 / nu)) ** 2 - (mu ** 2) - 2 * value * ((sigma_2) / nu))
-                    / (2 * sigma_2)
-                )
+            logdiffexp(
+                normal_lcdf(mu, sigma, value),
+                (
+                    (mu - value) / nu
+                    + 0.5 * (sigma / nu) ** 2
+                    + normal_lcdf(mu + (sigma ** 2) / nu, sigma, value)
+                ),
             ),
             normal_lcdf(mu, sigma, value),
         )
+
+    def _distr_parameters_for_repr(self):
+        return ["mu", "sigma", "nu"]
 
 
 class VonMises(Continuous):
@@ -3317,7 +3437,6 @@ class SkewNormal(Continuous):
 
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
@@ -3515,7 +3634,7 @@ class Triangular(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -3644,7 +3763,7 @@ class Gumbel(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -3721,7 +3840,6 @@ class Rice(PositiveContinuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         nu, b, sigma = self.get_nu_b(nu, b, sigma)
         self.nu = nu = tt.as_tensor_variable(floatX(nu))
@@ -3872,25 +3990,6 @@ class Logistic(Continuous):
         self.mean = self.mode = mu
         self.variance = s ** 2 * np.pi ** 2 / 3.0
 
-    def logp(self, value):
-        """
-        Calculate log-probability of Logistic distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-        mu = self.mu
-        s = self.s
-
-        return bound(-(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)), s > 0)
-
     def random(self, point=None, size=None):
         """
         Draw random values from Logistic distribution.
@@ -3914,20 +4013,36 @@ class Logistic(Continuous):
             stats.logistic.rvs, loc=mu, scale=s, dist_shape=self.shape, size=size
         )
 
+    def logp(self, value):
+        """
+        Calculate log-probability of Logistic distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        mu = self.mu
+        s = self.s
+
+        return bound(
+            -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)),
+            s > 0,
+        )
+
     def logcdf(self, value):
         r"""
         Compute the log of the cumulative distribution function for Logistic distribution
         at the specified value.
 
-        References
-        ----------
-        .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing :math:  `\log(1-\exp(- \mid a \mid<))` Assessed by the Rmpfr
-            package"
-
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 
@@ -3937,14 +4052,7 @@ class Logistic(Continuous):
         """
         mu = self.mu
         s = self.s
-        a = -(value - mu) / s
-        return -tt.switch(
-            tt.le(a, -37),
-            tt.exp(a),
-            tt.switch(
-                tt.le(a, 18), tt.log1p(tt.exp(a)), tt.switch(tt.le(a, 33.3), tt.exp(-a) + a, a)
-            ),
-        )
+        return -log1pexp(-(value - mu) / s)
 
 
 class LogitNormal(UnitContinuous):
@@ -3994,7 +4102,6 @@ class LogitNormal(UnitContinuous):
     def __init__(self, mu=0, sigma=None, tau=None, sd=None, **kwargs):
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         self.mu = mu = tt.as_tensor_variable(floatX(mu))
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
@@ -4270,7 +4377,7 @@ class Moyal(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: numeric or np.ndarray or theano.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
             values are desired the values must be provided in a numpy array or theano tensor.
 

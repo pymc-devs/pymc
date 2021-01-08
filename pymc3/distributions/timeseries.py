@@ -12,18 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import warnings
+import numpy as np
+import theano.tensor as tt
 
 from scipy import stats
-import theano.tensor as tt
 from theano import scan
-import numpy as np
 
-from .continuous import get_tau_sigma, Normal, Flat
-from .shape_utils import to_tuple
-from . import multivariate
-from . import distribution
-
+from pymc3.distributions import distribution, multivariate
+from pymc3.distributions.continuous import Flat, Normal, get_tau_sigma
+from pymc3.distributions.shape_utils import to_tuple
 
 __all__ = [
     "AR1",
@@ -117,7 +114,6 @@ class AR(distribution.Continuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.sigma = self.sd = tt.as_tensor_variable(sigma)
@@ -212,7 +208,6 @@ class GaussianRandomWalk(distribution.Continuous):
             raise TypeError("GaussianRandomWalk must be supplied a non-zero shape argument!")
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         self.tau = tt.as_tensor_variable(tau)
         sigma = tt.as_tensor_variable(sigma)
@@ -280,7 +275,6 @@ class GaussianRandomWalk(distribution.Continuous):
         """Implement a Gaussian random walk as a cumulative sum of normals.
         axis = len(size) - 1 denotes the axis along which cumulative sum would be calculated.
         This might need to be corrected in future when issue #4010 is fixed.
-        Lines 318-322 ties the starting point of each instance of random walk to 0"
         """
         if size[len(sample_shape)] == sample_shape:
             axis = len(sample_shape)
@@ -289,6 +283,8 @@ class GaussianRandomWalk(distribution.Continuous):
         rv = stats.norm(mu, sigma)
         data = rv.rvs(size).cumsum(axis=axis)
         data = np.array(data)
+
+        # the following lines center the random walk to start at the origin.
         if len(data.shape) > 1:
             for i in range(data.shape[0]):
                 data[i] = data[i] - data[i][0]
@@ -440,7 +436,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
         self.init = init
         self.innovArgs = (mu, cov, tau, chol, lower)
-        self.innov = multivariate.MvNormal.dist(*self.innovArgs)
+        self.innov = multivariate.MvNormal.dist(*self.innovArgs, shape=self.shape)
         self.mean = tt.as_tensor_variable(0.0)
 
     def logp(self, x):
@@ -457,6 +453,10 @@ class MvGaussianRandomWalk(distribution.Continuous):
         -------
         TensorVariable
         """
+
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+
         x_im1 = x[:-1]
         x_i = x[1:]
 
@@ -464,6 +464,70 @@ class MvGaussianRandomWalk(distribution.Continuous):
 
     def _distr_parameters_for_repr(self):
         return ["mu", "cov"]
+
+    def random(self, point=None, size=None):
+        """
+        Draw random values from MvGaussianRandomWalk.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int or tuple of ints, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+
+
+        Examples
+        -------
+        .. code-block:: python
+
+            with pm.Model():
+                mu = np.array([1.0, 0.0])
+                cov = np.array([[1.0, 0.0],
+                                [0.0, 2.0]])
+
+                # draw one sample from a 2-dimensional Gaussian random walk with 10 timesteps
+                sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random()
+
+                # draw three samples from a 2-dimensional Gaussian random walk with 10 timesteps
+                sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=3)
+
+                # draw four samples from a 2-dimensional Gaussian random walk with 10 timesteps,
+                # indexed with a (2, 2) array
+                sample = MvGaussianRandomWalk(mu, cov, shape=(10, 2)).random(size=(2, 2))
+        """
+
+        # for each draw specified by the size input, we need to draw time_steps many
+        # samples from MvNormal.
+
+        size = to_tuple(size)
+        multivariate_samples = self.innov.random(point=point, size=size)
+        # this has shape (size, self.shape)
+        if len(self.shape) == 2:
+            # have time dimension in first slot of shape. Therefore the time
+            # component can be accessed with the index equal to the length of size.
+            time_axis = len(size)
+            multivariate_samples = multivariate_samples.cumsum(axis=time_axis)
+            if time_axis != 0:
+                # this for loop covers the case where size is a tuple
+                for idx in np.ndindex(size):
+                    multivariate_samples[idx] = (
+                        multivariate_samples[idx] - multivariate_samples[idx][0]
+                    )
+            else:
+                # size was passed as None
+                multivariate_samples = multivariate_samples - multivariate_samples[0]
+
+        # if the above statement fails, then only a spatial dimension was passed in for self.shape.
+        # Therefore don't subtract off the initial value since otherwise you get all zeros
+        # as your output.
+        return multivariate_samples
 
 
 class MvStudentTRandomWalk(MvGaussianRandomWalk):

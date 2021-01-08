@@ -12,20 +12,21 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from collections import namedtuple
+import logging
 import time
 
+from collections import namedtuple
+
 import numpy as np
-import logging
-from pymc3.model import modelcontext, Point
-from pymc3.step_methods import arraystep
-from pymc3.step_methods.hmc import integration
-from pymc3.theanof import inputvars, floatX
-from pymc3.tuning import guess_scaling
-from .quadpotential import quad_potential, QuadPotentialDiagAdapt
-from pymc3.step_methods import step_sizes
+
 from pymc3.backends.report import SamplerWarning, WarningType
 from pymc3.exceptions import SamplingError
+from pymc3.model import Point, modelcontext
+from pymc3.step_methods import arraystep, step_sizes
+from pymc3.step_methods.hmc import integration
+from pymc3.step_methods.hmc.quadpotential import QuadPotentialDiagAdapt, quad_potential
+from pymc3.theanof import floatX, inputvars
+from pymc3.tuning import guess_scaling
 
 logger = logging.getLogger("pymc3")
 

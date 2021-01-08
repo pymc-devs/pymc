@@ -12,6 +12,3 @@ exclude_lines = [
 isort = 1
 black = 1
 pyupgrade = 1
-
-[tool.nbqa.addopts]
-pyupgrade = ["--py36-plus"]
