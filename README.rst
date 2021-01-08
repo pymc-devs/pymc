@@ -79,9 +79,9 @@ Installation
 
 To install PyMC3 on your system, follow the instructions on the appropriate installation guide:
 
--  `Installing PyMC3 on MacOS <https://github.com/pymc-devs/pymc3/wiki/Installation-Guide-(MacOS)`__
--  `Installing PyMC3 on Linux <https://github.com/pymc-devs/pymc3/wiki/Installation-Guide-(Linux)`__
--  `Installing PyMC3 on Windows <https://github.com/pymc-devs/pymc3/wiki/Installation-Guide-(Windows)`__
+-  `Installing PyMC3 on MacOS <https://github.com/pymc-devs/pymc3/wiki/Installation-Guide-(MacOS)>`__
+-  `Installing PyMC3 on Linux <https://github.com/pymc-devs/pymc3/wiki/Installation-Guide-(Linux)>`__
+-  `Installing PyMC3 on Windows <https://github.com/pymc-devs/pymc3/wiki/Installation-Guide-(Windows)>`__
 
 
 Citing PyMC3
