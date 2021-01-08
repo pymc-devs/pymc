@@ -364,7 +364,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         e.g., [0, 2, 1, ...]. Default is random
     transit_p: float
         The diagonal of the transition kernel. A value > .5 gives anticorrelated proposals,
-        which resulting in more efficient antithetical sampling.
+        which resulting in more efficient antithetical sampling. Default is 0.8
     model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
 
