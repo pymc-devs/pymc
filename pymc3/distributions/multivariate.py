@@ -596,6 +596,8 @@ class Multinomial(Discrete):
             self.p = tt.as_tensor_variable(p)
 
         self.mean = self.n * self.p
+        # Mode is only an approximation. Exact computation requires a complex
+        # iterative algorithm as described in https://doi.org/10.1016/j.spl.2009.09.013
         mode = tt.cast(tt.round(self.mean), "int32")
         diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
         inc_bool_arr = tt.abs_(diff) > 0
@@ -740,6 +742,8 @@ class DirichletMultinomial(Discrete):
         p = self.a / self.a.sum(-1, keepdims=True)
 
         self.mean = self.n * p
+        # Mode is only an approximation. Exact computation requires a complex
+        # iterative algorithm as described in https://doi.org/10.1016/j.spl.2009.09.013
         mode = tt.cast(tt.round(self.mean), "int32")
         diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
         inc_bool_arr = tt.abs_(diff) > 0
