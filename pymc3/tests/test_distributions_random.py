@@ -1029,7 +1029,7 @@ class TestScalarParameterSamples(SeededTest):
             [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), [17, 19]],
         ],
     )
-    def test_dirichlet_multinomial_shapes(self, a, shape, n):
+    def test_dirichlet_multinomial_shape(self, a, shape, n):
         a = np.asarray(a)
         with pm.Model() as model:
             m = pm.DirichletMultinomial("m", n=n, a=a, shape=shape)
@@ -1051,7 +1051,7 @@ class TestScalarParameterSamples(SeededTest):
             ([[5], [3]], [[1000, 1, 1], [1, 1, 1000]], (2, 3), pytest.raises(ShapeError)),
         ],
     )
-    def test_dirichlet_multinomial_dist_shapes_raise(self, n, a, shape, expectation):
+    def test_dirichlet_multinomial_dist_shape_raise(self, n, a, shape, expectation):
         m = pm.DirichletMultinomial.dist(n=n, a=a, shape=shape)
         with expectation:
             m.random()

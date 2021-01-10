@@ -1852,7 +1852,7 @@ class TestMatchesScipy(SeededTest):
         # Test that DM can handle a 3d array for `a`
 
         # Create an almost deterministic DM by setting a to 0.001, everywehere
-        # except for one category / dimensions which is given the value of 1000
+        # except for one category / dimension which is given the value of 1000
         n = 5
         vals = np.zeros((4, 5, 3), dtype="int32")
         a = np.zeros_like(vals, dtype=theano.config.floatX) + 0.001
