@@ -15,6 +15,8 @@
 import itertools
 import sys
 
+from contextlib import ExitStack as does_not_raise
+
 import numpy as np
 import numpy.random as nr
 import numpy.testing as npt
@@ -34,6 +36,7 @@ from pymc3.distributions.distribution import (
     draw_values,
     to_tuple,
 )
+from pymc3.exceptions import ShapeError
 from pymc3.tests.helpers import SeededTest
 from pymc3.tests.test_distributions import (
     Domain,
@@ -1038,6 +1041,20 @@ class TestScalarParameterSamples(SeededTest):
         assert to_tuple(samp0.shape) == shape_
         assert to_tuple(samp1.shape) == (1, *shape_)
         assert to_tuple(samp2.shape) == (2, *shape_)
+
+    @pytest.mark.parametrize(
+        "n, a, shape, expectation",
+        [
+            ([5], [[1000, 1, 1], [1, 1, 1000]], (2, 3), does_not_raise()),
+            ([5, 3], [[1000, 1, 1], [1, 1, 1000]], (2, 3), does_not_raise()),
+            ([[5]], [[1000, 1, 1], [1, 1, 1000]], (2, 3), pytest.raises(ShapeError)),
+            ([[5], [3]], [[1000, 1, 1], [1, 1, 1000]], (2, 3), pytest.raises(ShapeError)),
+        ],
+    )
+    def test_dirichlet_multinomial_dist_shapes_raise(self, n, a, shape, expectation):
+        m = pm.DirichletMultinomial.dist(n=n, a=a, shape=shape)
+        with expectation:
+            m.random()
 
     def test_multinomial(self):
         def ref_rand(size, p, n):

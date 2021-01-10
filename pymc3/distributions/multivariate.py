@@ -42,6 +42,7 @@ from pymc3.distributions.distribution import (
 )
 from pymc3.distributions.shape_utils import broadcast_dist_samples_to, to_tuple
 from pymc3.distributions.special import gammaln, multigammaln
+from pymc3.exceptions import ShapeError
 from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
 from pymc3.model import Deterministic
 from pymc3.theanof import floatX
@@ -717,9 +718,8 @@ class DirichletMultinomial(Discrete):
         with N = a.shape[0]
 
     a : one- or two-dimensional array
-        Dirichlet parameter.  Elements must be non-negative.
-        Dimension of each element of the distribution is the length
-        of the second dimension of *a*.
+        Dirichlet parameter. Elements must be non-negative.
+        The number of categories is given by the length of the last axis.
 
     shape : numerical tuple
         Describes shape of distribution. For example if n=array([5, 10]), and
@@ -794,11 +794,14 @@ class DirichletMultinomial(Discrete):
             size=size,
         )
 
-        if size is not None:
-            expect_shape = (size, *self.shape)
-        else:
-            expect_shape = self.shape
-        assert tuple(samples.shape) == tuple(expect_shape)
+        # If distribution is initialized with .dist(), valid init shape is not asserted.
+        # Under normal use in a model context valid init shape is asserted at start.
+        expected_shape = tuple(self.shape) if size is None else (size, *self.shape)
+        sample_shape = tuple(samples.shape)
+        if sample_shape != expected_shape:
+            raise ShapeError(
+                f"Expected sample shape was {expected_shape} but got {sample_shape}. This may reflect an invalid initialization shape."
+            )
 
         return samples
 
