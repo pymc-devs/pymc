@@ -1850,27 +1850,26 @@ class TestMatchesScipy(SeededTest):
 
     def test_batch_dirichlet_multinomial(self):
         # Test that DM can handle a 3d array for `a`
-        n = 10
+
         # Create an almost deterministic DM by setting a to 0.001, everywehere
-        # except for one category / dimensions which is given the value fo 100
+        # except for one category / dimensions which is given the value of 1000
+        n = 5
         vals = np.zeros((4, 5, 3), dtype="int32")
         a = np.zeros_like(vals, dtype=theano.config.floatX) + 0.001
         inds = np.random.randint(vals.shape[-1], size=vals.shape[:-1])[..., None]
         np.put_along_axis(vals, inds, n, axis=-1)
-        np.put_along_axis(a, inds, 100, axis=-1)
+        np.put_along_axis(a, inds, 1000, axis=-1)
 
         dist = DirichletMultinomial.dist(n=n, a=a, shape=vals.shape)
 
-        # TODO: Test logp is as expected (not as simple as the Multinomial case)
-        # value = tt.tensor3(dtype="int32")
-        # value.tag.test_value = np.zeros_like(vals, dtype="int32")
-        # logp = tt.exp(dist.logp(value))
-        # f = theano.function(inputs=[value], outputs=logp)
-        # assert_almost_equal(
-        #     f(vals),
-        #     np.ones(vals.shape[:-1] + (1,)),
-        #     decimal=select_by_precision(float64=6, float32=3),
-        # )
+        # Logp should be approx -9.924431e-06
+        dist_logp = dist.logp(vals).tag.test_value
+        expected_logp = np.full(shape=vals.shape[:-1] + (1,), fill_value=-9.924431e-06)
+        assert_almost_equal(
+            dist_logp,
+            expected_logp,
+            decimal=select_by_precision(float64=6, float32=3),
+        )
 
         # Samples should be equal given the almost deterministic DM
         sample = dist.random(size=2)
@@ -2218,6 +2217,9 @@ class TestStrAndLatexRepr:
                 shape=(n, n),
             )
 
+            # DirichletMultinomial
+            dm = DirichletMultinomial("dm", n=5, a=[1, 1, 1], shape=(2, 3))
+
             # Likelihood (sampling distribution) of observations
             Y_obs = Normal("Y_obs", mu=mu, sigma=sigma, observed=Y)
 
@@ -2235,6 +2237,7 @@ class TestStrAndLatexRepr:
                 r"$\text{bound_var} \sim \text{Bound}$ -- \text{Normal}$",
                 r"$\text{kron_normal} \sim \text{KroneckerNormal}$",
                 r"$\text{mat_normal} \sim \text{MatrixNormal}$",
+                r"$\text{dm} \sim \text{DirichletMultinomial}$",
             ),
             "plain": (
                 r"alpha ~ Normal",
@@ -2248,6 +2251,7 @@ class TestStrAndLatexRepr:
                 r"bound_var ~ Bound-Normal",
                 r"kron_normal ~ KroneckerNormal",
                 r"mat_normal ~ MatrixNormal",
+                r"dm ~ DirichletMultinomial",
             ),
             "latex_with_params": (
                 r"$\text{alpha} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
@@ -2261,6 +2265,7 @@ class TestStrAndLatexRepr:
                 r"$\text{bound_var} \sim \text{Bound}(\mathit{lower}=1.0,~\mathit{upper}=\text{None})$ -- \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
                 r"$\text{kron_normal} \sim \text{KroneckerNormal}(\mathit{mu}=array)$",
                 r"$\text{mat_normal} \sim \text{MatrixNormal}(\mathit{mu}=array,~\mathit{rowcov}=array,~\mathit{colchol_cov}=array)$",
+                r"$\text{dm} \sim \text{DirichletMultinomial}(\mathit{n}=5,~\mathit{a}=array)$",
             ),
             "plain_with_params": (
                 r"alpha ~ Normal(mu=0.0, sigma=10.0)",
@@ -2274,6 +2279,7 @@ class TestStrAndLatexRepr:
                 r"bound_var ~ Bound(lower=1.0, upper=None)-Normal(mu=0.0, sigma=10.0)",
                 r"kron_normal ~ KroneckerNormal(mu=array)",
                 r"mat_normal ~ MatrixNormal(mu=array, rowcov=array, colchol_cov=array)",
+                r"dm∼DirichletMultinomial(n=5, a=array)",
             ),
         }
 
