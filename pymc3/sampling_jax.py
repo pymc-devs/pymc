@@ -11,7 +11,7 @@ import arviz as az
 import jax
 import numpy as np
 import pandas as pd
-import theano
+import theano.graph.fg
 
 from theano.link.jax.jax_dispatch import jax_funcify
 
@@ -45,7 +45,7 @@ def sample_tfp_nuts(
 
     seed = jax.random.PRNGKey(random_seed)
 
-    fgraph = theano.gof.FunctionGraph(model.free_RVs, [model.logpt])
+    fgraph = theano.graph.fg.FunctionGraph(model.free_RVs, [model.logpt])
     fns = jax_funcify(fgraph)
     logp_fn_jax = fns[0]
 
@@ -130,7 +130,7 @@ def sample_numpyro_nuts(
 
     seed = jax.random.PRNGKey(random_seed)
 
-    fgraph = theano.gof.FunctionGraph(model.free_RVs, [model.logpt])
+    fgraph = theano.graph.fg.FunctionGraph(model.free_RVs, [model.logpt])
     fns = jax_funcify(fgraph)
     logp_fn_jax = fns[0]
 

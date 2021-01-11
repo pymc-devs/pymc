@@ -31,7 +31,7 @@ from numpy import (
     searchsorted,
 )
 from numpy.random import uniform
-from theano.gof.graph import inputs
+from theano.graph.basic import graph_inputs
 from theano.tensor import add
 
 from pymc3.distributions.discrete import Categorical
@@ -80,7 +80,7 @@ class ElemwiseCategorical(ArrayStep):
 
 
 def elemwise_logp(model, var):
-    terms = [v.logp_elemwiset for v in model.basic_RVs if var in inputs([v.logpt])]
+    terms = [v.logp_elemwiset for v in model.basic_RVs if var in graph_inputs([v.logpt])]
     return model.fn(add(*terms))
 
 

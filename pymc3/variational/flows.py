@@ -19,7 +19,6 @@ from theano import tensor as tt
 
 from pymc3.distributions.dist_math import rho2sigma
 from pymc3.memoize import WithMemoization
-from pymc3.theanof import change_flags
 from pymc3.variational import opvi
 from pymc3.variational.opvi import collect_shared_to_list, node_property
 
@@ -206,7 +205,7 @@ class AbstractFlow(WithMemoization):
         return params
 
     @property
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def sum_logdets(self):
         dets = [self.logdet]
         current = self
@@ -223,7 +222,7 @@ class AbstractFlow(WithMemoization):
     def logdet(self):
         raise NotImplementedError
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def forward_pass(self, z0):
         ret = theano.clone(self.forward, {self.root.z0: z0})
         try:
@@ -298,7 +297,7 @@ class FlowFn:
 class LinearFlow(AbstractFlow):
     __param_spec__ = dict(u=("d",), w=("d",), b=())
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def __init__(self, h, u=None, w=None, b=None, **kwargs):
         self.h = h
         super().__init__(**kwargs)
@@ -408,7 +407,7 @@ class PlanarFlow(LinearFlow):
 class ReferencePointFlow(AbstractFlow):
     __param_spec__ = dict(a=(), b=(), z_ref=("d",))
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def __init__(self, h, a=None, b=None, z_ref=None, **kwargs):
         super().__init__(**kwargs)
         a = self.add_param(a, "a")
@@ -540,7 +539,7 @@ class ScaleFlow(AbstractFlow):
     __param_spec__ = dict(rho=("d",))
     short_name = "scale"
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def __init__(self, rho=None, **kwargs):
         super().__init__(**kwargs)
         rho = self.add_param(rho, "rho")
@@ -565,7 +564,7 @@ class HouseholderFlow(AbstractFlow):
     __param_spec__ = dict(v=("d",))
     short_name = "hh"
 
-    @change_flags(compute_test_value="raise")
+    @theano.config.change_flags(compute_test_value="raise")
     def __init__(self, v=None, **kwargs):
         super().__init__(**kwargs)
         v = self.add_param(v, "v")

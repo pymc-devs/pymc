@@ -23,12 +23,13 @@ from typing import TYPE_CHECKING, Any, List, Optional, Type, TypeVar, Union, cas
 import numpy as np
 import scipy.sparse as sps
 import theano
+import theano.graph.basic
 import theano.sparse as sparse
 import theano.tensor as tt
 
 from pandas import Series
 from theano.compile import SharedVariable
-from theano.gof.graph import Apply
+from theano.graph.basic import Apply
 from theano.tensor.var import TensorVariable
 
 import pymc3 as pm
@@ -284,7 +285,7 @@ class ContextMeta(type):
             # self._theano_config is set in Model.__new__
             self._config_context = None
             if hasattr(self, "_theano_config"):
-                self._config_context = theano.change_flags(**self._theano_config)
+                self._config_context = theano.config.change_flags(**self._theano_config)
                 self._config_context.__enter__()
             return self
 
@@ -1704,7 +1705,7 @@ def pandas_to_array(data):
             ret = data
         else:  # empty mask
             ret = data.filled()
-    elif isinstance(data, theano.gof.graph.Variable):
+    elif isinstance(data, theano.graph.basic.Variable):
         ret = data
     elif sps.issparse(data):
         ret = data
@@ -1795,7 +1796,7 @@ class ObservedRV(Factor, PyMC3Variable):
 
         if type is None:
             data = pandas_to_array(data)
-            if isinstance(data, theano.gof.graph.Variable):
+            if isinstance(data, theano.graph.basic.Variable):
                 type = data.type
             else:
                 type = TensorType(distribution.dtype, data.shape)

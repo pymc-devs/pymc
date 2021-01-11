@@ -16,7 +16,7 @@ import theano
 import theano.tensor as tt
 
 from pymc3.memoize import WithMemoization, memoize
-from pymc3.theanof import change_flags, floatX
+from pymc3.theanof import floatX
 from pymc3.variational.opvi import node_property
 from pymc3.variational.test_functions import rbf
 
@@ -91,6 +91,6 @@ class Stein(WithMemoization):
         return sized_symbolic_logp / self.approx.symbolic_normalizing_constant
 
     @memoize
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def _kernel(self):
         return self._kernel_f(self.input_joint_matrix)

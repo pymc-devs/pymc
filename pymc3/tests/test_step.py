@@ -27,7 +27,7 @@ import theano.tensor as tt
 
 from numpy.testing import assert_array_almost_equal
 from theano.compile.ops import as_op
-from theano.gof.op import Op
+from theano.graph.op import Op
 
 from pymc3.data import Data
 from pymc3.distributions import (

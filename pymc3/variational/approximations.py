@@ -21,7 +21,6 @@ import pymc3 as pm
 
 from pymc3.distributions.dist_math import rho2sigma
 from pymc3.math import batched_diag
-from pymc3.theanof import change_flags
 from pymc3.util import update_start_vals
 from pymc3.variational import flows, opvi
 from pymc3.variational.opvi import Approximation, Group, node_property
@@ -60,7 +59,7 @@ class MeanFieldGroup(Group):
     def std(self):
         return rho2sigma(self.rho)
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         if not self._check_user_params():
@@ -115,7 +114,7 @@ class FullRankGroup(Group):
     short_name = "full_rank"
     alias_names = frozenset(["fr"])
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         if not self._check_user_params():
@@ -219,7 +218,7 @@ class EmpiricalGroup(Group):
     __param_spec__ = dict(histogram=("s", "d"))
     short_name = "empirical"
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         self._check_trace()
@@ -371,7 +370,7 @@ class NormalizingFlowGroup(Group):
     """
     default_flow = "scale-loc"
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         # objects to be resolved

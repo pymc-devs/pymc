@@ -25,8 +25,8 @@ import theano.tensor as tt
 import theano.tensor.slinalg  # pylint: disable=unused-import
 
 from scipy.linalg import block_diag as scipy_block_diag
-from theano.gof.graph import Apply
-from theano.gof.op import Op
+from theano.graph.basic import Apply
+from theano.graph.op import Op
 
 # pylint: disable=unused-import
 from theano.tensor import (

@@ -21,14 +21,14 @@ import pymc3 as pm
 
 @pytest.fixture(scope="function", autouse=True)
 def theano_config():
-    config = theano.configparser.change_flags(compute_test_value="raise")
+    config = theano.config.change_flags(compute_test_value="raise")
     with config:
         yield
 
 
 @pytest.fixture(scope="function", autouse=True)
 def exception_verbosity():
-    config = theano.configparser.change_flags(exception_verbosity="high")
+    config = theano.config.change_flags(exception_verbosity="high")
     with config:
         yield
 
@@ -36,7 +36,7 @@ def exception_verbosity():
 @pytest.fixture(scope="function", autouse=False)
 def strict_float32():
     if theano.config.floatX == "float32":
-        config = theano.configparser.change_flags(warn_float64="raise")
+        config = theano.config.change_flags(warn_float64="raise")
         with config:
             yield
     else:

@@ -167,13 +167,13 @@ class TestObserved:
 
 class TestTheanoConfig:
     def test_set_testval_raise(self):
-        with theano.configparser.change_flags(compute_test_value="off"):
+        with theano.config.change_flags(compute_test_value="off"):
             with pm.Model():
                 assert theano.config.compute_test_value == "raise"
             assert theano.config.compute_test_value == "off"
 
     def test_nested(self):
-        with theano.configparser.change_flags(compute_test_value="off"):
+        with theano.config.change_flags(compute_test_value="off"):
             with pm.Model(theano_config={"compute_test_value": "ignore"}):
                 assert theano.config.compute_test_value == "ignore"
                 with pm.Model(theano_config={"compute_test_value": "warn"}):

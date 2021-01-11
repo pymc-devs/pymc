@@ -114,9 +114,9 @@ class TestDrawValues:
             ]
         )
 
-    def test_gof_constant(self):
+    def test_graph_constant(self):
         # Issue 3595 pointed out that slice(None) can introduce
-        # theano.gof.graph.Constant into the compute graph, which wasn't
+        # theano.graph.basic.Constant into the compute graph, which wasn't
         # handled correctly by draw_values
         n_d = 500
         n_x = 2

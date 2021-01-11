@@ -15,10 +15,10 @@
 import numpy as np
 import theano
 
-from theano import change_flags, scalar
+from theano import scalar
 from theano import tensor as tt
-from theano.gof import Op
-from theano.gof.graph import Apply, inputs
+from theano.graph.basic import Apply, graph_inputs
+from theano.graph.op import Op
 from theano.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 
 from pymc3.blocking import ArrayOrdering
@@ -57,7 +57,7 @@ def inputvars(a):
     -------
         r: list of tensor variables that are inputs
     """
-    return [v for v in inputs(makeiter(a)) if isinstance(v, tt.TensorVariable)]
+    return [v for v in graph_inputs(makeiter(a)) if isinstance(v, tt.TensorVariable)]
 
 
 def cont_inputs(f):
@@ -163,12 +163,12 @@ def jacobian_diag(f, x):
     return theano.scan(grad_ii, sequences=[idx], n_steps=f.shape[0], name="jacobian_diag")[0]
 
 
-@change_flags(compute_test_value="ignore")
+@theano.config.change_flags(compute_test_value="ignore")
 def hessian(f, vars=None):
     return -jacobian(gradient(f, vars), vars)
 
 
-@change_flags(compute_test_value="ignore")
+@theano.config.change_flags(compute_test_value="ignore")
 def hessian_diag1(f, v):
     g = gradient1(f, v)
     idx = tt.arange(g.shape[0], dtype="int32")
@@ -179,7 +179,7 @@ def hessian_diag1(f, v):
     return theano.map(hess_ii, idx)[0]
 
 
-@change_flags(compute_test_value="ignore")
+@theano.config.change_flags(compute_test_value="ignore")
 def hessian_diag(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
@@ -348,10 +348,10 @@ class GeneratorOp(Op):
         else:
             output_storage[0][0] = next(self.generator)
 
-    def do_constant_folding(self, node):
+    def do_constant_folding(self, fgraph, node):
         return False
 
-    __call__ = change_flags(compute_test_value="off")(Op.__call__)
+    __call__ = theano.config.change_flags(compute_test_value="off")(Op.__call__)
 
     def set_gen(self, gen):
         if not isinstance(gen, GeneratorAdapter):

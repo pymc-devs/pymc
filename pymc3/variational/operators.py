@@ -11,12 +11,12 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import theano
 
 from theano import tensor as tt
 
 import pymc3 as pm
 
-from pymc3.theanof import change_flags
 from pymc3.variational import opvi
 from pymc3.variational.opvi import ObjectiveFunction, Operator
 from pymc3.variational.stein import Stein
@@ -75,7 +75,7 @@ class KSDObjective(ObjectiveFunction):
             raise opvi.ParametrizationError("Op should be KSD")
         ObjectiveFunction.__init__(self, op, tf)
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
         op = self.op  # type: KSD
         grad = op.apply(self.tf)

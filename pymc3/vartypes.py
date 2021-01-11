@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from theano.gof.graph import Constant as graph_constant
+from theano.graph.basic import Constant as graph_constant
 from theano.tensor import Constant as tensor_constant
 
 __all__ = [

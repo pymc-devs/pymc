@@ -26,7 +26,7 @@ import pandas as pd
 import theano
 import theano.tensor as tt
 
-from theano.gof.graph import Apply
+from theano.graph.basic import Apply
 
 import pymc3 as pm
 
@@ -296,7 +296,7 @@ class Minibatch(tt.TensorVariable):
 
     RNG = collections.defaultdict(list)  # type: Dict[str, List[Any]]
 
-    @theano.configparser.change_flags(compute_test_value="raise")
+    @theano.config.change_flags(compute_test_value="raise")
     def __init__(
         self,
         data,
