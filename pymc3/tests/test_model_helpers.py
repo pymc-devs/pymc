@@ -80,7 +80,7 @@ class TestHelperFunc:
         # Check function behavior with Theano graph variable
         theano_output = func(theano_graph_input)
         assert isinstance(theano_output, theano.graph.basic.Variable)
-        assert theano_output == theano_graph_input
+        npt.assert_allclose(theano_output.eval(), theano_graph_input.eval())
         assert theano_output.owner.inputs[0].name == input_name
 
         # Check function behavior with generator data
