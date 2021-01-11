@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import sys
 
 import numpy as np
 import numpy.testing as npt
@@ -236,7 +237,12 @@ class TestI0e:
         verify_grad(i0e, [[[0.5, -2.0]]])
 
 
-@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "float128"])
+@pytest.mark.parametrize(
+    "dtype",
+    ["float16", "float32", "float64", "float128"]
+    if sys.platform != "win32"
+    else ["float16", "float32", "float64"],
+)
 def test_clipped_beta_rvs(dtype):
     # Verify that the samples drawn from the beta distribution are never
     # equal to zero or one (issue #3898)
