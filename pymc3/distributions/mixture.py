@@ -253,7 +253,7 @@ class Mixture(Distribution):
                 val_shape = tuple(value.shape.eval())
             except AttributeError:
                 val_shape = value.shape
-            except theano.gof.MissingInputError:
+            except theano.graph.fg.MissingInputError:
                 val_shape = None
             try:
                 self_shape = tuple(self.shape)

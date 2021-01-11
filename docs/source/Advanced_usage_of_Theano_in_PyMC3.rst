@@ -186,7 +186,7 @@ Now, we use this to define a theano op, that also computes the gradient::
     import theano
     import theano.tensor as tt
     import theano.tests.unittest_tools
-    from theano.gof.op import Op
+    from theano.graph.op import Op
 
     class MuFromTheta(Op):
         itypes = [tt.dscalar]

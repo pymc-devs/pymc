@@ -16,8 +16,6 @@ import numpy as np
 import pytest
 import theano
 
-from theano.configparser import change_flags
-
 from pymc3.variational.updates import (
     adadelta,
     adagrad,
@@ -73,7 +71,7 @@ _n2 = _b + _n + _m2.sum()
     ids=["scalar", "matrix", "mixed"],
 )
 def test_updates_fast(opt, loss_and_params, kwargs, getter):
-    with change_flags(compute_test_value="ignore"):
+    with theano.config.change_flags(compute_test_value="ignore"):
         loss, param = getter(loss_and_params)
         args = dict()
         args.update(**kwargs)

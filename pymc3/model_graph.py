@@ -18,7 +18,7 @@ from typing import Dict, Iterator, Optional, Set
 VarName = str
 
 from theano.compile import SharedVariable
-from theano.gof.graph import stack_search
+from theano.graph.basic import walk
 from theano.tensor import Tensor
 
 import pymc3 as pm
@@ -69,7 +69,7 @@ class ModelGraph:
             else:
                 return None
 
-        list(stack_search(deque([func]), _expand, bfs=True))
+        list(walk(deque([func]), _expand, bfs=True))
         return retval
 
     def _filter_parents(self, var, parents) -> Set[VarName]:

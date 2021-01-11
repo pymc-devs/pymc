@@ -59,7 +59,7 @@ from pymc3.backends import NDArray
 from pymc3.blocking import ArrayOrdering, DictToArrayBijection, VarMap
 from pymc3.memoize import WithMemoization, memoize
 from pymc3.model import modelcontext
-from pymc3.theanof import change_flags, identity, tt_rng
+from pymc3.theanof import identity, tt_rng
 from pymc3.util import get_default_varnames, get_transformed
 from pymc3.variational.updates import adagrad_window
 
@@ -115,15 +115,20 @@ def node_property(f):
 
         def wrapper(fn):
             return property(
-                memoize(change_flags(compute_test_value="off")(append_name(f)(fn)), bound=True)
+                memoize(
+                    theano.config.change_flags(compute_test_value="off")(append_name(f)(fn)),
+                    bound=True,
+                )
             )
 
         return wrapper
     else:
-        return property(memoize(change_flags(compute_test_value="off")(f), bound=True))
+        return property(
+            memoize(theano.config.change_flags(compute_test_value="off")(f), bound=True)
+        )
 
 
-@change_flags(compute_test_value="ignore")
+@theano.config.change_flags(compute_test_value="ignore")
 def try_to_set_test_value(node_in, node_out, s):
     _s = s
     if s is None:
@@ -286,7 +291,7 @@ class ObjectiveFunction:
         if self.op.returns_loss:
             updates.loss = obj_target
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def step_function(
         self,
         obj_n_mc=None,
@@ -359,7 +364,7 @@ class ObjectiveFunction:
             step_fn = theano.function([], None, updates=updates, **fn_kwargs)
         return step_fn
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def score_function(
         self, sc_n_mc=None, more_replacements=None, fn_kwargs=None
     ):  # pragma: no cover
@@ -387,7 +392,7 @@ class ObjectiveFunction:
         loss = self(sc_n_mc, more_replacements=more_replacements)
         return theano.function([], loss, **fn_kwargs)
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
         if "more_tf_params" in kwargs:
             m = -1.0
@@ -925,7 +930,7 @@ class Group(WithMemoization):
         else:
             return tt.vector(name)
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         if not group:
             raise GroupError("Got empty group")
@@ -1106,7 +1111,7 @@ class Group(WithMemoization):
         else:
             return self.symbolic_random
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(self, node, s, d, more_replacements=None):
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
@@ -1467,7 +1472,7 @@ class Approximation(WithMemoization):
         flat2rand.update(more_replacements)
         return flat2rand
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(self, node, s, d, more_replacements=None):
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
@@ -1532,7 +1537,7 @@ class Approximation(WithMemoization):
             repl[self.datalogp] = self.single_symbolic_datalogp
         return repl
 
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def sample_node(self, node, size=None, deterministic=False, more_replacements=None):
         """Samples given node or nodes over shared posterior
 
@@ -1583,7 +1588,7 @@ class Approximation(WithMemoization):
 
     @property
     @memoize(bound=True)
-    @change_flags(compute_test_value="off")
+    @theano.config.change_flags(compute_test_value="off")
     def sample_dict_fn(self):
         s = tt.iscalar()
         names = [v.name for v in self.model.free_RVs]

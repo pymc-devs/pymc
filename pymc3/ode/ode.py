@@ -19,8 +19,8 @@ import scipy
 import theano
 import theano.tensor as tt
 
-from theano.gof.graph import Apply
-from theano.gof.op import Op, get_test_value
+from theano.graph.basic import Apply
+from theano.graph.op import Op, get_test_value
 
 from pymc3.exceptions import DtypeError, ShapeError
 from pymc3.ode import utils

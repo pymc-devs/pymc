@@ -23,9 +23,9 @@ import theano
 import theano.tensor as tt
 
 from scipy import linalg, stats
-from theano.gof.graph import Apply
-from theano.gof.op import Op, get_test_value
-from theano.gof.utils import TestValueError
+from theano.graph.basic import Apply
+from theano.graph.op import Op, get_test_value
+from theano.graph.utils import TestValueError
 from theano.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from theano.tensor.slinalg import Cholesky
 

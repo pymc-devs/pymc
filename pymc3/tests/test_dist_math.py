@@ -167,7 +167,7 @@ class TestMvNormalLogp:
         logp = logp_f(cov_val, delta_val)
         npt.assert_allclose(logp, expect)
 
-    @theano.configparser.change_flags(compute_test_value="ignore")
+    @theano.config.change_flags(compute_test_value="ignore")
     def test_grad(self):
         np.random.seed(42)
 
@@ -190,7 +190,7 @@ class TestMvNormalLogp:
         verify_grad(func, [chol_vec_val, delta_val])
 
     @pytest.mark.skip(reason="Fix in theano not released yet: Theano#5908")
-    @theano.configparser.change_flags(compute_test_value="ignore")
+    @theano.config.change_flags(compute_test_value="ignore")
     def test_hessian(self):
         chol_vec = tt.vector("chol_vec")
         chol_vec.tag.test_value = np.array([0.1, 2, 3])
@@ -209,14 +209,14 @@ class TestMvNormalLogp:
 
 
 class TestSplineWrapper:
-    @theano.configparser.change_flags(compute_test_value="ignore")
+    @theano.config.change_flags(compute_test_value="ignore")
     def test_grad(self):
         x = np.linspace(0, 1, 100)
         y = x * x
         spline = SplineWrapper(interpolate.InterpolatedUnivariateSpline(x, y, k=1))
         verify_grad(spline, [0.5])
 
-    @theano.configparser.change_flags(compute_test_value="ignore")
+    @theano.config.change_flags(compute_test_value="ignore")
     def test_hessian(self):
         x = np.linspace(0, 1, 100)
         y = x * x
@@ -228,7 +228,7 @@ class TestSplineWrapper:
 
 
 class TestI0e:
-    @theano.configparser.change_flags(compute_test_value="ignore")
+    @theano.config.change_flags(compute_test_value="ignore")
     def test_grad(self):
         verify_grad(i0e, [0.5])
         verify_grad(i0e, [-2.0])

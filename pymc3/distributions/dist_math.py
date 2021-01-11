@@ -27,8 +27,8 @@ import theano.tensor as tt
 
 from theano import scan
 from theano.compile.builders import OpFromGraph
-from theano.gof.graph import Apply
-from theano.gof.op import Op
+from theano.graph.basic import Apply
+from theano.graph.op import Op
 from theano.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from theano.scan import until
 from theano.tensor.slinalg import Cholesky

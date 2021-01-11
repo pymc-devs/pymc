@@ -21,7 +21,6 @@ from pymc3.distributions import Normal
 from pymc3.model import Model
 from pymc3.sampling import sample
 from pymc3.step_methods import MLDA, NUTS, HamiltonianMC, Metropolis, Slice
-from pymc3.theanof import change_flags
 
 
 class TestType:
@@ -35,7 +34,7 @@ class TestType:
         # restore theano config
         theano.config = self.theano_config
 
-    @change_flags({"floatX": "float64", "warn_float64": "ignore"})
+    @theano.config.change_flags({"floatX": "float64", "warn_float64": "ignore"})
     def test_float64(self):
         with Model() as model:
             x = Normal("x", testval=np.array(1.0, dtype="float64"))
@@ -48,7 +47,7 @@ class TestType:
             with model:
                 sample(10, sampler())
 
-    @change_flags({"floatX": "float32", "warn_float64": "warn"})
+    @theano.config.change_flags({"floatX": "float32", "warn_float64": "warn"})
     def test_float32(self):
         with Model() as model:
             x = Normal("x", testval=np.array(1.0, dtype="float32"))
@@ -61,7 +60,7 @@ class TestType:
             with model:
                 sample(10, sampler())
 
-    @change_flags({"floatX": "float64", "warn_float64": "ignore"})
+    @theano.config.change_flags({"floatX": "float64", "warn_float64": "ignore"})
     def test_float64_MLDA(self):
         data = np.random.randn(5)
 
@@ -79,7 +78,7 @@ class TestType:
         with model:
             sample(10, MLDA(coarse_models=[coarse_model]))
 
-    @change_flags({"floatX": "float32", "warn_float64": "warn"})
+    @theano.config.change_flags({"floatX": "float32", "warn_float64": "warn"})
     def test_float32_MLDA(self):
         data = np.random.randn(5).astype("float32")
 
