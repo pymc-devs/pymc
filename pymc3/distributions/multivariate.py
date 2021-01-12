@@ -799,7 +799,7 @@ class DirichletMultinomial(Discrete):
 
         # If distribution is initialized with .dist(), valid init shape is not asserted.
         # Under normal use in a model context valid init shape is asserted at start.
-        expected_shape = tuple(self.shape) if size is None else (size, *self.shape)
+        expected_shape = to_tuple(size) + to_tuple(self.shape)
         sample_shape = tuple(samples.shape)
         if sample_shape != expected_shape:
             raise ShapeError(
