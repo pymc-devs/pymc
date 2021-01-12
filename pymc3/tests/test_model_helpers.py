@@ -16,6 +16,7 @@ import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
 import pandas as pd
+import pytest
 import scipy.sparse as sps
 import theano
 import theano.sparse as sparse
@@ -25,18 +26,18 @@ import pymc3 as pm
 
 
 class TestHelperFunc:
-    def test_pandas_to_array(self):
+    @pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
+    def test_pandas_to_array(self, input_dtype):
         """
         Ensure that pandas_to_array returns the dense array, masked array,
         graph variable, TensorVariable, or sparse matrix as appropriate.
         """
         # Create the various inputs to the function
-        sparse_input = sps.csr_matrix(np.eye(3))
-        dense_input = np.arange(9).reshape((3, 3))
+        sparse_input = sps.csr_matrix(np.eye(3)).astype(input_dtype)
+        dense_input = np.arange(9).reshape((3, 3)).astype(input_dtype)
 
         input_name = "input_variable"
         theano_graph_input = tt.as_tensor(dense_input, name=input_name)
-
         pandas_input = pd.DataFrame(dense_input)
 
         # All the even numbers are replaced with NaN
@@ -81,7 +82,18 @@ class TestHelperFunc:
         theano_output = func(theano_graph_input)
         assert isinstance(theano_output, theano.graph.basic.Variable)
         npt.assert_allclose(theano_output.eval(), theano_graph_input.eval())
-        assert theano_output.owner.inputs[0].name == input_name
+        intX = pm.theanof._conversion_map[theano.config.floatX]
+        if dense_input.dtype == intX or dense_input.dtype == theano.config.floatX:
+            assert theano_output.owner is None  # func should not have added new nodes
+            assert theano_output.name == input_name
+        else:
+            assert theano_output.owner is not None  # func should have casted
+            assert theano_output.owner.inputs[0].name == input_name
+
+        if "float" in input_dtype:
+            assert theano_output.dtype == theano.config.floatX
+        else:
+            assert theano_output.dtype == intX
 
         # Check function behavior with generator data
         generator_output = func(square_generator)
