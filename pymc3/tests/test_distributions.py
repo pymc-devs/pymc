@@ -1771,11 +1771,11 @@ class TestMatchesScipy(SeededTest):
             [[[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]], [1, 10], (2, 4)],
         ],
     )
-    def test_dirichlet_multinomial_mode(self, a, n, shape):
+    def test_dirichlet_multinomial_defaultval(self, a, n, shape):
         a = np.asarray(a)
         with Model() as model:
             m = DirichletMultinomial("m", n=n, a=a, shape=shape)
-        assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
+        assert_allclose(m.distribution._defaultval.eval().sum(axis=-1), n)
 
     def test_dirichlet_multinomial_vec(self):
         vals = np.array([[2, 4, 4], [3, 3, 4]])

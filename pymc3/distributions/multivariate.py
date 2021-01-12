@@ -723,13 +723,14 @@ class DirichletMultinomial(Discrete):
         Dirichlet parameter. Elements must be non-negative.
         The number of categories is given by the length of the last axis.
 
-    shape : numerical tuple
+    shape : integer tuple
         Describes shape of distribution. For example if n=array([5, 10]), and
         p=array([1, 1, 1]), shape should be (2, 3).
     """
 
     def __init__(self, n, a, shape, *args, **kwargs):
-        super().__init__(shape, *args, **kwargs)
+
+        super().__init__(shape=shape, defaults=("_defaultval",), *args, **kwargs)
 
         if len(self.shape) > 1:
             self.n = tt.shape_padright(n)
@@ -748,7 +749,7 @@ class DirichletMultinomial(Discrete):
         diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
         inc_bool_arr = tt.abs_(diff) > 0
         mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
-        self.mode = mode
+        self._defaultval = mode
 
     def _random(self, n, a, size=None, raw_size=None):
         # numpy will cast dirichlet and multinomial samples to float64 by default
