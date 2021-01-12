@@ -54,13 +54,6 @@
 
     conda install -c conda-forge pymc3
 
-.. raw:: html
-
-                    <h3 class="ui header">Via pypi:</h3>
-
-.. code-block:: bash
-
-    pip install pymc3
 
 .. raw:: html
 

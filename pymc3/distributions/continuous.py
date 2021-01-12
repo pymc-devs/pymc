@@ -20,7 +20,6 @@ nodes in PyMC.
 import warnings
 
 import numpy as np
-import theano
 import theano.tensor as tt
 
 from scipy import stats
@@ -37,15 +36,15 @@ from pymc3.distributions.dist_math import (
     gammaln,
     i0e,
     incomplete_beta,
+    log_normal,
     logpow,
     normal_lccdf,
     normal_lcdf,
-    std_cdf,
     zvalue,
 )
 from pymc3.distributions.distribution import Continuous, draw_values, generate_samples
 from pymc3.distributions.special import log_i0
-from pymc3.math import invlogit, log1mexp, logdiffexp, logit
+from pymc3.math import invlogit, log1mexp, log1pexp, logdiffexp, logit
 from pymc3.theanof import floatX
 
 __all__ = [
@@ -80,6 +79,7 @@ __all__ = [
     "Interpolated",
     "Rice",
     "Moyal",
+    "AsymmetricLaplace",
 ]
 
 
@@ -1661,6 +1661,106 @@ class Laplace(Continuous):
         )
 
 
+class AsymmetricLaplace(Continuous):
+    r"""
+    Asymmetric-Laplace log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+        {f(x|\\b,\kappa,\mu) =
+            \left({\frac{\\b}{\kappa + 1/\kappa}}\right)\,e^{-(x-\mu)\\b\,s\kappa ^{s}}}
+
+    where
+
+    .. math::
+
+        s = sgn(x-\mu)
+
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu-\frac{\\\kappa-1/\kappa}b`
+    Variance  :math:`\frac{1+\kappa^{4}}{b^2\kappa^2 }`
+    ========  ========================
+
+    Parameters
+    ----------
+    b: float
+        Scale parameter (b > 0)
+    kappa: float
+        Symmetry parameter (kappa > 0)
+    mu: float
+        Location parameter
+
+    See Also:
+    --------
+    `Reference <https://en.wikipedia.org/wiki/Asymmetric_Laplace_distribution>`_
+    """
+
+    def __init__(self, b, kappa, mu=0, *args, **kwargs):
+        self.b = tt.as_tensor_variable(floatX(b))
+        self.kappa = tt.as_tensor_variable(floatX(kappa))
+        self.mu = mu = tt.as_tensor_variable(floatX(mu))
+
+        self.mean = self.mu - (self.kappa - 1 / self.kappa) / b
+        self.variance = (1 + self.kappa ** 4) / (self.kappa ** 2 * self.b ** 2)
+
+        assert_negative_support(kappa, "kappa", "AsymmetricLaplace")
+        assert_negative_support(b, "b", "AsymmetricLaplace")
+
+        super().__init__(*args, **kwargs)
+
+    def _random(self, b, kappa, mu, size=None):
+        u = np.random.uniform(size=size)
+        switch = kappa ** 2 / (1 + kappa ** 2)
+        non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
+        positive_x = mu - np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
+        draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
+        return draws
+
+    def random(self, point=None, size=None):
+        """
+        Draw random samples from this distribution, using the inverse CDF method.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size:int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        b, kappa, mu = draw_values([self.b, self.kappa, self.mu], point=point, size=size)
+        return generate_samples(self._random, b, kappa, mu, dist_shape=self.shape, size=size)
+
+    def logp(self, value):
+        """
+        Calculate log-probability of Asymmetric-Laplace distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        value = value - self.mu
+        return bound(
+            tt.log(self.b / (self.kappa + (self.kappa ** -1)))
+            + (-value * self.b * tt.sgn(value) * (self.kappa ** tt.sgn(value))),
+            0 < self.b,
+            0 < self.kappa,
+        )
+
+
 class Lognormal(PositiveContinuous):
     r"""
     Log-normal log-likelihood.
@@ -3113,21 +3213,21 @@ class ExGaussian(Continuous):
         sigma = self.sigma
         nu = self.nu
 
-        standardized_val = (value - mu) / sigma
-        cdf_val = std_cdf(standardized_val - sigma / nu)
-        cdf_val_safe = tt.switch(tt.eq(cdf_val, 0), np.finfo(theano.config.floatX).eps, cdf_val)
-
-        # This condition is suggested by exGAUS.R from gamlss
-        lp = tt.switch(
-            tt.gt(nu, 0.05 * sigma),
-            -tt.log(nu) + (mu - value) / nu + 0.5 * (sigma / nu) ** 2 + logpow(cdf_val_safe, 1.0),
-            -tt.log(sigma * tt.sqrt(2 * np.pi)) - 0.5 * standardized_val ** 2,
+        # Alogithm is adapted from dexGAUS.R from gamlss
+        return bound(
+            tt.switch(
+                tt.gt(nu, 0.05 * sigma),
+                (
+                    -tt.log(nu)
+                    + (mu - value) / nu
+                    + 0.5 * (sigma / nu) ** 2
+                    + normal_lcdf(mu + (sigma ** 2) / nu, sigma, value)
+                ),
+                log_normal(value, mean=mu, sigma=sigma),
+            ),
+            0 < sigma,
+            0 < nu,
         )
-
-        return bound(lp, sigma > 0.0, nu > 0.0)
-
-    def _distr_parameters_for_repr(self):
-        return ["mu", "sigma", "nu"]
 
     def logcdf(self, value):
         """
@@ -3152,21 +3252,24 @@ class ExGaussian(Continuous):
         """
         mu = self.mu
         sigma = self.sigma
-        sigma_2 = sigma ** 2
         nu = self.nu
-        z = value - mu - sigma_2 / nu
+
+        # Alogithm is adapted from pexGAUS.R from gamlss
         return tt.switch(
             tt.gt(nu, 0.05 * sigma),
-            tt.log(
-                std_cdf((value - mu) / sigma)
-                - std_cdf(z / sigma)
-                * tt.exp(
-                    ((mu + (sigma_2 / nu)) ** 2 - (mu ** 2) - 2 * value * ((sigma_2) / nu))
-                    / (2 * sigma_2)
-                )
+            logdiffexp(
+                normal_lcdf(mu, sigma, value),
+                (
+                    (mu - value) / nu
+                    + 0.5 * (sigma / nu) ** 2
+                    + normal_lcdf(mu + (sigma ** 2) / nu, sigma, value)
+                ),
             ),
             normal_lcdf(mu, sigma, value),
         )
+
+    def _distr_parameters_for_repr(self):
+        return ["mu", "sigma", "nu"]
 
 
 class VonMises(Continuous):
@@ -3887,25 +3990,6 @@ class Logistic(Continuous):
         self.mean = self.mode = mu
         self.variance = s ** 2 * np.pi ** 2 / 3.0
 
-    def logp(self, value):
-        """
-        Calculate log-probability of Logistic distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-        mu = self.mu
-        s = self.s
-
-        return bound(-(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)), s > 0)
-
     def random(self, point=None, size=None):
         """
         Draw random values from Logistic distribution.
@@ -3929,16 +4013,32 @@ class Logistic(Continuous):
             stats.logistic.rvs, loc=mu, scale=s, dist_shape=self.shape, size=size
         )
 
+    def logp(self, value):
+        """
+        Calculate log-probability of Logistic distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or theano tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        mu = self.mu
+        s = self.s
+
+        return bound(
+            -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)),
+            s > 0,
+        )
+
     def logcdf(self, value):
         r"""
         Compute the log of the cumulative distribution function for Logistic distribution
         at the specified value.
-
-        References
-        ----------
-        .. [Machler2012] Martin Mächler (2012).
-            "Accurately computing :math:  `\log(1-\exp(- \mid a \mid<))` Assessed by the Rmpfr
-            package"
 
         Parameters
         ----------
@@ -3952,14 +4052,7 @@ class Logistic(Continuous):
         """
         mu = self.mu
         s = self.s
-        a = -(value - mu) / s
-        return -tt.switch(
-            tt.le(a, -37),
-            tt.exp(a),
-            tt.switch(
-                tt.le(a, 18), tt.log1p(tt.exp(a)), tt.switch(tt.le(a, 33.3), tt.exp(-a) + a, a)
-            ),
-        )
+        return -log1pexp(-(value - mu) / s)
 
 
 class LogitNormal(UnitContinuous):

@@ -25,6 +25,8 @@ import theano.tensor as tt
 
 from numpy import array, exp, inf, log
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+from packaging.version import parse
+from scipy import __version__ as scipy_version
 from scipy import integrate
 from scipy.special import erf, logit
 
@@ -33,6 +35,7 @@ import pymc3 as pm
 from pymc3.blocking import DictToVarBijection
 from pymc3.distributions import (
     AR1,
+    AsymmetricLaplace,
     Bernoulli,
     Beta,
     BetaBinomial,
@@ -97,6 +100,8 @@ from pymc3.model import Deterministic, Model, Point
 from pymc3.tests.helpers import SeededTest, select_by_precision
 from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
+
+SCIPY_VERSION = parse(scipy_version)
 
 
 def get_lkj_cases():
@@ -218,6 +223,14 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
         vals.update(extra_args)
         distfam("value", shape=valuedomain.shape, transform=None, **vals)
     return m
+
+
+def laplace_asymmetric_logpdf(value, kappa, b, mu):
+    kapinv = 1 / kappa
+    value = value - mu
+    lPx = value * b * np.where(value >= 0, -kappa, kapinv)
+    lPx += np.log(b / (kappa + kapinv))
+    return lPx
 
 
 def integrate_nd(f, domain, shape, dtype):
@@ -1003,6 +1016,14 @@ class TestMatchesScipy(SeededTest):
             lambda value, mu, b: sp.laplace.logcdf(value, mu, b),
         )
 
+    def test_laplace_asymmetric(self):
+        self.pymc3_matches_scipy(
+            AsymmetricLaplace,
+            R,
+            {"b": Rplus, "kappa": Rplus, "mu": R},
+            laplace_asymmetric_logpdf,
+        )
+
     def test_lognormal(self):
         self.pymc3_matches_scipy(
             Lognormal,
@@ -1179,6 +1200,9 @@ class TestMatchesScipy(SeededTest):
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(
+        condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
+    )
     def test_beta_binomial(self):
         self.checkd(
             BetaBinomial,
@@ -1952,6 +1976,9 @@ class TestMatchesScipy(SeededTest):
             (15.0, 5.000, 7.500, 7.500, -3.3093854),
             (50.0, 50.000, 10.000, 10.000, -3.6436067),
             (1000.0, 500.000, 10.000, 20.000, -27.8707323),
+            (-1.0, 1.0, 20.0, 0.9, -3.91967108),  # Fails in scipy version
+            (0.01, 0.01, 100.0, 0.01, -5.5241087),  # Fails in scipy version
+            (-1.0, 0.0, 0.1, 0.1, -51.022349),  # Fails in previous pymc3 version
         ],
     )
     def test_ex_gaussian(self, value, mu, sigma, nu, logp):
@@ -1978,6 +2005,9 @@ class TestMatchesScipy(SeededTest):
             (15.0, 5.000, 7.500, 7.500, -0.4545255),
             (50.0, 50.000, 10.000, 10.000, -1.433714),
             (1000.0, 500.000, 10.000, 20.000, -1.573708e-11),
+            (0.01, 0.01, 100.0, 0.01, -0.69314718),  # Fails in scipy version
+            (-0.43402407, 0.0, 0.1, 0.1, -13.59615423),  # Previous 32-bit version failed here
+            (-0.72402009, 0.0, 0.1, 0.1, -31.26571842),  # Previous 64-bit version failed here
         ],
     )
     def test_ex_gaussian_cdf(self, value, mu, sigma, nu, logcdf):

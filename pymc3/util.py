@@ -131,7 +131,13 @@ def get_default_varnames(var_iterator, include_transformed):
 
 def get_repr_for_variable(variable, formatting="plain"):
     """Build a human-readable string representation for a variable."""
-    name = variable.name if variable is not None else None
+    if variable is not None and hasattr(variable, "name"):
+        name = variable.name
+    elif type(variable) in [float, int, str]:
+        name = str(variable)
+    else:
+        name = None
+
     if name is None and variable is not None:
         if hasattr(variable, "get_parents"):
             try:

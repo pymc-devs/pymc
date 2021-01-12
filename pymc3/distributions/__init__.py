@@ -16,6 +16,7 @@ from pymc3.distributions import shape_utils, timeseries, transforms
 from pymc3.distributions.bart import BART
 from pymc3.distributions.bound import Bound
 from pymc3.distributions.continuous import (
+    AsymmetricLaplace,
     Beta,
     Cauchy,
     ChiSquared,
@@ -162,6 +163,7 @@ __all__ = [
     "LKJCorr",
     "AR1",
     "AR",
+    "AsymmetricLaplace",
     "GaussianRandomWalk",
     "MvGaussianRandomWalk",
     "MvStudentTRandomWalk",
