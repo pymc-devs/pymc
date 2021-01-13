@@ -19,7 +19,6 @@ from pandas import DataFrame, Series
 from pymc3.distributions.distribution import NoDistribution
 from pymc3.distributions.tree import LeafNode, SplitNode, Tree
 
-
 __all__ = ["BART"]
 
 
