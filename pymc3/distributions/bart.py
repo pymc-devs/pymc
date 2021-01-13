@@ -52,7 +52,7 @@ class BaseBART(NoDistribution):
         self.num_observations = X.shape[0]
         self.num_variates = X.shape[1]
         self.available_predictors = list(range(self.num_variates))
-        self.ssv = sample_splitting_variable(split_prior, self.num_variates)
+        self.ssv = SampleSplittingVariable(split_prior, self.num_variates)
         self.m = m
         self.alpha = alpha
         self.trees = self.init_list_of_trees()
@@ -174,6 +174,7 @@ class BaseBART(NoDistribution):
         trees = self.all_trees
         num_observations = X_new.shape[0]
         pred = np.zeros((len(trees), num_observations))
+        np.random.randint(len(trees))
         for draw, trees_to_sum in enumerate(trees):
             new_Y = np.zeros(X_new.shape[0])
             for tree in trees_to_sum:
@@ -231,7 +232,7 @@ def discrete_uniform_sampler(upper_value):
     return int(np.random.random() * upper_value)
 
 
-class sample_splitting_variable:
+class SampleSplittingVariable:
     def __init__(self, prior, num_variates):
         self.prior = prior
         self.num_variates = num_variates
