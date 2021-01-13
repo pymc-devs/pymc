@@ -30,10 +30,8 @@ from scipy.special import logit
 
 import pymc3 as pm
 
-from pymc3.theanof import floatX
-
-from ..blocking import DictToVarBijection
-from ..distributions import (
+from pymc3.blocking import DictToVarBijection
+from pymc3.distributions import (
     AR1,
     Bernoulli,
     Beta,
@@ -92,10 +90,11 @@ from ..distributions import (
     ZeroInflatedPoisson,
     continuous,
 )
-from ..math import kronecker
-from ..model import Deterministic, Model, Point
-from ..vartypes import continuous_types
-from .helpers import SeededTest, select_by_precision
+from pymc3.math import kronecker
+from pymc3.model import Deterministic, Model, Point
+from pymc3.tests.helpers import SeededTest, select_by_precision
+from pymc3.theanof import floatX
+from pymc3.vartypes import continuous_types
 
 
 def get_lkj_cases():

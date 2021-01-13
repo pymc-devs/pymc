@@ -18,11 +18,11 @@ import numpy as np
 
 from numpy.random import uniform
 
-from ..blocking import ArrayOrdering, DictToArrayBijection
-from ..model import modelcontext
-from ..theanof import inputvars
-from ..util import get_var_name
-from .compound import CompoundStep
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.model import modelcontext
+from pymc3.step_methods.compound import CompoundStep
+from pymc3.theanof import inputvars
+from pymc3.util import get_var_name
 
 __all__ = ["ArrayStep", "ArrayStepShared", "metrop_select", "Competence"]
 

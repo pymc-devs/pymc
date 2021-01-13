@@ -19,12 +19,18 @@ import theano.tensor as tt
 
 from scipy import stats
 
+from pymc3.distributions.dist_math import (
+    betaln,
+    binomln,
+    bound,
+    factln,
+    logpow,
+    random_choice,
+)
+from pymc3.distributions.distribution import Discrete, draw_values, generate_samples
+from pymc3.distributions.shape_utils import broadcast_distribution_samples
 from pymc3.math import log1pexp, logaddexp, logit, sigmoid, tround
-
-from ..theanof import floatX, intX, take_along_axis
-from .dist_math import betaln, binomln, bound, factln, logpow, random_choice
-from .distribution import Discrete, draw_values, generate_samples
-from .shape_utils import broadcast_distribution_samples
+from pymc3.theanof import floatX, intX, take_along_axis
 
 __all__ = [
     "Binomial",

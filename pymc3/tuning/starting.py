@@ -30,16 +30,16 @@ from scipy.optimize import minimize
 
 import pymc3 as pm
 
-from ..blocking import ArrayOrdering, DictToArrayBijection
-from ..model import Point, modelcontext
-from ..theanof import inputvars
-from ..util import (
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.model import Point, modelcontext
+from pymc3.theanof import inputvars
+from pymc3.util import (
     check_start_vals,
     get_default_varnames,
     get_var_name,
     update_start_vals,
 )
-from ..vartypes import discrete_types, typefilter
+from pymc3.vartypes import discrete_types, typefilter
 
 __all__ = ["find_MAP"]
 

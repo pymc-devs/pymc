@@ -30,8 +30,7 @@ from pymc3 import (
     find_MAP,
     sample,
 )
-
-from .helpers import SeededTest
+from pymc3.tests.helpers import SeededTest
 
 
 # Generate data

@@ -39,16 +39,14 @@ from theano.tensor import Tensor
 
 import pymc3 as pm
 
-from pymc3.step_methods.hmc import quadpotential
-
-from .backends.base import BaseTrace, MultiTrace
-from .backends.ndarray import NDArray
-from .distributions.distribution import draw_values
-from .distributions.posterior_predictive import fast_sample_posterior_predictive
-from .exceptions import IncorrectArgumentsError, SamplingError
-from .model import Model, Point, all_continuous, modelcontext
-from .parallel_sampling import Draw, _cpu_count
-from .step_methods import (
+from pymc3.backends.base import BaseTrace, MultiTrace
+from pymc3.backends.ndarray import NDArray
+from pymc3.distributions.distribution import draw_values
+from pymc3.distributions.posterior_predictive import fast_sample_posterior_predictive
+from pymc3.exceptions import IncorrectArgumentsError, SamplingError
+from pymc3.model import Model, Point, all_continuous, modelcontext
+from pymc3.parallel_sampling import Draw, _cpu_count
+from pymc3.step_methods import (
     NUTS,
     PGBART,
     BinaryGibbsMetropolis,
@@ -61,7 +59,8 @@ from .step_methods import (
     Slice,
     arraystep,
 )
-from .util import (
+from pymc3.step_methods.hmc import quadpotential
+from pymc3.util import (
     chains_and_samples,
     check_start_vals,
     dataset_to_point_list,
@@ -70,7 +69,7 @@ from .util import (
     is_transformed_name,
     update_start_vals,
 )
-from .vartypes import discrete_types
+from pymc3.vartypes import discrete_types
 
 sys.setrecursionlimit(10000)
 

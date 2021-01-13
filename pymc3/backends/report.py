@@ -20,7 +20,7 @@ from typing import Any, Optional
 
 import arviz
 
-from ..util import get_untransformed_name, is_transformed_name
+from pymc3.util import get_untransformed_name, is_transformed_name
 
 logger = logging.getLogger("pymc3")
 

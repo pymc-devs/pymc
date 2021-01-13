@@ -27,9 +27,8 @@ import numpy as np
 
 from fastprogress.fastprogress import progress_bar
 
+from pymc3 import theanof
 from pymc3.exceptions import SamplingError
-
-from . import theanof
 
 logger = logging.getLogger("pymc3")
 

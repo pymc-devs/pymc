@@ -20,9 +20,9 @@ import theano.tensor as tt
 from scipy import stats
 from theano import scan
 
-from . import distribution, multivariate
-from .continuous import Flat, Normal, get_tau_sigma
-from .shape_utils import to_tuple
+from pymc3.distributions import distribution, multivariate
+from pymc3.distributions.continuous import Flat, Normal, get_tau_sigma
+from pymc3.distributions.shape_utils import to_tuple
 
 __all__ = [
     "AR1",

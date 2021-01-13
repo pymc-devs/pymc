@@ -29,6 +29,7 @@ jobs:
             --ignore=pymc3/tests/test_shape_handling.py
             --ignore=pymc3/tests/test_shared.py
             --ignore=pymc3/tests/test_smc.py
+            --ignore=pymc3/tests/test_step.py
             --ignore=pymc3/tests/test_updates.py
             --ignore=pymc3/tests/test_variational_inference.py
           - |
@@ -47,6 +48,7 @@ jobs:
           - |
             pymc3/tests/test_distributions_timeseries.py
             pymc3/tests/test_shape_handling.py
+            pymc3/tests/test_step.py
             pymc3/tests/test_updates.py
             pymc3/tests/test_variational_inference.py
           - |

@@ -16,8 +16,9 @@ import numpy as np
 
 from pandas import DataFrame, Series
 
-from .distribution import NoDistribution
-from .tree import LeafNode, SplitNode, Tree
+from pymc3.distributions.distribution import NoDistribution
+from pymc3.distributions.tree import LeafNode, SplitNode, Tree
+
 
 __all__ = ["BART"]
 

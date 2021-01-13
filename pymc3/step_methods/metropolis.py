@@ -19,16 +19,15 @@ import theano
 
 import pymc3 as pm
 
-from pymc3.theanof import floatX
-
-from ..distributions import draw_values
-from .arraystep import (
+from pymc3.distributions import draw_values
+from pymc3.step_methods.arraystep import (
     ArrayStep,
     ArrayStepShared,
     Competence,
     PopulationArrayStepShared,
     metrop_select,
 )
+from pymc3.theanof import floatX
 
 __all__ = [
     "Metropolis",

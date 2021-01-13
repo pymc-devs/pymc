@@ -21,10 +21,15 @@ from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 from theano import function as theano_function
 
-from ..backends.ndarray import NDArray
-from ..model import Point, modelcontext
-from ..sampling import sample_prior_predictive
-from ..theanof import floatX, inputvars, join_nonshared_inputs, make_shared_replacements
+from pymc3.backends.ndarray import NDArray
+from pymc3.model import Point, modelcontext
+from pymc3.sampling import sample_prior_predictive
+from pymc3.theanof import (
+    floatX,
+    inputvars,
+    join_nonshared_inputs,
+    make_shared_replacements,
+)
 
 
 class SMC:

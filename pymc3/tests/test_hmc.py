@@ -20,9 +20,8 @@ import numpy.testing as npt
 import pymc3
 
 from pymc3.step_methods.hmc.base_hmc import BaseHMC
+from pymc3.tests import models
 from pymc3.theanof import floatX
-
-from . import models
 
 logger = logging.getLogger("pymc3")
 

@@ -21,8 +21,8 @@ from scipy.stats import norm
 
 import pymc3 as pm
 
-from ..ode import DifferentialEquation
-from ..ode.utils import augment_system
+from pymc3.ode import DifferentialEquation
+from pymc3.ode.utils import augment_system
 
 
 def test_gradients():

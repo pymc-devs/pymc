@@ -12,10 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from . import shape_utils, timeseries, transforms
-from .bart import BART
-from .bound import Bound
-from .continuous import (
+from pymc3.distributions import shape_utils, timeseries, transforms
+from pymc3.distributions.bart import BART
+from pymc3.distributions.bound import Bound
+from pymc3.distributions.continuous import (
     Beta,
     Cauchy,
     ChiSquared,
@@ -48,7 +48,7 @@ from .continuous import (
     Wald,
     Weibull,
 )
-from .discrete import (
+from pymc3.distributions.discrete import (
     Bernoulli,
     BetaBinomial,
     Binomial,
@@ -66,7 +66,7 @@ from .discrete import (
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
 )
-from .distribution import (
+from pymc3.distributions.distribution import (
     Continuous,
     DensityDist,
     Discrete,
@@ -76,8 +76,8 @@ from .distribution import (
     draw_values,
     generate_samples,
 )
-from .mixture import Mixture, MixtureSameFamily, NormalMixture
-from .multivariate import (
+from pymc3.distributions.mixture import Mixture, MixtureSameFamily, NormalMixture
+from pymc3.distributions.multivariate import (
     Dirichlet,
     KroneckerNormal,
     LKJCholeskyCov,
@@ -89,9 +89,9 @@ from .multivariate import (
     Wishart,
     WishartBartlett,
 )
-from .posterior_predictive import fast_sample_posterior_predictive
-from .simulator import Simulator
-from .timeseries import (
+from pymc3.distributions.posterior_predictive import fast_sample_posterior_predictive
+from pymc3.distributions.simulator import Simulator
+from pymc3.distributions.timeseries import (
     AR,
     AR1,
     GARCH11,

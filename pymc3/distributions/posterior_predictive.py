@@ -27,24 +27,24 @@ from arviz import InferenceData
 from typing_extensions import Literal, Protocol
 from xarray import Dataset
 
-from ..backends.base import MultiTrace
-from ..exceptions import IncorrectArgumentsError
-from ..model import (
-    Model,
-    MultiObservedRV,
-    ObservedRV,
-    get_named_nodes_and_relations,
-    modelcontext,
-)
-from ..util import chains_and_samples, dataset_to_point_list, get_var_name
-from ..vartypes import theano_constant
-from .distribution import (
+from pymc3.backends.base import MultiTrace
+from pymc3.distributions.distribution import (
     _compile_theano_function,
     _DrawValuesContext,
     _DrawValuesContextBlocker,
     is_fast_drawable,
     vectorized_ppc,
 )
+from pymc3.exceptions import IncorrectArgumentsError
+from pymc3.model import (
+    Model,
+    MultiObservedRV,
+    ObservedRV,
+    get_named_nodes_and_relations,
+    modelcontext,
+)
+from pymc3.util import chains_and_samples, dataset_to_point_list, get_var_name
+from pymc3.vartypes import theano_constant
 
 # Failing tests:
 #    test_mixture_random_shape::test_mixture_random_shape

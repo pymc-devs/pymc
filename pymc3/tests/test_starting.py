@@ -17,11 +17,10 @@ import numpy as np
 from pytest import raises
 
 from pymc3 import Beta, Binomial, Model, Normal, Point, Uniform, find_MAP
+from pymc3.tests.checks import close_to
+from pymc3.tests.helpers import select_by_precision
+from pymc3.tests.models import non_normal, simple_arbitrary_det, simple_model
 from pymc3.tuning import starting
-
-from .checks import close_to
-from .helpers import select_by_precision
-from .models import non_normal, simple_arbitrary_det, simple_model
 
 
 def test_accuracy_normal():

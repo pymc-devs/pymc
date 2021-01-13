@@ -26,9 +26,9 @@ from typing import List
 import numpy as np
 import theano.tensor as tt
 
-from ..model import modelcontext
-from ..util import get_var_name
-from .report import SamplerReport, merge_reports
+from pymc3.backends.report import SamplerReport, merge_reports
+from pymc3.model import modelcontext
+from pymc3.util import get_var_name
 
 logger = logging.getLogger("pymc3")
 

@@ -52,7 +52,7 @@ iterations for all traces and variables.
     >>> sliced_trace = trace[1000:]
 
 The backend for the new trace is always NDArray, regardless of the
-type of original trace. 
+type of original trace.
 
 Loading a saved backend
 -----------------------
@@ -60,4 +60,9 @@ Loading a saved backend
 Saved backends can be loaded using `arviz.from_netcdf`
 
 """
-from ..backends.ndarray import NDArray, load_trace, point_list_to_multitrace, save_trace
+from pymc3.backends.ndarray import (
+    NDArray,
+    load_trace,
+    point_list_to_multitrace,
+    save_trace,
+)

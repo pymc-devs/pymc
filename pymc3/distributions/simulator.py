@@ -18,7 +18,7 @@ import numpy as np
 
 from scipy.spatial import cKDTree
 
-from .distribution import NoDistribution, draw_values
+from pymc3.distributions.distribution import NoDistribution, draw_values
 
 __all__ = ["Simulator"]
 

@@ -23,10 +23,8 @@ from pymc3.distributions.dist_math import rho2sigma
 from pymc3.math import batched_diag
 from pymc3.theanof import change_flags
 from pymc3.util import update_start_vals
-from pymc3.variational import flows
+from pymc3.variational import flows, opvi
 from pymc3.variational.opvi import Approximation, Group, node_property
-
-from . import opvi
 
 __all__ = ["MeanField", "FullRank", "Empirical", "NormalizingFlow", "sample_approx"]
 

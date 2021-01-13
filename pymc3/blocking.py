@@ -22,7 +22,7 @@ import copy
 
 import numpy as np
 
-from .util import get_var_name
+from pymc3.util import get_var_name
 
 __all__ = ["ArrayOrdering", "DictToArrayBijection", "DictToVarBijection"]
 

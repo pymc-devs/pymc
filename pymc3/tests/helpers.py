@@ -22,7 +22,7 @@ import theano
 from theano.gradient import verify_grad as tt_verify_grad
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
-from ..theanof import set_tt_rng, tt_rng
+from pymc3.theanof import set_tt_rng, tt_rng
 
 
 class SeededTest:

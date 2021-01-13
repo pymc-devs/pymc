@@ -17,7 +17,7 @@ import functools
 
 import dill
 
-from .util import biwrap
+from pymc3.util import biwrap
 
 CACHE_REGISTRY = []
 

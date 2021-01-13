@@ -30,22 +30,21 @@ from theano.tensor.slinalg import Cholesky
 
 import pymc3 as pm
 
-from pymc3.theanof import floatX
-
-from ..math import kron_diag, kron_dot, kron_solve_lower, kronecker
-from ..model import Deterministic
-from . import transforms
-from .continuous import ChiSquared, Normal
-from .dist_math import bound, factln, logpow
-from .distribution import (
+from pymc3.distributions import transforms
+from pymc3.distributions.continuous import ChiSquared, Normal
+from pymc3.distributions.dist_math import bound, factln, logpow
+from pymc3.distributions.distribution import (
     Continuous,
     Discrete,
     _DrawValuesContext,
     draw_values,
     generate_samples,
 )
-from .shape_utils import broadcast_dist_samples_to, to_tuple
-from .special import gammaln, multigammaln
+from pymc3.distributions.shape_utils import broadcast_dist_samples_to, to_tuple
+from pymc3.distributions.special import gammaln, multigammaln
+from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
+from pymc3.model import Deterministic
+from pymc3.theanof import floatX
 
 __all__ = [
     "MvNormal",

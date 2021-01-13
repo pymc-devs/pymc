@@ -33,8 +33,13 @@ import theano.tensor as tt
 
 from theano import function
 
-from ..memoize import memoize
-from ..model import (
+from pymc3.distributions.shape_utils import (
+    broadcast_dist_samples_shape,
+    get_broadcastable_dist_samples,
+    to_tuple,
+)
+from pymc3.memoize import memoize
+from pymc3.model import (
     ContextMeta,
     FreeRV,
     Model,
@@ -42,13 +47,8 @@ from ..model import (
     ObservedRV,
     build_named_node_tree,
 )
-from ..util import get_repr_for_variable, get_var_name
-from ..vartypes import string_types, theano_constant
-from .shape_utils import (
-    broadcast_dist_samples_shape,
-    get_broadcastable_dist_samples,
-    to_tuple,
-)
+from pymc3.util import get_repr_for_variable, get_var_name
+from pymc3.vartypes import string_types, theano_constant
 
 __all__ = [
     "DensityDist",

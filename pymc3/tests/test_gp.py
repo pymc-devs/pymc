@@ -24,7 +24,7 @@ import theano.tensor as tt
 
 import pymc3 as pm
 
-from ..math import cartesian, kronecker
+from pymc3.math import cartesian, kronecker
 
 np.random.seed(101)
 

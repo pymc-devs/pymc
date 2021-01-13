@@ -21,10 +21,10 @@ from collections.abc import Iterable
 
 import numpy as np
 
-from ..backends.base import MultiTrace
-from ..model import modelcontext
-from ..parallel_sampling import _cpu_count
-from .smc import SMC
+from pymc3.backends.base import MultiTrace
+from pymc3.model import modelcontext
+from pymc3.parallel_sampling import _cpu_count
+from pymc3.smc.smc import SMC
 
 
 def sample_smc(
