@@ -718,7 +718,7 @@ class DirichletMultinomial(Discrete):
         with N = a.shape[0]
 
     a : one- or two-dimensional array
-        Dirichlet parameter. Elements are strictly positive.
+        Dirichlet parameter. Elements must be strictly positive.
         The number of categories is given by the length of the last axis.
 
     shape : integer tuple
