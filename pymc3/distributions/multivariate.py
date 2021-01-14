@@ -695,7 +695,7 @@ class Multinomial(Discrete):
 class DirichletMultinomial(Discrete):
     R"""Dirichlet Multinomial log-likelihood.
 
-    Dirichlet mixture of multinomials distribution, with a marginalized PMF.
+    Dirichlet mixture of Multinomials distribution, with a marginalized PMF.
 
     .. math::
 
@@ -718,7 +718,7 @@ class DirichletMultinomial(Discrete):
         with N = a.shape[0]
 
     a : one- or two-dimensional array
-        Dirichlet parameter. Elements must be non-negative.
+        Dirichlet parameter. Elements are strictly positive.
         The number of categories is given by the length of the last axis.
 
     shape : integer tuple
