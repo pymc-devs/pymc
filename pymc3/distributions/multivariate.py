@@ -816,6 +816,8 @@ class DirichletMultinomial(Discrete):
         const = (gammaln(n + 1) + gammaln(sum_a)) - gammaln(n + sum_a)
         series = gammaln(x + a) - (gammaln(x + 1) + gammaln(a))
         result = const + series.sum(axis=-1, keepdims=True)
+        # Bounds checking to confirm parameters and data meet all constraints
+        # and that each observation x_i sums to n_i.
         return bound(
             result,
             tt.all(tt.ge(x, 0)),
