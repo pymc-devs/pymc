@@ -36,6 +36,7 @@ It also brings some dreadfully awaited fixes, so be sure to go through the chang
 - Improve numerical stability in `logp` and `logcdf` methods of `ExGaussian` (see [#4407](https://github.com/pymc-devs/pymc3/pull/4407))
 - Issue UserWarning when doing prior or posterior predictive sampling with models containing Potential factors (see [#4419](https://github.com/pymc-devs/pymc3/pull/4419))
 - Dirichlet distribution's `random` method is now optimized and gives outputs in correct shape (see [#4416](https://github.com/pymc-devs/pymc3/pull/4407))
+- Attempting to sample a named model with SMC will now raise a `NotImplementedError`. (see [#4365](https://github.com/pymc-devs/pymc3/pull/4365))
 
 ## PyMC3 3.10.0 (7 December 2020)
 
