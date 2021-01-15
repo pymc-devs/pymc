@@ -45,7 +45,7 @@ from pymc3.distributions.special import gammaln, multigammaln
 from pymc3.exceptions import ShapeError
 from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
 from pymc3.model import Deterministic
-from pymc3.theanof import floatX
+from pymc3.theanof import floatX, intX
 
 __all__ = [
     "MvNormal",
@@ -723,16 +723,18 @@ class DirichletMultinomial(Discrete):
 
     shape : integer tuple
         Describes shape of distribution. For example if n=array([5, 10]), and
-        p=array([1, 1, 1]), shape should be (2, 3).
+        a=array([1, 1, 1]), shape should be (2, 3).
     """
 
     def __init__(self, n, a, shape, *args, **kwargs):
 
         super().__init__(shape=shape, defaults=("_defaultval",), *args, **kwargs)
 
+        n = intX(n)
+        a = floatX(a)
         if len(self.shape) > 1:
             self.n = tt.shape_padright(n)
-            self.a = tt.as_tensor_variable(a) if np.ndim(a) > 1 else tt.shape_padleft(a)
+            self.a = tt.as_tensor_variable(a) if a.ndim > 1 else tt.shape_padleft(a)
         else:
             # n is a scalar, p is a 1d array
             self.n = tt.as_tensor_variable(n)
@@ -749,7 +751,7 @@ class DirichletMultinomial(Discrete):
         mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         self._defaultval = mode
 
-    def _random(self, n, a, size=None, raw_size=None):
+    def _random(self, n, a, size=None):
         # numpy will cast dirichlet and multinomial samples to float64 by default
         original_dtype = a.dtype
 
@@ -793,7 +795,6 @@ class DirichletMultinomial(Discrete):
             n,
             a,
             dist_shape=self.shape,
-            not_broadcast_kwargs={"raw_size": size},
             size=size,
         )
 
@@ -803,27 +804,41 @@ class DirichletMultinomial(Discrete):
         sample_shape = tuple(samples.shape)
         if sample_shape != expected_shape:
             raise ShapeError(
-                f"Expected sample shape was {expected_shape} but got {sample_shape}. This may reflect an invalid initialization shape."
+                f"Expected sample shape was {expected_shape} but got {sample_shape}. "
+                "This may reflect an invalid initialization shape."
             )
 
         return samples
 
-    def logp(self, x):
+    def logp(self, value):
+        """
+        Calculate log-probability of DirichletMultinomial distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value: integer array
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
         a = self.a
         n = self.n
         sum_a = a.sum(axis=-1, keepdims=True)
 
         const = (gammaln(n + 1) + gammaln(sum_a)) - gammaln(n + sum_a)
-        series = gammaln(x + a) - (gammaln(x + 1) + gammaln(a))
+        series = gammaln(value + a) - (gammaln(value + 1) + gammaln(a))
         result = const + series.sum(axis=-1, keepdims=True)
         # Bounds checking to confirm parameters and data meet all constraints
-        # and that each observation x_i sums to n_i.
+        # and that each observation value_i sums to n_i.
         return bound(
             result,
-            tt.all(tt.ge(x, 0)),
+            tt.all(tt.ge(value, 0)),
             tt.all(tt.gt(a, 0)),
             tt.all(tt.ge(n, 0)),
-            tt.all(tt.eq(x.sum(axis=-1, keepdims=True), n)),
+            tt.all(tt.eq(value.sum(axis=-1, keepdims=True), n)),
             broadcast_conditions=False,
         )
 
