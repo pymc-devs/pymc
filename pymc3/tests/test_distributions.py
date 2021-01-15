@@ -1782,7 +1782,11 @@ class TestMatchesScipy(SeededTest):
             pm.DirichletMultinomial.dist(n=n, a=[a, b], shape=(1, 2)).logp(ns_dm).tag.test_value
         )
         dm_logp = dm_logp.ravel()
-        assert_allclose(bb_logp, dm_logp)
+        assert_almost_equal(
+            dm_logp,
+            bb_logp,
+            decimal=select_by_precision(float64=6, float32=3),
+        )
 
     @pytest.mark.parametrize(
         "a, n, shape",
