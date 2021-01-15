@@ -222,6 +222,14 @@ def fast_sample_posterior_predictive(
 
     model = modelcontext(model)
     assert model is not None
+
+    if model.potentials:
+        warnings.warn(
+            "The effect of Potentials on other parameters is ignored during posterior predictive sampling. "
+            "This is likely to lead to invalid or biased predictive samples.",
+            UserWarning,
+        )
+
     with model:
 
         if keep_size and samples is not None:

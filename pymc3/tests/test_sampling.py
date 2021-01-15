@@ -722,6 +722,22 @@ class TestSamplePPC(SeededTest):
             assert ppc["a"].dtype.kind == "f"
             assert ppc["b"].dtype.kind == "i"
 
+    def test_potentials_warning(self):
+        warning_msg = "The effect of Potentials on other parameters is ignored during"
+        with pm.Model() as m:
+            a = pm.Normal("a", 0, 1)
+            p = pm.Potential("p", a)
+            obs = pm.Normal("obs", a, 1, observed=5)
+            trace = pm.sample()
+
+        with pytest.warns(UserWarning, match=warning_msg):
+            with m:
+                pm.sample_posterior_predictive(trace, samples=5)
+
+        with pytest.warns(UserWarning, match=warning_msg):
+            with m:
+                pm.fast_sample_posterior_predictive(trace, samples=5)
+
 
 class TestSamplePPCW(SeededTest):
     def test_sample_posterior_predictive_w(self):
@@ -772,6 +788,17 @@ class TestSamplePPCW(SeededTest):
             ValueError, match="The number of observed RVs should be the same for all models"
         ):
             pm.sample_posterior_predictive_w([trace_0, trace_2], 100, [model_0, model_2])
+
+    def test_potentials_warning(self):
+        warning_msg = "The effect of Potentials on other parameters is ignored during"
+        with pm.Model() as m:
+            a = pm.Normal("a", 0, 1)
+            p = pm.Potential("p", a)
+            obs = pm.Normal("obs", a, 1, observed=5)
+            trace = pm.sample()
+
+        with pytest.warns(UserWarning, match=warning_msg):
+            pm.sample_posterior_predictive_w(samples=5, traces=[trace, trace], models=[m, m])
 
 
 @pytest.mark.parametrize(
@@ -1011,6 +1038,15 @@ class TestSamplePriorPredictive(SeededTest):
         with model:
             prior_trace = pm.sample_prior_predictive(5)
             assert prior_trace["x"].shape == (5, 3, 1)
+
+    def test_potentials_warning(self):
+        warning_msg = "The effect of Potentials on other parameters is ignored during"
+        with pm.Model() as m:
+            a = pm.Normal("a", 0, 1)
+            p = pm.Potential("p", a)
+
+            with pytest.warns(UserWarning, match=warning_msg):
+                pm.sample_prior_predictive(samples=5)
 
 
 class TestSamplePosteriorPredictive:
