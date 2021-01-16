@@ -1692,6 +1692,13 @@ def sample_posterior_predictive(
 
     model = modelcontext(model)
 
+    if model.potentials:
+        warnings.warn(
+            "The effect of Potentials on other parameters is ignored during posterior predictive sampling. "
+            "This is likely to lead to invalid or biased predictive samples.",
+            UserWarning,
+        )
+
     if var_names is not None:
         vars_ = [model[x] for x in var_names]
     else:
@@ -1790,6 +1797,15 @@ def sample_posterior_predictive_w(
 
     if models is None:
         models = [modelcontext(models)] * len(traces)
+
+    for model in models:
+        if model.potentials:
+            warnings.warn(
+                "The effect of Potentials on other parameters is ignored during posterior predictive sampling. "
+                "This is likely to lead to invalid or biased predictive samples.",
+                UserWarning,
+            )
+            break
 
     if weights is None:
         weights = [1] * len(traces)
@@ -1902,6 +1918,13 @@ def sample_prior_predictive(
         samples.
     """
     model = modelcontext(model)
+
+    if model.potentials:
+        warnings.warn(
+            "The effect of Potentials on other parameters is ignored during prior predictive sampling. "
+            "This is likely to lead to invalid or biased predictive samples.",
+            UserWarning,
+        )
 
     if var_names is None:
         prior_pred_vars = model.observed_RVs
