@@ -15,6 +15,8 @@
 import itertools
 import sys
 
+from contextlib import ExitStack as does_not_raise
+
 import numpy as np
 import numpy.random as nr
 import numpy.testing as npt
@@ -34,6 +36,7 @@ from pymc3.distributions.distribution import (
     draw_values,
     to_tuple,
 )
+from pymc3.exceptions import ShapeError
 from pymc3.tests.helpers import SeededTest
 from pymc3.tests.test_distributions import (
     Domain,
@@ -1004,6 +1007,70 @@ class TestScalarParameterSamples(SeededTest):
                 size=100,
                 ref_rand=ref_rand,
             )
+
+    def test_dirichlet_multinomial(self):
+        def ref_rand(size, a, n):
+            k = a.shape[-1]
+            out = np.empty((size, k), dtype=int)
+            for i in range(size):
+                p = nr.dirichlet(a)
+                x = nr.multinomial(n=n, pvals=p)
+                out[i, :] = x
+            return out
+
+        for n in [2, 3]:
+            pymc3_random_discrete(
+                pm.DirichletMultinomial,
+                {"a": Vector(Rplus, n), "n": Nat},
+                valuedomain=Vector(Nat, n),
+                size=1000,
+                ref_rand=ref_rand,
+            )
+
+    @pytest.mark.parametrize(
+        "a, shape, n",
+        [
+            [[0.25, 0.25, 0.25, 0.25], 4, 2],
+            [[0.25, 0.25, 0.25, 0.25], (1, 4), 3],
+            [[0.25, 0.25, 0.25, 0.25], (10, 4), [2] * 10],
+            [[0.25, 0.25, 0.25, 0.25], (10, 1, 4), 5],
+            [[[0.25, 0.25, 0.25, 0.25]], (2, 4), [7, 11]],
+            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), 13],
+            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (1, 2, 4), [23, 29]],
+            [
+                [[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]],
+                (10, 2, 4),
+                [31, 37],
+            ],
+            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), [17, 19]],
+        ],
+    )
+    def test_dirichlet_multinomial_shape(self, a, shape, n):
+        a = np.asarray(a)
+        with pm.Model() as model:
+            m = pm.DirichletMultinomial("m", n=n, a=a, shape=shape)
+        samp0 = m.random()
+        samp1 = m.random(size=1)
+        samp2 = m.random(size=2)
+
+        shape_ = to_tuple(shape)
+        assert to_tuple(samp0.shape) == shape_
+        assert to_tuple(samp1.shape) == (1, *shape_)
+        assert to_tuple(samp2.shape) == (2, *shape_)
+
+    @pytest.mark.parametrize(
+        "n, a, shape, expectation",
+        [
+            ([5], [[1000, 1, 1], [1, 1, 1000]], (2, 3), does_not_raise()),
+            ([5, 3], [[1000, 1, 1], [1, 1, 1000]], (2, 3), does_not_raise()),
+            ([[5]], [[1000, 1, 1], [1, 1, 1000]], (2, 3), pytest.raises(ShapeError)),
+            ([[5], [3]], [[1000, 1, 1], [1, 1, 1000]], (2, 3), pytest.raises(ShapeError)),
+        ],
+    )
+    def test_dirichlet_multinomial_dist_ShapeError(self, n, a, shape, expectation):
+        m = pm.DirichletMultinomial.dist(n=n, a=a, shape=shape)
+        with expectation:
+            m.random()
 
     def test_multinomial(self):
         def ref_rand(size, p, n):

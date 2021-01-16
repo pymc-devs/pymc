@@ -81,6 +81,7 @@ from pymc3.distributions.distribution import (
 from pymc3.distributions.mixture import Mixture, MixtureSameFamily, NormalMixture
 from pymc3.distributions.multivariate import (
     Dirichlet,
+    DirichletMultinomial,
     KroneckerNormal,
     LKJCholeskyCov,
     LKJCorr,
@@ -155,6 +156,7 @@ __all__ = [
     "MvStudentT",
     "Dirichlet",
     "Multinomial",
+    "DirichletMultinomial",
     "Wishart",
     "WishartBartlett",
     "LKJCholeskyCov",

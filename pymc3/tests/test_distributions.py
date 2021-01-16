@@ -47,6 +47,7 @@ from pymc3.distributions import (
     Constant,
     DensityDist,
     Dirichlet,
+    DirichletMultinomial,
     DiscreteUniform,
     DiscreteWeibull,
     ExGaussian,
@@ -274,6 +275,21 @@ def multinomial_logpdf(value, n, p):
         logpdf -= scipy.special.gammaln(value + 1).sum()
         logpdf += logpow(p, value).sum()
         return logpdf
+    else:
+        return -inf
+
+
+def dirichlet_multinomial_logpmf(value, n, a):
+    value, n, a = [np.asarray(x) for x in [value, n, a]]
+    assert value.ndim == 1
+    assert n.ndim == 0
+    assert a.shape == value.shape
+    gammaln = scipy.special.gammaln
+    if value.sum() == n and (0 <= value).all() and (value <= n).all():
+        sum_a = a.sum(axis=-1)
+        const = gammaln(n + 1) + gammaln(sum_a) - gammaln(n + sum_a)
+        series = gammaln(value + a) - gammaln(value + 1) - gammaln(a)
+        return const + series.sum(axis=-1)
     else:
         return -inf
 
@@ -1748,6 +1764,145 @@ class TestMatchesScipy(SeededTest):
         sample = dist.random(size=2)
         assert_allclose(sample, np.stack([vals, vals], axis=0))
 
+    @pytest.mark.parametrize("n", [2, 3])
+    def test_dirichlet_multinomial(self, n):
+        self.pymc3_matches_scipy(
+            DirichletMultinomial,
+            Vector(Nat, n),
+            {"a": Vector(Rplus, n), "n": Nat},
+            dirichlet_multinomial_logpmf,
+        )
+
+    def test_dirichlet_multinomial_matches_beta_binomial(self):
+        a, b, n = 2, 1, 5
+        ns = np.arange(n + 1)
+        ns_dm = np.vstack((ns, n - ns)).T  # covert ns=1 to ns_dm=[1, 4], for all ns...
+        bb_logp = pm.BetaBinomial.dist(n=n, alpha=a, beta=b).logp(ns).tag.test_value
+        dm_logp = (
+            pm.DirichletMultinomial.dist(n=n, a=[a, b], shape=(1, 2)).logp(ns_dm).tag.test_value
+        )
+        dm_logp = dm_logp.ravel()
+        assert_almost_equal(
+            dm_logp,
+            bb_logp,
+            decimal=select_by_precision(float64=6, float32=3),
+        )
+
+    @pytest.mark.parametrize(
+        "a, n, shape",
+        [
+            [[0.25, 0.25, 0.25, 0.25], 1, (1, 4)],
+            [[0.3, 0.6, 0.05, 0.05], 2, (1, 4)],
+            [[0.3, 0.6, 0.05, 0.05], 10, (1, 4)],
+            [[0.25, 0.25, 0.25, 0.25], 1, (2, 4)],
+            [[0.3, 0.6, 0.05, 0.05], 2, (3, 4)],
+            [[[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]], [1, 10], (2, 4)],
+        ],
+    )
+    def test_dirichlet_multinomial_defaultval(self, a, n, shape):
+        a = np.asarray(a)
+        with Model() as model:
+            m = DirichletMultinomial("m", n=n, a=a, shape=shape)
+        assert_allclose(m.distribution._defaultval.eval().sum(axis=-1), n)
+
+    def test_dirichlet_multinomial_vec(self):
+        vals = np.array([[2, 4, 4], [3, 3, 4]])
+        a = np.array([0.2, 0.3, 0.5])
+        n = 10
+
+        with Model() as model_single:
+            DirichletMultinomial("m", n=n, a=a, shape=len(a))
+
+        with Model() as model_many:
+            DirichletMultinomial("m", n=n, a=a, shape=vals.shape)
+
+        assert_almost_equal(
+            np.asarray([dirichlet_multinomial_logpmf(v, n, a) for v in vals]),
+            np.asarray([model_single.fastlogp({"m": val}) for val in vals]),
+            decimal=4,
+        )
+
+        assert_almost_equal(
+            np.asarray([dirichlet_multinomial_logpmf(v, n, a) for v in vals]),
+            model_many.free_RVs[0].logp_elemwise({"m": vals}).squeeze(),
+            decimal=4,
+        )
+
+        assert_almost_equal(
+            sum([model_single.fastlogp({"m": val}) for val in vals]),
+            model_many.fastlogp({"m": vals}),
+            decimal=4,
+        )
+
+    def test_dirichlet_multinomial_vec_1d_n(self):
+        vals = np.array([[2, 4, 4], [4, 3, 4]])
+        a = np.array([0.2, 0.3, 0.5])
+        ns = np.array([10, 11])
+
+        with Model() as model:
+            DirichletMultinomial("m", n=ns, a=a, shape=vals.shape)
+
+        assert_almost_equal(
+            sum([dirichlet_multinomial_logpmf(val, n, a) for val, n in zip(vals, ns)]),
+            model.fastlogp({"m": vals}),
+            decimal=4,
+        )
+
+    def test_dirichlet_multinomial_vec_1d_n_2d_a(self):
+        vals = np.array([[2, 4, 4], [4, 3, 4]])
+        as_ = np.array([[0.2, 0.3, 0.5], [0.9, 0.09, 0.01]])
+        ns = np.array([10, 11])
+
+        with Model() as model:
+            DirichletMultinomial("m", n=ns, a=as_, shape=vals.shape)
+
+        assert_almost_equal(
+            sum([dirichlet_multinomial_logpmf(val, n, a) for val, n, a in zip(vals, ns, as_)]),
+            model.fastlogp({"m": vals}),
+            decimal=4,
+        )
+
+    def test_dirichlet_multinomial_vec_2d_a(self):
+        vals = np.array([[2, 4, 4], [3, 3, 4]])
+        as_ = np.array([[0.2, 0.3, 0.5], [0.3, 0.3, 0.4]])
+        n = 10
+
+        with Model() as model:
+            DirichletMultinomial("m", n=n, a=as_, shape=vals.shape)
+
+        assert_almost_equal(
+            sum([dirichlet_multinomial_logpmf(val, n, a) for val, a in zip(vals, as_)]),
+            model.fastlogp({"m": vals}),
+            decimal=4,
+        )
+
+    def test_batch_dirichlet_multinomial(self):
+        # Test that DM can handle a 3d array for `a`
+
+        # Create an almost deterministic DM by setting a to 0.001, everywehere
+        # except for one category / dimension which is given the value of 1000
+        n = 5
+        vals = np.zeros((4, 5, 3), dtype="int32")
+        a = np.zeros_like(vals, dtype=theano.config.floatX) + 0.001
+        inds = np.random.randint(vals.shape[-1], size=vals.shape[:-1])[..., None]
+        np.put_along_axis(vals, inds, n, axis=-1)
+        np.put_along_axis(a, inds, 1000, axis=-1)
+
+        dist = DirichletMultinomial.dist(n=n, a=a, shape=vals.shape)
+
+        # Logp should be approx -9.924431e-06
+        dist_logp = dist.logp(vals).tag.test_value
+        expected_logp = np.full(shape=vals.shape[:-1] + (1,), fill_value=-9.924431e-06)
+        assert_almost_equal(
+            dist_logp,
+            expected_logp,
+            decimal=select_by_precision(float64=6, float32=3),
+        )
+
+        # Samples should be equal given the almost deterministic DM
+        sample = dist.random(size=2)
+        assert_allclose(sample, np.stack([vals, vals], axis=0))
+
     def test_categorical_bounds(self):
         with Model():
             x = Categorical("x", p=np.array([0.2, 0.3, 0.5]))
@@ -2096,6 +2251,9 @@ class TestStrAndLatexRepr:
                 shape=(n, n),
             )
 
+            # DirichletMultinomial
+            dm = DirichletMultinomial("dm", n=5, a=[1, 1, 1], shape=(2, 3))
+
             # Likelihood (sampling distribution) of observations
             Y_obs = Normal("Y_obs", mu=mu, sigma=sigma, observed=Y)
 
@@ -2113,6 +2271,7 @@ class TestStrAndLatexRepr:
                 r"$\text{bound_var} \sim \text{Bound}$ -- \text{Normal}$",
                 r"$\text{kron_normal} \sim \text{KroneckerNormal}$",
                 r"$\text{mat_normal} \sim \text{MatrixNormal}$",
+                r"$\text{dm} \sim \text{DirichletMultinomial}$",
             ),
             "plain": (
                 r"alpha ~ Normal",
@@ -2126,6 +2285,7 @@ class TestStrAndLatexRepr:
                 r"bound_var ~ Bound-Normal",
                 r"kron_normal ~ KroneckerNormal",
                 r"mat_normal ~ MatrixNormal",
+                r"dm ~ DirichletMultinomial",
             ),
             "latex_with_params": (
                 r"$\text{alpha} \sim \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
@@ -2139,6 +2299,7 @@ class TestStrAndLatexRepr:
                 r"$\text{bound_var} \sim \text{Bound}(\mathit{lower}=1.0,~\mathit{upper}=\text{None})$ -- \text{Normal}(\mathit{mu}=0.0,~\mathit{sigma}=10.0)$",
                 r"$\text{kron_normal} \sim \text{KroneckerNormal}(\mathit{mu}=array)$",
                 r"$\text{mat_normal} \sim \text{MatrixNormal}(\mathit{mu}=array,~\mathit{rowcov}=array,~\mathit{colchol_cov}=array)$",
+                r"$\text{dm} \sim \text{DirichletMultinomial}(\mathit{n}=5,~\mathit{a}=array)$",
             ),
             "plain_with_params": (
                 r"alpha ~ Normal(mu=0.0, sigma=10.0)",
@@ -2152,6 +2313,7 @@ class TestStrAndLatexRepr:
                 r"bound_var ~ Bound(lower=1.0, upper=None)-Normal(mu=0.0, sigma=10.0)",
                 r"kron_normal ~ KroneckerNormal(mu=array)",
                 r"mat_normal ~ MatrixNormal(mu=array, rowcov=array, colchol_cov=array)",
+                r"dm∼DirichletMultinomial(n=5, a=array)",
             ),
         }
 

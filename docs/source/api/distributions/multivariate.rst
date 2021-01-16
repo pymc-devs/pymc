@@ -14,6 +14,7 @@ Multivariate
    LKJCorr
    Multinomial
    Dirichlet
+   DirichletMultinomial
 
 .. automodule:: pymc3.distributions.multivariate
    :members:

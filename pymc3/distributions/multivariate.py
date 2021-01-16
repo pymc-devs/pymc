@@ -42,15 +42,17 @@ from pymc3.distributions.distribution import (
 )
 from pymc3.distributions.shape_utils import broadcast_dist_samples_to, to_tuple
 from pymc3.distributions.special import gammaln, multigammaln
+from pymc3.exceptions import ShapeError
 from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
 from pymc3.model import Deterministic
-from pymc3.theanof import floatX
+from pymc3.theanof import floatX, intX
 
 __all__ = [
     "MvNormal",
     "MvStudentT",
     "Dirichlet",
     "Multinomial",
+    "DirichletMultinomial",
     "Wishart",
     "WishartBartlett",
     "LKJCorr",
@@ -688,6 +690,160 @@ class Multinomial(Discrete):
             tt.all(tt.ge(n, 0)),
             broadcast_conditions=False,
         )
+
+
+class DirichletMultinomial(Discrete):
+    R"""Dirichlet Multinomial log-likelihood.
+
+    Dirichlet mixture of Multinomials distribution, with a marginalized PMF.
+
+    .. math::
+
+    f(x \mid n, a) = \frac{\Gamma(n + 1)\Gamma(\sum a_k)}
+                              {\Gamma(\n + \sum a_k)}
+                         \prod_{k=1}^K
+                         \frac{\Gamma(x_k +  a_k)}
+                              {\Gamma(x_k + 1)\Gamma(a_k)}
+
+    ==========  ===========================================
+    Support     :math:`x \in \{0, 1, \ldots, n\}` such that
+                :math:`\sum x_i = n`
+    Mean        :math:`n \frac{a_i}{\sum{a_k}}`
+    ==========  ===========================================
+
+    Parameters
+    ----------
+    n : int or array
+        Total counts in each replicate. If n is an array its shape must be (N,)
+        with N = a.shape[0]
+
+    a : one- or two-dimensional array
+        Dirichlet parameter. Elements must be strictly positive.
+        The number of categories is given by the length of the last axis.
+
+    shape : integer tuple
+        Describes shape of distribution. For example if n=array([5, 10]), and
+        a=array([1, 1, 1]), shape should be (2, 3).
+    """
+
+    def __init__(self, n, a, shape, *args, **kwargs):
+
+        super().__init__(shape=shape, defaults=("_defaultval",), *args, **kwargs)
+
+        n = intX(n)
+        a = floatX(a)
+        if len(self.shape) > 1:
+            self.n = tt.shape_padright(n)
+            self.a = tt.as_tensor_variable(a) if a.ndim > 1 else tt.shape_padleft(a)
+        else:
+            # n is a scalar, p is a 1d array
+            self.n = tt.as_tensor_variable(n)
+            self.a = tt.as_tensor_variable(a)
+
+        p = self.a / self.a.sum(-1, keepdims=True)
+
+        self.mean = self.n * p
+        # Mode is only an approximation. Exact computation requires a complex
+        # iterative algorithm as described in https://doi.org/10.1016/j.spl.2009.09.013
+        mode = tt.cast(tt.round(self.mean), "int32")
+        diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
+        inc_bool_arr = tt.abs_(diff) > 0
+        mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
+        self._defaultval = mode
+
+    def _random(self, n, a, size=None):
+        # numpy will cast dirichlet and multinomial samples to float64 by default
+        original_dtype = a.dtype
+
+        # Thanks to the default shape handling done in generate_values, the last
+        # axis of n is a dummy axis that allows it to broadcast well with `a`
+        n = np.broadcast_to(n, size)
+        a = np.broadcast_to(a, size)
+        n = n[..., 0]
+
+        # np.random.multinomial needs `n` to be a scalar int and `a` a
+        # sequence so we semi flatten them and iterate over them
+        n_ = n.reshape([-1])
+        a_ = a.reshape([-1, a.shape[-1]])
+        p_ = np.array([np.random.dirichlet(aa) for aa in a_])
+        samples = np.array([np.random.multinomial(nn, pp) for nn, pp in zip(n_, p_)])
+        samples = samples.reshape(a.shape)
+
+        # We cast back to the original dtype
+        return samples.astype(original_dtype)
+
+    def random(self, point=None, size=None):
+        """
+        Draw random values from Dirichlet-Multinomial distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        n, a = draw_values([self.n, self.a], point=point, size=size)
+        samples = generate_samples(
+            self._random,
+            n,
+            a,
+            dist_shape=self.shape,
+            size=size,
+        )
+
+        # If distribution is initialized with .dist(), valid init shape is not asserted.
+        # Under normal use in a model context valid init shape is asserted at start.
+        expected_shape = to_tuple(size) + to_tuple(self.shape)
+        sample_shape = tuple(samples.shape)
+        if sample_shape != expected_shape:
+            raise ShapeError(
+                f"Expected sample shape was {expected_shape} but got {sample_shape}. "
+                "This may reflect an invalid initialization shape."
+            )
+
+        return samples
+
+    def logp(self, value):
+        """
+        Calculate log-probability of DirichletMultinomial distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value: integer array
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        a = self.a
+        n = self.n
+        sum_a = a.sum(axis=-1, keepdims=True)
+
+        const = (gammaln(n + 1) + gammaln(sum_a)) - gammaln(n + sum_a)
+        series = gammaln(value + a) - (gammaln(value + 1) + gammaln(a))
+        result = const + series.sum(axis=-1, keepdims=True)
+        # Bounds checking to confirm parameters and data meet all constraints
+        # and that each observation value_i sums to n_i.
+        return bound(
+            result,
+            tt.all(tt.ge(value, 0)),
+            tt.all(tt.gt(a, 0)),
+            tt.all(tt.ge(n, 0)),
+            tt.all(tt.eq(value.sum(axis=-1, keepdims=True), n)),
+            broadcast_conditions=False,
+        )
+
+    def _distr_parameters_for_repr(self):
+        return ["n", "a"]
 
 
 def posdef(AA):
