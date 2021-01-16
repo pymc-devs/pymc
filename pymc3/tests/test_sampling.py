@@ -726,16 +726,15 @@ class TestSamplePPC(SeededTest):
         warning_msg = "The effect of Potentials on other parameters is ignored during"
         with pm.Model() as m:
             a = pm.Normal("a", 0, 1)
-            p = pm.Potential("p", a)
+            p = pm.Potential("p", a + 1)
             obs = pm.Normal("obs", a, 1, observed=5)
-            trace = pm.sample()
 
-        with pytest.warns(UserWarning, match=warning_msg):
-            with m:
+        trace = az.from_dict({"a": np.random.rand(10)})
+        with m:
+            with pytest.warns(UserWarning, match=warning_msg):
                 pm.sample_posterior_predictive(trace, samples=5)
 
-        with pytest.warns(UserWarning, match=warning_msg):
-            with m:
+            with pytest.warns(UserWarning, match=warning_msg):
                 pm.fast_sample_posterior_predictive(trace, samples=5)
 
 
@@ -793,10 +792,10 @@ class TestSamplePPCW(SeededTest):
         warning_msg = "The effect of Potentials on other parameters is ignored during"
         with pm.Model() as m:
             a = pm.Normal("a", 0, 1)
-            p = pm.Potential("p", a)
+            p = pm.Potential("p", a + 1)
             obs = pm.Normal("obs", a, 1, observed=5)
-            trace = pm.sample()
 
+        trace = az.from_dict({"a": np.random.rand(10)})
         with pytest.warns(UserWarning, match=warning_msg):
             pm.sample_posterior_predictive_w(samples=5, traces=[trace, trace], models=[m, m])
 
@@ -1043,8 +1042,9 @@ class TestSamplePriorPredictive(SeededTest):
         warning_msg = "The effect of Potentials on other parameters is ignored during"
         with pm.Model() as m:
             a = pm.Normal("a", 0, 1)
-            p = pm.Potential("p", a)
+            p = pm.Potential("p", a + 1)
 
+        with m:
             with pytest.warns(UserWarning, match=warning_msg):
                 pm.sample_prior_predictive(samples=5)
 
