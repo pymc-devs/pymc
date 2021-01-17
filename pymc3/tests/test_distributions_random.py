@@ -542,6 +542,24 @@ class TestCategorical(BaseTestCases.BaseTestCase):
         assert pm.Categorical.dist(p=p).random(size=4).shape == (4, 3, 7)
 
 
+class TestDirichlet(SeededTest):
+    @pytest.mark.parametrize(
+        "shape, size",
+        [
+            ((2), (1)),
+            ((2), (2)),
+            ((2, 2), (2, 100)),
+            ((3, 4), (3, 4)),
+            ((3, 4), (3, 4, 100)),
+            ((3, 4), (100)),
+            ((3, 4), (1)),
+        ],
+    )
+    def test_dirichlet_random_shape(self, shape, size):
+        out_shape = to_tuple(size) + to_tuple(shape)
+        assert pm.Dirichlet.dist(a=np.ones(shape)).random(size=size).shape == out_shape
+
+
 class TestScalarParameterSamples(SeededTest):
     def test_bounded(self):
         # A bit crude...
