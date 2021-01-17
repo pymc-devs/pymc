@@ -349,6 +349,7 @@ class BetaBinomial(Discrete):
                 0,
             ),
             0 <= value,
+            0 <= n,
             0 < alpha,
             0 < beta,
         )
