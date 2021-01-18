@@ -54,7 +54,7 @@ def plot_posterior_predictive_glm(
 
     Warnings
     --------
-    The `plot_posterior_predictive_glm` function will removed in a future PyMC3 release.
+    The `plot_posterior_predictive_glm` function will be removed in a future PyMC3 release.
     """
     warnings.warn(
         "The `plot_posterior_predictive_glm` function will migrate to Arviz in a future release. "

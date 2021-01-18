@@ -10,7 +10,5 @@ library, a general purpose library for
 "exploratory analysis of Bayesian models."
 Refer to its documentation to use the plotting functions directly.
 
-.. currentmodule:: pymc3.plots.posteriorplot
-
 .. automodule:: pymc3.plots.posteriorplot
    :members:
