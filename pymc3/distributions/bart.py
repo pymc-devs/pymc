@@ -176,7 +176,7 @@ class BaseBART(NoDistribution):
         pred = np.zeros((len(trees), num_observations))
         np.random.randint(len(trees))
         for draw, trees_to_sum in enumerate(trees):
-            new_Y = np.zeros(X_new.shape[0])
+            new_Y = np.zeros(num_observations)
             for tree in trees_to_sum:
                 new_Y += [tree.predict_out_of_sample(x) for x in X_new]
             pred[draw] = new_Y
