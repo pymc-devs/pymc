@@ -84,6 +84,22 @@ class Tree:
             output[current_node.idx_data_points] = current_node.value
         return output
 
+    def predict_out_of_sample(self, x):
+        """
+        Predict output of tree for an unobserved point x.
+
+        Parameters
+        ----------
+        x : numpy array
+
+        Returns
+        -------
+        float
+            Value of the leaf value where the unobserved point lies.
+        """
+        leaf_node = self._traverse_tree(x=x, node_index=0)
+        return leaf_node.value
+
     def _traverse_tree(self, x, node_index=0):
         """
         Traverse the tree starting from a particular node given an unobserved point.
@@ -99,15 +115,13 @@ class Tree:
         """
         current_node = self.get_node(node_index)
         if isinstance(current_node, SplitNode):
-            if x is not np.NaN:
+            if x[current_node.idx_split_variable] <= current_node.split_value:
                 left_child = current_node.get_idx_left_child()
-                final_node = self._traverse_tree(x, left_child)
+                current_node = self._traverse_tree(x, left_child)
             else:
                 right_child = current_node.get_idx_right_child()
-                final_node = self._traverse_tree(x, right_child)
-        else:
-            final_node = current_node
-        return final_node
+                current_node = self._traverse_tree(x, right_child)
+        return current_node
 
     def grow_tree(self, index_leaf_node, new_split_node, new_left_node, new_right_node):
         """

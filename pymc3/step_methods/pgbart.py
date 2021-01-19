@@ -64,8 +64,13 @@ class PGBART(ArrayStepShared):
 
         self.tune = True
         self.idx = 0
+        self.iter = 0
+        self.sum_trees = []
+        self.chunk = chunk
+
         if chunk == "auto":
             self.chunk = max(1, int(self.bart.m * 0.1))
+        self.bart.chunk = self.chunk
         self.num_particles = num_particles
         self.log_num_particles = np.log(num_particles)
         self.indices = list(range(1, num_particles))
@@ -96,14 +101,14 @@ class PGBART(ArrayStepShared):
             self.idx = 0
 
         for idx in range(self.idx, self.idx + self.chunk):
-            if idx > bart.m:
+            if idx >= bart.m:
                 break
             self.idx += 1
             tree = bart.trees[idx]
             R_j = bart.get_residuals_loo(tree)
             # Generate an initial set of SMC particles
             # at the end of the algorithm we return one of these particles as the new tree
-            particles = self.init_particles(tree.tree_id, R_j, bart.num_observations)
+            particles = self.init_particles(tree.tree_id, R_j, num_observations)
 
             for t in range(1, max_stages):
                 # Get old particle at stage t
@@ -147,6 +152,11 @@ class PGBART(ArrayStepShared):
             bart.sum_trees_output = bart.Y - R_j + new_prediction
 
             if not self.tune:
+                self.iter += 1
+                self.sum_trees.append(new_tree.tree)
+                if not self.iter % bart.m:
+                    bart.all_trees.append(self.sum_trees)
+                    self.sum_trees = []
                 for index in new_tree.used_variates:
                     variable_inclusion[index] += 1
 
