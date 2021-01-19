@@ -1,9 +1,8 @@
 # Release Notes
 
 ## PyMC3 3.11.0 (19 January 2021)
-This release breaks some APIs w.r.t. `3.10.0`.
-It also brings some dreadfully awaited fixes, so be sure to go through the changes below.
-(Or latest when you run into problems.)
+
+This release breaks some APIs w.r.t. `3.10.0`. It also brings some dreadfully awaited fixes, so be sure to go through the (breaking) changes below.
 
 ### Breaking Changes
 - Python 3.6 support was dropped (by no longer testing) and Python 3.9 was added (see [#4332](https://github.com/pymc-devs/pymc3/pull/4332)).
