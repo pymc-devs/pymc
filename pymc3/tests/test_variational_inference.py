@@ -505,7 +505,7 @@ def test_elbo():
 
     # Create variational gradient tensor
     mean_field = MeanField(model=model)
-    with pm.theanof.change_flags(compute_test_value="off"):
+    with theano.config.change_flags(compute_test_value="off"):
         elbo = -pm.operators.KL(mean_field)()(10000)
 
     mean_field.shared_params["mu"].set_value(post_mu)
@@ -732,7 +732,6 @@ def fit_kwargs(inference, use_minibatch):
     return _select[(type(inference), key)]
 
 
-@pytest.mark.run("first")
 def test_fit_oo(inference, fit_kwargs, simple_model_data):
     trace = inference.fit(**fit_kwargs).sample(10000)
     mu_post = simple_model_data["mu_post"]
@@ -911,7 +910,6 @@ def binomial_model_inference(binomial_model, inference_spec):
         return inference_spec()
 
 
-@pytest.mark.run(after="test_sample_replacements")
 def test_replacements(binomial_model_inference):
     d = tt.bscalar()
     d.tag.test_value = 1
