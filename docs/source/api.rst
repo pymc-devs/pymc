@@ -28,7 +28,6 @@ API Reference
    api/shape_utils
    api/ode
 
-
 Indices and tables
 ===================
 

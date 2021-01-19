@@ -11,10 +11,10 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import time
 import timeit
 
+import arviz as az
 import numpy as np
 import pandas as pd
 import theano
@@ -192,7 +192,7 @@ class NUTSInitSuite:
                 compute_convergence_checks=False,
             )
             tot = time.time() - t0
-        ess = float(pm.ess(trace, var_names=["mu_a"])["mu_a"].values)
+        ess = float(az.ess(trace, var_names=["mu_a"])["mu_a"].values)
         return ess / tot
 
     def track_marginal_mixture_model_ess(self, init):
@@ -214,7 +214,7 @@ class NUTSInitSuite:
                 compute_convergence_checks=False,
             )
             tot = time.time() - t0
-        ess = pm.ess(trace, var_names=["mu"])["mu"].values.min()  # worst case
+        ess = az.ess(trace, var_names=["mu"])["mu"].values.min()  # worst case
         return ess / tot
 
 
@@ -245,7 +245,7 @@ class CompareMetropolisNUTSSuite:
                 compute_convergence_checks=False,
             )
             tot = time.time() - t0
-        ess = float(pm.ess(trace, var_names=["mu_a"])["mu_a"].values)
+        ess = float(az.ess(trace, var_names=["mu_a"])["mu_a"].values)
         return ess / tot
 
 
@@ -304,7 +304,7 @@ class DifferentialEquationSuite:
             t0 = time.time()
             trace = pm.sample(500, tune=1000, chains=2, cores=2, random_seed=0)
             tot = time.time() - t0
-        ess = pm.ess(trace)
+        ess = az.ess(trace)
         return np.mean([ess.sigma, ess.gamma]) / tot
 
 

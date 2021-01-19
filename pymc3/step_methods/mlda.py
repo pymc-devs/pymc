@@ -333,7 +333,7 @@ class MLDA(ArrayStepShared):
         ...                       tune=100, step=step_method,
         ...                       random_seed=123)
         ...
-        ... pm.summary(trace, kind="stats")
+        ... az.summary(trace, kind="stats")
            mean     sd  hdi_3%  hdi_97%
         x  0.99  0.987  -0.734    2.992
 

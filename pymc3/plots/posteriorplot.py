@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 import matplotlib.pyplot as plt
@@ -33,20 +35,33 @@ def plot_posterior_predictive_glm(
     **kwargs: Any
 ) -> None:
     """Plot posterior predictive of a linear model.
-    :Arguments:
-        trace: InferenceData or MultiTrace
-            Output of pm.sample()
-        eval: <array>
-            Array over which to evaluate lm
-        lm: function <default: linear function>
-            Function mapping parameters at different points
-            to their respective outputs.
-            input: point, sample
-            output: estimated value
-        samples: int <default=30>
-            How many posterior samples to draw.
-    Additional keyword arguments are passed to pylab.plot().
+
+    Parameters
+    ----------
+    trace: InferenceData or MultiTrace
+        Output of pm.sample()
+    eval: <array>
+        Array over which to evaluate lm
+    lm: function <default: linear function>
+        Function mapping parameters at different points
+        to their respective outputs.
+        input: point, sample
+        output: estimated value
+    samples: int <default=30>
+        How many posterior samples to draw.
+    kwargs : mapping, optional
+        Additional keyword arguments are passed to ``matplotlib.pyplot.plot()``.
+
+    Warnings
+    --------
+    The `plot_posterior_predictive_glm` function will be removed in a future PyMC3 release.
     """
+    warnings.warn(
+        "The `plot_posterior_predictive_glm` function will migrate to Arviz in a future release. "
+        "\nKeep up to date with `ArviZ <https://arviz-devs.github.io/arviz/>`_ for future updates.",
+        DeprecationWarning,
+    )
+
     if lm is None:
         lm = lambda x, sample: sample["Intercept"] + sample["x"] * x
 

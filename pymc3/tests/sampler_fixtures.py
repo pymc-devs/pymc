@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import arviz as az
 import numpy as np
 import numpy.testing as npt
 import theano.tensor as tt
@@ -146,12 +147,12 @@ class BaseSampler(SeededTest):
 
     def test_neff(self):
         if hasattr(self, "min_n_eff"):
-            n_eff = pm.ess(self.trace[self.burn :])
+            n_eff = az.ess(self.trace[self.burn :])
             for var in n_eff:
                 npt.assert_array_less(self.min_n_eff, n_eff[var])
 
     def test_Rhat(self):
-        rhat = pm.rhat(self.trace[self.burn :])
+        rhat = az.rhat(self.trace[self.burn :])
         for var in rhat:
             npt.assert_allclose(rhat[var], 1, rtol=0.01)
 

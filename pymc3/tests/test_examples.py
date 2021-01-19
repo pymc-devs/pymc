@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import arviz as az
 import matplotlib
 import numpy as np
 import pandas as pd
@@ -202,7 +203,7 @@ class TestDisasterModel(SeededTest):
             # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
-            pm.summary(tr)
+            az.summary(tr)
 
     def test_disaster_model_missing(self):
         model = build_disaster_model(masked=True)
@@ -212,7 +213,7 @@ class TestDisasterModel(SeededTest):
             # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
-            pm.summary(tr)
+            az.summary(tr)
 
 
 class TestGLMLinear(SeededTest):

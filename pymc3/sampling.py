@@ -416,7 +416,7 @@ def sample(
            ...:     y = pm.Binomial("y", n=n, p=p, observed=h)
            ...:     trace = pm.sample()
 
-        In [3]: pm.summary(trace, kind="stats")
+        In [3]: az.summary(trace, kind="stats")
 
         Out[3]:
             mean     sd  hdi_3%  hdi_97%
