@@ -196,6 +196,19 @@ def test_interval():
         close_to_logical(vals < b, True, tol)
 
 
+@pytest.mark.skipif(theano.config.floatX == "float32", reason="Test fails on 32 bit")
+def test_interval_near_boundary():
+    lb = -1.0
+    ub = 1e-7
+    x0 = np.nextafter(ub, lb)
+
+    with pm.Model() as model:
+        pm.Uniform("x", testval=x0, lower=lb, upper=ub)
+
+    log_prob = model.check_test_point()
+    np.testing.assert_allclose(log_prob.values, np.array([-52.68]))
+
+
 def test_circular():
     trans = tr.circular
     check_transform(trans, Circ)

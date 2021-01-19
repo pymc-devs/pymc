@@ -278,7 +278,8 @@ class Interval(ElemwiseTransform):
 
     def backward(self, x):
         a, b = self.a, self.b
-        r = (b - a) * tt.nnet.sigmoid(x) + a
+        sigmoid_x = tt.nnet.sigmoid(x)
+        r = sigmoid_x * b + (1 - sigmoid_x) * a
         return r
 
     def forward(self, x):
