@@ -17,10 +17,6 @@ Created on Mar 12, 2011
 
 @author: johnsalvatier
 """
-import warnings
-
-from inspect import getargspec
-
 import numpy as np
 import theano.gradient as tg
 
@@ -92,18 +88,20 @@ def find_MAP(
     wrapped it inside pymc3.sample() and you should thus avoid this method.
     """
     model = modelcontext(model)
+
+    if vars is None:
+        vars = model.cont_vars
+        if not vars:
+            raise ValueError("Model has no unobserved continuous variables.")
+    vars = inputvars(vars)
+    disc_vars = list(typefilter(vars, discrete_types))
+    allinmodel(vars, model)
+
     if start is None:
         start = model.test_point
     else:
         update_start_vals(start, model.test_point, model)
-
     check_start_vals(start, model)
-
-    if vars is None:
-        vars = model.cont_vars
-    vars = inputvars(vars)
-    disc_vars = list(typefilter(vars, discrete_types))
-    allinmodel(vars, model)
 
     start = Point(start, model=model)
     bij = DictToArrayBijection(ArrayOrdering(vars), start)
@@ -126,57 +124,25 @@ def find_MAP(
         )
         method = "Powell"
 
-    if "fmin" in kwargs:
-        fmin = kwargs.pop("fmin")
-        warnings.warn(
-            "In future versions, set the optimization algorithm with a string. "
-            'For example, use `method="L-BFGS-B"` instead of '
-            '`fmin=sp.optimize.fmin_l_bfgs_b"`.'
-        )
-
+    if compute_gradient:
+        cost_func = CostFuncWrapper(maxeval, progressbar, logp_func, dlogp_func)
+    else:
         cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
 
-        # Check to see if minimization function actually uses the gradient
-        if "fprime" in getargspec(fmin).args:
-
-            def grad_logp(point):
-                return nan_to_num(-dlogp_func(point))
-
-            opt_result = fmin(cost_func, x0, fprime=grad_logp, *args, **kwargs)
-        else:
-            # Check to see if minimization function uses a starting value
-            if "x0" in getargspec(fmin).args:
-                opt_result = fmin(cost_func, x0, *args, **kwargs)
-            else:
-                opt_result = fmin(cost_func, *args, **kwargs)
-
-        if isinstance(opt_result, tuple):
-            mx0 = opt_result[0]
-        else:
-            mx0 = opt_result
-    else:
-        # remove 'if' part, keep just this 'else' block after version change
-        if compute_gradient:
-            cost_func = CostFuncWrapper(maxeval, progressbar, logp_func, dlogp_func)
-        else:
-            cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
-
-        try:
-            opt_result = minimize(
-                cost_func, x0, method=method, jac=compute_gradient, *args, **kwargs
-            )
-            mx0 = opt_result["x"]  # r -> opt_result
-        except (KeyboardInterrupt, StopIteration) as e:
-            mx0, opt_result = cost_func.previous_x, None
-            if isinstance(e, StopIteration):
-                pm._log.info(e)
-        finally:
-            last_v = cost_func.n_eval
-            if progressbar:
-                assert isinstance(cost_func.progress, ProgressBar)
-                cost_func.progress.total = last_v
-                cost_func.progress.update(last_v)
-                print()
+    try:
+        opt_result = minimize(cost_func, x0, method=method, jac=compute_gradient, *args, **kwargs)
+        mx0 = opt_result["x"]  # r -> opt_result
+    except (KeyboardInterrupt, StopIteration) as e:
+        mx0, opt_result = cost_func.previous_x, None
+        if isinstance(e, StopIteration):
+            pm._log.info(e)
+    finally:
+        last_v = cost_func.n_eval
+        if progressbar:
+            assert isinstance(cost_func.progress, ProgressBar)
+            cost_func.progress.total = last_v
+            cost_func.progress.update(last_v)
+            print()
 
     vars = get_default_varnames(model.unobserved_RVs, include_transformed)
     mx = {var.name: value for var, value in zip(vars, model.fastfn(vars)(bij.rmap(mx0)))}
