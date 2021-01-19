@@ -1,6 +1,6 @@
 # Release Notes
 
-## PyMC3 vNext (on deck)
+## PyMC3 3.11.0 (19 January 2021)
 This release breaks some APIs w.r.t. `3.10.0`.
 It also brings some dreadfully awaited fixes, so be sure to go through the changes below.
 (Or latest when you run into problems.)
@@ -14,6 +14,7 @@ It also brings some dreadfully awaited fixes, so be sure to go through the chang
   - 0-length dimensions are now ruled illegal for random variables and raise a `ValueError`.
 - In `sample_prior_predictive` the `vars` kwarg was removed in favor of `var_names` (see [#4327](https://github.com/pymc-devs/pymc3/pull/4327)).
 - Removed `theanof.set_theano_config` because it illegally changed Theano's internal state (see [#4329](https://github.com/pymc-devs/pymc3/pull/4329)).
+- We now depend on `Theano-PyMC` version `1.1.0` or greater (see [#4405](https://github.com/pymc-devs/pymc3/pull/4405)).
 
 ### New Features
 - Option to set `check_bounds=False` when instantiating `pymc3.Model()`. This turns off bounds checks that ensure that input parameters of distributions are valid. For correctly specified models, this is unneccessary as all parameters get automatically transformed so that all values are valid. Turning this off should lead to faster sampling (see [#4377](https://github.com/pymc-devs/pymc3/pull/4377)).
@@ -37,6 +38,8 @@ It also brings some dreadfully awaited fixes, so be sure to go through the chang
 - Issue UserWarning when doing prior or posterior predictive sampling with models containing Potential factors (see [#4419](https://github.com/pymc-devs/pymc3/pull/4419))
 - Dirichlet distribution's `random` method is now optimized and gives outputs in correct shape (see [#4416](https://github.com/pymc-devs/pymc3/pull/4407))
 - Attempting to sample a named model with SMC will now raise a `NotImplementedError`. (see [#4365](https://github.com/pymc-devs/pymc3/pull/4365))
+
+**Release manager** for 3.11.0: Eelke Spaak ([@Spaak](https://github.com/Spaak))
 
 ## PyMC3 3.10.0 (7 December 2020)
 
