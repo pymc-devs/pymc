@@ -134,9 +134,7 @@ def find_MAP(
         cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
 
     try:
-        opt_result = minimize(
-            cost_func, x0, method=method, jac=compute_gradient, *args, **kwargs
-        )
+        opt_result = minimize(cost_func, x0, method=method, jac=compute_gradient, *args, **kwargs)
         mx0 = opt_result["x"]  # r -> opt_result
     except (KeyboardInterrupt, StopIteration) as e:
         mx0, opt_result = cost_func.previous_x, None
