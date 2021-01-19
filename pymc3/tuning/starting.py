@@ -17,10 +17,6 @@ Created on Mar 12, 2011
 
 @author: johnsalvatier
 """
-import warnings
-
-from inspect import getargspec
-
 import numpy as np
 import theano.gradient as tg
 
