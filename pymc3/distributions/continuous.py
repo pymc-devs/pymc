@@ -553,7 +553,12 @@ class Normal(Continuous):
         -------
         TensorVariable
         """
-        return normal_lcdf(self.mu, self.sigma, value)
+        mu = self.mu
+        sigma = self.sigma
+        return bound(
+            normal_lcdf(mu, sigma, value),
+            0 < sigma,
+        )
 
 
 class TruncatedNormal(BoundedContinuous):
@@ -1144,10 +1149,16 @@ class Wald(PositiveContinuous):
             tt.eq(value, 0) & tt.eq(lam, np.inf)
         )
 
-        return tt.switch(
-            left_limit,
-            -np.inf,
-            tt.switch((right_limit | degenerate_dist), 0, a + tt.log1p(tt.exp(b - a))),
+        return bound(
+            tt.switch(
+                ~(right_limit | degenerate_dist),
+                a + tt.log1p(tt.exp(b - a)),
+                0,
+            ),
+            ~left_limit,
+            0 < mu,
+            0 < lam,
+            0 <= alpha,
         )
 
 
@@ -1539,10 +1550,10 @@ class Exponential(PositiveContinuous):
         value = floatX(tt.as_tensor(value))
         lam = self.lam
         a = lam * value
-        return tt.switch(
-            tt.le(value, 0.0) | tt.le(lam, 0),
-            -np.inf,
+        return bound(
             log1mexp(a),
+            0 <= value,
+            0 <= lam,
         )
 
 
@@ -1654,10 +1665,17 @@ class Laplace(Continuous):
         a = self.mu
         b = self.b
         y = (value - a) / b
-        return tt.switch(
-            tt.le(value, a),
-            tt.log(0.5) + y,
-            tt.switch(tt.gt(y, 1), tt.log1p(-0.5 * tt.exp(-y)), tt.log(1 - 0.5 * tt.exp(-y))),
+        return bound(
+            tt.switch(
+                tt.le(value, a),
+                tt.log(0.5) + y,
+                tt.switch(
+                    tt.gt(y, 1),
+                    tt.log1p(-0.5 * tt.exp(-y)),
+                    tt.log(1 - 0.5 * tt.exp(-y)),
+                ),
+            ),
+            0 < b,
         )
 
 
@@ -1909,16 +1927,12 @@ class Lognormal(PositiveContinuous):
         """
         mu = self.mu
         sigma = self.sigma
-        z = zvalue(tt.log(value), mu=mu, sigma=sigma)
+        tau = self.tau
 
-        return tt.switch(
-            tt.le(value, 0),
-            -np.inf,
-            tt.switch(
-                tt.lt(z, -1.0),
-                tt.log(tt.erfcx(-z / tt.sqrt(2.0)) / 2.0) - tt.sqr(z) / 2,
-                tt.log1p(-tt.erfc(z / tt.sqrt(2.0)) / 2.0),
-            ),
+        return bound(
+            normal_lcdf(mu, sigma, tt.log(value)),
+            0 < value,
+            0 < tau,
         )
 
 
@@ -2220,8 +2234,15 @@ class Pareto(Continuous):
         m = self.m
         alpha = self.alpha
         arg = (m / value) ** alpha
-        return tt.switch(
-            tt.lt(value, m), -np.inf, tt.switch(tt.le(arg, 1e-5), tt.log1p(-arg), tt.log(1 - arg))
+        return bound(
+            tt.switch(
+                tt.le(arg, 1e-5),
+                tt.log1p(-arg),
+                tt.log(1 - arg),
+            ),
+            m <= value,
+            0 < alpha,
+            0 < m,
         )
 
 
@@ -2336,7 +2357,12 @@ class Cauchy(Continuous):
         -------
         TensorVariable
         """
-        return tt.log(0.5 + tt.arctan((value - self.alpha) / self.beta) / np.pi)
+        alpha = self.alpha
+        beta = self.beta
+        return bound(
+            tt.log(0.5 + tt.arctan((value - alpha) / beta) / np.pi),
+            0 < beta,
+        )
 
 
 class HalfCauchy(PositiveContinuous):
@@ -2444,7 +2470,12 @@ class HalfCauchy(PositiveContinuous):
         -------
         TensorVariable
         """
-        return tt.switch(tt.le(value, 0), -np.inf, tt.log(2 * tt.arctan(value / self.beta) / np.pi))
+        beta = self.beta
+        return bound(
+            tt.log(2 * tt.arctan(value / beta) / np.pi),
+            0 <= value,
+            0 < beta,
+        )
 
 
 class Gamma(PositiveContinuous):
@@ -2953,10 +2984,11 @@ class Weibull(PositiveContinuous):
         alpha = self.alpha
         beta = self.beta
         a = (value / beta) ** alpha
-        return tt.switch(
-            tt.le(value, 0.0),
-            -np.inf,
+        return bound(
             log1mexp(a),
+            0 <= value,
+            0 < alpha,
+            0 < beta,
         )
 
 
@@ -3255,17 +3287,21 @@ class ExGaussian(Continuous):
         nu = self.nu
 
         # Alogithm is adapted from pexGAUS.R from gamlss
-        return tt.switch(
-            tt.gt(nu, 0.05 * sigma),
-            logdiffexp(
-                normal_lcdf(mu, sigma, value),
-                (
-                    (mu - value) / nu
-                    + 0.5 * (sigma / nu) ** 2
-                    + normal_lcdf(mu + (sigma ** 2) / nu, sigma, value)
+        return bound(
+            tt.switch(
+                tt.gt(nu, 0.05 * sigma),
+                logdiffexp(
+                    normal_lcdf(mu, sigma, value),
+                    (
+                        (mu - value) / nu
+                        + 0.5 * (sigma / nu) ** 2
+                        + normal_lcdf(mu + (sigma ** 2) / nu, sigma, value)
+                    ),
                 ),
+                normal_lcdf(mu, sigma, value),
             ),
-            normal_lcdf(mu, sigma, value),
+            0 < sigma,
+            0 < nu,
         )
 
     def _distr_parameters_for_repr(self):
@@ -3753,8 +3789,13 @@ class Gumbel(Continuous):
         -------
         TensorVariable
         """
-        scaled = (value - self.mu) / self.beta
-        return bound(-scaled - tt.exp(-scaled) - tt.log(self.beta), self.beta > 0)
+        mu = self.mu
+        beta = self.beta
+        scaled = (value - mu) / beta
+        return bound(
+            -scaled - tt.exp(-scaled) - tt.log(self.beta),
+            0 < beta,
+        )
 
     def logcdf(self, value):
         """
@@ -3774,7 +3815,10 @@ class Gumbel(Continuous):
         beta = self.beta
         mu = self.mu
 
-        return -tt.exp(-(value - mu) / beta)
+        return bound(
+            -tt.exp(-(value - mu) / beta),
+            0 < beta,
+        )
 
 
 class Rice(PositiveContinuous):
@@ -4052,7 +4096,10 @@ class Logistic(Continuous):
         """
         mu = self.mu
         s = self.s
-        return -log1pexp(-(value - mu) / s)
+        return bound(
+            -log1pexp(-(value - mu) / s),
+            0 < s,
+        )
 
 
 class LogitNormal(UnitContinuous):
@@ -4360,14 +4407,12 @@ class Moyal(Continuous):
         -------
         TensorVariable
         """
-        scaled = (value - self.mu) / self.sigma
+        mu = self.mu
+        sigma = self.sigma
+        scaled = (value - mu) / sigma
         return bound(
-            (
-                -(1 / 2) * (scaled + tt.exp(-scaled))
-                - tt.log(self.sigma)
-                - (1 / 2) * tt.log(2 * np.pi)
-            ),
-            self.sigma > 0,
+            (-(1 / 2) * (scaled + tt.exp(-scaled)) - tt.log(sigma) - (1 / 2) * tt.log(2 * np.pi)),
+            0 < sigma,
         )
 
     def logcdf(self, value):
@@ -4385,5 +4430,11 @@ class Moyal(Continuous):
         -------
         TensorVariable
         """
-        scaled = (value - self.mu) / self.sigma
-        return tt.log(tt.erfc(tt.exp(-scaled / 2) * (2 ** -0.5)))
+        mu = self.mu
+        sigma = self.sigma
+
+        scaled = (value - mu) / sigma
+        return bound(
+            tt.log(tt.erfc(tt.exp(-scaled / 2) * (2 ** -0.5))),
+            0 < sigma,
+        )

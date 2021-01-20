@@ -587,46 +587,123 @@ class TestMatchesScipy(SeededTest):
         scipy_logcdf,
         decimal=None,
         n_samples=100,
+        skip_paramdomain_inside_edge_test=False,
+        skip_paramdomain_outside_edge_test=False,
     ):
-        domains = paramdomains.copy()
-        domains["value"] = domain
-        if decimal is None:
-            decimal = select_by_precision(float64=6, float32=3)
-        for pt in product(domains, n_samples=n_samples):
-            params = dict(pt)
-            scipy_cdf = scipy_logcdf(**params)
-            value = params.pop("value")
-            dist = pymc3_dist.dist(**params)
-            assert_almost_equal(
-                dist.logcdf(value).tag.test_value,
-                scipy_cdf,
-                decimal=decimal,
-                err_msg=str(pt),
-            )
+        """
+        Generic test for PyMC3 logcdf methods
 
-        # Test that values below domain evaluate to -np.inf
+        The following tests are performed by default:
+            1. Test PyMC3 logcdf and equivalent scipy logcdf methods give similar
+            results for valid values and parameters inside the supported edges.
+            Edges are excluded by default, but can be artificially included by
+            creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
+            Can be skipped via skip_paramdomain_inside_edge_test
+            2. Test PyMC3 logcdf method returns -inf for invalid parameter values
+            outside the supported edges. Can be skipped via skip_paramdomain_outside_edge_test
+            3. Test PyMC3 logcdf method returns -inf and 0 for values below and
+            above the supported edge, respectively, when using valid parameters.
+            4. Test PyMC3 logcdf methods works with multiple value or returns
+            default informative TypeError
+
+        Parameters
+        ----------
+        pymc3_dist: PyMC3 distribution
+        domain : Domain
+            Supported domain of distribution values
+        paramdomains : Dictionary of Parameter : Domain pairs
+            Supported domains of distribution parameters
+        scipy_logcdf : Scipy logcdf method
+            Scipy logcdf method of equivalent pymc3_dist distribution
+        decimal : Int
+            Level of precision with which pymc3_dist and scipy_logcdf are compared.
+            Defaults to 6 for float64 and 3 for float32
+        n_samples : Int
+            Upper limit on the number of valid domain and value combinations that
+            are compared between pymc3 and scipy methods. If n_samples is below the
+            total number of combinations, a random subset is evaluated.
+            Defaults to 100
+        skip_paramdomain_inside_edge_test : Bool
+            Whether to run test 1., which checks that pymc3 and scipy distributions
+            match for valid values and parameters inside the respective domain edges
+        skip_paramdomain_outside_edge_test : Bool
+            Whether to run test 2., which checks that pymc3 distribution logcdf
+            returns -inf for invalid parameter values outside the supported domain edge
+
+        Returns
+        -------
+
+        """
+        # Test pymc3 and scipy distributions match for values and parameters
+        # within the supported domain edges (excluding edges)
+        if not skip_paramdomain_inside_edge_test:
+            domains = paramdomains.copy()
+            domains["value"] = domain
+            if decimal is None:
+                decimal = select_by_precision(float64=6, float32=3)
+            for pt in product(domains, n_samples=n_samples):
+                params = dict(pt)
+                scipy_cdf = scipy_logcdf(**params)
+                value = params.pop("value")
+                dist = pymc3_dist.dist(**params)
+                assert_almost_equal(
+                    dist.logcdf(value).tag.test_value,
+                    scipy_cdf,
+                    decimal=decimal,
+                    err_msg=str(pt),
+                )
+
+        valid_value = domain.vals[0]
+        valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
+        valid_dist = pymc3_dist.dist(**valid_params)
+
+        # Natural domains do not have inf as the upper edge, but should also be ignored
+        nat_domains = (NatSmall, Nat, NatBig, PosNat)
+
+        # Test pymc3 distribution gives -inf for parameters outside the
+        # supported domain edges (excluding edgse)
+        if not skip_paramdomain_outside_edge_test:
+            # Step1: collect potential invalid parameters
+            invalid_params = {param: [None, None] for param in paramdomains}
+            for param, paramdomain in paramdomains.items():
+                if np.isfinite(paramdomain.lower):
+                    invalid_params[param][0] = paramdomain.lower - 1
+                if np.isfinite(paramdomain.upper) and paramdomain not in nat_domains:
+                    invalid_params[param][1] = paramdomain.upper + 1
+            # Step2: test invalid parameters, one a time
+            for invalid_param, invalid_edges in invalid_params.items():
+                for invalid_edge in invalid_edges:
+                    if invalid_edge is not None:
+                        test_params = valid_params.copy()  # Shallow copy should be okay
+                        test_params[invalid_param] = invalid_edge
+                        invalid_dist = pymc3_dist.dist(**test_params)
+                        assert_equal(
+                            invalid_dist.logcdf(valid_value).tag.test_value,
+                            -np.inf,
+                            err_msg=str(test_params),
+                        )
+
+        # Test that values below domain edge evaluate to -np.inf
         if np.isfinite(domain.lower):
             below_domain = domain.lower - 1
             assert_equal(
-                dist.logcdf(below_domain).tag.test_value,
+                valid_dist.logcdf(below_domain).tag.test_value,
                 -np.inf,
                 err_msg=str(below_domain),
             )
 
-        # Test that values above domain evaluate to 0
-        # Natural domains do not have inf as the upper edge, but should also be ignored
-        not_nat_domain = domain not in (NatSmall, Nat, NatBig, PosNat)
-        if not_nat_domain and np.isfinite(domain.upper):
+        # Test that values above domain edge evaluate to 0
+        if domain not in nat_domains and np.isfinite(domain.upper):
             above_domain = domain.upper + 1
             assert_equal(
-                dist.logcdf(above_domain).tag.test_value,
+                valid_dist.logcdf(above_domain).tag.test_value,
                 0,
                 err_msg=str(above_domain),
             )
 
         # Test that method works with multiple values or raises informative TypeError
         try:
-            dist.logcdf(np.array([value, value])).tag.test_value
+            valid_dist.logcdf(np.array([valid_value, valid_value])).tag.test_value
         except TypeError as err:
             if not str(err).endswith(
                 ".logcdf expects a scalar value but received a 1-dimensional object."
@@ -686,6 +763,7 @@ class TestMatchesScipy(SeededTest):
             Runif,
             {"lower": -Rplusunif, "upper": Rplusunif},
             lambda value, lower, upper: sp.uniform.logcdf(value, lower, upper - lower),
+            skip_paramdomain_outside_edge_test=True,
         )
 
     def test_triangular(self):
@@ -700,6 +778,7 @@ class TestMatchesScipy(SeededTest):
             Runif,
             {"lower": -Rplusunif, "c": Runif, "upper": Rplusunif},
             lambda value, c, lower, upper: sp.triang.logcdf(value, c - lower, lower, upper - lower),
+            skip_paramdomain_outside_edge_test=True,
         )
 
     def test_bound_normal(self):
@@ -727,6 +806,7 @@ class TestMatchesScipy(SeededTest):
             Rdunif,
             {"lower": -Rplusdunif, "upper": Rplusdunif},
             lambda value, lower, upper: sp.randint.logcdf(value, lower, upper + 1),
+            skip_paramdomain_outside_edge_test=True,
         )
         self.check_selfconsistency_discrete_logcdf(
             DiscreteUniform,
@@ -807,7 +887,10 @@ class TestMatchesScipy(SeededTest):
             lambda value, nu: sp.chi2.logpdf(value, df=nu),
         )
 
-    @pytest.mark.xfail(reason="Poor CDF in SciPy. See scipy/scipy#869 for details.")
+    @pytest.mark.xfail(
+        condition=(theano.config.floatX == "float32"),
+        reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
+    )
     def test_wald_scipy(self):
         self.pymc3_matches_scipy(
             Wald,
@@ -1094,11 +1177,15 @@ class TestMatchesScipy(SeededTest):
 
         self.pymc3_matches_scipy(Gamma, Rplus, {"mu": Rplusbig, "sigma": Rplusbig}, test_fun)
 
+        # pymc-devs/Theano-PyMC#224: skip_paramdomain_outside_edge_test has to be set
+        # True to avoid triggering a C-level assertion in the Theano GammaQ function
+        # in gamma.c file. Can be set back to False (defalut) once that issue is solved
         self.check_logcdf(
             Gamma,
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
             lambda value, alpha, beta: sp.gamma.logcdf(value, alpha, scale=1.0 / beta),
+            skip_paramdomain_outside_edge_test=True,
         )
 
     @pytest.mark.xfail(
@@ -1112,11 +1199,15 @@ class TestMatchesScipy(SeededTest):
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.invgamma.logpdf(value, alpha, scale=beta),
         )
+        # pymc-devs/Theano-PyMC#224: skip_paramdomain_outside_edge_test has to be set
+        # True to avoid triggering a C-level assertion in the Theano GammaQ function
+        # in gamma.c file. Can be set back to False (defalut) once that issue is solved
         self.check_logcdf(
             InverseGamma,
             Rplus,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.invgamma.logcdf(value, alpha, scale=beta),
+            skip_paramdomain_outside_edge_test=True,
         )
 
     @pytest.mark.xfail(
@@ -2022,6 +2113,15 @@ class TestMatchesScipy(SeededTest):
             logcdf,
             decimal=select_by_precision(float64=6, float32=2),
             err_msg=str((value, mu, sigma, nu, logcdf)),
+        )
+
+    def test_ex_gaussian_cdf_outside_edges(self):
+        self.check_logcdf(
+            ExGaussian,
+            R,
+            {"mu": R, "sigma": Rplus, "nu": Rplus},
+            None,
+            skip_paramdomain_inside_edge_test=True,  # Valid values are tested above
         )
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
