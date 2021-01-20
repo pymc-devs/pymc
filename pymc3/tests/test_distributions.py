@@ -1177,12 +1177,15 @@ class TestMatchesScipy(SeededTest):
 
         self.pymc3_matches_scipy(Gamma, Rplus, {"mu": Rplusbig, "sigma": Rplusbig}, test_fun)
 
+        # pymc-devs/Theano-PyMC#224: skip_paramdomain_outside_edge_test has to be set
+        # True to avoid triggering a C-level assertion in the Theano GammaQ function
+        # in gamma.c file. Can be set back to False (defalut) once that issue is solved
         self.check_logcdf(
             Gamma,
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
             lambda value, alpha, beta: sp.gamma.logcdf(value, alpha, scale=1.0 / beta),
-            skip_paramdomain_outside_edge_test=True,  # TODO: When True, Python crashes
+            skip_paramdomain_outside_edge_test=True,
         )
 
     @pytest.mark.xfail(
@@ -1196,12 +1199,15 @@ class TestMatchesScipy(SeededTest):
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.invgamma.logpdf(value, alpha, scale=beta),
         )
+        # pymc-devs/Theano-PyMC#224: skip_paramdomain_outside_edge_test has to be set
+        # True to avoid triggering a C-level assertion in the Theano GammaQ function
+        # in gamma.c file. Can be set back to False (defalut) once that issue is solved
         self.check_logcdf(
             InverseGamma,
             Rplus,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.invgamma.logcdf(value, alpha, scale=beta),
-            skip_paramdomain_outside_edge_test=True,  # TODO: When True, Python crashes
+            skip_paramdomain_outside_edge_test=True,
         )
 
     @pytest.mark.xfail(
