@@ -595,7 +595,9 @@ class TestMatchesScipy(SeededTest):
 
         The following tests are performed by default:
             1. Test PyMC3 logcdf and equivalent scipy logcdf methods give similar
-            results for valid values and parameters within the supported edges.
+            results for valid values and parameters inside the supported edges.
+            Edges are excluded by default, but can be artificially included by
+            creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
             Can be skipped via skip_paramdomain_inside_edge_test
             2. Test PyMC3 logcdf method returns -inf for invalid parameter values
             outside the supported edges. Can be skipped via skip_paramdomain_outside_edge_test
@@ -609,24 +611,24 @@ class TestMatchesScipy(SeededTest):
         pymc3_dist: PyMC3 distribution
         domain : Domain
             Supported domain of distribution values
-        paramdomains : Dictionary of Pamameter : Domain pairs
+        paramdomains : Dictionary of Parameter : Domain pairs
             Supported domains of distribution parameters
         scipy_logcdf : Scipy logcdf method
             Scipy logcdf method of equivalent pymc3_dist distribution
         decimal : Int
-            Level of precision with which pymc3_dist and scipy_logcdf are
-            compared. Defaults to 6 for float64 and 3 for float32
+            Level of precision with which pymc3_dist and scipy_logcdf are compared.
+            Defaults to 6 for float64 and 3 for float32
         n_samples : Int
             Upper limit on the number of valid domain and value combinations that
-            are compared between pymc3 and scipy methods. If n_samples is below
-            the total number of combinations, a random subset is evaluated.
+            are compared between pymc3 and scipy methods. If n_samples is below the
+            total number of combinations, a random subset is evaluated.
             Defaults to 100
         skip_paramdomain_inside_edge_test : Bool
-            Whether to compare pymc3 and scipy distributions match for valid values
-            and parameters within the respective domain edges (excluding edges)
+            Whether to run test 1., which checks that pymc3 and scipy distributions
+            match for valid values and parameters inside the respective domain edges
         skip_paramdomain_outside_edge_test : Bool
-            Whether to test pymc3 distribution logcdf returns -inf for invalid
-            parameter values that lie beyond the supported edge (excluding edges)
+            Whether to run test 2., which checks that pymc3 distribution logcdf
+            returns -inf for invalid parameter values outside the supported domain edge
 
         Returns
         -------
