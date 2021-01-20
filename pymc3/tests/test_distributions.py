@@ -885,8 +885,10 @@ class TestMatchesScipy(SeededTest):
             lambda value, nu: sp.chi2.logpdf(value, df=nu),
         )
 
-    # TODO: Is this still needed? It passes locally.
-    # @pytest.mark.xfail(reason="Poor CDF in SciPy. See scipy/scipy#869 for details.")
+    @pytest.mark.xfail(
+        condition=(theano.config.floatX == "float32"),
+        reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
+    )
     def test_wald_scipy(self):
         self.pymc3_matches_scipy(
             Wald,
@@ -1178,7 +1180,7 @@ class TestMatchesScipy(SeededTest):
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
             lambda value, alpha, beta: sp.gamma.logcdf(value, alpha, scale=1.0 / beta),
-            skip_paramdomain_outside_edge_test=True,  # TODO: This is failing mysteriously
+            skip_paramdomain_outside_edge_test=True,  # TODO: When True, Python crashes
         )
 
     @pytest.mark.xfail(
@@ -1197,7 +1199,7 @@ class TestMatchesScipy(SeededTest):
             Rplus,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.invgamma.logcdf(value, alpha, scale=beta),
-            skip_paramdomain_outside_edge_test=True,  # TODO: This is failing mysteriously
+            skip_paramdomain_outside_edge_test=True,  # TODO: When True, Python crashes
         )
 
     @pytest.mark.xfail(
