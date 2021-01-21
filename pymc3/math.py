@@ -243,7 +243,12 @@ def log1mexp_numpy(x):
     For details, see
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
     """
-    return np.where(x < 0.6931471805599453, np.log(-np.expm1(-x)), np.log1p(-np.exp(-x)))
+    x = np.asarray(x)
+    mask = x < 0.6931471805599453
+    x[mask] = np.log(-np.expm1(-x[mask]))
+    mask = ~mask
+    x[mask] = np.log1p(-np.exp(-x[mask]))
+    return x
 
 
 def flatten_list(tensors):

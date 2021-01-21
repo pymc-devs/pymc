@@ -153,6 +153,13 @@ def test_log1mexp():
     npt.assert_allclose(actual_, expected)
 
 
+def test_log1mexp_numpy_no_warning():
+    """Assert RuntimeWarning is not raised for very small numbers"""
+    with pytest.warns(None) as record:
+        log1mexp_numpy(1e-25)
+    assert not record
+
+
 class TestLogDet(SeededTest):
     def setup_method(self):
         super().setup_method()
