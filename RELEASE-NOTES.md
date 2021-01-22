@@ -1,5 +1,14 @@
 # Release Notes
 
+## PyMC3 vNext (on deck)
+
+### Breaking Changes
+
+### New Features
+
+### Maintenance
+- `math.log1mexp_numpy` no longer raises RuntimeWarning when given very small inputs. These were commonly observed during NUTS sampling (see [#4428](https://github.com/pymc-devs/pymc3/pull/4428)).
+
 ## PyMC3 3.11.0 (21 January 2021)
 
 This release breaks some APIs w.r.t. `3.10.0`. It also brings some dreadfully awaited fixes, so be sure to go through the (breaking) changes below.
