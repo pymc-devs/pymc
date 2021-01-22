@@ -133,6 +133,7 @@ def test_log1pexp():
 
 def test_log1mexp():
     vals = np.array([-1, 0, 1e-20, 1e-4, 10, 100, 1e20])
+    vals_ = vals.copy()
     # import mpmath
     # mpmath.mp.dps = 1000
     # [float(mpmath.log(1 - mpmath.exp(-x))) for x in vals]
@@ -151,6 +152,15 @@ def test_log1mexp():
     npt.assert_allclose(actual, expected)
     actual_ = log1mexp_numpy(vals)
     npt.assert_allclose(actual_, expected)
+    # Check that input was not changed in place
+    npt.assert_allclose(vals, vals_)
+
+
+def test_log1mexp_numpy_no_warning():
+    """Assert RuntimeWarning is not raised for very small numbers"""
+    with pytest.warns(None) as record:
+        log1mexp_numpy(1e-25)
+    assert not record
 
 
 class TestLogDet(SeededTest):
