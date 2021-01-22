@@ -1109,7 +1109,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             else:
                 self.coords[name] = coords[name]
 
-    def Var(self, name, dist, data=None, total_size=None, dims=None):
+    def Var(self, name, dist, data=None, total_size=None, dims=None, givens=None):
         """Create and add (un)observed random variable to the model with an
         appropriate prior distribution.
 
@@ -1161,6 +1161,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 var = MultiObservedRV(
                     name=name,
                     data=data,
+                    givens=givens,
                     distribution=dist,
                     total_size=total_size,
                     model=self,
@@ -1834,7 +1835,7 @@ class MultiObservedRV(Factor):
     Potentially partially observed.
     """
 
-    def __init__(self, name, data, distribution, total_size=None, model=None):
+    def __init__(self, name, data, distribution, total_size=None, model=None, givens=None):
         """
         Parameters
         ----------
@@ -1850,6 +1851,7 @@ class MultiObservedRV(Factor):
         self.data = {
             name: as_tensor(data, name, model, distribution) for name, data in data.items()
         }
+        self.givens = givens
 
         self.missing_values = [
             datum.missing_values for datum in self.data.values() if datum.missing_values is not None

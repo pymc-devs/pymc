@@ -92,10 +92,22 @@ class Distribution:
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
 
-        data = kwargs.pop("observed", None)
-        cls.data = data
-        if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
-            raise TypeError("observed needs to be data but got: {}".format(type(data)))
+        observed_data = kwargs.pop("observed", None)
+        if isinstance(observed_data, ObservedRV) or isinstance(observed_data, FreeRV):
+            raise TypeError("observed needs to be data but got: {}".format(type(observed_data)))
+        given_data = kwargs.pop("givens", None)
+        if given_data is None:
+            cls.data = observed_data
+        elif observed_data is None:
+            cls.data = given_data
+        elif isinstance(observed_data, dict):
+            cls.data = {**observed_data, **given_data}
+        else:
+            raise ValueError(
+                "If both observed and givens argument are present, observed needs to "
+                f"be a dict but got: {type(observed_data)}"
+            )
+        data = cls.data
         total_size = kwargs.pop("total_size", None)
 
         dims = kwargs.pop("dims", None)
@@ -119,7 +131,7 @@ class Distribution:
             dist = cls.dist(*args, **kwargs, shape=shape)
         else:
             dist = cls.dist(*args, **kwargs)
-        return model.Var(name, dist, data, total_size, dims=dims)
+        return model.Var(name, dist, data, total_size, dims=dims, givens=given_data)
 
     def __getnewargs__(self):
         return (_Unpickling,)
@@ -358,6 +370,7 @@ class DensityDist(Distribution):
         logp,
         shape=(),
         dtype=None,
+        givens=None,
         testval=0,
         random=None,
         wrap_random_with_dist_shape=True,
@@ -379,6 +392,8 @@ class DensityDist(Distribution):
             a value here.
         dtype: None, str (Optional)
             The dtype of the distribution.
+        givens : dict, optional
+            Model variables on which the DensityDist is conditioned.
         testval: number or array (Optional)
             The ``testval`` of the RV's tensor that follow the ``DensityDist``
             distribution.
@@ -525,9 +540,19 @@ class DensityDist(Distribution):
                 assert prior.shape == (10, 100, 3)
 
         """
+        observed = kwargs.get("observed", None)
+        if not (isinstance(givens, dict) or givens is None):
+            raise TypeError(f"givens needs to be of type dict but got: {type(givens)}")
+        if isinstance(observed, dict) and isinstance(givens, dict):
+            intersection = givens.keys() & observed.keys()
+            if intersection:
+                raise ValueError(
+                    f"{intersection} keys found in both givens and observed dicts but "
+                    "they can not have repeated keys"
+                )
         if dtype is None:
             dtype = theano.config.floatX
-        super().__init__(shape, dtype, testval, *args, **kwargs)
+        super().__init__(shape, dtype, testval, *args, **{**kwargs, "givens": givens})
         self.logp = logp
         if type(self.logp) == types.MethodType:
             if PLATFORM != "linux":
