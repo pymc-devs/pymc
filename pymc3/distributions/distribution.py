@@ -98,9 +98,17 @@ class Distribution:
         given_data = kwargs.pop("givens", None)
         if given_data is None:
             cls.data = observed_data
+        elif not isinstance(given_data, dict):
+            raise TypeError(f"givens needs to be of type dict but got: {type(givens)}")
         elif observed_data is None:
             cls.data = given_data
         elif isinstance(observed_data, dict):
+            intersection = given_data.keys() & observed_data.keys()
+            if intersection:
+                raise ValueError(
+                    f"{intersection} keys found in both givens and observed dicts but "
+                    "they can not have repeated keys"
+                )
             cls.data = {**observed_data, **given_data}
         else:
             raise ValueError(
@@ -128,8 +136,12 @@ class Distribution:
 
         # Some distributions do not accept shape=None
         if has_shape or shape is not None:
+            if "givens" in kwargs:
+                raise ValueError("givens found")
             dist = cls.dist(*args, **kwargs, shape=shape)
         else:
+            if "givens" in kwargs:
+                raise ValueError("givens found")
             dist = cls.dist(*args, **kwargs)
         return model.Var(name, dist, data, total_size, dims=dims, givens=given_data)
 
@@ -540,19 +552,9 @@ class DensityDist(Distribution):
                 assert prior.shape == (10, 100, 3)
 
         """
-        observed = kwargs.get("observed", None)
-        if not (isinstance(givens, dict) or givens is None):
-            raise TypeError(f"givens needs to be of type dict but got: {type(givens)}")
-        if isinstance(observed, dict) and isinstance(givens, dict):
-            intersection = givens.keys() & observed.keys()
-            if intersection:
-                raise ValueError(
-                    f"{intersection} keys found in both givens and observed dicts but "
-                    "they can not have repeated keys"
-                )
         if dtype is None:
             dtype = theano.config.floatX
-        super().__init__(shape, dtype, testval, *args, **{**kwargs, "givens": givens})
+        super().__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
         if type(self.logp) == types.MethodType:
             if PLATFORM != "linux":
