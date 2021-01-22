@@ -5,15 +5,17 @@
 This release breaks some APIs w.r.t. `3.10.0`. It also brings some dreadfully awaited fixes, so be sure to go through the (breaking) changes below.
 
 ### Breaking Changes
-- Python 3.6 support was dropped (by no longer testing) and Python 3.9 was added (see [#4332](https://github.com/pymc-devs/pymc3/pull/4332)).
-- Changed shape behavior: __No longer collapse length 1 vector shape into scalars.__ (see [#4206](https://github.com/pymc-devs/pymc3/issue/4206) and [#4214](https://github.com/pymc-devs/pymc3/pull/4214))
+- ⚠ Many plotting and diagnostic functions that were just aliasing ArviZ functions were removed (see [4397](https://github.com/pymc-devs/pymc3/pull/4397/files#)). This includes `pm.summary`, `pm.traceplot`, `pm.ess` and many more!
+- ⚠ We now depend on `Theano-PyMC` version `1.1.0` exactly (see [#4405](https://github.com/pymc-devs/pymc3/pull/4405)). Major refactorings were done in `Theano-PyMC` 1.1.0. If you implement custom `Op`s or interact with Theano in any way yourself, make sure to read the [Theano-PyMC 1.1.0 release notes](https://github.com/pymc-devs/Theano-PyMC/releases/tag/rel-1.1.0).
+- ⚠ Python 3.6 support was dropped (by no longer testing) and Python 3.9 was added (see [#4332](https://github.com/pymc-devs/pymc3/pull/4332)).
+- ⚠ Changed shape behavior: __No longer collapse length 1 vector shape into scalars.__ (see [#4206](https://github.com/pymc-devs/pymc3/issue/4206) and [#4214](https://github.com/pymc-devs/pymc3/pull/4214))
   - __Applies to random variables and also the `.random(size=...)` kwarg!__
   - To create scalar variables you must now use `shape=None` or `shape=()`.
   - __`shape=(1,)` and `shape=1` now become vectors.__ Previously they were collapsed into scalars
   - 0-length dimensions are now ruled illegal for random variables and raise a `ValueError`.
 - In `sample_prior_predictive` the `vars` kwarg was removed in favor of `var_names` (see [#4327](https://github.com/pymc-devs/pymc3/pull/4327)).
 - Removed `theanof.set_theano_config` because it illegally changed Theano's internal state (see [#4329](https://github.com/pymc-devs/pymc3/pull/4329)).
-- We now depend on `Theano-PyMC` version `1.1.0` exactly (see [#4405](https://github.com/pymc-devs/pymc3/pull/4405)). Major refactorings were done in `Theano-PyMC` 1.1.0. If you implement custom `Op`s or interact with Theano in any way yourself, make sure to read the [Theano-PyMC 1.1.0 release notes](https://github.com/pymc-devs/Theano-PyMC/releases/tag/rel-1.1.0).
+
 
 ### New Features
 - Option to set `check_bounds=False` when instantiating `pymc3.Model()`. This turns off bounds checks that ensure that input parameters of distributions are valid. For correctly specified models, this is unneccessary as all parameters get automatically transformed so that all values are valid. Turning this off should lead to faster sampling (see [#4377](https://github.com/pymc-devs/pymc3/pull/4377)).
