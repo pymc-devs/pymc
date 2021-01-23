@@ -533,24 +533,6 @@ class DensityDist(Distribution):
             the returned array of samples. It is the user's responsibility to
             wrap the callable to make it comply with PyMC3's interpretation
             of ``size``.
-
-
-            .. code-block:: python
-
-                with pm.Model():
-                    mu = pm.Normal('mu', 0 , 1)
-                    normal_dist = pm.Normal.dist(mu, 1, shape=3)
-                    dens = pm.DensityDist(
-                        'density_dist',
-                        normal_dist.logp,
-                        observed=np.random.randn(100, 3),
-                        shape=3,
-                        random=stats.norm.rvs,
-                        pymc3_size_interpretation=False, # Is True by default
-                    )
-                    prior = pm.sample_prior_predictive(10)['density_dist']
-                assert prior.shape == (10, 100, 3)
-
         """
         if dtype is None:
             dtype = theano.config.floatX
