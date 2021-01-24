@@ -103,6 +103,16 @@ class Distribution:
         elif observed_data is None:
             cls.data = given_data
         elif isinstance(observed_data, dict):
+            non_data_obs = {
+                key: type(value)
+                for key, value in observed_data.items()
+                if isinstance(value, ObservedRV) or isinstance(value, FreeRV)
+            }
+            if non_data_obs:
+                raise TypeError(
+                    f"All values in observed dict need to be data but got: {non_data_obs}. "
+                    "You may want to use the givens argument in DensityDist."
+                )
             intersection = given_data.keys() & observed_data.keys()
             if intersection:
                 raise ValueError(
@@ -136,12 +146,8 @@ class Distribution:
 
         # Some distributions do not accept shape=None
         if has_shape or shape is not None:
-            if "givens" in kwargs:
-                raise ValueError("givens found")
             dist = cls.dist(*args, **kwargs, shape=shape)
         else:
-            if "givens" in kwargs:
-                raise ValueError("givens found")
             dist = cls.dist(*args, **kwargs)
         return model.Var(name, dist, data, total_size, dims=dims, givens=given_data)
 
@@ -382,7 +388,6 @@ class DensityDist(Distribution):
         logp,
         shape=(),
         dtype=None,
-        givens=None,
         testval=0,
         random=None,
         wrap_random_with_dist_shape=True,
@@ -404,8 +409,6 @@ class DensityDist(Distribution):
             a value here.
         dtype: None, str (Optional)
             The dtype of the distribution.
-        givens : dict, optional
-            Model variables on which the DensityDist is conditioned.
         testval: number or array (Optional)
             The ``testval`` of the RV's tensor that follow the ``DensityDist``
             distribution.
@@ -430,6 +433,8 @@ class DensityDist(Distribution):
             If ``True``, the shape of the random samples generate in the
             ``random`` method is checked with the expected return shape. This
             test is only performed if ``wrap_random_with_dist_shape is False``.
+        givens : dict, optional
+            Model variables on which the DensityDist is conditioned.
         args, kwargs: (Optional)
             These are passed to the parent class' ``__init__``.
 
