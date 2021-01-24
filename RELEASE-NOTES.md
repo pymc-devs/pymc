@@ -1,10 +1,11 @@
 # Release Notes
 
-## PyMC3 vNext (on deck)
+## PyMC3 vNext (3.11.1)
 
 ### Breaking Changes
 
 ### New Features
++ Automatic imputations now also work with `ndarray` data, not just `pd.Series` or `pd.DataFrame` (see[#4439](https://github.com/pymc-devs/pymc3/pull/4439)).
 
 ### Maintenance
 - `math.log1mexp_numpy` no longer raises RuntimeWarning when given very small inputs. These were commonly observed during NUTS sampling (see [#4428](https://github.com/pymc-devs/pymc3/pull/4428)).

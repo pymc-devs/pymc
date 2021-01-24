@@ -41,9 +41,8 @@ class TestHelperFunc:
         pandas_input = pd.DataFrame(dense_input)
 
         # All the even numbers are replaced with NaN
-        missing_pandas_input = pd.DataFrame(
-            np.array([[np.nan, 1, np.nan], [3, np.nan, 5], [np.nan, 7, np.nan]])
-        )
+        missing_numpy_input = np.array([[np.nan, 1, np.nan], [3, np.nan, 5], [np.nan, 7, np.nan]])
+        missing_pandas_input = pd.DataFrame(missing_numpy_input)
         masked_array_input = ma.array(dense_input, mask=(np.mod(dense_input, 2) == 0))
 
         # Create a generator object. Apparently the generator object needs to
@@ -72,7 +71,7 @@ class TestHelperFunc:
 
         # Check function behavior when using masked array inputs and pandas
         # objects with missing data
-        for input_value in [masked_array_input, missing_pandas_input]:
+        for input_value in [missing_numpy_input, masked_array_input, missing_pandas_input]:
             func_output = func(input_value)
             assert isinstance(func_output, ma.core.MaskedArray)
             assert func_output.shape == input_value.shape
