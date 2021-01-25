@@ -17,17 +17,26 @@
 A collection of common probability distributions for stochastic
 nodes in PyMC.
 """
-import warnings
+from copy import copy
 
 import aesara.tensor as aet
 import numpy as np
 
+from aesara.assert_op import Assert
+from aesara.tensor.random.basic import (
+    GammaRV,
+    NormalRV,
+    UniformRV,
+    gamma,
+    normal,
+    uniform,
+)
 from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.special import expit
 
 from pymc3.aesaraf import floatX
-from pymc3.distributions import transforms
+from pymc3.distributions import _logcdf, _logp, transforms
 from pymc3.distributions.dist_math import (
     SplineWrapper,
     betaln,
@@ -81,25 +90,33 @@ __all__ = [
     "AsymmetricLaplace",
 ]
 
+# FIXME: These are temporary hacks
+normal = copy(normal)
+normal.inplace = True
+uniform = copy(uniform)
+uniform.inplace = True
+gamma = copy(gamma)
+gamma.inplace = True
+
 
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
 
-    def __init__(self, transform=transforms.log, *args, **kwargs):
-        super().__init__(transform=transform, *args, **kwargs)
+    default_transform = transforms.log
 
 
 class UnitContinuous(Continuous):
     """Base class for continuous distributions on [0,1]"""
 
-    def __init__(self, transform=transforms.logodds, *args, **kwargs):
-        super().__init__(transform=transform, *args, **kwargs)
+    default_transform = transforms.logodds
 
 
 class BoundedContinuous(Continuous):
     """Base class for bounded continuous distributions"""
 
-    def __init__(self, transform="auto", lower=None, upper=None, *args, **kwargs):
+    default_transform = "auto"
+
+    def create_transform(transform="auto", lower=None, upper=None):
 
         lower = aet.as_tensor_variable(lower) if lower is not None else None
         upper = aet.as_tensor_variable(upper) if upper is not None else None
@@ -114,28 +131,13 @@ class BoundedContinuous(Continuous):
             else:
                 transform = transforms.interval(lower, upper)
 
-        super().__init__(transform=transform, *args, **kwargs)
+        return transform
 
 
 def assert_negative_support(var, label, distname, value=-1e-6):
-    # Checks for evidence of positive support for a variable
-    if var is None:
-        return
-    try:
-        # Transformed distribution
-        support = np.isfinite(var.transformed.distribution.dist.logp(value).tag.test_value)
-    except AttributeError:
-        try:
-            # Untransformed distribution
-            support = np.isfinite(var.distribution.logp(value).tag.test_value)
-        except AttributeError:
-            # Otherwise no direct evidence of non-positive support
-            support = False
-
-    if np.any(support):
-        msg = f"The variable specified for {label} has negative support for {distname}, "
-        msg += "likely making it unsuitable for this parameter."
-        warnings.warn(msg)
+    msg = f"The variable specified for {label} has negative support for {distname}, "
+    msg += "likely making it unsuitable for this parameter."
+    return Assert(msg)(var, aet.all(aet.ge(var, 0.0)))
 
 
 def get_tau_sigma(tau=None, sigma=None):
@@ -221,82 +223,63 @@ class Uniform(BoundedContinuous):
     upper: float
         Upper limit.
     """
+    rv_op = uniform
 
-    def __init__(self, lower=0, upper=1, *args, **kwargs):
-        self.lower = lower = aet.as_tensor_variable(floatX(lower))
-        self.upper = upper = aet.as_tensor_variable(floatX(upper))
-        self.mean = (upper + lower) / 2.0
-        self.median = self.mean
+    @classmethod
+    def dist(cls, lower=0, upper=1, **kwargs):
+        lower = aet.as_tensor_variable(floatX(lower))
+        upper = aet.as_tensor_variable(floatX(upper))
+        # mean = (upper + lower) / 2.0
+        # median = self.mean
 
-        super().__init__(lower=lower, upper=upper, *args, **kwargs)
+        transform = kwargs.pop("transform", cls.default_transform)
+        transform = cls.create_transform(transform, lower, upper)
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Uniform distribution.
+        return super().dist([lower, upper], transform=transform, **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
 
-        Returns
-        -------
-        array
-        """
+@_logp.register(UniformRV)
+def uniform_logp(op, value, lower, upper):
+    """
+    Calculate log-probability of Uniform distribution at specified value.
 
-        lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
-        return generate_samples(
-            stats.uniform.rvs, loc=lower, scale=upper - lower, dist_shape=self.shape, size=size
-        )
+    Parameters
+    ----------
+    value: numeric
+        Value for which log-probability is calculated.
 
-    def logp(self, value):
-        """
-        Calculate log-probability of Uniform distribution at specified value.
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(-aet.log(upper - lower), value >= lower, value <= upper)
 
-        Parameters
-        ----------
-        value: numeric
-            Value for which log-probability is calculated.
 
-        Returns
-        -------
-        TensorVariable
-        """
-        lower = self.lower
-        upper = self.upper
-        return bound(-aet.log(upper - lower), value >= lower, value <= upper)
+@_logcdf.register(UniformRV)
+def uniform_logcdf(op, value, lower, upper):
+    """
+    Compute the log of the cumulative distribution function for Uniform distribution
+    at the specified value.
 
-    def logcdf(self, value):
-        """
-        Compute the log of the cumulative distribution function for Uniform distribution
-        at the specified value.
+    Parameters
+    ----------
+    value: numeric or np.ndarray or `TensorVariable`
+        Value(s) for which log CDF is calculated. If the log CDF for multiple
+        values are desired the values must be provided in a numpy array or `TensorVariable`.
 
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        lower = self.lower
-        upper = self.upper
-
-        return aet.switch(
-            aet.lt(value, lower) | aet.lt(upper, lower),
-            -np.inf,
-            aet.switch(
-                aet.lt(value, upper),
-                aet.log(value - lower) - aet.log(upper - lower),
-                0,
-            ),
-        )
+    Returns
+    -------
+    TensorVariable
+    """
+    return aet.switch(
+        aet.lt(value, lower) | aet.lt(upper, lower),
+        -np.inf,
+        aet.switch(
+            aet.lt(value, upper),
+            aet.log(value - lower) - aet.log(upper - lower),
+            0,
+        ),
+    )
 
 
 class Flat(Continuous):
@@ -478,88 +461,64 @@ class Normal(Continuous):
         with pm.Model():
             x = pm.Normal('x', mu=0, tau=1/23)
     """
+    rv_op = normal
 
-    def __init__(self, mu=0, sigma=None, tau=None, sd=None, **kwargs):
+    @classmethod
+    def dist(cls, mu=0, sigma=None, tau=None, sd=None, **kwargs):
         if sd is not None:
             sigma = sd
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = self.sd = aet.as_tensor_variable(sigma)
-        self.tau = aet.as_tensor_variable(tau)
+        sigma = aet.as_tensor_variable(sigma)
 
-        self.mean = self.median = self.mode = self.mu = mu = aet.as_tensor_variable(floatX(mu))
-        self.variance = 1.0 / self.tau
+        # sd = sigma
+        # tau = aet.as_tensor_variable(tau)
+        # mean = median = mode = mu = aet.as_tensor_variable(floatX(mu))
+        # variance = 1.0 / self.tau
 
         assert_negative_support(sigma, "sigma", "Normal")
-        assert_negative_support(tau, "tau", "Normal")
+        return super().dist([mu, sigma], **kwargs)
 
-        super().__init__(**kwargs)
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Normal distribution.
+@_logp.register(NormalRV)
+def normal_logp(op, value, mu, sigma):
+    """
+    Calculate log-probability of Normal distribution at specified value.
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or `TensorVariable`.
 
-        Returns
-        -------
-        array
-        """
-        mu, tau, _ = draw_values([self.mu, self.tau, self.sigma], point=point, size=size)
-        return generate_samples(
-            stats.norm.rvs, loc=mu, scale=tau ** -0.5, dist_shape=self.shape, size=size
-        )
+    Returns
+    -------
+    TensorVariable
+    """
+    tau, sigma = get_tau_sigma(tau=None, sigma=sigma)
 
-    def logp(self, value):
-        """
-        Calculate log-probability of Normal distribution at specified value.
+    return bound((-tau * (value - mu) ** 2 + aet.log(tau / np.pi / 2.0)) / 2.0, sigma > 0)
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
 
-        Returns
-        -------
-        TensorVariable
-        """
-        sigma = self.sigma
-        tau = self.tau
-        mu = self.mu
+@_logcdf.register(NormalRV)
+def normal_logcdf(op, value, mu, sigma):
+    """
+    Compute the log of the cumulative distribution function for Normal distribution
+    at the specified value.
 
-        return bound((-tau * (value - mu) ** 2 + aet.log(tau / np.pi / 2.0)) / 2.0, sigma > 0)
+    Parameters
+    ----------
+    value: numeric or np.ndarray or `TensorVariable`
+        Value(s) for which log CDF is calculated. If the log CDF for multiple
+        values are desired the values must be provided in a numpy array or `TensorVariable`.
 
-    def _distr_parameters_for_repr(self):
-        return ["mu", "sigma"]
-
-    def logcdf(self, value):
-        """
-        Compute the log of the cumulative distribution function for Normal distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        mu = self.mu
-        sigma = self.sigma
-        return bound(
-            normal_lcdf(mu, sigma, value),
-            0 < sigma,
-        )
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(
+        normal_lcdf(mu, sigma, value),
+        0 < sigma,
+    )
 
 
 class TruncatedNormal(BoundedContinuous):
@@ -2538,23 +2497,27 @@ class Gamma(PositiveContinuous):
     sigma: float
         Alternative scale parameter (sigma > 0).
     """
+    rv_op = gamma
 
-    def __init__(self, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    @classmethod
+    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs):
         if sd is not None:
             sigma = sd
 
-        alpha, beta = self.get_alpha_beta(alpha, beta, mu, sigma)
-        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
-        self.beta = beta = aet.as_tensor_variable(floatX(beta))
-        self.mean = alpha / beta
-        self.mode = aet.maximum((alpha - 1) / beta, 0)
-        self.variance = alpha / beta ** 2
+        alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
+        alpha = aet.as_tensor_variable(floatX(alpha))
+        beta = aet.as_tensor_variable(floatX(beta))
+        # mean = alpha / beta
+        # mode = aet.maximum((alpha - 1) / beta, 0)
+        # variance = alpha / beta ** 2
 
         assert_negative_support(alpha, "alpha", "Gamma")
         assert_negative_support(beta, "beta", "Gamma")
 
-    def get_alpha_beta(self, alpha=None, beta=None, mu=None, sigma=None):
+        return super().dist([alpha, beta], **kwargs)
+
+    @classmethod
+    def get_alpha_beta(cls, alpha=None, beta=None, mu=None, sigma=None):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sigma is not None):
@@ -2569,82 +2532,60 @@ class Gamma(PositiveContinuous):
 
         return alpha, beta
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Gamma distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
-        return generate_samples(
-            stats.gamma.rvs, alpha, scale=1.0 / beta, dist_shape=self.shape, size=size
-        )
-
-    def logp(self, value):
-        """
-        Calculate log-probability of Gamma distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-        alpha = self.alpha
-        beta = self.beta
-        return bound(
-            -gammaln(alpha) + logpow(beta, alpha) - beta * value + logpow(value, alpha - 1),
-            value >= 0,
-            alpha > 0,
-            beta > 0,
-        )
-
-    def logcdf(self, value):
-        """
-        Compute the log of the cumulative distribution function for Gamma distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        alpha = self.alpha
-        beta = self.beta
-        # Avoid C-assertion when the gammainc function is called with invalid values (#4340)
-        safe_alpha = aet.switch(aet.lt(alpha, 0), 0, alpha)
-        safe_beta = aet.switch(aet.lt(beta, 0), 0, beta)
-        safe_value = aet.switch(aet.lt(value, 0), 0, value)
-
-        return bound(
-            aet.log(aet.gammainc(safe_alpha, safe_beta * safe_value)),
-            0 <= value,
-            0 < alpha,
-            0 < beta,
-        )
-
     def _distr_parameters_for_repr(self):
         return ["alpha", "beta"]
+
+
+@_logp.register(GammaRV)
+def gamma_logp(op, value, alpha, beta):
+    """
+    Calculate log-probability of Gamma distribution at specified value.
+
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or `TensorVariable`.
+
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(
+        -gammaln(alpha) + logpow(beta, alpha) - beta * value + logpow(value, alpha - 1),
+        value >= 0,
+        alpha > 0,
+        beta > 0,
+    )
+
+
+@_logcdf.register(GammaRV)
+def gamma_logcdf(op, value, alpha, beta):
+    """
+    Compute the log of the cumulative distribution function for Gamma distribution
+    at the specified value.
+
+    Parameters
+    ----------
+    value: numeric or np.ndarray or `TensorVariable`
+        Value(s) for which log CDF is calculated. If the log CDF for multiple
+        values are desired the values must be provided in a numpy array or `TensorVariable`.
+
+    Returns
+    -------
+    TensorVariable
+    """
+    # Avoid C-assertion when the gammainc function is called with invalid values (#4340)
+    safe_alpha = aet.switch(aet.lt(alpha, 0), 0, alpha)
+    safe_beta = aet.switch(aet.lt(beta, 0), 0, beta)
+    safe_value = aet.switch(aet.lt(value, 0), 0, value)
+
+    return bound(
+        aet.log(aet.gammainc(safe_alpha, safe_beta * safe_value)),
+        0 <= value,
+        0 < alpha,
+        0 < beta,
+    )
 
 
 class InverseGamma(PositiveContinuous):

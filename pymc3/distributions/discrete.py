@@ -11,15 +11,18 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import warnings
+
+from copy import copy
 
 import aesara.tensor as aet
 import numpy as np
 
+from aesara.tensor.random.basic import BinomialRV, CategoricalRV, binomial, categorical
 from scipy import stats
 
 from pymc3.aesaraf import floatX, intX, take_along_axis
+from pymc3.distributions import _logcdf, _logp
 from pymc3.distributions.dist_math import (
     betaln,
     binomln,
@@ -30,7 +33,6 @@ from pymc3.distributions.dist_math import (
     logpow,
     normal_lccdf,
     normal_lcdf,
-    random_choice,
 )
 from pymc3.distributions.distribution import Discrete, draw_values, generate_samples
 from pymc3.distributions.shape_utils import broadcast_distribution_samples
@@ -54,6 +56,12 @@ __all__ = [
     "Categorical",
     "OrderedLogistic",
 ]
+
+# FIXME: These are temporary hacks
+categorical = copy(categorical)
+categorical.inplace = True
+binomial = copy(binomial)
+binomial.inplace = True
 
 
 class Binomial(Discrete):
@@ -97,93 +105,74 @@ class Binomial(Discrete):
     p: float
         Probability of success in each trial (0 < p < 1).
     """
+    rv_op = binomial
 
-    def __init__(self, n, p, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.n = n = aet.as_tensor_variable(intX(n))
-        self.p = p = aet.as_tensor_variable(floatX(p))
-        self.mode = aet.cast(tround(n * p), self.dtype)
+    @classmethod
+    def dist(cls, n, p, *args, **kwargs):
+        n = aet.as_tensor_variable(intX(n))
+        p = aet.as_tensor_variable(floatX(p))
+        # mode = aet.cast(tround(n * p), self.dtype)
+        return super().dist([n, p], **kwargs)
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from Binomial distribution.
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
+@_logp.register(BinomialRV)
+def binomial_logp(op, value, n, p):
+    r"""
+    Calculate log-probability of Binomial distribution at specified value.
 
-        Returns
-        -------
-        array
-        """
-        n, p = draw_values([self.n, self.p], point=point, size=size)
-        return generate_samples(stats.binom.rvs, n=n, p=p, dist_shape=self.shape, size=size)
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or aesara tensor
 
-    def logp(self, value):
-        r"""
-        Calculate log-probability of Binomial distribution at specified value.
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(
+        binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
+        0 <= value,
+        value <= n,
+        0 <= p,
+        p <= 1,
+    )
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
 
-        Returns
-        -------
-        TensorVariable
-        """
-        n = self.n
-        p = self.p
+@_logcdf.register(BinomialRV)
+def binomial_logcdf(op, value, n, p):
+    """
+    Compute the log of the cumulative distribution function for Binomial distribution
+    at the specified value.
 
-        return bound(
-            binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
-            0 <= value,
-            value <= n,
-            0 <= p,
-            p <= 1,
+    Parameters
+    ----------
+    value: numeric
+        Value for which log CDF is calculated.
+
+    Returns
+    -------
+    TensorVariable
+    """
+    # incomplete_beta function can only handle scalar values (see #4342)
+    if np.ndim(value):
+        raise TypeError(
+            f"Binomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
         )
 
-    def logcdf(self, value):
-        """
-        Compute the log of the cumulative distribution function for Binomial distribution
-        at the specified value.
+    value = aet.floor(value)
 
-        Parameters
-        ----------
-        value: numeric
-            Value for which log CDF is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        # incomplete_beta function can only handle scalar values (see #4342)
-        if np.ndim(value):
-            raise TypeError(
-                f"Binomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
-
-        n = self.n
-        p = self.p
-        value = aet.floor(value)
-
-        return bound(
-            aet.switch(
-                aet.lt(value, n),
-                aet.log(incomplete_beta(n - value, value + 1, 1 - p)),
-                0,
-            ),
-            0 <= value,
-            0 < n,
-            0 <= p,
-            p <= 1,
-        )
+    return bound(
+        aet.switch(
+            aet.lt(value, n),
+            aet.log(incomplete_beta(n - value, value + 1, 1 - p)),
+            0,
+        ),
+        0 <= value,
+        0 < n,
+        0 <= p,
+        p <= 1,
+    )
 
 
 class BetaBinomial(Discrete):
@@ -1344,90 +1333,54 @@ class Categorical(Discrete):
         p > 0 and the elements of p must sum to 1. They will be automatically
         rescaled otherwise.
     """
+    rv_op = categorical
 
-    def __init__(self, p, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        try:
-            self.k = aet.shape(p)[-1].tag.test_value
-        except AttributeError:
-            self.k = aet.shape(p)[-1]
+    @classmethod
+    def dist(cls, p, **kwargs):
+
         p = aet.as_tensor_variable(floatX(p))
 
-        # From #2082, it may be dangerous to automatically rescale p at this
-        # point without checking for positiveness
-        self.p = p
-        self.mode = aet.argmax(p, axis=-1)
-        if self.mode.ndim == 1:
-            self.mode = aet.squeeze(self.mode)
+        # mode = aet.argmax(p, axis=-1)
+        # if mode.ndim == 1:
+        #     mode = aet.squeeze(mode)
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from Categorical distribution.
+        return super().dist([p], **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
 
-        Returns
-        -------
-        array
-        """
-        p, k = draw_values([self.p, self.k], point=point, size=size)
-        p = p / np.sum(p, axis=-1, keepdims=True)
+@_logp.register(CategoricalRV)
+def categorical_logp(op, value, p_, upper):
+    r"""
+    Calculate log-probability of Categorical distribution at specified value.
 
-        return generate_samples(
-            random_choice,
-            p=p,
-            broadcast_shape=p.shape[:-1],
-            dist_shape=self.shape,
-            size=size,
-        )
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or `TensorVariable`
 
-    def logp(self, value):
-        r"""
-        Calculate log-probability of Categorical distribution at specified value.
+    """
+    p = p_ / aet.sum(p_, axis=-1, keepdims=True)
+    k = aet.shape(p_)[-1]
+    value_clip = aet.clip(value, 0, k - 1)
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-        p_ = self.p
-        k = self.k
-
-        # Clip values before using them for indexing
-        value_clip = aet.clip(value, 0, k - 1)
-
-        p = p_ / aet.sum(p_, axis=-1, keepdims=True)
-
-        if p.ndim > 1:
-            if p.ndim > value_clip.ndim:
-                value_clip = aet.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
-            elif p.ndim < value_clip.ndim:
-                p = aet.shape_padleft(p, value_clip.ndim - p_.ndim)
-            pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
-            a = aet.log(
-                take_along_axis(
-                    p.dimshuffle(pattern),
-                    value_clip,
-                )
+    if p.ndim > 1:
+        if p.ndim > value_clip.ndim:
+            value_clip = aet.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
+        elif p.ndim < value_clip.ndim:
+            p = aet.shape_padleft(p, value_clip.ndim - p_.ndim)
+        pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
+        a = aet.log(
+            take_along_axis(
+                p.dimshuffle(pattern),
+                value_clip,
             )
-        else:
-            a = aet.log(p[value_clip])
-
-        return bound(
-            a, value >= 0, value <= (k - 1), aet.all(p_ >= 0, axis=-1), aet.all(p <= 1, axis=-1)
         )
+    else:
+        a = aet.log(p[value_clip])
+
+    return bound(
+        a, value >= 0, value <= (k - 1), aet.all(p_ >= 0, axis=-1), aet.all(p <= 1, axis=-1)
+    )
 
 
 class Constant(Discrete):

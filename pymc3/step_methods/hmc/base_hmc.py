@@ -85,12 +85,19 @@ class BaseHMC(arraystep.GradientSharedStep):
             vars = self._model.cont_vars
         vars = inputvars(vars)
 
-        super().__init__(vars, blocked=blocked, model=model, dtype=dtype, **aesara_kwargs)
+        super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **aesara_kwargs)
 
         self.adapt_step_size = adapt_step_size
         self.Emax = Emax
         self.iter_count = 0
-        size = self._logp_dlogp_func.size
+
+        # We're using the initial/test point to determine the (initial) step
+        # size.
+        # TODO: If the dimensions of these terms change, the step size
+        # dimension-scaling should change as well, no?
+        test_point = self._model.test_point
+        continuous_vars = [test_point[v.name] for v in self._model.cont_vars]
+        size = sum(v.size for v in continuous_vars)
 
         self.step_size = step_scale / (size ** 0.25)
         self.step_adapt = step_sizes.DualAverageAdaptation(
@@ -105,8 +112,8 @@ class BaseHMC(arraystep.GradientSharedStep):
             potential = QuadPotentialDiagAdapt(size, mean, var, 10)
 
         if isinstance(scaling, dict):
-            point = Point(scaling, model=model)
-            scaling = guess_scaling(point, model=model, vars=vars)
+            point = Point(scaling, model=self._model)
+            scaling = guess_scaling(point, model=self._model, vars=vars)
 
         if scaling is not None and potential is not None:
             raise ValueError("Can not specify both potential and scaling.")

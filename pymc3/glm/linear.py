@@ -15,7 +15,7 @@
 import aesara.tensor as aet
 import numpy as np
 
-from pymc3.distributions import Flat, Normal
+# from pymc3.distributions import Flat, Normal
 from pymc3.glm import families
 from pymc3.glm.utils import any_to_tensor_and_labels
 from pymc3.model import Deterministic, Model
@@ -44,8 +44,11 @@ class LinearComponent(Model):
         included in the linear predictor during fitting.
     """
 
-    default_regressor_prior = Normal.dist(mu=0, tau=1.0e-6)
-    default_intercept_prior = Flat.dist()
+    # XXX: This isn't a sound approach now that `Distribution.dist` returns
+    # `TensorVariable`s directly
+    default_regressor_prior = None  # Normal.dist(mu=0, tau=1.0e-6)
+    # XXX: `Flat` needs to be refactored
+    default_intercept_prior = None  # Flat.dist()
 
     def __init__(
         self,
@@ -81,17 +84,15 @@ class LinearComponent(Model):
                 if name in vars:
                     v = Deterministic(name, vars[name])
                 else:
-                    v = self.Var(name=name, dist=priors.get(name, self.default_intercept_prior))
+                    v = self.register_rv(priors.get(name, self.default_intercept_prior), name)
                 coeffs.append(v)
             else:
                 if name in vars:
                     v = Deterministic(name, vars[name])
                 else:
-                    v = self.Var(
-                        name=name,
-                        dist=priors.get(
-                            name, priors.get("Regressor", self.default_regressor_prior)
-                        ),
+                    v = self.register_rv(
+                        priors.get(name, priors.get("Regressor", self.default_regressor_prior)),
+                        name,
                     )
                 coeffs.append(v)
         self.coeffs = aet.stack(coeffs, axis=0)
