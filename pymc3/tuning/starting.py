@@ -146,7 +146,9 @@ def find_MAP(
             cost_func.progress.update(last_v)
             print()
 
-    vars = get_default_varnames(model.unobserved_RVs, include_transformed)
+    vars = get_default_varnames(
+        [v.tag.value_var for v in model.unobserved_RVs], include_transformed
+    )
     mx = {var.name: value for var, value in zip(vars, model.fastfn(vars)(bij.rmap(mx0)))}
 
     if return_raw:
