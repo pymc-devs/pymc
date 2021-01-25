@@ -143,7 +143,7 @@ class BaseSampler(SeededTest):
             cls.trace = pm.sample(cls.n_samples, tune=cls.tune, step=cls.step, cores=cls.chains)
         cls.samples = {}
         for var in cls.model.unobserved_RVs:
-            cls.samples[get_var_name(var)] = cls.trace.get_values(var, burn=cls.burn)
+            cls.samples[get_var_name(var)] = cls.trace.get_values(var.tag.value_var, burn=cls.burn)
 
     def test_neff(self):
         if hasattr(self, "min_n_eff"):
