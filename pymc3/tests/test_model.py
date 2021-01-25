@@ -32,10 +32,8 @@ from numpy.testing import assert_almost_equal
 import pymc3 as pm
 
 from pymc3 import Deterministic, Potential
-from pymc3.blocking import DictToArrayBijection, RaveledVars
-from pymc3.distributions import Normal, logpt_sum, transforms
-from pymc3.model import Point, ValueGradFunction
-from pymc3.tests.helpers import SeededTest
+from pymc3.distributions import Normal, transforms
+from pymc3.model import ValueGradFunction
 
 
 class NewModel(pm.Model):
@@ -204,7 +202,15 @@ def test_empty_observed():
     data.values[:] = np.nan
     with pm.Model():
         a = pm.Normal("a", observed=data)
-        assert not hasattr(a.tag, "observations")
+        # The masked observations are replaced by elements of the RV `a`,
+        # which means that they should all have the same sample test values
+        a_data = a.owner.inputs[1]
+        npt.assert_allclose(a.tag.test_value, a_data.tag.test_value)
+
+        # Let's try this again with another distribution
+        b = pm.Gamma("b", alpha=1, beta=1, observed=data)
+        b_data = b.owner.inputs[1]
+        npt.assert_allclose(b.tag.test_value, b_data.tag.test_value)
 
 
 class TestValueGradFunction(unittest.TestCase):
@@ -273,7 +279,21 @@ class TestValueGradFunction(unittest.TestCase):
         assert val == 21
         npt.assert_allclose(grad, [5, 5, 5, 1, 1, 1, 1, 1, 1])
 
-    @pytest.mark.xfail(reason="Lognormal not refactored for v4")
+    def test_bij(self):
+        self.f_grad.set_extra_values({"extra1": 5})
+        array = np.ones(self.f_grad.size, dtype=self.f_grad.dtype)
+        point = self.f_grad.array_to_dict(array)
+        assert len(point) == 2
+        npt.assert_allclose(point["val1"], 1)
+        npt.assert_allclose(point["val2"], 1)
+
+        array2 = self.f_grad.dict_to_array(point)
+        npt.assert_allclose(array2, array)
+        point_ = self.f_grad.array_to_full_dict(array)
+        assert len(point_) == 3
+        assert point_["extra1"] == 5
+
+    @pytest.mark.xfail(reason="Missing distributions")
     def test_edge_case(self):
         # Edge case discovered in #2948
         ndim = 3
@@ -292,8 +312,9 @@ class TestValueGradFunction(unittest.TestCase):
         assert dlogp.size == 4
         npt.assert_allclose(dlogp, 0.0, atol=1e-5)
 
-    def test_missing_data(self):
-        # Originally from a case described in #3122
+    @pytest.mark.xfail(reason="Missing distributions")
+    def test_tensor_type_conversion(self):
+        # case described in #3122
         X = np.random.binomial(1, 0.5, 10)
         X[0] = -1  # masked a single value
         X = np.ma.masked_values(X, value=-1)
@@ -306,14 +327,8 @@ class TestValueGradFunction(unittest.TestCase):
 
         m.default_rng.get_value(borrow=True).seed(102)
 
-        # The gradient should have random values as inputs, so its value should
-        # change every time we evaluate it at the same point
-        #
-        # TODO: We could probably use a better test than this.
-        res = [gf(DictToArrayBijection.map(Point(m.test_point, model=m))) for i in range(20)]
-        assert np.var(res) > 0.0
-
-    def test_aesara_switch_broadcast_edge_cases_1(self):
+    @pytest.mark.xfail(reason="Missing distributions")
+    def test_aesara_switch_broadcast_edge_cases(self):
         # Tests against two subtle issues related to a previous bug in Theano
         # where `tt.switch` would not always broadcast tensors with single
         # values https://github.com/pymc-devs/aesara/issues/270
@@ -345,7 +360,7 @@ class TestValueGradFunction(unittest.TestCase):
         npt.assert_allclose(m.dlogp([mu])({"mu": 0}), 2.499424682024436, rtol=1e-5)
 
 
-@pytest.mark.xfail(reason="DensityDist not refactored for v4")
+@pytest.mark.xfail(reason="DensityDist not supported")
 def test_multiple_observed_rv():
     "Test previously buggy multi-observed RV comparison code."
     y1_data = np.random.randn(10)
@@ -361,6 +376,7 @@ def test_multiple_observed_rv():
     assert not model["x"] in model.value_vars
 
 
+@pytest.mark.xfail(reason="Functions depend on deprecated dshape/dsize")
 def test_tempered_logp_dlogp():
     with pm.Model() as model:
         pm.Normal("x")

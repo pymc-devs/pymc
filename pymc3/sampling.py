@@ -37,8 +37,7 @@ from fastprogress.fastprogress import progress_bar
 
 import pymc3 as pm
 
-from pymc3.aesaraf import change_rv_size, inputvars, walk_model
-from pymc3.backends.arviz import _DefaultTrace
+from pymc3.aesaraf import inputvars
 from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
 from pymc3.blocking import DictToArrayBijection
@@ -201,8 +200,8 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
             has_gradient = var.dtype not in discrete_types
             if has_gradient:
                 try:
-                    tg.grad(model.logpt, var)
-                except (NotImplementedError, tg.NullTypeGradError):
+                    tg.grad(model.logpt, var.tag.value_var)
+                except (AttributeError, NotImplementedError, tg.NullTypeGradError):
                     has_gradient = False
             # select the best method
             rv_var = model.values_to_rvs[var]
@@ -659,7 +658,9 @@ def sample(
 
     idata = None
     if compute_convergence_checks or return_inferencedata:
-        ikwargs = dict(model=model, save_warmup=not discard_tuned_samples)
+        # XXX: Arviz `log_likelihood` calculations need to be disabled until
+        # it's updated to work with v4.
+        ikwargs = dict(model=model, save_warmup=not discard_tuned_samples, log_likelihood=False)
         if idata_kwargs:
             ikwargs.update(idata_kwargs)
         idata = pm.to_inference_data(trace, **ikwargs)
@@ -1962,13 +1963,12 @@ def sample_prior_predictive(
         vars_ = set(var_names)
 
     if random_seed is not None:
-        # np.random.seed(random_seed)
-        model.default_rng.get_value(borrow=True).seed(random_seed)
+        np.random.seed(random_seed)
 
     names = get_default_varnames(vars_, include_transformed=False)
 
     vars_to_sample = [model[name] for name in names]
-    inputs = [i for i in inputvars(vars_to_sample) if not isinstance(i, SharedVariable)]
+    inputs = [i for i in inputvars(vars_to_sample)]
     sampler_fn = aesara.function(
         inputs,
         vars_to_sample,

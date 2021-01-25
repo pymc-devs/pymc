@@ -13,13 +13,16 @@
 #   limitations under the License.
 import warnings
 
-import aesara.tensor as at
+from copy import copy
+
+import aesara.tensor as aet
 import numpy as np
 
-from aesara.tensor.random.basic import bernoulli, binomial, categorical, nbinom, poisson
+from aesara.tensor.random.basic import BinomialRV, CategoricalRV, binomial, categorical
 from scipy import stats
 
 from pymc3.aesaraf import floatX, intX, take_along_axis
+from pymc3.distributions import _logcdf, _logp
 from pymc3.distributions.dist_math import (
     betaln,
     binomln,
@@ -52,6 +55,12 @@ __all__ = [
     "Categorical",
     "OrderedLogistic",
 ]
+
+# FIXME: These are temporary hacks
+categorical = copy(categorical)
+categorical.inplace = True
+binomial = copy(binomial)
+binomial.inplace = True
 
 
 class Binomial(Discrete):
@@ -100,66 +109,70 @@ class Binomial(Discrete):
 
     @classmethod
     def dist(cls, n, p, *args, **kwargs):
-        n = at.as_tensor_variable(intX(n))
-        p = at.as_tensor_variable(floatX(p))
-        # mode = at.cast(tround(n * p), self.dtype)
+        n = aet.as_tensor_variable(intX(n))
+        p = aet.as_tensor_variable(floatX(p))
+        # mode = aet.cast(tround(n * p), self.dtype)
         return super().dist([n, p], **kwargs)
 
-    def logp(value, n, p):
-        r"""
-        Calculate log-probability of Binomial distribution at specified value.
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+@_logp.register(BinomialRV)
+def binomial_logp(op, value, n, p):
+    r"""
+    Calculate log-probability of Binomial distribution at specified value.
 
-        Returns
-        -------
-        TensorVariable
-        """
-        return bound(
-            binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
-            0 <= value,
-            value <= n,
-            0 <= p,
-            p <= 1,
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or aesara tensor
+
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(
+        binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
+        0 <= value,
+        value <= n,
+        0 <= p,
+        p <= 1,
+    )
+
+
+@_logcdf.register(BinomialRV)
+def binomial_logcdf(op, value, n, p):
+    """
+    Compute the log of the cumulative distribution function for Binomial distribution
+    at the specified value.
+
+    Parameters
+    ----------
+    value: numeric
+        Value for which log CDF is calculated.
+
+    Returns
+    -------
+    TensorVariable
+    """
+    # incomplete_beta function can only handle scalar values (see #4342)
+    if np.ndim(value):
+        raise TypeError(
+            f"Binomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
         )
 
-    def logcdf(value, n, p):
-        """
-        Compute the log of the cumulative distribution function for Binomial distribution
-        at the specified value.
+    value = aet.floor(value)
 
-        Parameters
-        ----------
-        value: numeric
-            Value for which log CDF is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        # incomplete_beta function can only handle scalar values (see #4342)
-        if np.ndim(value):
-            raise TypeError(
-                f"Binomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
-
-        value = at.floor(value)
-
-        return bound(
-            at.switch(
-                at.lt(value, n),
-                at.log(incomplete_beta(n - value, value + 1, 1 - p)),
-                0,
-            ),
-            0 <= value,
-            0 < n,
-            0 <= p,
-            p <= 1,
-        )
+    return bound(
+        aet.switch(
+            aet.lt(value, n),
+            aet.log(incomplete_beta(n - value, value + 1, 1 - p)),
+            0,
+        ),
+        0 <= value,
+        0 < n,
+        0 <= p,
+        p <= 1,
+    )
 
 
 class BetaBinomial(Discrete):
@@ -1238,48 +1251,49 @@ class Categorical(Discrete):
     @classmethod
     def dist(cls, p, **kwargs):
 
-        p = at.as_tensor_variable(floatX(p))
+        p = aet.as_tensor_variable(floatX(p))
 
-        # mode = at.argmax(p, axis=-1)
+        # mode = aet.argmax(p, axis=-1)
         # if mode.ndim == 1:
-        #     mode = at.squeeze(mode)
+        #     mode = aet.squeeze(mode)
 
         return super().dist([p], **kwargs)
 
-    def logp(value, p):
-        r"""
-        Calculate log-probability of Categorical distribution at specified value.
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or `TensorVariable`
+@_logp.register(CategoricalRV)
+def categorical_logp(op, value, p_, upper):
+    r"""
+    Calculate log-probability of Categorical distribution at specified value.
 
-        """
-        k = at.shape(p)[-1]
-        p_ = p
-        p = p_ / at.sum(p_, axis=-1, keepdims=True)
-        value_clip = at.clip(value, 0, k - 1)
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or `TensorVariable`
 
-        if p.ndim > 1:
-            if p.ndim > value_clip.ndim:
-                value_clip = at.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
-            elif p.ndim < value_clip.ndim:
-                p = at.shape_padleft(p, value_clip.ndim - p_.ndim)
-            pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
-            a = at.log(
-                take_along_axis(
-                    p.dimshuffle(pattern),
-                    value_clip,
-                )
+    """
+    p = p_ / aet.sum(p_, axis=-1, keepdims=True)
+    k = aet.shape(p_)[-1]
+    value_clip = aet.clip(value, 0, k - 1)
+
+    if p.ndim > 1:
+        if p.ndim > value_clip.ndim:
+            value_clip = aet.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
+        elif p.ndim < value_clip.ndim:
+            p = aet.shape_padleft(p, value_clip.ndim - p_.ndim)
+        pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
+        a = aet.log(
+            take_along_axis(
+                p.dimshuffle(pattern),
+                value_clip,
             )
-        else:
-            a = at.log(p[value_clip])
-
-        return bound(
-            a, value >= 0, value <= (k - 1), at.all(p_ >= 0, axis=-1), at.all(p <= 1, axis=-1)
         )
+    else:
+        a = aet.log(p[value_clip])
+
+    return bound(
+        a, value >= 0, value <= (k - 1), aet.all(p_ >= 0, axis=-1), aet.all(p <= 1, axis=-1)
+    )
 
 
 class Constant(Discrete):

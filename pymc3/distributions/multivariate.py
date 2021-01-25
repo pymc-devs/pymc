@@ -17,6 +17,8 @@
 
 import warnings
 
+from copy import copy
+
 import aesara
 import aesara.tensor as at
 import numpy as np
@@ -25,8 +27,7 @@ import scipy
 from aesara.graph.basic import Apply
 from aesara.graph.op import Op
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
-from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
-from aesara.tensor.random.utils import broadcast_params
+from aesara.tensor.random.basic import DirichletRV, dirichlet
 from aesara.tensor.slinalg import (
     Cholesky,
     Solve,
@@ -39,7 +40,7 @@ from scipy import linalg, stats
 import pymc3 as pm
 
 from pymc3.aesaraf import floatX, intX
-from pymc3.distributions import transforms
+from pymc3.distributions import _logp, transforms
 from pymc3.distributions.continuous import ChiSquared, Normal
 from pymc3.distributions.dist_math import bound, factln, logpow
 from pymc3.distributions.distribution import Continuous, Discrete
@@ -61,51 +62,10 @@ __all__ = [
     "CAR",
 ]
 
-solve_lower = Solve(A_structure="lower_triangular")
-# Step methods and advi do not catch LinAlgErrors at the
-# moment. We work around that by using a cholesky op
-# that returns a nan as first entry instead of raising
-# an error.
-cholesky = Cholesky(lower=True, on_error="nan")
+# FIXME: These are temporary hacks
+dirichlet = copy(dirichlet)
+dirichlet.inplace = True
 
-
-def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
-    if chol is not None and not lower:
-        chol = chol.T
-
-    if len([i for i in [tau, cov, chol] if i is not None]) != 1:
-        raise ValueError("Incompatible parameterization. Specify exactly one of tau, cov, or chol.")
-
-    if cov is not None:
-        cov = at.as_tensor_variable(cov)
-        if cov.ndim != 2:
-            raise ValueError("cov must be two dimensional.")
-    elif tau is not None:
-        tau = at.as_tensor_variable(tau)
-        if tau.ndim != 2:
-            raise ValueError("tau must be two dimensional.")
-        # TODO: What's the correct order/approach (in the non-square case)?
-        # `aesara.tensor.nlinalg.tensorinv`?
-        cov = matrix_inverse(tau)
-    else:
-        # TODO: What's the correct order/approach (in the non-square case)?
-        chol = at.as_tensor_variable(chol)
-        if chol.ndim != 2:
-            raise ValueError("chol must be two dimensional.")
-        cov = chol.dot(chol.T)
-
-    return cov
-
-
-def quaddist_parse(value, mu, cov, mat_type="cov"):
-    """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""
-    if value.ndim > 2 or value.ndim == 0:
-        raise ValueError("Invalid dimension for value: %s" % value.ndim)
-    if value.ndim == 1:
-        onedim = True
-        value = value[None, :]
-    else:
-        onedim = False
 
     delta = value - mu
 
@@ -386,45 +346,44 @@ class Dirichlet(Continuous):
     """
 
     rv_op = dirichlet
-
-    def __new__(cls, name, *args, **kwargs):
-        kwargs.setdefault("transform", transforms.stick_breaking)
-        return super().__new__(cls, name, *args, **kwargs)
+    default_transform = transforms.stick_breaking
 
     @classmethod
     def dist(cls, a, **kwargs):
 
-        a = at.as_tensor_variable(a)
-        # mean = a / at.sum(a)
-        # mode = at.switch(at.all(a > 1), (a - 1) / at.sum(a - 1), np.nan)
+        a = aet.as_tensor_variable(a)
+        # mean = a / aet.sum(a)
+        # mode = aet.switch(aet.all(a > 1), (a - 1) / aet.sum(a - 1), np.nan)
 
         return super().dist([a], **kwargs)
 
-    def logp(value, a):
-        """
-        Calculate log-probability of Dirichlet distribution
-        at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value for which log-probability is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        # only defined for sum(value) == 1
-        return bound(
-            at.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(at.sum(a, axis=-1)),
-            at.all(value >= 0),
-            at.all(value <= 1),
-            at.all(a > 0),
-            broadcast_conditions=False,
-        )
-
     def _distr_parameters_for_repr(self):
         return ["a"]
+
+
+@_logp.register(DirichletRV)
+def dirichlet_logp(op, value, a):
+    """
+    Calculate log-probability of Dirichlet distribution
+    at specified value.
+
+    Parameters
+    ----------
+    value: numeric
+        Value for which log-probability is calculated.
+
+    Returns
+    -------
+    TensorVariable
+    """
+    # only defined for sum(value) == 1
+    return bound(
+        aet.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(aet.sum(a, axis=-1)),
+        aet.all(value >= 0),
+        aet.all(value <= 1),
+        aet.all(a > 0),
+        broadcast_conditions=False,
+    )
 
 
 class MultinomialRV(MultinomialRV):

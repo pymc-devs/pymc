@@ -33,9 +33,29 @@ if TYPE_CHECKING:
 
 import aesara
 import aesara.graph.basic
-import aesara.tensor as at
+import aesara.tensor as aet
+import numpy as np
 
-from pymc3.util import UNSET, get_repr_for_variable
+from aesara import function
+from aesara.compile.sharedvalue import SharedVariable
+from aesara.graph.basic import Constant
+from aesara.tensor.var import TensorVariable
+from cachetools import LRUCache, cached
+
+from pymc3.distributions.shape_utils import (
+    broadcast_dist_samples_shape,
+    get_broadcastable_dist_samples,
+    to_tuple,
+)
+from pymc3.model import (
+    ContextMeta,
+    FreeRV,
+    Model,
+    MultiObservedRV,
+    ObservedRV,
+    build_named_node_tree,
+)
+from pymc3.util import get_repr_for_variable, get_var_name, hash_key
 from pymc3.vartypes import string_types
 
 __all__ = [
@@ -44,6 +64,8 @@ __all__ = [
     "Continuous",
     "Discrete",
     "NoDistribution",
+    "draw_values",
+    "generate_samples",
 ]
 
 vectorized_ppc = contextvars.ContextVar(
@@ -125,8 +147,8 @@ class DistributionMeta(ABCMeta):
 class Distribution(metaclass=DistributionMeta):
     """Statistical distribution"""
 
-    rv_class = None
     rv_op = None
+    default_transform = None
 
     def __new__(cls, name, *args, **kwargs):
         try:
@@ -151,6 +173,9 @@ class Distribution(metaclass=DistributionMeta):
 
         data = kwargs.pop("observed", None)
 
+        if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
+            raise TypeError("observed needs to be data but got: {}".format(type(data)))
+
         total_size = kwargs.pop("total_size", None)
 
         dims = kwargs.pop("dims", None)
@@ -158,11 +183,41 @@ class Distribution(metaclass=DistributionMeta):
         if "shape" in kwargs:
             raise DeprecationWarning("The `shape` keyword is deprecated; use `size`.")
 
-        transform = kwargs.pop("transform", UNSET)
-
         rv_out = cls.dist(*args, rng=rng, **kwargs)
 
-        return model.register_rv(rv_out, name, data, total_size, dims=dims, transform=transform)
+        return model.register_rv(rv_out, name, data, total_size, dims=dims)
+
+    @classmethod
+    def dist(cls, dist_params, **kwargs):
+        transform = kwargs.pop("transform", cls.default_transform)
+        testval = kwargs.pop("testval", None)
+
+        rv_var = cls.rv_op(*dist_params, **kwargs)
+
+        rv_var.tag.transform = transform
+
+        if testval is not None:
+            rv_var.tag.test_value = testval
+
+        return rv_var
+
+    def default(self):
+        return np.asarray(self.get_test_val(self.testval, self.defaults), self.dtype)
+
+    def get_test_val(self, val, defaults):
+        if val is None:
+            for v in defaults:
+                if hasattr(self, v):
+                    attr_val = self.getattr_value(v)
+                    if np.all(np.isfinite(attr_val)):
+                        return attr_val
+            raise AttributeError(
+                "%s has no finite default value to use, "
+                "checked: %s. Pass testval argument or "
+                "adjust so value is finite." % (self, str(defaults))
+            )
+        else:
+            return self.getattr_value(val)
 
     @classmethod
     def dist(cls, dist_params, **kwargs):

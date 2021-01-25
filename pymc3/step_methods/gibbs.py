@@ -81,7 +81,7 @@ def elemwise_logp(model, var):
         v_logp = logpt(v)
         if var in graph_inputs([v_logp]):
             terms.append(v_logp)
-    return model.fn(at.add(*terms))
+    return model.fn(add(*terms))
 
 
 def categorical(prob, shape):

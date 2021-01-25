@@ -29,22 +29,19 @@ import scipy.sparse as sps
 
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.gradient import grad
-from aesara.graph.basic import Constant, Variable, graph_inputs
+from aesara.graph.basic import Apply, Variable
+from aesara.tensor.random.op import Observed, observed
+from aesara.tensor.type import TensorType
 from aesara.tensor.var import TensorVariable
 from pandas import Series
 
-from pymc3.aesaraf import (
-    change_rv_size,
-    gradient,
-    hessian,
-    inputvars,
-    pandas_to_array,
-    rvs_to_value_vars,
-)
-from pymc3.blocking import DictToArrayBijection, RaveledVars
+import pymc3 as pm
+
+from pymc3.aesaraf import generator, gradient, hessian, inputvars
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection
 from pymc3.data import GenTensorVariable, Minibatch
-from pymc3.distributions import logp_transform, logpt, logpt_sum
-from pymc3.exceptions import ImputationWarning, SamplingError
+from pymc3.distributions import _get_scaling, change_rv_size, logpt, logpt_sum
+from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
 from pymc3.util import UNSET, WithMemoization, get_var_name, treedict, treelist
 from pymc3.vartypes import continuous_types, discrete_types, typefilter
@@ -380,10 +377,10 @@ class ValueGradFunction:
         compute_grads=True,
         **kwargs,
     ):
-        if extra_vars_and_values is None:
-            extra_vars_and_values = {}
+        if extra_vars is None:
+            extra_vars = []
 
-        names = [arg.name for arg in grad_vars + list(extra_vars_and_values.keys())]
+        names = [arg.name for arg in grad_vars + extra_vars]
         if any(name is None for name in names):
             raise ValueError("Arguments must be named.")
         if len(set(names)) != len(names):
@@ -424,8 +421,14 @@ class ValueGradFunction:
 
         givens = []
         self._extra_vars_shared = {}
-        for var, value in extra_vars_and_values.items():
-            shared = aesara.shared(value, var.name + "_shared__")
+        for var in extra_vars:
+            shared = aesara.shared(var.tag.test_value, var.name + "_shared__")
+            # test TensorType compatibility
+            if hasattr(var.tag.test_value, "shape"):
+                testtype = TensorType(var.dtype, [s == 1 for s in var.tag.test_value.shape])
+
+                if testtype != shared.type:
+                    shared.type = testtype
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
 
@@ -597,7 +600,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             instance._parent = kwargs.get("model")
         else:
             instance._parent = cls.get_context(error_if_none=False)
-        instance._aesara_config = kwargs.get("aesara_config", {})
+        aesara_config = kwargs.get("aesara_config", None)
+        if aesara_config is None or "compute_test_value" not in aesara_config:
+            aesara_config = {"compute_test_value": "ignore"}
+        instance._aesara_config = aesara_config
         return instance
 
     def __init__(self, name="", model=None, aesara_config=None, coords=None, check_bounds=True):
@@ -649,7 +655,18 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def ndim(self):
-        return sum(var.ndim for var in self.value_vars)
+        return sum(var.ndim for var in self.free_RVs)
+
+    @property
+    def logp_array(self):
+        return self.bijection.mapf(self.fastlogp)
+
+    @property
+    def dlogp_array(self):
+        logpt = self.logpt
+        vars = inputvars(logpt)
+        dlogp = self.fastfn(gradient(self.logpt, vars))
+        return self.bijection.mapf(dlogp)
 
     def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
         """Compile a aesara function that computes logp and gradient.
@@ -675,20 +692,13 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         if tempered:
             with self:
-                # Convert random variables into their log-likelihood inputs and
-                # apply their transforms, if any
-                potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
-
-                free_RVs_logp = at.sum(
+                free_RVs_logp = aet.sum(
                     [
-                        at.sum(logpt(var, getattr(var.tag, "value_var", None)))
-                        for var in self.free_RVs
+                        aet.sum(logpt(var, getattr(var.tag, "value_var", None)))
+                        for var in self.free_RVs + self.potentials
                     ]
-                    + list(potentials)
                 )
-                observed_RVs_logp = at.sum(
-                    [at.sum(logpt(obs, obs.tag.observations)) for obs in self.observed_RVs]
-                )
+                observed_RVs_logp = aet.sum([aet.sum(logpt(obs)) for obs in self.observed_RVs])
 
             costs = [free_RVs_logp, observed_RVs_logp]
         else:
@@ -708,15 +718,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """Aesara scalar of log-probability of the model"""
         with self:
             factors = [logpt_sum(var, getattr(var.tag, "value_var", None)) for var in self.free_RVs]
-            factors += [logpt_sum(obs, obs.tag.observations) for obs in self.observed_RVs]
-
-            # Convert random variables into their log-likelihood inputs and
-            # apply their transforms, if any
-            potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
-
-            factors += potentials
-
-            logp_var = at.sum([at.sum(factor) for factor in factors])
+            factors += [logpt_sum(obs) for obs in self.observed_RVs]
+            factors += self.potentials
+            logp_var = aet.sum([aet.sum(factor) for factor in factors])
             if self.name:
                 logp_var.name = "__logp_%s" % self.name
             else:
@@ -736,17 +740,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 logpt_sum(var, getattr(var.tag, "value_var", None), jacobian=False)
                 for var in self.free_RVs
             ]
-            factors += [
-                logpt_sum(obs, obs.tag.observations, jacobian=False) for obs in self.observed_RVs
-            ]
-
-            # Convert random variables into their log-likelihood inputs and
-            # apply their transforms, if any
-            potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
-            factors += potentials
-
-            logp_var = at.sum([at.sum(factor) for factor in factors])
-
+            factors += [logpt_sum(obs, jacobian=False) for obs in self.observed_RVs]
+            factors += self.potentials
+            logp_var = aet.sum([aet.sum(factor) for factor in factors])
             if self.name:
                 logp_var.name = "__logp_nojac_%s" % self.name
             else:
@@ -759,30 +755,17 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         (excluding deterministic)."""
         with self:
             factors = [logpt_sum(var, getattr(var.tag, "value_var", None)) for var in self.free_RVs]
-            return at.sum(factors)
+            return aet.sum(factors)
 
     @property
     def datalogpt(self):
         with self:
-            factors = [logpt(obs, obs.tag.observations) for obs in self.observed_RVs]
-
-            # Convert random variables into their log-likelihood inputs and
-            # apply their transforms, if any
-            potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
-
-            factors += [at.sum(factor) for factor in potentials]
-            return at.sum(factors)
+            factors = [logpt(obs) for obs in self.observed_RVs]
+            factors += [aet.sum(factor) for factor in self.potentials]
+            return aet.sum(factors)
 
     @property
     def vars(self):
-        warnings.warn(
-            "Model.vars has been deprecated. Use Model.value_vars instead.",
-            DeprecationWarning,
-        )
-        return self.value_vars
-
-    @property
-    def value_vars(self):
         """List of unobserved random variables used as inputs to the model's
         log-likelihood (which excludes deterministics).
         """
@@ -824,43 +807,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def test_point(self):
-        warnings.warn(
-            "`Model.test_point` has been deprecated. Use `Model.initial_point` instead.",
-            DeprecationWarning,
-        )
-        return self.initial_point
-
-    @property
-    def initial_point(self):
-        points = []
-        for rv_var in self.free_RVs:
-            value_var = rv_var.tag.value_var
-            var_value = getattr(value_var.tag, "test_value", None)
-
-            if var_value is None:
-
-                rv_var_value = getattr(rv_var.tag, "test_value", None)
-
-                if rv_var_value is None:
-                    try:
-                        rv_var_value = rv_var.eval()
-                    except Exception:
-                        raise Exception(f"Couldn't generate an initial value for {rv_var}")
-
-                transform = getattr(value_var.tag, "transform", None)
-
-                if transform:
-                    try:
-                        rv_var_value = transform.forward(rv_var, rv_var_value).eval()
-                    except Exception:
-                        raise Exception(f"Couldn't generate an initial value for {rv_var}")
-
-                var_value = rv_var_value
-                value_var.tag.test_value = var_value
-
-            points.append((value_var, var_value))
-
-        return Point(points, model=self)
+        """Test point used to check that the model doesn't generate errors"""
+        return Point(((var.tag.value_var, var.tag.test_value) for var in self.free_RVs), model=self)
 
     @property
     def disc_vars(self):
@@ -902,7 +850,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             else:
                 self.coords[name] = coords[name]
 
-    def register_rv(self, rv_var, name, data=None, total_size=None, dims=None, transform=UNSET):
+    def register_rv(self, rv_var, name, data=None, total_size=None, dims=None):
         """Register an (un)observed random variable with the model.
 
         Parameters
@@ -926,8 +874,47 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         rv_var.tag.total_size = total_size
 
         if data is None:
+            # Create a `TensorVariable` that will be used as the random
+            # variable's "value" in log-likelihood graphs.
+            #
+            # In general, we'll call this type of variable the "value" variable.
+            #
+            # In all other cases, the role of the value variable is taken by
+            # observed data. That's why value variables are only referenced in
+            # this branch of the conditional.
+            value_var = rv_var.clone()
+            value_var.name = rv_var.name
+            rv_var.tag.value_var = value_var
+
             self.free_RVs.append(rv_var)
-            self.create_value_var(rv_var, transform)
+
+            transform = rv_var.tag.transform
+            value_var.tag.transform = None
+
+            if transform is not None:
+                self.deterministics.append(rv_var)
+
+        elif isinstance(data, dict):
+
+            # TODO: How exactly does this dictionary map to `rv_var`?
+
+            # obs_rvs = {name: make_obs_var(rv_var, d, name, self) for name, d in data.items()}
+            # rv_var.tag.data = obs_rvs
+            #
+            # missing_values = [
+            #     datum.missing_values for datum in data.values() if datum.missing_values is not None
+            # ]
+            # rv_var.tag.missing_values = missing_values
+            #
+            # self.observed_RVs.append(rv_var)
+            #
+            # if missing_values:
+            #     self.free_RVs += rv_var.tag.missing_values
+            #     self.missing_values += rv_var.tag.missing_values
+            #     for v in rv_var.tag.missing_values:
+            #         self.named_vars[v.name] = v
+
+            raise NotImplementedError()
         else:
             if (
                 isinstance(data, Variable)
@@ -938,50 +925,19 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
             data = pandas_to_array(data)
 
-            rv_var = make_obs_var(rv_var, data)
+            rv_var = make_obs_var(rv_var, data, name, self)
+            rv_var.tag.data = data
 
-            self.create_value_var(rv_var, transform)
+            self.observed_RVs.append(rv_var)
 
-            if hasattr(rv_var.tag, "observations"):
-                self.observed_RVs.append(rv_var)
+            if rv_var.tag.missing_values:
+                self.free_RVs.append(rv_var.tag.missing_values)
+                self.missing_values.append(rv_var.tag.missing_values)
+                self.named_vars[rv_var.tag.missing_values.name] = rv_var.tag.missing_values
 
         self.add_random_variable(rv_var, dims)
 
         return rv_var
-
-    def create_value_var(self, rv_var: TensorVariable, transform: Any) -> TensorVariable:
-        """Create a ``TensorVariable`` that will be used as the random
-        variable's "value" in log-likelihood graphs.
-
-        In general, we'll call this type of variable the "value" variable.
-
-        In all other cases, the role of the value variable is taken by
-        observed data. That's why value variables are only referenced in
-        this branch of the conditional.
-
-        """
-        value_var = rv_var.type()
-
-        if aesara.config.compute_test_value != "off":
-            value_var.tag.test_value = rv_var.tag.test_value
-
-        value_var.name = rv_var.name
-
-        rv_var.tag.value_var = value_var
-
-        # Make the value variable a transformed value variable,
-        # if there's an applicable transform
-        if transform is UNSET:
-            transform = logp_transform(rv_var.owner.op)
-
-        if transform is not None:
-            value_var.tag.transform = transform
-            value_var.name = f"{value_var.name}_{transform.name}__"
-            if aesara.config.compute_test_value != "off":
-                value_var.tag.test_value = transform.forward(rv_var, value_var).tag.test_value
-            self.named_vars[value_var.name] = value_var
-
-        return value_var
 
     def add_random_variable(self, var, dims=None):
         """Add a random variable to the named variables of the model."""
@@ -1137,11 +1093,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         flat_view
         """
         if vars is None:
-            vars = self.value_vars
-        if order is not None:
-            var_map = {v.name: v for v in vars}
-            vars = [var_map[n] for n in order]
-
+            vars = self.vars
+        if order is None:
+            order = ArrayOrdering(vars)
         if inputvar is None:
             inputvar = at.vector("flat_view", dtype=aesara.config.floatX)
             if aesara.config.compute_test_value != "off":
@@ -1264,10 +1218,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         return Series(
             {
-                rv.name: np.round(
-                    self.fn(logpt_sum(rv, getattr(rv.tag, "observations", None)))(point),
-                    round_vals,
-                )
+                rv.name: np.round(self.fn(logpt_sum(rv))(test_point), round_vals)
                 for rv in self.basic_RVs
             },
             name="Log-probability of test_point",
@@ -1452,7 +1403,84 @@ class LoosePointFunc:
 compilef = fastfn
 
 
-def make_obs_var(rv_var: TensorVariable, data: Union[np.ndarray]) -> TensorVariable:
+class FreeRV(Factor, PyMC3Variable):
+    """Unobserved random variable that a model is specified in terms of."""
+
+    dshape = None  # type: Tuple[int, ...]
+    size = None  # type: int
+    distribution = None  # type: Optional[Distribution]
+    model = None  # type: Optional[Model]
+
+    def __init__(
+        self,
+        type=None,
+        owner=None,
+        index=None,
+        name=None,
+        distribution=None,
+        total_size=None,
+        model=None,
+    ):
+        """
+        Parameters
+        ----------
+        type: aesara type (optional)
+        owner: aesara owner (optional)
+        name: str
+        distribution: Distribution
+        model: Model
+        total_size: scalar Tensor (optional)
+            needed for upscaling logp
+        """
+        if type is None:
+            type = distribution.type
+        super().__init__(type, owner, index, name)
+
+        if distribution is not None:
+            self.dshape = tuple(distribution.shape)
+            self.dsize = int(np.prod(distribution.shape))
+            self.distribution = distribution
+            self.tag.test_value = (
+                np.ones(distribution.shape, distribution.dtype) * distribution.default()
+            )
+            self.logp_elemwiset = distribution.logp(self)
+            # The logp might need scaling in minibatches.
+            # This is done in `Factor`.
+            self.logp_sum_unscaledt = distribution.logp_sum(self)
+            self.logp_nojac_unscaledt = distribution.logp_nojac(self)
+            self.total_size = total_size
+            self.model = model
+            self.scaling = _get_scaling(total_size, self.shape, self.ndim)
+
+            incorporate_methods(
+                source=distribution,
+                destination=self,
+                methods=["random"],
+                wrapper=InstanceMethod,
+            )
+
+    @property
+    def init_value(self):
+        """Convenience attribute to return tag.test_value"""
+        return self.tag.test_value
+
+    rv_var = change_rv_size(rv_var, new_size)
+
+    if aesara.config.compute_test_value != "off":
+        test_value = getattr(rv_var.tag, "test_value", None)
+
+        if test_value is not None:
+            # We try to reuse the old test value
+            rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.tag.test_value.shape)
+        else:
+            rv_var.tag.test_value = data
+
+    mask = getattr(data, "mask", None)
+    if mask is not None:
+
+def make_obs_var(
+    rv_var: TensorVariable, data: Union[np.ndarray], name: str, model: Model
+) -> TensorVariable:
     """Create a `TensorVariable` for an observed random variable.
 
     Parameters
@@ -1461,13 +1489,16 @@ def make_obs_var(rv_var: TensorVariable, data: Union[np.ndarray]) -> TensorVaria
         The random variable that is observed.
     data: ndarray
         The observed data.
+    name: str
+        The name of the random variable.
+    model: Model
+        The model object.
 
     Returns
     =======
     The new observed random variable
 
     """
-    name = rv_var.name
     data = pandas_to_array(data).astype(rv_var.dtype)
 
     # The shapes of the observed random variable and its data might not
@@ -1484,25 +1515,17 @@ def make_obs_var(rv_var: TensorVariable, data: Union[np.ndarray]) -> TensorVaria
     else:
         new_size = data.shape
 
+    test_value = getattr(rv_var.tag, "test_value", None)
+
     rv_var = change_rv_size(rv_var, new_size)
 
-    if aesara.config.compute_test_value != "off":
-        test_value = getattr(rv_var.tag, "test_value", None)
+    if aesara.config.compute_test_value != "off" and test_value is not None:
+        # We try to reuse the old test value
+        rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.tag.test_value.shape)
 
-        if test_value is not None:
-            # We try to reuse the old test value
-            rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.tag.test_value.shape)
-        else:
-            rv_var.tag.test_value = data
-
+    missing_values = None
     mask = getattr(data, "mask", None)
     if mask is not None:
-
-        if mask.all():
-            # If there are no observed values, this variable isn't really
-            # observed.
-            return rv_var
-
         impute_message = (
             f"Data in {rv_var} contains missing values and"
             " will be automatically imputed from the"
@@ -1510,20 +1533,178 @@ def make_obs_var(rv_var: TensorVariable, data: Union[np.ndarray]) -> TensorVaria
         )
         warnings.warn(impute_message, ImputationWarning)
 
-        comp_data = at.as_tensor_variable(data.compressed())
-        data = at.as_tensor_variable(data)
-        data.tag.mask = mask
+        missing_values = rv_var[mask]
+        constant = aet.as_tensor_variable(data.filled())
+        data = aet.set_subtensor(constant[mask.nonzero()], missing_values)
 
-        rv_var = at.set_subtensor(rv_var[~mask], comp_data)
-        rv_var.name = name
+        # Now, we need log-likelihood-space terms for these missing values
+        value_var = rv_var.clone()
+        value_var.name = f"{rv_var.name}_missing"
+        rv_var.tag.value_var = value_var
+
     elif sps.issparse(data):
         data = sparse.basic.as_sparse(data, name=name)
     else:
-        data = at.as_tensor_variable(data, name=name)
+        data = aet.as_tensor_variable(data, name=name)
+
+    rv_obs = observed(rv_var, data)
+    rv_obs.tag.missing_values = missing_values
+
+    rv_obs.name = name
+
+    return rv_obs
 
     rv_var.tag.observations = data
 
-    return rv_var
+class ObservedRV(Factor, PyMC3Variable):
+    """Observed random variable that a model is specified in terms of.
+    Potentially partially observed.
+    """
+
+    def __init__(
+        self,
+        type=None,
+        owner=None,
+        index=None,
+        name=None,
+        data=None,
+        distribution=None,
+        total_size=None,
+        model=None,
+    ):
+        """
+        Parameters
+        ----------
+        type: aesara type (optional)
+        owner: aesara owner (optional)
+        name: str
+        distribution: Distribution
+        model: Model
+        total_size: scalar Tensor (optional)
+            needed for upscaling logp
+        """
+
+        if hasattr(data, "type") and isinstance(data.type, TensorType):
+            type = data.type
+
+        if type is None:
+            data = pandas_to_array(data)
+            if isinstance(data, Variable):
+                type = data.type
+            else:
+                type = TensorType(distribution.dtype, [s == 1 for s in data.shape])
+
+        self.observations = data
+
+        super().__init__(type, owner, index, name)
+
+        if distribution is not None:
+            data = aet.as_tensor(data, name, model, distribution)
+
+            self.missing_values = data.missing_values
+            self.logp_elemwiset = distribution.logp(data)
+            # The logp might need scaling in minibatches.
+            # This is done in `Factor`.
+            self.logp_sum_unscaledt = distribution.logp_sum(data)
+            self.logp_nojac_unscaledt = distribution.logp_nojac(data)
+            self.total_size = total_size
+            self.model = model
+            self.distribution = distribution
+
+            # make this RV a view on the combined missing/nonmissing array
+            Apply(aesara.compile.view_op, inputs=[data], outputs=[self])
+            self.tag.test_value = aesara.compile.view_op(data).tag.test_value.astype(self.dtype)
+            self.scaling = _get_scaling(total_size, data.shape, data.ndim)
+
+    @property
+    def init_value(self):
+        """Convenience attribute to return tag.test_value"""
+        return self.tag.test_value
+
+
+class MultiObservedRV(Factor):
+    """Observed random variable that a model is specified in terms of.
+    Potentially partially observed.
+    """
+
+    def __init__(self, name, data, distribution, total_size=None, model=None):
+        """
+        Parameters
+        ----------
+        type: aesara type (optional)
+        owner: aesara owner (optional)
+        name: str
+        distribution: Distribution
+        model: Model
+        total_size: scalar Tensor (optional)
+            needed for upscaling logp
+        """
+        self.name = name
+        self.data = {
+            name: aet.as_tensor(data, name, model, distribution) for name, data in data.items()
+        }
+
+        self.missing_values = [
+            datum.missing_values for datum in self.data.values() if datum.missing_values is not None
+        ]
+        self.logp_elemwiset = distribution.logp(**self.data)
+        # The logp might need scaling in minibatches.
+        # This is done in `Factor`.
+        self.logp_sum_unscaledt = distribution.logp_sum(**self.data)
+        self.logp_nojac_unscaledt = distribution.logp_nojac(**self.data)
+        self.total_size = total_size
+        self.model = model
+        self.distribution = distribution
+        self.scaling = _get_scaling(total_size, self.logp_elemwiset.shape, self.logp_elemwiset.ndim)
+
+    # Make hashable by id for draw_values
+    def __hash__(self):
+        return id(self)
+
+    def __eq__(self, other):
+        "Use object identity for MultiObservedRV equality."
+        # This is likely a Bad Thing, but changing it would break a lot of code.
+        return self is other
+
+    def __ne__(self, other):
+        return not self == other
+
+
+def _walk_up_rv(rv, formatting="plain"):
+    """Walk up aesara graph to get inputs for deterministic RV."""
+    all_rvs = []
+    parents = list(itertools.chain(*[j.inputs for j in rv.get_parents()]))
+    if parents:
+        for parent in parents:
+            all_rvs.extend(_walk_up_rv(parent, formatting=formatting))
+    else:
+        name = rv.name if rv.name else "Constant"
+        fmt = r"\text{{{name}}}" if "latex" in formatting else "{name}"
+        all_rvs.append(fmt.format(name=name))
+    return all_rvs
+
+
+class DeterministicWrapper(TensorVariable):
+    def _str_repr(self, formatting="plain"):
+        if "latex" in formatting:
+            if formatting == "latex_with_params":
+                return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
+                    name=self.name, args=r",~".join(_walk_up_rv(self, formatting=formatting))
+                )
+            return fr"$\text{{{self.name}}} \sim \text{{Deterministic}}$"
+        else:
+            if formatting == "plain_with_params":
+                args = ", ".join(_walk_up_rv(self, formatting=formatting))
+                return f"{self.name} ~ Deterministic({args})"
+            return f"{self.name} ~ Deterministic"
+
+    def _repr_latex_(self, *, formatting="latex_with_params", **kwargs):
+        return self._str_repr(formatting=formatting)
+
+    __latex__ = _repr_latex_
+
+    def __str__(self):
+        return self._str_repr(formatting="plain")
 
 
 def Deterministic(name, var, model=None, dims=None):
@@ -1561,6 +1742,90 @@ def Potential(name, var, model=None):
     model = modelcontext(model)
     var.name = model.name_for(name)
     var.tag.scaling = None
+    var.tag.transform = None
     model.potentials.append(var)
     model.add_random_variable(var)
     return var
+
+
+class TransformedRV(PyMC3Variable):
+    """
+    Parameters
+    ----------
+
+    type: aesara type (optional)
+    owner: aesara owner (optional)
+    name: str
+    distribution: Distribution
+    model: Model
+    total_size: scalar Tensor (optional)
+        needed for upscaling logp
+    """
+
+    def __init__(
+        self,
+        type=None,
+        owner=None,
+        index=None,
+        name=None,
+        distribution=None,
+        model=None,
+        transform=None,
+        total_size=None,
+    ):
+        if type is None:
+            type = distribution.type
+        super().__init__(type, owner, index, name)
+
+        self.transformation = transform
+
+        if distribution is not None:
+            self.model = model
+            self.distribution = distribution
+            self.dshape = tuple(distribution.shape)
+            self.dsize = int(np.prod(distribution.shape))
+
+            transformed_name = get_transformed_name(name, transform)
+
+            self.transformed = model.Var(
+                transformed_name, transform.apply(distribution), total_size=total_size
+            )
+
+            normalRV = transform.backward(self.transformed)
+
+            Apply(aesara.compile.view_op, inputs=[normalRV], outputs=[self])
+            self.tag.test_value = normalRV.tag.test_value
+            self.scaling = _get_scaling(total_size, self.shape, self.ndim)
+            incorporate_methods(
+                source=distribution,
+                destination=self,
+                methods=["random"],
+                wrapper=InstanceMethod,
+            )
+
+    @property
+    def init_value(self):
+        """Convenience attribute to return tag.test_value"""
+        return self.tag.test_value
+
+
+def as_iterargs(data):
+    if isinstance(data, tuple):
+        return data
+    else:
+        return [data]
+
+
+def all_continuous(vars):
+    """Check that vars not include discrete variables or BART variables, excepting ObservedRVs."""
+
+    vars_ = [var for var in vars if not (var.owner and isinstance(var.owner.op, Observed))]
+    if any(
+        [
+            (var.dtype in pm.discrete_types or (var.owner and isinstance(var.owner.op, pm.BART)))
+            for var in vars_
+        ]
+    ):
+        return False
+    else:
+        return True

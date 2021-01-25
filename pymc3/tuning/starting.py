@@ -154,15 +154,10 @@ def find_MAP(
             cost_func.progress.update(last_v)
             print()
 
-    mx0 = RaveledVars(mx0, x0.point_map_info)
-
     vars = get_default_varnames(
         [v.tag.value_var for v in model.unobserved_RVs], include_transformed
     )
-    mx = {
-        var.name: value
-        for var, value in zip(vars, model.fastfn(vars)(DictToArrayBijection.rmap(mx0)))
-    }
+    mx = {var.name: value for var, value in zip(vars, model.fastfn(vars)(bij.rmap(mx0)))}
 
     if return_raw:
         return mx, opt_result
