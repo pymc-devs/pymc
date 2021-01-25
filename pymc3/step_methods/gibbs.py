@@ -34,6 +34,7 @@ from numpy import (
 )
 from numpy.random import uniform
 
+from pymc3.distributions import logpt
 from pymc3.distributions.discrete import Categorical
 from pymc3.model import modelcontext
 from pymc3.step_methods.arraystep import ArrayStep, Competence
@@ -80,7 +81,11 @@ class ElemwiseCategorical(ArrayStep):
 
 
 def elemwise_logp(model, var):
-    terms = [v.logp_elemwiset for v in model.basic_RVs if var in graph_inputs([v.logpt])]
+    terms = []
+    for v in model.basic_RVs:
+        v_logp = logpt(v)
+        if var in graph_inputs([v_logp]):
+            terms.append(v_logp)
     return model.fn(add(*terms))
 
 

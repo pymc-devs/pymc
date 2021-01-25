@@ -71,7 +71,7 @@ class Family:
             if isinstance(val, (numbers.Number, np.ndarray, np.generic)):
                 priors[key] = val
             else:
-                priors[key] = model.Var(f"{name}{key}", val)
+                priors[key] = model.register_rv(val, f"{name}{key}")
 
         return priors
 
@@ -109,14 +109,16 @@ class StudentT(Family):
     link = identity
     likelihood = pm_dists.StudentT
     parent = "mu"
-    priors = {"lam": pm_dists.HalfCauchy.dist(beta=10, testval=1.0), "nu": 1}
+    # XXX: This won't be a healthy approach even after `HalfCauchy` is refactored
+    priors = None  # {"lam": pm_dists.HalfCauchy.dist(beta=10, testval=1.0), "nu": 1}
 
 
 class Normal(Family):
     link = identity
     likelihood = pm_dists.Normal
     parent = "mu"
-    priors = {"sd": pm_dists.HalfCauchy.dist(beta=10, testval=1.0)}
+    # XXX: This won't be a healthy approach even after `HalfCauchy` is refactored
+    priors = None  # {"sd": pm_dists.HalfCauchy.dist(beta=10, testval=1.0)}
 
 
 class Binomial(Family):
@@ -130,14 +132,16 @@ class Poisson(Family):
     link = exp
     likelihood = pm_dists.Poisson
     parent = "mu"
-    priors = {"mu": pm_dists.HalfCauchy.dist(beta=10, testval=1.0)}
+    # XXX: This won't be a healthy approach even after `HalfCauchy` is refactored
+    priors = None  # {"mu": pm_dists.HalfCauchy.dist(beta=10, testval=1.0)}
 
 
 class NegativeBinomial(Family):
     link = exp
     likelihood = pm_dists.NegativeBinomial
     parent = "mu"
-    priors = {
-        "mu": pm_dists.HalfCauchy.dist(beta=10, testval=1.0),
-        "alpha": pm_dists.HalfCauchy.dist(beta=10, testval=1.0),
-    }
+    # XXX: This won't be a healthy approach even after `HalfCauchy` is refactored
+    priors = None  # {
+    #     "mu": pm_dists.HalfCauchy.dist(beta=10, testval=1.0),
+    #     "alpha": pm_dists.HalfCauchy.dist(beta=10, testval=1.0),
+    # }

@@ -34,7 +34,6 @@ import numpy as np
 
 from aesara import function
 from aesara.graph.basic import Constant
-from aesara.tensor.type import TensorType as AesaraTensorType
 from aesara.tensor.var import TensorVariable
 
 from pymc3.distributions.shape_utils import (
@@ -60,7 +59,6 @@ __all__ = [
     "Continuous",
     "Discrete",
     "NoDistribution",
-    "TensorType",
     "draw_values",
     "generate_samples",
 ]
@@ -79,9 +77,10 @@ class _Unpickling:
 class Distribution:
     """Statistical distribution"""
 
+    rv_op = None
+    default_transform = None
+
     def __new__(cls, name, *args, **kwargs):
-        if name is _Unpickling:
-            return object.__new__(cls)  # for pickle
         try:
             model = Model.get_context()
         except TypeError:
@@ -92,58 +91,43 @@ class Distribution:
                 "for a standalone distribution."
             )
 
+        rng = kwargs.pop("rng", None)
+
+        if rng is None:
+            rng = model.default_rng
+
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
 
         data = kwargs.pop("observed", None)
-        cls.data = data
+
         if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
             raise TypeError("observed needs to be data but got: {}".format(type(data)))
+
         total_size = kwargs.pop("total_size", None)
 
         dims = kwargs.pop("dims", None)
-        has_shape = "shape" in kwargs
-        shape = kwargs.pop("shape", None)
-        if dims is not None:
-            if shape is not None:
-                raise ValueError("Specify only one of 'dims' or 'shape'")
-            if isinstance(dims, string_types):
-                dims = (dims,)
-            shape = model.shape_from_dims(dims)
 
-        # failsafe against 0-shapes
-        if shape is not None and any(np.atleast_1d(shape) <= 0):
-            raise ValueError(
-                f"Distribution initialized with invalid shape {shape}. This is not allowed."
-            )
+        if "shape" in kwargs:
+            raise DeprecationWarning("The `shape` keyword is deprecated; use `size`.")
 
-        # Some distributions do not accept shape=None
-        if has_shape or shape is not None:
-            dist = cls.dist(*args, **kwargs, shape=shape)
-        else:
-            dist = cls.dist(*args, **kwargs)
-        return model.Var(name, dist, data, total_size, dims=dims)
+        rv_out = cls.dist(*args, rng=rng, **kwargs)
 
-    def __getnewargs__(self):
-        return (_Unpickling,)
+        return model.register_rv(rv_out, name, data, total_size, dims=dims)
 
     @classmethod
-    def dist(cls, *args, **kwargs):
-        dist = object.__new__(cls)
-        dist.__init__(*args, **kwargs)
-        return dist
+    def dist(cls, dist_params, **kwargs):
+        transform = kwargs.pop("transform", cls.default_transform)
+        testval = kwargs.pop("testval", None)
 
-    def __init__(
-        self, shape, dtype, testval=None, defaults=(), transform=None, broadcastable=None, dims=None
-    ):
-        self.shape = np.atleast_1d(shape)
-        if False in (np.floor(self.shape) == self.shape):
-            raise TypeError("Expected int elements in shape")
-        self.dtype = dtype
-        self.type = TensorType(self.dtype, self.shape, broadcastable)
-        self.testval = testval
-        self.defaults = defaults
-        self.transform = transform
+        rv_var = cls.rv_op(*dist_params, **kwargs)
+
+        rv_var.tag.transform = transform
+
+        if testval is not None:
+            rv_var.tag.test_value = testval
+
+        return rv_var
 
     def default(self):
         return np.asarray(self.get_test_val(self.testval, self.defaults), self.dtype)
@@ -247,35 +231,7 @@ class Distribution:
         """Magic method name for IPython to use for LaTeX formatting."""
         return self._str_repr(formatting=formatting, **kwargs)
 
-    def logp_nojac(self, *args, **kwargs):
-        """Return the logp, but do not include a jacobian term for transforms.
-
-        If we use different parametrizations for the same distribution, we
-        need to add the determinant of the jacobian of the transformation
-        to make sure the densities still describe the same distribution.
-        However, MAP estimates are not invariant with respect to the
-        parametrization, we need to exclude the jacobian terms in this case.
-
-        This function should be overwritten in base classes for transformed
-        distributions.
-        """
-        return self.logp(*args, **kwargs)
-
-    def logp_sum(self, *args, **kwargs):
-        """Return the sum of the logp values for the given observations.
-
-        Subclasses can use this to improve the speed of logp evaluations
-        if only the sum of the logp values is needed.
-        """
-        return aet.sum(self.logp(*args, **kwargs))
-
     __latex__ = _repr_latex_
-
-
-def TensorType(dtype, shape, broadcastable=None):
-    if broadcastable is None:
-        broadcastable = np.atleast_1d(shape) == 1
-    return AesaraTensorType(str(dtype), broadcastable)
 
 
 class NoDistribution(Distribution):

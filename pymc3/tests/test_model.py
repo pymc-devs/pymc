@@ -25,9 +25,8 @@ import pytest
 import pymc3 as pm
 
 from pymc3 import Deterministic, Potential
-from pymc3.distributions import HalfCauchy, Normal, transforms
+from pymc3.distributions import Normal, transforms
 from pymc3.model import ValueGradFunction
-from pymc3.tests.helpers import select_by_precision
 
 
 class NewModel(pm.Model):
@@ -35,7 +34,7 @@ class NewModel(pm.Model):
         super().__init__(name, model)
         assert pm.modelcontext(None) is self
         # 1) init variables with Var method
-        self.Var("v1", pm.Normal.dist())
+        self.register_rv(pm.Normal.dist(), "v1")
         self.v2 = pm.Normal("v2", mu=0, sigma=1)
         # 2) Potentials and Deterministic variables with method too
         # be sure that names will not overlap with other same models
@@ -46,9 +45,9 @@ class NewModel(pm.Model):
 class DocstringModel(pm.Model):
     def __init__(self, mean=0, sigma=1, name="", model=None):
         super().__init__(name, model)
-        self.Var("v1", Normal.dist(mu=mean, sigma=sigma))
+        self.register_rv(Normal.dist(mu=mean, sigma=sigma), "v1")
         Normal("v2", mu=mean, sigma=sigma)
-        Normal("v3", mu=mean, sigma=HalfCauchy("sd", beta=10, testval=1.0))
+        Normal("v3", mu=mean, sigma=Normal("sd", mu=10, sigma=1, testval=1.0))
         Deterministic("v3_sq", self.v3 ** 2)
         Potential("p1", aet.constant(1))
 
@@ -59,12 +58,12 @@ class TestBaseModel:
             pm.Normal("v1")
             assert len(model.vars) == 1
             with pm.Model("sub") as submodel:
-                submodel.Var("v1", pm.Normal.dist())
+                submodel.register_rv(pm.Normal.dist(), "v1")
                 assert hasattr(submodel, "v1")
                 assert len(submodel.vars) == 1
             assert len(model.vars) == 2
             with submodel:
-                submodel.Var("v2", pm.Normal.dist())
+                submodel.register_rv(pm.Normal.dist(), "v2")
                 assert hasattr(submodel, "v2")
                 assert len(submodel.vars) == 2
             assert len(model.vars) == 3
@@ -82,7 +81,7 @@ class TestBaseModel:
             assert usermodel2._parent == model
             # you can enter in a context with submodel
             with usermodel2:
-                usermodel2.Var("v3", pm.Normal.dist())
+                usermodel2.register_rv(pm.Normal.dist(), "v3")
                 pm.Normal("v4")
                 # this variable is created in parent model too
         assert "another_v2" in model.named_vars
@@ -165,65 +164,6 @@ class TestObserved:
         assert x2.type == X.type
 
 
-class TestAesaraConfig:
-    def test_set_testval_raise(self):
-        with aesara.config.change_flags(compute_test_value="off"):
-            with pm.Model():
-                assert aesara.config.compute_test_value == "raise"
-            assert aesara.config.compute_test_value == "off"
-
-    def test_nested(self):
-        with aesara.config.change_flags(compute_test_value="off"):
-            with pm.Model(aesara_config={"compute_test_value": "ignore"}):
-                assert aesara.config.compute_test_value == "ignore"
-                with pm.Model(aesara_config={"compute_test_value": "warn"}):
-                    assert aesara.config.compute_test_value == "warn"
-                assert aesara.config.compute_test_value == "ignore"
-            assert aesara.config.compute_test_value == "off"
-
-
-def test_matrix_multiplication():
-    # Check matrix multiplication works between RVs, transformed RVs,
-    # Deterministics, and numpy arrays
-    with pm.Model() as linear_model:
-        matrix = pm.Normal("matrix", shape=(2, 2))
-        transformed = pm.Gamma("transformed", alpha=2, beta=1, shape=2)
-        rv_rv = pm.Deterministic("rv_rv", matrix @ transformed)
-        np_rv = pm.Deterministic("np_rv", np.ones((2, 2)) @ transformed)
-        rv_np = pm.Deterministic("rv_np", matrix @ np.ones(2))
-        rv_det = pm.Deterministic("rv_det", matrix @ rv_rv)
-        det_rv = pm.Deterministic("det_rv", rv_rv @ transformed)
-
-        posterior = pm.sample(10, tune=0, compute_convergence_checks=False, progressbar=False)
-        decimal = select_by_precision(7, 5)
-        for point in posterior.points():
-            npt.assert_almost_equal(
-                point["matrix"] @ point["transformed"],
-                point["rv_rv"],
-                decimal=decimal,
-            )
-            npt.assert_almost_equal(
-                np.ones((2, 2)) @ point["transformed"],
-                point["np_rv"],
-                decimal=decimal,
-            )
-            npt.assert_almost_equal(
-                point["matrix"] @ np.ones(2),
-                point["rv_np"],
-                decimal=decimal,
-            )
-            npt.assert_almost_equal(
-                point["matrix"] @ point["rv_rv"],
-                point["rv_det"],
-                decimal=decimal,
-            )
-            npt.assert_almost_equal(
-                point["rv_rv"] @ point["transformed"],
-                point["det_rv"],
-                decimal=decimal,
-            )
-
-
 def test_duplicate_vars():
     with pytest.raises(ValueError) as err:
         with pm.Model():
@@ -255,9 +195,15 @@ def test_empty_observed():
     data.values[:] = np.nan
     with pm.Model():
         a = pm.Normal("a", observed=data)
-        npt.assert_allclose(a.tag.test_value, np.zeros((2, 3)))
-        b = pm.Beta("b", alpha=1, beta=1, observed=data)
-        npt.assert_allclose(b.tag.test_value, np.ones((2, 3)) / 2)
+        # The masked observations are replaced by elements of the RV `a`,
+        # which means that they should all have the same sample test values
+        a_data = a.owner.inputs[1]
+        npt.assert_allclose(a.tag.test_value, a_data.tag.test_value)
+
+        # Let's try this again with another distribution
+        b = pm.Gamma("b", alpha=1, beta=1, observed=data)
+        b_data = b.owner.inputs[1]
+        npt.assert_allclose(b.tag.test_value, b_data.tag.test_value)
 
 
 class TestValueGradFunction(unittest.TestCase):
@@ -335,6 +281,7 @@ class TestValueGradFunction(unittest.TestCase):
         assert len(point_) == 3
         assert point_["extra1"] == 5
 
+    @pytest.mark.xfail(reason="Missing distributions")
     def test_edge_case(self):
         # Edge case discovered in #2948
         ndim = 3
@@ -353,6 +300,7 @@ class TestValueGradFunction(unittest.TestCase):
         assert dlogp.size == 4
         npt.assert_allclose(dlogp, 0.0, atol=1e-5)
 
+    @pytest.mark.xfail(reason="Missing distributions")
     def test_tensor_type_conversion(self):
         # case described in #3122
         X = np.random.binomial(1, 0.5, 10)
@@ -366,9 +314,11 @@ class TestValueGradFunction(unittest.TestCase):
 
         assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
 
+    @pytest.mark.xfail(reason="Missing distributions")
     def test_aesara_switch_broadcast_edge_cases(self):
-        # Tests against two subtle issues related to a previous bug in Aesara where aet.switch would not
-        # always broadcast tensors with single values https://github.com/pymc-devs/aesara/issues/270
+        # Tests against two subtle issues related to a previous bug in Theano
+        # where `tt.switch` would not always broadcast tensors with single
+        # values https://github.com/pymc-devs/aesara/issues/270
 
         # Known issue 1: https://github.com/pymc-devs/pymc3/issues/4389
         data = np.zeros(10)
@@ -395,6 +345,7 @@ class TestValueGradFunction(unittest.TestCase):
         npt.assert_allclose(m.dlogp([mu])({"mu": 0}), 2.499424682024436, rtol=1e-5)
 
 
+@pytest.mark.xfail(reason="DensityDist not supported")
 def test_multiple_observed_rv():
     "Test previously buggy MultiObservedRV comparison code."
     y1_data = np.random.randn(10)
@@ -410,6 +361,7 @@ def test_multiple_observed_rv():
     assert not model["x"] in model.vars
 
 
+@pytest.mark.xfail(reason="Functions depend on deprecated dshape/dsize")
 def test_tempered_logp_dlogp():
     with pm.Model() as model:
         pm.Normal("x")

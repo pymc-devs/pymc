@@ -25,6 +25,7 @@ from collections import defaultdict
 from copy import copy, deepcopy
 from typing import Any, Dict, Iterable, List, Optional, Set, Union, cast
 
+import aesara
 import aesara.gradient as tg
 import arviz
 import numpy as np
@@ -36,6 +37,7 @@ from fastprogress.fastprogress import progress_bar
 
 import pymc3 as pm
 
+from pymc3.aesaraf import inputvars
 from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
 from pymc3.distributions.distribution import draw_values
@@ -202,7 +204,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
             has_gradient = var.dtype not in discrete_types
             if has_gradient:
                 try:
-                    tg.grad(model.logpt, var)
+                    tg.grad(model.logpt, var.tag.value_var)
                 except (AttributeError, NotImplementedError, tg.NullTypeGradError):
                     has_gradient = False
             # select the best method
@@ -632,7 +634,9 @@ def sample(
 
     idata = None
     if compute_convergence_checks or return_inferencedata:
-        ikwargs = dict(model=model, save_warmup=not discard_tuned_samples)
+        # XXX: Arviz `log_likelihood` calculations need to be disabled until
+        # it's updated to work with v4.
+        ikwargs = dict(model=model, save_warmup=not discard_tuned_samples, log_likelihood=False)
         if idata_kwargs:
             ikwargs.update(idata_kwargs)
         idata = arviz.from_pymc3(trace, **ikwargs)
@@ -1938,11 +1942,20 @@ def sample_prior_predictive(
 
     if random_seed is not None:
         np.random.seed(random_seed)
-    names = get_default_varnames(vars_, include_transformed=False)
-    # draw_values fails with auto-transformed variables. transform them later!
-    values = draw_values([model[name] for name in names], size=samples)
 
-    data = {k: v for k, v in zip(names, values)}
+    names = get_default_varnames(vars_, include_transformed=False)
+
+    vars_to_sample = [model[name] for name in names]
+    inputs = [i for i in inputvars(vars_to_sample)]
+    sampler_fn = aesara.function(
+        inputs,
+        vars_to_sample,
+        allow_input_downcast=True,
+        accept_inplace=True,
+    )
+    values = zip(*[sampler_fn() for i in range(samples)])
+
+    data = {k: np.stack(v) for k, v in zip(names, values)}
     if data is None:
         raise AssertionError("No variables sampled: attempting to sample %s" % names)
 
@@ -1950,12 +1963,6 @@ def sample_prior_predictive(
     for var_name in vars_:
         if var_name in data:
             prior[var_name] = data[var_name]
-        elif is_transformed_name(var_name):
-            untransformed = get_untransformed_name(var_name)
-            if untransformed in data:
-                prior[var_name] = model[untransformed].transformation.forward_val(
-                    data[untransformed]
-                )
     return prior
 
 

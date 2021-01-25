@@ -17,15 +17,17 @@
 
 import warnings
 
+from copy import copy
+
 import aesara
 import aesara.tensor as aet
 import numpy as np
 import scipy
 
 from aesara.graph.basic import Apply
-from aesara.graph.op import Op, get_test_value
-from aesara.graph.utils import TestValueError
+from aesara.graph.op import Op
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
+from aesara.tensor.random.basic import DirichletRV, dirichlet
 from aesara.tensor.slinalg import Cholesky
 from aesara.tensor.type import TensorType
 from scipy import linalg, stats
@@ -33,7 +35,7 @@ from scipy import linalg, stats
 import pymc3 as pm
 
 from pymc3.aesaraf import floatX, intX
-from pymc3.distributions import transforms
+from pymc3.distributions import _logp, transforms
 from pymc3.distributions.continuous import ChiSquared, Normal
 from pymc3.distributions.dist_math import bound, factln, logpow
 from pymc3.distributions.distribution import (
@@ -62,6 +64,10 @@ __all__ = [
     "MatrixNormal",
     "KroneckerNormal",
 ]
+
+# FIXME: These are temporary hacks
+dirichlet = copy(dirichlet)
+dirichlet.inplace = True
 
 
 class _QuadFormBase(Continuous):
@@ -455,80 +461,45 @@ class Dirichlet(Continuous):
         Concentration parameters (a > 0).
     """
 
-    def __init__(self, a, transform=transforms.stick_breaking, *args, **kwargs):
+    rv_op = dirichlet
+    default_transform = transforms.stick_breaking
 
-        if kwargs.get("shape") is None:
-            warnings.warn(
-                (
-                    "Shape not explicitly set. "
-                    "Please, set the value using the `shape` keyword argument. "
-                    "Using the test value to infer the shape."
-                ),
-                DeprecationWarning,
-            )
-            try:
-                kwargs["shape"] = np.shape(get_test_value(a))
-            except TestValueError:
-                pass
+    @classmethod
+    def dist(cls, a, **kwargs):
 
-        super().__init__(transform=transform, *args, **kwargs)
+        a = aet.as_tensor_variable(a)
+        # mean = a / aet.sum(a)
+        # mode = aet.switch(aet.all(a > 1), (a - 1) / aet.sum(a - 1), np.nan)
 
-        self.a = a = aet.as_tensor_variable(a)
-        self.mean = a / aet.sum(a)
-
-        self.mode = aet.switch(aet.all(a > 1), (a - 1) / aet.sum(a - 1), np.nan)
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Dirichlet distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        a = draw_values([self.a], point=point, size=size)[0]
-        output_shape = to_tuple(size) + to_tuple(self.shape)
-        a = broadcast_dist_samples_to(to_shape=output_shape, samples=[a], size=size)[0]
-        samples = stats.gamma.rvs(a=a, size=output_shape)
-        samples = samples / samples.sum(-1, keepdims=True)
-        return samples
-
-    def logp(self, value):
-        """
-        Calculate log-probability of Dirichlet distribution
-        at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value for which log-probability is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        a = self.a
-
-        # only defined for sum(value) == 1
-        return bound(
-            aet.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(aet.sum(a, axis=-1)),
-            aet.all(value >= 0),
-            aet.all(value <= 1),
-            aet.all(a > 0),
-            broadcast_conditions=False,
-        )
+        return super().dist([a], **kwargs)
 
     def _distr_parameters_for_repr(self):
         return ["a"]
+
+
+@_logp.register(DirichletRV)
+def dirichlet_logp(op, value, a):
+    """
+    Calculate log-probability of Dirichlet distribution
+    at specified value.
+
+    Parameters
+    ----------
+    value: numeric
+        Value for which log-probability is calculated.
+
+    Returns
+    -------
+    TensorVariable
+    """
+    # only defined for sum(value) == 1
+    return bound(
+        aet.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(aet.sum(a, axis=-1)),
+        aet.all(value >= 0),
+        aet.all(value <= 1),
+        aet.all(a > 0),
+        broadcast_conditions=False,
+    )
 
 
 class Multinomial(Discrete):

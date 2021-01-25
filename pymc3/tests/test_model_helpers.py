@@ -128,7 +128,7 @@ class TestHelperFunc:
             fake_distribution.testval = None
 
         # Alias the function to be tested
-        func = pm.model.as_tensor
+        func = pm.model.make_obs_var
 
         # Check function behavior using the various inputs
         dense_output = func(dense_input, input_name, fake_model, fake_distribution)

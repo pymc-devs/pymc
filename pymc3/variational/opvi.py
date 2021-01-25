@@ -1618,7 +1618,8 @@ class Approximation(WithMemoization):
             Samples drawn from variational posterior.
         """
         vars_sampled = get_default_varnames(
-            self.model.unobserved_RVs, include_transformed=include_transformed
+            [v.tag.value_var for v in self.model.unobserved_RVs],
+            include_transformed=include_transformed,
         )
         samples = self.sample_dict_fn(draws)  # type: dict
         points = ({name: records[i] for name, records in samples.items()} for i in range(draws))
