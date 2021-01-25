@@ -90,7 +90,14 @@ class BaseHMC(arraystep.GradientSharedStep):
         self.adapt_step_size = adapt_step_size
         self.Emax = Emax
         self.iter_count = 0
-        size = self._logp_dlogp_func.size
+
+        # We're using the initial/test point to determine the (initial) step
+        # size.
+        # TODO: If the dimensions of these terms change, the step size
+        # dimension-scaling should change as well, no?
+        test_point = model.test_point
+        continuous_vars = [test_point[v.name] for v in model.cont_vars]
+        size = sum(v.size for v in continuous_vars)
 
         self.step_size = step_scale / (size ** 0.25)
         self.step_adapt = step_sizes.DualAverageAdaptation(

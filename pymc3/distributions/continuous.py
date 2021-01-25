@@ -25,8 +25,9 @@ import theano.tensor as tt
 from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.special import expit
+from theano.tensor.random.basic import NormalRV, UniformRV, normal, uniform
 
-from pymc3.distributions import transforms
+from pymc3.distributions import _logcdf, _logp, transforms
 from pymc3.distributions.dist_math import (
     SplineWrapper,
     alltrue_elemwise,
@@ -82,25 +83,29 @@ __all__ = [
     "AsymmetricLaplace",
 ]
 
+# FIXME: These are temporary hacks
+normal.inplace = True
+uniform.inplace = True
+
 
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
 
-    def __init__(self, transform=transforms.log, *args, **kwargs):
-        super().__init__(transform=transform, *args, **kwargs)
+    default_transform = transforms.log
 
 
 class UnitContinuous(Continuous):
     """Base class for continuous distributions on [0,1]"""
 
-    def __init__(self, transform=transforms.logodds, *args, **kwargs):
-        super().__init__(transform=transform, *args, **kwargs)
+    default_transform = transforms.logodds
 
 
 class BoundedContinuous(Continuous):
     """Base class for bounded continuous distributions"""
 
-    def __init__(self, transform="auto", lower=None, upper=None, *args, **kwargs):
+    default_transform = "auto"
+
+    def create_transform(transform="auto", lower=None, upper=None):
 
         lower = tt.as_tensor_variable(lower) if lower is not None else None
         upper = tt.as_tensor_variable(upper) if upper is not None else None
@@ -115,7 +120,7 @@ class BoundedContinuous(Continuous):
             else:
                 transform = transforms.interval(lower, upper)
 
-        super().__init__(transform=transform, *args, **kwargs)
+        return transform
 
 
 def assert_negative_support(var, label, distname, value=-1e-6):
@@ -223,81 +228,64 @@ class Uniform(BoundedContinuous):
         Upper limit.
     """
 
-    def __init__(self, lower=0, upper=1, *args, **kwargs):
-        self.lower = lower = tt.as_tensor_variable(floatX(lower))
-        self.upper = upper = tt.as_tensor_variable(floatX(upper))
-        self.mean = (upper + lower) / 2.0
-        self.median = self.mean
+    @classmethod
+    def dist(cls, lower=0, upper=1, **kwargs):
+        lower = tt.as_tensor_variable(floatX(lower))
+        upper = tt.as_tensor_variable(floatX(upper))
+        # mean = (upper + lower) / 2.0
+        # median = self.mean
 
-        super().__init__(lower=lower, upper=upper, *args, **kwargs)
+        transform = kwargs.get("transform", cls.default_transform)
+        transform = cls.create_transform(transform, lower, upper)
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Uniform distribution.
+        rv_var = uniform(lower, upper, **kwargs)
+        rv_var.tag.transform = transform
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
+        return rv_var
 
-        Returns
-        -------
-        array
-        """
 
-        lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
-        return generate_samples(
-            stats.uniform.rvs, loc=lower, scale=upper - lower, dist_shape=self.shape, size=size
-        )
+@_logp.register(UniformRV)
+def uniform_logp(op, value, lower, upper):
+    """
+    Calculate log-probability of Uniform distribution at specified value.
 
-    def logp(self, value):
-        """
-        Calculate log-probability of Uniform distribution at specified value.
+    Parameters
+    ----------
+    value: numeric
+        Value for which log-probability is calculated.
 
-        Parameters
-        ----------
-        value: numeric
-            Value for which log-probability is calculated.
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(-tt.log(upper - lower), value >= lower, value <= upper)
 
-        Returns
-        -------
-        TensorVariable
-        """
-        lower = self.lower
-        upper = self.upper
-        return bound(-tt.log(upper - lower), value >= lower, value <= upper)
 
-    def logcdf(self, value):
-        """
-        Compute the log of the cumulative distribution function for Uniform distribution
-        at the specified value.
+@_logcdf.register(UniformRV)
+def uniform_logcdf(op, value, lower, upper):
+    """
+    Compute the log of the cumulative distribution function for Uniform distribution
+    at the specified value.
 
-        Parameters
-        ----------
-        value: numeric or np.ndarray or theano.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+    Parameters
+    ----------
+    value: numeric or np.ndarray or theano.tensor
+        Value(s) for which log CDF is calculated. If the log CDF for multiple
+        values are desired the values must be provided in a numpy array or theano tensor.
 
-        Returns
-        -------
-        TensorVariable
-        """
-        lower = self.lower
-        upper = self.upper
-
-        return tt.switch(
-            tt.lt(value, lower) | tt.lt(upper, lower),
-            -np.inf,
-            tt.switch(
-                tt.lt(value, upper),
-                tt.log(value - lower) - tt.log(upper - lower),
-                0,
-            ),
-        )
+    Returns
+    -------
+    TensorVariable
+    """
+    return tt.switch(
+        tt.lt(value, lower) | tt.lt(upper, lower),
+        -np.inf,
+        tt.switch(
+            tt.lt(value, upper),
+            tt.log(value - lower) - tt.log(upper - lower),
+            0,
+        ),
+    )
 
 
 class Flat(Continuous):
@@ -478,87 +466,67 @@ class Normal(Continuous):
             x = pm.Normal('x', mu=0, tau=1/23)
     """
 
-    def __init__(self, mu=0, sigma=None, tau=None, sd=None, **kwargs):
+    @classmethod
+    def dist(cls, mu=0, sigma=None, tau=None, sd=None, **kwargs):
         if sd is not None:
             sigma = sd
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = self.sd = tt.as_tensor_variable(sigma)
-        self.tau = tt.as_tensor_variable(tau)
+        sigma = tt.as_tensor_variable(sigma)
 
-        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.variance = 1.0 / self.tau
+        # sd = sigma
+        # tau = tt.as_tensor_variable(tau)
+        # mean = median = mode = mu = tt.as_tensor_variable(floatX(mu))
+        # variance = 1.0 / self.tau
 
         assert_negative_support(sigma, "sigma", "Normal")
-        assert_negative_support(tau, "tau", "Normal")
+        # assert_negative_support(tau, "tau", "Normal")
 
-        super().__init__(**kwargs)
+        rv_var = normal(mu, sigma, **kwargs)
+        rv_var.tag.transform = kwargs.get("transform", cls.default_transform)
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Normal distribution.
+        return rv_var
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
 
-        Returns
-        -------
-        array
-        """
-        mu, tau, _ = draw_values([self.mu, self.tau, self.sigma], point=point, size=size)
-        return generate_samples(
-            stats.norm.rvs, loc=mu, scale=tau ** -0.5, dist_shape=self.shape, size=size
-        )
+@_logp.register(NormalRV)
+def normal_logp(op, value, mu, sigma):
+    """
+    Calculate log-probability of Normal distribution at specified value.
 
-    def logp(self, value):
-        """
-        Calculate log-probability of Normal distribution at specified value.
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or theano tensor
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+    Returns
+    -------
+    TensorVariable
+    """
+    tau, sigma = get_tau_sigma(tau=None, sigma=sigma)
 
-        Returns
-        -------
-        TensorVariable
-        """
-        sigma = self.sigma
-        tau = self.tau
-        mu = self.mu
+    return bound((-tau * (value - mu) ** 2 + tt.log(tau / np.pi / 2.0)) / 2.0, sigma > 0)
 
-        return bound((-tau * (value - mu) ** 2 + tt.log(tau / np.pi / 2.0)) / 2.0, sigma > 0)
 
-    def _distr_parameters_for_repr(self):
-        return ["mu", "sigma"]
+@_logcdf.register(NormalRV)
+def normal_logcdf(op, value, mu, sigma):
+    """
+    Compute the log of the cumulative distribution function for Normal distribution
+    at the specified value.
 
-    def logcdf(self, value):
-        """
-        Compute the log of the cumulative distribution function for Normal distribution
-        at the specified value.
+    Parameters
+    ----------
+    value: numeric or np.ndarray or theano.tensor
+        Value(s) for which log CDF is calculated. If the log CDF for multiple
+        values are desired the values must be provided in a numpy array or theano tensor.
 
-        Parameters
-        ----------
-        value: numeric or np.ndarray or theano.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        mu = self.mu
-        sigma = self.sigma
-        return bound(
-            normal_lcdf(mu, sigma, value),
-            0 < sigma,
-        )
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(
+        normal_lcdf(mu, sigma, value),
+        0 < sigma,
+    )
 
 
 class TruncatedNormal(BoundedContinuous):

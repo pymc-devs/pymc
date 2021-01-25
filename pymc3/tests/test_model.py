@@ -35,7 +35,7 @@ class NewModel(pm.Model):
         super().__init__(name, model)
         assert pm.modelcontext(None) is self
         # 1) init variables with Var method
-        self.Var("v1", pm.Normal.dist())
+        self.register_rv("v1", pm.Normal.dist())
         self.v2 = pm.Normal("v2", mu=0, sigma=1)
         # 2) Potentials and Deterministic variables with method too
         # be sure that names will not overlap with other same models
@@ -46,7 +46,7 @@ class NewModel(pm.Model):
 class DocstringModel(pm.Model):
     def __init__(self, mean=0, sigma=1, name="", model=None):
         super().__init__(name, model)
-        self.Var("v1", Normal.dist(mu=mean, sigma=sigma))
+        self.register_rv("v1", Normal.dist(mu=mean, sigma=sigma))
         Normal("v2", mu=mean, sigma=sigma)
         Normal("v3", mu=mean, sigma=HalfCauchy("sd", beta=10, testval=1.0))
         Deterministic("v3_sq", self.v3 ** 2)
@@ -59,12 +59,12 @@ class TestBaseModel:
             pm.Normal("v1")
             assert len(model.vars) == 1
             with pm.Model("sub") as submodel:
-                submodel.Var("v1", pm.Normal.dist())
+                submodel.register_rv("v1", pm.Normal.dist())
                 assert hasattr(submodel, "v1")
                 assert len(submodel.vars) == 1
             assert len(model.vars) == 2
             with submodel:
-                submodel.Var("v2", pm.Normal.dist())
+                submodel.register_rv("v2", pm.Normal.dist())
                 assert hasattr(submodel, "v2")
                 assert len(submodel.vars) == 2
             assert len(model.vars) == 3
@@ -82,7 +82,7 @@ class TestBaseModel:
             assert usermodel2._parent == model
             # you can enter in a context with submodel
             with usermodel2:
-                usermodel2.Var("v3", pm.Normal.dist())
+                usermodel2.register_rv("v3", pm.Normal.dist())
                 pm.Normal("v4")
                 # this variable is created in parent model too
         assert "another_v2" in model.named_vars

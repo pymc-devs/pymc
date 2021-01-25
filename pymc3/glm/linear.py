@@ -81,13 +81,15 @@ class LinearComponent(Model):
                 if name in vars:
                     v = Deterministic(name, vars[name])
                 else:
-                    v = self.Var(name=name, dist=priors.get(name, self.default_intercept_prior))
+                    v = self.register_rv(
+                        name=name, dist=priors.get(name, self.default_intercept_prior)
+                    )
                 coeffs.append(v)
             else:
                 if name in vars:
                     v = Deterministic(name, vars[name])
                 else:
-                    v = self.Var(
+                    v = self.register_rv(
                         name=name,
                         dist=priors.get(
                             name, priors.get("Regressor", self.default_regressor_prior)

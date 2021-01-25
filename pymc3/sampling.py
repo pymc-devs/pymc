@@ -28,6 +28,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Union, cast
 import arviz
 import numpy as np
 import packaging
+import theano
 import theano.gradient as tg
 import xarray
 
@@ -57,6 +58,7 @@ from pymc3.step_methods import (
 )
 from pymc3.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc3.step_methods.hmc import quadpotential
+from pymc3.theanof import inputvars
 from pymc3.util import (
     chains_and_samples,
     check_start_vals,
@@ -1937,11 +1939,20 @@ def sample_prior_predictive(
 
     if random_seed is not None:
         np.random.seed(random_seed)
-    names = get_default_varnames(vars_, include_transformed=False)
-    # draw_values fails with auto-transformed variables. transform them later!
-    values = draw_values([model[name] for name in names], size=samples)
 
-    data = {k: v for k, v in zip(names, values)}
+    names = get_default_varnames(vars_, include_transformed=False)
+
+    vars_to_sample = [model[name] for name in names]
+    inputs = [i for i in inputvars(vars_to_sample)]
+    sampler_fn = theano.function(
+        inputs,
+        vars_to_sample,
+        allow_input_downcast=True,
+        accept_inplace=True,
+    )
+    values = zip(*[sampler_fn() for i in range(samples)])
+
+    data = {k: np.stack(v) for k, v in zip(names, values)}
     if data is None:
         raise AssertionError("No variables sampled: attempting to sample %s" % names)
 

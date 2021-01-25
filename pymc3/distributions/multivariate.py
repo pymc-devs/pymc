@@ -24,14 +24,14 @@ import theano.tensor as tt
 
 from scipy import linalg, stats
 from theano.graph.basic import Apply
-from theano.graph.op import Op, get_test_value
-from theano.graph.utils import TestValueError
+from theano.graph.op import Op
 from theano.tensor.nlinalg import det, eigh, matrix_inverse, trace
+from theano.tensor.random.basic import DirichletRV, dirichlet
 from theano.tensor.slinalg import Cholesky
 
 import pymc3 as pm
 
-from pymc3.distributions import transforms
+from pymc3.distributions import _logp, transforms
 from pymc3.distributions.continuous import ChiSquared, Normal
 from pymc3.distributions.dist_math import bound, factln, logpow
 from pymc3.distributions.distribution import (
@@ -61,6 +61,9 @@ __all__ = [
     "MatrixNormal",
     "KroneckerNormal",
 ]
+
+# FIXME: These are temporary hacks
+dirichlet.inplace = True
 
 
 class _QuadFormBase(Continuous):
@@ -454,81 +457,48 @@ class Dirichlet(Continuous):
         Concentration parameters (a > 0).
     """
 
-    def __init__(self, a, transform=transforms.stick_breaking, *args, **kwargs):
+    default_transform = transforms.stick_breaking
 
-        if kwargs.get("shape") is None:
-            warnings.warn(
-                (
-                    "Shape not explicitly set. "
-                    "Please, set the value using the `shape` keyword argument. "
-                    "Using the test value to infer the shape."
-                ),
-                DeprecationWarning,
-            )
-            try:
-                kwargs["shape"] = np.shape(get_test_value(a))
-            except TestValueError:
-                pass
+    @classmethod
+    def dist(cls, a, **kwargs):
 
-        super().__init__(transform=transform, *args, **kwargs)
+        a = tt.as_tensor_variable(a)
+        # mean = a / tt.sum(a)
+        # mode = tt.switch(tt.all(a > 1), (a - 1) / tt.sum(a - 1), np.nan)
 
-        self.a = a = tt.as_tensor_variable(a)
-        self.mean = a / tt.sum(a)
+        rv_var = dirichlet(a, *kwargs)
+        rv_var.tag.transform = kwargs.get("transform", cls.default_transform)
 
-        self.mode = tt.switch(tt.all(a > 1), (a - 1) / tt.sum(a - 1), np.nan)
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Dirichlet distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        a = draw_values([self.a], point=point, size=size)[0]
-        output_shape = to_tuple(size) + to_tuple(self.shape)
-        a = broadcast_dist_samples_to(to_shape=output_shape, samples=[a], size=size)[0]
-        samples = stats.gamma.rvs(a=a, size=output_shape)
-        samples = samples / samples.sum(-1, keepdims=True)
-        return samples
-
-    def logp(self, value):
-        """
-        Calculate log-probability of Dirichlet distribution
-        at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value for which log-probability is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        a = self.a
-
-        # only defined for sum(value) == 1
-        return bound(
-            tt.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(tt.sum(a, axis=-1)),
-            tt.all(value >= 0),
-            tt.all(value <= 1),
-            np.logical_not(a.broadcastable),
-            tt.all(a > 0),
-            broadcast_conditions=False,
-        )
+        return rv_var
 
     def _distr_parameters_for_repr(self):
         return ["a"]
+
+
+@_logp.register(DirichletRV)
+def dirichlet_logp(op, value, a):
+    """
+    Calculate log-probability of Dirichlet distribution
+    at specified value.
+
+    Parameters
+    ----------
+    value: numeric
+        Value for which log-probability is calculated.
+
+    Returns
+    -------
+    TensorVariable
+    """
+    # only defined for sum(value) == 1
+    return bound(
+        tt.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(tt.sum(a, axis=-1)),
+        tt.all(value >= 0),
+        tt.all(value <= 1),
+        np.logical_not(a.broadcastable),
+        tt.all(a > 0),
+        broadcast_conditions=False,
+    )
 
 
 class Multinomial(Discrete):

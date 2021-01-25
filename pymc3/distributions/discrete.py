@@ -18,7 +18,9 @@ import numpy as np
 import theano.tensor as tt
 
 from scipy import stats
+from theano.tensor.random.basic import CategoricalRV, categorical
 
+from pymc3.distributions import _logp
 from pymc3.distributions.dist_math import (
     betaln,
     binomln,
@@ -29,7 +31,6 @@ from pymc3.distributions.dist_math import (
     logpow,
     normal_lccdf,
     normal_lcdf,
-    random_choice,
 )
 from pymc3.distributions.distribution import Discrete, draw_values, generate_samples
 from pymc3.distributions.shape_utils import broadcast_distribution_samples
@@ -1338,89 +1339,62 @@ class Categorical(Discrete):
         rescaled otherwise.
     """
 
-    def __init__(self, p, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        try:
-            self.k = tt.shape(p)[-1].tag.test_value
-        except AttributeError:
-            self.k = tt.shape(p)[-1]
+    @classmethod
+    def dist(cls, p, **kwargs):
+
         p = tt.as_tensor_variable(floatX(p))
 
-        # From #2082, it may be dangerous to automatically rescale p at this
-        # point without checking for positiveness
-        self.p = p
-        self.mode = tt.argmax(p, axis=-1)
-        if self.mode.ndim == 1:
-            self.mode = tt.squeeze(self.mode)
+        # mode = tt.argmax(p, axis=-1)
+        # if mode.ndim == 1:
+        #     mode = tt.squeeze(mode)
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from Categorical distribution.
+        transform = kwargs.get("transform", cls.default_transform)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
+        rv_var = categorical(p, **kwargs)
+        rv_var.tag.transform = transform
 
-        Returns
-        -------
-        array
-        """
-        p, k = draw_values([self.p, self.k], point=point, size=size)
-        p = p / np.sum(p, axis=-1, keepdims=True)
+        return rv_var
 
-        return generate_samples(
-            random_choice,
-            p=p,
-            broadcast_shape=p.shape[:-1],
-            dist_shape=self.shape,
-            size=size,
-        )
 
-    def logp(self, value):
-        r"""
-        Calculate log-probability of Categorical distribution at specified value.
+@_logp.register(CategoricalRV)
+def categorical_logp(op, value, p_, upper):
+    r"""
+    Calculate log-probability of Categorical distribution at specified value.
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or theano tensor
 
-        Returns
-        -------
-        TensorVariable
-        """
-        p_ = self.p
-        k = self.k
+    Returns
+    -------
+    TensorVariable
+    """
+    p_ = self.p
+    k = self.k
 
-        # Clip values before using them for indexing
-        value_clip = tt.clip(value, 0, k - 1)
+    # Clip values before using them for indexing
+    value_clip = tt.clip(value, 0, k - 1)
 
-        p = p_ / tt.sum(p_, axis=-1, keepdims=True)
+    p = p_ / tt.sum(p_, axis=-1, keepdims=True)
 
-        if p.ndim > 1:
-            if p.ndim > value_clip.ndim:
-                value_clip = tt.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
-            elif p.ndim < value_clip.ndim:
-                p = tt.shape_padleft(p, value_clip.ndim - p_.ndim)
-            pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
-            a = tt.log(
-                take_along_axis(
-                    p.dimshuffle(pattern),
-                    value_clip,
-                )
+    if p.ndim > 1:
+        if p.ndim > value_clip.ndim:
+            value_clip = tt.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
+        elif p.ndim < value_clip.ndim:
+            p = tt.shape_padleft(p, value_clip.ndim - p_.ndim)
+        pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
+        a = tt.log(
+            take_along_axis(
+                p.dimshuffle(pattern),
+                value_clip,
             )
-        else:
-            a = tt.log(p[value_clip])
-
-        return bound(
-            a, value >= 0, value <= (k - 1), tt.all(p_ >= 0, axis=-1), tt.all(p <= 1, axis=-1)
         )
+    else:
+        a = tt.log(p[value_clip])
+
+    return bound(a, value >= 0, value <= (k - 1), tt.all(p_ >= 0, axis=-1), tt.all(p <= 1, axis=-1))
 
 
 class Constant(Discrete):
