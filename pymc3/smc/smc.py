@@ -343,7 +343,9 @@ class PseudoLikelihood:
         self.distance = distance
         self.sum_stat = sum_stat
         self.unobserved_RVs = [v.name for v in self.model.unobserved_RVs]
-        self.get_unobserved_fn = self.model.fastfn(self.model.unobserved_RVs)
+        self.get_unobserved_fn = self.model.fastfn(
+            [v.tag.value_var for v in self.model.unobserved_RVs]
+        )
         self.size = size
         self.save_sim_data = save_sim_data
         self.save_log_pseudolikelihood = save_log_pseudolikelihood
