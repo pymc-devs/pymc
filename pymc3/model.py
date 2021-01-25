@@ -1695,10 +1695,10 @@ def pandas_to_array(data):
     XXX: When `data` is a generator, this will return a Theano tensor!
 
     """
-    if hasattr(data, "to_numpy"):
+    if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
         # typically, but not limited to pandas objects
         vals = data.to_numpy()
-        mask = np.isnan(vals)
+        mask = data.isnull().to_numpy()
         if mask.any():
             # there are missing values
             ret = np.ma.MaskedArray(vals, mask)
