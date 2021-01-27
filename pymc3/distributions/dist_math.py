@@ -83,10 +83,14 @@ def bound(logp, *conditions, **kwargs):
 
     if broadcast_conditions:
         alltrue = alltrue_elemwise
+        bound_switch_name = 'elemwise_bound_switch'
     else:
         alltrue = alltrue_scalar
+        bound_switch_name = 'scalar_bound_switch'
 
-    return tt.switch(alltrue(conditions), logp, -np.inf)
+    bound_switch = tt.switch(alltrue(conditions), logp, -np.inf)
+    bound_switch.name = bound_switch_name
+    return bound_switch
 
 
 def alltrue_elemwise(vals):
@@ -97,7 +101,12 @@ def alltrue_elemwise(vals):
 
 
 def alltrue_scalar(vals):
-    return tt.all([tt.all(1 * val) for val in vals])
+    ret = []
+    for val in vals:
+        comp = tt.all(1 * val)
+        comp.name = 'scalar_bound'
+        ret.append(comp)
+    return tt.all(ret)
 
 
 def logpow(x, m):

@@ -224,8 +224,9 @@ class Uniform(BoundedContinuous):
     """
 
     def __init__(self, lower=0, upper=1, *args, **kwargs):
-        self.lower = lower = tt.as_tensor_variable(floatX(lower))
-        self.upper = upper = tt.as_tensor_variable(floatX(upper))
+        # TODO: This does not show up on logpt :(
+        self.lower = lower = tt.as_tensor_variable(floatX(lower), name='lower')
+        self.upper = upper = tt.as_tensor_variable(floatX(upper), name='upper')
         self.mean = (upper + lower) / 2.0
         self.median = self.mean
 

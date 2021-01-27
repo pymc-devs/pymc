@@ -235,7 +235,9 @@ def check_start_vals(start, model):
             raise SamplingError(
                 "Initial evaluation of model at starting point failed!\n"
                 "Starting values:\n{}\n\n"
-                "Initial evaluation results:\n{}".format(elem, str(initial_eval))
+                "Initial evaluation results:\n{}"
+                "pymc3.model_debug.check_bounds can be used to identify common issues\n"
+                .format(elem, str(initial_eval))
             )
 
 
