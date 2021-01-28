@@ -8,6 +8,7 @@
 
 ### Maintenance
 - `math.log1mexp_numpy` no longer raises RuntimeWarning when given very small inputs. These were commonly observed during NUTS sampling (see [#4428](https://github.com/pymc-devs/pymc3/pull/4428)).
+- `ScalarSharedVariable` can now be used as an input to other RVs directly.(see [#4445](https://github.com/pymc-devs/pymc3/pull/4445))
 
 ## PyMC3 3.11.0 (21 January 2021)
 
