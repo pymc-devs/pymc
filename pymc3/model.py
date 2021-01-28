@@ -1695,16 +1695,31 @@ def pandas_to_array(data):
     XXX: When `data` is a generator, this will return a Theano tensor!
 
     """
-    if hasattr(data, "values"):  # pandas
-        if data.isnull().any().any():  # missing values
-            ret = np.ma.MaskedArray(data.values, data.isnull().values)
+    if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
+        # typically, but not limited to pandas objects
+        vals = data.to_numpy()
+        mask = data.isnull().to_numpy()
+        if mask.any():
+            # there are missing values
+            ret = np.ma.MaskedArray(vals, mask)
         else:
-            ret = data.values
-    elif hasattr(data, "mask"):
-        if data.mask.any():
-            ret = data
-        else:  # empty mask
-            ret = data.filled()
+            ret = vals
+    elif isinstance(data, np.ndarray):
+        if isinstance(data, np.ma.MaskedArray):
+            if not data.mask.any():
+                # empty mask
+                ret = data.filled()
+            else:
+                # already masked and rightly so
+                ret = data
+        else:
+            # already a ndarray, but not masked
+            mask = np.isnan(data)
+            if np.any(mask):
+                ret = np.ma.MaskedArray(data, mask)
+            else:
+                # no masking required
+                ret = data
     elif isinstance(data, theano.graph.basic.Variable):
         ret = data
     elif sps.issparse(data):

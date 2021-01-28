@@ -1,10 +1,11 @@
 # Release Notes
 
-## PyMC3 vNext (on deck)
+## PyMC3 vNext (3.11.1)
 
 ### Breaking Changes
 
 ### New Features
+- Automatic imputations now also work with `ndarray` data, not just `pd.Series` or `pd.DataFrame` (see[#4439](https://github.com/pymc-devs/pymc3/pull/4439)).
 - `pymc3.sampling_jax.sample_numpyro_nuts` now returns samples from transformed random variables, rather than from the unconstrained representation (see [#4427](https://github.com/pymc-devs/pymc3/pull/4427)).
 
 ### Maintenance
