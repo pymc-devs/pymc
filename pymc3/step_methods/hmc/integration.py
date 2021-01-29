@@ -18,6 +18,8 @@ import numpy as np
 
 from scipy import linalg
 
+from pymc3.blocking import RaveledVars
+
 State = namedtuple("State", "q, p, v, q_grad, energy, model_logp")
 
 
@@ -39,11 +41,13 @@ class CpuLeapfrogIntegrator:
 
     def compute_state(self, q, p):
         """Compute Hamiltonian functions using a position and momentum."""
-        if q.dtype != self._dtype or p.dtype != self._dtype:
+        if q.data.dtype != self._dtype or p.data.dtype != self._dtype:
             raise ValueError("Invalid dtype. Must be %s" % self._dtype)
+
         logp, dlogp = self._logp_dlogp_func(q)
-        v = self._potential.velocity(p)
-        kinetic = self._potential.energy(p, velocity=v)
+
+        v = self._potential.velocity(p.data)
+        kinetic = self._potential.energy(p.data, velocity=v)
         energy = kinetic - logp
         return State(q, p, v, dlogp, energy, logp)
 
@@ -83,8 +87,8 @@ class CpuLeapfrogIntegrator:
         axpy = linalg.blas.get_blas_funcs("axpy", dtype=self._dtype)
         pot = self._potential
 
-        q_new = state.q.copy()
-        p_new = state.p.copy()
+        q_new = state.q.data.copy()
+        p_new = state.p.data.copy()
         v_new = np.empty_like(q_new)
         q_new_grad = np.empty_like(q_new)
 
@@ -99,12 +103,15 @@ class CpuLeapfrogIntegrator:
         # q_new = q + epsilon * v_new
         axpy(v_new, q_new, a=epsilon)
 
-        logp = self._logp_dlogp_func(q_new, q_new_grad)
+        p_new = RaveledVars(p_new, state.p.point_map_info)
+        q_new = RaveledVars(q_new, state.q.point_map_info)
+
+        logp = self._logp_dlogp_func(q_new, grad_out=q_new_grad)
 
         # p_new = p_new + dt * q_new_grad
-        axpy(q_new_grad, p_new, a=dt)
+        axpy(q_new_grad, p_new.data, a=dt)
 
-        kinetic = pot.velocity_energy(p_new, v_new)
+        kinetic = pot.velocity_energy(p_new.data, v_new)
         energy = kinetic - logp
 
         return State(q_new, p_new, v_new, q_new_grad, energy, logp)
