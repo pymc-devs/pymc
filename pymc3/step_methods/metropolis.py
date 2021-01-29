@@ -617,7 +617,7 @@ class DEMetropolis(PopulationArrayStepShared):
         vars = pm.inputvars(vars)
 
         if S is None:
-            S = np.ones(model.ndim)
+            S = np.ones(model.size)
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
@@ -627,7 +627,7 @@ class DEMetropolis(PopulationArrayStepShared):
         self.scaling = np.atleast_1d(scaling).astype("d")
         if lamb is None:
             # default to the optimal lambda for normally distributed targets
-            lamb = 2.38 / np.sqrt(2 * model.ndim)
+            lamb = 2.38 / np.sqrt(2 * model.size)
         self.lamb = float(lamb)
         if tune not in {None, "scaling", "lambda"}:
             raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')
@@ -758,7 +758,7 @@ class DEMetropolisZ(ArrayStepShared):
         vars = pm.inputvars(vars)
 
         if S is None:
-            S = np.ones(model.ndim)
+            S = np.ones(model.size)
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
@@ -768,7 +768,7 @@ class DEMetropolisZ(ArrayStepShared):
         self.scaling = np.atleast_1d(scaling).astype("d")
         if lamb is None:
             # default to the optimal lambda for normally distributed targets
-            lamb = 2.38 / np.sqrt(2 * model.ndim)
+            lamb = 2.38 / np.sqrt(2 * model.size)
         self.lamb = float(lamb)
         if tune not in {None, "scaling", "lambda"}:
             raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')
