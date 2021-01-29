@@ -1348,7 +1348,7 @@ class Categorical(Discrete):
 
 
 @_logp.register(CategoricalRV)
-def categorical_logp(op, value, p_, upper):
+def categorical_logp(op, value, p, upper):
     r"""
     Calculate log-probability of Categorical distribution at specified value.
 

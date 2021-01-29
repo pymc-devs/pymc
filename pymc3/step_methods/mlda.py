@@ -24,6 +24,7 @@ import numpy as np
 
 import pymc3 as pm
 
+from pymc3.blocking import DictToArrayBijection
 from pymc3.model import Model
 from pymc3.step_methods.arraystep import ArrayStepShared, Competence, metrop_select
 from pymc3.step_methods.compound import CompoundStep
@@ -719,7 +720,7 @@ class MLDA(ArrayStepShared):
 
         # Convert current sample from numpy array ->
         # dict before feeding to proposal
-        q0_dict = self.bij.rmap(q0)
+        q0_dict = DictToArrayBijection.rmap(q0)
 
         # Set subchain_selection (which sample from the coarse chain
         # is passed as a proposal to the fine chain). If variance
@@ -734,7 +735,7 @@ class MLDA(ArrayStepShared):
 
         # Call the recursive DA proposal to get proposed sample
         # and convert dict -> numpy array
-        q = self.bij.map(self.proposal_dist(q0_dict))
+        q = DictToArrayBijection.map(self.proposal_dist(q0_dict))
 
         # Evaluate MLDA acceptance log-ratio
         # If proposed sample from lower levels is the same as current one,

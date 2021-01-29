@@ -57,7 +57,7 @@ import pymc3 as pm
 
 from pymc3.aesaraf import aet_rng, identity
 from pymc3.backends import NDArray
-from pymc3.blocking import ArrayOrdering, DictToArrayBijection, VarMap
+from pymc3.blocking import ArrayOrdering, VarMap
 from pymc3.memoize import WithMemoization, memoize
 from pymc3.model import modelcontext
 from pymc3.util import get_default_varnames, get_transformed
@@ -950,9 +950,11 @@ class Group(WithMemoization):
         self.input = self._input_type(self.__class__.__name__ + "_symbolic_input")
         # I do some staff that is not supported by standard __init__
         # so I have to to it by myself
+        self.group = [get_transformed(var) for var in self.group]
+
+        # XXX: This needs to be refactored
         self.ordering = ArrayOrdering([])
         self.replacements = dict()
-        self.group = [get_transformed(var) for var in self.group]
         for var in self.group:
             if isinstance(var.distribution, pm.Discrete):
                 raise ParametrizationError(f"Discrete variables are not supported by VI: {var}")
@@ -978,7 +980,6 @@ class Group(WithMemoization):
             vr = self.input[..., vmap.slc].reshape(shape).astype(vmap.dtyp)
             vr.name = vmap.var + "_vi_replacement"
             self.replacements[var] = vr
-        self.bij = DictToArrayBijection(self.ordering, {})
 
     def _finalize_init(self):
         """*Dev* - clean up after init"""

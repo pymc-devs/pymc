@@ -40,6 +40,7 @@ import pymc3 as pm
 from pymc3.aesaraf import inputvars
 from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
+from pymc3.blocking import DictToArrayBijection
 from pymc3.distributions.distribution import draw_values
 from pymc3.distributions.posterior_predictive import fast_sample_posterior_predictive
 from pymc3.exceptions import IncorrectArgumentsError, SamplingError
@@ -2095,16 +2096,20 @@ def init_nuts(
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="relative"),
     ]
 
+    apoint = DictToArrayBijection.map(model.test_point)
+
     if init == "adapt_diag":
         start = [model.test_point] * chains
-        mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
+        mean = np.mean([apoint.data] * chains, axis=0)
         var = np.ones_like(mean)
-        potential = quadpotential.QuadPotentialDiagAdapt(model.size, mean, var, 10)
+        n = len(var)
+        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
     elif init == "jitter+adapt_diag":
         start = _init_jitter(model, chains, jitter_max_retries)
-        mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
+        mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
         var = np.ones_like(mean)
-        potential = quadpotential.QuadPotentialDiagAdapt(model.size, mean, var, 10)
+        n = len(var)
+        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
     elif init == "advi+adapt_diag_grad":
         approx: pm.MeanField = pm.fit(
             random_seed=random_seed,
@@ -2117,12 +2122,12 @@ def init_nuts(
         )
         start = approx.sample(draws=chains)
         start = list(start)
-        stds = approx.bij.rmap(approx.std.eval())
-        cov = model.dict_to_array(stds) ** 2
-        mean = approx.bij.rmap(approx.mean.get_value())
-        mean = model.dict_to_array(mean)
+        std_apoint = approx.std.eval()
+        cov = std_apoint ** 2
+        mean = approx.mean.get_value()
         weight = 50
-        potential = quadpotential.QuadPotentialDiagAdaptGrad(model.size, mean, cov, weight)
+        n = len(cov)
+        potential = quadpotential.QuadPotentialDiagAdaptGrad(n, mean, cov, weight)
     elif init == "advi+adapt_diag":
         approx = pm.fit(
             random_seed=random_seed,
@@ -2135,12 +2140,12 @@ def init_nuts(
         )
         start = approx.sample(draws=chains)
         start = list(start)
-        stds = approx.bij.rmap(approx.std.eval())
-        cov = model.dict_to_array(stds) ** 2
-        mean = approx.bij.rmap(approx.mean.get_value())
-        mean = model.dict_to_array(mean)
+        std_apoint = approx.std.eval()
+        cov = std_apoint ** 2
+        mean = approx.mean.get_value()
         weight = 50
-        potential = quadpotential.QuadPotentialDiagAdapt(model.size, mean, cov, weight)
+        n = len(cov)
+        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, cov, weight)
     elif init == "advi":
         approx = pm.fit(
             random_seed=random_seed,
@@ -2153,8 +2158,7 @@ def init_nuts(
         )
         start = approx.sample(draws=chains)
         start = list(start)
-        stds = approx.bij.rmap(approx.std.eval())
-        cov = model.dict_to_array(stds) ** 2
+        cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "advi_map":
         start = pm.find_MAP(include_transformed=True)
@@ -2169,8 +2173,7 @@ def init_nuts(
         )
         start = approx.sample(draws=chains)
         start = list(start)
-        stds = approx.bij.rmap(approx.std.eval())
-        cov = model.dict_to_array(stds) ** 2
+        cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov)
     elif init == "map":
         start = pm.find_MAP(include_transformed=True)
@@ -2179,12 +2182,12 @@ def init_nuts(
         potential = quadpotential.QuadPotentialFull(cov)
     elif init == "adapt_full":
         start = [model.test_point] * chains
-        mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
+        mean = np.mean([apoint.data] * chains, axis=0)
         cov = np.eye(model.size)
         potential = quadpotential.QuadPotentialFullAdapt(model.size, mean, cov, 10)
     elif init == "jitter+adapt_full":
         start = _init_jitter(model, chains, jitter_max_retries)
-        mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
+        mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
         cov = np.eye(model.size)
         potential = quadpotential.QuadPotentialFullAdapt(model.size, mean, cov, 10)
     else:

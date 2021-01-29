@@ -23,6 +23,7 @@ from aesara.tensor.random.basic import CategoricalRV
 import pymc3 as pm
 
 from pymc3.aesaraf import floatX
+from pymc3.blocking import DictToArrayBijection
 from pymc3.distributions import draw_values
 from pymc3.step_methods.arraystep import (
     ArrayStep,
@@ -671,8 +672,8 @@ class DEMetropolis(PopulationArrayStepShared):
         # differential evolution proposal
         # select two other chains
         ir1, ir2 = np.random.choice(self.other_chains, 2, replace=False)
-        r1 = self.bij.map(self.population[ir1])
-        r2 = self.bij.map(self.population[ir2])
+        r1 = DictToArrayBijection.map(self.population[ir1])
+        r2 = DictToArrayBijection.map(self.population[ir2])
         # propose a jump
         q = floatX(q0 + self.lamb * (r1 - r2) + epsilon)
 
