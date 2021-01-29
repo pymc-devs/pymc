@@ -133,7 +133,7 @@ class Metropolis(ArrayStepShared):
         scaling -- Initial scale factor for proposal. (default 1.0)
         tune -- Flag for tuning. (default True)
         tune_interval -- The frequency of tuning. (default 100)
-        model -- Optional model for sampling step. Defaults to None (taken from context).       (default None)
+        model -- Optional model for sampling step. Defaults to None (taken from context).(default None)
         mode -- compilation mode passed to Theano functions. (default None)
         """
 
