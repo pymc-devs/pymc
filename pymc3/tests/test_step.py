@@ -634,7 +634,7 @@ class TestMetropolisProposal:
     def test_proposal_choice(self):
         _, model, _ = mv_simple()
         with model:
-            s = np.ones(model.ndim)
+            s = np.ones(model.size)
             sampler = Metropolis(S=s)
             assert isinstance(sampler.proposal_dist, NormalProposal)
             s = np.diag(s)
@@ -1058,7 +1058,7 @@ class TestMLDA:
             assert sampler.base_proposal_dist is None
             assert isinstance(sampler.step_method_below.proposal_dist, UniformProposal)
 
-            s = np.ones(model.ndim)
+            s = np.ones(model.size)
             sampler = MLDA(coarse_models=[model_coarse], base_sampler="Metropolis", base_S=s)
             assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
             assert sampler.base_proposal_dist is None
@@ -1091,7 +1091,7 @@ class TestMLDA:
         _, model_coarse, _ = mv_simple_coarse()
         _, model_very_coarse, _ = mv_simple_very_coarse()
         with model:
-            s = np.ones(model.ndim) + 2.0
+            s = np.ones(model.size) + 2.0
             sampler = MLDA(
                 coarse_models=[model_very_coarse, model_coarse],
                 base_S=s,
