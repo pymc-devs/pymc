@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import numpy.random as nr
 import scipy.linalg
@@ -23,6 +23,7 @@ from aesara.tensor.random.basic import CategoricalRV
 import pymc3 as pm
 
 from pymc3.aesaraf import floatX
+from pymc3.blocking import DictToArrayBijection
 from pymc3.distributions import draw_values
 from pymc3.step_methods.arraystep import (
     ArrayStep,
@@ -352,7 +353,7 @@ class BinaryMetropolis(ArrayStep):
             return Competence.IDEAL
 
         if isinstance(distribution, CategoricalRV):
-            k = aet.get_scalar_constant_value(distribution.owner.inputs[2])
+            k = at.get_scalar_constant_value(distribution.owner.inputs[2])
             if k == 2:
                 return Competence.IDEAL
         return Competence.INCOMPATIBLE
@@ -432,7 +433,7 @@ class BinaryGibbsMetropolis(ArrayStep):
             return Competence.IDEAL
 
         if isinstance(distribution, CategoricalRV):
-            k = aet.get_scalar_constant_value(distribution.owner.inputs[2])
+            k = at.get_scalar_constant_value(distribution.owner.inputs[2])
             if k == 2:
                 return Competence.IDEAL
         return Competence.INCOMPATIBLE
@@ -550,7 +551,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         """
         distribution = getattr(var.owner, "op", None)
         if isinstance(distribution, CategoricalRV):
-            k = aet.get_scalar_constant_value(distribution.owner.inputs[2])
+            k = at.get_scalar_constant_value(distribution.owner.inputs[2])
             if k == 2:
                 return Competence.IDEAL
             return Competence.COMPATIBLE
@@ -671,8 +672,8 @@ class DEMetropolis(PopulationArrayStepShared):
         # differential evolution proposal
         # select two other chains
         ir1, ir2 = np.random.choice(self.other_chains, 2, replace=False)
-        r1 = self.bij.map(self.population[ir1])
-        r2 = self.bij.map(self.population[ir2])
+        r1 = DictToArrayBijection.map(self.population[ir1])
+        r2 = DictToArrayBijection.map(self.population[ir2])
         # propose a jump
         q = floatX(q0 + self.lamb * (r1 - r2) + epsilon)
 

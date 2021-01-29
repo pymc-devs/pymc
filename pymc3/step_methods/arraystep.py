@@ -19,8 +19,7 @@ import numpy as np
 
 from numpy.random import uniform
 
-from pymc3.aesaraf import inputvars
-from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.model import PyMC3Variable, modelcontext
 from pymc3.step_methods.compound import CompoundStep
 from pymc3.util import get_var_name
@@ -70,7 +69,7 @@ class BlockedStep:
             vars = model.vars
 
         # get the actual inputs from the vars
-        vars = inputvars(vars)
+        # vars = inputvars(vars)
 
         if len(vars) == 0:
             raise ValueError("No free random variables to sample.")
@@ -115,15 +114,6 @@ class BlockedStep:
                 competences.append(cls.competence(var))
         return competences
 
-    @property
-    def vars_shape_dtype(self):
-        shape_dtypes = {}
-        for var in self.vars:
-            dtype = np.dtype(var.dtype)
-            shape = var.dshape
-            shape_dtypes[var.name] = (shape, dtype)
-        return shape_dtypes
-
     def stop_tuning(self):
         if hasattr(self, "tune"):
             self.tune = False
@@ -144,24 +134,25 @@ class ArrayStep(BlockedStep):
 
     def __init__(self, vars, fs, allvars=False, blocked=True):
         self.vars = vars
-        self.ordering = ArrayOrdering(vars)
         self.fs = fs
         self.allvars = allvars
         self.blocked = blocked
 
-    def step(self, point):
-        bij = DictToArrayBijection(self.ordering, point)
+    def step(self, point: Dict[str, np.ndarray]):
 
-        inputs = [bij.mapf(x) for x in self.fs]
+        inputs = [DictToArrayBijection.mapf(x) for x in self.fs]
         if self.allvars:
             inputs.append(point)
 
         if self.generates_stats:
-            apoint, stats = self.astep(bij.map(point), *inputs)
-            return bij.rmap(apoint), stats
+            apoint, stats = self.astep(DictToArrayBijection.map(point), *inputs)
+            return DictToArrayBijection.rmap(apoint), stats
         else:
-            apoint = self.astep(bij.map(point), *inputs)
-            return bij.rmap(apoint)
+            apoint = self.astep(DictToArrayBijection.map(point), *inputs)
+            return DictToArrayBijection.rmap(apoint)
+
+    def astep(self, apoint, point):
+        raise NotImplementedError()
 
 
 class ArrayStepShared(BlockedStep):
@@ -181,23 +172,26 @@ class ArrayStepShared(BlockedStep):
         blocked: Boolean (default True)
         """
         self.vars = vars
-        self.ordering = ArrayOrdering(vars)
         self.shared = {get_var_name(var): shared for var, shared in shared.items()}
         self.blocked = blocked
-        self.bij = None
 
     def step(self, point):
         for var, share in self.shared.items():
             share.set_value(point[var])
 
-        self.bij = DictToArrayBijection(self.ordering, point)
-
         if self.generates_stats:
-            apoint, stats = self.astep(self.bij.map(point))
-            return self.bij.rmap(apoint), stats
+            apoint, stats = self.astep(DictToArrayBijection.map(point))
+            return DictToArrayBijection.rmap(apoint), stats
         else:
-            apoint = self.astep(self.bij.map(point))
-            return self.bij.rmap(apoint)
+            array = DictToArrayBijection.map(point)
+            apoint = self.astep(array)
+            if not isinstance(apoint, RaveledVars):
+                # We assume that the mapping has stayed the same
+                apoint = RaveledVars(apoint, array.point_map_info)
+            return DictToArrayBijection.rmap(apoint)
+
+    def astep(self, apoint):
+        raise NotImplementedError()
 
 
 class PopulationArrayStepShared(ArrayStepShared):
@@ -255,31 +249,31 @@ class GradientSharedStep(BlockedStep):
         else:
             func = logp_dlogp_func
 
-        # handle edge case discovered in #2948
-        try:
-            func.set_extra_values(model.test_point)
-            q = func.dict_to_array(model.test_point)
-            logp, dlogp = func(q)
-        except ValueError:
-            if logp_dlogp_func is not None:
-                raise
-            aesara_kwargs.update(mode="FAST_COMPILE")
-            func = model.logp_dlogp_function(vars, dtype=dtype, **aesara_kwargs)
-
         self._logp_dlogp_func = func
 
     def step(self, point):
         self._logp_dlogp_func.set_extra_values(point)
-        array = self._logp_dlogp_func.dict_to_array(point)
 
+        array = DictToArrayBijection.map(point)
+
+        stats = None
         if self.generates_stats:
             apoint, stats = self.astep(array)
-            point = self._logp_dlogp_func.array_to_full_dict(apoint)
-            return point, stats
         else:
             apoint = self.astep(array)
-            point = self._logp_dlogp_func.array_to_full_dict(apoint)
-            return point
+
+        if not isinstance(apoint, RaveledVars):
+            # We assume that the mapping has stayed the same
+            apoint = RaveledVars(apoint, array.point_map_info)
+
+        point = DictToArrayBijection.rmap(apoint)
+
+        if stats is not None:
+            return point, stats
+        return point
+
+    def astep(self, apoint):
+        raise NotImplementedError()
 
 
 def metrop_select(mr, q, q0):

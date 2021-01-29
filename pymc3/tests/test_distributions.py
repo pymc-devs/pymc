@@ -24,7 +24,7 @@ import scipy.stats
 import scipy.stats.distributions as sp
 
 from aesara.tensor.var import TensorVariable
-from numpy import array, exp, inf, log
+from numpy import array, inf, log
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 from packaging.version import parse
 from scipy import __version__ as scipy_version
@@ -34,7 +34,6 @@ from scipy.special import erf, logit
 import pymc3 as pm
 
 from pymc3.aesaraf import floatX
-from pymc3.blocking import DictToVarBijection
 from pymc3.distributions import (
     AR1,
     CAR,
@@ -2665,7 +2664,6 @@ class TestBugfixes:
         actual_a = actual_t.eval()
         assert isinstance(actual_a, np.ndarray)
         assert actual_a.shape == (X.shape[0],)
-        pass
 
     def test_issue_4499(self):
         # Test for bug in Uniform and DiscreteUniform logp when setting check_bounds = False

@@ -50,19 +50,3 @@ def test_deterministic():
 
     assert model.y == y
     assert model["y"] == y
-
-
-def test_mapping():
-    with pm.Model() as model:
-        mu = pm.Normal("mu", 0, 1)
-        sd = pm.Gamma("sd", 1, 1)
-        y = pm.Normal("y", mu, sd, observed=np.array([0.1, 0.5]))
-    lp = model.fastlogp
-    lparray = model.logp_array
-    point = model.test_point
-    parray = model.bijection.map(point)
-    assert lp(point) == lparray(parray)
-
-    randarray = np.random.randn(*parray.shape)
-    randpoint = model.bijection.rmap(randarray)
-    assert lp(randpoint) == lparray(randarray)
