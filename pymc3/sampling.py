@@ -468,7 +468,7 @@ def sample(
                 FutureWarning,
             )
         # set the default
-        return_inferencedata = False
+        return_inferencedata = True
 
     if start is not None:
         for start_vals in start:
