@@ -250,13 +250,15 @@ class _Tree:
         self.start_energy = np.array(start.energy)
 
         self.left = self.right = start
-        self.proposal = Proposal(start.q, start.q_grad, start.energy, 1.0, start.model_logp)
+        self.proposal = Proposal(
+            start.q.data, start.q_grad.data, start.energy, 1.0, start.model_logp
+        )
         self.depth = 0
         self.log_size = 0
         self.log_weighted_accept_sum = -np.inf
         self.mean_tree_accept = 0.0
         self.n_proposals = 0
-        self.p_sum = start.p.copy()
+        self.p_sum = start.p.data.copy()
         self.max_energy_change = 0
 
     def extend(self, direction):
@@ -311,9 +313,9 @@ class _Tree:
             left, right = self.left, self.right
             p_sum = self.p_sum
             turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
-            p_sum1 = leftmost_p_sum + rightmost_begin.p
+            p_sum1 = leftmost_p_sum + rightmost_begin.p.data
             turning1 = (p_sum1.dot(leftmost_begin.v) <= 0) or (p_sum1.dot(rightmost_begin.v) <= 0)
-            p_sum2 = leftmost_end.p + rightmost_p_sum
+            p_sum2 = leftmost_end.p.data + rightmost_p_sum
             turning2 = (p_sum2.dot(leftmost_end.v) <= 0) or (p_sum2.dot(rightmost_end.v) <= 0)
             turning = turning | turning1 | turning2
 
@@ -322,6 +324,7 @@ class _Tree:
     def _single_step(self, left, epsilon):
         """Perform a leapfrog step and handle error cases."""
         try:
+            # `State` type
             right = self.integrator.step(epsilon, left)
         except IntegrationError as err:
             error_msg = str(err)
@@ -343,13 +346,15 @@ class _Tree:
                 log_p_accept_weighted = -energy_change + min(0.0, -energy_change)
                 log_size = -energy_change
                 proposal = Proposal(
-                    right.q,
-                    right.q_grad,
+                    right.q.data,
+                    right.q_grad.data,
                     right.energy,
                     log_p_accept_weighted,
                     right.model_logp,
                 )
-                tree = Subtree(right, right, right.p, proposal, log_size, log_p_accept_weighted, 1)
+                tree = Subtree(
+                    right, right, right.p.data, proposal, log_size, log_p_accept_weighted, 1
+                )
                 return tree, None, False
             else:
                 error_msg = "Energy change in leapfrog step is too large: %s." % energy_change
@@ -375,9 +380,9 @@ class _Tree:
             turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
             # Additional U turn check only when depth > 1 to avoid redundant work.
             if depth - 1 > 0:
-                p_sum1 = tree1.p_sum + tree2.left.p
+                p_sum1 = tree1.p_sum + tree2.left.p.data
                 turning1 = (p_sum1.dot(tree1.left.v) <= 0) or (p_sum1.dot(tree2.left.v) <= 0)
-                p_sum2 = tree1.right.p + tree2.p_sum
+                p_sum2 = tree1.right.p.data + tree2.p_sum
                 turning2 = (p_sum2.dot(tree1.right.v) <= 0) or (p_sum2.dot(tree2.right.v) <= 0)
                 turning = turning | turning1 | turning2
 

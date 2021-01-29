@@ -24,7 +24,7 @@ import scipy.stats
 import scipy.stats.distributions as sp
 
 from aesara.tensor.var import TensorVariable
-from numpy import array, exp, inf, log
+from numpy import array, inf, log
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 from packaging.version import parse
 from scipy import __version__ as scipy_version
@@ -34,7 +34,6 @@ from scipy.special import erf, logit
 import pymc3 as pm
 
 from pymc3.aesaraf import floatX
-from pymc3.blocking import DictToVarBijection
 from pymc3.distributions import (
     AR1,
     AsymmetricLaplace,
@@ -769,15 +768,6 @@ class TestMatchesScipy:
                 decimal=decimal,
                 err_msg=str(pt),
             )
-
-    def check_int_to_1(self, model, value, domain, paramdomains):
-        pdf = model.fastfn(exp(model.logpt))
-        for pt in product(paramdomains, n_samples=10):
-            pt = Point(pt, value=value.tag.test_value, model=model)
-            bij = DictToVarBijection(value, (), pt)
-            pdfx = bij.mapf(pdf)
-            area = integrate_nd(pdfx, domain, value.dshape, value.dtype)
-            assert_almost_equal(area, 1, err_msg=str(pt))
 
     def checkd(self, distfam, valuedomain, vardomains, checks=None, extra_args=None):
         if checks is None:
@@ -2587,7 +2577,6 @@ class TestBugfixes:
         actual_a = actual_t.eval()
         assert isinstance(actual_a, np.ndarray)
         assert actual_a.shape == (X.shape[0],)
-        pass
 
 
 def test_serialize_density_dist():

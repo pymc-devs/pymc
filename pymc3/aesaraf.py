@@ -24,7 +24,6 @@ from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.var import TensorVariable
 
-from pymc3.blocking import ArrayOrdering
 from pymc3.data import GeneratorAdapter
 from pymc3.vartypes import continuous_types, int_types, typefilter
 
@@ -267,14 +266,16 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
     else:
         inarray = aesara.shared(joined.tag.test_value, "inarray")
 
-    ordering = ArrayOrdering(vars)
     inarray.tag.test_value = joined.tag.test_value
 
-    get_var = {var.name: var for var in vars}
-    replace = {
-        get_var[var]: reshape_t(inarray[slc], shp).astype(dtyp)
-        for var, slc, shp, dtyp in ordering.vmap
-    }
+    replace = {}
+    last_idx = 0
+    for var in vars:
+        arr_len = aet.prod(var.shape)
+        replace[var] = reshape_t(inarray[last_idx : last_idx + arr_len], var.shape).astype(
+            var.dtype
+        )
+        last_idx += arr_len
 
     replace.update(shared)
 
