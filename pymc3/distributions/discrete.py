@@ -1341,7 +1341,7 @@ class Categorical(Discrete):
 
 
 @_logp.register(CategoricalRV)
-def categorical_logp(op, value, p_, upper):
+def categorical_logp(op, value, p, upper):
     r"""
     Calculate log-probability of Categorical distribution at specified value.
 
@@ -1355,19 +1355,17 @@ def categorical_logp(op, value, p_, upper):
     -------
     TensorVariable
     """
-    p_ = self.p
-    k = self.k
 
     # Clip values before using them for indexing
-    value_clip = tt.clip(value, 0, k - 1)
+    value_clip = tt.clip(value, 0, p.size - 1)
 
-    p = p_ / tt.sum(p_, axis=-1, keepdims=True)
+    p = p / tt.sum(p, axis=-1, keepdims=True)
 
     if p.ndim > 1:
         if p.ndim > value_clip.ndim:
-            value_clip = tt.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
+            value_clip = tt.shape_padleft(value_clip, p.ndim - value_clip.ndim)
         elif p.ndim < value_clip.ndim:
-            p = tt.shape_padleft(p, value_clip.ndim - p_.ndim)
+            p = tt.shape_padleft(p, value_clip.ndim - p.ndim)
         pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
         a = tt.log(
             take_along_axis(
@@ -1378,7 +1376,9 @@ def categorical_logp(op, value, p_, upper):
     else:
         a = tt.log(p[value_clip])
 
-    return bound(a, value >= 0, value <= (k - 1), tt.all(p_ >= 0, axis=-1), tt.all(p <= 1, axis=-1))
+    return bound(
+        a, value >= 0, value <= (p.size - 1), tt.all(p >= 0, axis=-1), tt.all(p <= 1, axis=-1)
+    )
 
 
 class Constant(Discrete):

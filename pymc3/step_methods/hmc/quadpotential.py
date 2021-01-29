@@ -120,7 +120,7 @@ class QuadPotential:
 
         Parameters
         ----------
-        vmap: blocking.ArrayOrdering.vmap
+        vmap: list of blocking.VarMap
             List of `VarMap`s, which are namedtuples with var, slc, shp, dtyp
 
         Raises
@@ -240,12 +240,12 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
         self._n_samples += 1
 
-    def raise_ok(self, vmap):
+    def raise_ok(self, map_info):
         """Check if the mass matrix is ok, and raise ValueError if not.
 
         Parameters
         ----------
-        vmap: blocking.ArrayOrdering.vmap
+        vmap: List of tuples (var, )
             List of `VarMap`s, which are namedtuples with var, slc, shp, dtyp
 
         Raises
@@ -257,33 +257,25 @@ class QuadPotentialDiagAdapt(QuadPotential):
         None
         """
         if np.any(self._stds == 0):
-            name_slc = []
-            tmp_hold = list(range(self._stds.size))
-            for vmap_ in vmap:
-                slclen = len(tmp_hold[vmap_.slc])
-                for i in range(slclen):
-                    name_slc.append((vmap_.var, i))
-            index = np.where(self._stds == 0)[0]
             errmsg = ["Mass matrix contains zeros on the diagonal. "]
-            for ii in index:
-                errmsg.append(
-                    "The derivative of RV `{}`.ravel()[{}] is zero.".format(*name_slc[ii])
-                )
+            last_idx = 0
+            for name, shape, dtype in map_info:
+                arr_len = np.prod(shape, dtype=int)
+                index = np.where(self._stds[last_idx : last_idx + arr_len] == 0)[0]
+                errmsg.append(f"The derivative of RV `{name}`.ravel()[{index}] is zero.")
+                last_idx += arr_len
+
             raise ValueError("\n".join(errmsg))
 
         if np.any(~np.isfinite(self._stds)):
-            name_slc = []
-            tmp_hold = list(range(self._stds.size))
-            for vmap_ in vmap:
-                slclen = len(tmp_hold[vmap_.slc])
-                for i in range(slclen):
-                    name_slc.append((vmap_.var, i))
-            index = np.where(~np.isfinite(self._stds))[0]
             errmsg = ["Mass matrix contains non-finite values on the diagonal. "]
-            for ii in index:
-                errmsg.append(
-                    "The derivative of RV `{}`.ravel()[{}] is non-finite.".format(*name_slc[ii])
-                )
+
+            last_idx = 0
+            for name, shape, dtype in map_info:
+                arr_len = np.prod(shape, dtype=int)
+                index = np.where(~np.isfinite(self._stds[last_idx : last_idx + arr_len]))[0]
+                errmsg.append(f"The derivative of RV `{name}`.ravel()[{index}] is non-finite.")
+                last_idx += arr_len
             raise ValueError("\n".join(errmsg))
 
 
