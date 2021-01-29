@@ -71,10 +71,3 @@ class CompoundStep:
         for method in self.methods:
             if hasattr(method, "reset_tuning"):
                 method.reset_tuning()
-
-    @property
-    def vars_shape_dtype(self):
-        dtype_shapes = {}
-        for method in self.methods:
-            dtype_shapes.update(method.vars_shape_dtype)
-        return dtype_shapes
