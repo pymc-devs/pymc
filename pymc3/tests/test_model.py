@@ -366,6 +366,34 @@ class TestValueGradFunction(unittest.TestCase):
 
         assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
 
+    def test_theano_switch_broadcast_edge_cases(self):
+        # Tests against two subtle issues related to a previous bug in Theano where tt.switch would not
+        # always broadcast tensors with single values https://github.com/pymc-devs/aesara/issues/270
+
+        # Known issue 1: https://github.com/pymc-devs/pymc3/issues/4389
+        data = np.zeros(10)
+        with pm.Model() as m:
+            p = pm.Beta("p", 1, 1)
+            obs = pm.Bernoulli("obs", p=p, observed=data)
+        # Assert logp is correct
+        npt.assert_allclose(
+            obs.logp(m.test_point),
+            np.log(0.5) * 10,
+        )
+
+        # Known issue 2: https://github.com/pymc-devs/pymc3/issues/4417
+        # fmt: off
+        data = np.array([
+            1.35202174, -0.83690274, 1.11175166, 1.29000367, 0.21282749,
+            0.84430966, 0.24841369, 0.81803141, 0.20550244, -0.45016253,
+        ])
+        # fmt: on
+        with pm.Model() as m:
+            mu = pm.Normal("mu", 0, 5)
+            obs = pm.TruncatedNormal("obs", mu=mu, sigma=1, lower=-1, upper=2, observed=data)
+        # Assert dlogp is correct
+        npt.assert_allclose(m.dlogp([mu])({"mu": 0}), 2.499424682024436, rtol=1e-5)
+
 
 def test_multiple_observed_rv():
     "Test previously buggy MultiObservedRV comparison code."
