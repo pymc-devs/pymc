@@ -23,11 +23,26 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 
-__all__ = ["DictToArrayBijection"]
+__all__ = ["ArrayOrdering", "DictToArrayBijection"]
 
 # `point_map_info` is a tuple of tuples containing `(name, shape, dtype)` for
 # each of the raveled variables.
 RaveledVars = collections.namedtuple("RaveledVars", "data, point_map_info")
+VarMap = collections.namedtuple("VarMap", "var, slc, shp, dtyp")
+DataMap = collections.namedtuple("DataMap", "list_ind, slc, shp, dtype, name")
+
+
+class ArrayOrdering:
+    """
+
+            slc = slice(self.size, self.size + var.dsize)
+            varmap = VarMap(name, slc, var.dshape, var.dtype)
+            self.vmap.append(varmap)
+            self.by_name[name] = varmap
+            self.size += var.dsize
+
+    def __getitem__(self, key):
+        return self.by_name[key]
 
 
 class DictToArrayBijection:
@@ -41,11 +56,7 @@ class DictToArrayBijection:
     def map(var_dict: Dict[str, np.ndarray]) -> RaveledVars:
         """Map a dictionary of names and variables to a concatenated 1D array space."""
         vars_info = tuple((v, k, v.shape, v.dtype) for k, v in var_dict.items())
-        raveled_vars = [v[0].ravel() for v in vars_info]
-        if raveled_vars:
-            res = np.concatenate(raveled_vars)
-        else:
-            res = np.array([])
+        res = np.concatenate([v[0].ravel() for v in vars_info])
         return RaveledVars(res, tuple(v[1:] for v in vars_info))
 
     @staticmethod

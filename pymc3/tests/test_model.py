@@ -32,6 +32,7 @@ from numpy.testing import assert_almost_equal
 import pymc3 as pm
 
 from pymc3 import Deterministic, Potential
+from pymc3.blocking import RaveledVars
 from pymc3.distributions import Normal, transforms
 from pymc3.model import ValueGradFunction
 
@@ -217,7 +218,7 @@ class TestValueGradFunction(unittest.TestCase):
     def test_no_extra(self):
         a = at.vector("a")
         a.tag.test_value = np.zeros(3, dtype=a.dtype)
-        f_grad = ValueGradFunction([a.sum()], [a], {}, mode="FAST_COMPILE")
+        f_grad = ValueGradFunction([a.sum()], [a], [], mode="FAST_COMPILE")
         assert f_grad._extra_vars == []
 
     def test_invalid_type(self):
@@ -278,20 +279,6 @@ class TestValueGradFunction(unittest.TestCase):
         val, grad = self.f_grad(array)
         assert val == 21
         npt.assert_allclose(grad, [5, 5, 5, 1, 1, 1, 1, 1, 1])
-
-    def test_bij(self):
-        self.f_grad.set_extra_values({"extra1": 5})
-        array = np.ones(self.f_grad.size, dtype=self.f_grad.dtype)
-        point = self.f_grad.array_to_dict(array)
-        assert len(point) == 2
-        npt.assert_allclose(point["val1"], 1)
-        npt.assert_allclose(point["val2"], 1)
-
-        array2 = self.f_grad.dict_to_array(point)
-        npt.assert_allclose(array2, array)
-        point_ = self.f_grad.array_to_full_dict(array)
-        assert len(point_) == 3
-        assert point_["extra1"] == 5
 
     @pytest.mark.xfail(reason="Missing distributions")
     def test_edge_case(self):
@@ -376,7 +363,7 @@ def test_multiple_observed_rv():
     assert not model["x"] in model.value_vars
 
 
-@pytest.mark.xfail(reason="Functions depend on deprecated dshape/dsize")
+# @pytest.mark.xfail(reason="Functions depend on deprecated dshape/dsize")
 def test_tempered_logp_dlogp():
     with pm.Model() as model:
         pm.Normal("x")

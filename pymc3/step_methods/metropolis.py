@@ -23,8 +23,9 @@ from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
 
 import pymc3 as pm
 
-from pymc3.aesaraf import floatX, rvs_to_value_vars
-from pymc3.blocking import DictToArrayBijection, RaveledVars
+from pymc3.aesaraf import floatX
+from pymc3.blocking import DictToArrayBijection
+from pymc3.distributions import draw_values
 from pymc3.step_methods.arraystep import (
     ArrayStep,
     ArrayStepShared,

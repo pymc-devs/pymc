@@ -59,6 +59,7 @@ import pymc3 as pm
 
 from pymc3.aesaraf import at_rng, identity
 from pymc3.backends import NDArray
+from pymc3.blocking import ArrayOrdering, VarMap
 from pymc3.model import modelcontext
 from pymc3.util import (
     WithMemoization,
@@ -959,7 +960,7 @@ class Group(WithMemoization):
         self.group = [get_transformed(var) for var in self.group]
 
         # XXX: This needs to be refactored
-        # self.ordering = ArrayOrdering([])
+        self.ordering = ArrayOrdering([])
         self.replacements = dict()
         for var in self.group:
             if var.type.numpy_dtype.name in discrete_types:

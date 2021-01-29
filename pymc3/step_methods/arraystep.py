@@ -21,7 +21,7 @@ from aesara.graph.basic import Variable
 from numpy.random import uniform
 
 from pymc3.blocking import DictToArrayBijection, RaveledVars
-from pymc3.model import modelcontext
+from pymc3.model import PyMC3Variable, modelcontext
 from pymc3.step_methods.compound import CompoundStep
 from pymc3.util import get_var_name
 
@@ -69,8 +69,8 @@ class BlockedStep:
         else:  # Assume all model variables
             vars = model.value_vars
 
-        if not isinstance(vars, (tuple, list)):
-            vars = [vars]
+        # get the actual inputs from the vars
+        # vars = inputvars(vars)
 
         if len(vars) == 0:
             raise ValueError("No free random variables to sample.")
@@ -149,22 +149,13 @@ class ArrayStep(BlockedStep):
         step_res = self.astep(apoint, *inputs)
 
         if self.generates_stats:
-            apoint_new, stats = step_res
+            apoint, stats = self.astep(DictToArrayBijection.map(point), *inputs)
+            return DictToArrayBijection.rmap(apoint), stats
         else:
-            apoint_new = step_res
+            apoint = self.astep(DictToArrayBijection.map(point), *inputs)
+            return DictToArrayBijection.rmap(apoint)
 
-        if not isinstance(apoint_new, RaveledVars):
-            # We assume that the mapping has stayed the same
-            apoint_new = RaveledVars(apoint_new, apoint.point_map_info)
-
-        point_new = DictToArrayBijection.rmap(apoint_new)
-
-        if self.generates_stats:
-            return point_new, stats
-
-        return point_new
-
-    def astep(self, apoint: RaveledVars, point: Dict[str, np.ndarray]):
+    def astep(self, apoint, point):
         raise NotImplementedError()
 
 
@@ -190,42 +181,18 @@ class ArrayStepShared(BlockedStep):
 
     def step(self, point):
 
-        # Remove shared variables from the sample point
-        point_no_shared = point.copy()
-        for name, shared_var in self.shared.items():
-            shared_var.set_value(point[name])
-            if name in point_no_shared:
-                del point_no_shared[name]
-
-        q = DictToArrayBijection.map(point_no_shared)
-
-        step_res = self.astep(q)
-
         if self.generates_stats:
-            apoint, stats = step_res
+            apoint, stats = self.astep(DictToArrayBijection.map(point))
+            return DictToArrayBijection.rmap(apoint), stats
         else:
-            apoint = step_res
+            array = DictToArrayBijection.map(point)
+            apoint = self.astep(array)
+            if not isinstance(apoint, RaveledVars):
+                # We assume that the mapping has stayed the same
+                apoint = RaveledVars(apoint, array.point_map_info)
+            return DictToArrayBijection.rmap(apoint)
 
-        if not isinstance(apoint, RaveledVars):
-            # We assume that the mapping has stayed the same
-            apoint = RaveledVars(apoint, q.point_map_info)
-
-        # We need to re-add the shared variables to the new sample point
-        a_point = DictToArrayBijection.rmap(apoint)
-        new_point = {}
-        for name in point.keys():
-            shared_value = self.shared.get(name, None)
-            if shared_value is not None:
-                new_point[name] = shared_value.get_value()
-            else:
-                new_point[name] = a_point[name]
-
-        if self.generates_stats:
-            return new_point, stats
-
-        return new_point
-
-    def astep(self, apoint: RaveledVars):
+    def astep(self, apoint):
         raise NotImplementedError()
 
 
@@ -287,8 +254,25 @@ class GradientSharedStep(ArrayStepShared):
         super().__init__(vars, func._extra_vars_shared, blocked)
 
     def step(self, point):
-        self._logp_dlogp_func._extra_are_set = True
-        return super().step(point)
+        self._logp_dlogp_func.set_extra_values(point)
+
+        array = DictToArrayBijection.map(point)
+
+        stats = None
+        if self.generates_stats:
+            apoint, stats = self.astep(array)
+        else:
+            apoint = self.astep(array)
+
+        if not isinstance(apoint, RaveledVars):
+            # We assume that the mapping has stayed the same
+            apoint = RaveledVars(apoint, array.point_map_info)
+
+        point = DictToArrayBijection.rmap(apoint)
+
+        if stats is not None:
+            return point, stats
+        return point
 
     def astep(self, apoint):
         raise NotImplementedError()

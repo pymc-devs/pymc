@@ -38,13 +38,13 @@ from pandas import Series
 import pymc3 as pm
 
 from pymc3.aesaraf import generator, gradient, hessian, inputvars
-from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.data import GenTensorVariable, Minibatch
 from pymc3.distributions import _get_scaling, change_rv_size, logpt, logpt_sum
 from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
-from pymc3.util import UNSET, WithMemoization, get_var_name, treedict, treelist
-from pymc3.vartypes import continuous_types, discrete_types, typefilter
+from pymc3.util import WithMemoization, get_transformed_name, get_var_name
+from pymc3.vartypes import continuous_types, discrete_types, isgenerator, typefilter
 
 __all__ = [
     "Model",
@@ -423,17 +423,11 @@ class ValueGradFunction:
         self._extra_vars_shared = {}
         for var in extra_vars:
             shared = aesara.shared(var.tag.test_value, var.name + "_shared__")
-            # test TensorType compatibility
-            if hasattr(var.tag.test_value, "shape"):
-                testtype = TensorType(var.dtype, [s == 1 for s in var.tag.test_value.shape])
-
-                if testtype != shared.type:
-                    shared.type = testtype
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
 
         if compute_grads:
-            grads = grad(cost, grad_vars, disconnected_inputs="ignore")
+            grads = grad(cost, grad_vars)
             for grad_wrt, var in zip(grads, grad_vars):
                 grad_wrt.name = f"{var.name}_grad"
             outputs = [cost] + grads
@@ -654,19 +648,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return self.parent is None
 
     @property
+    def size(self):
+        return sum(self.test_point[n.name].size for n in self.free_RVs)
+
+    @property
     def ndim(self):
         return sum(var.ndim for var in self.free_RVs)
-
-    @property
-    def logp_array(self):
-        return self.bijection.mapf(self.fastlogp)
-
-    @property
-    def dlogp_array(self):
-        logpt = self.logpt
-        vars = inputvars(logpt)
-        dlogp = self.fastfn(gradient(self.logpt, vars))
-        return self.bijection.mapf(dlogp)
 
     def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
         """Compile a aesara function that computes logp and gradient.
@@ -1094,8 +1081,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """
         if vars is None:
             vars = self.vars
-        if order is None:
-            order = ArrayOrdering(vars)
+        if order is not None:
+            var_map = {v.name: v for v in vars}
+            vars = [var_map[n] for n in order]
+
         if inputvar is None:
             inputvar = at.vector("flat_view", dtype=aesara.config.floatX)
             if aesara.config.compute_test_value != "off":
@@ -1107,13 +1096,14 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         replacements = {}
         last_idx = 0
         for var in vars:
-            arr_len = at.prod(var.shape, dtype="int64")
+            arr_len = aet.prod(var.shape, dtype="int64")
             replacements[self.named_vars[var.name]] = (
                 inputvar[last_idx : (last_idx + arr_len)].reshape(var.shape).astype(var.dtype)
             )
             last_idx += arr_len
 
-        flat_view = FlatView(inputvar, replacements)
+        view = {vm.var: vm for vm in order.vmap}
+        flat_view = FlatView(inputvar, replacements, view)
 
         return flat_view
 

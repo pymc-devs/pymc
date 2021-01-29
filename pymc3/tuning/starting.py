@@ -29,7 +29,7 @@ from scipy.optimize import minimize
 import pymc3 as pm
 
 from pymc3.aesaraf import inputvars
-from pymc3.blocking import DictToArrayBijection, RaveledVars
+from pymc3.blocking import DictToArrayBijection
 from pymc3.model import Point, modelcontext
 from pymc3.util import get_default_varnames, get_var_name
 from pymc3.vartypes import discrete_types, typefilter
@@ -102,22 +102,14 @@ def find_MAP(
 
     start = Point(start, model=model)
 
+    logp_func = DictToArrayBijection.mapf(model.fastlogp_nojac)
     x0 = DictToArrayBijection.map(start)
-
-    # TODO: If the mapping is fixed, we can simply create graphs for the
-    # mapping and avoid all this bijection overhead
-    def logp_func(x):
-        return DictToArrayBijection.mapf(model.fastlogp_nojac)(RaveledVars(x, x0.point_map_info))
 
     try:
         # This might be needed for calls to `dlogp_func`
         # start_map_info = tuple((v.name, v.shape, v.dtype) for v in vars)
 
-        def dlogp_func(x):
-            return DictToArrayBijection.mapf(model.fastdlogp_nojac(vars))(
-                RaveledVars(x, x0.point_map_info)
-            )
-
+        dlogp_func = DictToArrayBijection.mapf(model.fastdlogp_nojac(vars))
         compute_gradient = True
     except (AttributeError, NotImplementedError, tg.NullTypeGradError):
         compute_gradient = False
@@ -157,7 +149,10 @@ def find_MAP(
     vars = get_default_varnames(
         [v.tag.value_var for v in model.unobserved_RVs], include_transformed
     )
-    mx = {var.name: value for var, value in zip(vars, model.fastfn(vars)(bij.rmap(mx0)))}
+    mx = {
+        var.name: value
+        for var, value in zip(vars, model.fastfn(vars)(DictToArrayBijection.rmap(mx0)))
+    }
 
     if return_raw:
         return mx, opt_result

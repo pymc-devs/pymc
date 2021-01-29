@@ -85,6 +85,8 @@ class BaseHMC(arraystep.GradientSharedStep):
         if vars is None:
             vars = self._model.cont_vars
 
+        # vars = inputvars(vars)
+
         super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **aesara_kwargs)
 
         self.adapt_step_size = adapt_step_size
@@ -93,7 +95,7 @@ class BaseHMC(arraystep.GradientSharedStep):
 
         # We're using the initial/test point to determine the (initial) step
         # size.
-        # TODO: If the dimensions of these terms change, the step size
+        # XXX: If the dimensions of these terms change, the step size
         # dimension-scaling should change as well, no?
         test_point = self._model.test_point
         continuous_vars = [test_point[v.name] for v in self._model.cont_vars]

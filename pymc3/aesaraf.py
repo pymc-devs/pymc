@@ -47,12 +47,8 @@ from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorVariable
 
-from pymc3.vartypes import continuous_types, int_types, isgenerator, typefilter
-
-PotentialShapeType = Union[
-    int, np.ndarray, Tuple[Union[int, Variable], ...], List[Union[int, Variable]], Variable
-]
-
+from pymc3.data import GeneratorAdapter
+from pymc3.vartypes import continuous_types, int_types, typefilter
 
 __all__ = [
     "gradient",
@@ -576,20 +572,17 @@ def join_nonshared_inputs(
         tensor_type = joined.type
         inarray = tensor_type("inarray")
     else:
-        if point is None:
-            raise ValueError("A point is required when `make_shared` is True")
-        joined_values = np.concatenate([point[var.name].ravel() for var in vars])
-        inarray = aesara.shared(joined_values, "inarray")
+        inarray = aesara.shared(joined.tag.test_value, "inarray")
 
-    if aesara.config.compute_test_value != "off":
-        inarray.tag.test_value = joined.tag.test_value
+    inarray.tag.test_value = joined.tag.test_value
 
     replace = {}
     last_idx = 0
     for var in vars:
-        shape = point[var.name].shape
-        arr_len = np.prod(shape, dtype=int)
-        replace[var] = reshape_t(inarray[last_idx : last_idx + arr_len], shape).astype(var.dtype)
+        arr_len = aet.prod(var.shape)
+        replace[var] = reshape_t(inarray[last_idx : last_idx + arr_len], var.shape).astype(
+            var.dtype
+        )
         last_idx += arr_len
 
     replace.update(shared)

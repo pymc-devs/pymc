@@ -41,6 +41,8 @@ from pymc3.aesaraf import inputvars
 from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
 from pymc3.blocking import DictToArrayBijection
+from pymc3.distributions.distribution import draw_values
+from pymc3.distributions.posterior_predictive import fast_sample_posterior_predictive
 from pymc3.exceptions import IncorrectArgumentsError, SamplingError
 from pymc3.model import Model, Point, modelcontext
 from pymc3.parallel_sampling import Draw, _cpu_count
@@ -2120,16 +2122,16 @@ def init_nuts(
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="relative"),
     ]
 
-    apoint = DictToArrayBijection.map(model.initial_point)
+    apoint = DictToArrayBijection.map(model.test_point)
 
     if init == "adapt_diag":
-        start = [model.initial_point] * chains
+        start = [model.test_point] * chains
         mean = np.mean([apoint.data] * chains, axis=0)
         var = np.ones_like(mean)
         n = len(var)
         potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
     elif init == "jitter+adapt_diag":
-        start = _init_jitter(model, model.initial_point, chains, jitter_max_retries)
+        start = _init_jitter(model, chains, jitter_max_retries)
         mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
         var = np.ones_like(mean)
         n = len(var)
@@ -2205,19 +2207,15 @@ def init_nuts(
         start = [start] * chains
         potential = quadpotential.QuadPotentialFull(cov)
     elif init == "adapt_full":
-        initial_point = model.initial_point
-        start = [initial_point] * chains
+        start = [model.test_point] * chains
         mean = np.mean([apoint.data] * chains, axis=0)
-        initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)
-        cov = np.eye(initial_point_model_size)
-        potential = quadpotential.QuadPotentialFullAdapt(initial_point_model_size, mean, cov, 10)
+        cov = np.eye(model.size)
+        potential = quadpotential.QuadPotentialFullAdapt(model.size, mean, cov, 10)
     elif init == "jitter+adapt_full":
-        initial_point = model.initial_point
-        start = _init_jitter(model, initial_point, chains, jitter_max_retries)
+        start = _init_jitter(model, chains, jitter_max_retries)
         mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
-        initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)
-        cov = np.eye(initial_point_model_size)
-        potential = quadpotential.QuadPotentialFullAdapt(initial_point_model_size, mean, cov, 10)
+        cov = np.eye(model.size)
+        potential = quadpotential.QuadPotentialFullAdapt(model.size, mean, cov, 10)
     else:
         raise ValueError(f"Unknown initializer: {init}.")
 

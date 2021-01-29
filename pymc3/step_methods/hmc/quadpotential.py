@@ -120,8 +120,8 @@ class QuadPotential:
 
         Parameters
         ----------
-        map_info: List of (name, shape, dtype)
-            List tuples with variable name, shape, and dtype.
+        vmap: list of blocking.VarMap
+            List of `VarMap`s, which are namedtuples with var, slc, shp, dtyp
 
         Raises
         ------
@@ -245,8 +245,8 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
         Parameters
         ----------
-        map_info: List of (name, shape, dtype)
-            List tuples with variable name, shape, and dtype.
+        vmap: List of tuples (var, )
+            List of `VarMap`s, which are namedtuples with var, slc, shp, dtyp
 
         Raises
         ------
