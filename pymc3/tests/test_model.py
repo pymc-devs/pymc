@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import pickle
-import unittest
 
 import numpy as np
 import numpy.testing as npt
@@ -26,7 +25,6 @@ import pymc3 as pm
 
 from pymc3 import Deterministic, Potential
 from pymc3.distributions import HalfCauchy, Normal, transforms
-from pymc3.model import ValueGradFunction
 from pymc3.tests.helpers import select_by_precision
 
 
@@ -258,141 +256,6 @@ def test_empty_observed():
         npt.assert_allclose(a.tag.test_value, np.zeros((2, 3)))
         b = pm.Beta("b", alpha=1, beta=1, observed=data)
         npt.assert_allclose(b.tag.test_value, np.ones((2, 3)) / 2)
-
-
-class TestValueGradFunction(unittest.TestCase):
-    def test_no_extra(self):
-        a = tt.vector("a")
-        a.tag.test_value = np.zeros(3, dtype=a.dtype)
-        a.dshape = (3,)
-        a.dsize = 3
-        f_grad = ValueGradFunction([a.sum()], [a], [], mode="FAST_COMPILE")
-        assert f_grad.size == 3
-
-    def test_invalid_type(self):
-        a = tt.ivector("a")
-        a.tag.test_value = np.zeros(3, dtype=a.dtype)
-        a.dshape = (3,)
-        a.dsize = 3
-        with pytest.raises(TypeError) as err:
-            ValueGradFunction([a.sum()], [a], [], mode="FAST_COMPILE")
-        err.match("Invalid dtype")
-
-    def setUp(self):
-        extra1 = tt.iscalar("extra1")
-        extra1_ = np.array(0, dtype=extra1.dtype)
-        extra1.tag.test_value = extra1_
-        extra1.dshape = tuple()
-        extra1.dsize = 1
-
-        val1 = tt.vector("val1")
-        val1_ = np.zeros(3, dtype=val1.dtype)
-        val1.tag.test_value = val1_
-        val1.dshape = (3,)
-        val1.dsize = 3
-
-        val2 = tt.matrix("val2")
-        val2_ = np.zeros((2, 3), dtype=val2.dtype)
-        val2.tag.test_value = val2_
-        val2.dshape = (2, 3)
-        val2.dsize = 6
-
-        self.val1, self.val1_ = val1, val1_
-        self.val2, self.val2_ = val2, val2_
-        self.extra1, self.extra1_ = extra1, extra1_
-
-        self.cost = extra1 * val1.sum() + val2.sum()
-
-        self.f_grad = ValueGradFunction([self.cost], [val1, val2], [extra1], mode="FAST_COMPILE")
-
-    def test_extra_not_set(self):
-        with pytest.raises(ValueError) as err:
-            self.f_grad.get_extra_values()
-        err.match("Extra values are not set")
-
-        with pytest.raises(ValueError) as err:
-            self.f_grad(np.zeros(self.f_grad.size, dtype=self.f_grad.dtype))
-        err.match("Extra values are not set")
-
-    def test_grad(self):
-        self.f_grad.set_extra_values({"extra1": 5})
-        array = np.ones(self.f_grad.size, dtype=self.f_grad.dtype)
-        val, grad = self.f_grad(array)
-        assert val == 21
-        npt.assert_allclose(grad, [5, 5, 5, 1, 1, 1, 1, 1, 1])
-
-    def test_bij(self):
-        self.f_grad.set_extra_values({"extra1": 5})
-        array = np.ones(self.f_grad.size, dtype=self.f_grad.dtype)
-        point = self.f_grad.array_to_dict(array)
-        assert len(point) == 2
-        npt.assert_allclose(point["val1"], 1)
-        npt.assert_allclose(point["val2"], 1)
-
-        array2 = self.f_grad.dict_to_array(point)
-        npt.assert_allclose(array2, array)
-        point_ = self.f_grad.array_to_full_dict(array)
-        assert len(point_) == 3
-        assert point_["extra1"] == 5
-
-    def test_edge_case(self):
-        # Edge case discovered in #2948
-        ndim = 3
-        with pm.Model() as m:
-            pm.Lognormal(
-                "sigma", mu=np.zeros(ndim), tau=np.ones(ndim), shape=ndim
-            )  # variance for the correlation matrix
-            pm.HalfCauchy("nu", beta=10)
-            step = pm.NUTS()
-
-        func = step._logp_dlogp_func
-        func.set_extra_values(m.test_point)
-        q = func.dict_to_array(m.test_point)
-        logp, dlogp = func(q)
-        assert logp.size == 1
-        assert dlogp.size == 4
-        npt.assert_allclose(dlogp, 0.0, atol=1e-5)
-
-    def test_tensor_type_conversion(self):
-        # case described in #3122
-        X = np.random.binomial(1, 0.5, 10)
-        X[0] = -1  # masked a single value
-        X = np.ma.masked_values(X, value=-1)
-        with pm.Model() as m:
-            x1 = pm.Uniform("x1", 0.0, 1.0)
-            x2 = pm.Bernoulli("x2", x1, observed=X)
-
-        gf = m.logp_dlogp_function()
-
-        assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
-
-    def test_theano_switch_broadcast_edge_cases(self):
-        # Tests against two subtle issues related to a previous bug in Theano where tt.switch would not
-        # always broadcast tensors with single values https://github.com/pymc-devs/aesara/issues/270
-
-        # Known issue 1: https://github.com/pymc-devs/pymc3/issues/4389
-        data = np.zeros(10)
-        with pm.Model() as m:
-            p = pm.Beta("p", 1, 1)
-            obs = pm.Bernoulli("obs", p=p, observed=data)
-        # Assert logp is correct
-        npt.assert_allclose(
-            obs.logp(m.test_point),
-            np.log(0.5) * 10,
-        )
-
-        # Known issue 2: https://github.com/pymc-devs/pymc3/issues/4417
-        # fmt: off
-        data = np.array([
-            1.35202174, -0.83690274, 1.11175166, 1.29000367, 0.21282749,
-            0.84430966, 0.24841369, 0.81803141, 0.20550244, -0.45016253,
-        ])
-        # fmt: on
-        with pm.Model() as m:
-            mu = pm.Normal("mu", 0, 5)
-            obs = pm.TruncatedNormal("obs", mu=mu, sigma=1, lower=-1, upper=2, observed=data)
-        # Assert dlogp is correct
-        npt.assert_allclose(m.dlogp([mu])({"mu": 0}), 2.499424682024436, rtol=1e-5)
 
 
 def test_multiple_observed_rv():

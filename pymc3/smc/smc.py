@@ -22,6 +22,7 @@ from scipy.stats import multivariate_normal
 from theano import function as theano_function
 
 from pymc3.backends.ndarray import NDArray
+from pymc3.blocking import DictToArrayBijection
 from pymc3.model import Point, modelcontext
 from pymc3.sampling import sample_prior_predictive
 from pymc3.theanof import (
@@ -93,6 +94,7 @@ class SMC:
             init_rnd = self.start
 
         init = self.model.test_point
+        bij = DictToArrayBijection([v.name for v in self.model.vars])
 
         for v in self.variables:
             var_info[v.name] = (init[v.name].shape, init[v.name].size)
@@ -100,7 +102,7 @@ class SMC:
         for i in range(self.draws):
 
             point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
-            population.append(self.model.dict_to_array(point))
+            population.append(bij.map(point).data)
 
         self.posterior = np.array(floatX(population))
         self.var_info = var_info

@@ -26,7 +26,7 @@ from scipy.optimize import minimize
 
 import pymc3 as pm
 
-from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.blocking import DictToArrayBijection
 from pymc3.model import Point, modelcontext
 from pymc3.theanof import inputvars
 from pymc3.util import (
@@ -104,7 +104,13 @@ def find_MAP(
     check_start_vals(start, model)
 
     start = Point(start, model=model)
-    bij = DictToArrayBijection(ArrayOrdering(vars), start)
+
+    bij = DictToArrayBijection(
+        [v.name for v in vars],
+        [v.shape for v in [start[v.name] for v in vars]],
+        [v.dtype for v in [start[v.name] for v in vars]],
+    )
+
     logp_func = bij.mapf(model.fastlogp_nojac)
     x0 = bij.map(start)
 

@@ -153,15 +153,14 @@ class _Process:
                 break
 
     def _make_numpy_refs(self):
-        shape_dtypes = self._step_method.vars_shape_dtype
         point = {}
-        for name, (shape, dtype) in shape_dtypes.items():
-            array = self._shared_point[name]
-            self._shared_point[name] = array
+        # XXX: I'm assuming that the processes are properly synchronized...
+        for name, (array, shape, dtype) in self._shared_point.items():
             point[name] = np.frombuffer(array, dtype).reshape(shape)
         return point
 
     def _write_point(self, point):
+        # XXX: What do we do when the underlying points change shape?
         for name, vals in point.items():
             self._point[name][...] = vals
 
@@ -251,7 +250,8 @@ class ProcessAdapter:
 
         self._shared_point = {}
         self._point = {}
-        for name, (shape, dtype) in step_method.vars_shape_dtype.items():
+
+        for name, shape, dtype in step_method.bij.map(start).point_map_info:
             size = 1
             for dim in shape:
                 size *= int(dim)
@@ -260,7 +260,7 @@ class ProcessAdapter:
                 raise ValueError("Variable %s is too large" % name)
 
             array = mp_ctx.RawArray("c", size)
-            self._shared_point[name] = array
+            self._shared_point[name] = (array, shape, dtype)
             array_np = np.frombuffer(array, dtype).reshape(shape)
             array_np[...] = start[name]
             self._point[name] = array_np

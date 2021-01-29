@@ -35,11 +35,11 @@ from theano.tensor.var import TensorVariable
 
 import pymc3 as pm
 
-from pymc3.blocking import ArrayOrdering, DictToArrayBijection
+from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.distributions import change_rv_size, logpt, logpt_sum
 from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
-from pymc3.memoize import WithMemoization, memoize
+from pymc3.memoize import WithMemoization
 from pymc3.theanof import floatX, generator, gradient, hessian, inputvars
 from pymc3.util import get_transformed_name, get_var_name
 from pymc3.vartypes import continuous_types, discrete_types, isgenerator, typefilter
@@ -607,8 +607,6 @@ class ValueGradFunction:
 
     Attributes
     ----------
-    size: int
-        The number of elements in the parameter array.
     profile: theano profiling object or None
         The profiling object of the theano function that computes value and
         gradient. This is None unless `profile=True` was set in the
@@ -626,8 +624,6 @@ class ValueGradFunction:
         compute_grads=True,
         **kwargs,
     ):
-        from pymc3.distributions import TensorType
-
         if extra_vars is None:
             extra_vars = []
 
@@ -657,9 +653,6 @@ class ValueGradFunction:
                 raise ValueError("All costs must be scalar.")
             cost = cost + self._weights[i] * val
 
-        self._cost = cost
-        self._ordering = ArrayOrdering(grad_vars)
-        self.size = self._ordering.size
         self._extra_are_set = False
         for var in self._grad_vars:
             if not np.can_cast(var.dtype, self.dtype, casting):
@@ -677,27 +670,21 @@ class ValueGradFunction:
         self._extra_vars_shared = {}
         for var in extra_vars:
             shared = theano.shared(var.tag.test_value, var.name + "_shared__")
-            # test TensorType compatibility
-            if hasattr(var.tag.test_value, "shape"):
-                testtype = TensorType(var.dtype, var.tag.test_value.shape)
-
-                if testtype != shared.type:
-                    shared.type = testtype
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
 
-        self._vars_joined, self._cost_joined = self._build_joined(
-            self._cost, grad_vars, self._ordering.vmap
-        )
+        self.bij = DictToArrayBijection([v.name for v in grad_vars])
 
         if compute_grads:
-            grad = tt.grad(self._cost_joined, self._vars_joined)
-            grad.name = "__grad"
-            outputs = [self._cost_joined, grad]
+            grads = tt.grad(cost, grad_vars)
+            for grad_wrt, var in zip(grads, grad_vars):
+                grad_wrt.name = f"{var.name}_grad"
+            outputs = [cost] + grads
         else:
-            outputs = self._cost_joined
+            outputs = cost
 
-        inputs = [self._vars_joined]
+        # inputs = [vars_joined]
+        inputs = grad_vars
 
         self._theano_function = theano.function(inputs, outputs, givens=givens, **kwargs)
 
@@ -717,76 +704,30 @@ class ValueGradFunction:
 
         return {var.name: self._extra_vars_shared[var.name].get_value() for var in self._extra_vars}
 
-    def __call__(self, array, grad_out=None, extra_vars=None):
+    def __call__(self, grad_vars, grad_out=None, extra_vars=None):
         if extra_vars is not None:
             self.set_extra_values(extra_vars)
 
         if not self._extra_are_set:
             raise ValueError("Extra values are not set.")
 
-        if array.shape != (self.size,):
-            raise ValueError(
-                "Invalid shape for array. Must be {} but is {}.".format((self.size,), array.shape)
-            )
+        if isinstance(grad_vars, RaveledVars):
+            grad_vars = self.bij.rmap(grad_vars, as_list=True)
+
+        cost, *grads = self._theano_function(*grad_vars)
+
+        grad = self.bij.map({name: grad for name, grad in zip(self.bij.ordering, grads)})
 
         if grad_out is None:
-            out = np.empty_like(array)
+            return cost, grad.data
         else:
-            out = grad_out
-
-        output = self._theano_function(array)
-        if grad_out is None:
-            return output
-        else:
-            np.copyto(out, output[1])
-            return output[0]
+            np.copyto(grad_out, grad.data)
+            return cost
 
     @property
     def profile(self):
         """Profiling information of the underlying theano function."""
         return self._theano_function.profile
-
-    def dict_to_array(self, point):
-        """Convert a dictionary with values for grad_vars to an array."""
-        array = np.empty(self.size, dtype=self.dtype)
-        for varmap in self._ordering.vmap:
-            array[varmap.slc] = point[varmap.var].ravel().astype(self.dtype)
-        return array
-
-    def array_to_dict(self, array):
-        """Convert an array to a dictionary containing the grad_vars."""
-        if array.shape != (self.size,):
-            raise ValueError(f"Array should have shape ({self.size},) but has {array.shape}")
-        if array.dtype != self.dtype:
-            raise ValueError(
-                f"Array has invalid dtype. Should be {self._dtype} but is {self.dtype}"
-            )
-        point = {}
-        for varmap in self._ordering.vmap:
-            data = array[varmap.slc].reshape(varmap.shp)
-            point[varmap.var] = data.astype(varmap.dtyp)
-
-        return point
-
-    def array_to_full_dict(self, array):
-        """Convert an array to a dictionary with grad_vars and extra_vars."""
-        point = self.array_to_dict(array)
-        for name, var in self._extra_vars_shared.items():
-            point[name] = var.get_value()
-        return point
-
-    def _build_joined(self, cost, args, vmap):
-        args_joined = tt.vector("__args_joined")
-        args_joined.tag.test_value = np.zeros(self.size, dtype=self.dtype)
-
-        joined_slices = {}
-        for vmap in vmap:
-            sliced = args_joined[vmap.slc].reshape(vmap.shp)
-            sliced.name = vmap.var
-            joined_slices[vmap.var] = sliced
-
-        replace = {var: joined_slices[var.name] for var in args}
-        return args_joined, theano.clone(cost, replace=replace)
 
 
 class Model(Factor, WithMemoization, metaclass=ContextMeta):
@@ -949,19 +890,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def isroot(self):
         return self.parent is None
 
-    @property  # type: ignore
-    @memoize(bound=True)
-    def bijection(self):
-        vars = inputvars(self.vars)
-
-        bij = DictToArrayBijection(ArrayOrdering(vars), self.test_point)
-
-        return bij
-
-    @property
-    def dict_to_array(self):
-        return self.bijection.map
-
     @property
     def size(self):
         return sum(self.test_point[n.name].size for n in self.free_RVs)
@@ -969,17 +897,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     @property
     def ndim(self):
         return sum(var.ndim for var in self.free_RVs)
-
-    @property
-    def logp_array(self):
-        return self.bijection.mapf(self.fastlogp)
-
-    @property
-    def dlogp_array(self):
-        logpt = self.logpt
-        vars = inputvars(logpt)
-        dlogp = self.fastfn(gradient(self.logpt, vars))
-        return self.bijection.mapf(dlogp)
 
     def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
         """Compile a theano function that computes logp and gradient.
@@ -1416,7 +1333,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         ----------
         vars: list of variables or None
             if None, then all model.free_RVs are used for flattening input
-        order: ArrayOrdering
+        order: list of variable names
             Optional, use predefined ordering
         inputvar: tt.vector
             Optional, use predefined inputvar
@@ -1427,8 +1344,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """
         if vars is None:
             vars = self.vars
-        if order is None:
-            order = ArrayOrdering(vars)
+        if order is not None:
+            var_map = {v.name: v for v in vars}
+            vars = [var_map[n] for n in order]
+
         if inputvar is None:
             inputvar = tt.vector("flat_view", dtype=theano.config.floatX)
             if theano.config.compute_test_value != "off":
@@ -1436,12 +1355,19 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                     inputvar.tag.test_value = flatten_list(vars).tag.test_value
                 else:
                     inputvar.tag.test_value = np.asarray([], inputvar.dtype)
-        replacements = {
-            self.named_vars[name]: inputvar[slc].reshape(shape).astype(dtype)
-            for name, slc, shape, dtype in order.vmap
-        }
+
+        replacements = {}
+        last_idx = 0
+        for var in vars:
+            arr_len = tt.prod(var.shape, dtype="int64")
+            replacements[self.named_vars[var.name]] = (
+                inputvar[last_idx : (last_idx + arr_len)].reshape(var.shape).astype(var.dtype)
+            )
+            last_idx += arr_len
+
         view = {vm.var: vm for vm in order.vmap}
         flat_view = FlatView(inputvar, replacements, view)
+
         return flat_view
 
     def check_test_point(self, test_point=None, round_vals=2):
