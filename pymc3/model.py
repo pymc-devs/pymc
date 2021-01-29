@@ -962,6 +962,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return self.bijection.map
 
     @property
+    def size(self):
+        return sum(self.test_point[n.name].size for n in self.free_RVs)
+
+    @property
     def ndim(self):
         return sum(var.dsize for var in self.free_RVs)
 
