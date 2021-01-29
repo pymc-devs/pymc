@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 import theano
 import theano.tensor as tt
+import xarray
 
 from theano.graph.basic import Apply
 
@@ -597,76 +598,57 @@ class Data:
         return coords
 
 
-class _IndexAccessor:
-    def __init__(self, data):
-        self._data = data
-
-    def __getitem__(self, key):
-        category = self._data._col_as_category(key)
-        vals = self._data.data.reset_index().loc[:, key]
-        return pd.Categorical(vals, dtype=category).codes
-
-
 class TidyData:
-    def __init__(self, data, copy_data=True, import_dims=None, model=None):
+    def __init__(self, data, import_dims=None, model=None):
         self.data = data
         self._shared_vars = {}
         self._category_cols = {}
-        self._index_dict = _IndexAccessor(self)
+        self._category_col_keys = {}
 
         if import_dims is not None:
             model = pm.model.modelcontext(model)
-            coords = self._extract_coords(import_dims)
-            model.add_coords(coords)
+            model_coords = self._dims_to_dict(import_dims)
+            model.add_coords(model_coords)
 
-    @property
-    def idxs(self):
-        return self._index_dict
-
-    def _col_as_category(self, key):
-        if key in self._category_cols:
-            return self._category_cols[key]
-        data = self.data.reset_index()
-        values = data.loc[:, key]
-        if values.dtype.name != 'category':
-            values = values.astype('category')
-        self._category_cols[key] = values.dtype
-        return values.dtype
+    def _dims_to_dict(self, dims):
+        model_coords = {}
+        for dim in dims:
+            self._validate_idx(dim)
+            if dim in self.data.coords:
+                coord = self.data.coords[dim]
+            elif dim in self.data.data_vars:
+                coord = self.data.data_vars[dim]
+            model_coords[dim] = coord
+        return model_coords
 
     def __getitem__(self, key):
-        if key not in self.data.columns:
-            raise KeyError('Unknown column %s' % key)
+        self._validate_idx(key)
         if key in self._shared_vars:
             return self._shared_vars[key]
 
-        shared_var = theano.shared(self.data.loc[:, key].values)
+        shared_var = theano.shared(self.data[key].values)
         self._shared_vars[key] = shared_var
         return shared_var
 
-    def _extract_coords(self, dims):
-        data = self.data
-        dims = set(dims)
-        coords = {}
+    def get_indexed(self, col, keys=False):
+        self._validate_idx(col)
 
-        if data.index.name is not None and data.index.name in dims:
-            dims.remove(data.index.name)
-            coords[data.index.name] = data.index
+        if col not in self._category_cols:
+            col_data = self.data[col]
+            keys = {}
 
-        # We want to iterate over index columns of a multi index as well
-        data = data.reset_index()
-        for col in data.columns:
-            if col not in dims:
-                continue
-            dims.remove(col)
-            category = self._col_as_category(col)
-            cat = pd.Categorical(category.categories, dtype=category)
-            coords[col] = pd.CategoricalIndex(cat, name=col)
+            for idx, group in enumerate(set(col_data.values)):
+                keys[group] = idx
+                col_data = xarray.where(col_data == group, idx, col_data)
 
-        if dims:
-            raise KeyError('Unknown columns: %s' % dims)
+            shared_col_data = col_data.values.tolist()
+            self._category_col_keys[col] = keys
+            self._category_cols[col] = shared_col_data
 
-        return coords
+        if keys is True:
+            return self._category_cols[col], self._category_col_keys[col]
+        return self._category_cols[col]
 
-    @property
-    def columns(self):
-        return self.data.columns
+    def _validate_idx(self, idx):
+        if idx not in self.data.coords and idx not in self.data.data_vars:
+            raise KeyError("Unknown column %s" % idx)
