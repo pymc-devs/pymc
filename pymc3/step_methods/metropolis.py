@@ -96,6 +96,26 @@ class MultivariateNormalProposal(Proposal):
 
 class Metropolis(ArrayStepShared):
     """Metropolis-Hastings sampling step
+    
+    Parameters
+    ----------
+    vars: list
+        List of variables for sampler
+    S: standard deviation or covariance matrix
+        Some measure of variance to parameterize proposal distribution
+    proposal_dist: function
+        Function that returns zero-mean deviates when parameterized with
+        S (and n). Defaults to normal.
+    scaling: scalar or array
+        Initial scale factor for proposal. Defaults to 1.
+    tune: bool
+        Flag for tuning. Defaults to True.
+    tune_interval: int
+        The frequency of tuning. Defaults to 100 iterations.
+    model: PyMC Model
+        Optional model for sampling step. Defaults to None (taken from context).
+    mode:  string or `Mode` instance.
+        compilation mode passed to Theano functions
     """
 
     name = "metropolis"
@@ -123,7 +143,7 @@ class Metropolis(ArrayStepShared):
         mode=None,
         **kwargs
     ):
-        """Metropolis-Hastings sampling step
+        """Create an instance of a Metropolis stepper
 
         Arguments:
         vars -- List of variables for sampler (default None)
