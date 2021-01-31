@@ -148,17 +148,17 @@ class Distribution:
     def get_test_val(self, val, defaults):
         if val is None:
             for v in defaults:
-                if hasattr(self, v) and np.all(np.isfinite(self.getattr_value(v))):
-                    return self.getattr_value(v)
-        else:
-            return self.getattr_value(val)
-
-        if val is None:
+                if hasattr(self, v):
+                    attr_val = self.getattr_value(v)
+                    if np.all(np.isfinite(attr_val)):
+                        return attr_val
             raise AttributeError(
                 "%s has no finite default value to use, "
                 "checked: %s. Pass testval argument or "
                 "adjust so value is finite." % (self, str(defaults))
             )
+        else:
+            return self.getattr_value(val)
 
     def getattr_value(self, val):
         if isinstance(val, string_types):
@@ -167,7 +167,7 @@ class Distribution:
         if isinstance(val, tt.TensorVariable):
             return val.tag.test_value
 
-        if isinstance(val, tt.sharedvar.TensorSharedVariable):
+        if isinstance(val, tt.sharedvar.SharedVariable):
             return val.get_value()
 
         if isinstance(val, theano_constant):

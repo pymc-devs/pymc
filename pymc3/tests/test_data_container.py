@@ -16,6 +16,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from theano import shared
+
 import pymc3 as pm
 
 from pymc3.tests.helpers import SeededTest
@@ -155,6 +157,26 @@ class TestData(SeededTest):
 
         np.testing.assert_allclose(np.array([2.0, 4.0, 6.0]), x.get_value(), atol=1e-1)
         np.testing.assert_allclose(np.array([2.0, 4.0, 6.0]), trace["y"].mean(0), atol=1e-1)
+
+    def test_shared_scalar_as_rv_input(self):
+        # See https://github.com/pymc-devs/pymc3/issues/3139
+        with pm.Model() as m:
+            shared_var = shared(5.0)
+            v = pm.Normal("v", mu=shared_var, shape=1)
+
+        np.testing.assert_allclose(
+            v.logp({"v": [5.0]}),
+            -0.91893853,
+            rtol=1e-5,
+        )
+
+        shared_var.set_value(10.0)
+
+        np.testing.assert_allclose(
+            v.logp({"v": [10.0]}),
+            -0.91893853,
+            rtol=1e-5,
+        )
 
     def test_creation_of_data_outside_model_context(self):
         with pytest.raises((IndexError, TypeError)) as error:
