@@ -141,7 +141,7 @@ class Metropolis(ArrayStepShared):
             The frequency of tuning. Defaults to 100 iterations.
         model: PyMC Model
             Optional model for sampling step. Defaults to None (taken from context).
-        mode:  string or `Mode` instance.
+        mode: string or `Mode` instance.
             compilation mode passed to Theano functions
         """
 
