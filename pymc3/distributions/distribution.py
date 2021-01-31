@@ -153,7 +153,7 @@ class Distribution:
                     if np.all(np.isfinite(attr_val)):
                         return attr_val
             raise AttributeError(
-                "%s has no finite default value to use "
+                "%s has no finite default value to use, "
                 "checked: %s. Pass testval argument or "
                 "adjust so value is finite." % (self, str(defaults))
             )
