@@ -169,7 +169,8 @@ class PGBART(ArrayStepShared):
         """
         PGBART is only suitable for BART distributions
         """
-        if isinstance(var.distribution, BART):
+        dist = getattr(var.owner, "op", None)
+        if isinstance(dist, BART):
             return Competence.IDEAL
         return Competence.INCOMPATIBLE
 
