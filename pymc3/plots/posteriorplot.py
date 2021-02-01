@@ -28,9 +28,9 @@ if TYPE_CHECKING:
 
 
 def plot_posterior_predictive_glm(
-    trace: Union[InferenceData, MultiTrace],
-    eval: Optional[np.ndarray] = None,
-    lm: Optional[Callable] = None,
+    trace: InferenceData | MultiTrace,
+    eval: np.ndarray | None = None,
+    lm: Callable | None = None,
     samples: int = 30,
     **kwargs: Any
 ) -> None:
