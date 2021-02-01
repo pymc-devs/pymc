@@ -75,7 +75,8 @@ class ElemwiseCategorical(ArrayStep):
 
     @staticmethod
     def competence(var, has_grad):
-        if isinstance(var.distribution, Categorical):
+        dist = getattr(var.owner, "op", None)
+        if isinstance(dist, Categorical):
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
 
