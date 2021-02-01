@@ -13,9 +13,12 @@
 #   limitations under the License.
 
 import aesara
+import aesara.tensor as aet
 import numpy as np
 import numpy.random as nr
 import scipy.linalg
+
+from aesara.tensor.random.basic import CategoricalRV
 
 import pymc3 as pm
 
@@ -344,11 +347,14 @@ class BinaryMetropolis(ArrayStep):
         BinaryMetropolis is only suitable for binary (bool)
         and Categorical variables with k=1.
         """
-        distribution = getattr(var.distribution, "parent_dist", var.distribution)
+        distribution = getattr(var.owner, "op", None)
         if isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
-            return Competence.COMPATIBLE
-        elif isinstance(distribution, pm.Categorical) and (distribution.k == 2):
-            return Competence.COMPATIBLE
+            return Competence.IDEAL
+
+        if isinstance(distribution, CategoricalRV):
+            k = aet.get_scalar_constant_value(distribution.owner.inputs[2])
+            if k == 2:
+                return Competence.IDEAL
         return Competence.INCOMPATIBLE
 
 
@@ -421,11 +427,14 @@ class BinaryGibbsMetropolis(ArrayStep):
         BinaryMetropolis is only suitable for Bernoulli
         and Categorical variables with k=2.
         """
-        distribution = getattr(var.distribution, "parent_dist", var.distribution)
+        distribution = getattr(var.owner, "op", None)
         if isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
             return Competence.IDEAL
-        elif isinstance(distribution, pm.Categorical) and (distribution.k == 2):
-            return Competence.IDEAL
+
+        if isinstance(distribution, CategoricalRV):
+            k = aet.get_scalar_constant_value(distribution.owner.inputs[2])
+            if k == 2:
+                return Competence.IDEAL
         return Competence.INCOMPATIBLE
 
 
@@ -451,8 +460,10 @@ class CategoricalGibbsMetropolis(ArrayStep):
         # variable with M categories and y being a 3-D variable with N
         # categories, we will have dimcats = [(0, M), (1, M), (2, N), (3, N), (4, N)].
         for v in vars:
-            distr = getattr(v.distribution, "parent_dist", v.distribution)
-            if isinstance(distr, pm.Categorical):
+
+            distr = getattr(v.owner, "op", None)
+
+            if isinstance(distr, CategoricalRV):
                 k = draw_values([distr.k])[0]
             elif isinstance(distr, pm.Bernoulli) or (v.dtype in pm.bool_types):
                 k = 2
@@ -537,13 +548,16 @@ class CategoricalGibbsMetropolis(ArrayStep):
         CategoricalGibbsMetropolis is only suitable for Bernoulli and
         Categorical variables.
         """
-        distribution = getattr(var.distribution, "parent_dist", var.distribution)
-        if isinstance(distribution, pm.Categorical):
-            if distribution.k > 2:
+        distribution = getattr(var.owner, "op", None)
+        if isinstance(distribution, CategoricalRV):
+            k = aet.get_scalar_constant_value(distribution.owner.inputs[2])
+            if k == 2:
                 return Competence.IDEAL
             return Competence.COMPATIBLE
-        elif isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
+
+        if isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
             return Competence.COMPATIBLE
+
         return Competence.INCOMPATIBLE
 
 
