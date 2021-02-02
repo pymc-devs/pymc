@@ -1699,7 +1699,7 @@ class TestMatchesScipy(SeededTest):
     def test_dirichlet_with_unit_batch_shape(self):
         with pm.Model() as model:
             a = pm.Dirichlet("a", a=np.ones((1, 2)))
-        np.isfinite(model.check_test_point()[0])
+        assert np.isfinite(model.check_test_point()[0])
 
     def test_dirichlet_shape(self):
         a = tt.as_tensor_variable(np.r_[1, 2])
