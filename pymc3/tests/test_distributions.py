@@ -1692,7 +1692,7 @@ class TestMatchesScipy(SeededTest):
         decimals = select_by_precision(float64=6, float32=4)
         assert_almost_equal(model.fastlogp(pt), lp, decimal=decimals, err_msg=str(pt))
 
-    @pytest.mark.parametrize("n", [2, 3])
+    @pytest.mark.parametrize("n", [1, 2, 3])
     def test_dirichlet(self, n):
         self.pymc3_matches_scipy(Dirichlet, Simplex(n), {"a": Vector(Rplus, n)}, dirichlet_logpdf)
 
