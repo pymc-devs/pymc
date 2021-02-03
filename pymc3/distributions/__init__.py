@@ -200,11 +200,10 @@ def strip_observed(x: TensorVariable) -> TensorVariable:
 def sample_to_measure_vars(graphs: List[TensorVariable]) -> List[TensorVariable]:
     """Replace `RandomVariable` terms in graphs with their measure-space counterparts."""
     replace = {}
-    for anc in ancestors(graphs):
-        if anc.owner and isinstance(anc.owner.op, RandomVariable):
-            measure_var = getattr(anc.tag, "value_var", None)
-            if measure_var is not None:
-                replace[anc] = measure_var
+    for anc in rv_ancestors(graphs):
+        measure_var = getattr(anc.tag, "value_var", None)
+        if measure_var is not None:
+            replace[anc] = measure_var
 
     dist_params = clone_replace(graphs, replace=replace)
     return dist_params
