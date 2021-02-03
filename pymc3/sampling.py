@@ -41,6 +41,7 @@ from pymc3.aesaraf import inputvars
 from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
 from pymc3.blocking import DictToArrayBijection
+from pymc3.distributions import change_rv_size, rv_ancestors, strip_observed
 from pymc3.distributions.distribution import draw_values
 from pymc3.distributions.posterior_predictive import fast_sample_posterior_predictive
 from pymc3.exceptions import IncorrectArgumentsError, SamplingError
@@ -1718,6 +1719,31 @@ def sample_posterior_predictive(
     if progressbar:
         indices = progress_bar(indices, total=samples, display=progressbar)
 
+    vars_to_sample = [
+        strip_observed(v) for v in get_default_varnames(vars_, include_transformed=False)
+    ]
+
+    if not vars_to_sample:
+        return {}
+
+    if not hasattr(_trace, "varnames"):
+        inputs_and_names = [(i, i.name) for i in rv_ancestors(vars_to_sample)]
+        inputs, input_names = zip(*inputs_and_names)
+    else:
+        input_names = _trace.varnames
+        inputs = [model[n] for n in _trace.varnames]
+
+    if size is not None:
+        vars_to_sample = [change_rv_size(v, size, expand=True) for v in vars_to_sample]
+
+    sampler_fn = theano.function(
+        inputs,
+        vars_to_sample,
+        allow_input_downcast=True,
+        accept_inplace=True,
+        on_unused_input="ignore",
+    )
+
     ppc_trace_t = _DefaultTrace(samples)
     try:
         for idx in indices:
@@ -1734,7 +1760,8 @@ def sample_posterior_predictive(
             else:
                 param = _trace[idx % len_trace]
 
-            values = draw_values(vars_, point=param, size=size)
+            values = sampler_fn(*(param[n] for n in input_names))
+
             for k, v in zip(vars_, values):
                 ppc_trace_t.insert(k.name, v, idx)
     except KeyboardInterrupt:
