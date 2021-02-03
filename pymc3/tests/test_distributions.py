@@ -948,6 +948,7 @@ class TestMatchesScipy(SeededTest):
             Unit,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.beta.logcdf(value, alpha, beta),
+            n_samples=10,
         )
 
     def test_kumaraswamy(self):
@@ -1052,17 +1053,20 @@ class TestMatchesScipy(SeededTest):
             Nat,
             {"mu": Rplus, "alpha": Rplus},
             scipy_mu_alpha_logcdf,
+            n_samples=5,
         )
         self.check_logcdf(
             NegativeBinomial,
             Nat,
             {"p": Unit, "n": Rplus},
             lambda value, p, n: sp.nbinom.logcdf(value, n, p),
+            n_samples=5,
         )
         self.check_selfconsistency_discrete_logcdf(
             NegativeBinomial,
             Nat,
             {"mu": Rplus, "alpha": Rplus},
+            n_samples=10,
         )
 
     @pytest.mark.parametrize(
@@ -1282,11 +1286,13 @@ class TestMatchesScipy(SeededTest):
             Nat,
             {"n": NatSmall, "p": Unit},
             lambda value, n, p: sp.binom.logcdf(value, n, p),
+            n_samples=10,
         )
         self.check_selfconsistency_discrete_logcdf(
             Binomial,
             Nat,
             {"n": NatSmall, "p": Unit},
+            n_samples=10,
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
@@ -1423,6 +1429,7 @@ class TestMatchesScipy(SeededTest):
             ZeroInflatedNegativeBinomial,
             Nat,
             {"mu": Rplusbig, "alpha": Rplusbig, "psi": Unit},
+            n_samples=10,
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
@@ -1437,6 +1444,7 @@ class TestMatchesScipy(SeededTest):
             ZeroInflatedBinomial,
             Nat,
             {"n": NatSmall, "p": Unit, "psi": Unit},
+            n_samples=10,
         )
 
     @pytest.mark.parametrize("n", [1, 2, 3])
