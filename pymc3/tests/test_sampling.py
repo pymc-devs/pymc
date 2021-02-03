@@ -121,6 +121,17 @@ class TestSample(SeededTest):
             for i, trace in enumerate(samps):
                 assert i == len(trace) - 1, "Trace does not have correct length."
 
+    def test_sample_does_not_modify_start(self):
+        start_dict = {"X0_mu": 25}
+        with self.model:
+            X0_mu = pm.Lognormal("X0_mu", mu=np.log(0.25), sd=0.10)
+            trace = pm.sample(
+                tune=50,
+                draws=100,
+                start=start_dict,
+            )
+        assert len(start_dict) == 1
+
     def test_parallel_start(self):
         with self.model:
             tr = pm.sample(

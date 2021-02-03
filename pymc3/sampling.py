@@ -15,6 +15,7 @@
 """Functions for MCMC sampling."""
 
 import collections.abc as abc
+import copy
 import logging
 import pickle
 import sys
@@ -423,14 +424,13 @@ def sample(
         p  0.609  0.047   0.528    0.699
     """
     model = modelcontext(model)
+    start = copy.deepcopy(start)
     if start is None:
         check_start_vals(model.test_point, model)
     else:
         if isinstance(start, dict):
-            start = {k: v for k, v in start.items()}
             update_start_vals(start, model.test_point, model)
         else:
-            start = start[:]
             for chain_start_vals in start:
                 update_start_vals(chain_start_vals, model.test_point, model)
         check_start_vals(start, model)
