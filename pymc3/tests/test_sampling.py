@@ -121,16 +121,36 @@ class TestSample(SeededTest):
             for i, trace in enumerate(samps):
                 assert i == len(trace) - 1, "Trace does not have correct length."
 
-    def test_sample_does_not_modify_start(self):
+    def test_sample_does_not_modify_start_as_list_of_dicts(self):
+        # make sure pm.sample does not modify the 'start_list' passed as an argument
+        # see https://github.com/pymc-devs/pymc3/pull/4458
+        start_list = [{"mu1": 10}, {"mu2": 15}]
+        with self.model:
+            mu1 = pm.Normal("mu1", mu=0, sd=5)
+            mu2 = pm.Normal("mu2", mu=0, sd=1)
+            trace = pm.sample(
+                step=pm.Metropolis(),
+                tune=5,
+                draws=10,
+                chains=2,
+                start=start_list,
+            )
+        assert start_list == [{"mu1": 10}, {"mu2": 15}]
+
+    def test_sample_does_not_modify_start_as_dict(self):
+        # make sure pm.sample does not modify the 'start_dict' passed as an argument.
+        # see https://github.com/pymc-devs/pymc3/pull/4458
         start_dict = {"X0_mu": 25}
         with self.model:
             X0_mu = pm.Lognormal("X0_mu", mu=np.log(0.25), sd=0.10)
             trace = pm.sample(
-                tune=50,
-                draws=100,
+                step=pm.Metropolis(),
+                tune=5,
+                draws=10,
+                chains=3,
                 start=start_dict,
             )
-        assert len(start_dict) == 1
+        assert start_dict == {"X0_mu": 25}
 
     def test_parallel_start(self):
         with self.model:

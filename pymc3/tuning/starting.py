@@ -102,7 +102,6 @@ def find_MAP(
     if start is None:
         start = model.test_point
     else:
-        start = {k: v for k, v in start.items()}
         update_start_vals(start, model.test_point, model)
     check_start_vals(start, model)
 
