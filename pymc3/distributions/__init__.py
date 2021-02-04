@@ -379,8 +379,7 @@ def logpt_sum(rv_var: TensorVariable, rv_value: Optional[TensorVariable] = None,
     return at.sum(logpt(rv_var, rv_value, **kwargs))
 
 
-# from pymc3.distributions import timeseries
-from pymc3.distributions import shape_utils, transforms
+from pymc3.distributions import shape_utils, timeseries, transforms
 from pymc3.distributions.bart import BART
 from pymc3.distributions.bound import Bound
 from pymc3.distributions.continuous import (
@@ -442,8 +441,6 @@ from pymc3.distributions.distribution import (
     Discrete,
     Distribution,
     NoDistribution,
-    draw_values,
-    generate_samples,
 )
 from pymc3.distributions.mixture import Mixture, MixtureSameFamily, NormalMixture
 from pymc3.distributions.multivariate import (
@@ -460,17 +457,16 @@ from pymc3.distributions.multivariate import (
     Wishart,
     WishartBartlett,
 )
-from pymc3.distributions.posterior_predictive import fast_sample_posterior_predictive
 from pymc3.distributions.simulator import Simulator
+from pymc3.distributions.timeseries import (
+    AR,
+    AR1,
+    GARCH11,
+    GaussianRandomWalk,
+    MvGaussianRandomWalk,
+    MvStudentTRandomWalk,
+)
 
-# from pymc3.distributions.timeseries import (
-#     AR,
-#     AR1,
-#     GARCH11,
-#     GaussianRandomWalk,
-#     MvGaussianRandomWalk,
-#     MvStudentTRandomWalk,
-# )
 __all__ = [
     "Uniform",
     "Flat",
@@ -528,13 +524,13 @@ __all__ = [
     "WishartBartlett",
     "LKJCholeskyCov",
     "LKJCorr",
-    # "AR1",
-    # "AR",
+    "AR1",
+    "AR",
     "AsymmetricLaplace",
-    # "GaussianRandomWalk",
-    # "MvGaussianRandomWalk",
-    # "MvStudentTRandomWalk",
-    # "GARCH11",
+    "GaussianRandomWalk",
+    "MvGaussianRandomWalk",
+    "MvStudentTRandomWalk",
+    "GARCH11",
     "SkewNormal",
     "Mixture",
     "NormalMixture",
@@ -549,7 +545,6 @@ __all__ = [
     "Rice",
     "Moyal",
     "Simulator",
-    "fast_sample_posterior_predictive",
     "BART",
     "CAR",
 ]

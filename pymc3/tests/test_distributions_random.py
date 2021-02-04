@@ -20,7 +20,6 @@ from contextlib import ExitStack as does_not_raise
 import aesara
 import numpy as np
 import numpy.random as nr
-import numpy.testing as npt
 import pytest
 import scipy.stats as st
 
@@ -30,12 +29,7 @@ from scipy.special import expit
 import pymc3 as pm
 
 from pymc3.distributions.dist_math import clipped_beta_rvs
-from pymc3.distributions.distribution import (
-    _DrawValuesContext,
-    _DrawValuesContextBlocker,
-    draw_values,
-    to_tuple,
-)
+from pymc3.distributions.distribution import to_tuple
 from pymc3.exceptions import ShapeError
 from pymc3.tests.helpers import SeededTest
 from pymc3.tests.test_distributions import (
@@ -118,90 +112,6 @@ def pymc3_random_discrete(
                 _, p = st.chisquare(k[:, 0], k[:, 1])
             f -= 1
         assert p > alpha, str(pt)
-
-
-class TestDrawValues(SeededTest):
-    def test_draw_scalar_parameters(self):
-        with pm.Model():
-            y = pm.Normal("y1", mu=0.0, sigma=1.0)
-            mu, tau = draw_values([y.distribution.mu, y.distribution.tau])
-        npt.assert_almost_equal(mu, 0)
-        npt.assert_almost_equal(tau, 1)
-
-    def test_draw_dependencies(self):
-        with pm.Model():
-            x = pm.Normal("x", mu=0.0, sigma=1.0)
-            exp_x = pm.Deterministic("exp_x", pm.math.exp(x))
-
-        x, exp_x = draw_values([x, exp_x])
-        npt.assert_almost_equal(np.exp(x), exp_x)
-
-    def test_draw_order(self):
-        with pm.Model():
-            x = pm.Normal("x", mu=0.0, sigma=1.0)
-            exp_x = pm.Deterministic("exp_x", pm.math.exp(x))
-
-        # Need to draw x before drawing log_x
-        exp_x, x = draw_values([exp_x, x])
-        npt.assert_almost_equal(np.exp(x), exp_x)
-
-    def test_draw_point_replacement(self):
-        with pm.Model():
-            mu = pm.Normal("mu", mu=0.0, tau=1e-3)
-            sigma = pm.Gamma("sigma", alpha=1.0, beta=1.0, transform=None)
-            y = pm.Normal("y", mu=mu, sigma=sigma)
-            mu2, tau2 = draw_values(
-                [y.distribution.mu, y.distribution.tau], point={"mu": 5.0, "sigma": 2.0}
-            )
-        npt.assert_almost_equal(mu2, 5)
-        npt.assert_almost_equal(tau2, 1 / 2.0 ** 2)
-
-    def test_random_sample_returns_nd_array(self):
-        with pm.Model():
-            mu = pm.Normal("mu", mu=0.0, tau=1e-3)
-            sigma = pm.Gamma("sigma", alpha=1.0, beta=1.0, transform=None)
-            y = pm.Normal("y", mu=mu, sigma=sigma)
-            mu, tau = draw_values([y.distribution.mu, y.distribution.tau])
-        assert isinstance(mu, np.ndarray)
-        assert isinstance(tau, np.ndarray)
-
-
-class TestDrawValuesContext:
-    def test_normal_context(self):
-        with _DrawValuesContext() as context0:
-            assert context0.parent is None
-            context0.drawn_vars["root_test"] = 1
-            with _DrawValuesContext() as context1:
-                assert id(context1.drawn_vars) == id(context0.drawn_vars)
-                assert context1.parent == context0
-                with _DrawValuesContext() as context2:
-                    assert id(context2.drawn_vars) == id(context0.drawn_vars)
-                    assert context2.parent == context1
-                    context2.drawn_vars["leaf_test"] = 2
-                assert context1.drawn_vars["leaf_test"] == 2
-                context1.drawn_vars["root_test"] = 3
-            assert context0.drawn_vars["root_test"] == 3
-            assert context0.drawn_vars["leaf_test"] == 2
-
-    def test_blocking_context(self):
-        with _DrawValuesContext() as context0:
-            assert context0.parent is None
-            context0.drawn_vars["root_test"] = 1
-            with _DrawValuesContext() as context1:
-                assert id(context1.drawn_vars) == id(context0.drawn_vars)
-                assert context1.parent == context0
-                with _DrawValuesContextBlocker() as blocker:
-                    assert id(blocker.drawn_vars) != id(context0.drawn_vars)
-                    assert blocker.parent is None
-                    blocker.drawn_vars["root_test"] = 2
-                    with _DrawValuesContext() as context2:
-                        assert id(context2.drawn_vars) == id(blocker.drawn_vars)
-                        assert context2.parent == blocker
-                        context2.drawn_vars["root_test"] = 3
-                        context2.drawn_vars["leaf_test"] = 4
-                    assert blocker.drawn_vars["root_test"] == 3
-                assert "leaf_test" not in context1.drawn_vars
-            assert context0.drawn_vars["root_test"] == 1
 
 
 class BaseTestCases:
@@ -1228,9 +1138,10 @@ def test_mixture_random_shape():
         w3 = pm.Dirichlet("w3", a=np.ones(2), shape=(20, 2))
         like3 = pm.Mixture("like3", w=w3, comp_dists=comp3, observed=y)
 
-    rand0, rand1, rand2, rand3 = draw_values(
-        [like0, like1, like2, like3], point=m.test_point, size=100
-    )
+    # XXX: This needs to be refactored
+    rand0, rand1, rand2, rand3 = [None] * 4  # draw_values(
+    #     [like0, like1, like2, like3], point=m.test_point, size=100
+    # )
     assert rand0.shape == (100, 20)
     assert rand1.shape == (100, 20)
     assert rand2.shape == (100, 20)
@@ -1265,22 +1176,14 @@ def test_mixture_random_shape_fast():
         w3 = pm.Dirichlet("w3", a=np.ones(2), shape=(20, 2))
         like3 = pm.Mixture("like3", w=w3, comp_dists=comp3, observed=y)
 
-    rand0, rand1, rand2, rand3 = draw_values(
-        [like0, like1, like2, like3], point=m.test_point, size=100
-    )
+    # XXX: This needs to be refactored
+    rand0, rand1, rand2, rand3 = [None] * 4  # draw_values(
+    #     [like0, like1, like2, like3], point=m.test_point, size=100
+    # )
     assert rand0.shape == (100, 20)
     assert rand1.shape == (100, 20)
     assert rand2.shape == (100, 20)
     assert rand3.shape == (100, 20)
-
-    # I *think* that the mixture means that this is not going to work,
-    # but I could be wrong. [2019/08/22:rpg]
-    with m:
-        ppc = pm.fast_sample_posterior_predictive([m.test_point], samples=200)
-    assert ppc["like0"].shape == (200, 20)
-    assert ppc["like1"].shape == (200, 20)
-    assert ppc["like2"].shape == (200, 20)
-    assert ppc["like3"].shape == (200, 20)
 
 
 class TestDensityDist:
@@ -1303,9 +1206,6 @@ class TestDensityDist:
         ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model, size=size)
         assert ppc["density_dist"].shape == (samples, size) + obs.distribution.shape
 
-        # ppc = pm.fast_sample_posterior_predictive(trace, samples=samples, model=model, size=size)
-        # assert ppc['density_dist'].shape == (samples, size) + obs.distribution.shape
-
     @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
     def test_density_dist_with_random_sampleable_failure(self, shape):
         with pm.Model() as model:
@@ -1325,9 +1225,6 @@ class TestDensityDist:
         with pytest.raises(RuntimeError):
             pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
 
-        with pytest.raises((TypeError, RuntimeError)):
-            pm.fast_sample_posterior_predictive(trace, samples=samples, model=model, size=100)
-
     @pytest.mark.parametrize("shape", [(), (3,), (3, 2)], ids=str)
     def test_density_dist_with_random_sampleable_hidden_error(self, shape):
         with pm.Model() as model:
@@ -1346,10 +1243,6 @@ class TestDensityDist:
 
         samples = 500
         ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model)
-        assert len(ppc["density_dist"]) == samples
-        assert ((samples,) + obs.distribution.shape) != ppc["density_dist"].shape
-
-        ppc = pm.fast_sample_posterior_predictive(trace, samples=samples, model=model)
         assert len(ppc["density_dist"]) == samples
         assert ((samples,) + obs.distribution.shape) != ppc["density_dist"].shape
 
@@ -1390,9 +1283,6 @@ class TestDensityDist:
         samples = 500
         size = 100
 
-        ppc = pm.fast_sample_posterior_predictive(trace, samples=samples, model=model, size=size)
-        assert ppc["density_dist"].shape == (samples, size) + obs.distribution.shape
-
     def test_density_dist_without_random_not_sampleable(self):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0, 1)
@@ -1403,9 +1293,6 @@ class TestDensityDist:
         samples = 500
         with pytest.raises(ValueError):
             pm.sample_posterior_predictive(trace, samples=samples, model=model, size=100)
-
-        with pytest.raises((TypeError, ValueError)):
-            pm.fast_sample_posterior_predictive(trace, samples=samples, model=model, size=100)
 
 
 class TestNestedRandom(SeededTest):
