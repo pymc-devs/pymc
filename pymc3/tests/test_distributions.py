@@ -1696,10 +1696,14 @@ class TestMatchesScipy(SeededTest):
     def test_dirichlet(self, n):
         self.pymc3_matches_scipy(Dirichlet, Simplex(n), {"a": Vector(Rplus, n)}, dirichlet_logpdf)
 
-    def test_dirichlet_with_unit_batch_shape(self):
+    @pytest.mark.parametrize("dist_shape", [1, (2, 1), (1, 2), (2, 4, 3)])
+    def test_dirichlet_with_batch_shapes(self, dist_shape):
+        a = np.ones(dist_shape)
         with pm.Model() as model:
-            a = pm.Dirichlet("a", a=np.ones((1, 2)))
-        assert np.isfinite(model.check_test_point()[0])
+            d = pm.Dirichlet("a", a=a)
+
+        value = d.tag.test_value
+        assert_almost_equal(dirichlet_logpdf(value, a), d.distribution.logp(value).eval().sum())
 
     def test_dirichlet_shape(self):
         a = tt.as_tensor_variable(np.r_[1, 2])
