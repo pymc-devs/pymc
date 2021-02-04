@@ -156,8 +156,8 @@ explicit about the conversion. For example:
 .. code:: python
 
     with pm.Model() as model:
-        z = pm.Normal('z', mu=0., sigma=5.)             # ==> pymc3.model.FreeRV, or aesara.tensor with logp
-        x = pm.Normal('x', mu=z, sigma=1., observed=5.) # ==> pymc3.model.ObservedRV, also has logp properties
+        z = pm.Normal('z', mu=0., sigma=5.)             # ==> aesara.tensor.var.TensorVariable
+        x = pm.Normal('x', mu=z, sigma=1., observed=5.) # ==> aesara.tensor.var.TensorVariable
     x.logp({'z': 2.5})                                  # ==> -4.0439386
     model.logp({'z': 2.5})                              # ==> -6.6973152
 
@@ -190,12 +190,11 @@ explicit about the conversion. For example:
     model_logp                                       # ==> -6.6973152
 
 
-Random method and logp method, very different behind the curtain
+``logp`` method, very different behind the curtain
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In short, the random method is scipy/numpy-based, and the logp method is
-Aesara-based. The ``logp`` method is straightforward - it is a Aesara
-function within each distribution. It has the following signature:
+The ``logp`` method is straightforward - it is a Aesara function within each
+distribution. It has the following signature:
 
 .. code:: python
 
@@ -229,42 +228,12 @@ itself <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66
         self.logp_sum_unscaledt = distribution.logp_sum(self)
         self.logp_nojac_unscaledt = distribution.logp_nojac(self)
 
-Or for a ObservedRV. it evaluate the logp on the data:
+Or for an observed RV. it evaluate the logp on the data:
 
 .. code:: python
 
         self.logp_sum_unscaledt = distribution.logp_sum(data)
         self.logp_nojac_unscaledt = distribution.logp_nojac(data)
-
-However, for the random method things are a bit less graceful. As the
-random generator is limited in Aesara, all random generation is done in
-scipy/numpy land. In the random method, we have:
-
-.. code:: python
-
-    def random(self, point=None, size=None):
-        # GET PARAMETERS
-        param1, param2, ... = draw_values([self.param1, self.param2, ...],
-                                          point=point,
-                                          size=size)
-        # GENERATE SAMPLE
-        samples = generate_samples(SCIPY_OR_NUMPY_RANDOM_FUNCTION,
-                                   param1, param2, ... # ==> parameters, type is numpy arrays
-                                   dist_shape=self.shape,
-                                   size=size)
-        return samples
-
-Here, ``point`` is a dictionary that contains dependence of
-``param1, param2, ...``, and ``draw_values`` generates a (random)
-``(size, ) + param.shape`` arrays *conditioned* on the information from
-``point``. This is the backbone for forwarding random simulation. The
-``draw_values`` function is a recursive algorithm to try to resolve all
-the dependence outside of Aesara, by walking the Aesara computational
-graph, it is complicated and a constant pain point for bug fixing:
-https://github.com/pymc-devs/pymc3/blob/master/pymc3/distributions/distribution.py#L217-L529
-(But also see a `recent
-PR <https://github.com/pymc-devs/pymc3/pull/3273>`__ that use
-interception and context manager to resolve the dependence issue)
 
 Model context and Random Variable
 ---------------------------------
@@ -323,164 +292,103 @@ a model:
         x = pm.Normal('x', mu=0., sigma=1.)
 
 
-Which is the same as doing:
-
-
-.. code:: python
-
-    m = pm.Model()
-    x = m.Var('x', pm.Normal.dist(mu=0., sigma=1.))
-
-
-Both with the same output:
-
-
 .. parsed-literal::
 
-    print(type(x))                              # ==> <class 'pymc3.model.FreeRV'>
+    print(type(x))                              # ==> <class 'aesara.tensor.var.TensorVariable'>
     print(m.free_RVs)                           # ==> [x]
-    print(x.distribution.logp(5.))              # ==> Elemwise{switch,no_inplace}.0
-    print(x.distribution.logp(5.).eval({}))     # ==> -13.418938533204672
+    print(logpt(x, 5.0))                        # ==> Elemwise{switch,no_inplace}.0
+    print(logpt(x, 5.).eval({}))                # ==> -13.418938533204672
     print(m.logp({'x': 5.}))                    # ==> -13.418938533204672
 
 
+In general, if a variable has observations (``observed`` parameter), the RV is
+an observed RV, otherwise if it has a ``transformed`` (``transform`` parameter)
+attribute, it is a transformed RV otherwise, it will be the most elementary
+form: a free RV.  Note that this means that random variables with observations
+cannot be transformed.
 
-Looking closer to the classmethod ``model.Var``, it is clear that what
-PyMC3 does is an **interception** of the Random Variable, depending on
-the ``*args``:
-https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/model.py#L786-L847
+..
+   Below, I will take a deeper look into transformed RV. A normal user
+   might not necessarily come in contact with the concept, since a
+   transformed RV and ``TransformedDistribution`` are intentionally not
+   user facing.
 
-.. code:: python
+   Because in PyMC3 there is no bijector class like in TFP or pyro, we only
+   have a partial implementation called ``Transform``, which implements
+   Jacobian correction for forward mapping only (there is no Jacobian
+   correction for inverse mapping). The use cases we considered are limited
+   to the set of distributions that are bounded, and the transformation
+   maps the bounded set to the real line - see
+   `doc
+   <https://docs.pymc.io/notebooks/api_quickstart.html#Automatic-transforms-of-bounded-RVs>`__.
+   However, other transformations are possible.
+   In general, PyMC3 does not provide explicit functionality to transform
+   one distribution to another. Instead, a dedicated distribution is
+   usually created in order to optimise performance. But getting a
+   ``TransformedDistribution`` is also possible (see also in
+   `doc <https://docs.pymc.io/notebooks/api_quickstart.html#Transformed-distributions-and-changes-of-variables>`__):
 
-    def Var(self, name, dist, data=None, total_size=None):
-        """
-        ...
-        """
-        ...
-        if data is None:
-            if getattr(dist, "transform", None) is None:
-                with self:
-                    var = FreeRV(...)             # ==> FreeRV
-                self.free_RVs.append(var)
-            else:
-                with self:
-                    var = TransformedRV(...)      # ==> TransformedRV
-                ...
-                self.deterministics.append(var)
-                self.add_random_variable(var)
-                return var
-        elif isinstance(data, dict):
-            with self:
-                var = MultiObservedRV(...)        # ==> MultiObservedRV
-            self.observed_RVs.append(var)
-            if var.missing_values:
-                ...                               # ==> Additional FreeRV if there is missing values
-        else:
-            with self:
-                var = ObservedRV(...)             # ==> ObservedRV
-            self.observed_RVs.append(var)
-            if var.missing_values:
-                ...                               # ==> Additional FreeRV if there is missing values
-
-        self.add_random_variable(var)
-        return var
-
-In general, if a variable has observations (``observed`` parameter), the RV is defined as an ``ObservedRV``,
-otherwise if it has a ``transformed`` (``transform`` parameter) attribute, it is a
-``TransformedRV``, otherwise, it will be the most elementary form: a
-``FreeRV``.  Note that this means that random variables with
-observations cannot be transformed.
-
-Below, I will take a deeper look into ``TransformedRV``. A normal user
-might not necessary come in contact with the concept, as
-``TransformedRV`` and ``TransformedDistribution`` are intentionally not
-user facing.
-
-Because in PyMC3 there is no bijector class like in TFP or pyro, we only
-have a partial implementation called ``Transform``, which implements
-Jacobian correction for forward mapping only (there is no Jacobian
-correction for inverse mapping). The use cases we considered are limited
-to the set of distributions that are bounded, and the transformation
-maps the bounded set to the real line - see
-`doc
-<https://docs.pymc.io/notebooks/api_quickstart.html#Automatic-transforms-of-bounded-RVs>`__.
-However, other transformations are possible.
-In general, PyMC3 does not provide explicit functionality to transform
-one distribution to another. Instead, a dedicated distribution is
-usually created in order to optimise performance. But getting a
-``TransformedDistribution`` is also possible (see also in
-`doc <https://docs.pymc.io/notebooks/api_quickstart.html#Transformed-distributions-and-changes-of-variables>`__):
-
-.. code:: python
-
-    tr = pm.distributions.transforms
-    class Exp(tr.ElemwiseTransform):
-        name = "exp"
-        def backward(self, x):
-            return aet.log(x)
-        def forward(self, x):
-            return aet.exp(x)
-        def jacobian_det(self, x):
-            return -aet.log(x)
-
-    lognorm = Exp().apply(pm.Normal.dist(0., 1.))
-    lognorm
+   .. code:: python
 
 
-.. parsed-literal::
+       lognorm = Exp().apply(pm.Normal.dist(0., 1.))
+       lognorm
 
-    <pymc3.distributions.transforms.TransformedDistribution at 0x7f1536749b00>
+
+   .. parsed-literal::
+
+       <pymc3.distributions.transforms.TransformedDistribution at 0x7f1536749b00>
 
 
 
-Now, back to ``model.RV(...)`` - things returned from ``model.RV(...)``
-are Aesara tensor variables, and it is clear from looking at
-``TransformedRV``:
+   Now, back to ``model.RV(...)`` - things returned from ``model.RV(...)``
+   are Aesara tensor variables, and it is clear from looking at
+   ``TransformedRV``:
 
-.. code:: python
+   .. code:: python
 
-    class TransformedRV(TensorVariable):
-        ...
+       class TransformedRV(TensorVariable):
+           ...
 
-as for ``FreeRV`` and ``ObservedRV``, they are ``TensorVariable``\s with
-``Factor`` as mixin:
+   as for ``FreeRV`` and ``ObservedRV``, they are ``TensorVariable``\s with
+   ``Factor`` as mixin:
 
-.. code:: python
+   .. code:: python
 
-    class FreeRV(Factor, TensorVariable):
-        ...
+       class FreeRV(Factor, TensorVariable):
+           ...
 
-``Factor`` basically `enable and assign the
-logp <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/model.py#L195-L276>`__
-(representated as a tensor also) property to a Aesara tensor (thus
-making it a random variable). For a ``TransformedRV``, it transforms the
-distribution into a ``TransformedDistribution``, and then ``model.Var`` is
-called again to added the RV associated with the
-``TransformedDistribution`` as a ``FreeRV``:
+   ``Factor`` basically `enable and assign the
+   logp <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/model.py#L195-L276>`__
+   (representated as a tensor also) property to a Aesara tensor (thus
+   making it a random variable). For a ``TransformedRV``, it transforms the
+   distribution into a ``TransformedDistribution``, and then ``model.Var`` is
+   called again to added the RV associated with the
+   ``TransformedDistribution`` as a ``FreeRV``:
 
-.. code:: python
+   .. code:: python
 
-        ...
-        self.transformed = model.Var(
-                    transformed_name, transform.apply(distribution), total_size=total_size)
+           ...
+           self.transformed = model.Var(
+                       transformed_name, transform.apply(distribution), total_size=total_size)
 
-note: after ``transform.apply(distribution)`` its ``.transform``
-porperty is set to ``None``, thus making sure that the above call will
-only add one ``FreeRV``. In another word, you *cannot* do chain
-transformation by nested applying multiple transforms to a Distribution
-(however, you can use `Chain
-transformation <https://docs.pymc.io/notebooks/api_quickstart.html?highlight=chain%20transformation>`__).
+   note: after ``transform.apply(distribution)`` its ``.transform``
+   porperty is set to ``None``, thus making sure that the above call will
+   only add one ``FreeRV``. In another word, you *cannot* do chain
+   transformation by nested applying multiple transforms to a Distribution
+   (however, you can use `Chain
+   transformation <https://docs.pymc.io/notebooks/api_quickstart.html?highlight=chain%20transformation>`__).
 
-.. code:: python
+   .. code:: python
 
-    z = pm.Lognormal.dist(mu=0., sigma=1., transform=tr.Log)
-    z.transform           # ==> pymc3.distributions.transforms.Log
+       z = pm.Lognormal.dist(mu=0., sigma=1., transform=tr.Log)
+       z.transform           # ==> pymc3.distributions.transforms.Log
 
 
-.. code:: python
+   .. code:: python
 
-    z2 = Exp().apply(z)
-    z2.transform is None  # ==> True
+       z2 = Exp().apply(z)
+       z2.transform is None  # ==> True
 
 
 
@@ -623,93 +531,6 @@ logp/dlogp function:
 Aesara graph to compile additional Aesara functions. PyMC3 relies on
 ``aesara.clone_replace`` to copy the ``model.logpt`` and replace its input. It
 does not edit or rewrite the graph directly.
-
-.. code:: python
-
-    class ValueGradFunction:
-        """Create a aesara function that computes a value and its gradient.
-        ...
-        """
-        def __init__(self, logpt, grad_vars, extra_vars=[], dtype=None,
-                     casting='no', **kwargs):
-            ...
-
-            self._grad_vars = grad_vars
-            self._extra_vars = extra_vars
-            self._extra_var_names = set(var.name for var in extra_vars)
-            self._logpt = logpt
-            self._ordering = ArrayOrdering(grad_vars)
-            self.size = self._ordering.size
-            self._extra_are_set = False
-
-            ...
-
-            # Extra vars are a subset of free_RVs that are not input to the compiled function.
-            # But nonetheless logpt depends on these RVs.
-            # This is set up as a dict of aesara.shared tensors, but givens (a list of
-            # tuple(free_RVs, aesara.shared)) is the actual list that goes into the aesara function
-            givens = []
-            self._extra_vars_shared = {}
-            for var in extra_vars:
-                shared = aesara.shared(var.tag.test_value, var.name + '_shared__')
-                self._extra_vars_shared[var.name] = shared
-                givens.append((var, shared))
-
-            # See the implementation below. Basically, it clones the logpt and replaces its
-            # input with a *single* 1d aesara tensor
-            self._vars_joined, self._logpt_joined = self._build_joined(
-                self._logpt, grad_vars, self._ordering.vmap)
-
-            grad = aet.grad(self._logpt_joined, self._vars_joined)
-            grad.name = '__grad'
-
-            inputs = [self._vars_joined]
-
-            self._aesara_function = aesara.function(
-                inputs, [self._logpt_joined, grad], givens=givens, **kwargs)
-
-
-        def _build_joined(self, logpt, args, vmap):
-            args_joined = aet.vector('__args_joined')
-            args_joined.tag.test_value = np.zeros(self.size, dtype=self.dtype)
-
-            joined_slices = {}
-            for vmap in vmap:
-                sliced = args_joined[vmap.slc].reshape(vmap.shp)
-                sliced.name = vmap.var
-                joined_slices[vmap.var] = sliced
-
-            replace = {var: joined_slices[var.name] for var in args}
-            return args_joined, aesara.clone_replace(logpt, replace=replace)
-
-
-        def __call__(self, array, grad_out=None, extra_vars=None):
-            ...
-            logp, dlogp = self._aesara_function(array)
-            return logp, dlogp
-
-
-        def set_extra_values(self, extra_vars):
-            ...
-
-        def get_extra_values(self):
-            ...
-
-        @property
-        def profile(self):
-            ...
-
-        def dict_to_array(self, point):
-            ...
-
-        def array_to_dict(self, array):
-            ...
-
-        def array_to_full_dict(self, array):
-            """Convert an array to a dictionary with grad_vars and extra_vars."""
-            ...
-
-        ...
 
 The important parts of the above function is highlighted and commented.
 On a high level, it allows us to build conditional logp function and its

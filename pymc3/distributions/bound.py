@@ -20,13 +20,7 @@ import numpy as np
 from pymc3.aesaraf import floatX
 from pymc3.distributions import transforms
 from pymc3.distributions.dist_math import bound
-from pymc3.distributions.distribution import (
-    Continuous,
-    Discrete,
-    Distribution,
-    draw_values,
-    generate_samples,
-)
+from pymc3.distributions.distribution import Continuous, Discrete, Distribution
 
 __all__ = ["Bound"]
 
@@ -115,38 +109,39 @@ class _Bounded(Distribution):
         -------
         array
         """
-        if self.lower is None and self.upper is None:
-            return self._wrapped.random(point=point, size=size)
-        elif self.lower is not None and self.upper is not None:
-            lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
-            return generate_samples(
-                self._random,
-                lower,
-                upper,
-                dist_shape=self.shape,
-                size=size,
-                not_broadcast_kwargs={"point": point},
-            )
-        elif self.lower is not None:
-            lower = draw_values([self.lower], point=point, size=size)
-            return generate_samples(
-                self._random,
-                lower,
-                np.inf,
-                dist_shape=self.shape,
-                size=size,
-                not_broadcast_kwargs={"point": point},
-            )
-        else:
-            upper = draw_values([self.upper], point=point, size=size)
-            return generate_samples(
-                self._random,
-                -np.inf,
-                upper,
-                dist_shape=self.shape,
-                size=size,
-                not_broadcast_kwargs={"point": point},
-            )
+        # if self.lower is None and self.upper is None:
+        #     return self._wrapped.random(point=point, size=size)
+        # elif self.lower is not None and self.upper is not None:
+        #     lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
+        #     return generate_samples(
+        #         self._random,
+        #         lower,
+        #         upper,
+        #         dist_shape=self.shape,
+        #         size=size,
+        #         not_broadcast_kwargs={"point": point},
+        #     )
+        # elif self.lower is not None:
+        #     lower = draw_values([self.lower], point=point, size=size)
+        #     return generate_samples(
+        #         self._random,
+        #         lower,
+        #         np.inf,
+        #         dist_shape=self.shape,
+        #         size=size,
+        #         not_broadcast_kwargs={"point": point},
+        #     )
+        # else:
+        #     upper = draw_values([self.upper], point=point, size=size)
+        #     return generate_samples(
+        #         self._random,
+        #         -np.inf,
+        #         upper,
+        #         dist_shape=self.shape,
+        #         size=size,
+        #         not_broadcast_kwargs={"point": point},
+        #     )
+        pass
 
     def _distr_parameters_for_repr(self):
         return ["lower", "upper"]

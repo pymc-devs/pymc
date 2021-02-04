@@ -33,7 +33,6 @@ from aesara.tensor.random.basic import (
 )
 from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
-from scipy.special import expit
 
 from pymc3.aesaraf import floatX
 from pymc3.distributions import _logcdf, _logp, transforms
@@ -41,7 +40,6 @@ from pymc3.distributions.dist_math import (
     SplineWrapper,
     betaln,
     bound,
-    clipped_beta_rvs,
     gammaln,
     i0e,
     incomplete_beta,
@@ -51,7 +49,7 @@ from pymc3.distributions.dist_math import (
     normal_lcdf,
     zvalue,
 )
-from pymc3.distributions.distribution import Continuous, draw_values, generate_samples
+from pymc3.distributions.distribution import Continuous
 from pymc3.distributions.special import log_i0
 from pymc3.math import invlogit, log1mexp, log1pexp, logdiffexp, logit
 
@@ -662,18 +660,18 @@ class TruncatedNormal(BoundedContinuous):
         -------
         array
         """
-        mu, sigma, lower, upper = draw_values(
-            [self.mu, self.sigma, self.lower, self.upper], point=point, size=size
-        )
-        return generate_samples(
-            self._random,
-            mu=mu,
-            sigma=sigma,
-            lower=lower,
-            upper=upper,
-            dist_shape=self.shape,
-            size=size,
-        )
+        # mu, sigma, lower, upper = draw_values(
+        #     [self.mu, self.sigma, self.lower, self.upper], point=point, size=size
+        # )
+        # return generate_samples(
+        #     self._random,
+        #     mu=mu,
+        #     sigma=sigma,
+        #     lower=lower,
+        #     upper=upper,
+        #     dist_shape=self.shape,
+        #     size=size,
+        # )
 
     def _random(self, mu, sigma, lower, upper, size):
         """Wrapper around stats.truncnorm.rvs that converts TruncatedNormal's
@@ -830,10 +828,10 @@ class HalfNormal(PositiveContinuous):
         -------
         array
         """
-        sigma = draw_values([self.sigma], point=point, size=size)[0]
-        return generate_samples(
-            stats.halfnorm.rvs, loc=0.0, scale=sigma, dist_shape=self.shape, size=size
-        )
+        # sigma = draw_values([self.sigma], point=point, size=size)[0]
+        # return generate_samples(
+        #     stats.halfnorm.rvs, loc=0.0, scale=sigma, dist_shape=self.shape, size=size
+        # )
 
     def logp(self, value):
         """
@@ -1030,8 +1028,8 @@ class Wald(PositiveContinuous):
         -------
         array
         """
-        mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha], point=point, size=size)
-        return generate_samples(self._random, mu, lam, alpha, dist_shape=self.shape, size=size)
+        # mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha], point=point, size=size)
+        # return generate_samples(self._random, mu, lam, alpha, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -1233,8 +1231,8 @@ class Beta(UnitContinuous):
         -------
         array
         """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
-        return generate_samples(clipped_beta_rvs, alpha, beta, dist_shape=self.shape, size=size)
+        # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
+        # return generate_samples(clipped_beta_rvs, alpha, beta, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -1380,8 +1378,8 @@ class Kumaraswamy(UnitContinuous):
         -------
         array
         """
-        a, b = draw_values([self.a, self.b], point=point, size=size)
-        return generate_samples(self._random, a, b, dist_shape=self.shape, size=size)
+        # a, b = draw_values([self.a, self.b], point=point, size=size)
+        # return generate_samples(self._random, a, b, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -1472,10 +1470,10 @@ class Exponential(PositiveContinuous):
         -------
         array
         """
-        lam = draw_values([self.lam], point=point, size=size)[0]
-        return generate_samples(
-            np.random.exponential, scale=1.0 / lam, dist_shape=self.shape, size=size
-        )
+        # lam = draw_values([self.lam], point=point, size=size)[0]
+        # return generate_samples(
+        #     np.random.exponential, scale=1.0 / lam, dist_shape=self.shape, size=size
+        # )
 
     def logp(self, value):
         """
@@ -1587,8 +1585,8 @@ class Laplace(Continuous):
         -------
         array
         """
-        mu, b = draw_values([self.mu, self.b], point=point, size=size)
-        return generate_samples(np.random.laplace, mu, b, dist_shape=self.shape, size=size)
+        # mu, b = draw_values([self.mu, self.b], point=point, size=size)
+        # return generate_samples(np.random.laplace, mu, b, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -1715,8 +1713,8 @@ class AsymmetricLaplace(Continuous):
         -------
         array
         """
-        b, kappa, mu = draw_values([self.b, self.kappa, self.mu], point=point, size=size)
-        return generate_samples(self._random, b, kappa, mu, dist_shape=self.shape, size=size)
+        # b, kappa, mu = draw_values([self.b, self.kappa, self.mu], point=point, size=size)
+        # return generate_samples(self._random, b, kappa, mu, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -1843,8 +1841,8 @@ class Lognormal(PositiveContinuous):
         -------
         array
         """
-        mu, tau = draw_values([self.mu, self.tau], point=point, size=size)
-        return generate_samples(self._random, mu, tau, dist_shape=self.shape, size=size)
+        # mu, tau = draw_values([self.mu, self.tau], point=point, size=size)
+        # return generate_samples(self._random, mu, tau, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -1993,10 +1991,10 @@ class StudentT(Continuous):
         -------
         array
         """
-        nu, mu, lam = draw_values([self.nu, self.mu, self.lam], point=point, size=size)
-        return generate_samples(
-            stats.t.rvs, nu, loc=mu, scale=lam ** -0.5, dist_shape=self.shape, size=size
-        )
+        # nu, mu, lam = draw_values([self.nu, self.mu, self.lam], point=point, size=size)
+        # return generate_samples(
+        #     stats.t.rvs, nu, loc=mu, scale=lam ** -0.5, dist_shape=self.shape, size=size
+        # )
 
     def logp(self, value):
         """
@@ -2149,8 +2147,8 @@ class Pareto(Continuous):
         -------
         array
         """
-        alpha, m = draw_values([self.alpha, self.m], point=point, size=size)
-        return generate_samples(self._random, alpha, m, dist_shape=self.shape, size=size)
+        # alpha, m = draw_values([self.alpha, self.m], point=point, size=size)
+        # return generate_samples(self._random, alpha, m, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -2281,8 +2279,8 @@ class Cauchy(Continuous):
         -------
         array
         """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
-        return generate_samples(self._random, alpha, beta, dist_shape=self.shape, size=size)
+        # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
+        # return generate_samples(self._random, alpha, beta, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -2393,8 +2391,8 @@ class HalfCauchy(PositiveContinuous):
         -------
         array
         """
-        beta = draw_values([self.beta], point=point, size=size)[0]
-        return generate_samples(self._random, beta, dist_shape=self.shape, size=size)
+        # beta = draw_values([self.beta], point=point, size=size)[0]
+        # return generate_samples(self._random, beta, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -2698,10 +2696,10 @@ class InverseGamma(PositiveContinuous):
         -------
         array
         """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
-        return generate_samples(
-            stats.invgamma.rvs, a=alpha, scale=beta, dist_shape=self.shape, size=size
-        )
+        # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
+        # return generate_samples(
+        #     stats.invgamma.rvs, a=alpha, scale=beta, dist_shape=self.shape, size=size
+        # )
 
     def logp(self, value):
         """
@@ -2877,12 +2875,12 @@ class Weibull(PositiveContinuous):
         -------
         array
         """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
-
-        def _random(a, b, size=None):
-            return b * (-np.log(np.random.uniform(size=size))) ** (1 / a)
-
-        return generate_samples(_random, alpha, beta, dist_shape=self.shape, size=size)
+        # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
+        #
+        # def _random(a, b, size=None):
+        #     return b * (-np.log(np.random.uniform(size=size))) ** (1 / a)
+        #
+        # return generate_samples(_random, alpha, beta, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -3026,10 +3024,10 @@ class HalfStudentT(PositiveContinuous):
         -------
         array
         """
-        nu, sigma = draw_values([self.nu, self.sigma], point=point, size=size)
-        return np.abs(
-            generate_samples(stats.t.rvs, nu, loc=0, scale=sigma, dist_shape=self.shape, size=size)
-        )
+        # nu, sigma = draw_values([self.nu, self.sigma], point=point, size=size)
+        # return np.abs(
+        #     generate_samples(stats.t.rvs, nu, loc=0, scale=sigma, dist_shape=self.shape, size=size)
+        # )
 
     def logp(self, value):
         """
@@ -3162,14 +3160,14 @@ class ExGaussian(Continuous):
         -------
         array
         """
-        mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu], point=point, size=size)
-
-        def _random(mu, sigma, nu, size=None):
-            return np.random.normal(mu, sigma, size=size) + np.random.exponential(
-                scale=nu, size=size
-            )
-
-        return generate_samples(_random, mu, sigma, nu, dist_shape=self.shape, size=size)
+        # mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu], point=point, size=size)
+        #
+        # def _random(mu, sigma, nu, size=None):
+        #     return np.random.normal(mu, sigma, size=size) + np.random.exponential(
+        #         scale=nu, size=size
+        #     )
+        #
+        # return generate_samples(_random, mu, sigma, nu, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -3322,10 +3320,10 @@ class VonMises(Continuous):
         -------
         array
         """
-        mu, kappa = draw_values([self.mu, self.kappa], point=point, size=size)
-        return generate_samples(
-            stats.vonmises.rvs, loc=mu, kappa=kappa, dist_shape=self.shape, size=size
-        )
+        # mu, kappa = draw_values([self.mu, self.kappa], point=point, size=size)
+        # return generate_samples(
+        #     stats.vonmises.rvs, loc=mu, kappa=kappa, dist_shape=self.shape, size=size
+        # )
 
     def logp(self, value):
         """
@@ -3448,12 +3446,12 @@ class SkewNormal(Continuous):
         -------
         array
         """
-        mu, tau, _, alpha = draw_values(
-            [self.mu, self.tau, self.sigma, self.alpha], point=point, size=size
-        )
-        return generate_samples(
-            stats.skewnorm.rvs, a=alpha, loc=mu, scale=tau ** -0.5, dist_shape=self.shape, size=size
-        )
+        # mu, tau, _, alpha = draw_values(
+        #     [self.mu, self.tau, self.sigma, self.alpha], point=point, size=size
+        # )
+        # return generate_samples(
+        #     stats.skewnorm.rvs, a=alpha, loc=mu, scale=tau ** -0.5, dist_shape=self.shape, size=size
+        # )
 
     def logp(self, value):
         """
@@ -3562,10 +3560,10 @@ class Triangular(BoundedContinuous):
         -------
         array
         """
-        c, lower, upper = draw_values([self.c, self.lower, self.upper], point=point, size=size)
-        return generate_samples(
-            self._random, c=c, lower=lower, upper=upper, size=size, dist_shape=self.shape
-        )
+        # c, lower, upper = draw_values([self.c, self.lower, self.upper], point=point, size=size)
+        # return generate_samples(
+        #     self._random, c=c, lower=lower, upper=upper, size=size, dist_shape=self.shape
+        # )
 
     def _random(self, c, lower, upper, size):
         """Wrapper around stats.triang.rvs that converts Triangular's
@@ -3717,10 +3715,10 @@ class Gumbel(Continuous):
         -------
         array
         """
-        mu, sigma = draw_values([self.mu, self.beta], point=point, size=size)
-        return generate_samples(
-            stats.gumbel_r.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size
-        )
+        # mu, sigma = draw_values([self.mu, self.beta], point=point, size=size)
+        # return generate_samples(
+        #     stats.gumbel_r.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size
+        # )
 
     def logp(self, value):
         """
@@ -3889,8 +3887,8 @@ class Rice(PositiveContinuous):
         -------
         array
         """
-        nu, sigma = draw_values([self.nu, self.sigma], point=point, size=size)
-        return generate_samples(self._random, nu=nu, sigma=sigma, dist_shape=self.shape, size=size)
+        # nu, sigma = draw_values([self.nu, self.sigma], point=point, size=size)
+        # return generate_samples(self._random, nu=nu, sigma=sigma, dist_shape=self.shape, size=size)
 
     def _random(self, nu, sigma, size):
         """Wrapper around stats.rice.rvs that converts Rice's
@@ -3998,11 +3996,11 @@ class Logistic(Continuous):
         -------
         array
         """
-        mu, s = draw_values([self.mu, self.s], point=point, size=size)
-
-        return generate_samples(
-            stats.logistic.rvs, loc=mu, scale=s, dist_shape=self.shape, size=size
-        )
+        # mu, s = draw_values([self.mu, self.s], point=point, size=size)
+        #
+        # return generate_samples(
+        #     stats.logistic.rvs, loc=mu, scale=s, dist_shape=self.shape, size=size
+        # )
 
     def logp(self, value):
         """
@@ -4124,10 +4122,10 @@ class LogitNormal(UnitContinuous):
         -------
         array
         """
-        mu, _, sigma = draw_values([self.mu, self.tau, self.sigma], point=point, size=size)
-        return expit(
-            generate_samples(stats.norm.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size)
-        )
+        # mu, _, sigma = draw_values([self.mu, self.tau, self.sigma], point=point, size=size)
+        # return expit(
+        #     generate_samples(stats.norm.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size)
+        # )
 
     def logp(self, value):
         """
@@ -4236,7 +4234,7 @@ class Interpolated(BoundedContinuous):
         -------
         array
         """
-        return generate_samples(self._random, dist_shape=self.shape, size=size)
+        # return generate_samples(self._random, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         """
@@ -4335,10 +4333,10 @@ class Moyal(Continuous):
         -------
         array
         """
-        mu, sigma = draw_values([self.mu, self.sigma], point=point, size=size)
-        return generate_samples(
-            stats.moyal.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size
-        )
+        # mu, sigma = draw_values([self.mu, self.sigma], point=point, size=size)
+        # return generate_samples(
+        #     stats.moyal.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size
+        # )
 
     def logp(self, value):
         """
