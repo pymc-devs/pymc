@@ -1702,8 +1702,10 @@ class TestMatchesScipy(SeededTest):
         with pm.Model() as model:
             d = pm.Dirichlet("a", a=a)
 
-        value = d.tag.test_value
-        assert_almost_equal(dirichlet_logpdf(value, a), d.distribution.logp(value).eval().sum())
+        pymc3_res = d.distribution.logp(d.tag.test_value).eval()
+        for idx in np.ndindex(a.shape[:-1]):
+            scipy_res = scipy.stats.dirichlet(a[idx]).logpdf(d.tag.test_value[idx])
+            assert_almost_equal(pymc3_res[idx], scipy_res)
 
     def test_dirichlet_shape(self):
         a = tt.as_tensor_variable(np.r_[1, 2])
