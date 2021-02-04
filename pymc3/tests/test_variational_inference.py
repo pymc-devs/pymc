@@ -22,7 +22,6 @@ import numpy as np
 import pytest
 
 import pymc3 as pm
-import pymc3.util
 
 from pymc3.aesaraf import intX
 from pymc3.tests import models
@@ -207,7 +206,8 @@ def parametric_grouped_approxes(request):
 
 @pytest.fixture
 def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_initial):
-    dsize = np.prod(pymc3.util.get_transformed(three_var_model.one).dshape[1:])
+    # XXX: This needs to be refactored
+    dsize = None  # np.prod(pymc3.util.get_transformed(three_var_model.one).dshape[1:])
     cls, kw = parametric_grouped_approxes
     spec = cls.get_param_spec_for(d=dsize, **kw)
     params = dict()

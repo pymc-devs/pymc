@@ -544,15 +544,16 @@ class Data:
 
         # To draw the node for this variable in the graphviz Digraph we need
         # its shape.
-        shared_object.dshape = tuple(shared_object.shape.eval())
-        if dims is not None:
-            shape_dims = model.shape_from_dims(dims)
-            if shared_object.dshape != shape_dims:
-                raise pm.exceptions.ShapeError(
-                    "Data shape does not match with specified `dims`.",
-                    actual=shared_object.dshape,
-                    expected=shape_dims,
-                )
+        # XXX: This needs to be refactored
+        # shared_object.dshape = tuple(shared_object.shape.eval())
+        # if dims is not None:
+        #     shape_dims = model.shape_from_dims(dims)
+        #     if shared_object.dshape != shape_dims:
+        #         raise pm.exceptions.ShapeError(
+        #             "Data shape does not match with specified `dims`.",
+        #             actual=shared_object.dshape,
+        #             expected=shape_dims,
+        #         )
 
         model.add_random_variable(shared_object, dims=dims)
 

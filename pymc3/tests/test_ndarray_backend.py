@@ -271,7 +271,6 @@ class TestSaveLoad:
         np.random.seed(seed)
         with TestSaveLoad.model():
             ppc = pm.sample_posterior_predictive(self.trace)
-            ppcf = pm.fast_sample_posterior_predictive(self.trace)
 
         seed = 10
         np.random.seed(seed)
@@ -282,6 +281,3 @@ class TestSaveLoad:
 
         for key, value in ppc.items():
             assert (value == ppc2[key]).all()
-
-        for key, value in ppcf.items():
-            assert (value == ppc2f[key]).all()
