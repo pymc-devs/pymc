@@ -57,7 +57,6 @@ import pymc3 as pm
 
 from pymc3.aesaraf import aet_rng, identity
 from pymc3.backends import NDArray
-from pymc3.blocking import ArrayOrdering, VarMap
 from pymc3.memoize import WithMemoization, memoize
 from pymc3.model import modelcontext
 from pymc3.util import get_default_varnames, get_transformed
@@ -953,7 +952,7 @@ class Group(WithMemoization):
         self.group = [get_transformed(var) for var in self.group]
 
         # XXX: This needs to be refactored
-        self.ordering = ArrayOrdering([])
+        # self.ordering = ArrayOrdering([])
         self.replacements = dict()
         for var in self.group:
             if isinstance(var.distribution, pm.Discrete):
@@ -965,18 +964,24 @@ class Group(WithMemoization):
                         raise LocalGroupError("Local variable should not be scalar")
                     else:
                         raise BatchedGroupError("Batched variable should not be scalar")
-                self.ordering.size += (np.prod(var.dshape[1:])).astype(int)
+                # XXX: This needs to be refactored
+                # self.ordering.size += None  # (np.prod(var.dshape[1:])).astype(int)
                 if self.local:
-                    shape = (-1,) + var.dshape[1:]
+                    # XXX: This needs to be refactored
+                    shape = None  # (-1,) + var.dshape[1:]
                 else:
-                    shape = var.dshape
+                    # XXX: This needs to be refactored
+                    shape = None  # var.dshape
             else:
-                self.ordering.size += var.dsize
-                shape = var.dshape
-            end = self.ordering.size
-            vmap = VarMap(var.name, slice(begin, end), shape, var.dtype)
-            self.ordering.vmap.append(vmap)
-            self.ordering.by_name[vmap.var] = vmap
+                # XXX: This needs to be refactored
+                # self.ordering.size += None  # var.dsize
+                # XXX: This needs to be refactored
+                shape = None  # var.dshape
+            # end = self.ordering.size
+            # XXX: This needs to be refactored
+            vmap = None  # VarMap(var.name, slice(begin, end), shape, var.dtype)
+            # self.ordering.vmap.append(vmap)
+            # self.ordering.by_name[vmap.var] = vmap
             vr = self.input[..., vmap.slc].reshape(shape).astype(vmap.dtyp)
             vr.name = vmap.var + "_vi_replacement"
             self.replacements[var] = vr
@@ -1031,7 +1036,8 @@ class Group(WithMemoization):
     def bdim(self):
         if not self.local:
             if self.batched:
-                return self.ordering.vmap[0].shp[0]
+                # XXX: This needs to be refactored
+                return None  # self.ordering.vmap[0].shp[0]
             else:
                 return 1
         else:
@@ -1039,11 +1045,13 @@ class Group(WithMemoization):
 
     @node_property
     def ndim(self):
-        return self.ordering.size * self.bdim
+        # XXX: This needs to be refactored
+        return None  # self.ordering.size * self.bdim
 
     @property
     def ddim(self):
-        return self.ordering.size
+        # XXX: This needs to be refactored
+        return None  # self.ordering.size
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         """*Dev* - allocates new initial random generator
@@ -1286,7 +1294,7 @@ class Approximation(WithMemoization):
         self._scale_cost_to_minibatch = aesara.shared(np.int8(1))
         model = modelcontext(model)
         if not model.free_RVs:
-            raise TypeError("Model does not have FreeRVs")
+            raise TypeError("Model does not have an free RVs")
         self.groups = list()
         seen = set()
         rest = None

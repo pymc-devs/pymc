@@ -29,9 +29,8 @@ import scipy.sparse as sps
 
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.gradient import grad
-from aesara.graph.basic import Apply, Variable
+from aesara.graph.basic import Variable
 from aesara.tensor.random.op import Observed, observed
-from aesara.tensor.type import TensorType
 from aesara.tensor.var import TensorVariable
 from pandas import Series
 
@@ -40,11 +39,11 @@ import pymc3 as pm
 from pymc3.aesaraf import generator, gradient, hessian, inputvars
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.data import GenTensorVariable, Minibatch
-from pymc3.distributions import _get_scaling, change_rv_size, logpt, logpt_sum
+from pymc3.distributions import change_rv_size, logpt, logpt_sum
 from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
 from pymc3.memoize import WithMemoization
-from pymc3.util import get_transformed_name, get_var_name
+from pymc3.util import get_var_name
 from pymc3.vartypes import continuous_types, discrete_types, isgenerator, typefilter
 
 __all__ = [
@@ -60,41 +59,7 @@ __all__ = [
     "set_data",
 ]
 
-FlatView = collections.namedtuple("FlatView", "input, replacements, view")
-
-
-class PyMC3Variable(TensorVariable):
-    """Class to wrap Aesara TensorVariable for custom behavior."""
-
-    # Implement matrix multiplication infix operator: X @ w
-    __matmul__ = aet.dot
-
-    def __rmatmul__(self, other):
-        return aet.dot(other, self)
-
-    def _str_repr(self, name=None, dist=None, formatting="plain"):
-        if getattr(self, "distribution", None) is None:
-            if "latex" in formatting:
-                return None
-            else:
-                return super().__str__()
-
-        if name is None and hasattr(self, "name"):
-            name = self.name
-        if dist is None and hasattr(self, "distribution"):
-            dist = self.distribution
-        return self.distribution._str_repr(name=name, dist=dist, formatting=formatting)
-
-    def _repr_latex_(self, *, formatting="latex_with_params", **kwargs):
-        return self._str_repr(formatting=formatting, **kwargs)
-
-    def __str__(self, **kwargs):
-        try:
-            return self._str_repr(formatting="plain", **kwargs)
-        except:
-            return super().__str__()
-
-    __latex__ = _repr_latex_
+FlatView = collections.namedtuple("FlatView", "input, replacements")
 
 
 class InstanceMethod:
@@ -1094,7 +1059,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         Returns
         -------
-        FreeRV or ObservedRV
+        TensorVariable
         """
         name = self.name_for(name)
         rv_var.name = name
@@ -1301,11 +1266,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def flatten(self, vars=None, order=None, inputvar=None):
         """Flattens model's input and returns:
 
-        FlatView with
-            * input vector variable
-            * replacements ``input_var -> vars``
-            * view `{variable: VarMap}`
-
         Parameters
         ----------
         vars: list of variables or None
@@ -1342,8 +1302,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             )
             last_idx += arr_len
 
-        view = {vm.var: vm for vm in order.vmap}
-        flat_view = FlatView(inputvar, replacements, view)
+        flat_view = FlatView(inputvar, replacements)
 
         return flat_view
 
@@ -1393,7 +1352,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         else:
             rv_reprs = [rv.__str__() for rv in all_rv]
             rv_reprs = [
-                rv_repr for rv_repr in rv_reprs if not "TransformedDistribution()" in rv_repr
+                rv_repr for rv_repr in rv_reprs if "TransformedDistribution()" not in rv_repr
             ]
             # align vars on their ~
             names = [s[: s.index("~") - 1] for s in rv_reprs]
@@ -1552,68 +1511,6 @@ class LoosePointFunc:
 compilef = fastfn
 
 
-class FreeRV(Factor, PyMC3Variable):
-    """Unobserved random variable that a model is specified in terms of."""
-
-    dshape = None  # type: Tuple[int, ...]
-    size = None  # type: int
-    distribution = None  # type: Optional[Distribution]
-    model = None  # type: Optional[Model]
-
-    def __init__(
-        self,
-        type=None,
-        owner=None,
-        index=None,
-        name=None,
-        distribution=None,
-        total_size=None,
-        model=None,
-    ):
-        """
-        Parameters
-        ----------
-        type: aesara type (optional)
-        owner: aesara owner (optional)
-        name: str
-        distribution: Distribution
-        model: Model
-        total_size: scalar Tensor (optional)
-            needed for upscaling logp
-        """
-        if type is None:
-            type = distribution.type
-        super().__init__(type, owner, index, name)
-
-        if distribution is not None:
-            self.dshape = tuple(distribution.shape)
-            self.dsize = int(np.prod(distribution.shape))
-            self.distribution = distribution
-            self.tag.test_value = (
-                np.ones(distribution.shape, distribution.dtype) * distribution.default()
-            )
-            self.logp_elemwiset = distribution.logp(self)
-            # The logp might need scaling in minibatches.
-            # This is done in `Factor`.
-            self.logp_sum_unscaledt = distribution.logp_sum(self)
-            self.logp_nojac_unscaledt = distribution.logp_nojac(self)
-            self.total_size = total_size
-            self.model = model
-            self.scaling = _get_scaling(total_size, self.shape, self.ndim)
-
-            incorporate_methods(
-                source=distribution,
-                destination=self,
-                methods=["random"],
-                wrapper=InstanceMethod,
-            )
-
-    @property
-    def init_value(self):
-        """Convenience attribute to return tag.test_value"""
-        return self.tag.test_value
-
-
 def pandas_to_array(data):
     """Convert a pandas object to a NumPy array.
 
@@ -1743,120 +1640,6 @@ def make_obs_var(
     return rv_obs
 
 
-class ObservedRV(Factor, PyMC3Variable):
-    """Observed random variable that a model is specified in terms of.
-    Potentially partially observed.
-    """
-
-    def __init__(
-        self,
-        type=None,
-        owner=None,
-        index=None,
-        name=None,
-        data=None,
-        distribution=None,
-        total_size=None,
-        model=None,
-    ):
-        """
-        Parameters
-        ----------
-        type: aesara type (optional)
-        owner: aesara owner (optional)
-        name: str
-        distribution: Distribution
-        model: Model
-        total_size: scalar Tensor (optional)
-            needed for upscaling logp
-        """
-
-        if hasattr(data, "type") and isinstance(data.type, TensorType):
-            type = data.type
-
-        if type is None:
-            data = pandas_to_array(data)
-            if isinstance(data, aesara.graph.basic.Variable):
-                type = data.type
-            else:
-                type = TensorType(distribution.dtype, [s == 1 for s in data.shape])
-
-        self.observations = data
-
-        super().__init__(type, owner, index, name)
-
-        if distribution is not None:
-            data = aet.as_tensor(data, name, model, distribution)
-
-            self.missing_values = data.missing_values
-            self.logp_elemwiset = distribution.logp(data)
-            # The logp might need scaling in minibatches.
-            # This is done in `Factor`.
-            self.logp_sum_unscaledt = distribution.logp_sum(data)
-            self.logp_nojac_unscaledt = distribution.logp_nojac(data)
-            self.total_size = total_size
-            self.model = model
-            self.distribution = distribution
-
-            # make this RV a view on the combined missing/nonmissing array
-            Apply(aesara.compile.view_op, inputs=[data], outputs=[self])
-            self.tag.test_value = aesara.compile.view_op(data).tag.test_value.astype(self.dtype)
-            self.scaling = _get_scaling(total_size, data.shape, data.ndim)
-
-    @property
-    def init_value(self):
-        """Convenience attribute to return tag.test_value"""
-        return self.tag.test_value
-
-
-class MultiObservedRV(Factor):
-    """Observed random variable that a model is specified in terms of.
-    Potentially partially observed.
-    """
-
-    def __init__(self, name, data, distribution, total_size=None, model=None):
-        """
-        Parameters
-        ----------
-        type: aesara type (optional)
-        owner: aesara owner (optional)
-        name: str
-        distribution: Distribution
-        model: Model
-        total_size: scalar Tensor (optional)
-            needed for upscaling logp
-        """
-        self.name = name
-        self.data = {
-            name: aet.as_tensor(data, name, model, distribution) for name, data in data.items()
-        }
-
-        self.missing_values = [
-            datum.missing_values for datum in self.data.values() if datum.missing_values is not None
-        ]
-        self.logp_elemwiset = distribution.logp(**self.data)
-        # The logp might need scaling in minibatches.
-        # This is done in `Factor`.
-        self.logp_sum_unscaledt = distribution.logp_sum(**self.data)
-        self.logp_nojac_unscaledt = distribution.logp_nojac(**self.data)
-        self.total_size = total_size
-        self.model = model
-        self.distribution = distribution
-        self.scaling = _get_scaling(total_size, self.logp_elemwiset.shape, self.logp_elemwiset.ndim)
-
-    # Make hashable by id for draw_values
-    def __hash__(self):
-        return id(self)
-
-    def __eq__(self, other):
-        "Use object identity for MultiObservedRV equality."
-        # This is likely a Bad Thing, but changing it would break a lot of code.
-        return self is other
-
-    def __ne__(self, other):
-        return not self == other
-
-
 def _walk_up_rv(rv, formatting="plain"):
     """Walk up aesara graph to get inputs for deterministic RV."""
     all_rvs = []
@@ -1936,67 +1719,6 @@ def Potential(name, var, model=None):
     return var
 
 
-class TransformedRV(PyMC3Variable):
-    """
-    Parameters
-    ----------
-
-    type: aesara type (optional)
-    owner: aesara owner (optional)
-    name: str
-    distribution: Distribution
-    model: Model
-    total_size: scalar Tensor (optional)
-        needed for upscaling logp
-    """
-
-    def __init__(
-        self,
-        type=None,
-        owner=None,
-        index=None,
-        name=None,
-        distribution=None,
-        model=None,
-        transform=None,
-        total_size=None,
-    ):
-        if type is None:
-            type = distribution.type
-        super().__init__(type, owner, index, name)
-
-        self.transformation = transform
-
-        if distribution is not None:
-            self.model = model
-            self.distribution = distribution
-            self.dshape = tuple(distribution.shape)
-            self.dsize = int(np.prod(distribution.shape))
-
-            transformed_name = get_transformed_name(name, transform)
-
-            self.transformed = model.Var(
-                transformed_name, transform.apply(distribution), total_size=total_size
-            )
-
-            normalRV = transform.backward(self.transformed)
-
-            Apply(aesara.compile.view_op, inputs=[normalRV], outputs=[self])
-            self.tag.test_value = normalRV.tag.test_value
-            self.scaling = _get_scaling(total_size, self.shape, self.ndim)
-            incorporate_methods(
-                source=distribution,
-                destination=self,
-                methods=["random"],
-                wrapper=InstanceMethod,
-            )
-
-    @property
-    def init_value(self):
-        """Convenience attribute to return tag.test_value"""
-        return self.tag.test_value
-
-
 def as_iterargs(data):
     if isinstance(data, tuple):
         return data
@@ -2005,7 +1727,7 @@ def as_iterargs(data):
 
 
 def all_continuous(vars):
-    """Check that vars not include discrete variables or BART variables, excepting ObservedRVs."""
+    """Check that vars not include discrete variables or BART variables, excepting observed RVs."""
 
     vars_ = [var for var in vars if not (var.owner and isinstance(var.owner.op, Observed))]
     if any(

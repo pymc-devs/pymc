@@ -38,18 +38,10 @@ from pymc3.aesaraf import floatX, intX
 from pymc3.distributions import _logp, transforms
 from pymc3.distributions.continuous import ChiSquared, Normal
 from pymc3.distributions.dist_math import bound, factln, logpow
-from pymc3.distributions.distribution import (
-    Continuous,
-    Discrete,
-    _DrawValuesContext,
-    draw_values,
-    generate_samples,
-)
-from pymc3.distributions.shape_utils import broadcast_dist_samples_to, to_tuple
+from pymc3.distributions.distribution import Continuous, Discrete
+from pymc3.distributions.shape_utils import to_tuple
 from pymc3.distributions.special import gammaln, multigammaln
-from pymc3.exceptions import ShapeError
 from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
-from pymc3.model import Deterministic
 
 __all__ = [
     "MvNormal",
@@ -266,36 +258,36 @@ class MvNormal(_QuadFormBase):
         -------
         array
         """
-        size = to_tuple(size)
-
-        param_attribute = getattr(self, "chol_cov" if self._cov_type == "chol" else self._cov_type)
-        mu, param = draw_values([self.mu, param_attribute], point=point, size=size)
-
-        dist_shape = to_tuple(self.shape)
-        output_shape = size + dist_shape
-
-        # Simple, there can be only be 1 batch dimension, only available from `mu`.
-        # Insert it into `param` before events, if there is a sample shape in front.
-        if param.ndim > 2 and dist_shape[:-1]:
-            param = param.reshape(size + (1,) + param.shape[-2:])
-
-        mu = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)[0]
-        param = np.broadcast_to(param, shape=output_shape + dist_shape[-1:])
-
-        assert mu.shape == output_shape
-        assert param.shape == output_shape + dist_shape[-1:]
-
-        if self._cov_type == "cov":
-            chol = np.linalg.cholesky(param)
-        elif self._cov_type == "chol":
-            chol = param
-        else:  # tau -> chol -> swapaxes (chol, -1, -2) -> inv ...
-            lower_chol = np.linalg.cholesky(param)
-            upper_chol = np.swapaxes(lower_chol, -1, -2)
-            chol = np.linalg.inv(upper_chol)
-
-        standard_normal = np.random.standard_normal(output_shape)
-        return mu + np.einsum("...ij,...j->...i", chol, standard_normal)
+        # size = to_tuple(size)
+        #
+        # param_attribute = getattr(self, "chol_cov" if self._cov_type == "chol" else self._cov_type)
+        # mu, param = draw_values([self.mu, param_attribute], point=point, size=size)
+        #
+        # dist_shape = to_tuple(self.shape)
+        # output_shape = size + dist_shape
+        #
+        # # Simple, there can be only be 1 batch dimension, only available from `mu`.
+        # # Insert it into `param` before events, if there is a sample shape in front.
+        # if param.ndim > 2 and dist_shape[:-1]:
+        #     param = param.reshape(size + (1,) + param.shape[-2:])
+        #
+        # mu = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)[0]
+        # param = np.broadcast_to(param, shape=output_shape + dist_shape[-1:])
+        #
+        # assert mu.shape == output_shape
+        # assert param.shape == output_shape + dist_shape[-1:]
+        #
+        # if self._cov_type == "cov":
+        #     chol = np.linalg.cholesky(param)
+        # elif self._cov_type == "chol":
+        #     chol = param
+        # else:  # tau -> chol -> swapaxes (chol, -1, -2) -> inv ...
+        #     lower_chol = np.linalg.cholesky(param)
+        #     upper_chol = np.swapaxes(lower_chol, -1, -2)
+        #     chol = np.linalg.inv(upper_chol)
+        #
+        # standard_normal = np.random.standard_normal(output_shape)
+        # return mu + np.einsum("...ij,...j->...i", chol, standard_normal)
 
     def logp(self, value):
         """
@@ -389,24 +381,24 @@ class MvStudentT(_QuadFormBase):
         -------
         array
         """
-        with _DrawValuesContext():
-            nu, mu = draw_values([self.nu, self.mu], point=point, size=size)
-            if self._cov_type == "cov":
-                (cov,) = draw_values([self.cov], point=point, size=size)
-                dist = MvNormal.dist(mu=np.zeros_like(mu), cov=cov, shape=self.shape)
-            elif self._cov_type == "tau":
-                (tau,) = draw_values([self.tau], point=point, size=size)
-                dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau, shape=self.shape)
-            else:
-                (chol,) = draw_values([self.chol_cov], point=point, size=size)
-                dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol, shape=self.shape)
-
-            samples = dist.random(point, size)
-
-        chi2_samples = np.random.chisquare(nu, size)
-        # Add distribution shape to chi2 samples
-        chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(self.shape))
-        return (samples / np.sqrt(chi2_samples / nu)) + mu
+        # with _DrawValuesContext():
+        #     nu, mu = draw_values([self.nu, self.mu], point=point, size=size)
+        #     if self._cov_type == "cov":
+        #         (cov,) = draw_values([self.cov], point=point, size=size)
+        #         dist = MvNormal.dist(mu=np.zeros_like(mu), cov=cov, shape=self.shape)
+        #     elif self._cov_type == "tau":
+        #         (tau,) = draw_values([self.tau], point=point, size=size)
+        #         dist = MvNormal.dist(mu=np.zeros_like(mu), tau=tau, shape=self.shape)
+        #     else:
+        #         (chol,) = draw_values([self.chol_cov], point=point, size=size)
+        #         dist = MvNormal.dist(mu=np.zeros_like(mu), chol=chol, shape=self.shape)
+        #
+        #     samples = dist.random(point, size)
+        #
+        # chi2_samples = np.random.chisquare(nu, size)
+        # # Add distribution shape to chi2 samples
+        # chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(self.shape))
+        # return (samples / np.sqrt(chi2_samples / nu)) + mu
 
     def logp(self, value):
         """
@@ -606,16 +598,16 @@ class Multinomial(Discrete):
         -------
         array
         """
-        n, p = draw_values([self.n, self.p], point=point, size=size)
-        samples = generate_samples(
-            self._random,
-            n,
-            p,
-            dist_shape=self.shape,
-            not_broadcast_kwargs={"raw_size": size},
-            size=size,
-        )
-        return samples
+        # n, p = draw_values([self.n, self.p], point=point, size=size)
+        # samples = generate_samples(
+        #     self._random,
+        #     n,
+        #     p,
+        #     dist_shape=self.shape,
+        #     not_broadcast_kwargs={"raw_size": size},
+        #     size=size,
+        # )
+        # return samples
 
     def logp(self, x):
         """
@@ -742,26 +734,26 @@ class DirichletMultinomial(Discrete):
         -------
         array
         """
-        n, a = draw_values([self.n, self.a], point=point, size=size)
-        samples = generate_samples(
-            self._random,
-            n,
-            a,
-            dist_shape=self.shape,
-            size=size,
-        )
-
-        # If distribution is initialized with .dist(), valid init shape is not asserted.
-        # Under normal use in a model context valid init shape is asserted at start.
-        expected_shape = to_tuple(size) + to_tuple(self.shape)
-        sample_shape = tuple(samples.shape)
-        if sample_shape != expected_shape:
-            raise ShapeError(
-                f"Expected sample shape was {expected_shape} but got {sample_shape}. "
-                "This may reflect an invalid initialization shape."
-            )
-
-        return samples
+        # n, a = draw_values([self.n, self.a], point=point, size=size)
+        # samples = generate_samples(
+        #     self._random,
+        #     n,
+        #     a,
+        #     dist_shape=self.shape,
+        #     size=size,
+        # )
+        #
+        # # If distribution is initialized with .dist(), valid init shape is not asserted.
+        # # Under normal use in a model context valid init shape is asserted at start.
+        # expected_shape = to_tuple(size) + to_tuple(self.shape)
+        # sample_shape = tuple(samples.shape)
+        # if sample_shape != expected_shape:
+        #     raise ShapeError(
+        #         f"Expected sample shape was {expected_shape} but got {sample_shape}. "
+        #         "This may reflect an invalid initialization shape."
+        #     )
+        #
+        # return samples
 
     def logp(self, value):
         """
@@ -920,9 +912,9 @@ class Wishart(Continuous):
         -------
         array
         """
-        nu, V = draw_values([self.nu, self.V], point=point, size=size)
-        size = 1 if size is None else size
-        return generate_samples(stats.wishart.rvs, nu.item(), V, broadcast_shape=(size,))
+        # nu, V = draw_values([self.nu, self.V], point=point, size=size)
+        # size = 1 if size is None else size
+        # return generate_samples(stats.wishart.rvs, nu.item(), V, broadcast_shape=(size,))
 
     def logp(self, X):
         """
@@ -1038,9 +1030,9 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
 
     # L * A * A.T * L.T ~ Wishart(L*L.T, nu)
     if return_cholesky:
-        return Deterministic(name, aet.dot(L, A))
+        return pm.Deterministic(name, aet.dot(L, A))
     else:
-        return Deterministic(name, aet.dot(aet.dot(aet.dot(L, A), A.T), L.T))
+        return pm.Deterministic(name, aet.dot(aet.dot(aet.dot(L, A), A.T), L.T))
 
 
 def _lkj_normalizing_constant(eta, n):
@@ -1198,45 +1190,45 @@ class _LKJCholeskyCov(Continuous):
         -------
         array
         """
-        # Get parameters and broadcast them
-        n, eta = draw_values([self.n, self.eta], point=point, size=size)
-        broadcast_shape = np.broadcast(n, eta).shape
-        # We can only handle cov matrices with a constant n per random call
-        n = np.unique(n)
-        if len(n) > 1:
-            raise RuntimeError("Varying n is not supported for LKJCholeskyCov")
-        n = int(n[0])
-        dist_shape = ((n * (n + 1)) // 2,)
-        # We make sure that eta and the drawn n get their shapes broadcasted
-        eta = np.broadcast_to(eta, broadcast_shape)
-        # We change the size of the draw depending on the broadcast shape
-        sample_shape = broadcast_shape + dist_shape
-        if size is not None:
-            if not isinstance(size, tuple):
-                try:
-                    size = tuple(size)
-                except TypeError:
-                    size = (size,)
-            if size == sample_shape:
-                size = None
-            elif size == broadcast_shape:
-                size = None
-            elif size[-len(sample_shape) :] == sample_shape:
-                size = size[: len(size) - len(sample_shape)]
-            elif size[-len(broadcast_shape) :] == broadcast_shape:
-                size = size[: len(size) - len(broadcast_shape)]
-        # We will always provide _random with an integer size and then reshape
-        # the output to get the correct size
-        if size is not None:
-            _size = np.prod(size)
-        else:
-            _size = 1
-        samples = self._random(n, eta, size=_size)
-        if size is None:
-            samples = samples[0]
-        else:
-            samples = np.reshape(samples, size + sample_shape)
-        return samples
+        # # Get parameters and broadcast them
+        # n, eta = draw_values([self.n, self.eta], point=point, size=size)
+        # broadcast_shape = np.broadcast(n, eta).shape
+        # # We can only handle cov matrices with a constant n per random call
+        # n = np.unique(n)
+        # if len(n) > 1:
+        #     raise RuntimeError("Varying n is not supported for LKJCholeskyCov")
+        # n = int(n[0])
+        # dist_shape = ((n * (n + 1)) // 2,)
+        # # We make sure that eta and the drawn n get their shapes broadcasted
+        # eta = np.broadcast_to(eta, broadcast_shape)
+        # # We change the size of the draw depending on the broadcast shape
+        # sample_shape = broadcast_shape + dist_shape
+        # if size is not None:
+        #     if not isinstance(size, tuple):
+        #         try:
+        #             size = tuple(size)
+        #         except TypeError:
+        #             size = (size,)
+        #     if size == sample_shape:
+        #         size = None
+        #     elif size == broadcast_shape:
+        #         size = None
+        #     elif size[-len(sample_shape) :] == sample_shape:
+        #         size = size[: len(size) - len(sample_shape)]
+        #     elif size[-len(broadcast_shape) :] == broadcast_shape:
+        #         size = size[: len(size) - len(broadcast_shape)]
+        # # We will always provide _random with an integer size and then reshape
+        # # the output to get the correct size
+        # if size is not None:
+        #     _size = np.prod(size)
+        # else:
+        #     _size = 1
+        # samples = self._random(n, eta, size=_size)
+        # if size is None:
+        #     samples = samples[0]
+        # else:
+        #     samples = np.reshape(samples, size + sample_shape)
+        # return samples
 
     def _distr_parameters_for_repr(self):
         return ["eta", "n"]
@@ -1511,10 +1503,10 @@ class LKJCorr(Continuous):
         -------
         array
         """
-        n, eta = draw_values([self.n, self.eta], point=point, size=size)
-        size = 1 if size is None else size
-        samples = generate_samples(self._random, n, eta, broadcast_shape=(size,))
-        return samples
+        # n, eta = draw_values([self.n, self.eta], point=point, size=size)
+        # size = 1 if size is None else size
+        # samples = generate_samples(self._random, n, eta, broadcast_shape=(size,))
+        # return samples
 
     def logp(self, x):
         """
@@ -1746,23 +1738,23 @@ class MatrixNormal(Continuous):
         -------
         array
         """
-        mu, colchol, rowchol = draw_values(
-            [self.mu, self.colchol_cov, self.rowchol_cov], point=point, size=size
-        )
-        size = to_tuple(size)
-        dist_shape = to_tuple(self.shape)
-        output_shape = size + dist_shape
-
-        # Broadcasting all parameters
-        (mu,) = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)
-        rowchol = np.broadcast_to(rowchol, shape=size + rowchol.shape[-2:])
-
-        colchol = np.broadcast_to(colchol, shape=size + colchol.shape[-2:])
-        colchol = np.swapaxes(colchol, -1, -2)  # Take transpose
-
-        standard_normal = np.random.standard_normal(output_shape)
-        samples = mu + np.matmul(rowchol, np.matmul(standard_normal, colchol))
-        return samples
+        # mu, colchol, rowchol = draw_values(
+        #     [self.mu, self.colchol_cov, self.rowchol_cov], point=point, size=size
+        # )
+        # size = to_tuple(size)
+        # dist_shape = to_tuple(self.shape)
+        # output_shape = size + dist_shape
+        #
+        # # Broadcasting all parameters
+        # (mu,) = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)
+        # rowchol = np.broadcast_to(rowchol, shape=size + rowchol.shape[-2:])
+        #
+        # colchol = np.broadcast_to(colchol, shape=size + colchol.shape[-2:])
+        # colchol = np.swapaxes(colchol, -1, -2)  # Take transpose
+        #
+        # standard_normal = np.random.standard_normal(output_shape)
+        # samples = mu + np.matmul(rowchol, np.matmul(standard_normal, colchol))
+        # return samples
 
     def _trquaddist(self, value):
         """Compute Tr[colcov^-1 @ (x - mu).T @ rowcov^-1 @ (x - mu)] and

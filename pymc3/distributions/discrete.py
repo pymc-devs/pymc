@@ -34,8 +34,7 @@ from pymc3.distributions.dist_math import (
     normal_lccdf,
     normal_lcdf,
 )
-from pymc3.distributions.distribution import Discrete, draw_values, generate_samples
-from pymc3.distributions.shape_utils import broadcast_distribution_samples
+from pymc3.distributions.distribution import Discrete
 from pymc3.math import log1mexp, log1pexp, logaddexp, logit, logsumexp, sigmoid, tround
 
 __all__ = [
@@ -276,10 +275,11 @@ class BetaBinomial(Discrete):
         -------
         array
         """
-        alpha, beta, n = draw_values([self.alpha, self.beta, self.n], point=point, size=size)
-        return generate_samples(
-            self._random, alpha=alpha, beta=beta, n=n, dist_shape=self.shape, size=size
-        )
+        # alpha, beta, n = draw_values([self.alpha, self.beta, self.n], point=point, size=size)
+        # return generate_samples(
+        #     self._random, alpha=alpha, beta=beta, n=n, dist_shape=self.shape, size=size
+        # )
+        pass
 
     def logp(self, value):
         r"""
@@ -416,8 +416,9 @@ class Bernoulli(Discrete):
         -------
         array
         """
-        p = draw_values([self.p], point=point, size=size)[0]
-        return generate_samples(stats.bernoulli.rvs, p, dist_shape=self.shape, size=size)
+        # p = draw_values([self.p], point=point, size=size)[0]
+        # return generate_samples(stats.bernoulli.rvs, p, dist_shape=self.shape, size=size)
+        pass
 
     def logp(self, value):
         r"""
@@ -557,9 +558,9 @@ class DiscreteWeibull(Discrete):
         -------
         array
         """
-        q, beta = draw_values([self.q, self.beta], point=point, size=size)
-
-        return generate_samples(self._random, q, beta, dist_shape=self.shape, size=size)
+        # q, beta = draw_values([self.q, self.beta], point=point, size=size)
+        # return generate_samples(self._random, q, beta, dist_shape=self.shape, size=size)
+        pass
 
     def logp(self, value):
         r"""
@@ -680,8 +681,9 @@ class Poisson(Discrete):
         -------
         array
         """
-        mu = draw_values([self.mu], point=point, size=size)[0]
-        return generate_samples(stats.poisson.rvs, mu, dist_shape=self.shape, size=size)
+        # mu = draw_values([self.mu], point=point, size=size)[0]
+        # return generate_samples(stats.poisson.rvs, mu, dist_shape=self.shape, size=size)
+        pass
 
     def logp(self, value):
         r"""
@@ -840,10 +842,11 @@ class NegativeBinomial(Discrete):
         -------
         array
         """
-        mu, alpha = draw_values([self.mu, self.alpha], point=point, size=size)
-        g = generate_samples(self._random, mu=mu, alpha=alpha, dist_shape=self.shape, size=size)
-        g[g == 0] = np.finfo(float).eps  # Just in case
-        return np.asarray(stats.poisson.rvs(g)).reshape(g.shape)
+        # mu, alpha = draw_values([self.mu, self.alpha], point=point, size=size)
+        # g = generate_samples(self._random, mu=mu, alpha=alpha, dist_shape=self.shape, size=size)
+        # g[g == 0] = np.finfo(float).eps  # Just in case
+        # return np.asarray(stats.poisson.rvs(g)).reshape(g.shape)
+        pass
 
     def _random(self, mu, alpha, size):
         r"""Wrapper around stats.gamma.rvs that converts NegativeBinomial's
@@ -980,8 +983,9 @@ class Geometric(Discrete):
         -------
         array
         """
-        p = draw_values([self.p], point=point, size=size)[0]
-        return generate_samples(np.random.geometric, p, dist_shape=self.shape, size=size)
+        # p = draw_values([self.p], point=point, size=size)[0]
+        # return generate_samples(np.random.geometric, p, dist_shape=self.shape, size=size)
+        pass
 
     def logp(self, value):
         r"""
@@ -1096,8 +1100,9 @@ class HyperGeometric(Discrete):
         array
         """
 
-        N, k, n = draw_values([self.N, self.k, self.n], point=point, size=size)
-        return generate_samples(self._random, N, k, n, dist_shape=self.shape, size=size)
+        # N, k, n = draw_values([self.N, self.k, self.n], point=point, size=size)
+        # return generate_samples(self._random, N, k, n, dist_shape=self.shape, size=size)
+        pass
 
     def _random(self, M, n, N, size=None):
         r"""Wrapper around scipy stat's hypergeom.rvs"""
@@ -1248,8 +1253,9 @@ class DiscreteUniform(Discrete):
         -------
         array
         """
-        lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
-        return generate_samples(self._random, lower, upper, dist_shape=self.shape, size=size)
+        # lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
+        # return generate_samples(self._random, lower, upper, dist_shape=self.shape, size=size)
+        pass
 
     def logp(self, value):
         r"""
@@ -1418,13 +1424,14 @@ class Constant(Discrete):
         -------
         array
         """
-        c = draw_values([self.c], point=point, size=size)[0]
-        dtype = np.array(c).dtype
-
-        def _random(c, dtype=dtype, size=None):
-            return np.full(size, fill_value=c, dtype=dtype)
-
-        return generate_samples(_random, c=c, dist_shape=self.shape, size=size).astype(dtype)
+        # c = draw_values([self.c], point=point, size=size)[0]
+        # dtype = np.array(c).dtype
+        #
+        # def _random(c, dtype=dtype, size=None):
+        #     return np.full(size, fill_value=c, dtype=dtype)
+        #
+        # return generate_samples(_random, c=c, dist_shape=self.shape, size=size).astype(dtype)
+        pass
 
     def logp(self, value):
         r"""
@@ -1521,10 +1528,11 @@ class ZeroInflatedPoisson(Discrete):
         -------
         array
         """
-        theta, psi = draw_values([self.theta, self.psi], point=point, size=size)
-        g = generate_samples(stats.poisson.rvs, theta, dist_shape=self.shape, size=size)
-        g, psi = broadcast_distribution_samples([g, psi], size=size)
-        return g * (np.random.random(g.shape) < psi)
+        # theta, psi = draw_values([self.theta, self.psi], point=point, size=size)
+        # g = generate_samples(stats.poisson.rvs, theta, dist_shape=self.shape, size=size)
+        # g, psi = broadcast_distribution_samples([g, psi], size=size)
+        # return g * (np.random.random(g.shape) < psi)
+        pass
 
     def logp(self, value):
         r"""
@@ -1652,10 +1660,11 @@ class ZeroInflatedBinomial(Discrete):
         -------
         array
         """
-        n, p, psi = draw_values([self.n, self.p, self.psi], point=point, size=size)
-        g = generate_samples(stats.binom.rvs, n, p, dist_shape=self.shape, size=size)
-        g, psi = broadcast_distribution_samples([g, psi], size=size)
-        return g * (np.random.random(g.shape) < psi)
+        # n, p, psi = draw_values([self.n, self.p, self.psi], point=point, size=size)
+        # g = generate_samples(stats.binom.rvs, n, p, dist_shape=self.shape, size=size)
+        # g, psi = broadcast_distribution_samples([g, psi], size=size)
+        # return g * (np.random.random(g.shape) < psi)
+        pass
 
     def logp(self, value):
         r"""
@@ -1806,11 +1815,12 @@ class ZeroInflatedNegativeBinomial(Discrete):
         -------
         array
         """
-        mu, alpha, psi = draw_values([self.mu, self.alpha, self.psi], point=point, size=size)
-        g = generate_samples(self._random, mu=mu, alpha=alpha, dist_shape=self.shape, size=size)
-        g[g == 0] = np.finfo(float).eps  # Just in case
-        g, psi = broadcast_distribution_samples([g, psi], size=size)
-        return stats.poisson.rvs(g) * (np.random.random(g.shape) < psi)
+        # mu, alpha, psi = draw_values([self.mu, self.alpha, self.psi], point=point, size=size)
+        # g = generate_samples(self._random, mu=mu, alpha=alpha, dist_shape=self.shape, size=size)
+        # g[g == 0] = np.finfo(float).eps  # Just in case
+        # g, psi = broadcast_distribution_samples([g, psi], size=size)
+        # return stats.poisson.rvs(g) * (np.random.random(g.shape) < psi)
+        pass
 
     def _random(self, mu, alpha, size):
         r"""Wrapper around stats.gamma.rvs that converts NegativeBinomial's

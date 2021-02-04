@@ -168,11 +168,7 @@ def get_repr_for_variable(variable, formatting="plain"):
 
 
 def get_var_name(var):
-    """Get an appropriate, plain variable name for a variable. Necessary
-    because we override aesara.tensor.var.TensorVariable.__str__ to give informative
-    string representations to our pymc3.PyMC3Variables, yet we want to use the
-    plain name as e.g. keys in dicts.
-    """
+    """Get an appropriate, plain variable name for a variable."""
     if isinstance(var, TensorVariable):
         return super(TensorVariable, var).__str__()
     else:

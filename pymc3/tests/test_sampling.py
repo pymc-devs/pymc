@@ -425,38 +425,23 @@ class TestSamplePPC(SeededTest):
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
-            ppc0 = pm.fast_sample_posterior_predictive([model.test_point], samples=10)
             # deprecated argument is not introduced to fast version [2019/08/20:rpg]
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
             # test empty ppc
             ppc = pm.sample_posterior_predictive(trace, var_names=[])
             assert len(ppc) == 0
-            ppc = pm.fast_sample_posterior_predictive(trace, var_names=[])
-            assert len(ppc) == 0
 
             # test keep_size parameter
             ppc = pm.sample_posterior_predictive(trace, keep_size=True)
-            assert ppc["a"].shape == (nchains, ndraws)
-            ppc = pm.fast_sample_posterior_predictive(trace, keep_size=True)
             assert ppc["a"].shape == (nchains, ndraws)
 
             # test keep_size parameter and idata input
             idata = az.from_pymc3(trace)
             ppc = pm.sample_posterior_predictive(idata, keep_size=True)
             assert ppc["a"].shape == (nchains, ndraws)
-            ppc = pm.fast_sample_posterior_predictive(trace, keep_size=True)
-            assert ppc["a"].shape == (nchains, ndraws)
 
             # test default case
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
-            assert "a" in ppc
-            assert ppc["a"].shape == (nchains * ndraws,)
-            # mu's standard deviation may have changed thanks to a's observed
-            _, pval = stats.kstest(ppc["a"] - trace["mu"], stats.norm(loc=0, scale=1).cdf)
-            assert pval > 0.001
-
-            # test default case
-            ppc = pm.fast_sample_posterior_predictive(trace, var_names=["a"])
             assert "a" in ppc
             assert ppc["a"].shape == (nchains * ndraws,)
             # mu's standard deviation may have changed thanks to a's observed
@@ -480,11 +465,6 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(trace, samples=12, var_names=[])
             assert len(ppc) == 0
 
-            # test list input
-            ppc0 = pm.fast_sample_posterior_predictive([model.test_point], samples=10)
-            ppc = pm.fast_sample_posterior_predictive(trace, samples=12, var_names=[])
-            assert len(ppc) == 0
-
             # test keep_size parameter
             ppc = pm.sample_posterior_predictive(trace, keep_size=True)
             assert ppc["a"].shape == (trace.nchains, len(trace), 2)
@@ -502,22 +482,6 @@ class TestSamplePPC(SeededTest):
             assert "a" in ppc
             assert ppc["a"].shape == (12, 2)
 
-            # test keep_size parameter
-            ppc = pm.fast_sample_posterior_predictive(trace, keep_size=True)
-            assert ppc["a"].shape == (trace.nchains, len(trace), 2)
-            with pytest.warns(UserWarning):
-                ppc = pm.fast_sample_posterior_predictive(trace, samples=12, var_names=["a"])
-            assert "a" in ppc
-            assert ppc["a"].shape == (12, 2)
-
-            # test keep_size parameter with inference data as input
-            ppc = pm.fast_sample_posterior_predictive(idata, keep_size=True)
-            assert ppc["a"].shape == (trace.nchains, len(trace), 2)
-            with pytest.warns(UserWarning):
-                ppc = pm.fast_sample_posterior_predictive(trace, samples=12, var_names=["a"])
-            assert "a" in ppc
-            assert ppc["a"].shape == (12, 2)
-
             # size unsupported by fast_ version  argument. [2019/08/19:rpg]
             ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"], size=4)
             assert "a" in ppc
@@ -532,10 +496,7 @@ class TestSamplePPC(SeededTest):
         with model:
             with pytest.raises(IncorrectArgumentsError):
                 ppc = pm.sample_posterior_predictive(trace, samples=10, keep_size=True)
-            with pytest.raises(IncorrectArgumentsError):
-                ppc = pm.fast_sample_posterior_predictive(trace, samples=10, keep_size=True)
 
-            # Not for fast_sample_posterior_predictive
             with pytest.raises(IncorrectArgumentsError):
                 ppc = pm.sample_posterior_predictive(trace, size=4, keep_size=True)
 
@@ -543,8 +504,6 @@ class TestSamplePPC(SeededTest):
             bad_trace = {"mu": stats.norm.rvs(size=1000)}
             with pytest.raises(TypeError):
                 ppc = pm.sample_posterior_predictive(bad_trace)
-            with pytest.raises(TypeError):
-                ppc = pm.fast_sample_posterior_predictive(bad_trace)
 
     def test_vector_observed(self):
         with pm.Model() as model:
@@ -566,15 +525,6 @@ class TestSamplePPC(SeededTest):
             assert "a" in ppc
             assert ppc["a"].shape == (10, 4, 2)
 
-            # now with fast version
-            # test list input
-            ppc0 = pm.fast_sample_posterior_predictive([model.test_point], samples=10)
-            ppc = pm.fast_sample_posterior_predictive(trace, samples=12, var_names=[])
-            assert len(ppc) == 0
-            ppc = pm.fast_sample_posterior_predictive(trace, samples=12, var_names=["a"])
-            assert "a" in ppc
-            assert ppc["a"].shape == (12, 2)
-
     def test_sum_normal(self):
         with pm.Model() as model:
             a = pm.Normal("a", sigma=0.2)
@@ -586,16 +536,6 @@ class TestSamplePPC(SeededTest):
             ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
             assert ppc0 == {}
             ppc = pm.sample_posterior_predictive(trace, samples=1000, var_names=["b"])
-            assert len(ppc) == 1
-            assert ppc["b"].shape == (1000,)
-            scale = np.sqrt(1 + 0.2 ** 2)
-            _, pval = stats.kstest(ppc["b"], stats.norm(scale=scale).cdf)
-            assert pval > 0.001
-
-            # test list input
-            ppc0 = pm.fast_sample_posterior_predictive([model.test_point], samples=10)
-            assert ppc0 == {}
-            ppc = pm.fast_sample_posterior_predictive(trace, samples=1000, var_names=["b"])
             assert len(ppc) == 1
             assert ppc["b"].shape == (1000,)
             scale = np.sqrt(1 + 0.2 ** 2)
@@ -617,9 +557,6 @@ class TestSamplePPC(SeededTest):
             samples = pm.sample_posterior_predictive(trace, 40)
             assert samples["foo"].shape == (40, 200)
 
-            samples = pm.fast_sample_posterior_predictive(trace, 40)
-            assert samples["foo"].shape == (40, 200)
-
     def test_model_shared_variable(self):
         x = np.random.randn(100)
         y = x > 0
@@ -638,17 +575,6 @@ class TestSamplePPC(SeededTest):
         samples = 100
         with model:
             post_pred = pm.sample_posterior_predictive(
-                trace, samples=samples, var_names=["p", "obs"]
-            )
-
-        expected_p = np.array([logistic.eval({coeff: val}) for val in trace["x"][:samples]])
-        assert post_pred["obs"].shape == (samples, 3)
-        npt.assert_allclose(post_pred["p"], expected_p)
-
-        # fast version
-        samples = 100
-        with model:
-            post_pred = pm.fast_sample_posterior_predictive(
                 trace, samples=samples, var_names=["p", "obs"]
             )
 
@@ -685,16 +611,6 @@ class TestSamplePPC(SeededTest):
 
             npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
-            np.random.seed(0)
-            ppc = pm.fast_sample_posterior_predictive(
-                model=model,
-                trace=trace,
-                samples=len(trace) * nchains,
-                var_names=[var.name for var in (model.deterministics + model.basic_RVs)],
-            )
-
-            npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
-
     def test_deterministic_of_observed_modified_interface(self):
         meas_in_1 = pm.aesaraf.floatX(2 + 4 * np.random.randn(100))
         meas_in_2 = pm.aesaraf.floatX(5 + 4 * np.random.randn(100))
@@ -714,16 +630,6 @@ class TestSamplePPC(SeededTest):
                 trace, varnames=[n for n in trace.varnames if n != "out"]
             ).to_dict("records")
             ppc = pm.sample_posterior_predictive(
-                model=model,
-                trace=ppc_trace,
-                samples=len(ppc_trace),
-                var_names=[x.name for x in (model.deterministics + model.basic_RVs)],
-            )
-
-            rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-3
-            npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
-
-            ppc = pm.fast_sample_posterior_predictive(
                 model=model,
                 trace=ppc_trace,
                 samples=len(ppc_trace),
@@ -756,9 +662,6 @@ class TestSamplePPC(SeededTest):
         with m:
             with pytest.warns(UserWarning, match=warning_msg):
                 pm.sample_posterior_predictive(trace, samples=5)
-
-            with pytest.warns(UserWarning, match=warning_msg):
-                pm.fast_sample_posterior_predictive(trace, samples=5)
 
 
 class TestSamplePPCW(SeededTest):
@@ -968,9 +871,6 @@ class TestSamplePriorPredictive(SeededTest):
         assert sim_priors["obs"].shape == (20,) + obs.distribution.shape
         assert sim_ppc["obs"].shape == (20,) + obs.distribution.shape
 
-        sim_ppc = pm.fast_sample_posterior_predictive(burned_trace, samples=20, model=dm_model)
-        assert sim_ppc["obs"].shape == (20,) + obs.distribution.shape
-
     def test_layers(self):
         with pm.Model() as model:
             a = pm.Uniform("a", lower=0, upper=1, shape=10)
@@ -1073,11 +973,6 @@ class TestSamplePriorPredictive(SeededTest):
 
 
 class TestSamplePosteriorPredictive:
-    def test_point_list_arg_bug_fspp(self, point_list_arg_bug_fixture):
-        pmodel, trace = point_list_arg_bug_fixture
-        with pmodel:
-            pp = pm.fast_sample_posterior_predictive([trace[15]], var_names=["d"])
-
     def test_point_list_arg_bug_spp(self, point_list_arg_bug_fixture):
         pmodel, trace = point_list_arg_bug_fixture
         with pmodel:
@@ -1097,9 +992,3 @@ class TestSamplePosteriorPredictive:
         idat = az.from_pymc3(trace)
         with pmodel:
             pp = pm.sample_posterior_predictive(idat.posterior, var_names=["d"])
-
-    def test_sample_from_xarray_posterior_fast(self, point_list_arg_bug_fixture):
-        pmodel, trace = point_list_arg_bug_fixture
-        idat = az.from_pymc3(trace)
-        with pmodel:
-            pp = pm.fast_sample_posterior_predictive(idat.posterior, var_names=["d"])

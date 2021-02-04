@@ -42,8 +42,6 @@ from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
 from pymc3.blocking import DictToArrayBijection
 from pymc3.distributions import change_rv_size, rv_ancestors, strip_observed
-from pymc3.distributions.distribution import draw_values
-from pymc3.distributions.posterior_predictive import fast_sample_posterior_predictive
 from pymc3.exceptions import IncorrectArgumentsError, SamplingError
 from pymc3.model import Model, Point, all_continuous, modelcontext
 from pymc3.parallel_sampling import Draw, _cpu_count
@@ -81,7 +79,6 @@ __all__ = [
     "sample_posterior_predictive_w",
     "init_nuts",
     "sample_prior_predictive",
-    "fast_sample_posterior_predictive",
 ]
 
 STEP_METHODS = (
@@ -1736,7 +1733,7 @@ def sample_posterior_predictive(
     if size is not None:
         vars_to_sample = [change_rv_size(v, size, expand=True) for v in vars_to_sample]
 
-    sampler_fn = theano.function(
+    sampler_fn = aesara.function(
         inputs,
         vars_to_sample,
         allow_input_downcast=True,
@@ -1917,7 +1914,9 @@ def sample_posterior_predictive_w(
             var = variables[idx]
             # TODO sample_posterior_predictive_w is currently only work for model with
             # one observed.
-            ppc[var.name].append(draw_values([var], point=param, size=size[idx])[0])
+            # XXX: This needs to be refactored
+            # ppc[var.name].append(draw_values([var], point=param, size=size[idx])[0])
+            raise NotImplementedError()
 
     except KeyboardInterrupt:
         pass

@@ -37,7 +37,6 @@ from aesara.tensor.slinalg import Cholesky
 from pymc3.aesaraf import floatX
 from pymc3.distributions.shape_utils import to_tuple
 from pymc3.distributions.special import gammaln
-from pymc3.model import modelcontext
 
 f = floatX
 c = -0.5 * np.log(2.0 * np.pi)
@@ -74,6 +73,8 @@ def bound(logp, *conditions, **kwargs):
 
     # If called inside a model context, see if bounds check is disabled
     try:
+        from pymc3.model import modelcontext
+
         model = modelcontext(kwargs.get("model"))
         if not model.check_bounds:
             return logp
