@@ -19,6 +19,7 @@ import numpy as np
 
 from aesara.graph.basic import Variable
 from numpy.random import uniform
+from theano.graph.basic import Variable
 
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.model import modelcontext
