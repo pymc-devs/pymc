@@ -19,7 +19,6 @@ import theano.tensor as tt
 
 from pymc3.distributions import distribution
 from pymc3.math import invlogit, logit, logsumexp
-from pymc3.model import FreeRV
 from pymc3.theanof import floatX, gradient
 
 __all__ = [
@@ -126,7 +125,8 @@ class TransformedDistribution(distribution.Distribution):
 
         self.dist = dist
         self.transform_used = transform
-        v = forward(FreeRV(name="v", distribution=dist))
+        # XXX: `FreeRV` no longer exists
+        v = None  # forward(FreeRV(name="v", distribution=dist))
         self.type = v.type
 
         super().__init__(v.shape.tag.test_value, v.dtype, testval, dist.defaults, *args, **kwargs)

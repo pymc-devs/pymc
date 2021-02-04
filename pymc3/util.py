@@ -170,7 +170,7 @@ def get_repr_for_variable(variable, formatting="plain"):
 def get_var_name(var):
     """Get an appropriate, plain variable name for a variable. Necessary
     because we override theano.tensor.TensorVariable.__str__ to give informative
-    string representations to our pymc3.PyMC3Variables, yet we want to use the
+    string representations to our TensorVariables, yet we want to use the
     plain name as e.g. keys in dicts.
     """
     if isinstance(var, TensorVariable):
