@@ -20,9 +20,7 @@ import theano.tensor as tt
 from scipy.special import logit as nplogit
 
 from pymc3.distributions import distribution
-from pymc3.distributions.distribution import draw_values
 from pymc3.math import invlogit, logit, logsumexp
-from pymc3.model import FreeRV
 from pymc3.theanof import floatX, gradient
 
 __all__ = [
@@ -151,7 +149,8 @@ class TransformedDistribution(distribution.Distribution):
 
         self.dist = dist
         self.transform_used = transform
-        v = forward(FreeRV(name="v", distribution=dist))
+        # XXX: `FreeRV` no longer exists
+        v = None  # forward(FreeRV(name="v", distribution=dist))
         self.type = v.type
 
         super().__init__(v.shape.tag.test_value, v.dtype, testval, dist.defaults, *args, **kwargs)
@@ -290,8 +289,10 @@ class Interval(ElemwiseTransform):
         # 2017-06-19
         # the `self.a-0.` below is important for the testval to propagates
         # For an explanation see pull/2328#issuecomment-309303811
-        a, b = draw_values([self.a - 0.0, self.b - 0.0], point=point)
-        return floatX(np.log(x - a) - np.log(b - x))
+        # XXX: This needs to be refactored
+        # a, b = draw_values([self.a - 0.0, self.b - 0.0], point=point)
+        # return floatX(np.log(x - a) - np.log(b - x))
+        pass
 
     def jacobian_det(self, x):
         s = tt.nnet.softplus(-x)
@@ -322,8 +323,10 @@ class LowerBound(ElemwiseTransform):
         # 2017-06-19
         # the `self.a-0.` below is important for the testval to propagates
         # For an explanation see pull/2328#issuecomment-309303811
-        a = draw_values([self.a - 0.0], point=point)[0]
-        return floatX(np.log(x - a))
+        # XXX: This needs to be refactored
+        # a = draw_values([self.a - 0.0], point=point)[0]
+        # return floatX(np.log(x - a))
+        pass
 
     def jacobian_det(self, x):
         return x
@@ -357,8 +360,10 @@ class UpperBound(ElemwiseTransform):
         # 2017-06-19
         # the `self.b-0.` below is important for the testval to propagates
         # For an explanation see pull/2328#issuecomment-309303811
-        b = draw_values([self.b - 0.0], point=point)[0]
-        return floatX(np.log(b - x))
+        # XXX: This needs to be refactored
+        # b = draw_values([self.b - 0.0], point=point)[0]
+        # return floatX(np.log(b - x))
+        pass
 
     def jacobian_det(self, x):
         return x

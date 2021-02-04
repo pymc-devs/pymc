@@ -56,7 +56,7 @@ import theano.tensor as tt
 import pymc3 as pm
 
 from pymc3.backends import NDArray
-from pymc3.blocking import ArrayOrdering, DictToArrayBijection, VarMap
+from pymc3.blocking import DictToArrayBijection
 from pymc3.memoize import WithMemoization, memoize
 from pymc3.model import modelcontext
 from pymc3.theanof import identity, tt_rng
@@ -950,7 +950,8 @@ class Group(WithMemoization):
         self.input = self._input_type(self.__class__.__name__ + "_symbolic_input")
         # I do some staff that is not supported by standard __init__
         # so I have to to it by myself
-        self.ordering = ArrayOrdering([])
+        # XXX: This needs to be refactored
+        # self.ordering = ArrayOrdering([])
         self.replacements = dict()
         self.group = [get_transformed(var) for var in self.group]
         for var in self.group:
@@ -963,16 +964,22 @@ class Group(WithMemoization):
                         raise LocalGroupError("Local variable should not be scalar")
                     else:
                         raise BatchedGroupError("Batched variable should not be scalar")
-                self.ordering.size += (np.prod(var.dshape[1:])).astype(int)
+                # XXX: This needs to be refactored
+                self.ordering.size += None  # (np.prod(var.dshape[1:])).astype(int)
                 if self.local:
-                    shape = (-1,) + var.dshape[1:]
+                    # XXX: This needs to be refactored
+                    shape = None  # (-1,) + var.dshape[1:]
                 else:
-                    shape = var.dshape
+                    # XXX: This needs to be refactored
+                    shape = None  # var.dshape
             else:
-                self.ordering.size += var.dsize
-                shape = var.dshape
+                # XXX: This needs to be refactored
+                self.ordering.size += None  # var.dsize
+                # XXX: This needs to be refactored
+                shape = None  # var.dshape
             end = self.ordering.size
-            vmap = VarMap(var.name, slice(begin, end), shape, var.dtype)
+            # XXX: This needs to be refactored
+            vmap = None  # VarMap(var.name, slice(begin, end), shape, var.dtype)
             self.ordering.vmap.append(vmap)
             self.ordering.by_name[vmap.var] = vmap
             vr = self.input[..., vmap.slc].reshape(shape).astype(vmap.dtyp)
@@ -1285,7 +1292,7 @@ class Approximation(WithMemoization):
         self._scale_cost_to_minibatch = theano.shared(np.int8(1))
         model = modelcontext(model)
         if not model.free_RVs:
-            raise TypeError("Model does not have FreeRVs")
+            raise TypeError("Model does not have an free RVs")
         self.groups = list()
         seen = set()
         rest = None

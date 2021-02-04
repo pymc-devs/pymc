@@ -23,43 +23,11 @@ from typing import Dict, List, Text, Union
 
 import numpy as np
 
-__all__ = ["ArrayOrdering", "DictToArrayBijection"]
+__all__ = ["DictToArrayBijection"]
 
 RaveledVars = collections.namedtuple("RaveledVars", "data, point_map_info")
-VarMap = collections.namedtuple("VarMap", "var, slc, shp, dtyp")
-DataMap = collections.namedtuple("DataMap", "list_ind, slc, shp, dtype, name")
-
 
 # TODO Classes and methods need to be fully documented.
-
-
-class ArrayOrdering:
-    """
-    An ordering for an array space
-    """
-
-    def __init__(self, vars):
-        self.vmap = []
-        self.by_name = {}
-        self.size = 0
-
-        for var in vars:
-            name = var.name
-            if name is None:
-                raise ValueError("Unnamed variable in ArrayOrdering.")
-            if name in self.by_name:
-                raise ValueError("Name of variable not unique: %s." % name)
-            if not hasattr(var, "dshape") or not hasattr(var, "dsize"):
-                raise ValueError("Shape of variable not known %s" % name)
-
-            slc = slice(self.size, self.size + var.dsize)
-            varmap = VarMap(name, slc, var.dshape, var.dtype)
-            self.vmap.append(varmap)
-            self.by_name[name] = varmap
-            self.size += var.dsize
-
-    def __getitem__(self, key):
-        return self.by_name[key]
 
 
 class DictToArrayBijection:

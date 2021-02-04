@@ -259,7 +259,7 @@ def test_empty_observed():
 
 
 def test_multiple_observed_rv():
-    "Test previously buggy MultiObservedRV comparison code."
+    "Test previously buggy multi-observed RV comparison code."
     y1_data = np.random.randn(10)
     y2_data = np.random.randn(100)
     with pm.Model() as model:
