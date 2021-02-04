@@ -262,7 +262,7 @@ class EmpiricalGroup(Group):
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)
         if trace is not None and not all([var.name in trace.varnames for var in self.group]):
-            raise ValueError("trace has not all FreeRV in the group")
+            raise ValueError("trace has not all free RVs in the group")
 
     def randidx(self, size=None):
         if size is None:

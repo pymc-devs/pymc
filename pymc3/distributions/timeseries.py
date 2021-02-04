@@ -109,7 +109,7 @@ class AR(distribution.Continuous):
     """
 
     def __init__(
-        self, rho, sigma=None, tau=None, constant=False, init=Flat.dist(), sd=None, *args, **kwargs
+        self, rho, sigma=None, tau=None, constant=False, init=None, sd=None, *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
         if sd is not None:
@@ -141,7 +141,7 @@ class AR(distribution.Continuous):
 
         self.constant = constant
         self.rho = rho = aet.as_tensor_variable(rho)
-        self.init = init
+        self.init = init or Flat.dist()
 
     def logp(self, value):
         """
@@ -201,7 +201,7 @@ class GaussianRandomWalk(distribution.Continuous):
         distribution for initial value (Defaults to Flat())
     """
 
-    def __init__(self, tau=None, init=Flat.dist(), sigma=None, mu=0.0, sd=None, *args, **kwargs):
+    def __init__(self, tau=None, init=None, sigma=None, mu=0.0, sd=None, *args, **kwargs):
         kwargs.setdefault("shape", 1)
         super().__init__(*args, **kwargs)
         if sum(self.shape) == 0:
@@ -213,7 +213,7 @@ class GaussianRandomWalk(distribution.Continuous):
         sigma = aet.as_tensor_variable(sigma)
         self.sigma = self.sd = sigma
         self.mu = aet.as_tensor_variable(mu)
-        self.init = init
+        self.init = init or Flat.dist()
         self.mean = aet.as_tensor_variable(0.0)
 
     def _mu_and_sigma(self, mu, sigma):
@@ -261,15 +261,16 @@ class GaussianRandomWalk(distribution.Continuous):
         -------
         array
         """
-        sigma, mu = distribution.draw_values([self.sigma, self.mu], point=point, size=size)
-        return distribution.generate_samples(
-            self._random,
-            sigma=sigma,
-            mu=mu,
-            size=size,
-            dist_shape=self.shape,
-            not_broadcast_kwargs={"sample_shape": to_tuple(size)},
-        )
+        # sigma, mu = distribution.draw_values([self.sigma, self.mu], point=point, size=size)
+        # return distribution.generate_samples(
+        #     self._random,
+        #     sigma=sigma,
+        #     mu=mu,
+        #     size=size,
+        #     dist_shape=self.shape,
+        #     not_broadcast_kwargs={"sample_shape": to_tuple(size)},
+        # )
+        pass
 
     def _random(self, sigma, mu, size, sample_shape):
         """Implement a Gaussian random walk as a cumulative sum of normals.
@@ -430,11 +431,11 @@ class MvGaussianRandomWalk(distribution.Continuous):
     """
 
     def __init__(
-        self, mu=0.0, cov=None, tau=None, chol=None, lower=True, init=Flat.dist(), *args, **kwargs
+        self, mu=0.0, cov=None, tau=None, chol=None, lower=True, init=None, *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
 
-        self.init = init
+        self.init = init or Flat.dist()
         self.innovArgs = (mu, cov, tau, chol, lower)
         self.innov = multivariate.MvNormal.dist(*self.innovArgs, shape=self.shape)
         self.mean = aet.as_tensor_variable(0.0)

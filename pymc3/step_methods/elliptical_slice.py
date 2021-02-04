@@ -16,8 +16,6 @@ import aesara.tensor as aet
 import numpy as np
 import numpy.random as nr
 
-from pymc3.aesaraf import inputvars
-from pymc3.distributions import draw_values
 from pymc3.model import modelcontext
 from pymc3.step_methods.arraystep import ArrayStep, Competence
 
@@ -101,7 +99,8 @@ class EllipticalSlice(ArrayStep):
 
         # Draw from the normal prior by multiplying the Cholesky decomposition
         # of the covariance with draws from a standard normal
-        chol = draw_values([self.prior_chol])[0]
+        # XXX: This needs to be refactored
+        chol = None  # draw_values([self.prior_chol])[0]
         nu = np.dot(chol, nr.randn(chol.shape[0]))
         y = logp(q0) - nr.standard_exponential()
 
