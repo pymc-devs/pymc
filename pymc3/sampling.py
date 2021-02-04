@@ -41,8 +41,7 @@ from pymc3.aesaraf import inputvars
 from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
 from pymc3.blocking import DictToArrayBijection
-from pymc3.distributions.distribution import draw_values
-from pymc3.distributions.posterior_predictive import fast_sample_posterior_predictive
+from pymc3.distributions import change_rv_size, rv_ancestors, strip_observed
 from pymc3.exceptions import IncorrectArgumentsError, SamplingError
 from pymc3.model import Model, Point, modelcontext
 from pymc3.parallel_sampling import Draw, _cpu_count

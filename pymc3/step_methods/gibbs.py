@@ -19,9 +19,6 @@ Created on May 12, 2012
 """
 from warnings import warn
 
-import aesara.tensor as at
-
-from aesara.graph.basic import graph_inputs
 from numpy import arange, array, cumsum, empty, exp, max, nested_iters, searchsorted
 from numpy.random import uniform
 

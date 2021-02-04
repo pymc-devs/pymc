@@ -30,7 +30,7 @@ import pymc3 as pm
 
 from pymc3.aesaraf import change_rv_size, floatX, intX
 from pymc3.distributions.dist_math import clipped_beta_rvs
-from pymc3.distributions.shape_utils import to_tuple
+from pymc3.distributions.distribution import to_tuple
 from pymc3.exceptions import ShapeError
 from pymc3.tests.helpers import SeededTest
 from pymc3.tests.test_distributions import (
@@ -1261,7 +1261,7 @@ def test_mixture_random_shape():
 
     # XXX: This needs to be refactored
     rand0, rand1, rand2, rand3 = [None] * 4  # draw_values(
-    #     [like0, like1, like2, like3], point=m.initial_point, size=100
+    #     [like0, like1, like2, like3], point=m.test_point, size=100
     # )
     assert rand0.shape == (100, 20)
     assert rand1.shape == (100, 20)
@@ -1299,7 +1299,7 @@ def test_mixture_random_shape_fast():
 
     # XXX: This needs to be refactored
     rand0, rand1, rand2, rand3 = [None] * 4  # draw_values(
-    #     [like0, like1, like2, like3], point=m.initial_point, size=100
+    #     [like0, like1, like2, like3], point=m.test_point, size=100
     # )
     assert rand0.shape == (100, 20)
     assert rand1.shape == (100, 20)

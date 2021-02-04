@@ -17,7 +17,7 @@ from typing import Dict, Iterator, NewType, Optional, Set
 
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import walk
-from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.random.op import Observed
 from aesara.tensor.var import TensorVariable
 
 import pymc3 as pm
@@ -112,7 +112,7 @@ class ModelGraph:
         for var_name in self.var_names:
             var = self.model[var_name]
             update_input_map(var_name, self.get_parents(var))
-            if hasattr(var.tag, "observations"):
+            if var.owner and isinstance(var.owner.op, Observed):
                 try:
                     obs_name = var.tag.observations.name
                     if obs_name:
@@ -128,7 +128,7 @@ class ModelGraph:
 
         # styling for node
         attrs = {}
-        if v.owner and isinstance(v.owner.op, RandomVariable) and hasattr(v.tag, "observations"):
+        if v.owner and isinstance(v.owner.op, Observed):
             attrs["style"] = "filled"
 
         # make Data be roundtangle, instead of rectangle

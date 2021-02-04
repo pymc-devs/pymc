@@ -35,7 +35,7 @@ from pymc3.distributions.dist_math import (
     normal_lcdf,
 )
 from pymc3.distributions.distribution import Discrete
-from pymc3.math import log1mexp, logaddexp, logsumexp, sigmoid, tround
+from pymc3.math import log1mexp, log1pexp, logaddexp, logit, logsumexp, sigmoid, tround
 
 __all__ = [
     "Binomial",
@@ -281,6 +281,7 @@ class BetaBinomial(Discrete):
         # return generate_samples(
         #     self._random, alpha=alpha, beta=beta, n=n, dist_shape=self.shape, size=size
         # )
+        pass
 
     def logp(self, value):
         r"""
@@ -384,11 +385,41 @@ class Bernoulli(Discrete):
     """
     rv_op = bernoulli
 
-    @classmethod
-    def dist(cls, p=None, logit_p=None, *args, **kwargs):
-        p = at.as_tensor_variable(floatX(p))
-        # mode = at.cast(tround(p), "int8")
-        return super().dist([p], **kwargs)
+    def __init__(self, p=None, logit_p=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if sum(int(var is None) for var in [p, logit_p]) != 1:
+            raise ValueError("Specify one of p and logit_p")
+        if p is not None:
+            self._is_logit = False
+            self.p = p = aet.as_tensor_variable(floatX(p))
+            self._logit_p = logit(p)
+        else:
+            self._is_logit = True
+            self.p = aet.nnet.sigmoid(floatX(logit_p))
+            self._logit_p = aet.as_tensor_variable(logit_p)
+
+        self.mode = aet.cast(tround(self.p), "int8")
+
+    def random(self, point=None, size=None):
+        r"""
+        Draw random values from Bernoulli distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        # p = draw_values([self.p], point=point, size=size)[0]
+        # return generate_samples(stats.bernoulli.rvs, p, dist_shape=self.shape, size=size)
+        pass
 
     def logp(value, p):
         r"""
@@ -529,6 +560,7 @@ class DiscreteWeibull(Discrete):
         """
         # q, beta = draw_values([self.q, self.beta], point=point, size=size)
         # return generate_samples(self._random, q, beta, dist_shape=self.shape, size=size)
+        pass
 
     def logp(self, value):
         r"""
@@ -627,11 +659,31 @@ class Poisson(Discrete):
     """
     rv_op = poisson
 
-    @classmethod
-    def dist(cls, mu, *args, **kwargs):
-        mu = at.as_tensor_variable(floatX(mu))
-        # mode = intX(at.floor(mu))
-        return super().dist([mu], *args, **kwargs)
+    def __init__(self, mu, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mu = mu = aet.as_tensor_variable(floatX(mu))
+        self.mode = intX(aet.floor(mu))
+
+    def random(self, point=None, size=None):
+        r"""
+        Draw random values from Poisson distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        # mu = draw_values([self.mu], point=point, size=size)[0]
+        # return generate_samples(stats.poisson.rvs, mu, dist_shape=self.shape, size=size)
+        pass
 
     def logp(value, mu):
         r"""
@@ -768,7 +820,42 @@ class NegativeBinomial(Discrete):
         elif mu is not None:
             raise ValueError("Incompatible parametrization. Can't specify both mu and p.")
 
-        return n, p
+        return mu, alpha
+
+    def random(self, point=None, size=None):
+        r"""
+        Draw random values from NegativeBinomial distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        # mu, alpha = draw_values([self.mu, self.alpha], point=point, size=size)
+        # g = generate_samples(self._random, mu=mu, alpha=alpha, dist_shape=self.shape, size=size)
+        # g[g == 0] = np.finfo(float).eps  # Just in case
+        # return np.asarray(stats.poisson.rvs(g)).reshape(g.shape)
+        pass
+
+    def _random(self, mu, alpha, size):
+        r"""Wrapper around stats.gamma.rvs that converts NegativeBinomial's
+        parametrization to scipy.gamma. All parameter arrays should have
+        been broadcasted properly by generate_samples at this point and size is
+        the scipy.rvs representation.
+        """
+        return stats.gamma.rvs(
+            a=alpha,
+            scale=mu / alpha,
+            size=size,
+        )
 
     def logp(value, n, p):
         r"""
@@ -889,6 +976,7 @@ class Geometric(Discrete):
         """
         # p = draw_values([self.p], point=point, size=size)[0]
         # return generate_samples(np.random.geometric, p, dist_shape=self.shape, size=size)
+        pass
 
     def logp(self, value):
         r"""
@@ -1006,6 +1094,7 @@ class HyperGeometric(Discrete):
 
         # N, k, n = draw_values([self.N, self.k, self.n], point=point, size=size)
         # return generate_samples(self._random, N, k, n, dist_shape=self.shape, size=size)
+        pass
 
     def _random(self, M, n, N, size=None):
         r"""Wrapper around scipy stat's hypergeom.rvs"""
@@ -1159,6 +1248,7 @@ class DiscreteUniform(Discrete):
         """
         # lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
         # return generate_samples(self._random, lower, upper, dist_shape=self.shape, size=size)
+        pass
 
     def logp(self, value):
         r"""
@@ -1338,6 +1428,7 @@ class Constant(Discrete):
         #     return np.full(size, fill_value=c, dtype=dtype)
         #
         # return generate_samples(_random, c=c, dist_shape=self.shape, size=size).astype(dtype)
+        pass
 
     def logp(self, value):
         r"""
@@ -1439,6 +1530,7 @@ class ZeroInflatedPoisson(Discrete):
         # g = generate_samples(stats.poisson.rvs, theta, dist_shape=self.shape, size=size)
         # g, psi = broadcast_distribution_samples([g, psi], size=size)
         # return g * (np.random.random(g.shape) < psi)
+        pass
 
     def logp(self, value):
         r"""
@@ -1571,6 +1663,7 @@ class ZeroInflatedBinomial(Discrete):
         # g = generate_samples(stats.binom.rvs, n, p, dist_shape=self.shape, size=size)
         # g, psi = broadcast_distribution_samples([g, psi], size=size)
         # return g * (np.random.random(g.shape) < psi)
+        pass
 
     def logp(self, value):
         r"""
@@ -1727,6 +1820,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         # g[g == 0] = np.finfo(float).eps  # Just in case
         # g, psi = broadcast_distribution_samples([g, psi], size=size)
         # return stats.poisson.rvs(g) * (np.random.random(g.shape) < psi)
+        pass
 
     def _random(self, mu, alpha, size):
         r"""Wrapper around stats.gamma.rvs that converts NegativeBinomial's

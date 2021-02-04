@@ -23,26 +23,11 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 
-__all__ = ["ArrayOrdering", "DictToArrayBijection"]
+__all__ = ["DictToArrayBijection"]
 
 # `point_map_info` is a tuple of tuples containing `(name, shape, dtype)` for
 # each of the raveled variables.
 RaveledVars = collections.namedtuple("RaveledVars", "data, point_map_info")
-VarMap = collections.namedtuple("VarMap", "var, slc, shp, dtyp")
-DataMap = collections.namedtuple("DataMap", "list_ind, slc, shp, dtype, name")
-
-
-class ArrayOrdering:
-    """
-
-            slc = slice(self.size, self.size + var.dsize)
-            varmap = VarMap(name, slc, var.dshape, var.dtype)
-            self.vmap.append(varmap)
-            self.by_name[name] = varmap
-            self.size += var.dsize
-
-    def __getitem__(self, key):
-        return self.by_name[key]
 
 
 class DictToArrayBijection:

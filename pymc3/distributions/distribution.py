@@ -36,26 +36,11 @@ import aesara.graph.basic
 import aesara.tensor as aet
 import numpy as np
 
-from aesara import function
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Constant
 from aesara.tensor.var import TensorVariable
-from cachetools import LRUCache, cached
 
-from pymc3.distributions.shape_utils import (
-    broadcast_dist_samples_shape,
-    get_broadcastable_dist_samples,
-    to_tuple,
-)
-from pymc3.model import (
-    ContextMeta,
-    FreeRV,
-    Model,
-    MultiObservedRV,
-    ObservedRV,
-    build_named_node_tree,
-)
-from pymc3.util import get_repr_for_variable, get_var_name, hash_key
+from pymc3.util import get_repr_for_variable
 from pymc3.vartypes import string_types
 
 __all__ = [
@@ -64,8 +49,6 @@ __all__ = [
     "Continuous",
     "Discrete",
     "NoDistribution",
-    "draw_values",
-    "generate_samples",
 ]
 
 vectorized_ppc = contextvars.ContextVar(
@@ -172,9 +155,6 @@ class Distribution(metaclass=DistributionMeta):
             raise TypeError(f"Name needs to be a string but got: {name}")
 
         data = kwargs.pop("observed", None)
-
-        if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
-            raise TypeError("observed needs to be data but got: {}".format(type(data)))
 
         total_size = kwargs.pop("total_size", None)
 

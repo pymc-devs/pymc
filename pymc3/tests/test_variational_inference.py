@@ -209,8 +209,8 @@ def parametric_grouped_approxes(request):
 
 @pytest.fixture
 def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_initial):
-    one_initial_value = three_var_model.initial_point[three_var_model.one.tag.value_var.name]
-    dsize = np.prod(one_initial_value.shape[1:])
+    # XXX: This needs to be refactored
+    dsize = None  # np.prod(pymc3.util.get_transformed(three_var_model.one).dshape[1:])
     cls, kw = parametric_grouped_approxes
     spec = cls.get_param_spec_for(d=dsize, **kw)
     params = dict()

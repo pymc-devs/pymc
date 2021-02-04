@@ -450,8 +450,8 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test list input
-            ppc0 = pm.sample_posterior_predictive([model.initial_point], samples=10)
-            # # deprecated argument is not introduced to fast version [2019/08/20:rpg]
+            ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
+            # deprecated argument is not introduced to fast version [2019/08/20:rpg]
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
             # test empty ppc
             ppc = pm.sample_posterior_predictive(trace, var_names=[])
@@ -459,6 +459,11 @@ class TestSamplePPC(SeededTest):
 
             # test keep_size parameter
             ppc = pm.sample_posterior_predictive(trace, keep_size=True)
+            assert ppc["a"].shape == (nchains, ndraws)
+
+            # test keep_size parameter and idata input
+            idata = az.from_pymc3(trace)
+            ppc = pm.sample_posterior_predictive(idata, keep_size=True)
             assert ppc["a"].shape == (nchains, ndraws)
 
             # test default case
@@ -598,7 +603,6 @@ class TestSamplePPC(SeededTest):
             _, pval = stats.kstest(ppc["b"], stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
-    @pytest.mark.xfail(reason="HalfFlat not refactored for v4")
     def test_model_not_drawable_prior(self):
         data = np.random.poisson(lam=10, size=200)
         model = pm.Model()
@@ -665,17 +669,6 @@ class TestSamplePPC(SeededTest):
             )
 
             rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-4
-
-            model.default_rng.get_value(borrow=True).seed(0)
-            ppc = pm.sample_posterior_predictive(
-                model=model,
-                trace=trace,
-                samples=len(trace) * nchains,
-                random_seed=0,
-                var_names=[var.name for var in (model.deterministics + model.basic_RVs)],
-            )
-
-            npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
     def test_deterministic_of_observed_modified_interface(self):
         np.random.seed(4982)
@@ -961,8 +954,8 @@ class TestSamplePriorPredictive(SeededTest):
         sim_priors = pm.sample_prior_predictive(samples=20, model=dm_model)
         sim_ppc = pm.sample_posterior_predictive(burned_trace, samples=20, model=dm_model)
         assert sim_priors["probs"].shape == (20, 6)
-        assert sim_priors["obs"].shape == (20,) + mn_data.shape
-        assert sim_ppc["obs"].shape == (20,) + mn_data.shape
+        assert sim_priors["obs"].shape == (20,) + obs.distribution.shape
+        assert sim_ppc["obs"].shape == (20,) + obs.distribution.shape
 
     def test_layers(self):
         with pm.Model() as model:

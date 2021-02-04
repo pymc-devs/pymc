@@ -162,8 +162,8 @@ class BaseStochasticGradient(ArrayStepShared):
 
         # This seems to be the only place that `Model.flatten` is used.
         # TODO: Why not _actually_ flatten the variables?
-        # E.g. `flat_vars = at.concatenate([var.ravel() for var in vars])`
-        # or `set_subtensor` the `vars` into a `at.vector`?
+        # E.g. `flat_vars = aet.concatenate([var.ravel() for var in vars])`
+        # or `set_subtensor` the `vars` into a `aet.vector`?
 
         flat_view = model.flatten(vars)
         self.inarray = [flat_view.input]

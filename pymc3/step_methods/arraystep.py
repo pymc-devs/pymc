@@ -21,7 +21,7 @@ from aesara.graph.basic import Variable
 from numpy.random import uniform
 
 from pymc3.blocking import DictToArrayBijection, RaveledVars
-from pymc3.model import PyMC3Variable, modelcontext
+from pymc3.model import modelcontext
 from pymc3.step_methods.compound import CompoundStep
 from pymc3.util import get_var_name
 

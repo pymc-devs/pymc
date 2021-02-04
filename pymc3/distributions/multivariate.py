@@ -44,6 +44,7 @@ from pymc3.distributions import _logp, transforms
 from pymc3.distributions.continuous import ChiSquared, Normal
 from pymc3.distributions.dist_math import bound, factln, logpow
 from pymc3.distributions.distribution import Continuous, Discrete
+from pymc3.distributions.shape_utils import to_tuple
 from pymc3.distributions.special import gammaln, multigammaln
 from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
 
@@ -179,11 +180,57 @@ class MvNormal(Continuous):
     """
     rv_op = multivariate_normal
 
-    @classmethod
-    def dist(cls, mu, cov=None, tau=None, chol=None, lower=True, **kwargs):
-        mu = at.as_tensor_variable(mu)
-        cov = quaddist_matrix(cov, chol, tau, lower)
-        return super().dist([mu, cov], **kwargs)
+    def __init__(self, mu, cov=None, tau=None, chol=None, lower=True, *args, **kwargs):
+        super().__init__(mu=mu, cov=cov, tau=tau, chol=chol, lower=lower, *args, **kwargs)
+        self.mean = self.median = self.mode = self.mu = self.mu
+
+    def random(self, point=None, size=None):
+        """
+        Draw random values from Multivariate Normal distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        # size = to_tuple(size)
+        #
+        # param_attribute = getattr(self, "chol_cov" if self._cov_type == "chol" else self._cov_type)
+        # mu, param = draw_values([self.mu, param_attribute], point=point, size=size)
+        #
+        # dist_shape = to_tuple(self.shape)
+        # output_shape = size + dist_shape
+        #
+        # # Simple, there can be only be 1 batch dimension, only available from `mu`.
+        # # Insert it into `param` before events, if there is a sample shape in front.
+        # if param.ndim > 2 and dist_shape[:-1]:
+        #     param = param.reshape(size + (1,) + param.shape[-2:])
+        #
+        # mu = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)[0]
+        # param = np.broadcast_to(param, shape=output_shape + dist_shape[-1:])
+        #
+        # assert mu.shape == output_shape
+        # assert param.shape == output_shape + dist_shape[-1:]
+        #
+        # if self._cov_type == "cov":
+        #     chol = np.linalg.cholesky(param)
+        # elif self._cov_type == "chol":
+        #     chol = param
+        # else:  # tau -> chol -> swapaxes (chol, -1, -2) -> inv ...
+        #     lower_chol = np.linalg.cholesky(param)
+        #     upper_chol = np.swapaxes(lower_chol, -1, -2)
+        #     chol = np.linalg.inv(upper_chol)
+        #
+        # standard_normal = np.random.standard_normal(output_shape)
+        # return mu + np.einsum("...ij,...j->...i", chol, standard_normal)
 
     def logp(value, mu, cov):
         """
@@ -296,7 +343,7 @@ class MvStudentT(Continuous):
         # chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(self.shape))
         # return (samples / np.sqrt(chi2_samples / nu)) + mu
 
-    def logp(value, nu, cov):
+    def logp(self, value):
         """
         Calculate log-probability of Multivariate Student's T distribution
         at specified value.
@@ -458,7 +505,62 @@ class Multinomial(Discrete):
         # mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         return super().dist([n, p], *args, **kwargs)
 
-    def logp(value, n, p):
+        # Thanks to the default shape handling done in generate_values, the last
+        # axis of n is a dummy axis that allows it to broadcast well with p
+        n = np.broadcast_to(n, size)
+        p = np.broadcast_to(p, size)
+        n = n[..., 0]
+
+        # np.random.multinomial needs `n` to be a scalar int and `p` a
+        # sequence so we semi flatten them and iterate over them
+        size_ = to_tuple(raw_size)
+        if p.ndim > len(size_) and p.shape[: len(size_)] == size_:
+            # p and n have the size_ prepend so we don't need it in np.random
+            n_ = n.reshape([-1])
+            p_ = p.reshape([-1, p.shape[-1]])
+            samples = np.array([np.random.multinomial(nn, pp) for nn, pp in zip(n_, p_)])
+            samples = samples.reshape(p.shape)
+        else:
+            # p and n don't have the size prepend
+            n_ = n.reshape([-1])
+            p_ = p.reshape([-1, p.shape[-1]])
+            samples = np.array(
+                [np.random.multinomial(nn, pp, size=size_) for nn, pp in zip(n_, p_)]
+            )
+            samples = np.moveaxis(samples, 0, -1)
+            samples = samples.reshape(size + p.shape)
+        # We cast back to the original dtype
+        return samples.astype(original_dtype)
+
+    def random(self, point=None, size=None):
+        """
+        Draw random values from Multinomial distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        # n, p = draw_values([self.n, self.p], point=point, size=size)
+        # samples = generate_samples(
+        #     self._random,
+        #     n,
+        #     p,
+        #     dist_shape=self.shape,
+        #     not_broadcast_kwargs={"raw_size": size},
+        #     size=size,
+        # )
+        # return samples
+
+    def logp(self, x):
         """
         Calculate log-probability of Multinomial distribution
         at specified value.
@@ -876,9 +978,9 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
 
     # L * A * A.T * L.T ~ Wishart(L*L.T, nu)
     if return_cholesky:
-        return pm.Deterministic(name, at.dot(L, A))
+        return pm.Deterministic(name, aet.dot(L, A))
     else:
-        return pm.Deterministic(name, at.dot(at.dot(at.dot(L, A), A.T), L.T))
+        return pm.Deterministic(name, aet.dot(aet.dot(aet.dot(L, A), A.T), L.T))
 
 
 def _lkj_normalizing_constant(eta, n):

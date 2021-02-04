@@ -40,7 +40,6 @@ from pymc3.distributions.dist_math import (
     SplineWrapper,
     betaln,
     bound,
-    clipped_beta_rvs,
     gammaln,
     i0e,
     incomplete_beta,
@@ -804,7 +803,25 @@ class HalfNormal(PositiveContinuous):
 
         return super().dist([0.0, sigma], **kwargs)
 
-    def logp(value, loc, sigma):
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        # sigma = draw_values([self.sigma], point=point, size=size)[0]
+        # return generate_samples(
+        #     stats.halfnorm.rvs, loc=0.0, scale=sigma, dist_shape=self.shape, size=size
+        # )
+
+    def logp(self, value):
         """
         Calculate log-probability of HalfNormal distribution at specified value.
 
@@ -1180,8 +1197,25 @@ class Beta(UnitContinuous):
 
         return alpha, beta
 
-    def _distr_parameters_for_repr(self):
-        return ["alpha", "beta"]
+    def random(self, point=None, size=None):
+        """
+        Draw random values from Beta distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
+        # return generate_samples(clipped_beta_rvs, alpha, beta, dist_shape=self.shape, size=size)
 
     def logp(value, alpha, beta):
         """
@@ -1396,7 +1430,29 @@ class Exponential(PositiveContinuous):
         assert_negative_support(lam, "lam", "Exponential")
         return super().dist([lam], **kwargs)
 
-    def logp(value, lam):
+    def random(self, point=None, size=None):
+        """
+        Draw random values from Exponential distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        # lam = draw_values([self.lam], point=point, size=size)[0]
+        # return generate_samples(
+        #     np.random.exponential, scale=1.0 / lam, dist_shape=self.shape, size=size
+        # )
+
+    def logp(self, value):
         """
         Calculate log-probability of Exponential distribution at specified value.
 
@@ -2183,8 +2239,12 @@ class Cauchy(Continuous):
         # median = alpha
         # mode = alpha
 
-        assert_negative_support(beta, "beta", "Cauchy")
-        return super().dist([alpha, beta], **kwargs)
+        Returns
+        -------
+        array
+        """
+        # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
+        # return generate_samples(self._random, alpha, beta, dist_shape=self.shape, size=size)
 
     def logp(value, alpha, beta):
         """
@@ -2271,7 +2331,31 @@ class HalfCauchy(PositiveContinuous):
         assert_negative_support(beta, "beta", "HalfCauchy")
         return super().dist([0.0, beta], **kwargs)
 
-    def logp(value, loc, beta):
+    def _random(self, beta, size=None):
+        u = np.random.uniform(size=size)
+        return beta * np.abs(np.tan(np.pi * (u - 0.5)))
+
+    def random(self, point=None, size=None):
+        """
+        Draw random values from HalfCauchy distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        # beta = draw_values([self.beta], point=point, size=size)[0]
+        # return generate_samples(self._random, beta, dist_shape=self.shape, size=size)
+
+    def logp(self, value):
         """
         Calculate log-probability of HalfCauchy distribution at specified value.
 
@@ -2558,9 +2642,27 @@ class InverseGamma(PositiveContinuous):
 
         return alpha, beta
 
-    @classmethod
-    def _distr_parameters_for_repr(self):
-        return ["alpha", "beta"]
+    def random(self, point=None, size=None):
+        """
+        Draw random values from InverseGamma distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
+        # return generate_samples(
+        #     stats.invgamma.rvs, a=alpha, scale=beta, dist_shape=self.shape, size=size
+        # )
 
     def logp(value, alpha, beta):
         """

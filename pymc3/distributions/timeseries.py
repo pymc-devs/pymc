@@ -140,7 +140,7 @@ class AR(distribution.Continuous):
             self.p = p
 
         self.constant = constant
-        self.rho = rho = at.as_tensor_variable(rho)
+        self.rho = rho = aet.as_tensor_variable(rho)
         self.init = init or Flat.dist()
 
     def logp(self, value):
@@ -212,9 +212,9 @@ class GaussianRandomWalk(distribution.Continuous):
         self.tau = at.as_tensor_variable(tau)
         sigma = at.as_tensor_variable(sigma)
         self.sigma = self.sd = sigma
-        self.mu = at.as_tensor_variable(mu)
+        self.mu = aet.as_tensor_variable(mu)
         self.init = init or Flat.dist()
-        self.mean = at.as_tensor_variable(0.0)
+        self.mean = aet.as_tensor_variable(0.0)
 
     def _mu_and_sigma(self, mu, sigma):
         """Helper to get mu and sigma if they are high dimensional."""

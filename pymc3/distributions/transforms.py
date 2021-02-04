@@ -105,11 +105,83 @@ class Transform:
 
 
 class ElemwiseTransform(Transform):
-    def jacobian_det(self, rv_var, rv_value):
-        grad = at.reshape(
-            gradient(at.sum(self.backward(rv_var, rv_value)), [rv_value]), rv_value.shape
-        )
-        return at.log(at.abs_(grad))
+    def jacobian_det(self, x):
+        grad = aet.reshape(gradient(aet.sum(self.backward(x)), [x]), x.shape)
+        return aet.log(aet.abs_(grad))
+
+
+class TransformedDistribution(distribution.Distribution):
+    """A distribution that has been transformed from one space into another."""
+
+    def __init__(self, dist, transform, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        dist: Distribution
+        transform: Transform
+        args, kwargs
+            arguments to Distribution"""
+        forward = transform.forward
+        testval = forward(dist.default())
+
+        self.dist = dist
+        self.transform_used = transform
+        # XXX: `FreeRV` no longer exists
+        v = None  # forward(FreeRV(name="v", distribution=dist))
+        self.type = v.type
+
+        super().__init__(v.shape.tag.test_value, v.dtype, testval, dist.defaults, *args, **kwargs)
+
+        if transform.name == "stickbreaking":
+            b = np.hstack(((np.atleast_1d(self.shape) == 1)[:-1], False))
+            # force the last dim not broadcastable
+            self.type = TensorType(v.dtype, b)
+
+    def logp(self, x):
+        """
+        Calculate log-probability of Transformed distribution at specified value.
+
+        Parameters
+        ----------
+        x: numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        logp_nojac = self.logp_nojac(x)
+        jacobian_det = self.transform_used.jacobian_det(x)
+        if logp_nojac.ndim > jacobian_det.ndim:
+            logp_nojac = logp_nojac.sum(axis=-1)
+        return logp_nojac + jacobian_det
+
+    def logp_nojac(self, x):
+        """
+        Calculate log-probability of Transformed distribution at specified value
+        without jacobian term for transforms.
+
+        Parameters
+        ----------
+        x: numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return self.dist.logp(self.transform_used.backward(x))
+
+    def _repr_latex_(self, **kwargs):
+        # prevent TransformedDistributions from ending up in LaTeX representations
+        # of models
+        return None
+
+    def _distr_parameters_for_repr(self):
+        return []
+
+
+transform = Transform
 
 
 class Log(ElemwiseTransform):
