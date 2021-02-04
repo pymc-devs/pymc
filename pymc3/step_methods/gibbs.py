@@ -19,19 +19,7 @@ Created on May 12, 2012
 """
 from warnings import warn
 
-from aesara.graph.basic import graph_inputs
-from aesara.tensor import add
-from numpy import (
-    arange,
-    array,
-    cumsum,
-    empty,
-    exp,
-    max,
-    nested_iters,
-    ones,
-    searchsorted,
-)
+from numpy import arange, array, cumsum, empty, exp, max, nested_iters, searchsorted
 from numpy.random import uniform
 
 from pymc3.distributions import logpt
@@ -61,7 +49,8 @@ class ElemwiseCategorical(ArrayStep):
         )
         model = modelcontext(model)
         self.var = vars[0]
-        self.sh = ones(self.var.dshape, self.var.dtype)
+        # XXX: This needs to be refactored
+        self.sh = None  # ones(self.var.dshape, self.var.dtype)
         if values is None:
             self.values = arange(self.var.distribution.k)
         else:
@@ -71,7 +60,9 @@ class ElemwiseCategorical(ArrayStep):
 
     def astep(self, q, logp):
         p = array([logp(v * self.sh) for v in self.values])
-        return categorical(p, self.var.dshape)
+        # XXX: This needs to be refactored
+        shape = None  # self.var.dshape
+        return categorical(p, shape)
 
     @staticmethod
     def competence(var, has_grad):

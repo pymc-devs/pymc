@@ -12,9 +12,6 @@ Distribution utility classes and functions
   DensityDist
   TensorType
 
-  draw_values
-  generate_samples
-
 
 .. autoclass:: Distribution
 .. autoclass:: Discrete
@@ -23,6 +20,3 @@ Distribution utility classes and functions
 .. autoclass:: DensityDist
     :members:
 .. autofunction:: TensorType
-
-.. autofunction:: draw_values
-.. autofunction:: generate_samples

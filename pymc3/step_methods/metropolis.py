@@ -24,7 +24,6 @@ import pymc3 as pm
 
 from pymc3.aesaraf import floatX
 from pymc3.blocking import DictToArrayBijection
-from pymc3.distributions import draw_values
 from pymc3.step_methods.arraystep import (
     ArrayStep,
     ArrayStepShared,
@@ -156,7 +155,8 @@ class Metropolis(ArrayStepShared):
         vars = pm.inputvars(vars)
 
         if S is None:
-            S = np.ones(sum(v.dsize for v in vars))
+            # XXX: This needs to be refactored
+            S = None  # np.ones(sum(v.dsize for v in vars))
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
@@ -175,7 +175,8 @@ class Metropolis(ArrayStepShared):
 
         # Determine type of variables
         self.discrete = np.concatenate(
-            [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in vars]
+            # XXX: This needs to be refactored
+            None  # [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in vars]
         )
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
@@ -386,7 +387,8 @@ class BinaryGibbsMetropolis(ArrayStep):
         # transition probabilities
         self.transit_p = transit_p
 
-        self.dim = sum(v.dsize for v in vars)
+        # XXX: This needs to be refactored
+        self.dim = None  # sum(v.dsize for v in vars)
 
         if order == "random":
             self.shuffle_dims = True
@@ -465,7 +467,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
             distr = getattr(v.owner, "op", None)
 
             if isinstance(distr, CategoricalRV):
-                k = draw_values([distr.k])[0]
+                # XXX: This needs to be refactored
+                k = None  # draw_values([distr.k])[0]
             elif isinstance(distr, pm.Bernoulli) or (v.dtype in pm.bool_types):
                 k = 2
             else:
@@ -473,7 +476,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
                     "All variables must be categorical or binary" + "for CategoricalGibbsMetropolis"
                 )
             start = len(dimcats)
-            dimcats += [(dim, k) for dim in range(start, start + v.dsize)]
+            # XXX: This needs to be refactored
+            dimcats += None  # [(dim, k) for dim in range(start, start + v.dsize)]
 
         if order == "random":
             self.shuffle_dims = True

@@ -22,7 +22,6 @@ from aesara.tensor.nlinalg import eigh
 
 import pymc3 as pm
 
-from pymc3.distributions import draw_values
 from pymc3.gp.cov import Constant, Covariance
 from pymc3.gp.mean import Zero
 from pymc3.gp.util import (
@@ -554,7 +553,8 @@ class Marginal(Base):
             given = {}
 
         mu, cov = self.predictt(Xnew, diag, pred_noise, given)
-        return draw_values([mu, cov], point=point)
+        # XXX: This needs to be refactored
+        # return draw_values([mu, cov], point=point)
 
     def predictt(self, Xnew, diag=False, pred_noise=False, given=None):
         R"""
@@ -1195,7 +1195,8 @@ class MarginalKron(Base):
             Default is `False`.
         """
         mu, cov = self._build_conditional(Xnew, pred_noise, diag)
-        return draw_values([mu, cov], point=point)
+        # XXX: This needs to be refactored
+        # return draw_values([mu, cov], point=point)
 
     def predictt(self, Xnew, diag=False, pred_noise=False):
         R"""

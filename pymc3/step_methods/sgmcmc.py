@@ -98,9 +98,9 @@ class BaseStochasticGradient(ArrayStepShared):
     random_seed: int
         The seed to initialize the Random Stream
     minibatches: iterator
-        If the ObservedRV.observed is not a GeneratorOp then this parameter must not be None
+        If the observed RV is not a GeneratorOp then this parameter must not be None
     minibatch_tensor: list of tensors
-        If the ObservedRV.observed is not a GeneratorOp then this parameter must not be None
+        If the observed RV is not a GeneratorOp then this parameter must not be None
         The length of this tensor should be the same as the next(minibatches)
 
     Notes
@@ -156,16 +156,23 @@ class BaseStochasticGradient(ArrayStepShared):
         shared = make_shared_replacements(vars, model)
 
         self.updates = OrderedDict()
-        self.q_size = int(sum(v.dsize for v in self.vars))
+        # XXX: This needs to be refactored
+        self.q_size = None  # int(sum(v.dsize for v in self.vars))
+
+        # This seems to be the only place that `Model.flatten` is used.
+        # TODO: Why not _actually_ flatten the variables?
+        # E.g. `flat_vars = aet.concatenate([var.ravel() for var in vars])`
+        # or `set_subtensor` the `vars` into a `aet.vector`?
 
         flat_view = model.flatten(vars)
         self.inarray = [flat_view.input]
 
         self.dlog_prior = prior_dlogp(vars, model, flat_view)
         self.dlogp_elemwise = elemwise_dlogL(vars, model, flat_view)
-        self.q_size = int(sum(v.dsize for v in self.vars))
+        # XXX: This needs to be refactored
+        self.q_size = None  # int(sum(v.dsize for v in self.vars))
 
-        if minibatch_tensors != None:
+        if minibatch_tensors is not None:
             _check_minibatches(minibatch_tensors, minibatches)
             self.minibatches = minibatches
 
