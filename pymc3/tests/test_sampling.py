@@ -285,6 +285,27 @@ class TestSample(SeededTest):
             assert len(trace) == trace_cancel_length
 
 
+def test_sample_find_MAP_does_not_modify_start():
+    # see https://github.com/pymc-devs/pymc3/pull/4458
+    with pm.Model():
+        pm.Lognormal("untransformed")
+
+        # make sure find_Map does not modify the start dict
+        start = {"untransformed": 2}
+        pm.find_MAP(start=start)
+        assert start == {"untransformed": 2}
+
+        # make sure sample does not modify the start dict
+        start = {"untransformed": 0.2}
+        pm.sample(draws=10, step=pm.Metropolis(), tune=5, start=start, chains=3)
+        assert start == {"untransformed": 0.2}
+
+        # make sure sample does not modify the start when passes as list of dict
+        start = [{"untransformed": 2}, {"untransformed": 0.2}]
+        pm.sample(draws=10, step=pm.Metropolis(), tune=5, start=start, chains=2)
+        assert start == [{"untransformed": 2}, {"untransformed": 0.2}]
+
+
 def test_empty_model():
     with pm.Model():
         pm.Normal("a", observed=1)

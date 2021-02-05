@@ -22,7 +22,7 @@ import time
 import warnings
 
 from collections import defaultdict
-from copy import copy
+from copy import copy, deepcopy
 from typing import Any, Dict, Iterable, List, Optional, Set, Union, cast
 
 import arviz
@@ -423,6 +423,7 @@ def sample(
         p  0.609  0.047   0.528    0.699
     """
     model = modelcontext(model)
+    start = deepcopy(start)
     if start is None:
         check_start_vals(model.test_point, model)
     else:

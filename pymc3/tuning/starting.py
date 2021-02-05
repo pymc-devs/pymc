@@ -17,6 +17,8 @@ Created on Mar 12, 2011
 
 @author: johnsalvatier
 """
+import copy
+
 import numpy as np
 import theano.gradient as tg
 
@@ -96,7 +98,7 @@ def find_MAP(
     vars = inputvars(vars)
     disc_vars = list(typefilter(vars, discrete_types))
     allinmodel(vars, model)
-
+    start = copy.deepcopy(start)
     if start is None:
         start = model.test_point
     else:
