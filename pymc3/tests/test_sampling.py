@@ -300,7 +300,7 @@ def test_sample_find_MAP_does_not_modify_start():
         pm.sample(draws=10, step=pm.Metropolis(), tune=5, start=start, chains=3)
         assert start == {"untransformed": 0.2}
 
-        # make sure sample does not modify the start when passes as dict
+        # make sure sample does not modify the start when passes as list of dict
         start = [{"untransformed": 2}, {"untransformed": 0.2}]
         pm.sample(draws=10, step=pm.Metropolis(), tune=5, start=start, chains=2)
         assert start == [{"untransformed": 2}, {"untransformed": 0.2}]
