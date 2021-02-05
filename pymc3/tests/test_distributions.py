@@ -97,7 +97,7 @@ from pymc3.distributions import (
 )
 from pymc3.math import kronecker, logsumexp
 from pymc3.model import Deterministic, Model, Point
-from pymc3.tests.helpers import SeededTest, select_by_precision
+from pymc3.tests.helpers import select_by_precision
 from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
 
@@ -545,39 +545,75 @@ def RandomPdMatrix(n):
     return np.dot(A, A.T) + n * np.identity(n)
 
 
-class TestMatchesScipy(SeededTest):
-    def pymc3_matches_scipy(
+class TestMatchesScipy:
+    def check_logp(
         self,
         pymc3_dist,
         domain,
         paramdomains,
-        scipy_dist,
+        scipy_logp,
         decimal=None,
+        n_samples=100,
         extra_args=None,
         scipy_args=None,
     ):
+        """
+        Generic test for PyMC3 logp methods
+
+        Test PyMC3 logp and equivalent scipy logpmf/logpdf methods give similar
+        results for valid values and parameters inside the supported edges.
+        Edges are excluded by default, but can be artificially included by
+        creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
+
+        Parameters
+        ----------
+        pymc3_dist: PyMC3 distribution
+        domain : Domain
+            Supported domain of distribution values
+        paramdomains : Dictionary of Parameter : Domain pairs
+            Supported domains of distribution parameters
+        scipy_logp : Scipy logpmf/logpdf method
+            Scipy logp method of equivalent pymc3_dist distribution
+        decimal : Int
+            Level of precision with which pymc3_dist and scipy logp are compared.
+            Defaults to 6 for float64 and 3 for float32
+        n_samples : Int
+            Upper limit on the number of valid domain and value combinations that
+            are compared between pymc3 and scipy methods. If n_samples is below the
+            total number of combinations, a random subset is evaluated.
+            Defaults to 100
+        extra_args : Dictionary with extra arguments needed to build pymc3 model
+            Dictionary is passed to helper function `build_model` from which
+            the pymc3 distribution logp is calculated
+        scipy_args : Dictionary with extra arguments needed to call scipy logp method
+            Usually the same as extra_args
+        """
+        if decimal is None:
+            decimal = select_by_precision(float64=6, float32=3)
+
         if extra_args is None:
             extra_args = {}
+
         if scipy_args is None:
             scipy_args = {}
-        model = build_model(pymc3_dist, domain, paramdomains, extra_args)
-        value = model.named_vars["value"]
 
-        def logp(args):
+        def logp_reference(args):
             args.update(scipy_args)
-            return scipy_dist(**args)
+            return scipy_logp(**args)
 
-        self.check_logp(model, value, domain, paramdomains, logp, decimal=decimal)
+        model = build_model(pymc3_dist, domain, paramdomains, extra_args)
+        logp = model.fastlogp
 
-    def check_logp(self, model, value, domain, paramdomains, logp_reference, decimal=None):
         domains = paramdomains.copy()
         domains["value"] = domain
-        logp = model.fastlogp
-        for pt in product(domains, n_samples=100):
+        for pt in product(domains, n_samples=n_samples):
             pt = Point(pt, model=model)
-            if decimal is None:
-                decimal = select_by_precision(float64=6, float32=3)
-            assert_almost_equal(logp(pt), logp_reference(pt), decimal=decimal, err_msg=str(pt))
+            assert_almost_equal(
+                logp(pt),
+                logp_reference(pt),
+                decimal=decimal,
+                err_msg=str(pt),
+            )
 
     def check_logcdf(
         self,
@@ -752,7 +788,7 @@ class TestMatchesScipy(SeededTest):
             check(m, m.named_vars["value"], valuedomain, vardomains)
 
     def test_uniform(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Uniform,
             Runif,
             {"lower": -Rplusunif, "upper": Rplusunif},
@@ -767,7 +803,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_triangular(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Triangular,
             Runif,
             {"lower": -Rplusunif, "c": Runif, "upper": Rplusunif},
@@ -783,7 +819,7 @@ class TestMatchesScipy(SeededTest):
 
     def test_bound_normal(self):
         PositiveNormal = Bound(Normal, lower=0.0)
-        self.pymc3_matches_scipy(
+        self.check_logp(
             PositiveNormal,
             Rplus,
             {"mu": Rplus, "sigma": Rplus},
@@ -795,7 +831,7 @@ class TestMatchesScipy(SeededTest):
         assert np.isinf(x.logp({"x": -1}))
 
     def test_discrete_unif(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             DiscreteUniform,
             Rdunif,
             {"lower": -Rplusdunif, "upper": Rplusdunif},
@@ -815,7 +851,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_flat(self):
-        self.pymc3_matches_scipy(Flat, Runif, {}, lambda value: 0)
+        self.check_logp(Flat, Runif, {}, lambda value: 0)
         with Model():
             x = Flat("a")
             assert_allclose(x.tag.test_value, 0)
@@ -825,7 +861,7 @@ class TestMatchesScipy(SeededTest):
         assert -np.inf == Flat.dist().logcdf(-np.inf).tag.test_value
 
     def test_half_flat(self):
-        self.pymc3_matches_scipy(HalfFlat, Rplus, {}, lambda value: 0)
+        self.check_logp(HalfFlat, Rplus, {}, lambda value: 0)
         with Model():
             x = HalfFlat("a", shape=2)
             assert_allclose(x.tag.test_value, 1)
@@ -836,7 +872,7 @@ class TestMatchesScipy(SeededTest):
         assert -np.inf == HalfFlat.dist().logcdf(-np.inf).tag.test_value
 
     def test_normal(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Normal,
             R,
             {"mu": R, "sigma": Rplus},
@@ -856,7 +892,7 @@ class TestMatchesScipy(SeededTest):
                 value, (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma
             )
 
-        self.pymc3_matches_scipy(
+        self.check_logp(
             TruncatedNormal,
             R,
             {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig, "upper": Rplusbig},
@@ -865,7 +901,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_half_normal(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             HalfNormal,
             Rplus,
             {"sigma": Rplus},
@@ -880,7 +916,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_chi_squared(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             ChiSquared,
             Rplus,
             {"nu": Rplusdunif},
@@ -892,7 +928,7 @@ class TestMatchesScipy(SeededTest):
         reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
     )
     def test_wald_scipy(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Wald,
             Rplus,
             {"mu": Rplus, "alpha": Rplus},
@@ -936,13 +972,13 @@ class TestMatchesScipy(SeededTest):
         assert_almost_equal(model.fastlogp(pt), logp, decimal=decimals, err_msg=str(pt))
 
     def test_beta(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Beta,
             Unit,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.beta.logpdf(value, alpha, beta),
         )
-        self.pymc3_matches_scipy(Beta, Unit, {"mu": Unit, "sigma": Rplus}, beta_mu_sigma)
+        self.check_logp(Beta, Unit, {"mu": Unit, "sigma": Rplus}, beta_mu_sigma)
         self.check_logcdf(
             Beta,
             Unit,
@@ -958,10 +994,10 @@ class TestMatchesScipy(SeededTest):
                 np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value ** a)
             )
 
-        self.pymc3_matches_scipy(Kumaraswamy, Unit, {"a": Rplus, "b": Rplus}, scipy_log_pdf)
+        self.check_logp(Kumaraswamy, Unit, {"a": Rplus, "b": Rplus}, scipy_log_pdf)
 
     def test_exponential(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Exponential,
             Rplus,
             {"lam": Rplus},
@@ -975,7 +1011,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_geometric(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Geometric,
             Nat,
             {"p": Unit},
@@ -1011,7 +1047,7 @@ class TestMatchesScipy(SeededTest):
 
             return original_res if not np.isnan(original_res) else -np.inf
 
-        self.pymc3_matches_scipy(
+        self.check_logp(
             HyperGeometric,
             Nat,
             {"N": NatSmall, "k": NatSmall, "n": NatSmall},
@@ -1036,13 +1072,13 @@ class TestMatchesScipy(SeededTest):
         def scipy_mu_alpha_logcdf(value, mu, alpha):
             return sp.nbinom.logcdf(value, alpha, 1 - mu / (mu + alpha))
 
-        self.pymc3_matches_scipy(
+        self.check_logp(
             NegativeBinomial,
             Nat,
             {"mu": Rplus, "alpha": Rplus},
             scipy_mu_alpha_logpmf,
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             NegativeBinomial,
             Nat,
             {"p": Unit, "n": Rplus},
@@ -1090,7 +1126,7 @@ class TestMatchesScipy(SeededTest):
                 NegativeBinomial("x", mu=mu, p=p, alpha=alpha, n=n)
 
     def test_laplace(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Laplace,
             R,
             {"mu": R, "b": Rplus},
@@ -1104,7 +1140,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_laplace_asymmetric(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             AsymmetricLaplace,
             R,
             {"b": Rplus, "kappa": Rplus, "mu": R},
@@ -1112,7 +1148,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_lognormal(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Lognormal,
             Rplus,
             {"mu": R, "tau": Rplusbig},
@@ -1126,7 +1162,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_t(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             StudentT,
             R,
             {"nu": Rplus, "mu": R, "lam": Rplus},
@@ -1141,7 +1177,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_cauchy(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Cauchy,
             R,
             {"alpha": R, "beta": Rplusbig},
@@ -1155,7 +1191,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_half_cauchy(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             HalfCauchy,
             Rplus,
             {"beta": Rplusbig},
@@ -1169,7 +1205,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_gamma(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Gamma,
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
@@ -1179,7 +1215,7 @@ class TestMatchesScipy(SeededTest):
         def test_fun(value, mu, sigma):
             return sp.gamma.logpdf(value, mu ** 2 / sigma ** 2, scale=1.0 / (mu / sigma ** 2))
 
-        self.pymc3_matches_scipy(Gamma, Rplus, {"mu": Rplusbig, "sigma": Rplusbig}, test_fun)
+        self.check_logp(Gamma, Rplus, {"mu": Rplusbig, "sigma": Rplusbig}, test_fun)
 
         # pymc-devs/Theano-PyMC#224: skip_paramdomain_outside_edge_test has to be set
         # True to avoid triggering a C-level assertion in the Theano GammaQ function
@@ -1197,7 +1233,7 @@ class TestMatchesScipy(SeededTest):
         reason="Fails on float32 due to numerical issues",
     )
     def test_inverse_gamma(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             InverseGamma,
             Rplus,
             {"alpha": Rplus, "beta": Rplus},
@@ -1223,10 +1259,10 @@ class TestMatchesScipy(SeededTest):
             alpha, beta = InverseGamma._get_alpha_beta(None, None, mu, sigma)
             return sp.invgamma.logpdf(value, alpha, scale=beta)
 
-        self.pymc3_matches_scipy(InverseGamma, Rplus, {"mu": Rplus, "sigma": Rplus}, test_fun)
+        self.check_logp(InverseGamma, Rplus, {"mu": Rplus, "sigma": Rplus}, test_fun)
 
     def test_pareto(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Pareto,
             Rplus,
             {"alpha": Rplusbig, "m": Rplusbig},
@@ -1244,7 +1280,7 @@ class TestMatchesScipy(SeededTest):
         reason="Fails on float32 due to inf issues",
     )
     def test_weibull(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Weibull,
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
@@ -1259,7 +1295,7 @@ class TestMatchesScipy(SeededTest):
 
     def test_half_studentt(self):
         # this is only testing for nu=1 (halfcauchy)
-        self.pymc3_matches_scipy(
+        self.check_logp(
             HalfStudentT,
             Rplus,
             {"sigma": Rplus},
@@ -1267,7 +1303,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_skew_normal(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             SkewNormal,
             R,
             {"mu": R, "sigma": Rplusbig, "alpha": R},
@@ -1275,7 +1311,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_binomial(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Binomial,
             Nat,
             {"n": NatSmall, "p": Unit},
@@ -1306,7 +1342,7 @@ class TestMatchesScipy(SeededTest):
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
@@ -1325,13 +1361,13 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_bernoulli(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Bernoulli,
             Bool,
             {"logit_p": R},
             lambda value, logit_p: sp.bernoulli.logpmf(value, scipy.special.expit(logit_p)),
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Bernoulli,
             Bool,
             {"p": Unit},
@@ -1356,7 +1392,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_discrete_weibull(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             DiscreteWeibull,
             Nat,
             {"q": Unit, "beta": Rplusdunif},
@@ -1369,7 +1405,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_poisson(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Poisson,
             Nat,
             {"mu": Rplus},
@@ -1389,7 +1425,7 @@ class TestMatchesScipy(SeededTest):
 
     def test_bound_poisson(self):
         NonZeroPoisson = Bound(Poisson, lower=1.0)
-        self.pymc3_matches_scipy(
+        self.check_logp(
             NonZeroPoisson,
             PosNat,
             {"mu": Rplus},
@@ -1401,7 +1437,7 @@ class TestMatchesScipy(SeededTest):
         assert np.isinf(x.logp({"x": 0}))
 
     def test_constantdist(self):
-        self.pymc3_matches_scipy(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
+        self.check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
@@ -1449,38 +1485,38 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_mvnormal(self, n):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             MvNormal,
             RealMatrix(5, n),
             {"mu": Vector(R, n), "tau": PdMatrix(n)},
             normal_logpdf_tau,
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             MvNormal,
             Vector(R, n),
             {"mu": Vector(R, n), "tau": PdMatrix(n)},
             normal_logpdf_tau,
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             MvNormal,
             RealMatrix(5, n),
             {"mu": Vector(R, n), "cov": PdMatrix(n)},
             normal_logpdf_cov,
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             MvNormal,
             Vector(R, n),
             {"mu": Vector(R, n), "cov": PdMatrix(n)},
             normal_logpdf_cov,
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             MvNormal,
             RealMatrix(5, n),
             {"mu": Vector(R, n), "chol": PdMatrixChol(n)},
             normal_logpdf_chol,
             decimal=select_by_precision(float64=6, float32=-1),
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             MvNormal,
             Vector(R, n),
             {"mu": Vector(R, n), "chol": PdMatrixChol(n)},
@@ -1491,7 +1527,7 @@ class TestMatchesScipy(SeededTest):
         def MvNormalUpper(*args, **kwargs):
             return MvNormal(lower=False, *args, **kwargs)
 
-        self.pymc3_matches_scipy(
+        self.check_logp(
             MvNormalUpper,
             Vector(R, n),
             {"mu": Vector(R, n), "chol": PdMatrixCholUpper(n)},
@@ -1535,7 +1571,7 @@ class TestMatchesScipy(SeededTest):
     def test_matrixnormal(self, n):
         mat_scale = 1e3  # To reduce logp magnitude
         mean_scale = 0.1
-        self.pymc3_matches_scipy(
+        self.check_logp(
             MatrixNormal,
             RealMatrix(n, n),
             {
@@ -1545,7 +1581,7 @@ class TestMatchesScipy(SeededTest):
             },
             matrix_normal_logpdf_cov,
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             MatrixNormal,
             RealMatrix(2, n),
             {
@@ -1555,7 +1591,7 @@ class TestMatchesScipy(SeededTest):
             },
             matrix_normal_logpdf_cov,
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             MatrixNormal,
             RealMatrix(3, n),
             {
@@ -1566,7 +1602,7 @@ class TestMatchesScipy(SeededTest):
             matrix_normal_logpdf_chol,
             decimal=select_by_precision(float64=6, float32=-1),
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             MatrixNormal,
             RealMatrix(n, 3),
             {
@@ -1600,7 +1636,7 @@ class TestMatchesScipy(SeededTest):
             for args in [cov_args, chol_args, evd_args]:
                 args["sigma"] = sigma
 
-        self.pymc3_matches_scipy(
+        self.check_logp(
             KroneckerNormal,
             dom,
             std_args,
@@ -1608,7 +1644,7 @@ class TestMatchesScipy(SeededTest):
             extra_args=cov_args,
             scipy_args=cov_args,
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             KroneckerNormal,
             dom,
             std_args,
@@ -1616,7 +1652,7 @@ class TestMatchesScipy(SeededTest):
             extra_args=chol_args,
             scipy_args=chol_args,
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             KroneckerNormal,
             dom,
             std_args,
@@ -1627,7 +1663,7 @@ class TestMatchesScipy(SeededTest):
 
         dom = Domain([np.random.randn(2, N) * 0.1], edges=(None, None), shape=(2, N))
 
-        self.pymc3_matches_scipy(
+        self.check_logp(
             KroneckerNormal,
             dom,
             std_args,
@@ -1635,7 +1671,7 @@ class TestMatchesScipy(SeededTest):
             extra_args=cov_args,
             scipy_args=cov_args,
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             KroneckerNormal,
             dom,
             std_args,
@@ -1643,7 +1679,7 @@ class TestMatchesScipy(SeededTest):
             extra_args=chol_args,
             scipy_args=chol_args,
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             KroneckerNormal,
             dom,
             std_args,
@@ -1654,13 +1690,13 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize("n", [1, 2])
     def test_mvt(self, n):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             MvStudentT,
             Vector(R, n),
             {"nu": Rplus, "Sigma": PdMatrix(n), "mu": Vector(R, n)},
             mvt_logpdf,
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             MvStudentT,
             RealMatrix(2, n),
             {"nu": Rplus, "Sigma": PdMatrix(n), "mu": Vector(R, n)},
@@ -1669,7 +1705,7 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_AR1(self, n):
-        self.pymc3_matches_scipy(AR1, Vector(R, n), {"k": Unit, "tau_e": Rplus}, AR1_logpdf)
+        self.check_logp(AR1, Vector(R, n), {"k": Unit, "tau_e": Rplus}, AR1_logpdf)
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_wishart(self, n):
@@ -1694,7 +1730,7 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_dirichlet(self, n):
-        self.pymc3_matches_scipy(Dirichlet, Simplex(n), {"a": Vector(Rplus, n)}, dirichlet_logpdf)
+        self.check_logp(Dirichlet, Simplex(n), {"a": Vector(Rplus, n)}, dirichlet_logpdf)
 
     def test_dirichlet_shape(self):
         a = tt.as_tensor_variable(np.r_[1, 2])
@@ -1706,7 +1742,7 @@ class TestMatchesScipy(SeededTest):
             dir_rv = Dirichlet.dist(tt.vector())
 
     def test_dirichlet_2D(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Dirichlet,
             MultiSimplex(2, 2),
             {"a": Vector(Vector(Rplus, 2), 2)},
@@ -1715,7 +1751,7 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_multinomial(self, n):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Multinomial, Vector(Nat, n), {"p": Simplex(n), "n": Nat}, multinomial_logpdf
         )
 
@@ -1865,7 +1901,7 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_dirichlet_multinomial(self, n):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             DirichletMultinomial,
             Vector(Nat, n),
             {"a": Vector(Rplus, n), "n": Nat},
@@ -2033,7 +2069,7 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_categorical(self, n):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Categorical,
             Domain(range(n), "int64"),
             {"p": Simplex(n)},
@@ -2042,7 +2078,7 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_orderedlogistic(self, n):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             OrderedLogistic,
             Domain(range(n), "int64"),
             {"eta": R, "cutpoints": Vector(R, n - 1)},
@@ -2051,7 +2087,7 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_orderedprobit(self, n):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             OrderedProbit,
             Domain(range(n), "int64"),
             {"eta": Runif, "cutpoints": UnitSortedVector(n - 1)},
@@ -2134,7 +2170,7 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_vonmises(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             VonMises,
             R,
             {"mu": Circ, "kappa": Rplus},
@@ -2145,7 +2181,7 @@ class TestMatchesScipy(SeededTest):
         def gumbel(value, mu, beta):
             return floatX(sp.gumbel_r.logpdf(value, loc=mu, scale=beta))
 
-        self.pymc3_matches_scipy(Gumbel, R, {"mu": R, "beta": Rplusbig}, gumbel)
+        self.check_logp(Gumbel, R, {"mu": R, "beta": Rplusbig}, gumbel)
 
         def gumbellcdf(value, mu, beta):
             return floatX(sp.gumbel_r.logcdf(value, loc=mu, scale=beta))
@@ -2153,7 +2189,7 @@ class TestMatchesScipy(SeededTest):
         self.check_logcdf(Gumbel, R, {"mu": R, "beta": Rplusbig}, gumbellcdf)
 
     def test_logistic(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Logistic,
             R,
             {"mu": R, "s": Rplus},
@@ -2169,7 +2205,7 @@ class TestMatchesScipy(SeededTest):
         )
 
     def test_logitnormal(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             LogitNormal,
             Unit,
             {"mu": R, "sigma": Rplus},
@@ -2184,13 +2220,13 @@ class TestMatchesScipy(SeededTest):
             Beta("beta", alpha=1.0, beta=1.0, shape=(10, 20))
 
     def test_rice(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Rice,
             Rplus,
             {"nu": Rplus, "sigma": Rplusbig},
             lambda value, nu, sigma: sp.rice.logpdf(value, b=nu / sigma, loc=0, scale=sigma),
         )
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Rice,
             Rplus,
             {"b": Rplus, "sigma": Rplusbig},
@@ -2199,7 +2235,7 @@ class TestMatchesScipy(SeededTest):
 
     @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
     def test_moyal(self):
-        self.pymc3_matches_scipy(
+        self.check_logp(
             Moyal,
             R,
             {"mu": R, "sigma": Rplusbig},
@@ -2233,7 +2269,7 @@ class TestMatchesScipy(SeededTest):
                         -np.inf * np.ones(value.shape),
                     )
 
-                self.pymc3_matches_scipy(TestedInterpolated, R, {}, ref_pdf)
+                self.check_logp(TestedInterpolated, R, {}, ref_pdf)
 
 
 def test_bound():
