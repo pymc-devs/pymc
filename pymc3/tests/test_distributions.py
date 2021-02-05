@@ -1309,6 +1309,7 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplusbig, "alpha": R},
             lambda value, alpha, mu, sigma: sp.skewnorm.logpdf(value, alpha, mu, sigma),
+            decimal=select_by_precision(float64=5, float32=3),
         )
 
     def test_binomial(self):
