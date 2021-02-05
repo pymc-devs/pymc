@@ -1054,8 +1054,6 @@ class Wald(PositiveContinuous):
             logpow(lam / (2.0 * np.pi), 0.5)
             - logpow(centered_value, 1.5)
             - (0.5 * lam / centered_value * ((centered_value - mu) / mu) ** 2),
-            # XXX these two are redundant. Please, check.
-            value > 0,
             centered_value > 0,
             mu > 0,
             lam > 0,
