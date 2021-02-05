@@ -682,11 +682,12 @@ class TestMatchesScipy:
                 scipy_cdf = scipy_logcdf(**params)
                 value = params.pop("value")
                 dist = pymc3_dist.dist(**params)
+                params["value"] = value  # for displaying in err_msg
                 assert_almost_equal(
                     dist.logcdf(value).tag.test_value,
                     scipy_cdf,
                     decimal=decimal,
-                    err_msg=str(pt),
+                    err_msg=str(params),
                 )
 
         valid_value = domain.vals[0]
