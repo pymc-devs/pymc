@@ -121,37 +121,6 @@ class TestSample(SeededTest):
             for i, trace in enumerate(samps):
                 assert i == len(trace) - 1, "Trace does not have correct length."
 
-    def test_sample_does_not_modify_start_as_list_of_dicts(self):
-        # make sure pm.sample does not modify the 'start_list' passed as an argument
-        # see https://github.com/pymc-devs/pymc3/pull/4458
-        start_list = [{"mu1": 10}, {"mu2": 15}]
-        with self.model:
-            mu1 = pm.Normal("mu1", mu=0, sd=5)
-            mu2 = pm.Normal("mu2", mu=0, sd=1)
-            trace = pm.sample(
-                step=pm.Metropolis(),
-                tune=5,
-                draws=10,
-                chains=2,
-                start=start_list,
-            )
-        assert start_list == [{"mu1": 10}, {"mu2": 15}]
-
-    def test_sample_does_not_modify_start_as_dict(self):
-        # make sure pm.sample does not modify the 'start_dict' passed as an argument.
-        # see https://github.com/pymc-devs/pymc3/pull/4458
-        start_dict = {"X0_mu": 25}
-        with self.model:
-            X0_mu = pm.Lognormal("X0_mu", mu=np.log(0.25), sd=0.10)
-            trace = pm.sample(
-                step=pm.Metropolis(),
-                tune=5,
-                draws=10,
-                chains=3,
-                start=start_dict,
-            )
-        assert start_dict == {"X0_mu": 25}
-
     def test_parallel_start(self):
         with self.model:
             tr = pm.sample(
@@ -314,6 +283,27 @@ class TestSample(SeededTest):
                 callback=callback,
             )
             assert len(trace) == trace_cancel_length
+
+
+def test_sample_find_MAP_does_not_modify_start():
+    # see https://github.com/pymc-devs/pymc3/pull/4458
+    with pm.Model():
+        pm.Lognormal("untransformed")
+
+        # make sure find_Map does not modify the start dict
+        start = {"untransformed": 2}
+        pm.find_MAP(start=start)
+        assert start == {"untransformed": 2}
+
+        # make sure sample does not modify the start dict
+        start = {"untransformed": 0.2}
+        pm.sample(draws=10, step=pm.Metropolis(), tune=5, start=start, chains=3)
+        assert start == {"untransformed": 0.2}
+
+        # make sure sample does not modify the start when passes as dict
+        start = [{"untransformed": 2}, {"untransformed": 0.2}]
+        pm.sample(draws=10, step=pm.Metropolis(), tune=5, start=start, chains=2)
+        assert start == [{"untransformed": 2}, {"untransformed": 0.2}]
 
 
 def test_empty_model():
