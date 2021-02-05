@@ -28,6 +28,7 @@ import numpy as np
 from fastprogress.fastprogress import progress_bar
 
 from pymc3 import theanof
+from pymc3.blocking import DictToArrayBijection
 from pymc3.exceptions import SamplingError
 
 logger = logging.getLogger("pymc3")
@@ -251,7 +252,7 @@ class ProcessAdapter:
         self._shared_point = {}
         self._point = {}
 
-        for name, shape, dtype in step_method.bij.map(start).point_map_info:
+        for name, shape, dtype in DictToArrayBijection.map(start).point_map_info:
             size = 1
             for dim in shape:
                 size *= int(dim)

@@ -20,7 +20,7 @@ from collections import namedtuple
 import numpy as np
 
 from pymc3.backends.report import SamplerWarning, WarningType
-from pymc3.blocking import RaveledVars
+from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.exceptions import SamplingError
 from pymc3.model import Point, modelcontext
 from pymc3.step_methods import arraystep, step_sizes
@@ -87,7 +87,7 @@ class BaseHMC(arraystep.GradientSharedStep):
 
         # vars = inputvars(vars)
 
-        super().__init__(vars, blocked=blocked, model=model, dtype=dtype, **theano_kwargs)
+        super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **theano_kwargs)
 
         self.adapt_step_size = adapt_step_size
         self.Emax = Emax
@@ -97,8 +97,8 @@ class BaseHMC(arraystep.GradientSharedStep):
         # size.
         # XXX: If the dimensions of these terms change, the step size
         # dimension-scaling should change as well, no?
-        test_point = model.test_point
-        continuous_vars = [test_point[v.name] for v in model.cont_vars]
+        test_point = self._model.test_point
+        continuous_vars = [test_point[v.name] for v in self._model.cont_vars]
         size = sum(v.size for v in continuous_vars)
 
         self.step_size = step_scale / (size ** 0.25)
@@ -114,8 +114,8 @@ class BaseHMC(arraystep.GradientSharedStep):
             potential = QuadPotentialDiagAdapt(size, mean, var, 10)
 
         if isinstance(scaling, dict):
-            point = Point(scaling, model=model)
-            scaling = guess_scaling(point, model=model, vars=vars)
+            point = Point(scaling, model=self._model)
+            scaling = guess_scaling(point, model=self._model, vars=vars)
 
         if scaling is not None and potential is not None:
             raise ValueError("Can not specify both potential and scaling.")
@@ -195,10 +195,10 @@ class BaseHMC(arraystep.GradientSharedStep):
                 self._num_divs_sample += 1
                 # We don't want to fill up all memory with divergence info
                 if self._num_divs_sample < 100 and info.state is not None:
-                    point = self.bij.rmap(info.state.q)
+                    point = DictToArrayBijection.rmap(info.state.q)
 
                 if self._num_divs_sample < 100 and info.state_div is not None:
-                    point = self.bij.rmap(info.state_div.q)
+                    point = DictToArrayBijection.rmap(info.state_div.q)
 
                 if self._num_divs_sample < 100:
                     info_store = info

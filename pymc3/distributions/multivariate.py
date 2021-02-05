@@ -17,6 +17,8 @@
 
 import warnings
 
+from copy import copy
+
 import numpy as np
 import scipy
 import theano
@@ -55,6 +57,7 @@ __all__ = [
 ]
 
 # FIXME: These are temporary hacks
+dirichlet = copy(dirichlet)
 dirichlet.inplace = True
 
 
@@ -449,6 +452,7 @@ class Dirichlet(Continuous):
         Concentration parameters (a > 0).
     """
 
+    rv_op = dirichlet
     default_transform = transforms.stick_breaking
 
     @classmethod
@@ -458,10 +462,7 @@ class Dirichlet(Continuous):
         # mean = a / tt.sum(a)
         # mode = tt.switch(tt.all(a > 1), (a - 1) / tt.sum(a - 1), np.nan)
 
-        rv_var = dirichlet(a, *kwargs)
-        rv_var.tag.transform = kwargs.get("transform", cls.default_transform)
-
-        return rv_var
+        return super().dist([a], **kwargs)
 
     def _distr_parameters_for_repr(self):
         return ["a"]

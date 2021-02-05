@@ -11,16 +11,17 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import warnings
+
+from copy import copy
 
 import numpy as np
 import theano.tensor as tt
 
 from scipy import stats
-from theano.tensor.random.basic import CategoricalRV, categorical
+from theano.tensor.random.basic import BinomialRV, CategoricalRV, binomial, categorical
 
-from pymc3.distributions import _logp
+from pymc3.distributions import _logcdf, _logp
 from pymc3.distributions.dist_math import (
     betaln,
     binomln,
@@ -54,6 +55,12 @@ __all__ = [
     "Categorical",
     "OrderedLogistic",
 ]
+
+# FIXME: These are temporary hacks
+categorical = copy(categorical)
+categorical.inplace = True
+binomial = copy(binomial)
+binomial.inplace = True
 
 
 class Binomial(Discrete):
@@ -97,94 +104,74 @@ class Binomial(Discrete):
     p: float
         Probability of success in each trial (0 < p < 1).
     """
+    rv_op = binomial
 
-    def __init__(self, n, p, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.n = n = tt.as_tensor_variable(intX(n))
-        self.p = p = tt.as_tensor_variable(floatX(p))
-        self.mode = tt.cast(tround(n * p), self.dtype)
+    @classmethod
+    def dist(cls, n, p, *args, **kwargs):
+        n = tt.as_tensor_variable(intX(n))
+        p = tt.as_tensor_variable(floatX(p))
+        # mode = tt.cast(tround(n * p), self.dtype)
+        return super().dist([n, p], **kwargs)
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from Binomial distribution.
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
+@_logp.register(BinomialRV)
+def binomial_logp(op, value, n, p):
+    r"""
+    Calculate log-probability of Binomial distribution at specified value.
 
-        Returns
-        -------
-        array
-        """
-        # n, p = draw_values([self.n, self.p], point=point, size=size)
-        # return generate_samples(stats.binom.rvs, n=n, p=p, dist_shape=self.shape, size=size)
-        pass
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or theano tensor
 
-    def logp(self, value):
-        r"""
-        Calculate log-probability of Binomial distribution at specified value.
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(
+        binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
+        0 <= value,
+        value <= n,
+        0 <= p,
+        p <= 1,
+    )
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
 
-        Returns
-        -------
-        TensorVariable
-        """
-        n = self.n
-        p = self.p
+@_logcdf.register(BinomialRV)
+def binomial_logcdf(op, value, n, p):
+    """
+    Compute the log of the cumulative distribution function for Binomial distribution
+    at the specified value.
 
-        return bound(
-            binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
-            0 <= value,
-            value <= n,
-            0 <= p,
-            p <= 1,
+    Parameters
+    ----------
+    value: numeric
+        Value for which log CDF is calculated.
+
+    Returns
+    -------
+    TensorVariable
+    """
+    # incomplete_beta function can only handle scalar values (see #4342)
+    if np.ndim(value):
+        raise TypeError(
+            f"Binomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
         )
 
-    def logcdf(self, value):
-        """
-        Compute the log of the cumulative distribution function for Binomial distribution
-        at the specified value.
+    value = tt.floor(value)
 
-        Parameters
-        ----------
-        value: numeric
-            Value for which log CDF is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        # incomplete_beta function can only handle scalar values (see #4342)
-        if np.ndim(value):
-            raise TypeError(
-                f"Binomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
-
-        n = self.n
-        p = self.p
-        value = tt.floor(value)
-
-        return bound(
-            tt.switch(
-                tt.lt(value, n),
-                tt.log(incomplete_beta(n - value, value + 1, 1 - p)),
-                0,
-            ),
-            0 <= value,
-            0 < n,
-            0 <= p,
-            p <= 1,
-        )
+    return bound(
+        tt.switch(
+            tt.lt(value, n),
+            tt.log(incomplete_beta(n - value, value + 1, 1 - p)),
+            0,
+        ),
+        0 <= value,
+        0 < n,
+        0 <= p,
+        p <= 1,
+    )
 
 
 class BetaBinomial(Discrete):
@@ -1345,6 +1332,7 @@ class Categorical(Discrete):
         p > 0 and the elements of p must sum to 1. They will be automatically
         rescaled otherwise.
     """
+    rv_op = categorical
 
     @classmethod
     def dist(cls, p, **kwargs):
@@ -1355,12 +1343,7 @@ class Categorical(Discrete):
         # if mode.ndim == 1:
         #     mode = tt.squeeze(mode)
 
-        transform = kwargs.get("transform", cls.default_transform)
-
-        rv_var = categorical(p, **kwargs)
-        rv_var.tag.transform = transform
-
-        return rv_var
+        return super().dist([p], **kwargs)
 
 
 @_logp.register(CategoricalRV)

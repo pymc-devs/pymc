@@ -17,14 +17,22 @@
 A collection of common probability distributions for stochastic
 nodes in PyMC.
 """
-import warnings
+from copy import copy
 
 import numpy as np
 import theano.tensor as tt
 
 from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
-from theano.tensor.random.basic import NormalRV, UniformRV, normal, uniform
+from theano.tensor.opt import Assert
+from theano.tensor.random.basic import (
+    GammaRV,
+    NormalRV,
+    UniformRV,
+    gamma,
+    normal,
+    uniform,
+)
 
 from pymc3.distributions import _logcdf, _logp, transforms
 from pymc3.distributions.dist_math import (
@@ -82,8 +90,12 @@ __all__ = [
 ]
 
 # FIXME: These are temporary hacks
+normal = copy(normal)
 normal.inplace = True
+uniform = copy(uniform)
 uniform.inplace = True
+gamma = copy(gamma)
+gamma.inplace = True
 
 
 class PositiveContinuous(Continuous):
@@ -122,24 +134,9 @@ class BoundedContinuous(Continuous):
 
 
 def assert_negative_support(var, label, distname, value=-1e-6):
-    # Checks for evidence of positive support for a variable
-    if var is None:
-        return
-    try:
-        # Transformed distribution
-        support = np.isfinite(var.transformed.distribution.dist.logp(value).tag.test_value)
-    except AttributeError:
-        try:
-            # Untransformed distribution
-            support = np.isfinite(var.distribution.logp(value).tag.test_value)
-        except AttributeError:
-            # Otherwise no direct evidence of non-positive support
-            support = False
-
-    if np.any(support):
-        msg = f"The variable specified for {label} has negative support for {distname}, "
-        msg += "likely making it unsuitable for this parameter."
-        warnings.warn(msg)
+    msg = f"The variable specified for {label} has negative support for {distname}, "
+    msg += "likely making it unsuitable for this parameter."
+    return Assert(msg)(var, tt.all(tt.ge(var, 0.0)))
 
 
 def get_tau_sigma(tau=None, sigma=None):
@@ -225,6 +222,7 @@ class Uniform(BoundedContinuous):
     upper: float
         Upper limit.
     """
+    rv_op = uniform
 
     @classmethod
     def dist(cls, lower=0, upper=1, **kwargs):
@@ -233,13 +231,10 @@ class Uniform(BoundedContinuous):
         # mean = (upper + lower) / 2.0
         # median = self.mean
 
-        transform = kwargs.get("transform", cls.default_transform)
+        transform = kwargs.pop("transform", cls.default_transform)
         transform = cls.create_transform(transform, lower, upper)
 
-        rv_var = uniform(lower, upper, **kwargs)
-        rv_var.tag.transform = transform
-
-        return rv_var
+        return super().dist([lower, upper], transform=transform, **kwargs)
 
 
 @_logp.register(UniformRV)
@@ -463,6 +458,7 @@ class Normal(Continuous):
         with pm.Model():
             x = pm.Normal('x', mu=0, tau=1/23)
     """
+    rv_op = normal
 
     @classmethod
     def dist(cls, mu=0, sigma=None, tau=None, sd=None, **kwargs):
@@ -477,12 +473,7 @@ class Normal(Continuous):
         # variance = 1.0 / self.tau
 
         assert_negative_support(sigma, "sigma", "Normal")
-        # assert_negative_support(tau, "tau", "Normal")
-
-        rv_var = normal(mu, sigma, **kwargs)
-        rv_var.tag.transform = kwargs.get("transform", cls.default_transform)
-
-        return rv_var
+        return super().dist([mu, sigma], **kwargs)
 
 
 @_logp.register(NormalRV)
@@ -680,7 +671,6 @@ class TruncatedNormal(BoundedContinuous):
         #     dist_shape=self.shape,
         #     size=size,
         # )
-        pass
 
     def _random(self, mu, sigma, lower, upper, size):
         """Wrapper around stats.truncnorm.rvs that converts TruncatedNormal's
@@ -841,7 +831,6 @@ class HalfNormal(PositiveContinuous):
         # return generate_samples(
         #     stats.halfnorm.rvs, loc=0.0, scale=sigma, dist_shape=self.shape, size=size
         # )
-        pass
 
     def logp(self, value):
         """
@@ -1040,7 +1029,6 @@ class Wald(PositiveContinuous):
         """
         # mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha], point=point, size=size)
         # return generate_samples(self._random, mu, lam, alpha, dist_shape=self.shape, size=size)
-        pass
 
     def logp(self, value):
         """
@@ -1242,7 +1230,6 @@ class Beta(UnitContinuous):
         """
         # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
         # return generate_samples(clipped_beta_rvs, alpha, beta, dist_shape=self.shape, size=size)
-        pass
 
     def logp(self, value):
         """
@@ -1390,7 +1377,6 @@ class Kumaraswamy(UnitContinuous):
         """
         # a, b = draw_values([self.a, self.b], point=point, size=size)
         # return generate_samples(self._random, a, b, dist_shape=self.shape, size=size)
-        pass
 
     def logp(self, value):
         """
@@ -1483,7 +1469,6 @@ class Exponential(PositiveContinuous):
         # return generate_samples(
         #     np.random.exponential, scale=1.0 / lam, dist_shape=self.shape, size=size
         # )
-        pass
 
     def logp(self, value):
         """
@@ -1597,7 +1582,6 @@ class Laplace(Continuous):
         """
         # mu, b = draw_values([self.mu, self.b], point=point, size=size)
         # return generate_samples(np.random.laplace, mu, b, dist_shape=self.shape, size=size)
-        pass
 
     def logp(self, value):
         """
@@ -1726,7 +1710,6 @@ class AsymmetricLaplace(Continuous):
         """
         # b, kappa, mu = draw_values([self.b, self.kappa, self.mu], point=point, size=size)
         # return generate_samples(self._random, b, kappa, mu, dist_shape=self.shape, size=size)
-        pass
 
     def logp(self, value):
         """
@@ -1855,7 +1838,6 @@ class Lognormal(PositiveContinuous):
         """
         # mu, tau = draw_values([self.mu, self.tau], point=point, size=size)
         # return generate_samples(self._random, mu, tau, dist_shape=self.shape, size=size)
-        pass
 
     def logp(self, value):
         """
@@ -2008,7 +1990,6 @@ class StudentT(Continuous):
         # return generate_samples(
         #     stats.t.rvs, nu, loc=mu, scale=lam ** -0.5, dist_shape=self.shape, size=size
         # )
-        pass
 
     def logp(self, value):
         """
@@ -2163,7 +2144,6 @@ class Pareto(Continuous):
         """
         # alpha, m = draw_values([self.alpha, self.m], point=point, size=size)
         # return generate_samples(self._random, alpha, m, dist_shape=self.shape, size=size)
-        pass
 
     def logp(self, value):
         """
@@ -2296,7 +2276,6 @@ class Cauchy(Continuous):
         """
         # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
         # return generate_samples(self._random, alpha, beta, dist_shape=self.shape, size=size)
-        pass
 
     def logp(self, value):
         """
@@ -2409,7 +2388,6 @@ class HalfCauchy(PositiveContinuous):
         """
         # beta = draw_values([self.beta], point=point, size=size)[0]
         # return generate_samples(self._random, beta, dist_shape=self.shape, size=size)
-        pass
 
     def logp(self, value):
         """
@@ -2512,23 +2490,27 @@ class Gamma(PositiveContinuous):
     sigma: float
         Alternative scale parameter (sigma > 0).
     """
+    rv_op = gamma
 
-    def __init__(self, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    @classmethod
+    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs):
         if sd is not None:
             sigma = sd
 
-        alpha, beta = self.get_alpha_beta(alpha, beta, mu, sigma)
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
-        self.beta = beta = tt.as_tensor_variable(floatX(beta))
-        self.mean = alpha / beta
-        self.mode = tt.maximum((alpha - 1) / beta, 0)
-        self.variance = alpha / beta ** 2
+        alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
+        alpha = tt.as_tensor_variable(floatX(alpha))
+        beta = tt.as_tensor_variable(floatX(beta))
+        # mean = alpha / beta
+        # mode = tt.maximum((alpha - 1) / beta, 0)
+        # variance = alpha / beta ** 2
 
         assert_negative_support(alpha, "alpha", "Gamma")
         assert_negative_support(beta, "beta", "Gamma")
 
-    def get_alpha_beta(self, alpha=None, beta=None, mu=None, sigma=None):
+        return super().dist([alpha, beta], **kwargs)
+
+    @classmethod
+    def get_alpha_beta(cls, alpha=None, beta=None, mu=None, sigma=None):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sigma is not None):
@@ -2543,83 +2525,60 @@ class Gamma(PositiveContinuous):
 
         return alpha, beta
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Gamma distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
-        # return generate_samples(
-        #     stats.gamma.rvs, alpha, scale=1.0 / beta, dist_shape=self.shape, size=size
-        # )
-        pass
-
-    def logp(self, value):
-        """
-        Calculate log-probability of Gamma distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-        alpha = self.alpha
-        beta = self.beta
-        return bound(
-            -gammaln(alpha) + logpow(beta, alpha) - beta * value + logpow(value, alpha - 1),
-            value >= 0,
-            alpha > 0,
-            beta > 0,
-        )
-
-    def logcdf(self, value):
-        """
-        Compute the log of the cumulative distribution function for Gamma distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or theano.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        alpha = self.alpha
-        beta = self.beta
-        # Avoid C-assertion when the gammainc function is called with invalid values (#4340)
-        safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
-        safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
-        safe_value = tt.switch(tt.lt(value, 0), 0, value)
-
-        return bound(
-            tt.log(tt.gammainc(safe_alpha, safe_beta * safe_value)),
-            0 <= value,
-            0 < alpha,
-            0 < beta,
-        )
-
     def _distr_parameters_for_repr(self):
         return ["alpha", "beta"]
+
+
+@_logp.register(GammaRV)
+def gamma_logp(op, value, alpha, beta):
+    """
+    Calculate log-probability of Gamma distribution at specified value.
+
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or theano tensor
+
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(
+        -gammaln(alpha) + logpow(beta, alpha) - beta * value + logpow(value, alpha - 1),
+        value >= 0,
+        alpha > 0,
+        beta > 0,
+    )
+
+
+@_logcdf.register(GammaRV)
+def gamma_logcdf(op, value, alpha, beta):
+    """
+    Compute the log of the cumulative distribution function for Gamma distribution
+    at the specified value.
+
+    Parameters
+    ----------
+    value: numeric or np.ndarray or theano.tensor
+        Value(s) for which log CDF is calculated. If the log CDF for multiple
+        values are desired the values must be provided in a numpy array or theano tensor.
+
+    Returns
+    -------
+    TensorVariable
+    """
+    # Avoid C-assertion when the gammainc function is called with invalid values (#4340)
+    safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
+    safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
+    safe_value = tt.switch(tt.lt(value, 0), 0, value)
+
+    return bound(
+        tt.log(tt.gammainc(safe_alpha, safe_beta * safe_value)),
+        0 <= value,
+        0 < alpha,
+        0 < beta,
+    )
 
 
 class InverseGamma(PositiveContinuous):
@@ -2736,7 +2695,6 @@ class InverseGamma(PositiveContinuous):
         # return generate_samples(
         #     stats.invgamma.rvs, a=alpha, scale=beta, dist_shape=self.shape, size=size
         # )
-        pass
 
     def logp(self, value):
         """
@@ -2918,7 +2876,6 @@ class Weibull(PositiveContinuous):
         #     return b * (-np.log(np.random.uniform(size=size))) ** (1 / a)
         #
         # return generate_samples(_random, alpha, beta, dist_shape=self.shape, size=size)
-        pass
 
     def logp(self, value):
         """
@@ -3066,7 +3023,6 @@ class HalfStudentT(PositiveContinuous):
         # return np.abs(
         #     generate_samples(stats.t.rvs, nu, loc=0, scale=sigma, dist_shape=self.shape, size=size)
         # )
-        pass
 
     def logp(self, value):
         """
@@ -3207,7 +3163,6 @@ class ExGaussian(Continuous):
         #     )
         #
         # return generate_samples(_random, mu, sigma, nu, dist_shape=self.shape, size=size)
-        pass
 
     def logp(self, value):
         """
@@ -3364,7 +3319,6 @@ class VonMises(Continuous):
         # return generate_samples(
         #     stats.vonmises.rvs, loc=mu, kappa=kappa, dist_shape=self.shape, size=size
         # )
-        pass
 
     def logp(self, value):
         """
@@ -3493,7 +3447,6 @@ class SkewNormal(Continuous):
         # return generate_samples(
         #     stats.skewnorm.rvs, a=alpha, loc=mu, scale=tau ** -0.5, dist_shape=self.shape, size=size
         # )
-        pass
 
     def logp(self, value):
         """
@@ -3606,7 +3559,6 @@ class Triangular(BoundedContinuous):
         # return generate_samples(
         #     self._random, c=c, lower=lower, upper=upper, size=size, dist_shape=self.shape
         # )
-        pass
 
     def _random(self, c, lower, upper, size):
         """Wrapper around stats.triang.rvs that converts Triangular's
@@ -3759,7 +3711,6 @@ class Gumbel(Continuous):
         # return generate_samples(
         #     stats.gumbel_r.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size
         # )
-        pass
 
     def logp(self, value):
         """
@@ -3930,7 +3881,6 @@ class Rice(PositiveContinuous):
         """
         # nu, sigma = draw_values([self.nu, self.sigma], point=point, size=size)
         # return generate_samples(self._random, nu=nu, sigma=sigma, dist_shape=self.shape, size=size)
-        pass
 
     def _random(self, nu, sigma, size):
         """Wrapper around stats.rice.rvs that converts Rice's
@@ -4043,7 +3993,6 @@ class Logistic(Continuous):
         # return generate_samples(
         #     stats.logistic.rvs, loc=mu, scale=s, dist_shape=self.shape, size=size
         # )
-        pass
 
     def logp(self, value):
         """
@@ -4169,7 +4118,6 @@ class LogitNormal(UnitContinuous):
         # return expit(
         #     generate_samples(stats.norm.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size)
         # )
-        pass
 
     def logp(self, value):
         """
@@ -4279,7 +4227,6 @@ class Interpolated(BoundedContinuous):
         array
         """
         # return generate_samples(self._random, dist_shape=self.shape, size=size)
-        pass
 
     def logp(self, value):
         """
@@ -4382,7 +4329,6 @@ class Moyal(Continuous):
         # return generate_samples(
         #     stats.moyal.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size
         # )
-        pass
 
     def logp(self, value):
         """

@@ -24,9 +24,75 @@ from theano.graph.op import compute_test_value
 from theano.tensor.random.op import Observed, RandomVariable
 from theano.tensor.var import TensorVariable
 
+from pymc3.theanof import floatX
+
 PotentialShapeType = Union[
     int, np.ndarray, Tuple[Union[int, Variable], ...], List[Union[int, Variable]], Variable
 ]
+
+
+def _get_scaling(total_size, shape, ndim):
+    """
+    Gets scaling constant for logp
+
+    Parameters
+    ----------
+    total_size: int or list[int]
+    shape: shape
+        shape to scale
+    ndim: int
+        ndim hint
+
+    Returns
+    -------
+    scalar
+    """
+    if total_size is None:
+        coef = floatX(1)
+    elif isinstance(total_size, int):
+        if ndim >= 1:
+            denom = shape[0]
+        else:
+            denom = 1
+        coef = floatX(total_size) / floatX(denom)
+    elif isinstance(total_size, (list, tuple)):
+        if not all(isinstance(i, int) for i in total_size if (i is not Ellipsis and i is not None)):
+            raise TypeError(
+                "Unrecognized `total_size` type, expected "
+                "int or list of ints, got %r" % total_size
+            )
+        if Ellipsis in total_size:
+            sep = total_size.index(Ellipsis)
+            begin = total_size[:sep]
+            end = total_size[sep + 1 :]
+            if Ellipsis in end:
+                raise ValueError(
+                    "Double Ellipsis in `total_size` is restricted, got %r" % total_size
+                )
+        else:
+            begin = total_size
+            end = []
+        if (len(begin) + len(end)) > ndim:
+            raise ValueError(
+                "Length of `total_size` is too big, "
+                "number of scalings is bigger that ndim, got %r" % total_size
+            )
+        elif (len(begin) + len(end)) == 0:
+            return floatX(1)
+        if len(end) > 0:
+            shp_end = shape[-len(end) :]
+        else:
+            shp_end = np.asarray([])
+        shp_begin = shape[: len(begin)]
+        begin_coef = [floatX(t) / shp_begin[i] for i, t in enumerate(begin) if t is not None]
+        end_coef = [floatX(t) / shp_end[i] for i, t in enumerate(end) if t is not None]
+        coefs = begin_coef + end_coef
+        coef = tt.prod(coefs)
+    else:
+        raise TypeError(
+            "Unrecognized `total_size` type, expected int or list of ints, got %r" % total_size
+        )
+    return tt.as_tensor(floatX(coef))
 
 
 def change_rv_size(
@@ -49,16 +115,20 @@ def change_rv_size(
     """
     rv_node = rv_var.owner
     rng, size, dtype, *dist_params = rv_node.inputs
+    name = rv_var.name
+    tag = rv_var.tag
 
     if expand:
         new_size = tuple(np.atleast_1d(new_size)) + tuple(size)
 
     new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
+    rv_var = new_rv_node.outputs[-1]
+    rv_var.name = name
+    for k, v in tag.__dict__.items():
+        rv_var.tag.__dict__.setdefault(k, v)
 
     if config.compute_test_value != "off":
         compute_test_value(new_rv_node)
-
-    rv_var = new_rv_node.outputs[-1]
 
     return rv_var
 
@@ -66,6 +136,7 @@ def change_rv_size(
 def rv_log_likelihood_args(
     rv_var: TensorVariable,
     rv_value: Optional[TensorVariable] = None,
+    transformed: Optional[bool] = True,
 ) -> Tuple[TensorVariable, TensorVariable]:
     """Get a `RandomVariable` and its corresponding log-likelihood `TensorVariable` value.
 
@@ -78,6 +149,8 @@ def rv_log_likelihood_args(
     rv_value
         The measure-space input `TensorVariable` (i.e. "input" to a
         log-likelihood).
+    transformed
+        When ``True``, return the transformed value var.
 
     Returns
     =======
@@ -97,6 +170,10 @@ def rv_log_likelihood_args(
             rv_value = rv_var.tag.value_var
         else:
             raise ValueError("value is unspecified")
+
+    transform = getattr(rv_value.tag, "transform", None)
+    if transformed and transform:
+        rv_value = transform.forward(rv_value)
 
     return rv_var, rv_value
 
@@ -172,8 +249,8 @@ def logpt(
     else:
         logp_var = _logp_nojac(rv_node.op, rv_value, *dist_params, **kwargs)
 
-    if scaling:
-        logp_var *= scaling
+    if scaling and hasattr(rv_var.tag, "scaling"):
+        logp_var *= _get_scaling(rv_var.tag.total_size, rv_value.shape, rv_value.ndim)
 
     if rv_var.name is not None:
         logp_var.name = "__logp_%s" % rv_var.name

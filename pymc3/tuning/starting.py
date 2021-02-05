@@ -105,17 +105,14 @@ def find_MAP(
 
     start = Point(start, model=model)
 
-    bij = DictToArrayBijection(
-        [v.name for v in vars],
-        [v.shape for v in [start[v.name] for v in vars]],
-        [v.dtype for v in [start[v.name] for v in vars]],
-    )
-
-    logp_func = bij.mapf(model.fastlogp_nojac)
-    x0 = bij.map(start)
+    logp_func = DictToArrayBijection.mapf(model.fastlogp_nojac)
+    x0 = DictToArrayBijection.map(start)
 
     try:
-        dlogp_func = bij.mapf(model.fastdlogp_nojac(vars))
+        # This might be needed for calls to `dlogp_func`
+        # start_map_info = tuple((v.name, v.shape, v.dtype) for v in vars)
+
+        dlogp_func = DictToArrayBijection.mapf(model.fastdlogp_nojac(vars))
         compute_gradient = True
     except (AttributeError, NotImplementedError, tg.NullTypeGradError):
         compute_gradient = False
@@ -153,7 +150,10 @@ def find_MAP(
     vars = get_default_varnames(
         [v.tag.value_var for v in model.unobserved_RVs], include_transformed
     )
-    mx = {var.name: value for var, value in zip(vars, model.fastfn(vars)(bij.rmap(mx0)))}
+    mx = {
+        var.name: value
+        for var, value in zip(vars, model.fastfn(vars)(DictToArrayBijection.rmap(mx0)))
+    }
 
     if return_raw:
         return mx, opt_result

@@ -71,7 +71,7 @@ class Family:
             if isinstance(val, (numbers.Number, np.ndarray, np.generic)):
                 priors[key] = val
             else:
-                priors[key] = model.register_rv(f"{name}{key}", val)
+                priors[key] = model.register_rv(val, f"{name}{key}")
 
         return priors
 

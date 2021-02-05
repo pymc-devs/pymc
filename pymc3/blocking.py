@@ -19,61 +19,58 @@ Classes for working with subsets of parameters.
 """
 import collections
 
-from typing import Dict, List, Text, Union
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 
 __all__ = ["DictToArrayBijection"]
 
+# `point_map_info` is a tuple of tuples containing `(name, shape, dtype)` for
+# each of the raveled variables.
 RaveledVars = collections.namedtuple("RaveledVars", "data, point_map_info")
 
-# TODO Classes and methods need to be fully documented.
-
+RaveledVars = collections.namedtuple("RaveledVars", "data, point_map_info")
 
 class DictToArrayBijection:
+    """Map between a `dict`s of variables to an array space.
+
+    Said array space consists of all the vars raveled and then concatenated.
+
     """
-    A mapping between a dict space and an array space
-    """
 
-    def __init__(self, ordering: List[Text]):
-        # TODO: Should just use `OrderedDict`s and remove this state entirely
-        self.ordering = ordering
-
-    def map(self, dpt: Dict[Text, np.ndarray]):
-        """
-        Maps value from dict space to array space
-
-        Parameters
-        ----------
-        dpt: dict
-        """
-        vars_info = tuple((dpt[n], n, dpt[n].shape, dpt[n].dtype) for n in self.ordering)
+    @staticmethod
+    def map(var_dict: Dict[str, np.ndarray]) -> RaveledVars:
+        """Map a dictionary of names and variables to a concatenated 1D array space."""
+        vars_info = tuple((v, k, v.shape, v.dtype) for k, v in var_dict.items())
         res = np.concatenate([v[0].ravel() for v in vars_info])
         return RaveledVars(res, tuple(v[1:] for v in vars_info))
 
-    @classmethod
+    @staticmethod
     def rmap(
-        cls, apt: RaveledVars, as_list=False
-    ) -> Union[Dict[Text, np.ndarray], List[np.ndarray]]:
-        """
-        Maps value from array space to dict space
+        array: RaveledVars, as_list: Optional[bool] = False
+    ) -> Union[Dict[str, np.ndarray], List[np.ndarray]]:
+        """Map 1D concatenated array to a dictionary of variables in their original spaces.
 
         Parameters
-        ----------
-        apt: array
+        ==========
+        array
+            The array to map.
+        as_list
+            When ``True``, return a list of the original variables instead of a
+            ``dict`` keyed each variable's name.
         """
         if as_list:
             res = []
         else:
             res = {}
 
-        if not isinstance(apt, RaveledVars):
+        if not isinstance(array, RaveledVars):
             raise TypeError("`apt` must be a `RaveledVars` type")
 
         last_idx = 0
-        for name, shape, dtype in apt.point_map_info:
+        for name, shape, dtype in array.point_map_info:
             arr_len = np.prod(shape, dtype=int)
-            var = apt.data[last_idx : last_idx + arr_len].reshape(shape).astype(dtype)
+            var = array.data[last_idx : last_idx + arr_len].reshape(shape).astype(dtype)
             if as_list:
                 res.append(var)
             else:
@@ -82,20 +79,20 @@ class DictToArrayBijection:
 
         return res
 
-    def mapf(self, f):
+    @classmethod
+    def mapf(cls, f):
         """
          function f: DictSpace -> T to ArraySpace -> T
 
         Parameters
         ----------
-
         f: dict -> T
 
         Returns
         -------
         f: array -> T
         """
-        return Compose(f, self.rmap)
+        return Compose(f, cls.rmap)
 
 
 class Compose:

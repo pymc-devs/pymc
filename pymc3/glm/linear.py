@@ -81,19 +81,15 @@ class LinearComponent(Model):
                 if name in vars:
                     v = Deterministic(name, vars[name])
                 else:
-                    v = self.register_rv(
-                        name=name, dist=priors.get(name, self.default_intercept_prior)
-                    )
+                    v = self.register_rv(priors.get(name, self.default_intercept_prior), name)
                 coeffs.append(v)
             else:
                 if name in vars:
                     v = Deterministic(name, vars[name])
                 else:
                     v = self.register_rv(
-                        name=name,
-                        dist=priors.get(
-                            name, priors.get("Regressor", self.default_regressor_prior)
-                        ),
+                        priors.get(name, priors.get("Regressor", self.default_regressor_prior)),
+                        name,
                     )
                 coeffs.append(v)
         self.coeffs = tt.stack(coeffs, axis=0)

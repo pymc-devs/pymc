@@ -43,13 +43,7 @@ def fixed_hessian(point, vars=None, model=None):
 
     point = Point(point, model=model)
 
-    bij = DictToArrayBijection(
-        [v.name for v in vars],
-        [v.shape for v in [point[v.name] for v in vars]],
-        [v.dtype for v in [point[v.name] for v in vars]],
-    )
-
-    rval = np.ones(bij.map(point).size) / 10
+    rval = np.ones(DictToArrayBijection.map(point).size) / 10
     return rval
 
 

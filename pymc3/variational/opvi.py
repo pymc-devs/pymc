@@ -56,7 +56,6 @@ import theano.tensor as tt
 import pymc3 as pm
 
 from pymc3.backends import NDArray
-from pymc3.blocking import DictToArrayBijection
 from pymc3.memoize import WithMemoization, memoize
 from pymc3.model import modelcontext
 from pymc3.theanof import identity, tt_rng
@@ -950,10 +949,11 @@ class Group(WithMemoization):
         self.input = self._input_type(self.__class__.__name__ + "_symbolic_input")
         # I do some staff that is not supported by standard __init__
         # so I have to to it by myself
+        self.group = [get_transformed(var) for var in self.group]
+
         # XXX: This needs to be refactored
         # self.ordering = ArrayOrdering([])
         self.replacements = dict()
-        self.group = [get_transformed(var) for var in self.group]
         for var in self.group:
             if isinstance(var.distribution, pm.Discrete):
                 raise ParametrizationError(f"Discrete variables are not supported by VI: {var}")
@@ -965,7 +965,7 @@ class Group(WithMemoization):
                     else:
                         raise BatchedGroupError("Batched variable should not be scalar")
                 # XXX: This needs to be refactored
-                self.ordering.size += None  # (np.prod(var.dshape[1:])).astype(int)
+                # self.ordering.size += None  # (np.prod(var.dshape[1:])).astype(int)
                 if self.local:
                     # XXX: This needs to be refactored
                     shape = None  # (-1,) + var.dshape[1:]
@@ -974,18 +974,17 @@ class Group(WithMemoization):
                     shape = None  # var.dshape
             else:
                 # XXX: This needs to be refactored
-                self.ordering.size += None  # var.dsize
+                # self.ordering.size += None  # var.dsize
                 # XXX: This needs to be refactored
                 shape = None  # var.dshape
-            end = self.ordering.size
+            # end = self.ordering.size
             # XXX: This needs to be refactored
             vmap = None  # VarMap(var.name, slice(begin, end), shape, var.dtype)
-            self.ordering.vmap.append(vmap)
-            self.ordering.by_name[vmap.var] = vmap
+            # self.ordering.vmap.append(vmap)
+            # self.ordering.by_name[vmap.var] = vmap
             vr = self.input[..., vmap.slc].reshape(shape).astype(vmap.dtyp)
             vr.name = vmap.var + "_vi_replacement"
             self.replacements[var] = vr
-        self.bij = DictToArrayBijection(self.ordering, {})
 
     def _finalize_init(self):
         """*Dev* - clean up after init"""
@@ -1037,7 +1036,8 @@ class Group(WithMemoization):
     def bdim(self):
         if not self.local:
             if self.batched:
-                return self.ordering.vmap[0].shp[0]
+                # XXX: This needs to be refactored
+                return None  # self.ordering.vmap[0].shp[0]
             else:
                 return 1
         else:
@@ -1045,11 +1045,13 @@ class Group(WithMemoization):
 
     @node_property
     def ndim(self):
-        return self.ordering.size * self.bdim
+        # XXX: This needs to be refactored
+        return None  # self.ordering.size * self.bdim
 
     @property
     def ddim(self):
-        return self.ordering.size
+        # XXX: This needs to be refactored
+        return None  # self.ordering.size
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         """*Dev* - allocates new initial random generator

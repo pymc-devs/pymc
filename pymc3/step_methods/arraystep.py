@@ -135,23 +135,22 @@ class ArrayStep(BlockedStep):
 
     def __init__(self, vars, fs, allvars=False, blocked=True):
         self.vars = vars
-        self.bij = DictToArrayBijection([v.name for v in vars])
         self.fs = fs
         self.allvars = allvars
         self.blocked = blocked
 
-    def step(self, point: Dict[Text, np.ndarray]):
+    def step(self, point: Dict[str, np.ndarray]):
 
-        inputs = [self.bij.mapf(x) for x in self.fs]
+        inputs = [DictToArrayBijection.mapf(x) for x in self.fs]
         if self.allvars:
             inputs.append(point)
 
         if self.generates_stats:
-            apoint, stats = self.astep(self.bij.map(point), *inputs)
-            return self.bij.rmap(apoint), stats
+            apoint, stats = self.astep(DictToArrayBijection.map(point), *inputs)
+            return DictToArrayBijection.rmap(apoint), stats
         else:
-            apoint = self.astep(self.bij.map(point), *inputs)
-            return self.bij.rmap(apoint)
+            apoint = self.astep(DictToArrayBijection.map(point), *inputs)
+            return DictToArrayBijection.rmap(apoint)
 
     def astep(self, apoint, point):
         raise NotImplementedError()
@@ -174,25 +173,26 @@ class ArrayStepShared(BlockedStep):
         blocked: Boolean (default True)
         """
         self.vars = vars
-        self.bij = DictToArrayBijection(self.ordering)
         self.shared = {get_var_name(var): shared for var, shared in shared.items()}
         self.blocked = blocked
-        self.bij = None
 
     def step(self, point):
         for var, share in self.shared.items():
             share.set_value(point[var])
 
         if self.generates_stats:
-            apoint, stats = self.astep(self.bij.map(point))
-            return self.bij.rmap(apoint), stats
+            apoint, stats = self.astep(DictToArrayBijection.map(point))
+            return DictToArrayBijection.rmap(apoint), stats
         else:
-            array = self.bij.map(point)
+            array = DictToArrayBijection.map(point)
             apoint = self.astep(array)
             if not isinstance(apoint, RaveledVars):
                 # We assume that the mapping has stayed the same
                 apoint = RaveledVars(apoint, array.point_map_info)
-            return self.bij.rmap(apoint)
+            return DictToArrayBijection.rmap(apoint)
+
+    def astep(self, apoint):
+        raise NotImplementedError()
 
     def astep(self, apoint):
         raise NotImplementedError()
@@ -260,7 +260,7 @@ class GradientSharedStep(BlockedStep):
     def step(self, point):
         self._logp_dlogp_func.set_extra_values(point)
 
-        array = self.bij.map(point)
+        array = DictToArrayBijection.map(point)
 
         stats = None
         if self.generates_stats:
@@ -272,7 +272,7 @@ class GradientSharedStep(BlockedStep):
             # We assume that the mapping has stayed the same
             apoint = RaveledVars(apoint, array.point_map_info)
 
-        point = self.bij.rmap(apoint)
+        point = DictToArrayBijection.rmap(apoint)
 
         if stats is not None:
             return point, stats

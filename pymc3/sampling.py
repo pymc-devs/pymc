@@ -203,7 +203,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
             has_gradient = var.dtype not in discrete_types
             if has_gradient:
                 try:
-                    tg.grad(model.logpt, var)
+                    tg.grad(model.logpt, var.tag.value_var)
                 except (AttributeError, NotImplementedError, tg.NullTypeGradError):
                     has_gradient = False
             # select the best method
@@ -632,7 +632,9 @@ def sample(
 
     idata = None
     if compute_convergence_checks or return_inferencedata:
-        ikwargs = dict(model=model, save_warmup=not discard_tuned_samples)
+        # XXX: Arviz `log_likelihood` calculations need to be disabled until
+        # it's updated to work with v4.
+        ikwargs = dict(model=model, save_warmup=not discard_tuned_samples, log_likelihood=False)
         if idata_kwargs:
             ikwargs.update(idata_kwargs)
         idata = arviz.from_pymc3(trace, **ikwargs)
@@ -1987,12 +1989,6 @@ def sample_prior_predictive(
     for var_name in vars_:
         if var_name in data:
             prior[var_name] = data[var_name]
-        elif is_transformed_name(var_name):
-            untransformed = get_untransformed_name(var_name)
-            if untransformed in data:
-                prior[var_name] = model[untransformed].transformation.forward_val(
-                    data[untransformed]
-                )
     return prior
 
 
@@ -2125,8 +2121,7 @@ def init_nuts(
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="relative"),
     ]
 
-    bij = DictToArrayBijection([v.name for v in inputvars(model.vars)])
-    apoint = bij.map(model.test_point)
+    apoint = DictToArrayBijection.map(model.test_point)
 
     if init == "adapt_diag":
         start = [model.test_point] * chains
@@ -2136,7 +2131,7 @@ def init_nuts(
         potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
     elif init == "jitter+adapt_diag":
         start = _init_jitter(model, chains, jitter_max_retries)
-        mean = np.mean([bij.map(vals).data for vals in start], axis=0)
+        mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
         var = np.ones_like(mean)
         n = len(var)
         potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
@@ -2217,7 +2212,7 @@ def init_nuts(
         potential = quadpotential.QuadPotentialFullAdapt(model.size, mean, cov, 10)
     elif init == "jitter+adapt_full":
         start = _init_jitter(model, chains, jitter_max_retries)
-        mean = np.mean([bij.map(vals).data for vals in start], axis=0)
+        mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
         cov = np.eye(model.size)
         potential = quadpotential.QuadPotentialFullAdapt(model.size, mean, cov, 10)
     else:

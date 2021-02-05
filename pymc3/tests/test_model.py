@@ -24,8 +24,9 @@ import theano.tensor as tt
 import pymc3 as pm
 
 from pymc3 import Deterministic, Potential
-from pymc3.distributions import HalfCauchy, Normal, transforms
-from pymc3.tests.helpers import select_by_precision
+from pymc3.blocking import RaveledVars
+from pymc3.distributions import Normal, transforms
+from pymc3.model import ValueGradFunction
 
 
 class NewModel(pm.Model):
@@ -33,7 +34,7 @@ class NewModel(pm.Model):
         super().__init__(name, model)
         assert pm.modelcontext(None) is self
         # 1) init variables with Var method
-        self.register_rv("v1", pm.Normal.dist())
+        self.register_rv(pm.Normal.dist(), "v1")
         self.v2 = pm.Normal("v2", mu=0, sigma=1)
         # 2) Potentials and Deterministic variables with method too
         # be sure that names will not overlap with other same models
@@ -44,9 +45,9 @@ class NewModel(pm.Model):
 class DocstringModel(pm.Model):
     def __init__(self, mean=0, sigma=1, name="", model=None):
         super().__init__(name, model)
-        self.register_rv("v1", Normal.dist(mu=mean, sigma=sigma))
+        self.register_rv(Normal.dist(mu=mean, sigma=sigma), "v1")
         Normal("v2", mu=mean, sigma=sigma)
-        Normal("v3", mu=mean, sigma=HalfCauchy("sd", beta=10, testval=1.0))
+        Normal("v3", mu=mean, sigma=Normal("sd", mu=10, sigma=1, testval=1.0))
         Deterministic("v3_sq", self.v3 ** 2)
         Potential("p1", tt.constant(1))
 
@@ -57,12 +58,12 @@ class TestBaseModel:
             pm.Normal("v1")
             assert len(model.vars) == 1
             with pm.Model("sub") as submodel:
-                submodel.register_rv("v1", pm.Normal.dist())
+                submodel.register_rv(pm.Normal.dist(), "v1")
                 assert hasattr(submodel, "v1")
                 assert len(submodel.vars) == 1
             assert len(model.vars) == 2
             with submodel:
-                submodel.register_rv("v2", pm.Normal.dist())
+                submodel.register_rv(pm.Normal.dist(), "v2")
                 assert hasattr(submodel, "v2")
                 assert len(submodel.vars) == 2
             assert len(model.vars) == 3
@@ -80,7 +81,7 @@ class TestBaseModel:
             assert usermodel2._parent == model
             # you can enter in a context with submodel
             with usermodel2:
-                usermodel2.register_rv("v3", pm.Normal.dist())
+                usermodel2.register_rv(pm.Normal.dist(), "v3")
                 pm.Normal("v4")
                 # this variable is created in parent model too
         assert "another_v2" in model.named_vars
@@ -163,65 +164,6 @@ class TestObserved:
         assert x2.type == X.type
 
 
-class TestTheanoConfig:
-    def test_set_testval_raise(self):
-        with theano.config.change_flags(compute_test_value="off"):
-            with pm.Model():
-                assert theano.config.compute_test_value == "raise"
-            assert theano.config.compute_test_value == "off"
-
-    def test_nested(self):
-        with theano.config.change_flags(compute_test_value="off"):
-            with pm.Model(theano_config={"compute_test_value": "ignore"}):
-                assert theano.config.compute_test_value == "ignore"
-                with pm.Model(theano_config={"compute_test_value": "warn"}):
-                    assert theano.config.compute_test_value == "warn"
-                assert theano.config.compute_test_value == "ignore"
-            assert theano.config.compute_test_value == "off"
-
-
-def test_matrix_multiplication():
-    # Check matrix multiplication works between RVs, transformed RVs,
-    # Deterministics, and numpy arrays
-    with pm.Model() as linear_model:
-        matrix = pm.Normal("matrix", shape=(2, 2))
-        transformed = pm.Gamma("transformed", alpha=2, beta=1, shape=2)
-        rv_rv = pm.Deterministic("rv_rv", matrix @ transformed)
-        np_rv = pm.Deterministic("np_rv", np.ones((2, 2)) @ transformed)
-        rv_np = pm.Deterministic("rv_np", matrix @ np.ones(2))
-        rv_det = pm.Deterministic("rv_det", matrix @ rv_rv)
-        det_rv = pm.Deterministic("det_rv", rv_rv @ transformed)
-
-        posterior = pm.sample(10, tune=0, compute_convergence_checks=False, progressbar=False)
-        decimal = select_by_precision(7, 5)
-        for point in posterior.points():
-            npt.assert_almost_equal(
-                point["matrix"] @ point["transformed"],
-                point["rv_rv"],
-                decimal=decimal,
-            )
-            npt.assert_almost_equal(
-                np.ones((2, 2)) @ point["transformed"],
-                point["np_rv"],
-                decimal=decimal,
-            )
-            npt.assert_almost_equal(
-                point["matrix"] @ np.ones(2),
-                point["rv_np"],
-                decimal=decimal,
-            )
-            npt.assert_almost_equal(
-                point["matrix"] @ point["rv_rv"],
-                point["rv_det"],
-                decimal=decimal,
-            )
-            npt.assert_almost_equal(
-                point["rv_rv"] @ point["transformed"],
-                point["det_rv"],
-                decimal=decimal,
-            )
-
-
 def test_duplicate_vars():
     with pytest.raises(ValueError) as err:
         with pm.Model():
@@ -253,11 +195,148 @@ def test_empty_observed():
     data.values[:] = np.nan
     with pm.Model():
         a = pm.Normal("a", observed=data)
-        npt.assert_allclose(a.tag.test_value, np.zeros((2, 3)))
-        b = pm.Beta("b", alpha=1, beta=1, observed=data)
-        npt.assert_allclose(b.tag.test_value, np.ones((2, 3)) / 2)
+        # The masked observations are replaced by elements of the RV `a`,
+        # which means that they should all have the same sample test values
+        a_data = a.owner.inputs[1]
+        npt.assert_allclose(a.tag.test_value, a_data.tag.test_value)
+
+        # Let's try this again with another distribution
+        b = pm.Gamma("b", alpha=1, beta=1, observed=data)
+        b_data = b.owner.inputs[1]
+        npt.assert_allclose(b.tag.test_value, b_data.tag.test_value)
 
 
+class TestValueGradFunction(unittest.TestCase):
+    def test_no_extra(self):
+        a = tt.vector("a")
+        a.tag.test_value = np.zeros(3, dtype=a.dtype)
+        f_grad = ValueGradFunction([a.sum()], [a], [], mode="FAST_COMPILE")
+        assert f_grad._extra_vars == []
+
+    def test_invalid_type(self):
+        a = tt.ivector("a")
+        a.tag.test_value = np.zeros(3, dtype=a.dtype)
+        a.dshape = (3,)
+        a.dsize = 3
+        with pytest.raises(TypeError) as err:
+            ValueGradFunction([a.sum()], [a], [], mode="FAST_COMPILE")
+        err.match("Invalid dtype")
+
+    def setUp(self):
+        extra1 = tt.iscalar("extra1")
+        extra1_ = np.array(0, dtype=extra1.dtype)
+        extra1.tag.test_value = extra1_
+        extra1.dshape = tuple()
+        extra1.dsize = 1
+
+        val1 = tt.vector("val1")
+        val1_ = np.zeros(3, dtype=val1.dtype)
+        val1.tag.test_value = val1_
+        val1.dshape = (3,)
+        val1.dsize = 3
+
+        val2 = tt.matrix("val2")
+        val2_ = np.zeros((2, 3), dtype=val2.dtype)
+        val2.tag.test_value = val2_
+        val2.dshape = (2, 3)
+        val2.dsize = 6
+
+        self.val1, self.val1_ = val1, val1_
+        self.val2, self.val2_ = val2, val2_
+        self.extra1, self.extra1_ = extra1, extra1_
+
+        self.cost = extra1 * val1.sum() + val2.sum()
+
+        self.f_grad = ValueGradFunction([self.cost], [val1, val2], [extra1], mode="FAST_COMPILE")
+
+    def test_extra_not_set(self):
+        with pytest.raises(ValueError) as err:
+            self.f_grad.get_extra_values()
+        err.match("Extra values are not set")
+
+        with pytest.raises(ValueError) as err:
+            size = self.val1_.size + self.val2_.size
+            self.f_grad(np.zeros(size, dtype=self.f_grad.dtype))
+        err.match("Extra values are not set")
+
+    def test_grad(self):
+        self.f_grad.set_extra_values({"extra1": 5})
+        size = self.val1_.size + self.val2_.size
+        array = RaveledVars(
+            np.ones(size, dtype=self.f_grad.dtype),
+            (
+                ("val1", self.val1_.shape, self.val1_.dtype),
+                ("val2", self.val2_.shape, self.val2_.dtype),
+            ),
+        )
+        val, grad = self.f_grad(array)
+        assert val == 21
+        npt.assert_allclose(grad, [5, 5, 5, 1, 1, 1, 1, 1, 1])
+
+    @pytest.mark.xfail(reason="Missing distributions")
+    def test_edge_case(self):
+        # Edge case discovered in #2948
+        ndim = 3
+        with pm.Model() as m:
+            pm.Lognormal(
+                "sigma", mu=np.zeros(ndim), tau=np.ones(ndim), shape=ndim
+            )  # variance for the correlation matrix
+            pm.HalfCauchy("nu", beta=10)
+            step = pm.NUTS()
+
+        func = step._logp_dlogp_func
+        func.set_extra_values(m.test_point)
+        q = func.dict_to_array(m.test_point)
+        logp, dlogp = func(q)
+        assert logp.size == 1
+        assert dlogp.size == 4
+        npt.assert_allclose(dlogp, 0.0, atol=1e-5)
+
+    @pytest.mark.xfail(reason="Missing distributions")
+    def test_tensor_type_conversion(self):
+        # case described in #3122
+        X = np.random.binomial(1, 0.5, 10)
+        X[0] = -1  # masked a single value
+        X = np.ma.masked_values(X, value=-1)
+        with pm.Model() as m:
+            x1 = pm.Uniform("x1", 0.0, 1.0)
+            x2 = pm.Bernoulli("x2", x1, observed=X)
+
+        gf = m.logp_dlogp_function()
+
+        assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
+
+    @pytest.mark.xfail(reason="Missing distributions")
+    def test_theano_switch_broadcast_edge_cases(self):
+        # Tests against two subtle issues related to a previous bug in Theano where tt.switch would not
+        # always broadcast tensors with single values https://github.com/pymc-devs/aesara/issues/270
+
+        # Known issue 1: https://github.com/pymc-devs/pymc3/issues/4389
+        data = np.zeros(10)
+        with pm.Model() as m:
+            p = pm.Beta("p", 1, 1)
+            obs = pm.Bernoulli("obs", p=p, observed=data)
+        # Assert logp is correct
+        npt.assert_allclose(
+            obs.logp(m.test_point),
+            np.log(0.5) * 10,
+        )
+
+        # Known issue 2: https://github.com/pymc-devs/pymc3/issues/4417
+        # fmt: off
+        data = np.array([
+            1.35202174, -0.83690274, 1.11175166, 1.29000367, 0.21282749,
+            0.84430966, 0.24841369, 0.81803141, 0.20550244, -0.45016253,
+        ])
+        # fmt: on
+        with pm.Model() as m:
+            mu = pm.Normal("mu", 0, 5)
+            obs = pm.TruncatedNormal("obs", mu=mu, sigma=1, lower=-1, upper=2, observed=data)
+        # Assert dlogp is correct
+        npt.assert_allclose(m.dlogp([mu])({"mu": 0}), 2.499424682024436, rtol=1e-5)
+
+
+@pytest.mark.xfail(reason="DensityDist not supported")
 def test_multiple_observed_rv():
     "Test previously buggy multi-observed RV comparison code."
     y1_data = np.random.randn(10)
@@ -273,6 +352,7 @@ def test_multiple_observed_rv():
     assert not model["x"] in model.vars
 
 
+# @pytest.mark.xfail(reason="Functions depend on deprecated dshape/dsize")
 def test_tempered_logp_dlogp():
     with pm.Model() as model:
         pm.Normal("x")
@@ -290,7 +370,7 @@ def test_tempered_logp_dlogp():
     func_temp_nograd = model.logp_dlogp_function(tempered=True, compute_grads=False)
     func_temp_nograd.set_extra_values({})
 
-    x = np.ones(func.size, dtype=func.dtype)
+    x = np.ones(1, dtype=func.dtype)
     assert func(x) == func_temp(x)
     assert func_nograd(x) == func(x)[0]
     assert func_temp_nograd(x) == func(x)[0]

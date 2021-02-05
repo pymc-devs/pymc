@@ -56,6 +56,7 @@ class _Unpickling:
 class Distribution:
     """Statistical distribution"""
 
+    rv_op = None
     default_transform = None
 
     def __new__(cls, name, *args, **kwargs):
@@ -99,13 +100,22 @@ class Distribution:
             )
 
         rv_out = cls.dist(*args, rng=rng, **kwargs)
-        rv_out.name = name
 
-        return model.register_rv(rv_out, name, cls, data, total_size, dims=dims)
+        return model.register_rv(rv_out, name, data, total_size, dims=dims)
 
     @classmethod
-    def dist(cls, *args, **kwargs):
-        raise NotImplementedError()
+    def dist(cls, dist_params, **kwargs):
+        transform = kwargs.pop("transform", cls.default_transform)
+        testval = kwargs.pop("testval", None)
+
+        rv_var = cls.rv_op(*dist_params, **kwargs)
+
+        rv_var.tag.transform = transform
+
+        if testval is not None:
+            rv_var.tag.test_value = testval
+
+        return rv_var
 
     def default(self):
         return np.asarray(self.get_test_val(self.testval, self.defaults), self.dtype)

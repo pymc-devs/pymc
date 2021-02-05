@@ -19,6 +19,7 @@ from theano import tensor as tt
 
 import pymc3 as pm
 
+from pymc3.blocking import DictToArrayBijection
 from pymc3.distributions.dist_math import rho2sigma
 from pymc3.math import batched_diag
 from pymc3.util import update_start_vals
@@ -76,7 +77,7 @@ class MeanFieldGroup(Group):
         if self.batched:
             start = start[self.group[0].name][0]
         else:
-            start = self.bij.map(start)
+            start = DictToArrayBijection.map(start)
         rho = np.zeros((self.ddim,))
         if self.batched:
             start = np.tile(start, (self.bdim, 1))
@@ -131,7 +132,7 @@ class FullRankGroup(Group):
         if self.batched:
             start = start[self.group[0].name][0]
         else:
-            start = self.bij.map(start)
+            start = DictToArrayBijection.map(start)
         n = self.ddim
         L_tril = np.eye(n)[np.tril_indices(n)].astype(theano.config.floatX)
         if self.batched:
@@ -242,7 +243,7 @@ class EmpiricalGroup(Group):
                     start_ = self.model.test_point.copy()
                     update_start_vals(start_, start, self.model)
                     start = start_
-                start = pm.floatX(self.bij.map(start))
+                start = pm.floatX(DictToArrayBijection.map(start))
                 # Initialize particles
                 histogram = np.tile(start, (size, 1))
                 histogram += pm.floatX(np.random.normal(0, jitter, histogram.shape))
@@ -252,7 +253,7 @@ class EmpiricalGroup(Group):
             i = 0
             for t in trace.chains:
                 for j in range(len(trace)):
-                    histogram[i] = self.bij.map(trace.point(j, t))
+                    histogram[i] = DictToArrayBijection.map(trace.point(j, t))
                     i += 1
         return dict(histogram=theano.shared(pm.floatX(histogram), "histogram"))
 

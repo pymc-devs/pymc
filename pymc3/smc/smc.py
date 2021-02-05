@@ -102,7 +102,7 @@ class SMC:
         for i in range(self.draws):
 
             point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
-            population.append(bij.map(point).data)
+            population.append(DictToArrayBijection.map(point).data)
 
         self.posterior = np.array(floatX(population))
         self.var_info = var_info

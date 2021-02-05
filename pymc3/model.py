@@ -29,6 +29,7 @@ import theano.tensor as tt
 
 from pandas import Series
 from theano.compile import SharedVariable
+from theano.graph.basic import Variable
 from theano.tensor.random.op import Observed, observed
 from theano.tensor.var import TensorVariable
 
@@ -39,8 +40,8 @@ from pymc3.distributions import change_rv_size, logpt, logpt_sum
 from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
 from pymc3.memoize import WithMemoization
-from pymc3.theanof import floatX, generator, gradient, hessian, inputvars
-from pymc3.util import get_transformed_name, get_var_name
+from pymc3.theanof import generator, gradient, hessian, inputvars
+from pymc3.util import get_var_name
 from pymc3.vartypes import continuous_types, discrete_types, isgenerator, typefilter
 
 __all__ = [
@@ -638,17 +639,14 @@ class ValueGradFunction:
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
 
-        self.bij = DictToArrayBijection([v.name for v in grad_vars])
-
         if compute_grads:
             grads = tt.grad(cost, grad_vars)
             for grad_wrt, var in zip(grads, grad_vars):
                 grad_wrt.name = f"{var.name}_grad"
             outputs = [cost] + grads
         else:
-            outputs = cost
+            outputs = [cost]
 
-        # inputs = [vars_joined]
         inputs = grad_vars
 
         self._theano_function = theano.function(inputs, outputs, givens=givens, **kwargs)
@@ -677,16 +675,21 @@ class ValueGradFunction:
             raise ValueError("Extra values are not set.")
 
         if isinstance(grad_vars, RaveledVars):
-            grad_vars = self.bij.rmap(grad_vars, as_list=True)
+            grad_vars = DictToArrayBijection.rmap(grad_vars, as_list=True)
 
         cost, *grads = self._theano_function(*grad_vars)
 
-        grad = self.bij.map({name: grad for name, grad in zip(self.bij.ordering, grads)})
+        if grads:
+            grads_raveled = DictToArrayBijection.map(
+                {v.name: gv for v, gv in zip(self._grad_vars, grads)}
+            )
 
-        if grad_out is None:
-            return cost, grad.data
+            if grad_out is None:
+                return cost, grads_raveled.data
+            else:
+                np.copyto(grad_out, grads_raveled.data)
+                return cost
         else:
-            np.copyto(grad_out, grad.data)
             return cost
 
     @property
@@ -876,7 +879,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             `alpha` can be changed using `ValueGradFunction.set_weights([alpha])`.
         """
         if grad_vars is None:
-            grad_vars = list(typefilter(self.free_RVs, continuous_types))
+            grad_vars = [v.tag.value_var for v in typefilter(self.free_RVs, continuous_types)]
         else:
             for i, var in enumerate(grad_vars):
                 if var.dtype not in continuous_types:
@@ -889,13 +892,11 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             with self:
                 free_RVs_logp = tt.sum(
                     [
-                        tt.sum(logpt(var, var.tag.value_var, scaling=var.tag.scaling))
+                        tt.sum(logpt(var, var.tag.value_var))
                         for var in self.free_RVs + self.potentials
                     ]
                 )
-                observed_RVs_logp = tt.sum(
-                    [tt.sum(logpt(obs, scaling=obs.tag.scaling)) for obs in self.observed_RVs]
-                )
+                observed_RVs_logp = tt.sum([tt.sum(logpt(obs)) for obs in self.observed_RVs])
 
             costs = [free_RVs_logp, observed_RVs_logp]
         else:
@@ -908,10 +909,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def logpt(self):
         """Theano scalar of log-probability of the model"""
         with self:
-            factors = [
-                logpt_sum(var, var.tag.value_var, scaling=var.tag.scaling) for var in self.free_RVs
-            ]
-            factors += [logpt_sum(obs, scaling=obs.tag.scaling) for obs in self.observed_RVs]
+            factors = [logpt_sum(var, var.tag.value_var) for var in self.free_RVs]
+            factors += [logpt_sum(obs) for obs in self.observed_RVs]
             factors += self.potentials
             logp_var = tt.sum([tt.sum(factor) for factor in factors])
             if self.name:
@@ -928,13 +927,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         will be the same as logpt as there is no need for Jacobian correction.
         """
         with self:
-            factors = [
-                logpt_sum(var, var.tag.value_var, jacobian=False, scaling=var.tag.scaling)
-                for var in self.free_RVs
-            ]
-            factors += [
-                logpt_sum(obs, jacobian=False, scaling=obs.tag.scaling) for obs in self.observed_RVs
-            ]
+            factors = [logpt_sum(var, var.tag.value_var, jacobian=False) for var in self.free_RVs]
+            factors += [logpt_sum(obs, jacobian=False) for obs in self.observed_RVs]
             factors += self.potentials
             logp_var = tt.sum([tt.sum(factor) for factor in factors])
             if self.name:
@@ -1044,13 +1038,13 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             else:
                 self.coords[name] = coords[name]
 
-    def register_rv(self, rv_var, name, dist, data=None, total_size=None, dims=None):
+    def register_rv(self, rv_var, name, data=None, total_size=None, dims=None):
         """Register an (un)observed random variable with the model.
 
         Parameters
         ----------
+        rv_var: TensorVariable
         name: str
-        dist: distribution for the random variable
         data: array_like (optional)
            If data is provided, the variable is observed. If None,
            the variable is unobserved.
@@ -1064,6 +1058,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         TensorVariable
         """
         name = self.name_for(name)
+        rv_var.name = name
+        rv_var.tag.total_size = total_size
 
         if data is None:
             # Create a `TensorVariable` that will be used as the random
@@ -1080,34 +1076,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
             self.free_RVs.append(rv_var)
 
-            transform = getattr(dist, "transform", None)
+            transform = rv_var.tag.transform
+            value_var.tag.transform = None
 
-            if transform is None:
-                value_var.tag.transform = None
-                rv_var.tag.scaling = _get_scaling(total_size, rv_var.shape, rv_var.ndim)
-            else:
-                value_var.tag.transform = transform
-
-                # These transformations are only relevant to log-likelihood
-                # calculations, so everything is being done on the "value"
-                # variable.
-                value_var_trans = transform.apply(value_var)
-                value_var_trans.tag.transformed = value_var_trans
-
-                transformed_name = get_transformed_name(name, transform)
-
-                rv_var.tag.scaling = _get_scaling(
-                    total_size, value_var_trans.shape, value_var_trans.ndim
-                )
-
-                pm._log.debug(
-                    "Applied {transform}-transform to {name}"
-                    " and added transformed {orig_name} to model.".format(
-                        transform=transform.name,
-                        name=name,
-                        orig_name=transformed_name,
-                    )
-                )
+            if transform is not None:
                 self.deterministics.append(rv_var)
 
         elif isinstance(data, dict):
@@ -1122,9 +1094,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             # ]
             # rv_var.tag.missing_values = missing_values
             #
-            # scaling = _get_scaling(total_size, rv_var.shape, rv_var.ndim)
-            # rv_var.tag.scaling = scaling
-            #
             # self.observed_RVs.append(rv_var)
             #
             # if missing_values:
@@ -1135,10 +1104,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
             raise NotImplementedError()
         else:
+            if isinstance(data, Variable) and data.owner is not None:
+                raise TypeError("Observed data cannot consist of symbolic variables.")
+
             data = pandas_to_array(data)
 
             rv_var = make_obs_var(rv_var, data, name, self)
-
             rv_var.tag.data = data
 
             self.observed_RVs.append(rv_var)
@@ -1147,8 +1118,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 self.free_RVs.append(rv_var.tag.missing_values)
                 self.missing_values.append(rv_var.tag.missing_values)
                 self.named_vars[rv_var.tag.missing_values.name] = rv_var.tag.missing_values
-
-            rv_var.tag.scaling = _get_scaling(total_size, rv_var.shape, rv_var.ndim)
 
         self.add_random_variable(rv_var, dims)
 
@@ -1349,9 +1318,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         return Series(
             {
-                rv.name: np.round(
-                    self.fn(logpt_sum(rv, scaling=rv.tag.scaling))(test_point), round_vals
-                )
+                rv.name: np.round(self.fn(logpt_sum(rv))(test_point), round_vals)
                 for rv in self.basic_RVs
             },
             name="Log-probability of test_point",
@@ -1536,70 +1503,6 @@ class LoosePointFunc:
 compilef = fastfn
 
 
-def _get_scaling(total_size, shape, ndim):
-    """
-    Gets scaling constant for logp
-
-    Parameters
-    ----------
-    total_size: int or list[int]
-    shape: shape
-        shape to scale
-    ndim: int
-        ndim hint
-
-    Returns
-    -------
-    scalar
-    """
-    if total_size is None:
-        coef = floatX(1)
-    elif isinstance(total_size, int):
-        if ndim >= 1:
-            denom = shape[0]
-        else:
-            denom = 1
-        coef = floatX(total_size) / floatX(denom)
-    elif isinstance(total_size, (list, tuple)):
-        if not all(isinstance(i, int) for i in total_size if (i is not Ellipsis and i is not None)):
-            raise TypeError(
-                "Unrecognized `total_size` type, expected "
-                "int or list of ints, got %r" % total_size
-            )
-        if Ellipsis in total_size:
-            sep = total_size.index(Ellipsis)
-            begin = total_size[:sep]
-            end = total_size[sep + 1 :]
-            if Ellipsis in end:
-                raise ValueError(
-                    "Double Ellipsis in `total_size` is restricted, got %r" % total_size
-                )
-        else:
-            begin = total_size
-            end = []
-        if (len(begin) + len(end)) > ndim:
-            raise ValueError(
-                "Length of `total_size` is too big, "
-                "number of scalings is bigger that ndim, got %r" % total_size
-            )
-        elif (len(begin) + len(end)) == 0:
-            return floatX(1)
-        if len(end) > 0:
-            shp_end = shape[-len(end) :]
-        else:
-            shp_end = np.asarray([])
-        shp_begin = shape[: len(begin)]
-        begin_coef = [floatX(t) / shp_begin[i] for i, t in enumerate(begin) if t is not None]
-        end_coef = [floatX(t) / shp_end[i] for i, t in enumerate(end) if t is not None]
-        coefs = begin_coef + end_coef
-        coef = tt.prod(coefs)
-    else:
-        raise TypeError(
-            "Unrecognized `total_size` type, expected int or list of ints, got %r" % total_size
-        )
-    return tt.as_tensor(floatX(coef))
-
-
 def pandas_to_array(data):
     """Convert a pandas object to a NumPy array.
 
@@ -1631,7 +1534,7 @@ def pandas_to_array(data):
             else:
                 # no masking required
                 ret = data
-    elif isinstance(data, theano.graph.basic.Variable):
+    elif isinstance(data, Variable):
         ret = data
     elif sps.issparse(data):
         ret = data
@@ -1653,7 +1556,7 @@ def pandas_to_array(data):
 
 
 def make_obs_var(
-    rv_var: TensorVariable, data: Union[np.ndarray], name: Text, model: Model
+    rv_var: TensorVariable, data: Union[np.ndarray], name: str, model: Model
 ) -> TensorVariable:
     """Create a `TensorVariable` for an observed random variable.
 
@@ -1673,11 +1576,33 @@ def make_obs_var(
     The new observed random variable
 
     """
-    dtype = rv_var.dtype
-    data = pandas_to_array(data).astype(dtype)
+    data = pandas_to_array(data).astype(rv_var.dtype)
+
+    # The shapes of the observed random variable and its data might not
+    # match.  We need need to update the observed random variable's `size`
+    # (i.e. number of samples) so that it matches the data.
+
+    # Setting `size` produces a random variable with shape `size +
+    # support_shape`, where `len(support_shape) == op.ndim_supp`, we need
+    # to disregard the last `op.ndim_supp`-many dimensions when we
+    # determine the appropriate `size` value from `data.shape`.
+    ndim_supp = rv_var.owner.op.ndim_supp
+    if ndim_supp > 0:
+        new_size = data.shape[:-ndim_supp]
+    else:
+        new_size = data.shape
+
+    test_value = getattr(rv_var.tag, "test_value", None)
+
+    rv_var = change_rv_size(rv_var, new_size)
+
+    if theano.config.compute_test_value != "off" and test_value is not None:
+        # We try to reuse the old test value
+        rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.tag.test_value.shape)
 
     missing_values = None
-    if hasattr(data, "mask"):
+    mask = getattr(data, "mask", None)
+    if mask is not None:
         impute_message = (
             "Data in {name} contains missing values and"
             " will be automatically imputed from the"
@@ -1685,31 +1610,13 @@ def make_obs_var(
         )
         warnings.warn(impute_message, ImputationWarning)
 
-        missing_values = rv_var[data.mask]
+        missing_values = rv_var[mask]
         constant = tt.as_tensor_variable(data.filled())
-
-        data = tt.set_subtensor(constant[data.mask.nonzero()], missing_values)
+        data = tt.set_subtensor(constant[mask.nonzero()], missing_values)
     elif sps.issparse(data):
         data = sparse.basic.as_sparse(data, name=name)
     else:
         data = tt.as_tensor_variable(data, name=name)
-
-    if len(rv_var.type.broadcastable) != len(data.type.broadcastable):
-        # The shapes of the observed random variable and the data don't match.
-        # We need need to update the observed random variable's `size`
-        # (i.e. number of samples) so that it matches the data.
-
-        # Setting `size` produces a random variable with shape `size +
-        # support_shape`, where `len(support_shape) == op.ndim_supp`, we need
-        # to disregard the last `op.ndim_supp`-many dimensions when we
-        # determine the appropriate `size` value from `data.shape`.
-        ndim_supp = rv_var.owner.op.ndim_supp
-        if ndim_supp > 0:
-            new_size = data.shape[:-ndim_supp]
-        else:
-            new_size = data.shape
-
-        rv_var = change_rv_size(rv_var, new_size)
 
     rv_obs = observed(rv_var, data)
     rv_obs.tag.missing_values = missing_values
@@ -1791,6 +1698,8 @@ def Potential(name, var, model=None):
     """
     model = modelcontext(model)
     var.name = model.name_for(name)
+    var.tag.scaling = None
+    var.tag.transform = None
     model.potentials.append(var)
     model.add_random_variable(var)
     return var
