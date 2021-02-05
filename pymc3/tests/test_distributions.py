@@ -1270,7 +1270,13 @@ class TestMatchesScipy:
             alpha, beta = InverseGamma._get_alpha_beta(None, None, mu, sigma)
             return sp.invgamma.logpdf(value, alpha, scale=beta)
 
-        self.check_logp(InverseGamma, Rplus, {"mu": Rplus, "sigma": Rplus}, test_fun)
+        self.check_logp(
+            InverseGamma,
+            Rplus,
+            {"mu": Rplus, "sigma": Rplus},
+            test_fun,
+            decimal=select_by_precision(float64=5, float32=3),
+        )
 
     def test_pareto(self):
         self.check_logp(
