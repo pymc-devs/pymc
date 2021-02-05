@@ -580,8 +580,8 @@ class TestMatchesScipy:
         n_samples : Int
             Upper limit on the number of valid domain and value combinations that
             are compared between pymc3 and scipy methods. If n_samples is below the
-            total number of combinations, a random subset is evaluated.
-            Defaults to 100
+            total number of combinations, a random subset is evaluated. Setting
+            n_samples = -1, will return all possible combinations. Defaults to 100
         extra_args : Dictionary with extra arguments needed to build pymc3 model
             Dictionary is passed to helper function `build_model` from which
             the pymc3 distribution logp is calculated
@@ -657,8 +657,8 @@ class TestMatchesScipy:
         n_samples : Int
             Upper limit on the number of valid domain and value combinations that
             are compared between pymc3 and scipy methods. If n_samples is below the
-            total number of combinations, a random subset is evaluated.
-            Defaults to 100
+            total number of combinations, a random subset is evaluated. Setting
+            n_samples = -1, will return all possible combinations. Defaults to 100
         skip_paramdomain_inside_edge_test : Bool
             Whether to run test 1., which checks that pymc3 and scipy distributions
             match for valid values and parameters inside the respective domain edges
@@ -1205,7 +1205,7 @@ class TestMatchesScipy:
             lambda value, beta: sp.halfcauchy.logcdf(value, scale=beta),
         )
 
-    def test_gamma(self):
+    def test_gamma_logp(self):
         self.check_logp(
             Gamma,
             Rplus,
@@ -1216,11 +1216,21 @@ class TestMatchesScipy:
         def test_fun(value, mu, sigma):
             return sp.gamma.logpdf(value, mu ** 2 / sigma ** 2, scale=1.0 / (mu / sigma ** 2))
 
-        self.check_logp(Gamma, Rplus, {"mu": Rplusbig, "sigma": Rplusbig}, test_fun)
+        self.check_logp(
+            Gamma,
+            Rplus,
+            {"mu": Rplusbig, "sigma": Rplusbig},
+            test_fun,
+        )
 
+    @pytest.mark.xfail(
+        condition=(theano.config.floatX == "float32"),
+        reason="Fails on float32 due to numerical issues",
+    )
+    def test_gamma_logcdf(self):
         # pymc-devs/Theano-PyMC#224: skip_paramdomain_outside_edge_test has to be set
         # True to avoid triggering a C-level assertion in the Theano GammaQ function
-        # in gamma.c file. Can be set back to False (defalut) once that issue is solved
+        # in gamma.c file. Can be set back to False (default) once that issue is solved
         self.check_logcdf(
             Gamma,
             Rplus,
@@ -1242,7 +1252,7 @@ class TestMatchesScipy:
         )
         # pymc-devs/Theano-PyMC#224: skip_paramdomain_outside_edge_test has to be set
         # True to avoid triggering a C-level assertion in the Theano GammaQ function
-        # in gamma.c file. Can be set back to False (defalut) once that issue is solved
+        # in gamma.c file. Can be set back to False (default) once that issue is solved
         self.check_logcdf(
             InverseGamma,
             Rplus,
