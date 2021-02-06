@@ -1692,9 +1692,20 @@ class TestMatchesScipy(SeededTest):
         decimals = select_by_precision(float64=6, float32=4)
         assert_almost_equal(model.fastlogp(pt), lp, decimal=decimals, err_msg=str(pt))
 
-    @pytest.mark.parametrize("n", [2, 3])
+    @pytest.mark.parametrize("n", [1, 2, 3])
     def test_dirichlet(self, n):
         self.pymc3_matches_scipy(Dirichlet, Simplex(n), {"a": Vector(Rplus, n)}, dirichlet_logpdf)
+
+    @pytest.mark.parametrize("dist_shape", [1, (2, 1), (1, 2), (2, 4, 3)])
+    def test_dirichlet_with_batch_shapes(self, dist_shape):
+        a = np.ones(dist_shape)
+        with pm.Model() as model:
+            d = pm.Dirichlet("a", a=a)
+
+        pymc3_res = d.distribution.logp(d.tag.test_value).eval()
+        for idx in np.ndindex(a.shape[:-1]):
+            scipy_res = scipy.stats.dirichlet(a[idx]).logpdf(d.tag.test_value[idx])
+            assert_almost_equal(pymc3_res[idx], scipy_res)
 
     def test_dirichlet_shape(self):
         a = tt.as_tensor_variable(np.r_[1, 2])

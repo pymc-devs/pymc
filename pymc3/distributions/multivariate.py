@@ -522,7 +522,6 @@ class Dirichlet(Continuous):
             tt.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(tt.sum(a, axis=-1)),
             tt.all(value >= 0),
             tt.all(value <= 1),
-            np.logical_not(a.broadcastable),
             tt.all(a > 0),
             broadcast_conditions=False,
         )
