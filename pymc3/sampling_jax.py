@@ -123,6 +123,7 @@ def sample_numpyro_nuts(
     random_seed=10,
     model=None,
     progress_bar=True,
+    keep_untransformed=False,
 ):
     from numpyro.infer import MCMC, NUTS
 
@@ -178,7 +179,7 @@ def sample_numpyro_nuts(
 
     posterior = {k: v for k, v in zip(rv_names, mcmc_samples)}
     tic3 = pd.Timestamp.now()
-    posterior = _transform_samples(posterior, model, keep_untransformed=False)
+    posterior = _transform_samples(posterior, model, keep_untransformed=keep_untransformed)
     tic4 = pd.Timestamp.now()
 
     az_trace = az.from_dict(posterior=posterior)
