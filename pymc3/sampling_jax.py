@@ -210,9 +210,7 @@ def _transform_samples(samples, model, keep_untransformed=False):
 
         # We need a function taking a single argument to run vmap, while the
         # jax_fn takes a list, so:
-        to_run = lambda x: cur_jax_fn(*x)
-
-        result = jax.vmap(jax.vmap(to_run))(inputs)
+        result = jax.vmap(jax.vmap(cur_jax_fn))(*inputs)
 
         # Add to sample dict
         samples[cur_op.name] = result
