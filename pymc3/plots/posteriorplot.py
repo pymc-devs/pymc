@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import warnings
 
-from typing import TYPE_CHECKING, Any, Callable, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable
 
 import matplotlib.pyplot as plt
 import numpy as np

@@ -948,6 +948,7 @@ class TestMatchesScipy(SeededTest):
             Unit,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.beta.logcdf(value, alpha, beta),
+            n_samples=10,
         )
 
     def test_kumaraswamy(self):
@@ -1052,17 +1053,20 @@ class TestMatchesScipy(SeededTest):
             Nat,
             {"mu": Rplus, "alpha": Rplus},
             scipy_mu_alpha_logcdf,
+            n_samples=5,
         )
         self.check_logcdf(
             NegativeBinomial,
             Nat,
             {"p": Unit, "n": Rplus},
             lambda value, p, n: sp.nbinom.logcdf(value, n, p),
+            n_samples=5,
         )
         self.check_selfconsistency_discrete_logcdf(
             NegativeBinomial,
             Nat,
             {"mu": Rplus, "alpha": Rplus},
+            n_samples=10,
         )
 
     @pytest.mark.parametrize(
@@ -1282,11 +1286,13 @@ class TestMatchesScipy(SeededTest):
             Nat,
             {"n": NatSmall, "p": Unit},
             lambda value, n, p: sp.binom.logcdf(value, n, p),
+            n_samples=10,
         )
         self.check_selfconsistency_discrete_logcdf(
             Binomial,
             Nat,
             {"n": NatSmall, "p": Unit},
+            n_samples=10,
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
@@ -1423,6 +1429,7 @@ class TestMatchesScipy(SeededTest):
             ZeroInflatedNegativeBinomial,
             Nat,
             {"mu": Rplusbig, "alpha": Rplusbig, "psi": Unit},
+            n_samples=10,
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
@@ -1437,6 +1444,7 @@ class TestMatchesScipy(SeededTest):
             ZeroInflatedBinomial,
             Nat,
             {"n": NatSmall, "p": Unit, "psi": Unit},
+            n_samples=10,
         )
 
     @pytest.mark.parametrize("n", [1, 2, 3])
@@ -1684,9 +1692,20 @@ class TestMatchesScipy(SeededTest):
         decimals = select_by_precision(float64=6, float32=4)
         assert_almost_equal(model.fastlogp(pt), lp, decimal=decimals, err_msg=str(pt))
 
-    @pytest.mark.parametrize("n", [2, 3])
+    @pytest.mark.parametrize("n", [1, 2, 3])
     def test_dirichlet(self, n):
         self.pymc3_matches_scipy(Dirichlet, Simplex(n), {"a": Vector(Rplus, n)}, dirichlet_logpdf)
+
+    @pytest.mark.parametrize("dist_shape", [1, (2, 1), (1, 2), (2, 4, 3)])
+    def test_dirichlet_with_batch_shapes(self, dist_shape):
+        a = np.ones(dist_shape)
+        with pm.Model() as model:
+            d = pm.Dirichlet("a", a=a)
+
+        pymc3_res = d.distribution.logp(d.tag.test_value).eval()
+        for idx in np.ndindex(a.shape[:-1]):
+            scipy_res = scipy.stats.dirichlet(a[idx]).logpdf(d.tag.test_value[idx])
+            assert_almost_equal(pymc3_res[idx], scipy_res)
 
     def test_dirichlet_shape(self):
         a = tt.as_tensor_variable(np.r_[1, 2])

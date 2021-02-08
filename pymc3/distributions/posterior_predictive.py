@@ -7,19 +7,7 @@ import warnings
 
 from collections import UserDict
 from contextlib import AbstractContextManager
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, cast, overload
 
 import numpy as np
 import theano.graph.basic
