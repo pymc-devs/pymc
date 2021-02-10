@@ -1,0 +1,334 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+from collections import OrderedDict
+
+import numpy as np
+import theano.tensor as tt
+
+from scipy.special import logsumexp
+from scipy.stats import multivariate_normal
+from theano import function as theano_function
+
+from pymc3.backends.ndarray import NDArray
+from pymc3.model import Point, modelcontext
+from pymc3.sampling import sample_prior_predictive
+from pymc3.theanof import (
+    floatX,
+    inputvars,
+    join_nonshared_inputs,
+    make_shared_replacements,
+)
+
+# Currently using a local copy of normalizing-flows (tf2 implementation of normalizing flows.
+# Will need to think of a neater way of doing this later.
+import sys
+sys.path.insert(0, '/users/grumitt/normalizing-flows')
+from normalizingflows.flow_catalog import *
+import tensorflow as tf
+import tensorflow_probability as tfp
+
+tfk = tf.keras
+tfkl = tfk.layers
+tfd = tfp.distributions
+tfb = tfp.bijectors
+
+class NS_NFMC:
+    """Nested sampling with normalizing flow based density estimation and sampling."""
+
+    def __init__(
+        self,
+        draws=2000,
+        n_steps=25,
+        save_sim_data=False,
+        save_log_pseudolikelihood=True,
+        model=None,
+        random_seed=-1,
+        chain=0,
+        hidden_shape=[200, 200],
+        layers=12,
+        params=2,
+        event_shape=[2],
+        activation="relu"
+        epochs=3000,
+        steps_per_epoch=1
+    ):
+
+        self.draws = draws
+        self.n_steps = n_steps
+        self.save_sim_data = save_sim_data
+        self.save_log_pseudolikelihood = save_log_pseudolikelihood
+        self.model = model
+        self.random_seed = random_seed
+        self.chain = chain
+        self.hidden_shape = hidden_shape
+        self.layers = layers
+        self.params = params
+        self.event_shape = event_shape
+        self.activation = activation
+        self.epochs = epochs
+        self.steps_per_epoch = steps_per_epoch
+        
+        self.model = modelcontext(model)
+
+        if self.random_seed != -1:
+            np.random.seed(self.random_seed)
+
+        self.variables = inputvars(self.model.vars)
+        self.log_marginal_likelihood = 0
+        self.weights = np.array([])
+        self.posterior = np.array([])
+        self.evidences = np.array([])
+
+    def initialize_population(self):
+        """Create an initial population from the prior distribution."""
+        population = []
+        var_info = OrderedDict()
+        if self.start is None:
+            init_rnd = sample_prior_predictive(
+                self.draws,
+                var_names=[v.name for v in self.model.unobserved_RVs],
+                model=self.model,
+            )
+        else:
+            init_rnd = self.start
+
+        init = self.model.test_point
+
+        for v in self.variables:
+            var_info[v.name] = (init[v.name].shape, init[v.name].size)
+
+        for i in range(self.draws):
+
+            point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
+            population.append(self.model.dict_to_array(point))
+
+        self.nf_samples = np.array(floatX(population))
+        self.var_info = var_info
+
+    def setup_logp(self):
+        """Set up the prior and likelihood logp functions."""
+        shared = make_shared_replacements(self.variables, self.model)
+
+        self.prior_logp_func = logp_forw([self.model.varlogpt], self.variables, shared)
+        self.likelihood_logp_func = logp_forw([self.model.datalogpt], self.variables, shared)
+        
+    def initialize_logp(self):
+        """Initialize the prior and likelihood log probabilities, along with NS likelihood levels."""
+        priors = [self.prior_logp_func(sample) for sample in self.nf_samples]
+        likelihoods = [self.likelihood_logp_func(sample) for sample in self.nf_samples]
+
+        self.prior_logp = np.array(priors).squeeze()
+        self.likelihood_logp = np.array(likelihoods).squeeze()
+        self.likelihood_cut = np.array([np.amin(self.likelihood_logp)])
+        
+    def initialize_flow(self):
+        """Initialize the flow model. Currently using MAF model."""
+        base_dist = tfd.Normal(loc=0.0, scale=1.0)
+
+        bijectors = []
+        for i in range(0, layers):
+            bijectors.append(tfb.MaskedAutoregressiveFlow(shift_and_scale_log_fn=Made(params=self.params, hidden_units=hidden_shape, activation=self.activation)))
+            bijectors.append(tfb.Permute(permutation=[1, 0]))
+
+        bijector = tfb.Chain(bijectors=list(reversed(bijectors)), name='maf_chain')
+        maf = tfd.TransformedDistribution(
+            distribution=base_dist,
+            bijector=bijector,
+            event_shape=self.event_shape)
+
+        x_ = tfkl.Input(shape=self.event_shape, dtype=tf.float32)
+        log_prob_ = maf.log_prob(x_)
+        self.nf_model = tfk.Model(x_, log_prob_)
+        self.nf_model.compile(optimizer=tf.optimizers.Adam(), loss=lambda _, log_prob: -log_prob)
+
+    def fit_nf(self):
+        """Fit the NF model to samples for the given likelihood level."""
+        self.nf_model.fit(x=self.nf_samples,
+                          y=np.zeros((self.posterior.shape[0], 0), np.float32),
+                          batch_size=self.posterior.shape[0],
+                          epochs=self.epochs,
+                          steps_per_epoch=self.steps_per_epoch,
+                          verbose=0,
+                          shuffle=False)
+            
+    def resample(self):
+        """Resample particles from a fitted NF."""
+        self.nf_samples = self.nf_model.sample(self.draws)
+        likelihoods = [self.likelihood_logp_func(sample) for sample in self.nf_samples]
+        self.likelihood_logp = np.array(likelihoods).squeeze()
+        self.nf_samples = self.nf_samples[np.where(self.likelihood_logp > self.likelihood_cut[-1:][0])]
+        # You are here - implementing the likelihood cut and resampling stage.
+        # Remember, need to store importance weights and evidences of dead points.
+        cut_idx = np.where(self.nf_samples
+
+        self.posterior = self.posterior[resampling_indexes]
+        self.prior_logp = self.prior_logp[resampling_indexes]
+        self.likelihood_logp = self.likelihood_logp[resampling_indexes]
+        self.posterior_logp = self.prior_logp + self.likelihood_logp * self.beta
+
+    def posterior_to_trace(self):
+        """Save results into a PyMC3 trace."""
+        lenght_pos = len(self.posterior)
+        varnames = [v.name for v in self.variables]
+
+        with self.model:
+            strace = NDArray(name=self.model.name)
+            strace.setup(lenght_pos, self.chain)
+        for i in range(lenght_pos):
+            value = []
+            size = 0
+            for var in varnames:
+                shape, new_size = self.var_info[var]
+                value.append(self.posterior[i][size : size + new_size].reshape(shape))
+                size += new_size
+            strace.record(point={k: v for k, v in zip(varnames, value)})
+        return strace
+
+
+def logp_forw(out_vars, vars, shared):
+    """Compile Theano function of the model and the input and output variables.
+
+    Parameters
+    ----------
+    out_vars: List
+        containing :class:`pymc3.Distribution` for the output variables
+    vars: List
+        containing :class:`pymc3.Distribution` for the input variables
+    shared: List
+        containing :class:`theano.tensor.Tensor` for depended shared data
+    """
+    out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
+    f = theano_function([inarray0], out_list[0])
+    f.trust_input = True
+    return f
+
+
+'''
+
+# RG: Not going to worry about simulation based inference for now - just stick with analytic likelihoods.
+
+class PseudoLikelihood:
+    """
+    Pseudo Likelihood.
+
+    epsilon: float
+        Standard deviation of the gaussian pseudo likelihood.
+    observations: array-like
+        observed data
+    function: python function
+        data simulator
+    params: list
+        names of the variables parameterizing the simulator.
+    model: PyMC3 model
+    var_info: dict
+        generated by ``SMC.initialize_population``
+    variables: list
+        Model variables.
+    distance : str or callable
+        Distance function.
+    sum_stat: str or callable
+        Summary statistics.
+    size : int
+        Number of simulated datasets to save. When this number is exceeded the counter will be
+        restored to zero and it will start saving again.
+    save_sim_data : bool
+        whether to save or not the simulated data.
+    save_log_pseudolikelihood : bool
+        whether to save or not the log pseudolikelihood values.
+    """
+
+    def __init__(
+        self,
+        epsilon,
+        observations,
+        function,
+        params,
+        model,
+        var_info,
+        variables,
+        distance,
+        sum_stat,
+        size,
+        save_sim_data,
+        save_log_pseudolikelihood,
+    ):
+        self.epsilon = epsilon
+        self.function = function
+        self.params = params
+        self.model = model
+        self.var_info = var_info
+        self.variables = variables
+        self.varnames = [v.name for v in self.variables]
+        self.distance = distance
+        self.sum_stat = sum_stat
+        self.unobserved_RVs = [v.name for v in self.model.unobserved_RVs]
+        self.get_unobserved_fn = self.model.fastfn(self.model.unobserved_RVs)
+        self.size = size
+        self.save_sim_data = save_sim_data
+        self.save_log_pseudolikelihood = save_log_pseudolikelihood
+        self.sim_data_l = []
+        self.lpl_l = []
+
+        self.observations = self.sum_stat(observations)
+
+    def posterior_to_function(self, posterior):
+        """Turn posterior samples into function parameters to feed the simulator."""
+        model = self.model
+        var_info = self.var_info
+
+        varvalues = []
+        samples = {}
+        size = 0
+        for var in self.variables:
+            shape, new_size = var_info[var.name]
+            varvalues.append(posterior[size : size + new_size].reshape(shape))
+            size += new_size
+        point = {k: v for k, v in zip(self.varnames, varvalues)}
+        for varname, value in zip(self.unobserved_RVs, self.get_unobserved_fn(point)):
+            if varname in self.params:
+                samples[varname] = value
+        return samples
+
+    def save_data(self, sim_data):
+        """Save simulated data."""
+        if len(self.sim_data_l) == self.size:
+            self.sim_data_l = []
+        self.sim_data_l.append(sim_data)
+
+    def get_data(self):
+        """Get simulated data."""
+        return np.array(self.sim_data_l)
+
+    def save_lpl(self, elemwise):
+        """Save log pseudolikelihood values."""
+        if len(self.lpl_l) == self.size:
+            self.lpl_l = []
+        self.lpl_l.append(elemwise)
+
+    def get_lpl(self):
+        """Get log pseudolikelihood values."""
+        return np.array(self.lpl_l)
+
+    def __call__(self, posterior):
+        """Compute the pseudolikelihood."""
+        func_parameters = self.posterior_to_function(posterior)
+        sim_data = self.function(**func_parameters)
+        if self.save_sim_data:
+            self.save_data(sim_data)
+        elemwise = self.distance(self.epsilon, self.observations, self.sum_stat(sim_data))
+        if self.save_log_pseudolikelihood:
+            self.save_lpl(elemwise)
+        return elemwise.sum()
+'''
