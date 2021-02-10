@@ -38,9 +38,9 @@ def sample_ns_nfmc(
     layers=12,
     made_params=2,
     event_shape=[2],
-    activation="relu"
+    activation="relu",
     epochs=3000,
-    steps_per_epoch=1
+    steps_per_epoch=1,
     random_seed=-1,
     parallel=False,
     chains=None,
