@@ -802,6 +802,10 @@ class TestMatchesScipy:
             lambda value, lower, upper: sp.uniform.logcdf(value, lower, upper - lower),
             skip_paramdomain_outside_edge_test=True,
         )
+        # Custom logp / logcdf check for invalid parameters
+        invalid_dist = Uniform.dist(lower=1, upper=0)
+        assert invalid_dist.logp(0.5).tag.test_value == -np.inf
+        assert invalid_dist.logcdf(2).tag.test_value == -np.inf
 
     def test_triangular(self):
         self.check_logp(
@@ -817,6 +821,14 @@ class TestMatchesScipy:
             lambda value, c, lower, upper: sp.triang.logcdf(value, c - lower, lower, upper - lower),
             skip_paramdomain_outside_edge_test=True,
         )
+        # Custom logp check for invalid value
+        valid_dist = Triangular.dist(lower=0, upper=1, c=2.0)
+        assert np.all(valid_dist.logp(np.array([1.9, 2.0, 2.1])).tag.test_value == -np.inf)
+
+        # Custom logp / logcdf check for invalid parameters
+        invalid_dist = Triangular.dist(lower=1, upper=0, c=2.0)
+        assert invalid_dist.logp(0.5).tag.test_value == -np.inf
+        assert invalid_dist.logcdf(2).tag.test_value == -np.inf
 
     def test_bound_normal(self):
         PositiveNormal = Bound(Normal, lower=0.0)
@@ -850,6 +862,10 @@ class TestMatchesScipy:
             Rdunif,
             {"lower": -Rplusdunif, "upper": Rplusdunif},
         )
+        # Custom logp / logcdf check for invalid parameters
+        invalid_dist = DiscreteUniform.dist(lower=1, upper=0)
+        assert invalid_dist.logp(0.5).tag.test_value == -np.inf
+        assert invalid_dist.logcdf(2).tag.test_value == -np.inf
 
     def test_flat(self):
         self.check_logp(Flat, Runif, {}, lambda value: 0)
