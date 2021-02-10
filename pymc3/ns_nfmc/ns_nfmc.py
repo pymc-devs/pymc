@@ -57,7 +57,7 @@ class NS_NFMC:
         layers=12,
         made_params=2,
         event_shape=[2],
-        activation="relu"
+        activation="relu",
         epochs=3000,
         steps_per_epoch=1,
         rho=0.01

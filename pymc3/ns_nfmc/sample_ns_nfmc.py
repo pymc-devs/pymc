@@ -197,7 +197,7 @@ def sample_ns_nfmc_int(
         activation=activation,
         epochs=epochs,
         steps_per_epoch=steps_per_epoch,
-        rho=rho
+        rho=rho,
     )
     stage = 0
     evidence_ratio = 1
@@ -221,6 +221,6 @@ def sample_ns_nfmc_int(
     return (
         ns_nf_mc.posterior_to_trace(),
         log_evidence,
-        ns_nfmc.log_evidences
-        ns_nfmc.likelihood_logp_thresh
+        ns_nfmc.log_evidences,
+        ns_nfmc.likelihood_logp_thresh,
     )
