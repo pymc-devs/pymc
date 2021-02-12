@@ -12,8 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara as th
 import numpy as np
-import theano as th
 
 import pymc3 as pm
 

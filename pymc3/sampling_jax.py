@@ -9,13 +9,13 @@ xla_flags = os.getenv("XLA_FLAGS", "").lstrip("--")
 xla_flags = re.sub(r"xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
 os.environ["XLA_FLAGS"] = " ".join(["--xla_force_host_platform_device_count={}".format(100)])
 
+import aesara.graph.fg
 import arviz as az
 import jax
 import numpy as np
 import pandas as pd
-import theano.graph.fg
 
-from theano.link.jax.jax_dispatch import jax_funcify
+from aesara.link.jax.jax_dispatch import jax_funcify
 
 import pymc3 as pm
 
@@ -24,9 +24,9 @@ from pymc3 import modelcontext
 warnings.warn("This module is experimental.")
 
 # Disable C compilation by default
-# theano.config.cxx = ""
+# aesara.config.cxx = ""
 # This will make the JAX Linker the default
-# theano.config.mode = "JAX"
+# aesara.config.mode = "JAX"
 
 
 def sample_tfp_nuts(
@@ -47,7 +47,7 @@ def sample_tfp_nuts(
 
     seed = jax.random.PRNGKey(random_seed)
 
-    fgraph = theano.graph.fg.FunctionGraph(model.free_RVs, [model.logpt])
+    fgraph = aesara.graph.fg.FunctionGraph(model.free_RVs, [model.logpt])
     fns = jax_funcify(fgraph)
     logp_fn_jax = fns[0]
 
@@ -133,7 +133,7 @@ def sample_numpyro_nuts(
 
     seed = jax.random.PRNGKey(random_seed)
 
-    fgraph = theano.graph.fg.FunctionGraph(model.free_RVs, [model.logpt])
+    fgraph = aesara.graph.fg.FunctionGraph(model.free_RVs, [model.logpt])
     fns = jax_funcify(fgraph)
     logp_fn_jax = fns[0]
 
@@ -199,7 +199,7 @@ def _transform_samples(samples, model, keep_untransformed=False):
     ops_to_compute = [x for x in model.unobserved_RVs if x.name in names_to_compute]
 
     # Create function graph for these:
-    fgraph = theano.graph.fg.FunctionGraph(model.free_RVs, ops_to_compute)
+    fgraph = aesara.graph.fg.FunctionGraph(model.free_RVs, ops_to_compute)
 
     # Jaxify, which returns a list of functions, one for each op
     jax_fns = jax_funcify(fgraph)

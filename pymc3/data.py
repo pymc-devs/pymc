@@ -21,12 +21,14 @@ import urllib.request
 from copy import copy
 from typing import Any, Dict, List
 
+import aesara
+import aesara.tensor as aet
 import numpy as np
 import pandas as pd
-import theano
-import theano.tensor as tt
 
-from theano.graph.basic import Apply
+from aesara.graph.basic import Apply
+from aesara.tensor.type import TensorType
+from aesara.tensor.var import TensorVariable
 
 import pymc3 as pm
 
@@ -61,7 +63,7 @@ def get_data(filename):
     return io.BytesIO(content)
 
 
-class GenTensorVariable(tt.TensorVariable):
+class GenTensorVariable(TensorVariable):
     def __init__(self, op, type, name=None):
         super().__init__(type=type, name=name)
         self.op = op
@@ -96,7 +98,7 @@ class GeneratorAdapter:
         # make pickling potentially possible
         self._yielded_test_value = False
         self.gen = generator
-        self.tensortype = tt.TensorType(self.test_value.dtype, ((False,) * self.test_value.ndim))
+        self.tensortype = TensorType(self.test_value.dtype, ((False,) * self.test_value.ndim))
 
     # python3 generator
     def __next__(self):
@@ -119,7 +121,7 @@ class GeneratorAdapter:
         return hash(id(self))
 
 
-class Minibatch(tt.TensorVariable):
+class Minibatch(TensorVariable):
     """Multidimensional minibatch that is pure TensorVariable
 
     Parameters
@@ -143,7 +145,7 @@ class Minibatch(tt.TensorVariable):
         you can use it to change source of
         minibatches programmatically
     in_memory_size: ``int`` or ``List[int|slice|Ellipsis]``
-        data size for storing in ``theano.shared``
+        data size for storing in ``aesara.shared``
 
     Attributes
     ----------
@@ -231,11 +233,11 @@ class Minibatch(tt.TensorVariable):
     To be more concrete about how we create a minibatch, here is a demo:
     1. create a shared variable
 
-        >>> shared = theano.shared(data)
+        >>> shared = aesara.shared(data)
 
     2. take a random slice of size 10:
 
-        >>> ridx = pm.tt_rng().uniform(size=(10,), low=0, high=data.shape[0]-1e-10).astype('int64')
+        >>> ridx = pm.aet_rng().uniform(size=(10,), low=0, high=data.shape[0]-1e-10).astype('int64')
 
     3) take the resulting slice:
 
@@ -255,7 +257,7 @@ class Minibatch(tt.TensorVariable):
     Then you should create a `dict` with replacements:
 
     >>> replacements = {x: testdata}
-    >>> rnode = theano.clone(node, replacements)
+    >>> rnode = aesara.clone_replace(node, replacements)
     >>> assert (testdata ** 2 == rnode.eval()).all()
 
     *FIXME: In the following, what is the **reason** to replace the Minibatch variable with
@@ -266,7 +268,7 @@ class Minibatch(tt.TensorVariable):
     For example
 
     >>> replacements = {x.minibatch: x.shared}
-    >>> rnode = theano.clone(node, replacements)
+    >>> rnode = aesara.clone_replace(node, replacements)
 
     For more complex slices some more code is needed that can seem not so clear
 
@@ -296,7 +298,7 @@ class Minibatch(tt.TensorVariable):
 
     RNG = collections.defaultdict(list)  # type: Dict[str, List[Any]]
 
-    @theano.config.change_flags(compute_test_value="raise")
+    @aesara.config.change_flags(compute_test_value="raise")
     def __init__(
         self,
         data,
@@ -313,23 +315,23 @@ class Minibatch(tt.TensorVariable):
         else:
             data = np.asarray(data, dtype)
         in_memory_slc = self.make_static_slices(in_memory_size)
-        self.shared = theano.shared(data[in_memory_slc])
+        self.shared = aesara.shared(data[in_memory_slc])
         self.update_shared_f = update_shared_f
         self.random_slc = self.make_random_slices(self.shared.shape, batch_size, random_seed)
         minibatch = self.shared[self.random_slc]
         if broadcastable is None:
             broadcastable = (False,) * minibatch.ndim
-        minibatch = tt.patternbroadcast(minibatch, broadcastable)
+        minibatch = aet.patternbroadcast(minibatch, broadcastable)
         self.minibatch = minibatch
         super().__init__(self.minibatch.type, None, None, name=name)
-        Apply(theano.compile.view_op, inputs=[self.minibatch], outputs=[self])
+        Apply(aesara.compile.view_op, inputs=[self.minibatch], outputs=[self])
         self.tag.test_value = copy(self.minibatch.tag.test_value)
 
     def rslice(self, total, size, seed):
         if size is None:
             return slice(None)
         elif isinstance(size, int):
-            rng = pm.tt_rng(seed)
+            rng = pm.aet_rng(seed)
             Minibatch.RNG[id(self)].append(rng)
             return rng.uniform(size=(size,), low=0.0, high=pm.floatX(total) - 1e-16).astype("int64")
         else:
@@ -401,7 +403,7 @@ class Minibatch(tt.TensorVariable):
                     )
                 if len(end) > 0:
                     shp_mid = shape[sep : -len(end)]
-                    mid = [tt.arange(s) for s in shp_mid]
+                    mid = [aet.arange(s) for s in shp_mid]
                 else:
                     mid = []
             else:
@@ -419,17 +421,17 @@ class Minibatch(tt.TensorVariable):
                 shp_end = np.asarray([])
             shp_begin = shape[: len(begin)]
             slc_begin = [
-                self.rslice(shp_begin[i], t[0], t[1]) if t is not None else tt.arange(shp_begin[i])
+                self.rslice(shp_begin[i], t[0], t[1]) if t is not None else aet.arange(shp_begin[i])
                 for i, t in enumerate(begin)
             ]
             slc_end = [
-                self.rslice(shp_end[i], t[0], t[1]) if t is not None else tt.arange(shp_end[i])
+                self.rslice(shp_end[i], t[0], t[1]) if t is not None else aet.arange(shp_end[i])
                 for i, t in enumerate(end)
             ]
             slc = slc_begin + mid + slc_end
         else:
             raise TypeError("Unrecognized size type, %r" % batch_size)
-        return pm.theanof.ix_(*slc)
+        return pm.aesaraf.ix_(*slc)
 
     def update_shared(self):
         if self.update_shared_f is None:
@@ -460,7 +462,7 @@ def align_minibatches(batches=None):
 
 
 class Data:
-    """Data container class that wraps the theano ``SharedVariable`` class
+    """Data container class that wraps the aesara ``SharedVariable`` class
     and lets the model be aware of its inputs and outputs.
 
     Parameters
@@ -524,7 +526,7 @@ class Data:
 
         # `pm.model.pandas_to_array` takes care of parameter `value` and
         # transforms it to something digestible for pymc3
-        shared_object = theano.shared(pm.model.pandas_to_array(value), name)
+        shared_object = aesara.shared(pm.model.pandas_to_array(value), name)
 
         if isinstance(dims, str):
             dims = (dims,)

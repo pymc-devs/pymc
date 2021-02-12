@@ -97,10 +97,10 @@
                     </div>
                 </a>
 
-                <a class="ui link card" href="/PyMC3_and_Theano.html">
+                <a class="ui link card" href="/PyMC3_and_Aesara.html">
                     <div class="content">
-                        <div class="header">PyMC3 and Theano</div>
-                        <div class="description">Theano is the deep-learning library PyMC3 uses to construct probability distributions and then access the gradient in order to implement cutting edge inference algorithms. More advanced models may be built by understanding this layer.
+                        <div class="header">PyMC3 and Aesara</div>
+                        <div class="description">Aesara is the library PyMC3 uses to construct probability distributions and then access the gradient in order to implement cutting edge inference algorithms. More advanced models may be built by understanding this layer.
                         </div>
                     </div>
                 </a>

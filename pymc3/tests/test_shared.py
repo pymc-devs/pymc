@@ -12,8 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
 import numpy as np
-import theano
 
 import pymc3 as pm
 
@@ -24,7 +24,7 @@ class TestShared(SeededTest):
     def test_deterministic(self):
         with pm.Model() as model:
             data_values = np.array([0.5, 0.4, 5, 2])
-            X = theano.shared(np.asarray(data_values, dtype=theano.config.floatX), borrow=True)
+            X = aesara.shared(np.asarray(data_values, dtype=aesara.config.floatX), borrow=True)
             pm.Normal("y", 0, 1, observed=X)
             model.logp(model.test_point)
 
@@ -34,7 +34,7 @@ class TestShared(SeededTest):
 
         x_pred = np.linspace(-3, 3, 200)
 
-        x_shared = theano.shared(x)
+        x_shared = aesara.shared(x)
 
         with pm.Model() as model:
             b = pm.Normal("b", 0.0, 10.0)

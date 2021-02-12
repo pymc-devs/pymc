@@ -19,10 +19,10 @@ import numpy as np
 
 from numpy.random import uniform
 
+from pymc3.aesaraf import inputvars
 from pymc3.blocking import ArrayOrdering, DictToArrayBijection
 from pymc3.model import PyMC3Variable, modelcontext
 from pymc3.step_methods.compound import CompoundStep
-from pymc3.theanof import inputvars
 from pymc3.util import get_var_name
 
 __all__ = ["ArrayStep", "ArrayStepShared", "metrop_select", "Competence"]
@@ -137,7 +137,7 @@ class ArrayStep(BlockedStep):
     ----------
     vars: list
         List of variables for sampler.
-    fs: list of logp theano functions
+    fs: list of logp aesara functions
     allvars: Boolean (default False)
     blocked: Boolean (default True)
     """
@@ -177,7 +177,7 @@ class ArrayStepShared(BlockedStep):
         Parameters
         ----------
         vars: list of sampling variables
-        shared: dict of theano variable -> shared variable
+        shared: dict of aesara variable -> shared variable
         blocked: Boolean (default True)
         """
         self.vars = vars
@@ -212,7 +212,7 @@ class PopulationArrayStepShared(ArrayStepShared):
         Parameters
         ----------
         vars: list of sampling variables
-        shared: dict of theano variable -> shared variable
+        shared: dict of aesara variable -> shared variable
         blocked: Boolean (default True)
         """
         self.population = None
@@ -244,14 +244,14 @@ class PopulationArrayStepShared(ArrayStepShared):
 
 class GradientSharedStep(BlockedStep):
     def __init__(
-        self, vars, model=None, blocked=True, dtype=None, logp_dlogp_func=None, **theano_kwargs
+        self, vars, model=None, blocked=True, dtype=None, logp_dlogp_func=None, **aesara_kwargs
     ):
         model = modelcontext(model)
         self.vars = vars
         self.blocked = blocked
 
         if logp_dlogp_func is None:
-            func = model.logp_dlogp_function(vars, dtype=dtype, **theano_kwargs)
+            func = model.logp_dlogp_function(vars, dtype=dtype, **aesara_kwargs)
         else:
             func = logp_dlogp_func
 
@@ -263,8 +263,8 @@ class GradientSharedStep(BlockedStep):
         except ValueError:
             if logp_dlogp_func is not None:
                 raise
-            theano_kwargs.update(mode="FAST_COMPILE")
-            func = model.logp_dlogp_function(vars, dtype=dtype, **theano_kwargs)
+            aesara_kwargs.update(mode="FAST_COMPILE")
+            func = model.logp_dlogp_function(vars, dtype=dtype, **aesara_kwargs)
 
         self._logp_dlogp_func = func
 

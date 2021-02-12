@@ -12,9 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara.tensor as aet
 import numpy as np
 import pandas as pd
-import theano.tensor as tt
+
+from aesara.graph.basic import Variable
 
 
 def any_to_tensor_and_labels(x, labels=None):
@@ -33,7 +35,7 @@ def any_to_tensor_and_labels(x, labels=None):
 
     Parameters
     ----------
-    x: np.ndarray | pd.DataFrame | tt.Variable | dict | list
+    x: np.ndarray | pd.DataFrame | Variable | dict | list
     labels: list - names for columns of output tensor
 
     Returns
@@ -76,13 +78,13 @@ def any_to_tensor_and_labels(x, labels=None):
             for k, v in x.items():
                 res.append(v)
                 labels.append(k)
-            x = tt.stack(res, axis=1)
+            x = aet.stack(res, axis=1)
             if x.ndim == 1:
                 x = x[:, None]
     # case when it can appear to be some
     # array like value like lists of lists
     # numpy deals with it
-    elif not isinstance(x, tt.Variable):
+    elif not isinstance(x, Variable):
         x = np.asarray(x)
         if x.ndim == 0:
             raise ValueError("Cannot use scalars")
@@ -92,7 +94,7 @@ def any_to_tensor_and_labels(x, labels=None):
     # but user passes labels trusting seems
     # to be a good option
     elif labels is not None:
-        x = tt.as_tensor_variable(x)
+        x = aet.as_tensor_variable(x)
         if x.ndim == 0:
             raise ValueError("Cannot use scalars")
         elif x.ndim == 1:
@@ -100,15 +102,15 @@ def any_to_tensor_and_labels(x, labels=None):
     else:  # trust input
         pass
     # we should check that we can extract labels
-    if labels is None and not isinstance(x, tt.Variable):
+    if labels is None and not isinstance(x, Variable):
         labels = ["x%d" % i for i in range(x.shape[1])]
-    # for theano variables we should have labels from user
+    # for aesara variables we should have labels from user
     elif labels is None:
         raise ValueError("Please provide labels as " "we cannot infer shape of input")
     else:  # trust labels, user knows what he is doing
         pass
     # it's time to check shapes if we can
-    if not isinstance(x, tt.Variable):
+    if not isinstance(x, Variable):
         if not len(labels) == x.shape[1]:
             raise ValueError(
                 "Please provide full list "
@@ -126,8 +128,8 @@ def any_to_tensor_and_labels(x, labels=None):
     elif not isinstance(labels, list):
         labels = list(labels)
     # as output we need tensor
-    if not isinstance(x, tt.Variable):
-        x = tt.as_tensor_variable(x)
+    if not isinstance(x, Variable):
+        x = aet.as_tensor_variable(x)
         # finally check dimensions
         if x.ndim == 0:
             raise ValueError("Cannot use scalars")

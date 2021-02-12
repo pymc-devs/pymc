@@ -16,11 +16,11 @@
 from functools import reduce
 from operator import add
 
+import aesara
+import aesara.tensor as aet
 import numpy as np
 import numpy.testing as npt
 import pytest
-import theano
-import theano.tensor as tt
 
 import pymc3 as pm
 
@@ -34,7 +34,7 @@ class TestZeroMean:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             zero_mean = pm.gp.mean.Zero()
-        M = theano.function([], zero_mean(X))()
+        M = aesara.function([], zero_mean(X))()
         assert np.all(M == 0)
         assert M.shape == (10,)
 
@@ -44,7 +44,7 @@ class TestConstantMean:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             const_mean = pm.gp.mean.Constant(6)
-        M = theano.function([], const_mean(X))()
+        M = aesara.function([], const_mean(X))()
         assert np.all(M == 6)
         assert M.shape == (10,)
 
@@ -54,7 +54,7 @@ class TestLinearMean:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             linear_mean = pm.gp.mean.Linear(2, 0.5)
-        M = theano.function([], linear_mean(X))()
+        M = aesara.function([], linear_mean(X))()
         npt.assert_allclose(M[1], 0.7222, atol=1e-3)
         assert M.shape == (10,)
 
@@ -66,7 +66,7 @@ class TestAddProdMean:
             mean1 = pm.gp.mean.Linear(coeffs=2, intercept=0.5)
             mean2 = pm.gp.mean.Constant(2)
             mean = mean1 + mean2 + mean2
-        M = theano.function([], mean(X))()
+        M = aesara.function([], mean(X))()
         npt.assert_allclose(M[1], 0.7222 + 2 + 2, atol=1e-3)
 
     def test_prod(self):
@@ -75,7 +75,7 @@ class TestAddProdMean:
             mean1 = pm.gp.mean.Linear(coeffs=2, intercept=0.5)
             mean2 = pm.gp.mean.Constant(2)
             mean = mean1 * mean2 * mean2
-        M = theano.function([], mean(X))()
+        M = aesara.function([], mean(X))()
         npt.assert_allclose(M[1], 0.7222 * 2 * 2, atol=1e-3)
 
     def test_add_multid(self):
@@ -86,7 +86,7 @@ class TestAddProdMean:
             mean1 = pm.gp.mean.Linear(coeffs=A, intercept=b)
             mean2 = pm.gp.mean.Constant(2)
             mean = mean1 + mean2 + mean2
-        M = theano.function([], mean(X))()
+        M = aesara.function([], mean(X))()
         npt.assert_allclose(M[1], 10.8965 + 2 + 2, atol=1e-3)
 
     def test_prod_multid(self):
@@ -97,7 +97,7 @@ class TestAddProdMean:
             mean1 = pm.gp.mean.Linear(coeffs=A, intercept=b)
             mean2 = pm.gp.mean.Constant(2)
             mean = mean1 * mean2 * mean2
-        M = theano.function([], mean(X))()
+        M = aesara.function([], mean(X))()
         npt.assert_allclose(M[1], 10.8965 * 2 * 2, atol=1e-3)
 
 
@@ -108,10 +108,10 @@ class TestCovAdd:
             cov1 = pm.gp.cov.ExpQuad(1, 0.1)
             cov2 = pm.gp.cov.ExpQuad(1, 0.1)
             cov = cov1 + cov2
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2 * 0.53940, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_rightadd_scalar(self):
@@ -119,10 +119,10 @@ class TestCovAdd:
         with pm.Model() as model:
             a = 1
             cov = pm.gp.cov.ExpQuad(1, 0.1) + a
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 1.53940, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_leftadd_scalar(self):
@@ -130,10 +130,10 @@ class TestCovAdd:
         with pm.Model() as model:
             a = 1
             cov = a + pm.gp.cov.ExpQuad(1, 0.1)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 1.53940, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_rightadd_matrix(self):
@@ -141,21 +141,21 @@ class TestCovAdd:
         M = 2 * np.ones((10, 10))
         with pm.Model() as model:
             cov = pm.gp.cov.ExpQuad(1, 0.1) + M
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2.53940, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_leftadd_matrixt(self):
         X = np.linspace(0, 1, 10)[:, None]
-        M = 2 * tt.ones((10, 10))
+        M = 2 * aet.ones((10, 10))
         with pm.Model() as model:
             cov = M + pm.gp.cov.ExpQuad(1, 0.1)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2.53940, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_leftprod_matrix(self):
@@ -164,8 +164,8 @@ class TestCovAdd:
         with pm.Model() as model:
             cov = M + pm.gp.cov.ExpQuad(1, 0.1)
             cov_true = pm.gp.cov.ExpQuad(1, 0.1) + M
-        K = theano.function([], cov(X))()
-        K_true = theano.function([], cov_true(X))()
+        K = aesara.function([], cov(X))()
+        K_true = aesara.function([], cov_true(X))()
         assert np.allclose(K, K_true)
 
     def test_inv_rightadd(self):
@@ -181,10 +181,10 @@ class TestCovProd:
             cov1 = pm.gp.cov.ExpQuad(1, 0.1)
             cov2 = pm.gp.cov.ExpQuad(1, 0.1)
             cov = cov1 * cov2
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.53940 * 0.53940, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_rightprod_scalar(self):
@@ -192,10 +192,10 @@ class TestCovProd:
         with pm.Model() as model:
             a = 2
             cov = pm.gp.cov.ExpQuad(1, 0.1) * a
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2 * 0.53940, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_leftprod_scalar(self):
@@ -203,10 +203,10 @@ class TestCovProd:
         with pm.Model() as model:
             a = 2
             cov = a * pm.gp.cov.ExpQuad(1, 0.1)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2 * 0.53940, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_rightprod_matrix(self):
@@ -214,10 +214,10 @@ class TestCovProd:
         M = 2 * np.ones((10, 10))
         with pm.Model() as model:
             cov = pm.gp.cov.ExpQuad(1, 0.1) * M
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2 * 0.53940, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_leftprod_matrix(self):
@@ -226,8 +226,8 @@ class TestCovProd:
         with pm.Model() as model:
             cov = M * pm.gp.cov.ExpQuad(1, 0.1)
             cov_true = pm.gp.cov.ExpQuad(1, 0.1) * M
-        K = theano.function([], cov(X))()
-        K_true = theano.function([], cov_true(X))()
+        K = aesara.function([], cov(X))()
+        K_true = aesara.function([], cov_true(X))()
         assert np.allclose(K, K_true)
 
     def test_multiops(self):
@@ -244,12 +244,12 @@ class TestCovProd:
                 + pm.gp.cov.ExpQuad(1, 0.1)
                 + 3
             )
-        K1 = theano.function([], cov1(X))()
-        K2 = theano.function([], cov2(X))()
+        K1 = aesara.function([], cov1(X))()
+        K2 = aesara.function([], cov2(X))()
         assert np.allclose(K1, K2)
         # check diagonal
-        K1d = theano.function([], cov1(X, diag=True))()
-        K2d = theano.function([], cov2(X, diag=True))()
+        K1d = aesara.function([], cov1(X, diag=True))()
+        K2d = aesara.function([], cov2(X, diag=True))()
         npt.assert_allclose(np.diag(K1), K2d, atol=1e-5)
         npt.assert_allclose(np.diag(K2), K1d, atol=1e-5)
 
@@ -265,10 +265,10 @@ class TestCovExponentiation:
         with pm.Model() as model:
             cov1 = pm.gp.cov.ExpQuad(1, 0.1)
             cov = cov1 ** 2
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_covexp_numpy(self):
@@ -276,32 +276,32 @@ class TestCovExponentiation:
         with pm.Model() as model:
             a = np.array([[2]])
             cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
-    def test_covexp_theano(self):
+    def test_covexp_aesara(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
-            a = tt.alloc(2.0, 1, 1)
+            a = aet.alloc(2.0, 1, 1)
             cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_covexp_shared(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
-            a = theano.shared(2.0)
+            a = aesara.shared(2.0)
             cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_invalid_covexp(self):
@@ -321,11 +321,11 @@ class TestCovKron:
             cov1 = pm.gp.cov.ExpQuad(1, 0.1)
             cov2 = pm.gp.cov.ExpQuad(1, 0.1)
             cov = pm.gp.cov.Kron([cov1, cov2])
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 1 * 0.53940, atol=1e-3)
         npt.assert_allclose(K[0, 11], 0.53940 * 0.53940, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_multiops(self):
@@ -342,8 +342,8 @@ class TestCovKron:
             )
             cov2 = pm.gp.cov.ExpQuad(1, 0.1) * pm.gp.cov.ExpQuad(2, 0.1)
             cov = pm.gp.cov.Kron([cov1, cov2])
-        K_true = kronecker(theano.function([], cov1(X1))(), theano.function([], cov2(X2))()).eval()
-        K = theano.function([], cov(X))()
+        K_true = kronecker(aesara.function([], cov1(X1))(), aesara.function([], cov2(X2))()).eval()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K_true, K)
 
 
@@ -352,30 +352,30 @@ class TestCovSliceDim:
         X = np.linspace(0, 1, 30).reshape(10, 3)
         with pm.Model() as model:
             cov = pm.gp.cov.ExpQuad(3, 0.1, active_dims=[0, 0, 1])
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.20084298, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_slice2(self):
         X = np.linspace(0, 1, 30).reshape(10, 3)
         with pm.Model() as model:
             cov = pm.gp.cov.ExpQuad(3, ls=[0.1, 0.1], active_dims=[1, 2])
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.34295549, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_slice3(self):
         X = np.linspace(0, 1, 30).reshape(10, 3)
         with pm.Model() as model:
             cov = pm.gp.cov.ExpQuad(3, ls=np.array([0.1, 0.1]), active_dims=[1, 2])
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.34295549, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_diffslice(self):
@@ -384,10 +384,10 @@ class TestCovSliceDim:
             cov = pm.gp.cov.ExpQuad(3, ls=0.1, active_dims=[1, 0, 0]) + pm.gp.cov.ExpQuad(
                 3, ls=[0.1, 0.2, 0.3]
             )
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.683572, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_raises(self):
@@ -402,7 +402,7 @@ class TestStability:
         X = np.random.uniform(low=320.0, high=400.0, size=[2000, 2])
         with pm.Model() as model:
             cov = pm.gp.cov.ExpQuad(2, 0.1)
-        dists = theano.function([], cov.square_dist(X, X))()
+        dists = aesara.function([], cov.square_dist(X, X))()
         assert not np.any(dists < 0)
 
 
@@ -411,44 +411,44 @@ class TestExpQuad:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov = pm.gp.cov.ExpQuad(1, 0.1)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.53940, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.53940, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_2d(self):
         X = np.linspace(0, 1, 10).reshape(5, 2)
         with pm.Model() as model:
             cov = pm.gp.cov.ExpQuad(2, 0.5)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.820754, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_2dard(self):
         X = np.linspace(0, 1, 10).reshape(5, 2)
         with pm.Model() as model:
             cov = pm.gp.cov.ExpQuad(2, np.array([1, 2]))
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.969607, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_inv_lengthscale(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov = pm.gp.cov.ExpQuad(1, ls_inv=10)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.53940, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.53940, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
@@ -457,14 +457,14 @@ class TestWhiteNoise:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov = pm.gp.cov.WhiteNoise(sigma=0.5)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.0, atol=1e-3)
         npt.assert_allclose(K[0, 0], 0.5 ** 2, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
         # check predict
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.0, atol=1e-3)
         # white noise predicting should return all zeros
         npt.assert_allclose(K[0, 0], 0.0, atol=1e-3)
@@ -475,14 +475,14 @@ class TestConstant:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov = pm.gp.cov.Constant(2.5)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 2.5, atol=1e-3)
         npt.assert_allclose(K[0, 0], 2.5, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 2.5, atol=1e-3)
         npt.assert_allclose(K[0, 0], 2.5, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
@@ -491,12 +491,12 @@ class TestRatQuad:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov = pm.gp.cov.RatQuad(1, ls=0.1, alpha=0.5)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.66896, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.66896, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
@@ -505,12 +505,12 @@ class TestExponential:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov = pm.gp.cov.Exponential(1, 0.1)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.57375, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.57375, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
@@ -519,12 +519,12 @@ class TestMatern52:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov = pm.gp.cov.Matern52(1, 0.1)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.46202, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.46202, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
@@ -533,12 +533,12 @@ class TestMatern32:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov = pm.gp.cov.Matern32(1, 0.1)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.42682, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.42682, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
@@ -547,11 +547,11 @@ class TestMatern12:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov = pm.gp.cov.Matern12(1, 0.1)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.32919, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.32919, atol=1e-3)
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
@@ -560,12 +560,12 @@ class TestCosine:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov = pm.gp.cov.Cosine(1, 0.1)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.766, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.766, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
@@ -574,12 +574,12 @@ class TestPeriodic:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov = pm.gp.cov.Periodic(1, 0.1, 0.1)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.00288, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.00288, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
@@ -588,12 +588,12 @@ class TestLinear:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov = pm.gp.cov.Linear(1, 0.5)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.19444, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.19444, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
@@ -602,12 +602,12 @@ class TestPolynomial:
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             cov = pm.gp.cov.Polynomial(1, 0.5, 2, 0)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.03780, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.03780, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
 
@@ -616,17 +616,17 @@ class TestWarpedInput:
         X = np.linspace(0, 1, 10)[:, None]
 
         def warp_func(x, a, b, c):
-            return x + (a * tt.tanh(b * (x - c)))
+            return x + (a * aet.tanh(b * (x - c)))
 
         with pm.Model() as model:
             cov_m52 = pm.gp.cov.Matern52(1, 0.2)
             cov = pm.gp.cov.WarpedInput(1, warp_func=warp_func, args=(1, 10, 1), cov_func=cov_m52)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.79593, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 0.79593, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_raises(self):
@@ -642,16 +642,16 @@ class TestGibbs:
         X = np.linspace(0, 2, 10)[:, None]
 
         def tanh_func(x, x1, x2, w, x0):
-            return (x1 + x2) / 2.0 - (x1 - x2) / 2.0 * tt.tanh((x - x0) / w)
+            return (x1 + x2) / 2.0 - (x1 - x2) / 2.0 * aet.tanh((x - x0) / w)
 
         with pm.Model() as model:
             cov = pm.gp.cov.Gibbs(1, tanh_func, args=(0.05, 0.6, 0.4, 1.0))
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[2, 3], 0.136683, atol=1e-4)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[2, 3], 0.136683, atol=1e-4)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_raises(self):
@@ -673,12 +673,12 @@ class TestScaledCov:
         with pm.Model() as model:
             cov_m52 = pm.gp.cov.Matern52(1, 0.2)
             cov = pm.gp.cov.ScaledCov(1, scaling_func=scaling_func, args=(2, -1), cov_func=cov_m52)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 3.00686, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], 3.00686, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_raises(self):
@@ -1200,12 +1200,12 @@ class TestCircular:
         etalon = 0.600881
         with pm.Model():
             cov = pm.gp.cov.Circular(1, 1, tau=5)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_1d_tau2(self):
@@ -1213,10 +1213,10 @@ class TestCircular:
         etalon = 0.691239
         with pm.Model():
             cov = pm.gp.cov.Circular(1, 1, tau=4)
-        K = theano.function([], cov(X))()
+        K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
-        K = theano.function([], cov(X, X))()
+        K = aesara.function([], cov(X, X))()
         npt.assert_allclose(K[0, 1], etalon, atol=1e-3)
         # check diagonal
-        Kd = theano.function([], cov(X, diag=True))()
+        Kd = aesara.function([], cov(X, diag=True))()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)

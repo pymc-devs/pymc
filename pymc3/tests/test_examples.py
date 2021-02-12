@@ -12,20 +12,20 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
+import aesara.tensor as aet
 import arviz as az
 import matplotlib
 import numpy as np
 import pandas as pd
 import pytest
-import theano
-import theano.tensor as tt
 
 from packaging import version
 
 import pymc3 as pm
 
+from pymc3.aesaraf import floatX
 from pymc3.tests.helpers import SeededTest
-from pymc3.theanof import floatX
 
 if version.parse(matplotlib.__version__) < version.parse("3.3"):
     matplotlib.use("Agg", warn=False)
@@ -68,7 +68,7 @@ class TestARM5_4(SeededTest):
 
         with pm.Model() as model:
             effects = pm.Normal("effects", mu=0, sigma=100, shape=len(P.columns))
-            logit_p = tt.dot(floatX(np.array(P)), effects)
+            logit_p = aet.dot(floatX(np.array(P)), effects)
             pm.Bernoulli("s", logit_p=logit_p, observed=floatX(data.switch.values))
         return model
 
@@ -186,13 +186,13 @@ def build_disaster_model(masked=False):
         # Allocate appropriate Poisson rates to years before and after current
         # switchpoint location
         idx = np.arange(years)
-        rate = tt.switch(switchpoint >= idx, early_mean, late_mean)
+        rate = aet.switch(switchpoint >= idx, early_mean, late_mean)
         # Data likelihood
         pm.Poisson("disasters", rate, observed=disasters_data)
     return model
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestDisasterModel(SeededTest):
     # Time series of recorded coal mining disasters in the UK from 1851 to 1962
     def test_disaster_model(self):
@@ -294,7 +294,7 @@ class TestLatentOccupancy(SeededTest):
 
 
 @pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"),
+    condition=(aesara.config.floatX == "float32"),
     reason="Fails on float32 due to starting inf at starting logP",
 )
 class TestRSV(SeededTest):

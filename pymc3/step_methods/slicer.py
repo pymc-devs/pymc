@@ -17,9 +17,9 @@
 import numpy as np
 import numpy.random as nr
 
+from pymc3.aesaraf import inputvars
 from pymc3.model import modelcontext
 from pymc3.step_methods.arraystep import ArrayStep, Competence
-from pymc3.theanof import inputvars
 from pymc3.vartypes import continuous_types
 
 __all__ = ["Slice"]

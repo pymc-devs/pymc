@@ -125,13 +125,13 @@ class DictToArrayBijection:
 
 class ListArrayOrdering:
     """
-    An ordering for a list to an array space. Takes also non theano.tensors.
+    An ordering for a list to an array space. Takes also non aesara.tensors.
     Modified from pymc3 blocking.
 
     Parameters
     ----------
     list_arrays: list
-        :class:`numpy.ndarray` or :class:`theano.tensor.Tensor`
+        :class:`numpy.ndarray` or :class:`aesara.tensor.Tensor`
     intype: str
         defining the input type 'tensor' or 'numpy'
     """

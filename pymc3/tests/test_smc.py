@@ -12,9 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara.tensor as aet
 import numpy as np
 import pytest
-import theano.tensor as tt
 
 import pymc3 as pm
 
@@ -39,16 +39,16 @@ class TestSMC(SeededTest):
 
         def two_gaussians(x):
             log_like1 = (
-                -0.5 * n * tt.log(2 * np.pi)
-                - 0.5 * tt.log(dsigma)
+                -0.5 * n * aet.log(2 * np.pi)
+                - 0.5 * aet.log(dsigma)
                 - 0.5 * (x - mu1).T.dot(isigma).dot(x - mu1)
             )
             log_like2 = (
-                -0.5 * n * tt.log(2 * np.pi)
-                - 0.5 * tt.log(dsigma)
+                -0.5 * n * aet.log(2 * np.pi)
+                - 0.5 * aet.log(dsigma)
                 - 0.5 * (x - mu2).T.dot(isigma).dot(x - mu2)
             )
-            return tt.log(w1 * tt.exp(log_like1) + w2 * tt.exp(log_like2))
+            return aet.log(w1 * aet.exp(log_like1) + w2 * aet.exp(log_like2))
 
         with pm.Model() as self.SMC_test:
             X = pm.Uniform("X", lower=-2, upper=2.0, shape=n)

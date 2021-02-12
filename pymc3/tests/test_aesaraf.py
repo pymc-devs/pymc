@@ -14,15 +14,17 @@
 
 from itertools import product
 
+import aesara
+import aesara.tensor as aet
 import numpy as np
 import pytest
-import theano
-import theano.tensor as tt
 
-from pymc3.theanof import _conversion_map, take_along_axis
+from aesara.tensor.type import TensorType
+
+from pymc3.aesaraf import _conversion_map, take_along_axis
 from pymc3.vartypes import int_types
 
-FLOATX = str(theano.config.floatX)
+FLOATX = str(aesara.config.floatX)
 INTX = str(_conversion_map[FLOATX])
 
 
@@ -78,8 +80,8 @@ class TestTakeAlongAxis:
 
     def _input_tensors(self, shape):
         ndim = len(shape)
-        arr = tt.TensorType(FLOATX, [False] * ndim)("arr")
-        indices = tt.TensorType(INTX, [False] * ndim)("indices")
+        arr = TensorType(FLOATX, [False] * ndim)("arr")
+        indices = TensorType(INTX, [False] * ndim)("indices")
         arr.tag.test_value = np.zeros(shape, dtype=FLOATX)
         indices.tag.test_value = np.zeros(shape, dtype=INTX)
         return arr, indices
@@ -107,7 +109,7 @@ class TestTakeAlongAxis:
             return out
 
     def _function(self, arr, indices, out):
-        return theano.function([arr, indices], [out])
+        return aesara.function([arr, indices], [out])
 
     def get_function(self, shape, axis):
         ndim = len(shape)
@@ -181,13 +183,13 @@ class TestTakeAlongAxis:
             _axis = len(shape) + axis
         else:
             _axis = axis
-        # Setup the theano function
+        # Setup the aesara function
         t_arr, t_indices = self.get_input_tensors(shape)
-        t_out2 = theano.grad(
-            tt.sum(self._output_tensor(t_arr ** 2, t_indices, axis)),
+        t_out2 = aesara.grad(
+            aet.sum(self._output_tensor(t_arr ** 2, t_indices, axis)),
             t_arr,
         )
-        func = theano.function([t_arr, t_indices], [t_out2])
+        func = aesara.function([t_arr, t_indices], [t_out2])
 
         # Test that the gradient gives the same output as what is expected
         arr, indices = self.get_input_values(shape, axis, samples)
@@ -209,16 +211,16 @@ class TestTakeAlongAxis:
             take_along_axis(arr, indices, axis=axis)
 
     def test_ndim_failure(self):
-        arr = tt.TensorType(FLOATX, [False] * 3)("arr")
-        indices = tt.TensorType(INTX, [False] * 2)("indices")
+        arr = TensorType(FLOATX, [False] * 3)("arr")
+        indices = TensorType(INTX, [False] * 2)("indices")
         arr.tag.test_value = np.zeros((1,) * arr.ndim, dtype=FLOATX)
         indices.tag.test_value = np.zeros((1,) * indices.ndim, dtype=INTX)
         with pytest.raises(ValueError):
             take_along_axis(arr, indices)
 
     def test_dtype_failure(self):
-        arr = tt.TensorType(FLOATX, [False] * 3)("arr")
-        indices = tt.TensorType(FLOATX, [False] * 3)("indices")
+        arr = TensorType(FLOATX, [False] * 3)("arr")
+        indices = TensorType(FLOATX, [False] * 3)("indices")
         arr.tag.test_value = np.zeros((1,) * arr.ndim, dtype=FLOATX)
         indices.tag.test_value = np.zeros((1,) * indices.ndim, dtype=FLOATX)
         with pytest.raises(IndexError):

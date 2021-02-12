@@ -12,11 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
+import aesara.tensor as aet
 import numpy as np
 import numpy.testing as npt
 import pytest
-import theano
-import theano.tensor as tt
 
 from numpy import random as nr
 
@@ -30,15 +30,15 @@ def test_draw_value():
     npt.assert_equal(_draw_value(np.array([5, 6])), [5, 6])
     npt.assert_equal(_draw_value(np.array(5.0)), 5)
 
-    npt.assert_equal(_draw_value(tt.constant([5.0, 6.0])), [5, 6])
-    assert _draw_value(tt.constant(5)) == 5
-    npt.assert_equal(_draw_value(2 * tt.constant([5.0, 6.0])), [10, 12])
+    npt.assert_equal(_draw_value(aet.constant([5.0, 6.0])), [5, 6])
+    assert _draw_value(aet.constant(5)) == 5
+    npt.assert_equal(_draw_value(2 * aet.constant([5.0, 6.0])), [10, 12])
 
-    val = theano.shared(np.array([5.0, 6.0]))
+    val = aesara.shared(np.array([5.0, 6.0]))
     npt.assert_equal(_draw_value(val), [5, 6])
     npt.assert_equal(_draw_value(2 * val), [10, 12])
 
-    a = tt.scalar("a")
+    a = aet.scalar("a")
     a.tag.test_value = 6
     npt.assert_equal(_draw_value(2 * a, givens=[(a, 1)]), 2)
 
@@ -48,7 +48,7 @@ def test_draw_value():
     assert isinstance(_draw_value(5), type(5))
 
     with pm.Model():
-        mu = 2 * tt.constant(np.array([5.0, 6.0])) + theano.shared(np.array(5))
+        mu = 2 * aet.constant(np.array([5.0, 6.0])) + aesara.shared(np.array(5))
         a = pm.Normal("a", mu=mu, sigma=5, shape=2)
 
     val1 = _draw_value(a)
@@ -68,17 +68,17 @@ class TestDrawValues:
         npt.assert_equal(draw_values([np.array([5, 6])])[0], [5, 6])
         npt.assert_equal(draw_values([np.array(5.0)])[0], 5)
 
-        npt.assert_equal(draw_values([tt.constant([5.0, 6.0])])[0], [5, 6])
-        assert draw_values([tt.constant(5)])[0] == 5
-        npt.assert_equal(draw_values([2 * tt.constant([5.0, 6.0])])[0], [10, 12])
+        npt.assert_equal(draw_values([aet.constant([5.0, 6.0])])[0], [5, 6])
+        assert draw_values([aet.constant(5)])[0] == 5
+        npt.assert_equal(draw_values([2 * aet.constant([5.0, 6.0])])[0], [10, 12])
 
-        val = theano.shared(np.array([5.0, 6.0]))
+        val = aesara.shared(np.array([5.0, 6.0]))
         npt.assert_equal(draw_values([val])[0], [5, 6])
         npt.assert_equal(draw_values([2 * val])[0], [10, 12])
 
     def test_simple_model(self):
         with pm.Model():
-            mu = 2 * tt.constant(np.array([5.0, 6.0])) + theano.shared(np.array(5))
+            mu = 2 * aet.constant(np.array([5.0, 6.0])) + aesara.shared(np.array(5))
             a = pm.Normal("a", mu=mu, sigma=5, shape=2)
 
         val1 = draw_values([a])
@@ -90,7 +90,7 @@ class TestDrawValues:
 
     def test_dep_vars(self):
         with pm.Model():
-            mu = 2 * tt.constant(np.array([5.0, 6.0])) + theano.shared(np.array(5))
+            mu = 2 * aet.constant(np.array([5.0, 6.0])) + aesara.shared(np.array(5))
             sd = pm.HalfNormal("sd", shape=2)
             tau = 1 / sd ** 2
             a = pm.Normal("a", mu=mu, tau=tau, shape=2)
@@ -116,7 +116,7 @@ class TestDrawValues:
 
     def test_graph_constant(self):
         # Issue 3595 pointed out that slice(None) can introduce
-        # theano.graph.basic.Constant into the compute graph, which wasn't
+        # aesara.graph.basic.Constant into the compute graph, which wasn't
         # handled correctly by draw_values
         n_d = 500
         n_x = 2

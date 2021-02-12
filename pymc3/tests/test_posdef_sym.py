@@ -12,19 +12,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
 import numpy as np
-import theano
 
 from pymc3.distributions import multivariate as mv
 
 
 def test_posdef_symmetric1():
-    data = np.array([[1.0, 0], [0, 1]], dtype=theano.config.floatX)
+    data = np.array([[1.0, 0], [0, 1]], dtype=aesara.config.floatX)
     assert mv.posdef(data) == 1
 
 
 def test_posdef_symmetric2():
-    data = np.array([[1.0, 2], [2, 1]], dtype=theano.config.floatX)
+    data = np.array([[1.0, 2], [2, 1]], dtype=aesara.config.floatX)
     assert mv.posdef(data) == 0
 
 
@@ -33,11 +33,11 @@ def test_posdef_symmetric3():
 
     Is this correct?
     """
-    data = np.array([[1.0, 1], [1, 1]], dtype=theano.config.floatX)
+    data = np.array([[1.0, 1], [1, 1]], dtype=aesara.config.floatX)
     assert mv.posdef(data) == 0
 
 
 def test_posdef_symmetric4():
-    d = np.array([[1, 0.99, 1], [0.99, 1, 0.999], [1, 0.999, 1]], theano.config.floatX)
+    d = np.array([[1, 0.99, 1], [0.99, 1, 0.999], [1, 0.999, 1]], aesara.config.floatX)
 
     assert mv.posdef(d) == 0
