@@ -95,14 +95,13 @@ class NS_NFMC:
         """Create an initial population from the prior distribution."""
         population = []
         var_info = OrderedDict()
-        if self.start is None:
-            init_rnd = sample_prior_predictive(
-                self.draws,
-                var_names=[v.name for v in self.model.unobserved_RVs],
-                model=self.model,
-            )
-        else:
-            init_rnd = self.start
+
+        init_rnd = sample_prior_predictive(
+            self.draws,
+            var_names=[v.name for v in self.model.unobserved_RVs],
+            model=self.model,
+        )
+
 
         init = self.model.test_point
 
@@ -117,7 +116,7 @@ class NS_NFMC:
         self.nf_samples = np.array(floatX(population))
         self.live_points = np.array(floatX(population))
         self.var_info = var_info
-
+        
     def setup_logp(self):
         """Set up the prior and likelihood logp functions."""
         shared = make_shared_replacements(self.variables, self.model)
