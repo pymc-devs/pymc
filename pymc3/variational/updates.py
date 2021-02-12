@@ -44,7 +44,7 @@
 # SOFTWARE.
 
 """
-Functions to generate Theano update dictionaries for training.
+Functions to generate Aesara update dictionaries for training.
 
 The update functions implement different methods to control the learning
 rate for use with stochastic gradient descent.
@@ -88,21 +88,20 @@ This is often used when training recurrent neural networks.
 Examples
 --------
 >>> import lasagne
->>> import theano.tensor as T
->>> import theano
+>>> import aesara
 >>> from lasagne.nonlinearities import softmax
 >>> from lasagne.layers import InputLayer, DenseLayer, get_output
 >>> from lasagne.updates import sgd, apply_momentum
 >>> l_in = InputLayer((100, 20))
 >>> l1 = DenseLayer(l_in, num_units=3, nonlinearity=softmax)
->>> x = tt.matrix('x')  # shp: num_batch x num_features
->>> y = tt.ivector('y') # shp: num_batch
+>>> x = aet.matrix('x')  # shp: num_batch x num_features
+>>> y = aet.ivector('y') # shp: num_batch
 >>> l_out = get_output(l1, x)
 >>> params = lasagne.layers.get_all_params(l1)
->>> loss = tt.mean(tt.nnet.categorical_crossentropy(l_out, y))
+>>> loss = aet.mean(aet.nnet.categorical_crossentropy(l_out, y))
 >>> updates_sgd = sgd(loss, params, learning_rate=0.0001)
 >>> updates = apply_momentum(updates_sgd, params, momentum=0.9)
->>> train_function = theano.function([x, y], updates=updates)
+>>> train_function = aesara.function([x, y], updates=updates)
 
 Notes
 -----
@@ -112,9 +111,9 @@ Taken from the Lasagne project: http://lasagne.readthedocs.io/en/latest/
 from collections import OrderedDict
 from functools import partial
 
+import aesara
+import aesara.tensor as aet
 import numpy as np
-import theano
-import theano.tensor as tt
 
 import pymc3 as pm
 
@@ -152,7 +151,7 @@ def get_or_compute_grads(loss_or_grads, params):
         gradients and returned as is, unless it does not match the length
         of `params`, in which case a `ValueError` is raised.
         Otherwise, `loss_or_grads` is assumed to be a cost expression and
-        the function returns `theano.grad(loss_or_grads, params)`.
+        the function returns `aesara.grad(loss_or_grads, params)`.
 
     Raises
     ------
@@ -161,7 +160,7 @@ def get_or_compute_grads(loss_or_grads, params):
         any element of `params` is not a shared variable (while we could still
         compute its gradient, we can never update it and want to fail early).
     """
-    if any(not isinstance(p, theano.compile.SharedVariable) for p in params):
+    if any(not isinstance(p, aesara.compile.SharedVariable) for p in params):
         raise ValueError(
             "params must contain shared variables only. If it "
             "contains arbitrary parameter expressions, then "
@@ -174,7 +173,7 @@ def get_or_compute_grads(loss_or_grads, params):
             )
         return loss_or_grads
     else:
-        return theano.grad(loss_or_grads, params)
+        return aesara.grad(loss_or_grads, params)
 
 
 def _get_call_kwargs(_locals_):
@@ -212,7 +211,7 @@ def sgd(loss_or_grads=None, params=None, learning_rate=1e-3):
 
     Examples
     --------
-    >>> a = theano.shared(1.)
+    >>> a = aesara.shared(1.)
     >>> b = a*2
     >>> updates = sgd(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -276,7 +275,7 @@ def apply_momentum(updates, params=None, momentum=0.9):
 
     for param in params:
         value = param.get_value(borrow=True)
-        velocity = theano.shared(
+        velocity = aesara.shared(
             np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
         x = momentum * velocity + updates[param]
@@ -326,7 +325,7 @@ def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
 
     Examples
     --------
-    >>> a = theano.shared(1.)
+    >>> a = aesara.shared(1.)
     >>> b = a*2
     >>> updates = momentum(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -391,7 +390,7 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
 
     for param in params:
         value = param.get_value(borrow=True)
-        velocity = theano.shared(
+        velocity = aesara.shared(
             np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
         x = momentum * velocity + updates[param] - param
@@ -446,7 +445,7 @@ def nesterov_momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momen
 
     Examples
     --------
-    >>> a = theano.shared(1.)
+    >>> a = aesara.shared(1.)
     >>> b = a*2
     >>> updates = nesterov_momentum(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -514,7 +513,7 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 
     Examples
     --------
-    >>> a = theano.shared(1.)
+    >>> a = aesara.shared(1.)
     >>> b = a*2
     >>> updates = adagrad(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -535,12 +534,12 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
-        accu = theano.shared(
+        accu = aesara.shared(
             np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
         accu_new = accu + grad ** 2
         updates[accu] = accu_new
-        updates[param] = param - (learning_rate * grad / tt.sqrt(accu_new + epsilon))
+        updates[param] = param - (learning_rate * grad / aet.sqrt(accu_new + epsilon))
 
     return updates
 
@@ -574,19 +573,19 @@ def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
     for param, grad in zip(params, grads):
-        i = theano.shared(pm.floatX(0))
+        i = aesara.shared(pm.floatX(0))
         i_int = i.astype("int32")
         value = param.get_value(borrow=True)
-        accu = theano.shared(np.zeros(value.shape + (n_win,), dtype=value.dtype))
+        accu = aesara.shared(np.zeros(value.shape + (n_win,), dtype=value.dtype))
 
         # Append squared gradient vector to accu_new
-        accu_new = tt.set_subtensor(accu[..., i_int], grad ** 2)
-        i_new = tt.switch((i + 1) < n_win, i + 1, 0)
+        accu_new = aet.set_subtensor(accu[..., i_int], grad ** 2)
+        i_new = aet.switch((i + 1) < n_win, i + 1, 0)
         updates[accu] = accu_new
         updates[i] = i_new
 
         accu_sum = accu_new.sum(axis=-1)
-        updates[param] = param - (learning_rate * grad / tt.sqrt(accu_sum + epsilon))
+        updates[param] = param - (learning_rate * grad / aet.sqrt(accu_sum + epsilon))
     return updates
 
 
@@ -633,13 +632,13 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
 
     References
     ----------
-    .. [1] Tieleman, tt. and Hinton, G. (2012):
+    .. [1] Tieleman, aet. and Hinton, G. (2012):
            Neural Networks for Machine Learning, Lecture 6.5 - rmsprop.
            Coursera. http://www.youtube.com/watch?v=O3sxAc4hxZU (formula @5:20)
 
     Examples
     --------
-    >>> a = theano.shared(1.)
+    >>> a = aesara.shared(1.)
     >>> b = a*2
     >>> updates = rmsprop(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -658,17 +657,17 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
-    # Using theano constant to prevent upcasting of float32
-    one = tt.constant(1)
+    # Using aesara constant to prevent upcasting of float32
+    one = aet.constant(1)
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
-        accu = theano.shared(
+        accu = aesara.shared(
             np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
         accu_new = rho * accu + (one - rho) * grad ** 2
         updates[accu] = accu_new
-        updates[param] = param - (learning_rate * grad / tt.sqrt(accu_new + epsilon))
+        updates[param] = param - (learning_rate * grad / aet.sqrt(accu_new + epsilon))
 
     return updates
 
@@ -731,7 +730,7 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
 
     Examples
     --------
-    >>> a = theano.shared(1.)
+    >>> a = aesara.shared(1.)
     >>> b = a*2
     >>> updates = adadelta(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -750,17 +749,17 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
-    # Using theano constant to prevent upcasting of float32
-    one = tt.constant(1)
+    # Using aesara constant to prevent upcasting of float32
+    one = aet.constant(1)
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
         # accu: accumulate gradient magnitudes
-        accu = theano.shared(
+        accu = aesara.shared(
             np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
         # delta_accu: accumulate update magnitudes (recursively!)
-        delta_accu = theano.shared(
+        delta_accu = aesara.shared(
             np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
 
@@ -769,7 +768,7 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
         updates[accu] = accu_new
 
         # compute parameter update, using the 'old' delta_accu
-        update = grad * tt.sqrt(delta_accu + epsilon) / tt.sqrt(accu_new + epsilon)
+        update = grad * aet.sqrt(delta_accu + epsilon) / aet.sqrt(accu_new + epsilon)
         updates[param] = param - learning_rate * update
 
         # update delta_accu (as accu, but accumulating updates)
@@ -823,7 +822,7 @@ def adam(
 
     Examples
     --------
-    >>> a = theano.shared(1.)
+    >>> a = aesara.shared(1.)
     >>> b = a*2
     >>> updates = adam(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -840,27 +839,27 @@ def adam(
     elif loss_or_grads is None or params is None:
         raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     all_grads = get_or_compute_grads(loss_or_grads, params)
-    t_prev = theano.shared(pm.theanof.floatX(0.0))
+    t_prev = aesara.shared(pm.aesaraf.floatX(0.0))
     updates = OrderedDict()
 
-    # Using theano constant to prevent upcasting of float32
-    one = tt.constant(1)
+    # Using aesara constant to prevent upcasting of float32
+    one = aet.constant(1)
 
     t = t_prev + 1
-    a_t = learning_rate * tt.sqrt(one - beta2 ** t) / (one - beta1 ** t)
+    a_t = learning_rate * aet.sqrt(one - beta2 ** t) / (one - beta1 ** t)
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
-        m_prev = theano.shared(
+        m_prev = aesara.shared(
             np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
-        v_prev = theano.shared(
+        v_prev = aesara.shared(
             np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
 
         m_t = beta1 * m_prev + (one - beta1) * g_t
         v_t = beta2 * v_prev + (one - beta2) * g_t ** 2
-        step = a_t * m_t / (tt.sqrt(v_t) + epsilon)
+        step = a_t * m_t / (aet.sqrt(v_t) + epsilon)
 
         updates[m_prev] = m_t
         updates[v_prev] = v_t
@@ -911,7 +910,7 @@ def adamax(
 
     Examples
     --------
-    >>> a = theano.shared(1.)
+    >>> a = aesara.shared(1.)
     >>> b = a*2
     >>> updates = adamax(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -928,26 +927,26 @@ def adamax(
     elif loss_or_grads is None or params is None:
         raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     all_grads = get_or_compute_grads(loss_or_grads, params)
-    t_prev = theano.shared(pm.theanof.floatX(0.0))
+    t_prev = aesara.shared(pm.aesaraf.floatX(0.0))
     updates = OrderedDict()
 
-    # Using theano constant to prevent upcasting of float32
-    one = tt.constant(1)
+    # Using aesara constant to prevent upcasting of float32
+    one = aet.constant(1)
 
     t = t_prev + 1
     a_t = learning_rate / (one - beta1 ** t)
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
-        m_prev = theano.shared(
+        m_prev = aesara.shared(
             np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
-        u_prev = theano.shared(
+        u_prev = aesara.shared(
             np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
         )
 
         m_t = beta1 * m_prev + (one - beta1) * g_t
-        u_t = tt.maximum(beta2 * u_prev, abs(g_t))
+        u_t = aet.maximum(beta2 * u_prev, abs(g_t))
         step = a_t * m_t / (u_t + epsilon)
 
         updates[m_prev] = m_t
@@ -968,7 +967,7 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
     Parameters
     ----------
     tensor_var: TensorVariable
-        Theano expression for update, gradient, or other quantity.
+        Aesara expression for update, gradient, or other quantity.
     max_norm: scalar
         This value sets the maximum allowed value of any norm in
         `tensor_var`.
@@ -993,11 +992,11 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
 
     Examples
     --------
-    >>> param = theano.shared(
-    ...     np.random.randn(100, 200).astype(theano.config.floatX))
+    >>> param = aesara.shared(
+    ...     np.random.randn(100, 200).astype(aesara.config.floatX))
     >>> update = param + 100
     >>> update = norm_constraint(update, 10)
-    >>> func = theano.function([], [], updates=[(param, update)])
+    >>> func = aesara.function([], [], updates=[(param, update)])
     >>> # Apply constrained update
     >>> _ = func()
     >>> from lasagne.utils import compute_norms
@@ -1028,9 +1027,9 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
             "Unsupported tensor dimensionality {}." "Must specify `norm_axes`".format(ndim)
         )
 
-    dtype = np.dtype(theano.config.floatX).type
-    norms = tt.sqrt(tt.sum(tt.sqr(tensor_var), axis=sum_over, keepdims=True))
-    target_norms = tt.clip(norms, 0, dtype(max_norm))
+    dtype = np.dtype(aesara.config.floatX).type
+    norms = aet.sqrt(aet.sum(aet.sqr(tensor_var), axis=sum_over, keepdims=True))
+    target_norms = aet.clip(norms, 0, dtype(max_norm))
     constrained_output = tensor_var * (target_norms / (dtype(epsilon) + norms))
 
     return constrained_output
@@ -1061,7 +1060,7 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7, return_norm=False
     -------
     tensor_vars_scaled: list of TensorVariables
         The scaled tensor variables.
-    norm: Theano scalar
+    norm: Aesara scalar
         The combined norms of the input variables prior to rescaling,
         only returned if ``return_norms=True``.
 
@@ -1070,14 +1069,14 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7, return_norm=False
     >>> from lasagne.layers import InputLayer, DenseLayer
     >>> import lasagne
     >>> from lasagne.updates import sgd, total_norm_constraint
-    >>> x = tt.matrix()
-    >>> y = tt.ivector()
+    >>> x = aet.matrix()
+    >>> y = aet.ivector()
     >>> l_in = InputLayer((5, 10))
-    >>> l1 = DenseLayer(l_in, num_units=7, nonlinearity=tt.nnet.softmax)
+    >>> l1 = DenseLayer(l_in, num_units=7, nonlinearity=aet.nnet.softmax)
     >>> output = lasagne.layers.get_output(l1, x)
-    >>> cost = tt.mean(tt.nnet.categorical_crossentropy(output, y))
+    >>> cost = aet.mean(aet.nnet.categorical_crossentropy(output, y))
     >>> all_params = lasagne.layers.get_all_params(l1)
-    >>> all_grads = tt.grad(cost, all_params)
+    >>> all_grads = aet.grad(cost, all_params)
     >>> scaled_grads = total_norm_constraint(all_grads, 5)
     >>> updates = sgd(scaled_grads, all_params, learning_rate=0.1)
 
@@ -1091,9 +1090,9 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7, return_norm=False
        learning with neural networks. In Advances in Neural Information
        Processing Systems (pp. 3104-3112).
     """
-    norm = tt.sqrt(sum(tt.sum(tensor ** 2) for tensor in tensor_vars))
-    dtype = np.dtype(theano.config.floatX).type
-    target_norm = tt.clip(norm, 0, dtype(max_norm))
+    norm = aet.sqrt(sum(aet.sum(tensor ** 2) for tensor in tensor_vars))
+    dtype = np.dtype(aesara.config.floatX).type
+    target_norm = aet.clip(norm, 0, dtype(max_norm))
     multiplier = target_norm / (dtype(epsilon) + norm)
     tensor_vars_scaled = [step * multiplier for step in tensor_vars]
 

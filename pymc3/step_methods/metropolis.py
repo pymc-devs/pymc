@@ -12,13 +12,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
 import numpy as np
 import numpy.random as nr
 import scipy.linalg
-import theano
 
 import pymc3 as pm
 
+from pymc3.aesaraf import floatX
 from pymc3.distributions import draw_values
 from pymc3.step_methods.arraystep import (
     ArrayStep,
@@ -27,7 +28,6 @@ from pymc3.step_methods.arraystep import (
     PopulationArrayStepShared,
     metrop_select,
 )
-from pymc3.theanof import floatX
 
 __all__ = [
     "Metropolis",
@@ -142,7 +142,7 @@ class Metropolis(ArrayStepShared):
         model: PyMC Model
             Optional model for sampling step. Defaults to None (taken from context).
         mode: string or `Mode` instance.
-            compilation mode passed to Theano functions
+            compilation mode passed to Aesara functions
         """
 
         model = pm.modelcontext(model)
@@ -571,7 +571,7 @@ class DEMetropolis(PopulationArrayStepShared):
     model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
     mode:  string or `Mode` instance.
-        compilation mode passed to Theano functions
+        compilation mode passed to Aesara functions
 
     References
     ----------
@@ -713,7 +713,7 @@ class DEMetropolisZ(ArrayStepShared):
     model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
     mode:  string or `Mode` instance.
-        compilation mode passed to Theano functions
+        compilation mode passed to Aesara functions
 
     References
     ----------
@@ -887,6 +887,6 @@ def delta_logp(logp, vars, shared):
 
     logp1 = pm.CallableTensor(logp0)(inarray1)
 
-    f = theano.function([inarray1, inarray0], logp1 - logp0)
+    f = aesara.function([inarray1, inarray0], logp1 - logp0)
     f.trust_input = True
     return f

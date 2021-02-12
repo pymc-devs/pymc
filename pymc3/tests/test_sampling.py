@@ -18,15 +18,15 @@ from contextlib import ExitStack as does_not_raise
 from itertools import combinations
 from typing import Tuple
 
+import aesara
+import aesara.tensor as aet
 import arviz as az
 import numpy as np
 import numpy.testing as npt
 import pytest
-import theano
-import theano.tensor as tt
 
+from aesara import shared
 from scipy import stats
-from theano import shared
 
 import pymc3 as pm
 
@@ -36,7 +36,7 @@ from pymc3.tests.helpers import SeededTest
 from pymc3.tests.models import simple_init
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestSample(SeededTest):
     def setup_method(self):
         super().setup_method()
@@ -348,7 +348,7 @@ def test_choose_chains(n_points, tune, expected_length, expected_n_traces):
     assert expected_n_traces == len(traces)
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestNamedSampling(SeededTest):
     def test_shared_named(self):
         G_var = shared(value=np.atleast_2d(1.0), broadcastable=(True, False), name="G")
@@ -362,7 +362,7 @@ class TestNamedSampling(SeededTest):
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=tt.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
+                "theta", mu=aet.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
             )
             res = theta.random()
             assert np.isclose(res, 0.0)
@@ -378,13 +378,13 @@ class TestNamedSampling(SeededTest):
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=tt.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
+                "theta", mu=aet.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
             )
             res = theta.random()
             assert np.isclose(res, 0.0)
 
     def test_constant_named(self):
-        G_var = tt.constant(np.atleast_2d(1.0), name="G")
+        G_var = aet.constant(np.atleast_2d(1.0), name="G")
         with pm.Model():
             theta0 = pm.Normal(
                 "theta0",
@@ -394,7 +394,7 @@ class TestNamedSampling(SeededTest):
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=tt.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
+                "theta", mu=aet.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
             )
 
             res = theta.random()
@@ -621,8 +621,8 @@ class TestSamplePPC(SeededTest):
     def test_model_shared_variable(self):
         x = np.random.randn(100)
         y = x > 0
-        x_shared = theano.shared(x)
-        y_shared = theano.shared(y)
+        x_shared = aesara.shared(x)
+        y_shared = aesara.shared(y)
         with pm.Model() as model:
             coeff = pm.Normal("x", mu=0, sd=1)
             logistic = pm.Deterministic("p", pm.math.sigmoid(coeff * x_shared))
@@ -655,8 +655,8 @@ class TestSamplePPC(SeededTest):
         npt.assert_allclose(post_pred["p"], expected_p)
 
     def test_deterministic_of_observed(self):
-        meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(10))
-        meas_in_2 = pm.theanof.floatX(5 + 4 * np.random.randn(10))
+        meas_in_1 = pm.aesaraf.floatX(2 + 4 * np.random.randn(10))
+        meas_in_2 = pm.aesaraf.floatX(5 + 4 * np.random.randn(10))
         nchains = 2
         with pm.Model() as model:
             mu_in_1 = pm.Normal("mu_in_1", 0, 1)
@@ -671,7 +671,7 @@ class TestSamplePPC(SeededTest):
 
             trace = pm.sample(100, chains=nchains)
             np.random.seed(0)
-            rtol = 1e-5 if theano.config.floatX == "float64" else 1e-4
+            rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-4
 
             np.random.seed(0)
             ppc = pm.sample_posterior_predictive(
@@ -694,8 +694,8 @@ class TestSamplePPC(SeededTest):
             npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
     def test_deterministic_of_observed_modified_interface(self):
-        meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(100))
-        meas_in_2 = pm.theanof.floatX(5 + 4 * np.random.randn(100))
+        meas_in_1 = pm.aesaraf.floatX(2 + 4 * np.random.randn(100))
+        meas_in_2 = pm.aesaraf.floatX(5 + 4 * np.random.randn(100))
         with pm.Model() as model:
             mu_in_1 = pm.Normal("mu_in_1", 0, 1)
             sigma_in_1 = pm.HalfNormal("sd_in_1", 1)
@@ -718,7 +718,7 @@ class TestSamplePPC(SeededTest):
                 var_names=[x.name for x in (model.deterministics + model.basic_RVs)],
             )
 
-            rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3
+            rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-3
             npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
             ppc = pm.fast_sample_posterior_predictive(
@@ -728,7 +728,7 @@ class TestSamplePPC(SeededTest):
                 var_names=[x.name for x in (model.deterministics + model.basic_RVs)],
             )
 
-            rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3
+            rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-3
             npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
     def test_variable_type(self):
@@ -987,7 +987,7 @@ class TestSamplePriorPredictive(SeededTest):
             phi = pm.Beta("phi", alpha=1.0, beta=1.0)
 
             kappa_log = pm.Exponential("logkappa", lam=5.0)
-            kappa = pm.Deterministic("kappa", tt.exp(kappa_log))
+            kappa = pm.Deterministic("kappa", aet.exp(kappa_log))
 
             thetas = pm.Beta("thetas", alpha=phi * kappa, beta=(1.0 - phi) * kappa, shape=n)
 
@@ -1053,7 +1053,7 @@ class TestSamplePriorPredictive(SeededTest):
     def test_bounded_dist(self):
         with pm.Model() as model:
             BoundedNormal = pm.Bound(pm.Normal, lower=0.0)
-            x = BoundedNormal("x", mu=tt.zeros((3, 1)), sd=1 * tt.ones((3, 1)), shape=(3, 1))
+            x = BoundedNormal("x", mu=aet.zeros((3, 1)), sd=1 * aet.ones((3, 1)), shape=(3, 1))
 
         with model:
             prior_trace = pm.sample_prior_predictive(5)

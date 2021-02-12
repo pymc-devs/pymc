@@ -15,7 +15,7 @@
 import numpy as np
 import pytest
 
-from theano import tensor as tt
+from aesara import tensor as aet
 
 import pymc3 as pm
 
@@ -106,7 +106,7 @@ def fixture_model():
             cov = pm.InverseGamma("cov", alpha=1, beta=1)
             x = pm.Normal("x", mu=np.ones((dim,)), sigma=pm.math.sqrt(cov), shape=(n, dim))
             eps = pm.HalfNormal("eps", np.ones((n, 1)), shape=(n, dim))
-            mu = pm.Deterministic("mu", tt.sum(x + eps, axis=-1))
+            mu = pm.Deterministic("mu", aet.sum(x + eps, axis=-1))
             y = pm.Normal("y", mu=mu, sigma=1, shape=(n,))
     return model, [cov, x, eps, y]
 

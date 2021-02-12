@@ -29,16 +29,17 @@ if not logging.root.handlers:
 
 
 def __set_compiler_flags():
-    # Workarounds for Theano compiler problems on various platforms
-    import theano
+    # Workarounds for Aesara compiler problems on various platforms
+    import aesara
 
-    current = theano.config.gcc__cxxflags
-    theano.config.gcc__cxxflags = f"{current} -Wno-c++11-narrowing"
+    current = aesara.config.gcc__cxxflags
+    aesara.config.gcc__cxxflags = f"{current} -Wno-c++11-narrowing"
 
 
 __set_compiler_flags()
 
 from pymc3 import gp, ode, sampling
+from pymc3.aesaraf import *
 from pymc3.backends import load_trace, save_trace
 from pymc3.backends.tracetab import *
 from pymc3.blocking import *
@@ -63,7 +64,6 @@ from pymc3.sampling import *
 from pymc3.smc import *
 from pymc3.step_methods import *
 from pymc3.tests import test
-from pymc3.theanof import *
 from pymc3.tuning import *
 from pymc3.variational import *
 from pymc3.vartypes import *

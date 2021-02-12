@@ -9,7 +9,7 @@ PyMC3 Developer Guide
 
 `PyMC3 <https://docs.pymc.io/>`__ is a Python package for Bayesian
 statistical modeling built on top of
-`Theano <http://deeplearning.net/software/theano/>`__. This
+`Aesara <https://aesara.readthedocs.io/en/latest/index.html>`__. This
 document aims to explain the design and implementation of probabilistic
 programming in PyMC3, with comparisons to other PPL like TensorFlow Probability (TFP)
 and Pyro in mind. A user-facing API
@@ -110,7 +110,7 @@ elementary. As long as you have a well-behaved density function, we can
 use it in the model to build the model log-likelihood function. Random
 number generation is great to have, but sometimes there might not be
 efficient random number generator for some densities. Since a function
-is all you need, you can wrap almost any Theano function into a
+is all you need, you can wrap almost any Aesara function into a
 distribution using ``pm.DensityDist``
 https://docs.pymc.io/Probability\_Distributions.html#custom-distributions
 
@@ -147,7 +147,7 @@ density function <https://en.wikipedia.org/wiki/Probability_density_function>`__
 .. math::
     X:=f(x) = \frac{1}{\sigma \sqrt{2 \pi}} \exp^{- 0.5 (\frac{x - \mu}{\sigma})^2}\vert_{\mu = 0, \sigma=1} = \frac{1}{\sqrt{2 \pi}} \exp^{- 0.5 x^2}
 
-Within a model context, RVs are essentially Theano tensors (more on that
+Within a model context, RVs are essentially Aesara tensors (more on that
 below). This is different than TFP and pyro, where you need to be more
 explicit about the conversion. For example:
 
@@ -156,7 +156,7 @@ explicit about the conversion. For example:
 .. code:: python
 
     with pm.Model() as model:
-        z = pm.Normal('z', mu=0., sigma=5.)             # ==> pymc3.model.FreeRV, or theano.tensor with logp
+        z = pm.Normal('z', mu=0., sigma=5.)             # ==> pymc3.model.FreeRV, or aesara.tensor with logp
         x = pm.Normal('x', mu=z, sigma=1., observed=5.) # ==> pymc3.model.ObservedRV, also has logp properties
     x.logp({'z': 2.5})                                  # ==> -4.0439386
     model.logp({'z': 2.5})                              # ==> -6.6973152
@@ -194,7 +194,7 @@ Random method and logp method, very different behind the curtain
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In short, the random method is scipy/numpy-based, and the logp method is
-Theano-based. The ``logp`` method is straightforward - it is a Theano
+Aesara-based. The ``logp`` method is straightforward - it is a Aesara
 function within each distribution. It has the following signature:
 
 .. code:: python
@@ -202,20 +202,20 @@ function within each distribution. It has the following signature:
     def logp(self, value):
         # GET PARAMETERS
         param1, param2, ... = self.params1, self.params2, ...
-        # EVALUATE LOG-LIKELIHOOD FUNCTION, all inputs are (or array that could be convert to) theano tensor
+        # EVALUATE LOG-LIKELIHOOD FUNCTION, all inputs are (or array that could be convert to) aesara tensor
         total_log_prob = f(param1, param2, ..., value)
         return total_log_prob
 
-In the ``logp`` method, parameters and values are either Theano tensors,
+In the ``logp`` method, parameters and values are either Aesara tensors,
 or could be converted to tensors. It is rather convenient as the
 evaluation of logp is represented as a tensor (``RV.logpt``), and when
 we linked different ``logp`` together (e.g., summing all ``RVs.logpt``
-to get the model totall logp) the dependence is taken care of by Theano
+to get the model totall logp) the dependence is taken care of by Aesara
 when the graph is built and compiled. Again, since the compiled function
 depends on the nodes that already in the graph, whenever you want to generate
 a new function that takes new input tensors you either need to regenerate the graph
 with the appropriate dependencies, or replace the node by editing the existing graph.
-In PyMC3 we use the second approach by using ``theano.clone()`` when it is needed.
+In PyMC3 we use the second approach by using ``aesara.clone_replace()`` when it is needed.
 
 As explained above, distribution in a ``pm.Model()`` context
 automatically turn into a tensor with distribution property (pymc3
@@ -225,7 +225,7 @@ itself <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66
 
 .. code:: python
 
-        # self is a theano.tensor with a distribution attached
+        # self is a aesara.tensor with a distribution attached
         self.logp_sum_unscaledt = distribution.logp_sum(self)
         self.logp_nojac_unscaledt = distribution.logp_nojac(self)
 
@@ -237,7 +237,7 @@ Or for a ObservedRV. it evaluate the logp on the data:
         self.logp_nojac_unscaledt = distribution.logp_nojac(data)
 
 However, for the random method things are a bit less graceful. As the
-random generator is limited in Theano, all random generation is done in
+random generator is limited in Aesara, all random generation is done in
 scipy/numpy land. In the random method, we have:
 
 .. code:: python
@@ -259,7 +259,7 @@ Here, ``point`` is a dictionary that contains dependence of
 ``(size, ) + param.shape`` arrays *conditioned* on the information from
 ``point``. This is the backbone for forwarding random simulation. The
 ``draw_values`` function is a recursive algorithm to try to resolve all
-the dependence outside of Theano, by walking the Theano computational
+the dependence outside of Aesara, by walking the Aesara computational
 graph, it is complicated and a constant pain point for bug fixing:
 https://github.com/pymc-devs/pymc3/blob/master/pymc3/distributions/distribution.py#L217-L529
 (But also see a `recent
@@ -417,11 +417,11 @@ usually created in order to optimise performance. But getting a
     class Exp(tr.ElemwiseTransform):
         name = "exp"
         def backward(self, x):
-            return tt.log(x)
+            return aet.log(x)
         def forward(self, x):
-            return tt.exp(x)
+            return aet.exp(x)
         def jacobian_det(self, x):
-            return -tt.log(x)
+            return -aet.log(x)
 
     lognorm = Exp().apply(pm.Normal.dist(0., 1.))
     lognorm
@@ -434,7 +434,7 @@ usually created in order to optimise performance. But getting a
 
 
 Now, back to ``model.RV(...)`` - things returned from ``model.RV(...)``
-are Theano tensor variables, and it is clear from looking at
+are Aesara tensor variables, and it is clear from looking at
 ``TransformedRV``:
 
 .. code:: python
@@ -452,7 +452,7 @@ as for ``FreeRV`` and ``ObservedRV``, they are ``TensorVariable``\s with
 
 ``Factor`` basically `enable and assign the
 logp <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/model.py#L195-L276>`__
-(representated as a tensor also) property to a Theano tensor (thus
+(representated as a tensor also) property to a Aesara tensor (thus
 making it a random variable). For a ``TransformedRV``, it transforms the
 distribution into a ``TransformedDistribution``, and then ``model.Var`` is
 called again to added the RV associated with the
@@ -494,10 +494,10 @@ the model logp), and also deterministic transformation (as bookkeeping):
 named\_vars, free\_RVs, observed\_RVs, deterministics, potentials,
 missing\_values. The model context then computes some simple model
 properties, builds a bijection mapping that transforms between
-dictionary and numpy/Theano ndarray, thus allowing the ``logp``/``dlogp`` functions
+dictionary and numpy/Aesara ndarray, thus allowing the ``logp``/``dlogp`` functions
 to have two equivalent versions: one takes a ``dict`` as input and the other
 takes an ``ndarray`` as input. More importantly, a ``pm.Model()`` contains methods
-to compile Theano functions that take Random Variables (that are also
+to compile Aesara functions that take Random Variables (that are also
 initialised within the same model) as input, for example:
 
 .. code:: python
@@ -559,20 +559,20 @@ sum them together to get the model logp:
 
     @property
     def logpt(self):
-        """Theano scalar of log-probability of the model"""
+        """Aesara scalar of log-probability of the model"""
         with self:
             factors = [var.logpt for var in self.basic_RVs] + self.potentials
-            logp = tt.sum([tt.sum(factor) for factor in factors])
+            logp = aet.sum([aet.sum(factor) for factor in factors])
             ...
             return logp
 
-which returns a Theano tensor that its value depends on the free
-parameters in the model (i.e., its parent nodes from the Theano
+which returns a Aesara tensor that its value depends on the free
+parameters in the model (i.e., its parent nodes from the Aesara
 graph).You can evaluate or compile into a python callable (that you can
 pass numpy as input args). Note that the logp tensor depends on its
-input in the Theano graph, thus you cannot pass new tensor to generate a
+input in the Aesara graph, thus you cannot pass new tensor to generate a
 logp function. For similar reason, in PyMC3 we do graph copying a lot
-using theano.clone to replace the inputs to a tensor.
+using aesara.clone_replace to replace the inputs to a tensor.
 
 .. code:: python
 
@@ -587,7 +587,7 @@ using theano.clone to replace the inputs to a tensor.
 
 .. code:: python
 
-    type(m.logpt)         # ==> theano.tensor.var.TensorVariable
+    type(m.logpt)         # ==> aesara.tensor.var.TensorVariable
 
 
 .. code:: python
@@ -620,14 +620,14 @@ logp/dlogp function:
         return ValueGradFunction(self.logpt, grad_vars, extra_vars, **kwargs)
 
 ``ValueGradFunction`` is a callable class which isolates part of the
-Theano graph to compile additional Theano functions. PyMC3 relies on
-``theano.clone`` to copy the ``model.logpt`` and replace its input. It
+Aesara graph to compile additional Aesara functions. PyMC3 relies on
+``aesara.clone_replace`` to copy the ``model.logpt`` and replace its input. It
 does not edit or rewrite the graph directly.
 
 .. code:: python
 
     class ValueGradFunction:
-        """Create a theano function that computes a value and its gradient.
+        """Create a aesara function that computes a value and its gradient.
         ...
         """
         def __init__(self, logpt, grad_vars, extra_vars=[], dtype=None,
@@ -646,31 +646,31 @@ does not edit or rewrite the graph directly.
 
             # Extra vars are a subset of free_RVs that are not input to the compiled function.
             # But nonetheless logpt depends on these RVs.
-            # This is set up as a dict of theano.shared tensors, but givens (a list of
-            # tuple(free_RVs, theano.shared)) is the actual list that goes into the theano function
+            # This is set up as a dict of aesara.shared tensors, but givens (a list of
+            # tuple(free_RVs, aesara.shared)) is the actual list that goes into the aesara function
             givens = []
             self._extra_vars_shared = {}
             for var in extra_vars:
-                shared = theano.shared(var.tag.test_value, var.name + '_shared__')
+                shared = aesara.shared(var.tag.test_value, var.name + '_shared__')
                 self._extra_vars_shared[var.name] = shared
                 givens.append((var, shared))
 
             # See the implementation below. Basically, it clones the logpt and replaces its
-            # input with a *single* 1d theano tensor
+            # input with a *single* 1d aesara tensor
             self._vars_joined, self._logpt_joined = self._build_joined(
                 self._logpt, grad_vars, self._ordering.vmap)
 
-            grad = tt.grad(self._logpt_joined, self._vars_joined)
+            grad = aet.grad(self._logpt_joined, self._vars_joined)
             grad.name = '__grad'
 
             inputs = [self._vars_joined]
 
-            self._theano_function = theano.function(
+            self._aesara_function = aesara.function(
                 inputs, [self._logpt_joined, grad], givens=givens, **kwargs)
 
 
         def _build_joined(self, logpt, args, vmap):
-            args_joined = tt.vector('__args_joined')
+            args_joined = aet.vector('__args_joined')
             args_joined.tag.test_value = np.zeros(self.size, dtype=self.dtype)
 
             joined_slices = {}
@@ -680,12 +680,12 @@ does not edit or rewrite the graph directly.
                 joined_slices[vmap.var] = sliced
 
             replace = {var: joined_slices[var.name] for var in args}
-            return args_joined, theano.clone(logpt, replace=replace)
+            return args_joined, aesara.clone_replace(logpt, replace=replace)
 
 
         def __call__(self, array, grad_out=None, extra_vars=None):
             ...
-            logp, dlogp = self._theano_function(array)
+            logp, dlogp = self._aesara_function(array)
             return logp, dlogp
 
 
@@ -773,12 +773,12 @@ gradient easily. Here is a taste of how it works in action:
 
 So why is this necessary? One can imagine that we just compile one logp
 function, and do bookkeeping ourselves. For example, we can build the
-logp function in Theano directly:
+logp function in Aesara directly:
 
 .. code:: python
 
-    import theano
-    func = theano.function(m.free_RVs, m.logpt)
+    import aesara
+    func = aesara.function(m.free_RVs, m.logpt)
     func(*inputlist)
 
 
@@ -790,8 +790,8 @@ logp function in Theano directly:
 
 .. code:: python
 
-    logpt_grad = theano.grad(m.logpt, m.free_RVs)
-    func_d = theano.function(m.free_RVs, logpt_grad)
+    logpt_grad = aesara.grad(m.logpt, m.free_RVs)
+    func_d = aesara.function(m.free_RVs, logpt_grad)
     func_d(*inputlist)
 
 
@@ -808,12 +808,12 @@ Similarly, build a conditional logp:
 
 .. code:: python
 
-    shared = theano.shared(inputlist[1])
-    func2 = theano.function([m.free_RVs[0]], m.logpt, givens=[(m.free_RVs[1], shared)])
+    shared = aesara.shared(inputlist[1])
+    func2 = aesara.function([m.free_RVs[0]], m.logpt, givens=[(m.free_RVs[1], shared)])
     print(func2(inputlist[0]))
 
-    logpt_grad2 = theano.grad(m.logpt, m.free_RVs[0])
-    func_d2 = theano.function([m.free_RVs[0]], logpt_grad2, givens=[(m.free_RVs[1], shared)])
+    logpt_grad2 = aesara.grad(m.logpt, m.free_RVs[0])
+    func_d2 = aesara.function([m.free_RVs[0]], logpt_grad2, givens=[(m.free_RVs[1], shared)])
     print(func_d2(inputlist[0]))
 
 
@@ -830,7 +830,7 @@ everything into a single function:
 
 .. code:: python
 
-    func_logp_and_grad = theano.function(m.free_RVs, [m.logpt, logpt_grad])  # ==> ERROR
+    func_logp_and_grad = aesara.function(m.free_RVs, [m.logpt, logpt_grad])  # ==> ERROR
 
 
 We want to have a function that return the evaluation and its gradient
@@ -838,23 +838,23 @@ re each input: ``value, grad = f(x)``, but the naive implementation does
 not work. We can of course wrap 2 functions - one for logp one for dlogp
 - and output a list. But that would mean we need to call 2 functions. In
 addition, when we write code using python logic to do bookkeeping when
-we build our conditional logp. Using ``theano.clone``, we always have
-the input to the Theano function being a 1d vector (instead of a list of
+we build our conditional logp. Using ``aesara.clone_replace``, we always have
+the input to the Aesara function being a 1d vector (instead of a list of
 RV that each can have very different shape), thus it is very easy to do
 matrix operation like rotation etc.
 
 Notes
 ~~~~~
 
-| The current setup is quite powerful, as the Theano compiled function
+| The current setup is quite powerful, as the Aesara compiled function
   is fairly fast to compile and to call. Also, when we are repeatedly
   calling a conditional logp function, external RV only need to reset
   once. However, there are still significant overheads when we are
-  passing values between Theano graph and numpy. That is the reason we
+  passing values between Aesara graph and numpy. That is the reason we
   often see no advantage in using GPU, because the data is copying
   between GPU and CPU at each function call - and for a small model, the
   result is a slower inference under GPU than CPU.
-| Also, ``theano.clone`` is too convenient (pymc internal joke is that
+| Also, ``aesara.clone_replace`` is too convenient (pymc internal joke is that
   it is like a drug - very addictive). If all the operation happens in
   the graph (including the conditioning and setting value), I see no
   need to isolate part of the graph (via graph copying or graph
@@ -927,10 +927,10 @@ Dynamic HMC
 ^^^^^^^^^^^
 
 We love NUTS, or to be more precise Dynamic HMC with complex stopping
-rules. This part is actually all done outside of Theano, for NUTS, it
+rules. This part is actually all done outside of Aesara, for NUTS, it
 includes: the leapfrog, dual averaging, tunning of mass matrix and step
 size, the tree building, sampler related statistics like divergence and
-energy checking. We actually have a Theano version of HMC, but it has never
+energy checking. We actually have a Aesara version of HMC, but it has never
 been used, and has been removed from the main repository. It can still be
 found in the `git history
 <https://github.com/pymc-devs/pymc3/pull/3734/commits/0fdae8207fd14f66635f3673ef267b2b8817aa68>`__,
@@ -940,7 +940,7 @@ Variational Inference (VI)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The design of the VI module takes a different approach than
-MCMC - it has a functional design, and everything is done within Theano
+MCMC - it has a functional design, and everything is done within Aesara
 (i.e., Optimization and building the variational objective). The base
 class of variational inference is
 `pymc3.variational.Inference <https://github.com/pymc-devs/pymc3/blob/master/pymc3/variational/inference.py>`__,
@@ -1006,7 +1006,7 @@ skip this for now and only consider ``SingleGroupApproximation`` like
 `variational/opvi <https://github.com/pymc-devs/pymc3/blob/master/pymc3/variational/opvi.py>`__,
 strip away the normalizing term, ``datalogp`` and ``varlogp`` are
 expectation of the variational free\_RVs and data logp - we clone the
-datalogp and varlogp from the model, replace its input with Theano
+datalogp and varlogp from the model, replace its input with Aesara
 tensor that `samples from the variational
 posterior <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/variational/opvi.py#L1098-L1111>`__.
 For ADVI, these samples are from `a
@@ -1021,7 +1021,7 @@ straightforward to evaluate <https://github.com/pymc-devs/pymc3/blob/6d07591962a
 Some challenges and insights from implementing VI.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  Graph based approach was helpful, but Theano had no direct access to
+-  Graph based approach was helpful, but Aesara had no direct access to
    previously created nodes in the computational graph. you can find a
    lot of ``@node_property`` usages in implementation. This is done to
    cache nodes. TensorFlow has graph utils for that that could
@@ -1029,12 +1029,12 @@ Some challenges and insights from implementing VI.
    Tensorflow seemed to more tricky than expected. The high level reason
    is that graph is an add only container
 
--  There were few fixed bugs not obvoius in the first place. Theano has
-   a tool to manipulate the graph (``theano.clone``) and this tool
+-  There were few fixed bugs not obvoius in the first place. Aesara has
+   a tool to manipulate the graph (``aesara.clone_replace``) and this tool
    requires extremely careful treatment when doing a lot of graph
    replacements at different level.
 
--  We coined a term ``theano.clone`` curse. We got extremely dependent
+-  We coined a term ``aesara.clone_replace`` curse. We got extremely dependent
    on this feature. Internal usages are uncountable:
 
    -  we use this to `vectorize the
@@ -1046,7 +1046,7 @@ Some challenges and insights from implementing VI.
       of computational graph.
 
 As this is the core of the VI process, we were trying to replicate this pattern
-in TF. However, when ``theano.clone`` is called, Theano creates a new part of the graph that can
+in TF. However, when ``aesara.clone_replace`` is called, Aesara creates a new part of the graph that can
 be collected by garbage collector, but TF's graph is add only. So we
 should solve the problem of replacing input in a different way.
 
@@ -1092,7 +1092,7 @@ Extending PyMC3
     -  `Inferencing Linear Mixed Model with EM.ipynb <https://github.com/junpenglao/Planet_Sakaar_Data_Science/blob/master/Ports/Inferencing%20Linear%20Mixed%20Model%20with%20EM.ipynb>`__
     -  `Laplace approximation in  pymc3.ipynb <https://github.com/junpenglao/Planet_Sakaar_Data_Science/blob/master/Ports/Laplace%20approximation%20in%20pymc3.ipynb>`__
 -  Connecting it to other library within a model
-    -  `Using “black box” likelihood function by creating a custom Theano Op <https://docs.pymc.io/notebooks/blackbox_external_likelihood.html>`__
+    -  `Using “black box” likelihood function by creating a custom Aesara Op <https://docs.pymc.io/notebooks/blackbox_external_likelihood.html>`__
     -  Using emcee
 -  Using other library for inference
     -  Connecting to Julia for solving ODE (with gradient for solution that can be used in NUTS)
@@ -1115,14 +1115,14 @@ Random methods in numpy
 
 There is a lot of complex logic for sampling from random variables, and
 because it is all in Python, we can't transform a sampling graph
-further. Unfortunately, Theano does not have code to sample from various
+further. Unfortunately, Aesara does not have code to sample from various
 distributions and we didn't want to write that our own.
 
 Samplers are in Python
 ~~~~~~~~~~~~~~~~~~~~~~
 
 While having the samplers be written in Python allows for a lot of
-flexibility and intuitive for experiment (writing e.g. NUTS in Theano is
+flexibility and intuitive for experiment (writing e.g. NUTS in Aesara is
 also very difficult), it comes at a performance penalty and makes
 sampling on the GPU very inefficient because memory needs to be copied
 for every logp evaluation.

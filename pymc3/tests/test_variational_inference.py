@@ -16,18 +16,18 @@ import functools
 import io
 import operator
 
+import aesara
+import aesara.tensor as aet
 import numpy as np
 import pytest
-import theano
-import theano.tensor as tt
 
 import pymc3 as pm
 import pymc3.memoize
 import pymc3.util
 
+from pymc3.aesaraf import intX
 from pymc3.tests import models
 from pymc3.tests.helpers import not_raises
-from pymc3.theanof import intX
 from pymc3.variational import flows, opvi
 from pymc3.variational.approximations import (
     Empirical,
@@ -51,7 +51,7 @@ def test_callbacks_convergence(diff, ord):
     cb = pm.variational.callbacks.CheckParametersConvergence(every=1, diff=diff, ord=ord)
 
     class _approx:
-        params = (theano.shared(np.asarray([1, 2, 3])),)
+        params = (aesara.shared(np.asarray([1, 2, 3])),)
 
     approx = _approx()
 
@@ -186,7 +186,7 @@ def test_sample_simple(three_var_approx, request):
 
 @pytest.fixture
 def aevb_initial():
-    return theano.shared(np.random.rand(3, 7).astype("float32"))
+    return aesara.shared(np.random.rand(3, 7).astype("float32"))
 
 
 @pytest.fixture(
@@ -251,7 +251,7 @@ def test_sample_aevb(three_var_aevb_approx, aevb_initial):
 
 
 def test_replacements_in_sample_node_aevb(three_var_aevb_approx, aevb_initial):
-    inp = tt.matrix(dtype="float32")
+    inp = aet.matrix(dtype="float32")
     three_var_aevb_approx.sample_node(
         three_var_aevb_approx.model.one, 2, more_replacements={aevb_initial: inp}
     ).eval({inp: np.random.rand(7, 7).astype("float32")})
@@ -265,14 +265,14 @@ def test_vae():
     minibatch_size = 10
     data = pm.floatX(np.random.rand(100))
     x_mini = pm.Minibatch(data, minibatch_size)
-    x_inp = tt.vector()
+    x_inp = aet.vector()
     x_inp.tag.test_value = data[:minibatch_size]
 
-    ae = theano.shared(pm.floatX([0.1, 0.1]))
-    be = theano.shared(pm.floatX(1.0))
+    ae = aesara.shared(pm.floatX([0.1, 0.1]))
+    be = aesara.shared(pm.floatX(1.0))
 
-    ad = theano.shared(pm.floatX(1.0))
-    bd = theano.shared(pm.floatX(1.0))
+    ad = aesara.shared(pm.floatX(1.0))
+    bd = aesara.shared(pm.floatX(1.0))
 
     enc = x_inp.dimshuffle(0, "x") * ae.dimshuffle("x", 0) + be
     mu, rho = enc[:, 0], enc[:, 1]
@@ -496,8 +496,8 @@ def test_elbo():
     sigma = 1.0
     y_obs = np.array([1.6, 1.4])
 
-    post_mu = np.array([1.88], dtype=theano.config.floatX)
-    post_sigma = np.array([1], dtype=theano.config.floatX)
+    post_mu = np.array([1.88], dtype=aesara.config.floatX)
+    post_sigma = np.array([1], dtype=aesara.config.floatX)
     # Create a model for test
     with pm.Model() as model:
         mu = pm.Normal("mu", mu=mu0, sigma=sigma)
@@ -505,13 +505,13 @@ def test_elbo():
 
     # Create variational gradient tensor
     mean_field = MeanField(model=model)
-    with theano.config.change_flags(compute_test_value="off"):
+    with aesara.config.change_flags(compute_test_value="off"):
         elbo = -pm.operators.KL(mean_field)()(10000)
 
     mean_field.shared_params["mu"].set_value(post_mu)
     mean_field.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
 
-    f = theano.function([], elbo)
+    f = aesara.function([], elbo)
     elbo_mc = f()
 
     # Exact value
@@ -534,17 +534,17 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
     y_obs = np.array([1.6, 1.4])
     beta = len(y_obs) / float(aux_total_size)
 
-    # TODO: theano_config
-    # with pm.Model(theano_config=dict(floatX='float64')):
+    # TODO: aesara_config
+    # with pm.Model(aesara_config=dict(floatX='float64')):
     # did not not work as expected
     # there were some numeric problems, so float64 is forced
-    with theano.config.change_flags(floatX="float64", warn_float64="ignore"):
+    with aesara.config.change_flags(floatX="float64", warn_float64="ignore"):
 
-        assert theano.config.floatX == "float64"
-        assert theano.config.warn_float64 == "ignore"
+        assert aesara.config.floatX == "float64"
+        assert aesara.config.warn_float64 == "ignore"
 
-        post_mu = np.array([1.88], dtype=theano.config.floatX)
-        post_sigma = np.array([1], dtype=theano.config.floatX)
+        post_mu = np.array([1.88], dtype=aesara.config.floatX)
+        post_sigma = np.array([1], dtype=aesara.config.floatX)
 
         with pm.Model():
             mu = pm.Normal("mu", mu=mu0, sigma=sigma)
@@ -555,7 +555,7 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
             mean_field_1.shared_params["mu"].set_value(post_mu)
             mean_field_1.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
 
-            with theano.config.change_flags(compute_test_value="off"):
+            with aesara.config.change_flags(compute_test_value="off"):
                 elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
 
         with pm.Model():
@@ -569,7 +569,7 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
             mean_field_2.shared_params["mu"].set_value(post_mu)
             mean_field_2.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
 
-        with theano.config.change_flags(compute_test_value="off"):
+        with aesara.config.change_flags(compute_test_value="off"):
             elbo_via_total_size_unscaled = -pm.operators.KL(mean_field_2)()(10000)
 
         np.testing.assert_allclose(
@@ -587,10 +587,10 @@ def test_elbo_beta_kl(aux_total_size):
     y_obs = np.array([1.6, 1.4])
     beta = len(y_obs) / float(aux_total_size)
 
-    with theano.config.change_flags(floatX="float64", warn_float64="ignore"):
+    with aesara.config.change_flags(floatX="float64", warn_float64="ignore"):
 
-        post_mu = np.array([1.88], dtype=theano.config.floatX)
-        post_sigma = np.array([1], dtype=theano.config.floatX)
+        post_mu = np.array([1.88], dtype=aesara.config.floatX)
+        post_sigma = np.array([1], dtype=aesara.config.floatX)
 
         with pm.Model():
             mu = pm.Normal("mu", mu=mu0, sigma=sigma)
@@ -601,7 +601,7 @@ def test_elbo_beta_kl(aux_total_size):
             mean_field_1.shared_params["mu"].set_value(post_mu)
             mean_field_1.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
 
-            with theano.config.change_flags(compute_test_value="off"):
+            with aesara.config.change_flags(compute_test_value="off"):
                 elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
 
         with pm.Model():
@@ -612,7 +612,7 @@ def test_elbo_beta_kl(aux_total_size):
             mean_field_3.shared_params["mu"].set_value(post_mu)
             mean_field_3.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
 
-            with theano.config.change_flags(compute_test_value="off"):
+            with aesara.config.change_flags(compute_test_value="off"):
                 elbo_via_beta_kl = -pm.operators.KL(mean_field_3, beta=beta)()(10000)
 
         np.testing.assert_allclose(
@@ -750,7 +750,7 @@ def test_remove_scan_op():
         inference = ADVI()
         buff = io.StringIO()
         inference.run_profiling(n=10).summary(buff)
-        assert "theano.scan.op.Scan" not in buff.getvalue()
+        assert "aesara.scan.op.Scan" not in buff.getvalue()
         buff.close()
 
 
@@ -780,7 +780,7 @@ def test_clear_cache():
 def another_simple_model():
     _model = models.simple_model()[1]
     with _model:
-        pm.Potential("pot", tt.ones((10, 10)))
+        pm.Potential("pot", aet.ones((10, 10)))
     return _model
 
 
@@ -831,8 +831,8 @@ def aevb_model():
         pm.Normal("y", shape=(2,))
     x = model.x
     y = model.y
-    mu = theano.shared(x.init_value)
-    rho = theano.shared(np.zeros_like(x.init_value))
+    mu = aesara.shared(x.init_value)
+    rho = aesara.shared(np.zeros_like(x.init_value))
     return {"model": model, "y": y, "x": x, "replace": dict(mu=mu, rho=rho)}
 
 
@@ -911,13 +911,13 @@ def binomial_model_inference(binomial_model, inference_spec):
 
 
 def test_replacements(binomial_model_inference):
-    d = tt.bscalar()
+    d = aet.bscalar()
     d.tag.test_value = 1
     approx = binomial_model_inference.approx
     p = approx.model.p
     p_t = p ** 3
     p_s = approx.sample_node(p_t)
-    if theano.config.compute_test_value != "off":
+    if aesara.config.compute_test_value != "off":
         assert p_s.tag.test_value.shape == p_t.tag.test_value.shape
     sampled = [p_s.eval() for _ in range(100)]
     assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
@@ -934,13 +934,13 @@ def test_replacements(binomial_model_inference):
 
 
 def test_sample_replacements(binomial_model_inference):
-    i = tt.iscalar()
+    i = aet.iscalar()
     i.tag.test_value = 1
     approx = binomial_model_inference.approx
     p = approx.model.p
     p_t = p ** 3
     p_s = approx.sample_node(p_t, size=100)
-    if theano.config.compute_test_value != "off":
+    if aesara.config.compute_test_value != "off":
         assert p_s.tag.test_value.shape == (100,) + p_t.tag.test_value.shape
     sampled = p_s.eval()
     assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
@@ -961,7 +961,7 @@ def test_discrete_not_allowed():
 
     with pm.Model():
         mu = pm.Normal("mu", mu=0, sigma=10, shape=3)
-        z = pm.Categorical("z", p=tt.ones(3) / 3, shape=len(y))
+        z = pm.Categorical("z", p=aet.ones(3) / 3, shape=len(y))
         pm.Normal("y_obs", mu=mu[z], sigma=1.0, observed=y)
         with pytest.raises(opvi.ParametrizationError):
             pm.fit(n=1)  # fails
@@ -1016,34 +1016,34 @@ def flow_spec(request):
 
 
 def test_flow_det(flow_spec):
-    z0 = tt.arange(0, 20).astype("float32")
+    z0 = aet.arange(0, 20).astype("float32")
     flow = flow_spec(dim=20, z0=z0.dimshuffle("x", 0))
-    with theano.config.change_flags(compute_test_value="off"):
+    with aesara.config.change_flags(compute_test_value="off"):
         z1 = flow.forward.flatten()
-        J = tt.jacobian(z1, z0)
-        logJdet = tt.log(tt.abs_(tt.nlinalg.det(J)))
+        J = aet.jacobian(z1, z0)
+        logJdet = aet.log(aet.abs_(aet.nlinalg.det(J)))
         det = flow.logdet[0]
     np.testing.assert_allclose(logJdet.eval(), det.eval(), atol=0.0001)
 
 
 def test_flow_det_local(flow_spec):
-    z0 = tt.arange(0, 12).astype("float32")
+    z0 = aet.arange(0, 12).astype("float32")
     spec = flow_spec.cls.get_param_spec_for(d=12)
     params = dict()
     for k, shp in spec.items():
         params[k] = np.random.randn(1, *shp).astype("float32")
     flow = flow_spec(dim=12, z0=z0.reshape((1, 1, 12)), **params)
     assert flow.batched
-    with theano.config.change_flags(compute_test_value="off"):
+    with aesara.config.change_flags(compute_test_value="off"):
         z1 = flow.forward.flatten()
-        J = tt.jacobian(z1, z0)
-        logJdet = tt.log(tt.abs_(tt.nlinalg.det(J)))
+        J = aet.jacobian(z1, z0)
+        logJdet = aet.log(aet.abs_(aet.nlinalg.det(J)))
         det = flow.logdet[0]
     np.testing.assert_allclose(logJdet.eval(), det.eval(), atol=0.0001)
 
 
 def test_flows_collect_chain():
-    initial = tt.ones((3, 2))
+    initial = aet.ones((3, 2))
     flow1 = flows.PlanarFlow(dim=2, z0=initial)
     flow2 = flows.PlanarFlow(dim=2, z0=flow1)
     assert len(flow2.params) == 3
@@ -1067,4 +1067,4 @@ def test_flow_formula(formula, length, order):
     assert len(flows_list) == length
     if order is not None:
         assert flows_list == order
-    spec(dim=2, jitter=1)(tt.ones((3, 2))).eval()  # should work
+    spec(dim=2, jitter=1)(aet.ones((3, 2))).eval()  # should work

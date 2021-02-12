@@ -12,14 +12,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
 import numpy as np
 import pytest
 import scipy.stats as st
-import theano
 
+from aesara import tensor as aet
 from numpy.testing import assert_allclose
 from scipy.special import logsumexp
-from theano import tensor as tt
 
 import pymc3 as pm
 
@@ -37,9 +37,9 @@ from pymc3 import (
     Poisson,
     sample,
 )
+from pymc3.aesaraf import floatX
 from pymc3.distributions.shape_utils import to_tuple
 from pymc3.tests.helpers import SeededTest
-from pymc3.theanof import floatX
 
 
 # Generate data
@@ -248,7 +248,7 @@ class TestMixture(SeededTest):
                 st.multivariate_normal.logpdf(obs, mu2, cov2),
             )
         ).T
-        complogp = y.distribution._comp_logp(theano.shared(obs)).eval()
+        complogp = y.distribution._comp_logp(aesara.shared(obs)).eval()
         assert_allclose(complogp, complogp_st)
 
         # check logp of mixture
@@ -264,7 +264,7 @@ class TestMixture(SeededTest):
         assert_allclose(model.logp(testpoint), mixlogp_st.sum() + priorlogp)
 
     def test_mixture_of_mixture(self):
-        if theano.config.floatX == "float32":
+        if aesara.config.floatX == "float32":
             rtol = 1e-4
         else:
             rtol = 1e-7
@@ -290,7 +290,7 @@ class TestMixture(SeededTest):
         test_point = model.test_point
 
         def mixmixlogp(value, point):
-            floatX = theano.config.floatX
+            floatX = aesara.config.floatX
             priorlogp = (
                 st.dirichlet.logpdf(
                     x=point["g_w"],
@@ -392,7 +392,7 @@ class TestMixtureVsLatent(SeededTest):
         super().setup_method(*args, **kwargs)
         self.nd = 3
         self.npop = 3
-        self.mus = tt.as_tensor_variable(
+        self.mus = aet.as_tensor_variable(
             np.tile(
                 np.reshape(
                     np.arange(self.npop),
@@ -446,7 +446,7 @@ class TestMixtureVsLatent(SeededTest):
                 shape=nd,
             )
             z = pm.Categorical("z", p=np.ones(npop) / npop, shape=nd)
-            mu = tt.as_tensor_variable([mus[i, z[i]] for i in range(nd)])
+            mu = aet.as_tensor_variable([mus[i, z[i]] for i in range(nd)])
             latent_m = pm.Normal("latent_m", mu=mu, sigma=1e-5, shape=nd)
 
         m_val = m.random(size=size)
@@ -470,7 +470,7 @@ class TestMixtureVsLatent(SeededTest):
         assert p_marginal >= 0.05 and p_correlation >= 0.05
 
     def logp_matches(self, mixture, latent_mix, z, npop, model):
-        if theano.config.floatX == "float32":
+        if aesara.config.floatX == "float32":
             rtol = 1e-4
         else:
             rtol = 1e-7
@@ -523,7 +523,7 @@ class TestMixtureSameFamily(SeededTest):
         assert prior["mixture"].shape == (self.n_samples, *batch_shape, 3)
         assert mixture.random(size=self.size).shape == (self.size, *batch_shape, 3)
 
-        if theano.config.floatX == "float32":
+        if aesara.config.floatX == "float32":
             rtol = 1e-4
         else:
             rtol = 1e-7
@@ -558,7 +558,7 @@ class TestMixtureSameFamily(SeededTest):
         assert prior["mixture"].shape == (self.n_samples, 3)
         assert mixture.random(size=self.size).shape == (self.size, 3)
 
-        if theano.config.floatX == "float32":
+        if aesara.config.floatX == "float32":
             rtol = 1e-4
         else:
             rtol = 1e-7

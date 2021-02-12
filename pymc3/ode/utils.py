@@ -12,9 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
+import aesara.tensor as aet
 import numpy as np
-import theano
-import theano.tensor as tt
 
 
 def make_sens_ic(n_states, n_theta, floatX):
@@ -83,20 +83,20 @@ def augment_system(ode_func, n_states, n_theta):
     """
 
     # Present state of the system
-    t_y = tt.vector("y", dtype="float64")
+    t_y = aet.vector("y", dtype="float64")
     t_y.tag.test_value = np.ones((n_states,), dtype="float64")
     # Parameter(s).  Should be vector to allow for generaliztion to multiparameter
     # systems of ODEs.  Is m dimensional because it includes all initial conditions as well as ode parameters
-    t_p = tt.vector("p", dtype="float64")
+    t_p = aet.vector("p", dtype="float64")
     t_p.tag.test_value = np.ones((n_states + n_theta,), dtype="float64")
     # Time.  Allow for non-automonous systems of ODEs to be analyzed
-    t_t = tt.scalar("t", dtype="float64")
+    t_t = aet.scalar("t", dtype="float64")
     t_t.tag.test_value = 2.459
 
     # Present state of the gradients:
     # Will always be 0 unless the parameter is the inital condition
     # Entry i,j is partial of y[i] wrt to p[j]
-    dydp_vec = tt.vector("dydp", dtype="float64")
+    dydp_vec = aet.vector("dydp", dtype="float64")
     dydp_vec.tag.test_value = make_sens_ic(n_states, n_theta, "float64")
 
     dydp = dydp_vec.reshape((n_states, n_states + n_theta))
@@ -106,19 +106,19 @@ def augment_system(ode_func, n_states, n_theta):
     # Stack the results of the ode_func into a single tensor variable
     if not isinstance(yhat, (list, tuple)):
         yhat = (yhat,)
-    t_yhat = tt.stack(yhat, axis=0)
+    t_yhat = aet.stack(yhat, axis=0)
 
     # Now compute gradients
-    J = tt.jacobian(t_yhat, t_y)
+    J = aet.jacobian(t_yhat, t_y)
 
-    Jdfdy = tt.dot(J, dydp)
+    Jdfdy = aet.dot(J, dydp)
 
-    grad_f = tt.jacobian(t_yhat, t_p)
+    grad_f = aet.jacobian(t_yhat, t_p)
 
     # This is the time derivative of dydp
     ddt_dydp = (Jdfdy + grad_f).flatten()
 
-    system = theano.function(
+    system = aesara.function(
         inputs=[t_y, t_t, t_p, dydp_vec], outputs=[t_yhat, ddt_dydp], on_unused_input="ignore"
     )
 

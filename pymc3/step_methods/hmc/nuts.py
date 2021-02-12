@@ -16,13 +16,13 @@ from collections import namedtuple
 
 import numpy as np
 
+from pymc3.aesaraf import floatX
 from pymc3.backends.report import SamplerWarning, WarningType
 from pymc3.distributions import BART
 from pymc3.math import logbern, logdiffexp_numpy
 from pymc3.step_methods.arraystep import Competence
 from pymc3.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
 from pymc3.step_methods.hmc.integration import IntegrationError
-from pymc3.theanof import floatX
 from pymc3.vartypes import continuous_types
 
 __all__ = ["NUTS"]
@@ -114,7 +114,7 @@ class NUTS(BaseHMC):
 
         Parameters
         ----------
-        vars: list of Theano variables, default all continuous vars
+        vars: list of Aesara variables, default all continuous vars
         Emax: float, default 1000
             Maximum energy change allowed during leapfrog steps. Larger
             deviations will abort the integration.
