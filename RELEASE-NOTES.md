@@ -1,21 +1,34 @@
 # Release Notes
 
-## PyMC3 vNext (3.11.1)
-
+## PyMC3 vNext (TBD)
 ### Breaking Changes
++ ...
+
+### New Features
++ ...
+
+### Maintenance
++ ...
+
+## PyMC3 3.11.1 (12 February 2021)
 
 ### New Features
 - Automatic imputations now also work with `ndarray` data, not just `pd.Series` or `pd.DataFrame` (see[#4439](https://github.com/pymc-devs/pymc3/pull/4439)).
 - `pymc3.sampling_jax.sample_numpyro_nuts` now returns samples from transformed random variables, rather than from the unconstrained representation (see [#4427](https://github.com/pymc-devs/pymc3/pull/4427)).
 
 ### Maintenance
-- We upgraded to `Theano-PyMC v1.1.2` which [includes bugfixes](https://github.com/pymc-devs/aesara/compare/rel-1.1.0...rel-1.1.2) for warning floods and compiledir locking (see [#4444](https://github.com/pymc-devs/pymc3/pull/4444))
-- `Theano-PyMC v1.1.2` also fixed an important issue in `tt.switch` that affected the behavior of several PyMC distributions, including at least the `Bernoulli` and `TruncatedNormal` (see[#4448](https://github.com/pymc-devs/pymc3/pull/4448))
+- We upgraded to `Theano-PyMC v1.1.2` which [includes bugfixes](https://github.com/pymc-devs/aesara/compare/rel-1.1.0...rel-1.1.2) for...
+  - ⚠ a problem with `tt.switch` that affected the behavior of several distributions, including at least the following special cases (see [#4448](https://github.com/pymc-devs/pymc3/pull/4448))
+    1.  `Bernoulli` when all the observed values were the same (e.g., `[0, 0, 0, 0, 0]`).
+    2.  `TruncatedNormal` when `sigma` was constant and `mu` was being automatically broadcasted to match the shape of observations.
+  - Warning floods and compiledir locking (see [#4444](https://github.com/pymc-devs/pymc3/pull/4444))
 - `math.log1mexp_numpy` no longer raises RuntimeWarning when given very small inputs. These were commonly observed during NUTS sampling (see [#4428](https://github.com/pymc-devs/pymc3/pull/4428)).
 - `ScalarSharedVariable` can now be used as an input to other RVs directly (see [#4445](https://github.com/pymc-devs/pymc3/pull/4445)).
 - `pm.sample` and `pm.find_MAP` no longer change the `start` argument (see [#4458](https://github.com/pymc-devs/pymc3/pull/4458)).
 - Fixed `Dirichlet.logp` method to work with unit batch or event shapes (see [#4454](https://github.com/pymc-devs/pymc3/pull/4454)).
-- Bugfix in logp and logcdf methods of `Triangular` distribution (see[#4470](https://github.com/pymc-devs/pymc3/pull/4470)).
+- Bugfix in logp and logcdf methods of `Triangular` distribution (see [#4470](https://github.com/pymc-devs/pymc3/pull/4470)).
+
+**Release manager** for 3.11.1: Michael Osthege ([@michaelosthege](https://github.com/michaelosthege))
 
 ## PyMC3 3.11.0 (21 January 2021)
 
