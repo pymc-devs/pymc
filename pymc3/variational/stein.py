@@ -12,11 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import theano
-import theano.tensor as tt
+import aesara
+import aesara.tensor as aet
 
+from pymc3.aesaraf import floatX
 from pymc3.memoize import WithMemoization, memoize
-from pymc3.theanof import floatX
 from pymc3.variational.opvi import node_property
 from pymc3.variational.test_functions import rbf
 
@@ -46,12 +46,12 @@ class Stein(WithMemoization):
 
     @node_property
     def dlogp(self):
-        grad = tt.grad(self.logp_norm.sum(), self.approx_symbolic_matrices)
+        grad = aet.grad(self.logp_norm.sum(), self.approx_symbolic_matrices)
 
         def flatten2(tensor):
             return tensor.flatten(2)
 
-        return tt.concatenate(list(map(flatten2, grad)), -1)
+        return aet.concatenate(list(map(flatten2, grad)), -1)
 
     @node_property
     def grad(self):
@@ -64,7 +64,7 @@ class Stein(WithMemoization):
     def density_part_grad(self):
         Kxy = self.Kxy
         dlogpdx = self.dlogp
-        return tt.dot(Kxy, dlogpdx)
+        return aet.dot(Kxy, dlogpdx)
 
     @node_property
     def repulsive_part_grad(self):
@@ -84,13 +84,13 @@ class Stein(WithMemoization):
     def logp_norm(self):
         sized_symbolic_logp = self.approx.sized_symbolic_logp
         if self.use_histogram:
-            sized_symbolic_logp = theano.clone(
+            sized_symbolic_logp = aesara.clone_replace(
                 sized_symbolic_logp,
                 dict(zip(self.approx.symbolic_randoms, self.approx.collect("histogram"))),
             )
         return sized_symbolic_logp / self.approx.symbolic_normalizing_constant
 
     @memoize
-    @theano.config.change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def _kernel(self):
         return self._kernel_f(self.input_joint_matrix)

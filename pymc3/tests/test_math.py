@@ -12,14 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
+import aesara.tensor as aet
 import numpy as np
 import numpy.testing as npt
 import pytest
-import theano
-import theano.tensor as tt
 
 from scipy.special import logsumexp as scipy_logsumexp
 
+from pymc3.aesaraf import floatX
 from pymc3.math import (
     LogDet,
     cartesian,
@@ -36,7 +37,6 @@ from pymc3.math import (
     probit,
 )
 from pymc3.tests.helpers import SeededTest, verify_grad
-from pymc3.theanof import floatX
 
 
 def test_kronecker():
@@ -45,7 +45,7 @@ def test_kronecker():
     [a, b, c] = [np.random.rand(3, 3 + i) for i in range(3)]
 
     custom = kronecker(a, b, c)  # Custom version
-    nested = tt.slinalg.kron(a, tt.slinalg.kron(b, c))
+    nested = aet.slinalg.kron(a, aet.slinalg.kron(b, c))
     np.testing.assert_array_almost_equal(custom.eval(), nested.eval())  # Standard nested version
 
 
@@ -100,7 +100,7 @@ def test_kron_dot():
     x = np.random.rand(tot_size).reshape((tot_size, 1))
     # Construct entire kronecker product then multiply
     big = kronecker(*Ks)
-    slow_ans = tt.dot(big, x)
+    slow_ans = aet.dot(big, x)
     # Use tricks to avoid construction of entire kronecker product
     fast_ans = kron_dot(Ks, x)
     np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
@@ -115,7 +115,7 @@ def test_kron_solve_lower():
     x = np.random.rand(tot_size).reshape((tot_size, 1))
     # Construct entire kronecker product then solve
     big = kronecker(*Ls)
-    slow_ans = tt.slinalg.solve_lower_triangular(big, x)
+    slow_ans = aet.slinalg.solve_lower_triangular(big, x)
     # Use tricks to avoid construction of entire kronecker product
     fast_ans = kron_solve_lower(Ls, x)
     np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
@@ -187,10 +187,10 @@ class TestLogDet(SeededTest):
         self.op_class = LogDet
         self.op = logdet
 
-    @theano.config.change_flags(compute_test_value="ignore")
+    @aesara.config.change_flags(compute_test_value="ignore")
     def validate(self, input_mat):
-        x = theano.tensor.matrix()
-        f = theano.function([x], self.op(x))
+        x = aesara.tensor.matrix()
+        f = aesara.function([x], self.op(x))
         out = f(input_mat)
         svd_diag = np.linalg.svd(input_mat, compute_uv=False)
         numpy_out = np.sum(np.log(np.abs(svd_diag)))
@@ -202,24 +202,24 @@ class TestLogDet(SeededTest):
         verify_grad(self.op, [input_mat])
 
     @pytest.mark.skipif(
-        theano.config.device in ["cuda", "gpu"],
+        aesara.config.device in ["cuda", "gpu"],
         reason="No logDet implementation on GPU.",
     )
     def test_basic(self):
         # Calls validate with different params
         test_case_1 = np.random.randn(3, 3) / np.sqrt(3)
         test_case_2 = np.random.randn(10, 10) / np.sqrt(10)
-        self.validate(test_case_1.astype(theano.config.floatX))
-        self.validate(test_case_2.astype(theano.config.floatX))
+        self.validate(test_case_1.astype(aesara.config.floatX))
+        self.validate(test_case_2.astype(aesara.config.floatX))
 
 
 def test_expand_packed_triangular():
     with pytest.raises(ValueError):
-        x = tt.matrix("x")
-        x.tag.test_value = np.array([[1.0]], dtype=theano.config.floatX)
+        x = aet.matrix("x")
+        x.tag.test_value = np.array([[1.0]], dtype=aesara.config.floatX)
         expand_packed_triangular(5, x)
     N = 5
-    packed = tt.vector("packed")
+    packed = aet.vector("packed")
     packed.tag.test_value = floatX(np.zeros(N * (N + 1) // 2))
     with pytest.raises(TypeError):
         expand_packed_triangular(packed.shape[0], packed)

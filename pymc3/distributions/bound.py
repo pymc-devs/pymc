@@ -14,9 +14,10 @@
 
 from numbers import Real
 
+import aesara.tensor as aet
 import numpy as np
-import theano.tensor as tt
 
+from pymc3.aesaraf import floatX
 from pymc3.distributions import transforms
 from pymc3.distributions.dist_math import bound
 from pymc3.distributions.distribution import (
@@ -26,7 +27,6 @@ from pymc3.distributions.distribution import (
     draw_values,
     generate_samples,
 )
-from pymc3.theanof import floatX
 
 __all__ = ["Bound"]
 
@@ -207,9 +207,9 @@ class _ContinuousBounded(_Bounded, Continuous):
 
     def __init__(self, distribution, lower, upper, transform="infer", *args, **kwargs):
         if lower is not None:
-            lower = tt.as_tensor_variable(floatX(lower))
+            lower = aet.as_tensor_variable(floatX(lower))
         if upper is not None:
-            upper = tt.as_tensor_variable(floatX(upper))
+            upper = aet.as_tensor_variable(floatX(upper))
 
         if transform == "infer":
             if lower is None and upper is None:

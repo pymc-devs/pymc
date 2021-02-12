@@ -9,18 +9,20 @@ from collections import UserDict
 from contextlib import AbstractContextManager
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, cast, overload
 
+import aesara.graph.basic
+import aesara.graph.fg
 import numpy as np
-import theano.graph.basic
-import theano.graph.fg
-import theano.tensor as tt
 
+from aesara.compile.sharedvalue import SharedVariable
+from aesara.graph.basic import Constant
+from aesara.tensor.var import TensorVariable
 from arviz import InferenceData
 from typing_extensions import Literal, Protocol
 from xarray import Dataset
 
 from pymc3.backends.base import MultiTrace
 from pymc3.distributions.distribution import (
-    _compile_theano_function,
+    _compile_aesara_function,
     _DrawValuesContext,
     _DrawValuesContextBlocker,
     is_fast_drawable,
@@ -35,7 +37,6 @@ from pymc3.model import (
     modelcontext,
 )
 from pymc3.util import chains_and_samples, dataset_to_point_list, get_var_name
-from pymc3.vartypes import theano_constant
 
 # Failing tests:
 #    test_mixture_random_shape::test_mixture_random_shape
@@ -375,13 +376,13 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                 if (next_, samples) in drawn:
                     # If the node already has a givens value, skip it
                     continue
-                elif isinstance(next_, (theano_constant, tt.sharedvar.SharedVariable)):
-                    # If the node is a theano.tensor.TensorConstant or a
-                    # theano.tensor.sharedvar.SharedVariable, its value will be
-                    # available automatically in _compile_theano_function so
+                elif isinstance(next_, (Constant, SharedVariable)):
+                    # If the node is a aesara.tensor.TensorConstant or a
+                    # aesara.tensor.sharedvar.SharedVariable, its value will be
+                    # available automatically in _compile_aesara_function so
                     # we can skip it. Furthermore, if this node was treated as a
-                    # TensorVariable that should be compiled by theano in
-                    # _compile_theano_function, it would raise a `TypeError:
+                    # TensorVariable that should be compiled by aesara in
+                    # _compile_aesara_function, it would raise a `TypeError:
                     # ('Constants not allowed in param list', ...)` for
                     # TensorConstant, and a `TypeError: Cannot use a shared
                     # variable (...) as explicit input` for SharedVariable.
@@ -411,7 +412,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                         assert isinstance(value, np.ndarray)
                         givens[next_.name] = (next_, value)
                         drawn[(next_, samples)] = value
-                    except theano.graph.fg.MissingInputError:
+                    except aesara.graph.fg.MissingInputError:
                         # The node failed, so we must add the node's parents to
                         # the stack of nodes to try to draw from. We exclude the
                         # nodes in the `params` list.
@@ -456,7 +457,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                             assert isinstance(value, np.ndarray)
                             self.evaluated[param_idx] = drawn[(param, samples)] = value
                             givens[param.name] = (param, value)
-                        except theano.graph.fg.MissingInputError:
+                        except aesara.graph.fg.MissingInputError:
                             missing_inputs.add(param_idx)
         return [self.evaluated[j] for j in params]
 
@@ -527,9 +528,9 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
 
         Parameters
         ----------
-        param: number, array like, theano variable or pymc3 random variable
+        param: number, array like, aesara variable or pymc3 random variable
             The value or distribution. Constants or shared variables
-            will be converted to an array and returned. Theano variables
+            will be converted to an array and returned. Aesara variables
             are evaluated. If `param` is a pymc3 random variable, draw
             values from it and return that (as ``np.ndarray``), unless a
             value is specified in the ``trace``.
@@ -537,8 +538,8 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
             A dictionary from pymc3 variable names to samples of their values
             used to provide context for evaluating ``param``.
         givens: dict, optional
-            A dictionary from theano variables to their values. These values
-            are used to evaluate ``param`` if it is a theano variable.
+            A dictionary from aesara variables to their values. These values
+            are used to evaluate ``param`` if it is a aesara variable.
         """
         samples = self.samples
 
@@ -569,11 +570,11 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
 
         if isinstance(param, (numbers.Number, np.ndarray)):
             return param
-        elif isinstance(param, theano_constant):
+        elif isinstance(param, Constant):
             return param.value
-        elif isinstance(param, tt.sharedvar.SharedVariable):
+        elif isinstance(param, SharedVariable):
             return param.get_value()
-        elif isinstance(param, (tt.TensorVariable, MultiObservedRV)):
+        elif isinstance(param, (TensorVariable, MultiObservedRV)):
             if hasattr(param, "model") and trace and param.name in trace.varnames:
                 return trace[param.name]
             elif hasattr(param, "random") and param.random is not None:
@@ -605,7 +606,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                         )
                     except (ValueError, TypeError):
                         # reset shape to account for shape changes
-                        # with theano.shared inputs
+                        # with aesara.shared inputs
                         dist_tmp.shape = ()
                         # We want to draw values to infer the dist_shape,
                         # we don't want to store these drawn values to the context
@@ -651,7 +652,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                 # We only truly care if the ancestors of param that were given
                 # value have the matching dshape and val.shape
                 param_ancestors = set(
-                    theano.graph.basic.ancestors([param], blockers=list(variables))
+                    aesara.graph.basic.ancestors([param], blockers=list(variables))
                 )
                 inputs = [
                     (var, val) for var, val in zip(variables, values) if var in param_ancestors
@@ -661,7 +662,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                 else:
                     input_vars = []
                     input_vals = []
-                func = _compile_theano_function(param, input_vars)
+                func = _compile_aesara_function(param, input_vars)
                 if not input_vars:
                     assert input_vals == []  # AFAICT if there are now vars, there can't be vals
                     output = func(*input_vals)
@@ -685,7 +686,7 @@ def _param_shape(var_desig, model: Model) -> tuple[int, ...]:
     if hasattr(v, "observations"):
         try:
             # To get shape of _observed_ data container `pm.Data`
-            # (wrapper for theano.SharedVariable) we evaluate it.
+            # (wrapper for SharedVariable) we evaluate it.
             shape = tuple(v.observations.shape.eval())
         except AttributeError:
             shape = v.observations.shape

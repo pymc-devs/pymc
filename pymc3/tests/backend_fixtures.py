@@ -16,10 +16,10 @@ import collections
 import os
 import shutil
 
+import aesara
 import numpy as np
 import numpy.testing as npt
 import pytest
-import theano
 
 from pymc3.backends import base
 from pymc3.tests import models
@@ -250,7 +250,7 @@ class SamplingTestCase(ModelBackendSetupTestCase):
         else:
             self.strace.record(point=point)
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_standard_close(self):
         for idx in range(self.draws):
             self.record_point(idx)
@@ -293,14 +293,14 @@ class SelectionTestCase(ModelBackendSampledTestCase):
     - shape
     """
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_get_values_default(self):
         for varname in self.test_point.keys():
             expected = np.concatenate([self.expected[chain][varname] for chain in [0, 1]])
             result = self.mtrace.get_values(varname)
             npt.assert_equal(result, expected)
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_get_values_nocombine_burn_keyword(self):
         burn = 2
         for varname in self.test_point.keys():
@@ -311,7 +311,7 @@ class SelectionTestCase(ModelBackendSampledTestCase):
     def test_len(self):
         assert len(self.mtrace) == self.draws
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_dtypes(self):
         for varname in self.test_point.keys():
             assert (
@@ -515,7 +515,7 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
         assert self.mtrace0.nchains == self.mtrace1.nchains
         assert len(self.mtrace0) == len(self.mtrace1)
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_dtype(self):
         for varname in self.test_point.keys():
             assert (

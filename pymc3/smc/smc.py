@@ -14,22 +14,22 @@
 
 from collections import OrderedDict
 
+import aesara.tensor as aet
 import numpy as np
-import theano.tensor as tt
 
+from aesara import function as aesara_function
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
-from theano import function as theano_function
 
-from pymc3.backends.ndarray import NDArray
-from pymc3.model import Point, modelcontext
-from pymc3.sampling import sample_prior_predictive
-from pymc3.theanof import (
+from pymc3.aesaraf import (
     floatX,
     inputvars,
     join_nonshared_inputs,
     make_shared_replacements,
 )
+from pymc3.backends.ndarray import NDArray
+from pymc3.model import Point, modelcontext
+from pymc3.sampling import sample_prior_predictive
 
 
 class SMC:
@@ -111,8 +111,8 @@ class SMC:
 
         if self.kernel == "abc":
             factors = [var.logpt for var in self.model.free_RVs]
-            factors += [tt.sum(factor) for factor in self.model.potentials]
-            self.prior_logp_func = logp_forw([tt.sum(factors)], self.variables, shared)
+            factors += [aet.sum(factor) for factor in self.model.potentials]
+            self.prior_logp_func = logp_forw([aet.sum(factors)], self.variables, shared)
             simulator = self.model.observed_RVs[0]
             distance = simulator.distribution.distance
             sum_stat = simulator.distribution.sum_stat
@@ -271,7 +271,7 @@ class SMC:
 
 
 def logp_forw(out_vars, vars, shared):
-    """Compile Theano function of the model and the input and output variables.
+    """Compile Aesara function of the model and the input and output variables.
 
     Parameters
     ----------
@@ -280,10 +280,10 @@ def logp_forw(out_vars, vars, shared):
     vars: List
         containing :class:`pymc3.Distribution` for the input variables
     shared: List
-        containing :class:`theano.tensor.Tensor` for depended shared data
+        containing :class:`aesara.tensor.Tensor` for depended shared data
     """
     out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
-    f = theano_function([inarray0], out_list[0])
+    f = aesara_function([inarray0], out_list[0])
     f.trust_input = True
     return f
 

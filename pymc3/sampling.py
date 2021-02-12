@@ -25,10 +25,10 @@ from collections import defaultdict
 from copy import copy, deepcopy
 from typing import Any, Dict, Iterable, List, Optional, Set, Union, cast
 
+import aesara.gradient as tg
 import arviz
 import numpy as np
 import packaging
-import theano.gradient as tg
 import xarray
 
 from arviz import InferenceData

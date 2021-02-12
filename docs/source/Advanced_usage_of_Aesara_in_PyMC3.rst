@@ -4,20 +4,20 @@
     _referenced in docs/source/notebooks/table_of_contents_tutorials.js
 
 =================================
-Advanced usage of Theano in PyMC3
+Advanced usage of Aesara in PyMC3
 =================================
 
 Using shared variables
 ======================
 
-Shared variables allow us to use values in theano functions that are
+Shared variables allow us to use values in Aesara functions that are
 not considered an input to the function, but can still be changed
 later. They are very similar to global variables in may ways::
 
-    a = tt.scalar('a')
+    a = aet.scalar('a')
     # Create a new shared variable with initial value of 0.1
-    b = theano.shared(0.1)
-    func = theano.function([a], a * b)
+    b = aesara.shared(0.1)
+    func = aesara.function([a], a * b)
     assert func(2.) == 0.2
 
     b.set_value(10.)
@@ -34,7 +34,7 @@ be time consuming if the number of datasets is large)::
     true_mu = [np.random.randn() for _ in range(10)]
     observed_data = [mu + np.random.randn(20) for mu in true_mu]
 
-    data = theano.shared(observed_data[0])
+    data = aesara.shared(observed_data[0])
     with pm.Model() as model:
         mu = pm.Normal('mu', 0, 10)
         pm.Normal('y', mu=mu, sigma=1, observed=data)
@@ -55,7 +55,7 @@ variable for our observations::
     x = np.random.randn(100)
     y = x > 0
 
-    x_shared = theano.shared(x)
+    x_shared = aesara.shared(x)
 
     with pm.Model() as model:
       coeff = pm.Normal('x', mu=0, sigma=1)
@@ -74,10 +74,10 @@ not possible to change the shape of a shared variable if that would
 also change the shape of one of the variables.
 
 
-Writing custom Theano Ops
+Writing custom Aesara Ops
 =========================
 
-While Theano includes a wide range of operations, there are cases where
+While Aesara includes a wide range of operations, there are cases where
 it makes sense to write your own. But before doing this it is a good
 idea to think hard if it is actually necessary. Especially if you want
 to use algorithms that need gradient information — this includes NUTS and
@@ -85,24 +85,24 @@ all variational methods, and you probably *should* want to use those —
 this is often quite a bit of work and also requires some math and
 debugging skills for the gradients.
 
-Good reasons for defining a custom Op might be the following:
+Good reasons for defining a custom `Op` might be the following:
 
-- You require an operation that is not available in Theano and can't
-  be build up out of existing Theano operations. This could for example
+- You require an operation that is not available in Aesara and can't
+  be build up out of existing Aesara operations. This could for example
   include models where you need to solve differential equations or
   integrals, or find a root or minimum of a function that depends
   on your parameters.
 - You want to connect your PyMC3 model to some existing external code.
 - After carefully considering different parametrizations and a lot
   of profiling your model is still too slow, but you know of a faster
-  way to compute the gradient than what theano is doing. This faster
+  way to compute the gradient than what Aesara is doing. This faster
   way might be anything from clever maths to using more hardware.
   There is nothing stopping anyone from using a cluster via MPI in
   a custom node, if a part of the gradient computation is slow enough
   and sufficiently parallelizable to make the cost worth it.
   We would definitely like to hear about any such examples.
 
-Theano has extensive `documentation, <http://deeplearning.net/software/theano/extending/index.html>`_
+Aesara has extensive `documentation, <https://aesara.readthedocs.io/en/latest/extending/index.html>`_
 about how to write new Ops.
 
 
@@ -158,7 +158,7 @@ We can now use `scipy.optimize.newton` to find the root::
     def mu_from_theta(theta):
         return optimize.newton(func, 1, fprime=jac, args=(theta,))
 
-We could wrap `mu_from_theta` with `theano.compile.ops.as_op` and use gradient-free
+We could wrap `mu_from_theta` with `aesara.compile.ops.as_op` and use gradient-free
 methods like Metropolis, but to get NUTS and ADVI working, we also
 need to define the derivative of `mu_from_theta`. We can find this
 derivative using the implicit function theorem, or equivalently we
@@ -181,16 +181,16 @@ We get
     \frac{d}{d\theta}\mu(\theta)
         = - \frac{\mu(\theta)^2}{1 + \theta\mu(\theta) + e^{-\theta\mu(\theta)}}
 
-Now, we use this to define a theano op, that also computes the gradient::
+Now, we use this to define a Aesara `Op`, that also computes the gradient::
 
-    import theano
-    import theano.tensor as tt
-    import theano.tests.unittest_tools
-    from theano.graph.op import Op
+    import aesara
+    import aesara.tensor as aet
+    import aesara.tests.unittest_tools
+    from aesara.graph.op import Op
 
     class MuFromTheta(Op):
-        itypes = [tt.dscalar]
-        otypes = [tt.dscalar]
+        itypes = [aet.dscalar]
+        otypes = [aet.dscalar]
 
         def perform(self, node, inputs, outputs):
             theta, = inputs
@@ -201,23 +201,23 @@ Now, we use this to define a theano op, that also computes the gradient::
             theta, = inputs
             mu = self(theta)
             thetamu = theta * mu
-            return [- g[0] * mu ** 2 / (1 + thetamu + tt.exp(-thetamu))]
+            return [- g[0] * mu ** 2 / (1 + thetamu + aet.exp(-thetamu))]
 
 If you value your sanity, always check that the gradient is ok::
 
-    theano.tests.unittest_tools.verify_grad(MuFromTheta(), [np.array(0.2)])
-    theano.tests.unittest_tools.verify_grad(MuFromTheta(), [np.array(1e-5)])
-    theano.tests.unittest_tools.verify_grad(MuFromTheta(), [np.array(1e5)])
+    aesara.gradient.verify_grad(MuFromTheta(), [np.array(0.2)])
+    aesara.gradient.verify_grad(MuFromTheta(), [np.array(1e-5)])
+    aesara.gradient.verify_grad(MuFromTheta(), [np.array(1e5)])
 
-We can now define our model using this new op::
+We can now define our model using this new `Op`::
 
     import pymc3 as pm
 
-    tt_mu_from_theta = MuFromTheta()
+    aet_mu_from_theta = MuFromTheta()
 
     with pm.Model() as model:
         theta = pm.HalfNormal('theta', sigma=1)
-        mu = pm.Deterministic('mu', tt_mu_from_theta(theta))
+        mu = pm.Deterministic('mu', aet_mu_from_theta(theta))
         pm.Normal('y', mu=mu, sigma=0.1, observed=[0.2, 0.21, 0.3])
 
         trace = pm.sample()

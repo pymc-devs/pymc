@@ -12,9 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
 import numpy as np
 import pytest
-import theano
 
 from scipy.integrate import odeint
 from scipy.stats import norm
@@ -26,13 +26,13 @@ from pymc3.ode.utils import augment_system
 
 
 def test_gradients():
-    """Tests the computation of the sensitivities from the theano computation graph"""
+    """Tests the computation of the sensitivities from the aesara computation graph"""
 
     # ODE system for which to compute gradients
     def ode_func(y, t, p):
         return np.exp(-t) - p[0] * y[0]
 
-    # Computation of graidients with Theano
+    # Computation of graidients with Aesara
     augmented_ode_func = augment_system(ode_func, 1, 1 + 1)
 
     # This is the new system, ODE + Sensitivities, which will be integrated
@@ -210,22 +210,22 @@ class TestErrors:
 
     ode_model = DifferentialEquation(func=system, t0=0, times=times, n_states=1, n_theta=1)
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_too_many_params(self):
         with pytest.raises(pm.ShapeError):
             self.ode_model(theta=[1, 1], y0=[0])
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_too_many_y0(self):
         with pytest.raises(pm.ShapeError):
             self.ode_model(theta=[1], y0=[0, 0])
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_too_few_params(self):
         with pytest.raises(pm.ShapeError):
             self.ode_model(theta=[], y0=[1])
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_too_few_y0(self):
         with pytest.raises(pm.ShapeError):
             self.ode_model(theta=[1], y0=[])

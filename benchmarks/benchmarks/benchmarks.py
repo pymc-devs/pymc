@@ -14,11 +14,11 @@
 import time
 import timeit
 
+import aesara
+import aesara.tensor as aet
 import arviz as az
 import numpy as np
 import pandas as pd
-import theano
-import theano.tensor as tt
 
 import pymc3 as pm
 
@@ -27,7 +27,7 @@ def glm_hierarchical_model(random_seed=123):
     """Sample glm hierarchical model to use in benchmarks"""
     np.random.seed(random_seed)
     data = pd.read_csv(pm.get_data("radon.csv"))
-    data["log_radon"] = data["log_radon"].astype(theano.config.floatX)
+    data["log_radon"] = data["log_radon"].astype(aesara.config.floatX)
     county_idx = data.county_code.values
 
     n_counties = len(data.county.unique())
@@ -61,8 +61,8 @@ def mixture_model(random_seed=1234):
         mu = pm.Normal("mu", mu=0.0, sd=10.0, shape=w_true.shape)
         enforce_order = pm.Potential(
             "enforce_order",
-            tt.switch(mu[0] - mu[1] <= 0, 0.0, -np.inf)
-            + tt.switch(mu[1] - mu[2] <= 0, 0.0, -np.inf),
+            aet.switch(mu[0] - mu[1] <= 0, 0.0, -np.inf)
+            + aet.switch(mu[1] - mu[2] <= 0, 0.0, -np.inf),
         )
         tau = pm.Gamma("tau", alpha=1.0, beta=1.0, shape=w_true.shape)
         pm.NormalMixture("x_obs", w=w, mu=mu, tau=tau, observed=x)

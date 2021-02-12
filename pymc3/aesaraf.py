@@ -12,14 +12,17 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
 import numpy as np
-import theano
 
-from theano import scalar
-from theano import tensor as tt
-from theano.graph.basic import Apply, graph_inputs
-from theano.graph.op import Op
-from theano.sandbox.rng_mrg import MRG_RandomStream as RandomStream
+from aesara import scalar
+from aesara import tensor as aet
+from aesara.gradient import grad
+from aesara.graph.basic import Apply, graph_inputs
+from aesara.graph.op import Op
+from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
+from aesara.tensor.elemwise import Elemwise
+from aesara.tensor.var import TensorVariable
 
 from pymc3.blocking import ArrayOrdering
 from pymc3.data import GeneratorAdapter
@@ -39,34 +42,34 @@ __all__ = [
     "join_nonshared_inputs",
     "make_shared_replacements",
     "generator",
-    "set_tt_rng",
-    "tt_rng",
+    "set_aet_rng",
+    "aet_rng",
     "take_along_axis",
 ]
 
 
 def inputvars(a):
     """
-    Get the inputs into a theano variables
+    Get the inputs into a aesara variables
 
     Parameters
     ----------
-        a: theano variable
+        a: aesara variable
 
     Returns
     -------
         r: list of tensor variables that are inputs
     """
-    return [v for v in graph_inputs(makeiter(a)) if isinstance(v, tt.TensorVariable)]
+    return [v for v in graph_inputs(makeiter(a)) if isinstance(v, TensorVariable)]
 
 
 def cont_inputs(f):
     """
-    Get the continuous inputs into a theano variables
+    Get the continuous inputs into a aesara variables
 
     Parameters
     ----------
-        a: theano variable
+        a: aesara variable
 
     Returns
     -------
@@ -77,13 +80,13 @@ def cont_inputs(f):
 
 def floatX(X):
     """
-    Convert a theano tensor or numpy array to theano.config.floatX type.
+    Convert a aesara tensor or numpy array to aesara.config.floatX type.
     """
     try:
-        return X.astype(theano.config.floatX)
+        return X.astype(aesara.config.floatX)
     except AttributeError:
         # Scalar passed
-        return np.asarray(X, dtype=theano.config.floatX)
+        return np.asarray(X, dtype=aesara.config.floatX)
 
 
 _conversion_map = {"float64": "int32", "float32": "int16", "float16": "int8", "float8": "int8"}
@@ -91,9 +94,9 @@ _conversion_map = {"float64": "int32", "float32": "int16", "float16": "int8", "f
 
 def intX(X):
     """
-    Convert a theano tensor or numpy array to theano.tensor.int32 type.
+    Convert a aesara tensor or numpy array to aesara.tensor.int32 type.
     """
-    intX = _conversion_map[theano.config.floatX]
+    intX = _conversion_map[aesara.config.floatX]
     try:
         return X.astype(intX)
     except AttributeError:
@@ -111,16 +114,16 @@ def smartfloatX(x):
 
 
 """
-Theano derivative functions
+Aesara derivative functions
 """
 
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
-    return tt.flatten(tt.grad(f, v, disconnected_inputs="warn"))
+    return aet.flatten(grad(f, v, disconnected_inputs="warn"))
 
 
-empty_gradient = tt.zeros(0, dtype="float32")
+empty_gradient = aet.zeros(0, dtype="float32")
 
 
 def gradient(f, vars=None):
@@ -128,20 +131,20 @@ def gradient(f, vars=None):
         vars = cont_inputs(f)
 
     if vars:
-        return tt.concatenate([gradient1(f, v) for v in vars], axis=0)
+        return aet.concatenate([gradient1(f, v) for v in vars], axis=0)
     else:
         return empty_gradient
 
 
 def jacobian1(f, v):
     """jacobian of f wrt v"""
-    f = tt.flatten(f)
-    idx = tt.arange(f.shape[0], dtype="int32")
+    f = aet.flatten(f)
+    idx = aet.arange(f.shape[0], dtype="int32")
 
     def grad_i(i):
         return gradient1(f[i], v)
 
-    return theano.map(grad_i, idx)[0]
+    return aesara.map(grad_i, idx)[0]
 
 
 def jacobian(f, vars=None):
@@ -149,43 +152,43 @@ def jacobian(f, vars=None):
         vars = cont_inputs(f)
 
     if vars:
-        return tt.concatenate([jacobian1(f, v) for v in vars], axis=1)
+        return aet.concatenate([jacobian1(f, v) for v in vars], axis=1)
     else:
         return empty_gradient
 
 
 def jacobian_diag(f, x):
-    idx = tt.arange(f.shape[0], dtype="int32")
+    idx = aet.arange(f.shape[0], dtype="int32")
 
     def grad_ii(i):
-        return theano.grad(f[i], x)[i]
+        return grad(f[i], x)[i]
 
-    return theano.scan(grad_ii, sequences=[idx], n_steps=f.shape[0], name="jacobian_diag")[0]
+    return aesara.scan(grad_ii, sequences=[idx], n_steps=f.shape[0], name="jacobian_diag")[0]
 
 
-@theano.config.change_flags(compute_test_value="ignore")
+@aesara.config.change_flags(compute_test_value="ignore")
 def hessian(f, vars=None):
     return -jacobian(gradient(f, vars), vars)
 
 
-@theano.config.change_flags(compute_test_value="ignore")
+@aesara.config.change_flags(compute_test_value="ignore")
 def hessian_diag1(f, v):
     g = gradient1(f, v)
-    idx = tt.arange(g.shape[0], dtype="int32")
+    idx = aet.arange(g.shape[0], dtype="int32")
 
     def hess_ii(i):
         return gradient1(g[i], v)[i]
 
-    return theano.map(hess_ii, idx)[0]
+    return aesara.map(hess_ii, idx)[0]
 
 
-@theano.config.change_flags(compute_test_value="ignore")
+@aesara.config.change_flags(compute_test_value="ignore")
 def hessian_diag(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
 
     if vars:
-        return -tt.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+        return -aet.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
     else:
         return empty_gradient
 
@@ -235,16 +238,16 @@ def make_shared_replacements(vars, model):
     Dict of variable -> new shared variable
     """
     othervars = set(model.vars) - set(vars)
-    return {var: theano.shared(var.tag.test_value, var.name + "_shared") for var in othervars}
+    return {var: aesara.shared(var.tag.test_value, var.name + "_shared") for var in othervars}
 
 
 def join_nonshared_inputs(xs, vars, shared, make_shared=False):
     """
-    Takes a list of theano Variables and joins their non shared inputs into a single input.
+    Takes a list of aesara Variables and joins their non shared inputs into a single input.
 
     Parameters
     ----------
-    xs: list of theano tensors
+    xs: list of aesara tensors
     vars: list of variables to join
 
     Returns
@@ -256,13 +259,13 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
     if not vars:
         raise ValueError("Empty list of variables.")
 
-    joined = tt.concatenate([var.ravel() for var in vars])
+    joined = aet.concatenate([var.ravel() for var in vars])
 
     if not make_shared:
         tensor_type = joined.type
         inarray = tensor_type("inarray")
     else:
-        inarray = theano.shared(joined.tag.test_value, "inarray")
+        inarray = aesara.shared(joined.tag.test_value, "inarray")
 
     ordering = ArrayOrdering(vars)
     inarray.tag.test_value = joined.tag.test_value
@@ -275,7 +278,7 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
 
     replace.update(shared)
 
-    xs_special = [theano.clone(x, replace, strict=False) for x in xs]
+    xs_special = [aesara.clone_replace(x, replace, strict=False) for x in xs]
     return xs_special, inarray
 
 
@@ -303,16 +306,16 @@ class CallableTensor:
         input: TensorVariable
         """
         (oldinput,) = inputvars(self.tensor)
-        return theano.clone(self.tensor, {oldinput: input}, strict=False)
+        return aesara.clone_replace(self.tensor, {oldinput: input}, strict=False)
 
 
 scalar_identity = IdentityOp(scalar.upgrade_to_float, name="scalar_identity")
-identity = tt.Elemwise(scalar_identity, name="identity")
+identity = Elemwise(scalar_identity, name="identity")
 
 
 class GeneratorOp(Op):
     """
-    Generator Op is designed for storing python generators inside theano graph.
+    Generator Op is designed for storing python generators inside aesara graph.
 
     __call__ creates TensorVariable
         It has 2 new methods
@@ -351,7 +354,7 @@ class GeneratorOp(Op):
     def do_constant_folding(self, fgraph, node):
         return False
 
-    __call__ = theano.config.change_flags(compute_test_value="off")(Op.__call__)
+    __call__ = aesara.config.change_flags(compute_test_value="off")(Op.__call__)
 
     def set_gen(self, gen):
         if not isinstance(gen, GeneratorAdapter):
@@ -394,10 +397,10 @@ def generator(gen, default=None):
     return GeneratorOp(gen, default)()
 
 
-_tt_rng = RandomStream()
+_aet_rng = RandomStream()
 
 
-def tt_rng(random_seed=None):
+def aet_rng(random_seed=None):
     """
     Get the package-level random number generator or new with specified seed.
 
@@ -405,36 +408,36 @@ def tt_rng(random_seed=None):
     ----------
     random_seed: int
         If not None
-        returns *new* theano random generator without replacing package global one
+        returns *new* aesara random generator without replacing package global one
 
     Returns
     -------
-    `theano.tensor.random.utils.RandomStream` instance
-        `theano.tensor.random.utils.RandomStream`
-        instance passed to the most recent call of `set_tt_rng`
+    `aesara.tensor.random.utils.RandomStream` instance
+        `aesara.tensor.random.utils.RandomStream`
+        instance passed to the most recent call of `set_aet_rng`
     """
     if random_seed is None:
-        return _tt_rng
+        return _aet_rng
     else:
         ret = RandomStream(random_seed)
         return ret
 
 
-def set_tt_rng(new_rng):
+def set_aet_rng(new_rng):
     """
     Set the package-level random number generator.
 
     Parameters
     ----------
-    new_rng: `theano.tensor.random.utils.RandomStream` instance
+    new_rng: `aesara.tensor.random.utils.RandomStream` instance
         The random number generator to use.
     """
     # pylint: disable=global-statement
-    global _tt_rng
+    global _aet_rng
     # pylint: enable=global-statement
     if isinstance(new_rng, int):
         new_rng = RandomStream(new_rng)
-    _tt_rng = new_rng
+    _aet_rng = new_rng
 
 
 def floatX_array(x):
@@ -443,7 +446,7 @@ def floatX_array(x):
 
 def ix_(*args):
     """
-    Theano np.ix_ analog
+    Aesara np.ix_ analog
 
     See numpy.lib.index_tricks.ix_ for reference
     """
@@ -452,7 +455,7 @@ def ix_(*args):
     for k, new in enumerate(args):
         if new is None:
             out.append(slice(None))
-        new = tt.as_tensor(new)
+        new = aet.as_tensor(new)
         if new.ndim != 1:
             raise ValueError("Cross index must be 1 dimensional")
         new = new.reshape((1,) * k + (new.size,) + (1,) * (nd - k - 1))
@@ -482,7 +485,7 @@ def _make_along_axis_idx(arr_shape, indices, axis):
             fancy_index.append(indices)
         else:
             ind_shape = shape_ones[:dim] + (-1,) + shape_ones[dim + 1 :]
-            fancy_index.append(tt.arange(n).reshape(ind_shape))
+            fancy_index.append(aet.arange(n).reshape(ind_shape))
 
     return tuple(fancy_index)
 
@@ -497,8 +500,8 @@ def take_along_axis(arr, indices, axis=0):
     Functions returning an index along an axis, like argsort and argpartition,
     produce suitable indices for this function.
     """
-    arr = tt.as_tensor_variable(arr)
-    indices = tt.as_tensor_variable(indices)
+    arr = aet.as_tensor_variable(arr)
+    indices = aet.as_tensor_variable(indices)
     # normalize inputs
     if axis is None:
         arr = arr.flatten()

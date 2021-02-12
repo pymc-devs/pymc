@@ -12,10 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
 import numpy as np
-import theano
 
-from theano import tensor as tt
+from aesara import tensor as aet
 
 from pymc3.distributions.dist_math import rho2sigma
 from pymc3.memoize import WithMemoization
@@ -161,14 +161,14 @@ class AbstractFlow(WithMemoization):
                 "Cannot infer dimension of flow, " "please provide dim or Flow instance as z0"
             )
         if z0 is None:
-            self.z0 = tt.matrix()  # type: tt.TensorVariable
+            self.z0 = aet.matrix()  # type: TensorVariable
         else:
-            self.z0 = tt.as_tensor(z0)
+            self.z0 = aet.as_tensor(z0)
         self.parent = parent
 
     def add_param(self, user=None, name=None, ref=0.0, dtype="floatX"):
         if dtype == "floatX":
-            dtype = theano.config.floatX
+            dtype = aesara.config.floatX
         spec = self.__param_spec__[name]
         shape = tuple(eval(s, {"d": self.dim}) for s in spec)
         if user is None:
@@ -178,7 +178,7 @@ class AbstractFlow(WithMemoization):
                 if self.batch_size is None:
                     raise opvi.BatchedGroupError("Need batch size to infer parameter shape")
                 shape = (self.batch_size,) + shape
-            return theano.shared(
+            return aesara.shared(
                 np.asarray(np.random.normal(size=shape) * self.__jitter + ref).astype(dtype),
                 name=name,
             )
@@ -189,7 +189,7 @@ class AbstractFlow(WithMemoization):
                     shape = (-1,) + shape
                 else:
                     shape = (self.batch_size,) + shape
-            return tt.as_tensor(user).reshape(shape)
+            return aet.as_tensor(user).reshape(shape)
 
     @property
     def params(self):
@@ -205,14 +205,14 @@ class AbstractFlow(WithMemoization):
         return params
 
     @property
-    @theano.config.change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def sum_logdets(self):
         dets = [self.logdet]
         current = self
         while not current.isroot:
             current = current.parent
             dets.append(current.logdet)
-        return tt.add(*dets)
+        return aet.add(*dets)
 
     @node_property
     def forward(self):
@@ -222,9 +222,9 @@ class AbstractFlow(WithMemoization):
     def logdet(self):
         raise NotImplementedError
 
-    @theano.config.change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def forward_pass(self, z0):
-        ret = theano.clone(self.forward, {self.root.z0: z0})
+        ret = aesara.clone_replace(self.forward, {self.root.z0: z0})
         try:
             ret.tag.test_value = np.random.normal(size=z0.tag.test_value.shape).astype(
                 self.z0.dtype
@@ -297,7 +297,7 @@ class FlowFn:
 class LinearFlow(AbstractFlow):
     __param_spec__ = dict(u=("d",), w=("d",), b=())
 
-    @theano.config.change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def __init__(self, h, u=None, w=None, b=None, **kwargs):
         self.h = h
         super().__init__(**kwargs)
@@ -325,7 +325,7 @@ class LinearFlow(AbstractFlow):
         if not self.batched:
             hwz = h(z.dot(w) + b)  # s
             # sxd + (s \outer d) = sxd
-            z1 = z + tt.outer(hwz, u)  # sxd
+            z1 = z + aet.outer(hwz, u)  # sxd
             return z1
         else:
             z = z.swapaxes(0, 1)
@@ -334,7 +334,7 @@ class LinearFlow(AbstractFlow):
             # w bxd
             b = b.dimshuffle(0, "x")
             # b bx-
-            hwz = h(tt.batched_dot(z, w) + b)  # bxs
+            hwz = h(aet.batched_dot(z, w) + b)  # bxs
             # bxsxd + (bxsx- * bx-xd) = bxsxd
             hwz = hwz.dimshuffle(0, 1, "x")  # bxsx-
             u = u.dimshuffle(0, "x", 1)  # bx-xd
@@ -352,8 +352,8 @@ class LinearFlow(AbstractFlow):
             # f'(sxd \dot d + .) * -xd = sxd
             phi = deriv(z.dot(w) + b).dimshuffle(0, "x") * w.dimshuffle("x", 0)
             # \abs(. + sxd \dot d) = s
-            det = tt.abs_(1.0 + phi.dot(u))
-            return tt.log(det)
+            det = aet.abs_(1.0 + phi.dot(u))
+            return aet.log(det)
         else:
             z = z.swapaxes(0, 1)
             b = b.dimshuffle(0, "x")
@@ -362,20 +362,20 @@ class LinearFlow(AbstractFlow):
             # w bxd
             # b bx-x-
             # f'(bxsxd \bdot bxd + bx-x-) * bx-xd = bxsxd
-            phi = deriv(tt.batched_dot(z, w) + b).dimshuffle(0, 1, "x") * w.dimshuffle(0, "x", 1)
+            phi = deriv(aet.batched_dot(z, w) + b).dimshuffle(0, 1, "x") * w.dimshuffle(0, "x", 1)
             # \abs(. + bxsxd \bdot bxd) = bxs
-            det = tt.abs_(1.0 + tt.batched_dot(phi, u))  # bxs
-            return tt.log(det).sum(0)  # s
+            det = aet.abs_(1.0 + aet.batched_dot(phi, u))  # bxs
+            return aet.log(det).sum(0)  # s
 
 
 class Tanh(FlowFn):
-    fn = tt.tanh
-    inv = tt.arctanh
+    fn = aet.tanh
+    inv = aet.arctanh
 
     @staticmethod
     def deriv(*args):
         (x,) = args
-        return 1.0 - tt.tanh(x) ** 2
+        return 1.0 - aet.tanh(x) ** 2
 
 
 @AbstractFlow.register
@@ -390,7 +390,7 @@ class PlanarFlow(LinearFlow):
             # u_: d
             # w_: d
             wu = u.dot(w)  # .
-            mwu = -1.0 + tt.nnet.softplus(wu)  # .
+            mwu = -1.0 + aet.nnet.softplus(wu)  # .
             # d + (. - .) * d / .
             u_h = u + (mwu - wu) * w / ((w ** 2).sum() + 1e-10)
             return u_h, w
@@ -398,7 +398,7 @@ class PlanarFlow(LinearFlow):
             # u_: bxd
             # w_: bxd
             wu = (u * w).sum(-1, keepdims=True)  # bx-
-            mwu = -1.0 + tt.nnet.softplus(wu)  # bx-
+            mwu = -1.0 + aet.nnet.softplus(wu)  # bx-
             # bxd + (bx- - bx-) * bxd / bx- = bxd
             u_h = u + (mwu - wu) * w / ((w ** 2).sum(-1, keepdims=True) + 1e-10)
             return u_h, w
@@ -407,7 +407,7 @@ class PlanarFlow(LinearFlow):
 class ReferencePointFlow(AbstractFlow):
     __param_spec__ = dict(a=(), b=(), z_ref=("d",))
 
-    @theano.config.change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def __init__(self, h, a=None, b=None, z_ref=None, **kwargs):
         super().__init__(**kwargs)
         a = self.add_param(a, "a")
@@ -474,7 +474,7 @@ class ReferencePointFlow(AbstractFlow):
         r = (z - z_ref).norm(2, axis=-1, keepdims=True)  # s
         har = h(a, r)
         dar = deriv(a, r)
-        logdet = tt.log((1.0 + b * har) ** (d - 1.0) * (1.0 + b * har + b * dar * r))
+        logdet = aet.log((1.0 + b * har) ** (d - 1.0) * (1.0 + b * har + b * dar * r))
         if self.batched:
             return logdet.sum([0, -1])
         else:
@@ -506,8 +506,8 @@ class RadialFlow(ReferencePointFlow):
         super().__init__(Radial(), **kwargs)
 
     def make_ab(self, a, b):
-        a = tt.exp(a)
-        b = -a + tt.nnet.softplus(b)
+        a = aet.exp(a)
+        b = -a + aet.nnet.softplus(b)
         return a, b
 
 
@@ -531,7 +531,7 @@ class LocFlow(AbstractFlow):
 
     @node_property
     def logdet(self):
-        return tt.zeros((self.z0.shape[0],))
+        return aet.zeros((self.z0.shape[0],))
 
 
 @AbstractFlow.register
@@ -539,7 +539,7 @@ class ScaleFlow(AbstractFlow):
     __param_spec__ = dict(rho=("d",))
     short_name = "scale"
 
-    @theano.config.change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def __init__(self, rho=None, **kwargs):
         super().__init__(**kwargs)
         rho = self.add_param(rho, "rho")
@@ -556,7 +556,7 @@ class ScaleFlow(AbstractFlow):
 
     @node_property
     def logdet(self):
-        return tt.repeat(tt.sum(tt.log(self.scale)), self.z0.shape[0])
+        return aet.repeat(aet.sum(aet.log(self.scale)), self.z0.shape[0])
 
 
 @AbstractFlow.register
@@ -564,18 +564,18 @@ class HouseholderFlow(AbstractFlow):
     __param_spec__ = dict(v=("d",))
     short_name = "hh"
 
-    @theano.config.change_flags(compute_test_value="raise")
+    @aesara.config.change_flags(compute_test_value="raise")
     def __init__(self, v=None, **kwargs):
         super().__init__(**kwargs)
         v = self.add_param(v, "v")
         self.shared_params = dict(v=v)
         if self.batched:
             vv = v.dimshuffle(0, 1, "x") * v.dimshuffle(0, "x", 1)
-            I = tt.eye(self.dim).dimshuffle("x", 0, 1)
+            I = aet.eye(self.dim).dimshuffle("x", 0, 1)
             vvn = (1e-10 + (v ** 2).sum(-1)).dimshuffle(0, "x", "x")
         else:
-            vv = tt.outer(v, v)
-            I = tt.eye(self.dim)
+            vv = aet.outer(v, v)
+            I = aet.eye(self.dim)
             vvn = (v ** 2).sum(-1) + 1e-10
         self.H = I - 2.0 * vv / vvn
 
@@ -584,10 +584,10 @@ class HouseholderFlow(AbstractFlow):
         z = self.z0  # sxd
         H = self.H  # dxd
         if self.batched:
-            return tt.batched_dot(z.swapaxes(0, 1), H).swapaxes(0, 1)
+            return aet.batched_dot(z.swapaxes(0, 1), H).swapaxes(0, 1)
         else:
             return z.dot(H)
 
     @node_property
     def logdet(self):
-        return tt.zeros((self.z0.shape[0],))
+        return aet.zeros((self.z0.shape[0],))
