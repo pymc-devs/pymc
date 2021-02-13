@@ -130,6 +130,7 @@ class MultinomialB(Discrete):
         )
 
 
+@pytest.mark.xfail(reason="This test relies on the deprecated Distribution interface")
 def test_multinomial_bound():
 
     x = np.array([1, 5])
@@ -148,6 +149,7 @@ def test_multinomial_bound():
     )
 
 
+@pytest.mark.xfail(reason="MvNormal not implemented")
 class TestMvNormalLogp:
     def test_logp(self):
         np.random.seed(42)
