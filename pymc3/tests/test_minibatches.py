@@ -177,7 +177,7 @@ class TestScaling:
             p2 = aesara.function([], model2.logpt)
         assert p1() * 2 == p2()
 
-    def test_density_scaling_with_genarator(self):
+    def test_density_scaling_with_generator(self):
         # We have different size generators
 
         def true_dens():
@@ -208,12 +208,12 @@ class TestScaling:
             genvar = generator(gen1())
             m = Normal("m")
             Normal("n", observed=genvar, total_size=1000)
-            grad1 = aesara.function([m], aet.grad(model1.logpt, m))
+            grad1 = aesara.function([m.tag.value_var], aet.grad(model1.logpt, m.tag.value_var))
         with pm.Model() as model2:
             m = Normal("m")
             shavar = aesara.shared(np.ones((1000, 100)))
             Normal("n", observed=shavar)
-            grad2 = aesara.function([m], aet.grad(model2.logpt, m))
+            grad2 = aesara.function([m.tag.value_var], aet.grad(model2.logpt, m.tag.value_var))
 
         for i in range(10):
             shavar.set_value(np.ones((100, 100)) * i)
@@ -255,22 +255,31 @@ class TestScaling:
         )
 
     def test_common_errors(self):
-        with pm.Model():
-            with pytest.raises(ValueError) as e:
+        with pytest.raises(ValueError) as e:
+            with pm.Model() as m:
                 Normal("n", observed=[[1]], total_size=[2, Ellipsis, 2, 2])
-            assert "Length of" in str(e.value)
-            with pytest.raises(ValueError) as e:
+                m.logpt
+        assert "Length of" in str(e.value)
+        with pytest.raises(ValueError) as e:
+            with pm.Model() as m:
                 Normal("n", observed=[[1]], total_size=[2, 2, 2])
-            assert "Length of" in str(e.value)
-            with pytest.raises(TypeError) as e:
+                m.logpt
+        assert "Length of" in str(e.value)
+        with pytest.raises(TypeError) as e:
+            with pm.Model() as m:
                 Normal("n", observed=[[1]], total_size="foo")
-            assert "Unrecognized" in str(e.value)
-            with pytest.raises(TypeError) as e:
+                m.logpt
+        assert "Unrecognized" in str(e.value)
+        with pytest.raises(TypeError) as e:
+            with pm.Model() as m:
                 Normal("n", observed=[[1]], total_size=["foo"])
-            assert "Unrecognized" in str(e.value)
-            with pytest.raises(ValueError) as e:
+                m.logpt
+        assert "Unrecognized" in str(e.value)
+        with pytest.raises(ValueError) as e:
+            with pm.Model() as m:
                 Normal("n", observed=[[1]], total_size=[Ellipsis, Ellipsis])
-            assert "Double Ellipsis" in str(e.value)
+                m.logpt
+        assert "Double Ellipsis" in str(e.value)
 
     def test_mixed1(self):
         with pm.Model():
@@ -290,8 +299,8 @@ class TestScaling:
             p4 = aesara.function([], model4.logpt)
 
         with pm.Model() as model5:
-            Normal("n", total_size=[2, Ellipsis, 2], shape=(1, 1), broadcastable=(False, False))
-            p5 = aesara.function([model5.n], model5.logpt)
+            n = Normal("n", total_size=[2, Ellipsis, 2], size=(2, 2))
+            p5 = aesara.function([n.tag.value_var], model5.logpt)
         assert p4() == p5(pm.floatX([[1]]))
         assert p4() == p5(pm.floatX([[1, 1], [1, 1]]))
 
