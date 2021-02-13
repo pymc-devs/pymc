@@ -15,6 +15,7 @@ import logging
 
 import numpy as np
 import numpy.testing as npt
+import pytest
 
 import pymc3
 
@@ -26,6 +27,7 @@ from pymc3.tests import models
 logger = logging.getLogger("pymc3")
 
 
+@pytest.mark.xfail(reason="Beta not refactored")
 def test_leapfrog_reversible():
     n = 3
     np.random.seed(42)

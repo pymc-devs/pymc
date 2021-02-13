@@ -208,12 +208,12 @@ class TestScaling:
             genvar = generator(gen1())
             m = Normal("m")
             Normal("n", observed=genvar, total_size=1000)
-            grad1 = aesara.function([m.tag.value_var], at.grad(model1.logpt, m.tag.value_var))
+            grad1 = aesara.function([m.tag.value_var], aet.grad(model1.logpt, m.tag.value_var))
         with pm.Model() as model2:
             m = Normal("m")
             shavar = aesara.shared(np.ones((1000, 100)))
             Normal("n", observed=shavar)
-            grad2 = aesara.function([m.tag.value_var], at.grad(model2.logpt, m.tag.value_var))
+            grad2 = aesara.function([m.tag.value_var], aet.grad(model2.logpt, m.tag.value_var))
 
         for i in range(10):
             shavar.set_value(np.ones((100, 100)) * i)

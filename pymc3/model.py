@@ -1343,7 +1343,7 @@ def fastfn(outs, mode=None, model=None):
     return model.fastfn(outs, mode)
 
 
-def Point(*args, filter_model_vars=False, **kwargs):
+def Point(*args, filter_model_vars=True, **kwargs):
     """Build a point. Uses same args as dict() does.
     Filters out variables not in the model. All keys are strings.
 
@@ -1361,7 +1361,7 @@ def Point(*args, filter_model_vars=False, **kwargs):
     return {
         get_var_name(k): np.array(v)
         for k, v in d.items()
-        if not filter_model_vars or (get_var_name(k) in map(get_var_name, model.value_vars))
+        if not filter_model_vars or (get_var_name(k) in map(get_var_name, model.vars))
     }
 
 

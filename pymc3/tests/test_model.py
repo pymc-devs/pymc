@@ -363,7 +363,6 @@ def test_multiple_observed_rv():
     assert not model["x"] in model.value_vars
 
 
-# @pytest.mark.xfail(reason="Functions depend on deprecated dshape/dsize")
 def test_tempered_logp_dlogp():
     with pm.Model() as model:
         pm.Normal("x")

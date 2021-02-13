@@ -30,7 +30,7 @@ def simple_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        Normal("x", mu, tau=tau, size=2, testval=floatX_array([0.1, 0.1]))
+        Normal("x", mu, tau=tau, size=2, testval=np.ones(2) * 0.1)
 
     return model.initial_point, model, (mu, tau ** -0.5)
 
@@ -92,9 +92,9 @@ def simple_2model_continuous():
     tau = 1.3
     with Model() as model:
         x = pm.Normal("x", mu, tau=tau, testval=0.1)
-        pm.Deterministic("logx", at.log(x))
+        pm.Deterministic("logx", aet.log(x))
         pm.Beta("y", alpha=1, beta=1, size=2)
-    return model.initial_point, model
+    return model.test_point, model
 
 
 def mv_simple():
@@ -104,8 +104,9 @@ def mv_simple():
     with pm.Model() as model:
         pm.MvNormal(
             "x",
-            at.constant(mu),
-            tau=at.constant(tau),
+            aet.constant(mu),
+            tau=aet.constant(tau),
+            size=3,
             testval=floatX_array([0.1, 1.0, 0.8]),
         )
     H = tau
@@ -120,8 +121,9 @@ def mv_simple_coarse():
     with pm.Model() as model:
         pm.MvNormal(
             "x",
-            at.constant(mu),
-            tau=at.constant(tau),
+            aet.constant(mu),
+            tau=aet.constant(tau),
+            size=3,
             testval=floatX_array([0.1, 1.0, 0.8]),
         )
     H = tau
@@ -136,8 +138,9 @@ def mv_simple_very_coarse():
     with pm.Model() as model:
         pm.MvNormal(
             "x",
-            at.constant(mu),
-            tau=at.constant(tau),
+            aet.constant(mu),
+            tau=aet.constant(tau),
+            size=3,
             testval=floatX_array([0.1, 1.0, 0.8]),
         )
     H = tau
@@ -150,7 +153,7 @@ def mv_simple_discrete():
     n = 5
     p = floatX_array([0.15, 0.85])
     with pm.Model() as model:
-        pm.Multinomial("x", n, at.constant(p), testval=np.array([1, 4]))
+        pm.Multinomial("x", n, aet.constant(p), size=d, testval=np.array([1, 4]))
         mu = n * p
         # covariance matrix
         C = np.zeros((d, d))
@@ -184,7 +187,7 @@ def mv_prior_simple():
 
     with pm.Model() as model:
         x = pm.Flat("x", size=n)
-        x_obs = pm.MvNormal("x_obs", observed=obs, mu=x, cov=noise * np.eye(n))
+        x_obs = pm.MvNormal("x_obs", observed=obs, mu=x, cov=noise * np.eye(n), size=n)
 
     return model.initial_point, model, (K, L, mu_post, std_post, noise)
 
@@ -192,14 +195,14 @@ def mv_prior_simple():
 def non_normal(n=2):
     with pm.Model() as model:
         pm.Beta("x", 3, 3, size=n, transform=None)
-    return model.initial_point, model, (np.tile([0.5], n), None)
+    return model.test_point, model, (np.tile([0.5], n), None)
 
 
 def exponential_beta(n=2):
     with pm.Model() as model:
         pm.Beta("x", 3, 1, size=n, transform=None)
         pm.Exponential("y", 1, size=n, transform=None)
-    return model.initial_point, model, None
+    return model.test_point, model, None
 
 
 def beta_bernoulli(n=2):
