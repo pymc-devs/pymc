@@ -18,6 +18,8 @@ import pytest
 from pymc3.distributions import Categorical, Continuous, DiscreteUniform
 from pymc3.model import Model
 
+pytestmark = pytest.mark.xfail(reason="This test relies on the deprecated Distribution interface")
+
 
 class DistTest(Continuous):
     def __init__(self, a, b, *args, **kwargs):

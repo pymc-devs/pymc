@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import numpy as np
+import pytest
 import scipy.stats as sp
 
 import pymc3 as pm
@@ -36,6 +37,7 @@ def test_dlogp():
     close_to(dlogp(start), -(start["x"] - mu) / sig ** 2, 1.0 / sig ** 2 / 100.0)
 
 
+@pytest.mark.xfail(reason="MvNormal not implemented")
 def test_dlogp2():
     start, model, (_, sig) = mv_simple()
     H = np.linalg.inv(sig)
