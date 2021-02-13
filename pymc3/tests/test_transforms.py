@@ -52,7 +52,6 @@ def check_transform(transform, domain, constructor=aet.dscalar, test=0):
     identity_f = aesara.function([x], transform.backward(transform.forward(x)))
     for val in domain.vals:
         close_to(val, identity_f(val), tol)
-        close_to(transform.forward_val(val), forward_f(val), tol)
 
 
 def check_vector_transform(transform, domain):

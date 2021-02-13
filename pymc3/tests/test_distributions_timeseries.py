@@ -22,6 +22,8 @@ from pymc3.model import Model
 from pymc3.sampling import sample, sample_posterior_predictive
 from pymc3.tests.helpers import select_by_precision
 
+pytestmark = pytest.mark.xfail(reason="This test relies on the deprecated Distribution interface")
+
 pytestmark = pytest.mark.usefixtures("seeded_test")
 
 
