@@ -1,8 +1,10 @@
 import numpy as np
+import pytest
 
 import pymc3 as pm
 
 
+@pytest.mark.xfail("Arviz incompatibilities")
 def test_coords():
     chains = 2
     n_features = 3
