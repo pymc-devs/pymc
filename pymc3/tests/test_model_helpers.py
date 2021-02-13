@@ -107,7 +107,8 @@ class TestHelperFunc:
         # Make sure the returned object is a Aesara TensorVariable
         assert isinstance(wrapped, TensorVariable)
 
-    def test_as_tensor(self):
+    @pytest.mark.xfail(reason="`Observed` `Op` doesn't take `SparseConstant`s, yet")
+    def test_make_obs_var(self):
         """
         Check returned values for `data` given known inputs to `as_tensor()`.
 
@@ -127,13 +128,14 @@ class TestHelperFunc:
             # Create the testval attribute simply for the sake of model testing
             fake_distribution.testval = None
 
-        # Alias the function to be tested
-        func = pm.model.make_obs_var
-
         # Check function behavior using the various inputs
-        dense_output = func(dense_input, input_name, fake_model, fake_distribution)
-        sparse_output = func(sparse_input, input_name, fake_model, fake_distribution)
-        masked_output = func(masked_array_input, input_name, fake_model, fake_distribution)
+        dense_output = pm.model.make_obs_var(fake_distribution, dense_input, input_name, fake_model)
+        sparse_output = pm.model.make_obs_var(
+            fake_distribution, sparse_input, input_name, fake_model
+        )
+        masked_output = pm.model.make_obs_var(
+            fake_distribution, masked_array_input, input_name, fake_model
+        )
 
         # Ensure that the missing values are appropriately set to None
         for func_output in [dense_output, sparse_output]:

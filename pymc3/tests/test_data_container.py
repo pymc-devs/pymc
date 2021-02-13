@@ -20,7 +20,7 @@ from aesara import shared
 
 import pymc3 as pm
 
-from pymc3.aesaraf import floatX
+from pymc3.distributions import logpt
 from pymc3.tests.helpers import SeededTest
 
 
@@ -32,6 +32,7 @@ class TestData(SeededTest):
             pm.Normal("y", 0, 1, observed=X)
             model.logp(model.test_point)
 
+    @pytest.mark.xfail(reason="Competence hasn't been updated")
     def test_sample(self):
         x = np.random.normal(size=100)
         y = x + np.random.normal(scale=1e-2, size=100)
@@ -105,7 +106,7 @@ class TestData(SeededTest):
         with pm.Model() as model:
             index = pm.Data("index", [2, 0, 1, 0, 2])
             y = pm.Data("y", [1.0, 2.0, 3.0, 2.0, 1.0])
-            alpha = pm.Normal("alpha", 0, 1.5, shape=3)
+            alpha = pm.Normal("alpha", 0, 1.5, size=3)
             pm.Normal("obs", alpha[index], np.sqrt(1e-2), observed=y)
 
             prior_trace = pm.sample_prior_predictive(1000, var_names=["alpha"])
@@ -150,7 +151,7 @@ class TestData(SeededTest):
             v = pm.Normal("v", mu=shared_var, shape=1)
 
         np.testing.assert_allclose(
-            v.logp({"v": [5.0]}),
+            logpt(v, 5.0).eval(),
             -0.91893853,
             rtol=1e-5,
         )
@@ -158,7 +159,7 @@ class TestData(SeededTest):
         shared_var.set_value(10.0)
 
         np.testing.assert_allclose(
-            v.logp({"v": [10.0]}),
+            logpt(v, 10.0).eval(),
             -0.91893853,
             rtol=1e-5,
         )
@@ -179,6 +180,7 @@ class TestData(SeededTest):
             pm.set_data({"beta": [1.1, 2.2, 3.3]}, model=model)
         error.match("defined as `pymc3.Data` inside the model")
 
+    @pytest.mark.xfail(reason="Depends on ModelGraph")
     def test_model_to_graphviz_for_model_with_data_container(self):
         with pm.Model() as model:
             x = pm.Data("x", [1.0, 2.0, 3.0])

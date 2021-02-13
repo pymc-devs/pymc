@@ -54,6 +54,10 @@ from pymc3.tests.test_distributions import (
     product,
 )
 
+# XXX: This test module will need to be repurposed as tests for new
+# `RandomVariable`s and their `RandomVariable.perform` methods.
+pytestmark = pytest.mark.xfail(reason="This test relies on the deprecated Distribution interface")
+
 
 def pymc3_random(
     dist,

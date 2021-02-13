@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import numpy as np
+import pytest
 
 import pymc3 as pm
 
@@ -47,6 +48,7 @@ def test_memo():
     assert len(fun.cache) == 3
 
 
+@pytest.mark.xfail(reason="DensityDist is deprecated")
 def test_hashing_of_rv_tuples():
     obs = np.random.normal(-1, 0.1, size=10)
     with pm.Model() as pmodel:

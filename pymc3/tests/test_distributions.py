@@ -101,6 +101,9 @@ from pymc3.model import Deterministic, Model, Point
 from pymc3.tests.helpers import select_by_precision
 from pymc3.vartypes import continuous_types
 
+pytestmark = pytest.mark.xfail(reason="This test relies on the deprecated Distribution interface")
+
+
 SCIPY_VERSION = parse(scipy_version)
 
 
