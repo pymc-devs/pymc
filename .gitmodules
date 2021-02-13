@@ -1,4 +1,4 @@
 [submodule "docs/source/pymc-examples"]
 	path = docs/source/pymc-examples
-	url = https://github.com/pymc-devs/pymc-examples.git
-        branch = main
+	url = https://github.com/Pyrsos/pymc-examples
+        branch = fast-docs-build
