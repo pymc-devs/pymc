@@ -5,8 +5,7 @@ echo checking out ${latesttag}
 git checkout ${latesttag}
 git submodule update --remote
 pushd docs/source
+git --git-dir=docs/source/pymc-examples --work-tree=file-system-folder checkout fast-docs-build
 make html
 ghp-import -c docs.pymc.io -n -p _build/html/
 popd
-cd docs/source/pymc-examples
-git checkout fast-build-docs
