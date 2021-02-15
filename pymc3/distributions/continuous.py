@@ -29,7 +29,6 @@ from scipy.special import expit
 from pymc3.distributions import transforms
 from pymc3.distributions.dist_math import (
     SplineWrapper,
-    alltrue_elemwise,
     betaln,
     bound,
     clipped_beta_rvs,
@@ -3649,18 +3648,14 @@ class Triangular(BoundedContinuous):
         c = self.c
         lower = self.lower
         upper = self.upper
-        return tt.switch(
-            alltrue_elemwise([lower <= value, value < c]),
-            tt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
+        return bound(
             tt.switch(
-                tt.eq(value, c),
-                tt.log(2 / (upper - lower)),
-                tt.switch(
-                    alltrue_elemwise([c < value, value <= upper]),
-                    tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),
-                    np.inf,
-                ),
+                tt.lt(value, c),
+                tt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
+                tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),
             ),
+            lower <= value,
+            value <= upper,
         )
 
     def logcdf(self, value):
@@ -3678,17 +3673,24 @@ class Triangular(BoundedContinuous):
         -------
         TensorVariable
         """
-        l = self.lower
-        u = self.upper
         c = self.c
-        return tt.switch(
-            tt.le(value, l),
-            -np.inf,
+        lower = self.lower
+        upper = self.upper
+        return bound(
             tt.switch(
-                tt.le(value, c),
-                tt.log(((value - l) ** 2) / ((u - l) * (c - l))),
-                tt.switch(tt.lt(value, u), tt.log1p(-((u - value) ** 2) / ((u - l) * (u - c))), 0),
+                tt.le(value, lower),
+                -np.inf,
+                tt.switch(
+                    tt.le(value, c),
+                    tt.log(((value - lower) ** 2) / ((upper - lower) * (c - lower))),
+                    tt.switch(
+                        tt.lt(value, upper),
+                        tt.log1p(-((upper - value) ** 2) / ((upper - lower) * (upper - c))),
+                        0,
+                    ),
+                ),
             ),
+            lower <= upper,
         )
 
 

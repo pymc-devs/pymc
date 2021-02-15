@@ -27,6 +27,7 @@ jobs:
             --ignore=pymc3/tests/test_quadpotential.py
             --ignore=pymc3/tests/test_random.py
             --ignore=pymc3/tests/test_sampling.py
+            --ignore=pymc3/tests/test_sampling_jax.py
             --ignore=pymc3/tests/test_shape_handling.py
             --ignore=pymc3/tests/test_shared.py
             --ignore=pymc3/tests/test_smc.py

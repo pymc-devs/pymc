@@ -12,13 +12,17 @@ import re
 from pathlib import Path
 
 if __name__ == "__main__":
-    pytest_ci_job = Path(".github") / "workflows/pytest.yml"
-    txt = pytest_ci_job.read_text()
-    ignored_tests = set(re.findall(r"(?<=--ignore=)(pymc3/tests.*\.py)", txt))
-    non_ignored_tests = set(re.findall(r"(?<!--ignore=)(pymc3/tests.*\.py)", txt))
+    testing_workflows = ["jaxtests.yml", "pytest.yml"]
+    ignored = set()
+    non_ignored = set()
+    for wfyml in testing_workflows:
+        pytest_ci_job = Path(".github") / "workflows" / wfyml
+        txt = pytest_ci_job.read_text()
+        ignored = set(re.findall(r"(?<=--ignore=)(pymc3/tests.*\.py)", txt))
+        non_ignored = non_ignored.union(set(re.findall(r"(?<!--ignore=)(pymc3/tests.*\.py)", txt)))
     assert (
-        ignored_tests <= non_ignored_tests
-    ), f"The following tests are ignored by the first job but not run by the others: {ignored_tests.difference(non_ignored_tests)}"
+        ignored <= non_ignored
+    ), f"The following tests are ignored by the first job but not run by the others: {ignored.difference(non_ignored)}"
     assert (
-        ignored_tests >= non_ignored_tests
-    ), f"The following tests are run by multiple jobs: {non_ignored_tests.difference(ignored_tests)}"
+        ignored >= non_ignored
+    ), f"The following tests are run by multiple jobs: {non_ignored.difference(ignored)}"
