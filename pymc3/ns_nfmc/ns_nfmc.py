@@ -31,35 +31,22 @@ from pymc3.theanof import (
     make_shared_replacements,
 )
 
-# Currently using a local copy of normalizing-flows (tf2 implementation of normalizing flows.
-# Will need to think of a neater way of doing this later.
-import sys
-sys.path.insert(0, '/users/grumitt/normalizing-flows')
-from normalizingflows.flow_catalog import *
-import tensorflow as tf
-import tensorflow_probability as tfp
+# SINF code for fitting the normalizing flow.
+from GIS import GIS
+import torch
 
-tfk = tf.keras
-tfkl = tfk.layers
-tfd = tfp.distributions
-tfb = tfp.bijectors
 
 class NS_NFMC:
     """Nested sampling with normalizing flow based density estimation and sampling."""
 
     def __init__(
         self,
-        draws=2000,
+        draws=10000,
         model=None,
         random_seed=-1,
         chain=0,
-        hidden_shape=[200, 200],
-        layers=12,
-        made_params=2,
-        event_shape=[2],
-        activation="relu",
-        epochs=3000,
-        steps_per_epoch=1,
+        frac_validate=0.8,
+        alpha=(0,0),
         rho=0.01
     ):
 
@@ -67,13 +54,8 @@ class NS_NFMC:
         self.model = model
         self.random_seed = random_seed
         self.chain = chain
-        self.hidden_shape = hidden_shape
-        self.layers = layers
-        self.made_params = made_params
-        self.event_shape = event_shape
-        self.activation = activation
-        self.epochs = epochs
-        self.steps_per_epoch = steps_per_epoch
+        self.frac_validate = frac_validate
+        self.alpha = alpha
         self.rho = rho
         
         self.model = modelcontext(model)
@@ -136,38 +118,11 @@ class NS_NFMC:
 
         self.likelihood_logp = np.array(likelihoods).squeeze()
         
-    def initialize_flow(self):
-        """Initialize the flow model. Currently using MAF model."""
-        base_dist = tfd.Normal(loc=0.0, scale=1.0)
-
-        bijectors = []
-        for i in range(0, layers):
-            bijectors.append(tfb.MaskedAutoregressiveFlow(shift_and_scale_log_fn=Made(params=self.made_params, hidden_units=hidden_shape,
-                                                                                      activation=self.activation)))
-            bijectors.append(tfb.Permute(permutation=[1, 0]))
-
-        bijector = tfb.Chain(bijectors=list(reversed(bijectors)), name='maf_chain')
-        maf = tfd.TransformedDistribution(
-            distribution=base_dist,
-            bijector=bijector,
-            event_shape=self.event_shape)
-
-        x_ = tfkl.Input(shape=self.event_shape, dtype=tf.float32)
-        log_prob_ = maf.log_prob(x_)
-        self.nf_model = tfk.Model(x_, log_prob_)
-        self.nf_model.compile(optimizer=tf.optimizers.Adam(), loss=lambda _, log_prob: -log_prob)
-
     def fit_nf(self):
         """Fit the NF model to samples for the given likelihood level and draw new sample set."""
-        self.nf_model.fit(x=self.live_points,
-                          y=np.zeros((self.posterior.shape[0], 0), np.float32),
-                          batch_size=self.posterior.shape[0],
-                          epochs=self.epochs,
-                          steps_per_epoch=self.steps_per_epoch,
-                          verbose=0,
-                          shuffle=False)
-
-        self.nf_samples = self.nf_model.sample(self.draws)
+        val_idx = int((1 - self.frac_validate) * self.live_points.shape[0])
+        self.nf_model = GIS(self.live_points[:val_idx, ...], self.live_points[val_idx:, ...], alpha=self.alpha)
+        self.nf_samples, = self.nf_model.sample(self.draws, device=torch.device('cpu'))
 
     def update_likelihood_thresh(self):
         """Adaptively set the new likelihood threshold, based on the samples at the previous NS iteration."""

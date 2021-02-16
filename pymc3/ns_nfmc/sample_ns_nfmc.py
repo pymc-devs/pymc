@@ -34,13 +34,8 @@ def sample_ns_nfmc(
     rho=0.01,
     epsilon=0.01,
     model=None,
-    hidden_shape=[200, 200],
-    layers=12,
-    made_params=2,
-    event_shape=[2],
-    activation="relu",
-    epochs=3000,
-    steps_per_epoch=1,
+    frac_validate=0.8,
+    alpha=(0,0),
     random_seed=-1,
     parallel=False,
     chains=None,
@@ -64,20 +59,10 @@ def sample_ns_nfmc(
         Stopping factor for the algorithm. At each iteration we compare the ratio of the evidences
         from the current and previous iterations. If it is less than 1-epsilon we stop.
     model: Model (optional if in ``with`` context)).
-    hidden_shape: list
-        Shape of the hidden layers in the MAF NF model.
-    layers: int
-        Number of layers in the MAF NF model.
-    made_params: int
-        Number of parameters to output per input for the MAF NF model.
-    event_shape: list
-        List of positive integers specifiying shape of input to layer in MAF model.
-    activation: str
-        Activation function to use with the MAF model.
-    epochs: int
-        Number of epochs to run the fitting over.
-    steps_per_epoch: int
-        Number of steps to take per epoch (batches of samples).
+    frac_validate: float
+        Fraction of the live points at each NS iteration that we use for validation of the NF fit.
+    alpha: tuple of floats
+        Regularization parameters used for the NF fit. 
     random_seed: int
         random seed
     parallel: bool
@@ -131,13 +116,8 @@ def sample_ns_nfmc(
         rho,
         epsilon,
         model,
-        hidden_shape,
-        layers,
-        made_params,
-        event_shape,
-        activation,
-        epochs,
-        steps_per_epoch,
+        frac_validate,
+        alpha,
     )
 
     t1 = time.time()
@@ -173,13 +153,8 @@ def sample_ns_nfmc_int(
     rho,
     epsilon,
     model,
-    hidden_shape,
-    layers,
-    made_params,
-    event_shape,
-    activation,
-    epochs,
-    steps_per_epoch,
+    frac_validate,
+    alpha,
     random_seed,
     chain,
     _log,
@@ -190,13 +165,8 @@ def sample_ns_nfmc_int(
         model=model,
         random_seed=random_seed,
         chain=chain,
-        hidden_shape=hidden_shape,
-        layers=layers,
-        made_params=made_params,
-        event_shape=event_shape,
-        activation=activation,
-        epochs=epochs,
-        steps_per_epoch=steps_per_epoch,
+        frac_validate=frac_validate,
+        alpha=alpha,
         rho=rho,
     )
     stage = 0
@@ -205,7 +175,6 @@ def sample_ns_nfmc_int(
     ns_nfmc.setup_logp()
     ns_nfmc.get_prior_logp()
     ns_nfmc.get_likelihood_logp()
-    ns_nfmc.initialize_flow()
     
     while evidence_ratio > 1 - epsilon:
         ns_nfmc.update_likelihood_thresh()
