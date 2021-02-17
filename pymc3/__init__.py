@@ -61,6 +61,7 @@ from pymc3.model_graph import model_to_graphviz
 from pymc3.plots import *
 from pymc3.sampling import *
 from pymc3.smc import *
+from pymc3.ns_nfmc import *
 from pymc3.step_methods import *
 from pymc3.tests import test
 from pymc3.theanof import *

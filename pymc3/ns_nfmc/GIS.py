@@ -1,4 +1,4 @@
-from SIT import *
+from pymc3.ns_nfmc.SIT import *
 
 def GIS(data_train, data_validate=None, iteration=None, n_component=None, interp_nbin=None, KDE=True, bw_factor=0.5, alpha=None, edge_bins=None, 
         ndata_wT=None, MSWD_max_iter=None, logit=False, Whiten=False, batchsize=None, nocuda=False, patch=False, shape=[28,28,1], verbose=True):

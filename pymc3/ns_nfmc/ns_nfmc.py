@@ -32,7 +32,7 @@ from pymc3.theanof import (
 )
 
 # SINF code for fitting the normalizing flow.
-from GIS import GIS
+from pymc3.ns_nfmc.GIS import GIS
 import torch
 
 
@@ -68,7 +68,6 @@ class NS_NFMC:
         self.log_volume_factor = np.zeros(1)
         self.prior_weight = np.ones(self.draws) / self.draws
         self.posterior_weights = np.array([])
-        self.posterior = np.array([])
         self.log_evidences = np.array([])
         self.cumul_evidences = np.zeros(1)
         self.likelihood_logp_thresh = np.array([])
@@ -98,6 +97,7 @@ class NS_NFMC:
         self.nf_samples = np.array(floatX(population))
         self.live_points = np.array(floatX(population))
         self.var_info = var_info
+        self.posterior = np.empty((0, np.shape(self.nf_samples)[1]))
         
     def setup_logp(self):
         """Set up the prior and likelihood logp functions."""
@@ -121,9 +121,12 @@ class NS_NFMC:
     def fit_nf(self):
         """Fit the NF model to samples for the given likelihood level and draw new sample set."""
         val_idx = int((1 - self.frac_validate) * self.live_points.shape[0])
-        self.nf_model = GIS(self.live_points[:val_idx, ...], self.live_points[val_idx:, ...], alpha=self.alpha)
-        self.nf_samples, = self.nf_model.sample(self.draws, device=torch.device('cpu'))
-
+        self.nf_model = GIS(torch.from_numpy(self.live_points[:val_idx, ...].astype(np.float32)),
+                            torch.from_numpy(self.live_points[val_idx:, ...].astype(np.float32)),
+                            alpha=self.alpha)
+        self.nf_samples, _ = self.nf_model.sample(self.draws, device=torch.device('cpu'))
+        self.nf_samples = self.nf_samples.numpy().astype(np.float64)
+        
     def update_likelihood_thresh(self):
         """Adaptively set the new likelihood threshold, based on the samples at the previous NS iteration."""
         self.get_likelihood_logp()
@@ -131,33 +134,35 @@ class NS_NFMC:
 
     def update_weights(self):
         """Update the prior and posterior weights for the given iteration, along with the evidences and volume factors."""
-        self.prior_weight = (self.likelihood_logp >= self.likelihood_logp_thresh).astype(int) / self.draws
+        self.prior_weight = (self.likelihood_logp >= self.likelihood_logp_thresh[-1:]).astype(int) / self.draws
         self.live_points = self.nf_samples[self.prior_weight != 0]
-        self.cut_idx = np.where(self.likelihood_logp < self.likelihood_logp_thresh)[0]
-        log_posterior_weight = (self.log_volume_factor[-1:] + self.likelihood_logp[self.cut_idx]) / self.draws   
+        self.cut_idx = np.where(self.likelihood_logp < self.likelihood_logp_thresh[-1:])[0]
+        log_posterior_weight = self.log_volume_factor[-1:] + self.likelihood_logp[self.cut_idx] - np.log(self.draws)   
 
+        #weight = np.exp(self.log_volume_factor[-1:]) * np.exp(self.likelihood_logp[self.cut_idx]) / self.draws
         self.posterior_weights = np.append(self.posterior_weights, np.exp(log_posterior_weight))
         self.log_evidences = np.append(self.log_evidences, logsumexp(log_posterior_weight))
-        self.posterior = np.append(self.posterior, self.nf_samples[self.cut_idx])
-        self.log_volume_factor = np.append(self.log_volume_factor, self.log_volume_factor[-1:] * np.sum(self.prior_weight))
+        self.posterior = np.append(self.posterior, self.nf_samples[self.cut_idx, ...], axis=0)
+        self.log_volume_factor = np.append(self.log_volume_factor, self.log_volume_factor[-1:] + np.log(np.sum(self.prior_weight)))
         self.cumul_evidences = np.append(self.cumul_evidences, np.exp(logsumexp(self.log_evidences)))
         
     def resample(self):
         """Resample particles given the calculated posterior weights."""
         resampling_indexes = np.random.choice(
-            np.arange(self.draws), size=self.draws, p=self.posterior_weights
+            np.arange(len(self.posterior_weights)), size=self.draws, p=self.posterior_weights/np.sum(self.posterior_weights)
         )
 
-        self.posterior = self.posterior[resampling_indexes]
-        self.prior_logp = self.prior_logp[resampling_indexes]
-        self.likelihood_logp = self.likelihood_logp[resampling_indexes]
+        self.posterior = self.posterior[resampling_indexes, ...]
+        self.nf_samples = np.copy(self.posterior)
+        self.get_prior_logp()
+        self.get_likelihood_logp()
         self.posterior_logp = self.prior_logp + self.likelihood_logp
         
     def posterior_to_trace(self):
         """Save results into a PyMC3 trace."""
         lenght_pos = len(self.posterior)
         varnames = [v.name for v in self.variables]
-
+        
         with self.model:
             strace = NDArray(name=self.model.name)
             strace.setup(lenght_pos, self.chain)

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import math
-from SlicedWasserstein import Percentile
+from pymc3.ns_nfmc.SlicedWasserstein import Percentile
 
 class kde(object):
     """

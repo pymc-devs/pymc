@@ -125,7 +125,7 @@ def sample_ns_nfmc(
         loggers = [_log] + [None] * (chains - 1)
         pool = mp.Pool(cores)
         results = pool.starmap(
-            sample_smc_int, [(*params, random_seed[i], i, loggers[i]) for i in range(chains)]
+            sample_ns_nfmc_int, [(*params, random_seed[i], i, loggers[i]) for i in range(chains)]
         )
 
         pool.close()
@@ -138,6 +138,8 @@ def sample_ns_nfmc(
     (
         traces,
         log_evidence,
+        log_evidences,
+        likelihood_logp_thresh,
     ) = zip(*results)
     trace = MultiTrace(traces)
     trace.report._n_draws = draws
@@ -170,25 +172,25 @@ def sample_ns_nfmc_int(
         rho=rho,
     )
     stage = 0
-    evidence_ratio = 1
+    evidence_ratio = 0
     ns_nfmc.initialize_population()
     ns_nfmc.setup_logp()
     ns_nfmc.get_prior_logp()
     ns_nfmc.get_likelihood_logp()
     
-    while evidence_ratio > 1 - epsilon:
+    while evidence_ratio < 1 - epsilon:
         ns_nfmc.update_likelihood_thresh()
         ns_nfmc.update_weights()
         if _log is not None:
-            _log.info(f"Stage: {stage:3d} Likelihood logp threshold: {ns_nfmc.likelihood_logp_thresh[-1:]:.3f}")
+            _log.info(f"Stage: {stage:3d}, Evidence ratio: {evidence_ratio}")
         ns_nfmc.fit_nf()
         stage += 1
-        evidence_ratio = ns_nfmc.cumul_evidences[-1:] / ns_nfmc.cumul_evidences[-2:]
+        evidence_ratio = ns_nfmc.cumul_evidences[-2:-1] / ns_nfmc.cumul_evidences[-1:]
     ns_nfmc.resample()
     log_evidence = logsumexp(ns_nfmc.log_evidences)
 
     return (
-        ns_nf_mc.posterior_to_trace(),
+        ns_nfmc.posterior_to_trace(),
         log_evidence,
         ns_nfmc.log_evidences,
         ns_nfmc.likelihood_logp_thresh,
