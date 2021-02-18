@@ -47,7 +47,8 @@ class NS_NFMC:
         chain=0,
         frac_validate=0.8,
         alpha=(0,0),
-        rho=0.01
+        rho=0.01,
+        verbose=False,
     ):
 
         self.draws = draws
@@ -57,6 +58,7 @@ class NS_NFMC:
         self.frac_validate = frac_validate
         self.alpha = alpha
         self.rho = rho
+        self.verbose = verbose
         
         self.model = modelcontext(model)
 
@@ -70,7 +72,8 @@ class NS_NFMC:
         self.posterior_weights = np.array([])
         self.log_evidences = np.array([])
         self.cumul_evidences = np.zeros(1)
-        self.likelihood_logp_thresh = np.array([])
+        self.likelihood_logp_thresh = np.array([-np.inf])
+        self.posterior_logp_thresh = np.array([])
         
     def initialize_population(self):
         """Create an initial population from the prior distribution."""
@@ -117,29 +120,43 @@ class NS_NFMC:
         likelihoods = [self.likelihood_logp_func(sample) for sample in self.nf_samples]
 
         self.likelihood_logp = np.array(likelihoods).squeeze()
+
+    def get_posterior_logp(self):
+        """Get the posterior log probabilities."""
+        priors = [self.prior_logp_func(sample) for sample in self.nf_samples]
+        likelihoods = [self.likelihood_logp_func(sample) for sample in self.nf_samples]
+
+        self.prior_logp = np.array(priors).squeeze()
+        self.likelihood_logp = np.array(likelihoods).squeeze()
+        self.posterior_logp = self.likelihood_logp + self.prior_logp
         
     def fit_nf(self):
         """Fit the NF model to samples for the given likelihood level and draw new sample set."""
         val_idx = int((1 - self.frac_validate) * self.live_points.shape[0])
         self.nf_model = GIS(torch.from_numpy(self.live_points[:val_idx, ...].astype(np.float32)),
                             torch.from_numpy(self.live_points[val_idx:, ...].astype(np.float32)),
-                            alpha=self.alpha)
+                            alpha=self.alpha, verbose=self.verbose)
         self.nf_samples, _ = self.nf_model.sample(self.draws, device=torch.device('cpu'))
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         
     def update_likelihood_thresh(self):
         """Adaptively set the new likelihood threshold, based on the samples at the previous NS iteration."""
         self.get_likelihood_logp()
-        self.likelihood_logp_thresh = np.append(self.likelihood_logp_thresh, np.quantile(self.likelihood_logp, 1 - self.rho))
-
+        self.likelihood_logp_thresh = np.append(self.likelihood_logp_thresh, np.quantile(self.likelihood_logp, self.rho))
+        
+    def update_posterior_thresh(self):
+        """Adaptively set the new posterior threshold, based on the samples at the previous NS iteration."""
+        self.get_posterior_logp()
+        self.posterior_logp_thresh = np.append(self.posterior_logp_thresh, np.quantile(self.posterior_logp, self.rho))
+        
     def update_weights(self):
         """Update the prior and posterior weights for the given iteration, along with the evidences and volume factors."""
         self.prior_weight = (self.likelihood_logp >= self.likelihood_logp_thresh[-1:]).astype(int) / self.draws
         self.live_points = self.nf_samples[self.prior_weight != 0]
-        self.cut_idx = np.where(self.likelihood_logp < self.likelihood_logp_thresh[-1:])[0]
+        self.cut_idx = np.where(np.logical_and(self.likelihood_logp < self.likelihood_logp_thresh[-1:],
+                                               self.likelihood_logp > self.likelihood_logp_thresh[-2:-1]))[0]
         log_posterior_weight = self.log_volume_factor[-1:] + self.likelihood_logp[self.cut_idx] - np.log(self.draws)   
 
-        #weight = np.exp(self.log_volume_factor[-1:]) * np.exp(self.likelihood_logp[self.cut_idx]) / self.draws
         self.posterior_weights = np.append(self.posterior_weights, np.exp(log_posterior_weight))
         self.log_evidences = np.append(self.log_evidences, logsumexp(log_posterior_weight))
         self.posterior = np.append(self.posterior, self.nf_samples[self.cut_idx, ...], axis=0)
@@ -148,16 +165,19 @@ class NS_NFMC:
         
     def resample(self):
         """Resample particles given the calculated posterior weights."""
+        is_nan = np.isnan(self.posterior_weights / np.sum(self.posterior_weights))
+        self.posterior_weights = self.posterior_weights[~is_nan]
+        self.posterior = self.posterior[~is_nan]
+        
         resampling_indexes = np.random.choice(
             np.arange(len(self.posterior_weights)), size=self.draws, p=self.posterior_weights/np.sum(self.posterior_weights)
         )
 
         self.posterior = self.posterior[resampling_indexes, ...]
-        self.nf_samples = np.copy(self.posterior)
         self.get_prior_logp()
         self.get_likelihood_logp()
         self.posterior_logp = self.prior_logp + self.likelihood_logp
-        
+
     def posterior_to_trace(self):
         """Save results into a PyMC3 trace."""
         lenght_pos = len(self.posterior)

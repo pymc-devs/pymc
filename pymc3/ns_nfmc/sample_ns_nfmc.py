@@ -36,6 +36,7 @@ def sample_ns_nfmc(
     model=None,
     frac_validate=0.8,
     alpha=(0,0),
+    verbose=False,
     random_seed=-1,
     parallel=False,
     chains=None,
@@ -63,6 +64,8 @@ def sample_ns_nfmc(
         Fraction of the live points at each NS iteration that we use for validation of the NF fit.
     alpha: tuple of floats
         Regularization parameters used for the NF fit. 
+    verbose: boolean
+        Whether you want verbose output from the NF fit.
     random_seed: int
         random seed
     parallel: bool
@@ -118,6 +121,7 @@ def sample_ns_nfmc(
         model,
         frac_validate,
         alpha,
+        verbose,
     )
 
     t1 = time.time()
@@ -157,6 +161,7 @@ def sample_ns_nfmc_int(
     model,
     frac_validate,
     alpha,
+    verbose,
     random_seed,
     chain,
     _log,
@@ -169,6 +174,7 @@ def sample_ns_nfmc_int(
         chain=chain,
         frac_validate=frac_validate,
         alpha=alpha,
+        verbose=verbose,
         rho=rho,
     )
     stage = 0
@@ -180,12 +186,19 @@ def sample_ns_nfmc_int(
     
     while evidence_ratio < 1 - epsilon:
         ns_nfmc.update_likelihood_thresh()
+        #ns_nfmc.update_posterior_thresh()
         ns_nfmc.update_weights()
         if _log is not None:
-            _log.info(f"Stage: {stage:3d}, Evidence ratio: {evidence_ratio}")
+            _log.info(f"Stage: {stage:3d}; Evidence ratio: {evidence_ratio}")
         ns_nfmc.fit_nf()
         stage += 1
-        evidence_ratio = ns_nfmc.cumul_evidences[-2:-1] / ns_nfmc.cumul_evidences[-1:]
+        if ns_nfmc.cumul_evidences[-1:] != 0:
+            evidence_ratio = ns_nfmc.cumul_evidences[-2:-1] / ns_nfmc.cumul_evidences[-1:]
+        else:
+            evidence_ratio = 0.0
+        #if _log is not None:
+        #    _log.info(f"Current cumulative evidence: {ns_nfmc.cumul_evidences[-1:]}")
+        #    _log.info(f"Pevious cumulative evidence: {ns_nfmc.cumul_evidences[-2:-1]}")
     ns_nfmc.resample()
     log_evidence = logsumexp(ns_nfmc.log_evidences)
 
