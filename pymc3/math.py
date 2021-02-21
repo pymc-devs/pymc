@@ -101,11 +101,17 @@ def cartesian(*arrays):
 
     Parameters
     ----------
-    arrays: 1D array-like
-            1D arrays where earlier arrays loop more slowly than later ones
+    arrays: N-D array-like
+            N-D arrays where earlier arrays loop more slowly than later ones
     """
     N = len(arrays)
-    return np.stack(np.meshgrid(*arrays, indexing="ij"), -1).reshape(-1, N)
+    arrays_np = [np.asarray(x) for x in arrays]
+    arrays_2d = [x[:, None] if np.asarray(x).ndim == 1 else x for x in arrays_np]
+    arrays_integer = [np.arange(len(x)) for x in arrays_2d]
+    product_integers = np.stack(np.meshgrid(*arrays_integer, indexing="ij"), -1).reshape(-1, N)
+    return np.concatenate(
+        [array[product_integers[:, i]] for i, array in enumerate(arrays_2d)], axis=-1
+    )
 
 
 def kron_matrix_op(krons, m, op):
