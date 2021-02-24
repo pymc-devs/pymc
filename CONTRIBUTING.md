@@ -113,7 +113,7 @@ tools:
   $ pytest --cov=pymc3 pymc3/tests/<name of test>.py
   ```
 
-* No `pre-commit` errors: see the [Python code style](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Python-Code-Style) and [Jupyter Notebook style](https://github.com/pymc-devs/pymc3/wiki/PyMC's-Jupyter-Notebook-Style) page from our Wiki on how to install and run it.
+* No `pre-commit` errors: see the [Python code style](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Python-Code-Style) and [Jupyter Notebook style](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Jupyter-Notebook-Style-Guide) page from our Wiki on how to install and run it.
 
 ## Developing in Docker
 
@@ -148,7 +148,7 @@ docker exec -it pymc3 jupyter notebook list
 We have configured a pre-commit hook that checks for `black`-compliant code style.
 We encourage you to configure the pre-commit hook as described in the [PyMC3 Python Code Style Wiki Page](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Python-Code-Style), because it will automatically enforce the code style on your commits.
 
-Similarly, consult the [PyMC's Jupyter Notebook Style](https://github.com/pymc-devs/pymc3/wiki/PyMC's-Jupyter-Notebook-Style) guides for notebooks.
+Similarly, consult the [PyMC's Jupyter Notebook Style](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Jupyter-Notebook-Style-Guide) guides for notebooks.
 
 For documentation strings, we *prefer* [numpy style](https://numpydoc.readthedocs.io/en/latest/format.html) to comply with the style that predominates in our upstream dependencies.
 
