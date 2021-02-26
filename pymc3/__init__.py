@@ -40,7 +40,12 @@ __set_compiler_flags()
 
 from pymc3 import gp, ode, sampling
 from pymc3.aesaraf import *
-from pymc3.backends import load_trace, save_trace
+from pymc3.backends import (
+    load_trace,
+    predictions_to_inference_data,
+    save_trace,
+    to_inference_data,
+)
 from pymc3.backends.tracetab import *
 from pymc3.blocking import *
 from pymc3.data import *

@@ -1,5 +1,5 @@
 aesara>=2.0.1
-arviz>=0.11.1
+arviz>=0.11.2
 dill
 fastprogress>=0.2.0
 numpy>=1.15.0
