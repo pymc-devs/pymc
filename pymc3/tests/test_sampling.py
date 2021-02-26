@@ -486,7 +486,7 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test keep_size parameter and idata input
-            idata = az.from_pymc3(trace)
+            idata = pm.to_inference_data(trace)
             ppc = pm.sample_posterior_predictive(idata, keep_size=True)
             assert ppc["a"].shape == (nchains, ndraws)
 
@@ -529,7 +529,7 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test keep_size parameter with inference data as input...
-            idata = az.from_pymc3(trace)
+            idata = pm.to_inference_data(trace)
             ppc = pm.sample_posterior_predictive(idata, keep_size=True)
             assert ppc["a"].shape == (trace.nchains, len(trace), 2)
 
@@ -735,14 +735,14 @@ class TestSamplePPCW(SeededTest):
             y = pm.Normal("y", mu=mu, sigma=1, observed=data0)
             with pytest.warns(UserWarning, match=warning_msg):
                 trace_0 = pm.sample(10, tune=0, chains=2, return_inferencedata=False)
-            idata_0 = az.from_pymc3(trace_0, log_likelihood=False)
+            idata_0 = pm.to_inference_data(trace_0, log_likelihood=False)
 
         with pm.Model() as model_1:
             mu = pm.Normal("mu", mu=0, sigma=1, size=len(data0))
             y = pm.Normal("y", mu=mu, sigma=1, observed=data0)
             with pytest.warns(UserWarning, match=warning_msg):
                 trace_1 = pm.sample(10, tune=0, chains=2, return_inferencedata=False)
-            idata_1 = az.from_pymc3(trace_1, log_likelihood=False)
+            idata_1 = pm.to_inference_data(trace_1, log_likelihood=False)
 
         with pm.Model() as model_2:
             # Model with no observed RVs.
@@ -1052,13 +1052,13 @@ class TestSamplePosteriorPredictive:
 
         with pmodel:
             prior = pm.sample_prior_predictive(samples=20)
-        idat = az.from_pymc3(trace, prior=prior)
+        idat = pm.to_inference_data(trace, prior=prior)
         with pmodel:
             pp = pm.sample_posterior_predictive(idat.prior, var_names=["d"])
 
     @pytest.mark.xfail(reason="Arviz not refactored for v4")
     def test_sample_from_xarray_posterior(self, point_list_arg_bug_fixture):
         pmodel, trace = point_list_arg_bug_fixture
-        idat = az.from_pymc3(trace)
+        idat = pm.to_inference_data(trace)
         with pmodel:
             pp = pm.sample_posterior_predictive(idat.posterior, var_names=["d"])
