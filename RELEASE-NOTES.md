@@ -5,6 +5,7 @@
 + ...
 
 ### New Features
++ `pm.math.cartesian` can now handle inputs that are themselves >1D (see [#4482](https://github.com/pymc-devs/pymc3/pull/4482)).
 + ...
 
 ### Maintenance

@@ -71,7 +71,24 @@ def test_cartesian():
         ]
     )
     auto_cart = cartesian(a, b, c)
-    np.testing.assert_array_almost_equal(manual_cartesian, auto_cart)
+    np.testing.assert_array_equal(manual_cartesian, auto_cart)
+
+
+def test_cartesian_2d():
+    np.random.seed(1)
+    a = [[1, 2], [3, 4]]
+    b = [5, 6]
+    c = [0]
+    manual_cartesian = np.array(
+        [
+            [1, 2, 5, 0],
+            [1, 2, 6, 0],
+            [3, 4, 5, 0],
+            [3, 4, 6, 0],
+        ]
+    )
+    auto_cart = cartesian(a, b, c)
+    np.testing.assert_array_equal(manual_cartesian, auto_cart)
 
 
 def test_kron_dot():
