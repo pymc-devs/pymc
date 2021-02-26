@@ -655,6 +655,8 @@ class TestSamplePPC(SeededTest):
         npt.assert_allclose(post_pred["p"], expected_p)
 
     def test_deterministic_of_observed(self):
+        np.random.seed(8442)
+
         meas_in_1 = pm.aesaraf.floatX(2 + 4 * np.random.randn(10))
         meas_in_2 = pm.aesaraf.floatX(5 + 4 * np.random.randn(10))
         nchains = 2
