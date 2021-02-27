@@ -21,11 +21,36 @@ import pytest
 
 from aesara.tensor.type import TensorType
 
+import pymc3 as pm
+
 from pymc3.aesaraf import _conversion_map, take_along_axis
 from pymc3.vartypes import int_types
 
 FLOATX = str(aesara.config.floatX)
 INTX = str(_conversion_map[FLOATX])
+
+
+class TestBroadcasting:
+    def test_make_shared_replacements(self):
+        """Check if pm.make_shared_replacements preserves broadcasting."""
+
+        with pm.Model() as test_model:
+            test1 = pm.Normal("test1", mu=0.0, sigma=1.0, shape=(1, 10))
+            test2 = pm.Normal("test2", mu=0.0, sigma=1.0, shape=(10, 1))
+
+        # Replace test1 with a shared variable, keep test 2 the same
+        replacement = pm.make_shared_replacements([test_model.test2], test_model)
+        assert test_model.test1.broadcastable == replacement[test_model.test1].broadcastable
+
+    def test_metropolis_sampling(self):
+        """Check if the Metropolis sampler can handle broadcasting."""
+        with pm.Model() as test_model:
+            test1 = pm.Normal("test1", mu=0.0, sigma=1.0, shape=(1, 10))
+            test2 = pm.Normal("test2", mu=test1, sigma=1.0, shape=(10, 10))
+
+            step = pm.Metropolis()
+            # This should fail immediately if broadcasting does not work.
+            pm.sample(tune=5, draws=7, cores=1, step=step, compute_convergence_checks=False)
 
 
 def _make_along_axis_idx(arr_shape, indices, axis):

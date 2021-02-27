@@ -238,7 +238,12 @@ def make_shared_replacements(vars, model):
     Dict of variable -> new shared variable
     """
     othervars = set(model.vars) - set(vars)
-    return {var: aesara.shared(var.tag.test_value, var.name + "_shared") for var in othervars}
+    return {
+        var: aesara.shared(
+            var.tag.test_value, var.name + "_shared", broadcastable=var.broadcastable
+        )
+        for var in othervars
+    }
 
 
 def join_nonshared_inputs(xs, vars, shared, make_shared=False):
