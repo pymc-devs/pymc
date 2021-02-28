@@ -466,7 +466,8 @@ def sample(
             warnings.warn(
                 "In v4.0, pm.sample will return an `arviz.InferenceData` object instead of a `MultiTrace` by default. "
                 "You can pass return_inferencedata=True or return_inferencedata=False to be safe and silence this warning.",
-                FutureWarning, stacklevel=2
+                FutureWarning,
+                stacklevel=2
             )
         # set the default
         return_inferencedata = False
