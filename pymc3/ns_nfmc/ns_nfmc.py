@@ -32,7 +32,7 @@ from pymc3.theanof import (
 )
 
 # SINF code for fitting the normalizing flow.
-from pymc3.ns_nfmc.GIS import GIS
+from pymc3.sinf.GIS import GIS
 import torch
 
 
