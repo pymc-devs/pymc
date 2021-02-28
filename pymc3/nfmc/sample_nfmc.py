@@ -40,7 +40,7 @@ def sample_nfmc(
     random_seed=-1,
     parallel=False,
     chains=None,
-    cores=None,
+    cores=None
 ):
     r"""
     Normalizing flow based nested sampling.
@@ -78,7 +78,7 @@ def sample_nfmc(
 
     """
     _log = logging.getLogger("pymc3")
-    _log.info("Initializing normalizing flow based nested sampling...")
+    _log.info("Initializing normalizing flow based sampling...")
 
     model = modelcontext(model)
     if model.name:
@@ -88,9 +88,10 @@ def sample_nfmc(
         )
     if cores is None:
         cores = _cpu_count()
-
+        
     _log.info(
         f"Sampling {chains} chain{'s' if chains > 1 else ''} "
+        f"Number of cores available for optimization is {cores}"
     )
 
     if random_seed == -1:
@@ -112,6 +113,7 @@ def sample_nfmc(
         model,
         frac_validate,
         alpha,
+        cores,
         verbose,
         parallel,
     )
@@ -153,6 +155,7 @@ def sample_nfmc_int(
     model,
     frac_validate,
     alpha,
+    cores,
     verbose,
     parallel,
     random_seed,
