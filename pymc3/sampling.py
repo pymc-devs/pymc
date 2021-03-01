@@ -464,9 +464,10 @@ def sample(
         v = packaging.version.parse(pm.__version__)
         if v.release[0] > 3 or v.release[1] >= 10:  # type: ignore
             warnings.warn(
-                "In an upcoming release, pm.sample will return an `arviz.InferenceData` object instead of a `MultiTrace` by default. "
+                "In v4.0, pm.sample will return an `arviz.InferenceData` object instead of a `MultiTrace` by default. "
                 "You can pass return_inferencedata=True or return_inferencedata=False to be safe and silence this warning.",
                 FutureWarning,
+                stacklevel=2,
             )
         # set the default
         return_inferencedata = False
