@@ -599,7 +599,7 @@ def sample(
     # count the number of tune/draw iterations that happened
     # ideally via the "tune" statistic, but not all samplers record it!
     if "tune" in trace.stat_names:
-        stat = trace.get_sampler_stats("tune", chains=0)
+        stat = trace.get_sampler_stats("tune", chains=chain_idx)
         # when CompoundStep is used, the stat is 2 dimensional!
         if len(stat.shape) == 2:
             stat = stat[:, 0]
