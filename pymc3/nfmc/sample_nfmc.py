@@ -40,7 +40,7 @@ def sample_nfmc(
     random_seed=-1,
     parallel=False,
     chains=None,
-    cores=None,
+    cores=None
 ):
     r"""
     Normalizing flow based nested sampling.
@@ -88,7 +88,7 @@ def sample_nfmc(
         )
     if cores is None:
         cores = _cpu_count()
-
+        
     _log.info(
         f"Sampling {chains} chain{'s' if chains > 1 else ''} "
         f"Cores available for optimization: {cores}"
