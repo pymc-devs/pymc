@@ -1135,7 +1135,11 @@ class Wald(PositiveContinuous):
         b = 2.0 / l + normal_lcdf(0, 1, -(q + 1.0) / r)
 
         return bound(
-            a + log1pexp(b - a),
+            tt.switch(
+                tt.lt(value, np.inf),
+                a + log1pexp(b - a),
+                0,
+            ),
             0 < value,
             0 < mu,
             0 < lam,
