@@ -1452,9 +1452,9 @@ def _mp_sample(
         # dict does not contain all parameters
         update_start_vals(start[idx - chain], model.test_point, model)
         if step.generates_stats and strace.supports_sampler_stats:
-            strace.setup(draws + tune, idx + chain, step.stats_dtypes)
+            strace.setup(draws + tune, idx, step.stats_dtypes)
         else:
-            strace.setup(draws + tune, idx + chain)
+            strace.setup(draws + tune, idx)
         traces.append(strace)
 
     sampler = ps.ParallelSampler(
