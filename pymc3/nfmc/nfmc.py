@@ -177,7 +177,7 @@ class NFMC:
                             torch.from_numpy(self.weighted_samples[val_idx:, ...].astype(np.float32)),
                             weight_train=torch.from_numpy(self.importance_weights[:val_idx, ...].astype(np.float32)),
                             weight_validate=torch.from_numpy(self.importance_weights[val_idx:, ...].astype(np.float32)),
-                            alpha=self.alpha, verbose=self.verbose)
+                            alpha=self.alpha, verbose=self.verbose, interp_nbin=10)
         self.nf_samples, self.logq = self.nf_model.sample(self.draws, device=torch.device('cpu'))
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
