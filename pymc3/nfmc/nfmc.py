@@ -92,7 +92,6 @@ class NFMC:
         for v in self.variables:
             var_info[v.name] = (init[v.name].shape, init[v.name].size)
 
-        print(self.variables)
         for i in range(self.draws):
 
             point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
@@ -128,12 +127,9 @@ class NFMC:
 
     def get_posterior_logp(self):
         """Get the posterior log probabilities."""
-        priors = [self.prior_logp_func(sample) for sample in self.nf_samples]
-        likelihoods = [self.likelihood_logp_func(sample) for sample in self.nf_samples]
+        posteriors = [self.posterior_logp_func(sample) for sample in self.nf_samples]
 
-        self.prior_logp = np.array(priors).squeeze()
-        self.likelihood_logp = np.array(likelihoods).squeeze()
-        self.posterior_logp = self.likelihood_logp + self.prior_logp
+        self.posterior_logp = np.array(posteriors).squeeze()
 
     def optim_target_logp(self, param_vals):
         """Optimization target function"""
@@ -155,22 +151,28 @@ class NFMC:
     def initialize_nf(self):
         """Intialize the first NF approx, by fitting to the prior and optimization samples."""
         val_idx = int((1 - self.frac_validate) * self.optim_samples.shape[0])
-        print(self.prior_samples)
-        print(val_idx)
         self.nf_model = GIS(torch.from_numpy(self.optim_samples[:val_idx, ...].astype(np.float32)),
                             torch.from_numpy(self.optim_samples[val_idx:, ...].astype(np.float32)),
                             alpha=self.alpha, verbose=self.verbose)
         self.nf_samples, self.logq = self.nf_model.sample(self.draws, device=torch.device('cpu'))
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
+        print(np.shape(self.optim_samples))
+        print(np.shape(self.weighted_samples))
         self.get_posterior_logp()
         weights = np.exp(self.posterior_logp - self.logq.numpy().astype(np.float64))
+        print('Max weights ...')
+        print(np.mean(weights) * len(weights)**self.k_trunc)
         weights = np.clip(weights, 0, np.mean(weights) * len(weights)**self.k_trunc)
         self.importance_weights = np.append(self.importance_weights, weights)
         
     def fit_nf(self):
         """Fit the NF model for a given iteration after initialization."""
         val_idx = int((1 - self.frac_validate) * self.weighted_samples.shape[0])
+        print(np.mean(self.importance_weights))
+        print(np.std(self.importance_weights))
+        print(self.importance_weights)
+        print(self.weighted_samples)
         self.nf_model = GIS(torch.from_numpy(self.weighted_samples[:val_idx, ...].astype(np.float32)),
                             torch.from_numpy(self.weighted_samples[val_idx:, ...].astype(np.float32)),
                             weight_train=torch.from_numpy(self.importance_weights[:val_idx, ...].astype(np.float32)),
@@ -180,7 +182,7 @@ class NFMC:
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
         self.get_posterior_logp()
-        self.weights = np.exp(self.posterior_logp - self.logq)
+        self.weights = np.exp(self.posterior_logp - self.logq.numpy().astype(np.float64))
         self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
         self.importance_weights = np.append(self.importance_weights, self.weights)
         

@@ -191,7 +191,6 @@ def sample_nfmc_int(
     elif not parallel:
         optim_results = np.empty((0, np.shape(nfmc.prior_samples)[1]))
         for sample in nfmc.prior_samples:
-            print(f'Running optimization on prior sample {sample}.')
             optim_results = np.append(optim_results, nfmc.optimize(sample), axis=0)
         np.random.shuffle(optim_results)
     nfmc.optim_samples = np.copy(optim_results)
