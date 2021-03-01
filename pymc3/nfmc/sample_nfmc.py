@@ -78,7 +78,7 @@ def sample_nfmc(
 
     """
     _log = logging.getLogger("pymc3")
-    _log.info("Initializing normalizing flow based nested sampling...")
+    _log.info("Initializing normalizing flow based sampling...")
 
     model = modelcontext(model)
     if model.name:
@@ -91,6 +91,7 @@ def sample_nfmc(
 
     _log.info(
         f"Sampling {chains} chain{'s' if chains > 1 else ''} "
+        f"Cores available for optimization: {cores}"
     )
 
     if random_seed == -1:
@@ -112,6 +113,7 @@ def sample_nfmc(
         model,
         frac_validate,
         alpha,
+        cores,
         verbose,
         parallel,
     )
@@ -153,6 +155,7 @@ def sample_nfmc_int(
     model,
     frac_validate,
     alpha,
+    cores,
     verbose,
     parallel,
     random_seed,
@@ -188,6 +191,7 @@ def sample_nfmc_int(
     elif not parallel:
         optim_results = np.empty((0, np.shape(nfmc.prior_samples)[1]))
         for sample in nfmc.prior_samples:
+            print(f'Running optimization on prior sample {sample}.')
             optim_results = np.append(optim_results, nfmc.optimize(sample), axis=0)
         np.random.shuffle(optim_results)
     nfmc.optim_samples = np.copy(optim_results)

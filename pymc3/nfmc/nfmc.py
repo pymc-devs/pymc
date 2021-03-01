@@ -155,6 +155,8 @@ class NFMC:
     def initialize_nf(self):
         """Intialize the first NF approx, by fitting to the prior and optimization samples."""
         val_idx = int((1 - self.frac_validate) * self.optim_samples.shape[0])
+        print(self.prior_samples)
+        print(val_idx)
         self.nf_model = GIS(torch.from_numpy(self.optim_samples[:val_idx, ...].astype(np.float32)),
                             torch.from_numpy(self.optim_samples[val_idx:, ...].astype(np.float32)),
                             alpha=self.alpha, verbose=self.verbose)
