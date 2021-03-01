@@ -321,6 +321,7 @@ def test_partial_trace_sample():
         trace = pm.sample(trace=[a])
 
 
+@pytest.mark.xfail
 def test_chain_idx():
     # see https://github.com/pymc-devs/pymc3/issues/4469
     with pm.Model():
