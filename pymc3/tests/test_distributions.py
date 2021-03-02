@@ -1246,6 +1246,7 @@ class TestMatchesScipy:
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
+    # this test doesn't always result in the same outcome fail/success
     def test_gamma_logcdf(self):
         # pymc-devs/aesara#224: skip_paramdomain_outside_edge_test has to be set
         # True to avoid triggering a C-level assertion in the Aesara GammaQ function
@@ -1541,13 +1542,14 @@ class TestMatchesScipy:
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    def test_zeroinflatedbinomial(self):
+    def test_zeroinflatedbinomial_distribution(self):
         self.checkd(
             ZeroInflatedBinomial,
             Nat,
             {"n": NatSmall, "p": Unit, "psi": Unit},
         )
+
+    def test_zeroinflatedbinomial_logcdf(self):
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedBinomial,
             Nat,
