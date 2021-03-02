@@ -192,8 +192,8 @@ def build_disaster_model(masked=False):
     return model
 
 
-@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestDisasterModel(SeededTest):
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     # Time series of recorded coal mining disasters in the UK from 1851 to 1962
     def test_disaster_model(self):
         model = build_disaster_model(masked=False)
@@ -205,6 +205,7 @@ class TestDisasterModel(SeededTest):
             tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
             az.summary(tr)
 
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_disaster_model_missing(self):
         model = build_disaster_model(masked=True)
         with model:

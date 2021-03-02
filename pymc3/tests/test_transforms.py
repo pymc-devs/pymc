@@ -235,15 +235,22 @@ def test_ordered():
     close_to_logical(np.diff(vals) >= 0, True, tol)
 
 
+def test_chain_values():
+    chain_tranf = tr.Chain([tr.logodds, tr.ordered])
+    vals = get_values(chain_tranf, Vector(R, 5), aet.dvector, np.zeros(5))
+    close_to_logical(np.diff(vals) >= 0, True, tol)
+
+
 @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-def test_chain():
+def test_chain_vector_transform():
     chain_tranf = tr.Chain([tr.logodds, tr.ordered])
     check_vector_transform(chain_tranf, UnitSortedVector(3))
 
-    check_jacobian_det(chain_tranf, Vector(R, 4), aet.dvector, np.zeros(4), elemwise=False)
 
-    vals = get_values(chain_tranf, Vector(R, 5), aet.dvector, np.zeros(5))
-    close_to_logical(np.diff(vals) >= 0, True, tol)
+@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+def test_chain_jacob_det():
+    chain_tranf = tr.Chain([tr.logodds, tr.ordered])
+    check_jacobian_det(chain_tranf, Vector(R, 4), aet.dvector, np.zeros(4), elemwise=False)
 
 
 class TestElementWiseLogp(SeededTest):
