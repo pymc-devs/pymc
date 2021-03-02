@@ -332,6 +332,9 @@ def test_chain_idx():
         # before
         trace = pm.sample(draws=150, tune=10, chain_idx=1)
 
+        ppc = pm.sample_posterior_predictive(trace)
+        ppc = pm.sample_posterior_predictive(trace, keep_size=True)
+
 
 @pytest.mark.parametrize(
     "n_points, tune, expected_length, expected_n_traces",
