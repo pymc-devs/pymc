@@ -1720,7 +1720,10 @@ def sample_posterior_predictive(
                 # the trace object will either be a MultiTrace (and have _straces)...
                 if hasattr(_trace, "_straces"):
                     chain_idx, point_idx = np.divmod(idx, len_trace)
-                    param = cast(MultiTrace, _trace)._straces[chain_idx % nchain].point(point_idx)
+                    chain_idx = chain_idx % nchain
+                    # chain indices might not always start at 0, convert to proper index
+                    chain_idx = list(_trace._straces.keys())[chain_idx]
+                    param = cast(MultiTrace, _trace)._straces[chain_idx].point(point_idx)
                 # ... or a PointList
                 else:
                     param = cast(PointList, _trace)[idx % (len_trace * nchain)]
