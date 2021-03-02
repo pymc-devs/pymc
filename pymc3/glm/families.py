@@ -16,8 +16,8 @@ import numbers
 
 from copy import copy
 
+import aesara.tensor as aet
 import numpy as np
-import theano.tensor as tt
 
 from pymc3 import distributions as pm_dists
 from pymc3.model import modelcontext
@@ -36,9 +36,9 @@ class Identity:
 
 
 identity = Identity()
-logit = tt.nnet.sigmoid
-inverse = tt.inv
-exp = tt.exp
+logit = aet.nnet.sigmoid
+inverse = aet.inv
+exp = aet.exp
 
 
 class Family:
@@ -80,7 +80,7 @@ class Family:
 
         Parameters
         ----------
-        y_est: theano.tensor
+        y_est: aesara.tensor
             Estimate of dependent variable
         y_data: array
             Observed dependent variable

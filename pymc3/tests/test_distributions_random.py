@@ -17,12 +17,12 @@ import sys
 
 from contextlib import ExitStack as does_not_raise
 
+import aesara
 import numpy as np
 import numpy.random as nr
 import numpy.testing as npt
 import pytest
 import scipy.stats as st
-import theano
 
 from scipy import linalg
 from scipy.special import expit
@@ -1127,7 +1127,7 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(pm.Moyal, {"mu": R, "sigma": Rplus}, ref_rand=ref_rand)
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
             for sigma in Rplus.vals:

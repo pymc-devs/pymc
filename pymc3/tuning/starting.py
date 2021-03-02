@@ -19,8 +19,8 @@ Created on Mar 12, 2011
 """
 import copy
 
+import aesara.gradient as tg
 import numpy as np
-import theano.gradient as tg
 
 from fastprogress.fastprogress import ProgressBar, progress_bar
 from numpy import isfinite, nan_to_num
@@ -28,9 +28,9 @@ from scipy.optimize import minimize
 
 import pymc3 as pm
 
+from pymc3.aesaraf import inputvars
 from pymc3.blocking import ArrayOrdering, DictToArrayBijection
 from pymc3.model import Point, modelcontext
-from pymc3.theanof import inputvars
 from pymc3.util import (
     check_start_vals,
     get_default_varnames,

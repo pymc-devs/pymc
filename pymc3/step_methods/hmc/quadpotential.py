@@ -14,14 +14,14 @@
 
 import warnings
 
+import aesara
 import numpy as np
 import scipy.linalg
-import theano
 
 from numpy.random import normal
 from scipy.sparse import issparse
 
-from pymc3.theanof import floatX
+from pymc3.aesaraf import floatX
 
 __all__ = [
     "quad_potential",
@@ -170,7 +170,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
             )
 
         if dtype is None:
-            dtype = theano.config.floatX
+            dtype = aesara.config.floatX
 
         if initial_diag is None:
             initial_diag = np.ones(n, dtype=dtype)
@@ -189,7 +189,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
     def reset(self):
         self._var = np.array(self._initial_diag, dtype=self.dtype, copy=True)
-        self._var_theano = theano.shared(self._var)
+        self._var_aesara = aesara.shared(self._var)
         self._stds = np.sqrt(self._initial_diag)
         self._inv_stds = floatX(1.0) / self._stds
         self._foreground_var = _WeightedVariance(
@@ -222,7 +222,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
         weightvar.current_variance(out=self._var)
         np.sqrt(self._var, out=self._stds)
         np.divide(1, self._stds, out=self._inv_stds)
-        self._var_theano.set_value(self._var)
+        self._var_aesara.set_value(self._var)
 
     def update(self, sample, grad, tune):
         """Inform the potential about a new sample during tuning."""
@@ -304,7 +304,7 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
         self._var[:] = var
         np.sqrt(self._var, out=self._stds)
         np.divide(1, self._stds, out=self._inv_stds)
-        self._var_theano.set_value(self._var)
+        self._var_aesara.set_value(self._var)
 
     def update(self, sample, grad, tune):
         """Inform the potential about a new sample during tuning."""
@@ -384,7 +384,7 @@ class QuadPotentialDiag(QuadPotential):
            Diagonal of covariance matrix for the potential vector
         """
         if dtype is None:
-            dtype = theano.config.floatX
+            dtype = aesara.config.floatX
         self.dtype = dtype
         v = v.astype(self.dtype)
         s = v ** 0.5
@@ -428,7 +428,7 @@ class QuadPotentialFullInv(QuadPotential):
            Inverse of covariance matrix for the potential vector
         """
         if dtype is None:
-            dtype = theano.config.floatX
+            dtype = aesara.config.floatX
         self.dtype = dtype
         self.L = floatX(scipy.linalg.cholesky(A, lower=True))
 
@@ -468,7 +468,7 @@ class QuadPotentialFull(QuadPotential):
             scaling matrix for the potential vector
         """
         if dtype is None:
-            dtype = theano.config.floatX
+            dtype = aesara.config.floatX
         self.dtype = dtype
         self._cov = np.array(cov, dtype=self.dtype, copy=True)
         self._chol = scipy.linalg.cholesky(self._cov, lower=True)
@@ -525,7 +525,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
             )
 
         if dtype is None:
-            dtype = theano.config.floatX
+            dtype = aesara.config.floatX
 
         if initial_cov is None:
             initial_cov = np.eye(n, dtype=dtype)
@@ -658,7 +658,7 @@ except ImportError:
 if chol_available:
     __all__ += ["QuadPotentialSparse"]
 
-    import theano.sparse
+    import aesara.sparse
 
     class QuadPotentialSparse(QuadPotential):
         def __init__(self, A):
@@ -676,8 +676,8 @@ if chol_available:
 
         def velocity(self, x):
             """Compute the current velocity at a position in parameter space."""
-            A = theano.sparse.as_sparse(self.A)
-            return theano.sparse.dot(A, x)
+            A = aesara.sparse.as_sparse(self.A)
+            return aesara.sparse.dot(A, x)
 
         def random(self):
             """Draw random value from QuadPotential."""

@@ -14,16 +14,16 @@
 
 import warnings
 
+import aesara.tensor as aet
 import numpy as np
-import theano.tensor as tt
-import theano.tensor.slinalg  # pylint: disable=unused-import
 
+from aesara.tensor.slinalg import Solve, cholesky  # pylint: disable=unused-import
+from aesara.tensor.var import TensorConstant
 from scipy.cluster.vq import kmeans
 
-cholesky = tt.slinalg.cholesky
-solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
-solve_upper = tt.slinalg.Solve(A_structure="upper_triangular")
-solve = tt.slinalg.Solve(A_structure="general")
+solve_lower = Solve(A_structure="lower_triangular")
+solve_upper = Solve(A_structure="upper_triangular")
+solve = Solve(A_structure="general")
 
 
 def infer_shape(X, n_points=None):
@@ -37,12 +37,12 @@ def infer_shape(X, n_points=None):
 
 def stabilize(K):
     """ adds small diagonal to a covariance matrix """
-    return K + 1e-6 * tt.identity_like(K)
+    return K + 1e-6 * aet.identity_like(K)
 
 
 def kmeans_inducing_points(n_inducing, X):
     # first whiten X
-    if isinstance(X, tt.TensorConstant):
+    if isinstance(X, TensorConstant):
         X = X.value
     elif isinstance(X, (np.ndarray, tuple, list)):
         X = np.asarray(X)

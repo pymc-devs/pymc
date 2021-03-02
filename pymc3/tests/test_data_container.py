@@ -16,12 +16,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from theano import shared
+from aesara import shared
 
 import pymc3 as pm
 
+from pymc3.aesaraf import floatX
 from pymc3.tests.helpers import SeededTest
-from pymc3.theanof import floatX
 
 
 class TestData(SeededTest):

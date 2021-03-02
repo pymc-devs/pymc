@@ -12,15 +12,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
+import aesara.sparse as sparse
+import aesara.tensor as aet
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
 import pandas as pd
 import pytest
 import scipy.sparse as sps
-import theano
-import theano.sparse as sparse
-import theano.tensor as tt
+
+from aesara.graph.basic import Variable
+from aesara.tensor.var import TensorConstant, TensorVariable
 
 import pymc3 as pm
 
@@ -37,7 +40,7 @@ class TestHelperFunc:
         dense_input = np.arange(9).reshape((3, 3)).astype(input_dtype)
 
         input_name = "input_variable"
-        theano_graph_input = tt.as_tensor(dense_input, name=input_name)
+        aesara_graph_input = aet.as_tensor(dense_input, name=input_name)
         pandas_input = pd.DataFrame(dense_input)
 
         # All the even numbers are replaced with NaN
@@ -77,22 +80,22 @@ class TestHelperFunc:
             assert func_output.shape == input_value.shape
             npt.assert_allclose(func_output, masked_array_input)
 
-        # Check function behavior with Theano graph variable
-        theano_output = func(theano_graph_input)
-        assert isinstance(theano_output, theano.graph.basic.Variable)
-        npt.assert_allclose(theano_output.eval(), theano_graph_input.eval())
-        intX = pm.theanof._conversion_map[theano.config.floatX]
-        if dense_input.dtype == intX or dense_input.dtype == theano.config.floatX:
-            assert theano_output.owner is None  # func should not have added new nodes
-            assert theano_output.name == input_name
+        # Check function behavior with Aesara graph variable
+        aesara_output = func(aesara_graph_input)
+        assert isinstance(aesara_output, Variable)
+        npt.assert_allclose(aesara_output.eval(), aesara_graph_input.eval())
+        intX = pm.aesaraf._conversion_map[aesara.config.floatX]
+        if dense_input.dtype == intX or dense_input.dtype == aesara.config.floatX:
+            assert aesara_output.owner is None  # func should not have added new nodes
+            assert aesara_output.name == input_name
         else:
-            assert theano_output.owner is not None  # func should have casted
-            assert theano_output.owner.inputs[0].name == input_name
+            assert aesara_output.owner is not None  # func should have casted
+            assert aesara_output.owner.inputs[0].name == input_name
 
         if "float" in input_dtype:
-            assert theano_output.dtype == theano.config.floatX
+            assert aesara_output.dtype == aesara.config.floatX
         else:
-            assert theano_output.dtype == intX
+            assert aesara_output.dtype == intX
 
         # Check function behavior with generator data
         generator_output = func(square_generator)
@@ -102,15 +105,15 @@ class TestHelperFunc:
         # Make sure the returned object has .set_gen and .set_default methods
         assert hasattr(wrapped, "set_gen")
         assert hasattr(wrapped, "set_default")
-        # Make sure the returned object is a Theano TensorVariable
-        assert isinstance(wrapped, tt.TensorVariable)
+        # Make sure the returned object is a Aesara TensorVariable
+        assert isinstance(wrapped, TensorVariable)
 
     def test_as_tensor(self):
         """
         Check returned values for `data` given known inputs to `as_tensor()`.
 
         Note that ndarrays should return a TensorConstant and sparse inputs
-        should return a Sparse Theano object.
+        should return a Sparse Aesara object.
         """
         # Create the various inputs to the function
         input_name = "testing_inputs"
@@ -137,18 +140,18 @@ class TestHelperFunc:
         for func_output in [dense_output, sparse_output]:
             assert func_output.missing_values is None
 
-        # Ensure that the Theano variable names are correctly set.
+        # Ensure that the Aesara variable names are correctly set.
         # Note that the output for masked inputs do not have their names set
         # to the passed value.
         for func_output in [dense_output, sparse_output]:
             assert func_output.name == input_name
 
         # Ensure the that returned functions are all of the correct type
-        assert isinstance(dense_output, tt.TensorConstant)
+        assert isinstance(dense_output, TensorConstant)
         assert sparse.basic._is_sparse_variable(sparse_output)
 
         # Masked output is something weird. Just ensure it has missing values
-        # self.assertIsInstance(masked_output, tt.TensorConstant)
+        # self.assertIsInstance(masked_output, TensorConstant)
         assert masked_output.missing_values is not None
 
         return None

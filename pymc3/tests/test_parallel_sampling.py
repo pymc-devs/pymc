@@ -14,12 +14,13 @@
 import multiprocessing
 import os
 
+import aesara
+import aesara.tensor as aet
 import numpy as np
 import pytest
-import theano
-import theano.tensor as tt
 
-from theano.compile.ops import as_op
+from aesara.compile.ops import as_op
+from aesara.tensor.type import TensorType
 
 import pymc3 as pm
 import pymc3.parallel_sampling as ps
@@ -60,10 +61,10 @@ def test_bad_unpickle():
         assert "could not be unpickled" in str(exc_info.getrepr(style="short"))
 
 
-tt_vector = tt.TensorType(theano.config.floatX, [False])
+aet_vector = TensorType(aesara.config.floatX, [False])
 
 
-@as_op([tt_vector, tt.iscalar], [tt_vector])
+@as_op([aet_vector, aet.iscalar], [aet_vector])
 def _crash_remote_process(a, master_pid):
     if os.getpid() != master_pid:
         os.exit(0)
@@ -80,8 +81,8 @@ def test_remote_pipe_closed():
     master_pid = os.getpid()
     with pm.Model():
         x = pm.Normal("x", shape=2, mu=0.1)
-        tt_pid = tt.as_tensor_variable(np.array(master_pid, dtype="int32"))
-        pm.Normal("y", mu=_crash_remote_process(x, tt_pid), shape=2)
+        aet_pid = aet.as_tensor_variable(np.array(master_pid, dtype="int32"))
+        pm.Normal("y", mu=_crash_remote_process(x, aet_pid), shape=2)
 
         step = pm.Metropolis()
         with pytest.raises(RuntimeError, match="Chain [0-9] failed"):

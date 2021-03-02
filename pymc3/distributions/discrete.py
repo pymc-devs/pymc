@@ -14,11 +14,12 @@
 
 import warnings
 
+import aesara.tensor as aet
 import numpy as np
-import theano.tensor as tt
 
 from scipy import stats
 
+from pymc3.aesaraf import floatX, intX, take_along_axis
 from pymc3.distributions.dist_math import (
     betaln,
     binomln,
@@ -34,7 +35,6 @@ from pymc3.distributions.dist_math import (
 from pymc3.distributions.distribution import Discrete, draw_values, generate_samples
 from pymc3.distributions.shape_utils import broadcast_distribution_samples
 from pymc3.math import log1mexp, log1pexp, logaddexp, logit, logsumexp, sigmoid, tround
-from pymc3.theanof import floatX, intX, take_along_axis
 
 __all__ = [
     "Binomial",
@@ -100,9 +100,9 @@ class Binomial(Discrete):
 
     def __init__(self, n, p, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.n = n = tt.as_tensor_variable(intX(n))
-        self.p = p = tt.as_tensor_variable(floatX(p))
-        self.mode = tt.cast(tround(n * p), self.dtype)
+        self.n = n = aet.as_tensor_variable(intX(n))
+        self.p = p = aet.as_tensor_variable(floatX(p))
+        self.mode = aet.cast(tround(n * p), self.dtype)
 
     def random(self, point=None, size=None):
         r"""
@@ -132,7 +132,7 @@ class Binomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -171,12 +171,12 @@ class Binomial(Discrete):
 
         n = self.n
         p = self.p
-        value = tt.floor(value)
+        value = aet.floor(value)
 
         return bound(
-            tt.switch(
-                tt.lt(value, n),
-                tt.log(incomplete_beta(n - value, value + 1, 1 - p)),
+            aet.switch(
+                aet.lt(value, n),
+                aet.log(incomplete_beta(n - value, value + 1, 1 - p)),
                 0,
             ),
             0 <= value,
@@ -243,10 +243,10 @@ class BetaBinomial(Discrete):
 
     def __init__(self, alpha, beta, n, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
-        self.beta = beta = tt.as_tensor_variable(floatX(beta))
-        self.n = n = tt.as_tensor_variable(intX(n))
-        self.mode = tt.cast(tround(alpha / (alpha + beta)), "int8")
+        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
+        self.beta = beta = aet.as_tensor_variable(floatX(beta))
+        self.n = n = aet.as_tensor_variable(intX(n))
+        self.mode = aet.cast(tround(alpha / (alpha + beta)), "int8")
 
     def _random(self, alpha, beta, n, size=None):
         size = size or ()
@@ -300,7 +300,7 @@ class BetaBinomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -340,12 +340,12 @@ class BetaBinomial(Discrete):
         alpha = self.alpha
         beta = self.beta
         n = self.n
-        safe_lower = tt.switch(tt.lt(value, 0), value, 0)
+        safe_lower = aet.switch(aet.lt(value, 0), value, 0)
 
         return bound(
-            tt.switch(
-                tt.lt(value, n),
-                logsumexp(self.logp(tt.arange(safe_lower, value + 1)), keepdims=False),
+            aet.switch(
+                aet.lt(value, n),
+                logsumexp(self.logp(aet.arange(safe_lower, value + 1)), keepdims=False),
                 0,
             ),
             0 <= value,
@@ -401,14 +401,14 @@ class Bernoulli(Discrete):
             raise ValueError("Specify one of p and logit_p")
         if p is not None:
             self._is_logit = False
-            self.p = p = tt.as_tensor_variable(floatX(p))
+            self.p = p = aet.as_tensor_variable(floatX(p))
             self._logit_p = logit(p)
         else:
             self._is_logit = True
-            self.p = tt.nnet.sigmoid(floatX(logit_p))
-            self._logit_p = tt.as_tensor_variable(logit_p)
+            self.p = aet.nnet.sigmoid(floatX(logit_p))
+            self._logit_p = aet.as_tensor_variable(logit_p)
 
-        self.mode = tt.cast(tround(self.p), "int8")
+        self.mode = aet.cast(tround(self.p), "int8")
 
     def random(self, point=None, size=None):
         r"""
@@ -438,19 +438,23 @@ class Bernoulli(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
         TensorVariable
         """
         if self._is_logit:
-            lp = tt.switch(value, self._logit_p, -self._logit_p)
+            lp = aet.switch(value, self._logit_p, -self._logit_p)
             return -log1pexp(-lp)
         else:
             p = self.p
             return bound(
-                tt.switch(value, tt.log(p), tt.log(1 - p)), value >= 0, value <= 1, p >= 0, p <= 1
+                aet.switch(value, aet.log(p), aet.log(1 - p)),
+                value >= 0,
+                value <= 1,
+                p >= 0,
+                p <= 1,
             )
 
     def logcdf(self, value):
@@ -460,9 +464,9 @@ class Bernoulli(Discrete):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -471,9 +475,9 @@ class Bernoulli(Discrete):
         p = self.p
 
         return bound(
-            tt.switch(
-                tt.lt(value, 1),
-                tt.log1p(-p),
+            aet.switch(
+                aet.lt(value, 1),
+                aet.log1p(-p),
                 0,
             ),
             0 <= value,
@@ -527,8 +531,8 @@ class DiscreteWeibull(Discrete):
     def __init__(self, q, beta, *args, **kwargs):
         super().__init__(*args, defaults=("median",), **kwargs)
 
-        self.q = tt.as_tensor_variable(floatX(q))
-        self.beta = tt.as_tensor_variable(floatX(beta))
+        self.q = aet.as_tensor_variable(floatX(q))
+        self.beta = aet.as_tensor_variable(floatX(beta))
 
         self.median = self._ppf(0.5)
 
@@ -540,7 +544,7 @@ class DiscreteWeibull(Discrete):
         q = self.q
         beta = self.beta
 
-        return (tt.ceil(tt.power(tt.log(1 - p) / tt.log(q), 1.0 / beta)) - 1).astype("int64")
+        return (aet.ceil(aet.power(aet.log(1 - p) / aet.log(q), 1.0 / beta)) - 1).astype("int64")
 
     def _random(self, q, beta, size=None):
         p = np.random.uniform(size=size)
@@ -576,7 +580,7 @@ class DiscreteWeibull(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -585,7 +589,9 @@ class DiscreteWeibull(Discrete):
         q = self.q
         beta = self.beta
         return bound(
-            tt.log(tt.power(q, tt.power(value, beta)) - tt.power(q, tt.power(value + 1, beta))),
+            aet.log(
+                aet.power(q, aet.power(value, beta)) - aet.power(q, aet.power(value + 1, beta))
+            ),
             0 <= value,
             0 < q,
             q < 1,
@@ -599,9 +605,9 @@ class DiscreteWeibull(Discrete):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -611,7 +617,7 @@ class DiscreteWeibull(Discrete):
         beta = self.beta
 
         return bound(
-            tt.log1p(-tt.power(q, tt.power(value + 1, beta))),
+            aet.log1p(-aet.power(q, aet.power(value + 1, beta))),
             0 <= value,
             0 < q,
             q < 1,
@@ -665,8 +671,8 @@ class Poisson(Discrete):
 
     def __init__(self, mu, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.mode = intX(tt.floor(mu))
+        self.mu = mu = aet.as_tensor_variable(floatX(mu))
+        self.mode = intX(aet.floor(mu))
 
     def random(self, point=None, size=None):
         r"""
@@ -696,7 +702,7 @@ class Poisson(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -705,7 +711,7 @@ class Poisson(Discrete):
         mu = self.mu
         log_prob = bound(logpow(mu, value) - factln(value) - mu, mu >= 0, value >= 0)
         # Return zero when mu and value are both zero
-        return tt.switch(tt.eq(mu, 0) * tt.eq(value, 0), 0, log_prob)
+        return aet.switch(aet.eq(mu, 0) * aet.eq(value, 0), 0, log_prob)
 
     def logcdf(self, value):
         """
@@ -714,22 +720,22 @@ class Poisson(Discrete):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
         TensorVariable
         """
         mu = self.mu
-        value = tt.floor(value)
+        value = aet.floor(value)
         # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
-        safe_mu = tt.switch(tt.lt(mu, 0), 0, mu)
-        safe_value = tt.switch(tt.lt(value, 0), 0, value)
+        safe_mu = aet.switch(aet.lt(mu, 0), 0, mu)
+        safe_value = aet.switch(aet.lt(value, 0), 0, value)
 
         return bound(
-            tt.log(tt.gammaincc(safe_value + 1, safe_mu)),
+            aet.log(aet.gammaincc(safe_value + 1, safe_mu)),
             0 <= value,
             0 <= mu,
         )
@@ -800,16 +806,16 @@ class NegativeBinomial(Discrete):
     def __init__(self, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         mu, alpha = self.get_mu_alpha(mu, alpha, p, n)
-        self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
-        self.mode = intX(tt.floor(mu))
+        self.mu = mu = aet.as_tensor_variable(floatX(mu))
+        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
+        self.mode = intX(aet.floor(mu))
 
     def get_mu_alpha(self, mu=None, alpha=None, p=None, n=None):
         self._param_type = ["mu", "alpha"]
         if alpha is None:
             if n is not None:
                 self._param_type[1] = "n"
-                self.n = tt.as_tensor_variable(intX(n))
+                self.n = aet.as_tensor_variable(intX(n))
                 alpha = n
             else:
                 raise ValueError("Incompatible parametrization. Must specify either alpha or n.")
@@ -819,7 +825,7 @@ class NegativeBinomial(Discrete):
         if mu is None:
             if p is not None:
                 self._param_type[0] = "p"
-                self.p = tt.as_tensor_variable(floatX(p))
+                self.p = aet.as_tensor_variable(floatX(p))
                 mu = alpha * (1 - p) / p
             else:
                 raise ValueError("Incompatible parametrization. Must specify either mu or p.")
@@ -870,7 +876,7 @@ class NegativeBinomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -888,7 +894,7 @@ class NegativeBinomial(Discrete):
         )
 
         # Return Poisson when alpha gets very large.
-        return tt.switch(tt.gt(alpha, 1e10), Poisson.dist(self.mu).logp(value), negbinom)
+        return aet.switch(aet.gt(alpha, 1e10), Poisson.dist(self.mu).logp(value), negbinom)
 
     def logcdf(self, value):
         """
@@ -915,7 +921,7 @@ class NegativeBinomial(Discrete):
         p = alpha / (self.mu + alpha)
 
         return bound(
-            tt.log(incomplete_beta(alpha, tt.floor(value) + 1, p)),
+            aet.log(incomplete_beta(alpha, aet.floor(value) + 1, p)),
             0 <= value,
             0 < alpha,
             0 <= p,
@@ -965,7 +971,7 @@ class Geometric(Discrete):
 
     def __init__(self, p, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.p = p = tt.as_tensor_variable(floatX(p))
+        self.p = p = aet.as_tensor_variable(floatX(p))
         self.mode = 1
 
     def random(self, point=None, size=None):
@@ -996,14 +1002,14 @@ class Geometric(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
         TensorVariable
         """
         p = self.p
-        return bound(tt.log(p) + logpow(1 - p, value - 1), 0 <= p, p <= 1, value >= 1)
+        return bound(aet.log(p) + logpow(1 - p, value - 1), 0 <= p, p <= 1, value >= 1)
 
     def logcdf(self, value):
         """
@@ -1012,9 +1018,9 @@ class Geometric(Discrete):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -1023,7 +1029,7 @@ class Geometric(Discrete):
         p = self.p
 
         return bound(
-            log1mexp(-tt.log1p(-p) * value),
+            log1mexp(-aet.log1p(-p) * value),
             0 <= value,
             0 <= p,
             p <= 1,
@@ -1081,7 +1087,7 @@ class HyperGeometric(Discrete):
         self.N = intX(N)
         self.k = intX(k)
         self.n = intX(n)
-        self.mode = intX(tt.floor((n + 1) * (k + 1) / (N + 2)))
+        self.mode = intX(aet.floor((n + 1) * (k + 1) / (N + 2)))
 
     def random(self, point=None, size=None):
         r"""
@@ -1120,7 +1126,7 @@ class HyperGeometric(Discrete):
         ----------
         value : numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1140,8 +1146,8 @@ class HyperGeometric(Discrete):
             - betaln(tot + 1, 1)
         )
         # value in [max(0, n - N + k), min(k, n)]
-        lower = tt.switch(tt.gt(n - N + k, 0), n - N + k, 0)
-        upper = tt.switch(tt.lt(k, n), k, n)
+        lower = aet.switch(aet.gt(n - N + k, 0), n - N + k, 0)
+        upper = aet.switch(aet.lt(k, n), k, n)
         return bound(result, lower <= value, value <= upper)
 
     def logcdf(self, value):
@@ -1168,12 +1174,12 @@ class HyperGeometric(Discrete):
         N = self.N
         n = self.n
         k = self.k
-        safe_lower = tt.switch(tt.lt(value, 0), value, 0)
+        safe_lower = aet.switch(aet.lt(value, 0), value, 0)
 
         return bound(
-            tt.switch(
-                tt.lt(value, n),
-                logsumexp(self.logp(tt.arange(safe_lower, value + 1)), keepdims=False),
+            aet.switch(
+                aet.lt(value, n),
+                logsumexp(self.logp(aet.arange(safe_lower, value + 1)), keepdims=False),
                 0,
             ),
             0 <= value,
@@ -1226,9 +1232,9 @@ class DiscreteUniform(Discrete):
 
     def __init__(self, lower, upper, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.lower = intX(tt.floor(lower))
-        self.upper = intX(tt.floor(upper))
-        self.mode = tt.maximum(intX(tt.floor((upper + lower) / 2.0)), self.lower)
+        self.lower = intX(aet.floor(lower))
+        self.upper = intX(aet.floor(upper))
+        self.mode = aet.maximum(intX(aet.floor((upper + lower) / 2.0)), self.lower)
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
@@ -1264,7 +1270,7 @@ class DiscreteUniform(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1272,7 +1278,7 @@ class DiscreteUniform(Discrete):
         """
         upper = self.upper
         lower = self.lower
-        return bound(-tt.log(upper - lower + 1), lower <= value, value <= upper)
+        return bound(-aet.log(upper - lower + 1), lower <= value, value <= upper)
 
     def logcdf(self, value):
         """
@@ -1281,9 +1287,9 @@ class DiscreteUniform(Discrete):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -1293,9 +1299,10 @@ class DiscreteUniform(Discrete):
         lower = self.lower
 
         return bound(
-            tt.switch(
-                tt.lt(value, upper),
-                tt.log(tt.minimum(tt.floor(value), upper) - lower + 1) - tt.log(upper - lower + 1),
+            aet.switch(
+                aet.lt(value, upper),
+                aet.log(aet.minimum(aet.floor(value), upper) - lower + 1)
+                - aet.log(upper - lower + 1),
                 0,
             ),
             lower <= value,
@@ -1341,17 +1348,17 @@ class Categorical(Discrete):
     def __init__(self, p, *args, **kwargs):
         super().__init__(*args, **kwargs)
         try:
-            self.k = tt.shape(p)[-1].tag.test_value
+            self.k = aet.shape(p)[-1].tag.test_value
         except AttributeError:
-            self.k = tt.shape(p)[-1]
-        p = tt.as_tensor_variable(floatX(p))
+            self.k = aet.shape(p)[-1]
+        p = aet.as_tensor_variable(floatX(p))
 
         # From #2082, it may be dangerous to automatically rescale p at this
         # point without checking for positiveness
         self.p = p
-        self.mode = tt.argmax(p, axis=-1)
+        self.mode = aet.argmax(p, axis=-1)
         if self.mode.ndim == 1:
-            self.mode = tt.squeeze(self.mode)
+            self.mode = aet.squeeze(self.mode)
 
     def random(self, point=None, size=None):
         r"""
@@ -1389,7 +1396,7 @@ class Categorical(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1399,27 +1406,27 @@ class Categorical(Discrete):
         k = self.k
 
         # Clip values before using them for indexing
-        value_clip = tt.clip(value, 0, k - 1)
+        value_clip = aet.clip(value, 0, k - 1)
 
-        p = p_ / tt.sum(p_, axis=-1, keepdims=True)
+        p = p_ / aet.sum(p_, axis=-1, keepdims=True)
 
         if p.ndim > 1:
             if p.ndim > value_clip.ndim:
-                value_clip = tt.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
+                value_clip = aet.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
             elif p.ndim < value_clip.ndim:
-                p = tt.shape_padleft(p, value_clip.ndim - p_.ndim)
+                p = aet.shape_padleft(p, value_clip.ndim - p_.ndim)
             pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
-            a = tt.log(
+            a = aet.log(
                 take_along_axis(
                     p.dimshuffle(pattern),
                     value_clip,
                 )
             )
         else:
-            a = tt.log(p[value_clip])
+            a = aet.log(p[value_clip])
 
         return bound(
-            a, value >= 0, value <= (k - 1), tt.all(p_ >= 0, axis=-1), tt.all(p <= 1, axis=-1)
+            a, value >= 0, value <= (k - 1), aet.all(p_ >= 0, axis=-1), aet.all(p <= 1, axis=-1)
         )
 
 
@@ -1439,7 +1446,7 @@ class Constant(Discrete):
             DeprecationWarning,
         )
         super().__init__(*args, **kwargs)
-        self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
+        self.mean = self.median = self.mode = self.c = c = aet.as_tensor_variable(c)
 
     def random(self, point=None, size=None):
         r"""
@@ -1474,14 +1481,14 @@ class Constant(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
         TensorVariable
         """
         c = self.c
-        return bound(0, tt.eq(value, c))
+        return bound(0, aet.eq(value, c))
 
 
 ConstantDist = Constant
@@ -1539,8 +1546,8 @@ class ZeroInflatedPoisson(Discrete):
 
     def __init__(self, psi, theta, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.theta = theta = tt.as_tensor_variable(floatX(theta))
-        self.psi = tt.as_tensor_variable(floatX(psi))
+        self.theta = theta = aet.as_tensor_variable(floatX(theta))
+        self.psi = aet.as_tensor_variable(floatX(psi))
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
 
@@ -1574,7 +1581,7 @@ class ZeroInflatedPoisson(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1583,10 +1590,10 @@ class ZeroInflatedPoisson(Discrete):
         psi = self.psi
         theta = self.theta
 
-        logp_val = tt.switch(
-            tt.gt(value, 0),
-            tt.log(psi) + self.pois.logp(value),
-            logaddexp(tt.log1p(-psi), tt.log(psi) - theta),
+        logp_val = aet.switch(
+            aet.gt(value, 0),
+            aet.log(psi) + self.pois.logp(value),
+            logaddexp(aet.log1p(-psi), aet.log(psi) - theta),
         )
 
         return bound(logp_val, 0 <= value, 0 <= psi, psi <= 1, 0 <= theta)
@@ -1598,9 +1605,9 @@ class ZeroInflatedPoisson(Discrete):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -1609,7 +1616,7 @@ class ZeroInflatedPoisson(Discrete):
         psi = self.psi
 
         return bound(
-            logaddexp(tt.log1p(-psi), tt.log(psi) + self.pois.logcdf(value)),
+            logaddexp(aet.log1p(-psi), aet.log(psi) + self.pois.logcdf(value)),
             0 <= value,
             0 <= psi,
             psi <= 1,
@@ -1669,9 +1676,9 @@ class ZeroInflatedBinomial(Discrete):
 
     def __init__(self, psi, n, p, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.n = n = tt.as_tensor_variable(intX(n))
-        self.p = p = tt.as_tensor_variable(floatX(p))
-        self.psi = psi = tt.as_tensor_variable(floatX(psi))
+        self.n = n = aet.as_tensor_variable(intX(n))
+        self.p = p = aet.as_tensor_variable(floatX(p))
+        self.psi = psi = aet.as_tensor_variable(floatX(psi))
         self.bin = Binomial.dist(n, p)
         self.mode = self.bin.mode
 
@@ -1705,7 +1712,7 @@ class ZeroInflatedBinomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1715,10 +1722,10 @@ class ZeroInflatedBinomial(Discrete):
         p = self.p
         n = self.n
 
-        logp_val = tt.switch(
-            tt.gt(value, 0),
-            tt.log(psi) + self.bin.logp(value),
-            logaddexp(tt.log1p(-psi), tt.log(psi) + n * tt.log1p(-p)),
+        logp_val = aet.switch(
+            aet.gt(value, 0),
+            aet.log(psi) + self.bin.logp(value),
+            logaddexp(aet.log1p(-psi), aet.log(psi) + n * aet.log1p(-p)),
         )
 
         return bound(logp_val, 0 <= value, value <= n, 0 <= psi, psi <= 1, 0 <= p, p <= 1)
@@ -1746,7 +1753,7 @@ class ZeroInflatedBinomial(Discrete):
         psi = self.psi
 
         return bound(
-            logaddexp(tt.log1p(-psi), tt.log(psi) + self.bin.logcdf(value)),
+            logaddexp(aet.log1p(-psi), aet.log(psi) + self.bin.logcdf(value)),
             0 <= value,
             0 <= psi,
             psi <= 1,
@@ -1823,9 +1830,9 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     def __init__(self, psi, mu, alpha, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
-        self.psi = psi = tt.as_tensor_variable(floatX(psi))
+        self.mu = mu = aet.as_tensor_variable(floatX(mu))
+        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
+        self.psi = psi = aet.as_tensor_variable(floatX(psi))
         self.nb = NegativeBinomial.dist(mu, alpha)
         self.mode = self.nb.mode
 
@@ -1872,7 +1879,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1882,12 +1889,12 @@ class ZeroInflatedNegativeBinomial(Discrete):
         mu = self.mu
         psi = self.psi
 
-        logp_other = tt.log(psi) + self.nb.logp(value)
+        logp_other = aet.log(psi) + self.nb.logp(value)
         logp_0 = logaddexp(
-            tt.log1p(-psi), tt.log(psi) + alpha * (tt.log(alpha) - tt.log(alpha + mu))
+            aet.log1p(-psi), aet.log(psi) + alpha * (aet.log(alpha) - aet.log(alpha + mu))
         )
 
-        logp_val = tt.switch(tt.gt(value, 0), logp_other, logp_0)
+        logp_val = aet.switch(aet.gt(value, 0), logp_other, logp_0)
 
         return bound(logp_val, 0 <= value, 0 <= psi, psi <= 1, mu > 0, alpha > 0)
 
@@ -1913,7 +1920,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         psi = self.psi
 
         return bound(
-            logaddexp(tt.log1p(-psi), tt.log(psi) + self.nb.logcdf(value)),
+            logaddexp(aet.log1p(-psi), aet.log(psi) + self.nb.logcdf(value)),
             0 <= value,
             0 <= psi,
             psi <= 1,
@@ -1987,15 +1994,15 @@ class OrderedLogistic(Categorical):
     """
 
     def __init__(self, eta, cutpoints, *args, **kwargs):
-        self.eta = tt.as_tensor_variable(floatX(eta))
-        self.cutpoints = tt.as_tensor_variable(cutpoints)
+        self.eta = aet.as_tensor_variable(floatX(eta))
+        self.cutpoints = aet.as_tensor_variable(cutpoints)
 
-        pa = sigmoid(self.cutpoints - tt.shape_padright(self.eta))
-        p_cum = tt.concatenate(
+        pa = sigmoid(self.cutpoints - aet.shape_padright(self.eta))
+        p_cum = aet.concatenate(
             [
-                tt.zeros_like(tt.shape_padright(pa[..., 0])),
+                aet.zeros_like(aet.shape_padright(pa[..., 0])),
                 pa,
-                tt.ones_like(tt.shape_padright(pa[..., 0])),
+                aet.ones_like(aet.shape_padright(pa[..., 0])),
             ],
             axis=-1,
         )
@@ -2076,23 +2083,23 @@ class OrderedProbit(Categorical):
 
     def __init__(self, eta, cutpoints, *args, **kwargs):
 
-        self.eta = tt.as_tensor_variable(floatX(eta))
-        self.cutpoints = tt.as_tensor_variable(cutpoints)
+        self.eta = aet.as_tensor_variable(floatX(eta))
+        self.cutpoints = aet.as_tensor_variable(cutpoints)
 
-        probits = tt.shape_padright(self.eta) - self.cutpoints
-        _log_p = tt.concatenate(
+        probits = aet.shape_padright(self.eta) - self.cutpoints
+        _log_p = aet.concatenate(
             [
-                tt.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
+                aet.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
                 log_diff_normal_cdf(0, 1, probits[..., :-1], probits[..., 1:]),
-                tt.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
+                aet.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
             ],
             axis=-1,
         )
-        _log_p = tt.as_tensor_variable(floatX(_log_p))
+        _log_p = aet.as_tensor_variable(floatX(_log_p))
 
         self._log_p = _log_p
-        self.mode = tt.argmax(_log_p, axis=-1)
-        p = tt.exp(_log_p)
+        self.mode = aet.argmax(_log_p, axis=-1)
+        p = aet.exp(_log_p)
 
         super().__init__(p=p, *args, **kwargs)
 
@@ -2104,7 +2111,7 @@ class OrderedProbit(Categorical):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -2114,13 +2121,13 @@ class OrderedProbit(Categorical):
         k = self.k
 
         # Clip values before using them for indexing
-        value_clip = tt.clip(value, 0, k - 1)
+        value_clip = aet.clip(value, 0, k - 1)
 
         if logp.ndim > 1:
             if logp.ndim > value_clip.ndim:
-                value_clip = tt.shape_padleft(value_clip, logp.ndim - value_clip.ndim)
+                value_clip = aet.shape_padleft(value_clip, logp.ndim - value_clip.ndim)
             elif logp.ndim < value_clip.ndim:
-                logp = tt.shape_padleft(logp, value_clip.ndim - logp.ndim)
+                logp = aet.shape_padleft(logp, value_clip.ndim - logp.ndim)
             pattern = (logp.ndim - 1,) + tuple(range(logp.ndim - 1))
             a = take_along_axis(
                 logp.dimshuffle(pattern),

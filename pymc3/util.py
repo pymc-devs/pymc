@@ -22,7 +22,7 @@ import arviz
 import numpy as np
 import xarray
 
-from theano.tensor import TensorVariable
+from aesara.tensor.var import TensorVariable
 
 from pymc3.exceptions import SamplingError
 
@@ -169,7 +169,7 @@ def get_repr_for_variable(variable, formatting="plain"):
 
 def get_var_name(var):
     """Get an appropriate, plain variable name for a variable. Necessary
-    because we override theano.tensor.TensorVariable.__str__ to give informative
+    because we override aesara.tensor.var.TensorVariable.__str__ to give informative
     string representations to our pymc3.PyMC3Variables, yet we want to use the
     plain name as e.g. keys in dicts.
     """

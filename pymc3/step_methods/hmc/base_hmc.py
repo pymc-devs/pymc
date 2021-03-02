@@ -19,13 +19,13 @@ from collections import namedtuple
 
 import numpy as np
 
+from pymc3.aesaraf import floatX, inputvars
 from pymc3.backends.report import SamplerWarning, WarningType
 from pymc3.exceptions import SamplingError
 from pymc3.model import Point, modelcontext
 from pymc3.step_methods import arraystep, step_sizes
 from pymc3.step_methods.hmc import integration
 from pymc3.step_methods.hmc.quadpotential import QuadPotentialDiagAdapt, quad_potential
-from pymc3.theanof import floatX, inputvars
 from pymc3.tuning import guess_scaling
 
 logger = logging.getLogger("pymc3")
@@ -57,13 +57,13 @@ class BaseHMC(arraystep.GradientSharedStep):
         t0=10,
         adapt_step_size=True,
         step_rand=None,
-        **theano_kwargs
+        **aesara_kwargs
     ):
         """Set up Hamiltonian samplers with common structures.
 
         Parameters
         ----------
-        vars: list of theano variables
+        vars: list of aesara variables
         scaling: array_like, ndim = {1,2}
             Scaling for momentum distribution. 1d arrays interpreted matrix
             diagonal.
@@ -77,7 +77,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         potential: Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods.
-        **theano_kwargs: passed to theano functions
+        **aesara_kwargs: passed to aesara functions
         """
         self._model = modelcontext(model)
 
@@ -85,7 +85,7 @@ class BaseHMC(arraystep.GradientSharedStep):
             vars = self._model.cont_vars
         vars = inputvars(vars)
 
-        super().__init__(vars, blocked=blocked, model=model, dtype=dtype, **theano_kwargs)
+        super().__init__(vars, blocked=blocked, model=model, dtype=dtype, **aesara_kwargs)
 
         self.adapt_step_size = adapt_step_size
         self.Emax = Emax

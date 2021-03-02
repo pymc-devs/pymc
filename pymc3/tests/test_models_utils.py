@@ -12,10 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara.tensor as aet
 import numpy as np
 import pandas as pd
 import pytest
-import theano.tensor as tt
 
 from pymc3.glm import utils
 
@@ -51,7 +51,7 @@ class TestUtils:
         m, l = utils.any_to_tensor_and_labels(self.data.to_dict("list"))
         self.assertMatrixLabels(m, l, mt=self.data[l].values, lt=l)
 
-        inp = {k: tt.as_tensor_variable(v.values) for k, v in self.data.to_dict("series").items()}
+        inp = {k: aet.as_tensor_variable(v.values) for k, v in self.data.to_dict("series").items()}
         m, l = utils.any_to_tensor_and_labels(inp)
         self.assertMatrixLabels(m, l, mt=self.data[l].values, lt=l)
 
@@ -63,18 +63,18 @@ class TestUtils:
 
     def test_tensor_input(self):
         m, l = utils.any_to_tensor_and_labels(
-            tt.as_tensor_variable(self.data.values.tolist()), labels=["x0", "x1"]
+            aet.as_tensor_variable(self.data.values.tolist()), labels=["x0", "x1"]
         )
         self.assertMatrixLabels(m, l, lt=["x0", "x1"])
         m, l = utils.any_to_tensor_and_labels(
-            tt.as_tensor_variable(self.data.values.tolist()), labels=["x2", "x3"]
+            aet.as_tensor_variable(self.data.values.tolist()), labels=["x2", "x3"]
         )
         self.assertMatrixLabels(m, l, lt=["x2", "x3"])
 
     def test_user_mistakes(self):
         # no labels for tensor variable
         with pytest.raises(ValueError):
-            utils.any_to_tensor_and_labels(tt.as_tensor_variable(self.data.values.tolist()))
+            utils.any_to_tensor_and_labels(aet.as_tensor_variable(self.data.values.tolist()))
         # len of labels is bad
         with pytest.raises(ValueError):
             utils.any_to_tensor_and_labels(self.data.values.tolist(), labels=["x"])

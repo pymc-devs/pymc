@@ -15,18 +15,18 @@
 import itertools
 import pickle
 
+import aesara
 import numpy as np
 import pytest
-import theano
 
+from aesara import tensor as aet
 from scipy import stats as stats
-from theano import tensor as tt
 
 import pymc3 as pm
 
-from pymc3 import GeneratorAdapter, Normal, floatX, generator, tt_rng
+from pymc3 import GeneratorAdapter, Normal, aet_rng, floatX, generator
+from pymc3.aesaraf import GeneratorOp
 from pymc3.tests.helpers import select_by_precision
-from pymc3.theanof import GeneratorOp
 
 
 class _DataSampler:
@@ -35,7 +35,7 @@ class _DataSampler:
     """
 
     def __init__(self, data, batchsize=50, random_seed=42, dtype="floatX"):
-        self.dtype = theano.config.floatX if dtype == "floatX" else dtype
+        self.dtype = aesara.config.floatX if dtype == "floatX" else dtype
         self.rng = np.random.RandomState(random_seed)
         self.data = data
         self.n = batchsize
@@ -77,7 +77,7 @@ class TestGenerator:
         generator = GeneratorAdapter(integers())
         gop = GeneratorOp(generator)()
         assert gop.tag.test_value == np.float32(0)
-        f = theano.function([], gop)
+        f = aesara.function([], gop)
         assert f() == np.float32(0)
         assert f() == np.float32(1)
         for _ in range(2, 100):
@@ -89,7 +89,7 @@ class TestGenerator:
             res = list(itertools.islice(integers_ndim(ndim), 0, 2))
             generator = GeneratorAdapter(integers_ndim(ndim))
             gop = GeneratorOp(generator)()
-            f = theano.function([], gop)
+            f = aesara.function([], gop)
             assert ndim == res[0].ndim
             np.testing.assert_equal(f(), res[0])
             np.testing.assert_equal(f(), res[1])
@@ -97,9 +97,9 @@ class TestGenerator:
     def test_cloning_available(self):
         gop = generator(integers())
         res = gop ** 2
-        shared = theano.shared(floatX(10))
-        res1 = theano.clone(res, {gop: shared})
-        f = theano.function([], res1)
+        shared = aesara.shared(floatX(10))
+        res1 = aesara.clone_replace(res, {gop: shared})
+        f = aesara.function([], res1)
         assert f() == np.float32(100)
 
     def test_default_value(self):
@@ -108,7 +108,7 @@ class TestGenerator:
                 yield floatX(np.ones((10, 10)) * i)
 
         gop = generator(gen(), np.ones((10, 10)) * 10)
-        f = theano.function([], gop)
+        f = aesara.function([], gop)
         np.testing.assert_equal(np.ones((10, 10)) * 0, f())
         np.testing.assert_equal(np.ones((10, 10)) * 1, f())
         np.testing.assert_equal(np.ones((10, 10)) * 10, f())
@@ -121,7 +121,7 @@ class TestGenerator:
                 yield floatX(np.ones((10, 10)) * i)
 
         gop = generator(gen())
-        f = theano.function([], gop)
+        f = aesara.function([], gop)
         np.testing.assert_equal(np.ones((10, 10)) * 0, f())
         np.testing.assert_equal(np.ones((10, 10)) * 1, f())
         with pytest.raises(StopIteration):
@@ -139,12 +139,12 @@ class TestGenerator:
 
     def test_gen_cloning_with_shape_change(self, datagen):
         gen = generator(datagen)
-        gen_r = tt_rng().normal(size=gen.shape).T
+        gen_r = aet_rng().normal(size=gen.shape).T
         X = gen.dot(gen_r)
-        res, _ = theano.scan(lambda x: x.sum(), X, n_steps=X.shape[0])
+        res, _ = aesara.scan(lambda x: x.sum(), X, n_steps=X.shape[0])
         assert res.eval().shape == (50,)
-        shared = theano.shared(datagen.data.astype(gen.dtype))
-        res2 = theano.clone(res, {gen: shared ** 2})
+        shared = aesara.shared(datagen.data.astype(gen.dtype))
+        res2 = aesara.clone_replace(res, {gen: shared ** 2})
         assert res2.eval().shape == (1000,)
 
 
@@ -170,11 +170,11 @@ class TestScaling:
     def test_density_scaling(self):
         with pm.Model() as model1:
             Normal("n", observed=[[1]], total_size=1)
-            p1 = theano.function([], model1.logpt)
+            p1 = aesara.function([], model1.logpt)
 
         with pm.Model() as model2:
             Normal("n", observed=[[1]], total_size=2)
-            p2 = theano.function([], model2.logpt)
+            p2 = aesara.function([], model2.logpt)
         assert p1() * 2 == p2()
 
     def test_density_scaling_with_genarator(self):
@@ -189,12 +189,12 @@ class TestScaling:
         # We have same size models
         with pm.Model() as model1:
             Normal("n", observed=gen1(), total_size=100)
-            p1 = theano.function([], model1.logpt)
+            p1 = aesara.function([], model1.logpt)
 
         with pm.Model() as model2:
             gen_var = generator(gen2())
             Normal("n", observed=gen_var, total_size=100)
-            p2 = theano.function([], model2.logpt)
+            p2 = aesara.function([], model2.logpt)
 
         for i in range(10):
             _1, _2, _t = p1(), p2(), next(t)
@@ -208,12 +208,12 @@ class TestScaling:
             genvar = generator(gen1())
             m = Normal("m")
             Normal("n", observed=genvar, total_size=1000)
-            grad1 = theano.function([m], tt.grad(model1.logpt, m))
+            grad1 = aesara.function([m], aet.grad(model1.logpt, m))
         with pm.Model() as model2:
             m = Normal("m")
-            shavar = theano.shared(np.ones((1000, 100)))
+            shavar = aesara.shared(np.ones((1000, 100)))
             Normal("n", observed=shavar)
-            grad2 = theano.function([m], tt.grad(model2.logpt, m))
+            grad2 = aesara.function([m], aet.grad(model2.logpt, m))
 
         for i in range(10):
             shavar.set_value(np.ones((100, 100)) * i)
@@ -224,27 +224,27 @@ class TestScaling:
     def test_multidim_scaling(self):
         with pm.Model() as model0:
             Normal("n", observed=[[1, 1], [1, 1]], total_size=[])
-            p0 = theano.function([], model0.logpt)
+            p0 = aesara.function([], model0.logpt)
 
         with pm.Model() as model1:
             Normal("n", observed=[[1, 1], [1, 1]], total_size=[2, 2])
-            p1 = theano.function([], model1.logpt)
+            p1 = aesara.function([], model1.logpt)
 
         with pm.Model() as model2:
             Normal("n", observed=[[1], [1]], total_size=[2, 2])
-            p2 = theano.function([], model2.logpt)
+            p2 = aesara.function([], model2.logpt)
 
         with pm.Model() as model3:
             Normal("n", observed=[[1, 1]], total_size=[2, 2])
-            p3 = theano.function([], model3.logpt)
+            p3 = aesara.function([], model3.logpt)
 
         with pm.Model() as model4:
             Normal("n", observed=[[1]], total_size=[2, 2])
-            p4 = theano.function([], model4.logpt)
+            p4 = aesara.function([], model4.logpt)
 
         with pm.Model() as model5:
             Normal("n", observed=[[1]], total_size=[2, Ellipsis, 2])
-            p5 = theano.function([], model5.logpt)
+            p5 = aesara.function([], model5.logpt)
         _p0 = p0()
         assert (
             np.allclose(_p0, p1())
@@ -287,11 +287,11 @@ class TestScaling:
     def test_free_rv(self):
         with pm.Model() as model4:
             Normal("n", observed=[[1, 1], [1, 1]], total_size=[2, 2])
-            p4 = theano.function([], model4.logpt)
+            p4 = aesara.function([], model4.logpt)
 
         with pm.Model() as model5:
             Normal("n", total_size=[2, Ellipsis, 2], shape=(1, 1), broadcastable=(False, False))
-            p5 = theano.function([model5.n], model5.logpt)
+            p5 = aesara.function([model5.n], model5.logpt)
         assert p4() == p5(pm.floatX([[1]]))
         assert p4() == p5(pm.floatX([[1, 1], [1, 1]]))
 
@@ -327,15 +327,15 @@ class TestMinibatch:
     def test_cloning_available(self):
         gop = pm.Minibatch(np.arange(100), 1)
         res = gop ** 2
-        shared = theano.shared(np.array([10]))
-        res1 = theano.clone(res, {gop: shared})
-        f = theano.function([], res1)
+        shared = aesara.shared(np.array([10]))
+        res1 = aesara.clone_replace(res, {gop: shared})
+        f = aesara.function([], res1)
         assert f() == np.array([100])
 
     def test_align(self):
         m = pm.Minibatch(np.arange(1000), 1, random_seed=1)
         n = pm.Minibatch(np.arange(1000), 1, random_seed=1)
-        f = theano.function([], [m, n])
+        f = aesara.function([], [m, n])
         n.eval()  # not aligned
         a, b = zip(*(f() for _ in range(1000)))
         assert a != b

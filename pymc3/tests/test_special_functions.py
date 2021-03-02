@@ -12,11 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara.tensor as aet
 import numpy as np
 import scipy.special as ss
-import theano.tensor as tt
 
-from theano import function
+from aesara import function
 
 import pymc3.distributions.special as ps
 
@@ -26,10 +26,10 @@ from pymc3.tests.checks import close_to
 def test_functions():
     xvals = list(map(np.atleast_1d, [0.01, 0.1, 2, 100, 10000]))
 
-    x = tt.dvector("x")
+    x = aet.dvector("x")
     x.tag.test_value = xvals[0]
 
-    p = tt.iscalar("p")
+    p = aet.iscalar("p")
     p.tag.test_value = 1
 
     gammaln = function([x], ps.gammaln(x))
@@ -55,10 +55,10 @@ In [14]:
 def t_multigamma():
     xvals = list(map(np.atleast_1d, [0, 0.1, 2, 100]))
 
-    x = tt.dvector("x")
+    x = aet.dvector("x")
     x.tag.test_value = xvals[0]
 
-    p = tt.iscalar("p")
+    p = aet.iscalar("p")
     p.tag.test_value = 1
 
     multigammaln = function([x, p], ps.multigammaln(x, p))

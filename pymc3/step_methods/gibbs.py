@@ -19,6 +19,8 @@ Created on May 12, 2012
 """
 from warnings import warn
 
+from aesara.graph.basic import graph_inputs
+from aesara.tensor import add
 from numpy import (
     arange,
     array,
@@ -31,8 +33,6 @@ from numpy import (
     searchsorted,
 )
 from numpy.random import uniform
-from theano.graph.basic import graph_inputs
-from theano.tensor import add
 
 from pymc3.distributions.discrete import Categorical
 from pymc3.model import modelcontext

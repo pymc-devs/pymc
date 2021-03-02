@@ -20,7 +20,7 @@ from os.path import dirname, join, realpath
 from setuptools import find_packages, setup
 
 DISTNAME = "pymc3"
-DESCRIPTION = "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
+DESCRIPTION = "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Aesara"
 AUTHOR = "PyMC Developers"
 AUTHOR_EMAIL = "pymc.devs@gmail.com"
 URL = "http://github.com/pymc-devs/pymc3"

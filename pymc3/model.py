@@ -20,25 +20,27 @@ import warnings
 from sys import modules
 from typing import TYPE_CHECKING, Any, List, Optional, Type, TypeVar, Union, cast
 
+import aesara
+import aesara.graph.basic
+import aesara.sparse as sparse
+import aesara.tensor as aet
 import numpy as np
 import scipy.sparse as sps
-import theano
-import theano.graph.basic
-import theano.sparse as sparse
-import theano.tensor as tt
 
+from aesara.compile.sharedvalue import SharedVariable
+from aesara.gradient import grad
+from aesara.graph.basic import Apply, Variable
+from aesara.tensor.type import TensorType as AesaraTensorType
+from aesara.tensor.var import TensorVariable
 from pandas import Series
-from theano.compile import SharedVariable
-from theano.graph.basic import Apply
-from theano.tensor.var import TensorVariable
 
 import pymc3 as pm
 
+from pymc3.aesaraf import floatX, generator, gradient, hessian, inputvars
 from pymc3.blocking import ArrayOrdering, DictToArrayBijection
 from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
 from pymc3.memoize import WithMemoization, memoize
-from pymc3.theanof import floatX, generator, gradient, hessian, inputvars
 from pymc3.util import get_transformed_name, get_var_name
 from pymc3.vartypes import continuous_types, discrete_types, isgenerator, typefilter
 
@@ -59,13 +61,13 @@ FlatView = collections.namedtuple("FlatView", "input, replacements, view")
 
 
 class PyMC3Variable(TensorVariable):
-    """Class to wrap Theano TensorVariable for custom behavior."""
+    """Class to wrap Aesara TensorVariable for custom behavior."""
 
     # Implement matrix multiplication infix operator: X @ w
-    __matmul__ = tt.dot
+    __matmul__ = aet.dot
 
     def __rmatmul__(self, other):
-        return tt.dot(other, self)
+        return aet.dot(other, self)
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):
         if getattr(self, "distribution", None) is None:
@@ -143,28 +145,28 @@ def incorporate_methods(source, destination, methods, wrapper=None, override=Fal
 
 
 def get_named_nodes_and_relations(graph):
-    """Get the named nodes in a theano graph (i.e., nodes whose name
+    """Get the named nodes in a aesara graph (i.e., nodes whose name
     attribute is not None) along with their relationships (i.e., the
     node's named parents, and named children, while skipping unnamed
     intermediate nodes)
 
     Parameters
     ----------
-    graph: a theano node
+    graph: a aesara node
 
     Returns:
     --------
     leaf_dict: Dict[str, node]
         A dictionary of name:node pairs, of the named nodes that
-        have no named ancestors in the provided theano graph.
+        have no named ancestors in the provided aesara graph.
     descendents: Dict[node, Set[node]]
-        Each key is a theano named node, and the corresponding value
-        is the set of theano named nodes that are descendents with no
+        Each key is a aesara named node, and the corresponding value
+        is the set of aesara named nodes that are descendents with no
         intervening named nodes in the supplied ``graph``.
     ancestors: Dict[node, Set[node]]
         A dictionary of node:set([ancestors]) pairs. Each key
-        is a theano named node, and the corresponding value is the set
-        of theano named nodes that are ancestors with no intervening named
+        is a aesara named node, and the corresponding value is the set
+        of aesara named nodes that are ancestors with no intervening named
         nodes in the supplied ``graph``.
 
     """
@@ -222,28 +224,28 @@ def _get_named_nodes_and_relations(graph, descendent, descendents, ancestors):
 
 def build_named_node_tree(graphs):
     """Build the combined descence/ancestry tree of named nodes (i.e., nodes
-    whose name attribute is not None) in a list (or iterable) of theano graphs.
+    whose name attribute is not None) in a list (or iterable) of aesara graphs.
     The relationship tree does not include unnamed intermediate nodes present
     in the supplied graphs.
 
     Parameters
     ----------
-    graphs - iterable of theano graphs
+    graphs - iterable of aesara graphs
 
     Returns:
     --------
     leaf_dict: Dict[str, node]
         A dictionary of name:node pairs, of the named nodes that
-        have no named ancestors in the provided theano graphs.
+        have no named ancestors in the provided aesara graphs.
     descendents: Dict[node, Set[node]]
         A dictionary of node:set([parents]) pairs. Each key is
-        a theano named node, and the corresponding value is the set of
-        theano named nodes that are descendents with no intervening named
+        a aesara named node, and the corresponding value is the set of
+        aesara named nodes that are descendents with no intervening named
         nodes in the supplied ``graphs``.
     ancestors: Dict[node, Set[node]]
         A dictionary of node:set([ancestors]) pairs. Each key
-        is a theano named node, and the corresponding value is the set
-        of theano named nodes that are ancestors with no intervening named
+        is a aesara named node, and the corresponding value is the set
+        of aesara named nodes that are ancestors with no intervening named
         nodes in the supplied ``graphs``.
 
     """
@@ -282,16 +284,16 @@ class ContextMeta(type):
 
         def __enter__(self):
             self.__class__.context_class.get_contexts().append(self)
-            # self._theano_config is set in Model.__new__
+            # self._aesara_config is set in Model.__new__
             self._config_context = None
-            if hasattr(self, "_theano_config"):
-                self._config_context = theano.config.change_flags(**self._theano_config)
+            if hasattr(self, "_aesara_config"):
+                self._config_context = aesara.config.change_flags(**self._aesara_config)
                 self._config_context.__enter__()
             return self
 
         def __exit__(self, typ, value, traceback):  # pylint: disable=unused-argument
             self.__class__.context_class.get_contexts().pop()
-            # self._theano_config is set in Model.__new__
+            # self._aesara_config is set in Model.__new__
             if self._config_context:
                 self._config_context.__exit__(typ, value, traceback)
 
@@ -468,7 +470,7 @@ class Factor:
 
     @property
     def logpt(self):
-        """Theano scalar of log-probability of the model"""
+        """Aesara scalar of log-probability of the model"""
         if getattr(self, "total_size", None) is not None:
             logp = self.logp_sum_unscaledt * self.scaling
         else:
@@ -479,11 +481,11 @@ class Factor:
 
     @property
     def logp_nojact(self):
-        """Theano scalar of log-probability, excluding jacobian terms."""
+        """Aesara scalar of log-probability, excluding jacobian terms."""
         if getattr(self, "total_size", None) is not None:
-            logp = tt.sum(self.logp_nojac_unscaledt) * self.scaling
+            logp = aet.sum(self.logp_nojac_unscaledt) * self.scaling
         else:
-            logp = tt.sum(self.logp_nojac_unscaledt)
+            logp = aet.sum(self.logp_nojac_unscaledt)
         if self.name is not None:
             logp.name = "__logp_%s" % self.name
         return logp
@@ -578,20 +580,20 @@ class treedict(dict):
 
 
 class ValueGradFunction:
-    """Create a theano function that computes a value and its gradient.
+    """Create a aesara function that computes a value and its gradient.
 
     Parameters
     ----------
-    costs: list of theano variables
-        We compute the weighted sum of the specified theano values, and the gradient
+    costs: list of aesara variables
+        We compute the weighted sum of the specified aesara values, and the gradient
         of that sum. The weights can be specified with `ValueGradFunction.set_weights`.
-    grad_vars: list of named theano variables or None
+    grad_vars: list of named aesara variables or None
         The arguments with respect to which the gradient is computed.
-    extra_vars: list of named theano variables or None
+    extra_vars: list of named aesara variables or None
         Other arguments of the function that are assumed constant. They
         are stored in shared variables and can be set using
         `set_extra_values`.
-    dtype: str, default=theano.config.floatX
+    dtype: str, default=aesara.config.floatX
         The dtype of the arrays.
     casting: {'no', 'equiv', 'save', 'same_kind', 'unsafe'}, default='no'
         Casting rule for casting `grad_args` to the array dtype.
@@ -601,14 +603,14 @@ class ValueGradFunction:
     compute_grads: bool, default=True
         If False, return only the logp, not the gradient.
     kwargs
-        Extra arguments are passed on to `theano.function`.
+        Extra arguments are passed on to `aesara.function`.
 
     Attributes
     ----------
     size: int
         The number of elements in the parameter array.
-    profile: theano profiling object or None
-        The profiling object of the theano function that computes value and
+    profile: aesara profiling object or None
+        The profiling object of the aesara function that computes value and
         gradient. This is None unless `profile=True` was set in the
         kwargs.
     """
@@ -640,14 +642,14 @@ class ValueGradFunction:
         self._extra_var_names = {var.name for var in extra_vars}
 
         if dtype is None:
-            dtype = theano.config.floatX
+            dtype = aesara.config.floatX
         self.dtype = dtype
 
         self._n_costs = len(costs)
         if self._n_costs == 0:
             raise ValueError("At least one cost is required.")
         weights = np.ones(self._n_costs - 1, dtype=self.dtype)
-        self._weights = theano.shared(weights, "__weights")
+        self._weights = aesara.shared(weights, "__weights")
 
         cost = costs[0]
         for i, val in enumerate(costs[1:]):
@@ -674,7 +676,7 @@ class ValueGradFunction:
         givens = []
         self._extra_vars_shared = {}
         for var in extra_vars:
-            shared = theano.shared(var.tag.test_value, var.name + "_shared__")
+            shared = aesara.shared(var.tag.test_value, var.name + "_shared__")
             # test TensorType compatibility
             if hasattr(var.tag.test_value, "shape"):
                 testtype = TensorType(var.dtype, var.tag.test_value.shape)
@@ -689,15 +691,15 @@ class ValueGradFunction:
         )
 
         if compute_grads:
-            grad = tt.grad(self._cost_joined, self._vars_joined)
-            grad.name = "__grad"
-            outputs = [self._cost_joined, grad]
+            grad_out = grad(self._cost_joined, self._vars_joined)
+            grad_out.name = "__grad"
+            outputs = [self._cost_joined, grad_out]
         else:
             outputs = self._cost_joined
 
         inputs = [self._vars_joined]
 
-        self._theano_function = theano.function(inputs, outputs, givens=givens, **kwargs)
+        self._aesara_function = aesara.function(inputs, outputs, givens=givens, **kwargs)
 
     def set_weights(self, values):
         if values.shape != (self._n_costs - 1,):
@@ -732,7 +734,7 @@ class ValueGradFunction:
         else:
             out = grad_out
 
-        output = self._theano_function(array)
+        output = self._aesara_function(array)
         if grad_out is None:
             return output
         else:
@@ -741,8 +743,8 @@ class ValueGradFunction:
 
     @property
     def profile(self):
-        """Profiling information of the underlying theano function."""
-        return self._theano_function.profile
+        """Profiling information of the underlying aesara function."""
+        return self._aesara_function.profile
 
     def dict_to_array(self, point):
         """Convert a dictionary with values for grad_vars to an array."""
@@ -774,7 +776,7 @@ class ValueGradFunction:
         return point
 
     def _build_joined(self, cost, args, vmap):
-        args_joined = tt.vector("__args_joined")
+        args_joined = aet.vector("__args_joined")
         args_joined.tag.test_value = np.zeros(self.size, dtype=self.dtype)
 
         joined_slices = {}
@@ -784,7 +786,7 @@ class ValueGradFunction:
             joined_slices[vmap.var] = sliced
 
         replace = {var: joined_slices[var.name] for var in args}
-        return args_joined, theano.clone(cost, replace=replace)
+        return args_joined, aesara.clone_replace(cost, replace=replace)
 
 
 class Model(Factor, WithMemoization, metaclass=ContextMeta):
@@ -806,10 +808,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         defined within instance will be passed to the parent instance.
         So that 'nested' model contributes to the variables and
         likelihood factors of parent model.
-    theano_config: dict
-        A dictionary of theano config values that should be set
+    aesara_config: dict
+        A dictionary of aesara config values that should be set
         temporarily in the model context. See the documentation
-        of theano for a complete list. Set config key
+        of aesara for a complete list. Set config key
         ``compute_test_value`` to `raise` if it is None.
     check_bounds: bool
         Ensure that input parameters to distributions are in a valid
@@ -854,7 +856,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 Deterministic('v3_sq', self.v3 ** 2)
 
                 # Potentials too
-                Potential('p1', tt.constant(1))
+                Potential('p1', aet.constant(1))
 
         # After defining a class CustomModel you can use it in several
         # ways
@@ -896,13 +898,13 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             instance._parent = kwargs.get("model")
         else:
             instance._parent = cls.get_context(error_if_none=False)
-        theano_config = kwargs.get("theano_config", None)
-        if theano_config is None or "compute_test_value" not in theano_config:
-            theano_config = {"compute_test_value": "raise"}
-        instance._theano_config = theano_config
+        aesara_config = kwargs.get("aesara_config", None)
+        if aesara_config is None or "compute_test_value" not in aesara_config:
+            aesara_config = {"compute_test_value": "raise"}
+        instance._aesara_config = aesara_config
         return instance
 
-    def __init__(self, name="", model=None, theano_config=None, coords=None, check_bounds=True):
+    def __init__(self, name="", model=None, aesara_config=None, coords=None, check_bounds=True):
         self.name = name
         self.coords = {}
         self.RV_dims = {}
@@ -970,7 +972,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return self.bijection.mapf(self.fastdlogp(vars))
 
     def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
-        """Compile a theano function that computes logp and gradient.
+        """Compile a aesara function that computes logp and gradient.
 
         Parameters
         ----------
@@ -990,10 +992,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         if tempered:
             with self:
-                free_RVs_logp = tt.sum(
-                    [tt.sum(var.logpt) for var in self.free_RVs + self.potentials]
+                free_RVs_logp = aet.sum(
+                    [aet.sum(var.logpt) for var in self.free_RVs + self.potentials]
                 )
-                observed_RVs_logp = tt.sum([tt.sum(var.logpt) for var in self.observed_RVs])
+                observed_RVs_logp = aet.sum([aet.sum(var.logpt) for var in self.observed_RVs])
 
             costs = [free_RVs_logp, observed_RVs_logp]
         else:
@@ -1004,10 +1006,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def logpt(self):
-        """Theano scalar of log-probability of the model"""
+        """Aesara scalar of log-probability of the model"""
         with self:
             factors = [var.logpt for var in self.basic_RVs] + self.potentials
-            logp = tt.sum([tt.sum(factor) for factor in factors])
+            logp = aet.sum([aet.sum(factor) for factor in factors])
             if self.name:
                 logp.name = "__logp_%s" % self.name
             else:
@@ -1016,14 +1018,14 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def logp_nojact(self):
-        """Theano scalar of log-probability of the model but without the jacobian
+        """Aesara scalar of log-probability of the model but without the jacobian
         if transformed Random Variable is presented.
         Note that If there is no transformed variable in the model, logp_nojact
         will be the same as logpt as there is no need for Jacobian correction.
         """
         with self:
             factors = [var.logp_nojact for var in self.basic_RVs] + self.potentials
-            logp = tt.sum([tt.sum(factor) for factor in factors])
+            logp = aet.sum([aet.sum(factor) for factor in factors])
             if self.name:
                 logp.name = "__logp_nojac_%s" % self.name
             else:
@@ -1032,18 +1034,18 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def varlogpt(self):
-        """Theano scalar of log-probability of the unobserved random variables
+        """Aesara scalar of log-probability of the unobserved random variables
         (excluding deterministic)."""
         with self:
             factors = [var.logpt for var in self.free_RVs]
-            return tt.sum(factors)
+            return aet.sum(factors)
 
     @property
     def datalogpt(self):
         with self:
             factors = [var.logpt for var in self.observed_RVs]
-            factors += [tt.sum(factor) for factor in self.potentials]
-            return tt.sum(factors)
+            factors += [aet.sum(factor) for factor in self.potentials]
+            return aet.sum(factors)
 
     @property
     def vars(self):
@@ -1237,20 +1239,20 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 raise e
 
     def makefn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Theano function which returns ``outs`` and takes the variable
+        """Compiles a Aesara function which returns ``outs`` and takes the variable
         ancestors of ``outs`` as inputs.
 
         Parameters
         ----------
-        outs: Theano variable or iterable of Theano variables
-        mode: Theano compilation mode
+        outs: Aesara variable or iterable of Aesara variables
+        mode: Aesara compilation mode
 
         Returns
         -------
-        Compiled Theano function
+        Compiled Aesara function
         """
         with self:
-            return theano.function(
+            return aesara.function(
                 self.vars,
                 outs,
                 allow_input_downcast=True,
@@ -1262,43 +1264,43 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             )
 
     def fn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Theano function which returns the values of ``outs``
+        """Compiles a Aesara function which returns the values of ``outs``
         and takes values of model vars as arguments.
 
         Parameters
         ----------
-        outs: Theano variable or iterable of Theano variables
-        mode: Theano compilation mode
+        outs: Aesara variable or iterable of Aesara variables
+        mode: Aesara compilation mode
 
         Returns
         -------
-        Compiled Theano function
+        Compiled Aesara function
         """
         return LoosePointFunc(self.makefn(outs, mode, *args, **kwargs), self)
 
     def fastfn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Theano function which returns ``outs`` and takes values
+        """Compiles a Aesara function which returns ``outs`` and takes values
         of model vars as a dict as an argument.
 
         Parameters
         ----------
-        outs: Theano variable or iterable of Theano variables
-        mode: Theano compilation mode
+        outs: Aesara variable or iterable of Aesara variables
+        mode: Aesara compilation mode
 
         Returns
         -------
-        Compiled Theano function as point function.
+        Compiled Aesara function as point function.
         """
         f = self.makefn(outs, mode, *args, **kwargs)
         return FastPointFunc(f)
 
     def profile(self, outs, n=1000, point=None, profile=True, *args, **kwargs):
-        """Compiles and profiles a Theano function which returns ``outs`` and
+        """Compiles and profiles a Aesara function which returns ``outs`` and
         takes values of model vars as a dict as an argument.
 
         Parameters
         ----------
-        outs: Theano variable or iterable of Theano variables
+        outs: Aesara variable or iterable of Aesara variables
         n: int, default 1000
             Number of iterations to run
         point: point
@@ -1335,7 +1337,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             if None, then all model.free_RVs are used for flattening input
         order: ArrayOrdering
             Optional, use predefined ordering
-        inputvar: tt.vector
+        inputvar: aet.vector
             Optional, use predefined inputvar
 
         Returns
@@ -1347,8 +1349,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if order is None:
             order = ArrayOrdering(vars)
         if inputvar is None:
-            inputvar = tt.vector("flat_view", dtype=theano.config.floatX)
-            if theano.config.compute_test_value != "off":
+            inputvar = aet.vector("flat_view", dtype=aesara.config.floatX)
+            if aesara.config.compute_test_value != "off":
                 if vars:
                     inputvar.tag.test_value = flatten_list(vars).tag.test_value
                 else:
@@ -1482,34 +1484,34 @@ def set_data(new_data, model=None):
 
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
-    """Compiles a Theano function which returns the values of ``outs`` and
+    """Compiles a Aesara function which returns the values of ``outs`` and
     takes values of model vars as arguments.
 
     Parameters
     ----------
-    outs: Theano variable or iterable of Theano variables
-    mode: Theano compilation mode
+    outs: Aesara variable or iterable of Aesara variables
+    mode: Aesara compilation mode
 
     Returns
     -------
-    Compiled Theano function
+    Compiled Aesara function
     """
     model = modelcontext(model)
     return model.fn(outs, mode, *args, **kwargs)
 
 
 def fastfn(outs, mode=None, model=None):
-    """Compiles a Theano function which returns ``outs`` and takes values of model
+    """Compiles a Aesara function which returns ``outs`` and takes values of model
     vars as a dict as an argument.
 
     Parameters
     ----------
-    outs: Theano variable or iterable of Theano variables
-    mode: Theano compilation mode
+    outs: Aesara variable or iterable of Aesara variables
+    mode: Aesara compilation mode
 
     Returns
     -------
-    Compiled Theano function as point function.
+    Compiled Aesara function as point function.
     """
     model = modelcontext(model)
     return model.fastfn(outs, mode)
@@ -1619,12 +1621,12 @@ def _get_scaling(total_size, shape, ndim):
         begin_coef = [floatX(t) / shp_begin[i] for i, t in enumerate(begin) if t is not None]
         end_coef = [floatX(t) / shp_end[i] for i, t in enumerate(end) if t is not None]
         coefs = begin_coef + end_coef
-        coef = tt.prod(coefs)
+        coef = aet.prod(coefs)
     else:
         raise TypeError(
             "Unrecognized `total_size` type, expected int or list of ints, got %r" % total_size
         )
-    return tt.as_tensor(floatX(coef))
+    return aet.as_tensor(floatX(coef))
 
 
 class FreeRV(Factor, PyMC3Variable):
@@ -1648,8 +1650,8 @@ class FreeRV(Factor, PyMC3Variable):
         """
         Parameters
         ----------
-        type: theano type (optional)
-        owner: theano owner (optional)
+        type: aesara type (optional)
+        owner: aesara owner (optional)
         name: str
         distribution: Distribution
         model: Model
@@ -1692,7 +1694,7 @@ class FreeRV(Factor, PyMC3Variable):
 def pandas_to_array(data):
     """Convert a pandas object to a NumPy array.
 
-    XXX: When `data` is a generator, this will return a Theano tensor!
+    XXX: When `data` is a generator, this will return a Aesara tensor!
 
     """
     if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
@@ -1720,7 +1722,7 @@ def pandas_to_array(data):
             else:
                 # no masking required
                 ret = data
-    elif isinstance(data, theano.graph.basic.Variable):
+    elif isinstance(data, Variable):
         ret = data
     elif sps.issparse(data):
         ret = data
@@ -1762,9 +1764,9 @@ def as_tensor(data, name, model, distribution):
             parent_dist=distribution,
         )
         missing_values = FreeRV(name=name + "_missing", distribution=fakedist, model=model)
-        constant = tt.as_tensor_variable(data.filled())
+        constant = aet.as_tensor_variable(data.filled())
 
-        dataTensor = tt.set_subtensor(constant[data.mask.nonzero()], missing_values)
+        dataTensor = aet.set_subtensor(constant[data.mask.nonzero()], missing_values)
         dataTensor.missing_values = missing_values
         return dataTensor
     elif sps.issparse(data):
@@ -1772,7 +1774,7 @@ def as_tensor(data, name, model, distribution):
         data.missing_values = None
         return data
     else:
-        data = tt.as_tensor_variable(data, name=name)
+        data = aet.as_tensor_variable(data, name=name)
         data.missing_values = None
         return data
 
@@ -1796,8 +1798,8 @@ class ObservedRV(Factor, PyMC3Variable):
         """
         Parameters
         ----------
-        type: theano type (optional)
-        owner: theano owner (optional)
+        type: aesara type (optional)
+        owner: aesara owner (optional)
         name: str
         distribution: Distribution
         model: Model
@@ -1806,12 +1808,12 @@ class ObservedRV(Factor, PyMC3Variable):
         """
         from pymc3.distributions import TensorType
 
-        if hasattr(data, "type") and isinstance(data.type, tt.TensorType):
+        if hasattr(data, "type") and isinstance(data.type, AesaraTensorType):
             type = data.type
 
         if type is None:
             data = pandas_to_array(data)
-            if isinstance(data, theano.graph.basic.Variable):
+            if isinstance(data, Variable):
                 type = data.type
             else:
                 type = TensorType(distribution.dtype, data.shape)
@@ -1834,8 +1836,8 @@ class ObservedRV(Factor, PyMC3Variable):
             self.distribution = distribution
 
             # make this RV a view on the combined missing/nonmissing array
-            Apply(theano.compile.view_op, inputs=[data], outputs=[self])
-            self.tag.test_value = theano.compile.view_op(data).tag.test_value.astype(self.dtype)
+            Apply(aesara.compile.view_op, inputs=[data], outputs=[self])
+            self.tag.test_value = aesara.compile.view_op(data).tag.test_value.astype(self.dtype)
             self.scaling = _get_scaling(total_size, data.shape, data.ndim)
 
     @property
@@ -1853,8 +1855,8 @@ class MultiObservedRV(Factor):
         """
         Parameters
         ----------
-        type: theano type (optional)
-        owner: theano owner (optional)
+        type: aesara type (optional)
+        owner: aesara owner (optional)
         name: str
         distribution: Distribution
         model: Model
@@ -1893,7 +1895,7 @@ class MultiObservedRV(Factor):
 
 
 def _walk_up_rv(rv, formatting="plain"):
-    """Walk up theano graph to get inputs for deterministic RV."""
+    """Walk up aesara graph to get inputs for deterministic RV."""
     all_rvs = []
     parents = list(itertools.chain(*[j.inputs for j in rv.get_parents()]))
     if parents:
@@ -1906,7 +1908,7 @@ def _walk_up_rv(rv, formatting="plain"):
     return all_rvs
 
 
-class DeterministicWrapper(tt.TensorVariable):
+class DeterministicWrapper(TensorVariable):
     def _str_repr(self, formatting="plain"):
         if "latex" in formatting:
             if formatting == "latex_with_params":
@@ -1935,7 +1937,7 @@ def Deterministic(name, var, model=None, dims=None):
     Parameters
     ----------
     name: str
-    var: theano variables
+    var: aesara variables
 
     Returns
     -------
@@ -1956,7 +1958,7 @@ def Potential(name, var, model=None):
     Parameters
     ----------
     name: str
-    var: theano variables
+    var: aesara variables
 
     Returns
     -------
@@ -1974,8 +1976,8 @@ class TransformedRV(PyMC3Variable):
     Parameters
     ----------
 
-    type: theano type (optional)
-    owner: theano owner (optional)
+    type: aesara type (optional)
+    owner: aesara owner (optional)
     name: str
     distribution: Distribution
     model: Model
@@ -2014,7 +2016,7 @@ class TransformedRV(PyMC3Variable):
 
             normalRV = transform.backward(self.transformed)
 
-            Apply(theano.compile.view_op, inputs=[normalRV], outputs=[self])
+            Apply(aesara.compile.view_op, inputs=[normalRV], outputs=[self])
             self.tag.test_value = normalRV.tag.test_value
             self.scaling = _get_scaling(total_size, self.shape, self.ndim)
             incorporate_methods(

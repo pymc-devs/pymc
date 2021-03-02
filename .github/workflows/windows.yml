@@ -17,7 +17,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=core2'
+      AESARA_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=core2'
     defaults:
       run:
         shell: bash -l {0}

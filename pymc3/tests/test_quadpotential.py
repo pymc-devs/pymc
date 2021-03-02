@@ -19,8 +19,8 @@ import scipy.sparse
 
 import pymc3
 
+from pymc3.aesaraf import floatX
 from pymc3.step_methods.hmc import quadpotential
-from pymc3.theanof import floatX
 
 
 def test_elemwise_posdef():

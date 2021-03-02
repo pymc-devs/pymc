@@ -15,10 +15,10 @@
 import functools
 import warnings
 
+import aesara.tensor as aet
 import numpy as np
-import theano.tensor as tt
 
-from theano.tensor.nlinalg import eigh
+from aesara.tensor.nlinalg import eigh
 
 import pymc3 as pm
 
@@ -195,9 +195,9 @@ class Latent(Base):
         L = cholesky(stabilize(Kxx))
         A = solve_lower(L, Kxs)
         v = solve_lower(L, f - mean_total(X))
-        mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
+        mu = self.mean_func(Xnew) + aet.dot(aet.transpose(A), v)
         Kss = self.cov_func(Xnew)
-        cov = Kss - tt.dot(tt.transpose(A), A)
+        cov = Kss - aet.dot(aet.transpose(A), A)
         return mu, cov
 
     def conditional(self, name, Xnew, given=None, **kwargs):
@@ -281,7 +281,7 @@ class TP(Latent):
         if reparameterize:
             chi2 = pm.ChiSquared(name + "_chi2_", self.nu)
             v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, shape=shape, **kwargs)
-            f = pm.Deterministic(name, (tt.sqrt(self.nu) / chi2) * (mu + cholesky(cov).dot(v)))
+            f = pm.Deterministic(name, (aet.sqrt(self.nu) / chi2) * (mu + cholesky(cov).dot(v)))
         else:
             f = pm.MvStudentT(name, nu=self.nu, mu=mu, cov=cov, shape=shape, **kwargs)
         return f
@@ -318,10 +318,10 @@ class TP(Latent):
         Kss = self.cov_func(Xnew)
         L = cholesky(stabilize(Kxx))
         A = solve_lower(L, Kxs)
-        cov = Kss - tt.dot(tt.transpose(A), A)
+        cov = Kss - aet.dot(aet.transpose(A), A)
         v = solve_lower(L, f - self.mean_func(X))
-        mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
-        beta = tt.dot(v, v)
+        mu = self.mean_func(Xnew) + aet.dot(aet.transpose(A), v)
+        beta = aet.dot(v, v)
         nu2 = self.nu + X.shape[0]
         covT = (self.nu + beta - 2) / (nu2 - 2) * cov
         return nu2, mu, covT
@@ -476,16 +476,16 @@ class Marginal(Base):
         L = cholesky(stabilize(Kxx) + Knx)
         A = solve_lower(L, Kxs)
         v = solve_lower(L, rxx)
-        mu = self.mean_func(Xnew) + tt.dot(tt.transpose(A), v)
+        mu = self.mean_func(Xnew) + aet.dot(aet.transpose(A), v)
         if diag:
             Kss = self.cov_func(Xnew, diag=True)
-            var = Kss - tt.sum(tt.square(A), 0)
+            var = Kss - aet.sum(aet.square(A), 0)
             if pred_noise:
                 var += noise(Xnew, diag=True)
             return mu, var
         else:
             Kss = self.cov_func(Xnew)
-            cov = Kss - tt.dot(tt.transpose(A), A)
+            cov = Kss - aet.dot(aet.transpose(A), A)
             if pred_noise:
                 cov += noise(Xnew)
             return mu, cov if pred_noise else stabilize(cov)
@@ -664,32 +664,32 @@ class MarginalSparse(Marginal):
     # in marginal_likelihood instead of lambda. This makes pickling
     # possible.
     def _build_marginal_likelihood_logp(self, y, X, Xu, sigma):
-        sigma2 = tt.square(sigma)
+        sigma2 = aet.square(sigma)
         Kuu = self.cov_func(Xu)
         Kuf = self.cov_func(Xu, X)
         Luu = cholesky(stabilize(Kuu))
         A = solve_lower(Luu, Kuf)
-        Qffd = tt.sum(A * A, 0)
+        Qffd = aet.sum(A * A, 0)
         if self.approx == "FITC":
             Kffd = self.cov_func(X, diag=True)
-            Lamd = tt.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
+            Lamd = aet.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
             trace = 0.0
         elif self.approx == "VFE":
-            Lamd = tt.ones_like(Qffd) * sigma2
+            Lamd = aet.ones_like(Qffd) * sigma2
             trace = (1.0 / (2.0 * sigma2)) * (
-                tt.sum(self.cov_func(X, diag=True)) - tt.sum(tt.sum(A * A, 0))
+                aet.sum(self.cov_func(X, diag=True)) - aet.sum(aet.sum(A * A, 0))
             )
         else:  # DTC
-            Lamd = tt.ones_like(Qffd) * sigma2
+            Lamd = aet.ones_like(Qffd) * sigma2
             trace = 0.0
         A_l = A / Lamd
-        L_B = cholesky(tt.eye(Xu.shape[0]) + tt.dot(A_l, tt.transpose(A)))
+        L_B = cholesky(aet.eye(Xu.shape[0]) + aet.dot(A_l, aet.transpose(A)))
         r = y - self.mean_func(X)
         r_l = r / Lamd
-        c = solve_lower(L_B, tt.dot(A, r_l))
-        constant = 0.5 * X.shape[0] * tt.log(2.0 * np.pi)
-        logdet = 0.5 * tt.sum(tt.log(Lamd)) + tt.sum(tt.log(tt.diag(L_B)))
-        quadratic = 0.5 * (tt.dot(r, r_l) - tt.dot(c, c))
+        c = solve_lower(L_B, aet.dot(A, r_l))
+        constant = 0.5 * X.shape[0] * aet.log(2.0 * np.pi)
+        logdet = 0.5 * aet.sum(aet.log(Lamd)) + aet.sum(aet.log(aet.diag(L_B)))
+        quadratic = 0.5 * (aet.dot(r, r_l) - aet.dot(c, c))
         return -1.0 * (constant + logdet + quadratic + trace)
 
     def marginal_likelihood(self, name, X, Xu, y, noise=None, is_observed=True, **kwargs):
@@ -743,36 +743,38 @@ class MarginalSparse(Marginal):
             return pm.DensityDist(name, logp, shape=shape, **kwargs)
 
     def _build_conditional(self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total):
-        sigma2 = tt.square(sigma)
+        sigma2 = aet.square(sigma)
         Kuu = cov_total(Xu)
         Kuf = cov_total(Xu, X)
         Luu = cholesky(stabilize(Kuu))
         A = solve_lower(Luu, Kuf)
-        Qffd = tt.sum(A * A, 0)
+        Qffd = aet.sum(A * A, 0)
         if self.approx == "FITC":
             Kffd = cov_total(X, diag=True)
-            Lamd = tt.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
+            Lamd = aet.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
         else:  # VFE or DTC
-            Lamd = tt.ones_like(Qffd) * sigma2
+            Lamd = aet.ones_like(Qffd) * sigma2
         A_l = A / Lamd
-        L_B = cholesky(tt.eye(Xu.shape[0]) + tt.dot(A_l, tt.transpose(A)))
+        L_B = cholesky(aet.eye(Xu.shape[0]) + aet.dot(A_l, aet.transpose(A)))
         r = y - mean_total(X)
         r_l = r / Lamd
-        c = solve_lower(L_B, tt.dot(A, r_l))
+        c = solve_lower(L_B, aet.dot(A, r_l))
         Kus = self.cov_func(Xu, Xnew)
         As = solve_lower(Luu, Kus)
-        mu = self.mean_func(Xnew) + tt.dot(tt.transpose(As), solve_upper(tt.transpose(L_B), c))
+        mu = self.mean_func(Xnew) + aet.dot(aet.transpose(As), solve_upper(aet.transpose(L_B), c))
         C = solve_lower(L_B, As)
         if diag:
             Kss = self.cov_func(Xnew, diag=True)
-            var = Kss - tt.sum(tt.square(As), 0) + tt.sum(tt.square(C), 0)
+            var = Kss - aet.sum(aet.square(As), 0) + aet.sum(aet.square(C), 0)
             if pred_noise:
                 var += sigma2
             return mu, var
         else:
-            cov = self.cov_func(Xnew) - tt.dot(tt.transpose(As), As) + tt.dot(tt.transpose(C), C)
+            cov = (
+                self.cov_func(Xnew) - aet.dot(aet.transpose(As), As) + aet.dot(aet.transpose(C), C)
+            )
             if pred_noise:
-                cov += sigma2 * tt.identity_like(cov)
+                cov += sigma2 * aet.identity_like(cov)
             return mu, cov if pred_noise else stabilize(cov)
 
     def _get_given_vals(self, given):
@@ -891,7 +893,7 @@ class LatentKron(Base):
         chols = [cholesky(stabilize(cov(X))) for cov, X in zip(self.cov_funcs, Xs)]
         # remove reparameterization option
         v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, shape=self.N, **kwargs)
-        f = pm.Deterministic(name, mu + tt.flatten(kron_dot(chols, v)))
+        f = pm.Deterministic(name, mu + aet.flatten(kron_dot(chols, v)))
         return f
 
     def prior(self, name, Xs, **kwargs):
@@ -925,15 +927,15 @@ class LatentKron(Base):
         delta = f - self.mean_func(X)
         covs = [stabilize(cov(Xi)) for cov, Xi in zip(self.cov_funcs, Xs)]
         chols = [cholesky(cov) for cov in covs]
-        cholTs = [tt.transpose(chol) for chol in chols]
+        cholTs = [aet.transpose(chol) for chol in chols]
         Kss = self.cov_func(Xnew)
         Kxs = self.cov_func(X, Xnew)
-        Ksx = tt.transpose(Kxs)
+        Ksx = aet.transpose(Kxs)
         alpha = kron_solve_lower(chols, delta)
         alpha = kron_solve_upper(cholTs, alpha)
-        mu = tt.dot(Ksx, alpha).ravel() + self.mean_func(Xnew)
+        mu = aet.dot(Ksx, alpha).ravel() + self.mean_func(Xnew)
         A = kron_solve_lower(chols, Kxs)
-        cov = stabilize(Kss - tt.dot(tt.transpose(A), A))
+        cov = stabilize(Kss - aet.dot(aet.transpose(A), A))
         return mu, cov
 
     def conditional(self, name, Xnew, **kwargs):
@@ -1103,7 +1105,7 @@ class MarginalKron(Base):
         delta = y - self.mean_func(X)
         Kns = [f(x) for f, x in zip(self.cov_funcs, Xs)]
         eigs_sep, Qs = zip(*map(eigh, Kns))  # Unzip
-        QTs = list(map(tt.transpose, Qs))
+        QTs = list(map(aet.transpose, Qs))
         eigs = kron_diag(*eigs_sep)  # Combine separate eigs
         if sigma is not None:
             eigs += sigma ** 2
@@ -1117,21 +1119,21 @@ class MarginalKron(Base):
         alpha = kron_dot(QTs, delta)
         alpha = alpha / eigs[:, None]
         alpha = kron_dot(Qs, alpha)
-        mu = tt.dot(Kmn, alpha).ravel() + self.mean_func(Xnew)
+        mu = aet.dot(Kmn, alpha).ravel() + self.mean_func(Xnew)
 
         # Build conditional cov
         A = kron_dot(QTs, Knm)
-        A = A / tt.sqrt(eigs[:, None])
+        A = A / aet.sqrt(eigs[:, None])
         if diag:
-            Asq = tt.sum(tt.square(A), 0)
+            Asq = aet.sum(aet.square(A), 0)
             cov = Km - Asq
             if pred_noise:
                 cov += sigma
         else:
-            Asq = tt.dot(A.T, A)
+            Asq = aet.dot(A.T, A)
             cov = Km - Asq
             if pred_noise:
-                cov += sigma * tt.identity_like(cov)
+                cov += sigma * aet.identity_like(cov)
         return mu, cov
 
     def conditional(self, name, Xnew, pred_noise=False, **kwargs):

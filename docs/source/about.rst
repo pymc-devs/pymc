@@ -27,7 +27,7 @@ PyMC3 strives to make Bayesian modeling as simple and painless as possible,  all
 
 * Includes a large suite of well-documented statistical distributions.
 
-* Uses Theano as the computational backend, allowing for fast expression evaluation, automatic gradient calculation, and GPU computing.
+* Uses Aesara as the computational backend, allowing for fast expression evaluation, automatic gradient calculation, and GPU computing.
 
 * Built-in support for Gaussian process modeling.
 
@@ -45,7 +45,7 @@ PyMC3 strives to make Bayesian modeling as simple and painless as possible,  all
 What's new in version 3
 =======================
 
-The third major version of PyMC has benefitted from being re-written from scratch. Substantial improvements in the user interface and performance have resulted from this. While PyMC2 relied on Fortran extensions (via f2py) for most of the computational heavy-lifting, PyMC3 leverages Theano, a library from the Montréal Institute for Learning Algorithms (MILA), for array-based expression evaluation, to perform its computation. What this provides, above all else, is fast automatic differentiation, which is at the heart of the gradient-based sampling and optimization methods currently providing inference for probabilistic programming.
+The third major version of PyMC has benefitted from being re-written from scratch. Substantial improvements in the user interface and performance have resulted from this. While PyMC2 relied on Fortran extensions (via f2py) for most of the computational heavy-lifting, PyMC3 leverages Aesara, a fork of the Theano library from the Montréal Institute for Learning Algorithms (MILA), for array-based expression evaluation, to perform its computation. What this provides, above all else, is fast automatic differentiation, which is at the heart of the gradient-based sampling and optimization methods currently providing inference for probabilistic programming.
 
 Major changes from previous versions:
 
@@ -65,7 +65,7 @@ Major changes from previous versions:
 
 * Much more!
 
-While the addition of Theano adds a level of complexity to the development of PyMC, fundamentally altering how the underlying computation is performed, we have worked hard to maintain the elegant simplicity of the original PyMC model specification syntax.
+While the addition of Aesara adds a level of complexity to the development of PyMC, fundamentally altering how the underlying computation is performed, we have worked hard to maintain the elegant simplicity of the original PyMC model specification syntax.
 
 
 History
@@ -90,7 +90,7 @@ plotting, csv table output, improved imputation syntax, and posterior
 predictive check plots. PyMC 2.3 was released on October 31, 2013. It included
 Python 3 compatibility, improved summary plots, and some important bug fixes.
 
-In 2011, John Salvatier began thinking about implementing gradient-based MCMC samplers, and developed the ``mcex`` package to experiment with his ideas. The following year, John was invited by the team to re-engineer PyMC to accomodate Hamiltonian Monte Carlo sampling. This led to the adoption of Theano as the computational back end, and marked the beginning of PyMC3's development. The first alpha version of PyMC3 was released in June 2015. Over the following 2 years, the core development team grew to 12 members, and the first release, PyMC3 3.0, was launched in January 2017.
+In 2011, John Salvatier began thinking about implementing gradient-based MCMC samplers, and developed the ``mcex`` package to experiment with his ideas. The following year, John was invited by the team to re-engineer PyMC to accomodate Hamiltonian Monte Carlo sampling. This led to the adoption of Theano as the computational back end, and marked the beginning of PyMC3's development. The first alpha version of PyMC3 was released in June 2015. Over the following 2 years, the core development team grew to 12 members, and the first release, PyMC3 3.0, was launched in January 2017.  In 2020 the PyMC developers forked Theano and in 2021 renamed the forked project to Aesara.
 
 .. _support:
 

@@ -16,13 +16,13 @@ import logging
 
 import numpy as np
 
-from theano import function as theano_function
+from aesara import function as aesara_function
 
+from pymc3.aesaraf import inputvars, join_nonshared_inputs, make_shared_replacements
 from pymc3.distributions import BART
 from pymc3.distributions.tree import Tree
 from pymc3.model import modelcontext
 from pymc3.step_methods.arraystep import ArrayStepShared, Competence
-from pymc3.theanof import inputvars, join_nonshared_inputs, make_shared_replacements
 
 _log = logging.getLogger("pymc3")
 
@@ -274,7 +274,7 @@ class ParticleTree:
 
 
 def logp(out_vars, vars, shared):
-    """Compile Theano function of the model and the input and output variables.
+    """Compile Aesara function of the model and the input and output variables.
 
     Parameters
     ----------
@@ -283,9 +283,9 @@ def logp(out_vars, vars, shared):
     vars: List
         containing :class:`pymc3.Distribution` for the input variables
     shared: List
-        containing :class:`theano.tensor.Tensor` for depended shared data
+        containing :class:`aesara.tensor.Tensor` for depended shared data
     """
     out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
-    f = theano_function([inarray0], out_list[0])
+    f = aesara_function([inarray0], out_list[0])
     f.trust_input = True
     return f

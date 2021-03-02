@@ -158,7 +158,7 @@ html_theme_options = {
         ("About PyMC3", "about"),
     ],
     #     "fixed_sidebar": "false",
-    #     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Theano"
+    #     "description": "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with Aesara"
 }
 
 # Add any paths that contain custom themes here, relative to this directory.

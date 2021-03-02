@@ -19,13 +19,14 @@ nodes in PyMC.
 """
 import warnings
 
+import aesara.tensor as aet
 import numpy as np
-import theano.tensor as tt
 
 from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.special import expit
 
+from pymc3.aesaraf import floatX
 from pymc3.distributions import transforms
 from pymc3.distributions.dist_math import (
     SplineWrapper,
@@ -44,7 +45,6 @@ from pymc3.distributions.dist_math import (
 from pymc3.distributions.distribution import Continuous, draw_values, generate_samples
 from pymc3.distributions.special import log_i0
 from pymc3.math import invlogit, log1mexp, log1pexp, logdiffexp, logit
-from pymc3.theanof import floatX
 
 __all__ = [
     "Uniform",
@@ -101,8 +101,8 @@ class BoundedContinuous(Continuous):
 
     def __init__(self, transform="auto", lower=None, upper=None, *args, **kwargs):
 
-        lower = tt.as_tensor_variable(lower) if lower is not None else None
-        upper = tt.as_tensor_variable(upper) if upper is not None else None
+        lower = aet.as_tensor_variable(lower) if lower is not None else None
+        upper = aet.as_tensor_variable(upper) if upper is not None else None
 
         if transform == "auto":
             if lower is None and upper is None:
@@ -223,8 +223,8 @@ class Uniform(BoundedContinuous):
     """
 
     def __init__(self, lower=0, upper=1, *args, **kwargs):
-        self.lower = lower = tt.as_tensor_variable(floatX(lower))
-        self.upper = upper = tt.as_tensor_variable(floatX(upper))
+        self.lower = lower = aet.as_tensor_variable(floatX(lower))
+        self.upper = upper = aet.as_tensor_variable(floatX(upper))
         self.mean = (upper + lower) / 2.0
         self.median = self.mean
 
@@ -268,7 +268,7 @@ class Uniform(BoundedContinuous):
         """
         lower = self.lower
         upper = self.upper
-        return bound(-tt.log(upper - lower), value >= lower, value <= upper)
+        return bound(-aet.log(upper - lower), value >= lower, value <= upper)
 
     def logcdf(self, value):
         """
@@ -277,9 +277,9 @@ class Uniform(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -288,12 +288,12 @@ class Uniform(BoundedContinuous):
         lower = self.lower
         upper = self.upper
 
-        return tt.switch(
-            tt.lt(value, lower) | tt.lt(upper, lower),
+        return aet.switch(
+            aet.lt(value, lower) | aet.lt(upper, lower),
             -np.inf,
-            tt.switch(
-                tt.lt(value, upper),
-                tt.log(value - lower) - tt.log(upper - lower),
+            aet.switch(
+                aet.lt(value, upper),
+                aet.log(value - lower) - aet.log(upper - lower),
                 0,
             ),
         )
@@ -331,13 +331,13 @@ class Flat(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
         TensorVariable
         """
-        return tt.zeros_like(value)
+        return aet.zeros_like(value)
 
     def logcdf(self, value):
         """
@@ -346,16 +346,16 @@ class Flat(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
         TensorVariable
         """
-        return tt.switch(
-            tt.eq(value, -np.inf), -np.inf, tt.switch(tt.eq(value, np.inf), 0, tt.log(0.5))
+        return aet.switch(
+            aet.eq(value, -np.inf), -np.inf, aet.switch(aet.eq(value, np.inf), 0, aet.log(0.5))
         )
 
 
@@ -388,13 +388,13 @@ class HalfFlat(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
         TensorVariable
         """
-        return bound(tt.zeros_like(value), value > 0)
+        return bound(aet.zeros_like(value), value > 0)
 
     def logcdf(self, value):
         """
@@ -403,15 +403,17 @@ class HalfFlat(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
         TensorVariable
         """
-        return tt.switch(tt.lt(value, np.inf), -np.inf, tt.switch(tt.eq(value, np.inf), 0, -np.inf))
+        return aet.switch(
+            aet.lt(value, np.inf), -np.inf, aet.switch(aet.eq(value, np.inf), 0, -np.inf)
+        )
 
 
 class Normal(Continuous):
@@ -481,10 +483,10 @@ class Normal(Continuous):
         if sd is not None:
             sigma = sd
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = self.sd = tt.as_tensor_variable(sigma)
-        self.tau = tt.as_tensor_variable(tau)
+        self.sigma = self.sd = aet.as_tensor_variable(sigma)
+        self.tau = aet.as_tensor_variable(tau)
 
-        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(floatX(mu))
+        self.mean = self.median = self.mode = self.mu = mu = aet.as_tensor_variable(floatX(mu))
         self.variance = 1.0 / self.tau
 
         assert_negative_support(sigma, "sigma", "Normal")
@@ -522,7 +524,7 @@ class Normal(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -532,7 +534,7 @@ class Normal(Continuous):
         tau = self.tau
         mu = self.mu
 
-        return bound((-tau * (value - mu) ** 2 + tt.log(tau / np.pi / 2.0)) / 2.0, sigma > 0)
+        return bound((-tau * (value - mu) ** 2 + aet.log(tau / np.pi / 2.0)) / 2.0, sigma > 0)
 
     def _distr_parameters_for_repr(self):
         return ["mu", "sigma"]
@@ -544,9 +546,9 @@ class Normal(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -647,21 +649,21 @@ class TruncatedNormal(BoundedContinuous):
         if sd is not None:
             sigma = sd
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = self.sd = tt.as_tensor_variable(sigma)
-        self.tau = tt.as_tensor_variable(tau)
-        self.lower_check = tt.as_tensor_variable(floatX(lower)) if lower is not None else lower
-        self.upper_check = tt.as_tensor_variable(floatX(upper)) if upper is not None else upper
+        self.sigma = self.sd = aet.as_tensor_variable(sigma)
+        self.tau = aet.as_tensor_variable(tau)
+        self.lower_check = aet.as_tensor_variable(floatX(lower)) if lower is not None else lower
+        self.upper_check = aet.as_tensor_variable(floatX(upper)) if upper is not None else upper
         self.lower = (
-            tt.as_tensor_variable(floatX(lower))
+            aet.as_tensor_variable(floatX(lower))
             if lower is not None
-            else tt.as_tensor_variable(-np.inf)
+            else aet.as_tensor_variable(-np.inf)
         )
         self.upper = (
-            tt.as_tensor_variable(floatX(upper))
+            aet.as_tensor_variable(floatX(upper))
             if upper is not None
-            else tt.as_tensor_variable(np.inf)
+            else aet.as_tensor_variable(np.inf)
         )
-        self.mu = tt.as_tensor_variable(floatX(mu))
+        self.mu = aet.as_tensor_variable(floatX(mu))
 
         if self.lower_check is None and self.upper_check is None:
             self._defaultval = mu
@@ -732,7 +734,7 @@ class TruncatedNormal(BoundedContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -763,7 +765,7 @@ class TruncatedNormal(BoundedContinuous):
             lsf_a = normal_lccdf(mu, sigma, self.lower)
             lsf_b = normal_lccdf(mu, sigma, self.upper)
 
-            return tt.switch(self.lower > 0, logdiffexp(lsf_a, lsf_b), logdiffexp(lcdf_b, lcdf_a))
+            return aet.switch(self.lower > 0, logdiffexp(lsf_a, lsf_b), logdiffexp(lcdf_b, lcdf_a))
 
         if self.lower_check is not None:
             return normal_lccdf(mu, sigma, self.lower)
@@ -843,10 +845,10 @@ class HalfNormal(PositiveContinuous):
         super().__init__(*args, **kwargs)
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
-        self.tau = tau = tt.as_tensor_variable(tau)
+        self.sigma = self.sd = sigma = aet.as_tensor_variable(sigma)
+        self.tau = tau = aet.as_tensor_variable(tau)
 
-        self.mean = tt.sqrt(2 / (np.pi * self.tau))
+        self.mean = aet.sqrt(2 / (np.pi * self.tau))
         self.variance = (1.0 - 2 / np.pi) / self.tau
 
         assert_negative_support(tau, "tau", "HalfNormal")
@@ -882,7 +884,7 @@ class HalfNormal(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -891,7 +893,7 @@ class HalfNormal(PositiveContinuous):
         tau = self.tau
         sigma = self.sigma
         return bound(
-            -0.5 * tau * value ** 2 + 0.5 * tt.log(tau * 2.0 / np.pi),
+            -0.5 * tau * value ** 2 + 0.5 * aet.log(tau * 2.0 / np.pi),
             value >= 0,
             tau > 0,
             sigma > 0,
@@ -907,9 +909,9 @@ class HalfNormal(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -918,7 +920,7 @@ class HalfNormal(PositiveContinuous):
         sigma = self.sigma
         z = zvalue(value, mu=0, sigma=sigma)
         return bound(
-            tt.log1p(-tt.erfc(z / tt.sqrt(2.0))),
+            aet.log1p(-aet.erfc(z / aet.sqrt(2.0))),
             0 <= value,
             0 < sigma,
         )
@@ -1005,14 +1007,14 @@ class Wald(PositiveContinuous):
     def __init__(self, mu=None, lam=None, phi=None, alpha=0.0, *args, **kwargs):
         super().__init__(*args, **kwargs)
         mu, lam, phi = self.get_mu_lam_phi(mu, lam, phi)
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
-        self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.lam = lam = tt.as_tensor_variable(floatX(lam))
-        self.phi = phi = tt.as_tensor_variable(floatX(phi))
+        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
+        self.mu = mu = aet.as_tensor_variable(floatX(mu))
+        self.lam = lam = aet.as_tensor_variable(floatX(lam))
+        self.phi = phi = aet.as_tensor_variable(floatX(phi))
 
         self.mean = self.mu + self.alpha
         self.mode = (
-            self.mu * (tt.sqrt(1.0 + (1.5 * self.mu / self.lam) ** 2) - 1.5 * self.mu / self.lam)
+            self.mu * (aet.sqrt(1.0 + (1.5 * self.mu / self.lam) ** 2) - 1.5 * self.mu / self.lam)
             + self.alpha
         )
         self.variance = (self.mu ** 3) / self.lam
@@ -1080,7 +1082,7 @@ class Wald(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1113,9 +1115,9 @@ class Wald(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -1129,7 +1131,7 @@ class Wald(PositiveContinuous):
         value -= alpha
         q = value / mu
         l = lam * mu
-        r = tt.sqrt(value * lam)
+        r = aet.sqrt(value * lam)
 
         a = normal_lcdf(0, 1, (q - 1.0) / r)
         b = 2.0 / l + normal_lcdf(0, 1, -(q + 1.0) / r)
@@ -1215,8 +1217,8 @@ class Beta(UnitContinuous):
         if sd is not None:
             sigma = sd
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sigma)
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
-        self.beta = beta = tt.as_tensor_variable(floatX(beta))
+        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
+        self.beta = beta = aet.as_tensor_variable(floatX(beta))
 
         self.mean = self.alpha / (self.alpha + self.beta)
         self.variance = (
@@ -1269,7 +1271,7 @@ class Beta(UnitContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1278,11 +1280,11 @@ class Beta(UnitContinuous):
         alpha = self.alpha
         beta = self.beta
 
-        logval = tt.log(value)
-        log1pval = tt.log1p(-value)
+        logval = aet.log(value)
+        log1pval = aet.log1p(-value)
         logp = (
-            tt.switch(tt.eq(alpha, 1), 0, (alpha - 1) * logval)
-            + tt.switch(tt.eq(beta, 1), 0, (beta - 1) * log1pval)
+            aet.switch(aet.eq(alpha, 1), 0, (alpha - 1) * logval)
+            + aet.switch(aet.eq(beta, 1), 0, (beta - 1) * log1pval)
             - betaln(alpha, beta)
         )
 
@@ -1312,9 +1314,9 @@ class Beta(UnitContinuous):
         b = self.beta
 
         return bound(
-            tt.switch(
-                tt.lt(value, 1),
-                tt.log(incomplete_beta(a, b, value)),
+            aet.switch(
+                aet.lt(value, 1),
+                aet.log(incomplete_beta(a, b, value)),
                 0,
             ),
             0 <= value,
@@ -1371,15 +1373,15 @@ class Kumaraswamy(UnitContinuous):
     def __init__(self, a, b, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.a = a = tt.as_tensor_variable(floatX(a))
-        self.b = b = tt.as_tensor_variable(floatX(b))
+        self.a = a = aet.as_tensor_variable(floatX(a))
+        self.b = b = aet.as_tensor_variable(floatX(b))
 
-        ln_mean = tt.log(b) + tt.gammaln(1 + 1 / a) + tt.gammaln(b) - tt.gammaln(1 + 1 / a + b)
-        self.mean = tt.exp(ln_mean)
+        ln_mean = aet.log(b) + aet.gammaln(1 + 1 / a) + aet.gammaln(b) - aet.gammaln(1 + 1 / a + b)
+        self.mean = aet.exp(ln_mean)
         ln_2nd_raw_moment = (
-            tt.log(b) + tt.gammaln(1 + 2 / a) + tt.gammaln(b) - tt.gammaln(1 + 2 / a + b)
+            aet.log(b) + aet.gammaln(1 + 2 / a) + aet.gammaln(b) - aet.gammaln(1 + 2 / a + b)
         )
-        self.variance = tt.exp(ln_2nd_raw_moment) - self.mean ** 2
+        self.variance = aet.exp(ln_2nd_raw_moment) - self.mean ** 2
 
         assert_negative_support(a, "a", "Kumaraswamy")
         assert_negative_support(b, "b", "Kumaraswamy")
@@ -1416,7 +1418,7 @@ class Kumaraswamy(UnitContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1425,7 +1427,9 @@ class Kumaraswamy(UnitContinuous):
         a = self.a
         b = self.b
 
-        logp = tt.log(a) + tt.log(b) + (a - 1) * tt.log(value) + (b - 1) * tt.log(1 - value ** a)
+        logp = (
+            aet.log(a) + aet.log(b) + (a - 1) * aet.log(value) + (b - 1) * aet.log(1 - value ** a)
+        )
 
         return bound(logp, value >= 0, value <= 1, a > 0, b > 0)
 
@@ -1469,10 +1473,10 @@ class Exponential(PositiveContinuous):
 
     def __init__(self, lam, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.lam = lam = tt.as_tensor_variable(floatX(lam))
+        self.lam = lam = aet.as_tensor_variable(floatX(lam))
         self.mean = 1.0 / self.lam
-        self.median = self.mean * tt.log(2)
-        self.mode = tt.zeros_like(self.lam)
+        self.median = self.mean * aet.log(2)
+        self.mode = aet.zeros_like(self.lam)
 
         self.variance = self.lam ** -2
 
@@ -1508,14 +1512,14 @@ class Exponential(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
         TensorVariable
         """
         lam = self.lam
-        return bound(tt.log(lam) - lam * value, value >= 0, lam > 0)
+        return bound(aet.log(lam) - lam * value, value >= 0, lam > 0)
 
     def logcdf(self, value):
         r"""
@@ -1524,15 +1528,15 @@ class Exponential(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
         TensorVariable
         """
-        value = floatX(tt.as_tensor(value))
+        value = floatX(aet.as_tensor(value))
         lam = self.lam
         a = lam * value
         return bound(
@@ -1586,8 +1590,8 @@ class Laplace(Continuous):
 
     def __init__(self, mu, b, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.b = b = tt.as_tensor_variable(floatX(b))
-        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(floatX(mu))
+        self.b = b = aet.as_tensor_variable(floatX(b))
+        self.mean = self.median = self.mode = self.mu = mu = aet.as_tensor_variable(floatX(mu))
 
         self.variance = 2 * self.b ** 2
 
@@ -1621,7 +1625,7 @@ class Laplace(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1630,7 +1634,7 @@ class Laplace(Continuous):
         mu = self.mu
         b = self.b
 
-        return -tt.log(2 * b) - abs(value - mu) / b
+        return -aet.log(2 * b) - abs(value - mu) / b
 
     def logcdf(self, value):
         """
@@ -1639,9 +1643,9 @@ class Laplace(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -1651,13 +1655,13 @@ class Laplace(Continuous):
         b = self.b
         y = (value - a) / b
         return bound(
-            tt.switch(
-                tt.le(value, a),
-                tt.log(0.5) + y,
-                tt.switch(
-                    tt.gt(y, 1),
-                    tt.log1p(-0.5 * tt.exp(-y)),
-                    tt.log(1 - 0.5 * tt.exp(-y)),
+            aet.switch(
+                aet.le(value, a),
+                aet.log(0.5) + y,
+                aet.switch(
+                    aet.gt(y, 1),
+                    aet.log1p(-0.5 * aet.exp(-y)),
+                    aet.log(1 - 0.5 * aet.exp(-y)),
                 ),
             ),
             0 < b,
@@ -1701,9 +1705,9 @@ class AsymmetricLaplace(Continuous):
     """
 
     def __init__(self, b, kappa, mu=0, *args, **kwargs):
-        self.b = tt.as_tensor_variable(floatX(b))
-        self.kappa = tt.as_tensor_variable(floatX(kappa))
-        self.mu = mu = tt.as_tensor_variable(floatX(mu))
+        self.b = aet.as_tensor_variable(floatX(b))
+        self.kappa = aet.as_tensor_variable(floatX(kappa))
+        self.mu = mu = aet.as_tensor_variable(floatX(mu))
 
         self.mean = self.mu - (self.kappa - 1 / self.kappa) / b
         self.variance = (1 + self.kappa ** 4) / (self.kappa ** 2 * self.b ** 2)
@@ -1749,7 +1753,7 @@ class AsymmetricLaplace(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1757,8 +1761,8 @@ class AsymmetricLaplace(Continuous):
         """
         value = value - self.mu
         return bound(
-            tt.log(self.b / (self.kappa + (self.kappa ** -1)))
-            + (-value * self.b * tt.sgn(value) * (self.kappa ** tt.sgn(value))),
+            aet.log(self.b / (self.kappa + (self.kappa ** -1)))
+            + (-value * self.b * aet.sgn(value) * (self.kappa ** aet.sgn(value))),
             0 < self.b,
             0 < self.kappa,
         )
@@ -1833,14 +1837,14 @@ class Lognormal(PositiveContinuous):
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.tau = tau = tt.as_tensor_variable(tau)
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
+        self.mu = mu = aet.as_tensor_variable(floatX(mu))
+        self.tau = tau = aet.as_tensor_variable(tau)
+        self.sigma = self.sd = sigma = aet.as_tensor_variable(sigma)
 
-        self.mean = tt.exp(self.mu + 1.0 / (2 * self.tau))
-        self.median = tt.exp(self.mu)
-        self.mode = tt.exp(self.mu - 1.0 / self.tau)
-        self.variance = (tt.exp(1.0 / self.tau) - 1) * tt.exp(2 * self.mu + 1.0 / self.tau)
+        self.mean = aet.exp(self.mu + 1.0 / (2 * self.tau))
+        self.median = aet.exp(self.mu)
+        self.mode = aet.exp(self.mu - 1.0 / self.tau)
+        self.variance = (aet.exp(1.0 / self.tau) - 1) * aet.exp(2 * self.mu + 1.0 / self.tau)
 
         assert_negative_support(tau, "tau", "Lognormal")
         assert_negative_support(sigma, "sigma", "Lognormal")
@@ -1877,7 +1881,7 @@ class Lognormal(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1886,9 +1890,9 @@ class Lognormal(PositiveContinuous):
         mu = self.mu
         tau = self.tau
         return bound(
-            -0.5 * tau * (tt.log(value) - mu) ** 2
-            + 0.5 * tt.log(tau / (2.0 * np.pi))
-            - tt.log(value),
+            -0.5 * tau * (aet.log(value) - mu) ** 2
+            + 0.5 * aet.log(tau / (2.0 * np.pi))
+            - aet.log(value),
             tau > 0,
         )
 
@@ -1902,9 +1906,9 @@ class Lognormal(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -1915,7 +1919,7 @@ class Lognormal(PositiveContinuous):
         tau = self.tau
 
         return bound(
-            normal_lcdf(mu, sigma, tt.log(value)),
+            normal_lcdf(mu, sigma, aet.log(value)),
             0 < value,
             0 < tau,
         )
@@ -1988,13 +1992,13 @@ class StudentT(Continuous):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-        self.nu = nu = tt.as_tensor_variable(floatX(nu))
+        self.nu = nu = aet.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
-        self.lam = lam = tt.as_tensor_variable(lam)
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
-        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(mu)
+        self.lam = lam = aet.as_tensor_variable(lam)
+        self.sigma = self.sd = sigma = aet.as_tensor_variable(sigma)
+        self.mean = self.median = self.mode = self.mu = mu = aet.as_tensor_variable(mu)
 
-        self.variance = tt.switch((nu > 2) * 1, (1 / self.lam) * (nu / (nu - 2)), np.inf)
+        self.variance = aet.switch((nu > 2) * 1, (1 / self.lam) * (nu / (nu - 2)), np.inf)
 
         assert_negative_support(lam, "lam (sigma)", "StudentT")
         assert_negative_support(nu, "nu", "StudentT")
@@ -2029,7 +2033,7 @@ class StudentT(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -2042,9 +2046,9 @@ class StudentT(Continuous):
 
         return bound(
             gammaln((nu + 1.0) / 2.0)
-            + 0.5 * tt.log(lam / (nu * np.pi))
+            + 0.5 * aet.log(lam / (nu * np.pi))
             - gammaln(nu / 2.0)
-            - (nu + 1.0) / 2.0 * tt.log1p(lam * (value - mu) ** 2 / nu),
+            - (nu + 1.0) / 2.0 * aet.log1p(lam * (value - mu) ** 2 / nu),
             lam > 0,
             nu > 0,
             sigma > 0,
@@ -2078,11 +2082,11 @@ class StudentT(Continuous):
         sigma = self.sigma
         lam = self.lam
         t = (value - mu) / sigma
-        sqrt_t2_nu = tt.sqrt(t ** 2 + nu)
+        sqrt_t2_nu = aet.sqrt(t ** 2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
 
         return bound(
-            tt.log(incomplete_beta(nu / 2.0, nu / 2.0, x)),
+            aet.log(incomplete_beta(nu / 2.0, nu / 2.0, x)),
             0 < nu,
             0 < sigma,
             0 < lam,
@@ -2135,13 +2139,13 @@ class Pareto(Continuous):
     """
 
     def __init__(self, alpha, m, transform="lowerbound", *args, **kwargs):
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
-        self.m = m = tt.as_tensor_variable(floatX(m))
+        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
+        self.m = m = aet.as_tensor_variable(floatX(m))
 
-        self.mean = tt.switch(tt.gt(alpha, 1), alpha * m / (alpha - 1.0), np.inf)
+        self.mean = aet.switch(aet.gt(alpha, 1), alpha * m / (alpha - 1.0), np.inf)
         self.median = m * 2.0 ** (1.0 / alpha)
-        self.variance = tt.switch(
-            tt.gt(alpha, 2), (alpha * m ** 2) / ((alpha - 2.0) * (alpha - 1.0) ** 2), np.inf
+        self.variance = aet.switch(
+            aet.gt(alpha, 2), (alpha * m ** 2) / ((alpha - 2.0) * (alpha - 1.0) ** 2), np.inf
         )
 
         assert_negative_support(alpha, "alpha", "Pareto")
@@ -2183,7 +2187,7 @@ class Pareto(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -2192,7 +2196,7 @@ class Pareto(Continuous):
         alpha = self.alpha
         m = self.m
         return bound(
-            tt.log(alpha) + logpow(m, alpha) - logpow(value, alpha + 1),
+            aet.log(alpha) + logpow(m, alpha) - logpow(value, alpha + 1),
             value >= m,
             alpha > 0,
             m > 0,
@@ -2208,9 +2212,9 @@ class Pareto(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -2220,10 +2224,10 @@ class Pareto(Continuous):
         alpha = self.alpha
         arg = (m / value) ** alpha
         return bound(
-            tt.switch(
-                tt.le(arg, 1e-5),
-                tt.log1p(-arg),
-                tt.log(1 - arg),
+            aet.switch(
+                aet.le(arg, 1e-5),
+                aet.log1p(-arg),
+                aet.log(1 - arg),
             ),
             m <= value,
             0 < alpha,
@@ -2278,8 +2282,8 @@ class Cauchy(Continuous):
 
     def __init__(self, alpha, beta, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.median = self.mode = self.alpha = tt.as_tensor_variable(floatX(alpha))
-        self.beta = tt.as_tensor_variable(floatX(beta))
+        self.median = self.mode = self.alpha = aet.as_tensor_variable(floatX(alpha))
+        self.beta = aet.as_tensor_variable(floatX(beta))
 
         assert_negative_support(beta, "beta", "Cauchy")
 
@@ -2315,7 +2319,7 @@ class Cauchy(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -2324,7 +2328,7 @@ class Cauchy(Continuous):
         alpha = self.alpha
         beta = self.beta
         return bound(
-            -tt.log(np.pi) - tt.log(beta) - tt.log1p(((value - alpha) / beta) ** 2), beta > 0
+            -aet.log(np.pi) - aet.log(beta) - aet.log1p(((value - alpha) / beta) ** 2), beta > 0
         )
 
     def logcdf(self, value):
@@ -2334,9 +2338,9 @@ class Cauchy(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -2345,7 +2349,7 @@ class Cauchy(Continuous):
         alpha = self.alpha
         beta = self.beta
         return bound(
-            tt.log(0.5 + tt.arctan((value - alpha) / beta) / np.pi),
+            aet.log(0.5 + aet.arctan((value - alpha) / beta) / np.pi),
             0 < beta,
         )
 
@@ -2390,8 +2394,8 @@ class HalfCauchy(PositiveContinuous):
 
     def __init__(self, beta, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mode = tt.as_tensor_variable(0)
-        self.median = self.beta = tt.as_tensor_variable(floatX(beta))
+        self.mode = aet.as_tensor_variable(0)
+        self.median = self.beta = aet.as_tensor_variable(floatX(beta))
 
         assert_negative_support(beta, "beta", "HalfCauchy")
 
@@ -2427,7 +2431,7 @@ class HalfCauchy(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -2435,7 +2439,7 @@ class HalfCauchy(PositiveContinuous):
         """
         beta = self.beta
         return bound(
-            tt.log(2) - tt.log(np.pi) - tt.log(beta) - tt.log1p((value / beta) ** 2),
+            aet.log(2) - aet.log(np.pi) - aet.log(beta) - aet.log1p((value / beta) ** 2),
             value >= 0,
             beta > 0,
         )
@@ -2447,9 +2451,9 @@ class HalfCauchy(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -2457,7 +2461,7 @@ class HalfCauchy(PositiveContinuous):
         """
         beta = self.beta
         return bound(
-            tt.log(2 * tt.arctan(value / beta) / np.pi),
+            aet.log(2 * aet.arctan(value / beta) / np.pi),
             0 <= value,
             0 < beta,
         )
@@ -2527,10 +2531,10 @@ class Gamma(PositiveContinuous):
             sigma = sd
 
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sigma)
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
-        self.beta = beta = tt.as_tensor_variable(floatX(beta))
+        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
+        self.beta = beta = aet.as_tensor_variable(floatX(beta))
         self.mean = alpha / beta
-        self.mode = tt.maximum((alpha - 1) / beta, 0)
+        self.mode = aet.maximum((alpha - 1) / beta, 0)
         self.variance = alpha / beta ** 2
 
         assert_negative_support(alpha, "alpha", "Gamma")
@@ -2581,7 +2585,7 @@ class Gamma(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -2603,9 +2607,9 @@ class Gamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -2614,12 +2618,12 @@ class Gamma(PositiveContinuous):
         alpha = self.alpha
         beta = self.beta
         # Avoid C-assertion when the gammainc function is called with invalid values (#4340)
-        safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
-        safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
-        safe_value = tt.switch(tt.lt(value, 0), 0, value)
+        safe_alpha = aet.switch(aet.lt(alpha, 0), 0, alpha)
+        safe_beta = aet.switch(aet.lt(beta, 0), 0, beta)
+        safe_value = aet.switch(aet.lt(value, 0), 0, value)
 
         return bound(
-            tt.log(tt.gammainc(safe_alpha, safe_beta * safe_value)),
+            aet.log(aet.gammainc(safe_alpha, safe_beta * safe_value)),
             0 <= value,
             0 < alpha,
             0 < beta,
@@ -2684,13 +2688,13 @@ class InverseGamma(PositiveContinuous):
             sigma = sd
 
         alpha, beta = InverseGamma._get_alpha_beta(alpha, beta, mu, sigma)
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
-        self.beta = beta = tt.as_tensor_variable(floatX(beta))
+        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
+        self.beta = beta = aet.as_tensor_variable(floatX(beta))
 
         self.mean = self._calculate_mean()
         self.mode = beta / (alpha + 1.0)
-        self.variance = tt.switch(
-            tt.gt(alpha, 2), (beta ** 2) / ((alpha - 2) * (alpha - 1.0) ** 2), np.inf
+        self.variance = aet.switch(
+            aet.gt(alpha, 2), (beta ** 2) / ((alpha - 2) * (alpha - 1.0) ** 2), np.inf
         )
         assert_negative_support(alpha, "alpha", "InverseGamma")
         assert_negative_support(beta, "beta", "InverseGamma")
@@ -2752,7 +2756,7 @@ class InverseGamma(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -2777,9 +2781,9 @@ class InverseGamma(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -2788,12 +2792,12 @@ class InverseGamma(PositiveContinuous):
         alpha = self.alpha
         beta = self.beta
         # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
-        safe_alpha = tt.switch(tt.lt(alpha, 0), 0, alpha)
-        safe_beta = tt.switch(tt.lt(beta, 0), 0, beta)
-        safe_value = tt.switch(tt.lt(value, 0), 0, value)
+        safe_alpha = aet.switch(aet.lt(alpha, 0), 0, alpha)
+        safe_beta = aet.switch(aet.lt(beta, 0), 0, beta)
+        safe_value = aet.switch(aet.lt(value, 0), 0, value)
 
         return bound(
-            tt.log(tt.gammaincc(safe_alpha, safe_beta / safe_value)),
+            aet.log(aet.gammaincc(safe_alpha, safe_beta / safe_value)),
             0 <= value,
             0 < alpha,
             0 < beta,
@@ -2839,7 +2843,7 @@ class ChiSquared(Gamma):
     """
 
     def __init__(self, nu, *args, **kwargs):
-        self.nu = nu = tt.as_tensor_variable(floatX(nu))
+        self.nu = nu = aet.as_tensor_variable(floatX(nu))
         super().__init__(alpha=nu / 2.0, beta=0.5, *args, **kwargs)
 
 
@@ -2889,12 +2893,12 @@ class Weibull(PositiveContinuous):
 
     def __init__(self, alpha, beta, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
-        self.beta = beta = tt.as_tensor_variable(floatX(beta))
-        self.mean = beta * tt.exp(gammaln(1 + 1.0 / alpha))
-        self.median = beta * tt.exp(gammaln(tt.log(2))) ** (1.0 / alpha)
-        self.variance = beta ** 2 * tt.exp(gammaln(1 + 2.0 / alpha)) - self.mean ** 2
-        self.mode = tt.switch(
+        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
+        self.beta = beta = aet.as_tensor_variable(floatX(beta))
+        self.mean = beta * aet.exp(gammaln(1 + 1.0 / alpha))
+        self.median = beta * aet.exp(gammaln(aet.log(2))) ** (1.0 / alpha)
+        self.variance = beta ** 2 * aet.exp(gammaln(1 + 2.0 / alpha)) - self.mean ** 2
+        self.mode = aet.switch(
             alpha >= 1, beta * ((alpha - 1) / alpha) ** (1 / alpha), 0
         )  # Reference: https://en.wikipedia.org/wiki/Weibull_distribution
 
@@ -2933,7 +2937,7 @@ class Weibull(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -2942,9 +2946,9 @@ class Weibull(PositiveContinuous):
         alpha = self.alpha
         beta = self.beta
         return bound(
-            tt.log(alpha)
-            - tt.log(beta)
-            + (alpha - 1) * tt.log(value / beta)
+            aet.log(alpha)
+            - aet.log(beta)
+            + (alpha - 1) * aet.log(value / beta)
             - (value / beta) ** alpha,
             value >= 0,
             alpha > 0,
@@ -2958,9 +2962,9 @@ class Weibull(PositiveContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -3039,12 +3043,12 @@ class HalfStudentT(PositiveContinuous):
         if sd is not None:
             sigma = sd
 
-        self.mode = tt.as_tensor_variable(0)
+        self.mode = aet.as_tensor_variable(0)
         lam, sigma = get_tau_sigma(lam, sigma)
-        self.median = tt.as_tensor_variable(sigma)
-        self.sigma = self.sd = tt.as_tensor_variable(sigma)
-        self.lam = tt.as_tensor_variable(lam)
-        self.nu = nu = tt.as_tensor_variable(floatX(nu))
+        self.median = aet.as_tensor_variable(sigma)
+        self.sigma = self.sd = aet.as_tensor_variable(sigma)
+        self.lam = aet.as_tensor_variable(lam)
+        self.nu = nu = aet.as_tensor_variable(floatX(nu))
 
         assert_negative_support(sigma, "sigma", "HalfStudentT")
         assert_negative_support(lam, "lam", "HalfStudentT")
@@ -3080,7 +3084,7 @@ class HalfStudentT(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -3091,11 +3095,11 @@ class HalfStudentT(PositiveContinuous):
         lam = self.lam
 
         return bound(
-            tt.log(2)
+            aet.log(2)
             + gammaln((nu + 1.0) / 2.0)
             - gammaln(nu / 2.0)
-            - 0.5 * tt.log(nu * np.pi * sigma ** 2)
-            - (nu + 1.0) / 2.0 * tt.log1p(value ** 2 / (nu * sigma ** 2)),
+            - 0.5 * aet.log(nu * np.pi * sigma ** 2)
+            - (nu + 1.0) / 2.0 * aet.log1p(value ** 2 / (nu * sigma ** 2)),
             sigma > 0,
             lam > 0,
             nu > 0,
@@ -3177,9 +3181,9 @@ class ExGaussian(Continuous):
         if sd is not None:
             sigma = sd
 
-        self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(floatX(sigma))
-        self.nu = nu = tt.as_tensor_variable(floatX(nu))
+        self.mu = mu = aet.as_tensor_variable(floatX(mu))
+        self.sigma = self.sd = sigma = aet.as_tensor_variable(floatX(sigma))
+        self.nu = nu = aet.as_tensor_variable(floatX(nu))
         self.mean = mu + nu
         self.variance = (sigma ** 2) + (nu ** 2)
 
@@ -3220,7 +3224,7 @@ class ExGaussian(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -3232,10 +3236,10 @@ class ExGaussian(Continuous):
 
         # Alogithm is adapted from dexGAUS.R from gamlss
         return bound(
-            tt.switch(
-                tt.gt(nu, 0.05 * sigma),
+            aet.switch(
+                aet.gt(nu, 0.05 * sigma),
                 (
-                    -tt.log(nu)
+                    -aet.log(nu)
                     + (mu - value) / nu
                     + 0.5 * (sigma / nu) ** 2
                     + normal_lcdf(mu + (sigma ** 2) / nu, sigma, value)
@@ -3259,9 +3263,9 @@ class ExGaussian(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -3273,8 +3277,8 @@ class ExGaussian(Continuous):
 
         # Alogithm is adapted from pexGAUS.R from gamlss
         return bound(
-            tt.switch(
-                tt.gt(nu, 0.05 * sigma),
+            aet.switch(
+                aet.gt(nu, 0.05 * sigma),
                 logdiffexp(
                     normal_lcdf(mu, sigma, value),
                     (
@@ -3341,8 +3345,8 @@ class VonMises(Continuous):
         if transform == "circular":
             transform = transforms.Circular()
         super().__init__(transform=transform, *args, **kwargs)
-        self.mean = self.median = self.mode = self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.kappa = kappa = tt.as_tensor_variable(floatX(kappa))
+        self.mean = self.median = self.mode = self.mu = mu = aet.as_tensor_variable(floatX(mu))
+        self.kappa = kappa = aet.as_tensor_variable(floatX(kappa))
 
         assert_negative_support(kappa, "kappa", "VonMises")
 
@@ -3376,7 +3380,7 @@ class VonMises(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -3385,7 +3389,7 @@ class VonMises(Continuous):
         mu = self.mu
         kappa = self.kappa
         return bound(
-            kappa * tt.cos(mu - value) - (tt.log(2 * np.pi) + log_i0(kappa)),
+            kappa * aet.cos(mu - value) - (aet.log(2 * np.pi) + log_i0(kappa)),
             kappa > 0,
             value >= -np.pi,
             value <= np.pi,
@@ -3460,11 +3464,11 @@ class SkewNormal(Continuous):
             sigma = sd
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.tau = tt.as_tensor_variable(tau)
-        self.sigma = self.sd = tt.as_tensor_variable(sigma)
+        self.mu = mu = aet.as_tensor_variable(floatX(mu))
+        self.tau = aet.as_tensor_variable(tau)
+        self.sigma = self.sd = aet.as_tensor_variable(sigma)
 
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
+        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
 
         self.mean = mu + self.sigma * (2 / np.pi) ** 0.5 * alpha / (1 + alpha ** 2) ** 0.5
         self.variance = self.sigma ** 2 * (1 - (2 * alpha ** 2) / ((1 + alpha ** 2) * np.pi))
@@ -3504,7 +3508,7 @@ class SkewNormal(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -3515,8 +3519,8 @@ class SkewNormal(Continuous):
         mu = self.mu
         alpha = self.alpha
         return bound(
-            tt.log(1 + tt.erf(((value - mu) * tt.sqrt(tau) * alpha) / tt.sqrt(2)))
-            + (-tau * (value - mu) ** 2 + tt.log(tau / np.pi / 2.0)) / 2.0,
+            aet.log(1 + aet.erf(((value - mu) * aet.sqrt(tau) * alpha) / aet.sqrt(2)))
+            + (-tau * (value - mu) ** 2 + aet.log(tau / np.pi / 2.0)) / 2.0,
             tau > 0,
             sigma > 0,
         )
@@ -3580,9 +3584,9 @@ class Triangular(BoundedContinuous):
     """
 
     def __init__(self, lower=0, upper=1, c=0.5, *args, **kwargs):
-        self.median = self.mean = self.c = c = tt.as_tensor_variable(floatX(c))
-        self.lower = lower = tt.as_tensor_variable(floatX(lower))
-        self.upper = upper = tt.as_tensor_variable(floatX(upper))
+        self.median = self.mean = self.c = c = aet.as_tensor_variable(floatX(c))
+        self.lower = lower = aet.as_tensor_variable(floatX(lower))
+        self.upper = upper = aet.as_tensor_variable(floatX(upper))
 
         super().__init__(lower=lower, upper=upper, *args, **kwargs)
 
@@ -3625,7 +3629,7 @@ class Triangular(BoundedContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -3635,10 +3639,10 @@ class Triangular(BoundedContinuous):
         lower = self.lower
         upper = self.upper
         return bound(
-            tt.switch(
-                tt.lt(value, c),
-                tt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
-                tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),
+            aet.switch(
+                aet.lt(value, c),
+                aet.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
+                aet.log(2 * (upper - value) / ((upper - lower) * (upper - c))),
             ),
             lower <= value,
             value <= upper,
@@ -3651,9 +3655,9 @@ class Triangular(BoundedContinuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -3663,15 +3667,15 @@ class Triangular(BoundedContinuous):
         lower = self.lower
         upper = self.upper
         return bound(
-            tt.switch(
-                tt.le(value, lower),
+            aet.switch(
+                aet.le(value, lower),
                 -np.inf,
-                tt.switch(
-                    tt.le(value, c),
-                    tt.log(((value - lower) ** 2) / ((upper - lower) * (c - lower))),
-                    tt.switch(
-                        tt.lt(value, upper),
-                        tt.log1p(-((upper - value) ** 2) / ((upper - lower) * (upper - c))),
+                aet.switch(
+                    aet.le(value, c),
+                    aet.log(((value - lower) ** 2) / ((upper - lower) * (c - lower))),
+                    aet.switch(
+                        aet.lt(value, upper),
+                        aet.log1p(-((upper - value) ** 2) / ((upper - lower) * (upper - c))),
                         0,
                     ),
                 ),
@@ -3729,13 +3733,13 @@ class Gumbel(Continuous):
     """
 
     def __init__(self, mu=0, beta=1.0, **kwargs):
-        self.mu = tt.as_tensor_variable(floatX(mu))
-        self.beta = tt.as_tensor_variable(floatX(beta))
+        self.mu = aet.as_tensor_variable(floatX(mu))
+        self.beta = aet.as_tensor_variable(floatX(beta))
 
         assert_negative_support(beta, "beta", "Gumbel")
 
         self.mean = self.mu + self.beta * np.euler_gamma
-        self.median = self.mu - self.beta * tt.log(tt.log(2))
+        self.median = self.mu - self.beta * aet.log(aet.log(2))
         self.mode = self.mu
         self.variance = (np.pi ** 2 / 6.0) * self.beta ** 2
 
@@ -3771,7 +3775,7 @@ class Gumbel(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -3781,7 +3785,7 @@ class Gumbel(Continuous):
         beta = self.beta
         scaled = (value - mu) / beta
         return bound(
-            -scaled - tt.exp(-scaled) - tt.log(self.beta),
+            -scaled - aet.exp(-scaled) - aet.log(self.beta),
             0 < beta,
         )
 
@@ -3792,9 +3796,9 @@ class Gumbel(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -3804,7 +3808,7 @@ class Gumbel(Continuous):
         mu = self.mu
 
         return bound(
-            -tt.exp(-(value - mu) / beta),
+            -aet.exp(-(value - mu) / beta),
             0 < beta,
         )
 
@@ -3874,18 +3878,18 @@ class Rice(PositiveContinuous):
             sigma = sd
 
         nu, b, sigma = self.get_nu_b(nu, b, sigma)
-        self.nu = nu = tt.as_tensor_variable(floatX(nu))
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(floatX(sigma))
-        self.b = b = tt.as_tensor_variable(floatX(b))
+        self.nu = nu = aet.as_tensor_variable(floatX(nu))
+        self.sigma = self.sd = sigma = aet.as_tensor_variable(floatX(sigma))
+        self.b = b = aet.as_tensor_variable(floatX(b))
 
         nu_sigma_ratio = -(nu ** 2) / (2 * sigma ** 2)
         self.mean = (
             sigma
             * np.sqrt(np.pi / 2)
-            * tt.exp(nu_sigma_ratio / 2)
+            * aet.exp(nu_sigma_ratio / 2)
             * (
-                (1 - nu_sigma_ratio) * tt.i0(-nu_sigma_ratio / 2)
-                - nu_sigma_ratio * tt.i1(-nu_sigma_ratio / 2)
+                (1 - nu_sigma_ratio) * aet.i0(-nu_sigma_ratio / 2)
+                - nu_sigma_ratio * aet.i1(-nu_sigma_ratio / 2)
             )
         )
         self.variance = (
@@ -3893,10 +3897,10 @@ class Rice(PositiveContinuous):
             + nu ** 2
             - (np.pi * sigma ** 2 / 2)
             * (
-                tt.exp(nu_sigma_ratio / 2)
+                aet.exp(nu_sigma_ratio / 2)
                 * (
-                    (1 - nu_sigma_ratio) * tt.i0(-nu_sigma_ratio / 2)
-                    - nu_sigma_ratio * tt.i1(-nu_sigma_ratio / 2)
+                    (1 - nu_sigma_ratio) * aet.i0(-nu_sigma_ratio / 2)
+                    - nu_sigma_ratio * aet.i1(-nu_sigma_ratio / 2)
                 )
             )
             ** 2
@@ -3949,7 +3953,7 @@ class Rice(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -3960,7 +3964,7 @@ class Rice(PositiveContinuous):
         b = self.b
         x = value / sigma
         return bound(
-            tt.log(x * tt.exp((-(x - b) * (x - b)) / 2) * i0e(x * b) / sigma),
+            aet.log(x * aet.exp((-(x - b) * (x - b)) / 2) * i0e(x * b) / sigma),
             sigma >= 0,
             nu >= 0,
             value > 0,
@@ -4016,8 +4020,8 @@ class Logistic(Continuous):
     def __init__(self, mu=0.0, s=1.0, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.mu = tt.as_tensor_variable(floatX(mu))
-        self.s = tt.as_tensor_variable(floatX(s))
+        self.mu = aet.as_tensor_variable(floatX(mu))
+        self.s = aet.as_tensor_variable(floatX(s))
 
         self.mean = self.mode = mu
         self.variance = s ** 2 * np.pi ** 2 / 3.0
@@ -4053,7 +4057,7 @@ class Logistic(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -4063,7 +4067,7 @@ class Logistic(Continuous):
         s = self.s
 
         return bound(
-            -(value - mu) / s - tt.log(s) - 2 * tt.log1p(tt.exp(-(value - mu) / s)),
+            -(value - mu) / s - aet.log(s) - 2 * aet.log1p(aet.exp(-(value - mu) / s)),
             s > 0,
         )
 
@@ -4074,9 +4078,9 @@ class Logistic(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -4137,10 +4141,10 @@ class LogitNormal(UnitContinuous):
     def __init__(self, mu=0, sigma=None, tau=None, sd=None, **kwargs):
         if sd is not None:
             sigma = sd
-        self.mu = mu = tt.as_tensor_variable(floatX(mu))
+        self.mu = mu = aet.as_tensor_variable(floatX(mu))
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = self.sd = tt.as_tensor_variable(sigma)
-        self.tau = tau = tt.as_tensor_variable(tau)
+        self.sigma = self.sd = aet.as_tensor_variable(sigma)
+        self.tau = tau = aet.as_tensor_variable(tau)
 
         self.median = invlogit(mu)
         assert_negative_support(sigma, "sigma", "LogitNormal")
@@ -4178,7 +4182,7 @@ class LogitNormal(UnitContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -4188,8 +4192,8 @@ class LogitNormal(UnitContinuous):
         tau = self.tau
         return bound(
             -0.5 * tau * (logit(value) - mu) ** 2
-            + 0.5 * tt.log(tau / (2.0 * np.pi))
-            - tt.log(value * (1 - value)),
+            + 0.5 * aet.log(tau / (2.0 * np.pi))
+            - aet.log(value * (1 - value)),
             value > 0,
             value < 1,
             tau > 0,
@@ -4228,15 +4232,15 @@ class Interpolated(BoundedContinuous):
     """
 
     def __init__(self, x_points, pdf_points, *args, **kwargs):
-        self.lower = lower = tt.as_tensor_variable(x_points[0])
-        self.upper = upper = tt.as_tensor_variable(x_points[-1])
+        self.lower = lower = aet.as_tensor_variable(x_points[0])
+        self.upper = upper = aet.as_tensor_variable(x_points[-1])
 
         super().__init__(lower=lower, upper=upper, *args, **kwargs)
 
         interp = InterpolatedUnivariateSpline(x_points, pdf_points, k=1, ext="zeros")
         Z = interp.integral(x_points[0], x_points[-1])
 
-        self.Z = tt.as_tensor_variable(Z)
+        self.Z = aet.as_tensor_variable(Z)
         self.interp_op = SplineWrapper(interp)
         self.x_points = x_points
         self.pdf_points = pdf_points / Z
@@ -4287,13 +4291,13 @@ class Interpolated(BoundedContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
         TensorVariable
         """
-        return tt.log(self.interp_op(value) / self.Z)
+        return aet.log(self.interp_op(value) / self.Z)
 
     def _distr_parameters_for_repr(self):
         return []
@@ -4347,13 +4351,13 @@ class Moyal(Continuous):
     """
 
     def __init__(self, mu=0, sigma=1.0, *args, **kwargs):
-        self.mu = tt.as_tensor_variable(floatX(mu))
-        self.sigma = tt.as_tensor_variable(floatX(sigma))
+        self.mu = aet.as_tensor_variable(floatX(mu))
+        self.sigma = aet.as_tensor_variable(floatX(sigma))
 
         assert_negative_support(sigma, "sigma", "Moyal")
 
-        self.mean = self.mu + self.sigma * (np.euler_gamma + tt.log(2))
-        self.median = self.mu - self.sigma * tt.log(2 * tt.erfcinv(1 / 2) ** 2)
+        self.mean = self.mu + self.sigma * (np.euler_gamma + aet.log(2))
+        self.median = self.mu - self.sigma * aet.log(2 * aet.erfcinv(1 / 2) ** 2)
         self.mode = self.mu
         self.variance = (np.pi ** 2 / 2.0) * self.sigma ** 2
 
@@ -4389,7 +4393,7 @@ class Moyal(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -4399,7 +4403,11 @@ class Moyal(Continuous):
         sigma = self.sigma
         scaled = (value - mu) / sigma
         return bound(
-            (-(1 / 2) * (scaled + tt.exp(-scaled)) - tt.log(sigma) - (1 / 2) * tt.log(2 * np.pi)),
+            (
+                -(1 / 2) * (scaled + aet.exp(-scaled))
+                - aet.log(sigma)
+                - (1 / 2) * aet.log(2 * np.pi)
+            ),
             0 < sigma,
         )
 
@@ -4410,9 +4418,9 @@ class Moyal(Continuous):
 
         Parameters
         ----------
-        value: numeric or np.ndarray or theano.tensor
+        value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or theano tensor.
+            values are desired the values must be provided in a numpy array or aesara tensor.
 
         Returns
         -------
@@ -4423,6 +4431,6 @@ class Moyal(Continuous):
 
         scaled = (value - mu) / sigma
         return bound(
-            tt.log(tt.erfc(tt.exp(-scaled / 2) * (2 ** -0.5))),
+            aet.log(aet.erfc(aet.exp(-scaled / 2) * (2 ** -0.5))),
             0 < sigma,
         )

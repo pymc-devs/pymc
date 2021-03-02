@@ -17,20 +17,27 @@
 
 import warnings
 
+import aesara
+import aesara.tensor as aet
 import numpy as np
 import scipy
-import theano
-import theano.tensor as tt
 
+from aesara.graph.basic import Apply
+from aesara.graph.op import Op, get_test_value
+from aesara.graph.utils import TestValueError
+from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
+from aesara.tensor.slinalg import (
+    Cholesky,
+    Solve,
+    solve_lower_triangular,
+    solve_upper_triangular,
+)
+from aesara.tensor.type import TensorType
 from scipy import linalg, stats
-from theano.graph.basic import Apply
-from theano.graph.op import Op, get_test_value
-from theano.graph.utils import TestValueError
-from theano.tensor.nlinalg import det, eigh, matrix_inverse, trace
-from theano.tensor.slinalg import Cholesky
 
 import pymc3 as pm
 
+from pymc3.aesaraf import floatX, intX
 from pymc3.distributions import transforms
 from pymc3.distributions.continuous import ChiSquared, Normal
 from pymc3.distributions.dist_math import bound, factln, logpow
@@ -46,7 +53,6 @@ from pymc3.distributions.special import gammaln, multigammaln
 from pymc3.exceptions import ShapeError
 from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
 from pymc3.model import Deterministic
-from pymc3.theanof import floatX, intX
 
 __all__ = [
     "MvNormal",
@@ -75,8 +81,8 @@ class _QuadFormBase(Continuous):
             raise ValueError(
                 "Incompatible parameterization. Specify exactly one of tau, cov, or chol."
             )
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
+        self.mu = mu = aet.as_tensor_variable(mu)
+        self.solve_lower = Solve(A_structure="lower_triangular")
         # Step methods and advi do not catch LinAlgErrors at the
         # moment. We work around that by using a cholesky op
         # that returns a nan as first entry instead of raising
@@ -86,7 +92,7 @@ class _QuadFormBase(Continuous):
         if cov is not None:
             self.k = cov.shape[0]
             self._cov_type = "cov"
-            cov = tt.as_tensor_variable(cov)
+            cov = aet.as_tensor_variable(cov)
             if cov.ndim != 2:
                 raise ValueError("cov must be two dimensional.")
             self.chol_cov = cholesky(cov)
@@ -95,7 +101,7 @@ class _QuadFormBase(Continuous):
         elif tau is not None:
             self.k = tau.shape[0]
             self._cov_type = "tau"
-            tau = tt.as_tensor_variable(tau)
+            tau = aet.as_tensor_variable(tau)
             if tau.ndim != 2:
                 raise ValueError("tau must be two dimensional.")
             self.chol_tau = cholesky(tau)
@@ -106,7 +112,7 @@ class _QuadFormBase(Continuous):
             self._cov_type = "chol"
             if chol.ndim != 2:
                 raise ValueError("chol must be two dimensional.")
-            self.chol_cov = tt.as_tensor_variable(chol)
+            self.chol_cov = aet.as_tensor_variable(chol)
             self._n = self.chol_cov.shape[-1]
 
     def _quaddist(self, value):
@@ -137,16 +143,16 @@ class _QuadFormBase(Continuous):
 
     def _quaddist_chol(self, delta):
         chol_cov = self.chol_cov
-        diag = tt.nlinalg.diag(chol_cov)
+        diag = aet.nlinalg.diag(chol_cov)
         # Check if the covariance matrix is positive definite.
-        ok = tt.all(diag > 0)
+        ok = aet.all(diag > 0)
         # If not, replace the diagonal. We return -inf later, but
         # need to prevent solve_lower from throwing an exception.
-        chol_cov = tt.switch(ok, chol_cov, 1)
+        chol_cov = aet.switch(ok, chol_cov, 1)
 
         delta_trans = self.solve_lower(chol_cov, delta.T).T
         quaddist = (delta_trans ** 2).sum(axis=-1)
-        logdet = tt.sum(tt.log(diag))
+        logdet = aet.sum(aet.log(diag))
         return quaddist, logdet, ok
 
     def _quaddist_cov(self, delta):
@@ -154,16 +160,16 @@ class _QuadFormBase(Continuous):
 
     def _quaddist_tau(self, delta):
         chol_tau = self.chol_tau
-        diag = tt.nlinalg.diag(chol_tau)
+        diag = aet.nlinalg.diag(chol_tau)
         # Check if the precision matrix is positive definite.
-        ok = tt.all(diag > 0)
+        ok = aet.all(diag > 0)
         # If not, replace the diagonal. We return -inf later, but
         # need to prevent solve_lower from throwing an exception.
-        chol_tau = tt.switch(ok, chol_tau, 1)
+        chol_tau = aet.switch(ok, chol_tau, 1)
 
-        delta_trans = tt.dot(delta, chol_tau)
+        delta_trans = aet.dot(delta, chol_tau)
         quaddist = (delta_trans ** 2).sum(axis=-1)
-        logdet = -tt.sum(tt.log(diag))
+        logdet = -aet.sum(aet.log(diag))
         return quaddist, logdet, ok
 
     def _cov_param_for_repr(self):
@@ -235,7 +241,7 @@ class MvNormal(_QuadFormBase):
         chol, _, _ = pm.LKJCholeskyCov('chol_cov', n=3, eta=2,
             sd_dist=sd_dist, compute_corr=True)
         vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=(5, 3))
-        vals = pm.Deterministic('vals', tt.dot(chol, vals_raw.T).T)
+        vals = pm.Deterministic('vals', aet.dot(chol, vals_raw.T).T)
     """
 
     def __init__(self, mu, cov=None, tau=None, chol=None, lower=True, *args, **kwargs):
@@ -362,7 +368,7 @@ class MvStudentT(_QuadFormBase):
                 raise ValueError("Specify only one of cov and Sigma")
             cov = Sigma
         super().__init__(mu=mu, cov=cov, tau=tau, chol=chol, lower=lower, *args, **kwargs)
-        self.nu = nu = tt.as_tensor_variable(nu)
+        self.nu = nu = aet.as_tensor_variable(nu)
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
@@ -423,7 +429,7 @@ class MvStudentT(_QuadFormBase):
             - gammaln(self.nu / 2.0)
             - 0.5 * k * floatX(np.log(self.nu * np.pi))
         )
-        inner = -(self.nu + k) / 2.0 * tt.log1p(quaddist / self.nu)
+        inner = -(self.nu + k) / 2.0 * aet.log1p(quaddist / self.nu)
         return bound(norm + inner - logdet, ok)
 
     def _distr_parameters_for_repr(self):
@@ -472,10 +478,10 @@ class Dirichlet(Continuous):
 
         super().__init__(transform=transform, *args, **kwargs)
 
-        self.a = a = tt.as_tensor_variable(a)
-        self.mean = a / tt.sum(a)
+        self.a = a = aet.as_tensor_variable(a)
+        self.mean = a / aet.sum(a)
 
-        self.mode = tt.switch(tt.all(a > 1), (a - 1) / tt.sum(a - 1), np.nan)
+        self.mode = aet.switch(aet.all(a > 1), (a - 1) / aet.sum(a - 1), np.nan)
 
     def random(self, point=None, size=None):
         """
@@ -519,10 +525,10 @@ class Dirichlet(Continuous):
 
         # only defined for sum(value) == 1
         return bound(
-            tt.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(tt.sum(a, axis=-1)),
-            tt.all(value >= 0),
-            tt.all(value <= 1),
-            tt.all(a > 0),
+            aet.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(aet.sum(a, axis=-1)),
+            aet.all(value >= 0),
+            aet.all(value <= 1),
+            aet.all(a > 0),
             broadcast_conditions=False,
         )
 
@@ -566,21 +572,21 @@ class Multinomial(Discrete):
     def __init__(self, n, p, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        p = p / tt.sum(p, axis=-1, keepdims=True)
+        p = p / aet.sum(p, axis=-1, keepdims=True)
 
         if len(self.shape) > 1:
-            self.n = tt.shape_padright(n)
-            self.p = p if p.ndim > 1 else tt.shape_padleft(p)
+            self.n = aet.shape_padright(n)
+            self.p = p if p.ndim > 1 else aet.shape_padleft(p)
         else:
             # n is a scalar, p is a 1d array
-            self.n = tt.as_tensor_variable(n)
-            self.p = tt.as_tensor_variable(p)
+            self.n = aet.as_tensor_variable(n)
+            self.p = aet.as_tensor_variable(p)
 
         self.mean = self.n * self.p
-        mode = tt.cast(tt.round(self.mean), "int32")
-        diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = tt.abs_(diff) > 0
-        mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
+        mode = aet.cast(aet.round(self.mean), "int32")
+        diff = self.n - aet.sum(mode, axis=-1, keepdims=True)
+        inc_bool_arr = aet.abs_(diff) > 0
+        mode = aet.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         self.mode = mode
 
     def _random(self, n, p, size=None, raw_size=None):
@@ -663,12 +669,12 @@ class Multinomial(Discrete):
         p = self.p
 
         return bound(
-            factln(n) + tt.sum(-factln(x) + logpow(p, x), axis=-1, keepdims=True),
-            tt.all(x >= 0),
-            tt.all(tt.eq(tt.sum(x, axis=-1, keepdims=True), n)),
-            tt.all(p <= 1),
-            tt.all(tt.eq(tt.sum(p, axis=-1), 1)),
-            tt.all(tt.ge(n, 0)),
+            factln(n) + aet.sum(-factln(x) + logpow(p, x), axis=-1, keepdims=True),
+            aet.all(x >= 0),
+            aet.all(aet.eq(aet.sum(x, axis=-1, keepdims=True), n)),
+            aet.all(p <= 1),
+            aet.all(aet.eq(aet.sum(p, axis=-1), 1)),
+            aet.all(aet.ge(n, 0)),
             broadcast_conditions=False,
         )
 
@@ -714,22 +720,22 @@ class DirichletMultinomial(Discrete):
         n = intX(n)
         a = floatX(a)
         if len(self.shape) > 1:
-            self.n = tt.shape_padright(n)
-            self.a = tt.as_tensor_variable(a) if a.ndim > 1 else tt.shape_padleft(a)
+            self.n = aet.shape_padright(n)
+            self.a = aet.as_tensor_variable(a) if a.ndim > 1 else aet.shape_padleft(a)
         else:
             # n is a scalar, p is a 1d array
-            self.n = tt.as_tensor_variable(n)
-            self.a = tt.as_tensor_variable(a)
+            self.n = aet.as_tensor_variable(n)
+            self.a = aet.as_tensor_variable(a)
 
         p = self.a / self.a.sum(-1, keepdims=True)
 
         self.mean = self.n * p
         # Mode is only an approximation. Exact computation requires a complex
         # iterative algorithm as described in https://doi.org/10.1016/j.spl.2009.09.013
-        mode = tt.cast(tt.round(self.mean), "int32")
-        diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = tt.abs_(diff) > 0
-        mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
+        mode = aet.cast(aet.round(self.mean), "int32")
+        diff = self.n - aet.sum(mode, axis=-1, keepdims=True)
+        inc_bool_arr = aet.abs_(diff) > 0
+        mode = aet.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         self._defaultval = mode
 
     def _random(self, n, a, size=None):
@@ -816,10 +822,10 @@ class DirichletMultinomial(Discrete):
         # and that each observation value_i sums to n_i.
         return bound(
             result,
-            tt.all(tt.ge(value, 0)),
-            tt.all(tt.gt(a, 0)),
-            tt.all(tt.ge(n, 0)),
-            tt.all(tt.eq(value.sum(axis=-1, keepdims=True), n)),
+            aet.all(aet.ge(value, 0)),
+            aet.all(aet.gt(a, 0)),
+            aet.all(aet.ge(n, 0)),
+            aet.all(aet.eq(value.sum(axis=-1, keepdims=True), n)),
             broadcast_conditions=False,
         )
 
@@ -847,9 +853,9 @@ class PosDefMatrix(Op):
     # Compulsory if itypes and otypes are not defined
 
     def make_node(self, x):
-        x = tt.as_tensor_variable(x)
+        x = aet.as_tensor_variable(x)
         assert x.ndim == 2
-        o = tt.TensorType(dtype="int8", broadcastable=[])()
+        o = TensorType(dtype="int8", broadcastable=[])()
         return Apply(self, [x], [o])
 
     # Python implementation:
@@ -868,7 +874,7 @@ class PosDefMatrix(Op):
 
     def grad(self, inp, grads):
         (x,) = inp
-        return [x.zeros_like(theano.config.floatX)]
+        return [x.zeros_like(aesara.config.floatX)]
 
     def __str__(self):
         return "MatrixIsPositiveDefinite"
@@ -925,11 +931,11 @@ class Wishart(Continuous):
             "https://github.com/pymc-devs/pymc3/issues/538.",
             UserWarning,
         )
-        self.nu = nu = tt.as_tensor_variable(nu)
-        self.p = p = tt.as_tensor_variable(V.shape[0])
-        self.V = V = tt.as_tensor_variable(V)
+        self.nu = nu = aet.as_tensor_variable(nu)
+        self.p = p = aet.as_tensor_variable(V.shape[0])
+        self.V = V = aet.as_tensor_variable(V)
         self.mean = nu * V
-        self.mode = tt.switch(tt.ge(nu, p + 1), (nu - p - 1) * V, np.nan)
+        self.mode = aet.switch(aet.ge(nu, p + 1), (nu - p - 1) * V, np.nan)
 
     def random(self, point=None, size=None):
         """
@@ -975,15 +981,15 @@ class Wishart(Continuous):
 
         return bound(
             (
-                (nu - p - 1) * tt.log(IXI)
+                (nu - p - 1) * aet.log(IXI)
                 - trace(matrix_inverse(V).dot(X))
-                - nu * p * tt.log(2)
-                - nu * tt.log(IVI)
+                - nu * p * aet.log(2)
+                - nu * aet.log(IVI)
                 - 2 * multigammaln(nu / 2.0, p)
             )
             / 2,
             matrix_pos_def(X),
-            tt.eq(X, X.T),
+            aet.eq(X, X.T),
             nu > (p - 1),
             broadcast_conditions=False,
         )
@@ -1053,44 +1059,44 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
         diag_testval = None
         tril_testval = None
 
-    c = tt.sqrt(
+    c = aet.sqrt(
         ChiSquared("%s_c" % name, nu - np.arange(2, 2 + n_diag), shape=n_diag, testval=diag_testval)
     )
     pm._log.info("Added new variable %s_c to model diagonal of Wishart." % name)
     z = Normal("%s_z" % name, 0.0, 1.0, shape=n_tril, testval=tril_testval)
     pm._log.info("Added new variable %s_z to model off-diagonals of Wishart." % name)
     # Construct A matrix
-    A = tt.zeros(S.shape, dtype=np.float32)
-    A = tt.set_subtensor(A[diag_idx], c)
-    A = tt.set_subtensor(A[tril_idx], z)
+    A = aet.zeros(S.shape, dtype=np.float32)
+    A = aet.set_subtensor(A[diag_idx], c)
+    A = aet.set_subtensor(A[tril_idx], z)
 
     # L * A * A.T * L.T ~ Wishart(L*L.T, nu)
     if return_cholesky:
-        return Deterministic(name, tt.dot(L, A))
+        return Deterministic(name, aet.dot(L, A))
     else:
-        return Deterministic(name, tt.dot(tt.dot(tt.dot(L, A), A.T), L.T))
+        return Deterministic(name, aet.dot(aet.dot(aet.dot(L, A), A.T), L.T))
 
 
 def _lkj_normalizing_constant(eta, n):
     if eta == 1:
-        result = gammaln(2.0 * tt.arange(1, int((n - 1) / 2) + 1)).sum()
+        result = gammaln(2.0 * aet.arange(1, int((n - 1) / 2) + 1)).sum()
         if n % 2 == 1:
             result += (
-                0.25 * (n ** 2 - 1) * tt.log(np.pi)
-                - 0.25 * (n - 1) ** 2 * tt.log(2.0)
+                0.25 * (n ** 2 - 1) * aet.log(np.pi)
+                - 0.25 * (n - 1) ** 2 * aet.log(2.0)
                 - (n - 1) * gammaln(int((n + 1) / 2))
             )
         else:
             result += (
-                0.25 * n * (n - 2) * tt.log(np.pi)
-                + 0.25 * (3 * n ** 2 - 4 * n) * tt.log(2.0)
+                0.25 * n * (n - 2) * aet.log(np.pi)
+                + 0.25 * (3 * n ** 2 - 4 * n) * aet.log(2.0)
                 + n * gammaln(n / 2)
                 - (n - 1) * gammaln(n)
             )
     else:
         result = -(n - 1) * gammaln(eta + 0.5 * (n - 1))
-        k = tt.arange(1, n)
-        result += (0.5 * k * tt.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))).sum()
+        k = aet.arange(1, n)
+        result += (0.5 * k * aet.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))).sum()
     return result
 
 
@@ -1100,8 +1106,8 @@ class _LKJCholeskyCov(Continuous):
     """
 
     def __init__(self, eta, n, sd_dist, *args, **kwargs):
-        self.n = tt.as_tensor_variable(n)
-        self.eta = tt.as_tensor_variable(eta)
+        self.n = aet.as_tensor_variable(n)
+        self.eta = aet.as_tensor_variable(eta)
 
         if "transform" in kwargs and kwargs["transform"] is not None:
             raise ValueError("Invalid parameter: transform.")
@@ -1143,22 +1149,22 @@ class _LKJCholeskyCov(Continuous):
         eta = self.eta
 
         diag_idxs = self.diag_idxs
-        cumsum = tt.cumsum(x ** 2)
-        variance = tt.zeros(n)
-        variance = tt.inc_subtensor(variance[0], x[0] ** 2)
-        variance = tt.inc_subtensor(variance[1:], cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
-        sd_vals = tt.sqrt(variance)
+        cumsum = aet.cumsum(x ** 2)
+        variance = aet.zeros(n)
+        variance = aet.inc_subtensor(variance[0], x[0] ** 2)
+        variance = aet.inc_subtensor(variance[1:], cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
+        sd_vals = aet.sqrt(variance)
 
         logp_sd = self.sd_dist.logp(sd_vals).sum()
         corr_diag = x[diag_idxs] / sd_vals
 
-        logp_lkj = (2 * eta - 3 + n - tt.arange(n)) * tt.log(corr_diag)
-        logp_lkj = tt.sum(logp_lkj)
+        logp_lkj = (2 * eta - 3 + n - aet.arange(n)) * aet.log(corr_diag)
+        logp_lkj = aet.sum(logp_lkj)
 
         # Compute the log det jacobian of the second transformation
         # described in the docstring.
-        idx = tt.arange(n)
-        det_invjac = tt.log(corr_diag) - idx * tt.log(sd_vals)
+        idx = aet.arange(n)
+        det_invjac = aet.log(corr_diag) - idx * aet.log(sd_vals)
         det_invjac = det_invjac.sum()
 
         norm = _lkj_normalizing_constant(eta, n)
@@ -1348,10 +1354,10 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
 
             # Or transform an uncorrelated normal:
             vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=10)
-            vals = tt.dot(chol, vals_raw)
+            vals = aet.dot(chol, vals_raw)
 
             # Or compute the covariance matrix
-            cov = tt.dot(chol, chol.T)
+            cov = aet.dot(chol, chol.T)
 
     **Implementation** In the unconstrained space all values of the cholesky factor
     are stored untransformed, except for the diagonal entries, where
@@ -1411,9 +1417,9 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
     else:
         chol = pm.expand_packed_triangular(n, packed_chol, lower=True)
         # compute covariance matrix
-        cov = tt.dot(chol, chol.T)
+        cov = aet.dot(chol, chol.T)
         # extract standard deviations and rho
-        stds = tt.sqrt(tt.diag(cov))
+        stds = aet.sqrt(aet.diag(cov))
         inv_stds = 1 / stds
         corr = inv_stds[None, :] * cov * inv_stds[:, None]
         if store_in_trace:
@@ -1562,14 +1568,14 @@ class LKJCorr(Continuous):
         eta = self.eta
 
         X = x[self.tri_index]
-        X = tt.fill_diagonal(X, 1)
+        X = aet.fill_diagonal(X, 1)
 
         result = _lkj_normalizing_constant(eta, n)
-        result += (eta - 1.0) * tt.log(det(X))
+        result += (eta - 1.0) * aet.log(det(X))
         return bound(
             result,
-            tt.all(X <= 1),
-            tt.all(X >= -1),
+            aet.all(X <= 1),
+            aet.all(X >= -1),
             matrix_pos_def(X),
             eta > 0,
             broadcast_conditions=False,
@@ -1662,7 +1668,7 @@ class MatrixNormal(Continuous):
 
             # Setup left covariance matrix
             scale = pm.Lognormal('scale', mu=np.log(true_scale), sigma=0.5)
-            rowcov = tt.nlinalg.diag([scale**(2*i) for i in range(m)])
+            rowcov = aet.nlinalg.diag([scale**(2*i) for i in range(m)])
 
             vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,
                                    observed=data, shape=(m, n))
@@ -1687,10 +1693,10 @@ class MatrixNormal(Continuous):
         assert len(shape) == 2, "shape must have length 2: mxn"
         self.shape = shape
         super().__init__(shape=shape, *args, **kwargs)
-        self.mu = tt.as_tensor_variable(mu)
+        self.mu = aet.as_tensor_variable(mu)
         self.mean = self.median = self.mode = self.mu
-        self.solve_lower = tt.slinalg.solve_lower_triangular
-        self.solve_upper = tt.slinalg.solve_upper_triangular
+        self.solve_lower = solve_lower_triangular
+        self.solve_upper = solve_upper_triangular
 
     def _setup_matrices(self, colcov, colchol, coltau, rowcov, rowchol, rowtau):
         cholesky = Cholesky(lower=True, on_error="raise")
@@ -1705,7 +1711,7 @@ class MatrixNormal(Continuous):
         if rowcov is not None:
             self.m = rowcov.shape[0]
             self._rowcov_type = "cov"
-            rowcov = tt.as_tensor_variable(rowcov)
+            rowcov = aet.as_tensor_variable(rowcov)
             if rowcov.ndim != 2:
                 raise ValueError("rowcov must be two dimensional.")
             self.rowchol_cov = cholesky(rowcov)
@@ -1714,7 +1720,7 @@ class MatrixNormal(Continuous):
             raise ValueError("rowtau not supported at this time")
             self.m = rowtau.shape[0]
             self._rowcov_type = "tau"
-            rowtau = tt.as_tensor_variable(rowtau)
+            rowtau = aet.as_tensor_variable(rowtau)
             if rowtau.ndim != 2:
                 raise ValueError("rowtau must be two dimensional.")
             self.rowchol_tau = cholesky(rowtau)
@@ -1724,7 +1730,7 @@ class MatrixNormal(Continuous):
             self._rowcov_type = "chol"
             if rowchol.ndim != 2:
                 raise ValueError("rowchol must be two dimensional.")
-            self.rowchol_cov = tt.as_tensor_variable(rowchol)
+            self.rowchol_cov = aet.as_tensor_variable(rowchol)
 
         # Among-column matrices
         if len([i for i in [coltau, colcov, colchol] if i is not None]) != 1:
@@ -1736,7 +1742,7 @@ class MatrixNormal(Continuous):
         if colcov is not None:
             self.n = colcov.shape[0]
             self._colcov_type = "cov"
-            colcov = tt.as_tensor_variable(colcov)
+            colcov = aet.as_tensor_variable(colcov)
             if colcov.ndim != 2:
                 raise ValueError("colcov must be two dimensional.")
             self.colchol_cov = cholesky(colcov)
@@ -1745,7 +1751,7 @@ class MatrixNormal(Continuous):
             raise ValueError("coltau not supported at this time")
             self.n = coltau.shape[0]
             self._colcov_type = "tau"
-            coltau = tt.as_tensor_variable(coltau)
+            coltau = aet.as_tensor_variable(coltau)
             if coltau.ndim != 2:
                 raise ValueError("coltau must be two dimensional.")
             self.colchol_tau = cholesky(coltau)
@@ -1755,7 +1761,7 @@ class MatrixNormal(Continuous):
             self._colcov_type = "chol"
             if colchol.ndim != 2:
                 raise ValueError("colchol must be two dimensional.")
-            self.colchol_cov = tt.as_tensor_variable(colchol)
+            self.colchol_cov = aet.as_tensor_variable(colchol)
 
     def random(self, point=None, size=None):
         """
@@ -1802,15 +1808,15 @@ class MatrixNormal(Continuous):
 
         # Find exponent piece by piece
         right_quaddist = self.solve_lower(rowchol_cov, delta)
-        quaddist = tt.nlinalg.matrix_dot(right_quaddist.T, right_quaddist)
+        quaddist = aet.nlinalg.matrix_dot(right_quaddist.T, right_quaddist)
         quaddist = self.solve_lower(colchol_cov, quaddist)
         quaddist = self.solve_upper(colchol_cov.T, quaddist)
-        trquaddist = tt.nlinalg.trace(quaddist)
+        trquaddist = aet.nlinalg.trace(quaddist)
 
-        coldiag = tt.nlinalg.diag(colchol_cov)
-        rowdiag = tt.nlinalg.diag(rowchol_cov)
-        half_collogdet = tt.sum(tt.log(coldiag))  # logdet(M) = 2*Tr(log(L))
-        half_rowlogdet = tt.sum(tt.log(rowdiag))  # Using Cholesky: M = L L^T
+        coldiag = aet.nlinalg.diag(colchol_cov)
+        rowdiag = aet.nlinalg.diag(rowchol_cov)
+        half_collogdet = aet.sum(aet.log(coldiag))  # logdet(M) = 2*Tr(log(L))
+        half_rowlogdet = aet.sum(aet.log(rowdiag))  # Using Cholesky: M = L L^T
         return trquaddist, half_collogdet, half_rowlogdet
 
     def logp(self, value):
@@ -1869,7 +1875,7 @@ class KroneckerNormal(Continuous):
         :math:`[(v_1, Q_1), (v_2, Q_2), ...]` such that
         :math:`K_i = Q_i \text{diag}(v_i) Q_i'`. For example::
 
-            v_i, Q_i = tt.nlinalg.eigh(K_i)
+            v_i, Q_i = aet.nlinalg.eigh(K_i)
 
     sigma: scalar, variable
         Standard deviation of the Gaussian white noise.
@@ -1930,7 +1936,7 @@ class KroneckerNormal(Continuous):
     def __init__(self, mu, covs=None, chols=None, evds=None, sigma=None, *args, **kwargs):
         self._setup(covs, chols, evds, sigma)
         super().__init__(*args, **kwargs)
-        self.mu = tt.as_tensor_variable(mu)
+        self.mu = aet.as_tensor_variable(mu)
         self.mean = self.median = self.mode = self.mu
 
     def _setup(self, covs, chols, evds, sigma):
@@ -1952,21 +1958,21 @@ class KroneckerNormal(Continuous):
             else:
                 # Otherwise use cholesky as usual
                 self.chols = list(map(self.cholesky, self.covs))
-                self.chol_diags = list(map(tt.nlinalg.diag, self.chols))
-                self.sizes = tt.as_tensor_variable([chol.shape[0] for chol in self.chols])
-                self.N = tt.prod(self.sizes)
+                self.chol_diags = list(map(aet.nlinalg.diag, self.chols))
+                self.sizes = aet.as_tensor_variable([chol.shape[0] for chol in self.chols])
+                self.N = aet.prod(self.sizes)
         elif chols is not None:
             self._cov_type = "chol"
             if self.is_noisy:  # A strange case...
                 # Noise requires eigendecomposition
-                covs = [tt.dot(chol, chol.T) for chol in chols]
+                covs = [aet.dot(chol, chol.T) for chol in chols]
                 eigh_map = map(eigh, covs)
                 self._setup_evd(eigh_map)
             else:
                 self.chols = chols
-                self.chol_diags = list(map(tt.nlinalg.diag, self.chols))
-                self.sizes = tt.as_tensor_variable([chol.shape[0] for chol in self.chols])
-                self.N = tt.prod(self.sizes)
+                self.chol_diags = list(map(aet.nlinalg.diag, self.chols))
+                self.sizes = aet.as_tensor_variable([chol.shape[0] for chol in self.chols])
+                self.N = aet.prod(self.sizes)
         else:
             self._cov_type = "evd"
             self._setup_evd(evds)
@@ -1974,10 +1980,10 @@ class KroneckerNormal(Continuous):
     def _setup_evd(self, eigh_iterable):
         self._isEVD = True
         eigs_sep, Qs = zip(*eigh_iterable)  # Unzip
-        self.Qs = list(map(tt.as_tensor_variable, Qs))
-        self.QTs = list(map(tt.transpose, self.Qs))
+        self.Qs = list(map(aet.as_tensor_variable, Qs))
+        self.QTs = list(map(aet.transpose, self.Qs))
 
-        self.eigs_sep = list(map(tt.as_tensor_variable, eigs_sep))
+        self.eigs_sep = list(map(aet.as_tensor_variable, eigs_sep))
         self.eigs = kron_diag(*self.eigs_sep)  # Combine separate eigs
         if self.is_noisy:
             self.eigs += self.sigma ** 2
@@ -1989,28 +1995,28 @@ class KroneckerNormal(Continuous):
             if self._cov_type == "cov":
                 cov = kronecker(*self.covs)
                 if self.is_noisy:
-                    cov = cov + self.sigma ** 2 * tt.identity_like(cov)
+                    cov = cov + self.sigma ** 2 * aet.identity_like(cov)
                 self.mv_params["cov"] = cov
             elif self._cov_type == "chol":
                 if self.is_noisy:
                     covs = []
                     for eig, Q in zip(self.eigs_sep, self.Qs):
-                        cov_i = tt.dot(Q, tt.dot(tt.diag(eig), Q.T))
+                        cov_i = aet.dot(Q, aet.dot(aet.diag(eig), Q.T))
                         covs.append(cov_i)
                     cov = kronecker(*covs)
                     if self.is_noisy:
-                        cov = cov + self.sigma ** 2 * tt.identity_like(cov)
+                        cov = cov + self.sigma ** 2 * aet.identity_like(cov)
                     self.mv_params["chol"] = self.cholesky(cov)
                 else:
                     self.mv_params["chol"] = kronecker(*self.chols)
             elif self._cov_type == "evd":
                 covs = []
                 for eig, Q in zip(self.eigs_sep, self.Qs):
-                    cov_i = tt.dot(Q, tt.dot(tt.diag(eig), Q.T))
+                    cov_i = aet.dot(Q, aet.dot(aet.diag(eig), Q.T))
                     covs.append(cov_i)
                 cov = kronecker(*covs)
                 if self.is_noisy:
-                    cov = cov + self.sigma ** 2 * tt.identity_like(cov)
+                    cov = cov + self.sigma ** 2 * aet.identity_like(cov)
                 self.mv_params["cov"] = cov
 
     def random(self, point=None, size=None):
@@ -2050,16 +2056,16 @@ class KroneckerNormal(Continuous):
         delta = value - self.mu
         if self._isEVD:
             sqrt_quad = kron_dot(self.QTs, delta.T)
-            sqrt_quad = sqrt_quad / tt.sqrt(self.eigs[:, None])
-            logdet = tt.sum(tt.log(self.eigs))
+            sqrt_quad = sqrt_quad / aet.sqrt(self.eigs[:, None])
+            logdet = aet.sum(aet.log(self.eigs))
         else:
             sqrt_quad = kron_solve_lower(self.chols, delta.T)
             logdet = 0
             for chol_size, chol_diag in zip(self.sizes, self.chol_diags):
-                logchol = tt.log(chol_diag) * self.N / chol_size
-                logdet += tt.sum(2 * logchol)
+                logchol = aet.log(chol_diag) * self.N / chol_size
+                logdet += aet.sum(2 * logchol)
         # Square each sample
-        quad = tt.batched_dot(sqrt_quad.T, sqrt_quad.T)
+        quad = aet.batched_dot(sqrt_quad.T, sqrt_quad.T)
         if onedim:
             quad = quad[0]
         return quad, logdet
@@ -2079,7 +2085,7 @@ class KroneckerNormal(Continuous):
         TensorVariable
         """
         quad, logdet = self._quaddist(value)
-        return -(quad + logdet + self.N * tt.log(2 * np.pi)) / 2.0
+        return -(quad + logdet + self.N * aet.log(2 * np.pi)) / 2.0
 
     def _distr_parameters_for_repr(self):
         return ["mu"]
