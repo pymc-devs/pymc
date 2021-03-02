@@ -1136,27 +1136,13 @@ class Wald(PositiveContinuous):
         a = normal_lcdf(0, 1, (q - 1.0) / r)
         b = 2.0 / l + normal_lcdf(0, 1, -(q + 1.0) / r)
 
-        left_limit = (
-            aet.lt(value, 0)
-            | (aet.eq(value, 0) & aet.gt(mu, 0) & aet.lt(lam, np.inf))
-            | (aet.lt(value, mu) & aet.eq(lam, 0))
-        )
-        right_limit = (
-            aet.eq(value, np.inf)
-            | (aet.eq(lam, 0) & aet.gt(value, mu))
-            | (aet.gt(value, 0) & aet.eq(lam, np.inf))
-        )
-        degenerate_dist = (aet.lt(mu, np.inf) & aet.eq(mu, value) & aet.eq(lam, 0)) | (
-            aet.eq(value, 0) & aet.eq(lam, np.inf)
-        )
-
         return bound(
             aet.switch(
-                ~(right_limit | degenerate_dist),
-                a + aet.log1p(aet.exp(b - a)),
+                aet.lt(value, np.inf),
+                a + log1pexp(b - a),
                 0,
             ),
-            ~left_limit,
+            0 < value,
             0 < mu,
             0 < lam,
             0 <= alpha,
