@@ -1378,7 +1378,6 @@ class TestMatchesScipy:
             Binomial,
             Nat,
             {"n": NatSmall, "p": Unit},
-            n_samples=-1,
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
@@ -1400,7 +1399,6 @@ class TestMatchesScipy:
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
-            checks=(lambda *args: self.check_int_to_1(*args, n_samples=-1),),
         )
 
     def test_beta_binomial_selfconsistency(self):
@@ -1408,7 +1406,6 @@ class TestMatchesScipy:
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
-            n_samples=-1,
         )
 
     @pytest.mark.skipif(
@@ -1546,7 +1543,6 @@ class TestMatchesScipy:
             ZeroInflatedBinomial,
             Nat,
             {"n": NatSmall, "p": Unit, "psi": Unit},
-            checks=(lambda *args: self.check_int_to_1(*args, n_samples=-1),),
         )
 
     def test_zeroinflatedbinomial_logcdf(self):
