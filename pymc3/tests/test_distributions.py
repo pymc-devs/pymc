@@ -1383,7 +1383,7 @@ class TestMatchesScipy:
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
     )
     def test_beta_binomial_logcdf(self):
@@ -1410,7 +1410,7 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
     )
     def test_beta_binomial_logp(self):
