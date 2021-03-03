@@ -896,6 +896,7 @@ class TestMatchesScipy:
             {"mu": R, "sigma": Rplus},
             lambda value, mu, sigma: sp.norm.logpdf(value, mu, sigma),
             decimal=select_by_precision(float64=6, float32=1),
+            n_samples=-1,
         )
 
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
@@ -906,6 +907,7 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplus},
             lambda value, mu, sigma: sp.norm.logcdf(value, mu, sigma),
+            n_samples=-1,
         )
 
     def test_truncated_normal(self):
@@ -952,6 +954,7 @@ class TestMatchesScipy:
             {"mu": Rplus, "alpha": Rplus},
             lambda value, mu, alpha: sp.invgauss.logpdf(value, mu=mu, loc=alpha),
             decimal=select_by_precision(float64=6, float32=1),
+            n_samples=-1,
         )
 
     @pytest.mark.xfail(
@@ -964,6 +967,7 @@ class TestMatchesScipy:
             Rplus,
             {"mu": Rplus, "alpha": Rplus},
             lambda value, mu, alpha: sp.invgauss.logcdf(value, mu=mu, loc=alpha),
+            n_samples=-1,
         )
 
     @pytest.mark.parametrize(
@@ -1261,6 +1265,7 @@ class TestMatchesScipy:
             {"alpha": Rplusbig, "beta": Rplusbig},
             lambda value, alpha, beta: sp.gamma.logcdf(value, alpha, scale=1.0 / beta),
             skip_paramdomain_outside_edge_test=True,
+            n_samples=-1,
         )
 
     def test_inverse_gamma_logp(self):
@@ -1269,6 +1274,7 @@ class TestMatchesScipy:
             Rplus,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.invgamma.logpdf(value, alpha, scale=beta),
+            n_samples=-1,
         )
         # pymc-devs/aesara#224: skip_paramdomain_outside_edge_test has to be set
         # True to avoid triggering a C-level assertion in the Aesara GammaQ function
@@ -1287,6 +1293,7 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.invgamma.logcdf(value, alpha, scale=beta),
             skip_paramdomain_outside_edge_test=True,
+            n_samples=-1,
         )
 
     @pytest.mark.xfail(
@@ -1330,6 +1337,7 @@ class TestMatchesScipy:
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
             lambda value, alpha, beta: sp.exponweib.logpdf(value, 1, alpha, scale=beta),
+            n_samples=-1,
         )
 
     @pytest.mark.xfail(
@@ -1343,6 +1351,7 @@ class TestMatchesScipy:
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
             lambda value, alpha, beta: sp.exponweib.logcdf(value, 1, alpha, scale=beta),
+            n_samples=-1,
         )
 
     def test_half_studentt(self):
@@ -1381,7 +1390,7 @@ class TestMatchesScipy:
             Binomial,
             Nat,
             {"n": NatSmall, "p": Unit},
-            n_samples=10,
+            n_samples=-1,
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
@@ -1395,6 +1404,7 @@ class TestMatchesScipy:
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
             lambda value, alpha, beta, n: sp.betabinom.logcdf(value, a=alpha, b=beta, n=n),
+            n_samples=-1,
         )
 
     def test_beta_binomial(self):
@@ -1419,6 +1429,7 @@ class TestMatchesScipy:
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
             lambda value, alpha, beta, n: sp.betabinom.logpmf(value, a=alpha, b=beta, n=n),
+            n_samples=-1,
         )
 
     def test_bernoulli(self):
@@ -1517,6 +1528,7 @@ class TestMatchesScipy:
             ZeroInflatedPoisson,
             Nat,
             {"theta": Rplus, "psi": Unit},
+            n_samples=-1,
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
@@ -1537,7 +1549,7 @@ class TestMatchesScipy:
             ZeroInflatedNegativeBinomial,
             Nat,
             {"mu": Rplusbig, "alpha": Rplusbig, "psi": Unit},
-            n_samples=10,
+            n_samples=-1,
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
@@ -1553,7 +1565,7 @@ class TestMatchesScipy:
             ZeroInflatedBinomial,
             Nat,
             {"n": NatSmall, "p": Unit, "psi": Unit},
-            n_samples=10,
+            n_samples=-1,
         )
 
     @pytest.mark.parametrize("n", [1, 2, 3])
@@ -2324,6 +2336,7 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: floatX(sp.moyal.logpdf(value, mu, sigma)),
+            n_samples=-1,
         )
 
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
@@ -2333,6 +2346,7 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: floatX(sp.moyal.logcdf(value, mu, sigma)),
+            n_samples=-1,
         )
 
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
