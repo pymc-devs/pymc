@@ -1505,7 +1505,6 @@ class TestMatchesScipy:
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
-    # this test doesn't always result in the same outcome (pass/not pass)
     def test_zeroinflatedpoisson_distribution(self):
         self.checkd(
             ZeroInflatedPoisson,
@@ -2318,6 +2317,7 @@ class TestMatchesScipy:
             lambda value, b, sigma: sp.rice.logpdf(value, b=b, loc=0, scale=sigma),
         )
 
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_moyal_logp(self):
         self.check_logp(
             Moyal,
