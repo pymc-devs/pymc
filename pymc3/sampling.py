@@ -1715,6 +1715,10 @@ def sample_posterior_predictive(
 
     ppc_trace_t = _DefaultTrace(samples)
     try:
+        if hasattr(_trace, "_straces"):
+            # trace dict is unordered, but we want to return ppc samples in
+            # a predictable ordering, so sort the chain indices
+            chain_idx_mapping = sorted(_trace._straces.keys())
         for idx in indices:
             if nchain > 1:
                 # the trace object will either be a MultiTrace (and have _straces)...
@@ -1722,7 +1726,7 @@ def sample_posterior_predictive(
                     chain_idx, point_idx = np.divmod(idx, len_trace)
                     chain_idx = chain_idx % nchain
                     # chain indices might not always start at 0, convert to proper index
-                    chain_idx = list(_trace._straces.keys())[chain_idx]
+                    chain_idx = chain_idx_mapping[chain_idx]
                     param = cast(MultiTrace, _trace)._straces[chain_idx].point(point_idx)
                 # ... or a PointList
                 else:
