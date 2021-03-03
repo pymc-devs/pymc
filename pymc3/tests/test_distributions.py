@@ -1397,11 +1397,14 @@ class TestMatchesScipy:
             lambda value, alpha, beta, n: sp.betabinom.logcdf(value, a=alpha, b=beta, n=n),
         )
 
-    @pytest.mark.xfail(
-        condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
-    )
     def test_beta_binomial(self):
         self.checkd(
+            BetaBinomial,
+            Nat,
+            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
+        )
+
+        self.check_selfconsistency_discrete_logcdf(
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
@@ -1416,13 +1419,6 @@ class TestMatchesScipy:
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
             lambda value, alpha, beta, n: sp.betabinom.logpmf(value, a=alpha, b=beta, n=n),
-        )
-
-    def test_beta_binomial_discrete_logcdf(self):
-        self.check_selfconsistency_discrete_logcdf(
-            BetaBinomial,
-            Nat,
-            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
         )
 
     def test_bernoulli(self):
