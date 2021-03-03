@@ -899,7 +899,6 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    # this test doesn't always result in the same outcome (pass/not pass)
     def test_normal_logcdf(self):
         self.check_logcdf(
             Normal,
@@ -1250,7 +1249,6 @@ class TestMatchesScipy:
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
-    # this test doesn't always result in the same outcome fail/success
     def test_gamma_logcdf(self):
         # pymc-devs/aesara#224: skip_paramdomain_outside_edge_test has to be set
         # True to avoid triggering a C-level assertion in the Aesara GammaQ function
@@ -1337,7 +1335,6 @@ class TestMatchesScipy:
         reason="Fails on float32 due to inf issues",
     )
     def test_weibull_logcdf(self):
-        # this test result is non-deterministic
         self.check_logcdf(
             Weibull,
             Rplus,
@@ -1527,7 +1524,6 @@ class TestMatchesScipy:
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
-    # this test doesn't always result in the same outcome (pass/not pass)
     def test_zeroinflatednegativebinomial_distribution(self):
         self.checkd(
             ZeroInflatedNegativeBinomial,
