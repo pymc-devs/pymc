@@ -1408,6 +1408,7 @@ class TestMatchesScipy:
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
+            n_samples=-1,
         )
 
     @pytest.mark.skipif(
