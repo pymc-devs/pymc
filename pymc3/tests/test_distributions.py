@@ -889,7 +889,7 @@ class TestMatchesScipy:
         assert 0.0 == HalfFlat.dist().logcdf(np.inf).tag.test_value
         assert -np.inf == HalfFlat.dist().logcdf(-np.inf).tag.test_value
 
-    def test_normal_logp(self):
+    def test_normal(self):
         self.check_logp(
             Normal,
             R,
@@ -897,7 +897,6 @@ class TestMatchesScipy:
             lambda value, mu, sigma: sp.norm.logpdf(value, mu, sigma),
             decimal=select_by_precision(float64=6, float32=1),
         )
-
         self.check_logcdf(
             Normal,
             R,
@@ -943,27 +942,6 @@ class TestMatchesScipy:
             lambda value, nu: sp.chi2.logpdf(value, df=nu),
         )
 
-    def test_wald_scipy_logp(self):
-        self.check_logp(
-            Wald,
-            Rplus,
-            {"mu": Rplus, "alpha": Rplus},
-            lambda value, mu, alpha: sp.invgauss.logpdf(value, mu=mu, loc=alpha),
-            decimal=select_by_precision(float64=6, float32=1),
-        )
-
-    @pytest.mark.xfail(
-        condition=(aesara.config.floatX == "float32"),
-        reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
-    )
-    def test_wald_scipy_logcdf(self):
-        self.check_logcdf(
-            Wald,
-            Rplus,
-            {"mu": Rplus, "alpha": Rplus},
-            lambda value, mu, alpha: sp.invgauss.logcdf(value, mu=mu, loc=alpha),
-        )
-
     @pytest.mark.parametrize(
         "value,mu,lam,phi,alpha,logp",
         [
@@ -983,7 +961,7 @@ class TestMatchesScipy:
             (50.0, 15.0, None, 0.666666, 10.0, -5.6481874),
         ],
     )
-    def test_wald(self, value, mu, lam, phi, alpha, logp):
+    def test_wald_logp_custom_points(self, value, mu, lam, phi, alpha, logp):
         # Log probabilities calculated using the dIG function from the R package gamlss.
         # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or
         # http://www.gamlss.org/.
@@ -992,6 +970,27 @@ class TestMatchesScipy:
         pt = {"wald": value}
         decimals = select_by_precision(float64=6, float32=1)
         assert_almost_equal(model.fastlogp(pt), logp, decimal=decimals, err_msg=str(pt))
+
+    def test_wald_logp(self):
+        self.check_logp(
+            Wald,
+            Rplus,
+            {"mu": Rplus, "alpha": Rplus},
+            lambda value, mu, alpha: sp.invgauss.logpdf(value, mu=mu, loc=alpha),
+            decimal=select_by_precision(float64=6, float32=1),
+        )
+
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
+    )
+    def test_wald_logcdf(self):
+        self.check_logcdf(
+            Wald,
+            Rplus,
+            {"mu": Rplus, "alpha": Rplus},
+            lambda value, mu, alpha: sp.invgauss.logcdf(value, mu=mu, loc=alpha),
+        )
 
     def test_beta(self):
         self.check_logp(
@@ -1381,27 +1380,8 @@ class TestMatchesScipy:
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    @pytest.mark.skipif(
-        condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
-    )
-    def test_beta_binomial_logcdf(self):
-        self.check_logcdf(
-            BetaBinomial,
-            Nat,
-            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
-            lambda value, alpha, beta, n: sp.betabinom.logcdf(value, a=alpha, b=beta, n=n),
-        )
-
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_beta_binomial_distribution(self):
         self.checkd(
-            BetaBinomial,
-            Nat,
-            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
-        )
-
-    def test_beta_binomial_selfconsistency(self):
-        self.check_selfconsistency_discrete_logcdf(
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
@@ -1416,6 +1396,25 @@ class TestMatchesScipy:
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
             lambda value, alpha, beta, n: sp.betabinom.logpmf(value, a=alpha, b=beta, n=n),
+        )
+
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.skipif(
+        condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
+    )
+    def test_beta_binomial_logcdf(self):
+        self.check_logcdf(
+            BetaBinomial,
+            Nat,
+            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
+            lambda value, alpha, beta, n: sp.betabinom.logcdf(value, a=alpha, b=beta, n=n),
+        )
+
+    def test_beta_binomial_selfconsistency(self):
+        self.check_selfconsistency_discrete_logcdf(
+            BetaBinomial,
+            Nat,
+            {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
         )
 
     def test_bernoulli(self):
