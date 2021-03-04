@@ -135,7 +135,7 @@ class NS_NFMC:
         val_idx = int((1 - self.frac_validate) * self.live_points.shape[0])
         self.nf_model = GIS(torch.from_numpy(self.live_points[:val_idx, ...].astype(np.float32)),
                             torch.from_numpy(self.live_points[val_idx:, ...].astype(np.float32)),
-                            alpha=self.alpha, verbose=self.verbose)
+                            alpha=self.alpha, verbose=self.verbose, bw_factor=0.9)
         self.nf_samples, _ = self.nf_model.sample(self.draws, device=torch.device('cpu'))
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         
