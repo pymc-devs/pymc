@@ -1376,6 +1376,7 @@ class TestMatchesScipy:
             Binomial,
             Nat,
             {"n": NatSmall, "p": Unit},
+            n_samples=10,
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
