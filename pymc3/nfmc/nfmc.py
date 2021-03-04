@@ -211,7 +211,7 @@ class NFMC:
                             interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=self.bw_factor,
                             edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
                             NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
-                            batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape))
+                            batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape)
         
         self.nf_samples, self.logq = self.nf_model.sample(self.draws, device=torch.device('cpu'))
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
