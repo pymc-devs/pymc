@@ -56,6 +56,20 @@ class NFMC:
         optim_iter=1000,
         k_trunc=0.25,
         verbose=False,
+        n_component=None,
+        interp_nbin=None,
+        KDE=True,
+        bw_factor=0.5,
+        edge_bins=None,
+        ndata_wT=None,
+        MSWD_max_iter=None,
+        NBfirstlayer=False,
+        logit=False,
+        Whiten=False,
+        batchsize=None,
+        nocuda=False,
+        patch=False,
+        shape=[28,28,1],
     ):
 
         self.draws = draws
@@ -67,6 +81,20 @@ class NFMC:
         self.optim_iter = optim_iter
         self.k_trunc = k_trunc
         self.verbose = verbose
+        self.n_component = n_component
+        self.interp_nbin = interp_nbin
+        self.KDE = KDE
+        self.bw_factor = bw_factor
+        self.edge_bins = edge_bins
+        self.ndata_wT = ndata_wT
+        self.MSWD_max_iter = MSWD_max_iter
+        self.NBfirstlayer = NBfirstlayer
+        self.logit = logit
+        self.Whiten = Whiten
+        self.batchsize = batchsize
+        self.nocuda = nocuda
+        self.patch = patch
+        self.shape = shape
         
         self.model = modelcontext(model)
 
@@ -152,9 +180,15 @@ class NFMC:
     def initialize_nf(self):
         """Intialize the first NF approx, by fitting to the prior and optimization samples."""
         val_idx = int((1 - self.frac_validate) * self.optim_samples.shape[0])
+
         self.nf_model = GIS(torch.from_numpy(self.optim_samples[:val_idx, ...].astype(np.float32)),
                             torch.from_numpy(self.optim_samples[val_idx:, ...].astype(np.float32)),
-                            alpha=self.alpha, verbose=self.verbose)
+                            alpha=self.alpha, verbose=self.verbose, n_component=self.n_component,
+                            interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=self.bw_factor,
+                            edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
+                            NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
+                            batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape)
+        
         self.nf_samples, self.logq = self.nf_model.sample(self.draws, device=torch.device('cpu'))
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
@@ -173,7 +207,11 @@ class NFMC:
                             torch.from_numpy(self.weighted_samples[val_idx:, ...].astype(np.float32)),
                             weight_train=torch.from_numpy(self.importance_weights[:val_idx, ...].astype(np.float32)),
                             weight_validate=torch.from_numpy(self.importance_weights[val_idx:, ...].astype(np.float32)),
-                            alpha=self.alpha, verbose=self.verbose)
+                            alpha=self.alpha, verbose=self.verbose, n_component=self.n_component,
+                            interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=self.bw_factor,
+                            edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
+                            NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
+                            batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape))
         
         self.nf_samples, self.logq = self.nf_model.sample(self.draws, device=torch.device('cpu'))
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)

@@ -37,6 +37,20 @@ def sample_nfmc(
     frac_validate=0.1,
     alpha=(0,0),
     verbose=False,
+    n_component=None,
+    interp_nbin=None,
+    KDE=True,
+    bw_factor=0.5,
+    edge_bins=None,
+    ndata_wT=None,
+    MSWD_max_iter=None,
+    NBfirstlayer=False,
+    logit=False,
+    Whiten=False,
+    batchsize=None,
+    nocuda=False,
+    patch=False,
+    shape=[28,28,1],
     random_seed=-1,
     parallel=False,
     chains=None,
@@ -119,21 +133,7 @@ def sample_nfmc(
     )
 
     t1 = time.time()
-    '''
-    if parallel and chains > 1:
-        loggers = [_log] + [None] * (chains - 1)
-        pool = mp.Pool(cores)
-        results = pool.starmap(
-            sample_ns_nfmc_int, [(*params, random_seed[i], i, loggers[i]) for i in range(chains)]
-        )
 
-        pool.close()
-        pool.join()
-    else:
-        results = []
-        for i in range(chains):
-            results.append(sample_ns_nfmc_int(*params, random_seed[i], i, _log))
-    '''
     results = []
     for i in range(chains):
         results.append(sample_nfmc_int(*params, random_seed[i], i, _log))
@@ -159,6 +159,20 @@ def sample_nfmc_int(
     alpha,
     cores,
     verbose,
+    n_component=n_component,
+    interp_nbin=interp_nbin,
+    KDE=KDE,
+    bw_factor=bw_factor,
+    edge_bins=edge_bins,
+    ndata_wT=ndata_wT,
+    MSWD_max_iter=MSWD_max_iter,
+    NBfirstlayer=NBfirstlayer,
+    logit=logit,
+    Whiten=Whiten,
+    batchsize=batchsize,
+    nocuda=nocuda,
+    patch=patch,
+    shape=shape,
     parallel,
     random_seed,
     chain,
@@ -174,6 +188,20 @@ def sample_nfmc_int(
         alpha=alpha,
         verbose=verbose,
         optim_iter=optim_iter,
+        n_component=n_component,
+        interp_nbin=interp_nbin,
+        KDE=KDE,
+        bw_factor=bw_factor,
+        edge_bins=edge_bins,
+        ndata_wT=ndata_wT,
+        MSWD_max_iter=MSWD_max_iter,
+        NBfirstlayer=NBfirstlayer,
+        logit=logit,
+        Whiten=Whiten,
+        batchsize=batchsize,
+        nocuda=nocuda,
+        patch=patch,
+        shape=shape,
     )
     stage = 1
     nfmc.initialize_population()
