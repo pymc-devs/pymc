@@ -340,31 +340,35 @@ def estimate_knots_gaussian(data, interp_nbin, above_noise, weight=None, edge_bi
             if KDE:
                 rho = kde(data[:,i], bw_factor=bw_factor, weights=weight, batchsize=batchsize)
                 scale = (rho.covariance[0,0]+1)**0.5
-                y[i] = 2**0.5 * scale * torch.erfinv(2*rho.cdf(x[i])-1)
+                y[i] = 2**0.5 * scale * torch.erfinv(2*rho.cdf(x[i]).double()-1).to(torch.get_default_dtype())
                 dy = y[i,1:] - y[i,:-1]
                 dx = x[i,1:] - x[i,:-1]
-                while (dy<=eps).any() or (dx<=eps).any():
+                while (dy<=eps).any() or (dx<=eps).any() or torch.isnan(dy).any() or not torch.isfinite(y[i]).all():
                     select = torch.zeros(len(y[i]), dtype=bool, device=y.device)
                     select[1:] = dy <= eps 
                     select[1:] += dx <= eps 
+                    select[1:] += torch.isnan(dy)
+                    select += ~torch.isfinite(y[i])
                     x[i,select] = torch.rand(torch.sum(select).item(), device=x.device)*(torch.max(data[:,i])-torch.min(data[:,i])) + torch.min(data[:,i]) 
                     x[i] = torch.sort(x[i])[0]
-                    y[i] = 2**0.5 * scale * torch.erfinv(2*rho.cdf(x[i])-1)
+                    y[i] = 2**0.5 * scale * torch.erfinv(2*rho.cdf(x[i]).double()-1).to(torch.get_default_dtype())
                     dy = y[i,1:] - y[i,:-1]
                     dx = x[i,1:] - x[i,:-1]
             else:
-                y[i] = 2**0.5 * torch.erfinv(2*q/100.-1)
+                y[i] = 2**0.5 * torch.erfinv(2*q.double()/100.-1).to(torch.get_default_dtype())
                 dy = y[i,1:] - y[i,:-1]
                 dx = x[i,1:] - x[i,:-1]
                 q0 = q.clone()
-                while (dy<=eps).any() or (dx<=eps).any():
+                while (dy<=eps).any() or (dx<=eps).any() or torch.isnan(dy).any() or not torch.isfinite(y[i]).all():
                     select = torch.zeros(len(y[i]), dtype=bool, device=y.device)
                     select[1:] = dy <= eps 
                     select[1:] += dx <= eps 
+                    select[1:] += torch.isnan(dy)
+                    select += ~torch.isfinite(y[i])
                     q0[select] = torch.rand(torch.sum(select).item(), device=q.device)*100
                     q0 = torch.sort(q0)[0]
                     x[i] = Percentile(data[:,i], q0).to(torch.get_default_dtype())
-                    y[i] = 2**0.5 * torch.erfinv(2*q0/100.-1)
+                    y[i] = 2**0.5 * torch.erfinv(2*q0.double()/100.-1).to(torch.get_default_dtype())
                     dy = y[i,1:] - y[i,:-1]
                     dx = x[i,1:] - x[i,:-1]
             h = dx
@@ -379,11 +383,11 @@ def estimate_knots_gaussian(data, interp_nbin, above_noise, weight=None, edge_bi
                     endx1 = torch.min(data[:,i])
                     endx2 = torch.max(data[:,i])
                     if KDE:
-                        deriv[i,0] = (2**0.5 * scale * torch.erfinv(2*rho.cdf(endx1)-1) - y[i,0]) / (endx1 - x[i,0])
-                        deriv[i,-1] = (2**0.5 * scale * torch.erfinv(2*rho.cdf(endx2)-1) - y[i,-1]) / (endx2 - x[i,-1])
+                        deriv[i,0] = (2**0.5 * scale * torch.erfinv(2*rho.cdf(endx1).double()-1).to(torch.get_default_dtype()) - y[i,0]) / (endx1 - x[i,0])
+                        deriv[i,-1] = (2**0.5 * scale * torch.erfinv(2*rho.cdf(endx2).double()-1).to(torch.get_default_dtype()) - y[i,-1]) / (endx2 - x[i,-1])
                     else:
-                        deriv[i,0] = (2**0.5 * torch.erfinv(2*torch.tensor(0.5/len(data), device=data.device)-1) - y[i,0]) / (endx1 - x[i,0])
-                        deriv[i,-1] = (2**0.5 * torch.erfinv(2*torch.tensor(1-0.5/len(data), device=data.device)-1) - y[i,-1]) / (endx2 - x[i,-1])
+                        deriv[i,0] = (2**0.5 * torch.erfinv(2*torch.tensor(0.5/len(data), device=data.device, dtype=torch.float64)-1).to(torch.get_default_dtype())- y[i,0]) / (endx1 - x[i,0])
+                        deriv[i,-1] = (2**0.5 * torch.erfinv(2*torch.tensor(1-0.5/len(data), device=data.device, dtype=torch.float64)-1).to(torch.get_default_dtype()) - y[i,-1]) / (endx2 - x[i,-1])
                 elif extrapolate == 'regression':
                     endx1 = torch.sort(data[data[:,i]<x[i,0],i])[0]
                     endx2 = torch.sort(data[data[:,i]>x[i,-1],i], descending=True)[0]
@@ -398,12 +402,14 @@ def estimate_knots_gaussian(data, interp_nbin, above_noise, weight=None, edge_bi
                         endy1 = 2**0.5 * torch.erfinv(2*torch.linspace(0.5,len(endx1)-0.5,len(endx1),device=data.device,dtype=torch.float64)/len(data)-1).to(torch.get_default_dtype()) - y[i,0]
                         endy2 = 2**0.5 * torch.erfinv(2*(1-torch.linspace(0.5,len(endx2)-0.5,len(endx2),device=data.device,dtype=torch.float64)/len(data))-1).to(torch.get_default_dtype()) - y[i,-1]
                     endx1 -= x[i,0]
-                    deriv[i,0] = torch.sum(endx1*endy1) / torch.sum(endx1*endx1)
+                    select1 = torch.isfinite(endy1) & (endy1>0) & (endx1>0)
+                    deriv[i,0] = torch.sum(endx1[select1]*endy1[select1]) / torch.sum(endx1[select1]*endx1[select1])
                     endx2 -= x[i,-1]
-                    deriv[i,-1] = torch.sum(endx2*endy2) / torch.sum(endx2*endx2)
-                    if len(endx1) == 0:
+                    select2 = torch.isfinite(endy2) & (endy2>0) & (endx2>0)
+                    deriv[i,-1] = torch.sum(endx2[select2]*endy2[select2]) / torch.sum(endx2[select2]*endx2[select2])
+                    if torch.sum(select1) == 0:
                         deriv[i,0] = 1
-                    if len(endx2) == 0:
+                    if torch.sum(select2) == 0:
                         deriv[i,-1] = 1
 
             y[i] = (1-alpha[0]) * y[i] + alpha[0] * x[i]

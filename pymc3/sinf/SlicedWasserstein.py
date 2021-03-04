@@ -33,9 +33,8 @@ def Gaussian_ppf(Nsample, weight=None, device=torch.device("cuda:0")):
         end = 100-start
         q = torch.linspace(start, end, Nsample, device=device)
     else:
-        w = weight / torch.sum(weight, dim=1).reshape(-1,1)
-        q = torch.cumsum(w, dim=1)
-        q = q - 0.5*w
+        q = torch.cumsum(weight, dim=1)
+        q = q - 0.5*weight
     pg = 2**0.5 * torch.erfinv(2*q/100-1)
     return pg
 
@@ -79,6 +78,7 @@ def maxSWDdirection(x, x2='gaussian', weight=None, n_component=None, maxiter=200
     elif weight is not None:
         assert len(weight) == len(x)
         pg = None
+        weight = weight / torch.sum(weight)
     else:
         pg = Gaussian_ppf(len(x), device=x.device)
 
@@ -184,7 +184,7 @@ def SlicedWasserstein(data, second='gaussian', Nslice=1000, weight=None, p=2, ba
                 direction = torch.randn(Ndim, Nslice-i*batchsize).to(data.device)
             direction /= torch.sum(direction**2, dim=0)**0.5
             data0 = data @ direction
-            if second is 'gaussian':
+            if second == 'gaussian':
                 SWD[i * batchsize: (i+1) * batchsize] = ObjectiveG(data0.T, pg, p, w=weight, perdim=False)
             else:
                 second0 = second @ direction
@@ -203,7 +203,7 @@ def SlicedWasserstein_direction(data, directions=None, second='gaussian', weight
         data0 = data
     else:
         data0 = data @ directions
-    if second is not 'gaussian':
+    if second != 'gaussian':
         assert data.shape[1] == second.shape[1]
 
         second0 = second
