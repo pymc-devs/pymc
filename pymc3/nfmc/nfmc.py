@@ -103,6 +103,7 @@ class NFMC:
         self.weighted_samples = np.empty((0, np.shape(self.optim_samples)[1]))
         self.importance_weights = np.array([])
         self.posterior = np.empty((0, np.shape(self.optim_samples)[1]))
+        self.nf_models = []
         
     def setup_logp(self):
         """Set up the prior and likelihood logp functions, and derivatives."""
@@ -157,43 +158,51 @@ class NFMC:
         self.nf_samples, self.logq = self.nf_model.sample(self.draws, device=torch.device('cpu'))
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
-        print(np.shape(self.optim_samples))
-        print(np.shape(self.weighted_samples))
         self.get_posterior_logp()
-        weights = np.exp(self.posterior_logp - self.logq.numpy().astype(np.float64))
-        print('Max weights ...')
-        print(np.mean(weights) * len(weights)**self.k_trunc)
-        weights = np.clip(weights, 0, np.mean(weights) * len(weights)**self.k_trunc)
-        self.importance_weights = np.append(self.importance_weights, weights)
+        self.weights = np.exp(self.posterior_logp - self.logq.numpy().astype(np.float64))
+        self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
+        self.weights = self.weights / np.sum(self.weights)
+        self.importance_weights = np.append(self.importance_weights, self.weights)
+        self.nf_models.append(self.nf_model)
         
     def fit_nf(self):
         """Fit the NF model for a given iteration after initialization."""
         val_idx = int((1 - self.frac_validate) * self.weighted_samples.shape[0])
-        print(np.mean(self.importance_weights))
-        print(np.std(self.importance_weights))
-        print(self.importance_weights)
-        print(self.weighted_samples)
+        
         self.nf_model = GIS(torch.from_numpy(self.weighted_samples[:val_idx, ...].astype(np.float32)),
                             torch.from_numpy(self.weighted_samples[val_idx:, ...].astype(np.float32)),
                             weight_train=torch.from_numpy(self.importance_weights[:val_idx, ...].astype(np.float32)),
                             weight_validate=torch.from_numpy(self.importance_weights[val_idx:, ...].astype(np.float32)),
-                            alpha=self.alpha, verbose=self.verbose, interp_nbin=10)
+                            alpha=self.alpha, verbose=self.verbose)
+        
         self.nf_samples, self.logq = self.nf_model.sample(self.draws, device=torch.device('cpu'))
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
         self.get_posterior_logp()
         self.weights = np.exp(self.posterior_logp - self.logq.numpy().astype(np.float64))
         self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
+        self.weights = self.weights / np.sum(self.weights)
         self.importance_weights = np.append(self.importance_weights, self.weights)
+        self.nf_models.append(self.nf_model)
+        
+    def resample_iter(self):
+        """Resample at a given NF fit iteration, to obtain samples for the next stage."""
+        resampling_indexes = np.random.choice(
+            np.arange(len(self.weights)), size=self.draws, p=self.weights/np.sum(self.weights)
+        )
+        self.nf_samples = self.nf_samples[resampling_indexes, ...]
+        
         
     def resample(self):
         """Resample all the weighted samples to obtain final posterior samples with uniform weight."""
-        
         resampling_indexes = np.random.choice(
             np.arange(len(self.importance_weights)), size=self.draws, p=self.importance_weights/np.sum(self.importance_weights)
         )
-
+        #resampling_indexes = np.random.choice(
+        #    np.arange(len(self.weights)), size=self.draws, p=self.weights/np.sum(self.weights)
+        #)
         self.posterior = self.weighted_samples[resampling_indexes, ...]
+        #self.posterior = self.nf_samples[resampling_indexes, ...]
         
     def posterior_to_trace(self):
         """Save results into a PyMC3 trace."""

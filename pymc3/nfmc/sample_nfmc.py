@@ -138,13 +138,15 @@ def sample_nfmc(
     for i in range(chains):
         results.append(sample_nfmc_int(*params, random_seed[i], i, _log))
     (
-        traces
+        traces,
+        nf_models,
+        importance_weights,
     ) = zip(*results)
     trace = MultiTrace(traces)
     trace.report._n_draws = draws
     trace.report._t_sampling = time.time() - t1
 
-    return trace
+    return trace, nf_models, importance_weights
 
 
 def sample_nfmc_int(
@@ -200,13 +202,15 @@ def sample_nfmc_int(
     
     for i in range(nf_iter):
 
-        nfmc.fit_nf()
         if _log is not None:
-            _log.info(f"Stage: {stage:3d}; Mean weights: {np.mean(nfmc.importance_weights)}; Std weights: {np.std(nfmc.importance_weights)}")
+            _log.info(f"Stage: {stage:3d}")
+        nfmc.fit_nf()
         stage += 1
 
-    ns_nfmc.resample()
+    nfmc.resample()
 
     return (
-        ns_nfmc.posterior_to_trace(),
+        nfmc.posterior_to_trace(),
+        nfmc.nf_models,
+        nfmc.importance_weights,
     )
