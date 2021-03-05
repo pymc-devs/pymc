@@ -15,6 +15,7 @@ Multivariate
    Multinomial
    Dirichlet
    DirichletMultinomial
+   CAR
 
 .. automodule:: pymc3.distributions.multivariate
    :members:
