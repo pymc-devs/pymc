@@ -43,6 +43,7 @@ from pymc3.distributions import (
     BetaBinomial,
     Binomial,
     Bound,
+    CAR,
     Categorical,
     Cauchy,
     ChiSquared,

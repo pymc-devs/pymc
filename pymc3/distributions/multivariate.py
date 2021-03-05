@@ -2125,6 +2125,11 @@ class CAR(Continuous):
     sparse: bool, default=False
         Determines whether or not sparse computations are used
     
+    References
+    ----------
+    ..  Jin, X., Carlin, B., Banerjee, S.
+        "Generalized Hierarchical Multivariate CAR Models for Areal Data"
+        Biometrics, Vol. 61, No. 4 (Dec., 2005), pp. 950-961
     """
 
     def __init__(self, mu, W, alpha, tau, sparse=False, *args, **kwargs):
