@@ -143,7 +143,7 @@ class _QuadFormBase(Continuous):
 
     def _quaddist_chol(self, delta):
         chol_cov = self.chol_cov
-        diag = aet.nlinalg.diag(chol_cov)
+        diag = aet.diag(chol_cov)
         # Check if the covariance matrix is positive definite.
         ok = aet.all(diag > 0)
         # If not, replace the diagonal. We return -inf later, but
@@ -160,7 +160,7 @@ class _QuadFormBase(Continuous):
 
     def _quaddist_tau(self, delta):
         chol_tau = self.chol_tau
-        diag = aet.nlinalg.diag(chol_tau)
+        diag = aet.diag(chol_tau)
         # Check if the precision matrix is positive definite.
         ok = aet.all(diag > 0)
         # If not, replace the diagonal. We return -inf later, but
@@ -1668,7 +1668,7 @@ class MatrixNormal(Continuous):
 
             # Setup left covariance matrix
             scale = pm.Lognormal('scale', mu=np.log(true_scale), sigma=0.5)
-            rowcov = aet.nlinalg.diag([scale**(2*i) for i in range(m)])
+            rowcov = aet.diag([scale**(2*i) for i in range(m)])
 
             vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,
                                    observed=data, shape=(m, n))
@@ -1813,8 +1813,8 @@ class MatrixNormal(Continuous):
         quaddist = self.solve_upper(colchol_cov.T, quaddist)
         trquaddist = aet.nlinalg.trace(quaddist)
 
-        coldiag = aet.nlinalg.diag(colchol_cov)
-        rowdiag = aet.nlinalg.diag(rowchol_cov)
+        coldiag = aet.diag(colchol_cov)
+        rowdiag = aet.diag(rowchol_cov)
         half_collogdet = aet.sum(aet.log(coldiag))  # logdet(M) = 2*Tr(log(L))
         half_rowlogdet = aet.sum(aet.log(rowdiag))  # Using Cholesky: M = L L^T
         return trquaddist, half_collogdet, half_rowlogdet
@@ -1958,7 +1958,7 @@ class KroneckerNormal(Continuous):
             else:
                 # Otherwise use cholesky as usual
                 self.chols = list(map(self.cholesky, self.covs))
-                self.chol_diags = list(map(aet.nlinalg.diag, self.chols))
+                self.chol_diags = list(map(aet.diag, self.chols))
                 self.sizes = aet.as_tensor_variable([chol.shape[0] for chol in self.chols])
                 self.N = aet.prod(self.sizes)
         elif chols is not None:
@@ -1970,7 +1970,7 @@ class KroneckerNormal(Continuous):
                 self._setup_evd(eigh_map)
             else:
                 self.chols = chols
-                self.chol_diags = list(map(aet.nlinalg.diag, self.chols))
+                self.chol_diags = list(map(aet.diag, self.chols))
                 self.sizes = aet.as_tensor_variable([chol.shape[0] for chol in self.chols])
                 self.N = aet.prod(self.sizes)
         else:

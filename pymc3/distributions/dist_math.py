@@ -275,7 +275,7 @@ def MvNormalLogp():
     n, k = delta.shape
     n, k = f(n), f(k)
     chol_cov = cholesky(cov)
-    diag = aet.nlinalg.diag(chol_cov)
+    diag = aet.diag(chol_cov)
     ok = aet.all(diag > 0)
 
     chol_cov = aet.switch(ok, chol_cov, aet.fill(chol_cov, 1))
@@ -295,7 +295,7 @@ def MvNormalLogp():
         n, k = delta.shape
 
         chol_cov = cholesky(cov)
-        diag = aet.nlinalg.diag(chol_cov)
+        diag = aet.diag(chol_cov)
         ok = aet.all(diag > 0)
 
         chol_cov = aet.switch(ok, chol_cov, aet.fill(chol_cov, 1))

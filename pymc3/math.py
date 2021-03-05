@@ -70,7 +70,14 @@ from aesara.tensor import (
     where,
     zeros_like,
 )
-from aesara.tensor.nlinalg import det, extract_diag, matrix_dot, matrix_inverse, trace
+
+try:
+    from aesara.tensor.basic import extract_diag
+except ImportError:
+    from aesara.tensor.nlinalg import extract_diag
+
+
+from aesara.tensor.nlinalg import det, matrix_dot, matrix_inverse, trace
 from aesara.tensor.nnet import sigmoid
 from scipy.linalg import block_diag as scipy_block_diag
 
