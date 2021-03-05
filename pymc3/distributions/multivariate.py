@@ -66,6 +66,7 @@ __all__ = [
     "LKJCholeskyCov",
     "MatrixNormal",
     "KroneckerNormal",
+    "CAR",
 ]
 
 
@@ -2089,3 +2090,110 @@ class KroneckerNormal(Continuous):
 
     def _distr_parameters_for_repr(self):
         return ["mu"]
+
+class CAR(Continuous):
+    R"""
+    Likelihood for a conditional autoregression. This is a special case of the 
+    multivariate normal with an adjacency-structured covariance matrix.
+    
+    .. math::
+
+       f(x \mid W, \alpha, \tau) =
+           \frac{|T|^{1/2}}{(2\pi)^{k/2}}
+           \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime} T^{-1} (x-\mu) \right\}
+
+    where :math:`T = (\tau D(I-\alpha W))^{-1}` and :math:`D = diag(\sum_i W_{ij})`.
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{R}^k`
+    Mean      :math:`\mu`
+    Variance  :math:`(\tau D(I-\alpha W))^{-1}`
+    ========  ==========================
+    
+    Parameters
+    ----------
+    mu: array
+        Mean vector
+    W: matrix
+        Symmetric adjacency matrix of 1s and 0s indicating
+        adjacency between elements.
+    alpha: float or array
+        Autoregression parameter. Values closer to 0 indicate weaker
+        correlation and values closer to 1 indicate higher autocorrelation.
+    tau: float or array
+        Precision variables controlling the scale of the underlying normal variates.
+    sparse: bool, default=False
+        Determines whether or not sparse computations are used
+    
+    """
+
+    def __init__(self, mu, W, alpha, tau, sparse=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        D = W.sum(axis=0)
+        d, _ = W.shape
+         
+        self.d = d
+        self.median = self.mode = self.mean = self.mu = aet.as_tensor_variable(mu)
+        self.sparse = sparse
+        
+        if not W.ndim == 2 or not np.allclose(W, W.T):
+            raise ValueError('W must be a symmetric adjacency matrix.')
+
+        if sparse:
+            W_sparse = scipy.sparse.csr_matrix(W)
+            self.W = aesara.sparse.as_sparse_variable(W_sparse)
+        else:
+            self.W = aet.as_tensor_variable(W)
+            
+        # eigenvalues of D^−1/2 * W * D^−1/2
+        Dinv_sqrt = np.diag(1 / np.sqrt(D))
+        DWD = np.matmul(np.matmul(Dinv_sqrt, W), Dinv_sqrt)
+        self.lam = scipy.linalg.eigvalsh(DWD)
+        self.D = aet.as_tensor_variable(D)
+        
+        tau = aet.as_tensor_variable(tau)
+        if tau.ndim > 0:
+            self.tau = tau[:, None]
+        else:
+            self.tau = tau
+        
+        alpha = aet.as_tensor_variable(alpha)
+        if alpha.ndim > 0:
+            self.alpha = alpha[:, None]
+        else:
+            self.alpha = alpha
+        
+    def logp(self, value):
+         """
+        Calculate log-probability of a CAR-distributed vector
+        at specified value.
+        
+        Parameters
+        ----------
+        value: numeric
+            Value for which log-probability is calculated.
+            
+        Returns
+        -------
+        TensorVariable
+        """
+        
+        logtau = self.d * aet.log(self.tau).sum()
+        logdet = aet.log(1 - self.alpha.T * self.lam[:, None]).sum()
+        delta = (value - self.mu)
+    
+        if self.sparse:        
+            Wdelta = aesara.sparse.dot(delta, self.W)
+        else:
+            Wdelta = aet.dot(delta, self.W)
+            
+        tau_dot_delta = self.D[None, :] * delta - self.alpha * Wdelta
+        logquad = aet.dot((self.tau*delta).ravel(), tau_dot_delta.ravel()).sum()
+        return 0.5 * (logtau + logdet - logquad)
+    
+    def random(self, point=None, size=None):
+        raise NotImplementedError('Sampling from a CAR distribution is not supported.')
+    
+    def _distr_parameters_for_repr(self):
+        return ['mu','W','alpha','tau']
