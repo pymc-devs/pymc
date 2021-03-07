@@ -2119,8 +2119,9 @@ class CAR(Continuous):
         Symmetric adjacency matrix of 1s and 0s indicating
         adjacency between elements.
     alpha: float or array
-        Autoregression parameter. Values closer to 0 indicate weaker
-        correlation and values closer to 1 indicate higher autocorrelation.
+        Autoregression parameter taking values between -1 and 1. Values closer to 0 indicate weaker
+        correlation and values closer to 1 indicate higher autocorrelation. For most use cases, the
+        support of alpha should be restricted to (0, 1)
     tau: float or array
         Precision variables controlling the scale of the underlying normal variates.
     sparse: bool, default=False
@@ -2201,7 +2202,12 @@ class CAR(Continuous):
 
         tau_dot_delta = self.D[None, :] * delta - self.alpha * Wdelta
         logquad = (self.tau * delta * tau_dot_delta).sum(axis=-1)
-        return 0.5 * (logtau + logdet - logquad)
+        return bound(
+            0.5 * (logtau + logdet - logquad),
+            aet.all(self.alpha <= 1),
+            aet.all(self.alpha >= -1),
+            self.tau > 0,
+        )
 
     def random(self, point=None, size=None):
         raise NotImplementedError("Sampling from a CAR distribution is not supported.")
