@@ -22,7 +22,6 @@ import numpy as np
 import pytest
 
 import pymc3 as pm
-import pymc3.memoize
 import pymc3.util
 
 from pymc3.aesaraf import intX
@@ -757,14 +756,12 @@ def test_remove_scan_op():
 def test_clear_cache():
     import pickle
 
-    pymc3.memoize.clear_cache()
-    assert all(len(c) == 0 for c in pymc3.memoize.CACHE_REGISTRY)
     with pm.Model():
         pm.Normal("n", 0, 1)
         inference = ADVI()
         inference.fit(n=10)
         assert any(len(c) != 0 for c in inference.approx._cache.values())
-        pymc3.memoize.clear_cache(inference.approx)
+        inference.approx._cache.clear()
         # should not be cleared at this call
         assert all(len(c) == 0 for c in inference.approx._cache.values())
         new_a = pickle.loads(pickle.dumps(inference.approx))
@@ -772,7 +769,7 @@ def test_clear_cache():
         inference_new = pm.KLqp(new_a)
         inference_new.fit(n=10)
         assert any(len(c) != 0 for c in inference_new.approx._cache.values())
-        pymc3.memoize.clear_cache(inference_new.approx)
+        inference_new.approx._cache.clear()
         assert all(len(c) == 0 for c in inference_new.approx._cache.values())
 
 

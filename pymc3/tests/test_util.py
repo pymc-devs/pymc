@@ -15,12 +15,14 @@
 import numpy as np
 import pytest
 
+from cachetools import cached
 from numpy.testing import assert_almost_equal
 
 import pymc3 as pm
 
 from pymc3.distributions.transforms import Transform
 from pymc3.tests.helpers import SeededTest
+from pymc3.util import hash_key, hashable, locally_cachedmethod
 
 
 class TestTransformName:
@@ -167,3 +169,53 @@ class TestExceptions:
             raise pm.exceptions.DtypeError("With types.", actual=int, expected=str)
         assert "int" in exinfo.value.args[0] and "str" in exinfo.value.args[0]
         pass
+
+
+def test_hashing_of_rv_tuples():
+    obs = np.random.normal(-1, 0.1, size=10)
+    with pm.Model() as pmodel:
+        mu = pm.Normal("mu", 0, 1)
+        sd = pm.Gamma("sd", 1, 2)
+        dd = pm.DensityDist(
+            "dd",
+            pm.Normal.dist(mu, sd).logp,
+            random=pm.Normal.dist(mu, sd).random,
+            observed=obs,
+        )
+        for freerv in [mu, sd, dd] + pmodel.free_RVs:
+            for structure in [
+                freerv,
+                {"alpha": freerv, "omega": None},
+                [freerv, []],
+                (freerv, []),
+            ]:
+                assert isinstance(hashable(structure), int)
+
+
+def test_hash_key():
+    class Bad1:
+        def __hash__(self):
+            return 329
+
+    class Bad2:
+        def __hash__(self):
+            return 329
+
+    b1 = Bad1()
+    b2 = Bad2()
+
+    assert b1 != b2
+
+    @cached({}, key=hash_key)
+    def some_func(x):
+        return x
+
+    assert some_func(b1) != some_func(b2)
+
+    class TestClass:
+        @locally_cachedmethod
+        def some_method(self, x):
+            return x
+
+    tc = TestClass()
+    assert tc.some_method(b1) != tc.some_method(b2)
