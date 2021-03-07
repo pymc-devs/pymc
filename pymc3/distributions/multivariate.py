@@ -2179,7 +2179,7 @@ class CAR(Continuous):
 
         Parameters
         ----------
-        value: numeric
+        value: array
             Value for which log-probability is calculated.
 
         Returns
