@@ -32,6 +32,7 @@ import theano
 import theano.graph.basic
 import theano.tensor as tt
 
+from cachetools import LRUCache, cached
 from theano import function
 
 from pymc3.distributions.shape_utils import (
@@ -39,7 +40,6 @@ from pymc3.distributions.shape_utils import (
     get_broadcastable_dist_samples,
     to_tuple,
 )
-from pymc3.memoize import memoize
 from pymc3.model import (
     ContextMeta,
     FreeRV,
@@ -48,7 +48,7 @@ from pymc3.model import (
     ObservedRV,
     build_named_node_tree,
 )
-from pymc3.util import get_repr_for_variable, get_var_name
+from pymc3.util import get_repr_for_variable, get_var_name, hash_key
 from pymc3.vartypes import string_types, theano_constant
 
 __all__ = [
@@ -840,7 +840,7 @@ def draw_values(params, point=None, size=None):
     return [evaluated[j] for j in params]  # set the order back
 
 
-@memoize
+@cached(LRUCache(128), key=hash_key)
 def _compile_theano_function(param, vars, givens=None):
     """Compile theano function for a given parameter and input variables.
 
