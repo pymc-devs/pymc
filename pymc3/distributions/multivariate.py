@@ -2114,7 +2114,7 @@ class CAR(Continuous):
     Parameters
     ----------
     mu: array
-        Mean vector
+        Real-valued mean vector
     W: Numpy matrix
         Symmetric adjacency matrix of 1s and 0s indicating
         adjacency between elements.
