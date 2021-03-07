@@ -185,4 +185,5 @@ __all__ = [
     "Simulator",
     "fast_sample_posterior_predictive",
     "BART",
+    "CAR",
 ]

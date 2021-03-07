@@ -37,13 +37,13 @@ from pymc3.aesaraf import floatX
 from pymc3.blocking import DictToVarBijection
 from pymc3.distributions import (
     AR1,
+    CAR,
     AsymmetricLaplace,
     Bernoulli,
     Beta,
     BetaBinomial,
     Binomial,
     Bound,
-    CAR,
     Categorical,
     Cauchy,
     ChiSquared,
@@ -2572,6 +2572,43 @@ def test_orderedlogistic_dimensions(shape):
     assert np.allclose(clogp, expected)
     assert ol.distribution.p.ndim == (len(shape) + 1)
     assert np.allclose(ologp, expected)
+
+
+def test_car_logp():
+    """
+    Tests the log probability function for the CAR distribution by checking
+    against Scipy's multivariate normal logpdf, up to an additive constant.
+    The formula used by the CAR logp implementation omits several additive terms.
+    """
+    np.random.seed(1)
+
+    nvals = 10
+    d = 4
+    xs = np.random.randn(nvals, d)
+
+    # d x d adjacency matrix for a square (d=4) of rook-adjacent sites
+    W = np.array(
+        [[0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
+    )
+
+    tau = 2.0
+    alpha = 0.5
+    mu = np.zeros(d)
+
+    # Compute CAR covariance matrix and resulting MVN logp
+    D = W.sum(axis=0)
+    prec = tau * (np.diag(D) - alpha * W)
+    cov = np.linalg.inv(prec)
+    scipy_logp = scipy.stats.multivariate_normal.logpdf(xs, mu, cov)
+
+    car_logp = CAR.dist(mu, W, alpha, tau, shape=(nvals, d)).logp(xs).eval()
+
+    # Check to make sure that the CAR and MVN log PDFs are equivalent
+    # up to an additive constant which is independent of the CAR parameters
+    delta_logp = scipy_logp - car_logp
+
+    # Check to make sure all the delta values are identical.
+    assert np.allclose(delta_logp - delta_logp[0], 0.0)
 
 
 class TestBugfixes:

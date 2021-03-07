@@ -2184,6 +2184,10 @@ class CAR(Continuous):
         -------
         TensorVariable
         """
+
+        if value.ndim == 1:
+            value = value[None, :]
+
         logtau = self.d * aet.log(self.tau).sum()
         logdet = aet.log(1 - self.alpha.T * self.lam[:, None]).sum()
         delta = value - self.mu
@@ -2194,7 +2198,7 @@ class CAR(Continuous):
             Wdelta = aet.dot(delta, self.W)
 
         tau_dot_delta = self.D[None, :] * delta - self.alpha * Wdelta
-        logquad = aet.dot((self.tau * delta).ravel(), tau_dot_delta.ravel()).sum()
+        logquad = (self.tau * delta * tau_dot_delta).sum(axis=-1)
         return 0.5 * (logtau + logdet - logquad)
 
     def random(self, point=None, size=None):
