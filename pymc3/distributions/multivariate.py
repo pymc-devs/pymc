@@ -2115,7 +2115,7 @@ class CAR(Continuous):
     ----------
     mu: array
         Mean vector
-    W: matrix
+    W: Numpy matrix
         Symmetric adjacency matrix of 1s and 0s indicating
         adjacency between elements.
     alpha: float or array
@@ -2173,7 +2173,9 @@ class CAR(Continuous):
     def logp(self, value):
         """
         Calculate log-probability of a CAR-distributed vector
-        at specified value.
+        at specified value. This log probability function differs from
+        the true CAR log density (AKA a multivariate normal with CAR-structured
+        covariance matrix) by an additive constant.
 
         Parameters
         ----------

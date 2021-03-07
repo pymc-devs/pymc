@@ -2574,7 +2574,8 @@ def test_orderedlogistic_dimensions(shape):
     assert np.allclose(ologp, expected)
 
 
-def test_car_logp():
+@pytest.mark.parametrize("shape", [(4,), (4, 1), (4, 4)], ids=str)
+def test_car_logp(shape):
     """
     Tests the log probability function for the CAR distribution by checking
     against Scipy's multivariate normal logpdf, up to an additive constant.
@@ -2582,9 +2583,7 @@ def test_car_logp():
     """
     np.random.seed(1)
 
-    nvals = 10
-    d = 4
-    xs = np.random.randn(nvals, d)
+    xs = np.random.randn(*shape)
 
     # d x d adjacency matrix for a square (d=4) of rook-adjacent sites
     W = np.array(
@@ -2593,7 +2592,7 @@ def test_car_logp():
 
     tau = 2.0
     alpha = 0.5
-    mu = np.zeros(d)
+    mu = np.zeros(4)
 
     # Compute CAR covariance matrix and resulting MVN logp
     D = W.sum(axis=0)
@@ -2601,7 +2600,7 @@ def test_car_logp():
     cov = np.linalg.inv(prec)
     scipy_logp = scipy.stats.multivariate_normal.logpdf(xs, mu, cov)
 
-    car_logp = CAR.dist(mu, W, alpha, tau, shape=(nvals, d)).logp(xs).eval()
+    car_logp = CAR.dist(mu, W, alpha, tau, shape=shape).logp(xs).eval()
 
     # Check to make sure that the CAR and MVN log PDFs are equivalent
     # up to an additive constant which is independent of the CAR parameters
