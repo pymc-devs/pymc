@@ -19,10 +19,12 @@ import warnings
 from typing import Dict, List, Tuple, Union
 
 import arviz
+import dill
 import numpy as np
 import xarray
 
 from aesara.tensor.var import TensorVariable
+from cachetools import LRUCache, cachedmethod
 
 from pymc3.exceptions import SamplingError
 
@@ -304,3 +306,76 @@ def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tupl
     nchains = coords["chain"].sizes["chain"]
     nsamples = coords["draw"].sizes["draw"]
     return nchains, nsamples
+
+
+def hashable(a=None) -> int:
+    """
+    Hashes many kinds of objects, including some that are unhashable through the builtin `hash` function.
+    Lists and tuples are hashed based on their elements.
+    """
+    if isinstance(a, dict):
+        # first hash the keys and values with hashable
+        # then hash the tuple of int-tuples with the builtin
+        return hash(tuple((hashable(k), hashable(v)) for k, v in a.items()))
+    if isinstance(a, (tuple, list)):
+        # lists are mutable and not hashable by default
+        # for memoization, we need the hash to depend on the items
+        return hash(tuple(hashable(i) for i in a))
+    try:
+        return hash(a)
+    except TypeError:
+        pass
+    # Not hashable >>>
+    try:
+        return hash(dill.dumps(a))
+    except Exception:
+        if hasattr(a, "__dict__"):
+            return hashable(a.__dict__)
+        else:
+            return id(a)
+
+
+def hash_key(*args, **kwargs):
+    return tuple(HashableWrapper(a) for a in args + tuple(kwargs.items()))
+
+
+class HashableWrapper:
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __hash__(self):
+        return hashable(self.obj)
+
+    def __eq__(self, other):
+        return self.obj == other
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self.obj})"
+
+
+class WithMemoization:
+    def __hash__(self):
+        return hash(id(self))
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state.pop("_cache", None)
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+
+def locally_cachedmethod(f):
+
+    from collections import defaultdict
+
+    def self_cache_fn(f_name):
+        def cf(self):
+            return self.__dict__.setdefault("_cache", defaultdict(lambda: LRUCache(128)))[f_name]
+
+        return cf
+
+    return cachedmethod(self_cache_fn(f.__name__), key=hash_key)(f)

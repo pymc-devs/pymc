@@ -60,9 +60,13 @@ import pymc3 as pm
 from pymc3.aesaraf import aet_rng, identity
 from pymc3.backends import NDArray
 from pymc3.blocking import ArrayOrdering, DictToArrayBijection, VarMap
-from pymc3.memoize import WithMemoization, memoize
 from pymc3.model import modelcontext
-from pymc3.util import get_default_varnames, get_transformed
+from pymc3.util import (
+    WithMemoization,
+    get_default_varnames,
+    get_transformed,
+    locally_cachedmethod,
+)
 from pymc3.variational.updates import adagrad_window
 
 __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximation"]
@@ -113,21 +117,18 @@ def append_name(name):
 
 def node_property(f):
     """A shortcut for wrapping method to accessible tensor"""
+
     if isinstance(f, str):
 
         def wrapper(fn):
-            return property(
-                memoize(
-                    aesara.config.change_flags(compute_test_value="off")(append_name(f)(fn)),
-                    bound=True,
-                )
-            )
+            ff = append_name(f)(fn)
+            f_ = aesara.config.change_flags(compute_test_value="off")(ff)
+            return property(locally_cachedmethod(f_))
 
         return wrapper
     else:
-        return property(
-            memoize(aesara.config.change_flags(compute_test_value="off")(f), bound=True)
-        )
+        f_ = aesara.config.change_flags(compute_test_value="off")(f)
+        return property(locally_cachedmethod(f_))
 
 
 @aesara.config.change_flags(compute_test_value="ignore")
@@ -1588,9 +1589,7 @@ class Approximation(WithMemoization):
             raise KeyError("%r not found" % name)
         return found
 
-    @property
-    @memoize(bound=True)
-    @aesara.config.change_flags(compute_test_value="off")
+    @node_property
     def sample_dict_fn(self):
         s = aet.iscalar()
         names = [v.name for v in self.model.free_RVs]

@@ -18,7 +18,7 @@ import numpy as np
 from aesara import tensor as aet
 
 from pymc3.distributions.dist_math import rho2sigma
-from pymc3.memoize import WithMemoization
+from pymc3.util import WithMemoization
 from pymc3.variational import opvi
 from pymc3.variational.opvi import collect_shared_to_list, node_property
 
