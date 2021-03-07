@@ -27,6 +27,7 @@ import theano.graph.basic
 import theano.sparse as sparse
 import theano.tensor as tt
 
+from cachetools import LRUCache, cachedmethod
 from pandas import Series
 from theano.compile import SharedVariable
 from theano.graph.basic import Apply
@@ -36,10 +37,8 @@ import pymc3 as pm
 
 from pymc3.blocking import ArrayOrdering, DictToArrayBijection
 from pymc3.exceptions import ImputationWarning
-from pymc3.math import flatten_list
-from pymc3.memoize import WithMemoization, memoize
 from pymc3.theanof import floatX, generator, gradient, hessian, inputvars
-from pymc3.util import get_transformed_name, get_var_name
+from pymc3.util import WithMemoization, get_transformed_name, get_var_name, hash_key
 from pymc3.vartypes import continuous_types, discrete_types, isgenerator, typefilter
 
 __all__ = [
@@ -944,7 +943,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return self.parent is None
 
     @property  # type: ignore
-    @memoize(bound=True)
+    @cachedmethod(
+        lambda self: self.__dict__.setdefault("_bijection_cache", LRUCache(128)), key=hash_key
+    )
     def bijection(self):
         vars = inputvars(self.vars)
 
