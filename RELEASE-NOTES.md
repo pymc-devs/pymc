@@ -9,7 +9,8 @@
 + ...
 
 ### Maintenance
-+ ...
+- ⚠ Our memoization mechanism wasn't robust against hash collisions (#4506), sometimes resulting in incorrect values in, for example, posterior predictives. The `pymc3.memoize` module was removed and replaced with `cachetools`.  The `hashable` function and `WithMemoization` class were moved to `pymc3.util`.
+- ...
 
 ## PyMC3 3.11.1 (12 February 2021)
 
