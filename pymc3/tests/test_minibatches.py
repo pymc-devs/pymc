@@ -198,7 +198,7 @@ class TestScaling:
 
         for i in range(10):
             _1, _2, _t = p1(), p2(), next(t)
-            decimals = select_by_precision(float64=7, float32=2)
+            decimals = select_by_precision(float64=7, float32=1)
             np.testing.assert_almost_equal(_1, _t, decimal=decimals)  # Value O(-50,000)
             np.testing.assert_almost_equal(_1, _2)
         # Done

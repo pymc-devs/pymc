@@ -263,6 +263,7 @@ def test_full_adapt_warn():
         quadpotential.QuadPotentialFullAdapt(2, np.zeros(2), np.eye(2), 0)
 
 
+@pytest.mark.xfail(reason="MvNormal was not yet refactored")
 def test_full_adapt_sampling(seed=289586):
     np.random.seed(seed)
 
@@ -271,7 +272,7 @@ def test_full_adapt_sampling(seed=289586):
     L[np.triu_indices_from(L, 1)] = 0.0
 
     with pymc3.Model() as model:
-        pymc3.MvNormal("a", mu=np.zeros(len(L)), chol=L, shape=len(L))
+        pymc3.MvNormal("a", mu=np.zeros(len(L)), chol=L, size=len(L))
 
         pot = quadpotential.QuadPotentialFullAdapt(model.size, np.zeros(model.size))
         step = pymc3.NUTS(model=model, potential=pot)
