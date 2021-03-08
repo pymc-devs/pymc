@@ -137,10 +137,10 @@ class Latent(Base):
         cov = stabilize(self.cov_func(X))
         shape = infer_shape(X, kwargs.pop("shape", None))
         if reparameterize:
-            v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, shape=shape, **kwargs)
+            v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=shape, **kwargs)
             f = pm.Deterministic(name, mu + cholesky(cov).dot(v))
         else:
-            f = pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
+            f = pm.MvNormal(name, mu=mu, cov=cov, size=shape, **kwargs)
         return f
 
     def prior(self, name, X, reparameterize=True, **kwargs):
@@ -231,7 +231,7 @@ class Latent(Base):
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, *givens)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, size=shape, **kwargs)
 
 
 @conditioned_vars(["X", "f", "nu"])
@@ -279,10 +279,10 @@ class TP(Latent):
         shape = infer_shape(X, kwargs.pop("shape", None))
         if reparameterize:
             chi2 = pm.ChiSquared(name + "_chi2_", self.nu)
-            v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, shape=shape, **kwargs)
+            v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=shape, **kwargs)
             f = pm.Deterministic(name, (at.sqrt(self.nu) / chi2) * (mu + cholesky(cov).dot(v)))
         else:
-            f = pm.MvStudentT(name, nu=self.nu, mu=mu, cov=cov, shape=shape, **kwargs)
+            f = pm.MvStudentT(name, nu=self.nu, mu=mu, cov=cov, size=shape, **kwargs)
         return f
 
     def prior(self, name, X, reparameterize=True, **kwargs):
@@ -349,7 +349,7 @@ class TP(Latent):
         f = self.f
         nu2, mu, cov = self._build_conditional(Xnew, X, f)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvStudentT(name, nu=nu2, mu=mu, cov=cov, shape=shape, **kwargs)
+        return pm.MvStudentT(name, nu=nu2, mu=mu, cov=cov, size=shape, **kwargs)
 
 
 @conditioned_vars(["X", "y", "noise"])
@@ -447,7 +447,7 @@ class Marginal(Base):
             return pm.MvNormal(name, mu=mu, cov=cov, observed=y, **kwargs)
         else:
             shape = infer_shape(X, kwargs.pop("shape", None))
-            return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
+            return pm.MvNormal(name, mu=mu, cov=cov, size=shape, **kwargs)
 
     def _get_given_vals(self, given):
         if given is None:
@@ -525,7 +525,7 @@ class Marginal(Base):
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, size=shape, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False, given=None):
         R"""
@@ -740,7 +740,7 @@ class MarginalSparse(Marginal):
             return pm.DensityDist(name, logp, observed=y, **kwargs)
         else:
             shape = infer_shape(X, kwargs.pop("shape", None))
-            return pm.DensityDist(name, logp, shape=shape, **kwargs)
+            return pm.DensityDist(name, logp, size=shape, **kwargs)
 
     def _build_conditional(self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total):
         sigma2 = at.square(sigma)
@@ -817,7 +817,7 @@ class MarginalSparse(Marginal):
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, size=shape, **kwargs)
 
 
 @conditioned_vars(["Xs", "f"])
@@ -890,7 +890,7 @@ class LatentKron(Base):
         mu = self.mean_func(cartesian(*Xs))
         chols = [cholesky(stabilize(cov(X))) for cov, X in zip(self.cov_funcs, Xs)]
         # remove reparameterization option
-        v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, shape=self.N, **kwargs)
+        v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=self.N, **kwargs)
         f = pm.Deterministic(name, mu + at.flatten(kron_dot(chols, v)))
         return f
 
@@ -969,7 +969,7 @@ class LatentKron(Base):
         """
         mu, cov = self._build_conditional(Xnew)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, size=shape, **kwargs)
 
 
 @conditioned_vars(["Xs", "y", "sigma"])
@@ -1093,7 +1093,7 @@ class MarginalKron(Base):
             return pm.KroneckerNormal(name, mu=mu, covs=covs, sigma=sigma, observed=y, **kwargs)
         else:
             shape = np.prod([len(X) for X in Xs])
-            return pm.KroneckerNormal(name, mu=mu, covs=covs, sigma=sigma, shape=shape, **kwargs)
+            return pm.KroneckerNormal(name, mu=mu, covs=covs, sigma=sigma, size=shape, **kwargs)
 
     def _build_conditional(self, Xnew, pred_noise, diag):
         Xs, y, sigma = self.Xs, self.y, self.sigma
@@ -1170,7 +1170,7 @@ class MarginalKron(Base):
         """
         mu, cov = self._build_conditional(Xnew, pred_noise, False)
         shape = infer_shape(Xnew, kwargs.pop("shape", None))
-        return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
+        return pm.MvNormal(name, mu=mu, cov=cov, size=shape, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False):
         R"""
