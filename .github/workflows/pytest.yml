@@ -7,58 +7,96 @@ on:
 
 jobs:
   pytest:
-    if: false
     strategy:
       matrix:
         os: [ubuntu-18.04]
         floatx: [float32, float64]
         test-subset:
+        # Tests are split into multiple jobs to accelerate the CI.
+        # The first job (starting in the next block) shouldn't run any tests, but
+        # just ignores tests because that don't work at all, or run in other jobs.'
+        # Any test that was not ignored runs in the first job.
+        # A pre-commit hook (scripts/check_all_tests_are_covered.py) enforces that
+        # test run just once.
+
+        # Because YAML doesn't allow comments in the blocks below, here they are..
+        # 1st block: These tests are temporarily disabled, because they are _very_ broken
+        # 2nd block: The JAX tests run through their own workflow: jaxtests.yml
+        # 3nd & 4rd: These tests are covered by other matrix jobs
+        # 5th block: These tests PASS without a single XFAIL
+        # 6th block: These have some XFAILs
           - |
-            --ignore=pymc3/tests/test_dist_math.py
             --ignore=pymc3/tests/test_distribution_defaults.py
             --ignore=pymc3/tests/test_distributions.py
             --ignore=pymc3/tests/test_distributions_random.py
             --ignore=pymc3/tests/test_distributions_timeseries.py
-            --ignore=pymc3/tests/test_examples.py
-            --ignore=pymc3/tests/test_gp.py
+            --ignore=pymc3/tests/test_missing.py
             --ignore=pymc3/tests/test_mixture.py
-            --ignore=pymc3/tests/test_ode.py
+            --ignore=pymc3/tests/test_model_graph.py
+            --ignore=pymc3/tests/test_modelcontext.py
+            --ignore=pymc3/tests/test_models_linear.py
+            --ignore=pymc3/tests/test_ndarray_backend.py
             --ignore=pymc3/tests/test_parallel_sampling.py
+            --ignore=pymc3/tests/test_posterior_predictive.py
             --ignore=pymc3/tests/test_posteriors.py
-            --ignore=pymc3/tests/test_quadpotential.py
+            --ignore=pymc3/tests/test_profile.py
             --ignore=pymc3/tests/test_random.py
             --ignore=pymc3/tests/test_sampling.py
-            --ignore=pymc3/tests/test_sampling_jax.py
-            --ignore=pymc3/tests/test_shape_handling.py
             --ignore=pymc3/tests/test_shared.py
             --ignore=pymc3/tests/test_smc.py
+            --ignore=pymc3/tests/test_starting.py
             --ignore=pymc3/tests/test_step.py
-            --ignore=pymc3/tests/test_updates.py
+            --ignore=pymc3/tests/test_tracetab.py
+            --ignore=pymc3/tests/test_transforms.py
+            --ignore=pymc3/tests/test_tuning.py
+            --ignore=pymc3/tests/test_types.py
+            --ignore=pymc3/tests/test_util.py
             --ignore=pymc3/tests/test_variational_inference.py
+
+            --ignore=pymc3/tests/test_sampling_jax.py
+
+            --ignore=pymc3/tests/test_dist_math.py
+            --ignore=pymc3/tests/test_minibatches.py
+            --ignore=pymc3/tests/test_pickling.py
+            --ignore=pymc3/tests/test_plots.py
+            --ignore=pymc3/tests/test_special_functions.py
+            --ignore=pymc3/tests/test_updates.py
+
+            --ignore=pymc3/tests/test_dist_math.py
+            --ignore=pymc3/tests/test_examples.py
+            --ignore=pymc3/tests/test_glm.py
+            --ignore=pymc3/tests/test_gp.py
+            --ignore=pymc3/tests/test_model.py
+            --ignore=pymc3/tests/test_model_func.py
+            --ignore=pymc3/tests/test_model_helpers.py
+            --ignore=pymc3/tests/test_models_utils.py
+            --ignore=pymc3/tests/test_ode.py
+            --ignore=pymc3/tests/test_posdef_sym.py
+            --ignore=pymc3/tests/test_quadpotential.py
+            --ignore=pymc3/tests/test_shape_handling.py
+
           - |
             pymc3/tests/test_dist_math.py
-            pymc3/tests/test_distribution_defaults.py
-            pymc3/tests/test_distributions_random.py
-            pymc3/tests/test_parallel_sampling.py
-            pymc3/tests/test_random.py
-            pymc3/tests/test_shared.py
-            pymc3/tests/test_smc.py
-          - |
-            pymc3/tests/test_examples.py
-            pymc3/tests/test_mixture.py
-            pymc3/tests/test_ode.py
-            pymc3/tests/test_posteriors.py
-            pymc3/tests/test_quadpotential.py
-          - |
-            pymc3/tests/test_distributions_timeseries.py
-            pymc3/tests/test_shape_handling.py
-            pymc3/tests/test_step.py
+            pymc3/tests/test_minibatches.py
+            pymc3/tests/test_pickling.py
+            pymc3/tests/test_plots.py
+            pymc3/tests/test_special_functions.py
             pymc3/tests/test_updates.py
-            pymc3/tests/test_variational_inference.py
+
           - |
-            pymc3/tests/test_distributions.py
+            pymc3/tests/test_dist_math.py
+            pymc3/tests/test_examples.py
+            pymc3/tests/test_glm.py
             pymc3/tests/test_gp.py
-            pymc3/tests/test_sampling.py
+            pymc3/tests/test_model.py
+            pymc3/tests/test_model_func.py
+            pymc3/tests/test_model_helpers.py
+            pymc3/tests/test_models_utils.py
+            pymc3/tests/test_ode.py
+            pymc3/tests/test_posdef_sym.py
+            pymc3/tests/test_quadpotential.py
+            pymc3/tests/test_shape_handling.py
+
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
