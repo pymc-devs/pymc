@@ -4,7 +4,7 @@ import pytest
 import pymc3 as pm
 
 
-@pytest.mark.xfail("Arviz incompatibilities")
+@pytest.mark.xfail(reason="Arviz incompatibilities")
 def test_coords():
     chains = 2
     n_features = 3
