@@ -155,7 +155,7 @@ class TestObserved:
                 Normal("n", observed=x)
 
     def test_observed_type(self):
-        X_ = np.random.randn(100, 5)
+        X_ = np.random.randn(100, 5).astype(aesara.config.floatX)
         X = pm.floatX(aesara.shared(X_))
         with pm.Model():
             x1 = pm.Normal("x1", observed=X_)
