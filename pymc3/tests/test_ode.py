@@ -264,6 +264,7 @@ class TestDiffEqModel:
         assert op_1 != op_other
         return
 
+    @pytest.mark.xfail(reason="HalfCauchy was not yet refactored")
     def test_scalar_ode_1_param(self):
         """Test running model for a scalar ODE with 1 parameter"""
 
@@ -292,6 +293,7 @@ class TestDiffEqModel:
         assert trace["y0"].size > 0
         assert trace["sigma"].size > 0
 
+    @pytest.mark.xfail(reason="HalfCauchy was not yet refactored")
     def test_scalar_ode_2_param(self):
         """Test running model for a scalar ODE with 2 parameters"""
 
@@ -323,6 +325,7 @@ class TestDiffEqModel:
         assert trace["y0"].size > 0
         assert trace["sigma"].size > 0
 
+    @pytest.mark.xfail(reason="HalfCauchy was not yet refactored")
     def test_vector_ode_1_param(self):
         """Test running model for a vector ODE with 1 parameter"""
 
@@ -362,6 +365,7 @@ class TestDiffEqModel:
         assert trace["R"].size > 0
         assert trace["sigma"].size > 0
 
+    @pytest.mark.xfail(reason="HalfCauchy was not yet refactored")
     def test_vector_ode_2_param(self):
         """Test running model for a vector ODE with 2 parameters"""
 

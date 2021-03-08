@@ -131,7 +131,7 @@ class TestData(SeededTest):
         """
         with pm.Model() as m:
             x = pm.Data("x", [1.0, 2.0, 3.0])
-            _ = pm.Normal("y", mu=x, shape=3)
+            _ = pm.Normal("y", mu=x, size=3)
             trace = pm.sample(chains=1)
 
         np.testing.assert_allclose(np.array([1.0, 2.0, 3.0]), x.get_value(), atol=1e-1)
@@ -148,7 +148,7 @@ class TestData(SeededTest):
         # See https://github.com/pymc-devs/pymc3/issues/3139
         with pm.Model() as m:
             shared_var = shared(5.0)
-            v = pm.Normal("v", mu=shared_var, shape=1)
+            v = pm.Normal("v", mu=shared_var, size=1)
 
         np.testing.assert_allclose(
             logpt(v, 5.0).eval(),

@@ -30,7 +30,7 @@ def simple_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        Normal("x", mu, tau=tau, size=2, testval=np.ones(2) * 0.1)
+        Normal("x", mu, tau=tau, size=2, testval=floatX_array([0.1, 0.1]))
 
     return model.test_point, model, (mu, tau ** -0.5)
 
