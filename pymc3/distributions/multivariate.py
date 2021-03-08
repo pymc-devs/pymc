@@ -2107,14 +2107,14 @@ class CAR(Continuous):
 
     ========  ==========================
     Support   :math:`x \in \mathbb{R}^k`
-    Mean      :math:`\mu`
+    Mean      :math:`\mu \in \mathbb{R}^k`
     Variance  :math:`(\tau D(I-\alpha W))^{-1}`
     ========  ==========================
 
     Parameters
     ----------
     mu: array
-        Mean vector
+        Real-valued mean vector
     W: Numpy matrix
         Symmetric adjacency matrix of 1s and 0s indicating
         adjacency between elements.
@@ -2123,7 +2123,7 @@ class CAR(Continuous):
         correlation and values closer to 1 indicate higher autocorrelation. For most use cases, the
         support of alpha should be restricted to (0, 1)
     tau: float or array
-        Precision variables controlling the scale of the underlying normal variates.
+        Positive precision variable controlling the scale of the underlying normal variates.
     sparse: bool, default=False
         Determines whether or not sparse computations are used
 
