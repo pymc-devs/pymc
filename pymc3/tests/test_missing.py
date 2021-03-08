@@ -22,7 +22,7 @@ from numpy import array, ma
 from pymc3 import ImputationWarning, Model, Normal, sample, sample_prior_predictive
 
 
-@pytest.mark.xfail("Missing values not fully refactored")
+@pytest.mark.xfail(reason="Missing values not fully refactored")
 def test_missing():
     data = ma.masked_values([1, 2, -1, 4, -1], value=-1)
     with Model() as model:

@@ -280,7 +280,7 @@ class TP(Latent):
         if reparameterize:
             chi2 = pm.ChiSquared(name + "_chi2_", self.nu)
             v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=shape, **kwargs)
-            f = pm.Deterministic(name, (at.sqrt(self.nu) / chi2) * (mu + cholesky(cov).dot(v)))
+            f = pm.Deterministic(name, (aet.sqrt(self.nu) / chi2) * (mu + cholesky(cov).dot(v)))
         else:
             f = pm.MvStudentT(name, nu=self.nu, mu=mu, cov=cov, size=shape, **kwargs)
         return f
@@ -891,7 +891,7 @@ class LatentKron(Base):
         chols = [cholesky(stabilize(cov(X))) for cov, X in zip(self.cov_funcs, Xs)]
         # remove reparameterization option
         v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=self.N, **kwargs)
-        f = pm.Deterministic(name, mu + at.flatten(kron_dot(chols, v)))
+        f = pm.Deterministic(name, mu + aet.flatten(kron_dot(chols, v)))
         return f
 
     def prior(self, name, Xs, **kwargs):

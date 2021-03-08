@@ -263,6 +263,7 @@ def test_full_adapt_warn():
         quadpotential.QuadPotentialFullAdapt(2, np.zeros(2), np.eye(2), 0)
 
 
+@pytest.mark.xfail(reason="MvNormal was not yet refactored")
 def test_full_adapt_sampling(seed=289586):
     np.random.seed(seed)
 

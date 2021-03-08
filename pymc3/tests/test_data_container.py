@@ -159,9 +159,7 @@ class TestData(SeededTest):
         with pm.Model() as m:
             x = pm.Data("x", [1.0, 2.0, 3.0])
             _ = pm.Normal("y", mu=x, size=3)
-            trace = pm.sample(
-                chains=1, return_inferencedata=False, compute_convergence_checks=False
-            )
+            trace = pm.sample(chains=1)
 
         np.testing.assert_allclose(np.array([1.0, 2.0, 3.0]), x.get_value(), atol=1e-1)
         np.testing.assert_allclose(np.array([1.0, 2.0, 3.0]), trace["y"].mean(0), atol=1e-1)

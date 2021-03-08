@@ -26,8 +26,6 @@ import pymc3 as pm
 
 from pymc3.math import cartesian, kronecker
 
-pytestmark = pytest.mark.xfail(reason="GP not refactored")
-
 np.random.seed(101)
 
 
