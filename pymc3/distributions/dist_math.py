@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2021 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 """
-import platform
-
 import aesara
 import aesara.tensor as aet
 import numpy as np
@@ -45,11 +43,6 @@ _beta_clip_values = {
     dtype: (np.nextafter(0, 1, dtype=dtype), np.nextafter(1, 0, dtype=dtype))
     for dtype in ["float16", "float32", "float64"]
 }
-if platform.system() in ["Linux", "Darwin"]:
-    _beta_clip_values["float128"] = (
-        np.nextafter(0, 1, dtype="float128"),
-        np.nextafter(1, 0, dtype="float128"),
-    )
 
 
 def bound(logp, *conditions, **kwargs):
