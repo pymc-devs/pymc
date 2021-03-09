@@ -19,6 +19,7 @@ import sys
 import types
 import warnings
 
+from abc import ABC
 from typing import TYPE_CHECKING
 
 import dill
@@ -57,11 +58,10 @@ class _Unpickling:
     pass
 
 
-class Distribution:
+class Distribution(ABC):
     """Statistical distribution"""
 
     rv_op = None
-    default_transform = None
 
     def __new__(cls, name, *args, **kwargs):
         try:
@@ -93,18 +93,18 @@ class Distribution:
         if "shape" in kwargs:
             raise DeprecationWarning("The `shape` keyword is deprecated; use `size`.")
 
+        transform = kwargs.pop("transform", None)
+
         rv_out = cls.dist(*args, rng=rng, **kwargs)
 
-        return model.register_rv(rv_out, name, data, total_size, dims=dims)
+        return model.register_rv(rv_out, name, data, total_size, dims=dims, transform=transform)
 
     @classmethod
     def dist(cls, dist_params, **kwargs):
-        transform = kwargs.pop("transform", cls.default_transform)
+
         testval = kwargs.pop("testval", None)
 
         rv_var = cls.rv_op(*dist_params, **kwargs)
-
-        rv_var.tag.transform = transform
 
         if testval is not None:
             rv_var.tag.test_value = testval
@@ -223,7 +223,6 @@ class NoDistribution(Distribution):
         dtype,
         testval=None,
         defaults=(),
-        transform=None,
         parent_dist=None,
         *args,
         **kwargs,
@@ -269,9 +268,6 @@ class Discrete(Distribution):
                 dtype = "int64"
         if dtype != "int16" and dtype != "int64":
             raise TypeError("Discrete classes expect dtype to be int16 or int64.")
-
-        if kwargs.get("transform", None) is not None:
-            raise ValueError("Transformations for discrete distributions " "are not allowed.")
 
         super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
