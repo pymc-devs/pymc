@@ -29,7 +29,7 @@ import scipy.sparse as sps
 
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.gradient import grad
-from aesara.graph.basic import Variable
+from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.tensor.random.op import Observed, observed
 from aesara.tensor.var import TensorVariable
 from pandas import Series
@@ -39,7 +39,7 @@ import pymc3 as pm
 from pymc3.aesaraf import generator, gradient, hessian, inputvars
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.data import GenTensorVariable, Minibatch
-from pymc3.distributions import change_rv_size, logpt, logpt_sum
+from pymc3.distributions import change_rv_size, logp_transform, logpt, logpt_sum
 from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
 from pymc3.util import WithMemoization, get_var_name
@@ -893,7 +893,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             with self:
                 free_RVs_logp = at.sum(
                     [
-                        at.sum(logpt(var, getattr(var.tag, "value_var", None)))
+                        at.sum(logpt(var, getattr(var.tag, "value_var", None), transformed=True))
                         for var in self.free_RVs + self.potentials
                     ]
                 )
@@ -902,15 +902,19 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             costs = [free_RVs_logp, observed_RVs_logp]
         else:
             costs = [self.logpt]
-        varnames = [var.name for var in grad_vars]
-        extra_vars = [var for var in self.free_RVs if var.name not in varnames]
+
+        input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
+        extra_vars = [var for var in self.free_RVs if var in input_vars]
         return ValueGradFunction(costs, grad_vars, extra_vars, **kwargs)
 
     @property
     def logpt(self):
         """Aesara scalar of log-probability of the model"""
         with self:
-            factors = [logpt_sum(var, getattr(var.tag, "value_var", None)) for var in self.free_RVs]
+            factors = [
+                logpt_sum(var, getattr(var.tag, "value_var", None), transformed=True)
+                for var in self.free_RVs
+            ]
             factors += [logpt_sum(obs) for obs in self.observed_RVs]
             factors += self.potentials
             logp_var = at.sum([at.sum(factor) for factor in factors])
@@ -924,12 +928,15 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def logp_nojact(self):
         """Aesara scalar of log-probability of the model but without the jacobian
         if transformed Random Variable is presented.
-        Note that If there is no transformed variable in the model, logp_nojact
+
+        Note that if there is no transformed variable in the model, logp_nojact
         will be the same as logpt as there is no need for Jacobian correction.
         """
         with self:
             factors = [
-                logpt_sum(var, getattr(var.tag, "value_var", None), jacobian=False)
+                logpt_sum(
+                    var, getattr(var.tag, "value_var", None), jacobian=False, transformed=True
+                )
                 for var in self.free_RVs
             ]
             factors += [logpt_sum(obs, jacobian=False) for obs in self.observed_RVs]
@@ -946,7 +953,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """Aesara scalar of log-probability of the unobserved random variables
         (excluding deterministic)."""
         with self:
-            factors = [logpt_sum(var, getattr(var.tag, "value_var", None)) for var in self.free_RVs]
+            factors = [
+                logpt_sum(var, getattr(var.tag, "value_var", None), transformed=True)
+                for var in self.free_RVs
+            ]
             return at.sum(factors)
 
     @property
@@ -1000,7 +1010,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     @property
     def test_point(self):
         """Test point used to check that the model doesn't generate errors"""
-        return Point(((var.tag.value_var, var.tag.test_value) for var in self.free_RVs), model=self)
+        return Point(((var, var.tag.test_value) for var in self.vars), model=self)
 
     @property
     def disc_vars(self):
@@ -1042,7 +1052,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             else:
                 self.coords[name] = coords[name]
 
-    def register_rv(self, rv_var, name, data=None, total_size=None, dims=None):
+    def register_rv(self, rv_var, name, data=None, total_size=None, dims=None, transform=None):
         """Register an (un)observed random variable with the model.
 
         Parameters
@@ -1050,11 +1060,11 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         rv_var: TensorVariable
         name: str
         data: array_like (optional)
-           If data is provided, the variable is observed. If None,
-           the variable is unobserved.
+            If data is provided, the variable is observed. If None,
+            the variable is unobserved.
         total_size: scalar
             upscales logp of variable with ``coef = total_size/var.shape[0]``
-        dims : tuple
+        dims: tuple
             Dimension names for the variable.
 
         Returns
@@ -1074,17 +1084,24 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             # In all other cases, the role of the value variable is taken by
             # observed data. That's why value variables are only referenced in
             # this branch of the conditional.
-            value_var = rv_var.clone()
-            value_var.name = rv_var.name
-            rv_var.tag.value_var = value_var
-
             self.free_RVs.append(rv_var)
+            value_var = rv_var.clone()
 
-            transform = rv_var.tag.transform
-            value_var.tag.transform = None
-
+            transform = transform or logp_transform(rv_var.owner.op, rv_var.owner.inputs)
             if transform is not None:
-                self.deterministics.append(rv_var)
+                value_var.tag.transform = transform
+                value_var.name = f"{rv_var.name}_{transform.name}"
+                if aesara.config.compute_test_value != "off":
+                    value_var.tag.test_value = transform.forward(value_var).tag.test_value
+
+                # The transformed variable needs to be a named variable in the
+                # model, too
+                self.named_vars[value_var.name] = value_var
+            else:
+                value_var = rv_var.clone()
+                value_var.name = rv_var.name
+
+            rv_var.tag.value_var = value_var
 
         elif isinstance(data, dict):
 
@@ -1178,7 +1195,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             except KeyError:
                 raise e
 
-    def makefn(self, outs, mode=None, *args, **kwargs):
+    def makefn(self, outs, mode=None, transformed=True, *args, **kwargs):
         """Compiles a Aesara function which returns ``outs`` and takes the variable
         ancestors of ``outs`` as inputs.
 
@@ -1192,8 +1209,11 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         Compiled Aesara function
         """
         with self:
+            vars = [
+                v if not transformed else getattr(v.tag, "transformed_var", v) for v in self.vars
+            ]
             return aesara.function(
-                self.vars,
+                vars,
                 outs,
                 allow_input_downcast=True,
                 on_unused_input="ignore",
@@ -1463,7 +1483,7 @@ def fastfn(outs, mode=None, model=None):
     return model.fastfn(outs, mode)
 
 
-def Point(*args, filter_model_vars=True, **kwargs):
+def Point(*args, filter_model_vars=False, **kwargs):
     """Build a point. Uses same args as dict() does.
     Filters out variables not in the model. All keys are strings.
 
@@ -1608,6 +1628,13 @@ def make_obs_var(
         # We try to reuse the old test value
         rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.tag.test_value.shape)
 
+    # An independent variable used as the generic log-likelihood input
+    # parameter (i.e. the measure-space counterpart to the sample-space
+    # variable `rv_var`).
+    value_var = rv_var.clone()
+    rv_var.tag.value_var = value_var
+    value_var.name = f"{rv_var.name}"
+
     missing_values = None
     mask = getattr(data, "mask", None)
     if mask is not None:
@@ -1623,9 +1650,7 @@ def make_obs_var(
         data = at.set_subtensor(constant[mask.nonzero()], missing_values)
 
         # Now, we need log-likelihood-space terms for these missing values
-        value_var = rv_var.clone()
         value_var.name = f"{rv_var.name}_missing"
-        rv_var.tag.value_var = value_var
 
     elif sps.issparse(data):
         data = sparse.basic.as_sparse(data, name=name)
@@ -1713,7 +1738,6 @@ def Potential(name, var, model=None):
     model = modelcontext(model)
     var.name = model.name_for(name)
     var.tag.scaling = None
-    var.tag.transform = None
     model.potentials.append(var)
     model.add_random_variable(var)
     return var
