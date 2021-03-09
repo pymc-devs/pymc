@@ -6,6 +6,7 @@
 
 ### New Features
 + `pm.math.cartesian` can now handle inputs that are themselves >1D (see [#4482](https://github.com/pymc-devs/pymc3/pull/4482)).
++ The `CAR` distribution has been added to allow for use of conditional autoregressions which often are used in spatial and network models.
 + ...
 
 ### Maintenance
