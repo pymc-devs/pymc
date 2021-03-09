@@ -9,7 +9,8 @@
 + ...
 
 ### Maintenance
-- The `pymc3.memoize` module was removed and replaced with `cachetools`.  The `hashable` function and `WithMemoization` class were moved to `pymc3.util`.
+- The `pymc3.memoize` module was removed and replaced with `cachetools`.  The `hashable` function and `WithMemoization` class were moved to `pymc3.util` (see [#4509](https://github.com/pymc-devs/pymc3/pull/4509)).
+- Remove float128 dtype support (see [#4514](https://github.com/pymc-devs/pymc3/pull/4514)).
 
 ## PyMC3 3.11.1 (12 February 2021)
 
