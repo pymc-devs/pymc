@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2021 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 """
-import platform
-
 import aesara
 import aesara.tensor as aet
 import numpy as np
