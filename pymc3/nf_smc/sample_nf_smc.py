@@ -29,14 +29,26 @@ from pymc3.nf_smc.nf_smc import NF_SMC
 
 def sample_nf_smc(
     draws=2000,
-    kernel="metropolis",
-    n_steps=25,
-    start=None,
-    tune_steps=True,
-    p_acc_rate=0.85,
+    start=None,    
     threshold=0.5,
-    save_sim_data=False,
-    save_log_pseudolikelihood=True,
+    frac_validate=0.1,
+    alpha=(0,0),
+    k_trunc=0.25,
+    verbose=False,
+    n_component=None,
+    interp_nbin=None,
+    KDE=True,
+    bw_factor=0.5,
+    edge_bins=None,
+    ndata_wT=None,
+    MSWD_max_iter=None,
+    NBfirstlayer=True,
+    logit=False,
+    Whiten=False,
+    batchsize=None,
+    nocuda=False,
+    patch=False,
+    shape=[28,28,1],
     model=None,
     random_seed=-1,
     parallel=False,
@@ -51,33 +63,13 @@ def sample_nf_smc(
     draws: int
         The number of samples to draw from the posterior (i.e. last stage). And also the number of
         independent chains. Defaults to 2000.
-    kernel: str
-        Kernel method for the SMC sampler. Available option are ``metropolis`` (default) and `ABC`.
-        Use `ABC` for likelihood free inference together with a ``pm.Simulator``.
-    n_steps: int
-        The number of steps of each Markov Chain. If ``tune_steps == True`` ``n_steps`` will be used
-        for the first stage and for the others it will be determined automatically based on the
-        acceptance rate and `p_acc_rate`, the max number of steps is ``n_steps``.
     start: dict, or array of dict
         Starting point in parameter space. It should be a list of dict with length `chains`.
         When None (default) the starting point is sampled from the prior distribution.
-    tune_steps: bool
-        Whether to compute the number of steps automatically or not. Defaults to True
-    p_acc_rate: float
-        Used to compute ``n_steps`` when ``tune_steps == True``. The higher the value of
-        ``p_acc_rate`` the higher the number of steps computed automatically. Defaults to 0.85.
-        It should be between 0 and 1.
     threshold: float
         Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
         the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
         It should be between 0 and 1.
-    save_sim_data : bool
-        Whether or not to save the simulated data. This parameter only works with the ABC kernel.
-        The stored data corresponds to a samples from the posterior predictive distribution.
-    save_log_pseudolikelihood : bool
-        Whether or not to save the log pseudolikelihood values. This parameter only works with the
-        ABC kernel. The stored data can be used to compute LOO or WAIC values. Computing LOO/WAIC
-        values from log pseudolikelihood values is experimental.
     model: Model (optional if in ``with`` context)).
     random_seed: int
         random seed
@@ -138,7 +130,7 @@ def sample_nf_smc(
         %282007%29133:7%28816%29>`__
     """
     _log = logging.getLogger("pymc3")
-    _log.info("Initializing SMC sampler...")
+    _log.info("Initializing SMC+SINF sampler...")
 
     model = modelcontext(model)
     if model.name:
@@ -170,22 +162,28 @@ def sample_nf_smc(
     if not isinstance(random_seed, Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
 
-    if kernel.lower() == "abc":
-        if len(model.observed_RVs) != 1:
-            warnings.warn("SMC-ABC only works properly with models with one observed variable")
-        if model.potentials:
-            _log.info("Potentials will be added to the prior term")
-
     params = (
         draws,
-        kernel,
-        n_steps,
         start,
-        tune_steps,
-        p_acc_rate,
         threshold,
-        save_sim_data,
-        save_log_pseudolikelihood,
+        frac_validate,
+        alpha,
+        k_trunc,
+        verbose,
+        n_component,
+        interp_nbin,
+        KDE,
+        bw_factor,
+        edge_bins,
+        ndata_wT,
+        MSWD_max_iter,
+        NBfirstlayer,
+        logit,
+        Whiten,
+        batchsize,
+        nocuda,
+        patch,
+        shape,
         model,
     )
 
@@ -194,7 +192,7 @@ def sample_nf_smc(
         loggers = [_log] + [None] * (chains - 1)
         pool = mp.Pool(cores)
         results = pool.starmap(
-            sample_smc_int, [(*params, random_seed[i], i, loggers[i]) for i in range(chains)]
+            sample_nf_smc_int, [(*params, random_seed[i], i, loggers[i]) for i in range(chains)]
         )
 
         pool.close()
@@ -202,90 +200,97 @@ def sample_nf_smc(
     else:
         results = []
         for i in range(chains):
-            results.append(sample_smc_int(*params, random_seed[i], i, _log))
+            results.append(sample_nf_smc_int(*params, random_seed[i], i, _log))
 
     (
         traces,
-        sim_data,
-        log_marginal_likelihoods,
-        log_pseudolikelihood,
+        marginal_likelihood,
         betas,
-        accept_ratios,
-        nsteps,
     ) = zip(*results)
     trace = MultiTrace(traces)
     trace.report._n_draws = draws
-    trace.report._n_tune = 0
-    trace.report.log_marginal_likelihood = np.array(log_marginal_likelihoods)
-    trace.report.log_pseudolikelihood = log_pseudolikelihood
+    trace.report.marginal_likelihood = marginal_likelihood
     trace.report.betas = betas
-    trace.report.accept_ratios = accept_ratios
-    trace.report.nsteps = nsteps
     trace.report._t_sampling = time.time() - t1
 
-    if save_sim_data:
-        return trace, {modelcontext(model).observed_RVs[0].name: np.array(sim_data)}
-    else:
-        return trace
+    return trace
 
 
 def sample_nf_smc_int(
     draws,
-    kernel,
-    n_steps,
     start,
-    tune_steps,
-    p_acc_rate,
     threshold,
-    save_sim_data,
-    save_log_pseudolikelihood,
+    frac_validate,
+    alpha,
+    k_trunc,
+    verbose,
+    n_component,
+    interp_nbin,
+    KDE,
+    bw_factor,
+    edge_bins,
+    ndata_wT,
+    MSWD_max_iter,
+    NBfirstlayer,
+    logit,
+    Whiten,
+    batchsize,
+    nocuda,
+    patch,
+    shape,
     model,
     random_seed,
     chain,
     _log,
 ):
     """Run one SMC instance."""
-    smc = SMC(
+    nf_smc = NF_SMC(
         draws=draws,
-        kernel=kernel,
-        n_steps=n_steps,
         start=start,
-        tune_steps=tune_steps,
-        p_acc_rate=p_acc_rate,
         threshold=threshold,
-        save_sim_data=save_sim_data,
-        save_log_pseudolikelihood=save_log_pseudolikelihood,
+        frac_validate=frac_validate,
+        alpha=alpha,
+        k_trunc=k_trunc,
+        verbose=verbose,
+        n_component=n_component,
+        interp_nbin=interp_nbin,
+        KDE=KDE,
+        bw_factor=bw_factor,
+        edge_bins=edge_bins,
+        ndata_wT=ndata_wT,
+        MSWD_max_iter=MSWD_max_iter,
+        NBfirstlayer=NBfirstlayer,
+        logit=logit,
+        Whiten=Whiten,
+        batchsize=batchsize,
+        nocuda=nocuda,
+        patch=patch,
+        shape=shape,
         model=model,
         random_seed=random_seed,
         chain=chain,
     )
     stage = 0
     betas = []
-    accept_ratios = []
-    nsteps = []
-    smc.initialize_population()
-    smc.setup_kernel()
-    smc.initialize_logp()
 
-    while smc.beta < 1:
-        smc.update_weights_beta()
+    nf_smc.initialize_population()
+    nf_smc.setup_logp()
+    nf_smc.get_logp()
+    #nf_smc.fit_nf()
+
+    while nf_smc.beta < 1:
+        nf_smc.update_weights_beta()
         if _log is not None:
-            _log.info(f"Stage: {stage:3d} Beta: {smc.beta:.3f}")
-        smc.update_proposal()
-        smc.resample()
-        smc.mutate()
-        smc.tune()
+            _log.info(f"Stage: {stage:3d} Beta: {nf_smc.beta:.3f}")
+        nf_smc.fit_nf()
+        nf_smc.get_logp()
         stage += 1
-        betas.append(smc.beta)
-        accept_ratios.append(smc.acc_rate)
-        nsteps.append(smc.n_steps)
+        betas.append(nf_smc.beta)
+    print(np.mean(nf_smc.raw_weights))
+    nf_smc.resample()
 
     return (
-        smc.posterior_to_trace(),
-        smc.sim_data,
-        smc.log_marginal_likelihood,
-        smc.log_pseudolikelihood,
+        nf_smc.posterior_to_trace(),
+        np.mean(nf_smc.raw_weights),
         betas,
-        accept_ratios,
-        nsteps,
     )
