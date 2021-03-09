@@ -35,7 +35,7 @@ from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 from pymc3.aesaraf import floatX
-from pymc3.distributions import _logcdf, _logp, transforms
+from pymc3.distributions import _logcdf, _logp, logp_transform, transforms
 from pymc3.distributions.dist_math import (
     SplineWrapper,
     betaln,
@@ -100,36 +100,41 @@ gamma.inplace = True
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
 
-    default_transform = transforms.log
-
 
 class UnitContinuous(Continuous):
     """Base class for continuous distributions on [0,1]"""
-
-    default_transform = transforms.logodds
 
 
 class BoundedContinuous(Continuous):
     """Base class for bounded continuous distributions"""
 
-    default_transform = "auto"
 
-    def create_transform(transform="auto", lower=None, upper=None):
+@logp_transform.register(PositiveContinuous)
+def pos_cont_transform(op, inputs):
+    return transforms.log
 
-        lower = at.as_tensor_variable(lower) if lower is not None else None
-        upper = at.as_tensor_variable(upper) if upper is not None else None
 
-        if transform == "auto":
-            if lower is None and upper is None:
-                transform = None
-            elif lower is not None and upper is None:
-                transform = transforms.lowerbound(lower)
-            elif lower is None and upper is not None:
-                transform = transforms.upperbound(upper)
-            else:
-                transform = transforms.interval(lower, upper)
+@logp_transform.register(UnitContinuous)
+def unit_cont_transform(op, inputs):
+    return transforms.logodds
 
-        return transform
+
+@logp_transform.register(BoundedContinuous)
+def bounded_cont_transform(op, inputs):
+    _, _, _, lower, upper = inputs
+    lower = at.as_tensor_variable(lower) if lower is not None else None
+    upper = at.as_tensor_variable(upper) if upper is not None else None
+
+    if lower is None and upper is None:
+        transform = None
+    elif lower is not None and upper is None:
+        transform = transforms.lowerbound(lower)
+    elif lower is None and upper is not None:
+        transform = transforms.upperbound(upper)
+    else:
+        transform = transforms.interval(lower, upper)
+
+    return transform
 
 
 def assert_negative_support(var, label, distname, value=-1e-6):
@@ -230,11 +235,10 @@ class Uniform(BoundedContinuous):
         upper = at.as_tensor_variable(floatX(upper))
         # mean = (upper + lower) / 2.0
         # median = self.mean
+        return super().dist([lower, upper], **kwargs)
 
-        transform = kwargs.pop("transform", cls.default_transform)
-        transform = cls.create_transform(transform, lower, upper)
 
-        return super().dist([lower, upper], transform=transform, **kwargs)
+BoundedContinuous.register(UniformRV)
 
 
 @_logp.register(UniformRV)
