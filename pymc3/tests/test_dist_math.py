@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2021 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -10,9 +10,6 @@
 #   distributed under the License is distributed on an "AS IS" BASIS,
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
-#   limitations under the License.
-import sys
-
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -237,12 +234,7 @@ class TestI0e:
         verify_grad(i0e, [[[0.5, -2.0]]])
 
 
-@pytest.mark.parametrize(
-    "dtype",
-    ["float16", "float32", "float64", "float128"]
-    if sys.platform != "win32"
-    else ["float16", "float32", "float64"],
-)
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64"])
 def test_clipped_beta_rvs(dtype):
     # Verify that the samples drawn from the beta distribution are never
     # equal to zero or one (issue #3898)
