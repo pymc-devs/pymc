@@ -45,11 +45,6 @@ _beta_clip_values = {
     dtype: (np.nextafter(0, 1, dtype=dtype), np.nextafter(1, 0, dtype=dtype))
     for dtype in ["float16", "float32", "float64"]
 }
-if platform.system() in ["Linux", "Darwin"]:
-    _beta_clip_values["float128"] = (
-        np.nextafter(0, 1, dtype="float128"),
-        np.nextafter(1, 0, dtype="float128"),
-    )
 
 
 def bound(logp, *conditions, **kwargs):

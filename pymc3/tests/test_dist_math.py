@@ -239,9 +239,7 @@ class TestI0e:
 
 @pytest.mark.parametrize(
     "dtype",
-    ["float16", "float32", "float64", "float128"]
-    if sys.platform != "win32"
-    else ["float16", "float32", "float64"],
+    ["float16", "float32", "float64"]
 )
 def test_clipped_beta_rvs(dtype):
     # Verify that the samples drawn from the beta distribution are never
