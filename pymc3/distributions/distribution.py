@@ -18,8 +18,7 @@ import sys
 import types
 import warnings
 
-from abc import ABCMeta
-from copy import copy
+from abc import ABC
 from typing import TYPE_CHECKING
 
 import dill
@@ -62,76 +61,10 @@ class _Unpickling:
     pass
 
 
-class DistributionMeta(ABCMeta):
-    def __new__(cls, name, bases, clsdict):
-
-        # Forcefully deprecate old v3 `Distribution`s
-        if "random" in clsdict:
-
-            def _random(*args, **kwargs):
-                warnings.warn(
-                    "The old `Distribution.random` interface is deprecated.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-                return clsdict["random"](*args, **kwargs)
-
-            clsdict["random"] = _random
-
-        rv_op = clsdict.setdefault("rv_op", None)
-        rv_type = None
-
-        if isinstance(rv_op, RandomVariable):
-            if not rv_op.inplace:
-                # TODO: This is a temporary work-around.
-                # Remove this once we know what we want regarding RNG states
-                # and their propagation.
-                rv_op = copy(rv_op)
-                rv_op.inplace = True
-                clsdict["rv_op"] = rv_op
-
-            rv_type = type(rv_op)
-
-        new_cls = super().__new__(cls, name, bases, clsdict)
-
-        if rv_type is not None:
-            # Create dispatch functions
-
-            class_logp = clsdict.get("logp")
-            if class_logp:
-
-                @_logp.register(rv_type)
-                def logp(op, var, rvs_to_values, *dist_params, **kwargs):
-                    value_var = rvs_to_values.get(var, var)
-                    return class_logp(value_var, *dist_params, **kwargs)
-
-            class_logcdf = clsdict.get("logcdf")
-            if class_logcdf:
-
-                @_logcdf.register(rv_type)
-                def logcdf(op, var, rvs_to_values, *dist_params, **kwargs):
-                    value_var = rvs_to_values.get(var, var)
-                    return class_logcdf(value_var, *dist_params, **kwargs)
-
-            # class_transform = clsdict.get("transform")
-            # if class_transform:
-            #
-            #     @logp_transform.register(rv_type)
-            #     def transform(op, *args, **kwargs):
-            #         return class_transform(*args, **kwargs)
-
-            # Register the Aesara `RandomVariable` type as a subclass of this
-            # `Distribution` type.
-            new_cls.register(rv_type)
-
-        return new_cls
-
-
-class Distribution(metaclass=DistributionMeta):
+class Distribution(ABC):
     """Statistical distribution"""
 
     rv_op = None
-    default_transform = None
 
     def __new__(cls, name, *args, **kwargs):
         try:
@@ -163,18 +96,18 @@ class Distribution(metaclass=DistributionMeta):
         if "shape" in kwargs:
             raise DeprecationWarning("The `shape` keyword is deprecated; use `size`.")
 
+        transform = kwargs.pop("transform", None)
+
         rv_out = cls.dist(*args, rng=rng, **kwargs)
 
-        return model.register_rv(rv_out, name, data, total_size, dims=dims)
+        return model.register_rv(rv_out, name, data, total_size, dims=dims, transform=transform)
 
     @classmethod
     def dist(cls, dist_params, **kwargs):
-        transform = kwargs.pop("transform", cls.default_transform)
+
         testval = kwargs.pop("testval", None)
 
         rv_var = cls.rv_op(*dist_params, **kwargs)
-
-        rv_var.tag.transform = transform
 
         if testval is not None:
             rv_var.tag.test_value = testval
@@ -329,10 +262,7 @@ class Discrete(Distribution):
 
     def __new__(cls, name, *args, **kwargs):
 
-        if kwargs.get("transform", None):
-            raise ValueError("Transformations for discrete distributions")
-
-        return super().__new__(cls, name, *args, **kwargs)
+        super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
 
 class Continuous(Distribution):

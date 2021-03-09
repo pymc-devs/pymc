@@ -229,7 +229,7 @@ def test_interval_near_boundary():
     with pm.Model() as model:
         pm.Uniform("x", testval=x0, lower=lb, upper=ub)
 
-    log_prob = model.point_logps()
+    log_prob = model.check_test_point()
     np.testing.assert_allclose(log_prob, np.array([-52.68]))
 
 
@@ -286,34 +286,38 @@ class TestElementWiseLogp(SeededTest):
         x0 = x.tag.value_var
         assert x.ndim == logpt(x).ndim
 
-        pt = model.initial_point
+        pt = model.test_point
         array = np.random.randn(*pt[x0.name].shape)
         transform = x0.tag.transform
-        logp_notrans = logpt(x, transform.backward(x, array), transformed=False)
+        logp_nojac = logpt(x, transform.backward(array), jacobian=False)
+        jacob_det = transform.jacobian_det(aesara.shared(array))
+        assert logpt(x).ndim == jacob_det.ndim
 
         jacob_det = transform.jacobian_det(x, aesara.shared(array))
         assert logpt(x).ndim == jacob_det.ndim
 
-        v1 = logpt(x, array, jacobian=False).eval()
-        v2 = logp_notrans.eval()
-        close_to(v1, v2, tol)
+        close_to(logpt(x, array).eval(), elementwiselogp.eval(), tol)
 
     def check_vectortransform_elementwise_logp(self, model, vect_opt=0):
         x = model.free_RVs[0]
         x0 = x.tag.value_var
         assert (x.ndim - 1) == logpt(x).ndim
 
-        pt = model.initial_point
+        pt = model.test_point
         array = np.random.randn(*pt[x0.name].shape)
         transform = x0.tag.transform
-        logp_nojac = logpt(x, transform.backward(x, array), transformed=False)
-
-        jacob_det = transform.jacobian_det(x, aesara.shared(array))
+        logp_nojac = logpt(x, transform.backward(array))
+        jacob_det = transform.jacobian_det(aesara.shared(array))
         assert logpt(x).ndim == jacob_det.ndim
 
+        if vect_opt == 0:
+            # the original distribution is univariate
+            elementwiselogp = logp_nojac.sum(axis=-1) + jacob_det
+        else:
+            elementwiselogp = logp_nojac + jacob_det
         # Hack to get relative tolerance
-        a = logpt(x, array.astype(aesara.config.floatX), jacobian=False).eval()
-        b = logp_nojac.eval()
+        a = logpt(x, array).eval()
+        b = elementwiselogp.eval()
         close_to(a, b, np.abs(0.5 * (a + b) * tol))
 
     @pytest.mark.parametrize(
@@ -324,13 +328,15 @@ class TestElementWiseLogp(SeededTest):
             (np.ones(3) * 10.0, (4, 3)),
         ],
     )
-    def test_half_normal(self, sd, size):
-        model = self.build_model(pm.HalfNormal, {"sd": sd}, size=size, transform=tr.log)
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    def test_half_normal(self, sd, shape):
+        model = self.build_model(pm.HalfNormal, {"sd": sd}, size=shape, transform=tr.log)
         self.check_transform_elementwise_logp(model)
 
-    @pytest.mark.parametrize("lam,size", [(2.5, 2), (5.0, (2, 3)), (np.ones(3), (4, 3))])
-    def test_exponential(self, lam, size):
-        model = self.build_model(pm.Exponential, {"lam": lam}, size=size, transform=tr.log)
+    @pytest.mark.parametrize("lam,shape", [(2.5, 2), (5.0, (2, 3)), (np.ones(3), (4, 3))])
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    def test_exponential(self, lam, shape):
+        model = self.build_model(pm.Exponential, {"lam": lam}, size=shape, transform=tr.log)
         self.check_transform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
@@ -341,8 +347,9 @@ class TestElementWiseLogp(SeededTest):
             (np.ones(3), np.ones(3), (4, 3)),
         ],
     )
-    def test_beta(self, a, b, size):
-        model = self.build_model(pm.Beta, {"alpha": a, "beta": b}, size=size, transform=tr.logodds)
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    def test_beta(self, a, b, shape):
+        model = self.build_model(pm.Beta, {"alpha": a, "beta": b}, size=shape, transform=tr.logodds)
         self.check_transform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
@@ -362,7 +369,7 @@ class TestElementWiseLogp(SeededTest):
 
         interval = tr.Interval(transform_params)
         model = self.build_model(
-            pm.Uniform, {"lower": lower, "upper": upper}, size=size, transform=interval
+            pm.Uniform, {"lower": lower, "upper": upper}, size=shape, transform=interval
         )
         self.check_transform_elementwise_logp(model)
 
@@ -370,17 +377,17 @@ class TestElementWiseLogp(SeededTest):
         "mu,kappa,size", [(0.0, 1.0, 2), (-0.5, 5.5, (2, 3)), (np.zeros(3), np.ones(3), (4, 3))]
     )
     @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_vonmises(self, mu, kappa, size):
+    def test_vonmises(self, mu, kappa, shape):
         model = self.build_model(
-            pm.VonMises, {"mu": mu, "kappa": kappa}, size=size, transform=tr.circular
+            pm.VonMises, {"mu": mu, "kappa": kappa}, size=shape, transform=tr.circular
         )
         self.check_transform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
         "a,size", [(np.ones(2), None), (np.ones((2, 3)) * 0.5, None), (np.ones(3), (4,))]
     )
-    def test_dirichlet(self, a, size):
-        model = self.build_model(pm.Dirichlet, {"a": a}, size=size, transform=tr.stick_breaking)
+    def test_dirichlet(self, a, shape):
+        model = self.build_model(pm.Dirichlet, {"a": a}, size=shape, transform=tr.stick_breaking)
         self.check_vectortransform_elementwise_logp(model, vect_opt=1)
 
     def test_normal_ordered(self):
@@ -406,7 +413,7 @@ class TestElementWiseLogp(SeededTest):
         model = self.build_model(
             pm.HalfNormal,
             {"sd": sd},
-            size=size,
+            size=shape,
             testval=testval,
             transform=tr.Chain([tr.log, tr.ordered]),
         )
@@ -418,7 +425,7 @@ class TestElementWiseLogp(SeededTest):
         model = self.build_model(
             pm.Exponential,
             {"lam": lam},
-            size=size,
+            size=shape,
             testval=testval,
             transform=tr.Chain([tr.log, tr.ordered]),
         )
@@ -436,7 +443,7 @@ class TestElementWiseLogp(SeededTest):
         model = self.build_model(
             pm.Beta,
             {"alpha": a, "beta": b},
-            size=size,
+            size=shape,
             testval=testval,
             transform=tr.Chain([tr.logodds, tr.ordered]),
         )
@@ -459,7 +466,7 @@ class TestElementWiseLogp(SeededTest):
         model = self.build_model(
             pm.Uniform,
             {"lower": lower, "upper": upper},
-            size=size,
+            size=shape,
             testval=testval,
             transform=tr.Chain([interval, tr.ordered]),
         )
@@ -472,7 +479,7 @@ class TestElementWiseLogp(SeededTest):
         model = self.build_model(
             pm.VonMises,
             {"mu": mu, "kappa": kappa},
-            size=size,
+            size=shape,
             testval=testval,
             transform=tr.Chain([tr.circular, tr.ordered]),
         )
@@ -491,7 +498,7 @@ class TestElementWiseLogp(SeededTest):
         model = self.build_model(
             pm.Uniform,
             {"lower": lower, "upper": upper},
-            size=size,
+            size=shape,
             testval=testval,
             transform=transform,
         )
@@ -507,6 +514,6 @@ class TestElementWiseLogp(SeededTest):
     def test_mvnormal_ordered(self, mu, cov, size, shape):
         testval = np.sort(np.random.randn(*shape))
         model = self.build_model(
-            pm.MvNormal, {"mu": mu, "cov": cov}, size=size, testval=testval, transform=tr.ordered
+            pm.MvNormal, {"mu": mu, "cov": cov}, size=shape, testval=testval, transform=tr.ordered
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=1)
