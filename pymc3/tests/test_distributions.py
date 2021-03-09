@@ -770,9 +770,9 @@ class TestMatchesScipy:
                 err_msg=str(pt),
             )
 
-    def check_int_to_1(self, model, value, domain, paramdomains):
+    def check_int_to_1(self, model, value, domain, paramdomains, n_samples=10):
         pdf = model.fastfn(exp(model.logpt))
-        for pt in product(paramdomains, n_samples=10):
+        for pt in product(paramdomains, n_samples=n_samples):
             pt = Point(pt, value=value.tag.test_value, model=model)
             bij = DictToVarBijection(value, (), pt)
             pdfx = bij.mapf(pdf)
@@ -902,6 +902,7 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplus},
             lambda value, mu, sigma: sp.norm.logcdf(value, mu, sigma),
+            decimal=select_by_precision(float64=6, float32=2),
         )
 
     def test_truncated_normal(self):
@@ -941,25 +942,6 @@ class TestMatchesScipy:
             lambda value, nu: sp.chi2.logpdf(value, df=nu),
         )
 
-    @pytest.mark.xfail(
-        condition=(aesara.config.floatX == "float32"),
-        reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
-    )
-    def test_wald_scipy(self):
-        self.check_logp(
-            Wald,
-            Rplus,
-            {"mu": Rplus, "alpha": Rplus},
-            lambda value, mu, alpha: sp.invgauss.logpdf(value, mu=mu, loc=alpha),
-            decimal=select_by_precision(float64=6, float32=1),
-        )
-        self.check_logcdf(
-            Wald,
-            Rplus,
-            {"mu": Rplus, "alpha": Rplus},
-            lambda value, mu, alpha: sp.invgauss.logcdf(value, mu=mu, loc=alpha),
-        )
-
     @pytest.mark.parametrize(
         "value,mu,lam,phi,alpha,logp",
         [
@@ -979,7 +961,7 @@ class TestMatchesScipy:
             (50.0, 15.0, None, 0.666666, 10.0, -5.6481874),
         ],
     )
-    def test_wald(self, value, mu, lam, phi, alpha, logp):
+    def test_wald_logp_custom_points(self, value, mu, lam, phi, alpha, logp):
         # Log probabilities calculated using the dIG function from the R package gamlss.
         # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or
         # http://www.gamlss.org/.
@@ -988,6 +970,27 @@ class TestMatchesScipy:
         pt = {"wald": value}
         decimals = select_by_precision(float64=6, float32=1)
         assert_almost_equal(model.fastlogp(pt), logp, decimal=decimals, err_msg=str(pt))
+
+    def test_wald_logp(self):
+        self.check_logp(
+            Wald,
+            Rplus,
+            {"mu": Rplus, "alpha": Rplus},
+            lambda value, mu, alpha: sp.invgauss.logpdf(value, mu=mu, loc=alpha),
+            decimal=select_by_precision(float64=6, float32=1),
+        )
+
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
+    )
+    def test_wald_logcdf(self):
+        self.check_logcdf(
+            Wald,
+            Rplus,
+            {"mu": Rplus, "alpha": Rplus},
+            lambda value, mu, alpha: sp.invgauss.logcdf(value, mu=mu, loc=alpha),
+        )
 
     def test_beta(self):
         self.check_logp(
@@ -1256,17 +1259,21 @@ class TestMatchesScipy:
             skip_paramdomain_outside_edge_test=True,
         )
 
-    @pytest.mark.xfail(
-        condition=(aesara.config.floatX == "float32"),
-        reason="Fails on float32 due to numerical issues",
-    )
-    def test_inverse_gamma(self):
+    def test_inverse_gamma_logp(self):
         self.check_logp(
             InverseGamma,
             Rplus,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.invgamma.logpdf(value, alpha, scale=beta),
         )
+        # pymc-devs/aesara#224: skip_paramdomain_outside_edge_test has to be set
+        # True to avoid triggering a C-level assertion in the Aesara GammaQ function
+
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Fails on float32 due to numerical issues",
+    )
+    def test_inverse_gamma_logcdf(self):
         # pymc-devs/aesara#224: skip_paramdomain_outside_edge_test has to be set
         # True to avoid triggering a C-level assertion in the Aesara GammaQ function
         # in gamma.c file. Can be set back to False (default) once that issue is solved
@@ -1313,13 +1320,19 @@ class TestMatchesScipy:
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
-    def test_weibull(self):
+    def test_weibull_logp(self):
         self.check_logp(
             Weibull,
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
             lambda value, alpha, beta: sp.exponweib.logpdf(value, 1, alpha, scale=beta),
         )
+
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Fails on float32 due to inf issues",
+    )
+    def test_weibull_logcdf(self):
         self.check_logcdf(
             Weibull,
             Rplus,
@@ -1368,27 +1381,37 @@ class TestMatchesScipy:
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    @pytest.mark.xfail(
-        condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
-    )
-    def test_beta_binomial(self):
+    def test_beta_binomial_distribution(self):
         self.checkd(
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
         )
+
+    @pytest.mark.skipif(
+        condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
+    )
+    def test_beta_binomial_logp(self):
         self.check_logp(
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
             lambda value, alpha, beta, n: sp.betabinom.logpmf(value, a=alpha, b=beta, n=n),
         )
+
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.skipif(
+        condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
+    )
+    def test_beta_binomial_logcdf(self):
         self.check_logcdf(
             BetaBinomial,
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
             lambda value, alpha, beta, n: sp.betabinom.logcdf(value, a=alpha, b=beta, n=n),
         )
+
+    def test_beta_binomial_selfconsistency(self):
         self.check_selfconsistency_discrete_logcdf(
             BetaBinomial,
             Nat,
@@ -1475,13 +1498,18 @@ class TestMatchesScipy:
         self.check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    def test_zeroinflatedpoisson(self):
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Fails on float32 due to inf issues",
+    )
+    def test_zeroinflatedpoisson_distribution(self):
         self.checkd(
             ZeroInflatedPoisson,
             Nat,
             {"theta": Rplus, "psi": Unit},
         )
+
+    def test_zeroinflatedpoisson_logcdf(self):
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedPoisson,
             Nat,
@@ -1489,13 +1517,18 @@ class TestMatchesScipy:
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    def test_zeroinflatednegativebinomial(self):
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Fails on float32 due to inf issues",
+    )
+    def test_zeroinflatednegativebinomial_distribution(self):
         self.checkd(
             ZeroInflatedNegativeBinomial,
             Nat,
             {"mu": Rplusbig, "alpha": Rplusbig, "psi": Unit},
         )
+
+    def test_zeroinflatednegativebinomial_logcdf(self):
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedNegativeBinomial,
             Nat,
@@ -1504,13 +1537,14 @@ class TestMatchesScipy:
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    def test_zeroinflatedbinomial(self):
+    def test_zeroinflatedbinomial_distribution(self):
         self.checkd(
             ZeroInflatedBinomial,
             Nat,
             {"n": NatSmall, "p": Unit, "psi": Unit},
         )
+
+    def test_zeroinflatedbinomial_logcdf(self):
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedBinomial,
             Nat,
@@ -2279,14 +2313,21 @@ class TestMatchesScipy:
             lambda value, b, sigma: sp.rice.logpdf(value, b=b, loc=0, scale=sigma),
         )
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    def test_moyal(self):
+    def test_moyal_logp(self):
+        # Using a custom domain, because the standard `R` domain undeflows with scipy in float64
+        value_domain = Domain([-inf, -1.5, -1, -0.01, 0.0, 0.01, 1, 1.5, inf])
         self.check_logp(
             Moyal,
-            R,
+            value_domain,
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: floatX(sp.moyal.logpdf(value, mu, sigma)),
         )
+
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Pymc3 underflows earlier than scipy on float32",
+    )
+    def test_moyal_logcdf(self):
         self.check_logcdf(
             Moyal,
             R,

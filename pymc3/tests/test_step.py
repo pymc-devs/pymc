@@ -957,8 +957,8 @@ class TestDEMetropolisZ:
         pass
 
 
-@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestNutsCheckTrace:
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_multiple_samplers(self, caplog):
         with Model():
             prob = Beta("prob", alpha=5.0, beta=3.0)

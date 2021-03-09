@@ -40,7 +40,6 @@ class TestUtils:
         m, l = utils.any_to_tensor_and_labels(self.data, labels=["x2", "x3"])
         self.assertMatrixLabels(m, l, lt=["x2", "x3"])
 
-    @pytest.mark.xfail
     def test_dict_input(self):
         m, l = utils.any_to_tensor_and_labels(self.data.to_dict("dict"))
         self.assertMatrixLabels(m, l, mt=self.data[l].values, lt=l)
@@ -51,6 +50,8 @@ class TestUtils:
         m, l = utils.any_to_tensor_and_labels(self.data.to_dict("list"))
         self.assertMatrixLabels(m, l, mt=self.data[l].values, lt=l)
 
+    @pytest.mark.xfail
+    def test_dict_input_pandas_series(self):
         inp = {k: aet.as_tensor_variable(v.values) for k, v in self.data.to_dict("series").items()}
         m, l = utils.any_to_tensor_and_labels(inp)
         self.assertMatrixLabels(m, l, mt=self.data[l].values, lt=l)
