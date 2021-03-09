@@ -237,10 +237,7 @@ class TestI0e:
         verify_grad(i0e, [[[0.5, -2.0]]])
 
 
-@pytest.mark.parametrize(
-    "dtype",
-    ["float16", "float32", "float64"]
-)
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64"])
 def test_clipped_beta_rvs(dtype):
     # Verify that the samples drawn from the beta distribution are never
     # equal to zero or one (issue #3898)
