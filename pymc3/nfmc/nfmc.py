@@ -54,6 +54,8 @@ class NFMC:
         frac_validate=0.1,
         alpha=(0,0),
         optim_iter=1000,
+        ftol=2.220446049250313e-9,
+        gtol=1.0e-5,
         k_trunc=0.25,
         verbose=False,
         n_component=None,
@@ -63,7 +65,7 @@ class NFMC:
         edge_bins=None,
         ndata_wT=None,
         MSWD_max_iter=None,
-        NBfirstlayer=False,
+        NBfirstlayer=True,
         logit=False,
         Whiten=False,
         batchsize=None,
@@ -79,6 +81,8 @@ class NFMC:
         self.frac_validate = frac_validate
         self.alpha = alpha
         self.optim_iter = optim_iter
+        self.ftol = ftol
+        self.gtol = gtol
         self.k_trunc = k_trunc
         self.verbose = verbose
         self.n_component = n_component
@@ -173,7 +177,8 @@ class NFMC:
     def optimize(self, sample):
         """Optimize the prior samples"""
         self.optim_iter_samples = np.array([sample])
-        minimize(self.optim_target_logp, x0=sample, method='L-BFGS-B', options={'maxiter': self.optim_iter},
+        minimize(self.optim_target_logp, x0=sample, method='L-BFGS-B',
+                 options={'maxiter': self.optim_iter, 'ftol': self.ftol, 'gtol': self.gtol},
                  jac=self.optim_target_dlogp, callback=self.callback)
         return self.optim_iter_samples 
         
@@ -195,6 +200,7 @@ class NFMC:
         self.get_posterior_logp()
         self.weights = np.exp(self.posterior_logp - self.logq.numpy().astype(np.float64))
         self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
+        self.evidence = np.mean(self.weights)
         self.weights = self.weights / np.sum(self.weights)
         self.importance_weights = np.append(self.importance_weights, self.weights)
         self.nf_models.append(self.nf_model)
@@ -219,6 +225,7 @@ class NFMC:
         self.get_posterior_logp()
         self.weights = np.exp(self.posterior_logp - self.logq.numpy().astype(np.float64))
         self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
+        self.evidence = np.mean(self.weights)
         self.weights = self.weights / np.sum(self.weights)
         self.importance_weights = np.append(self.importance_weights, self.weights)
         self.nf_models.append(self.nf_model)
