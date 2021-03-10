@@ -1980,7 +1980,7 @@ def sample_prior_predictive(
 
     names = get_default_varnames(vars_, include_transformed=False)
 
-    vars_to_sample = [model[name] for name in names]
+    vars_to_sample = [strip_observed(model[name]) for name in names]
     inputs = [i for i in inputvars(vars_to_sample)]
     sampler_fn = aesara.function(
         inputs,
