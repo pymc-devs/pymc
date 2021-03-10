@@ -849,9 +849,9 @@ class TestSamplePriorPredictive(SeededTest):
             prior = pm.sample_prior_predictive()
 
         assert "observed_data" not in prior
-        assert (prior["mu"] < 90).all()
+        assert (prior["mu"] < -90).all()
         assert (prior["positive_mu"] > 90).all()
-        assert (prior["x_obs"] < 90).all()
+        assert (prior["x_obs"] < -90).all()
         assert prior["x_obs"].shape == (500, 200)
         npt.assert_array_almost_equal(prior["positive_mu"], np.abs(prior["mu"]), decimal=4)
 
