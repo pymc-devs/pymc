@@ -284,6 +284,7 @@ def sample_nf_smc_int(
             _log.info(f"Stage: {stage:3d} Beta: {nf_smc.beta:.3f}")
         nf_smc.fit_nf()
         nf_smc.get_logp()
+        nf_smc.resample_nf_iw()
         stage += 1
         betas.append(nf_smc.beta)
     print(np.mean(nf_smc.raw_weights))

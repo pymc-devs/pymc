@@ -155,10 +155,13 @@ class NF_SMC:
 
         while up_beta - low_beta > 1e-6:
             new_beta = (low_beta + up_beta) / 2.0
+            '''
             if old_beta == 0:
                 log_weights_un = (new_beta - old_beta) * self.likelihood_logp
             else:
                 log_weights_un = self.prior_logp + self.likelihood_logp * new_beta - self.logq
+            '''
+            log_weights_un = (new_beta - old_beta) * self.likelihood_logp
             log_weights = log_weights_un - logsumexp(log_weights_un)
             ESS = int(np.exp(-logsumexp(log_weights * 2)))
             if ESS == rN:
@@ -169,8 +172,8 @@ class NF_SMC:
                 low_beta = new_beta
         if new_beta >= 1:
             new_beta = 1
-            #log_weights_un = (new_beta - old_beta) * self.likelihood_logp
-            log_weights_un = self.prior_logp + self.likelihood_logp * new_beta - self.logq
+            log_weights_un = (new_beta - old_beta) * self.likelihood_logp
+            #log_weights_un = self.prior_logp + self.likelihood_logp * new_beta - self.logq
             log_weights = log_weights_un - logsumexp(log_weights_un)
 
         self.log_marginal_likelihood += logsumexp(log_weights_un) - np.log(self.draws)
@@ -178,7 +181,10 @@ class NF_SMC:
         self.weights = np.exp(log_weights)
         # We normalize again to correct for small numerical errors that might build up
         self.weights /= self.weights.sum()
-        self.raw_weights = np.exp(log_weights_un)
+        if old_beta == 0:
+            self.raw_weights = np.exp((new_beta - old_beta) * self.likelihood_logp)
+        else:
+            self.raw_weights = np.exp(self.prior_logp + self.likelihood_logp * new_beta - self.logq)
 
     def resample(self):
         """Resample particles based on importance weights."""
@@ -190,7 +196,7 @@ class NF_SMC:
         self.prior_logp = self.prior_logp[resampling_indexes]
         self.likelihood_logp = self.likelihood_logp[resampling_indexes]
         self.posterior_logp = self.prior_logp + self.likelihood_logp * self.beta
-
+        
     def fit_nf(self):
         """Fit an NF approximation to the current tempered posterior."""
         val_idx = int((1 - self.frac_validate) * self.posterior.shape[0])
@@ -205,9 +211,27 @@ class NF_SMC:
                             NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
                             batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape)
 
-        self.posterior, self.logq = self.nf_model.sample(self.draws, device=torch.device('cpu'))
+        self.posterior, self.logq = self.nf_model.sample(10*self.draws, device=torch.device('cpu'))
         self.posterior = self.posterior.numpy().astype(np.float64)
         self.logq = self.logq.numpy().astype(np.float64)
+
+    def resample_nf_iw(self):
+        """Resample the NF samples at a given iteration, applying IW correction to account for
+        mis-match between NF fit and the current tempered posterior."""
+        self.log_mismatch_un = self.prior_logp + self.likelihood_logp * self.beta - self.logq
+        self.log_mismatch = self.log_mismatch_un - logsumexp(self.log_mismatch_un)
+        self.mismatch = np.exp(self.log_mismatch)
+        self.mismatch /= self.mismatch.sum()
+        
+        resampling_indexes = np.random.choice(
+            np.arange(10*self.draws), size=self.draws, p=self.mismatch
+        )
+
+        self.posterior = self.posterior[resampling_indexes]
+        self.prior_logp = self.prior_logp[resampling_indexes]
+        self.likelihood_logp = self.likelihood_logp[resampling_indexes]
+        self.logq = self.logq[resampling_indexes]
+        self.posterior_logp = self.prior_logp + self.likelihood_logp * self.beta
         
     def posterior_to_trace(self):
         """Save results into a PyMC3 trace."""
