@@ -171,10 +171,7 @@ def get_repr_for_variable(variable, formatting="plain"):
 
 def get_var_name(var):
     """Get an appropriate, plain variable name for a variable."""
-    if isinstance(var, TensorVariable):
-        return super(TensorVariable, var).__str__()
-    else:
-        return str(var)
+    return getattr(var, "name", str(var))
 
 
 def update_start_vals(a, b, model):
