@@ -61,7 +61,7 @@ class BaseTrace(ABC):
         model = modelcontext(model)
         self.model = model
         if vars is None:
-            vars = [v.tag.value_var for v in model.unobserved_RVs]
+            vars = [getattr(v.tag, "value_var", v) for v in model.unobserved_RVs]
         self.vars = vars
         self.varnames = [var.name for var in vars]
         self.fn = model.fastfn(vars)
