@@ -1980,6 +1980,11 @@ class TestMatchesScipy:
         sample = dist.random(size=2)
         assert_allclose(sample, np.stack([vals, vals], axis=0))
 
+    def test_multinomial_logp(self):
+        with pm.Model() as m:
+            label = pm.Multinomial("m", n=1, p=[0, 0.05, 0.95], observed=[0, 1, 0])
+            assert_almost_equal(label.logp(), -2.9957323)
+
     @pytest.mark.parametrize("n", [2, 3])
     def test_dirichlet_multinomial(self, n):
         self.check_logp(
