@@ -34,6 +34,7 @@ def sample_nf_smc(
     frac_validate=0.1,
     alpha=(0,0),
     k_trunc=0.25,
+    epsilon=1e-3,
     verbose=False,
     n_component=None,
     interp_nbin=None,
@@ -169,6 +170,7 @@ def sample_nf_smc(
         frac_validate,
         alpha,
         k_trunc,
+        epsilon,
         verbose,
         n_component,
         interp_nbin,
@@ -223,6 +225,7 @@ def sample_nf_smc_int(
     frac_validate,
     alpha,
     k_trunc,
+    epsilon,
     verbose,
     n_component,
     interp_nbin,
@@ -251,6 +254,7 @@ def sample_nf_smc_int(
         frac_validate=frac_validate,
         alpha=alpha,
         k_trunc=k_trunc,
+        epsilon=epsilon,
         verbose=verbose,
         n_component=n_component,
         interp_nbin=interp_nbin,
@@ -275,19 +279,18 @@ def sample_nf_smc_int(
 
     nf_smc.initialize_population()
     nf_smc.setup_logp()
-    nf_smc.get_logp()
-    #nf_smc.fit_nf()
+    nf_smc.get_nf_logp()
+    nf_smc.get_full_logp()
 
     while nf_smc.beta < 1:
         nf_smc.update_weights_beta()
         if _log is not None:
             _log.info(f"Stage: {stage:3d} Beta: {nf_smc.beta:.3f}")
         nf_smc.fit_nf()
-        nf_smc.get_logp()
-        nf_smc.resample_nf_iw()
+        nf_smc.get_nf_logp()
+        nf_smc.get_full_logp()
         stage += 1
         betas.append(nf_smc.beta)
-    print(np.mean(nf_smc.raw_weights))
     nf_smc.resample()
 
     return (

@@ -49,6 +49,7 @@ class NF_SMC:
         frac_validate=0.1,
         alpha=(0,0),
         k_trunc=0.25,
+        epsilon=1e-3,
         verbose=False,
         n_component=None,
 	interp_nbin=None,
@@ -75,6 +76,7 @@ class NF_SMC:
         self.frac_validate = frac_validate
         self.alpha = alpha
         self.k_trunc = k_trunc
+        self.epsilon = epsilon
         self.verbose = verbose
         self.n_component = n_component
         self.interp_nbin = interp_nbin
@@ -99,6 +101,7 @@ class NF_SMC:
         self.beta = 0
         self.variables = inputvars(self.model.vars)
         self.weights = np.ones(self.draws) / self.draws
+        self.sinf_logq = np.array([])
         self.log_marginal_likelihood = 0
 
     def initialize_population(self):
@@ -124,9 +127,10 @@ class NF_SMC:
             point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
             population.append(self.model.dict_to_array(point))
 
-        self.posterior = np.array(floatX(population))
+        self.nf_samples = np.array(floatX(population))
+        self.posterior = np.copy(self.nf_samples)
         self.var_info = var_info
-
+        
     def setup_logp(self):
         """Set up the likelihood logp function based on the chosen kernel."""
         shared = make_shared_replacements(self.variables, self.model)
@@ -134,8 +138,17 @@ class NF_SMC:
         self.prior_logp_func = logp_forw([self.model.varlogpt], self.variables, shared)
         self.likelihood_logp_func = logp_forw([self.model.datalogpt], self.variables, shared)
 
-    def get_logp(self):
-        """Get the prior, likelihood and tempered posterior log probabilities."""
+    def get_nf_logp(self):
+        """Get the prior, likelihood and tempered posterior log probabilities, for the current NF samples."""
+        priors = [self.prior_logp_func(sample) for sample in self.nf_samples]
+        likelihoods = [self.likelihood_logp_func(sample) for sample in self.nf_samples]
+
+        self.nf_prior_logp = np.array(priors).squeeze()
+        self.nf_likelihood_logp = np.array(likelihoods).squeeze()
+        self.nf_posterior_logp = self.nf_prior_logp + self.nf_likelihood_logp * self.beta
+
+    def get_full_logp(self):
+        """Get the prior, likelihood and tempered posterior log probabilities, for the full sample set."""
         priors = [self.prior_logp_func(sample) for sample in self.posterior]
         likelihoods = [self.likelihood_logp_func(sample) for sample in self.posterior]
 
@@ -151,8 +164,17 @@ class NF_SMC:
         """
         low_beta = old_beta = self.beta
         up_beta = 2.0
-        rN = int(len(self.likelihood_logp) * self.threshold)
+        rN = int(len(self.nf_likelihood_logp) * self.threshold)
 
+        if self.beta == 0:
+            self.sinf_logq = np.append(self.sinf_logq, self.nf_prior_logp)
+            log_weights_q = np.ones_like(self.nf_prior_logp) / self.draws
+        else:
+            log_weights_q = self.nf_prior_logp + self.nf_likelihood_logp * self.beta - self.logq
+            log_weights_q = np.clip(log_weights_q, a_min=None,
+                                    a_max=np.log(np.mean(np.exp(log_weights_q))) + self.k_trunc * np.log(self.draws))
+            log_weights_q = log_weights_q - logsumexp(log_weights_q)
+        
         while up_beta - low_beta > 1e-6:
             new_beta = (low_beta + up_beta) / 2.0
             '''
@@ -161,9 +183,10 @@ class NF_SMC:
             else:
                 log_weights_un = self.prior_logp + self.likelihood_logp * new_beta - self.logq
             '''
-            log_weights_un = (new_beta - old_beta) * self.likelihood_logp
+            log_weights_un = (new_beta - old_beta) * self.nf_likelihood_logp
             log_weights = log_weights_un - logsumexp(log_weights_un)
-            ESS = int(np.exp(-logsumexp(log_weights * 2)))
+            
+            ESS = int(np.exp(-logsumexp(log_weights_q + log_weights * 2)) / self.draws)
             if ESS == rN:
                 break
             elif ESS < rN:
@@ -172,24 +195,41 @@ class NF_SMC:
                 low_beta = new_beta
         if new_beta >= 1:
             new_beta = 1
-            log_weights_un = (new_beta - old_beta) * self.likelihood_logp
+            log_weights_un = (new_beta - old_beta) * self.nf_likelihood_logp
             #log_weights_un = self.prior_logp + self.likelihood_logp * new_beta - self.logq
             log_weights = log_weights_un - logsumexp(log_weights_un)
 
         self.log_marginal_likelihood += logsumexp(log_weights_un) - np.log(self.draws)
         self.beta = new_beta
         self.weights = np.exp(log_weights)
+        
         # We normalize again to correct for small numerical errors that might build up
         self.weights /= self.weights.sum()
+
+        self.sinf_weights = np.exp(self.prior_logp + self.likelihood_logp * self.beta - self.sinf_logq)
+        self.sinf_weights = np.clip(self.sinf_weights, 0, np.mean(self.sinf_weights) * len(self.sinf_weights)**self.k_trunc)
+
+        low_weight_idx = np.where(self.sinf_weights < np.mean(self.sinf_weights) * self.epsilon)[0]
+        self.sinf_weights = np.delete(self.sinf_weights, low_weight_idx)
+        self.posterior = np.delete(self.posterior, low_weight_idx, axis=0)
+        self.sinf_logq = np.delete(self.sinf_logq, low_weight_idx)
+        self.sinf_weights /= self.sinf_weights.sum()
+        
         if old_beta == 0:
-            self.raw_weights = np.exp((new_beta - old_beta) * self.likelihood_logp)
+            self.raw_weights = np.exp((new_beta - old_beta) * self.nf_likelihood_logp)
         else:
-            self.raw_weights = np.exp(self.prior_logp + self.likelihood_logp * new_beta - self.logq)
+            log_raw_weights = self.nf_prior_logp + self.nf_likelihood_logp * self.beta - self.logq
+            log_raw_weights = np.clip(log_raw_weights, a_min=None,
+                                      a_max=np.log(np.mean(np.exp(log_raw_weights))) + self.k_trunc * np.log(self.draws))
+            self.raw_weights = np.exp(log_raw_weights)
 
     def resample(self):
         """Resample particles based on importance weights."""
+        self.sinf_weights = np.exp(self.prior_logp + self.likelihood_logp * self.beta - self.sinf_logq)
+        self.sinf_weights = np.clip(self.sinf_weights, 0, np.mean(self.sinf_weights) * len(self.sinf_weights)**self.k_trunc)
+        self.sinf_weights /= self.sinf_weights.sum()
         resampling_indexes = np.random.choice(
-            np.arange(self.draws), size=self.draws, p=self.weights
+            np.arange(self.posterior.shape[0]), size=self.draws, p=self.sinf_weights
         )
 
         self.posterior = self.posterior[resampling_indexes]
@@ -199,22 +239,26 @@ class NF_SMC:
         
     def fit_nf(self):
         """Fit an NF approximation to the current tempered posterior."""
-        val_idx = int((1 - self.frac_validate) * self.posterior.shape[0])
-
-        self.nf_model = GIS(torch.from_numpy(self.posterior[:val_idx, ...].astype(np.float32)),
-                            torch.from_numpy(self.posterior[val_idx:, ...].astype(np.float32)),
-                            weight_train=torch.from_numpy(self.weights[:val_idx, ...].astype(np.float32)),
-                            weight_validate=torch.from_numpy(self.weights[val_idx:, ...].astype(np.float32)),
+        num_val = int(self.frac_validate * self.posterior.shape[0])
+        val_idx = np.random.choice(np.arange(self.posterior.shape[0]), size=num_val, replace=False)
+        fit_idx = np.delete(np.arange(self.posterior.shape[0]), val_idx)
+        
+        self.nf_model = GIS(torch.from_numpy(self.posterior[fit_idx, ...].astype(np.float32)),
+                            torch.from_numpy(self.posterior[val_idx, ...].astype(np.float32)),
+                            weight_train=torch.from_numpy(self.sinf_weights[fit_idx, ...].astype(np.float32)),
+                            weight_validate=torch.from_numpy(self.sinf_weights[val_idx, ...].astype(np.float32)),
                             alpha=self.alpha, verbose=self.verbose, n_component=self.n_component,
                             interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=self.bw_factor,
                             edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
                             NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
                             batchsize=self.batchsize, nocuda=self.nocuda, patch=self.patch, shape=self.shape)
 
-        self.posterior, self.logq = self.nf_model.sample(10*self.draws, device=torch.device('cpu'))
-        self.posterior = self.posterior.numpy().astype(np.float64)
+        self.nf_samples, self.logq = self.nf_model.sample(self.draws, device=torch.device('cpu'))
+        self.nf_samples = self.nf_samples.numpy().astype(np.float64)
+        self.posterior = np.append(self.posterior, self.nf_samples, axis=0)
         self.logq = self.logq.numpy().astype(np.float64)
-
+        self.sinf_logq = np.append(self.sinf_logq, self.logq)
+        
     def resample_nf_iw(self):
         """Resample the NF samples at a given iteration, applying IW correction to account for
         mis-match between NF fit and the current tempered posterior."""
