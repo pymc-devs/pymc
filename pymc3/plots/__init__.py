@@ -12,11 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""PyMC3 Plotting.
+"""Alias for the `plots` submodule from ArviZ.
 
 Plots are delegated to the ArviZ library, a general purpose library for
-"exploratory analysis of Bayesian models." See https://arviz-devs.github.io/arviz/
-for details on plots.
+"exploratory analysis of Bayesian models."
+See https://arviz-devs.github.io/arviz/ for details on plots.
 """
 import functools
 import sys
@@ -24,47 +24,49 @@ import warnings
 
 import arviz as az
 
+# Makes this module as identical to arviz.plots as possible
+for attr in dir(az.plots):
+    obj = getattr(az.plots, attr)
+    if not attr.startswith("__"):
+        setattr(sys.modules[__name__], attr, obj)
 
-def map_args(func):
-    swaps = [("varnames", "var_names")]
 
+def map_args(func, alias: str):
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
-        for (old, new) in swaps:
-            if old in kwargs and new not in kwargs:
-                warnings.warn(
-                    f"Keyword argument `{old}` renamed to `{new}`, and will be removed in pymc3 3.8"
-                )
-                kwargs[new] = kwargs.pop(old)
-            return func(*args, **kwargs)
+        if "varnames" in kwargs:
+            raise DeprecationWarning(f"The `varnames` kwarg was renamed to `var_names`.")
+        original = func.__name__
+        warnings.warn(
+            f"The function `{alias}` from PyMC3 is just an alias for `{original}` from ArviZ. "
+            f"Please switch to `pymc3.{original}` or `arviz.{original}`.",
+            DeprecationWarning,
+        )
+        return func(*args, **kwargs)
 
     return wrapped
 
 
-# pymc3 custom plots: override these names for custom behavior
-autocorrplot = map_args(az.plot_autocorr)
-forestplot = map_args(az.plot_forest)
-kdeplot = map_args(az.plot_kde)
-plot_posterior = map_args(az.plot_posterior)
-energyplot = map_args(az.plot_energy)
-densityplot = map_args(az.plot_density)
-pairplot = map_args(az.plot_pair)
-
-# Use compact traceplot by default
-@map_args
-@functools.wraps(az.plot_trace)
-def traceplot(*args, **kwargs):
-    try:
-        kwargs.setdefault("compact", True)
-        return az.plot_trace(*args, **kwargs)
-    except TypeError:
-        kwargs.pop("compact")
-        return az.plot_trace(*args, **kwargs)
+# Aliases of ArviZ functions
+autocorrplot = map_args(az.plot_autocorr, alias="autocorrplot")
+forestplot = map_args(az.plot_forest, alias="forestplot")
+kdeplot = map_args(az.plot_kde, alias="kdeplot")
+plot_posterior = map_args(az.plot_posterior, alias="plot_posterior")
+energyplot = map_args(az.plot_energy, alias="energyplot")
+densityplot = map_args(az.plot_density, alias="densityplot")
+pairplot = map_args(az.plot_pair, alias="pairplot")
+traceplot = map_args(az.plot_trace, alias="traceplot")
 
 
-# addition arg mapping for compare plot
+# Customized with kwarg reformatting
 @functools.wraps(az.plot_compare)
 def compareplot(*args, **kwargs):
+    warnings.warn(
+        f"The function `compareplot` from PyMC3 is an alias for `plot_compare` from ArviZ. "
+        "It also applies some kwarg replacements. Nevertheless, please switch "
+        f"to `pymc3.plot_compare` or `arviz.plot_compare`.",
+        DeprecationWarning,
+    )
     if "comp_df" in kwargs:
         comp_df = kwargs["comp_df"].copy()
     else:
@@ -102,10 +104,6 @@ def compareplot(*args, **kwargs):
 
 
 from pymc3.plots.posteriorplot import plot_posterior_predictive_glm
-
-# Access to arviz plots: base plots provided by arviz
-for plot in az.plots.__all__:
-    setattr(sys.modules[__name__], plot, map_args(getattr(az.plots, plot)))
 
 __all__ = tuple(az.plots.__all__) + (
     "autocorrplot",

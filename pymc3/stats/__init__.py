@@ -12,58 +12,20 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Statistical utility functions for PyMC3
+"""Alias for the `stats` submodule from ArviZ.
 
 Diagnostics and auxiliary statistical functions are delegated to the ArviZ library, a general
-purpose library for "exploratory analysis of Bayesian models." See
-https://arviz-devs.github.io/arviz/ for details.
+purpose library for "exploratory analysis of Bayesian models."
+See https://arviz-devs.github.io/arviz/ for details.
 """
-import functools
-import warnings
+import sys
 
 import arviz as az
 
-
-def map_args(func):
-    swaps = [("varnames", "var_names")]
-
-    @functools.wraps(func)
-    def wrapped(*args, **kwargs):
-        for (old, new) in swaps:
-            if old in kwargs and new not in kwargs:
-                warnings.warn(
-                    "Keyword argument `{old}` renamed to `{new}`, and will be removed in "
-                    "pymc3 3.9".format(old=old, new=new)
-                )
-                kwargs[new] = kwargs.pop(old)
-            return func(*args, **kwargs)
-
-    return wrapped
+for attr in dir(az.stats):
+    obj = getattr(az.stats, attr)
+    if not attr.startswith("__"):
+        setattr(sys.modules[__name__], attr, obj)
 
 
-bfmi = map_args(az.bfmi)
-compare = map_args(az.compare)
-ess = map_args(az.ess)
-geweke = map_args(az.geweke)
-hpd = map_args(az.hpd)
-loo = map_args(az.loo)
-mcse = map_args(az.mcse)
-r2_score = map_args(az.r2_score)
-rhat = map_args(az.rhat)
-summary = map_args(az.summary)
-waic = map_args(az.waic)
-
-
-__all__ = [
-    "bfmi",
-    "compare",
-    "ess",
-    "geweke",
-    "hpd",
-    "loo",
-    "mcse",
-    "r2_score",
-    "rhat",
-    "summary",
-    "waic",
-]
+__all__ = tuple(az.stats.__all__)
