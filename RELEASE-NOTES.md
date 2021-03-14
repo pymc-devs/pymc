@@ -1,12 +1,20 @@
 # Release Notes
 
-## PyMC3 vNext (TBD)
+## PyMC3 3.11.2 (TBD)
 ### Breaking Changes
 + ...
 
 ### New Features
 + `pm.math.cartesian` can now handle inputs that are themselves >1D (see [#4482](https://github.com/pymc-devs/pymc3/pull/4482)).
-+ ...
++ Statistics and plotting functions that were removed in `3.11.0` were brought back, albeit with deprecation warnings if an old naming scheme is used (see [#4536](https://github.com/pymc-devs/pymc3/pull/4536)). In order to future proof your code, rename these function calls:
+  + `pm.traceplot` → `pm.plot_trace`
+  + `pm.compareplot` → `pm.plot_compare` (here you might need to rename some columns in the input according to the [`arviz.plot_compare` documentation](https://arviz-devs.github.io/arviz/api/generated/arviz.plot_compare.html))
+  + `pm.autocorrplot` → `pm.plot_autocorr`
+  + `pm.forestplot` → `pm.plot_forest`
+  + `pm.kdeplot` → `pm.plot_kde`
+  + `pm.energyplot` → `pm.plot_energy`
+  + `pm.densityplot` → `pm.plot_density`
+  + `pm.pairplot` → `pm.plot_pair`
 
 ### Maintenance
 - ⚠ Our memoization mechanism wasn't robust against hash collisions (#4506), sometimes resulting in incorrect values in, for example, posterior predictives. The `pymc3.memoize` module was removed and replaced with `cachetools`.  The `hashable` function and `WithMemoization` class were moved to `pymc3.util` (see #4525).
