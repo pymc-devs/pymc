@@ -1,8 +1,6 @@
 # Release Notes
 
-## PyMC3 3.11.2 (TBD)
-### Breaking Changes
-+ ...
+## PyMC3 3.11.2 (14 March 2021)
 
 ### New Features
 + `pm.math.cartesian` can now handle inputs that are themselves >1D (see [#4482](https://github.com/pymc-devs/pymc3/pull/4482)).
@@ -17,8 +15,10 @@
   + `pm.pairplot` → `pm.plot_pair`
 
 ### Maintenance
-- ⚠ Our memoization mechanism wasn't robust against hash collisions (#4506), sometimes resulting in incorrect values in, for example, posterior predictives. The `pymc3.memoize` module was removed and replaced with `cachetools`.  The `hashable` function and `WithMemoization` class were moved to `pymc3.util` (see #4525).
+- ⚠ Our memoization mechanism wasn't robust against hash collisions ([#4506](https://github.com/pymc-devs/pymc3/issues/4506)), sometimes resulting in incorrect values in, for example, posterior predictives. The `pymc3.memoize` module was removed and replaced with `cachetools`.  The `hashable` function and `WithMemoization` class were moved to `pymc3.util` (see [#4525](https://github.com/pymc-devs/pymc3/pull/4525)).
 - `pm.make_shared_replacements` now retains broadcasting information which fixes issues with Metropolis samplers (see [#4492](https://github.com/pymc-devs/pymc3/pull/4492)).
+
+**Release manager** for 3.11.2: Michael Osthege ([@michaelosthege](https://github.com/michaelosthege))
 
 ## PyMC3 3.11.1 (12 February 2021)
 
