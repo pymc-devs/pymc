@@ -19,6 +19,9 @@ import logging
 import multiprocessing as mp
 import platform
 
+import semver
+import theano
+
 _log = logging.getLogger("pymc3")
 
 if not logging.root.handlers:
@@ -28,10 +31,18 @@ if not logging.root.handlers:
         _log.addHandler(handler)
 
 
+if not semver.match(theano.__version__, ">=1.1.2"):
+    print(
+        "!" * 60
+        + f"\nThe installed Theano(-PyMC) version ({theano.__version__}) does not match the PyMC3 requirements."
+        + "\nFor PyMC3 to work, Theano must be uninstalled and replaced with Theano-PyMC."
+        + "\nSee https://github.com/pymc-devs/pymc3/wiki for installation instructions.\n"
+        + "!" * 60
+    )
+
+
 def __set_compiler_flags():
     # Workarounds for Theano compiler problems on various platforms
-    import theano
-
     current = theano.config.gcc__cxxflags
     theano.config.gcc__cxxflags = f"{current} -Wno-c++11-narrowing"
 
