@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2021 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import sys
 
 import arviz as az
 
-for attr in dir(az.stats):
+for attr in az.stats.__all__:
     obj = getattr(az.stats, attr)
     if not attr.startswith("__"):
         setattr(sys.modules[__name__], attr, obj)

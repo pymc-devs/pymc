@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2021 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import warnings
 import arviz as az
 
 # Makes this module as identical to arviz.plots as possible
-for attr in dir(az.plots):
+for attr in az.plots.__all__:
     obj = getattr(az.plots, attr)
     if not attr.startswith("__"):
         setattr(sys.modules[__name__], attr, obj)
@@ -35,23 +35,29 @@ def map_args(func, alias: str):
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
         if "varnames" in kwargs:
-            raise DeprecationWarning(f"The `varnames` kwarg was renamed to `var_names`.")
+            raise DeprecationWarning(
+                f"The `varnames` kwarg was renamed to `var_names`.", stacklevel=2
+            )
         original = func.__name__
         warnings.warn(
             f"The function `{alias}` from PyMC3 is just an alias for `{original}` from ArviZ. "
             f"Please switch to `pymc3.{original}` or `arviz.{original}`.",
             DeprecationWarning,
+            stacklevel=2,
         )
         return func(*args, **kwargs)
 
     return wrapped
 
 
+# Always show the DeprecationWarnings
+warnings.filterwarnings("once", category=DeprecationWarning, module="pymc3.plots")
+
+
 # Aliases of ArviZ functions
 autocorrplot = map_args(az.plot_autocorr, alias="autocorrplot")
 forestplot = map_args(az.plot_forest, alias="forestplot")
 kdeplot = map_args(az.plot_kde, alias="kdeplot")
-plot_posterior = map_args(az.plot_posterior, alias="plot_posterior")
 energyplot = map_args(az.plot_energy, alias="energyplot")
 densityplot = map_args(az.plot_density, alias="densityplot")
 pairplot = map_args(az.plot_pair, alias="pairplot")
@@ -66,6 +72,7 @@ def compareplot(*args, **kwargs):
         "It also applies some kwarg replacements. Nevertheless, please switch "
         f"to `pymc3.plot_compare` or `arviz.plot_compare`.",
         DeprecationWarning,
+        stacklevel=2,
     )
     if "comp_df" in kwargs:
         comp_df = kwargs["comp_df"].copy()
