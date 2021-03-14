@@ -2667,6 +2667,17 @@ class TestBugfixes:
         assert actual_a.shape == (X.shape[0],)
         pass
 
+    def test_issue_4499(self):
+        # Test for bug in Uniform and DiscreteUniform logp when setting check_bounds = False
+        # https://github.com/pymc-devs/pymc3/issues/4499
+        with pm.Model(check_bounds=False) as m:
+            x = pm.Uniform("x", 0, 2, shape=10, transform=None)
+        assert_almost_equal(m.logp_array(np.ones(10)), -np.log(2) * 10)
+
+        with pm.Model(check_bounds=False) as m:
+            x = pm.DiscreteUniform("x", 0, 1, shape=10)
+        assert_almost_equal(m.logp_array(np.ones(10)), -np.log(2) * 10)
+
 
 def test_serialize_density_dist():
     def func(x):
