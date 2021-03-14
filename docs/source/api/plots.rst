@@ -7,8 +7,7 @@ Plots
 Plots are delegated to the
 `ArviZ <https://arviz-devs.github.io/arviz/index.html>`_.
 library, a general purpose library for
-"exploratory analysis of Bayesian models."
-Refer to its documentation to use the plotting functions directly.
+"exploratory analysis of Bayesian models".
 
-.. automodule:: pymc3.plots.posteriorplot
-   :members:
+Functions from the `arviz.plots` module are available through ``pymc3.<function>`` or ``pymc3.plots.<function>``,
+but for their API documentation please refer to the :ref:`ArviZ documentation <arviz:plot_api>`.
