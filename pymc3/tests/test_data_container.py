@@ -151,7 +151,7 @@ class TestData(SeededTest):
             v = pm.Normal("v", mu=shared_var, size=1)
 
         np.testing.assert_allclose(
-            logpt(v, 5.0).eval(),
+            logpt(v, np.r_[5.0]).eval(),
             -0.91893853,
             rtol=1e-5,
         )
@@ -159,7 +159,7 @@ class TestData(SeededTest):
         shared_var.set_value(10.0)
 
         np.testing.assert_allclose(
-            logpt(v, 10.0).eval(),
+            logpt(v, np.r_[10.0]).eval(),
             -0.91893853,
             rtol=1e-5,
         )
