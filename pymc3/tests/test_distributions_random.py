@@ -29,7 +29,7 @@ from scipy.special import expit
 import pymc3 as pm
 
 from pymc3.distributions.dist_math import clipped_beta_rvs
-from pymc3.distributions.distribution import to_tuple
+from pymc3.distributions.shape_utils import to_tuple
 from pymc3.exceptions import ShapeError
 from pymc3.tests.helpers import SeededTest
 from pymc3.tests.test_distributions import (
