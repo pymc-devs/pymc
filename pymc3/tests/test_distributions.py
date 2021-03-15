@@ -2861,6 +2861,6 @@ def test_hierarchical_logpt():
     # Make sure that hierarchical random variables are replaced with their
     # log-likelihood space variables in the log-likelhood
     logpt_ancestors = list(ancestors([m.logpt]))
-    assert not any(isinstance(v.owner.op, RandomVariable) for v in logpt_ancestors if v.owner)
+    assert not any(isinstance(v, RandomVariable) for v in logpt_ancestors)
     assert x.tag.value_var in logpt_ancestors
     assert y.tag.value_var in logpt_ancestors
