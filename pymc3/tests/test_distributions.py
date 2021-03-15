@@ -1871,18 +1871,26 @@ class TestMatchesScipy:
     def test_dirichlet_with_batch_shapes(self, dist_shape):
         a = np.ones(dist_shape)
         with pm.Model() as model:
-            d = pm.Dirichlet("a", a=a)
+            d = pm.Dirichlet("d", a=a)
 
-        pymc3_res = logpt(d, d.tag.test_value).eval()
+        d_value = d.tag.value_var
+        d_point = d.eval()
+        if hasattr(d_value.tag, "transform"):
+            d_point_trans = d_value.tag.transform.forward(d_point).eval()
+        else:
+            d_point_trans = d_point
+
+        pymc3_res = logpt(d, d_point_trans, jacobian=False).eval()
+        scipy_res = np.empty_like(pymc3_res)
         for idx in np.ndindex(a.shape[:-1]):
-            scipy_res = scipy.stats.dirichlet(a[idx]).logpdf(d.tag.test_value[idx])
-            assert_almost_equal(pymc3_res[idx], scipy_res)
+            scipy_res[idx] = scipy.stats.dirichlet(a[idx]).logpdf(d_point[idx])
+
+        assert_almost_equal(pymc3_res, scipy_res)
 
     def test_dirichlet_shape(self):
         a = at.as_tensor_variable(np.r_[1, 2])
-        with pytest.warns(DeprecationWarning):
-            dir_rv = Dirichlet.dist(a)
-            assert dir_rv.shape == (2,)
+        dir_rv = Dirichlet.dist(a)
+        assert dir_rv.shape.eval() == (2,)
 
         with pytest.warns(DeprecationWarning), aesara.change_flags(compute_test_value="ignore"):
             dir_rv = Dirichlet.dist(at.vector())

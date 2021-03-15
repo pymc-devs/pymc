@@ -40,7 +40,7 @@ from scipy import linalg, stats
 import pymc3 as pm
 
 from pymc3.aesaraf import floatX, intX
-from pymc3.distributions import _logp, transforms
+from pymc3.distributions import _logp, logp_transform, transforms
 from pymc3.distributions.continuous import ChiSquared, Normal
 from pymc3.distributions.dist_math import bound, factln, logpow
 from pymc3.distributions.distribution import Continuous, Discrete
@@ -460,7 +460,6 @@ class Dirichlet(Continuous):
     """
 
     rv_op = dirichlet
-    default_transform = transforms.stick_breaking
 
     @classmethod
     def dist(cls, a, **kwargs):
@@ -473,6 +472,17 @@ class Dirichlet(Continuous):
 
     def _distr_parameters_for_repr(self):
         return ["a"]
+
+
+@logp_transform.register(DirichletRV)
+def dirichlet_transform(op, rv_var):
+
+    if rv_var.ndim == 1 or rv_var.broadcastable[-1]:
+        # If this variable is just a bunch of scalars/degenerate
+        # Dirichlets, we can't transform it
+        return None
+
+    return transforms.stick_breaking
 
 
 @_logp.register(DirichletRV)
