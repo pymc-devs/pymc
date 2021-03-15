@@ -313,22 +313,20 @@ def logpt(
     # (signified by having a `transform` value in their tags), then we apply
     # the their transforms and add their Jacobians (when enabled)
     if transform:
-        logp_var = _logp(rv_node.op, transform.backward(rv_value_var), *dist_params, **kwargs)
+        logp_var = _logp(rv_node.op, transform.backward(rv_value), *dist_params, **kwargs)
         logp_var = transform_logp(
             logp_var,
             tuple(replacements.values()),
         )
 
         if jacobian:
-            transformed_jacobian = transform.jacobian_det(rv_value_var)
+            transformed_jacobian = transform.jacobian_det(rv_value)
             if transformed_jacobian:
                 if logp_var.ndim > transformed_jacobian.ndim:
                     logp_var = logp_var.sum(axis=-1)
                 logp_var += transformed_jacobian
     else:
-        logp_var = _logp(rv_node.op, rv_value_var, *dist_params, **kwargs)
-
-    (logp_var,) = clone_replace([logp_var], replace={rv_value_var: rv_value})
+        logp_var = _logp(rv_node.op, rv_value, *dist_params, **kwargs)
 
     if scaling:
         logp_var *= _get_scaling(
