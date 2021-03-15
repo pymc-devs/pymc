@@ -381,7 +381,7 @@ def logcdf(rv_var, rv_value, jacobian=True, **kwargs):
     if not rv_node:
         raise TypeError()
 
-    rv_value = aet.as_tensor(rv_value)
+    rv_value = at.as_tensor(rv_value)
 
     rng, size, dtype, *dist_params = rv_node.inputs
 
