@@ -267,6 +267,9 @@ def logpt(
     else:
         rv_value = at.as_tensor(rv_value)
 
+    if rv_value_var is None:
+        rv_value_var = rv_value
+
     rv_node = rv_var.owner
 
     if not rv_node:
@@ -297,9 +300,6 @@ def logpt(
             return logp_var
 
         return at.zeros_like(rv_var)
-
-    if rv_value_var is None:
-        raise NotImplementedError(f"The log-likelihood for {rv_var} is undefined")
 
     # This case should be reached when `rv_var` is either the result of an
     # `Observed` or a `RandomVariable` `Op`
@@ -375,11 +375,13 @@ def _logp(op, value, *dist_params, **kwargs):
 def logcdf(rv_var, rv_value, jacobian=True, **kwargs):
     """Create a log-CDF graph."""
 
-    rv_var, rv_value = rv_log_likelihood_args(rv_var)
+    rv_var, _ = rv_log_likelihood_args(rv_var)
     rv_node = rv_var.owner
 
     if not rv_node:
         raise TypeError()
+
+    rv_value = aet.as_tensor(rv_value)
 
     rng, size, dtype, *dist_params = rv_node.inputs
 
