@@ -3,7 +3,7 @@
     :alt: PyMC3 logo
     :align: center
 
-|Build Status| |Coverage| |NumFOCUS_badge| |Binder| |Dockerhub|
+|Build Status| |Coverage| |NumFOCUS_badge| |Binder| |Dockerhub| |DOIzenodo|
 
 PyMC3 is a Python package for Bayesian statistical modeling and Probabilistic Machine Learning
 focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (VI)
@@ -74,10 +74,16 @@ To install PyMC3 on your system, follow the instructions on the appropriate inst
 
 Citing PyMC3
 ============
+Please choose from the following:
 
-Salvatier J., Wiecki T.V., Fonnesbeck C. (2016) Probabilistic programming
-in Python using PyMC3. PeerJ Computer Science 2:e55
-`DOI: 10.7717/peerj-cs.55 <https://doi.org/10.7717/peerj-cs.55>`__.
+- |DOIpaper| *Probabilistic programming in Python using PyMC3*, Salvatier J., Wiecki T.V., Fonnesbeck C. (2016)
+- |DOIzenodo| A DOI for all versions.
+- DOIs for specific versions are shown on Zenodo and under `Releases <https://github.com/pymc-devs/pymc3/releases>`_
+
+.. |DOIpaper| image:: https://img.shields.io/badge/DOI-10.7717%2Fpeerj--cs.55-blue
+     :target: https://doi.org/10.7717/peerj-cs.55
+.. |DOIzenodo| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4603970.svg
+   :target: https://doi.org/10.5281/zenodo.4603970
 
 Contact
 =======
