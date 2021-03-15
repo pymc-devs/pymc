@@ -234,7 +234,6 @@ def logpt(
     rv_var: TensorVariable,
     rv_value: Optional[TensorVariable] = None,
     jacobian: Optional[bool] = True,
-    transformed: Optional[bool] = True,
     scaling: Optional[bool] = True,
     **kwargs,
 ) -> TensorVariable:
@@ -256,8 +255,6 @@ def logpt(
         when available, used.
     jacobian
         Whether or not to include the Jacobian term.
-    transformed
-        Return the transformed version of the log-likelihood graph.
     scaling
         A scaling term to apply to the generated log-likelihood graph.
 
@@ -310,27 +307,28 @@ def logpt(
 
     dist_params, replacements = sample_to_measure_vars(dist_params)
 
-    logp_var = _logp(rv_node.op, rv_value_var, *dist_params, **kwargs)
+    transform = getattr(rv_value_var.tag, "transform", None)
 
     # If any of the measure vars are transformed measure-space variables
     # (signified by having a `transform` value in their tags), then we apply
     # the their transforms and add their Jacobians (when enabled)
-    if transformed:
+    if transform:
+        logp_var = _logp(rv_node.op, transform.backward(rv_value_var), *dist_params, **kwargs)
         logp_var = transform_logp(
             logp_var,
-            tuple(replacements.values()) + (rv_value_var,),
+            tuple(replacements.values()),
         )
 
-        transform = getattr(rv_value_var.tag, "transform", None)
-
-        if transform and jacobian:
+        if jacobian:
             transformed_jacobian = transform.jacobian_det(rv_value_var)
             if transformed_jacobian:
                 if logp_var.ndim > transformed_jacobian.ndim:
                     logp_var = logp_var.sum(axis=-1)
                 logp_var += transformed_jacobian
+    else:
+        logp_var = _logp(rv_node.op, rv_value_var, *dist_params, **kwargs)
 
-        (logp_var,) = clone_replace([logp_var], replace={rv_value_var: rv_value})
+    (logp_var,) = clone_replace([logp_var], replace={rv_value_var: rv_value})
 
     if scaling:
         logp_var *= _get_scaling(
@@ -374,7 +372,7 @@ def _logp(op, value, *dist_params, **kwargs):
     return at.zeros_like(value)
 
 
-def logcdf(rv_var, rv_value, transformed=True, jacobian=True, **kwargs):
+def logcdf(rv_var, rv_value, jacobian=True, **kwargs):
     """Create a log-CDF graph."""
 
     rv_var, rv_value = rv_log_likelihood_args(rv_var)
@@ -388,11 +386,6 @@ def logcdf(rv_var, rv_value, transformed=True, jacobian=True, **kwargs):
     dist_params, replacements = sample_to_measure_vars(dist_params)
 
     logp_var = _logcdf(rv_node.op, rv_value, *dist_params, **kwargs)
-
-    if transformed:
-        logp_var = transform_logp(
-            logp_var, tuple(replacements.values()) + (rv_value,), jacobian=jacobian
-        )
 
     return logp_var
 
