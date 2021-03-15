@@ -2536,6 +2536,9 @@ class Gamma(PositiveContinuous):
         return ["alpha", "beta"]
 
 
+PositiveContinuous.register(GammaRV)
+
+
 @_logp.register(GammaRV)
 def gamma_logp(op, value, alpha, beta):
     """
