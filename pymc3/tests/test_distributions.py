@@ -996,6 +996,27 @@ class TestMatchesScipy:
             lambda value, nu: sp.chi2.logpdf(value, df=nu),
         )
 
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
+    )
+    def test_wald_scipy(self):
+        self.check_logp(
+            Wald,
+            Rplus,
+            {"mu": Rplus, "alpha": Rplus},
+            lambda value, mu, alpha: sp.invgauss.logpdf(value, mu=mu, loc=alpha),
+            decimal=select_by_precision(float64=6, float32=1),
+        )
+        self.check_logcdf(
+            Wald,
+            Rplus,
+            {"mu": Rplus, "alpha": Rplus},
+            lambda value, mu, alpha: sp.invgauss.logcdf(value, mu=mu, loc=alpha),
+        )
+
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.parametrize(
         "value,mu,lam,phi,alpha,logp",
         [
@@ -1187,6 +1208,7 @@ class TestMatchesScipy:
             n_samples=10,
         )
 
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.parametrize(
         "mu, p, alpha, n, expected",
         [
@@ -1202,7 +1224,6 @@ class TestMatchesScipy:
             (5, 0.5, None, 2, "Can't specify both mu and p."),
         ],
     )
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_negative_binomial_init_fail(self, mu, p, alpha, n, expected):
         with Model():
             with pytest.raises(ValueError, match=f"Incompatible parametrization. {expected}"):
@@ -1638,6 +1659,7 @@ class TestMatchesScipy:
             n_samples=10,
         )
 
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_mvnormal(self, n):
         self.check_logp(
