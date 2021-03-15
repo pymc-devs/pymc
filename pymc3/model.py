@@ -893,7 +893,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             with self:
                 free_RVs_logp = at.sum(
                     [
-                        at.sum(logpt(var, getattr(var.tag, "value_var", None), transformed=True))
+                        at.sum(logpt(var, getattr(var.tag, "value_var", None)))
                         for var in self.free_RVs + self.potentials
                     ]
                 )
@@ -911,10 +911,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def logpt(self):
         """Aesara scalar of log-probability of the model"""
         with self:
-            factors = [
-                logpt_sum(var, getattr(var.tag, "value_var", None), transformed=True)
-                for var in self.free_RVs
-            ]
+            factors = [logpt_sum(var, getattr(var.tag, "value_var", None)) for var in self.free_RVs]
             factors += [logpt_sum(obs) for obs in self.observed_RVs]
             factors += self.potentials
             logp_var = at.sum([at.sum(factor) for factor in factors])
@@ -934,9 +931,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """
         with self:
             factors = [
-                logpt_sum(
-                    var, getattr(var.tag, "value_var", None), jacobian=False, transformed=True
-                )
+                logpt_sum(var, getattr(var.tag, "value_var", None), jacobian=False)
                 for var in self.free_RVs
             ]
             factors += [logpt_sum(obs, jacobian=False) for obs in self.observed_RVs]
@@ -953,10 +948,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """Aesara scalar of log-probability of the unobserved random variables
         (excluding deterministic)."""
         with self:
-            factors = [
-                logpt_sum(var, getattr(var.tag, "value_var", None), transformed=True)
-                for var in self.free_RVs
-            ]
+            factors = [logpt_sum(var, getattr(var.tag, "value_var", None)) for var in self.free_RVs]
             return at.sum(factors)
 
     @property
