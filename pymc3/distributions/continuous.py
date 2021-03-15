@@ -110,18 +110,18 @@ class BoundedContinuous(Continuous):
 
 
 @logp_transform.register(PositiveContinuous)
-def pos_cont_transform(op, inputs):
+def pos_cont_transform(op, rv_var):
     return transforms.log
 
 
 @logp_transform.register(UnitContinuous)
-def unit_cont_transform(op, inputs):
+def unit_cont_transform(op, rv_var):
     return transforms.logodds
 
 
 @logp_transform.register(BoundedContinuous)
-def bounded_cont_transform(op, inputs):
-    _, _, _, lower, upper = inputs
+def bounded_cont_transform(op, rv_var):
+    _, _, _, lower, upper = rv_var.owner.inputs
     lower = at.as_tensor_variable(lower) if lower is not None else None
     upper = at.as_tensor_variable(upper) if upper is not None else None
 

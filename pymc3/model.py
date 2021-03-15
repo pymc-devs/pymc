@@ -1087,7 +1087,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.free_RVs.append(rv_var)
             value_var = rv_var.clone()
 
-            transform = transform or logp_transform(rv_var.owner.op, rv_var.owner.inputs)
+            transform = transform or logp_transform(rv_var.owner.op, rv_var)
+
             if transform is not None:
                 value_var.tag.transform = transform
                 value_var.name = f"{rv_var.name}_{transform.name}"
