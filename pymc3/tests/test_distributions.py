@@ -751,7 +751,7 @@ class TestMatchesScipy:
                         # otherwise, we won't be able to create the
                         # `RandomVariable`
                         with aesara.config.change_flags(compute_test_value="off"):
-                            invalid_dist = pymc3_dist.dist(no_assert=True, **test_params)
+                            invalid_dist = pymc3_dist.dist(**test_params)
                         with aesara.config.change_flags(mode=Mode("py")):
                             assert_equal(
                                 logcdf(invalid_dist, valid_value).eval(),
@@ -971,7 +971,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=1),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_half_normal(self):
         self.check_logp(
             HalfNormal,
@@ -1047,6 +1046,7 @@ class TestMatchesScipy:
         decimals = select_by_precision(float64=6, float32=1)
         assert_almost_equal(model.fastlogp(pt), logp, decimal=decimals, err_msg=str(pt))
 
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_wald_logp(self):
         self.check_logp(
             Wald,
@@ -1095,7 +1095,6 @@ class TestMatchesScipy:
 
         self.check_logp(Kumaraswamy, Unit, {"a": Rplus, "b": Rplus}, scipy_log_pdf)
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_exponential(self):
         self.check_logp(
             Exponential,
@@ -1284,7 +1283,6 @@ class TestMatchesScipy:
             n_samples=10,
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_cauchy(self):
         self.check_logp(
             Cauchy,
@@ -1299,7 +1297,6 @@ class TestMatchesScipy:
             lambda value, alpha, beta: sp.cauchy.logcdf(value, alpha, beta),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_half_cauchy(self):
         self.check_logp(
             HalfCauchy,
@@ -1348,11 +1345,6 @@ class TestMatchesScipy:
             skip_paramdomain_outside_edge_test=True,
         )
 
-    @pytest.mark.xfail(
-        condition=(aesara.config.floatX == "float32"),
-        reason="Fails on float32 due to numerical issues",
-    )
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_inverse_gamma_logp(self):
         self.check_logp(
             InverseGamma,

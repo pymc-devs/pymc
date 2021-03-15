@@ -15,7 +15,7 @@ import warnings
 
 from copy import copy
 
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from aesara.tensor.random.basic import BinomialRV, CategoricalRV, binomial, categorical
@@ -109,9 +109,9 @@ class Binomial(Discrete):
 
     @classmethod
     def dist(cls, n, p, *args, **kwargs):
-        n = aet.as_tensor_variable(intX(n))
-        p = aet.as_tensor_variable(floatX(p))
-        # mode = aet.cast(tround(n * p), self.dtype)
+        n = at.as_tensor_variable(intX(n))
+        p = at.as_tensor_variable(floatX(p))
+        # mode = at.cast(tround(n * p), self.dtype)
         return super().dist([n, p], **kwargs)
 
 
@@ -160,12 +160,12 @@ def binomial_logcdf(op, value, n, p):
             f"Binomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
         )
 
-    value = aet.floor(value)
+    value = at.floor(value)
 
     return bound(
-        aet.switch(
-            aet.lt(value, n),
-            aet.log(incomplete_beta(n - value, value + 1, 1 - p)),
+        at.switch(
+            at.lt(value, n),
+            at.log(incomplete_beta(n - value, value + 1, 1 - p)),
             0,
         ),
         0 <= value,
@@ -233,10 +233,10 @@ class BetaBinomial(Discrete):
 
     def __init__(self, alpha, beta, n, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
-        self.beta = beta = aet.as_tensor_variable(floatX(beta))
-        self.n = n = aet.as_tensor_variable(intX(n))
-        self.mode = aet.cast(tround(alpha / (alpha + beta)), "int8")
+        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
+        self.beta = beta = at.as_tensor_variable(floatX(beta))
+        self.n = n = at.as_tensor_variable(intX(n))
+        self.mode = at.cast(tround(alpha / (alpha + beta)), "int8")
 
     def _random(self, alpha, beta, n, size=None):
         size = size or ()
@@ -331,12 +331,12 @@ class BetaBinomial(Discrete):
         alpha = self.alpha
         beta = self.beta
         n = self.n
-        safe_lower = aet.switch(aet.lt(value, 0), value, 0)
+        safe_lower = at.switch(at.lt(value, 0), value, 0)
 
         return bound(
-            aet.switch(
-                aet.lt(value, n),
-                logsumexp(self.logp(aet.arange(safe_lower, value + 1)), keepdims=False),
+            at.switch(
+                at.lt(value, n),
+                logsumexp(self.logp(at.arange(safe_lower, value + 1)), keepdims=False),
                 0,
             ),
             0 <= value,
@@ -393,14 +393,14 @@ class Bernoulli(Discrete):
             raise ValueError("Specify one of p and logit_p")
         if p is not None:
             self._is_logit = False
-            self.p = p = aet.as_tensor_variable(floatX(p))
+            self.p = p = at.as_tensor_variable(floatX(p))
             self._logit_p = logit(p)
         else:
             self._is_logit = True
-            self.p = aet.nnet.sigmoid(floatX(logit_p))
-            self._logit_p = aet.as_tensor_variable(logit_p)
+            self.p = at.nnet.sigmoid(floatX(logit_p))
+            self._logit_p = at.as_tensor_variable(logit_p)
 
-        self.mode = aet.cast(tround(self.p), "int8")
+        self.mode = at.cast(tround(self.p), "int8")
 
     def random(self, point=None, size=None):
         r"""
@@ -438,12 +438,12 @@ class Bernoulli(Discrete):
         TensorVariable
         """
         if self._is_logit:
-            lp = aet.switch(value, self._logit_p, -self._logit_p)
+            lp = at.switch(value, self._logit_p, -self._logit_p)
             return -log1pexp(-lp)
         else:
             p = self.p
             return bound(
-                aet.switch(value, aet.log(p), aet.log(1 - p)),
+                at.switch(value, at.log(p), at.log(1 - p)),
                 value >= 0,
                 value <= 1,
                 p >= 0,
@@ -468,9 +468,9 @@ class Bernoulli(Discrete):
         p = self.p
 
         return bound(
-            aet.switch(
-                aet.lt(value, 1),
-                aet.log1p(-p),
+            at.switch(
+                at.lt(value, 1),
+                at.log1p(-p),
                 0,
             ),
             0 <= value,
@@ -525,8 +525,8 @@ class DiscreteWeibull(Discrete):
     def __init__(self, q, beta, *args, **kwargs):
         super().__init__(*args, defaults=("median",), **kwargs)
 
-        self.q = aet.as_tensor_variable(floatX(q))
-        self.beta = aet.as_tensor_variable(floatX(beta))
+        self.q = at.as_tensor_variable(floatX(q))
+        self.beta = at.as_tensor_variable(floatX(beta))
 
         self.median = self._ppf(0.5)
 
@@ -538,7 +538,7 @@ class DiscreteWeibull(Discrete):
         q = self.q
         beta = self.beta
 
-        return (aet.ceil(aet.power(aet.log(1 - p) / aet.log(q), 1.0 / beta)) - 1).astype("int64")
+        return (at.ceil(at.power(at.log(1 - p) / at.log(q), 1.0 / beta)) - 1).astype("int64")
 
     def _random(self, q, beta, size=None):
         p = np.random.uniform(size=size)
@@ -583,9 +583,7 @@ class DiscreteWeibull(Discrete):
         q = self.q
         beta = self.beta
         return bound(
-            aet.log(
-                aet.power(q, aet.power(value, beta)) - aet.power(q, aet.power(value + 1, beta))
-            ),
+            at.log(at.power(q, at.power(value, beta)) - at.power(q, at.power(value + 1, beta))),
             0 <= value,
             0 < q,
             q < 1,
@@ -611,7 +609,7 @@ class DiscreteWeibull(Discrete):
         beta = self.beta
 
         return bound(
-            aet.log1p(-aet.power(q, aet.power(value + 1, beta))),
+            at.log1p(-at.power(q, at.power(value + 1, beta))),
             0 <= value,
             0 < q,
             q < 1,
@@ -666,8 +664,8 @@ class Poisson(Discrete):
 
     def __init__(self, mu, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mu = mu = aet.as_tensor_variable(floatX(mu))
-        self.mode = intX(aet.floor(mu))
+        self.mu = mu = at.as_tensor_variable(floatX(mu))
+        self.mode = intX(at.floor(mu))
 
     def random(self, point=None, size=None):
         r"""
@@ -707,7 +705,7 @@ class Poisson(Discrete):
         mu = self.mu
         log_prob = bound(logpow(mu, value) - factln(value) - mu, mu >= 0, value >= 0)
         # Return zero when mu and value are both zero
-        return aet.switch(aet.eq(mu, 0) * aet.eq(value, 0), 0, log_prob)
+        return at.switch(at.eq(mu, 0) * at.eq(value, 0), 0, log_prob)
 
     def logcdf(self, value):
         """
@@ -725,13 +723,13 @@ class Poisson(Discrete):
         TensorVariable
         """
         mu = self.mu
-        value = aet.floor(value)
+        value = at.floor(value)
         # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
-        safe_mu = aet.switch(aet.lt(mu, 0), 0, mu)
-        safe_value = aet.switch(aet.lt(value, 0), 0, value)
+        safe_mu = at.switch(at.lt(mu, 0), 0, mu)
+        safe_value = at.switch(at.lt(value, 0), 0, value)
 
         return bound(
-            aet.log(aet.gammaincc(safe_value + 1, safe_mu)),
+            at.log(at.gammaincc(safe_value + 1, safe_mu)),
             0 <= value,
             0 <= mu,
         )
@@ -803,16 +801,16 @@ class NegativeBinomial(Discrete):
     def __init__(self, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         mu, alpha = self.get_mu_alpha(mu, alpha, p, n)
-        self.mu = mu = aet.as_tensor_variable(floatX(mu))
-        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
-        self.mode = intX(aet.floor(mu))
+        self.mu = mu = at.as_tensor_variable(floatX(mu))
+        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
+        self.mode = intX(at.floor(mu))
 
     def get_mu_alpha(self, mu=None, alpha=None, p=None, n=None):
         self._param_type = ["mu", "alpha"]
         if alpha is None:
             if n is not None:
                 self._param_type[1] = "n"
-                self.n = aet.as_tensor_variable(intX(n))
+                self.n = at.as_tensor_variable(intX(n))
                 alpha = n
             else:
                 raise ValueError("Incompatible parametrization. Must specify either alpha or n.")
@@ -822,7 +820,7 @@ class NegativeBinomial(Discrete):
         if mu is None:
             if p is not None:
                 self._param_type[0] = "p"
-                self.p = aet.as_tensor_variable(floatX(p))
+                self.p = at.as_tensor_variable(floatX(p))
                 mu = alpha * (1 - p) / p
             else:
                 raise ValueError("Incompatible parametrization. Must specify either mu or p.")
@@ -892,7 +890,7 @@ class NegativeBinomial(Discrete):
         )
 
         # Return Poisson when alpha gets very large.
-        return aet.switch(aet.gt(alpha, 1e10), Poisson.dist(self.mu).logp(value), negbinom)
+        return at.switch(at.gt(alpha, 1e10), Poisson.dist(self.mu).logp(value), negbinom)
 
     def logcdf(self, value):
         """
@@ -919,7 +917,7 @@ class NegativeBinomial(Discrete):
         p = alpha / (self.mu + alpha)
 
         return bound(
-            aet.log(incomplete_beta(alpha, aet.floor(value) + 1, p)),
+            at.log(incomplete_beta(alpha, at.floor(value) + 1, p)),
             0 <= value,
             0 < alpha,
             0 <= p,
@@ -970,7 +968,7 @@ class Geometric(Discrete):
 
     def __init__(self, p, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.p = p = aet.as_tensor_variable(floatX(p))
+        self.p = p = at.as_tensor_variable(floatX(p))
         self.mode = 1
 
     def random(self, point=None, size=None):
@@ -1009,7 +1007,7 @@ class Geometric(Discrete):
         TensorVariable
         """
         p = self.p
-        return bound(aet.log(p) + logpow(1 - p, value - 1), 0 <= p, p <= 1, value >= 1)
+        return bound(at.log(p) + logpow(1 - p, value - 1), 0 <= p, p <= 1, value >= 1)
 
     def logcdf(self, value):
         """
@@ -1029,7 +1027,7 @@ class Geometric(Discrete):
         p = self.p
 
         return bound(
-            log1mexp(-aet.log1p(-p) * value),
+            log1mexp(-at.log1p(-p) * value),
             0 <= value,
             0 <= p,
             p <= 1,
@@ -1088,7 +1086,7 @@ class HyperGeometric(Discrete):
         self.N = intX(N)
         self.k = intX(k)
         self.n = intX(n)
-        self.mode = intX(aet.floor((n + 1) * (k + 1) / (N + 2)))
+        self.mode = intX(at.floor((n + 1) * (k + 1) / (N + 2)))
 
     def random(self, point=None, size=None):
         r"""
@@ -1148,8 +1146,8 @@ class HyperGeometric(Discrete):
             - betaln(tot + 1, 1)
         )
         # value in [max(0, n - N + k), min(k, n)]
-        lower = aet.switch(aet.gt(n - N + k, 0), n - N + k, 0)
-        upper = aet.switch(aet.lt(k, n), k, n)
+        lower = at.switch(at.gt(n - N + k, 0), n - N + k, 0)
+        upper = at.switch(at.lt(k, n), k, n)
         return bound(result, lower <= value, value <= upper)
 
     def logcdf(self, value):
@@ -1176,12 +1174,12 @@ class HyperGeometric(Discrete):
         N = self.N
         n = self.n
         k = self.k
-        safe_lower = aet.switch(aet.lt(value, 0), value, 0)
+        safe_lower = at.switch(at.lt(value, 0), value, 0)
 
         return bound(
-            aet.switch(
-                aet.lt(value, n),
-                logsumexp(self.logp(aet.arange(safe_lower, value + 1)), keepdims=False),
+            at.switch(
+                at.lt(value, n),
+                logsumexp(self.logp(at.arange(safe_lower, value + 1)), keepdims=False),
                 0,
             ),
             0 <= value,
@@ -1235,9 +1233,9 @@ class DiscreteUniform(Discrete):
 
     def __init__(self, lower, upper, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.lower = intX(aet.floor(lower))
-        self.upper = intX(aet.floor(upper))
-        self.mode = aet.maximum(intX(aet.floor((upper + lower) / 2.0)), self.lower)
+        self.lower = intX(at.floor(lower))
+        self.upper = intX(at.floor(upper))
+        self.mode = at.maximum(intX(at.floor((upper + lower) / 2.0)), self.lower)
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
@@ -1283,7 +1281,7 @@ class DiscreteUniform(Discrete):
         upper = self.upper
         lower = self.lower
         return bound(
-            aet.fill(value, -aet.log(upper - lower + 1)),
+            at.fill(value, -at.log(upper - lower + 1)),
             lower <= value,
             value <= upper,
         )
@@ -1307,10 +1305,9 @@ class DiscreteUniform(Discrete):
         lower = self.lower
 
         return bound(
-            aet.switch(
-                aet.lt(value, upper),
-                aet.log(aet.minimum(aet.floor(value), upper) - lower + 1)
-                - aet.log(upper - lower + 1),
+            at.switch(
+                at.lt(value, upper),
+                at.log(at.minimum(at.floor(value), upper) - lower + 1) - at.log(upper - lower + 1),
                 0,
             ),
             lower <= value,
@@ -1358,11 +1355,11 @@ class Categorical(Discrete):
     @classmethod
     def dist(cls, p, **kwargs):
 
-        p = aet.as_tensor_variable(floatX(p))
+        p = at.as_tensor_variable(floatX(p))
 
-        # mode = aet.argmax(p, axis=-1)
+        # mode = at.argmax(p, axis=-1)
         # if mode.ndim == 1:
-        #     mode = aet.squeeze(mode)
+        #     mode = at.squeeze(mode)
 
         return super().dist([p], **kwargs)
 
@@ -1379,29 +1376,27 @@ def categorical_logp(op, value, p):
         values are desired the values must be provided in a numpy array or `TensorVariable`
 
     """
-    k = aet.shape(p)[-1]
+    k = at.shape(p)[-1]
     p_ = p
-    p = p_ / aet.sum(p_, axis=-1, keepdims=True)
-    value_clip = aet.clip(value, 0, k - 1)
+    p = p_ / at.sum(p_, axis=-1, keepdims=True)
+    value_clip = at.clip(value, 0, k - 1)
 
     if p.ndim > 1:
         if p.ndim > value_clip.ndim:
-            value_clip = aet.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
+            value_clip = at.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
         elif p.ndim < value_clip.ndim:
-            p = aet.shape_padleft(p, value_clip.ndim - p_.ndim)
+            p = at.shape_padleft(p, value_clip.ndim - p_.ndim)
         pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
-        a = aet.log(
+        a = at.log(
             take_along_axis(
                 p.dimshuffle(pattern),
                 value_clip,
             )
         )
     else:
-        a = aet.log(p[value_clip])
+        a = at.log(p[value_clip])
 
-    return bound(
-        a, value >= 0, value <= (k - 1), aet.all(p_ >= 0, axis=-1), aet.all(p <= 1, axis=-1)
-    )
+    return bound(a, value >= 0, value <= (k - 1), at.all(p_ >= 0, axis=-1), at.all(p <= 1, axis=-1))
 
 
 class Constant(Discrete):
@@ -1420,7 +1415,7 @@ class Constant(Discrete):
             DeprecationWarning,
         )
         super().__init__(*args, **kwargs)
-        self.mean = self.median = self.mode = self.c = c = aet.as_tensor_variable(c)
+        self.mean = self.median = self.mode = self.c = c = at.as_tensor_variable(c)
 
     def random(self, point=None, size=None):
         r"""
@@ -1463,7 +1458,7 @@ class Constant(Discrete):
         TensorVariable
         """
         c = self.c
-        return bound(0, aet.eq(value, c))
+        return bound(0, at.eq(value, c))
 
 
 ConstantDist = Constant
@@ -1522,8 +1517,8 @@ class ZeroInflatedPoisson(Discrete):
 
     def __init__(self, psi, theta, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.theta = theta = aet.as_tensor_variable(floatX(theta))
-        self.psi = aet.as_tensor_variable(floatX(psi))
+        self.theta = theta = at.as_tensor_variable(floatX(theta))
+        self.psi = at.as_tensor_variable(floatX(psi))
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
 
@@ -1567,10 +1562,10 @@ class ZeroInflatedPoisson(Discrete):
         psi = self.psi
         theta = self.theta
 
-        logp_val = aet.switch(
-            aet.gt(value, 0),
-            aet.log(psi) + self.pois.logp(value),
-            logaddexp(aet.log1p(-psi), aet.log(psi) - theta),
+        logp_val = at.switch(
+            at.gt(value, 0),
+            at.log(psi) + self.pois.logp(value),
+            logaddexp(at.log1p(-psi), at.log(psi) - theta),
         )
 
         return bound(logp_val, 0 <= value, 0 <= psi, psi <= 1, 0 <= theta)
@@ -1593,7 +1588,7 @@ class ZeroInflatedPoisson(Discrete):
         psi = self.psi
 
         return bound(
-            logaddexp(aet.log1p(-psi), aet.log(psi) + self.pois.logcdf(value)),
+            logaddexp(at.log1p(-psi), at.log(psi) + self.pois.logcdf(value)),
             0 <= value,
             0 <= psi,
             psi <= 1,
@@ -1654,9 +1649,9 @@ class ZeroInflatedBinomial(Discrete):
 
     def __init__(self, psi, n, p, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.n = n = aet.as_tensor_variable(intX(n))
-        self.p = p = aet.as_tensor_variable(floatX(p))
-        self.psi = psi = aet.as_tensor_variable(floatX(psi))
+        self.n = n = at.as_tensor_variable(intX(n))
+        self.p = p = at.as_tensor_variable(floatX(p))
+        self.psi = psi = at.as_tensor_variable(floatX(psi))
         self.bin = Binomial.dist(n, p)
         self.mode = self.bin.mode
 
@@ -1701,10 +1696,10 @@ class ZeroInflatedBinomial(Discrete):
         p = self.p
         n = self.n
 
-        logp_val = aet.switch(
-            aet.gt(value, 0),
-            aet.log(psi) + self.bin.logp(value),
-            logaddexp(aet.log1p(-psi), aet.log(psi) + n * aet.log1p(-p)),
+        logp_val = at.switch(
+            at.gt(value, 0),
+            at.log(psi) + self.bin.logp(value),
+            logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
         )
 
         return bound(logp_val, 0 <= value, value <= n, 0 <= psi, psi <= 1, 0 <= p, p <= 1)
@@ -1732,7 +1727,7 @@ class ZeroInflatedBinomial(Discrete):
         psi = self.psi
 
         return bound(
-            logaddexp(aet.log1p(-psi), aet.log(psi) + self.bin.logcdf(value)),
+            logaddexp(at.log1p(-psi), at.log(psi) + self.bin.logcdf(value)),
             0 <= value,
             0 <= psi,
             psi <= 1,
@@ -1810,9 +1805,9 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     def __init__(self, psi, mu, alpha, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mu = mu = aet.as_tensor_variable(floatX(mu))
-        self.alpha = alpha = aet.as_tensor_variable(floatX(alpha))
-        self.psi = psi = aet.as_tensor_variable(floatX(psi))
+        self.mu = mu = at.as_tensor_variable(floatX(mu))
+        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
+        self.psi = psi = at.as_tensor_variable(floatX(psi))
         self.nb = NegativeBinomial.dist(mu, alpha)
         self.mode = self.nb.mode
 
@@ -1870,12 +1865,12 @@ class ZeroInflatedNegativeBinomial(Discrete):
         mu = self.mu
         psi = self.psi
 
-        logp_other = aet.log(psi) + self.nb.logp(value)
+        logp_other = at.log(psi) + self.nb.logp(value)
         logp_0 = logaddexp(
-            aet.log1p(-psi), aet.log(psi) + alpha * (aet.log(alpha) - aet.log(alpha + mu))
+            at.log1p(-psi), at.log(psi) + alpha * (at.log(alpha) - at.log(alpha + mu))
         )
 
-        logp_val = aet.switch(aet.gt(value, 0), logp_other, logp_0)
+        logp_val = at.switch(at.gt(value, 0), logp_other, logp_0)
 
         return bound(logp_val, 0 <= value, 0 <= psi, psi <= 1, mu > 0, alpha > 0)
 
@@ -1901,7 +1896,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         psi = self.psi
 
         return bound(
-            logaddexp(aet.log1p(-psi), aet.log(psi) + self.nb.logcdf(value)),
+            logaddexp(at.log1p(-psi), at.log(psi) + self.nb.logcdf(value)),
             0 <= value,
             0 <= psi,
             psi <= 1,
@@ -1975,15 +1970,15 @@ class OrderedLogistic(Categorical):
     """
 
     def __init__(self, eta, cutpoints, *args, **kwargs):
-        self.eta = aet.as_tensor_variable(floatX(eta))
-        self.cutpoints = aet.as_tensor_variable(cutpoints)
+        self.eta = at.as_tensor_variable(floatX(eta))
+        self.cutpoints = at.as_tensor_variable(cutpoints)
 
-        pa = sigmoid(self.cutpoints - aet.shape_padright(self.eta))
-        p_cum = aet.concatenate(
+        pa = sigmoid(self.cutpoints - at.shape_padright(self.eta))
+        p_cum = at.concatenate(
             [
-                aet.zeros_like(aet.shape_padright(pa[..., 0])),
+                at.zeros_like(at.shape_padright(pa[..., 0])),
                 pa,
-                aet.ones_like(aet.shape_padright(pa[..., 0])),
+                at.ones_like(at.shape_padright(pa[..., 0])),
             ],
             axis=-1,
         )
@@ -2064,23 +2059,23 @@ class OrderedProbit(Categorical):
 
     def __init__(self, eta, cutpoints, *args, **kwargs):
 
-        self.eta = aet.as_tensor_variable(floatX(eta))
-        self.cutpoints = aet.as_tensor_variable(cutpoints)
+        self.eta = at.as_tensor_variable(floatX(eta))
+        self.cutpoints = at.as_tensor_variable(cutpoints)
 
-        probits = aet.shape_padright(self.eta) - self.cutpoints
-        _log_p = aet.concatenate(
+        probits = at.shape_padright(self.eta) - self.cutpoints
+        _log_p = at.concatenate(
             [
-                aet.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
+                at.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
                 log_diff_normal_cdf(0, 1, probits[..., :-1], probits[..., 1:]),
-                aet.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
+                at.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
             ],
             axis=-1,
         )
-        _log_p = aet.as_tensor_variable(floatX(_log_p))
+        _log_p = at.as_tensor_variable(floatX(_log_p))
 
         self._log_p = _log_p
-        self.mode = aet.argmax(_log_p, axis=-1)
-        p = aet.exp(_log_p)
+        self.mode = at.argmax(_log_p, axis=-1)
+        p = at.exp(_log_p)
 
         super().__init__(p=p, *args, **kwargs)
 
@@ -2102,13 +2097,13 @@ class OrderedProbit(Categorical):
         k = self.k
 
         # Clip values before using them for indexing
-        value_clip = aet.clip(value, 0, k - 1)
+        value_clip = at.clip(value, 0, k - 1)
 
         if logp.ndim > 1:
             if logp.ndim > value_clip.ndim:
-                value_clip = aet.shape_padleft(value_clip, logp.ndim - value_clip.ndim)
+                value_clip = at.shape_padleft(value_clip, logp.ndim - value_clip.ndim)
             elif logp.ndim < value_clip.ndim:
-                logp = aet.shape_padleft(logp, value_clip.ndim - logp.ndim)
+                logp = at.shape_padleft(logp, value_clip.ndim - logp.ndim)
             pattern = (logp.ndim - 1,) + tuple(range(logp.ndim - 1))
             a = take_along_axis(
                 logp.dimshuffle(pattern),
