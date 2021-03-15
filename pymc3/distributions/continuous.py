@@ -466,7 +466,7 @@ class Normal(Continuous):
     rv_op = normal
 
     @classmethod
-    def dist(cls, mu=0, sigma=None, tau=None, sd=None, **kwargs):
+    def dist(cls, mu=0, sigma=None, tau=None, sd=None, no_assert=False, **kwargs):
         if sd is not None:
             sigma = sd
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
@@ -477,7 +477,9 @@ class Normal(Continuous):
         # mean = median = mode = mu = at.as_tensor_variable(floatX(mu))
         # variance = 1.0 / self.tau
 
-        assert_negative_support(sigma, "sigma", "Normal")
+        if not no_assert:
+            assert_negative_support(sigma, "sigma", "Normal")
+
         return super().dist([mu, sigma], **kwargs)
 
 
@@ -2497,7 +2499,7 @@ class Gamma(PositiveContinuous):
     rv_op = gamma
 
     @classmethod
-    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs):
+    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, sd=None, no_assert=False, **kwargs):
         if sd is not None:
             sigma = sd
 
@@ -2508,10 +2510,11 @@ class Gamma(PositiveContinuous):
         # mode = at.maximum((alpha - 1) / beta, 0)
         # variance = alpha / beta ** 2
 
-        assert_negative_support(alpha, "alpha", "Gamma")
-        assert_negative_support(beta, "beta", "Gamma")
+        if not no_assert:
+            assert_negative_support(alpha, "alpha", "Gamma")
+            assert_negative_support(beta, "beta", "Gamma")
 
-        return super().dist([alpha, beta], **kwargs)
+        return super().dist([alpha, aet.inv(beta)], **kwargs)
 
     @classmethod
     def get_alpha_beta(cls, alpha=None, beta=None, mu=None, sigma=None):
