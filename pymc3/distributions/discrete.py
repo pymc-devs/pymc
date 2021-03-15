@@ -1354,7 +1354,7 @@ class Categorical(Discrete):
 
 
 @_logp.register(CategoricalRV)
-def categorical_logp(op, value, p, upper):
+def categorical_logp(op, value, p):
     r"""
     Calculate log-probability of Categorical distribution at specified value.
 
@@ -1365,8 +1365,9 @@ def categorical_logp(op, value, p, upper):
         values are desired the values must be provided in a numpy array or `TensorVariable`
 
     """
+    k = aet.shape(p)[-1]
+    p_ = p
     p = p_ / aet.sum(p_, axis=-1, keepdims=True)
-    k = aet.shape(p_)[-1]
     value_clip = aet.clip(value, 0, k - 1)
 
     if p.ndim > 1:
