@@ -222,13 +222,16 @@ Bool = Domain([0, 0, 1, 1], "int64")
 def build_model(distfam, valuedomain, vardomains, extra_args=None):
     if extra_args is None:
         extra_args = {}
+
     with Model() as m:
-        vals = {}
+        param_vars = {}
         for v, dom in vardomains.items():
-            vals[v] = dom.vals[0]
-        vals.update(extra_args)
-        distfam("value", size=valuedomain.shape, transform=None, **vals)
-    return m
+            v_at = aesara.shared(np.asarray(dom.vals[0]))
+            v_at.name = v
+            param_vars[v] = v_at
+        param_vars.update(extra_args)
+        distfam("value", **param_vars, transform=None)
+    return m, param_vars
 
 
 def laplace_asymmetric_logpdf(value, kappa, b, mu):
@@ -607,14 +610,34 @@ class TestMatchesScipy:
             args.update(scipy_args)
             return scipy_logp(**args)
 
-        model = build_model(pymc3_dist, domain, paramdomains, extra_args)
-        logp = model.fastlogp
+        model, param_vars = build_model(pymc3_dist, domain, paramdomains, extra_args)
+        logp = model.fastlogp_nojac
 
         domains = paramdomains.copy()
         domains["value"] = domain
         for pt in product(domains, n_samples=n_samples):
+
             pt = dict(pt)
-            pt_logp = Point(pt, model=model)
+            pt_d = {}
+            for k, v in pt.items():
+                nv = param_vars.get(k, model.named_vars.get(k))
+                nv = getattr(nv.tag, "value_var", nv)
+
+                transform = getattr(nv.tag, "transform", None)
+                if transform:
+                    # TODO: The compiled graph behind this should be cached and
+                    # reused (if it isn't already).
+                    v = transform.forward(v).eval()
+
+                if nv.name in param_vars:
+                    # Update the shared parameter variables in `param_vars`
+                    param_vars[nv.name].set_value(v)
+                else:
+                    # Create an argument entry for the (potentially
+                    # transformed) "value" variable
+                    pt_d[nv.name] = v
+
+            pt_logp = Point(pt_d, model=model)
             pt_ref = Point(pt, filter_model_vars=False, model=model)
             assert_almost_equal(
                 logp(pt_logp),
