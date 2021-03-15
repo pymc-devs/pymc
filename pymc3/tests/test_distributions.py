@@ -746,7 +746,12 @@ class TestMatchesScipy:
                     if invalid_edge is not None:
                         test_params = valid_params.copy()  # Shallow copy should be okay
                         test_params[invalid_param] = invalid_edge
-                        invalid_dist = pymc3_dist.dist(**test_params)
+                        # We need to remove `Assert`s introduced by checks like
+                        # `assert_negative_support` and disable test values;
+                        # otherwise, we won't be able to create the
+                        # `RandomVariable`
+                        with aesara.config.change_flags(compute_test_value="off"):
+                            invalid_dist = pymc3_dist.dist(no_assert=True, **test_params)
                         with aesara.config.change_flags(mode=Mode("py")):
                             assert_equal(
                                 logcdf(invalid_dist, valid_value).eval(),
