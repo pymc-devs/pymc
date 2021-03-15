@@ -1962,14 +1962,22 @@ class TestMatchesScipy:
         with pm.Model() as model:
             d = pm.Dirichlet("d", a=a)
 
-        pymc3_res = logpt(d, d.tag.test_value).eval()
+        d_value = d.tag.value_var
+        d_point = d.eval()
+        if hasattr(d_value.tag, "transform"):
+            d_point_trans = d_value.tag.transform.forward(d_point).eval()
+        else:
+            d_point_trans = d_point
+
+        pymc3_res = logpt(d, d_point_trans, jacobian=False).eval()
+        scipy_res = np.empty_like(pymc3_res)
         for idx in np.ndindex(a.shape[:-1]):
             scipy_res[idx] = scipy.stats.dirichlet(a[idx]).logpdf(d_point[idx])
 
         assert_almost_equal(pymc3_res, scipy_res)
 
     def test_dirichlet_shape(self):
-        a = at.as_tensor_variable(np.r_[1, 2])
+        a = aet.as_tensor_variable(np.r_[1, 2])
         dir_rv = Dirichlet.dist(a)
         assert dir_rv.shape.eval() == (2,)
 
