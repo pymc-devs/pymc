@@ -24,10 +24,22 @@ import numpy as np
 
 from aesara.assert_op import Assert
 from aesara.tensor.random.basic import (
+    BetaRV,
+    CauchyRV,
+    ExponentialRV,
     GammaRV,
+    HalfCauchyRV,
+    HalfNormalRV,
+    InvGammaRV,
     NormalRV,
     UniformRV,
+    beta,
+    cauchy,
+    exponential,
     gamma,
+    halfcauchy,
+    halfnormal,
+    invgamma,
     normal,
     uniform,
 )
@@ -95,6 +107,8 @@ uniform = copy(uniform)
 uniform.inplace = True
 gamma = copy(gamma)
 gamma.inplace = True
+beta = copy(beta)
+beta.inplace = True
 
 
 class PositiveContinuous(Continuous):
@@ -812,73 +826,66 @@ class HalfNormal(PositiveContinuous):
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
+        # sigma = sd = sigma = aet.as_tensor_variable(sigma)
+        # tau = tau = aet.as_tensor_variable(tau)
+
+        # mean = aet.sqrt(2 / (np.pi * tau))
+        # variance = (1.0 - 2 / np.pi) / tau
+
         assert_negative_support(tau, "tau", "HalfNormal")
         assert_negative_support(sigma, "sigma", "HalfNormal")
 
-        return super().dist([0.0, sigma], **kwargs)
+        return super().dist([sigma, tau], **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
+    def _distr_parameters_for_repr(self):
+        return ["sigma"]
 
-        Returns
-        -------
-        array
-        """
-        # sigma = draw_values([self.sigma], point=point, size=size)[0]
-        # return generate_samples(
-        #     stats.halfnorm.rvs, loc=0.0, scale=sigma, dist_shape=self.shape, size=size
-        # )
 
-    def logp(self, value):
-        """
-        Calculate log-probability of HalfNormal distribution at specified value.
+@_logp.register(HalfNormalRV)
+def halfnormal_logp(op, value, sigma, tau):
+    """
+    Calculate log-probability of HalfNormal distribution at specified value.
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or aesara tensor
 
-        Returns
-        -------
-        TensorVariable
-        """
-        tau, sigma = get_tau_sigma(tau=None, sigma=sigma)
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(
+        -0.5 * tau * value ** 2 + 0.5 * aet.log(tau * 2.0 / np.pi),
+        value >= 0,
+        tau > 0,
+        sigma > 0,
+    )
 
-        return bound(
-            -0.5 * tau * (value - loc) ** 2 + 0.5 * at.log(tau * 2.0 / np.pi),
-            value >= loc,
-            tau > 0,
-            sigma > 0,
-        )
 
-    def logcdf(value, loc, sigma):
-        """
-        Compute the log of the cumulative distribution function for HalfNormal distribution
-        at the specified value.
+@_logcdf.register(HalfNormalRV)
+def halfnormal_logcdf(op, value, sigma, tau):
+    """
+    Compute the log of the cumulative distribution function for HalfNormal distribution
+    at the specified value.
 
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+    Parameters
+    ----------
+    value: numeric or np.ndarray or aesara.tensor
+        Value(s) for which log CDF is calculated. If the log CDF for multiple
+        values are desired the values must be provided in a numpy array or aesara tensor.
 
-        Returns
-        -------
-        TensorVariable
-        """
-        z = zvalue(value, mu=loc, sigma=sigma)
-        return bound(
-            at.log1p(-at.erfc(z / at.sqrt(2.0))),
-            loc <= value,
-            0 < sigma,
-        )
+    Returns
+    -------
+    TensorVariable
+    """
+    z = zvalue(value, mu=0, sigma=sigma)
+    return bound(
+        aet.log1p(-aet.erfc(z / aet.sqrt(2.0))),
+        0 <= value,
+        0 < sigma,
+    )
 
     def _distr_parameters_for_repr(self):
         return ["sigma"]
@@ -1187,8 +1194,11 @@ class Beta(UnitContinuous):
             sigma = sd
 
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
-        alpha = at.as_tensor_variable(floatX(alpha))
-        beta = at.as_tensor_variable(floatX(beta))
+        alpha = aet.as_tensor_variable(floatX(alpha))
+        beta = aet.as_tensor_variable(floatX(beta))
+
+        mean = alpha / (alpha + beta)
+        variance = (alpha * beta) / ((alpha + beta) ** 2 * (alpha + beta + 1))
 
         assert_negative_support(alpha, "alpha", "Beta")
         assert_negative_support(beta, "beta", "Beta")
@@ -1211,81 +1221,68 @@ class Beta(UnitContinuous):
 
         return alpha, beta
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Beta distribution.
+    def _distr_parameters_for_repr(self):
+        return ["alpha", "beta"]
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
 
-        Returns
-        -------
-        array
-        """
-        # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
-        # return generate_samples(clipped_beta_rvs, alpha, beta, dist_shape=self.shape, size=size)
+@_logp.register(BetaRV)
+def beta_logp(op, value, alpha, beta):
+    """
+    Calculate log-probability of Beta distribution at specified value.
 
-    def logp(value, alpha, beta):
-        """
-        Calculate log-probability of Beta distribution at specified value.
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or aesara tensor
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+    Returns
+    -------
+    TensorVariable
+    """
 
-        Returns
-        -------
-        TensorVariable
-        """
+    logval = aet.log(value)
+    log1pval = aet.log1p(-value)
+    logp = (
+        aet.switch(aet.eq(alpha, 1), 0, (alpha - 1) * logval)
+        + aet.switch(aet.eq(beta, 1), 0, (beta - 1) * log1pval)
+        - betaln(alpha, beta)
+    )
 
-        logval = at.log(value)
-        log1pval = at.log1p(-value)
-        logp = (
-            at.switch(at.eq(alpha, 1), 0, (alpha - 1) * logval)
-            + at.switch(at.eq(beta, 1), 0, (beta - 1) * log1pval)
-            - betaln(alpha, beta)
+    return bound(logp, value >= 0, value <= 1, alpha > 0, beta > 0)
+
+
+@_logcdf.register(BetaRV)
+def beta_logcdf(op, value, alpha, beta):
+    """
+    Compute the log of the cumulative distribution function for Beta distribution
+    at the specified value.
+
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log CDF is calculated.
+
+    Returns
+    -------
+    TensorVariable
+    """
+    # incomplete_beta function can only handle scalar values (see #4342)
+    if np.ndim(value):
+        raise TypeError(
+            f"Beta.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
         )
 
-        return bound(logp, value >= 0, value <= 1, alpha > 0, beta > 0)
-
-    def logcdf(value, alpha, beta):
-        """
-        Compute the log of the cumulative distribution function for Beta distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log CDF is calculated.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        # incomplete_beta function can only handle scalar values (see #4342)
-        if np.ndim(value):
-            raise TypeError(
-                f"Beta.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
-
-        return bound(
-            at.switch(
-                at.lt(value, 1),
-                at.log(incomplete_beta(alpha, beta, value)),
-                0,
-            ),
-            0 <= value,
-            0 < alpha,
-            0 < beta,
-        )
+    return bound(
+        aet.switch(
+            aet.lt(value, 1),
+            aet.log(incomplete_beta(alpha, beta, value)),
+            0,
+        ),
+        0 <= value,
+        0 < alpha,
+        0 < beta,
+    )
 
 
 class Kumaraswamy(UnitContinuous):
@@ -1434,75 +1431,57 @@ class Exponential(PositiveContinuous):
 
     @classmethod
     def dist(cls, lam, *args, **kwargs):
-        lam = at.as_tensor_variable(floatX(lam))
+        lam = aet.as_tensor_variable(floatX(lam))
         # mean = 1.0 / lam
-        # median = mean * at.log(2)
-        # mode = at.zeros_like(lam)
+        # median = mean * aet.log(2)
+        # mode = aet.zeros_like(lam)
 
         # variance = lam ** -2
 
         assert_negative_support(lam, "lam", "Exponential")
         return super().dist([lam], **kwargs)
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Exponential distribution.
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
+@_logp.register(ExponentialRV)
+def exponential_logp(op, value, lam):
+    """
+    Calculate log-probability of Exponential distribution at specified value.
 
-        Returns
-        -------
-        array
-        """
-        # lam = draw_values([self.lam], point=point, size=size)[0]
-        # return generate_samples(
-        #     np.random.exponential, scale=1.0 / lam, dist_shape=self.shape, size=size
-        # )
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or aesara tensor
 
-    def logp(self, value):
-        """
-        Calculate log-probability of Exponential distribution at specified value.
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(aet.log(lam) - lam * value, value >= 0, lam > 0)
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
 
-        Returns
-        -------
-        TensorVariable
-        """
-        return bound(at.log(lam) - lam * value, value >= 0, lam > 0)
+@_logcdf.register(ExponentialRV)
+def exponential_logcdf(op, value, lam):
+    r"""
+    Compute the log of cumulative distribution function for the Exponential distribution
+    at the specified value.
 
-    def logcdf(value, lam):
-        r"""
-        Compute the log of cumulative distribution function for the Exponential distribution
-        at the specified value.
+    Parameters
+    ----------
+    value: numeric or np.ndarray or aesara.tensor
+        Value(s) for which log CDF is calculated. If the log CDF for multiple
+        values are desired the values must be provided in a numpy array or aesara tensor.
 
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        a = lam * value
-        return bound(
-            log1mexp(a),
-            0 <= value,
-            0 <= lam,
-        )
+    Returns
+    -------
+    TensorVariable
+    """
+    a = lam * value
+    return bound(
+        log1mexp(a),
+        0 <= value,
+        0 <= lam,
+    )
 
 
 class Laplace(Continuous):
@@ -2247,56 +2226,56 @@ class Cauchy(Continuous):
 
     @classmethod
     def dist(cls, alpha, beta, *args, **kwargs):
-        alpha = at.as_tensor_variable(floatX(alpha))
-        beta = at.as_tensor_variable(floatX(beta))
+        alpha = aet.as_tensor_variable(floatX(alpha))
+        beta = aet.as_tensor_variable(floatX(beta))
 
         # median = alpha
         # mode = alpha
 
-        Returns
-        -------
-        array
-        """
-        # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
-        # return generate_samples(self._random, alpha, beta, dist_shape=self.shape, size=size)
+        assert_negative_support(beta, "beta", "Cauchy")
+        return super().dist([alpha, beta], **kwargs)
 
-    def logp(value, alpha, beta):
-        """
-        Calculate log-probability of Cauchy distribution at specified value.
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+@_logp.register(CauchyRV)
+def cauchy_logp(op, value, alpha, beta):
+    """
+    Calculate log-probability of Cauchy distribution at specified value.
 
-        Returns
-        -------
-        TensorVariable
-        """
-        return bound(
-            -at.log(np.pi) - at.log(beta) - at.log1p(((value - alpha) / beta) ** 2), beta > 0
-        )
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or aesara tensor
 
-    def logcdf(value, alpha, beta):
-        """
-        Compute the log of the cumulative distribution function for Cauchy distribution
-        at the specified value.
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(
+        -aet.log(np.pi) - aet.log(beta) - aet.log1p(((value - alpha) / beta) ** 2), beta > 0
+    )
 
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
 
-        Returns
-        -------
-        TensorVariable
-        """
-        return bound(
-            at.log(0.5 + at.arctan((value - alpha) / beta) / np.pi),
-            0 < beta,
-        )
+@_logcdf.register(CauchyRV)
+def cauchy_logcdf(op, value, alpha, beta):
+    """
+    Compute the log of the cumulative distribution function for Cauchy distribution
+    at the specified value.
+
+    Parameters
+    ----------
+    value: numeric or np.ndarray or aesara.tensor
+        Value(s) for which log CDF is calculated. If the log CDF for multiple
+        values are desired the values must be provided in a numpy array or aesara tensor.
+
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(
+        aet.log(0.5 + aet.arctan((value - alpha) / beta) / np.pi),
+        0 < beta,
+    )
 
 
 class HalfCauchy(PositiveContinuous):
@@ -2341,74 +2320,58 @@ class HalfCauchy(PositiveContinuous):
 
     @classmethod
     def dist(cls, beta, *args, **kwargs):
-        beta = at.as_tensor_variable(floatX(beta))
+        beta = aet.as_tensor_variable(floatX(beta))
+
+        # mode = aet.as_tensor_variable(0)
+        # median = beta
+
         assert_negative_support(beta, "beta", "HalfCauchy")
-        return super().dist([0.0, beta], **kwargs)
+        return super().dist([beta], **kwargs)
 
-    def _random(self, beta, size=None):
-        u = np.random.uniform(size=size)
-        return beta * np.abs(np.tan(np.pi * (u - 0.5)))
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from HalfCauchy distribution.
+@_logp.register(HalfCauchyRV)
+def half_cauchy_logp(op, value, beta, alpha):
+    """
+    Calculate log-probability of HalfCauchy distribution at specified value.
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or aesara tensor
 
-        Returns
-        -------
-        array
-        """
-        # beta = draw_values([self.beta], point=point, size=size)[0]
-        # return generate_samples(self._random, beta, dist_shape=self.shape, size=size)
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(
+        aet.log(2) - aet.log(np.pi) - aet.log(beta) - aet.log1p((value / beta) ** 2),
+        value >= 0,
+        beta > 0,
+    )
 
-    def logp(self, value):
-        """
-        Calculate log-probability of HalfCauchy distribution at specified value.
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+@_logcdf.register(HalfCauchyRV)
+def half_cauchy_logcdf(op, value, beta, alpha):
+    """
+    Compute the log of the cumulative distribution function for HalfCauchy distribution
+    at the specified value.
 
-        Returns
-        -------
-        TensorVariable
-        """
-        return bound(
-            at.log(2) - at.log(np.pi) - at.log(beta) - at.log1p(((value - loc) / beta) ** 2),
-            value >= loc,
-            beta > 0,
-        )
+    Parameters
+    ----------
+    value: numeric or np.ndarray or aesara.tensor
+        Value(s) for which log CDF is calculated. If the log CDF for multiple
+        values are desired the values must be provided in a numpy array or aesara tensor.
 
-    def logcdf(value, loc, beta):
-        """
-        Compute the log of the cumulative distribution function for HalfCauchy distribution
-        at the specified value.
-
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        return bound(
-            at.log(2 * at.arctan((value - loc) / beta) / np.pi),
-            loc <= value,
-            0 < beta,
-        )
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(
+        aet.log(2 * aet.arctan(value / beta) / np.pi),
+        0 <= value,
+        0 < beta,
+    )
 
 
 class Gamma(PositiveContinuous):
@@ -2617,8 +2580,8 @@ class InverseGamma(PositiveContinuous):
             sigma = sd
 
         alpha, beta = cls._get_alpha_beta(alpha, beta, mu, sigma)
-        alpha = at.as_tensor_variable(floatX(alpha))
-        beta = at.as_tensor_variable(floatX(beta))
+        alpha = aet.as_tensor_variable(floatX(alpha))
+        beta = aet.as_tensor_variable(floatX(beta))
 
         # m = beta / (alpha - 1.0)
         # try:
@@ -2628,8 +2591,8 @@ class InverseGamma(PositiveContinuous):
         #     mean = m
 
         # mode = beta / (alpha + 1.0)
-        # variance = at.switch(
-        #     at.gt(alpha, 2), (beta ** 2) / ((alpha - 2) * (alpha - 1.0) ** 2), np.inf
+        # variance = aet.switch(
+        #     aet.gt(alpha, 2), (beta ** 2) / ((alpha - 2) * (alpha - 1.0) ** 2), np.inf
         # )
 
         assert_negative_support(alpha, "alpha", "InverseGamma")
@@ -2656,75 +2619,61 @@ class InverseGamma(PositiveContinuous):
 
         return alpha, beta
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from InverseGamma distribution.
+    @classmethod
+    def _distr_parameters_for_repr(self):
+        return ["alpha", "beta"]
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
 
-        Returns
-        -------
-        array
-        """
-        # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
-        # return generate_samples(
-        #     stats.invgamma.rvs, a=alpha, scale=beta, dist_shape=self.shape, size=size
-        # )
+@_logp.register(InvGammaRV)
+def inv_gamma_logp(op, value, alpha, beta):
+    """
+    Calculate log-probability of InverseGamma distribution at specified value.
 
-    def logp(value, alpha, beta):
-        """
-        Calculate log-probability of InverseGamma distribution at specified value.
+    Parameters
+    ----------
+    value: numeric
+        Value(s) for which log-probability is calculated. If the log probabilities for multiple
+        values are desired the values must be provided in a numpy array or aesara tensor
 
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+    Returns
+    -------
+    TensorVariable
+    """
+    return bound(
+        logpow(beta, alpha) - gammaln(alpha) - beta / value + logpow(value, -alpha - 1),
+        value > 0,
+        alpha > 0,
+        beta > 0,
+    )
 
-        Returns
-        -------
-        TensorVariable
-        """
-        return bound(
-            logpow(beta, alpha) - gammaln(alpha) - beta / value + logpow(value, -alpha - 1),
-            value > 0,
-            alpha > 0,
-            beta > 0,
-        )
 
-    def logcdf(value, alpha, beta):
-        """
-        Compute the log of the cumulative distribution function for Inverse Gamma distribution
-        at the specified value.
+@_logcdf.register(InvGammaRV)
+def inv_gamma_logcdf(op, value, alpha, beta):
+    """
+    Compute the log of the cumulative distribution function for Inverse Gamma distribution
+    at the specified value.
 
-        Parameters
-        ----------
-        value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+    Parameters
+    ----------
+    value: numeric or np.ndarray or aesara.tensor
+        Value(s) for which log CDF is calculated. If the log CDF for multiple
+        values are desired the values must be provided in a numpy array or aesara tensor.
 
-        Returns
-        -------
-        TensorVariable
-        """
-        # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
-        safe_alpha = at.switch(at.lt(alpha, 0), 0, alpha)
-        safe_beta = at.switch(at.lt(beta, 0), 0, beta)
-        safe_value = at.switch(at.lt(value, 0), 0, value)
+    Returns
+    -------
+    TensorVariable
+    """
+    # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
+    safe_alpha = aet.switch(aet.lt(alpha, 0), 0, alpha)
+    safe_beta = aet.switch(aet.lt(beta, 0), 0, beta)
+    safe_value = aet.switch(aet.lt(value, 0), 0, value)
 
-        return bound(
-            at.log(at.gammaincc(safe_alpha, safe_beta / safe_value)),
-            0 <= value,
-            0 < alpha,
-            0 < beta,
-        )
+    return bound(
+        aet.log(aet.gammaincc(safe_alpha, safe_beta / safe_value)),
+        0 <= value,
+        0 < alpha,
+        0 < beta,
+    )
 
 
 class ChiSquared(Gamma):
