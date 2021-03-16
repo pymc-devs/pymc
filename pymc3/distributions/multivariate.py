@@ -17,8 +17,6 @@
 
 import warnings
 
-from copy import copy
-
 import aesara
 import aesara.tensor as at
 import numpy as np
@@ -27,7 +25,8 @@ import scipy
 from aesara.graph.basic import Apply
 from aesara.graph.op import Op
 from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
-from aesara.tensor.random.basic import DirichletRV, dirichlet
+from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
+from aesara.tensor.random.utils import broadcast_params
 from aesara.tensor.slinalg import (
     Cholesky,
     Solve,
@@ -40,11 +39,10 @@ from scipy import linalg, stats
 import pymc3 as pm
 
 from pymc3.aesaraf import floatX, intX
-from pymc3.distributions import _logp, logp_transform, transforms
+from pymc3.distributions import transforms
 from pymc3.distributions.continuous import ChiSquared, Normal
 from pymc3.distributions.dist_math import bound, factln, logpow
 from pymc3.distributions.distribution import Continuous, Discrete
-from pymc3.distributions.shape_utils import to_tuple
 from pymc3.distributions.special import gammaln, multigammaln
 from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
 
@@ -63,10 +61,51 @@ __all__ = [
     "CAR",
 ]
 
-# FIXME: These are temporary hacks
-dirichlet = copy(dirichlet)
-dirichlet.inplace = True
+solve_lower = Solve(A_structure="lower_triangular")
+# Step methods and advi do not catch LinAlgErrors at the
+# moment. We work around that by using a cholesky op
+# that returns a nan as first entry instead of raising
+# an error.
+cholesky = Cholesky(lower=True, on_error="nan")
 
+
+def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
+    if chol is not None and not lower:
+        chol = chol.T
+
+    if len([i for i in [tau, cov, chol] if i is not None]) != 1:
+        raise ValueError("Incompatible parameterization. Specify exactly one of tau, cov, or chol.")
+
+    if cov is not None:
+        cov = aet.as_tensor_variable(cov)
+        if cov.ndim != 2:
+            raise ValueError("cov must be two dimensional.")
+    elif tau is not None:
+        tau = aet.as_tensor_variable(tau)
+        if tau.ndim != 2:
+            raise ValueError("tau must be two dimensional.")
+        # TODO: What's the correct order/approach (in the non-square case)?
+        # `aesara.tensor.nlinalg.tensorinv`?
+        cov = matrix_inverse(tau)
+    else:
+        # TODO: What's the correct order/approach (in the non-square case)?
+        chol = aet.as_tensor_variable(chol)
+        if chol.ndim != 2:
+            raise ValueError("chol must be two dimensional.")
+        cov = chol.dot(chol.T)
+
+    return cov
+
+
+def quaddist_parse(value, mu, cov, mat_type="cov"):
+    """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""
+    if value.ndim > 2 or value.ndim == 0:
+        raise ValueError("Invalid dimension for value: %s" % value.ndim)
+    if value.ndim == 1:
+        onedim = True
+        value = value[None, :]
+    else:
+        onedim = False
 
     delta = value - mu
 
@@ -87,30 +126,30 @@ dirichlet.inplace = True
 
 
 def quaddist_chol(delta, chol_mat):
-    diag = at.diag(chol_mat)
+    diag = aet.nlinalg.diag(chol_mat)
     # Check if the covariance matrix is positive definite.
-    ok = at.all(diag > 0)
+    ok = aet.all(diag > 0)
     # If not, replace the diagonal. We return -inf later, but
     # need to prevent solve_lower from throwing an exception.
-    chol_cov = at.switch(ok, chol_mat, 1)
+    chol_cov = aet.switch(ok, chol_mat, 1)
 
     delta_trans = solve_lower(chol_cov, delta.T).T
     quaddist = (delta_trans ** 2).sum(axis=-1)
-    logdet = at.sum(at.log(diag))
+    logdet = aet.sum(aet.log(diag))
     return quaddist, logdet, ok
 
 
 def quaddist_tau(delta, chol_mat):
-    diag = at.nlinalg.diag(chol_mat)
+    diag = aet.nlinalg.diag(chol_mat)
     # Check if the precision matrix is positive definite.
-    ok = at.all(diag > 0)
+    ok = aet.all(diag > 0)
     # If not, replace the diagonal. We return -inf later, but
     # need to prevent solve_lower from throwing an exception.
-    chol_tau = at.switch(ok, chol_mat, 1)
+    chol_tau = aet.switch(ok, chol_mat, 1)
 
-    delta_trans = at.dot(delta, chol_tau)
+    delta_trans = aet.dot(delta, chol_tau)
     quaddist = (delta_trans ** 2).sum(axis=-1)
-    logdet = -at.sum(at.log(diag))
+    logdet = -aet.sum(aet.log(diag))
     return quaddist, logdet, ok
 
 
@@ -180,57 +219,11 @@ class MvNormal(Continuous):
     """
     rv_op = multivariate_normal
 
-    def __init__(self, mu, cov=None, tau=None, chol=None, lower=True, *args, **kwargs):
-        super().__init__(mu=mu, cov=cov, tau=tau, chol=chol, lower=lower, *args, **kwargs)
-        self.mean = self.median = self.mode = self.mu = self.mu
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Multivariate Normal distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # size = to_tuple(size)
-        #
-        # param_attribute = getattr(self, "chol_cov" if self._cov_type == "chol" else self._cov_type)
-        # mu, param = draw_values([self.mu, param_attribute], point=point, size=size)
-        #
-        # dist_shape = to_tuple(self.shape)
-        # output_shape = size + dist_shape
-        #
-        # # Simple, there can be only be 1 batch dimension, only available from `mu`.
-        # # Insert it into `param` before events, if there is a sample shape in front.
-        # if param.ndim > 2 and dist_shape[:-1]:
-        #     param = param.reshape(size + (1,) + param.shape[-2:])
-        #
-        # mu = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)[0]
-        # param = np.broadcast_to(param, shape=output_shape + dist_shape[-1:])
-        #
-        # assert mu.shape == output_shape
-        # assert param.shape == output_shape + dist_shape[-1:]
-        #
-        # if self._cov_type == "cov":
-        #     chol = np.linalg.cholesky(param)
-        # elif self._cov_type == "chol":
-        #     chol = param
-        # else:  # tau -> chol -> swapaxes (chol, -1, -2) -> inv ...
-        #     lower_chol = np.linalg.cholesky(param)
-        #     upper_chol = np.swapaxes(lower_chol, -1, -2)
-        #     chol = np.linalg.inv(upper_chol)
-        #
-        # standard_normal = np.random.standard_normal(output_shape)
-        # return mu + np.einsum("...ij,...j->...i", chol, standard_normal)
+    @classmethod
+    def dist(cls, mu, cov=None, tau=None, chol=None, lower=True, **kwargs):
+        mu = aet.as_tensor_variable(mu)
+        cov = quaddist_matrix(cov, tau, chol, lower)
+        return super().__init__([mu, cov], **kwargs)
 
     def logp(value, mu, cov):
         """
@@ -343,7 +336,7 @@ class MvStudentT(Continuous):
         # chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(self.shape))
         # return (samples / np.sqrt(chi2_samples / nu)) + mu
 
-    def logp(self, value):
+    def logp(value, nu, cov):
         """
         Calculate log-probability of Multivariate Student's T distribution
         at specified value.
@@ -361,7 +354,7 @@ class MvStudentT(Continuous):
         k = floatX(value.shape[-1])
 
         norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * floatX(np.log(nu * np.pi))
-        inner = -(nu + k) / 2.0 * at.log1p(quaddist / nu)
+        inner = -(nu + k) / 2.0 * aet.log1p(quaddist / nu)
         return bound(norm + inner - logdet, ok)
 
     def _distr_parameters_for_repr(self):
@@ -403,44 +396,64 @@ class Dirichlet(Continuous):
 
         return super().dist([a], **kwargs)
 
+    def logp(value, a):
+        """
+        Calculate log-probability of Dirichlet distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # only defined for sum(value) == 1
+        return bound(
+            aet.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(aet.sum(a, axis=-1)),
+            aet.all(value >= 0),
+            aet.all(value <= 1),
+            aet.all(a > 0),
+            broadcast_conditions=False,
+        )
+
+    def transform(rv_var):
+
+        if rv_var.ndim == 1 or rv_var.broadcastable[-1]:
+            # If this variable is just a bunch of scalars/degenerate
+            # Dirichlets, we can't transform it
+            return None
+
+        return transforms.stick_breaking
+
     def _distr_parameters_for_repr(self):
         return ["a"]
 
 
-@logp_transform.register(DirichletRV)
-def dirichlet_transform(op, rv_var):
+class MultinomialRV(MultinomialRV):
+    """Aesara's `MultinomialRV` doesn't broadcast; this one does."""
 
-    if rv_var.ndim == 1 or rv_var.broadcastable[-1]:
-        # If this variable is just a bunch of scalars/degenerate
-        # Dirichlets, we can't transform it
-        return None
+    @classmethod
+    def rng_fn(cls, rng, n, p, size):
+        if n.ndim > 0 or p.ndim > 1:
+            n, p = broadcast_params([n, p], cls.ndims_params)
+            size = tuple(size or ())
 
-    return transforms.stick_breaking
+            if size:
+                n = np.broadcast_to(n, size + n.shape)
+                p = np.broadcast_to(p, size + p.shape)
+
+            res = np.empty(p.shape)
+            for idx in np.ndindex(p.shape[:-1]):
+                res[idx] = rng.multinomial(n[idx], p[idx])
+            return res
+        else:
+            return rng.multinomial(n, p, size=size)
 
 
-@_logp.register(DirichletRV)
-def dirichlet_logp(op, value, a):
-    """
-    Calculate log-probability of Dirichlet distribution
-    at specified value.
-
-    Parameters
-    ----------
-    value: numeric
-        Value for which log-probability is calculated.
-
-    Returns
-    -------
-    TensorVariable
-    """
-    # only defined for sum(value) == 1
-    return bound(
-        aet.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(aet.sum(a, axis=-1)),
-        aet.all(value >= 0),
-        aet.all(value <= 1),
-        aet.all(a > 0),
-        broadcast_conditions=False,
-    )
+multinomial = MultinomialRV()
 
 
 class MultinomialRV(MultinomialRV):
@@ -504,73 +517,18 @@ class Multinomial(Discrete):
     @classmethod
     def dist(cls, n, p, *args, **kwargs):
 
-        p = p / at.sum(p, axis=-1, keepdims=True)
-        n = at.as_tensor_variable(n)
-        p = at.as_tensor_variable(p)
+        # p = p / aet.sum(p, axis=-1, keepdims=True)
+        n = aet.as_tensor_variable(n)
+        p = aet.as_tensor_variable(p)
 
         # mean = n * p
-        # mode = at.cast(at.round(mean), "int32")
-        # diff = n - at.sum(mode, axis=-1, keepdims=True)
-        # inc_bool_arr = at.abs_(diff) > 0
-        # mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
+        # mode = aet.cast(aet.round(mean), "int32")
+        # diff = n - aet.sum(mode, axis=-1, keepdims=True)
+        # inc_bool_arr = aet.abs_(diff) > 0
+        # mode = aet.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         return super().dist([n, p], *args, **kwargs)
 
-        # Thanks to the default shape handling done in generate_values, the last
-        # axis of n is a dummy axis that allows it to broadcast well with p
-        n = np.broadcast_to(n, size)
-        p = np.broadcast_to(p, size)
-        n = n[..., 0]
-
-        # np.random.multinomial needs `n` to be a scalar int and `p` a
-        # sequence so we semi flatten them and iterate over them
-        size_ = to_tuple(raw_size)
-        if p.ndim > len(size_) and p.shape[: len(size_)] == size_:
-            # p and n have the size_ prepend so we don't need it in np.random
-            n_ = n.reshape([-1])
-            p_ = p.reshape([-1, p.shape[-1]])
-            samples = np.array([np.random.multinomial(nn, pp) for nn, pp in zip(n_, p_)])
-            samples = samples.reshape(p.shape)
-        else:
-            # p and n don't have the size prepend
-            n_ = n.reshape([-1])
-            p_ = p.reshape([-1, p.shape[-1]])
-            samples = np.array(
-                [np.random.multinomial(nn, pp, size=size_) for nn, pp in zip(n_, p_)]
-            )
-            samples = np.moveaxis(samples, 0, -1)
-            samples = samples.reshape(size + p.shape)
-        # We cast back to the original dtype
-        return samples.astype(original_dtype)
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Multinomial distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # n, p = draw_values([self.n, self.p], point=point, size=size)
-        # samples = generate_samples(
-        #     self._random,
-        #     n,
-        #     p,
-        #     dist_shape=self.shape,
-        #     not_broadcast_kwargs={"raw_size": size},
-        #     size=size,
-        # )
-        # return samples
-
-    def logp(self, x):
+    def logp(value, n, p):
         """
         Calculate log-probability of Multinomial distribution
         at specified value.
@@ -585,12 +543,12 @@ class Multinomial(Discrete):
         TensorVariable
         """
         return bound(
-            factln(n) + at.sum(-factln(value) + logpow(p, value), axis=-1),
-            at.all(value >= 0),
-            at.all(at.eq(at.sum(value, axis=-1), n)),
-            at.all(p <= 1),
-            at.all(at.eq(at.sum(p, axis=-1), 1)),
-            at.all(at.ge(n, 0)),
+            factln(n) + aet.sum(-factln(value) + logpow(p, value), axis=-1),
+            aet.all(value >= 0),
+            aet.all(aet.eq(aet.sum(value, axis=-1), n)),
+            aet.all(p <= 1),
+            aet.all(aet.eq(aet.sum(p, axis=-1), 1)),
+            aet.all(aet.ge(n, 0)),
             broadcast_conditions=False,
         )
 
