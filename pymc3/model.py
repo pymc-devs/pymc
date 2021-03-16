@@ -817,7 +817,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         Ensure that input parameters to distributions are in a valid
         range. If your model is built in a way where you know your
         parameters can only take on valid values you can set this to
-        False for increased speed.
+        False for increased speed. This should not be used if your model
+        contains discrete variables.
 
     Examples
     --------

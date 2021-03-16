@@ -527,9 +527,9 @@ class Dirichlet(Continuous):
         # only defined for sum(value) == 1
         return bound(
             aet.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(aet.sum(a, axis=-1)),
-            aet.all(value >= 0),
-            aet.all(value <= 1),
-            aet.all(a > 0),
+            value >= 0,
+            value <= 1,
+            a > 0,
             broadcast_conditions=False,
         )
 
@@ -671,11 +671,11 @@ class Multinomial(Discrete):
 
         return bound(
             factln(n) + aet.sum(-factln(x) + logpow(p, x), axis=-1, keepdims=True),
-            aet.all(x >= 0),
-            aet.all(aet.eq(aet.sum(x, axis=-1, keepdims=True), n)),
-            aet.all(p <= 1),
-            aet.all(aet.eq(aet.sum(p, axis=-1), 1)),
-            aet.all(aet.ge(n, 0)),
+            x >= 0,
+            aet.eq(aet.sum(x, axis=-1, keepdims=True), n),
+            p <= 1,
+            aet.eq(aet.sum(p, axis=-1), 1),
+            n >= 0,
             broadcast_conditions=False,
         )
 
@@ -823,10 +823,10 @@ class DirichletMultinomial(Discrete):
         # and that each observation value_i sums to n_i.
         return bound(
             result,
-            aet.all(aet.ge(value, 0)),
-            aet.all(aet.gt(a, 0)),
-            aet.all(aet.ge(n, 0)),
-            aet.all(aet.eq(value.sum(axis=-1, keepdims=True), n)),
+            value >= 0,
+            a > 0,
+            n >= 0,
+            aet.eq(value.sum(axis=-1, keepdims=True), n),
             broadcast_conditions=False,
         )
 
@@ -1575,8 +1575,8 @@ class LKJCorr(Continuous):
         result += (eta - 1.0) * aet.log(det(X))
         return bound(
             result,
-            aet.all(X <= 1),
-            aet.all(X >= -1),
+            X >= -1,
+            X <= 1,
             matrix_pos_def(X),
             eta > 0,
             broadcast_conditions=False,
@@ -2204,9 +2204,10 @@ class CAR(Continuous):
         logquad = (self.tau * delta * tau_dot_delta).sum(axis=-1)
         return bound(
             0.5 * (logtau + logdet - logquad),
-            aet.all(self.alpha <= 1),
-            aet.all(self.alpha >= -1),
+            self.alpha >= -1,
+            self.alpha <= 1,
             self.tau > 0,
+            broadcast_conditions=False,
         )
 
     def random(self, point=None, size=None):

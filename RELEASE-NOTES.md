@@ -1,19 +1,37 @@
 # Release Notes
 
-## PyMC3 vNext (TBD)
+## PyMC3 vNext (4.0.0)
 ### Breaking Changes
 - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `aet`, and `pymc3.aesaraf` (see [4471](https://github.com/pymc-devs/pymc3/pull/4471)).
 
 ### New Features
-+ `pm.math.cartesian` can now handle inputs that are themselves >1D (see [#4482](https://github.com/pymc-devs/pymc3/pull/4482)).
-+ The `CAR` distribution has been added to allow for use of conditional autoregressions which often are used in spatial and network models.
-+ ...
+- The `CAR` distribution has been added to allow for use of conditional autoregressions which often are used in spatial and network models.
+- ...
 
 ### Maintenance
-- The `pymc3.memoize` module was removed and replaced with `cachetools`.  The `hashable` function and `WithMemoization` class were moved to `pymc3.util` (see [#4509](https://github.com/pymc-devs/pymc3/pull/4509)).
 - Remove float128 dtype support (see [#4514](https://github.com/pymc-devs/pymc3/pull/4514)).
+- Logp method of `Uniform` and `DiscreteUniform` no longer depends on `pymc3.distributions.dist_math.bound` for proper evaluation (see [#4541](https://github.com/pymc-devs/pymc3/pull/4541)).
+- ...
+
+## PyMC3 3.11.2 (14 March 2021)
+
+### New Features
++ `pm.math.cartesian` can now handle inputs that are themselves >1D (see [#4482](https://github.com/pymc-devs/pymc3/pull/4482)).
++ Statistics and plotting functions that were removed in `3.11.0` were brought back, albeit with deprecation warnings if an old naming scheme is used (see [#4536](https://github.com/pymc-devs/pymc3/pull/4536)). In order to future proof your code, rename these function calls:
+  + `pm.traceplot` → `pm.plot_trace`
+  + `pm.compareplot` → `pm.plot_compare` (here you might need to rename some columns in the input according to the [`arviz.plot_compare` documentation](https://arviz-devs.github.io/arviz/api/generated/arviz.plot_compare.html))
+  + `pm.autocorrplot` → `pm.plot_autocorr`
+  + `pm.forestplot` → `pm.plot_forest`
+  + `pm.kdeplot` → `pm.plot_kde`
+  + `pm.energyplot` → `pm.plot_energy`
+  + `pm.densityplot` → `pm.plot_density`
+  + `pm.pairplot` → `pm.plot_pair`
+
+### Maintenance
+- ⚠ Our memoization mechanism wasn't robust against hash collisions ([#4506](https://github.com/pymc-devs/pymc3/issues/4506)), sometimes resulting in incorrect values in, for example, posterior predictives. The `pymc3.memoize` module was removed and replaced with `cachetools`.  The `hashable` function and `WithMemoization` class were moved to `pymc3.util` (see [#4525](https://github.com/pymc-devs/pymc3/pull/4525)).
 - `pm.make_shared_replacements` now retains broadcasting information which fixes issues with Metropolis samplers (see [#4492](https://github.com/pymc-devs/pymc3/pull/4492)).
-+ ...
+
+**Release manager** for 3.11.2: Michael Osthege ([@michaelosthege](https://github.com/michaelosthege))
 
 ## PyMC3 3.11.1 (12 February 2021)
 

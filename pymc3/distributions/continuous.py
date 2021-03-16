@@ -268,7 +268,11 @@ class Uniform(BoundedContinuous):
         """
         lower = self.lower
         upper = self.upper
-        return bound(-aet.log(upper - lower), value >= lower, value <= upper)
+        return bound(
+            aet.fill(value, -aet.log(upper - lower)),
+            value >= lower,
+            value <= upper,
+        )
 
     def logcdf(self, value):
         """

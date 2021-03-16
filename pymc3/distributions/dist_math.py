@@ -48,17 +48,23 @@ _beta_clip_values = {
 def bound(logp, *conditions, **kwargs):
     """
     Bounds a log probability density with several conditions.
+    When conditions are not met, the logp values are replaced by -inf.
+
+    Note that bound should not be used to enforce the logic of the logp under the normal
+    support as it can be disabled by the user via check_bounds = False in pm.Model()
 
     Parameters
     ----------
     logp: float
     *conditions: booleans
     broadcast_conditions: bool (optional, default=True)
-        If True, broadcasts logp to match the largest shape of the conditions.
-        This is used e.g. in DiscreteUniform where logp is a scalar constant and the shape
-        is specified via the conditions.
-        If False, will return the same shape as logp.
-        This is used e.g. in Multinomial where broadcasting can lead to differences in the logp.
+        If True, conditions are broadcasted and applied element-wise to each value in logp.
+        If False, conditions are collapsed via aet.all(). As a consequence the entire logp
+        array is either replaced by -inf or unchanged.
+
+        Setting broadcasts_conditions to False is necessary for most (all?) multivariate
+        distributions where the dimensions of the conditions do not unambigously match
+        that of the logp.
 
     Returns
     -------

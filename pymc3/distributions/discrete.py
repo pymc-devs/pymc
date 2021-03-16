@@ -1278,7 +1278,11 @@ class DiscreteUniform(Discrete):
         """
         upper = self.upper
         lower = self.lower
-        return bound(-aet.log(upper - lower + 1), lower <= value, value <= upper)
+        return bound(
+            aet.fill(value, -aet.log(upper - lower + 1)),
+            lower <= value,
+            value <= upper,
+        )
 
     def logcdf(self, value):
         """
