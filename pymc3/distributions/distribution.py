@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import contextvars
 import inspect
 import multiprocessing
@@ -19,10 +18,15 @@ import sys
 import types
 import warnings
 
-from abc import ABC
+from abc import ABCMeta
+from copy import copy
 from typing import TYPE_CHECKING
 
 import dill
+
+from aesara.tensor.random.op import RandomVariable
+
+from pymc3.distributions import _logcdf, _logp, logp_transform
 
 if TYPE_CHECKING:
     from typing import Optional, Callable
@@ -58,9 +62,73 @@ class _Unpickling:
     pass
 
 
-class Distribution(ABC):
+class DistributionMeta(ABCMeta):
+    def __new__(cls, name, bases, clsdict):
+
+        new_cls = super().__new__(cls, name, bases, clsdict)
+
+        # Forcefully deprecate old v3 `Distribution`s
+        if "random" in clsdict:
+
+            def _random(*args, **kwargs):
+                warnings.warn(
+                    "The old `Distribution.random` interface is deprecated.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                return clsdict["random"](*args, **kwargs)
+
+            clsdict["random"] = _random
+
+        rv_op = clsdict.setdefault("rv_op", None)
+        rv_type = None
+
+        if isinstance(rv_op, RandomVariable):
+            if not rv_op.inplace:
+                # TODO: This is a temporary work-around.
+                # Remove this once we know what we want regarding RNG states
+                # and their propagation.
+                rv_op = copy(rv_op)
+                rv_op.inplace = True
+                clsdict["rv_op"] = rv_op
+
+            rv_type = type(rv_op)
+
+        if rv_type is not None:
+            # Create dispatch functions
+
+            class_logp = clsdict.get("logp")
+            if class_logp:
+
+                @_logp.register(rv_type)
+                def logp(op, value, *dist_params, **kwargs):
+                    return class_logp(value, *dist_params, **kwargs)
+
+            class_logcdf = clsdict.get("logcdf")
+            if class_logcdf:
+
+                @_logcdf.register(rv_type)
+                def logcdf(op, value, *dist_params, **kwargs):
+                    return class_logcdf(value, *dist_params, **kwargs)
+
+            class_transform = clsdict.get("transform")
+            if class_transform:
+
+                @logp_transform.register(rv_type)
+                def transform(op, *args, **kwargs):
+                    return class_transform(*args, **kwargs)
+
+            # Register the Aesara `RandomVariable` type as a subclass of this
+            # `Distribution` type.
+            new_cls.register(rv_type)
+
+        return new_cls
+
+
+class Distribution(metaclass=DistributionMeta):
     """Statistical distribution"""
 
+    rv_class = None
     rv_op = None
 
     def __new__(cls, name, *args, **kwargs):
