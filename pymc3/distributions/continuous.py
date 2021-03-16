@@ -377,9 +377,7 @@ class HalfFlat(PositiveContinuous):
         -------
         TensorVariable
         """
-        return at.switch(
-            at.lt(value, np.inf), -np.inf, at.switch(at.eq(value, np.inf), 0, -np.inf)
-        )
+        return at.switch(at.lt(value, np.inf), -np.inf, at.switch(at.eq(value, np.inf), 0, -np.inf))
 
 
 class Normal(Continuous):
@@ -1329,9 +1327,7 @@ class Kumaraswamy(UnitContinuous):
         a = self.a
         b = self.b
 
-        logp = (
-            at.log(a) + at.log(b) + (a - 1) * at.log(value) + (b - 1) * at.log(1 - value ** a)
-        )
+        logp = at.log(a) + at.log(b) + (a - 1) * at.log(value) + (b - 1) * at.log(1 - value ** a)
 
         return bound(logp, value >= 0, value <= 1, a > 0, b > 0)
 
@@ -2259,14 +2255,10 @@ class HalfCauchy(PositiveContinuous):
     @classmethod
     def dist(cls, beta, *args, **kwargs):
         beta = at.as_tensor_variable(floatX(beta))
-
-        # mode = at.as_tensor_variable(0)
-        # median = beta
-
         assert_negative_support(beta, "beta", "HalfCauchy")
-        return super().dist([beta], **kwargs)
+        return super().dist([0.0, beta], **kwargs)
 
-    def logp(value, beta, alpha):
+    def logp(value, loc, beta):
         """
         Calculate log-probability of HalfCauchy distribution at specified value.
 
@@ -2281,12 +2273,12 @@ class HalfCauchy(PositiveContinuous):
         TensorVariable
         """
         return bound(
-            at.log(2) - at.log(np.pi) - at.log(beta) - at.log1p((value / beta) ** 2),
-            value >= 0,
+            at.log(2) - at.log(np.pi) - at.log(beta) - at.log1p(((value - loc) / beta) ** 2),
+            value >= loc,
             beta > 0,
         )
 
-    def logcdf(value, beta, alpha):
+    def logcdf(value, loc, beta):
         """
         Compute the log of the cumulative distribution function for HalfCauchy distribution
         at the specified value.
@@ -2302,8 +2294,8 @@ class HalfCauchy(PositiveContinuous):
         TensorVariable
         """
         return bound(
-            at.log(2 * at.arctan(value / beta) / np.pi),
-            0 <= value,
+            at.log(2 * at.arctan((value - loc) / beta) / np.pi),
+            loc <= value,
             0 < beta,
         )
 
@@ -4235,11 +4227,7 @@ class Moyal(Continuous):
         sigma = self.sigma
         scaled = (value - mu) / sigma
         return bound(
-            (
-                -(1 / 2) * (scaled + at.exp(-scaled))
-                - at.log(sigma)
-                - (1 / 2) * at.log(2 * np.pi)
-            ),
+            (-(1 / 2) * (scaled + at.exp(-scaled)) - at.log(sigma) - (1 / 2) * at.log(2 * np.pi)),
             0 < sigma,
         )
 
