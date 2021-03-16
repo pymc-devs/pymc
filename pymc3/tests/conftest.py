@@ -18,12 +18,11 @@ import pytest
 
 import pymc3 as pm
 
-
-@pytest.fixture(scope="function", autouse=True)
-def aesara_config():
-    config = aesara.config.change_flags(compute_test_value="raise")
-    with config:
-        yield
+# @pytest.fixture(scope="function", autouse=True)
+# def aesara_config():
+#     config = aesara.config.change_flags(compute_test_value="raise")
+#     with config:
+#         yield
 
 
 @pytest.fixture(scope="function", autouse=True)
