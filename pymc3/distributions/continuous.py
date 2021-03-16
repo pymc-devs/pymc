@@ -2259,14 +2259,10 @@ class HalfCauchy(PositiveContinuous):
     @classmethod
     def dist(cls, beta, *args, **kwargs):
         beta = aet.as_tensor_variable(floatX(beta))
-
-        # mode = aet.as_tensor_variable(0)
-        # median = beta
-
         assert_negative_support(beta, "beta", "HalfCauchy")
-        return super().dist([beta], **kwargs)
+        return super().dist([0.0, beta], **kwargs)
 
-    def logp(value, beta, alpha):
+    def logp(value, loc, beta):
         """
         Calculate log-probability of HalfCauchy distribution at specified value.
 
@@ -2281,12 +2277,12 @@ class HalfCauchy(PositiveContinuous):
         TensorVariable
         """
         return bound(
-            aet.log(2) - aet.log(np.pi) - aet.log(beta) - aet.log1p((value / beta) ** 2),
-            value >= 0,
+            aet.log(2) - aet.log(np.pi) - aet.log(beta) - aet.log1p(((value - loc) / beta) ** 2),
+            value >= loc,
             beta > 0,
         )
 
-    def logcdf(value, beta, alpha):
+    def logcdf(value, loc, beta):
         """
         Compute the log of the cumulative distribution function for HalfCauchy distribution
         at the specified value.
@@ -2302,8 +2298,8 @@ class HalfCauchy(PositiveContinuous):
         TensorVariable
         """
         return bound(
-            aet.log(2 * aet.arctan(value / beta) / np.pi),
-            0 <= value,
+            aet.log(2 * aet.arctan((value - loc) / beta) / np.pi),
+            loc <= value,
             0 < beta,
         )
 
