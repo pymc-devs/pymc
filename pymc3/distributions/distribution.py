@@ -65,8 +65,6 @@ class _Unpickling:
 class DistributionMeta(ABCMeta):
     def __new__(cls, name, bases, clsdict):
 
-        new_cls = super().__new__(cls, name, bases, clsdict)
-
         # Forcefully deprecate old v3 `Distribution`s
         if "random" in clsdict:
 
@@ -93,6 +91,8 @@ class DistributionMeta(ABCMeta):
                 clsdict["rv_op"] = rv_op
 
             rv_type = type(rv_op)
+
+        new_cls = super().__new__(cls, name, bases, clsdict)
 
         if rv_type is not None:
             # Create dispatch functions
