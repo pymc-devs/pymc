@@ -31,14 +31,29 @@ if not logging.root.handlers:
         _log.addHandler(handler)
 
 
-if not semver.match(theano.__version__, ">=1.1.2"):
-    print(
-        "!" * 60
-        + f"\nThe installed Theano(-PyMC) version ({theano.__version__}) does not match the PyMC3 requirements."
-        + "\nFor PyMC3 to work, Theano must be uninstalled and replaced with Theano-PyMC."
-        + "\nSee https://github.com/pymc-devs/pymc3/wiki for installation instructions.\n"
-        + "!" * 60
-    )
+def _check_backend_version():
+    backend_paths = theano.__spec__.submodule_search_locations
+    try:
+        backend_version = theano.__version__
+    except:
+        print(
+            "!" * 60
+            + f"\nThe imported Theano(-PyMC) module is broken."
+            + f"\nIt was imported from {backend_paths}"
+            + "\nTry to uninstall/reinstall it after closing all active sessions/notebooks."
+            + "\nAlso see https://github.com/pymc-devs/pymc3/wiki for installation instructions.\n"
+            + "!" * 60
+        )
+        return
+    if not semver.VersionInfo.parse(backend_version).match(">=1.1.2"):
+        print(
+            "!" * 60
+            + f"\nThe installed Theano(-PyMC) version ({theano.__version__}) does not match the PyMC3 requirements."
+            + f"\nIt was imported from {backend_paths}"
+            + "\nFor PyMC3 to work, a compatible Theano-PyMC backend version must be installed."
+            + "\nSee https://github.com/pymc-devs/pymc3/wiki for installation instructions.\n"
+            + "!" * 60
+        )
 
 
 def __set_compiler_flags():
@@ -47,6 +62,7 @@ def __set_compiler_flags():
     theano.config.gcc__cxxflags = f"{current} -Wno-c++11-narrowing"
 
 
+_check_backend_version()
 __set_compiler_flags()
 
 from pymc3 import gp, ode, sampling

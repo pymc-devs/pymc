@@ -14,6 +14,7 @@
 
 import numpy as np
 import pytest
+import theano
 
 from cachetools import cached
 from numpy.testing import assert_almost_equal
@@ -23,6 +24,27 @@ import pymc3 as pm
 from pymc3.distributions.transforms import Transform
 from pymc3.tests.helpers import SeededTest
 from pymc3.util import hash_key, hashable, locally_cachedmethod
+
+
+class TestBackendVersionCheck:
+    def test_warn_on_incompatible_backend(self, capsys):
+        assert not "!!!!!" in capsys.readouterr().out
+        pm._check_backend_version()
+        assert not "!!!!!" in capsys.readouterr().out
+
+        # Mock an incorrect backend version
+        original = theano.__version__
+
+        theano.__version__ = "1.1.0"
+        pm._check_backend_version()
+        assert "does not match" in capsys.readouterr().out
+
+        del theano.__version__
+        pm._check_backend_version()
+        assert "is broken" in capsys.readouterr().out
+
+        theano.__version__ = original
+        pass
 
 
 class TestTransformName:
