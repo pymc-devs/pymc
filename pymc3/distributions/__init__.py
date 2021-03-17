@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 from functools import singledispatch
 from itertools import chain
 from typing import Generator, List, Optional, Tuple, Union
@@ -20,7 +22,7 @@ import numpy as np
 
 from aesara import config
 from aesara.graph.basic import Variable, ancestors, clone_replace
-from aesara.graph.op import compute_test_value
+from aesara.graph.op import Op, compute_test_value
 from aesara.tensor.random.op import Observed, RandomVariable
 from aesara.tensor.subtensor import AdvancedSubtensor, AdvancedSubtensor1, Subtensor
 from aesara.tensor.var import TensorVariable
@@ -33,7 +35,7 @@ PotentialShapeType = Union[
 
 
 @singledispatch
-def logp_transform(op, inputs):
+def logp_transform(op: Op):
     return None
 
 
@@ -141,7 +143,8 @@ def change_rv_size(
 
 def rv_log_likelihood_args(
     rv_var: TensorVariable,
-    transformed: Optional[bool] = True,
+    *,
+    return_observations: bool = True,
 ) -> Tuple[TensorVariable, TensorVariable]:
     """Get a `RandomVariable` and its corresponding log-likelihood `TensorVariable` value.
 
@@ -151,8 +154,9 @@ def rv_log_likelihood_args(
         A variable corresponding to a `RandomVariable`, whether directly or
         indirectly (e.g. an observed variable that's the output of an
         `Observed` `Op`).
-    transformed
-        When ``True``, return the transformed value var.
+    return_observations
+        When ``True``, return the observed values in place of the log-likelihood
+        value variable.
 
     Returns
     =======
@@ -163,12 +167,14 @@ def rv_log_likelihood_args(
     """
 
     if rv_var.owner and isinstance(rv_var.owner.op, Observed):
-        return tuple(rv_var.owner.inputs)
-    elif hasattr(rv_var.tag, "value_var"):
-        rv_value = rv_var.tag.value_var
-        return rv_var, rv_value
-    else:
-        return rv_var, None
+        rv_var, obs_var = rv_var.owner.inputs
+        if return_observations:
+            return rv_var, obs_var
+        else:
+            return rv_var, rv_log_likelihood_args(rv_var)[1]
+
+    rv_value = getattr(rv_var.tag, "value_var", None)
+    return rv_var, rv_value
 
 
 def rv_ancestors(graphs: List[TensorVariable]) -> Generator[TensorVariable, None, None]:
@@ -217,7 +223,7 @@ def sample_to_measure_vars(
         if not (anc.owner and isinstance(anc.owner.op, RandomVariable)):
             continue
 
-        _, value_var = rv_log_likelihood_args(anc)
+        _, value_var = rv_log_likelihood_args(anc, return_observations=False)
 
         if value_var is not None:
             replace[anc] = value_var
@@ -233,8 +239,10 @@ def sample_to_measure_vars(
 def logpt(
     rv_var: TensorVariable,
     rv_value: Optional[TensorVariable] = None,
-    jacobian: Optional[bool] = True,
-    scaling: Optional[bool] = True,
+    *,
+    jacobian: bool = True,
+    scaling: bool = True,
+    transformed: bool = True,
     **kwargs,
 ) -> TensorVariable:
     """Create a measure-space (i.e. log-likelihood) graph for a random variable at a given point.
@@ -257,6 +265,8 @@ def logpt(
         Whether or not to include the Jacobian term.
     scaling
         A scaling term to apply to the generated log-likelihood graph.
+    transformed
+        Apply transforms.
 
     """
 
@@ -282,22 +292,22 @@ def logpt(
 
             raise NotImplementedError("Missing value support is incomplete")
 
-            # "Flatten" and sum an array of indexed RVs' log-likelihoods
-            rv_var, missing_values = rv_node.inputs
-
-            missing_values = missing_values.data
-            logp_var = at.sum(
-                [
-                    logpt(
-                        rv_var,
-                    )
-                    for idx, missing in zip(
-                        np.ndindex(missing_values.shape), missing_values.flatten()
-                    )
-                    if missing
-                ]
-            )
-            return logp_var
+            # # "Flatten" and sum an array of indexed RVs' log-likelihoods
+            # rv_var, missing_values = rv_node.inputs
+            #
+            # missing_values = missing_values.data
+            # logp_var = at.sum(
+            #     [
+            #         logpt(
+            #             rv_var,
+            #         )
+            #         for idx, missing in zip(
+            #             np.ndindex(missing_values.shape), missing_values.flatten()
+            #         )
+            #         if missing
+            #     ]
+            # )
+            # return logp_var
 
         return at.zeros_like(rv_var)
 
@@ -312,15 +322,16 @@ def logpt(
     # If any of the measure vars are transformed measure-space variables
     # (signified by having a `transform` value in their tags), then we apply
     # the their transforms and add their Jacobians (when enabled)
-    if transform:
-        logp_var = _logp(rv_node.op, transform.backward(rv_value), *dist_params, **kwargs)
+    if transform and transformed:
+        logp_var = _logp(rv_node.op, transform.backward(rv_var, rv_value), *dist_params, **kwargs)
+
         logp_var = transform_logp(
             logp_var,
             tuple(replacements.values()),
         )
 
         if jacobian:
-            transformed_jacobian = transform.jacobian_det(rv_value)
+            transformed_jacobian = transform.jacobian_det(rv_var, rv_value)
             if transformed_jacobian:
                 if logp_var.ndim > transformed_jacobian.ndim:
                     logp_var = logp_var.sum(axis=-1)
@@ -345,11 +356,17 @@ def transform_logp(logp_var: TensorVariable, inputs: List[TensorVariable]) -> Te
     for measure_var in inputs:
 
         transform = getattr(measure_var.tag, "transform", None)
+        rv_var = getattr(measure_var.tag, "rv_var", None)
 
-        if transform is None:
+        if transform is not None and rv_var is None:
+            warnings.warn(
+                f"A transform was found for {measure_var} but not a corresponding random variable"
+            )
+
+        if transform is None or rv_var is None:
             continue
 
-        trans_rv_value = transform.backward(measure_var)
+        trans_rv_value = transform.backward(rv_var, measure_var)
         trans_replacements[measure_var] = trans_rv_value
 
     if trans_replacements:
@@ -359,7 +376,7 @@ def transform_logp(logp_var: TensorVariable, inputs: List[TensorVariable]) -> Te
 
 
 @singledispatch
-def _logp(op, value, *dist_params, **kwargs):
+def _logp(op: Op, value: TensorVariable, *dist_params, **kwargs):
     """Create a log-likelihood graph.
 
     This function dispatches on the type of `op`, which should be a subclass
@@ -370,7 +387,9 @@ def _logp(op, value, *dist_params, **kwargs):
     return at.zeros_like(value)
 
 
-def logcdf(rv_var, rv_value, jacobian=True, **kwargs):
+def logcdf(
+    rv_var: TensorVariable, rv_value: Optional[TensorVariable], jacobian: bool = True, **kwargs
+):
     """Create a log-CDF graph."""
 
     rv_var, _ = rv_log_likelihood_args(rv_var)

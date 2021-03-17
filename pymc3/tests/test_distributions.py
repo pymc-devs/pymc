@@ -620,14 +620,15 @@ class TestMatchesScipy:
             pt = dict(pt)
             pt_d = {}
             for k, v in pt.items():
-                nv = param_vars.get(k, model.named_vars.get(k))
+                rv_var = model.named_vars.get(k)
+                nv = param_vars.get(k, rv_var)
                 nv = getattr(nv.tag, "value_var", nv)
 
                 transform = getattr(nv.tag, "transform", None)
                 if transform:
                     # TODO: The compiled graph behind this should be cached and
                     # reused (if it isn't already).
-                    v = transform.forward(v).eval()
+                    v = transform.forward(rv_var, v).eval()
 
                 if nv.name in param_vars:
                     # Update the shared parameter variables in `param_vars`
@@ -1914,7 +1915,7 @@ class TestMatchesScipy:
         d_value = d.tag.value_var
         d_point = d.eval()
         if hasattr(d_value.tag, "transform"):
-            d_point_trans = d_value.tag.transform.forward(d_point).eval()
+            d_point_trans = d_value.tag.transform.forward(d, d_point).eval()
         else:
             d_point_trans = d_point
 
