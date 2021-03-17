@@ -104,31 +104,24 @@ class BoundedContinuous(Continuous):
 
 
 @logp_transform.register(PositiveContinuous)
-def pos_cont_transform(op, rv_var):
+def pos_cont_transform(op):
     return transforms.log
 
 
 @logp_transform.register(UnitContinuous)
-def unit_cont_transform(op, rv_var):
+def unit_cont_transform(op):
     return transforms.logodds
 
 
 @logp_transform.register(BoundedContinuous)
-def bounded_cont_transform(op, rv_var):
-    _, _, _, lower, upper = rv_var.owner.inputs
-    lower = at.as_tensor_variable(lower) if lower is not None else None
-    upper = at.as_tensor_variable(upper) if upper is not None else None
+def bounded_cont_transform(op):
+    def transform_params(rv_var):
+        _, _, _, lower, upper = rv_var.owner.inputs
+        lower = at.as_tensor_variable(lower) if lower is not None else None
+        upper = at.as_tensor_variable(upper) if upper is not None else None
+        return lower, upper
 
-    if lower is None and upper is None:
-        transform = None
-    elif lower is not None and upper is None:
-        transform = transforms.lowerbound(lower)
-    elif lower is None and upper is not None:
-        transform = transforms.upperbound(upper)
-    else:
-        transform = transforms.interval(lower, upper)
-
-    return transform
+    return transforms.interval(transform_params)
 
 
 def assert_negative_support(var, label, distname, value=-1e-6):
@@ -384,7 +377,9 @@ class HalfFlat(PositiveContinuous):
         -------
         TensorVariable
         """
-        return at.switch(at.lt(value, np.inf), -np.inf, at.switch(at.eq(value, np.inf), 0, -np.inf))
+        return at.switch(
+            at.lt(value, np.inf), -np.inf, at.switch(at.eq(value, np.inf), 0, -np.inf)
+        )
 
 
 class Normal(Continuous):
@@ -1334,7 +1329,9 @@ class Kumaraswamy(UnitContinuous):
         a = self.a
         b = self.b
 
-        logp = at.log(a) + at.log(b) + (a - 1) * at.log(value) + (b - 1) * at.log(1 - value ** a)
+        logp = (
+            at.log(a) + at.log(b) + (a - 1) * at.log(value) + (b - 1) * at.log(1 - value ** a)
+        )
 
         return bound(logp, value >= 0, value <= 1, a > 0, b > 0)
 
@@ -4238,7 +4235,11 @@ class Moyal(Continuous):
         sigma = self.sigma
         scaled = (value - mu) / sigma
         return bound(
-            (-(1 / 2) * (scaled + at.exp(-scaled)) - at.log(sigma) - (1 / 2) * at.log(2 * np.pi)),
+            (
+                -(1 / 2) * (scaled + at.exp(-scaled))
+                - at.log(sigma)
+                - (1 / 2) * at.log(2 * np.pi)
+            ),
             0 < sigma,
         )
 
