@@ -126,7 +126,7 @@ def quaddist_parse(value, mu, cov, mat_type="cov"):
 
 
 def quaddist_chol(delta, chol_mat):
-    diag = at.nlinalg.diag(chol_mat)
+    diag = at.diag(chol_mat)
     # Check if the covariance matrix is positive definite.
     ok = at.all(diag > 0)
     # If not, replace the diagonal. We return -inf later, but
@@ -223,7 +223,7 @@ class MvNormal(Continuous):
     def dist(cls, mu, cov=None, tau=None, chol=None, lower=True, **kwargs):
         mu = at.as_tensor_variable(mu)
         cov = quaddist_matrix(cov, tau, chol, lower)
-        return super().__init__([mu, cov], **kwargs)
+        return super().dist([mu, cov], **kwargs)
 
     def logp(value, mu, cov):
         """
@@ -969,7 +969,11 @@ class _LKJCholeskyCov(Continuous):
         if sd_dist.shape.ndim not in [0, 1]:
             raise ValueError("Invalid shape for sd_dist.")
 
-        transform = transforms.CholeskyCovPacked(n)
+        def transform_params(rv_var):
+            _, _, _, n, eta = rv_var.owner.inputs
+            return np.arange(1, n + 1).cumsum() - 1
+
+        transform = transforms.CholeskyCovPacked(transform_params)
 
         kwargs["shape"] = shape
         kwargs["transform"] = transform
