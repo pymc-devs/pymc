@@ -301,7 +301,6 @@ class TestWald(BaseTestCases.BaseTestCase):
     params = {"mu": 1.0, "lam": 1.0, "alpha": 0.0}
 
 
-@pytest.mark.skip(reason="This test is covered by Aesara")
 class TestBeta(BaseTestCases.BaseTestCase):
     distribution = pm.Beta
     params = {"alpha": 1.0, "beta": 1.0}
