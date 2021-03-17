@@ -115,20 +115,13 @@ def unit_cont_transform(op, rv_var):
 
 @logp_transform.register(BoundedContinuous)
 def bounded_cont_transform(op, rv_var):
-    _, _, _, lower, upper = rv_var.owner.inputs
-    lower = aet.as_tensor_variable(lower) if lower is not None else None
-    upper = aet.as_tensor_variable(upper) if upper is not None else None
+    def transform_params(rv_var):
+        _, _, _, lower, upper = rv_var.owner.inputs
+        lower = aet.as_tensor_variable(lower) if lower is not None else None
+        upper = aet.as_tensor_variable(upper) if upper is not None else None
+        return lower, upper
 
-    if lower is None and upper is None:
-        transform = None
-    elif lower is not None and upper is None:
-        transform = transforms.lowerbound(lower)
-    elif lower is None and upper is not None:
-        transform = transforms.upperbound(upper)
-    else:
-        transform = transforms.interval(lower, upper)
-
-    return transform
+    return transforms.interval(transform_params)
 
 
 def assert_negative_support(var, label, distname, value=-1e-6):

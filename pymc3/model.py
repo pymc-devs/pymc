@@ -16,6 +16,7 @@ import collections
 import itertools
 import threading
 import warnings
+import weakref
 
 from sys import modules
 from typing import TYPE_CHECKING, Any, List, Optional, Type, TypeVar, Union, cast
@@ -1085,16 +1086,16 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 value_var.tag.transform = transform
                 value_var.name = f"{rv_var.name}_{transform.name}"
                 if aesara.config.compute_test_value != "off":
-                    value_var.tag.test_value = transform.forward(value_var).tag.test_value
+                    value_var.tag.test_value = transform.forward(rv_var, value_var).tag.test_value
 
                 # The transformed variable needs to be a named variable in the
                 # model, too
                 self.named_vars[value_var.name] = value_var
             else:
-                value_var = rv_var.clone()
                 value_var.name = rv_var.name
 
             rv_var.tag.value_var = value_var
+            value_var.tag.rv_var = weakref.ref(rv_var)
 
         elif isinstance(data, dict):
 
@@ -1626,6 +1627,7 @@ def make_obs_var(
     # variable `rv_var`).
     value_var = rv_var.clone()
     rv_var.tag.value_var = value_var
+    value_var.tag.rv_var = weakref.ref(rv_var)
     value_var.name = f"{rv_var.name}"
 
     missing_values = None
