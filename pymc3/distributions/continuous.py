@@ -23,7 +23,7 @@ import numpy as np
 
 from aesara.assert_op import Assert
 from aesara.tensor.random.basic import (
-    beta,
+    BetaRV,
     cauchy,
     exponential,
     gamma,
@@ -42,6 +42,7 @@ from pymc3.distributions.dist_math import (
     SplineWrapper,
     betaln,
     bound,
+    clipped_beta_rvs,
     gammaln,
     i0e,
     incomplete_beta,
@@ -1064,6 +1065,15 @@ class Wald(PositiveContinuous):
         )
 
 
+class BetaClippedRV(BetaRV):
+    @classmethod
+    def rng_fn(cls, rng, alpha, beta, size):
+        return clipped_beta_rvs(alpha, beta, size=size, random_state=rng)
+
+
+beta = BetaClippedRV()
+
+
 class Beta(UnitContinuous):
     r"""
     Beta log-likelihood.
@@ -1138,9 +1148,6 @@ class Beta(UnitContinuous):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
-
-        # mean = alpha / (alpha + beta)
-        # variance = (alpha * beta) / ((alpha + beta) ** 2 * (alpha + beta + 1))
 
         assert_negative_support(alpha, "alpha", "Beta")
         assert_negative_support(beta, "beta", "Beta")
