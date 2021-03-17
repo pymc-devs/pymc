@@ -596,7 +596,7 @@ def incomplete_beta(a, b, value):
     )
 
 
-def clipped_beta_rvs(a, b, size=None, dtype="float64"):
+def clipped_beta_rvs(a, b, size=None, random_state=None, dtype="float64"):
     """Draw beta distributed random samples in the open :math:`(0, 1)` interval.
 
     The samples are generated with ``scipy.stats.beta.rvs``, but any value that
@@ -631,6 +631,6 @@ def clipped_beta_rvs(a, b, size=None, dtype="float64"):
         is shifted to ``np.nextafter(1, 0, dtype=dtype)``.
 
     """
-    out = scipy.stats.beta.rvs(a, b, size=size).astype(dtype)
+    out = scipy.stats.beta.rvs(a, b, size=size, random_state=random_state).astype(dtype)
     lower, upper = _beta_clip_values[dtype]
     return np.maximum(np.minimum(out, upper), lower)
