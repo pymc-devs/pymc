@@ -790,18 +790,12 @@ class HalfNormal(PositiveContinuous):
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        # sigma = sd = sigma = aet.as_tensor_variable(sigma)
-        # tau = tau = aet.as_tensor_variable(tau)
-
-        # mean = aet.sqrt(2 / (np.pi * tau))
-        # variance = (1.0 - 2 / np.pi) / tau
-
         assert_negative_support(tau, "tau", "HalfNormal")
         assert_negative_support(sigma, "sigma", "HalfNormal")
 
-        return super().dist([sigma, tau], **kwargs)
+        return super().dist([0.0, sigma], **kwargs)
 
-    def logp(value, sigma, tau):
+    def logp(value, loc, sigma):
         """
         Calculate log-probability of HalfNormal distribution at specified value.
 
@@ -815,14 +809,16 @@ class HalfNormal(PositiveContinuous):
         -------
         TensorVariable
         """
+        tau, sigma = get_tau_sigma(tau=None, sigma=sigma)
+
         return bound(
-            -0.5 * tau * value ** 2 + 0.5 * aet.log(tau * 2.0 / np.pi),
-            value >= 0,
+            -0.5 * tau * (value - loc) ** 2 + 0.5 * aet.log(tau * 2.0 / np.pi),
+            value >= loc,
             tau > 0,
             sigma > 0,
         )
 
-    def logcdf(value, sigma, tau):
+    def logcdf(value, loc, sigma):
         """
         Compute the log of the cumulative distribution function for HalfNormal distribution
         at the specified value.
@@ -837,10 +833,10 @@ class HalfNormal(PositiveContinuous):
         -------
         TensorVariable
         """
-        z = zvalue(value, mu=0, sigma=sigma)
+        z = zvalue(value, mu=loc, sigma=sigma)
         return bound(
             aet.log1p(-aet.erfc(z / aet.sqrt(2.0))),
-            0 <= value,
+            loc <= value,
             0 < sigma,
         )
 
