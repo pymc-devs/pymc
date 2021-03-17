@@ -68,7 +68,7 @@ class BaseTrace(ABC):
                 if transform:
                     # We need to create and add an un-transformed version of
                     # each transformed variable
-                    untrans_var = transform.backward(var)
+                    untrans_var = transform.backward(v, var)
                     untrans_var.name = v.name
                     vars.append(untrans_var)
                 vars.append(var)
