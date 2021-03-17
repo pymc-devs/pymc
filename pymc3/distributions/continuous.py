@@ -23,7 +23,7 @@ import numpy as np
 
 from aesara.assert_op import Assert
 from aesara.tensor.random.basic import (
-    beta,
+    BetaRV,
     cauchy,
     exponential,
     gamma,
@@ -42,6 +42,7 @@ from pymc3.distributions.dist_math import (
     SplineWrapper,
     betaln,
     bound,
+    clipped_beta_rvs,
     gammaln,
     i0e,
     incomplete_beta,
@@ -1150,9 +1151,6 @@ class Beta(UnitContinuous):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
         alpha = aet.as_tensor_variable(floatX(alpha))
         beta = aet.as_tensor_variable(floatX(beta))
-
-        # mean = alpha / (alpha + beta)
-        # variance = (alpha * beta) / ((alpha + beta) ** 2 * (alpha + beta + 1))
 
         assert_negative_support(alpha, "alpha", "Beta")
         assert_negative_support(beta, "beta", "Beta")
