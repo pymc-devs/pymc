@@ -126,7 +126,7 @@ def quaddist_parse(value, mu, cov, mat_type="cov"):
 
 
 def quaddist_chol(delta, chol_mat):
-    diag = aet.nlinalg.diag(chol_mat)
+    diag = aet.diag(chol_mat)
     # Check if the covariance matrix is positive definite.
     ok = aet.all(diag > 0)
     # If not, replace the diagonal. We return -inf later, but
@@ -223,7 +223,7 @@ class MvNormal(Continuous):
     def dist(cls, mu, cov=None, tau=None, chol=None, lower=True, **kwargs):
         mu = aet.as_tensor_variable(mu)
         cov = quaddist_matrix(cov, tau, chol, lower)
-        return super().__init__([mu, cov], **kwargs)
+        return super().dist([mu, cov], **kwargs)
 
     def logp(value, mu, cov):
         """

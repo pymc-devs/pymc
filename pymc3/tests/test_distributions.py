@@ -642,7 +642,27 @@ class TestMatchesScipy:
         domains["value"] = domain
         for pt in product(domains, n_samples=n_samples):
             pt = dict(pt)
-            pt_logp = Point(pt, model=model)
+            pt_d = {}
+            for k, v in pt.items():
+                rv_var = model.named_vars.get(k)
+                nv = param_vars.get(k, rv_var)
+                nv = getattr(nv.tag, "value_var", nv)
+
+                transform = getattr(nv.tag, "transform", None)
+                if transform:
+                    # TODO: The compiled graph behind this should be cached and
+                    # reused (if it isn't already).
+                    v = transform.forward(rv_var, v).eval()
+
+                if nv.name in param_vars:
+                    # Update the shared parameter variables in `param_vars`
+                    param_vars[nv.name].set_value(v)
+                else:
+                    # Create an argument entry for the (potentially
+                    # transformed) "value" variable
+                    pt_d[nv.name] = v
+
+            pt_logp = Point(pt_d, model=model)
             pt_ref = Point(pt, filter_model_vars=False, model=model)
             assert_almost_equal(
                 logp(pt_logp),
@@ -1956,7 +1976,7 @@ class TestMatchesScipy:
         d_value = d.tag.value_var
         d_point = d.eval()
         if hasattr(d_value.tag, "transform"):
-            d_point_trans = d_value.tag.transform.forward(d_point).eval()
+            d_point_trans = d_value.tag.transform.forward(d, d_point).eval()
         else:
             d_point_trans = d_point
 
