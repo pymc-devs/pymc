@@ -27,7 +27,6 @@ jobs:
         # 6th block: These have some XFAILs
           - |
             --ignore=pymc3/tests/test_distribution_defaults.py
-            --ignore=pymc3/tests/test_distributions_random.py
             --ignore=pymc3/tests/test_distributions_timeseries.py
             --ignore=pymc3/tests/test_missing.py
             --ignore=pymc3/tests/test_mixture.py
@@ -53,7 +52,6 @@ jobs:
             --ignore=pymc3/tests/test_plots.py
             --ignore=pymc3/tests/test_special_functions.py
             --ignore=pymc3/tests/test_updates.py
-            --ignore=pymc3/tests/test_dist_math.py
             --ignore=pymc3/tests/test_examples.py
             --ignore=pymc3/tests/test_glm.py
             --ignore=pymc3/tests/test_gp.py
@@ -65,6 +63,8 @@ jobs:
             --ignore=pymc3/tests/test_posdef_sym.py
             --ignore=pymc3/tests/test_quadpotential.py
             --ignore=pymc3/tests/test_shape_handling.py
+            --ignore=pymc3/tests/test_distributions.py
+            --ignore=pymc3/tests/test_distributions_random.py
 
           - |
             pymc3/tests/test_dist_math.py
@@ -76,6 +76,8 @@ jobs:
 
           - |
             pymc3/tests/test_dist_math.py
+            pymc3/tests/test_distributions.py
+            pymc3/tests/test_distributions_random.py
             pymc3/tests/test_examples.py
             pymc3/tests/test_glm.py
             pymc3/tests/test_gp.py
