@@ -554,6 +554,30 @@ def RandomPdMatrix(n):
     return np.dot(A, A.T) + n * np.identity(n)
 
 
+def test_hierarchical_logpt():
+    """Make sure there are no random variables in a model's log-likelihood graph."""
+    with pm.Model() as m:
+        x = pm.Uniform("x", lower=0, upper=1)
+        y = pm.Uniform("y", lower=0, upper=x)
+
+    logpt_ancestors = list(ancestors([m.logpt]))
+    ancestors_with_owner = [a for a in logpt_ancestors if a.owner]
+    assert len(ancestors_with_owner) > 0
+    assert not any(isinstance(v.owner.op, RandomVariable) for v in ancestors_with_owner)
+    assert x.tag.value_var in logpt_ancestors
+    assert y.tag.value_var in logpt_ancestors
+
+
+def test_hierarchical_obs_logpt():
+    obs = np.array([0.5, 0.4, 5, 2])
+
+    with pm.Model() as model:
+        x = pm.Normal("x", 0, 1, observed=obs)
+        pm.Normal("y", x, 1, observed=obs)
+
+    model.logp(model.test_point)
+
+
 class TestMatchesScipy:
     def check_logp(
         self,
@@ -2834,16 +2858,3 @@ def test_serialize_density_dist():
     import pickle
 
     pickle.loads(pickle.dumps(y))
-
-
-def test_hierarchical_logpt():
-    with pm.Model() as m:
-        x = pm.Uniform("x", lower=0, upper=1)
-        y = pm.Uniform("y", lower=0, upper=x)
-
-    # Make sure that hierarchical random variables are replaced with their
-    # log-likelihood space variables in the log-likelhood
-    logpt_ancestors = list(ancestors([m.logpt]))
-    assert not any(isinstance(v, RandomVariable) for v in logpt_ancestors)
-    assert x.tag.value_var in logpt_ancestors
-    assert y.tag.value_var in logpt_ancestors
