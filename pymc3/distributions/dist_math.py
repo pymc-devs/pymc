@@ -466,7 +466,7 @@ def incomplete_beta_cfe(a, b, x, small):
     qkm1 = one
     r = one
 
-    def _step(i, pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r):
+    def _step(i, pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r, a, b, x, small):
         xk = -(x * k1 * k2) / (k3 * k4)
         pk = pkm1 + pkm2 * xk
         qk = qkm1 + qkm2 * xk
@@ -522,6 +522,7 @@ def incomplete_beta_cfe(a, b, x, small):
                 (pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r), "float64"
             )
         ],
+        non_sequences=[a, b, x, small],
     )
 
     return r[-1]
@@ -540,14 +541,17 @@ def incomplete_beta_ps(a, b, value):
     threshold = np.MachAr().eps * ai
     s = aet.constant(0, dtype="float64")
 
-    def _step(i, t, s):
+    def _step(i, t, s, a, b, value):
         t *= (i - b) * value / i
         step = t / (a + i)
         s += step
         return ((t, s), until(aet.abs_(step) < threshold))
 
     (t, s), _ = scan(
-        _step, sequences=[aet.arange(2, 302)], outputs_info=[e for e in aet.cast((t, s), "float64")]
+        _step,
+        sequences=[aet.arange(2, 302)],
+        outputs_info=[e for e in aet.cast((t, s), "float64")],
+        non_sequences=[a, b, value],
     )
 
     s = s[-1] + t1 + ai
