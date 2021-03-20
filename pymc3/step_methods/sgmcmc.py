@@ -19,7 +19,7 @@ from collections import OrderedDict
 import aesara
 import aesara.tensor as at
 
-from pymc3.aesaraf import at_rng, make_shared_replacements
+from pymc3.aesaraf import aet_rng, make_shared_replacements
 from pymc3.model import inputvars, modelcontext
 from pymc3.step_methods.arraystep import ArrayStepShared
 
@@ -64,8 +64,9 @@ def elemwise_dlogL(vars, model, flat_view):
     terms = []
     for var in vars:
         output, _ = aesara.scan(
-            lambda i, logX=logL, v=var: aesara.grad(logX[i], v).flatten(),
+            lambda i, logX, v: aesara.grad(logX[i], v).flatten(),
             sequences=[at.arange(logL.shape[0])],
+            non_sequences=[logL, var],
         )
         terms.append(output)
     dlogL = aesara.clone_replace(
@@ -147,9 +148,9 @@ class BaseStochasticGradient(ArrayStepShared):
         # set random stream
         self.random = None
         if random_seed is None:
-            self.random = at_rng()
+            self.random = aet_rng()
         else:
-            self.random = at_rng(random_seed)
+            self.random = aet_rng(random_seed)
 
         self.step_size = step_size
 

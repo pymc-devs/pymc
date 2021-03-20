@@ -1160,10 +1160,10 @@ class Group(WithMemoization):
         random = self.symbolic_random.astype(self.symbolic_initial.dtype)
         random = at.patternbroadcast(random, self.symbolic_initial.broadcastable)
 
-        def sample(post):
+        def sample(post, node):
             return aesara.clone_replace(node, {self.input: post})
 
-        nodes, _ = aesara.scan(sample, random)
+        nodes, _ = aesara.scan(sample, random, non_sequences=[node])
         return nodes
 
     def symbolic_single_sample(self, node):
@@ -1522,10 +1522,11 @@ class Approximation(WithMemoization):
         """
         node = self.to_flat_input(node)
 
-        def sample(*post):
-            return aesara.clone_replace(node, dict(zip(self.inputs, post)))
+        def sample(*post, node, inputs):
+            node, inputs = post[-2:]
+            return aesara.clone_replace(node, dict(zip(inputs, post)))
 
-        nodes, _ = aesara.scan(sample, self.symbolic_randoms)
+        nodes, _ = aesara.scan(sample, self.symbolic_randoms, non_sequences=[node, inputs])
         return nodes
 
     def symbolic_single_sample(self, node):
