@@ -64,8 +64,9 @@ def elemwise_dlogL(vars, model, flat_view):
     terms = []
     for var in vars:
         output, _ = aesara.scan(
-            lambda i, logX=logL, v=var: aesara.grad(logX[i], v).flatten(),
+            lambda i, logX, v: aesara.grad(logX[i], v).flatten(),
             sequences=[aet.arange(logL.shape[0])],
+            non_sequences=[logL, var],
         )
         terms.append(output)
     dlogL = aesara.clone_replace(
