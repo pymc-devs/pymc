@@ -546,8 +546,8 @@ def incomplete_beta_ps(a, b, value):
 
     (t, s), _ = scan(
         _step,
-        sequences=[at.arange(2, 302)],
-        outputs_info=[e for e in at.cast((t, s), "float64")],
+        sequences=[aet.arange(2, 302)],
+        outputs_info=[e for e in aet.cast((t, s), "float64")],
         non_sequences=[a, b, value],
     )
 
