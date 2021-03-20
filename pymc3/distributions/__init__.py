@@ -23,7 +23,7 @@ import numpy as np
 from aesara import config
 from aesara.graph.basic import Variable, ancestors, clone_replace
 from aesara.graph.op import Op, compute_test_value
-from aesara.tensor.random.op import Observed, RandomVariable
+from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import AdvancedSubtensor, AdvancedSubtensor1, Subtensor
 from aesara.tensor.var import TensorVariable
 
@@ -141,22 +141,16 @@ def change_rv_size(
     return rv_var
 
 
-def rv_log_likelihood_args(
-    rv_var: TensorVariable,
-    *,
-    return_observations: bool = True,
+def extract_rv_and_value_vars(
+    var: TensorVariable,
 ) -> Tuple[TensorVariable, TensorVariable]:
-    """Get a `RandomVariable` and its corresponding log-likelihood `TensorVariable` value.
+    """Extract a random variable and its corresponding value variable from a generic
+    `TensorVariable`.
 
     Parameters
     ==========
-    rv_var
-        A variable corresponding to a `RandomVariable`, whether directly or
-        indirectly (e.g. an observed variable that's the output of an
-        `Observed` `Op`).
-    return_observations
-        When ``True``, return the observed values in place of the log-likelihood
-        value variable.
+    var
+        A variable corresponding to a `RandomVariable`.
 
     Returns
     =======
@@ -165,16 +159,14 @@ def rv_log_likelihood_args(
     variable).
 
     """
+    if not var.owner:
+        return None, None
 
-    if rv_var.owner and isinstance(rv_var.owner.op, Observed):
-        rv_var, obs_var = rv_var.owner.inputs
-        if return_observations:
-            return rv_var, obs_var
-        else:
-            return rv_var, rv_log_likelihood_args(rv_var)[1]
+    if isinstance(var.owner.op, RandomVariable):
+        rv_value = getattr(var.tag, "value_var", None)
+        return var, rv_value
 
-    rv_value = getattr(rv_var.tag, "value_var", None)
-    return rv_var, rv_value
+    return None, None
 
 
 def rv_ancestors(graphs: List[TensorVariable]) -> Generator[TensorVariable, None, None]:
@@ -184,14 +176,6 @@ def rv_ancestors(graphs: List[TensorVariable]) -> Generator[TensorVariable, None
             continue
         if anc.owner and isinstance(anc.owner.op, RandomVariable):
             yield anc
-
-
-def strip_observed(x: TensorVariable) -> TensorVariable:
-    """Return the `RandomVariable` term for an `Observed` node input; otherwise, return the input."""
-    if x.owner and isinstance(x.owner.op, Observed):
-        return x.owner.inputs[0]
-    else:
-        return x
 
 
 def sample_to_measure_vars(
@@ -223,7 +207,7 @@ def sample_to_measure_vars(
         if not (anc.owner and isinstance(anc.owner.op, RandomVariable)):
             continue
 
-        _, value_var = rv_log_likelihood_args(anc, return_observations=False)
+        _, value_var = extract_rv_and_value_vars(anc)
 
         if value_var is not None:
             replace[anc] = value_var
@@ -270,7 +254,7 @@ def logpt(
 
     """
 
-    rv_var, rv_value_var = rv_log_likelihood_args(rv_var)
+    rv_var, rv_value_var = extract_rv_and_value_vars(rv_var)
 
     if rv_value is None:
         rv_value = rv_value_var
@@ -311,8 +295,8 @@ def logpt(
 
         return at.zeros_like(rv_var)
 
-    # This case should be reached when `rv_var` is either the result of an
-    # `Observed` or a `RandomVariable` `Op`
+    # This case should be reached when `rv_var` is the output of a
+    # `RandomVariable` `Op`
     rng, size, dtype, *dist_params = rv_node.inputs
 
     dist_params, replacements = sample_to_measure_vars(dist_params)
@@ -392,7 +376,7 @@ def logcdf(
 ):
     """Create a log-CDF graph."""
 
-    rv_var, _ = rv_log_likelihood_args(rv_var)
+    rv_var, _ = extract_rv_and_value_vars(rv_var)
     rv_node = rv_var.owner
 
     if not rv_node:

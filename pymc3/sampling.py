@@ -41,7 +41,7 @@ from pymc3.aesaraf import inputvars
 from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
 from pymc3.blocking import DictToArrayBijection
-from pymc3.distributions import change_rv_size, rv_ancestors, strip_observed
+from pymc3.distributions import change_rv_size, rv_ancestors
 from pymc3.exceptions import IncorrectArgumentsError, SamplingError
 from pymc3.model import Model, Point, all_continuous, modelcontext
 from pymc3.parallel_sampling import Draw, _cpu_count
@@ -1717,9 +1717,7 @@ def sample_posterior_predictive(
     if progressbar:
         indices = progress_bar(indices, total=samples, display=progressbar)
 
-    vars_to_sample = [
-        strip_observed(v) for v in get_default_varnames(vars_, include_transformed=False)
-    ]
+    vars_to_sample = list(get_default_varnames(vars_, include_transformed=False))
 
     if not vars_to_sample:
         return {}
@@ -1980,7 +1978,7 @@ def sample_prior_predictive(
 
     names = get_default_varnames(vars_, include_transformed=False)
 
-    vars_to_sample = [strip_observed(model[name]) for name in names]
+    vars_to_sample = [model[name] for name in names]
     inputs = [i for i in inputvars(vars_to_sample)]
     sampler_fn = aesara.function(
         inputs,
