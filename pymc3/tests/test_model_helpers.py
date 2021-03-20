@@ -108,7 +108,6 @@ class TestHelperFunc:
         # Make sure the returned object is a Aesara TensorVariable
         assert isinstance(wrapped, TensorVariable)
 
-    @pytest.mark.xfail(reason="`Observed` `Op` doesn't take `SparseConstant`s, yet")
     def test_make_obs_var(self):
         """
         Check returned values for `data` given known inputs to `as_tensor()`.
@@ -127,20 +126,16 @@ class TestHelperFunc:
         with fake_model:
             fake_distribution = pm.Normal.dist(mu=0, sigma=1)
             # Create the testval attribute simply for the sake of model testing
-            fake_distribution.testval = None
+            fake_distribution.name = input_name
 
         # Check function behavior using the various inputs
-        dense_output = pm.model.make_obs_var(fake_distribution, dense_input, input_name, fake_model)
-        sparse_output = pm.model.make_obs_var(
-            fake_distribution, sparse_input, input_name, fake_model
-        )
-        masked_output = pm.model.make_obs_var(
-            fake_distribution, masked_array_input, input_name, fake_model
-        )
+        dense_output = pm.model.make_obs_var(fake_distribution, dense_input)
+        sparse_output = pm.model.make_obs_var(fake_distribution, sparse_input)
+        masked_output = pm.model.make_obs_var(fake_distribution, masked_array_input)
 
         # Ensure that the missing values are appropriately set to None
         for func_output in [dense_output, sparse_output]:
-            assert func_output.missing_values is None
+            assert func_output.tag.missing_values is None
 
         # Ensure that the Aesara variable names are correctly set.
         # Note that the output for masked inputs do not have their names set
@@ -149,11 +144,11 @@ class TestHelperFunc:
             assert func_output.name == input_name
 
         # Ensure the that returned functions are all of the correct type
-        assert isinstance(dense_output, TensorConstant)
-        assert sparse.basic._is_sparse_variable(sparse_output)
+        assert isinstance(dense_output.tag.observations, TensorConstant)
+        assert sparse.basic._is_sparse_variable(sparse_output.tag.observations)
 
         # Masked output is something weird. Just ensure it has missing values
         # self.assertIsInstance(masked_output, TensorConstant)
-        assert masked_output.missing_values is not None
+        assert masked_output.tag.missing_values is not None
 
         return None
