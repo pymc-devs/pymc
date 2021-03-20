@@ -595,10 +595,10 @@ class Empirical(SingleGroupApproximation):
         """
         node = self.to_flat_input(node)
 
-        def sample(post):
+        def sample(post, node):
             return aesara.clone_replace(node, {self.input: post})
 
-        nodes, _ = aesara.scan(sample, self.histogram)
+        nodes, _ = aesara.scan(sample, self.histogram, non_sequences=[node])
         return nodes
 
 
