@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -30,15 +30,15 @@ def test_draw_value():
     npt.assert_equal(_draw_value(np.array([5, 6])), [5, 6])
     npt.assert_equal(_draw_value(np.array(5.0)), 5)
 
-    npt.assert_equal(_draw_value(aet.constant([5.0, 6.0])), [5, 6])
-    assert _draw_value(aet.constant(5)) == 5
-    npt.assert_equal(_draw_value(2 * aet.constant([5.0, 6.0])), [10, 12])
+    npt.assert_equal(_draw_value(at.constant([5.0, 6.0])), [5, 6])
+    assert _draw_value(at.constant(5)) == 5
+    npt.assert_equal(_draw_value(2 * at.constant([5.0, 6.0])), [10, 12])
 
     val = aesara.shared(np.array([5.0, 6.0]))
     npt.assert_equal(_draw_value(val), [5, 6])
     npt.assert_equal(_draw_value(2 * val), [10, 12])
 
-    a = aet.scalar("a")
+    a = at.scalar("a")
     a.tag.test_value = 6
     npt.assert_equal(_draw_value(2 * a, givens=[(a, 1)]), 2)
 
@@ -48,7 +48,7 @@ def test_draw_value():
     assert isinstance(_draw_value(5), type(5))
 
     with pm.Model():
-        mu = 2 * aet.constant(np.array([5.0, 6.0])) + aesara.shared(np.array(5))
+        mu = 2 * at.constant(np.array([5.0, 6.0])) + aesara.shared(np.array(5))
         a = pm.Normal("a", mu=mu, sigma=5, shape=2)
 
     val1 = _draw_value(a)
@@ -68,9 +68,9 @@ class TestDrawValues:
         npt.assert_equal(draw_values([np.array([5, 6])])[0], [5, 6])
         npt.assert_equal(draw_values([np.array(5.0)])[0], 5)
 
-        npt.assert_equal(draw_values([aet.constant([5.0, 6.0])])[0], [5, 6])
-        assert draw_values([aet.constant(5)])[0] == 5
-        npt.assert_equal(draw_values([2 * aet.constant([5.0, 6.0])])[0], [10, 12])
+        npt.assert_equal(draw_values([at.constant([5.0, 6.0])])[0], [5, 6])
+        assert draw_values([at.constant(5)])[0] == 5
+        npt.assert_equal(draw_values([2 * at.constant([5.0, 6.0])])[0], [10, 12])
 
         val = aesara.shared(np.array([5.0, 6.0]))
         npt.assert_equal(draw_values([val])[0], [5, 6])
@@ -78,7 +78,7 @@ class TestDrawValues:
 
     def test_simple_model(self):
         with pm.Model():
-            mu = 2 * aet.constant(np.array([5.0, 6.0])) + aesara.shared(np.array(5))
+            mu = 2 * at.constant(np.array([5.0, 6.0])) + aesara.shared(np.array(5))
             a = pm.Normal("a", mu=mu, sigma=5, shape=2)
 
         val1 = draw_values([a])
@@ -90,7 +90,7 @@ class TestDrawValues:
 
     def test_dep_vars(self):
         with pm.Model():
-            mu = 2 * aet.constant(np.array([5.0, 6.0])) + aesara.shared(np.array(5))
+            mu = 2 * at.constant(np.array([5.0, 6.0])) + aesara.shared(np.array(5))
             sd = pm.HalfNormal("sd", shape=2)
             tau = 1 / sd ** 2
             a = pm.Normal("a", mu=mu, tau=tau, shape=2)

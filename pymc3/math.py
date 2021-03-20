@@ -18,7 +18,7 @@ from functools import partial, reduce
 
 import aesara
 import aesara.sparse
-import aesara.tensor as aet
+import aesara.tensor as at
 import aesara.tensor.slinalg  # pylint: disable=unused-import
 import numpy as np
 import scipy as sp
@@ -100,7 +100,7 @@ def kronecker(*Ks):
     np.ndarray :
         Block matrix Kroncker product of the argument matrices.
     """
-    return reduce(aet.slinalg.kron, Ks)
+    return reduce(at.slinalg.kron, Ks)
 
 
 def cartesian(*arrays):
@@ -153,17 +153,17 @@ def kron_matrix_op(krons, m, op):
         raise ValueError(f"m must have ndim <= 2, not {m.ndim}")
     res = kron_vector_op(m)
     res_shape = res.shape
-    return aet.reshape(res, (res_shape[1], res_shape[0])).T
+    return at.reshape(res, (res_shape[1], res_shape[0])).T
 
 
 # Define kronecker functions that work on 1D and 2D arrays
-kron_dot = partial(kron_matrix_op, op=aet.dot)
-kron_solve_lower = partial(kron_matrix_op, op=aet.slinalg.solve_lower_triangular)
-kron_solve_upper = partial(kron_matrix_op, op=aet.slinalg.solve_upper_triangular)
+kron_dot = partial(kron_matrix_op, op=at.dot)
+kron_solve_lower = partial(kron_matrix_op, op=at.slinalg.solve_lower_triangular)
+kron_solve_upper = partial(kron_matrix_op, op=at.slinalg.solve_upper_triangular)
 
 
 def flat_outer(a, b):
-    return aet.outer(a, b).ravel()
+    return at.outer(a, b).ravel()
 
 
 def kron_diag(*diags):
@@ -183,20 +183,20 @@ def tround(*args, **kwargs):
     when the warning disappears.
     """
     kwargs["mode"] = "half_to_even"
-    return aet.round(*args, **kwargs)
+    return at.round(*args, **kwargs)
 
 
 def logsumexp(x, axis=None, keepdims=True):
     # Adapted from https://github.com/Theano/Theano/issues/1563
-    x_max = aet.max(x, axis=axis, keepdims=True)
-    x_max = aet.switch(aet.isinf(x_max), 0, x_max)
-    res = aet.log(aet.sum(aet.exp(x - x_max), axis=axis, keepdims=True)) + x_max
+    x_max = at.max(x, axis=axis, keepdims=True)
+    x_max = at.switch(at.isinf(x_max), 0, x_max)
+    res = at.log(at.sum(at.exp(x - x_max), axis=axis, keepdims=True)) + x_max
     return res if keepdims else res.squeeze()
 
 
 def logaddexp(a, b):
     diff = b - a
-    return aet.switch(diff > 0, b + aet.log1p(aet.exp(-diff)), a + aet.log1p(aet.exp(diff)))
+    return at.switch(diff > 0, b + at.log1p(at.exp(-diff)), a + at.log1p(at.exp(diff)))
 
 
 def logdiffexp(a, b):
@@ -211,7 +211,7 @@ def logdiffexp_numpy(a, b):
 
 def invlogit(x, eps=sys.float_info.epsilon):
     """The inverse of the logit function, 1 / (1 + exp(-x))."""
-    return (1.0 - 2.0 * eps) / (1.0 + aet.exp(-x)) + eps
+    return (1.0 - 2.0 * eps) / (1.0 + at.exp(-x)) + eps
 
 
 def logbern(log_p):
@@ -221,7 +221,7 @@ def logbern(log_p):
 
 
 def logit(p):
-    return aet.log(p / (floatX(1) - p))
+    return at.log(p / (floatX(1) - p))
 
 
 def log1pexp(x):
@@ -229,7 +229,7 @@ def log1pexp(x):
 
     This function is numerically more stable than the naive approach.
     """
-    return aet.nnet.softplus(x)
+    return at.nnet.softplus(x)
 
 
 def log1mexp(x):
@@ -247,9 +247,7 @@ def log1mexp(x):
             package"
 
     """
-    return aet.switch(
-        aet.lt(x, 0.6931471805599453), aet.log(-aet.expm1(-x)), aet.log1p(-aet.exp(-x))
-    )
+    return at.switch(at.lt(x, 0.6931471805599453), at.log(-at.expm1(-x)), at.log1p(-at.exp(-x)))
 
 
 def log1mexp_numpy(x):
@@ -268,7 +266,7 @@ def log1mexp_numpy(x):
 
 
 def flatten_list(tensors):
-    return aet.concatenate([var.ravel() for var in tensors])
+    return at.concatenate([var.ravel() for var in tensors])
 
 
 class LogDet(Op):
@@ -353,13 +351,13 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
         diag_idxs = np.arange(2, n + 2)[::-1].cumsum() - n - 1
         return packed[diag_idxs]
     elif lower:
-        out = aet.zeros((n, n), dtype=aesara.config.floatX)
+        out = at.zeros((n, n), dtype=aesara.config.floatX)
         idxs = np.tril_indices(n)
-        return aet.set_subtensor(out[idxs], packed)
+        return at.set_subtensor(out[idxs], packed)
     elif not lower:
-        out = aet.zeros((n, n), dtype=aesara.config.floatX)
+        out = at.zeros((n, n), dtype=aesara.config.floatX)
         idxs = np.triu_indices(n)
-        return aet.set_subtensor(out[idxs], packed)
+        return at.set_subtensor(out[idxs], packed)
 
 
 class BatchedDiag(Op):
@@ -370,11 +368,11 @@ class BatchedDiag(Op):
     __props__ = ()
 
     def make_node(self, diag):
-        diag = aet.as_tensor_variable(diag)
+        diag = at.as_tensor_variable(diag)
         if diag.type.ndim != 2:
             raise TypeError("data argument must be a matrix", diag.type)
 
-        return Apply(self, [diag], [aet.tensor3(dtype=diag.dtype)])
+        return Apply(self, [diag], [at.tensor3(dtype=diag.dtype)])
 
     def perform(self, node, ins, outs, params=None):
         (C,) = ins
@@ -390,7 +388,7 @@ class BatchedDiag(Op):
 
     def grad(self, inputs, gout):
         (gz,) = gout
-        idx = aet.arange(gz.shape[-1])
+        idx = at.arange(gz.shape[-1])
         return [gz[..., idx, idx]]
 
     def infer_shape(self, fgraph, nodes, shapes):
@@ -398,14 +396,14 @@ class BatchedDiag(Op):
 
 
 def batched_diag(C):
-    C = aet.as_tensor(C)
+    C = at.as_tensor(C)
     dim = C.shape[-1]
     if C.ndim == 2:
         # diag -> matrices
         return BatchedDiag()(C)
     elif C.ndim == 3:
         # matrices -> diag
-        idx = aet.arange(dim)
+        idx = at.arange(dim)
         return C[..., idx, idx]
     else:
         raise ValueError("Input should be 2 or 3 dimensional")
@@ -423,7 +421,7 @@ class BlockDiagonalMatrix(Op):
     def make_node(self, *matrices):
         if not matrices:
             raise ValueError("no matrices to allocate")
-        matrices = list(map(aet.as_tensor, matrices))
+        matrices = list(map(at.as_tensor, matrices))
         if any(mat.type.ndim != 2 for mat in matrices):
             raise TypeError("all data arguments must be matrices")
         if self.sparse:
@@ -440,13 +438,13 @@ class BlockDiagonalMatrix(Op):
             output_storage[0][0] = scipy_block_diag(*inputs).astype(dtype)
 
     def grad(self, inputs, gout):
-        shapes = aet.stack([i.shape for i in inputs])
+        shapes = at.stack([i.shape for i in inputs])
         index_end = shapes.cumsum(0)
         index_begin = index_end - shapes
         slices = [
             ix_(
-                aet.arange(index_begin[i, 0], index_end[i, 0]),
-                aet.arange(index_begin[i, 1], index_end[i, 1]),
+                at.arange(index_begin[i, 0], index_end[i, 0]),
+                at.arange(index_begin[i, 1], index_end[i, 1]),
             )
             for i in range(len(inputs))
         ]
@@ -454,7 +452,7 @@ class BlockDiagonalMatrix(Op):
 
     def infer_shape(self, fgraph, nodes, shapes):
         first, second = zip(*shapes)
-        return [(aet.add(*first), aet.add(*second))]
+        return [(at.add(*first), at.add(*second))]
 
 
 def block_diagonal(matrices, sparse=False, format="csr"):

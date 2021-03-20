@@ -17,7 +17,7 @@ import io
 import operator
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import pytest
 
@@ -250,7 +250,7 @@ def test_sample_aevb(three_var_aevb_approx, aevb_initial):
 
 
 def test_replacements_in_sample_node_aevb(three_var_aevb_approx, aevb_initial):
-    inp = aet.matrix(dtype="float32")
+    inp = at.matrix(dtype="float32")
     three_var_aevb_approx.sample_node(
         three_var_aevb_approx.model.one, 2, more_replacements={aevb_initial: inp}
     ).eval({inp: np.random.rand(7, 7).astype("float32")})
@@ -264,7 +264,7 @@ def test_vae():
     minibatch_size = 10
     data = pm.floatX(np.random.rand(100))
     x_mini = pm.Minibatch(data, minibatch_size)
-    x_inp = aet.vector()
+    x_inp = at.vector()
     x_inp.tag.test_value = data[:minibatch_size]
 
     ae = aesara.shared(pm.floatX([0.1, 0.1]))
@@ -777,7 +777,7 @@ def test_clear_cache():
 def another_simple_model():
     _model = models.simple_model()[1]
     with _model:
-        pm.Potential("pot", aet.ones((10, 10)))
+        pm.Potential("pot", at.ones((10, 10)))
     return _model
 
 
@@ -908,7 +908,7 @@ def binomial_model_inference(binomial_model, inference_spec):
 
 
 def test_replacements(binomial_model_inference):
-    d = aet.bscalar()
+    d = at.bscalar()
     d.tag.test_value = 1
     approx = binomial_model_inference.approx
     p = approx.model.p
@@ -931,7 +931,7 @@ def test_replacements(binomial_model_inference):
 
 
 def test_sample_replacements(binomial_model_inference):
-    i = aet.iscalar()
+    i = at.iscalar()
     i.tag.test_value = 1
     approx = binomial_model_inference.approx
     p = approx.model.p
@@ -958,7 +958,7 @@ def test_discrete_not_allowed():
 
     with pm.Model():
         mu = pm.Normal("mu", mu=0, sigma=10, shape=3)
-        z = pm.Categorical("z", p=aet.ones(3) / 3, shape=len(y))
+        z = pm.Categorical("z", p=at.ones(3) / 3, shape=len(y))
         pm.Normal("y_obs", mu=mu[z], sigma=1.0, observed=y)
         with pytest.raises(opvi.ParametrizationError):
             pm.fit(n=1)  # fails
@@ -1013,18 +1013,18 @@ def flow_spec(request):
 
 
 def test_flow_det(flow_spec):
-    z0 = aet.arange(0, 20).astype("float32")
+    z0 = at.arange(0, 20).astype("float32")
     flow = flow_spec(dim=20, z0=z0.dimshuffle("x", 0))
     with aesara.config.change_flags(compute_test_value="off"):
         z1 = flow.forward.flatten()
-        J = aet.jacobian(z1, z0)
-        logJdet = aet.log(aet.abs_(aet.nlinalg.det(J)))
+        J = at.jacobian(z1, z0)
+        logJdet = at.log(at.abs_(at.nlinalg.det(J)))
         det = flow.logdet[0]
     np.testing.assert_allclose(logJdet.eval(), det.eval(), atol=0.0001)
 
 
 def test_flow_det_local(flow_spec):
-    z0 = aet.arange(0, 12).astype("float32")
+    z0 = at.arange(0, 12).astype("float32")
     spec = flow_spec.cls.get_param_spec_for(d=12)
     params = dict()
     for k, shp in spec.items():
@@ -1033,14 +1033,14 @@ def test_flow_det_local(flow_spec):
     assert flow.batched
     with aesara.config.change_flags(compute_test_value="off"):
         z1 = flow.forward.flatten()
-        J = aet.jacobian(z1, z0)
-        logJdet = aet.log(aet.abs_(aet.nlinalg.det(J)))
+        J = at.jacobian(z1, z0)
+        logJdet = at.log(at.abs_(at.nlinalg.det(J)))
         det = flow.logdet[0]
     np.testing.assert_allclose(logJdet.eval(), det.eval(), atol=0.0001)
 
 
 def test_flows_collect_chain():
-    initial = aet.ones((3, 2))
+    initial = at.ones((3, 2))
     flow1 = flows.PlanarFlow(dim=2, z0=initial)
     flow2 = flows.PlanarFlow(dim=2, z0=flow1)
     assert len(flow2.params) == 3
@@ -1064,4 +1064,4 @@ def test_flow_formula(formula, length, order):
     assert len(flows_list) == length
     if order is not None:
         assert flows_list == order
-    spec(dim=2, jitter=1)(aet.ones((3, 2))).eval()  # should work
+    spec(dim=2, jitter=1)(at.ones((3, 2))).eval()  # should work

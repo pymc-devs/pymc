@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import arviz as az
 import matplotlib
 import numpy as np
@@ -68,7 +68,7 @@ class TestARM5_4(SeededTest):
 
         with pm.Model() as model:
             effects = pm.Normal("effects", mu=0, sigma=100, shape=len(P.columns))
-            logit_p = aet.dot(floatX(np.array(P)), effects)
+            logit_p = at.dot(floatX(np.array(P)), effects)
             pm.Bernoulli("s", logit_p=logit_p, observed=floatX(data.switch.values))
         return model
 
@@ -186,7 +186,7 @@ def build_disaster_model(masked=False):
         # Allocate appropriate Poisson rates to years before and after current
         # switchpoint location
         idx = np.arange(years)
-        rate = aet.switch(switchpoint >= idx, early_mean, late_mean)
+        rate = at.switch(switchpoint >= idx, early_mean, late_mean)
         # Data likelihood
         pm.Poisson("disasters", rate, observed=disasters_data)
     return model

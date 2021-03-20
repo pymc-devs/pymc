@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from aesara import scan
@@ -47,10 +47,10 @@ class AR1(distribution.Continuous):
 
     def __init__(self, k, tau_e, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.k = k = aet.as_tensor_variable(k)
-        self.tau_e = tau_e = aet.as_tensor_variable(tau_e)
+        self.k = k = at.as_tensor_variable(k)
+        self.tau_e = tau_e = at.as_tensor_variable(tau_e)
         self.tau = tau_e * (1 - k ** 2)
-        self.mode = aet.as_tensor_variable(0.0)
+        self.mode = at.as_tensor_variable(0.0)
 
     def logp(self, x):
         """
@@ -74,7 +74,7 @@ class AR1(distribution.Continuous):
         boundary = Normal.dist(0.0, tau=tau).logp
 
         innov_like = Normal.dist(k * x_im1, tau=tau_e).logp(x_i)
-        return boundary(x[0]) + aet.sum(innov_like)
+        return boundary(x[0]) + at.sum(innov_like)
 
 
 class AR(distribution.Continuous):
@@ -116,10 +116,10 @@ class AR(distribution.Continuous):
             sigma = sd
 
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.sigma = self.sd = aet.as_tensor_variable(sigma)
-        self.tau = aet.as_tensor_variable(tau)
+        self.sigma = self.sd = at.as_tensor_variable(sigma)
+        self.tau = at.as_tensor_variable(tau)
 
-        self.mean = aet.as_tensor_variable(0.0)
+        self.mean = at.as_tensor_variable(0.0)
 
         if isinstance(rho, list):
             p = len(rho)
@@ -140,7 +140,7 @@ class AR(distribution.Continuous):
             self.p = p
 
         self.constant = constant
-        self.rho = rho = aet.as_tensor_variable(rho)
+        self.rho = rho = at.as_tensor_variable(rho)
         self.init = init
 
     def logp(self, value):
@@ -157,7 +157,7 @@ class AR(distribution.Continuous):
         TensorVariable
         """
         if self.constant:
-            x = aet.add(
+            x = at.add(
                 *[self.rho[i + 1] * value[self.p - (i + 1) : -(i + 1)] for i in range(self.p)]
             )
             eps = value[self.p :] - self.rho[0] - x
@@ -165,7 +165,7 @@ class AR(distribution.Continuous):
             if self.p == 1:
                 x = self.rho * value[:-1]
             else:
-                x = aet.add(
+                x = at.add(
                     *[self.rho[i] * value[self.p - (i + 1) : -(i + 1)] for i in range(self.p)]
                 )
             eps = value[self.p :] - x
@@ -173,7 +173,7 @@ class AR(distribution.Continuous):
         innov_like = Normal.dist(mu=0.0, tau=self.tau).logp(eps)
         init_like = self.init.logp(value[: self.p])
 
-        return aet.sum(innov_like) + aet.sum(init_like)
+        return at.sum(innov_like) + at.sum(init_like)
 
 
 class GaussianRandomWalk(distribution.Continuous):
@@ -209,12 +209,12 @@ class GaussianRandomWalk(distribution.Continuous):
         if sd is not None:
             sigma = sd
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        self.tau = aet.as_tensor_variable(tau)
-        sigma = aet.as_tensor_variable(sigma)
+        self.tau = at.as_tensor_variable(tau)
+        sigma = at.as_tensor_variable(sigma)
         self.sigma = self.sd = sigma
-        self.mu = aet.as_tensor_variable(mu)
+        self.mu = at.as_tensor_variable(mu)
         self.init = init
-        self.mean = aet.as_tensor_variable(0.0)
+        self.mean = at.as_tensor_variable(0.0)
 
     def _mu_and_sigma(self, mu, sigma):
         """Helper to get mu and sigma if they are high dimensional."""
@@ -242,7 +242,7 @@ class GaussianRandomWalk(distribution.Continuous):
             x_i = x[1:]
             mu, sigma = self._mu_and_sigma(self.mu, self.sigma)
             innov_like = Normal.dist(mu=x_im1 + mu, sigma=sigma).logp(x_i)
-            return self.init.logp(x[0]) + aet.sum(innov_like)
+            return self.init.logp(x[0]) + at.sum(innov_like)
         return self.init.logp(x)
 
     def random(self, point=None, size=None):
@@ -323,17 +323,17 @@ class GARCH11(distribution.Continuous):
     def __init__(self, omega, alpha_1, beta_1, initial_vol, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.omega = omega = aet.as_tensor_variable(omega)
-        self.alpha_1 = alpha_1 = aet.as_tensor_variable(alpha_1)
-        self.beta_1 = beta_1 = aet.as_tensor_variable(beta_1)
-        self.initial_vol = aet.as_tensor_variable(initial_vol)
-        self.mean = aet.as_tensor_variable(0.0)
+        self.omega = omega = at.as_tensor_variable(omega)
+        self.alpha_1 = alpha_1 = at.as_tensor_variable(alpha_1)
+        self.beta_1 = beta_1 = at.as_tensor_variable(beta_1)
+        self.initial_vol = at.as_tensor_variable(initial_vol)
+        self.mean = at.as_tensor_variable(0.0)
 
     def get_volatility(self, x):
         x = x[:-1]
 
         def volatility_update(x, vol, w, a, b):
-            return aet.sqrt(w + a * aet.square(x) + b * aet.square(vol))
+            return at.sqrt(w + a * at.square(x) + b * at.square(vol))
 
         vol, _ = scan(
             fn=volatility_update,
@@ -341,7 +341,7 @@ class GARCH11(distribution.Continuous):
             outputs_info=[self.initial_vol],
             non_sequences=[self.omega, self.alpha_1, self.beta_1],
         )
-        return aet.concatenate([[self.initial_vol], vol])
+        return at.concatenate([[self.initial_vol], vol])
 
     def logp(self, x):
         """
@@ -357,7 +357,7 @@ class GARCH11(distribution.Continuous):
         TensorVariable
         """
         vol = self.get_volatility(x)
-        return aet.sum(Normal.dist(0.0, sigma=vol).logp(x))
+        return at.sum(Normal.dist(0.0, sigma=vol).logp(x))
 
     def _distr_parameters_for_repr(self):
         return ["omega", "alpha_1", "beta_1"]
@@ -379,7 +379,7 @@ class EulerMaruyama(distribution.Continuous):
 
     def __init__(self, dt, sde_fn, sde_pars, *args, **kwds):
         super().__init__(*args, **kwds)
-        self.dt = dt = aet.as_tensor_variable(dt)
+        self.dt = dt = at.as_tensor_variable(dt)
         self.sde_fn = sde_fn
         self.sde_pars = sde_pars
 
@@ -399,8 +399,8 @@ class EulerMaruyama(distribution.Continuous):
         xt = x[:-1]
         f, g = self.sde_fn(x[:-1], *self.sde_pars)
         mu = xt + self.dt * f
-        sd = aet.sqrt(self.dt) * g
-        return aet.sum(Normal.dist(mu=mu, sigma=sd).logp(x[1:]))
+        sd = at.sqrt(self.dt) * g
+        return at.sum(Normal.dist(mu=mu, sigma=sd).logp(x[1:]))
 
     def _distr_parameters_for_repr(self):
         return ["dt"]
@@ -437,7 +437,7 @@ class MvGaussianRandomWalk(distribution.Continuous):
         self.init = init
         self.innovArgs = (mu, cov, tau, chol, lower)
         self.innov = multivariate.MvNormal.dist(*self.innovArgs, shape=self.shape)
-        self.mean = aet.as_tensor_variable(0.0)
+        self.mean = at.as_tensor_variable(0.0)
 
     def logp(self, x):
         """
@@ -551,7 +551,7 @@ class MvStudentTRandomWalk(MvGaussianRandomWalk):
 
     def __init__(self, nu, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.nu = aet.as_tensor_variable(nu)
+        self.nu = at.as_tensor_variable(nu)
         self.innov = multivariate.MvStudentT.dist(self.nu, None, *self.innovArgs)
 
     def _distr_parameters_for_repr(self):

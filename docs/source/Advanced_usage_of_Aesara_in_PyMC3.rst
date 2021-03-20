@@ -14,7 +14,7 @@ Shared variables allow us to use values in Aesara functions that are
 not considered an input to the function, but can still be changed
 later. They are very similar to global variables in may ways::
 
-    a = aet.scalar('a')
+    a = at.scalar('a')
     # Create a new shared variable with initial value of 0.1
     b = aesara.shared(0.1)
     func = aesara.function([a], a * b)
@@ -184,13 +184,13 @@ We get
 Now, we use this to define a Aesara `Op`, that also computes the gradient::
 
     import aesara
-    import aesara.tensor as aet
+    import aesara.tensor as at
     import aesara.tests.unittest_tools
     from aesara.graph.op import Op
 
     class MuFromTheta(Op):
-        itypes = [aet.dscalar]
-        otypes = [aet.dscalar]
+        itypes = [at.dscalar]
+        otypes = [at.dscalar]
 
         def perform(self, node, inputs, outputs):
             theta, = inputs
@@ -201,7 +201,7 @@ Now, we use this to define a Aesara `Op`, that also computes the gradient::
             theta, = inputs
             mu = self(theta)
             thetamu = theta * mu
-            return [- g[0] * mu ** 2 / (1 + thetamu + aet.exp(-thetamu))]
+            return [- g[0] * mu ** 2 / (1 + thetamu + at.exp(-thetamu))]
 
 If you value your sanity, always check that the gradient is ok::
 
@@ -213,11 +213,11 @@ We can now define our model using this new `Op`::
 
     import pymc3 as pm
 
-    aet_mu_from_theta = MuFromTheta()
+    at_mu_from_theta = MuFromTheta()
 
     with pm.Model() as model:
         theta = pm.HalfNormal('theta', sigma=1)
-        mu = pm.Deterministic('mu', aet_mu_from_theta(theta))
+        mu = pm.Deterministic('mu', at_mu_from_theta(theta))
         pm.Normal('y', mu=mu, sigma=0.1, observed=[0.2, 0.21, 0.3])
 
         trace = pm.sample()

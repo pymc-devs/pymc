@@ -15,7 +15,7 @@
 from itertools import product
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import pytest
 
@@ -211,7 +211,7 @@ class TestTakeAlongAxis:
         # Setup the aesara function
         t_arr, t_indices = self.get_input_tensors(shape)
         t_out2 = aesara.grad(
-            aet.sum(self._output_tensor(t_arr ** 2, t_indices, axis)),
+            at.sum(self._output_tensor(t_arr ** 2, t_indices, axis)),
             t_arr,
         )
         func = aesara.function([t_arr, t_indices], [t_out2])

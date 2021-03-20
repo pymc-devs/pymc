@@ -15,7 +15,7 @@ import multiprocessing
 import os
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import pytest
 
@@ -61,10 +61,10 @@ def test_bad_unpickle():
         assert "could not be unpickled" in str(exc_info.getrepr(style="short"))
 
 
-aet_vector = TensorType(aesara.config.floatX, [False])
+at_vector = TensorType(aesara.config.floatX, [False])
 
 
-@as_op([aet_vector, aet.iscalar], [aet_vector])
+@as_op([at_vector, at.iscalar], [at_vector])
 def _crash_remote_process(a, master_pid):
     if os.getpid() != master_pid:
         os.exit(0)
@@ -81,8 +81,8 @@ def test_remote_pipe_closed():
     master_pid = os.getpid()
     with pm.Model():
         x = pm.Normal("x", shape=2, mu=0.1)
-        aet_pid = aet.as_tensor_variable(np.array(master_pid, dtype="int32"))
-        pm.Normal("y", mu=_crash_remote_process(x, aet_pid), shape=2)
+        at_pid = at.as_tensor_variable(np.array(master_pid, dtype="int32"))
+        pm.Normal("y", mu=_crash_remote_process(x, at_pid), shape=2)
 
         step = pm.Metropolis()
         with pytest.raises(RuntimeError, match="Chain [0-9] failed"):

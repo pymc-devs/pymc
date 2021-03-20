@@ -17,7 +17,7 @@ from functools import reduce
 from operator import add
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -149,7 +149,7 @@ class TestCovAdd:
 
     def test_leftadd_matrixt(self):
         X = np.linspace(0, 1, 10)[:, None]
-        M = 2 * aet.ones((10, 10))
+        M = 2 * at.ones((10, 10))
         with pm.Model() as model:
             cov = M + pm.gp.cov.ExpQuad(1, 0.1)
         K = aesara.function([], cov(X))()
@@ -285,7 +285,7 @@ class TestCovExponentiation:
     def test_covexp_aesara(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
-            a = aet.alloc(2.0, 1, 1)
+            a = at.alloc(2.0, 1, 1)
             cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
         K = aesara.function([], cov(X))()
         npt.assert_allclose(K[0, 1], 0.53940 ** 2, atol=1e-3)
@@ -616,7 +616,7 @@ class TestWarpedInput:
         X = np.linspace(0, 1, 10)[:, None]
 
         def warp_func(x, a, b, c):
-            return x + (a * aet.tanh(b * (x - c)))
+            return x + (a * at.tanh(b * (x - c)))
 
         with pm.Model() as model:
             cov_m52 = pm.gp.cov.Matern52(1, 0.2)
@@ -642,7 +642,7 @@ class TestGibbs:
         X = np.linspace(0, 2, 10)[:, None]
 
         def tanh_func(x, x1, x2, w, x0):
-            return (x1 + x2) / 2.0 - (x1 - x2) / 2.0 * aet.tanh((x - x0) / w)
+            return (x1 + x2) / 2.0 - (x1 - x2) / 2.0 * at.tanh((x - x0) / w)
 
         with pm.Model() as model:
             cov = pm.gp.cov.Gibbs(1, tanh_func, args=(0.05, 0.6, 0.4, 1.0))

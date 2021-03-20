@@ -15,7 +15,7 @@ import time
 import timeit
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import arviz as az
 import numpy as np
 import pandas as pd
@@ -61,8 +61,8 @@ def mixture_model(random_seed=1234):
         mu = pm.Normal("mu", mu=0.0, sd=10.0, shape=w_true.shape)
         enforce_order = pm.Potential(
             "enforce_order",
-            aet.switch(mu[0] - mu[1] <= 0, 0.0, -np.inf)
-            + aet.switch(mu[1] - mu[2] <= 0, 0.0, -np.inf),
+            at.switch(mu[0] - mu[1] <= 0, 0.0, -np.inf)
+            + at.switch(mu[1] - mu[2] <= 0, 0.0, -np.inf),
         )
         tau = pm.Gamma("tau", alpha=1.0, beta=1.0, shape=w_true.shape)
         pm.NormalMixture("x_obs", w=w, mu=mu, tau=tau, observed=x)

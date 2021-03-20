@@ -17,9 +17,9 @@ import warnings
 from collections import OrderedDict
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 
-from pymc3.aesaraf import aet_rng, make_shared_replacements
+from pymc3.aesaraf import at_rng, make_shared_replacements
 from pymc3.model import inputvars, modelcontext
 from pymc3.step_methods.arraystep import ArrayStepShared
 
@@ -45,7 +45,7 @@ def _check_minibatches(minibatch_tensors, minibatches):
 
 def prior_dlogp(vars, model, flat_view):
     """Returns the gradient of the prior on the parameters as a vector of size D x 1"""
-    terms = aet.concatenate([aesara.grad(var.logpt, var).flatten() for var in vars], axis=0)
+    terms = at.concatenate([aesara.grad(var.logpt, var).flatten() for var in vars], axis=0)
     dlogp = aesara.clone_replace(terms, flat_view.replacements, strict=False)
 
     return dlogp
@@ -65,11 +65,11 @@ def elemwise_dlogL(vars, model, flat_view):
     for var in vars:
         output, _ = aesara.scan(
             lambda i, logX=logL, v=var: aesara.grad(logX[i], v).flatten(),
-            sequences=[aet.arange(logL.shape[0])],
+            sequences=[at.arange(logL.shape[0])],
         )
         terms.append(output)
     dlogL = aesara.clone_replace(
-        aet.concatenate(terms, axis=1), flat_view.replacements, strict=False
+        at.concatenate(terms, axis=1), flat_view.replacements, strict=False
     )
     return dlogL
 
@@ -147,9 +147,9 @@ class BaseStochasticGradient(ArrayStepShared):
         # set random stream
         self.random = None
         if random_seed is None:
-            self.random = aet_rng()
+            self.random = at_rng()
         else:
-            self.random = aet_rng(random_seed)
+            self.random = at_rng(random_seed)
 
         self.step_size = step_size
 

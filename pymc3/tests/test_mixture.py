@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 import scipy.stats as st
 
-from aesara import tensor as aet
+from aesara import tensor as at
 from numpy.testing import assert_allclose
 from scipy.special import logsumexp
 
@@ -392,7 +392,7 @@ class TestMixtureVsLatent(SeededTest):
         super().setup_method(*args, **kwargs)
         self.nd = 3
         self.npop = 3
-        self.mus = aet.as_tensor_variable(
+        self.mus = at.as_tensor_variable(
             np.tile(
                 np.reshape(
                     np.arange(self.npop),
@@ -446,7 +446,7 @@ class TestMixtureVsLatent(SeededTest):
                 shape=nd,
             )
             z = pm.Categorical("z", p=np.ones(npop) / npop, shape=nd)
-            mu = aet.as_tensor_variable([mus[i, z[i]] for i in range(nd)])
+            mu = at.as_tensor_variable([mus[i, z[i]] for i in range(nd)])
             latent_m = pm.Normal("latent_m", mu=mu, sigma=1e-5, shape=nd)
 
         m_val = m.random(size=size)

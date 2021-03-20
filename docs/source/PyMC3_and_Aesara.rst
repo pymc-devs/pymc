@@ -34,13 +34,13 @@ First, we need to define symbolic variables for our inputs (this
 is similar to eg SymPy's `Symbol`)::
 
     import aesara
-    import aesara.tensor as aet
+    import aesara.tensor as at
     # We don't specify the dtype of our input variables, so it
     # defaults to using float64 without any special config.
-    a = aet.scalar('a')
-    x = aet.vector('x')
-    # `aet.ivector` creates a symbolic vector of integers.
-    y = aet.ivector('y')
+    a = at.scalar('a')
+    x = at.vector('x')
+    # `at.ivector` creates a symbolic vector of integers.
+    y = at.ivector('y')
 
 Next, we use those variables to build up a symbolic representation
 of the output of our function. Note that no computation is actually
@@ -48,11 +48,11 @@ being done at this point. We only record what operations we need to
 do to compute the output::
 
     inner = a * x**3 + y**2
-    out = aet.exp(inner).sum()
+    out = at.exp(inner).sum()
 
 .. note::
 
-   In this example we use `aet.exp` to create a symbolic representation
+   In this example we use `at.exp` to create a symbolic representation
    of the exponential of `inner`. Somewhat surprisingly, it
    would also have worked if we used `np.exp`. This is because numpy
    gives objects it operates on a chance to define the results of
@@ -77,8 +77,8 @@ We can call this function with actual arrays as many times as we want::
 
 For the most part the symbolic Aesara variables can be operated on
 like NumPy arrays. Most NumPy functions are available in `aesara.tensor`
-(which is typically imported as `aet`). A lot of linear algebra operations
-can be found in `aet.nlinalg` and `aet.slinalg` (the NumPy and SciPy
+(which is typically imported as `at`). A lot of linear algebra operations
+can be found in `at.nlinalg` and `at.slinalg` (the NumPy and SciPy
 operations respectively). Some support for sparse matrices is available
 in `aesara.sparse`. For a detailed overview of available operations,
 see `the aesara api docs <https://aesara.readthedocs.io/en/latest/library/tensor/index.html>`_.
@@ -88,9 +88,9 @@ NumPy arrays are operations involving conditional execution.
 
 Code like this won't work as expected::
 
-    a = aet.vector('a')
+    a = at.vector('a')
     if (a > 0).all():
-        b = aet.sqrt(a)
+        b = at.sqrt(a)
     else:
         b = -a
 
@@ -100,17 +100,17 @@ and according to the rules for this conversion, things that aren't empty
 containers or zero are converted to `True`. So the code is equivalent
 to this::
 
-    a = aet.vector('a')
-    b = aet.sqrt(a)
+    a = at.vector('a')
+    b = at.sqrt(a)
 
-To get the desired behaviour, we can use `aet.switch`::
+To get the desired behaviour, we can use `at.switch`::
 
-    a = aet.vector('a')
-    b = aet.switch((a > 0).all(), aet.sqrt(a), -a)
+    a = at.vector('a')
+    b = at.switch((a > 0).all(), at.sqrt(a), -a)
 
 Indexing also works similarly to NumPy::
 
-    a = aet.vector('a')
+    a = at.vector('a')
     # Access the 10th element. This will fail when a function build
     # from this expression is executed with an array that is too short.
     b = a[10]
@@ -118,10 +118,10 @@ Indexing also works similarly to NumPy::
     # Extract a subvector
     b = a[[1, 2, 10]]
 
-Changing elements of an array is possible using `aet.set_subtensor`::
+Changing elements of an array is possible using `at.set_subtensor`::
 
-    a = aet.vector('a')
-    b = aet.set_subtensor(a[:10], 1)
+    a = at.vector('a')
+    b = at.set_subtensor(a[:10], 1)
 
     # is roughly equivalent to this (although aesara avoids
     # the copy if `a` isn't used anymore)
@@ -167,7 +167,7 @@ this is happening::
     # in exactly this way!
     model = pm.Model()
 
-    mu = aet.scalar('mu')
+    mu = at.scalar('mu')
     model.add_free_variable(mu)
     model.add_logp_term(pm.Normal.dist(0, 1).logp(mu))
 
@@ -195,15 +195,15 @@ is roughly equivalent to this::
 
     # For illustration only, not real code!
     model = pm.Model()
-    mu = aet.scalar('mu')
+    mu = at.scalar('mu')
     model.add_free_variable(mu)
     model.add_logp_term(pm.Normal.dist(0, 1).logp(mu))
 
-    sd_log__ = aet.scalar('sd_log__')
+    sd_log__ = at.scalar('sd_log__')
     model.add_free_variable(sd_log__)
     model.add_logp_term(corrected_logp_half_normal(sd_log__))
 
-    sd = aet.exp(sd_log__)
+    sd = at.exp(sd_log__)
     model.add_deterministic_variable(sd)
 
     model.add_logp_term(pm.Normal.dist(mu, sd).logp(data))
@@ -214,8 +214,8 @@ Aesara operation on them::
 
     design_matrix = np.array([[...]])
     with pm.Model() as model:
-        # beta is a aet.dvector
+        # beta is a at.dvector
         beta = pm.Normal('beta', 0, 1, shape=len(design_matrix))
-        predict = aet.dot(design_matrix, beta)
+        predict = at.dot(design_matrix, beta)
         sd = pm.HalfCauchy('sd', beta=2.5)
         pm.Normal('y', mu=predict, sigma=sd, observed=data)

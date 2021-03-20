@@ -19,7 +19,7 @@ import tempfile
 from math import isclose
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import arviz as az
 import numpy as np
 import numpy.testing as npt
@@ -718,8 +718,8 @@ class TestAssignStepMethods:
 
             # a custom Aesara Op that does not have a grad:
             is_64 = aesara.config.floatX == "float64"
-            itypes = [aet.dscalar] if is_64 else [aet.fscalar]
-            otypes = [aet.dscalar] if is_64 else [aet.fscalar]
+            itypes = [at.dscalar] if is_64 else [at.fscalar]
+            otypes = [at.dscalar] if is_64 else [at.fscalar]
 
             @as_op(itypes, otypes)
             def kill_grad(x):
@@ -986,8 +986,8 @@ class TestNutsCheckTrace:
     def test_linalg(self, caplog):
         with Model():
             a = Normal("a", shape=2)
-            a = aet.switch(a > 0, np.inf, a)
-            b = aet.slinalg.solve(floatX(np.eye(2)), a)
+            a = at.switch(a > 0, np.inf, a)
+            b = at.slinalg.solve(floatX(np.eye(2)), a)
             Normal("c", mu=b, shape=2)
             caplog.clear()
             trace = sample(20, init=None, tune=5, chains=2)
@@ -1460,11 +1460,11 @@ class TestMLDA:
         # forward model Op - here, just the regression equation
         class ForwardModel(Op):
             if aesara.config.floatX == "float32":
-                itypes = [aet.fvector]
-                otypes = [aet.fvector]
+                itypes = [at.fvector]
+                otypes = [at.fvector]
             else:
-                itypes = [aet.dvector]
-                otypes = [aet.dvector]
+                itypes = [at.dvector]
+                otypes = [at.dvector]
 
             def __init__(self, x, pymc3_model):
                 self.x = x
@@ -1494,7 +1494,7 @@ class TestMLDA:
             intercept = Normal("Intercept", 0, sigma=20)
             x_coeff = Normal("x", 0, sigma=20)
 
-            theta = aet.as_tensor_variable([intercept, x_coeff])
+            theta = at.as_tensor_variable([intercept, x_coeff])
 
             mout.append(ForwardModel(x, coarse_model_0))
 
@@ -1514,7 +1514,7 @@ class TestMLDA:
             intercept = Normal("Intercept", 0, sigma=20)
             x_coeff = Normal("x", 0, sigma=20)
 
-            theta = aet.as_tensor_variable([intercept, x_coeff])
+            theta = at.as_tensor_variable([intercept, x_coeff])
 
             mout.append(ForwardModel(x, coarse_model_1))
 
@@ -1533,7 +1533,7 @@ class TestMLDA:
             intercept = Normal("Intercept", 0, sigma=20)
             x_coeff = Normal("x", 0, sigma=20)
 
-            theta = aet.as_tensor_variable([intercept, x_coeff])
+            theta = at.as_tensor_variable([intercept, x_coeff])
 
             mout.append(ForwardModel(x, model))
 
@@ -1602,11 +1602,11 @@ class TestMLDA:
         # define likelihoods with different Q
         class Likelihood1(Op):
             if aesara.config.floatX == "float32":
-                itypes = [aet.fvector]
-                otypes = [aet.fscalar]
+                itypes = [at.fvector]
+                otypes = [at.fscalar]
             else:
-                itypes = [aet.dvector]
-                otypes = [aet.dscalar]
+                itypes = [at.dvector]
+                otypes = [at.dscalar]
 
             def __init__(self, x, y, pymc3_model):
                 self.x = x
@@ -1625,11 +1625,11 @@ class TestMLDA:
 
         class Likelihood2(Op):
             if aesara.config.floatX == "float32":
-                itypes = [aet.fvector]
-                otypes = [aet.fscalar]
+                itypes = [at.fvector]
+                otypes = [at.fscalar]
             else:
-                itypes = [aet.dvector]
-                otypes = [aet.dscalar]
+                itypes = [at.dvector]
+                otypes = [at.dscalar]
 
             def __init__(self, x, y, pymc3_model):
                 self.x = x
@@ -1663,7 +1663,7 @@ class TestMLDA:
                     intercept = Normal("Intercept", 0, sigma=20)
                     x_coeff = Normal("x", 0, sigma=20)
 
-                    theta = aet.as_tensor_variable([intercept, x_coeff])
+                    theta = at.as_tensor_variable([intercept, x_coeff])
 
                     mout.append(f(x_coarse_0, y_coarse_0, coarse_model_0))
                     Potential("likelihood", mout[0](theta))
@@ -1680,7 +1680,7 @@ class TestMLDA:
                     intercept = Normal("Intercept", 0, sigma=20)
                     x_coeff = Normal("x", 0, sigma=20)
 
-                    theta = aet.as_tensor_variable([intercept, x_coeff])
+                    theta = at.as_tensor_variable([intercept, x_coeff])
 
                     mout.append(f(x_coarse_1, y_coarse_1, coarse_model_1))
                     Potential("likelihood", mout[1](theta))
@@ -1697,7 +1697,7 @@ class TestMLDA:
                     intercept = Normal("Intercept", 0, sigma=20)
                     x_coeff = Normal("x", 0, sigma=20)
 
-                    theta = aet.as_tensor_variable([intercept, x_coeff])
+                    theta = at.as_tensor_variable([intercept, x_coeff])
 
                     mout.append(f(x, y, model))
                     Potential("likelihood", mout[-1](theta))

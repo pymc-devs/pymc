@@ -99,7 +99,7 @@ class _Process:
         self._step_method_is_pickled = step_method_is_pickled
         self._shared_point = shared_point
         self._seed = seed
-        self._aet_seed = seed + 1
+        self._at_seed = seed + 1
         self._draws = draws
         self._tune = tune
         self._pickle_backend = pickle_backend
@@ -170,7 +170,7 @@ class _Process:
 
     def _start_loop(self):
         np.random.seed(self._seed)
-        aesaraf.set_aet_rng(self._aet_seed)
+        aesaraf.set_at_rng(self._at_seed)
 
         draw = 0
         tuning = True

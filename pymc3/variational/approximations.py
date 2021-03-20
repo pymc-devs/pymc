@@ -15,7 +15,7 @@
 import aesara
 import numpy as np
 
-from aesara import tensor as aet
+from aesara import tensor as at
 from aesara.graph.basic import Variable
 from aesara.tensor.var import TensorVariable
 
@@ -55,7 +55,7 @@ class MeanFieldGroup(Group):
         if self.batched:
             return batched_diag(var)
         else:
-            return aet.diag(var)
+            return at.diag(var)
 
     @node_property
     def std(self):
@@ -99,7 +99,7 @@ class MeanFieldGroup(Group):
     def symbolic_logq_not_scaled(self):
         z0 = self.symbolic_initial
         std = rho2sigma(self.rho)
-        logdet = aet.log(std)
+        logdet = at.log(std)
         logq = pm.Normal.dist().logp(z0) - logdet
         return logq.sum(range(1, logq.ndim))
 
@@ -144,12 +144,12 @@ class FullRankGroup(Group):
     @node_property
     def L(self):
         if self.batched:
-            L = aet.zeros((self.ddim, self.ddim, self.bdim))
-            L = aet.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"].T)
+            L = at.zeros((self.ddim, self.ddim, self.bdim))
+            L = at.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"].T)
             L = L.dimshuffle(2, 0, 1)
         else:
-            L = aet.zeros((self.ddim, self.ddim))
-            L = aet.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"])
+            L = at.zeros((self.ddim, self.ddim))
+            L = at.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"])
         return L
 
     @node_property
@@ -160,16 +160,16 @@ class FullRankGroup(Group):
     def cov(self):
         L = self.L
         if self.batched:
-            return aet.batched_dot(L, L.swapaxes(-1, -2))
+            return at.batched_dot(L, L.swapaxes(-1, -2))
         else:
             return L.dot(L.T)
 
     @node_property
     def std(self):
         if self.batched:
-            return aet.sqrt(batched_diag(self.cov))
+            return at.sqrt(batched_diag(self.cov))
         else:
-            return aet.sqrt(aet.diag(self.cov))
+            return at.sqrt(at.diag(self.cov))
 
     @property
     def num_tril_entries(self):
@@ -204,7 +204,7 @@ class FullRankGroup(Group):
             # initial: bxsxd
             # L: bxdxd
             initial = initial.swapaxes(0, 1)
-            return aet.batched_dot(initial, L.swapaxes(1, 2)).swapaxes(0, 1) + mu
+            return at.batched_dot(initial, L.swapaxes(1, 2)).swapaxes(0, 1) + mu
         else:
             return initial.dot(L.T) + mu
 
@@ -282,14 +282,14 @@ class EmpiricalGroup(Group):
     def _new_initial(self, size, deterministic, more_replacements=None):
         aesara_condition_is_here = isinstance(deterministic, Variable)
         if aesara_condition_is_here:
-            return aet.switch(
+            return at.switch(
                 deterministic,
-                aet.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1),
+                at.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1),
                 self.histogram[self.randidx(size)],
             )
         else:
             if deterministic:
-                return aet.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1)
+                return at.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1)
             else:
                 return self.histogram[self.randidx(size)]
 
@@ -312,7 +312,7 @@ class EmpiricalGroup(Group):
 
     @node_property
     def std(self):
-        return aet.sqrt(aet.diag(self.cov))
+        return at.sqrt(at.diag(self.cov))
 
     def __str__(self):
         if isinstance(self.histogram, aesara.compile.SharedVariable):

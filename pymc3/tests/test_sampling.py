@@ -19,7 +19,7 @@ from itertools import combinations
 from typing import Tuple
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import arviz as az
 import numpy as np
 import numpy.testing as npt
@@ -377,7 +377,7 @@ class TestNamedSampling(SeededTest):
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=aet.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
+                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
             )
             res = theta.random()
             assert np.isclose(res, 0.0)
@@ -393,13 +393,13 @@ class TestNamedSampling(SeededTest):
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=aet.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
+                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
             )
             res = theta.random()
             assert np.isclose(res, 0.0)
 
     def test_constant_named(self):
-        G_var = aet.constant(np.atleast_2d(1.0), name="G")
+        G_var = at.constant(np.atleast_2d(1.0), name="G")
         with pm.Model():
             theta0 = pm.Normal(
                 "theta0",
@@ -409,7 +409,7 @@ class TestNamedSampling(SeededTest):
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=aet.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
+                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
             )
 
             res = theta.random()
@@ -1004,7 +1004,7 @@ class TestSamplePriorPredictive(SeededTest):
             phi = pm.Beta("phi", alpha=1.0, beta=1.0)
 
             kappa_log = pm.Exponential("logkappa", lam=5.0)
-            kappa = pm.Deterministic("kappa", aet.exp(kappa_log))
+            kappa = pm.Deterministic("kappa", at.exp(kappa_log))
 
             thetas = pm.Beta("thetas", alpha=phi * kappa, beta=(1.0 - phi) * kappa, shape=n)
 
@@ -1070,7 +1070,7 @@ class TestSamplePriorPredictive(SeededTest):
     def test_bounded_dist(self):
         with pm.Model() as model:
             BoundedNormal = pm.Bound(pm.Normal, lower=0.0)
-            x = BoundedNormal("x", mu=aet.zeros((3, 1)), sd=1 * aet.ones((3, 1)), shape=(3, 1))
+            x = BoundedNormal("x", mu=at.zeros((3, 1)), sd=1 * at.ones((3, 1)), shape=(3, 1))
 
         with model:
             prior_trace = pm.sample_prior_predictive(5)

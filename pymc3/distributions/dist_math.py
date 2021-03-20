@@ -18,7 +18,7 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 """
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import scipy.linalg
 import scipy.stats
@@ -59,7 +59,7 @@ def bound(logp, *conditions, **kwargs):
     *conditions: booleans
     broadcast_conditions: bool (optional, default=True)
         If True, conditions are broadcasted and applied element-wise to each value in logp.
-        If False, conditions are collapsed via aet.all(). As a consequence the entire logp
+        If False, conditions are collapsed via at.all(). As a consequence the entire logp
         array is either replaced by -inf or unchanged.
 
         Setting broadcasts_conditions to False is necessary for most (all?) multivariate
@@ -86,7 +86,7 @@ def bound(logp, *conditions, **kwargs):
     else:
         alltrue = alltrue_scalar
 
-    return aet.switch(alltrue(conditions), logp, -np.inf)
+    return at.switch(alltrue(conditions), logp, -np.inf)
 
 
 def alltrue_elemwise(vals):
@@ -97,7 +97,7 @@ def alltrue_elemwise(vals):
 
 
 def alltrue_scalar(vals):
-    return aet.all([aet.all(1 * val) for val in vals])
+    return at.all([at.all(1 * val) for val in vals])
 
 
 def logpow(x, m):
@@ -105,7 +105,7 @@ def logpow(x, m):
     Calculates log(x**m) since m*log(x) will fail when m, x = 0.
     """
     # return m * log(x)
-    return aet.switch(aet.eq(x, 0), aet.switch(aet.eq(m, 0), 0.0, -np.inf), m * aet.log(x))
+    return at.switch(at.eq(x, 0), at.switch(at.eq(m, 0), 0.0, -np.inf), m * at.log(x))
 
 
 def factln(n):
@@ -124,25 +124,25 @@ def std_cdf(x):
     """
     Calculates the standard normal cumulative distribution function.
     """
-    return 0.5 + 0.5 * aet.erf(x / aet.sqrt(2.0))
+    return 0.5 + 0.5 * at.erf(x / at.sqrt(2.0))
 
 
 def normal_lcdf(mu, sigma, x):
     """Compute the log of the cumulative density function of the normal."""
     z = (x - mu) / sigma
-    return aet.switch(
-        aet.lt(z, -1.0),
-        aet.log(aet.erfcx(-z / aet.sqrt(2.0)) / 2.0) - aet.sqr(z) / 2.0,
-        aet.log1p(-aet.erfc(z / aet.sqrt(2.0)) / 2.0),
+    return at.switch(
+        at.lt(z, -1.0),
+        at.log(at.erfcx(-z / at.sqrt(2.0)) / 2.0) - at.sqr(z) / 2.0,
+        at.log1p(-at.erfc(z / at.sqrt(2.0)) / 2.0),
     )
 
 
 def normal_lccdf(mu, sigma, x):
     z = (x - mu) / sigma
-    return aet.switch(
-        aet.gt(z, 1.0),
-        aet.log(aet.erfcx(z / aet.sqrt(2.0)) / 2.0) - aet.sqr(z) / 2.0,
-        aet.log1p(-aet.erfc(-z / aet.sqrt(2.0)) / 2.0),
+    return at.switch(
+        at.gt(z, 1.0),
+        at.log(at.erfcx(z / at.sqrt(2.0)) / 2.0) - at.sqr(z) / 2.0,
+        at.log1p(-at.erfc(-z / at.sqrt(2.0)) / 2.0),
     )
 
 
@@ -167,22 +167,21 @@ def log_diff_normal_cdf(mu, sigma, x, y):
     log (\\Phi(x) - \\Phi(y))
 
     """
-    x = (x - mu) / sigma / aet.sqrt(2.0)
-    y = (y - mu) / sigma / aet.sqrt(2.0)
+    x = (x - mu) / sigma / at.sqrt(2.0)
+    y = (y - mu) / sigma / at.sqrt(2.0)
 
     # To stabilize the computation, consider these three regions:
     # 1) x > y > 0 => Use erf(x) = 1 - e^{-x^2} erfcx(x) and erf(y) =1 - e^{-y^2} erfcx(y)
     # 2) 0 > x > y => Use erf(x) = e^{-x^2} erfcx(-x) and erf(y) = e^{-y^2} erfcx(-y)
     # 3) x > 0 > y => Naive formula log( (erf(x) - erf(y)) / 2 ) works fine.
-    return aet.log(0.5) + aet.switch(
-        aet.gt(y, 0),
-        -aet.square(y)
-        + aet.log(aet.erfcx(y) - aet.exp(aet.square(y) - aet.square(x)) * aet.erfcx(x)),
-        aet.switch(
-            aet.lt(x, 0),  # 0 > x > y
-            -aet.square(x)
-            + aet.log(aet.erfcx(-x) - aet.exp(aet.square(x) - aet.square(y)) * aet.erfcx(-y)),
-            aet.log(aet.erf(x) - aet.erf(y)),  # x >0 > y
+    return at.log(0.5) + at.switch(
+        at.gt(y, 0),
+        -at.square(y) + at.log(at.erfcx(y) - at.exp(at.square(y) - at.square(x)) * at.erfcx(x)),
+        at.switch(
+            at.lt(x, 0),  # 0 > x > y
+            -at.square(x)
+            + at.log(at.erfcx(-x) - at.exp(at.square(x) - at.square(y)) * at.erfcx(-y)),
+            at.log(at.erf(x) - at.erf(y)),  # x >0 > y
         ),
     )
 
@@ -191,14 +190,14 @@ def sigma2rho(sigma):
     """
     `sigma -> rho` aesara converter
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
-    return aet.log(aet.exp(aet.abs_(sigma)) - 1.0)
+    return at.log(at.exp(at.abs_(sigma)) - 1.0)
 
 
 def rho2sigma(rho):
     """
     `rho -> sigma` aesara converter
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
-    return aet.nnet.softplus(rho)
+    return at.nnet.softplus(rho)
 
 
 rho2sd = rho2sigma
@@ -241,13 +240,13 @@ def log_normal(x, mean, **kwargs):
     if sigma is not None:
         std = sigma
     elif w is not None:
-        std = aet.exp(w)
+        std = at.exp(w)
     elif rho is not None:
         std = rho2sigma(rho)
     else:
         std = tau ** (-1)
     std += f(eps)
-    return f(c) - aet.log(aet.abs_(std)) - (x - mean) ** 2 / (2.0 * std ** 2)
+    return f(c) - at.log(at.abs_(std)) - (x - mean) ** 2 / (2.0 * std ** 2)
 
 
 def MvNormalLogp():
@@ -257,14 +256,14 @@ def MvNormalLogp():
 
     Parameters
     ----------
-    cov: aet.matrix
+    cov: at.matrix
         The covariance matrix.
-    delta: aet.matrix
+    delta: at.matrix
         Array of deviations from the mean.
     """
-    cov = aet.matrix("cov")
+    cov = at.matrix("cov")
     cov.tag.test_value = floatX(np.eye(3))
-    delta = aet.matrix("delta")
+    delta = at.matrix("delta")
     delta.tag.test_value = floatX(np.zeros((2, 3)))
 
     solve_lower = Solve(A_structure="lower_triangular")
@@ -274,17 +273,17 @@ def MvNormalLogp():
     n, k = delta.shape
     n, k = f(n), f(k)
     chol_cov = cholesky(cov)
-    diag = aet.diag(chol_cov)
-    ok = aet.all(diag > 0)
+    diag = at.diag(chol_cov)
+    ok = at.all(diag > 0)
 
-    chol_cov = aet.switch(ok, chol_cov, aet.fill(chol_cov, 1))
+    chol_cov = at.switch(ok, chol_cov, at.fill(chol_cov, 1))
     delta_trans = solve_lower(chol_cov, delta.T).T
 
-    result = n * k * aet.log(f(2) * np.pi)
-    result += f(2) * n * aet.sum(aet.log(diag))
+    result = n * k * at.log(f(2) * np.pi)
+    result += f(2) * n * at.sum(at.log(diag))
     result += (delta_trans ** f(2)).sum()
     result = f(-0.5) * result
-    logp = aet.switch(ok, result, -np.inf)
+    logp = at.switch(ok, result, -np.inf)
 
     def dlogp(inputs, gradients):
         (g_logp,) = gradients
@@ -294,21 +293,21 @@ def MvNormalLogp():
         n, k = delta.shape
 
         chol_cov = cholesky(cov)
-        diag = aet.diag(chol_cov)
-        ok = aet.all(diag > 0)
+        diag = at.diag(chol_cov)
+        ok = at.all(diag > 0)
 
-        chol_cov = aet.switch(ok, chol_cov, aet.fill(chol_cov, 1))
+        chol_cov = at.switch(ok, chol_cov, at.fill(chol_cov, 1))
         delta_trans = solve_lower(chol_cov, delta.T).T
 
-        inner = n * aet.eye(k) - aet.dot(delta_trans.T, delta_trans)
+        inner = n * at.eye(k) - at.dot(delta_trans.T, delta_trans)
         g_cov = solve_upper(chol_cov.T, inner)
         g_cov = solve_upper(chol_cov.T, g_cov.T)
 
         tau_delta = solve_upper(chol_cov.T, delta_trans.T)
         g_delta = tau_delta.T
 
-        g_cov = aet.switch(ok, g_cov, -np.nan)
-        g_delta = aet.switch(ok, g_delta, -np.nan)
+        g_cov = at.switch(ok, g_cov, -np.nan)
+        g_delta = at.switch(ok, g_delta, -np.nan)
 
         return [-0.5 * g_cov * g_logp, -g_delta * g_logp]
 
@@ -326,7 +325,7 @@ class SplineWrapper(Op):
         self.spline = spline
 
     def make_node(self, x):
-        x = aet.as_tensor_variable(x)
+        x = at.as_tensor_variable(x)
         return Apply(self, [x], [x.type()])
 
     @property
@@ -438,13 +437,13 @@ def incomplete_beta_cfe(a, b, x, small):
     based on Cephes library by Steve Moshier (incbet.c).
     small: Choose element-wise which continued fraction expansion to use.
     """
-    BIG = aet.constant(4.503599627370496e15, dtype="float64")
-    BIGINV = aet.constant(2.22044604925031308085e-16, dtype="float64")
-    THRESH = aet.constant(3.0 * np.MachAr().eps, dtype="float64")
+    BIG = at.constant(4.503599627370496e15, dtype="float64")
+    BIGINV = at.constant(2.22044604925031308085e-16, dtype="float64")
+    THRESH = at.constant(3.0 * np.MachAr().eps, dtype="float64")
 
-    zero = aet.constant(0.0, dtype="float64")
-    one = aet.constant(1.0, dtype="float64")
-    two = aet.constant(2.0, dtype="float64")
+    zero = at.constant(0.0, dtype="float64")
+    one = at.constant(1.0, dtype="float64")
+    two = at.constant(2.0, dtype="float64")
 
     r = one
     k1 = a
@@ -453,11 +452,11 @@ def incomplete_beta_cfe(a, b, x, small):
     k5 = one
     k8 = a + two
 
-    k2 = aet.switch(small, a + b, b - one)
-    k6 = aet.switch(small, b - one, a + b)
-    k7 = aet.switch(small, k4, a + one)
-    k26update = aet.switch(small, one, -one)
-    x = aet.switch(small, x, x / (one - x))
+    k2 = at.switch(small, a + b, b - one)
+    k6 = at.switch(small, b - one, a + b)
+    k7 = at.switch(small, k4, a + one)
+    k26update = at.switch(small, one, -one)
+    x = at.switch(small, x, x / (one - x))
 
     pkm2 = zero
     qkm2 = one
@@ -483,7 +482,7 @@ def incomplete_beta_cfe(a, b, x, small):
         qkm1 = qk
 
         old_r = r
-        r = aet.switch(aet.eq(qk, zero), r, pk / qk)
+        r = at.switch(at.eq(qk, zero), r, pk / qk)
 
         k1 += one
         k2 += k26update
@@ -494,32 +493,30 @@ def incomplete_beta_cfe(a, b, x, small):
         k7 += two
         k8 += two
 
-        big_cond = aet.gt(aet.abs_(qk) + aet.abs_(pk), BIG)
-        biginv_cond = aet.or_(aet.lt(aet.abs_(qk), BIGINV), aet.lt(aet.abs_(pk), BIGINV))
+        big_cond = at.gt(at.abs_(qk) + at.abs_(pk), BIG)
+        biginv_cond = at.or_(at.lt(at.abs_(qk), BIGINV), at.lt(at.abs_(pk), BIGINV))
 
-        pkm2 = aet.switch(big_cond, pkm2 * BIGINV, pkm2)
-        pkm1 = aet.switch(big_cond, pkm1 * BIGINV, pkm1)
-        qkm2 = aet.switch(big_cond, qkm2 * BIGINV, qkm2)
-        qkm1 = aet.switch(big_cond, qkm1 * BIGINV, qkm1)
+        pkm2 = at.switch(big_cond, pkm2 * BIGINV, pkm2)
+        pkm1 = at.switch(big_cond, pkm1 * BIGINV, pkm1)
+        qkm2 = at.switch(big_cond, qkm2 * BIGINV, qkm2)
+        qkm1 = at.switch(big_cond, qkm1 * BIGINV, qkm1)
 
-        pkm2 = aet.switch(biginv_cond, pkm2 * BIG, pkm2)
-        pkm1 = aet.switch(biginv_cond, pkm1 * BIG, pkm1)
-        qkm2 = aet.switch(biginv_cond, qkm2 * BIG, qkm2)
-        qkm1 = aet.switch(biginv_cond, qkm1 * BIG, qkm1)
+        pkm2 = at.switch(biginv_cond, pkm2 * BIG, pkm2)
+        pkm1 = at.switch(biginv_cond, pkm1 * BIG, pkm1)
+        qkm2 = at.switch(biginv_cond, qkm2 * BIG, qkm2)
+        qkm1 = at.switch(biginv_cond, qkm1 * BIG, qkm1)
 
         return (
             (pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r),
-            until(aet.abs_(old_r - r) < (THRESH * aet.abs_(r))),
+            until(at.abs_(old_r - r) < (THRESH * at.abs_(r))),
         )
 
     (pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r), _ = scan(
         _step,
-        sequences=[aet.arange(0, 300)],
+        sequences=[at.arange(0, 300)],
         outputs_info=[
             e
-            for e in aet.cast(
-                (pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r), "float64"
-            )
+            for e in at.cast((pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r), "float64")
         ],
     )
 
@@ -531,28 +528,28 @@ def incomplete_beta_ps(a, b, value):
     Use when b*x is small and value not too close to 1.
     Based on Cephes library by Steve Moshier (incbet.c)
     """
-    one = aet.constant(1, dtype="float64")
+    one = at.constant(1, dtype="float64")
     ai = one / a
     u = (one - b) * value
     t1 = u / (a + one)
     t = u
     threshold = np.MachAr().eps * ai
-    s = aet.constant(0, dtype="float64")
+    s = at.constant(0, dtype="float64")
 
     def _step(i, t, s):
         t *= (i - b) * value / i
         step = t / (a + i)
         s += step
-        return ((t, s), until(aet.abs_(step) < threshold))
+        return ((t, s), until(at.abs_(step) < threshold))
 
     (t, s), _ = scan(
-        _step, sequences=[aet.arange(2, 302)], outputs_info=[e for e in aet.cast((t, s), "float64")]
+        _step, sequences=[at.arange(2, 302)], outputs_info=[e for e in at.cast((t, s), "float64")]
     )
 
     s = s[-1] + t1 + ai
 
-    t = gammaln(a + b) - gammaln(a) - gammaln(b) + a * aet.log(value) + aet.log(s)
-    return aet.exp(t)
+    t = gammaln(a + b) - gammaln(a) - gammaln(b) + a * at.log(value) + at.log(s)
+    return at.exp(t)
 
 
 def incomplete_beta(a, b, value):
@@ -560,37 +557,37 @@ def incomplete_beta(a, b, value):
     Power series and continued fraction expansions chosen for best numerical
     convergence across the board based on inputs.
     """
-    machep = aet.constant(np.MachAr().eps, dtype="float64")
-    one = aet.constant(1, dtype="float64")
+    machep = at.constant(np.MachAr().eps, dtype="float64")
+    one = at.constant(1, dtype="float64")
     w = one - value
 
     ps = incomplete_beta_ps(a, b, value)
 
-    flip = aet.gt(value, (a / (a + b)))
+    flip = at.gt(value, (a / (a + b)))
     aa, bb = a, b
-    a = aet.switch(flip, bb, aa)
-    b = aet.switch(flip, aa, bb)
-    xc = aet.switch(flip, value, w)
-    x = aet.switch(flip, w, value)
+    a = at.switch(flip, bb, aa)
+    b = at.switch(flip, aa, bb)
+    xc = at.switch(flip, value, w)
+    x = at.switch(flip, w, value)
 
     tps = incomplete_beta_ps(a, b, x)
-    tps = aet.switch(aet.le(tps, machep), one - machep, one - tps)
+    tps = at.switch(at.le(tps, machep), one - machep, one - tps)
 
     # Choose which continued fraction expansion for best convergence.
-    small = aet.lt(x * (a + b - 2.0) - (a - one), 0.0)
+    small = at.lt(x * (a + b - 2.0) - (a - one), 0.0)
     cfe = incomplete_beta_cfe(a, b, x, small)
-    w = aet.switch(small, cfe, cfe / xc)
+    w = at.switch(small, cfe, cfe / xc)
 
     # Direct incomplete beta accounting for flipped a, b.
-    t = aet.exp(
-        a * aet.log(x) + b * aet.log(xc) + gammaln(a + b) - gammaln(a) - gammaln(b) + aet.log(w / a)
+    t = at.exp(
+        a * at.log(x) + b * at.log(xc) + gammaln(a + b) - gammaln(a) - gammaln(b) + at.log(w / a)
     )
 
-    t = aet.switch(flip, aet.switch(aet.le(t, machep), one - machep, one - t), t)
-    return aet.switch(
-        aet.and_(flip, aet.and_(aet.le((b * x), one), aet.le(x, 0.95))),
+    t = at.switch(flip, at.switch(at.le(t, machep), one - machep, one - t), t)
+    return at.switch(
+        at.and_(flip, at.and_(at.le((b * x), one), at.le(x, 0.95))),
         tps,
-        aet.switch(aet.and_(aet.le(b * value, one), aet.le(value, 0.95)), ps, t),
+        at.switch(at.and_(at.le(b * value, one), at.le(value, 0.95)), ps, t),
     )
 
 

@@ -47,4 +47,4 @@ def strict_float32():
 def seeded_test():
     # TODO: use this instead of SeededTest
     np.random.seed(42)
-    pm.set_aet_rng(42)
+    pm.set_at_rng(42)

@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import pandas as pd
 
@@ -78,7 +78,7 @@ def any_to_tensor_and_labels(x, labels=None):
             for k, v in x.items():
                 res.append(v)
                 labels.append(k)
-            x = aet.stack(res, axis=1)
+            x = at.stack(res, axis=1)
             if x.ndim == 1:
                 x = x[:, None]
     # case when it can appear to be some
@@ -94,7 +94,7 @@ def any_to_tensor_and_labels(x, labels=None):
     # but user passes labels trusting seems
     # to be a good option
     elif labels is not None:
-        x = aet.as_tensor_variable(x)
+        x = at.as_tensor_variable(x)
         if x.ndim == 0:
             raise ValueError("Cannot use scalars")
         elif x.ndim == 1:
@@ -129,7 +129,7 @@ def any_to_tensor_and_labels(x, labels=None):
         labels = list(labels)
     # as output we need tensor
     if not isinstance(x, Variable):
-        x = aet.as_tensor_variable(x)
+        x = at.as_tensor_variable(x)
         # finally check dimensions
         if x.ndim == 0:
             raise ValueError("Cannot use scalars")
