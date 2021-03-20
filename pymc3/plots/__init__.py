@@ -117,7 +117,6 @@ __all__ = tuple(az.plots.__all__) + (
     "compareplot",
     "forestplot",
     "kdeplot",
-    "plot_posterior",
     "traceplot",
     "energyplot",
     "densityplot",
