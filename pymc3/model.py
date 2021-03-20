@@ -30,7 +30,6 @@ import scipy.sparse as sps
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.gradient import grad
 from aesara.graph.basic import Constant, Variable, graph_inputs
-from aesara.tensor.random.op import Observed, observed
 from aesara.tensor.var import TensorVariable
 from pandas import Series
 
@@ -897,7 +896,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                         for var in self.free_RVs + self.potentials
                     ]
                 )
-                observed_RVs_logp = at.sum([at.sum(logpt(obs)) for obs in self.observed_RVs])
+                observed_RVs_logp = at.sum(
+                    [at.sum(logpt(obs, obs.tag.observations)) for obs in self.observed_RVs]
+                )
 
             costs = [free_RVs_logp, observed_RVs_logp]
         else:
@@ -912,7 +913,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """Aesara scalar of log-probability of the model"""
         with self:
             factors = [logpt_sum(var, getattr(var.tag, "value_var", None)) for var in self.free_RVs]
-            factors += [logpt_sum(obs) for obs in self.observed_RVs]
+            factors += [logpt_sum(obs, obs.tag.observations) for obs in self.observed_RVs]
             factors += self.potentials
             logp_var = at.sum([at.sum(factor) for factor in factors])
             if self.name:
@@ -934,7 +935,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 logpt_sum(var, getattr(var.tag, "value_var", None), jacobian=False)
                 for var in self.free_RVs
             ]
-            factors += [logpt_sum(obs, jacobian=False) for obs in self.observed_RVs]
+            factors += [
+                logpt_sum(obs, obs.tag.observations, jacobian=False) for obs in self.observed_RVs
+            ]
             factors += self.potentials
             logp_var = at.sum([at.sum(factor) for factor in factors])
             if self.name:
@@ -954,7 +957,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     @property
     def datalogpt(self):
         with self:
-            factors = [logpt(obs) for obs in self.observed_RVs]
+            factors = [logpt(obs, obs.tag.observations) for obs in self.observed_RVs]
             factors += [at.sum(factor) for factor in self.potentials]
             return at.sum(factors)
 
@@ -1068,56 +1071,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         rv_var.tag.total_size = total_size
 
         if data is None:
-            # Create a `TensorVariable` that will be used as the random
-            # variable's "value" in log-likelihood graphs.
-            #
-            # In general, we'll call this type of variable the "value" variable.
-            #
-            # In all other cases, the role of the value variable is taken by
-            # observed data. That's why value variables are only referenced in
-            # this branch of the conditional.
             self.free_RVs.append(rv_var)
-            value_var = rv_var.clone()
-
-            transform = transform or logp_transform(rv_var.owner.op)
-
-            if transform is not None:
-                value_var.tag.transform = transform
-                value_var.name = f"{rv_var.name}_{transform.name}"
-                if aesara.config.compute_test_value != "off":
-                    value_var.tag.test_value = transform.forward(rv_var, value_var).tag.test_value
-
-                # The transformed variable needs to be a named variable in the
-                # model, too
-                self.named_vars[value_var.name] = value_var
-            else:
-                value_var.name = rv_var.name
-
-            rv_var.tag.value_var = value_var
-            # XXX: This is a circular reference.
-            value_var.tag.rv_var = rv_var
-
-        elif isinstance(data, dict):
-
-            # TODO: How exactly does this dictionary map to `rv_var`?
-
-            # obs_rvs = {name: make_obs_var(rv_var, d, name, self) for name, d in data.items()}
-            # rv_var.tag.data = obs_rvs
-            #
-            # missing_values = [
-            #     datum.missing_values for datum in data.values() if datum.missing_values is not None
-            # ]
-            # rv_var.tag.missing_values = missing_values
-            #
-            # self.observed_RVs.append(rv_var)
-            #
-            # if missing_values:
-            #     self.free_RVs += rv_var.tag.missing_values
-            #     self.missing_values += rv_var.tag.missing_values
-            #     for v in rv_var.tag.missing_values:
-            #         self.named_vars[v.name] = v
-
-            raise NotImplementedError()
         else:
             if (
                 isinstance(data, Variable)
@@ -1128,8 +1082,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
             data = pandas_to_array(data)
 
-            rv_var = make_obs_var(rv_var, data, name, self)
-            rv_var.tag.data = data
+            rv_var = make_obs_var(rv_var, data)
 
             self.observed_RVs.append(rv_var)
 
@@ -1137,6 +1090,37 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 self.free_RVs.append(rv_var.tag.missing_values)
                 self.missing_values.append(rv_var.tag.missing_values)
                 self.named_vars[rv_var.tag.missing_values.name] = rv_var.tag.missing_values
+
+        # Create a `TensorVariable` that will be used as the random
+        # variable's "value" in log-likelihood graphs.
+        #
+        # In general, we'll call this type of variable the "value" variable.
+        #
+        # In all other cases, the role of the value variable is taken by
+        # observed data. That's why value variables are only referenced in
+        # this branch of the conditional.
+        value_var = rv_var.type()
+
+        if aesara.config.compute_test_value != "off":
+            value_var.tag.test_value = rv_var.tag.test_value
+
+        value_var.name = f"{rv_var.name}_value"
+
+        rv_var.tag.value_var = value_var
+
+        # Make the value variable a transformed value variable,
+        # if there's an applicable transform
+        transform = transform or logp_transform(rv_var.owner.op)
+
+        if transform is not None:
+            value_var.tag.transform = transform
+            value_var.name = f"{value_var.name}_{transform.name}__"
+            if aesara.config.compute_test_value != "off":
+                value_var.tag.test_value = transform.forward(rv_var, value_var).tag.test_value
+
+            # The transformed variable needs to be a named variable in the
+            # model, too
+            self.named_vars[value_var.name] = value_var
 
         self.add_random_variable(rv_var, dims)
 
@@ -1577,9 +1561,7 @@ def pandas_to_array(data):
         return pm.floatX(ret)
 
 
-def make_obs_var(
-    rv_var: TensorVariable, data: Union[np.ndarray], name: str, model: Model
-) -> TensorVariable:
+def make_obs_var(rv_var: TensorVariable, data: Union[np.ndarray]) -> TensorVariable:
     """Create a `TensorVariable` for an observed random variable.
 
     Parameters
@@ -1588,16 +1570,13 @@ def make_obs_var(
         The random variable that is observed.
     data: ndarray
         The observed data.
-    name: str
-        The name of the random variable.
-    model: Model
-        The model object.
 
     Returns
     =======
     The new observed random variable
 
     """
+    name = rv_var.name
     data = pandas_to_array(data).astype(rv_var.dtype)
 
     # The shapes of the observed random variable and its data might not
@@ -1618,47 +1597,35 @@ def make_obs_var(
 
     rv_var = change_rv_size(rv_var, new_size)
 
-    if aesara.config.compute_test_value != "off" and test_value is not None:
-        # We try to reuse the old test value
-        rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.tag.test_value.shape)
-
-    # An independent variable used as the generic log-likelihood input
-    # parameter (i.e. the measure-space counterpart to the sample-space
-    # variable `rv_var`).
-    value_var = rv_var.clone()
-    rv_var.tag.value_var = value_var
-    # XXX: This is a circular reference.
-    value_var.tag.rv_var = rv_var
-    value_var.name = f"{rv_var.name}"
+    if aesara.config.compute_test_value != "off":
+        if test_value is not None:
+            # We try to reuse the old test value
+            rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.tag.test_value.shape)
+        else:
+            rv_var.tag.test_value = data
 
     missing_values = None
     mask = getattr(data, "mask", None)
     if mask is not None:
         impute_message = (
-            "Data in {name} contains missing values and"
+            f"Data in {rv_var} contains missing values and"
             " will be automatically imputed from the"
-            " sampling distribution.".format(name=name)
+            " sampling distribution."
         )
         warnings.warn(impute_message, ImputationWarning)
 
         missing_values = rv_var[mask]
         constant = at.as_tensor_variable(data.filled())
         data = at.set_subtensor(constant[mask.nonzero()], missing_values)
-
-        # Now, we need log-likelihood-space terms for these missing values
-        value_var.name = f"{rv_var.name}_missing"
-
     elif sps.issparse(data):
         data = sparse.basic.as_sparse(data, name=name)
     else:
         data = at.as_tensor_variable(data, name=name)
 
-    rv_obs = observed(rv_var, data)
-    rv_obs.tag.missing_values = missing_values
+    rv_var.tag.missing_values = missing_values
+    rv_var.tag.observations = data
 
-    rv_obs.name = name
-
-    return rv_obs
+    return rv_var
 
 
 def _walk_up_rv(rv, formatting="plain"):
@@ -1749,7 +1716,7 @@ def as_iterargs(data):
 def all_continuous(vars):
     """Check that vars not include discrete variables or BART variables, excepting observed RVs."""
 
-    vars_ = [var for var in vars if not (var.owner and isinstance(var.owner.op, Observed))]
+    vars_ = [var for var in vars if not (var.owner and hasattr(var.tag, "observations"))]
     if any(
         [
             (var.dtype in pm.discrete_types or (var.owner and isinstance(var.owner.op, pm.BART)))
