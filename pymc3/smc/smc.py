@@ -14,7 +14,7 @@
 
 from collections import OrderedDict
 
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from aesara import function as aesara_function
@@ -111,8 +111,8 @@ class SMC:
 
         if self.kernel == "abc":
             factors = [var.logpt for var in self.model.free_RVs]
-            factors += [aet.sum(factor) for factor in self.model.potentials]
-            self.prior_logp_func = logp_forw([aet.sum(factors)], self.variables, shared)
+            factors += [at.sum(factor) for factor in self.model.potentials]
+            self.prior_logp_func = logp_forw([at.sum(factors)], self.variables, shared)
             simulator = self.model.observed_RVs[0]
             distance = simulator.distribution.distance
             sum_stat = simulator.distribution.sum_stat

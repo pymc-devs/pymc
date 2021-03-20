@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any, List, Optional, Type, TypeVar, Union, cas
 import aesara
 import aesara.graph.basic
 import aesara.sparse as sparse
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import scipy.sparse as sps
 
@@ -64,10 +64,10 @@ class PyMC3Variable(TensorVariable):
     """Class to wrap Aesara TensorVariable for custom behavior."""
 
     # Implement matrix multiplication infix operator: X @ w
-    __matmul__ = aet.dot
+    __matmul__ = at.dot
 
     def __rmatmul__(self, other):
-        return aet.dot(other, self)
+        return at.dot(other, self)
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):
         if getattr(self, "distribution", None) is None:
@@ -483,9 +483,9 @@ class Factor:
     def logp_nojact(self):
         """Aesara scalar of log-probability, excluding jacobian terms."""
         if getattr(self, "total_size", None) is not None:
-            logp = aet.sum(self.logp_nojac_unscaledt) * self.scaling
+            logp = at.sum(self.logp_nojac_unscaledt) * self.scaling
         else:
-            logp = aet.sum(self.logp_nojac_unscaledt)
+            logp = at.sum(self.logp_nojac_unscaledt)
         if self.name is not None:
             logp.name = "__logp_%s" % self.name
         return logp
@@ -776,7 +776,7 @@ class ValueGradFunction:
         return point
 
     def _build_joined(self, cost, args, vmap):
-        args_joined = aet.vector("__args_joined")
+        args_joined = at.vector("__args_joined")
         args_joined.tag.test_value = np.zeros(self.size, dtype=self.dtype)
 
         joined_slices = {}
@@ -857,7 +857,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 Deterministic('v3_sq', self.v3 ** 2)
 
                 # Potentials too
-                Potential('p1', aet.constant(1))
+                Potential('p1', at.constant(1))
 
         # After defining a class CustomModel you can use it in several
         # ways
@@ -995,10 +995,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         if tempered:
             with self:
-                free_RVs_logp = aet.sum(
-                    [aet.sum(var.logpt) for var in self.free_RVs + self.potentials]
+                free_RVs_logp = at.sum(
+                    [at.sum(var.logpt) for var in self.free_RVs + self.potentials]
                 )
-                observed_RVs_logp = aet.sum([aet.sum(var.logpt) for var in self.observed_RVs])
+                observed_RVs_logp = at.sum([at.sum(var.logpt) for var in self.observed_RVs])
 
             costs = [free_RVs_logp, observed_RVs_logp]
         else:
@@ -1012,7 +1012,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """Aesara scalar of log-probability of the model"""
         with self:
             factors = [var.logpt for var in self.basic_RVs] + self.potentials
-            logp = aet.sum([aet.sum(factor) for factor in factors])
+            logp = at.sum([at.sum(factor) for factor in factors])
             if self.name:
                 logp.name = "__logp_%s" % self.name
             else:
@@ -1028,7 +1028,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """
         with self:
             factors = [var.logp_nojact for var in self.basic_RVs] + self.potentials
-            logp = aet.sum([aet.sum(factor) for factor in factors])
+            logp = at.sum([at.sum(factor) for factor in factors])
             if self.name:
                 logp.name = "__logp_nojac_%s" % self.name
             else:
@@ -1041,14 +1041,14 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         (excluding deterministic)."""
         with self:
             factors = [var.logpt for var in self.free_RVs]
-            return aet.sum(factors)
+            return at.sum(factors)
 
     @property
     def datalogpt(self):
         with self:
             factors = [var.logpt for var in self.observed_RVs]
-            factors += [aet.sum(factor) for factor in self.potentials]
-            return aet.sum(factors)
+            factors += [at.sum(factor) for factor in self.potentials]
+            return at.sum(factors)
 
     @property
     def vars(self):
@@ -1340,7 +1340,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             if None, then all model.free_RVs are used for flattening input
         order: ArrayOrdering
             Optional, use predefined ordering
-        inputvar: aet.vector
+        inputvar: at.vector
             Optional, use predefined inputvar
 
         Returns
@@ -1352,7 +1352,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if order is None:
             order = ArrayOrdering(vars)
         if inputvar is None:
-            inputvar = aet.vector("flat_view", dtype=aesara.config.floatX)
+            inputvar = at.vector("flat_view", dtype=aesara.config.floatX)
             if aesara.config.compute_test_value != "off":
                 if vars:
                     inputvar.tag.test_value = flatten_list(vars).tag.test_value
@@ -1624,12 +1624,12 @@ def _get_scaling(total_size, shape, ndim):
         begin_coef = [floatX(t) / shp_begin[i] for i, t in enumerate(begin) if t is not None]
         end_coef = [floatX(t) / shp_end[i] for i, t in enumerate(end) if t is not None]
         coefs = begin_coef + end_coef
-        coef = aet.prod(coefs)
+        coef = at.prod(coefs)
     else:
         raise TypeError(
             "Unrecognized `total_size` type, expected int or list of ints, got %r" % total_size
         )
-    return aet.as_tensor(floatX(coef))
+    return at.as_tensor(floatX(coef))
 
 
 class FreeRV(Factor, PyMC3Variable):
@@ -1767,9 +1767,9 @@ def as_tensor(data, name, model, distribution):
             parent_dist=distribution,
         )
         missing_values = FreeRV(name=name + "_missing", distribution=fakedist, model=model)
-        constant = aet.as_tensor_variable(data.filled())
+        constant = at.as_tensor_variable(data.filled())
 
-        dataTensor = aet.set_subtensor(constant[data.mask.nonzero()], missing_values)
+        dataTensor = at.set_subtensor(constant[data.mask.nonzero()], missing_values)
         dataTensor.missing_values = missing_values
         return dataTensor
     elif sps.issparse(data):
@@ -1777,7 +1777,7 @@ def as_tensor(data, name, model, distribution):
         data.missing_values = None
         return data
     else:
-        data = aet.as_tensor_variable(data, name=name)
+        data = at.as_tensor_variable(data, name=name)
         data.missing_values = None
         return data
 

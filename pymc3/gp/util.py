@@ -14,7 +14,7 @@
 
 import warnings
 
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from aesara.tensor.slinalg import Solve, cholesky  # pylint: disable=unused-import
@@ -37,7 +37,7 @@ def infer_shape(X, n_points=None):
 
 def stabilize(K):
     """ adds small diagonal to a covariance matrix """
-    return K + 1e-6 * aet.identity_like(K)
+    return K + 1e-6 * at.identity_like(K)
 
 
 def kmeans_inducing_points(n_inducing, X):

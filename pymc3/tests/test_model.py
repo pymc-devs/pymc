@@ -16,7 +16,7 @@ import pickle
 import unittest
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pandas as pd
@@ -39,8 +39,8 @@ class NewModel(pm.Model):
         self.v2 = pm.Normal("v2", mu=0, sigma=1)
         # 2) Potentials and Deterministic variables with method too
         # be sure that names will not overlap with other same models
-        pm.Deterministic("d", aet.constant(1))
-        pm.Potential("p", aet.constant(1))
+        pm.Deterministic("d", at.constant(1))
+        pm.Potential("p", at.constant(1))
 
 
 class DocstringModel(pm.Model):
@@ -50,7 +50,7 @@ class DocstringModel(pm.Model):
         Normal("v2", mu=mean, sigma=sigma)
         Normal("v3", mu=mean, sigma=HalfCauchy("sd", beta=10, testval=1.0))
         Deterministic("v3_sq", self.v3 ** 2)
-        Potential("p1", aet.constant(1))
+        Potential("p1", at.constant(1))
 
 
 class TestBaseModel:
@@ -262,7 +262,7 @@ def test_empty_observed():
 
 class TestValueGradFunction(unittest.TestCase):
     def test_no_extra(self):
-        a = aet.vector("a")
+        a = at.vector("a")
         a.tag.test_value = np.zeros(3, dtype=a.dtype)
         a.dshape = (3,)
         a.dsize = 3
@@ -270,7 +270,7 @@ class TestValueGradFunction(unittest.TestCase):
         assert f_grad.size == 3
 
     def test_invalid_type(self):
-        a = aet.ivector("a")
+        a = at.ivector("a")
         a.tag.test_value = np.zeros(3, dtype=a.dtype)
         a.dshape = (3,)
         a.dsize = 3
@@ -279,19 +279,19 @@ class TestValueGradFunction(unittest.TestCase):
         err.match("Invalid dtype")
 
     def setUp(self):
-        extra1 = aet.iscalar("extra1")
+        extra1 = at.iscalar("extra1")
         extra1_ = np.array(0, dtype=extra1.dtype)
         extra1.tag.test_value = extra1_
         extra1.dshape = tuple()
         extra1.dsize = 1
 
-        val1 = aet.vector("val1")
+        val1 = at.vector("val1")
         val1_ = np.zeros(3, dtype=val1.dtype)
         val1.tag.test_value = val1_
         val1.dshape = (3,)
         val1.dsize = 3
 
-        val2 = aet.matrix("val2")
+        val2 = at.matrix("val2")
         val2_ = np.zeros((2, 3), dtype=val2.dtype)
         val2.tag.test_value = val2_
         val2.dshape = (2, 3)
@@ -367,7 +367,7 @@ class TestValueGradFunction(unittest.TestCase):
         assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
 
     def test_aesara_switch_broadcast_edge_cases(self):
-        # Tests against two subtle issues related to a previous bug in Aesara where aet.switch would not
+        # Tests against two subtle issues related to a previous bug in Aesara where at.switch would not
         # always broadcast tensors with single values https://github.com/pymc-devs/aesara/issues/270
 
         # Known issue 1: https://github.com/pymc-devs/pymc3/issues/4389

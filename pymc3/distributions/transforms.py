@@ -14,7 +14,7 @@
 
 import warnings
 
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from aesara.tensor.subtensor import advanced_set_subtensor1
@@ -133,8 +133,8 @@ class Transform:
 
 class ElemwiseTransform(Transform):
     def jacobian_det(self, x):
-        grad = aet.reshape(gradient(aet.sum(self.backward(x)), [x]), x.shape)
-        return aet.log(aet.abs_(grad))
+        grad = at.reshape(gradient(at.sum(self.backward(x)), [x]), x.shape)
+        return at.log(at.abs_(grad))
 
 
 class TransformedDistribution(distribution.Distribution):
@@ -214,10 +214,10 @@ class Log(ElemwiseTransform):
     name = "log"
 
     def backward(self, x):
-        return aet.exp(x)
+        return at.exp(x)
 
     def forward(self, x):
-        return aet.log(x)
+        return at.log(x)
 
     def forward_val(self, x, point=None):
         return np.log(x)
@@ -233,7 +233,7 @@ class LogExpM1(ElemwiseTransform):
     name = "log_exp_m1"
 
     def backward(self, x):
-        return aet.nnet.softplus(x)
+        return at.nnet.softplus(x)
 
     def forward(self, x):
         """Inverse operation of softplus.
@@ -241,13 +241,13 @@ class LogExpM1(ElemwiseTransform):
         y = Log(Exp(x) - 1)
           = Log(1 - Exp(-x)) + x
         """
-        return aet.log(1.0 - aet.exp(-x)) + x
+        return at.log(1.0 - at.exp(-x)) + x
 
     def forward_val(self, x, point=None):
         return np.log(1.0 - np.exp(-x)) + x
 
     def jacobian_det(self, x):
-        return -aet.nnet.softplus(-x)
+        return -at.nnet.softplus(-x)
 
 
 log_exp_m1 = LogExpM1()
@@ -275,18 +275,18 @@ class Interval(ElemwiseTransform):
     name = "interval"
 
     def __init__(self, a, b):
-        self.a = aet.as_tensor_variable(a)
-        self.b = aet.as_tensor_variable(b)
+        self.a = at.as_tensor_variable(a)
+        self.b = at.as_tensor_variable(b)
 
     def backward(self, x):
         a, b = self.a, self.b
-        sigmoid_x = aet.nnet.sigmoid(x)
+        sigmoid_x = at.nnet.sigmoid(x)
         r = sigmoid_x * b + (1 - sigmoid_x) * a
         return r
 
     def forward(self, x):
         a, b = self.a, self.b
-        return aet.log(x - a) - aet.log(b - x)
+        return at.log(x - a) - at.log(b - x)
 
     def forward_val(self, x, point=None):
         # 2017-06-19
@@ -296,8 +296,8 @@ class Interval(ElemwiseTransform):
         return floatX(np.log(x - a) - np.log(b - x))
 
     def jacobian_det(self, x):
-        s = aet.nnet.softplus(-x)
-        return aet.log(self.b - self.a) - 2 * s - x
+        s = at.nnet.softplus(-x)
+        return at.log(self.b - self.a) - 2 * s - x
 
 
 interval = Interval
@@ -309,16 +309,16 @@ class LowerBound(ElemwiseTransform):
     name = "lowerbound"
 
     def __init__(self, a):
-        self.a = aet.as_tensor_variable(a)
+        self.a = at.as_tensor_variable(a)
 
     def backward(self, x):
         a = self.a
-        r = aet.exp(x) + a
+        r = at.exp(x) + a
         return r
 
     def forward(self, x):
         a = self.a
-        return aet.log(x - a)
+        return at.log(x - a)
 
     def forward_val(self, x, point=None):
         # 2017-06-19
@@ -344,16 +344,16 @@ class UpperBound(ElemwiseTransform):
     name = "upperbound"
 
     def __init__(self, b):
-        self.b = aet.as_tensor_variable(b)
+        self.b = at.as_tensor_variable(b)
 
     def backward(self, x):
         b = self.b
-        r = b - aet.exp(x)
+        r = b - at.exp(x)
         return r
 
     def forward(self, x):
         b = self.b
-        return aet.log(b - x)
+        return at.log(b - x)
 
     def forward_val(self, x, point=None):
         # 2017-06-19
@@ -377,15 +377,15 @@ class Ordered(Transform):
     name = "ordered"
 
     def backward(self, y):
-        x = aet.zeros(y.shape)
-        x = aet.inc_subtensor(x[..., 0], y[..., 0])
-        x = aet.inc_subtensor(x[..., 1:], aet.exp(y[..., 1:]))
-        return aet.cumsum(x, axis=-1)
+        x = at.zeros(y.shape)
+        x = at.inc_subtensor(x[..., 0], y[..., 0])
+        x = at.inc_subtensor(x[..., 1:], at.exp(y[..., 1:]))
+        return at.cumsum(x, axis=-1)
 
     def forward(self, x):
-        y = aet.zeros(x.shape)
-        y = aet.inc_subtensor(y[..., 0], x[..., 0])
-        y = aet.inc_subtensor(y[..., 1:], aet.log(x[..., 1:] - x[..., :-1]))
+        y = at.zeros(x.shape)
+        y = at.inc_subtensor(y[..., 0], x[..., 0])
+        y = at.inc_subtensor(y[..., 1:], at.log(x[..., 1:] - x[..., :-1]))
         return y
 
     def forward_val(self, x, point=None):
@@ -395,7 +395,7 @@ class Ordered(Transform):
         return y
 
     def jacobian_det(self, y):
-        return aet.sum(y[..., 1:], axis=-1)
+        return at.sum(y[..., 1:], axis=-1)
 
 
 ordered = Ordered()
@@ -414,8 +414,8 @@ class SumTo1(Transform):
     name = "sumto1"
 
     def backward(self, y):
-        remaining = 1 - aet.sum(y[..., :], axis=-1, keepdims=True)
-        return aet.concatenate([y[..., :], remaining], axis=-1)
+        remaining = 1 - at.sum(y[..., :], axis=-1, keepdims=True)
+        return at.concatenate([y[..., :], remaining], axis=-1)
 
     def forward(self, x):
         return x[..., :-1]
@@ -424,8 +424,8 @@ class SumTo1(Transform):
         return x[..., :-1]
 
     def jacobian_det(self, x):
-        y = aet.zeros(x.shape)
-        return aet.sum(y, axis=-1)
+        y = at.zeros(x.shape)
+        return at.sum(y, axis=-1)
 
 
 sum_to_1 = SumTo1()
@@ -452,8 +452,8 @@ class StickBreaking(Transform):
     def forward(self, x_):
         x = x_.T
         n = x.shape[0]
-        lx = aet.log(x)
-        shift = aet.sum(lx, 0, keepdims=True) / n
+        lx = at.log(x)
+        shift = at.sum(lx, 0, keepdims=True) / n
         y = lx[:-1] - shift
         return floatX(y.T)
 
@@ -467,20 +467,20 @@ class StickBreaking(Transform):
 
     def backward(self, y_):
         y = y_.T
-        y = aet.concatenate([y, -aet.sum(y, 0, keepdims=True)])
+        y = at.concatenate([y, -at.sum(y, 0, keepdims=True)])
         # "softmax" with vector support and no deprication warning:
-        e_y = aet.exp(y - aet.max(y, 0, keepdims=True))
-        x = e_y / aet.sum(e_y, 0, keepdims=True)
+        e_y = at.exp(y - at.max(y, 0, keepdims=True))
+        x = e_y / at.sum(e_y, 0, keepdims=True)
         return floatX(x.T)
 
     def jacobian_det(self, y_):
         y = y_.T
         Km1 = y.shape[0] + 1
-        sy = aet.sum(y, 0, keepdims=True)
-        r = aet.concatenate([y + sy, aet.zeros(sy.shape)])
+        sy = at.sum(y, 0, keepdims=True)
+        r = at.concatenate([y + sy, at.zeros(sy.shape)])
         sr = logsumexp(r, 0, keepdims=True)
-        d = aet.log(Km1) + (Km1 * sy) - (Km1 * sr)
-        return aet.sum(d, 0).T
+        d = at.log(Km1) + (Km1 * sy) - (Km1 * sr)
+        return at.sum(d, 0).T
 
 
 stick_breaking = StickBreaking()
@@ -492,16 +492,16 @@ class Circular(ElemwiseTransform):
     name = "circular"
 
     def backward(self, y):
-        return aet.arctan2(aet.sin(y), aet.cos(y))
+        return at.arctan2(at.sin(y), at.cos(y))
 
     def forward(self, x):
-        return aet.as_tensor_variable(x)
+        return at.as_tensor_variable(x)
 
     def forward_val(self, x, point=None):
         return x
 
     def jacobian_det(self, x):
-        return aet.zeros(x.shape)
+        return at.zeros(x.shape)
 
 
 circular = Circular()
@@ -514,17 +514,17 @@ class CholeskyCovPacked(Transform):
         self.diag_idxs = np.arange(1, n + 1).cumsum() - 1
 
     def backward(self, x):
-        return advanced_set_subtensor1(x, aet.exp(x[self.diag_idxs]), self.diag_idxs)
+        return advanced_set_subtensor1(x, at.exp(x[self.diag_idxs]), self.diag_idxs)
 
     def forward(self, y):
-        return advanced_set_subtensor1(y, aet.log(y[self.diag_idxs]), self.diag_idxs)
+        return advanced_set_subtensor1(y, at.log(y[self.diag_idxs]), self.diag_idxs)
 
     def forward_val(self, y, point=None):
         y[..., self.diag_idxs] = np.log(y[..., self.diag_idxs])
         return y
 
     def jacobian_det(self, y):
-        return aet.sum(y[self.diag_idxs])
+        return at.sum(y[self.diag_idxs])
 
 
 class Chain(Transform):
@@ -551,7 +551,7 @@ class Chain(Transform):
         return x
 
     def jacobian_det(self, y):
-        y = aet.as_tensor_variable(y)
+        y = at.as_tensor_variable(y)
         det_list = []
         ndim0 = y.ndim
         for transf in reversed(self.transform_list):

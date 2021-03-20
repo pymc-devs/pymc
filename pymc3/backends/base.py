@@ -23,7 +23,7 @@ import warnings
 from abc import ABC
 from typing import List
 
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from pymc3.backends.report import SamplerReport, merge_reports
@@ -434,7 +434,7 @@ class MultiTrace:
 
             for idx, chain in enumerate(chains.values()):
                 if new_var:
-                    dummy = aet.as_tensor_variable([], k)
+                    dummy = at.as_tensor_variable([], k)
                     chain.vars.append(dummy)
                 chain.samples[k] = v[idx]
 

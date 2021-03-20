@@ -16,7 +16,7 @@ import itertools
 import sys
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import numpy.random as nr
 import pytest
@@ -1611,22 +1611,22 @@ class TestMatchesScipy:
     )
     def test_mvnormal_indef(self):
         cov_val = np.array([[1, 0.5], [0.5, -2]])
-        cov = aet.matrix("cov")
+        cov = at.matrix("cov")
         cov.tag.test_value = np.eye(2)
         mu = floatX(np.zeros(2))
-        x = aet.vector("x")
+        x = at.vector("x")
         x.tag.test_value = np.zeros(2)
         logp = MvNormal.dist(mu=mu, cov=cov).logp(x)
         f_logp = aesara.function([cov, x], logp)
         assert f_logp(cov_val, np.ones(2)) == -np.inf
-        dlogp = aet.grad(logp, cov)
+        dlogp = at.grad(logp, cov)
         f_dlogp = aesara.function([cov, x], dlogp)
         assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
 
         logp = MvNormal.dist(mu=mu, tau=cov).logp(x)
         f_logp = aesara.function([cov, x], logp)
         assert f_logp(cov_val, np.ones(2)) == -np.inf
-        dlogp = aet.grad(logp, cov)
+        dlogp = at.grad(logp, cov)
         f_dlogp = aesara.function([cov, x], dlogp)
         assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
 
@@ -1814,13 +1814,13 @@ class TestMatchesScipy:
             assert_almost_equal(pymc3_res[idx], scipy_res)
 
     def test_dirichlet_shape(self):
-        a = aet.as_tensor_variable(np.r_[1, 2])
+        a = at.as_tensor_variable(np.r_[1, 2])
         with pytest.warns(DeprecationWarning):
             dir_rv = Dirichlet.dist(a)
             assert dir_rv.shape == (2,)
 
         with pytest.warns(DeprecationWarning), aesara.change_flags(compute_test_value="ignore"):
-            dir_rv = Dirichlet.dist(aet.vector())
+            dir_rv = Dirichlet.dist(at.vector())
 
     def test_dirichlet_2D(self):
         self.check_logp(
@@ -1967,9 +1967,9 @@ class TestMatchesScipy:
         np.put_along_axis(p, inds, 1, axis=-1)
 
         dist = Multinomial.dist(n=n, p=p, shape=vals.shape)
-        value = aet.tensor3(dtype="int32")
+        value = at.tensor3(dtype="int32")
         value.tag.test_value = np.zeros_like(vals, dtype="int32")
-        logp = aet.exp(dist.logp(value))
+        logp = at.exp(dist.logp(value))
         f = aesara.function(inputs=[value], outputs=logp)
         assert_almost_equal(
             f(vals),
@@ -2395,7 +2395,7 @@ def test_bound():
         a = ArrayNormal("c", shape=2)
         assert_equal(a.tag.test_value, np.array([1.5, 2.5]))
 
-    lower = aet.vector("lower")
+    lower = at.vector("lower")
     lower.tag.test_value = np.array([1, 2]).astype(aesara.config.floatX)
     upper = 3
     ArrayNormal = Bound(Normal, lower=lower, upper=upper)
@@ -2464,7 +2464,7 @@ class TestStrAndLatexRepr:
             nb2 = pm.NegativeBinomial("nb_with_p_n", p=pm.Uniform("nbp"), n=10)
 
             # Expected value of outcome
-            mu = Deterministic("mu", floatX(alpha + aet.dot(X, b)))
+            mu = Deterministic("mu", floatX(alpha + at.dot(X, b)))
 
             # add a bounded variable as well
             bound_var = Bound(Normal, lower=1.0)("bound_var", mu=0, sigma=10)

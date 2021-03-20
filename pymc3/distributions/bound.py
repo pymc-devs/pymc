@@ -14,7 +14,7 @@
 
 from numbers import Real
 
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from pymc3.aesaraf import floatX
@@ -207,9 +207,9 @@ class _ContinuousBounded(_Bounded, Continuous):
 
     def __init__(self, distribution, lower, upper, transform="infer", *args, **kwargs):
         if lower is not None:
-            lower = aet.as_tensor_variable(floatX(lower))
+            lower = at.as_tensor_variable(floatX(lower))
         if upper is not None:
-            upper = aet.as_tensor_variable(floatX(upper))
+            upper = at.as_tensor_variable(floatX(upper))
 
         if transform == "infer":
             if lower is None and upper is None:

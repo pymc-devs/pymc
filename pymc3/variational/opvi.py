@@ -50,14 +50,14 @@ import itertools
 import warnings
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from aesara.graph.basic import Variable
 
 import pymc3 as pm
 
-from pymc3.aesaraf import aet_rng, identity
+from pymc3.aesaraf import at_rng, identity
 from pymc3.backends import NDArray
 from pymc3.blocking import ArrayOrdering, DictToArrayBijection, VarMap
 from pymc3.model import modelcontext
@@ -136,7 +136,7 @@ def try_to_set_test_value(node_in, node_out, s):
     _s = s
     if s is None:
         s = 1
-    s = aesara.compile.view_op(aet.as_tensor(s))
+    s = aesara.compile.view_op(at.as_tensor(s))
     if not isinstance(node_in, (list, tuple)):
         node_in = [node_in]
     if not isinstance(node_out, (list, tuple)):
@@ -845,7 +845,7 @@ class Group(WithMemoization):
         self._vfam = vfam
         self._local = local
         self._batched = rowwise
-        self._rng = aet_rng(random_seed)
+        self._rng = at_rng(random_seed)
         model = modelcontext(model)
         self.model = model
         self.group = group
@@ -898,7 +898,7 @@ class Group(WithMemoization):
                 shape = (-1,) + shape
             elif self.batched:
                 shape = (self.bdim,) + shape
-            self._user_params[name] = aet.as_tensor(param).reshape(shape)
+            self._user_params[name] = at.as_tensor(param).reshape(shape)
         return True
 
     def _initial_type(self, name):
@@ -913,9 +913,9 @@ class Group(WithMemoization):
         tensor
         """
         if self.batched:
-            return aet.tensor3(name)
+            return at.tensor3(name)
         else:
-            return aet.matrix(name)
+            return at.matrix(name)
 
     def _input_type(self, name):
         R"""*Dev* - input type with given name. The correct type depends on `self.batched`
@@ -929,9 +929,9 @@ class Group(WithMemoization):
         tensor
         """
         if self.batched:
-            return aet.matrix(name)
+            return at.matrix(name)
         else:
-            return aet.vector(name)
+            return at.vector(name)
 
     @aesara.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
@@ -1023,11 +1023,11 @@ class Group(WithMemoization):
         shape vector
         """
         if self.batched:
-            bdim = aet.as_tensor(self.bdim)
+            bdim = at.as_tensor(self.bdim)
             bdim = aesara.clone_replace(bdim, more_replacements)
-            return aet.stack([size, bdim, dim])
+            return at.stack([size, bdim, dim])
         else:
-            return aet.stack([size, dim])
+            return at.stack([size, dim])
 
     @node_property
     def bdim(self):
@@ -1078,18 +1078,18 @@ class Group(WithMemoization):
             deterministic = np.int8(deterministic)
         dim, dist_name, dist_map = (self.ddim, self.initial_dist_name, self.initial_dist_map)
         dtype = self.symbolic_initial.dtype
-        dim = aet.as_tensor(dim)
-        size = aet.as_tensor(size)
+        dim = at.as_tensor(dim)
+        size = at.as_tensor(size)
         shape = self._new_initial_shape(size, dim, more_replacements)
         # apply optimizations if possible
         if not isinstance(deterministic, Variable):
             if deterministic:
-                return aet.ones(shape, dtype) * dist_map
+                return at.ones(shape, dtype) * dist_map
             else:
                 return getattr(self._rng, dist_name)(size=shape)
         else:
             sample = getattr(self._rng, dist_name)(size=shape)
-            initial = aet.switch(deterministic, aet.ones(shape, dtype) * dist_map, sample)
+            initial = at.switch(deterministic, at.ones(shape, dtype) * dist_map, sample)
             return initial
 
     @node_property
@@ -1149,7 +1149,7 @@ class Group(WithMemoization):
         """
         node = self.to_flat_input(node)
         random = self.symbolic_random.astype(self.symbolic_initial.dtype)
-        random = aet.patternbroadcast(random, self.symbolic_initial.broadcastable)
+        random = at.patternbroadcast(random, self.symbolic_initial.broadcastable)
 
         def sample(post):
             return aesara.clone_replace(node, {self.input: post})
@@ -1164,7 +1164,7 @@ class Group(WithMemoization):
         """
         node = self.to_flat_input(node)
         random = self.symbolic_random.astype(self.symbolic_initial.dtype)
-        random = aet.patternbroadcast(random, self.symbolic_initial.broadcastable)
+        random = at.patternbroadcast(random, self.symbolic_initial.broadcastable)
         return aesara.clone_replace(node, {self.input: random[0]})
 
     def make_size_and_deterministic_replacements(self, s, d, more_replacements=None):
@@ -1185,7 +1185,7 @@ class Group(WithMemoization):
         dict with replacements for initial
         """
         initial = self._new_initial(s, d, more_replacements)
-        initial = aet.patternbroadcast(initial, self.symbolic_initial.broadcastable)
+        initial = at.patternbroadcast(initial, self.symbolic_initial.broadcastable)
         if more_replacements:
             initial = aesara.clone_replace(initial, more_replacements)
         return {self.symbolic_initial: initial}
@@ -1193,7 +1193,7 @@ class Group(WithMemoization):
     @node_property
     def symbolic_normalizing_constant(self):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`"""
-        t = self.to_flat_input(aet.max([v.scaling for v in self.group]))
+        t = self.to_flat_input(at.max([v.scaling for v in self.group]))
         t = self.symbolic_single_sample(t)
         return pm.floatX(t)
 
@@ -1344,22 +1344,22 @@ class Approximation(WithMemoization):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`.
         Here the effect is controlled by `self.scale_cost_to_minibatch`
         """
-        t = aet.max(
+        t = at.max(
             self.collect("symbolic_normalizing_constant")
             + [var.scaling for var in self.model.observed_RVs]
         )
-        t = aet.switch(self._scale_cost_to_minibatch, t, aet.constant(1, dtype=t.dtype))
+        t = at.switch(self._scale_cost_to_minibatch, t, at.constant(1, dtype=t.dtype))
         return pm.floatX(t)
 
     @node_property
     def symbolic_logq(self):
         """*Dev* - collects `symbolic_logq` for all groups"""
-        return aet.add(*self.collect("symbolic_logq"))
+        return at.add(*self.collect("symbolic_logq"))
 
     @node_property
     def logq(self):
         """*Dev* - collects `logQ` for all groups"""
-        return aet.add(*self.collect("logq"))
+        return at.add(*self.collect("logq"))
 
     @node_property
     def logq_norm(self):
@@ -1591,7 +1591,7 @@ class Approximation(WithMemoization):
 
     @node_property
     def sample_dict_fn(self):
-        s = aet.iscalar()
+        s = at.iscalar()
         names = [v.name for v in self.model.free_RVs]
         sampled = [self.rslice(name) for name in names]
         sampled = self.set_size_and_deterministic(sampled, s, 0)
@@ -1659,7 +1659,7 @@ class Approximation(WithMemoization):
 
     @node_property
     def symbolic_random(self):
-        return aet.concatenate(self.collect("symbolic_random2d"), axis=-1)
+        return at.concatenate(self.collect("symbolic_random2d"), axis=-1)
 
     def __str__(self):
         if len(self.groups) < 5:
@@ -1680,7 +1680,7 @@ class Approximation(WithMemoization):
     def joint_histogram(self):
         if not self.all_histograms:
             raise VariationalInferenceError("%s does not consist of all Empirical approximations")
-        return aet.concatenate(self.collect("histogram"), axis=-1)
+        return at.concatenate(self.collect("histogram"), axis=-1)
 
     @property
     def params(self):

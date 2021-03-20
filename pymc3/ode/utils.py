@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 
@@ -83,20 +83,20 @@ def augment_system(ode_func, n_states, n_theta):
     """
 
     # Present state of the system
-    t_y = aet.vector("y", dtype="float64")
+    t_y = at.vector("y", dtype="float64")
     t_y.tag.test_value = np.ones((n_states,), dtype="float64")
     # Parameter(s).  Should be vector to allow for generaliztion to multiparameter
     # systems of ODEs.  Is m dimensional because it includes all initial conditions as well as ode parameters
-    t_p = aet.vector("p", dtype="float64")
+    t_p = at.vector("p", dtype="float64")
     t_p.tag.test_value = np.ones((n_states + n_theta,), dtype="float64")
     # Time.  Allow for non-automonous systems of ODEs to be analyzed
-    t_t = aet.scalar("t", dtype="float64")
+    t_t = at.scalar("t", dtype="float64")
     t_t.tag.test_value = 2.459
 
     # Present state of the gradients:
     # Will always be 0 unless the parameter is the inital condition
     # Entry i,j is partial of y[i] wrt to p[j]
-    dydp_vec = aet.vector("dydp", dtype="float64")
+    dydp_vec = at.vector("dydp", dtype="float64")
     dydp_vec.tag.test_value = make_sens_ic(n_states, n_theta, "float64")
 
     dydp = dydp_vec.reshape((n_states, n_states + n_theta))
@@ -106,14 +106,14 @@ def augment_system(ode_func, n_states, n_theta):
     # Stack the results of the ode_func into a single tensor variable
     if not isinstance(yhat, (list, tuple)):
         yhat = (yhat,)
-    t_yhat = aet.stack(yhat, axis=0)
+    t_yhat = at.stack(yhat, axis=0)
 
     # Now compute gradients
-    J = aet.jacobian(t_yhat, t_y)
+    J = at.jacobian(t_yhat, t_y)
 
-    Jdfdy = aet.dot(J, dydp)
+    Jdfdy = at.dot(J, dydp)
 
-    grad_f = aet.jacobian(t_yhat, t_p)
+    grad_f = at.jacobian(t_yhat, t_p)
 
     # This is the time derivative of dydp
     ddt_dydp = (Jdfdy + grad_f).flatten()

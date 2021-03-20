@@ -15,7 +15,7 @@
 from itertools import product
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from aesara.compile.ops import as_op
@@ -30,7 +30,7 @@ def simple_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        Normal("x", mu, tau=tau, shape=2, testval=aet.ones(2) * 0.1)
+        Normal("x", mu, tau=tau, shape=2, testval=at.ones(2) * 0.1)
 
     return model.test_point, model, (mu, tau ** -0.5)
 
@@ -50,13 +50,13 @@ def multidimensional_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        Normal("x", mu, tau=tau, shape=(3, 2), testval=0.1 * aet.ones((3, 2)))
+        Normal("x", mu, tau=tau, shape=(3, 2), testval=0.1 * at.ones((3, 2)))
 
     return model.test_point, model, (mu, tau ** -0.5)
 
 
 def simple_arbitrary_det():
-    scalar_type = aet.dscalar if aesara.config.floatX == "float64" else aet.fscalar
+    scalar_type = at.dscalar if aesara.config.floatX == "float64" else at.fscalar
 
     @as_op(itypes=[scalar_type], otypes=[scalar_type])
     def arbitrary_det(value):
@@ -82,7 +82,7 @@ def simple_2model():
     p = 0.4
     with Model() as model:
         x = pm.Normal("x", mu, tau=tau, testval=0.1)
-        pm.Deterministic("logx", aet.log(x))
+        pm.Deterministic("logx", at.log(x))
         pm.Bernoulli("y", p)
     return model.test_point, model
 
@@ -92,7 +92,7 @@ def simple_2model_continuous():
     tau = 1.3
     with Model() as model:
         x = pm.Normal("x", mu, tau=tau, testval=0.1)
-        pm.Deterministic("logx", aet.log(x))
+        pm.Deterministic("logx", at.log(x))
         pm.Beta("y", alpha=1, beta=1, shape=2)
     return model.test_point, model
 
@@ -104,8 +104,8 @@ def mv_simple():
     with pm.Model() as model:
         pm.MvNormal(
             "x",
-            aet.constant(mu),
-            tau=aet.constant(tau),
+            at.constant(mu),
+            tau=at.constant(tau),
             shape=3,
             testval=floatX_array([0.1, 1.0, 0.8]),
         )
@@ -121,8 +121,8 @@ def mv_simple_coarse():
     with pm.Model() as model:
         pm.MvNormal(
             "x",
-            aet.constant(mu),
-            tau=aet.constant(tau),
+            at.constant(mu),
+            tau=at.constant(tau),
             shape=3,
             testval=floatX_array([0.1, 1.0, 0.8]),
         )
@@ -138,8 +138,8 @@ def mv_simple_very_coarse():
     with pm.Model() as model:
         pm.MvNormal(
             "x",
-            aet.constant(mu),
-            tau=aet.constant(tau),
+            at.constant(mu),
+            tau=at.constant(tau),
             shape=3,
             testval=floatX_array([0.1, 1.0, 0.8]),
         )
@@ -153,7 +153,7 @@ def mv_simple_discrete():
     n = 5
     p = floatX_array([0.15, 0.85])
     with pm.Model() as model:
-        pm.Multinomial("x", n, aet.constant(p), shape=d, testval=np.array([1, 4]))
+        pm.Multinomial("x", n, at.constant(p), shape=d, testval=np.array([1, 4]))
         mu = n * p
         # covariance matrix
         C = np.zeros((d, d))

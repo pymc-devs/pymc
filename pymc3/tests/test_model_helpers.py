@@ -14,7 +14,7 @@
 
 import aesara
 import aesara.sparse as sparse
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
@@ -40,7 +40,7 @@ class TestHelperFunc:
         dense_input = np.arange(9).reshape((3, 3)).astype(input_dtype)
 
         input_name = "input_variable"
-        aesara_graph_input = aet.as_tensor(dense_input, name=input_name)
+        aesara_graph_input = at.as_tensor(dense_input, name=input_name)
         pandas_input = pd.DataFrame(dense_input)
 
         # All the even numbers are replaced with NaN

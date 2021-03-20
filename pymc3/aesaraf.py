@@ -16,7 +16,7 @@ import aesara
 import numpy as np
 
 from aesara import scalar
-from aesara import tensor as aet
+from aesara import tensor as at
 from aesara.gradient import grad
 from aesara.graph.basic import Apply, graph_inputs
 from aesara.graph.op import Op
@@ -42,8 +42,8 @@ __all__ = [
     "join_nonshared_inputs",
     "make_shared_replacements",
     "generator",
-    "set_aet_rng",
-    "aet_rng",
+    "set_at_rng",
+    "at_rng",
     "take_along_axis",
 ]
 
@@ -120,10 +120,10 @@ Aesara derivative functions
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
-    return aet.flatten(grad(f, v, disconnected_inputs="warn"))
+    return at.flatten(grad(f, v, disconnected_inputs="warn"))
 
 
-empty_gradient = aet.zeros(0, dtype="float32")
+empty_gradient = at.zeros(0, dtype="float32")
 
 
 def gradient(f, vars=None):
@@ -131,15 +131,15 @@ def gradient(f, vars=None):
         vars = cont_inputs(f)
 
     if vars:
-        return aet.concatenate([gradient1(f, v) for v in vars], axis=0)
+        return at.concatenate([gradient1(f, v) for v in vars], axis=0)
     else:
         return empty_gradient
 
 
 def jacobian1(f, v):
     """jacobian of f wrt v"""
-    f = aet.flatten(f)
-    idx = aet.arange(f.shape[0], dtype="int32")
+    f = at.flatten(f)
+    idx = at.arange(f.shape[0], dtype="int32")
 
     def grad_i(i):
         return gradient1(f[i], v)
@@ -152,13 +152,13 @@ def jacobian(f, vars=None):
         vars = cont_inputs(f)
 
     if vars:
-        return aet.concatenate([jacobian1(f, v) for v in vars], axis=1)
+        return at.concatenate([jacobian1(f, v) for v in vars], axis=1)
     else:
         return empty_gradient
 
 
 def jacobian_diag(f, x):
-    idx = aet.arange(f.shape[0], dtype="int32")
+    idx = at.arange(f.shape[0], dtype="int32")
 
     def grad_ii(i):
         return grad(f[i], x)[i]
@@ -174,7 +174,7 @@ def hessian(f, vars=None):
 @aesara.config.change_flags(compute_test_value="ignore")
 def hessian_diag1(f, v):
     g = gradient1(f, v)
-    idx = aet.arange(g.shape[0], dtype="int32")
+    idx = at.arange(g.shape[0], dtype="int32")
 
     def hess_ii(i):
         return gradient1(g[i], v)[i]
@@ -188,7 +188,7 @@ def hessian_diag(f, vars=None):
         vars = cont_inputs(f)
 
     if vars:
-        return -aet.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+        return -at.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
     else:
         return empty_gradient
 
@@ -264,7 +264,7 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
     if not vars:
         raise ValueError("Empty list of variables.")
 
-    joined = aet.concatenate([var.ravel() for var in vars])
+    joined = at.concatenate([var.ravel() for var in vars])
 
     if not make_shared:
         tensor_type = joined.type
@@ -402,10 +402,10 @@ def generator(gen, default=None):
     return GeneratorOp(gen, default)()
 
 
-_aet_rng = RandomStream()
+_at_rng = RandomStream()
 
 
-def aet_rng(random_seed=None):
+def at_rng(random_seed=None):
     """
     Get the package-level random number generator or new with specified seed.
 
@@ -419,16 +419,16 @@ def aet_rng(random_seed=None):
     -------
     `aesara.tensor.random.utils.RandomStream` instance
         `aesara.tensor.random.utils.RandomStream`
-        instance passed to the most recent call of `set_aet_rng`
+        instance passed to the most recent call of `set_at_rng`
     """
     if random_seed is None:
-        return _aet_rng
+        return _at_rng
     else:
         ret = RandomStream(random_seed)
         return ret
 
 
-def set_aet_rng(new_rng):
+def set_at_rng(new_rng):
     """
     Set the package-level random number generator.
 
@@ -438,11 +438,11 @@ def set_aet_rng(new_rng):
         The random number generator to use.
     """
     # pylint: disable=global-statement
-    global _aet_rng
+    global _at_rng
     # pylint: enable=global-statement
     if isinstance(new_rng, int):
         new_rng = RandomStream(new_rng)
-    _aet_rng = new_rng
+    _at_rng = new_rng
 
 
 def floatX_array(x):
@@ -460,7 +460,7 @@ def ix_(*args):
     for k, new in enumerate(args):
         if new is None:
             out.append(slice(None))
-        new = aet.as_tensor(new)
+        new = at.as_tensor(new)
         if new.ndim != 1:
             raise ValueError("Cross index must be 1 dimensional")
         new = new.reshape((1,) * k + (new.size,) + (1,) * (nd - k - 1))
@@ -490,7 +490,7 @@ def _make_along_axis_idx(arr_shape, indices, axis):
             fancy_index.append(indices)
         else:
             ind_shape = shape_ones[:dim] + (-1,) + shape_ones[dim + 1 :]
-            fancy_index.append(aet.arange(n).reshape(ind_shape))
+            fancy_index.append(at.arange(n).reshape(ind_shape))
 
     return tuple(fancy_index)
 
@@ -505,8 +505,8 @@ def take_along_axis(arr, indices, axis=0):
     Functions returning an index along an axis, like argsort and argpartition,
     produce suitable indices for this function.
     """
-    arr = aet.as_tensor_variable(arr)
-    indices = aet.as_tensor_variable(indices)
+    arr = at.as_tensor_variable(arr)
+    indices = at.as_tensor_variable(indices)
     # normalize inputs
     if axis is None:
         arr = arr.flatten()

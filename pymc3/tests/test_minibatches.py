@@ -19,12 +19,12 @@ import aesara
 import numpy as np
 import pytest
 
-from aesara import tensor as aet
+from aesara import tensor as at
 from scipy import stats as stats
 
 import pymc3 as pm
 
-from pymc3 import GeneratorAdapter, Normal, aet_rng, floatX, generator
+from pymc3 import GeneratorAdapter, Normal, at_rng, floatX, generator
 from pymc3.aesaraf import GeneratorOp
 from pymc3.tests.helpers import select_by_precision
 
@@ -139,7 +139,7 @@ class TestGenerator:
 
     def test_gen_cloning_with_shape_change(self, datagen):
         gen = generator(datagen)
-        gen_r = aet_rng().normal(size=gen.shape).T
+        gen_r = at_rng().normal(size=gen.shape).T
         X = gen.dot(gen_r)
         res, _ = aesara.scan(lambda x: x.sum(), X, n_steps=X.shape[0])
         assert res.eval().shape == (50,)
@@ -208,12 +208,12 @@ class TestScaling:
             genvar = generator(gen1())
             m = Normal("m")
             Normal("n", observed=genvar, total_size=1000)
-            grad1 = aesara.function([m], aet.grad(model1.logpt, m))
+            grad1 = aesara.function([m], at.grad(model1.logpt, m))
         with pm.Model() as model2:
             m = Normal("m")
             shavar = aesara.shared(np.ones((1000, 100)))
             Normal("n", observed=shavar)
-            grad2 = aesara.function([m], aet.grad(model2.logpt, m))
+            grad2 = aesara.function([m], at.grad(model2.logpt, m))
 
         for i in range(10):
             shavar.set_value(np.ones((100, 100)) * i)

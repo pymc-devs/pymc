@@ -19,10 +19,10 @@ from logging.handlers import BufferingHandler
 import aesara
 import numpy.random as nr
 
-from aesara.gradient import verify_grad as aet_verify_grad
+from aesara.gradient import verify_grad as at_verify_grad
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 
-from pymc3.aesaraf import aet_rng, set_aet_rng
+from pymc3.aesaraf import at_rng, set_at_rng
 
 
 class SeededTest:
@@ -34,11 +34,11 @@ class SeededTest:
 
     def setup_method(self):
         nr.seed(self.random_seed)
-        self.old_aet_rng = aet_rng()
-        set_aet_rng(RandomStream(self.random_seed))
+        self.old_at_rng = at_rng()
+        set_at_rng(RandomStream(self.random_seed))
 
     def teardown_method(self):
-        set_aet_rng(self.old_aet_rng)
+        set_at_rng(self.old_at_rng)
 
 
 class LoggingHandler(BufferingHandler):
@@ -116,4 +116,4 @@ def not_raises():
 def verify_grad(op, pt, n_tests=2, rng=None, *args, **kwargs):
     if rng is None:
         rng = nr.RandomState(411342)
-    aet_verify_grad(op, pt, n_tests, rng, *args, **kwargs)
+    at_verify_grad(op, pt, n_tests, rng, *args, **kwargs)

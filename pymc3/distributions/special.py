@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from aesara import scalar
@@ -34,17 +34,17 @@ def multigammaln(a, p):
     p: int
        degrees of freedom. p > 0
     """
-    i = aet.arange(1, p + 1)
-    return p * (p - 1) * aet.log(np.pi) / 4.0 + aet.sum(gammaln(a + (1.0 - i) / 2.0), axis=0)
+    i = at.arange(1, p + 1)
+    return p * (p - 1) * at.log(np.pi) / 4.0 + at.sum(gammaln(a + (1.0 - i) / 2.0), axis=0)
 
 
 def log_i0(x):
     """
     Calculates the logarithm of the 0 order modified Bessel function of the first kind""
     """
-    return aet.switch(
-        aet.lt(x, 5),
-        aet.log1p(
+    return at.switch(
+        at.lt(x, 5),
+        at.log1p(
             x ** 2.0 / 4.0
             + x ** 4.0 / 64.0
             + x ** 6.0 / 2304.0
@@ -53,8 +53,8 @@ def log_i0(x):
             + x ** 12.0 / 2123366400.0
         ),
         x
-        - 0.5 * aet.log(2.0 * np.pi * x)
-        + aet.log1p(
+        - 0.5 * at.log(2.0 * np.pi * x)
+        + at.log1p(
             1.0 / (8.0 * x)
             + 9.0 / (128.0 * x ** 2.0)
             + 225.0 / (3072.0 * x ** 3.0)

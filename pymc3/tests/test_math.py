@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -45,7 +45,7 @@ def test_kronecker():
     [a, b, c] = [np.random.rand(3, 3 + i) for i in range(3)]
 
     custom = kronecker(a, b, c)  # Custom version
-    nested = aet.slinalg.kron(a, aet.slinalg.kron(b, c))
+    nested = at.slinalg.kron(a, at.slinalg.kron(b, c))
     np.testing.assert_array_almost_equal(custom.eval(), nested.eval())  # Standard nested version
 
 
@@ -100,7 +100,7 @@ def test_kron_dot():
     x = np.random.rand(tot_size).reshape((tot_size, 1))
     # Construct entire kronecker product then multiply
     big = kronecker(*Ks)
-    slow_ans = aet.dot(big, x)
+    slow_ans = at.dot(big, x)
     # Use tricks to avoid construction of entire kronecker product
     fast_ans = kron_dot(Ks, x)
     np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
@@ -115,7 +115,7 @@ def test_kron_solve_lower():
     x = np.random.rand(tot_size).reshape((tot_size, 1))
     # Construct entire kronecker product then solve
     big = kronecker(*Ls)
-    slow_ans = aet.slinalg.solve_lower_triangular(big, x)
+    slow_ans = at.slinalg.solve_lower_triangular(big, x)
     # Use tricks to avoid construction of entire kronecker product
     fast_ans = kron_solve_lower(Ls, x)
     np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
@@ -215,11 +215,11 @@ class TestLogDet(SeededTest):
 
 def test_expand_packed_triangular():
     with pytest.raises(ValueError):
-        x = aet.matrix("x")
+        x = at.matrix("x")
         x.tag.test_value = np.array([[1.0]], dtype=aesara.config.floatX)
         expand_packed_triangular(5, x)
     N = 5
-    packed = aet.vector("packed")
+    packed = at.vector("packed")
     packed.tag.test_value = floatX(np.zeros(N * (N + 1) // 2))
     with pytest.raises(TypeError):
         expand_packed_triangular(packed.shape[0], packed)

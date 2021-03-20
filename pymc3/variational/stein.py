@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 
 from pymc3.aesaraf import floatX
 from pymc3.util import WithMemoization, locally_cachedmethod
@@ -46,12 +46,12 @@ class Stein(WithMemoization):
 
     @node_property
     def dlogp(self):
-        grad = aet.grad(self.logp_norm.sum(), self.approx_symbolic_matrices)
+        grad = at.grad(self.logp_norm.sum(), self.approx_symbolic_matrices)
 
         def flatten2(tensor):
             return tensor.flatten(2)
 
-        return aet.concatenate(list(map(flatten2, grad)), -1)
+        return at.concatenate(list(map(flatten2, grad)), -1)
 
     @node_property
     def grad(self):
@@ -64,7 +64,7 @@ class Stein(WithMemoization):
     def density_part_grad(self):
         Kxy = self.Kxy
         dlogpdx = self.dlogp
-        return aet.dot(Kxy, dlogpdx)
+        return at.dot(Kxy, dlogpdx)
 
     @node_property
     def repulsive_part_grad(self):

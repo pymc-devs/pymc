@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -36,24 +36,24 @@ from pymc3.tests.helpers import verify_grad
 
 
 def test_bound():
-    logp = aet.ones((10, 10))
-    cond = aet.ones((10, 10))
+    logp = at.ones((10, 10))
+    cond = at.ones((10, 10))
     assert np.all(bound(logp, cond).eval() == logp.eval())
 
-    logp = aet.ones((10, 10))
-    cond = aet.zeros((10, 10))
+    logp = at.ones((10, 10))
+    cond = at.zeros((10, 10))
     assert np.all(bound(logp, cond).eval() == (-np.inf * logp).eval())
 
-    logp = aet.ones((10, 10))
+    logp = at.ones((10, 10))
     cond = True
     assert np.all(bound(logp, cond).eval() == logp.eval())
 
-    logp = aet.ones(3)
+    logp = at.ones(3)
     cond = np.array([1, 0, 1])
     assert not np.all(bound(logp, cond).eval() == 1)
     assert np.prod(bound(logp, cond).eval()) == -np.inf
 
-    logp = aet.ones((2, 3))
+    logp = at.ones((2, 3))
     cond = np.array([[1, 1, 1], [1, 0, 1]])
     assert not np.all(bound(logp, cond).eval() == 1)
     assert np.prod(bound(logp, cond).eval()) == -np.inf
@@ -61,7 +61,7 @@ def test_bound():
 
 def test_check_bounds_false():
     with pm.Model(check_bounds=False):
-        logp = aet.ones(3)
+        logp = at.ones(3)
         cond = np.array([1, 0, 1])
         assert np.all(bound(logp, cond).eval() == logp.eval())
 
@@ -69,21 +69,21 @@ def test_check_bounds_false():
 def test_alltrue_scalar():
     assert alltrue_scalar([]).eval()
     assert alltrue_scalar([True]).eval()
-    assert alltrue_scalar([aet.ones(10)]).eval()
-    assert alltrue_scalar([aet.ones(10), 5 * aet.ones(101)]).eval()
-    assert alltrue_scalar([np.ones(10), 5 * aet.ones(101)]).eval()
-    assert alltrue_scalar([np.ones(10), True, 5 * aet.ones(101)]).eval()
-    assert alltrue_scalar([np.array([1, 2, 3]), True, 5 * aet.ones(101)]).eval()
+    assert alltrue_scalar([at.ones(10)]).eval()
+    assert alltrue_scalar([at.ones(10), 5 * at.ones(101)]).eval()
+    assert alltrue_scalar([np.ones(10), 5 * at.ones(101)]).eval()
+    assert alltrue_scalar([np.ones(10), True, 5 * at.ones(101)]).eval()
+    assert alltrue_scalar([np.array([1, 2, 3]), True, 5 * at.ones(101)]).eval()
 
     assert not alltrue_scalar([False]).eval()
-    assert not alltrue_scalar([aet.zeros(10)]).eval()
+    assert not alltrue_scalar([at.zeros(10)]).eval()
     assert not alltrue_scalar([True, False]).eval()
-    assert not alltrue_scalar([np.array([0, -1]), aet.ones(60)]).eval()
-    assert not alltrue_scalar([np.ones(10), False, 5 * aet.ones(101)]).eval()
+    assert not alltrue_scalar([np.array([0, -1]), at.ones(60)]).eval()
+    assert not alltrue_scalar([np.ones(10), False, 5 * at.ones(101)]).eval()
 
 
 def test_alltrue_shape():
-    vals = [True, aet.ones(10), aet.zeros(5)]
+    vals = [True, at.ones(10), at.zeros(5)]
 
     assert alltrue_scalar(vals).eval().shape == ()
 
@@ -100,11 +100,11 @@ class MultinomialA(Discrete):
         p = self.p
 
         return bound(
-            factln(n) - factln(value).sum() + (value * aet.log(p)).sum(),
+            factln(n) - factln(value).sum() + (value * at.log(p)).sum(),
             value >= 0,
             0 <= p,
             p <= 1,
-            aet.isclose(p.sum(), 1),
+            at.isclose(p.sum(), 1),
             broadcast_conditions=False,
         )
 
@@ -121,11 +121,11 @@ class MultinomialB(Discrete):
         p = self.p
 
         return bound(
-            factln(n) - factln(value).sum() + (value * aet.log(p)).sum(),
-            aet.all(value >= 0),
-            aet.all(0 <= p),
-            aet.all(p <= 1),
-            aet.isclose(p.sum(), 1),
+            factln(n) - factln(value).sum() + (value * at.log(p)).sum(),
+            at.all(value >= 0),
+            at.all(0 <= p),
+            at.all(p <= 1),
+            at.isclose(p.sum(), 1),
             broadcast_conditions=False,
         )
 
@@ -154,10 +154,10 @@ class TestMvNormalLogp:
 
         chol_val = floatX(np.array([[1, 0.9], [0, 2]]))
         cov_val = floatX(np.dot(chol_val, chol_val.T))
-        cov = aet.matrix("cov")
+        cov = at.matrix("cov")
         cov.tag.test_value = cov_val
         delta_val = floatX(np.random.randn(5, 2))
-        delta = aet.matrix("delta")
+        delta = at.matrix("delta")
         delta.tag.test_value = delta_val
         expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
         expect = expect.logpdf(delta_val).sum()
@@ -171,13 +171,13 @@ class TestMvNormalLogp:
         np.random.seed(42)
 
         def func(chol_vec, delta):
-            chol = aet.stack(
+            chol = at.stack(
                 [
-                    aet.stack([aet.exp(0.1 * chol_vec[0]), 0]),
-                    aet.stack([chol_vec[1], 2 * aet.exp(chol_vec[2])]),
+                    at.stack([at.exp(0.1 * chol_vec[0]), 0]),
+                    at.stack([chol_vec[1], 2 * at.exp(chol_vec[2])]),
                 ]
             )
-            cov = aet.dot(chol, chol.T)
+            cov = at.dot(chol, chol.T)
             return MvNormalLogp()(cov, delta)
 
         chol_vec_val = floatX(np.array([0.5, 1.0, -0.1]))
@@ -191,20 +191,20 @@ class TestMvNormalLogp:
     @pytest.mark.skip(reason="Fix in aesara not released yet: Theano#5908")
     @aesara.config.change_flags(compute_test_value="ignore")
     def test_hessian(self):
-        chol_vec = aet.vector("chol_vec")
+        chol_vec = at.vector("chol_vec")
         chol_vec.tag.test_value = np.array([0.1, 2, 3])
-        chol = aet.stack(
+        chol = at.stack(
             [
-                aet.stack([aet.exp(0.1 * chol_vec[0]), 0]),
-                aet.stack([chol_vec[1], 2 * aet.exp(chol_vec[2])]),
+                at.stack([at.exp(0.1 * chol_vec[0]), 0]),
+                at.stack([chol_vec[1], 2 * at.exp(chol_vec[2])]),
             ]
         )
-        cov = aet.dot(chol, chol.T)
-        delta = aet.matrix("delta")
+        cov = at.dot(chol, chol.T)
+        delta = at.matrix("delta")
         delta.tag.test_value = np.ones((5, 2))
         logp = MvNormalLogp()(cov, delta)
-        g_cov, g_delta = aet.grad(logp, [cov, delta])
-        aet.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
+        g_cov, g_delta = at.grad(logp, [cov, delta])
+        at.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
 
 
 class TestSplineWrapper:
@@ -220,10 +220,10 @@ class TestSplineWrapper:
         x = np.linspace(0, 1, 100)
         y = x * x
         spline = SplineWrapper(interpolate.InterpolatedUnivariateSpline(x, y, k=1))
-        x_var = aet.dscalar("x")
-        (g_x,) = aet.grad(spline(x_var), [x_var])
+        x_var = at.dscalar("x")
+        (g_x,) = at.grad(spline(x_var), [x_var])
         with pytest.raises(NotImplementedError):
-            aet.grad(g_x, [x_var])
+            at.grad(g_x, [x_var])
 
 
 class TestI0e:

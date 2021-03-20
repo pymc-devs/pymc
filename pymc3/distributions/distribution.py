@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 import aesara
 import aesara.graph.basic
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from aesara import function
@@ -268,7 +268,7 @@ class Distribution:
         Subclasses can use this to improve the speed of logp evaluations
         if only the sum of the logp values is needed.
         """
-        return aet.sum(self.logp(*args, **kwargs))
+        return at.sum(self.logp(*args, **kwargs))
 
     __latex__ = _repr_latex_
 
@@ -315,7 +315,7 @@ class NoDistribution(Distribution):
         -------
         TensorVariable
         """
-        return aet.zeros_like(x)
+        return at.zeros_like(x)
 
     def _distr_parameters_for_repr(self):
         return []

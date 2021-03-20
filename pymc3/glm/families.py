@@ -16,7 +16,7 @@ import numbers
 
 from copy import copy
 
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from pymc3 import distributions as pm_dists
@@ -36,9 +36,9 @@ class Identity:
 
 
 identity = Identity()
-logit = aet.nnet.sigmoid
-inverse = aet.inv
-exp = aet.exp
+logit = at.nnet.sigmoid
+inverse = at.inv
+exp = at.exp
 
 
 class Family:

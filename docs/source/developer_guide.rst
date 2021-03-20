@@ -417,11 +417,11 @@ usually created in order to optimise performance. But getting a
     class Exp(tr.ElemwiseTransform):
         name = "exp"
         def backward(self, x):
-            return aet.log(x)
+            return at.log(x)
         def forward(self, x):
-            return aet.exp(x)
+            return at.exp(x)
         def jacobian_det(self, x):
-            return -aet.log(x)
+            return -at.log(x)
 
     lognorm = Exp().apply(pm.Normal.dist(0., 1.))
     lognorm
@@ -562,7 +562,7 @@ sum them together to get the model logp:
         """Aesara scalar of log-probability of the model"""
         with self:
             factors = [var.logpt for var in self.basic_RVs] + self.potentials
-            logp = aet.sum([aet.sum(factor) for factor in factors])
+            logp = at.sum([at.sum(factor) for factor in factors])
             ...
             return logp
 
@@ -660,7 +660,7 @@ does not edit or rewrite the graph directly.
             self._vars_joined, self._logpt_joined = self._build_joined(
                 self._logpt, grad_vars, self._ordering.vmap)
 
-            grad = aet.grad(self._logpt_joined, self._vars_joined)
+            grad = at.grad(self._logpt_joined, self._vars_joined)
             grad.name = '__grad'
 
             inputs = [self._vars_joined]
@@ -670,7 +670,7 @@ does not edit or rewrite the graph directly.
 
 
         def _build_joined(self, logpt, args, vmap):
-            args_joined = aet.vector('__args_joined')
+            args_joined = at.vector('__args_joined')
             args_joined.tag.test_value = np.zeros(self.size, dtype=self.dtype)
 
             joined_slices = {}

@@ -15,7 +15,7 @@
 import aesara
 import numpy as np
 
-from aesara import tensor as aet
+from aesara import tensor as at
 
 from pymc3.distributions.dist_math import rho2sigma
 from pymc3.util import WithMemoization
@@ -161,9 +161,9 @@ class AbstractFlow(WithMemoization):
                 "Cannot infer dimension of flow, " "please provide dim or Flow instance as z0"
             )
         if z0 is None:
-            self.z0 = aet.matrix()  # type: TensorVariable
+            self.z0 = at.matrix()  # type: TensorVariable
         else:
-            self.z0 = aet.as_tensor(z0)
+            self.z0 = at.as_tensor(z0)
         self.parent = parent
 
     def add_param(self, user=None, name=None, ref=0.0, dtype="floatX"):
@@ -189,7 +189,7 @@ class AbstractFlow(WithMemoization):
                     shape = (-1,) + shape
                 else:
                     shape = (self.batch_size,) + shape
-            return aet.as_tensor(user).reshape(shape)
+            return at.as_tensor(user).reshape(shape)
 
     @property
     def params(self):
@@ -212,7 +212,7 @@ class AbstractFlow(WithMemoization):
         while not current.isroot:
             current = current.parent
             dets.append(current.logdet)
-        return aet.add(*dets)
+        return at.add(*dets)
 
     @node_property
     def forward(self):
@@ -325,7 +325,7 @@ class LinearFlow(AbstractFlow):
         if not self.batched:
             hwz = h(z.dot(w) + b)  # s
             # sxd + (s \outer d) = sxd
-            z1 = z + aet.outer(hwz, u)  # sxd
+            z1 = z + at.outer(hwz, u)  # sxd
             return z1
         else:
             z = z.swapaxes(0, 1)
@@ -334,7 +334,7 @@ class LinearFlow(AbstractFlow):
             # w bxd
             b = b.dimshuffle(0, "x")
             # b bx-
-            hwz = h(aet.batched_dot(z, w) + b)  # bxs
+            hwz = h(at.batched_dot(z, w) + b)  # bxs
             # bxsxd + (bxsx- * bx-xd) = bxsxd
             hwz = hwz.dimshuffle(0, 1, "x")  # bxsx-
             u = u.dimshuffle(0, "x", 1)  # bx-xd
@@ -352,8 +352,8 @@ class LinearFlow(AbstractFlow):
             # f'(sxd \dot d + .) * -xd = sxd
             phi = deriv(z.dot(w) + b).dimshuffle(0, "x") * w.dimshuffle("x", 0)
             # \abs(. + sxd \dot d) = s
-            det = aet.abs_(1.0 + phi.dot(u))
-            return aet.log(det)
+            det = at.abs_(1.0 + phi.dot(u))
+            return at.log(det)
         else:
             z = z.swapaxes(0, 1)
             b = b.dimshuffle(0, "x")
@@ -362,20 +362,20 @@ class LinearFlow(AbstractFlow):
             # w bxd
             # b bx-x-
             # f'(bxsxd \bdot bxd + bx-x-) * bx-xd = bxsxd
-            phi = deriv(aet.batched_dot(z, w) + b).dimshuffle(0, 1, "x") * w.dimshuffle(0, "x", 1)
+            phi = deriv(at.batched_dot(z, w) + b).dimshuffle(0, 1, "x") * w.dimshuffle(0, "x", 1)
             # \abs(. + bxsxd \bdot bxd) = bxs
-            det = aet.abs_(1.0 + aet.batched_dot(phi, u))  # bxs
-            return aet.log(det).sum(0)  # s
+            det = at.abs_(1.0 + at.batched_dot(phi, u))  # bxs
+            return at.log(det).sum(0)  # s
 
 
 class Tanh(FlowFn):
-    fn = aet.tanh
-    inv = aet.arctanh
+    fn = at.tanh
+    inv = at.arctanh
 
     @staticmethod
     def deriv(*args):
         (x,) = args
-        return 1.0 - aet.tanh(x) ** 2
+        return 1.0 - at.tanh(x) ** 2
 
 
 @AbstractFlow.register
@@ -390,7 +390,7 @@ class PlanarFlow(LinearFlow):
             # u_: d
             # w_: d
             wu = u.dot(w)  # .
-            mwu = -1.0 + aet.nnet.softplus(wu)  # .
+            mwu = -1.0 + at.nnet.softplus(wu)  # .
             # d + (. - .) * d / .
             u_h = u + (mwu - wu) * w / ((w ** 2).sum() + 1e-10)
             return u_h, w
@@ -398,7 +398,7 @@ class PlanarFlow(LinearFlow):
             # u_: bxd
             # w_: bxd
             wu = (u * w).sum(-1, keepdims=True)  # bx-
-            mwu = -1.0 + aet.nnet.softplus(wu)  # bx-
+            mwu = -1.0 + at.nnet.softplus(wu)  # bx-
             # bxd + (bx- - bx-) * bxd / bx- = bxd
             u_h = u + (mwu - wu) * w / ((w ** 2).sum(-1, keepdims=True) + 1e-10)
             return u_h, w
@@ -474,7 +474,7 @@ class ReferencePointFlow(AbstractFlow):
         r = (z - z_ref).norm(2, axis=-1, keepdims=True)  # s
         har = h(a, r)
         dar = deriv(a, r)
-        logdet = aet.log((1.0 + b * har) ** (d - 1.0) * (1.0 + b * har + b * dar * r))
+        logdet = at.log((1.0 + b * har) ** (d - 1.0) * (1.0 + b * har + b * dar * r))
         if self.batched:
             return logdet.sum([0, -1])
         else:
@@ -506,8 +506,8 @@ class RadialFlow(ReferencePointFlow):
         super().__init__(Radial(), **kwargs)
 
     def make_ab(self, a, b):
-        a = aet.exp(a)
-        b = -a + aet.nnet.softplus(b)
+        a = at.exp(a)
+        b = -a + at.nnet.softplus(b)
         return a, b
 
 
@@ -531,7 +531,7 @@ class LocFlow(AbstractFlow):
 
     @node_property
     def logdet(self):
-        return aet.zeros((self.z0.shape[0],))
+        return at.zeros((self.z0.shape[0],))
 
 
 @AbstractFlow.register
@@ -556,7 +556,7 @@ class ScaleFlow(AbstractFlow):
 
     @node_property
     def logdet(self):
-        return aet.repeat(aet.sum(aet.log(self.scale)), self.z0.shape[0])
+        return at.repeat(at.sum(at.log(self.scale)), self.z0.shape[0])
 
 
 @AbstractFlow.register
@@ -571,11 +571,11 @@ class HouseholderFlow(AbstractFlow):
         self.shared_params = dict(v=v)
         if self.batched:
             vv = v.dimshuffle(0, 1, "x") * v.dimshuffle(0, "x", 1)
-            I = aet.eye(self.dim).dimshuffle("x", 0, 1)
+            I = at.eye(self.dim).dimshuffle("x", 0, 1)
             vvn = (1e-10 + (v ** 2).sum(-1)).dimshuffle(0, "x", "x")
         else:
-            vv = aet.outer(v, v)
-            I = aet.eye(self.dim)
+            vv = at.outer(v, v)
+            I = at.eye(self.dim)
             vvn = (v ** 2).sum(-1) + 1e-10
         self.H = I - 2.0 * vv / vvn
 
@@ -584,10 +584,10 @@ class HouseholderFlow(AbstractFlow):
         z = self.z0  # sxd
         H = self.H  # dxd
         if self.batched:
-            return aet.batched_dot(z.swapaxes(0, 1), H).swapaxes(0, 1)
+            return at.batched_dot(z.swapaxes(0, 1), H).swapaxes(0, 1)
         else:
             return z.dot(H)
 
     @node_property
     def logdet(self):
-        return aet.zeros((self.z0.shape[0],))
+        return at.zeros((self.z0.shape[0],))

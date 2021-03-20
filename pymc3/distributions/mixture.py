@@ -15,7 +15,7 @@
 from collections.abc import Iterable
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from pymc3.aesaraf import _conversion_map, take_along_axis
@@ -143,7 +143,7 @@ class Mixture(Distribution):
             )
         shape = kwargs.pop("shape", ())
 
-        self.w = w = aet.as_tensor_variable(w)
+        self.w = w = at.as_tensor_variable(w)
         self.comp_dists = comp_dists
 
         defaults = kwargs.pop("defaults", [])
@@ -166,9 +166,9 @@ class Mixture(Distribution):
             if isinstance(comp_dists, Distribution):
                 comp_mode_logps = comp_dists.logp(comp_dists.mode)
             else:
-                comp_mode_logps = aet.stack([cd.logp(cd.mode) for cd in comp_dists])
+                comp_mode_logps = at.stack([cd.logp(cd.mode) for cd in comp_dists])
 
-            mode_idx = aet.argmax(aet.log(w) + comp_mode_logps, axis=-1)
+            mode_idx = at.argmax(at.log(w) + comp_mode_logps, axis=-1)
             self.mode = self._comp_modes()[mode_idx]
 
             if "mode" not in defaults:
@@ -292,30 +292,26 @@ class Mixture(Distribution):
                 if ndim <= 1:
                     ndim = len(comp_dists.shape) - 1
             if ndim < len(comp_dists.shape):
-                value_ = aet.shape_padright(value, len(comp_dists.shape) - ndim)
+                value_ = at.shape_padright(value, len(comp_dists.shape) - ndim)
             else:
                 value_ = value
             return comp_dists.logp(value_)
         else:
-            return aet.squeeze(
-                aet.stack([comp_dist.logp(value) for comp_dist in comp_dists], axis=-1)
+            return at.squeeze(
+                at.stack([comp_dist.logp(value) for comp_dist in comp_dists], axis=-1)
             )
 
     def _comp_means(self):
         try:
-            return aet.as_tensor_variable(self.comp_dists.mean)
+            return at.as_tensor_variable(self.comp_dists.mean)
         except AttributeError:
-            return aet.squeeze(
-                aet.stack([comp_dist.mean for comp_dist in self.comp_dists], axis=-1)
-            )
+            return at.squeeze(at.stack([comp_dist.mean for comp_dist in self.comp_dists], axis=-1))
 
     def _comp_modes(self):
         try:
-            return aet.as_tensor_variable(self.comp_dists.mode)
+            return at.as_tensor_variable(self.comp_dists.mode)
         except AttributeError:
-            return aet.squeeze(
-                aet.stack([comp_dist.mode for comp_dist in self.comp_dists], axis=-1)
-            )
+            return at.squeeze(at.stack([comp_dist.mode for comp_dist in self.comp_dists], axis=-1))
 
     def _comp_samples(self, point=None, size=None, comp_dist_shapes=None, broadcast_shape=None):
         if self.comp_is_distribution:
@@ -431,10 +427,10 @@ class Mixture(Distribution):
         w = self.w
 
         return bound(
-            logsumexp(aet.log(w) + self._comp_logp(value), axis=-1, keepdims=False),
+            logsumexp(at.log(w) + self._comp_logp(value), axis=-1, keepdims=False),
             w >= 0,
             w <= 1,
-            aet.allclose(w.sum(axis=-1), 1),
+            at.allclose(w.sum(axis=-1), 1),
             broadcast_conditions=False,
         )
 
@@ -636,8 +632,8 @@ class NormalMixture(Mixture):
             sigma = sd
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        self.mu = mu = aet.as_tensor_variable(mu)
-        self.sigma = self.sd = sigma = aet.as_tensor_variable(sigma)
+        self.mu = mu = at.as_tensor_variable(mu)
+        self.sigma = self.sd = sigma = at.as_tensor_variable(sigma)
 
         super().__init__(w, Normal.dist(mu, sigma=sigma, shape=comp_shape), *args, **kwargs)
 
@@ -679,7 +675,7 @@ class MixtureSameFamily(Distribution):
     """
 
     def __init__(self, w, comp_dists, mixture_axis=-1, *args, **kwargs):
-        self.w = aet.as_tensor_variable(w)
+        self.w = at.as_tensor_variable(w)
         if not isinstance(comp_dists, Distribution):
             raise TypeError(
                 "The MixtureSameFamily distribution only accepts Distribution "
@@ -701,19 +697,19 @@ class MixtureSameFamily(Distribution):
         # Compute the mode so we don't always have to pass a testval
         defaults = kwargs.pop("defaults", [])
         event_shape = self.comp_dists.shape[mixture_axis + 1 :]
-        _w = aet.shape_padleft(
-            aet.shape_padright(w, len(event_shape)),
+        _w = at.shape_padleft(
+            at.shape_padright(w, len(event_shape)),
             len(self.comp_dists.shape) - w.ndim - len(event_shape),
         )
         mode = take_along_axis(
             self.comp_dists.mode,
-            aet.argmax(_w, keepdims=True),
+            at.argmax(_w, keepdims=True),
             axis=mixture_axis,
         )
         self.mode = mode[(..., 0) + (slice(None),) * len(event_shape)]
 
         if not all_discrete(comp_dists):
-            mean = aet.as_tensor_variable(self.comp_dists.mean)
+            mean = at.as_tensor_variable(self.comp_dists.mean)
             self.mean = (_w * mean).sum(axis=mixture_axis)
             if "mean" not in defaults:
                 defaults.append("mean")
@@ -746,7 +742,7 @@ class MixtureSameFamily(Distribution):
         # We first have to pad the shape of w to the right with ones
         # so that it can broadcast with the event_shape.
 
-        w = aet.shape_padright(w, len(event_shape))
+        w = at.shape_padright(w, len(event_shape))
 
         # Second, we have to add the mixture_axis to the value tensor
         # To insert the mixture axis at the correct location, we use the
@@ -755,14 +751,14 @@ class MixtureSameFamily(Distribution):
         # than the ones present in the comp_dists.
         comp_dists_ndim = len(comp_dists.shape)
 
-        value = aet.shape_padaxis(value, axis=mixture_axis - comp_dists_ndim)
+        value = at.shape_padaxis(value, axis=mixture_axis - comp_dists_ndim)
 
         comp_logp = comp_dists.logp(value)
         return bound(
-            logsumexp(aet.log(w) + comp_logp, axis=mixture_axis, keepdims=False),
+            logsumexp(at.log(w) + comp_logp, axis=mixture_axis, keepdims=False),
             w >= 0,
             w <= 1,
-            aet.allclose(w.sum(axis=mixture_axis - comp_dists_ndim), 1),
+            at.allclose(w.sum(axis=mixture_axis - comp_dists_ndim), 1),
             broadcast_conditions=False,
         )
 

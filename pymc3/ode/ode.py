@@ -15,7 +15,7 @@
 import logging
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import scipy
 
@@ -154,8 +154,8 @@ class DifferentialEquation(Op):
             )
 
         # convert inputs to tensors (and check their types)
-        y0 = aet.cast(aet.unbroadcast(aet.as_tensor_variable(y0), 0), floatX)
-        theta = aet.cast(aet.unbroadcast(aet.as_tensor_variable(theta), 0), floatX)
+        y0 = at.cast(at.unbroadcast(at.as_tensor_variable(y0), 0), floatX)
+        theta = at.cast(at.unbroadcast(at.as_tensor_variable(theta), 0), floatX)
         inputs = [y0, theta]
         for i, (input_val, itype) in enumerate(zip(inputs, self._itypes)):
             if not input_val.type == itype:
@@ -235,8 +235,8 @@ class DifferentialEquation(Op):
         # for each parameter, multiply sensitivities with the output gradient and sum the result
         # sens is (n_times, n_states, n_p)
         # ograds is (n_times, n_states)
-        grads = [aet.sum(sens[:, :, p] * ograds) for p in range(self.n_p)]
+        grads = [at.sum(sens[:, :, p] * ograds) for p in range(self.n_p)]
 
         # return separate gradient tensors for y0 and theta inputs
-        result = aet.stack(grads[: self.n_states]), aet.stack(grads[self.n_states :])
+        result = at.stack(grads[: self.n_states]), at.stack(grads[self.n_states :])
         return result

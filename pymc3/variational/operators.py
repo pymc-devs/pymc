@@ -13,7 +13,7 @@
 #   limitations under the License.
 import aesara
 
-from aesara import tensor as aet
+from aesara import tensor as at
 
 import pymc3 as pm
 
@@ -88,7 +88,7 @@ class KSDObjective(ObjectiveFunction):
         else:
             params = self.test_params + kwargs["more_tf_params"]
             grad *= pm.floatX(-1)
-        grads = aet.grad(None, params, known_grads={z: grad})
+        grads = at.grad(None, params, known_grads={z: grad})
         return self.approx.set_size_and_deterministic(
             grads, nmc, 0, kwargs.get("more_replacements")
         )

@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara.tensor as aet
+import aesara.tensor as at
 import arviz as az
 import numpy as np
 import numpy.testing as npt
@@ -124,9 +124,9 @@ class LKJCholeskyCovFixture(KnownCDF):
             sd_dist = pm.Lognormal.dist(mu=sd_mu, sigma=sd_mu / 10.0, shape=5)
             chol_packed = pm.LKJCholeskyCov("chol_packed", eta=3, n=5, sd_dist=sd_dist)
             chol = pm.expand_packed_triangular(5, chol_packed, lower=True)
-            cov = aet.dot(chol, chol.T)
-            stds = aet.sqrt(aet.diag(cov))
-            pm.Deterministic("log_stds", aet.log(stds))
+            cov = at.dot(chol, chol.T)
+            stds = at.sqrt(at.diag(cov))
+            pm.Deterministic("log_stds", at.log(stds))
             corr = cov / stds[None, :] / stds[:, None]
             corr_entries_unit = (corr[np.tril_indices(5, -1)] + 1) / 2
             pm.Deterministic("corr_entries_unit", corr_entries_unit)

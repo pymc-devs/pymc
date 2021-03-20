@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 
 from pymc3.distributions import Flat, Normal
@@ -73,7 +73,7 @@ class LinearComponent(Model):
         x, labels = any_to_tensor_and_labels(x, labels)
         # now we have x, shape and labels
         if intercept:
-            x = aet.concatenate([aet.ones((x.shape[0], 1), x.dtype), x], axis=1)
+            x = at.concatenate([at.ones((x.shape[0], 1), x.dtype), x], axis=1)
             labels = ["Intercept"] + labels
         coeffs = list()
         for name in labels:
@@ -94,7 +94,7 @@ class LinearComponent(Model):
                         ),
                     )
                 coeffs.append(v)
-        self.coeffs = aet.stack(coeffs, axis=0)
+        self.coeffs = at.stack(coeffs, axis=0)
         self.y_est = x.dot(self.coeffs) + offset
 
     @classmethod

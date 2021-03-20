@@ -22,7 +22,7 @@ from copy import copy
 from typing import Any, Dict, List
 
 import aesara
-import aesara.tensor as aet
+import aesara.tensor as at
 import numpy as np
 import pandas as pd
 
@@ -237,7 +237,7 @@ class Minibatch(TensorVariable):
 
     2. take a random slice of size 10:
 
-        >>> ridx = pm.aet_rng().uniform(size=(10,), low=0, high=data.shape[0]-1e-10).astype('int64')
+        >>> ridx = pm.at_rng().uniform(size=(10,), low=0, high=data.shape[0]-1e-10).astype('int64')
 
     3) take the resulting slice:
 
@@ -321,7 +321,7 @@ class Minibatch(TensorVariable):
         minibatch = self.shared[self.random_slc]
         if broadcastable is None:
             broadcastable = (False,) * minibatch.ndim
-        minibatch = aet.patternbroadcast(minibatch, broadcastable)
+        minibatch = at.patternbroadcast(minibatch, broadcastable)
         self.minibatch = minibatch
         super().__init__(self.minibatch.type, None, None, name=name)
         Apply(aesara.compile.view_op, inputs=[self.minibatch], outputs=[self])
@@ -331,7 +331,7 @@ class Minibatch(TensorVariable):
         if size is None:
             return slice(None)
         elif isinstance(size, int):
-            rng = pm.aet_rng(seed)
+            rng = pm.at_rng(seed)
             Minibatch.RNG[id(self)].append(rng)
             return rng.uniform(size=(size,), low=0.0, high=pm.floatX(total) - 1e-16).astype("int64")
         else:
@@ -403,7 +403,7 @@ class Minibatch(TensorVariable):
                     )
                 if len(end) > 0:
                     shp_mid = shape[sep : -len(end)]
-                    mid = [aet.arange(s) for s in shp_mid]
+                    mid = [at.arange(s) for s in shp_mid]
                 else:
                     mid = []
             else:
@@ -421,11 +421,11 @@ class Minibatch(TensorVariable):
                 shp_end = np.asarray([])
             shp_begin = shape[: len(begin)]
             slc_begin = [
-                self.rslice(shp_begin[i], t[0], t[1]) if t is not None else aet.arange(shp_begin[i])
+                self.rslice(shp_begin[i], t[0], t[1]) if t is not None else at.arange(shp_begin[i])
                 for i, t in enumerate(begin)
             ]
             slc_end = [
-                self.rslice(shp_end[i], t[0], t[1]) if t is not None else aet.arange(shp_end[i])
+                self.rslice(shp_end[i], t[0], t[1]) if t is not None else at.arange(shp_end[i])
                 for i, t in enumerate(end)
             ]
             slc = slc_begin + mid + slc_end
