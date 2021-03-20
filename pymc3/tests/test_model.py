@@ -22,6 +22,8 @@ import numpy.testing as npt
 import pandas as pd
 import pytest
 
+from aesara.tensor.subtensor import AdvancedIncSubtensor
+
 import pymc3 as pm
 
 from pymc3 import Deterministic, Potential
@@ -194,17 +196,20 @@ def test_duplicate_vars():
 def test_empty_observed():
     data = pd.DataFrame(np.ones((2, 3)) / 3)
     data.values[:] = np.nan
-    with pm.Model():
+    with pm.Model(aesara_config={"compute_test_value": "raise"}):
         a = pm.Normal("a", observed=data)
+
+        assert isinstance(a.tag.observations.owner.op, AdvancedIncSubtensor)
         # The masked observations are replaced by elements of the RV `a`,
         # which means that they should all have the same sample test values
-        a_data = a.owner.inputs[1]
-        npt.assert_allclose(a.tag.test_value, a_data.tag.test_value)
+        a_data = a.tag.observations.owner.inputs[1]
+        npt.assert_allclose(a.tag.test_value.flatten(), a_data.tag.test_value)
 
         # Let's try this again with another distribution
         b = pm.Gamma("b", alpha=1, beta=1, observed=data)
-        b_data = b.owner.inputs[1]
-        npt.assert_allclose(b.tag.test_value, b_data.tag.test_value)
+        assert isinstance(b.tag.observations.owner.op, AdvancedIncSubtensor)
+        b_data = b.tag.observations.owner.inputs[1]
+        npt.assert_allclose(b.tag.test_value.flatten(), b_data.tag.test_value)
 
 
 class TestValueGradFunction(unittest.TestCase):
