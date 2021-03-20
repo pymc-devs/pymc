@@ -159,10 +159,12 @@ def jacobian(f, vars=None):
 def jacobian_diag(f, x):
     idx = at.arange(f.shape[0], dtype="int32")
 
-    def grad_ii(i):
+    def grad_ii(i, f, x):
         return grad(f[i], x)[i]
 
-    return aesara.scan(grad_ii, sequences=[idx], n_steps=f.shape[0], name="jacobian_diag")[0]
+    return aesara.scan(
+        grad_ii, sequences=[idx], n_steps=f.shape[0], non_sequences=[f, x], name="jacobian_diag"
+    )[0]
 
 
 @aesara.config.change_flags(compute_test_value="ignore")
