@@ -1153,8 +1153,8 @@ class Beta(UnitContinuous):
         alpha = aet.as_tensor_variable(floatX(alpha))
         beta = aet.as_tensor_variable(floatX(beta))
 
-        mean = alpha / (alpha + beta)
-        variance = (alpha * beta) / ((alpha + beta) ** 2 * (alpha + beta + 1))
+        # mean = alpha / (alpha + beta)
+        # variance = (alpha * beta) / ((alpha + beta) ** 2 * (alpha + beta + 1))
 
         assert_negative_support(alpha, "alpha", "Beta")
         assert_negative_support(beta, "beta", "Beta")
