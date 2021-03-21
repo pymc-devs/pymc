@@ -1723,7 +1723,9 @@ def sample_posterior_predictive(
         return {}
 
     if not hasattr(_trace, "varnames"):
-        inputs_and_names = [(i, i.name) for i in rv_ancestors(vars_to_sample)]
+        inputs_and_names = [
+            (rv, rv.name) for rv in rv_ancestors(vars_to_sample, walk_past_rvs=True)
+        ]
         inputs, input_names = zip(*inputs_and_names)
     else:
         input_names = _trace.varnames

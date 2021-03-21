@@ -218,7 +218,7 @@ class Interval(ElemwiseTransform):
             s = at.nnet.softplus(-rv_value)
             return at.log(b - a) - 2 * s - rv_value
         else:
-            return rv_value
+            return at.ones_like(rv_value)
 
 
 interval = Interval
@@ -286,6 +286,11 @@ class StickBreaking(Transform):
     name = "stickbreaking"
 
     def forward(self, rv_var, rv_value):
+        if rv_var.ndim == 1 or rv_var.broadcastable[-1]:
+            # If this variable is just a bunch of scalars/degenerate
+            # Dirichlets, we can't transform it
+            return rv_value
+
         x = rv_value.T
         n = x.shape[0]
         lx = at.log(x)
@@ -294,6 +299,11 @@ class StickBreaking(Transform):
         return floatX(y.T)
 
     def backward(self, rv_var, rv_value):
+        if rv_var.ndim == 1 or rv_var.broadcastable[-1]:
+            # If this variable is just a bunch of scalars/degenerate
+            # Dirichlets, we can't transform it
+            return rv_value
+
         y = rv_value.T
         y = at.concatenate([y, -at.sum(y, 0, keepdims=True)])
         # "softmax" with vector support and no deprication warning:
@@ -302,6 +312,11 @@ class StickBreaking(Transform):
         return floatX(x.T)
 
     def jacobian_det(self, rv_var, rv_value):
+        if rv_var.ndim == 1 or rv_var.broadcastable[-1]:
+            # If this variable is just a bunch of scalars/degenerate
+            # Dirichlets, we can't transform it
+            return at.ones_like(rv_value)
+
         y = rv_value.T
         Km1 = y.shape[0] + 1
         sy = at.sum(y, 0, keepdims=True)

@@ -388,7 +388,7 @@ class Dirichlet(Continuous):
     rv_op = dirichlet
 
     @classmethod
-    def dist(cls, a, **kwargs):
+    def dist(cls, a, transform=transforms.stick_breaking, **kwargs):
 
         a = at.as_tensor_variable(a)
         # mean = a / at.sum(a)
@@ -418,15 +418,6 @@ class Dirichlet(Continuous):
             at.all(a > 0),
             broadcast_conditions=False,
         )
-
-    def transform(rv_var):
-
-        if rv_var.ndim == 1 or rv_var.broadcastable[-1]:
-            # If this variable is just a bunch of scalars/degenerate
-            # Dirichlets, we can't transform it
-            return None
-
-        return transforms.stick_breaking
 
     def _distr_parameters_for_repr(self):
         return ["a"]
