@@ -26,7 +26,7 @@ import dill
 
 from aesara.tensor.random.op import RandomVariable
 
-from pymc3.distributions import _logcdf, _logp, logp_transform
+from pymc3.distributions import _logcdf, _logp
 
 if TYPE_CHECKING:
     from typing import Optional, Callable
@@ -111,12 +111,12 @@ class DistributionMeta(ABCMeta):
                 def logcdf(op, value, *dist_params, **kwargs):
                     return class_logcdf(value, *dist_params, **kwargs)
 
-            class_transform = clsdict.get("transform")
-            if class_transform:
-
-                @logp_transform.register(rv_type)
-                def transform(op, *args, **kwargs):
-                    return class_transform(*args, **kwargs)
+            # class_transform = clsdict.get("transform")
+            # if class_transform:
+            #
+            #     @logp_transform.register(rv_type)
+            #     def transform(op, *args, **kwargs):
+            #         return class_transform(*args, **kwargs)
 
             # Register the Aesara `RandomVariable` type as a subclass of this
             # `Distribution` type.
@@ -327,7 +327,10 @@ class Discrete(Distribution):
 
     def __new__(cls, name, *args, **kwargs):
 
-        super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
+        if kwargs.get("transform", None):
+            raise ValueError("Transformations for discrete distributions")
+
+        return super().__new__(cls, name, *args, **kwargs)
 
 
 class Continuous(Distribution):

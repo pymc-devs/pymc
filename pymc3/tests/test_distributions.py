@@ -98,6 +98,7 @@ from pymc3.distributions import (
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
+    change_rv_size,
     continuous,
     logcdf,
     logpt,
@@ -765,7 +766,7 @@ class TestMatchesScipy:
                 with Model() as m:
                     dist = pymc3_dist("y", **params)
                 params["value"] = value  # for displaying in err_msg
-                with aesara.config.change_flags(mode=Mode("py")):
+                with aesara.config.change_flags(on_opt_error="raise", mode=Mode("py")):
                     assert_almost_equal(
                         logcdf(dist, value).eval(),
                         scipy_cdf,
@@ -830,14 +831,8 @@ class TestMatchesScipy:
                 )
 
         # Test that method works with multiple values or raises informative TypeError
-        try:
-            with aesara.config.change_flags(mode=Mode("py")):
-                logcdf(valid_dist, np.array([valid_value, valid_value])).eval()
-        except TypeError as err:
-            if not str(err).endswith(
-                ".logcdf expects a scalar value but received a 1-dimensional object."
-            ):
-                raise
+        with pytest.raises(TypeError), aesara.config.change_flags(mode=Mode("py")):
+            logcdf(valid_dist, np.array([valid_value, valid_value])).eval()
 
     def check_selfconsistency_discrete_logcdf(
         self, distribution, domain, paramdomains, decimal=None, n_samples=100
@@ -854,10 +849,13 @@ class TestMatchesScipy:
             value = params.pop("value")
             values = np.arange(domain.lower, value + 1)
             dist = distribution.dist(**params)
+            # This only works for scalar random variables
+            assert dist.owner.op.ndim_supp == 0
+            values_dist = change_rv_size(dist, values.shape)
             with aesara.config.change_flags(mode=Mode("py")):
                 assert_almost_equal(
                     logcdf(dist, value).eval(),
-                    logsumexp(logpt(dist, values), keepdims=False).eval(),
+                    logsumexp(logpt(values_dist, values), keepdims=False).eval(),
                     decimal=decimal,
                     err_msg=str(pt),
                 )
@@ -899,8 +897,8 @@ class TestMatchesScipy:
         invalid_dist = Uniform.dist(lower=1, upper=0)
 
         with aesara.config.change_flags(mode=Mode("py")):
-            assert logpt(invalid_dist, 0.5).eval() == -np.inf
-            assert logcdf(invalid_dist, 2).eval() == -np.inf
+            assert logpt(invalid_dist, np.array(0.5)).eval() == -np.inf
+            assert logcdf(invalid_dist, np.array(2.0)).eval() == -np.inf
 
     @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_triangular(self):
@@ -1572,13 +1570,22 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
         )
 
+    @pytest.mark.xfail(reason="Bernoulli logit_p not refactored yet")
+    def test_bernoulli_logit_p(self):
+        self.check_logp(
+            Bernoulli,
+            Bool,
+            {"logit_p": R},
+            lambda value, logit_p: sp.bernoulli.logpmf(value, scipy.special.expit(logit_p)),
+        )
+        self.check_logcdf(
+            Bernoulli,
+            Bool,
+            {"logit_p": R},
+            lambda value, logit_p: sp.bernoulli.logcdf(value, scipy.special.expit(logit_p)),
+        )
+
     def test_bernoulli(self):
-        # self.check_logp(
-        #     Bernoulli,
-        #     Bool,
-        #     {"logit_p": R},
-        #     lambda value, logit_p: sp.bernoulli.logpmf(value, scipy.special.expit(logit_p)),
-        # )
         self.check_logp(
             Bernoulli,
             Bool,
@@ -1591,12 +1598,6 @@ class TestMatchesScipy:
             {"p": Unit},
             lambda value, p: sp.bernoulli.logcdf(value, p),
         )
-        # self.check_logcdf(
-        #     Bernoulli,
-        #     Bool,
-        #     {"logit_p": R},
-        #     lambda value, logit_p: sp.bernoulli.logcdf(value, scipy.special.expit(logit_p)),
-        # )
         self.check_selfconsistency_discrete_logcdf(
             Bernoulli,
             Bool,
@@ -2009,23 +2010,24 @@ class TestMatchesScipy:
             Multinomial, Vector(Nat, n), {"p": Simplex(n), "n": Nat}, multinomial_logpdf
         )
 
-    # @pytest.mark.parametrize(
-    #     "p,n",
-    #     [
-    #         [[0.25, 0.25, 0.25, 0.25], 1],
-    #         [[0.3, 0.6, 0.05, 0.05], 2],
-    #         [[0.3, 0.6, 0.05, 0.05], 10],
-    #     ],
-    # )
-    # def test_multinomial_mode(self, p, n):
-    #     _p = np.array(p)
-    #     with Model() as model:
-    #         m = Multinomial("m", n, _p, _p.shape)
-    #     assert_allclose(m.distribution.mode.eval().sum(), n)
-    #     _p = np.array([p, p])
-    #     with Model() as model:
-    #         m = Multinomial("m", n, _p, _p.shape)
-    #     assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
+    @pytest.mark.skip(reason="Moment calculations have not been refactored yet")
+    @pytest.mark.parametrize(
+        "p,n",
+        [
+            [[0.25, 0.25, 0.25, 0.25], 1],
+            [[0.3, 0.6, 0.05, 0.05], 2],
+            [[0.3, 0.6, 0.05, 0.05], 10],
+        ],
+    )
+    def test_multinomial_mode(self, p, n):
+        _p = np.array(p)
+        with Model() as model:
+            m = Multinomial("m", n, _p, _p.shape)
+        assert_allclose(m.distribution.mode.eval().sum(), n)
+        _p = np.array([p, p])
+        with Model() as model:
+            m = Multinomial("m", n, _p, _p.shape)
+        assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
 
     @pytest.mark.parametrize(
         "p, size, n",
@@ -2054,12 +2056,13 @@ class TestMatchesScipy:
 
         assert m.eval().shape == size + p.shape
 
-    # def test_multinomial_mode_with_shape(self):
-    #     n = [1, 10]
-    #     p = np.asarray([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]])
-    #     with Model() as model:
-    #         m = Multinomial("m", n=n, p=p, size=(2, 4))
-    #     assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
+    @pytest.mark.skip(reason="Moment calculations have not been refactored yet")
+    def test_multinomial_mode_with_shape(self):
+        n = [1, 10]
+        p = np.asarray([[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]])
+        with Model() as model:
+            m = Multinomial("m", n=n, p=p, size=(2, 4))
+        assert_allclose(m.distribution.mode.eval().sum(axis=-1), n)
 
     def test_multinomial_vec(self):
         vals = np.array([[2, 4, 4], [3, 3, 4]])
@@ -2784,7 +2787,6 @@ class TestStrAndLatexRepr:
             assert str_repr in model_str
 
 
-@pytest.mark.xfail(reason="Distribution not refactored yet")
 def test_discrete_trafo():
     with Model():
         with pytest.raises(ValueError) as err:
