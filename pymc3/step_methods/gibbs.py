@@ -19,7 +19,7 @@ Created on May 12, 2012
 """
 from warnings import warn
 
-import aesara.tensor as aet
+import aesara.tensor as at
 
 from aesara.graph.basic import graph_inputs
 from numpy import arange, array, cumsum, empty, exp, max, nested_iters, searchsorted
@@ -81,7 +81,7 @@ def elemwise_logp(model, var):
         v_logp = logpt(v)
         if var in graph_inputs([v_logp]):
             terms.append(v_logp)
-    return model.fn(aet.add(*terms))
+    return model.fn(at.add(*terms))
 
 
 def categorical(prob, shape):
