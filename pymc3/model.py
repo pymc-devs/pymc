@@ -239,6 +239,8 @@ def build_named_node_tree(graphs):
 
 T = TypeVar("T", bound="ContextMeta")
 
+no_transform_object = object()
+
 
 class ContextMeta(type):
     """Functionality for objects that put themselves in a context using
@@ -1047,7 +1049,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             else:
                 self.coords[name] = coords[name]
 
-    def register_rv(self, rv_var, name, data=None, total_size=None, dims=None, transform=None):
+    def register_rv(
+        self, rv_var, name, data=None, total_size=None, dims=None, transform=no_transform_object
+    ):
         """Register an (un)observed random variable with the model.
 
         Parameters
@@ -1104,23 +1108,20 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if aesara.config.compute_test_value != "off":
             value_var.tag.test_value = rv_var.tag.test_value
 
-        value_var.name = f"{rv_var.name}_value"
+        value_var.name = rv_var.name
 
         rv_var.tag.value_var = value_var
 
         # Make the value variable a transformed value variable,
         # if there's an applicable transform
-        transform = transform or logp_transform(rv_var.owner.op)
+        if transform is no_transform_object:
+            transform = logp_transform(rv_var.owner.op)
 
         if transform is not None:
             value_var.tag.transform = transform
             value_var.name = f"{value_var.name}_{transform.name}__"
             if aesara.config.compute_test_value != "off":
                 value_var.tag.test_value = transform.forward(rv_var, value_var).tag.test_value
-
-            # The transformed variable needs to be a named variable in the
-            # model, too
-            self.named_vars[value_var.name] = value_var
 
         self.add_random_variable(rv_var, dims)
 
@@ -1173,7 +1174,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             except KeyError:
                 raise e
 
-    def makefn(self, outs, mode=None, transformed=True, *args, **kwargs):
+    def makefn(self, outs, mode=None, *args, **kwargs):
         """Compiles a Aesara function which returns ``outs`` and takes the variable
         ancestors of ``outs`` as inputs.
 
@@ -1187,11 +1188,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         Compiled Aesara function
         """
         with self:
-            vars = [
-                v if not transformed else getattr(v.tag, "transformed_var", v) for v in self.vars
-            ]
             return aesara.function(
-                vars,
+                self.vars,
                 outs,
                 allow_input_downcast=True,
                 on_unused_input="ignore",
@@ -1324,7 +1322,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         return Series(
             {
-                rv.name: np.round(self.fn(logpt_sum(rv))(test_point), round_vals)
+                rv.name: np.round(
+                    self.fn(logpt_sum(rv, getattr(rv.tag, "observations", None)))(test_point),
+                    round_vals,
+                )
                 for rv in self.basic_RVs
             },
             name="Log-probability of test_point",
