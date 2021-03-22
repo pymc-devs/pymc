@@ -267,14 +267,12 @@ class TestSaveLoad:
 
         assert save_dir == directory
 
-        seed = 10
-        np.random.seed(seed)
-        with TestSaveLoad.model():
+        with TestSaveLoad.model() as model:
+            model.default_rng.get_value(borrow=True).seed(10)
             ppc = pm.sample_posterior_predictive(self.trace)
 
-        seed = 10
-        np.random.seed(seed)
-        with TestSaveLoad.model():
+        with TestSaveLoad.model() as model:
+            model.default_rng.get_value(borrow=True).seed(10)
             trace2 = pm.load_trace(directory)
             ppc2 = pm.sample_posterior_predictive(trace2)
             ppc2f = pm.sample_posterior_predictive(trace2)
