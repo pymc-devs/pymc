@@ -4241,7 +4241,7 @@ class Interpolated(BoundedContinuous):
         ax.plot(points, pdf, color='black', marker='o', label='Lattice Points',alpha=0.5,linestyle='')
         ax.plot(x, np.exp(interpolated.logp(x).eval()),'C1',label='Interpolated pdf',alpha=0.8,lw=3)
         r = interpolated.random(size=1000)
-        ax.hist(r, density=True, histtype='stepfilled', alpha=0.4,align ='right',color='grey')
+        ax.hist(r, density=True, alpha=0.4,align ='mid',color='grey')
         ax.legend(loc='best', frameon=False)
         plt.show()
 
