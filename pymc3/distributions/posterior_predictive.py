@@ -342,7 +342,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
         self.size = size
         self.logger = logging.getLogger("posterior_predictive")
 
-    def __enter__(self) -> "_PosteriorPredictiveSampler":
+    def __enter__(self) -> _PosteriorPredictiveSampler:
         self._tok = vectorized_ppc.set(posterior_predictive_draw_values)
         return self
 
