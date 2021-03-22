@@ -4223,26 +4223,20 @@ class Interpolated(BoundedContinuous):
     Both parameters ``x_points`` and values ``pdf_points`` are not variables, but
     plain array-like objects, so they are constant and cannot be sampled.
 
-    ========  ===========================================
-    Support   :math:`x \in [x\_points[0], x\_points[-1]]`
-    ========  ===========================================
-    
+    .. plot::
     import matplotlib.pyplot as plt
     import numpy as np
     import pymc3 as pm
+    import arviz as az
     import warnings
     warnings.simplefilter(action="ignore", category=FutureWarning)
     from scipy.stats import gamma
-    a = 1.99
-    mean, var, skew, kurt = gamma.stats(a, moments='mvsk')
-    rv = gamma(a)
+    rv = gamma(1.99)
     x = np.linspace(rv.ppf(0.01),rv.ppf(0.99), 1000)
     points = np.linspace(x[0], x[-1], 50)
     pdf = rv.pdf(points)
     interpolated = pm.Interpolated.dist(points, pdf)
     plt.style.use('arviz-darkgrid')
-    plt.style.use('tableau-colorblind10')
-    #plt.set_cmap('coolwarm')
     fig, ax = plt.subplots(1, 1)
     ax.plot(x, rv.pdf(x), 'C0', linestyle = '--',  label='Original Gamma pdf',alpha=0.8,lw=2)
     ax.plot(points, pdf, color='black', marker='o', label='Lattice Points',alpha=0.5,linestyle='')
@@ -4251,6 +4245,10 @@ class Interpolated(BoundedContinuous):
     ax.hist(r, density=True, histtype='stepfilled', alpha=0.4,align ='right',color='grey')
     ax.legend(loc='best', frameon=False)
     plt.show()
+
+    ========  ===========================================
+    Support   :math:`x \in [x\_points[0], x\_points[-1]]`
+    ========  ===========================================
 
     Parameters
     ----------
