@@ -448,7 +448,8 @@ def sample(
         random_seed = [random_seed]
     if random_seed is None or isinstance(random_seed, int):
         if random_seed is not None:
-            np.random.seed(random_seed)
+            # np.random.seed(random_seed)
+            model.default_rng.get_value(borrow=True).seed(random_seed)
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
     if not isinstance(random_seed, abc.Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
@@ -971,7 +972,8 @@ def _iter_sample(
     model = modelcontext(model)
     draws = int(draws)
     if random_seed is not None:
-        np.random.seed(random_seed)
+        # np.random.seed(random_seed)
+        model.default_rng.get_value(borrow=True).seed(random_seed)
     if draws < 1:
         raise ValueError("Argument `draws` must be greater than 0.")
 
@@ -1239,7 +1241,8 @@ def _prepare_iter_population(
     model = modelcontext(model)
     draws = int(draws)
     if random_seed is not None:
-        np.random.seed(random_seed)
+        # np.random.seed(random_seed)
+        model.default_rng.get_value(borrow=True).seed(random_seed)
     if draws < 1:
         raise ValueError("Argument `draws` should be above 0.")
 
@@ -1710,7 +1713,8 @@ def sample_posterior_predictive(
         vars_ = model.observed_RVs
 
     if random_seed is not None:
-        np.random.seed(random_seed)
+        # np.random.seed(random_seed)
+        model.default_rng.get_value(borrow=True).seed(random_seed)
 
     indices = np.arange(samples)
 
@@ -1820,7 +1824,7 @@ def sample_posterior_predictive_w(
         Dictionary with the variables as keys. The values corresponding to the
         posterior predictive samples from the weighted models.
     """
-    np.random.seed(random_seed)
+    # np.random.seed(random_seed)
 
     if isinstance(traces[0], InferenceData):
         n_samples = [
@@ -1837,6 +1841,8 @@ def sample_posterior_predictive_w(
         models = [modelcontext(models)] * len(traces)
 
     for model in models:
+        if random_seed:
+            model.default_rng.get_value(borrow=True).seed(random_seed)
         if model.potentials:
             warnings.warn(
                 "The effect of Potentials on other parameters is ignored during posterior predictive sampling. "
@@ -1976,7 +1982,8 @@ def sample_prior_predictive(
         vars_ = set(var_names)
 
     if random_seed is not None:
-        np.random.seed(random_seed)
+        # np.random.seed(random_seed)
+        model.default_rng.get_value(borrow=True).seed(random_seed)
 
     names = get_default_varnames(vars_, include_transformed=False)
 
@@ -2123,7 +2130,8 @@ def init_nuts(
 
     if random_seed is not None:
         random_seed = int(np.atleast_1d(random_seed)[0])
-        np.random.seed(random_seed)
+        # np.random.seed(random_seed)
+        model.default_rng.get_value(borrow=True).seed(random_seed)
 
     cb = [
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="absolute"),
