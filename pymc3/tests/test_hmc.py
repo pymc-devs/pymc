@@ -20,6 +20,7 @@ import pytest
 import pymc3
 
 from pymc3.aesaraf import floatX
+from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.step_methods.hmc.base_hmc import BaseHMC
 from pymc3.tests import models
 
@@ -35,8 +36,9 @@ def test_leapfrog_reversible():
     scaling = floatX(np.random.rand(size))
     step = BaseHMC(vars=model.vars, model=model, scaling=scaling)
     step.integrator._logp_dlogp_func.set_extra_values({})
-    p = floatX(step.potential.random())
-    q = floatX(np.random.randn(size))
+    astart = DictToArrayBijection.map(start)
+    p = RaveledVars(floatX(step.potential.random()), astart.point_map_info)
+    q = RaveledVars(floatX(np.random.randn(size)), astart.point_map_info)
     start = step.integrator.compute_state(p, q)
     for epsilon in [0.01, 0.1]:
         for n_steps in [1, 2, 3, 4, 20]:
@@ -45,8 +47,8 @@ def test_leapfrog_reversible():
                 state = step.integrator.step(epsilon, state)
             for _ in range(n_steps):
                 state = step.integrator.step(-epsilon, state)
-            npt.assert_allclose(state.q, start.q, rtol=1e-5)
-            npt.assert_allclose(state.p, start.p, rtol=1e-5)
+            npt.assert_allclose(state.q.data, start.q.data, rtol=1e-5)
+            npt.assert_allclose(state.p.data, start.p.data, rtol=1e-5)
 
 
 def test_nuts_tuning():
