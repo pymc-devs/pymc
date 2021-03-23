@@ -194,8 +194,8 @@ class NFMC:
 
     def target_dlogp(self, param_vals):
         dlogps = [self.posterior_dlogp_func(val) for val in param_vals]
-	return np.array(dlogps).squeeze()
-        
+        return np.array(dlogps).squeeze()
+
     def target_hessian(self, param_vals):
         hessians = [self.posterior_hessian_func(val) for val in param_vals]
         return np.array(hessians).squeeze()
