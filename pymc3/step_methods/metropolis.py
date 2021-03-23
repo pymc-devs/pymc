@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from typing import Any, Dict, List, Tuple
 
 import aesara
 import aesara.tensor as at
@@ -23,7 +24,7 @@ from aesara.tensor.random.basic import CategoricalRV
 import pymc3 as pm
 
 from pymc3.aesaraf import floatX
-from pymc3.blocking import DictToArrayBijection
+from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.step_methods.arraystep import (
     ArrayStep,
     ArrayStepShared,
@@ -149,14 +150,14 @@ class Metropolis(ArrayStepShared):
         """
 
         model = pm.modelcontext(model)
+        initial_values = model.test_point
 
         if vars is None:
             vars = model.vars
         vars = pm.inputvars(vars)
 
         if S is None:
-            # XXX: This needs to be refactored
-            S = None  # np.ones(sum(v.dsize for v in vars))
+            S = np.ones(sum(initial_values[v.name].size for v in vars))
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
@@ -175,8 +176,7 @@ class Metropolis(ArrayStepShared):
 
         # Determine type of variables
         self.discrete = np.concatenate(
-            # XXX: This needs to be refactored
-            None  # [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in vars]
+            [[v.dtype in pm.discrete_types] * (initial_values[v.name].size or 1) for v in vars]
         )
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
@@ -188,8 +188,8 @@ class Metropolis(ArrayStepShared):
 
         self.mode = mode
 
-        shared = pm.make_shared_replacements(vars, model)
-        self.delta_logp = delta_logp(model.logpt, vars, shared)
+        shared = pm.make_shared_replacements(initial_values, vars, model)
+        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
         super().__init__(vars, shared)
 
     def reset_tuning(self):
@@ -198,7 +198,11 @@ class Metropolis(ArrayStepShared):
             setattr(self, attr, initial_value)
         return
 
-    def astep(self, q0):
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
+
         if not self.steps_until_tune and self.tune:
             # Tune scaling parameter
             self.scaling = tune(self.scaling, self.accepted / float(self.tune_interval))
@@ -221,6 +225,7 @@ class Metropolis(ArrayStepShared):
 
         accept = self.delta_logp(q, q0)
         q_new, accepted = metrop_select(accept, q, q0)
+
         self.accepted += accepted
 
         self.steps_until_tune -= 1
@@ -231,6 +236,8 @@ class Metropolis(ArrayStepShared):
             "accept": np.exp(accept),
             "accepted": accepted,
         }
+
+        q_new = RaveledVars(q_new, point_map_info)
 
         return q_new, [stats]
 
@@ -320,7 +327,10 @@ class BinaryMetropolis(ArrayStep):
 
         super().__init__(vars, [model.fastlogp])
 
-    def astep(self, q0, logp):
+    def astep(self, q0: RaveledVars, logp) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
 
         # Convert adaptive_scale_factor to a jump probability
         p_jump = 1.0 - 0.5 ** self.scaling
@@ -340,6 +350,8 @@ class BinaryMetropolis(ArrayStep):
             "accept": np.exp(accept),
             "p_jump": p_jump,
         }
+
+        q_new = RaveledVars(q_new, point_map_info)
 
         return q_new, [stats]
 
@@ -404,7 +416,11 @@ class BinaryGibbsMetropolis(ArrayStep):
 
         super().__init__(vars, [model.fastlogp])
 
-    def astep(self, q0, logp):
+    def astep(self, q0: RaveledVars, logp) -> RaveledVars:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
+
         order = self.order
         if self.shuffle_dims:
             nr.shuffle(order)
@@ -421,6 +437,8 @@ class BinaryGibbsMetropolis(ArrayStep):
                 q[idx], accepted = metrop_select(logp_prop - logp_curr, q[idx], curr_val)
                 if accepted:
                     logp_curr = logp_prop
+
+        q = RaveledVars(q, point_map_info)
 
         return q
 
@@ -498,7 +516,11 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         super().__init__(vars, [model.fastlogp])
 
-    def astep_unif(self, q0, logp):
+    def astep_unif(self, q0: RaveledVars, logp) -> RaveledVars:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
+
         dimcats = self.dimcats
         if self.shuffle_dims:
             nr.shuffle(dimcats)
@@ -512,9 +534,16 @@ class CategoricalGibbsMetropolis(ArrayStep):
             q[dim], accepted = metrop_select(logp_prop - logp_curr, q[dim], curr_val)
             if accepted:
                 logp_curr = logp_prop
+
+        q = RaveledVars(q, point_map_info)
+
         return q
 
-    def astep_prop(self, q0, logp):
+    def astep_prop(self, q0: RaveledVars, logp) -> RaveledVars:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
+
         dimcats = self.dimcats
         if self.shuffle_dims:
             nr.shuffle(dimcats)
@@ -524,6 +553,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         for dim, k in dimcats:
             logp_curr = self.metropolis_proportional(q, logp, logp_curr, dim, k)
+
+        q = RaveledVars(q, point_map_info)
 
         return q
 
@@ -630,6 +661,7 @@ class DEMetropolis(PopulationArrayStepShared):
     ):
 
         model = pm.modelcontext(model)
+        initial_values = model.test_point
 
         if vars is None:
             vars = model.cont_vars
@@ -657,11 +689,15 @@ class DEMetropolis(PopulationArrayStepShared):
 
         self.mode = mode
 
-        shared = pm.make_shared_replacements(vars, model)
-        self.delta_logp = delta_logp(model.logpt, vars, shared)
+        shared = pm.make_shared_replacements(initial_values, vars, model)
+        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
         super().__init__(vars, shared)
 
-    def astep(self, q0):
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
+
         if not self.steps_until_tune and self.tune:
             if self.tune == "scaling":
                 self.scaling = tune(self.scaling, self.accepted / float(self.tune_interval))
@@ -694,6 +730,8 @@ class DEMetropolis(PopulationArrayStepShared):
             "accept": np.exp(accept),
             "accepted": accepted,
         }
+
+        q_new = RaveledVars(q_new, point_map_info)
 
         return q_new, [stats]
 
@@ -771,6 +809,7 @@ class DEMetropolisZ(ArrayStepShared):
         **kwargs
     ):
         model = pm.modelcontext(model)
+        initial_values = model.test_point
 
         if vars is None:
             vars = model.cont_vars
@@ -810,8 +849,8 @@ class DEMetropolisZ(ArrayStepShared):
 
         self.mode = mode
 
-        shared = pm.make_shared_replacements(vars, model)
-        self.delta_logp = delta_logp(model.logpt, vars, shared)
+        shared = pm.make_shared_replacements(initial_values, vars, model)
+        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
         super().__init__(vars, shared)
 
     def reset_tuning(self):
@@ -822,7 +861,11 @@ class DEMetropolisZ(ArrayStepShared):
             setattr(self, attr, initial_value)
         return
 
-    def astep(self, q0):
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
+
         # same tuning scheme as DEMetropolis
         if not self.steps_until_tune and self.tune:
             if self.tune_target == "scaling":
@@ -868,6 +911,8 @@ class DEMetropolisZ(ArrayStepShared):
             "accepted": accepted,
         }
 
+        q_new = RaveledVars(q_new, point_map_info)
+
         return q_new, [stats]
 
     def stop_tuning(self):
@@ -898,8 +943,8 @@ def softmax(x):
     return e_x / np.sum(e_x, axis=0)
 
 
-def delta_logp(logp, vars, shared):
-    [logp0], inarray0 = pm.join_nonshared_inputs([logp], vars, shared)
+def delta_logp(point, logp, vars, shared):
+    [logp0], inarray0 = pm.join_nonshared_inputs(point, [logp], vars, shared)
 
     tensor_type = inarray0.type
     inarray1 = tensor_type("inarray1")
