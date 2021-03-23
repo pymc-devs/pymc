@@ -24,7 +24,7 @@ from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
 import pymc3 as pm
 
 from pymc3.aesaraf import floatX
-from pymc3.blocking import DictToArrayBijection
+from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.step_methods.arraystep import (
     ArrayStep,
     ArrayStepShared,
@@ -150,15 +150,14 @@ class Metropolis(ArrayStepShared):
         """
 
         model = pm.modelcontext(model)
-        initial_values = model.initial_point
+        initial_values = model.test_point
 
         if vars is None:
             vars = model.value_vars
         vars = pm.inputvars(vars)
 
         if S is None:
-            # XXX: This needs to be refactored
-            S = None  # np.ones(sum(v.dsize for v in vars))
+            S = np.ones(sum(initial_values[v.name].size for v in vars))
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
@@ -177,8 +176,7 @@ class Metropolis(ArrayStepShared):
 
         # Determine type of variables
         self.discrete = np.concatenate(
-            # XXX: This needs to be refactored
-            None  # [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in vars]
+            [[v.dtype in pm.discrete_types] * (initial_values[v.name].size or 1) for v in vars]
         )
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
@@ -561,6 +559,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
             if accepted:
                 logp_curr = logp_prop
 
+        q = RaveledVars(q, point_map_info)
+
         return q
 
     def astep_prop(self, q0: RaveledVars, logp) -> RaveledVars:
@@ -577,6 +577,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         for dim, k in dimcats:
             logp_curr = self.metropolis_proportional(q, logp, logp_curr, dim, k)
+
+        q = RaveledVars(q, point_map_info)
 
         return q
 
@@ -693,8 +695,7 @@ class DEMetropolis(PopulationArrayStepShared):
     ):
 
         model = pm.modelcontext(model)
-        initial_values = model.initial_point
-        initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
+        initial_values = model.test_point
 
         if vars is None:
             vars = model.cont_vars
@@ -842,8 +843,7 @@ class DEMetropolisZ(ArrayStepShared):
         **kwargs
     ):
         model = pm.modelcontext(model)
-        initial_values = model.initial_point
-        initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
+        initial_values = model.test_point
 
         if vars is None:
             vars = model.cont_vars

@@ -11,17 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import (
-    Callable,
-    Dict,
-    Generator,
-    Iterable,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-)
+from typing import Dict, List
 
 import aesara
 import aesara.tensor as at
@@ -572,17 +562,20 @@ def join_nonshared_inputs(
         tensor_type = joined.type
         inarray = tensor_type("inarray")
     else:
-        inarray = aesara.shared(joined.tag.test_value, "inarray")
+        if point is None:
+            raise ValueError("A point is required when `make_shared` is True")
+        joined_values = np.concatenate([point[var.name].ravel() for var in vars])
+        inarray = aesara.shared(joined_values, "inarray")
 
-    inarray.tag.test_value = joined.tag.test_value
+    if aesara.config.compute_test_value != "off":
+        inarray.tag.test_value = joined.tag.test_value
 
     replace = {}
     last_idx = 0
     for var in vars:
-        arr_len = aet.prod(var.shape)
-        replace[var] = reshape_t(inarray[last_idx : last_idx + arr_len], var.shape).astype(
-            var.dtype
-        )
+        shape = point[var.name].shape
+        arr_len = np.prod(shape, dtype=int)
+        replace[var] = reshape_t(inarray[last_idx : last_idx + arr_len], shape).astype(var.dtype)
         last_idx += arr_len
 
     replace.update(shared)

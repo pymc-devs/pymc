@@ -108,14 +108,14 @@ class SMC:
 
     def setup_kernel(self):
         """Set up the likelihood logp function based on the chosen kernel."""
-        initial_values = self.model.initial_point
+        initial_values = self.model.test_point
         shared = make_shared_replacements(initial_values, self.variables, self.model)
 
         if self.kernel == "abc":
             factors = [var.logpt for var in self.model.free_RVs]
-            factors += [at.sum(factor) for factor in self.model.potentials]
+            factors += [aet.sum(factor) for factor in self.model.potentials]
             self.prior_logp_func = logp_forw(
-                initial_values, [at.sum(factors)], self.variables, shared
+                initial_values, [aet.sum(factors)], self.variables, shared
             )
             simulator = self.model.observed_RVs[0]
             distance = simulator.distribution.distance

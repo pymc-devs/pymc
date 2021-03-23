@@ -58,7 +58,7 @@ class MetropolisMLDA(Metropolis):
         and some extra code specific for MLDA.
         """
         model = pm.modelcontext(kwargs.get("model", None))
-        initial_values = model.initial_point
+        initial_values = model.test_point
 
         # flag to that variance reduction is activated - forces MetropolisMLDA
         # to store quantities of interest in a register if True
@@ -71,18 +71,18 @@ class MetropolisMLDA(Metropolis):
             self.Q_reg = [np.nan] * self.mlda_subsampling_rate_above
 
             # extract some necessary variables
-            value_vars = kwargs.get("vars", None)
-            if value_vars is None:
-                value_vars = model.value_vars
-            value_vars = pm.inputvars(value_vars)
-            shared = pm.make_shared_replacements(initial_values, value_vars, model)
+            vars = kwargs.get("vars", None)
+            if vars is None:
+                vars = model.vars
+            vars = pm.inputvars(vars)
+            shared = pm.make_shared_replacements(initial_values, vars, model)
 
         # call parent class __init__
         super().__init__(*args, **kwargs)
 
         # modify the delta function and point to model if VR is used
         if self.mlda_variance_reduction:
-            self.delta_logp = delta_logp_inverse(initial_values, model.logpt, value_vars, shared)
+            self.delta_logp = delta_logp_inverse(initial_values, model.logpt, vars, shared)
             self.model = model
 
     def reset_tuning(self):
@@ -126,7 +126,7 @@ class DEMetropolisZMLDA(DEMetropolisZ):
         self.tuning_end_trigger = False
 
         model = pm.modelcontext(kwargs.get("model", None))
-        initial_values = model.initial_point
+        initial_values = model.test_point
 
         # flag to that variance reduction is activated - forces DEMetropolisZMLDA
         # to store quantities of interest in a register if True
@@ -139,18 +139,18 @@ class DEMetropolisZMLDA(DEMetropolisZ):
             self.Q_reg = [np.nan] * self.mlda_subsampling_rate_above
 
             # extract some necessary variables
-            value_vars = kwargs.get("vars", None)
-            if value_vars is None:
-                value_vars = model.value_vars
-            value_vars = pm.inputvars(value_vars)
-            shared = pm.make_shared_replacements(initial_values, value_vars, model)
+            vars = kwargs.get("vars", None)
+            if vars is None:
+                vars = model.vars
+            vars = pm.inputvars(vars)
+            shared = pm.make_shared_replacements(initial_values, vars, model)
 
         # call parent class __init__
         super().__init__(*args, **kwargs)
 
         # modify the delta function and point to model if VR is used
         if self.mlda_variance_reduction:
-            self.delta_logp = delta_logp_inverse(initial_values, model.logpt, value_vars, shared)
+            self.delta_logp = delta_logp_inverse(initial_values, model.logpt, vars, shared)
             self.model = model
 
     def reset_tuning(self):
@@ -403,7 +403,7 @@ class MLDA(ArrayStepShared):
 
         # assign internal state
         model = pm.modelcontext(model)
-        initial_values = model.initial_point
+        initial_values = model.test_point
         self.model = model
         self.coarse_models = coarse_models
         self.model_below = self.coarse_models[-1]
@@ -557,8 +557,8 @@ class MLDA(ArrayStepShared):
 
         # Construct aesara function for current-level model likelihood
         # (for use in acceptance)
-        shared = pm.make_shared_replacements(initial_values, value_vars, model)
-        self.delta_logp = delta_logp_inverse(initial_values, model.logpt, value_vars, shared)
+        shared = pm.make_shared_replacements(initial_values, vars, model)
+        self.delta_logp = delta_logp_inverse(initial_values, model.logpt, vars, shared)
 
         # Construct aesara function for below-level model likelihood
         # (for use in acceptance)
