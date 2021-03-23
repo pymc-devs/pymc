@@ -30,7 +30,9 @@ from pymc3.nfmc.nfmc import NFMC
 
 def sample_nfmc(
     draws=500,
-    start=None,
+    init_samples=None,
+    pareto=False,
+    k_trunc=0.25,
     norm_tol=0.01,
     optim_iter=1000,
     ftol=2.220446049250313e-9,
@@ -127,7 +129,9 @@ def sample_nfmc(
 
     params = (
         draws,
-        start,
+        init_samples,
+        pareto,
+        k_trunc,
         norm_tol,
         optim_iter,
         ftol,
@@ -163,12 +167,12 @@ def sample_nfmc(
     (
         traces,
         evidence,
-        nf_models,
+        weighted_samples,
         importance_weights,
     ) = zip(*results)
     trace = MultiTrace(traces)
     trace.report.evidence = evidence
-    trace.report.nf_models = nf_models
+    trace.report.weighted_samples = weighted_samples
     trace.report.importance_weights = importance_weights
     trace.report._n_draws = draws
     trace.report._t_sampling = time.time() - t1
@@ -178,7 +182,9 @@ def sample_nfmc(
 
 def sample_nfmc_int(
     draws,
-    start,
+    init_samples,
+    pareto,
+    k_trunc,
     norm_tol,
     optim_iter,
     ftol,
@@ -212,6 +218,9 @@ def sample_nfmc_int(
     nfmc = NFMC(
         draws=draws,
         model=model,
+        init_samples=init_samples,
+        pareto=pareto,
+        k_trunc=k_trunc,
         random_seed=random_seed,
         chain=chain,
         frac_validate=frac_validate,
@@ -239,6 +248,7 @@ def sample_nfmc_int(
     nfmc.initialize_population()
     nfmc.setup_logp()
 
+    '''
     # Run the optimization ...
     print('Running initial optimization ...')
     if parallel:
@@ -256,9 +266,11 @@ def sample_nfmc_int(
             optim_results = np.append(optim_results, nfmc.optimize(sample), axis=0)
         np.random.shuffle(optim_results)
     nfmc.optim_samples = np.copy(optim_results)
-    
-    print('Fitting the first NF approx to the prior optimized samples ...')
+    '''
+
+    print('Fitting the first NF approx to the initial samples ...')
     nfmc.initialize_nf()
+    print(nfmc.importance_weights)
     iter_evidence = 1.0 * nfmc.evidence
     
     for i in range(nf_iter):
@@ -266,6 +278,7 @@ def sample_nfmc_int(
         if _log is not None:
             _log.info(f"Stage: {stage:3d}, Normalizing Constant Estimate: {nfmc.evidence}")
         nfmc.fit_nf()
+        print(nfmc.importance_weights)
         stage += 1
         if np.abs((iter_evidence - nfmc.evidence) / nfmc.evidence) <= norm_tol:
             print('Normalizing constant estimate has stabilised - ending NF fits.')
@@ -277,6 +290,6 @@ def sample_nfmc_int(
     return (
         nfmc.posterior_to_trace(),
         nfmc.evidence,
-        nfmc.nf_models,
+        nfmc.weighted_samples,
         nfmc.importance_weights,
     )

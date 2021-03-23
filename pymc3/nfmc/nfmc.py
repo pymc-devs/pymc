@@ -21,6 +21,11 @@ from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 from scipy.optimize import minimize
 from theano import function as theano_function
+import arviz as az
+import jax
+
+# This is temporary, until I've turned it into a full variational method.
+from pymc3.el2o.el2o_basic import *
 
 from pymc3.backends.ndarray import NDArray
 from pymc3.model import Point, modelcontext
@@ -31,6 +36,7 @@ from pymc3.theanof import (
     join_nonshared_inputs,
     make_shared_replacements,
     gradient,
+    hessian,
 )
 
 # SINF code for fitting the normalizing flow.
@@ -49,6 +55,8 @@ class NFMC:
         self,
         draws=500,
         model=None,
+        init_samples=None,
+        pareto=False,
         random_seed=-1,
         chain=0,
         frac_validate=0.1,
@@ -76,6 +84,8 @@ class NFMC:
 
         self.draws = draws
         self.model = model
+        self.init_samples = init_samples
+        self.pareto = pareto,
         self.random_seed = random_seed
         self.chain = chain
         self.frac_validate = frac_validate
@@ -112,31 +122,37 @@ class NFMC:
         population = []
         var_info = OrderedDict()
 
-        init_rnd = sample_prior_predictive(
-            self.draws,
-            var_names=[v.name for v in self.model.unobserved_RVs],
-            model=self.model,
-        )
-
-
         init = self.model.test_point
-
+        
         for v in self.variables:
             var_info[v.name] = (init[v.name].shape, init[v.name].size)
-
-        for i in range(self.draws):
-
-            point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
-            population.append(self.model.dict_to_array(point))
-
-        self.prior_samples = np.array(floatX(population))
-        self.optim_samples = np.copy(self.prior_samples)
-        self.var_info = var_info
-        self.weighted_samples = np.empty((0, np.shape(self.optim_samples)[1]))
-        self.importance_weights = np.array([])
-        self.posterior = np.empty((0, np.shape(self.optim_samples)[1]))
-        self.nf_models = []
         
+        if self.init_samples is None:
+            init_rnd = sample_prior_predictive(
+                self.draws,
+                var_names=[v.name for v in self.model.unobserved_RVs],
+                model=self.model,
+            )
+
+            for i in range(self.draws):
+
+                point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
+                population.append(self.model.dict_to_array(point))
+
+            self.prior_samples = np.array(floatX(population))
+
+        elif self.init_samples is not None:
+            
+            self.prior_samples = np.copy(self.init_samples)
+
+        print('Prior sample check ...')
+        print(f'Shape of prior samples = {np.shape(self.prior_samples)}')
+        self.var_info = var_info
+        self.weighted_samples = np.empty((0, np.shape(self.prior_samples)[1]))
+        self.importance_weights = np.array([])
+        self.posterior = np.empty((0, np.shape(self.prior_samples)[1]))
+        self.nf_models = []
+
     def setup_logp(self):
         """Set up the prior and likelihood logp functions, and derivatives."""
         shared = make_shared_replacements(self.variables, self.model)
@@ -145,6 +161,7 @@ class NFMC:
         self.likelihood_logp_func = logp_forw([self.model.datalogpt], self.variables, shared)
         self.posterior_logp_func = logp_forw([self.model.logpt], self.variables, shared)
         self.posterior_dlogp_func = logp_forw([gradient(self.model.logpt, self.variables)], self.variables, shared)
+        self.posterior_hessian_func = logp_forw([hessian(self.model.logpt, self.variables)], self.variables, shared)
         
     def get_prior_logp(self):
         """Get the prior log probabilities."""
@@ -171,6 +188,18 @@ class NFMC:
     def optim_target_dlogp(self, param_vals):
         return -1.0 * self.posterior_dlogp_func(param_vals)
 
+    def target_logp(self, param_vals):
+        logps = [self.posterior_logp_func(val) for val in param_vals]
+        return np.array(logps).squeeze()
+
+    def target_dlogp(self, param_vals):
+        dlogps = [self.posterior_dlogp_func(val) for val in param_vals]
+	return np.array(dlogps).squeeze()
+        
+    def target_hessian(self, param_vals):
+        hessians = [self.posterior_hessian_func(val) for val in param_vals]
+        return np.array(hessians).squeeze()
+
     def callback(self, xk):
         self.optim_iter_samples = np.append(self.optim_iter_samples, np.array([xk]), axis=0)
     
@@ -183,12 +212,12 @@ class NFMC:
         return self.optim_iter_samples 
         
     def initialize_nf(self):
-        """Intialize the first NF approx, by fitting to the prior and optimization samples."""
-        val_idx = int((1 - self.frac_validate) * self.optim_samples.shape[0])
+        """Intialize the first NF approx, by fitting to the prior samples."""
+        val_idx = int((1 - self.frac_validate) * self.prior_samples.shape[0])
 
-        self.nf_model = GIS(torch.from_numpy(self.optim_samples[:val_idx, ...].astype(np.float32)),
-                            torch.from_numpy(self.optim_samples[val_idx:, ...].astype(np.float32)),
-                            alpha=self.alpha, verbose=self.verbose, n_component=self.n_component,
+        self.nf_model = GIS(torch.from_numpy(self.prior_samples[:val_idx, ...].astype(np.float32)),
+                            torch.from_numpy(self.prior_samples[val_idx:, ...].astype(np.float32)),
+                            alpha=None, verbose=self.verbose, n_component=self.n_component,
                             interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=self.bw_factor,
                             edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
                             NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
@@ -198,12 +227,60 @@ class NFMC:
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
         self.get_posterior_logp()
-        self.weights = np.exp(self.posterior_logp - self.logq.numpy().astype(np.float64))
-        self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
-        self.evidence = np.mean(self.weights)
+        log_weight = self.posterior_logp - self.logq.numpy().astype(np.float64)
+        self.evidence = np.mean(np.exp(log_weight))
+        
+        if self.pareto:
+            psiw = az.psislw(log_weight)
+            self.weights = np.exp(psiw[0])
+        elif not self.pareto:
+            self.weights = np.exp(log_weight)
+            self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
+
         self.weights = self.weights / np.sum(self.weights)
         self.importance_weights = np.append(self.importance_weights, self.weights)
         self.nf_models.append(self.nf_model)
+
+    def logq_fr_el20(self, z, mu, Sigma):
+        """Logq for full-rank Gaussian family."""
+        return jax.scipy.stats.multivariate_normal.logpdf(z, mu, Sigma) 
+        
+    def run_el2o(self):
+        """Run the EL2O algorithm, assuming you've got the MAP+Laplace solution."""
+
+        self.mu_k = self.mu_map
+        self.Sigma_k = self.Sigma_map
+        self.EL2O = [1e10, 1]
+
+        self.zk = np.random.multivariate_normal(self.mu_k, self.Sigma_k)
+        #self.zk = self.zk.reshape(-1, 2)
+
+        N = 1
+        while self.EL2O[-1] > self.absEL2O and abs((self.EL2O[-1] - self.EL2O[-2]) / self.EL2O[-1]) > self.fracEL2O:
+
+            for i in range(N):
+
+                if i > 0:
+                    self.zk = np.vstack((self.zk, np.random.multivariate_normal(self.mu_k, self.Sigma_k)))
+                    #self.zk = self.zk.reshape(-1, 2)
+
+                Nk = len(self.zk)
+                self.Sigma_k = -1 * np.linalg.inv(np.sum(self.target_hessian(zk), axis=0) / Nk)
+
+                temp = 0
+                for j in range(Nk):
+                    temp += np.dot(self.Sigma_k, self.target_dlogp(zk[j, :])) + zk[j, :]
+                self.mu_k = temp / Nk
+
+                self.EL2O = np.append(self.EL2O, 1 / (self.len(zk)) * (np.sum((self.target_logp(self.zk) - Lq(self.zk, self.mu_k, self.Sigma_k))**2) +
+                                                                       np.sum((self.target_dlogp(zk) - 
+                                                                               jax.vmap(jax.grad(self.logq_fr_el2o)(self.zk, self.mu_k, self.Sigma_k)))**2) +
+                                                                       np.sum((self.target_hessian(zk) - 
+                                                                               jax.vmap(jax.hessian(self.logq_fr_el2o)(self.zk, self.mu_k, self.Sigma_k)))**2)))
+            N = N + 1
+
+        return self.mu_k, self.Sigma_k, self.zk, self.EL2O
+
         
     def fit_nf(self):
         """Fit the NF model for a given iteration after initialization."""
@@ -223,9 +300,16 @@ class NFMC:
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
         self.get_posterior_logp()
-        self.weights = np.exp(self.posterior_logp - self.logq.numpy().astype(np.float64))
-        self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
-        self.evidence = np.mean(self.weights)
+        log_weight = self.posterior_logp - self.logq.numpy().astype(np.float64)
+        self.evidence = np.mean(np.exp(log_weight))
+
+        if self.pareto:
+            psiw = az.psislw(log_weight)
+            self.weights = np.exp(psiw[0])
+        elif not self.pareto:
+            self.weights = np.exp(log_weight)
+            self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
+
         self.weights = self.weights / np.sum(self.weights)
         self.importance_weights = np.append(self.importance_weights, self.weights)
         self.nf_models.append(self.nf_model)
