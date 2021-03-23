@@ -872,6 +872,7 @@ def iter_sample(
     model: Optional[Model] = None,
     random_seed: Optional[Union[int, List[int]]] = None,
     callback=None,
+    streaming=False,
 ):
     """Generate a trace on each iteration using the given step method.
 
@@ -905,11 +906,15 @@ def iter_sample(
         the ``draw.chain`` argument can be used to determine which of the active chains the sample
         is drawn from.
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
+    streaming : bool
+        If True, this generator returns only the most recent sample as a Point object rather than a trace
+        with the full sampling history.
 
     Yields
     ------
-    trace : MultiTrace
-        Contains all samples up to the current iteration
+    result : MultiTrace or Point
+        Contains all samples up to the current iteration unless ``streaming`` is True, in which
+        case only a single sample is returned.
 
     Examples
     --------
@@ -918,9 +923,14 @@ def iter_sample(
         for trace in iter_sample(500, step):
             ...
     """
-    sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed, callback)
-    for i, (strace, _) in enumerate(sampling):
-        yield MultiTrace([strace[: i + 1]])
+    sampling = _iter_sample(
+        draws, step, start, trace, chain, tune, model, random_seed, callback, streaming
+    )
+    for i, (result, _) in enumerate(sampling):
+        if streaming:
+            yield result
+        else:
+            yield MultiTrace([result[: i + 1]])
 
 
 def _iter_sample(
@@ -933,6 +943,7 @@ def _iter_sample(
     model=None,
     random_seed=None,
     callback=None,
+    streaming=False,
 ):
     """Generator for sampling one chain. (Used in singleprocess sampling.)
 
@@ -957,11 +968,15 @@ def _iter_sample(
     model : Model (optional if in ``with`` context)
     random_seed : int or list of ints, optional
         A list is accepted if more if ``cores`` is greater than one.
+    streaming : bool
+        If True, this generator returns only the most recent sample as a Point object rather than a trace
+        with the full sampling history.
 
     Yields
     ------
     strace : BaseTrace
-        The trace object containing the samples for this chain
+        The trace object containing the samples for this chain. If ``streaming`` is True,
+        This will be a single Point object with the most recent sample.
     diverging : bool
         Indicates if the draw is divergent. Only available with some samplers.
     """
@@ -971,6 +986,9 @@ def _iter_sample(
         np.random.seed(random_seed)
     if draws < 1:
         raise ValueError("Argument `draws` must be greater than 0.")
+
+    if callback and streaming:
+        raise NotImplementedError("Callback not supported for streaming samples.")
 
     if start is None:
         start = {}
@@ -989,10 +1007,11 @@ def _iter_sample(
 
     point = Point(start, model=model)
 
-    if step.generates_stats and strace.supports_sampler_stats:
-        strace.setup(draws, chain, step.stats_dtypes)
-    else:
-        strace.setup(draws, chain)
+    if not streaming:
+        if step.generates_stats and strace.supports_sampler_stats:
+            strace.setup(draws, chain, step.stats_dtypes)
+        else:
+            strace.setup(draws, chain)
 
     try:
         step.tune = bool(tune)
@@ -1006,17 +1025,25 @@ def _iter_sample(
                 step.iter_count = 0
             if i == tune:
                 step = stop_tuning(step)
-            if step.generates_stats:
+            if step.generates_stats and not streaming:
                 point, stats = step.step(point)
                 if strace.supports_sampler_stats:
                     strace.record(point, stats)
-                    diverging = i > tune and stats and stats[0].get("diverging")
                 else:
                     strace.record(point)
             else:
-                point = step.step(point)
-                strace.record(point)
-            if callback is not None:
+                if step.generates_stats:
+                    point, stats = step.step(point)
+                else:
+                    point = step.step(point)
+                if streaming:
+                    strace = point
+                else:
+                    strace.record(point)
+
+            diverging = i > tune and stats and stats[0].get("diverging")
+
+            if callback is not None and not streaming:
                 warns = getattr(step, "warnings", None)
                 callback(
                     trace=strace,
@@ -1024,20 +1051,24 @@ def _iter_sample(
                 )
 
             yield strace, diverging
+
     except KeyboardInterrupt:
-        strace.close()
-        if hasattr(step, "warnings"):
-            warns = step.warnings()
-            strace._add_warnings(warns)
+        if not streaming:
+            strace.close()
+            if hasattr(step, "warnings"):
+                warns = step.warnings()
+                strace._add_warnings(warns)
         raise
     except BaseException:
-        strace.close()
+        if not streaming:
+            strace.close()
         raise
     else:
-        strace.close()
-        if hasattr(step, "warnings"):
-            warns = step.warnings()
-            strace._add_warnings(warns)
+        if not streaming:
+            strace.close()
+            if hasattr(step, "warnings"):
+                warns = step.warnings()
+                strace._add_warnings(warns)
 
 
 class PopulationStepper:
