@@ -19,7 +19,7 @@ from collections import OrderedDict
 import aesara
 import aesara.tensor as at
 
-from pymc3.aesaraf import aet_rng, make_shared_replacements
+from pymc3.aesaraf import at_rng, make_shared_replacements
 from pymc3.model import inputvars, modelcontext
 from pymc3.step_methods.arraystep import ArrayStepShared
 
@@ -148,9 +148,9 @@ class BaseStochasticGradient(ArrayStepShared):
         # set random stream
         self.random = None
         if random_seed is None:
-            self.random = aet_rng()
+            self.random = at_rng()
         else:
-            self.random = aet_rng(random_seed)
+            self.random = at_rng(random_seed)
 
         self.step_size = step_size
 

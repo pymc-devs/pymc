@@ -108,12 +108,15 @@ class SMC:
 
     def setup_kernel(self):
         """Set up the likelihood logp function based on the chosen kernel."""
-        shared = make_shared_replacements(self.variables, self.model)
+        initial_values = self.model.test_point
+        shared = make_shared_replacements(initial_values, self.variables, self.model)
 
         if self.kernel == "abc":
             factors = [var.logpt for var in self.model.free_RVs]
             factors += [at.sum(factor) for factor in self.model.potentials]
-            self.prior_logp_func = logp_forw([at.sum(factors)], self.variables, shared)
+            self.prior_logp_func = logp_forw(
+                initial_values, [at.sum(factors)], self.variables, shared
+            )
             simulator = self.model.observed_RVs[0]
             distance = simulator.distribution.distance
             sum_stat = simulator.distribution.sum_stat
@@ -132,8 +135,12 @@ class SMC:
                 self.save_log_pseudolikelihood,
             )
         elif self.kernel == "metropolis":
-            self.prior_logp_func = logp_forw([self.model.varlogpt], self.variables, shared)
-            self.likelihood_logp_func = logp_forw([self.model.datalogpt], self.variables, shared)
+            self.prior_logp_func = logp_forw(
+                initial_values, [self.model.varlogpt], self.variables, shared
+            )
+            self.likelihood_logp_func = logp_forw(
+                initial_values, [self.model.datalogpt], self.variables, shared
+            )
 
     def initialize_logp(self):
         """Initialize the prior and likelihood log probabilities."""
@@ -271,7 +278,7 @@ class SMC:
         return strace
 
 
-def logp_forw(out_vars, vars, shared):
+def logp_forw(point, out_vars, vars, shared):
     """Compile Aesara function of the model and the input and output variables.
 
     Parameters
@@ -283,7 +290,7 @@ def logp_forw(out_vars, vars, shared):
     shared: List
         containing :class:`aesara.tensor.Tensor` for depended shared data
     """
-    out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
+    out_list, inarray0 = join_nonshared_inputs(point, out_vars, vars, shared)
     f = aesara_function([inarray0], out_list[0])
     f.trust_input = True
     return f

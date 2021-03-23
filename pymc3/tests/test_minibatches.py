@@ -24,7 +24,7 @@ from scipy import stats as stats
 
 import pymc3 as pm
 
-from pymc3 import GeneratorAdapter, Normal, aet_rng, floatX, generator
+from pymc3 import GeneratorAdapter, Normal, at_rng, floatX, generator
 from pymc3.aesaraf import GeneratorOp
 from pymc3.tests.helpers import select_by_precision
 
@@ -139,7 +139,7 @@ class TestGenerator:
 
     def test_gen_cloning_with_shape_change(self, datagen):
         gen = generator(datagen)
-        gen_r = aet_rng().normal(size=gen.shape).T
+        gen_r = at_rng().normal(size=gen.shape).T
         X = gen.dot(gen_r)
         res, _ = aesara.scan(lambda x: x.sum(), X, n_steps=X.shape[0])
         assert res.eval().shape == (50,)

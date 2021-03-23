@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from typing import Dict, List
 
 import aesara
 import numpy as np
@@ -222,7 +223,7 @@ class IdentityOp(scalar.UnaryScalarOp):
         return hash(type(self))
 
 
-def make_shared_replacements(vars, model):
+def make_shared_replacements(point, vars, model):
     """
     Makes shared replacements for all *other* variables than the ones passed.
 
@@ -231,6 +232,7 @@ def make_shared_replacements(vars, model):
 
     Parameters
     ----------
+    point: dictionary mapping variable names to sample values
     vars: list of variables not to make shared
     model: model
 
@@ -240,19 +242,24 @@ def make_shared_replacements(vars, model):
     """
     othervars = set(model.vars) - set(vars)
     return {
-        var: aesara.shared(
-            var.tag.test_value, var.name + "_shared", broadcastable=var.broadcastable
-        )
+        var: aesara.shared(point[var.name], var.name + "_shared", broadcastable=var.broadcastable)
         for var in othervars
     }
 
 
-def join_nonshared_inputs(xs, vars, shared, make_shared=False):
+def join_nonshared_inputs(
+    point: Dict[str, np.ndarray],
+    xs: List[TensorVariable],
+    vars: List[TensorVariable],
+    shared,
+    make_shared: bool = False,
+):
     """
     Takes a list of aesara Variables and joins their non shared inputs into a single input.
 
     Parameters
     ----------
+    point: a sample point
     xs: list of aesara tensors
     vars: list of variables to join
 
@@ -271,17 +278,20 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
         tensor_type = joined.type
         inarray = tensor_type("inarray")
     else:
-        inarray = aesara.shared(joined.tag.test_value, "inarray")
+        if point is None:
+            raise ValueError("A point is required when `make_shared` is True")
+        joined_values = np.concatenate([point[var.name].ravel() for var in vars])
+        inarray = aesara.shared(joined_values, "inarray")
 
-    inarray.tag.test_value = joined.tag.test_value
+    if aesara.config.compute_test_value != "off":
+        inarray.tag.test_value = joined.tag.test_value
 
     replace = {}
     last_idx = 0
     for var in vars:
-        arr_len = at.prod(var.shape)
-        replace[var] = reshape_t(inarray[last_idx : last_idx + arr_len], var.shape).astype(
-            var.dtype
-        )
+        shape = point[var.name].shape
+        arr_len = np.prod(shape, dtype=int)
+        replace[var] = reshape_t(inarray[last_idx : last_idx + arr_len], shape).astype(var.dtype)
         last_idx += arr_len
 
     replace.update(shared)
