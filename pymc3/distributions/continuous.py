@@ -194,7 +194,8 @@ class Uniform(BoundedContinuous):
 
         import matplotlib.pyplot as plt
         import numpy as np
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-3, 3, 500)
         ls = [0., -2]
         us = [2., 1]
@@ -445,7 +446,8 @@ class Normal(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-5, 5, 1000)
         mus = [0., 0., 0., -2.]
         sigmas = [0.4, 1., 2., 0.4]
@@ -591,7 +593,8 @@ class TruncatedNormal(BoundedContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-10, 10, 1000)
         mus = [0.,  0., 0.]
         sigmas = [3.,5.,7.]
@@ -809,7 +812,8 @@ class HalfNormal(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 5, 200)
         for sigma in [0.4, 1., 2.]:
             pdf = st.halfnorm.pdf(x, scale=sigma)
@@ -949,7 +953,8 @@ class Wald(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 3, 500)
         mus = [1., 1., 1., 3.]
         lams = [1., .2, 3., 1.]
@@ -1169,7 +1174,8 @@ class Beta(UnitContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 1, 200)
         alphas = [.5, 5., 1., 2., 2.]
         betas = [.5, 1., 3., 2., 5.]
@@ -1347,7 +1353,8 @@ class Kumaraswamy(UnitContinuous):
 
         import matplotlib.pyplot as plt
         import numpy as np
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 1, 200)
         a_s = [.5, 5., 1., 2., 2.]
         b_s = [.5, 1., 3., 2., 5.]
@@ -1453,7 +1460,8 @@ class Exponential(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 3, 100)
         for lam in [0.5, 1., 2.]:
             pdf = st.expon.pdf(x, scale=1.0/lam)
@@ -1566,7 +1574,8 @@ class Laplace(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-10, 10, 1000)
         mus = [0., 0., 0., -5.]
         bs = [1., 2., 4., 4.]
@@ -1794,7 +1803,8 @@ class Lognormal(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 3, 100)
         mus = [0., 0., 0.]
         sigmas = [.25, .5, 1.]
@@ -1951,7 +1961,8 @@ class StudentT(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-8, 8, 200)
         mus = [0., 0., -2., -2.]
         sigmas = [1., 1., 1., 2.]
@@ -2115,7 +2126,8 @@ class Pareto(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 4, 1000)
         alphas = [1., 2., 5., 5.]
         ms = [1., 1., 1., 2.]
@@ -2257,7 +2269,8 @@ class Cauchy(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-5, 5, 500)
         alphas = [0., 0., 0., -2.]
         betas = [.5, 1., 2., 1.]
@@ -2373,7 +2386,8 @@ class HalfCauchy(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 5, 200)
         for b in [0.5, 1.0, 2.0]:
             pdf = st.cauchy.pdf(x, scale=b)
@@ -2490,7 +2504,8 @@ class Gamma(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 20, 200)
         alphas = [1., 2., 3., 7.5]
         betas = [.5, .5, 1., 1.]
@@ -2654,7 +2669,8 @@ class InverseGamma(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 3, 500)
         alphas = [1., 2., 3., 3.]
         betas = [1., 1., 1., .5]
@@ -2823,7 +2839,8 @@ class ChiSquared(Gamma):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 15, 200)
         for df in [1, 2, 3, 6, 9]:
             pdf = st.chi2.pdf(x, df)
@@ -2868,7 +2885,8 @@ class Weibull(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 3, 200)
         alphas = [.5, 1., 1.5, 5., 5.]
         betas = [1., 1., 1., 1.,  2]
@@ -3003,7 +3021,8 @@ class HalfStudentT(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 5, 200)
         sigmas = [1., 1., 2., 1.]
         nus = [.5, 1., 1., 30.]
@@ -3138,7 +3157,8 @@ class ExGaussian(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-6, 9, 200)
         mus = [0., -2., 0., -3.]
         sigmas = [1., 1., 3., 1.]
@@ -3319,7 +3339,8 @@ class VonMises(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-np.pi, np.pi, 200)
         mus = [0., 0., 0.,  -2.5]
         kappas = [.01, 0.5,  4., 2.]
@@ -3419,7 +3440,8 @@ class SkewNormal(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-4, 4, 200)
         for alpha in [-6, 0, 6]:
             pdf = st.skewnorm.pdf(x, alpha, loc=0, scale=1)
@@ -3554,7 +3576,8 @@ class Triangular(BoundedContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-2, 10, 500)
         lowers = [0., -1, 2]
         cs = [2., 0., 6.5]
@@ -3709,7 +3732,8 @@ class Gumbel(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-10, 20, 200)
         mus = [0., 4., -1.]
         betas = [2., 2., 4.]
@@ -3832,7 +3856,8 @@ class Rice(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 8, 500)
         nus = [0., 0., 4., 4.]
         sigmas = [1., 2., 1., 2.]
@@ -3994,7 +4019,8 @@ class Logistic(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-5, 5, 200)
         mus = [0., 0., 0., -2.]
         ss = [.4, 1., 2., .4]
@@ -4116,7 +4142,8 @@ class LogitNormal(UnitContinuous):
         import numpy as np
         import scipy.stats as st
         from scipy.special import logit
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0.0001, 0.9999, 500)
         mus = [0., 0., 0., 1.]
         sigmas = [0.3, 1., 2., 1.]
@@ -4350,7 +4377,8 @@ class Moyal(Continuous):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-10, 20, 200)
         mus = [-1., 0., 4.]
         sigmas = [2., 2., 4.]
