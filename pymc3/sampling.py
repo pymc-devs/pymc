@@ -197,7 +197,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
     # Use competence classmethods to select step methods for remaining
     # variables
     selected_steps = defaultdict(list)
-    for var in model.free_RVs:
+    for var in model.vars:
         if var not in assigned_vars:
             # determine if a gradient can be computed
             has_gradient = var.dtype not in discrete_types
