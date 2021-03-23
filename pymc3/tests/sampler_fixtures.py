@@ -81,7 +81,7 @@ class NormalFixture(KnownMean, KnownVariance, KnownCDF):
     @classmethod
     def make_model(cls):
         with pm.Model() as model:
-            a = pm.Normal("a", mu=2, sigma=np.sqrt(3), shape=10)
+            a = pm.Normal("a", mu=2, sigma=np.sqrt(3), size=10)
         return model
 
 
@@ -91,7 +91,7 @@ class BetaBinomialFixture(KnownCDF):
     @classmethod
     def make_model(cls):
         with pm.Model() as model:
-            p = pm.Beta("p", [0.5, 0.5, 1.0], [0.5, 0.5, 1.0], shape=3)
+            p = pm.Beta("p", [0.5, 0.5, 1.0], [0.5, 0.5, 1.0], size=3)
             pm.Binomial("y", p=p, n=[4, 12, 9], observed=[1, 2, 9])
         return model
 
@@ -121,7 +121,7 @@ class LKJCholeskyCovFixture(KnownCDF):
     def make_model(cls):
         with pm.Model() as model:
             sd_mu = np.array([1, 2, 3, 4, 5])
-            sd_dist = pm.Lognormal.dist(mu=sd_mu, sigma=sd_mu / 10.0, shape=5)
+            sd_dist = pm.Lognormal.dist(mu=sd_mu, sigma=sd_mu / 10.0, size=5)
             chol_packed = pm.LKJCholeskyCov("chol_packed", eta=3, n=5, sd_dist=sd_dist)
             chol = pm.expand_packed_triangular(5, chol_packed, lower=True)
             cov = at.dot(chol, chol.T)
