@@ -1007,19 +1007,37 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def test_point(self):
-        """Test point used to check that the model doesn't generate errors"""
+        """Test point used to check that the model doesn't generate errors
+
+        TODO: This should be replaced with proper initial value support.
+        """
         points = []
-        for var in self.free_RVs:
-            var_value = getattr(var.tag, "test_value", None)
+        for rv_var in self.free_RVs:
+            value_var = rv_var.tag.value_var
+            var_value = getattr(value_var.tag, "test_value", None)
 
             if var_value is None:
-                try:
-                    var_value = var.eval()
-                    var.tag.test_value = var_value
-                except Exception:
-                    raise Exception(f"Couldn't generate an initial value for {var}")
 
-            points.append((getattr(var.tag, "value_var", var), var_value))
+                rv_var_value = getattr(rv_var.tag, "test_value", None)
+
+                if rv_var_value is None:
+                    try:
+                        rv_var_value = rv_var.eval()
+                    except Exception:
+                        raise Exception(f"Couldn't generate an initial value for {rv_var}")
+
+                transform = getattr(value_var.tag, "transform", None)
+
+                if transform:
+                    try:
+                        rv_var_value = transform.forward(rv_var, rv_var_value).eval()
+                    except Exception:
+                        raise Exception(f"Couldn't generate an initial value for {rv_var}")
+
+                var_value = rv_var_value
+                value_var.tag.test_value = var_value
+
+            points.append((value_var, var_value))
 
         return Point(points, model=self)
 
