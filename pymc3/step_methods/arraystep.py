@@ -164,7 +164,7 @@ class ArrayStep(BlockedStep):
 
         return point_new
 
-    def astep(self, apoint, point):
+    def astep(self, apoint: RaveledVars, point: Dict[str, np.ndarray]):
         raise NotImplementedError()
 
 
@@ -225,7 +225,7 @@ class ArrayStepShared(BlockedStep):
 
         return new_point
 
-    def astep(self, apoint):
+    def astep(self, apoint: RaveledVars):
         raise NotImplementedError()
 
 
