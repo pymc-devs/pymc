@@ -67,6 +67,7 @@ from pymc3.util import (
     locally_cachedmethod,
 )
 from pymc3.variational.updates import adagrad_window
+from pymc3.vartypes import discrete_types
 
 __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximation"]
 
@@ -832,6 +833,9 @@ class Group(WithMemoization):
         options=None,
         **kwargs,
     ):
+        # XXX: Needs to be refactored for v4
+        raise NotImplementedError("This class needs to be refactored for v4")
+
         if local and not self.supports_batched:
             raise LocalGroupError("%s does not support local groups" % self.__class__)
         if local and rowwise:
@@ -958,7 +962,7 @@ class Group(WithMemoization):
         # self.ordering = ArrayOrdering([])
         self.replacements = dict()
         for var in self.group:
-            if isinstance(var.distribution, pm.Discrete):
+            if var.type.numpy_dtype.name in discrete_types:
                 raise ParametrizationError(f"Discrete variables are not supported by VI: {var}")
             begin = self.ddim
             if self.batched:
