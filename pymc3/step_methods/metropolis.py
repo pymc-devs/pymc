@@ -197,7 +197,7 @@ class Metropolis(ArrayStepShared):
             setattr(self, attr, initial_value)
         return
 
-    def astep(self, q0):
+    def astep(self, q0: RaveledVars):
         if not self.steps_until_tune and self.tune:
             # Tune scaling parameter
             self.scaling = tune(self.scaling, self.accepted / float(self.tune_interval))
