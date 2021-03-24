@@ -1154,6 +1154,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             value_var.name = f"{value_var.name}_{transform.name}__"
             if aesara.config.compute_test_value != "off":
                 value_var.tag.test_value = transform.forward(rv_var, value_var).tag.test_value
+            self.named_vars[value_var.name] = value_var
 
         self.add_random_variable(rv_var, dims)
 
