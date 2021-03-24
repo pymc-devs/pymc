@@ -26,7 +26,7 @@ import dill
 
 from aesara.tensor.random.op import RandomVariable
 
-from pymc3.distributions import _logcdf, _logp
+from pymc3.distributions import _logcdf, _logp, no_transform_object
 
 if TYPE_CHECKING:
     from typing import Optional, Callable
@@ -161,7 +161,7 @@ class Distribution(metaclass=DistributionMeta):
         if "shape" in kwargs:
             raise DeprecationWarning("The `shape` keyword is deprecated; use `size`.")
 
-        transform = kwargs.pop("transform", None)
+        transform = kwargs.pop("transform", no_transform_object)
 
         rv_out = cls.dist(*args, rng=rng, **kwargs)
 
