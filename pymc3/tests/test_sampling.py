@@ -159,13 +159,19 @@ class TestSample(SeededTest):
             # add more variables, because stats are 2D with CompoundStep!
             pm.Uniform("uni")
             trace = pm.sample(
-                draws=100, tune=50, cores=1, discard_tuned_samples=discard, step=step_cls()
+                draws=100,
+                tune=50,
+                cores=1,
+                discard_tuned_samples=discard,
+                step=step_cls(),
+                compute_convergence_checks=False,
+                return_inferencedata=False,
             )
             assert trace.report.n_tune == 50
             assert trace.report.n_draws == 100
             assert isinstance(trace.report.t_sampling, float)
-        pass
 
+    @pytest.mark.xfail(reason="BART not refactored for v4")
     def test_trace_report_bart(self):
         X = np.random.normal(0, 1, size=(3, 250)).T
         Y = np.random.normal(0, 1, size=250)
@@ -218,7 +224,6 @@ class TestSample(SeededTest):
             monkeypatch.setattr("pymc3.__version__", "3.10")
             with pytest.warns(FutureWarning, match="pass return_inferencedata"):
                 result = pm.sample(**kwargs)
-        pass
 
     @pytest.mark.parametrize("cores", [1, 2])
     def test_sampler_stat_tune(self, cores):
@@ -228,15 +233,14 @@ class TestSample(SeededTest):
             ).get_sampler_stats("tune", chains=1)
             assert list(tune_stat).count(True) == 5
             assert list(tune_stat).count(False) == 7
-        pass
 
     @pytest.mark.parametrize(
         "start, error",
         [
             ([1, 2], TypeError),
-            ({"x": 1}, ValueError),
+            ({"x": 1}, TypeError),
             ({"x": [1, 2, 3]}, ValueError),
-            ({"x": np.array([[1, 1], [1, 1]])}, ValueError),
+            ({"x": np.array([[1, 1], [1, 1]])}, TypeError),
         ],
     )
     def test_sample_start_bad_shape(self, start, error):
@@ -285,6 +289,7 @@ class TestSample(SeededTest):
             assert len(trace) == trace_cancel_length
 
 
+@pytest.mark.xfail(reason="Lognormal not refactored for v4")
 def test_sample_find_MAP_does_not_modify_start():
     # see https://github.com/pymc-devs/pymc3/pull/4458
     with pm.Model():
@@ -319,6 +324,7 @@ def test_partial_trace_sample():
         a = pm.Normal("a", mu=0, sigma=1)
         b = pm.Normal("b", mu=0, sigma=1)
         trace = pm.sample(trace=[a])
+        # TODO: Assert something to make this a real test
 
 
 @pytest.mark.xfail
@@ -373,13 +379,13 @@ class TestNamedSampling(SeededTest):
                 "theta0",
                 mu=np.atleast_2d(0),
                 tau=np.atleast_2d(1e20),
-                shape=(1, 1),
+                size=(1, 1),
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
+                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
             )
-            res = theta.random()
+            res = theta.eval()
             assert np.isclose(res, 0.0)
 
     def test_shared_unnamed(self):
@@ -389,13 +395,13 @@ class TestNamedSampling(SeededTest):
                 "theta0",
                 mu=np.atleast_2d(0),
                 tau=np.atleast_2d(1e20),
-                shape=(1, 1),
+                size=(1, 1),
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
+                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
             )
-            res = theta.random()
+            res = theta.eval()
             assert np.isclose(res, 0.0)
 
     def test_constant_named(self):
@@ -405,14 +411,14 @@ class TestNamedSampling(SeededTest):
                 "theta0",
                 mu=np.atleast_2d(0),
                 tau=np.atleast_2d(1e20),
-                shape=(1, 1),
+                size=(1, 1),
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
+                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
             )
 
-            res = theta.random()
+            res = theta.eval()
             assert np.isclose(res, 0.0)
 
 
@@ -435,12 +441,16 @@ class TestSamplePPC(SeededTest):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=0.0)
-            trace = pm.sample(draws=ndraws, chains=nchains)
+            trace = pm.sample(
+                draws=ndraws,
+                chains=nchains,
+                return_inferencedata=False,
+            )
 
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
-            # deprecated argument is not introduced to fast version [2019/08/20:rpg]
+            # # deprecated argument is not introduced to fast version [2019/08/20:rpg]
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
             # test empty ppc
             ppc = pm.sample_posterior_predictive(trace, var_names=[])
@@ -448,11 +458,6 @@ class TestSamplePPC(SeededTest):
 
             # test keep_size parameter
             ppc = pm.sample_posterior_predictive(trace, keep_size=True)
-            assert ppc["a"].shape == (nchains, ndraws)
-
-            # test keep_size parameter and idata input
-            idata = az.from_pymc3(trace)
-            ppc = pm.sample_posterior_predictive(idata, keep_size=True)
             assert ppc["a"].shape == (nchains, ndraws)
 
             # test default case
@@ -468,11 +473,28 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(trace, size=5, var_names=["a"])
             assert ppc["a"].shape == (nchains * ndraws, 5)
 
+    @pytest.mark.xfail(reason="Arviz not refactored for v4")
+    def test_normal_scalar_idata(self):
+        nchains = 2
+        ndraws = 500
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0)
+            a = pm.Normal("a", mu=mu, sigma=1, observed=0.0)
+            trace = pm.sample(
+                draws=ndraws, chains=nchains, return_inferencedata=True, discard_tuned_samples=False
+            )
+
+        with model:
+            # test keep_size parameter and idata input
+            idata = az.from_pymc3(trace)
+            ppc = pm.sample_posterior_predictive(idata, keep_size=True)
+            assert ppc["a"].shape == (nchains, ndraws)
+
     def test_normal_vector(self, caplog):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
-            trace = pm.sample()
+            trace = pm.sample(return_inferencedata=False)
 
         with model:
             # test list input
@@ -488,10 +510,6 @@ class TestSamplePPC(SeededTest):
             assert "a" in ppc
             assert ppc["a"].shape == (12, 2)
 
-            # test keep_size parameter with inference data as input...
-            idata = az.from_pymc3(trace)
-            ppc = pm.sample_posterior_predictive(idata, keep_size=True)
-            assert ppc["a"].shape == (trace.nchains, len(trace), 2)
             with pytest.warns(UserWarning):
                 ppc = pm.sample_posterior_predictive(trace, samples=12, var_names=["a"])
             assert "a" in ppc
@@ -501,6 +519,19 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(trace, samples=10, var_names=["a"], size=4)
             assert "a" in ppc
             assert ppc["a"].shape == (10, 4, 2)
+
+    @pytest.mark.xfail(reason="Arviz not refactored for v4")
+    def test_normal_vector_idata(self, caplog):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0)
+            a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
+            trace = pm.sample(return_inferencedata=False)
+
+        with model:
+            # test keep_size parameter with inference data as input...
+            idata = az.from_pymc3(trace)
+            ppc = pm.sample_posterior_predictive(idata, keep_size=True)
+            assert ppc["a"].shape == (trace.nchains, len(trace), 2)
 
     def test_exceptions(self, caplog):
         with pm.Model() as model:
@@ -557,6 +588,7 @@ class TestSamplePPC(SeededTest):
             _, pval = stats.kstest(ppc["b"], stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
+    @pytest.mark.xfail(reason="HalfFlat not refactored for v4")
     def test_model_not_drawable_prior(self):
         data = np.random.poisson(lam=10, size=200)
         model = pm.Model()
@@ -582,7 +614,7 @@ class TestSamplePPC(SeededTest):
             logistic = pm.Deterministic("p", pm.math.sigmoid(coeff * x_shared))
 
             obs = pm.Bernoulli("obs", p=logistic, observed=y_shared)
-            trace = pm.sample(100)
+            trace = pm.sample(100, return_inferencedata=False, compute_convergence_checks=False)
 
         x_shared.set_value([-1, 0, 1.0])
         y_shared.set_value([0, 0, 0])
@@ -614,15 +646,22 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            trace = pm.sample(100, chains=nchains)
-            np.random.seed(0)
+            model.default_rng.get_value(borrow=True).seed(0)
+            trace = pm.sample(
+                100,
+                chains=nchains,
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+            )
+
             rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-4
 
-            np.random.seed(0)
+            model.default_rng.get_value(borrow=True).seed(0)
             ppc = pm.sample_posterior_predictive(
                 model=model,
                 trace=trace,
                 samples=len(trace) * nchains,
+                random_seed=0,
                 var_names=[var.name for var in (model.deterministics + model.basic_RVs)],
             )
 
@@ -642,7 +681,11 @@ class TestSamplePPC(SeededTest):
             out_diff = in_1 + in_2
             pm.Deterministic("out", out_diff)
 
-            trace = pm.sample(100)
+            trace = pm.sample(
+                100,
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+            )
             ppc_trace = pm.trace_to_dataframe(
                 trace, varnames=[n for n in trace.varnames if n != "out"]
             ).to_dict("records")
@@ -661,7 +704,7 @@ class TestSamplePPC(SeededTest):
             mu = pm.HalfNormal("mu", 1)
             a = pm.Normal("a", mu=mu, sigma=2, observed=np.array([1, 2]))
             b = pm.Poisson("b", mu, observed=np.array([1, 2]))
-            trace = pm.sample()
+            trace = pm.sample(compute_convergence_checks=False, return_inferencedata=False)
 
         with model:
             ppc = pm.sample_posterior_predictive(trace, samples=1)
@@ -682,6 +725,7 @@ class TestSamplePPC(SeededTest):
 
 
 class TestSamplePPCW(SeededTest):
+    @pytest.mark.xfail(reason="sample_posterior_predictive_w not refactored for v4")
     def test_sample_posterior_predictive_w(self):
         data0 = np.random.normal(0, 1, size=50)
         warning_msg = "The number of samples is too small to check convergence reliably"
@@ -691,14 +735,14 @@ class TestSamplePPCW(SeededTest):
             y = pm.Normal("y", mu=mu, sigma=1, observed=data0)
             with pytest.warns(UserWarning, match=warning_msg):
                 trace_0 = pm.sample(10, tune=0, chains=2, return_inferencedata=False)
-            idata_0 = az.from_pymc3(trace_0)
+            idata_0 = az.from_pymc3(trace_0, log_likelihood=False)
 
         with pm.Model() as model_1:
-            mu = pm.Normal("mu", mu=0, sigma=1, shape=len(data0))
+            mu = pm.Normal("mu", mu=0, sigma=1, size=len(data0))
             y = pm.Normal("y", mu=mu, sigma=1, observed=data0)
             with pytest.warns(UserWarning, match=warning_msg):
                 trace_1 = pm.sample(10, tune=0, chains=2, return_inferencedata=False)
-            idata_1 = az.from_pymc3(trace_1)
+            idata_1 = az.from_pymc3(trace_1, log_likelihood=False)
 
         with pm.Model() as model_2:
             # Model with no observed RVs.
@@ -731,6 +775,7 @@ class TestSamplePPCW(SeededTest):
         ):
             pm.sample_posterior_predictive_w([trace_0, trace_2], 100, [model_0, model_2])
 
+    @pytest.mark.xfail(reason="sample_posterior_predictive_w not refactored for v4")
     def test_potentials_warning(self):
         warning_msg = "The effect of Potentials on other parameters is ignored during"
         with pm.Model() as m:
@@ -746,32 +791,33 @@ class TestSamplePPCW(SeededTest):
 @pytest.mark.parametrize(
     "method",
     [
-        "jitter+adapt_diag",
-        "adapt_diag",
         "advi",
         "ADVI+adapt_diag",
         "advi+adapt_diag_grad",
-        "map",
         "advi_map",
+        "jitter+adapt_diag",
+        "adapt_diag",
+        "map",
         "adapt_full",
         "jitter+adapt_full",
     ],
 )
+@pytest.mark.xfail(reason="ADVI not refactored for v4", exception=NotImplementedError)
 def test_exec_nuts_init(method):
     with pm.Model() as model:
-        pm.Normal("a", mu=0, sigma=1, shape=2)
+        pm.Normal("a", mu=0, sigma=1, size=2)
         pm.HalfNormal("b", sigma=1)
     with model:
         start, _ = pm.init_nuts(init=method, n_init=10)
         assert isinstance(start, list)
         assert len(start) == 1
         assert isinstance(start[0], dict)
-        assert "a" in start[0] and "b_log__" in start[0]
+        assert "a" in start[0] and "b" in start[0]
         start, _ = pm.init_nuts(init=method, n_init=10, chains=2)
         assert isinstance(start, list)
         assert len(start) == 2
         assert isinstance(start[0], dict)
-        assert "a" in start[0] and "b_log__" in start[0]
+        assert "a" in start[0] and "b" in start[0]
 
 
 @pytest.mark.parametrize(
@@ -858,8 +904,8 @@ class TestSamplePriorPredictive(SeededTest):
     def test_respects_shape(self):
         for shape in (2, (2,), (10, 2), (10, 10)):
             with pm.Model():
-                mu = pm.Gamma("mu", 3, 1, shape=1)
-                goals = pm.Poisson("goals", mu, shape=shape)
+                mu = pm.Gamma("mu", 3, 1, size=1)
+                goals = pm.Poisson("goals", mu, size=shape)
                 trace1 = pm.sample_prior_predictive(10, var_names=["mu", "mu", "goals"])
                 trace2 = pm.sample_prior_predictive(10, var_names=["mu", "goals"])
             if shape == 2:  # want to test shape as an int
@@ -869,32 +915,34 @@ class TestSamplePriorPredictive(SeededTest):
 
     def test_multivariate(self):
         with pm.Model():
-            m = pm.Multinomial("m", n=5, p=np.array([0.25, 0.25, 0.25, 0.25]), shape=4)
+            m = pm.Multinomial("m", n=5, p=np.array([0.25, 0.25, 0.25, 0.25]))
             trace = pm.sample_prior_predictive(10)
 
-        assert m.random(size=10).shape == (10, 4)
         assert trace["m"].shape == (10, 4)
 
     def test_multivariate2(self):
         # Added test for issue #3271
         mn_data = np.random.multinomial(n=100, pvals=[1 / 6.0] * 6, size=10)
         with pm.Model() as dm_model:
-            probs = pm.Dirichlet("probs", a=np.ones(6), shape=6)
+            probs = pm.Dirichlet("probs", a=np.ones(6))
             obs = pm.Multinomial("obs", n=100, p=probs, observed=mn_data)
-            burned_trace = pm.sample(20, tune=10, cores=1)
+            burned_trace = pm.sample(
+                20, tune=10, cores=1, return_inferencedata=False, compute_convergence_checks=False
+            )
         sim_priors = pm.sample_prior_predictive(samples=20, model=dm_model)
         sim_ppc = pm.sample_posterior_predictive(burned_trace, samples=20, model=dm_model)
         assert sim_priors["probs"].shape == (20, 6)
-        assert sim_priors["obs"].shape == (20,) + obs.distribution.shape
-        assert sim_ppc["obs"].shape == (20,) + obs.distribution.shape
+        assert sim_priors["obs"].shape == (20,) + mn_data.shape
+        assert sim_ppc["obs"].shape == (20,) + mn_data.shape
 
     def test_layers(self):
         with pm.Model() as model:
-            a = pm.Uniform("a", lower=0, upper=1, shape=10)
-            b = pm.Binomial("b", n=1, p=a, shape=10)
+            a = pm.Uniform("a", lower=0, upper=1, size=10)
+            b = pm.Binomial("b", n=1, p=a, size=10)
 
-        avg = b.random(size=10000).mean(axis=0)
-        npt.assert_array_almost_equal(avg, 0.5 * np.ones_like(b), decimal=2)
+        b_sampler = aesara.function([], b)
+        avg = np.stack([b_sampler() for i in range(10000)]).mean(0)
+        npt.assert_array_almost_equal(avg, 0.5 * np.ones((10,)), decimal=2)
 
     def test_transformed(self):
         n = 18
@@ -908,14 +956,14 @@ class TestSamplePriorPredictive(SeededTest):
             kappa_log = pm.Exponential("logkappa", lam=5.0)
             kappa = pm.Deterministic("kappa", at.exp(kappa_log))
 
-            thetas = pm.Beta("thetas", alpha=phi * kappa, beta=(1.0 - phi) * kappa, shape=n)
+            thetas = pm.Beta("thetas", alpha=phi * kappa, beta=(1.0 - phi) * kappa, size=n)
 
             y = pm.Binomial("y", n=at_bats, p=thetas, observed=hits)
             gen = pm.sample_prior_predictive(draws)
 
         assert gen["phi"].shape == (draws,)
         assert gen["y"].shape == (draws, n)
-        assert "thetas_logodds__" in gen
+        assert "thetas" in gen
 
     def test_shared(self):
         n1 = 10
@@ -936,6 +984,7 @@ class TestSamplePriorPredictive(SeededTest):
 
         assert gen2["y"].shape == (draws, n2)
 
+    @pytest.mark.xfail(reason="DensityDist not refactored for v4")
     def test_density_dist(self):
         obs = np.random.normal(-1, 0.1, size=10)
         with pm.Model():
@@ -953,26 +1002,28 @@ class TestSamplePriorPredictive(SeededTest):
 
     def test_shape_edgecase(self):
         with pm.Model():
-            mu = pm.Normal("mu", shape=5)
+            mu = pm.Normal("mu", size=5)
             sd = pm.Uniform("sd", lower=2, upper=3)
-            x = pm.Normal("x", mu=mu, sigma=sd, shape=5)
+            x = pm.Normal("x", mu=mu, sigma=sd, size=5)
             prior = pm.sample_prior_predictive(10)
         assert prior["mu"].shape == (10, 5)
 
+    @pytest.mark.xfail(reason="ZeroInflatedPoisson not refactored for v4")
     def test_zeroinflatedpoisson(self):
         with pm.Model():
             theta = pm.Beta("theta", alpha=1, beta=1)
             psi = pm.HalfNormal("psi", sd=1)
-            pm.ZeroInflatedPoisson("suppliers", psi=psi, theta=theta, shape=20)
+            pm.ZeroInflatedPoisson("suppliers", psi=psi, theta=theta, size=20)
             gen_data = pm.sample_prior_predictive(samples=5000)
             assert gen_data["theta"].shape == (5000,)
             assert gen_data["psi"].shape == (5000,)
             assert gen_data["suppliers"].shape == (5000, 20)
 
+    @pytest.mark.xfail(reason="Bound not refactored for v4")
     def test_bounded_dist(self):
         with pm.Model() as model:
             BoundedNormal = pm.Bound(pm.Normal, lower=0.0)
-            x = BoundedNormal("x", mu=at.zeros((3, 1)), sd=1 * at.ones((3, 1)), shape=(3, 1))
+            x = BoundedNormal("x", mu=at.zeros((3, 1)), sd=1 * at.ones((3, 1)), size=(3, 1))
 
         with model:
             prior_trace = pm.sample_prior_predictive(5)
@@ -995,6 +1046,7 @@ class TestSamplePosteriorPredictive:
         with pmodel:
             pp = pm.sample_posterior_predictive([trace[15]], var_names=["d"])
 
+    @pytest.mark.xfail(reason="Arviz not refactored for v4")
     def test_sample_from_xarray_prior(self, point_list_arg_bug_fixture):
         pmodel, trace = point_list_arg_bug_fixture
 
@@ -1004,6 +1056,7 @@ class TestSamplePosteriorPredictive:
         with pmodel:
             pp = pm.sample_posterior_predictive(idat.prior, var_names=["d"])
 
+    @pytest.mark.xfail(reason="Arviz not refactored for v4")
     def test_sample_from_xarray_posterior(self, point_list_arg_bug_fixture):
         pmodel, trace = point_list_arg_bug_fixture
         idat = az.from_pymc3(trace)
