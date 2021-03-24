@@ -76,6 +76,7 @@ class TestNUTSBetaBinomial(sf.NutsFixture, sf.BetaBinomialFixture):
     min_n_eff = 400
 
 
+@pytest.mark.xfail(reason="StudentT not refactored for v4")
 class TestNUTSStudentT(sf.NutsFixture, sf.StudentTFixture):
     n_samples = 10000
     tune = 1000
@@ -97,6 +98,7 @@ class TestNUTSNormalLong(sf.NutsFixture, sf.NormalFixture):
     atol = 0.001
 
 
+@pytest.mark.xfail(reason="StudentT not refactored for v4")
 class TestNUTSLKJCholeskyCov(sf.NutsFixture, sf.LKJCholeskyCovFixture):
     n_samples = 2000
     tune = 1000
