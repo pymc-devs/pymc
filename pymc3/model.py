@@ -1676,29 +1676,6 @@ def _walk_up_rv(rv, formatting="plain"):
     return all_rvs
 
 
-class DeterministicWrapper(TensorVariable):
-    def _str_repr(self, formatting="plain"):
-        if "latex" in formatting:
-            if formatting == "latex_with_params":
-                return r"$\text{{{name}}} \sim \text{{Deterministic}}({args})$".format(
-                    name=self.name, args=r",~".join(_walk_up_rv(self, formatting=formatting))
-                )
-            return fr"$\text{{{self.name}}} \sim \text{{Deterministic}}$"
-        else:
-            if formatting == "plain_with_params":
-                args = ", ".join(_walk_up_rv(self, formatting=formatting))
-                return f"{self.name} ~ Deterministic({args})"
-            return f"{self.name} ~ Deterministic"
-
-    def _repr_latex_(self, *, formatting="latex_with_params", **kwargs):
-        return self._str_repr(formatting=formatting)
-
-    __latex__ = _repr_latex_
-
-    def __str__(self):
-        return self._str_repr(formatting="plain")
-
-
 def Deterministic(name, var, model=None, dims=None):
     """Create a named deterministic variable
 
@@ -1715,7 +1692,6 @@ def Deterministic(name, var, model=None, dims=None):
     var = var.copy(model.name_for(name))
     model.deterministics.append(var)
     model.add_random_variable(var, dims)
-    var.__class__ = DeterministicWrapper  # adds str and latex functionality
 
     return var
 
