@@ -47,6 +47,8 @@ tol = 1e-7 if aesara.config.floatX == "float64" else 1e-6
 def check_transform(transform, domain, constructor=at.dscalar, test=0, rv_var=None):
     x = constructor("x")
     x.tag.test_value = test
+    if rv_var is None:
+        rv_var = x
     # test forward and forward_val
     # FIXME: What's being tested here?  That the transformed graph can compile?
     forward_f = aesara.function([x], transform.forward(rv_var, x))
@@ -63,6 +65,8 @@ def check_vector_transform(transform, domain, rv_var=None):
 def get_values(transform, domain=R, constructor=at.dscalar, test=0, rv_var=None):
     x = constructor("x")
     x.tag.test_value = test
+    if rv_var is None:
+        rv_var = x
     f = aesara.function([x], transform.backward(rv_var, x))
     return np.array([f(val) for val in domain.vals])
 
@@ -78,6 +82,9 @@ def check_jacobian_det(
 ):
     y = constructor("y")
     y.tag.test_value = test
+
+    if rv_var is None:
+        rv_var = y
 
     x = transform.backward(rv_var, y)
     if make_comparable:
@@ -125,7 +132,7 @@ def test_stickbreaking_accuracy():
     x = at.dvector("x")
     x.tag.test_value = val
     identity_f = aesara.function(
-        [x], tr.stick_breaking.forward(None, tr.stick_breaking.backward(None, x))
+        [x], tr.stick_breaking.forward(x, tr.stick_breaking.backward(x, x))
     )
     close_to(val, identity_f(val), tol)
 
