@@ -980,7 +980,7 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplus},
             lambda value, mu, sigma: sp.norm.logcdf(value, mu, sigma),
-            decimal=select_by_precision(float64=6, float32=2),
+            decimal=select_by_precision(float64=6, float32=1),
         )
 
     @pytest.mark.xfail(reason="Distribution not refactored yet")
@@ -1110,6 +1110,7 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: sp.beta.logcdf(value, alpha, beta),
             n_samples=10,
+            decimal=select_by_precision(float64=5, float32=3),
         )
 
     @pytest.mark.xfail(reason="Distribution not refactored yet")
