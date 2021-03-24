@@ -38,7 +38,13 @@ import pymc3 as pm
 from pymc3.aesaraf import generator, gradient, hessian, inputvars
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.data import GenTensorVariable, Minibatch
-from pymc3.distributions import change_rv_size, logp_transform, logpt, logpt_sum
+from pymc3.distributions import (
+    change_rv_size,
+    logp_transform,
+    logpt,
+    logpt_sum,
+    no_transform_object,
+)
 from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
 from pymc3.util import WithMemoization, get_var_name
@@ -238,8 +244,6 @@ def build_named_node_tree(graphs):
 
 
 T = TypeVar("T", bound="ContextMeta")
-
-no_transform_object = object()
 
 
 class ContextMeta(type):
