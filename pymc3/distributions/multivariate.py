@@ -387,8 +387,12 @@ class Dirichlet(Continuous):
 
     rv_op = dirichlet
 
+    def __new__(cls, name, *args, **kwargs):
+        kwargs.setdefault("transform", transforms.stick_breaking)
+        return super().__new__(cls, name, *args, **kwargs)
+
     @classmethod
-    def dist(cls, a, transform=transforms.stick_breaking, **kwargs):
+    def dist(cls, a, **kwargs):
 
         a = at.as_tensor_variable(a)
         # mean = a / at.sum(a)
