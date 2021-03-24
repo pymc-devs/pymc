@@ -72,7 +72,8 @@ class Binomial(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.arange(0, 22)
         ns = [10, 17]
         ps = [0.5, 0.7]
@@ -206,7 +207,8 @@ class BetaBinomial(Discrete):
         import numpy as np
         import scipy.stats as st
         from scipy import special
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
 
         def BetaBinom(a, b, n, x):
             pmf = special.binom(n, x) * (special.beta(x+a, n-x+b) / special.beta(a, b))
@@ -369,7 +371,8 @@ class Bernoulli(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = [0, 1]
         for p in [0, 0.5, 0.8]:
             pmf = st.bernoulli.pmf(x, p)
@@ -504,7 +507,8 @@ class DiscreteWeibull(Discrete):
         import numpy as np
         import scipy.stats as st
         from scipy import special
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
 
         def DiscreteWeibull(q, b, x):
             return q**(x**b) - q**((x + 1)**b)
@@ -640,7 +644,8 @@ class Poisson(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.arange(0, 15)
         for m in [0.5, 3, 8]:
             pmf = st.poisson.pmf(x, m)
@@ -761,7 +766,8 @@ class NegativeBinomial(Discrete):
         import numpy as np
         import scipy.stats as st
         from scipy import special
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
 
         def NegBinom(a, m, x):
             pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
@@ -947,7 +953,8 @@ class Geometric(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.arange(1, 11)
         for p in [0.1, 0.25, 0.75]:
             pmf = st.geom.pmf(x, p)
@@ -1052,7 +1059,8 @@ class HyperGeometric(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.arange(1, 15)
         N = 50
         k = 10
@@ -1203,7 +1211,8 @@ class DiscreteUniform(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         ls = [1, -2]
         us = [6, 2]
         for l, u in zip(ls, us):
@@ -1327,7 +1336,8 @@ class Categorical(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         ps = [[0.1, 0.6, 0.3], [0.3, 0.1, 0.1, 0.5]]
         for p in ps:
             x = range(len(p))
@@ -1518,7 +1528,8 @@ class ZeroInflatedPoisson(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.arange(0, 22)
         psis = [0.7, 0.4]
         thetas = [8, 4]
@@ -1645,7 +1656,8 @@ class ZeroInflatedBinomial(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.arange(0, 25)
         ns = [10, 20]
         ps = [0.5, 0.7]
@@ -1794,7 +1806,8 @@ class ZeroInflatedNegativeBinomial(Discrete):
         import numpy as np
         import scipy.stats as st
         from scipy import special
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
 
         def ZeroInfNegBinom(a, m, psi, x):
             pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
