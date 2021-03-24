@@ -272,8 +272,8 @@ class TestSaveLoad:
             ppc = pm.sample_posterior_predictive(self.trace)
 
         with TestSaveLoad.model() as model:
-            model.default_rng.get_value(borrow=True).seed(10)
             trace2 = pm.load_trace(directory)
+            model.default_rng.get_value(borrow=True).seed(10)
             ppc2 = pm.sample_posterior_predictive(trace2)
             ppc2f = pm.sample_posterior_predictive(trace2)
 
