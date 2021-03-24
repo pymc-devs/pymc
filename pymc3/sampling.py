@@ -1728,12 +1728,18 @@ def sample_posterior_predictive(
 
     if not hasattr(_trace, "varnames"):
         inputs_and_names = [
-            (rv, rv.name) for rv in rv_ancestors(vars_to_sample, walk_past_rvs=True)
+            (rv, rv.name)
+            for rv in rv_ancestors(vars_to_sample, walk_past_rvs=True)
+            if rv not in vars_to_sample and rv in model.named_vars.values()
         ]
-        inputs, input_names = zip(*inputs_and_names)
+        if inputs_and_names:
+            inputs, input_names = zip(*inputs_and_names)
+        else:
+            inputs, input_names = [], []
     else:
-        input_names = _trace.varnames
-        inputs = [model[n] for n in _trace.varnames]
+        output_names = [v.name for v in vars_to_sample if v.name is not None]
+        input_names = [n for n in _trace.varnames if n not in output_names]
+        inputs = [model[n] for n in input_names]
 
     if size is not None:
         vars_to_sample = [change_rv_size(v, size, expand=True) for v in vars_to_sample]
