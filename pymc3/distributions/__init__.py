@@ -31,6 +31,8 @@ PotentialShapeType = Union[
     int, np.ndarray, Tuple[Union[int, Variable], ...], List[Union[int, Variable]], Variable
 ]
 
+no_transform_object = object()
+
 
 @singledispatch
 def logp_transform(op: Op):
