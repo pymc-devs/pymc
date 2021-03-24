@@ -1944,7 +1944,7 @@ class TestMatchesScipy:
         d_value = d.tag.value_var
         d_point = d.eval()
         if hasattr(d_value.tag, "transform"):
-            d_point_trans = d_value.tag.transform.forward(d, d_point).eval()
+            d_point_trans = d_value.tag.transform.forward(d, aet.as_tensor(d_point)).eval()
         else:
             d_point_trans = d_point
 
