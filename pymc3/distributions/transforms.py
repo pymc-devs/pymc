@@ -286,7 +286,7 @@ class StickBreaking(Transform):
     name = "stickbreaking"
 
     def forward(self, rv_var, rv_value):
-        if rv_var.ndim == 1 or rv_var.broadcastable[-1]:
+        if rv_var.broadcastable[-1]:
             # If this variable is just a bunch of scalars/degenerate
             # Dirichlets, we can't transform it
             return rv_value
@@ -299,7 +299,7 @@ class StickBreaking(Transform):
         return floatX(y.T)
 
     def backward(self, rv_var, rv_value):
-        if rv_var.ndim == 1 or rv_var.broadcastable[-1]:
+        if rv_var.broadcastable[-1]:
             # If this variable is just a bunch of scalars/degenerate
             # Dirichlets, we can't transform it
             return rv_value
@@ -312,7 +312,7 @@ class StickBreaking(Transform):
         return floatX(x.T)
 
     def jacobian_det(self, rv_var, rv_value):
-        if rv_var.ndim == 1 or rv_var.broadcastable[-1]:
+        if rv_var.broadcastable[-1]:
             # If this variable is just a bunch of scalars/degenerate
             # Dirichlets, we can't transform it
             return at.ones_like(rv_value)
