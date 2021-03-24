@@ -659,9 +659,9 @@ def _check_start_shape(model, start):
     if not isinstance(start, dict):
         raise TypeError("start argument must be a dict or an array-like of dicts")
     e = ""
-    for var in model.vars:
+    for var in model.basic_RVs:
+        var_shape = model.fastfn(var.shape)(start)
         if var.name in start.keys():
-            var_shape = var.shape.tag.test_value
             start_var_shape = np.shape(start[var.name])
             if start_var_shape:
                 if not np.array_equal(var_shape, start_var_shape):
