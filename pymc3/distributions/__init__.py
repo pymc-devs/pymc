@@ -340,17 +340,17 @@ def logpt(
     else:
         logp_var = _logcdf(rv_node.op, rv_var, *dist_params, **kwargs)
 
-    transform = getattr(rv_value_var.tag, "transform", None) if rv_value_var else None
-
-    if transform and transformed and not cdf:
+    if transformed and not cdf:
         (logp_var,), _ = apply_transforms((logp_var,))
 
-        if jacobian:
-            transformed_jacobian = transform.jacobian_det(rv_var, rv_value)
-            if transformed_jacobian:
-                if logp_var.ndim > transformed_jacobian.ndim:
-                    logp_var = logp_var.sum(axis=-1)
-                logp_var += transformed_jacobian
+    transform = getattr(rv_value_var.tag, "transform", None) if rv_value_var else None
+
+    if transform and transformed and not cdf and jacobian:
+        transformed_jacobian = transform.jacobian_det(rv_var, rv_value)
+        if transformed_jacobian:
+            if logp_var.ndim > transformed_jacobian.ndim:
+                logp_var = logp_var.sum(axis=-1)
+            logp_var += transformed_jacobian
 
     # Replace random variables with their value variables
     (logp_var,), replaced = rvs_to_value_vars((logp_var,), {rv_var: rv_value})
