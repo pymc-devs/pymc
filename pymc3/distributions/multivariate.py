@@ -488,7 +488,7 @@ class Multinomial(Discrete):
     @classmethod
     def dist(cls, n, p, *args, **kwargs):
 
-        # p = p / at.sum(p, axis=-1, keepdims=True)
+        p = p / at.sum(p, axis=-1, keepdims=True)
         n = at.as_tensor_variable(n)
         p = at.as_tensor_variable(p)
 
