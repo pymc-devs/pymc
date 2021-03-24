@@ -203,6 +203,10 @@ def check_start_vals(start, model):
     """
     start_points = [start] if isinstance(start, dict) else start
     for elem in start_points:
+
+        for k, v in elem.items():
+            elem[k] = np.asarray(v, dtype=model[k].dtype)
+
         if not set(elem.keys()).issubset(model.named_vars.keys()):
             extra_keys = ", ".join(set(elem.keys()) - set(model.named_vars.keys()))
             valid_keys = ", ".join(model.named_vars.keys())
