@@ -218,7 +218,7 @@ class Interval(ElemwiseTransform):
             s = aet.nnet.softplus(-rv_value)
             return aet.log(b - a) - 2 * s - rv_value
         else:
-            return aet.ones_like(rv_value)
+            return rv_value
 
 
 interval = Interval
