@@ -16,6 +16,7 @@ import aesara.tensor as at
 import arviz as az
 import numpy as np
 import numpy.testing as npt
+import pytest
 
 from scipy import stats
 
@@ -140,17 +141,26 @@ class BaseSampler(SeededTest):
         cls.model = cls.make_model()
         with cls.model:
             cls.step = cls.make_step()
-            cls.trace = pm.sample(cls.n_samples, tune=cls.tune, step=cls.step, cores=cls.chains)
+            cls.trace = pm.sample(
+                cls.n_samples,
+                tune=cls.tune,
+                step=cls.step,
+                cores=cls.chains,
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+            )
         cls.samples = {}
         for var in cls.model.unobserved_RVs:
-            cls.samples[get_var_name(var)] = cls.trace.get_values(var.tag.value_var, burn=cls.burn)
+            cls.samples[get_var_name(var)] = cls.trace.get_values(var, burn=cls.burn)
 
+    @pytest.mark.xfail(reason="Arviz not refactored for v4")
     def test_neff(self):
         if hasattr(self, "min_n_eff"):
             n_eff = az.ess(self.trace[self.burn :])
             for var in n_eff:
                 npt.assert_array_less(self.min_n_eff, n_eff[var])
 
+    @pytest.mark.xfail(reason="Arviz not refactored for v4")
     def test_Rhat(self):
         rhat = az.rhat(self.trace[self.burn :])
         for var in rhat:
