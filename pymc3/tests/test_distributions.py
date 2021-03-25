@@ -1931,8 +1931,11 @@ class TestMatchesScipy:
         with pm.Model() as model:
             d = pm.Dirichlet("d", a=a)
 
+        # Generate sample points to test
         d_value = d.tag.value_var
-        d_point = d.eval()
+        d_point = d.eval().astype("float64")
+        d_point /= d_point.sum(axis=-1)[..., None]
+
         if hasattr(d_value.tag, "transform"):
             d_point_trans = d_value.tag.transform.forward(d, at.as_tensor(d_point)).eval()
         else:
