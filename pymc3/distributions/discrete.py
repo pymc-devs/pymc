@@ -731,35 +731,33 @@ class NegativeBinomial(Discrete):
 
     @classmethod
     def dist(cls, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
-        mu, alpha = cls.get_mu_alpha(mu, alpha, p, n)
-        mu = aet.as_tensor_variable(floatX(mu))
-        alpha = aet.as_tensor_variable(floatX(alpha))
-        # mode = intX(aet.floor(mu))
-        return super().dist([mu, alpha], *args, **kwargs)
+        n, p = cls.get_mu_alpha(mu, alpha, p, n)
+        n = aet.as_tensor_variable(floatX(n))
+        p = aet.as_tensor_variable(floatX(p))
+        return super().dist([n, p], *args, **kwargs)
 
     @classmethod
     def get_mu_alpha(cls, mu=None, alpha=None, p=None, n=None):
-        if alpha is None:
-            if n is not None:
-                n = aet.as_tensor_variable(intX(n))
-                alpha = n
+        if n is None:
+            if alpha is not None:
+                n = aet.as_tensor_variable(floatX(alpha))
             else:
                 raise ValueError("Incompatible parametrization. Must specify either alpha or n.")
         elif alpha is not None:
             raise ValueError("Incompatible parametrization. Can't specify both alpha and n.")
 
-        if mu is None:
-            if p is not None:
-                p = aet.as_tensor_variable(floatX(p))
-                mu = alpha * (1 - p) / p
+        if p is None:
+            if mu is not None:
+                mu = aet.as_tensor_variable(floatX(mu))
+                p = n / (mu + n)
             else:
                 raise ValueError("Incompatible parametrization. Must specify either mu or p.")
         elif mu is not None:
             raise ValueError("Incompatible parametrization. Can't specify both mu and p.")
 
-        return mu, alpha
+        return n, p
 
-    def logp(value, mu, alpha):
+    def logp(value, n, p):
         r"""
         Calculate log-probability of NegativeBinomial distribution at specified value.
 
@@ -773,6 +771,8 @@ class NegativeBinomial(Discrete):
         -------
         TensorVariable
         """
+        alpha = n
+        mu = alpha * (1 - p) / p
         negbinom = bound(
             binomln(value + alpha - 1, value)
             + logpow(mu / (mu + alpha), value)
@@ -783,9 +783,9 @@ class NegativeBinomial(Discrete):
         )
 
         # Return Poisson when alpha gets very large.
-        return aet.switch(aet.gt(alpha, 1e10), Poisson.dist(mu).logp(value), negbinom)
+        return aet.switch(aet.gt(alpha, 1e10), Poisson.logp(value, mu), negbinom)
 
-    def logcdf(value, mu, alpha):
+    def logcdf(value, n, p):
         """
         Compute the log of the cumulative distribution function for NegativeBinomial distribution
         at the specified value.
@@ -805,11 +805,8 @@ class NegativeBinomial(Discrete):
                 f"NegativeBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
-        # TODO: avoid `p` recomputation if distribution was defined in terms of `p`
-        p = alpha / (mu + alpha)
-
         return bound(
-            at.log(incomplete_beta(n, at.floor(value) + 1, p)),
+            aet.log(incomplete_beta(n, aet.floor(value) + 1, p)),
             0 <= value,
             0 < n,
             0 <= p,
