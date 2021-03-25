@@ -31,6 +31,9 @@ from pymc3.nfmc.nfmc import NFMC
 def sample_nfmc(
     draws=500,
     init_samples=None,
+    init_el2o=None,
+    absEL2O=1e-10,
+    fracEL2O=1e-2,
     pareto=False,
     k_trunc=0.25,
     norm_tol=0.01,
@@ -72,6 +75,9 @@ def sample_nfmc(
     start: dict, or array of dict
         Starting point in parameter space. It should be a list of dict with length `chains`.
         When None (default) the starting point is sampled from the prior distribution.
+    init_el2o: str
+        If specified, tells us to initialize with EL2O algorithm. Currently must be set to
+        either None or 'full_rank'. Will add option for 'gauss_mix' later.
     norm_tol: float
         Fractional difference in the evidence estimate between two steps. If it falls below this we
         stop iterating over the NF fits.
@@ -99,6 +105,9 @@ def sample_nfmc(
         convergence statistics. Default is 2.
 
     """
+
+    assert init_el2o is None or init_el2o == 'full_rank'
+    
     _log = logging.getLogger("pymc3")
     _log.info("Initializing normalizing flow based sampling...")
 
@@ -130,6 +139,9 @@ def sample_nfmc(
     params = (
         draws,
         init_samples,
+        init_el2o,
+        absEL2O,
+        fracEL2O,
         pareto,
         k_trunc,
         norm_tol,
@@ -183,6 +195,9 @@ def sample_nfmc(
 def sample_nfmc_int(
     draws,
     init_samples,
+    init_el2o,
+    absEL2O,
+    fracEL2O,
     pareto,
     k_trunc,
     norm_tol,
@@ -219,6 +234,9 @@ def sample_nfmc_int(
         draws=draws,
         model=model,
         init_samples=init_samples,
+        init_el2o=init_el2o,
+        absEL2O=absEL2O,
+        fracEL2O=fracEL2O,
         pareto=pareto,
         k_trunc=k_trunc,
         random_seed=random_seed,
@@ -245,8 +263,14 @@ def sample_nfmc_int(
         shape=shape,
     )
     stage = 1
-    nfmc.initialize_population()
+    nfmc.initialize_var_info()
     nfmc.setup_logp()
+    if init_el2o is not None:
+        print(f'Initializing with EL2O approximation family: {init_el2o}')
+        nfmc.get_map_laplace()
+        nfmc.run_el2o()
+    else:
+        nfmc.initialize_population()
 
     '''
     # Run the optimization ...
@@ -270,7 +294,6 @@ def sample_nfmc_int(
 
     print('Fitting the first NF approx to the initial samples ...')
     nfmc.initialize_nf()
-    print(nfmc.importance_weights)
     iter_evidence = 1.0 * nfmc.evidence
     
     for i in range(nf_iter):
@@ -278,7 +301,6 @@ def sample_nfmc_int(
         if _log is not None:
             _log.info(f"Stage: {stage:3d}, Normalizing Constant Estimate: {nfmc.evidence}")
         nfmc.fit_nf()
-        print(nfmc.importance_weights)
         stage += 1
         if np.abs((iter_evidence - nfmc.evidence) / nfmc.evidence) <= norm_tol:
             print('Normalizing constant estimate has stabilised - ending NF fits.')

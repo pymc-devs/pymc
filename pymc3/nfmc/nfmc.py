@@ -23,10 +23,13 @@ from scipy.optimize import minimize
 from theano import function as theano_function
 import arviz as az
 import jax
+import jax.numpy as jnp
 
 # This is temporary, until I've turned it into a full variational method.
-from pymc3.el2o.el2o_basic import *
+#from pymc3.el2o.el2o_basic import *
 
+from pymc3.tuning.scaling import find_hessian
+from pymc3.tuning.starting import find_MAP
 from pymc3.backends.ndarray import NDArray
 from pymc3.model import Point, modelcontext
 from pymc3.sampling import sample_prior_predictive
@@ -56,6 +59,9 @@ class NFMC:
         draws=500,
         model=None,
         init_samples=None,
+        init_el2o=None,
+        absEL2O=1e-10,
+        fracEL2O=1e-2,
         pareto=False,
         random_seed=-1,
         chain=0,
@@ -85,6 +91,9 @@ class NFMC:
         self.draws = draws
         self.model = model
         self.init_samples = init_samples
+        self.init_el2o = init_el2o
+        self.absEL2O = 1e-10
+        self.fracEL2O = 1e-2
         self.pareto = pareto,
         self.random_seed = random_seed
         self.chain = chain
@@ -116,17 +125,19 @@ class NFMC:
             np.random.seed(self.random_seed)
 
         self.variables = inputvars(self.model.vars)
+
+    def initialize_var_info(self):
+        """Extract variable info for the model instance."""
+        var_info = OrderedDict()
+        init = self.model.test_point
+        for v in self.variables:
+            var_info[v.name] = (init[v.name].shape, init[v.name].size)
+        self.var_info = var_info
         
     def initialize_population(self):
         """Create an initial population from the prior distribution."""
         population = []
-        var_info = OrderedDict()
 
-        init = self.model.test_point
-        
-        for v in self.variables:
-            var_info[v.name] = (init[v.name].shape, init[v.name].size)
-        
         if self.init_samples is None:
             init_rnd = sample_prior_predictive(
                 self.draws,
@@ -135,19 +146,16 @@ class NFMC:
             )
 
             for i in range(self.draws):
-
+                
                 point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
                 population.append(self.model.dict_to_array(point))
 
             self.prior_samples = np.array(floatX(population))
-
+                
         elif self.init_samples is not None:
             
             self.prior_samples = np.copy(self.init_samples)
 
-        print('Prior sample check ...')
-        print(f'Shape of prior samples = {np.shape(self.prior_samples)}')
-        self.var_info = var_info
         self.weighted_samples = np.empty((0, np.shape(self.prior_samples)[1]))
         self.importance_weights = np.array([])
         self.posterior = np.empty((0, np.shape(self.prior_samples)[1]))
@@ -241,9 +249,19 @@ class NFMC:
         self.importance_weights = np.append(self.importance_weights, self.weights)
         self.nf_models.append(self.nf_model)
 
-    def logq_fr_el20(self, z, mu, Sigma):
+    def logq_fr_el2o(self, z, mu, Sigma):
         """Logq for full-rank Gaussian family."""
-        return jax.scipy.stats.multivariate_normal.logpdf(z, mu, Sigma) 
+        return jnp.reshape(jax.scipy.stats.multivariate_normal.logpdf(z, mu, Sigma), ()) 
+
+    def get_map_laplace(self):
+        """Find the MAP+Laplace solution for the model."""
+        self.map_dict = find_MAP(model=self.model)
+        self.mu_map = []
+        for v in self.variables:
+            self.mu_map.append(self.map_dict[v.name])
+        self.mu_map = np.array(self.mu_map)
+        self.Sigma_map = np.linalg.inv(self.target_hessian(self.mu_map.reshape(-1, len(self.mu_map))))
+        print(f'MAP estimate = {self.map_dict}')
         
     def run_el2o(self):
         """Run the EL2O algorithm, assuming you've got the MAP+Laplace solution."""
@@ -253,34 +271,35 @@ class NFMC:
         self.EL2O = [1e10, 1]
 
         self.zk = np.random.multivariate_normal(self.mu_k, self.Sigma_k)
-        #self.zk = self.zk.reshape(-1, 2)
+        self.zk = self.zk.reshape(-1, len(self.zk))
 
-        N = 1
         while self.EL2O[-1] > self.absEL2O and abs((self.EL2O[-1] - self.EL2O[-2]) / self.EL2O[-1]) > self.fracEL2O:
 
-            for i in range(N):
+            self.zk = np.vstack((self.zk, np.random.multivariate_normal(self.mu_k.squeeze(), self.Sigma_k)))
+            Nk = len(self.zk)
+            self.Sigma_k = np.linalg.inv(np.sum(self.target_hessian(self.zk), axis=0) / Nk)
 
-                if i > 0:
-                    self.zk = np.vstack((self.zk, np.random.multivariate_normal(self.mu_k, self.Sigma_k)))
-                    #self.zk = self.zk.reshape(-1, 2)
+            temp = 0
+            for j in range(Nk):
+                temp += np.dot(self.Sigma_k, self.target_dlogp(self.zk[j, :].reshape(-1, len(self.zk[j, :])))) + self.zk[j, :].reshape(-1, len(self.zk[j, :]))
+            self.mu_k = temp / Nk
 
-                Nk = len(self.zk)
-                self.Sigma_k = -1 * np.linalg.inv(np.sum(self.target_hessian(zk), axis=0) / Nk)
+            self.EL2O = np.append(self.EL2O, 1 / (len(self.zk)) * (np.sum((self.target_logp(self.zk) -
+                                                                           jax.vmap(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k), in_axes=0)(self.zk))**2) +
+                                                                   np.sum((self.target_dlogp(self.zk) - 
+                                                                           jax.vmap(jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)), in_axes=0)(self.zk))**2) +
+                                                                   np.sum((self.target_hessian(self.zk) - 
+                                                                           jax.vmap(jax.hessian(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)), in_axes=0)(self.zk))**2)
+            ))
+            
 
-                temp = 0
-                for j in range(Nk):
-                    temp += np.dot(self.Sigma_k, self.target_dlogp(zk[j, :])) + zk[j, :]
-                self.mu_k = temp / Nk
-
-                self.EL2O = np.append(self.EL2O, 1 / (self.len(zk)) * (np.sum((self.target_logp(self.zk) - Lq(self.zk, self.mu_k, self.Sigma_k))**2) +
-                                                                       np.sum((self.target_dlogp(zk) - 
-                                                                               jax.vmap(jax.grad(self.logq_fr_el2o)(self.zk, self.mu_k, self.Sigma_k)))**2) +
-                                                                       np.sum((self.target_hessian(zk) - 
-                                                                               jax.vmap(jax.hessian(self.logq_fr_el2o)(self.zk, self.mu_k, self.Sigma_k)))**2)))
-            N = N + 1
-
-        return self.mu_k, self.Sigma_k, self.zk, self.EL2O
-
+        print(f'Final EL2O mu = {self.mu_k}')
+        print(f'Final EL2O Sigma = {self.Sigma_k}')
+        self.prior_samples = np.random.multivariate_normal(self.mu_k.squeeze(), self.Sigma_k, size=self.draws)
+        self.weighted_samples = np.empty((0, np.shape(self.prior_samples)[1]))
+        self.importance_weights = np.array([])
+        self.posterior = np.empty((0, np.shape(self.prior_samples)[1]))
+        self.nf_models = []
         
     def fit_nf(self):
         """Fit the NF model for a given iteration after initialization."""
