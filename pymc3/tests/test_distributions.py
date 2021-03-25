@@ -1031,11 +1031,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.xfail(reason="Distribution not refactored yet")
-    @pytest.mark.xfail(
-        condition=(aesara.config.floatX == "float32"),
-        reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
-    )
-    def test_wald_scipy(self):
+    def test_wald_logp(self):
         self.check_logp(
             Wald,
             Rplus,
@@ -1043,6 +1039,13 @@ class TestMatchesScipy:
             lambda value, mu, alpha: sp.invgauss.logpdf(value, mu=mu, loc=alpha),
             decimal=select_by_precision(float64=6, float32=1),
         )
+
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
+    )
+    def test_wald_logcdf(self):
         self.check_logcdf(
             Wald,
             Rplus,
@@ -1081,29 +1084,6 @@ class TestMatchesScipy:
         decimals = select_by_precision(float64=6, float32=1)
         assert_almost_equal(model.fastlogp(pt), logp, decimal=decimals, err_msg=str(pt))
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_wald_logp(self):
-        self.check_logp(
-            Wald,
-            Rplus,
-            {"mu": Rplus, "alpha": Rplus},
-            lambda value, mu, alpha: sp.invgauss.logpdf(value, mu=mu, loc=alpha),
-            decimal=select_by_precision(float64=6, float32=1),
-        )
-
-    @pytest.mark.xfail(
-        condition=(aesara.config.floatX == "float32"),
-        reason="Poor CDF in SciPy. See scipy/scipy#869 for details.",
-    )
-    def test_wald_logcdf(self):
-        self.check_logcdf(
-            Wald,
-            Rplus,
-            {"mu": Rplus, "alpha": Rplus},
-            lambda value, mu, alpha: sp.invgauss.logcdf(value, mu=mu, loc=alpha),
-        )
-
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_beta(self):
         self.check_logp(
             Beta,
@@ -1439,10 +1419,6 @@ class TestMatchesScipy:
             lambda value, alpha, m: sp.pareto.logcdf(value, alpha, scale=m),
         )
 
-    @pytest.mark.xfail(
-        condition=(aesara.config.floatX == "float32"),
-        reason="Fails on float32 due to inf issues",
-    )
     @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_weibull_logp(self):
         self.check_logp(
@@ -1452,6 +1428,7 @@ class TestMatchesScipy:
             lambda value, alpha, beta: sp.exponweib.logpdf(value, 1, alpha, scale=beta),
         )
 
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.xfail(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
@@ -1506,11 +1483,8 @@ class TestMatchesScipy:
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    @pytest.mark.xfail(
-        condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
-    )
     @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_beta_binomial_distribution(self):
         self.checkd(
             BetaBinomial,
@@ -1518,6 +1492,7 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
         )
 
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.skipif(
         condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
     )
@@ -1529,6 +1504,7 @@ class TestMatchesScipy:
             lambda value, alpha, beta, n: sp.betabinom.logpmf(value, a=alpha, b=beta, n=n),
         )
 
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     @pytest.mark.skipif(
         condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
@@ -1635,8 +1611,11 @@ class TestMatchesScipy:
         self.check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Fails on float32 due to inf issues",
+    )
     def test_zeroinflatedpoisson_distribution(self):
         self.checkd(
             ZeroInflatedPoisson,
@@ -1644,6 +1623,7 @@ class TestMatchesScipy:
             {"theta": Rplus, "psi": Unit},
         )
 
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_zeroinflatedpoisson_logcdf(self):
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedPoisson,
@@ -1652,8 +1632,11 @@ class TestMatchesScipy:
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.xfail(
+        condition=(aesara.config.floatX == "float32"),
+        reason="Fails on float32 due to inf issues",
+    )
     def test_zeroinflatednegativebinomial_distribution(self):
         self.checkd(
             ZeroInflatedNegativeBinomial,
@@ -1661,6 +1644,7 @@ class TestMatchesScipy:
             {"mu": Rplusbig, "alpha": Rplusbig, "psi": Unit},
         )
 
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_zeroinflatednegativebinomial_logcdf(self):
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedNegativeBinomial,
@@ -1670,7 +1654,6 @@ class TestMatchesScipy:
         )
 
     # Too lazy to propagate decimal parameter through the whole chain of deps
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_zeroinflatedbinomial_distribution(self):
         self.checkd(
@@ -1679,6 +1662,7 @@ class TestMatchesScipy:
             {"n": NatSmall, "p": Unit, "psi": Unit},
         )
 
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_zeroinflatedbinomial_logcdf(self):
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedBinomial,
@@ -2489,7 +2473,6 @@ class TestMatchesScipy:
             lambda value, b, sigma: sp.rice.logpdf(value, b=b, loc=0, scale=sigma),
         )
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_moyal_logp(self):
         # Using a custom domain, because the standard `R` domain undeflows with scipy in float64
@@ -2501,6 +2484,7 @@ class TestMatchesScipy:
             lambda value, mu, sigma: floatX(sp.moyal.logpdf(value, mu, sigma)),
         )
 
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.xfail(
         condition=(aesara.config.floatX == "float32"),
         reason="Pymc3 underflows earlier than scipy on float32",
@@ -2793,8 +2777,9 @@ def test_orderedlogistic_dimensions(shape):
     assert np.allclose(ologp, expected)
 
 
-@pytest.mark.parametrize("shape", [(4,), (4, 1), (4, 4)], ids=str)
-def test_car_logp(shape):
+@pytest.mark.xfail(reason="Distribution not refactored yet")
+@pytest.mark.parametrize("size", [(1,), (4,)], ids=str)
+def test_car_logp(size):
     """
     Tests the log probability function for the CAR distribution by checking
     against Scipy's multivariate normal logpdf, up to an additive constant.
@@ -2845,6 +2830,7 @@ class TestBugfixes:
         assert isinstance(actual_a, np.ndarray)
         assert actual_a.shape == (X.shape[0],)
 
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_issue_4499(self):
         # Test for bug in Uniform and DiscreteUniform logp when setting check_bounds = False
         # https://github.com/pymc-devs/pymc3/issues/4499
