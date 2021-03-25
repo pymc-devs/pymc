@@ -648,28 +648,8 @@ class TestMatchesScipy:
         domains = paramdomains.copy()
         domains["value"] = domain
         for pt in product(domains, n_samples=n_samples):
-
             pt = dict(pt)
-            pt_d = {}
-            for k, v in pt.items():
-                rv_var = model.named_vars.get(k)
-                nv = param_vars.get(k, rv_var)
-                nv = getattr(nv.tag, "value_var", nv)
-
-                transform = getattr(nv.tag, "transform", None)
-                if transform:
-                    # TODO: The compiled graph behind this should be cached and
-                    # reused (if it isn't already).
-                    v = transform.forward(rv_var, v).eval()
-
-                if nv.name in param_vars:
-                    # Update the shared parameter variables in `param_vars`
-                    param_vars[nv.name].set_value(v)
-                else:
-                    # Create an argument entry for the (potentially
-                    # transformed) "value" variable
-                    pt_d[nv.name] = v
-
+            pt_d = self._model_input_dict(model, param_vars, pt)
             pt_logp = Point(pt_d, model=model)
             pt_ref = Point(pt, filter_model_vars=False, model=model)
             assert_almost_equal(
@@ -678,6 +658,30 @@ class TestMatchesScipy:
                 decimal=decimal,
                 err_msg=str(pt),
             )
+
+    def _model_input_dict(self, model, param_vars, pt):
+        """Create a dict with only the necessary, transformed logp inputs."""
+        pt_d = {}
+        for k, v in pt.items():
+            rv_var = model.named_vars.get(k)
+            nv = param_vars.get(k, rv_var)
+            nv = getattr(nv.tag, "value_var", nv)
+
+            transform = getattr(nv.tag, "transform", None)
+            if transform:
+                # todo: the compiled graph behind this should be cached and
+                # reused (if it isn't already).
+                v = transform.forward(rv_var, v).eval()
+
+            if nv.name in param_vars:
+                # update the shared parameter variables in `param_vars`
+                param_vars[nv.name].set_value(v)
+            else:
+                # create an argument entry for the (potentially
+                # transformed) "value" variable
+                pt_d[nv.name] = v
+
+        return pt_d
 
     def check_logcdf(
         self,
