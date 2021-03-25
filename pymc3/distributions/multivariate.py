@@ -222,7 +222,7 @@ class MvNormal(Continuous):
     @classmethod
     def dist(cls, mu, cov=None, tau=None, chol=None, lower=True, **kwargs):
         mu = at.as_tensor_variable(mu)
-        cov = quaddist_matrix(cov, tau, chol, lower)
+        cov = quaddist_matrix(cov, chol, tau, lower)
         return super().dist([mu, cov], **kwargs)
 
     def logp(value, mu, cov):
