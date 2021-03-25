@@ -227,10 +227,16 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
     with Model() as m:
         param_vars = {}
         for v, dom in vardomains.items():
-            vals[v] = dom.vals[0]
-        vals.update(extra_args)
-        distfam("value", size=valuedomain.shape, transform=None, **vals)
-    return m
+            v_at = aesara.shared(np.asarray(dom.vals[0]))
+            v_at.name = v
+            param_vars[v] = v_at
+        param_vars.update(extra_args)
+        distfam(
+            "value",
+            **param_vars,
+            transform=None,
+        )
+    return m, param_vars
 
 
 def laplace_asymmetric_logpdf(value, kappa, b, mu):
@@ -1767,7 +1773,6 @@ class TestMatchesScipy:
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_mvnormal_indef(self):
         cov_val = np.array([[1, 0.5], [0.5, -2]])
         cov = at.matrix("cov")
@@ -1782,14 +1787,13 @@ class TestMatchesScipy:
         f_dlogp = aesara.function([cov, x], dlogp)
         assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
 
-        logp = logp(MvNormal.dist(mu=mu, tau=cov), x)
+        logp = logpt(MvNormal.dist(mu=mu, tau=cov), x)
         f_logp = aesara.function([cov, x], logp)
         assert f_logp(cov_val, np.ones(2)) == -np.inf
         dlogp = at.grad(logp, cov)
         f_dlogp = aesara.function([cov, x], dlogp)
         assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_mvnormal_init_fail(self):
         with Model():
             with pytest.raises(ValueError):
