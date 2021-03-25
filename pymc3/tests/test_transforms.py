@@ -312,7 +312,7 @@ class TestElementWiseLogp(SeededTest):
         assert logpt(x).ndim == jacob_det.ndim
 
         # Hack to get relative tolerance
-        a = logpt(x, array, jacobian=False).eval()
+        a = logpt(x, array.astype(aesara.config.floatX), jacobian=False).eval()
         b = logp_nojac.eval()
         close_to(a, b, np.abs(0.5 * (a + b) * tol))
 
