@@ -231,7 +231,11 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
             v_at.name = v
             param_vars[v] = v_at
         param_vars.update(extra_args)
-        distfam("value", **param_vars, transform=None)
+        distfam(
+            "value",
+            **param_vars,
+            transform=None,
+        )
     return m, param_vars
 
 
@@ -1533,6 +1537,7 @@ class TestMatchesScipy:
             lambda value, alpha, beta, n: sp.betabinom.logcdf(value, a=alpha, b=beta, n=n),
         )
 
+    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_beta_binomial_selfconsistency(self):
         self.check_selfconsistency_discrete_logcdf(
             BetaBinomial,
@@ -1678,7 +1683,6 @@ class TestMatchesScipy:
             n_samples=10,
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_mvnormal(self, n):
         self.check_logp(
@@ -1686,6 +1690,7 @@ class TestMatchesScipy:
             RealMatrix(5, n),
             {"mu": Vector(R, n), "tau": PdMatrix(n)},
             normal_logpdf_tau,
+            extra_args={"size": 5},
         )
         self.check_logp(
             MvNormal,
@@ -1698,6 +1703,7 @@ class TestMatchesScipy:
             RealMatrix(5, n),
             {"mu": Vector(R, n), "cov": PdMatrix(n)},
             normal_logpdf_cov,
+            extra_args={"size": 5},
         )
         self.check_logp(
             MvNormal,
@@ -1711,6 +1717,7 @@ class TestMatchesScipy:
             {"mu": Vector(R, n), "chol": PdMatrixChol(n)},
             normal_logpdf_chol,
             decimal=select_by_precision(float64=6, float32=-1),
+            extra_args={"size": 5},
         )
         self.check_logp(
             MvNormal,
@@ -1719,23 +1726,19 @@ class TestMatchesScipy:
             normal_logpdf_chol,
             decimal=select_by_precision(float64=6, float32=0),
         )
-
-        def MvNormalUpper(*args, **kwargs):
-            return MvNormal(lower=False, *args, **kwargs)
-
         self.check_logp(
-            MvNormalUpper,
+            MvNormal,
             Vector(R, n),
             {"mu": Vector(R, n), "chol": PdMatrixCholUpper(n)},
             normal_logpdf_chol_upper,
             decimal=select_by_precision(float64=6, float32=0),
+            extra_args={"lower": False},
         )
 
     @pytest.mark.xfail(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_mvnormal_indef(self):
         cov_val = np.array([[1, 0.5], [0.5, -2]])
         cov = at.matrix("cov")
@@ -1750,14 +1753,13 @@ class TestMatchesScipy:
         f_dlogp = aesara.function([cov, x], dlogp)
         assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
 
-        logp = logp(MvNormal.dist(mu=mu, tau=cov), x)
+        logp = logpt(MvNormal.dist(mu=mu, tau=cov), x)
         f_logp = aesara.function([cov, x], logp)
         assert f_logp(cov_val, np.ones(2)) == -np.inf
         dlogp = at.grad(logp, cov)
         f_dlogp = aesara.function([cov, x], dlogp)
         assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_mvnormal_init_fail(self):
         with Model():
             with pytest.raises(ValueError):
