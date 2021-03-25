@@ -302,7 +302,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 coords=self.coords,
                 dims=self.dims,
                 attrs=self.attrs,
-                index_origin=self.index_origin,
+                # index_origin=self.index_origin,
             ),
             dict_to_dataset(
                 data_warmup,
@@ -310,7 +310,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 coords=self.coords,
                 dims=self.dims,
                 attrs=self.attrs,
-                index_origin=self.index_origin,
+                # index_origin=self.index_origin,
             ),
         )
 
@@ -344,7 +344,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 dims=None,
                 coords=self.coords,
                 attrs=self.attrs,
-                index_origin=self.index_origin,
+                # index_origin=self.index_origin,
             ),
             dict_to_dataset(
                 data_warmup,
@@ -352,7 +352,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 dims=None,
                 coords=self.coords,
                 attrs=self.attrs,
-                index_origin=self.index_origin,
+                # index_origin=self.index_origin,
             ),
         )
 
@@ -385,7 +385,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 dims=self.dims,
                 coords=self.coords,
                 skip_event_dims=True,
-                index_origin=self.index_origin,
+                # index_origin=self.index_origin,
             ),
             dict_to_dataset(
                 data_warmup,
@@ -393,7 +393,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 dims=self.dims,
                 coords=self.coords,
                 skip_event_dims=True,
-                index_origin=self.index_origin,
+                # index_origin=self.index_origin,
             ),
         )
 
@@ -415,7 +415,11 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                     k,
                 )
         return dict_to_dataset(
-            data, library=pymc3, coords=self.coords, dims=self.dims, index_origin=self.index_origin
+            data,
+            library=pymc3,
+            coords=self.coords,
+            # dims=self.dims,
+            # index_origin=self.index_origin
         )
 
     @requires(["posterior_predictive"])
@@ -450,8 +454,8 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                     {k: np.expand_dims(self.prior[k], 0) for k in var_names},
                     library=pymc3,
                     coords=self.coords,
-                    dims=self.dims,
-                    index_origin=self.index_origin,
+                    # dims=self.dims,
+                    # index_origin=self.index_origin,
                 )
             )
         return priors_dict
@@ -466,9 +470,9 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             {**self.observations, **self.multi_observations},
             library=pymc3,
             coords=self.coords,
-            dims=self.dims,
-            default_dims=[],
-            index_origin=self.index_origin,
+            # dims=self.dims,
+            # default_dims=[],
+            # index_origin=self.index_origin,
         )
 
     @requires(["trace", "predictions"])
@@ -513,9 +517,9 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             constant_data,
             library=pymc3,
             coords=self.coords,
-            dims=self.dims,
-            default_dims=[],
-            index_origin=self.index_origin,
+            # dims=self.dims,
+            # default_dims=[],
+            # index_origin=self.index_origin,
         )
 
     def to_inference_data(self):
