@@ -23,23 +23,13 @@ import pandas as pd
 import pytest
 import scipy.sparse as sps
 
-from aesara.graph.basic import Variable
-from aesara.tensor.random.basic import normal, uniform
-from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.type import TensorType
 from aesara.tensor.var import TensorVariable
 
 import pymc3 as pm
 
-from pymc3.aesaraf import (
-    _conversion_map,
-    extract_obs_data,
-    pandas_to_array,
-    rvs_to_value_vars,
-    take_along_axis,
-    walk_model,
-)
+from pymc3.aesaraf import _conversion_map, extract_obs_data, take_along_axis
 from pymc3.vartypes import int_types
 
 FLOATX = str(aesara.config.floatX)
@@ -276,10 +266,10 @@ class TestTakeAlongAxis:
 def test_extract_obs_data():
 
     with pytest.raises(TypeError):
-        extract_obs_data(at.matrix())
+        extract_obs_data(aet.matrix())
 
     data = np.random.normal(size=(2, 3))
-    data_at = at.as_tensor(data)
+    data_at = aet.as_tensor(data)
     mask = np.random.binomial(1, 0.5, size=(2, 3)).astype(bool)
 
     for val_at in (data_at, aesara.shared(data)):
@@ -291,8 +281,8 @@ def test_extract_obs_data():
     # AdvancedIncSubtensor check
     data_m = np.ma.MaskedArray(data, mask)
     missing_values = data_at.type()[mask]
-    constant = at.as_tensor(data_m.filled())
-    z_at = at.set_subtensor(constant[mask.nonzero()], missing_values)
+    constant = aet.as_tensor(data_m.filled())
+    z_at = aet.set_subtensor(constant[mask.nonzero()], missing_values)
 
     assert isinstance(z_at.owner.op, AdvancedIncSubtensor)
 
@@ -303,13 +293,13 @@ def test_extract_obs_data():
 
     # AdvancedIncSubtensor1 check
     data = np.random.normal(size=(3,))
-    data_at = at.as_tensor(data)
+    data_at = aet.as_tensor(data)
     mask = np.random.binomial(1, 0.5, size=(3,)).astype(bool)
 
     data_m = np.ma.MaskedArray(data, mask)
     missing_values = data_at.type()[mask]
-    constant = at.as_tensor(data_m.filled())
-    z_at = at.set_subtensor(constant[mask.nonzero()], missing_values)
+    constant = aet.as_tensor(data_m.filled())
+    z_at = aet.set_subtensor(constant[mask.nonzero()], missing_values)
 
     assert isinstance(z_at.owner.op, AdvancedIncSubtensor1)
 
@@ -317,159 +307,3 @@ def test_extract_obs_data():
 
     assert isinstance(res, np.ndarray)
     assert np.ma.allequal(res, data_m)
-
-
-@pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
-def test_pandas_to_array(input_dtype):
-    """
-    Ensure that pandas_to_array returns the dense array, masked array,
-    graph variable, TensorVariable, or sparse matrix as appropriate.
-    """
-    # Create the various inputs to the function
-    sparse_input = sps.csr_matrix(np.eye(3)).astype(input_dtype)
-    dense_input = np.arange(9).reshape((3, 3)).astype(input_dtype)
-
-    input_name = "input_variable"
-    aesara_graph_input = at.as_tensor(dense_input, name=input_name)
-    pandas_input = pd.DataFrame(dense_input)
-
-    # All the even numbers are replaced with NaN
-    missing_numpy_input = np.array([[np.nan, 1, np.nan], [3, np.nan, 5], [np.nan, 7, np.nan]])
-    missing_pandas_input = pd.DataFrame(missing_numpy_input)
-    masked_array_input = ma.array(dense_input, mask=(np.mod(dense_input, 2) == 0))
-
-    # Create a generator object. Apparently the generator object needs to
-    # yield numpy arrays.
-    square_generator = (np.array([i ** 2], dtype=int) for i in range(100))
-
-    # Alias the function to be tested
-    func = pandas_to_array
-
-    #####
-    # Perform the various tests
-    #####
-    # Check function behavior with dense arrays and pandas dataframes
-    # without missing values
-    for input_value in [dense_input, pandas_input]:
-        func_output = func(input_value)
-        assert isinstance(func_output, np.ndarray)
-        assert func_output.shape == input_value.shape
-        npt.assert_allclose(func_output, dense_input)
-
-    # Check function behavior with sparse matrix inputs
-    sparse_output = func(sparse_input)
-    assert sps.issparse(sparse_output)
-    assert sparse_output.shape == sparse_input.shape
-    npt.assert_allclose(sparse_output.toarray(), sparse_input.toarray())
-
-    # Check function behavior when using masked array inputs and pandas
-    # objects with missing data
-    for input_value in [missing_numpy_input, masked_array_input, missing_pandas_input]:
-        func_output = func(input_value)
-        assert isinstance(func_output, ma.core.MaskedArray)
-        assert func_output.shape == input_value.shape
-        npt.assert_allclose(func_output, masked_array_input)
-
-    # Check function behavior with Aesara graph variable
-    aesara_output = func(aesara_graph_input)
-    assert isinstance(aesara_output, Variable)
-    npt.assert_allclose(aesara_output.eval(), aesara_graph_input.eval())
-    intX = pm.aesaraf._conversion_map[aesara.config.floatX]
-    if dense_input.dtype == intX or dense_input.dtype == aesara.config.floatX:
-        assert aesara_output.owner is None  # func should not have added new nodes
-        assert aesara_output.name == input_name
-    else:
-        assert aesara_output.owner is not None  # func should have casted
-        assert aesara_output.owner.inputs[0].name == input_name
-
-    if "float" in input_dtype:
-        assert aesara_output.dtype == aesara.config.floatX
-    else:
-        assert aesara_output.dtype == intX
-
-    # Check function behavior with generator data
-    generator_output = func(square_generator)
-
-    # Output is wrapped with `pm.floatX`, and this unwraps
-    wrapped = generator_output.owner.inputs[0]
-    # Make sure the returned object has .set_gen and .set_default methods
-    assert hasattr(wrapped, "set_gen")
-    assert hasattr(wrapped, "set_default")
-    # Make sure the returned object is a Aesara TensorVariable
-    assert isinstance(wrapped, TensorVariable)
-
-
-def test_walk_model():
-    d = at.vector("d")
-    b = at.vector("b")
-    c = uniform(0.0, d)
-    c.name = "c"
-    e = at.log(c)
-    a = normal(e, b)
-    a.name = "a"
-
-    test_graph = at.exp(a + 1)
-    res = list(walk_model((test_graph,)))
-    assert a in res
-    assert c not in res
-
-    res = list(walk_model((test_graph,), walk_past_rvs=True))
-    assert a in res
-    assert c in res
-
-    res = list(walk_model((test_graph,), walk_past_rvs=True, stop_at_vars={e}))
-    assert a in res
-    assert c not in res
-
-
-def test_rvs_to_value_vars():
-
-    with pm.Model() as m:
-        a = pm.Uniform("a", 0.0, 1.0)
-        b = pm.Uniform("b", 0, a + 1.0)
-        c = pm.Normal("c")
-        d = at.log(c + b) + 2.0
-
-    a_value_var = m.rvs_to_values[a]
-    assert a_value_var.tag.transform
-
-    b_value_var = m.rvs_to_values[b]
-    c_value_var = m.rvs_to_values[c]
-
-    (res,), replaced = rvs_to_value_vars((d,))
-
-    assert res.owner.op == at.add
-    log_output = res.owner.inputs[0]
-    assert log_output.owner.op == at.log
-    log_add_output = res.owner.inputs[0].owner.inputs[0]
-    assert log_add_output.owner.op == at.add
-    c_output = log_add_output.owner.inputs[0]
-
-    # We make sure that the random variables were replaced
-    # with their value variables
-    assert c_output == c_value_var
-    b_output = log_add_output.owner.inputs[1]
-    assert b_output == b_value_var
-
-    res_ancestors = list(walk_model((res,), walk_past_rvs=True))
-    res_rv_ancestors = [
-        v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
-    ]
-
-    # There shouldn't be any `RandomVariable`s in the resulting graph
-    assert len(res_rv_ancestors) == 0
-    assert b_value_var in res_ancestors
-    assert c_value_var in res_ancestors
-    assert a_value_var not in res_ancestors
-
-    (res,), replaced = rvs_to_value_vars((d,), apply_transforms=True)
-
-    res_ancestors = list(walk_model((res,), walk_past_rvs=True))
-    res_rv_ancestors = [
-        v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
-    ]
-
-    assert len(res_rv_ancestors) == 0
-    assert a_value_var in res_ancestors
-    assert b_value_var in res_ancestors
-    assert c_value_var in res_ancestors
