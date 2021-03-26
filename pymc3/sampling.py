@@ -32,6 +32,7 @@ import numpy as np
 import packaging
 import xarray
 
+from aesara.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
 
@@ -1730,7 +1731,9 @@ def sample_posterior_predictive(
         inputs_and_names = [
             (rv, rv.name)
             for rv in rv_ancestors(vars_to_sample, walk_past_rvs=True)
-            if rv not in vars_to_sample and rv in model.named_vars.values()
+            if rv not in vars_to_sample
+            and rv in model.named_vars.values()
+            and not isinstance(rv, SharedVariable)
         ]
         if inputs_and_names:
             inputs, input_names = zip(*inputs_and_names)
@@ -1738,7 +1741,11 @@ def sample_posterior_predictive(
             inputs, input_names = [], []
     else:
         output_names = [v.name for v in vars_to_sample if v.name is not None]
-        input_names = [n for n in _trace.varnames if n not in output_names]
+        input_names = [
+            n
+            for n in _trace.varnames
+            if n not in output_names and not isinstance(model[n], SharedVariable)
+        ]
         inputs = [model[n] for n in input_names]
 
     if size is not None:
@@ -1994,7 +2001,7 @@ def sample_prior_predictive(
     names = get_default_varnames(vars_, include_transformed=False)
 
     vars_to_sample = [model[name] for name in names]
-    inputs = [i for i in inputvars(vars_to_sample)]
+    inputs = [i for i in inputvars(vars_to_sample) if not isinstance(i, SharedVariable)]
     sampler_fn = aesara.function(
         inputs,
         vars_to_sample,
