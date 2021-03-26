@@ -16,12 +16,12 @@ import aesara.tensor as at
 import arviz as az
 import numpy as np
 import numpy.testing as npt
-import pytest
 
 from scipy import stats
 
 import pymc3 as pm
 
+from pymc3.backends.arviz import to_inference_data
 from pymc3.tests.helpers import SeededTest
 from pymc3.util import get_var_name
 
@@ -153,16 +153,16 @@ class BaseSampler(SeededTest):
         for var in cls.model.unobserved_RVs:
             cls.samples[get_var_name(var)] = cls.trace.get_values(var, burn=cls.burn)
 
-    @pytest.mark.xfail(reason="Arviz not refactored for v4")
     def test_neff(self):
         if hasattr(self, "min_n_eff"):
-            n_eff = az.ess(self.trace[self.burn :])
+            idata = to_inference_data(self.trace[self.burn :])
+            n_eff = az.ess(idata)
             for var in n_eff:
                 npt.assert_array_less(self.min_n_eff, n_eff[var])
 
-    @pytest.mark.xfail(reason="Arviz not refactored for v4")
     def test_Rhat(self):
-        rhat = az.rhat(self.trace[self.burn :])
+        idata = to_inference_data(self.trace[self.burn :])
+        rhat = az.rhat(idata)
         for var in rhat:
             npt.assert_allclose(rhat[var], 1, rtol=0.01)
 
