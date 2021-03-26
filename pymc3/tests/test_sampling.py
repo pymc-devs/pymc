@@ -20,12 +20,13 @@ from typing import Tuple
 
 import aesara
 import aesara.tensor as at
-import arviz as az
 import numpy as np
 import numpy.testing as npt
 import pytest
 
 from aesara import shared
+from arviz import InferenceData
+from arviz import from_dict as az_from_dict
 from scipy import stats
 
 import pymc3 as pm
@@ -200,7 +201,7 @@ class TestSample(SeededTest):
 
             # inferencedata with tuning
             result = pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=False)
-            assert isinstance(result, az.InferenceData)
+            assert isinstance(result, InferenceData)
             assert result.posterior.sizes["draw"] == 100
             assert result.posterior.sizes["chain"] == 2
             assert len(result._groups_warmup) > 0
@@ -215,7 +216,7 @@ class TestSample(SeededTest):
                 random_seed=-1
             )
             assert "prior" in result
-            assert isinstance(result, az.InferenceData)
+            assert isinstance(result, InferenceData)
             assert result.posterior.sizes["draw"] == 100
             assert result.posterior.sizes["chain"] == 2
             assert len(result._groups_warmup) == 0
@@ -473,7 +474,6 @@ class TestSamplePPC(SeededTest):
             ppc = pm.sample_posterior_predictive(trace, size=5, var_names=["a"])
             assert ppc["a"].shape == (nchains * ndraws, 5)
 
-    @pytest.mark.xfail(reason="Arviz not refactored for v4")
     def test_normal_scalar_idata(self):
         nchains = 2
         ndraws = 500
@@ -481,12 +481,19 @@ class TestSamplePPC(SeededTest):
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=0.0)
             trace = pm.sample(
-                draws=ndraws, chains=nchains, return_inferencedata=True, discard_tuned_samples=False
+                draws=ndraws,
+                chains=nchains,
+                return_inferencedata=False,
+                discard_tuned_samples=False,
             )
+
+        assert not isinstance(trace, InferenceData)
 
         with model:
             # test keep_size parameter and idata input
             idata = pm.to_inference_data(trace)
+            assert isinstance(idata, InferenceData)
+
             ppc = pm.sample_posterior_predictive(idata, keep_size=True)
             assert ppc["a"].shape == (nchains, ndraws)
 
@@ -520,16 +527,19 @@ class TestSamplePPC(SeededTest):
             assert "a" in ppc
             assert ppc["a"].shape == (10, 4, 2)
 
-    @pytest.mark.xfail(reason="Arviz not refactored for v4")
     def test_normal_vector_idata(self, caplog):
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
             trace = pm.sample(return_inferencedata=False)
 
+        assert not isinstance(trace, InferenceData)
+
         with model:
             # test keep_size parameter with inference data as input...
             idata = pm.to_inference_data(trace)
+            assert isinstance(idata, InferenceData)
+
             ppc = pm.sample_posterior_predictive(idata, keep_size=True)
             assert ppc["a"].shape == (trace.nchains, len(trace), 2)
 
@@ -718,7 +728,7 @@ class TestSamplePPC(SeededTest):
             p = pm.Potential("p", a + 1)
             obs = pm.Normal("obs", a, 1, observed=5)
 
-        trace = az.from_dict({"a": np.random.rand(10)})
+        trace = az_from_dict({"a": np.random.rand(10)})
         with m:
             with pytest.warns(UserWarning, match=warning_msg):
                 pm.sample_posterior_predictive(trace, samples=5)
@@ -783,7 +793,7 @@ class TestSamplePPCW(SeededTest):
             p = pm.Potential("p", a + 1)
             obs = pm.Normal("obs", a, 1, observed=5)
 
-        trace = az.from_dict({"a": np.random.rand(10)})
+        trace = az_from_dict({"a": np.random.rand(10)})
         with pytest.warns(UserWarning, match=warning_msg):
             pm.sample_posterior_predictive_w(samples=5, traces=[trace, trace], models=[m, m])
 
@@ -1046,17 +1056,17 @@ class TestSamplePosteriorPredictive:
         with pmodel:
             pp = pm.sample_posterior_predictive([trace[15]], var_names=["d"])
 
-    @pytest.mark.xfail(reason="Arviz not refactored for v4")
     def test_sample_from_xarray_prior(self, point_list_arg_bug_fixture):
         pmodel, trace = point_list_arg_bug_fixture
 
         with pmodel:
             prior = pm.sample_prior_predictive(samples=20)
+
         idat = pm.to_inference_data(trace, prior=prior)
+
         with pmodel:
             pp = pm.sample_posterior_predictive(idat.prior, var_names=["d"])
 
-    @pytest.mark.xfail(reason="Arviz not refactored for v4")
     def test_sample_from_xarray_posterior(self, point_list_arg_bug_fixture):
         pmodel, trace = point_list_arg_bug_fixture
         idat = pm.to_inference_data(trace)
