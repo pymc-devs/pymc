@@ -19,10 +19,12 @@ import numpy as np
 from aesara import scalar
 from aesara import tensor as at
 from aesara.gradient import grad
-from aesara.graph.basic import Apply, graph_inputs
+from aesara.graph.basic import Apply, Constant, graph_inputs
 from aesara.graph.op import Op
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 from aesara.tensor.elemwise import Elemwise
+from aesara.tensor.sharedvar import SharedVariable
+from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorVariable
 
 from pymc3.data import GeneratorAdapter
@@ -46,6 +48,28 @@ __all__ = [
     "at_rng",
     "take_along_axis",
 ]
+
+
+def extract_obs_data(x: TensorVariable) -> np.ndarray:
+    """Extract data observed symbolic variables.
+
+    Raises
+    ------
+    TypeError
+
+    """
+    if isinstance(x, Constant):
+        return x.data
+    if isinstance(x, SharedVariable):
+        return x.get_value()
+    if x.owner and isinstance(x.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1)):
+        array_data = extract_obs_data(x.owner.inputs[0])
+        mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
+        mask = np.zeros_like(array_data)
+        mask[mask_idx] = 1
+        return np.ma.MaskedArray(array_data, mask)
+
+    raise TypeError(f"Data cannot be extracted from {x}")
 
 
 def inputvars(a):
