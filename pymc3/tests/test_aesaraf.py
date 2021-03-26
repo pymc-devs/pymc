@@ -256,10 +256,10 @@ class TestTakeAlongAxis:
 def test_extract_obs_data():
 
     with pytest.raises(TypeError):
-        extract_obs_data(aet.matrix())
+        extract_obs_data(at.matrix())
 
     data = np.random.normal(size=(2, 3))
-    data_at = aet.as_tensor(data)
+    data_at = at.as_tensor(data)
     mask = np.random.binomial(1, 0.5, size=(2, 3)).astype(bool)
 
     for val_at in (data_at, aesara.shared(data)):
@@ -271,8 +271,8 @@ def test_extract_obs_data():
     # AdvancedIncSubtensor check
     data_m = np.ma.MaskedArray(data, mask)
     missing_values = data_at.type()[mask]
-    constant = aet.as_tensor(data_m.filled())
-    z_at = aet.set_subtensor(constant[mask.nonzero()], missing_values)
+    constant = at.as_tensor(data_m.filled())
+    z_at = at.set_subtensor(constant[mask.nonzero()], missing_values)
 
     assert isinstance(z_at.owner.op, AdvancedIncSubtensor)
 
@@ -283,13 +283,13 @@ def test_extract_obs_data():
 
     # AdvancedIncSubtensor1 check
     data = np.random.normal(size=(3,))
-    data_at = aet.as_tensor(data)
+    data_at = at.as_tensor(data)
     mask = np.random.binomial(1, 0.5, size=(3,)).astype(bool)
 
     data_m = np.ma.MaskedArray(data, mask)
     missing_values = data_at.type()[mask]
-    constant = aet.as_tensor(data_m.filled())
-    z_at = aet.set_subtensor(constant[mask.nonzero()], missing_values)
+    constant = at.as_tensor(data_m.filled())
+    z_at = at.set_subtensor(constant[mask.nonzero()], missing_values)
 
     assert isinstance(z_at.owner.op, AdvancedIncSubtensor1)
 
