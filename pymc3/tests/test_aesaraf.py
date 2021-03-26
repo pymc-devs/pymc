@@ -19,11 +19,12 @@ import aesara.tensor as at
 import numpy as np
 import pytest
 
+from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.type import TensorType
 
 import pymc3 as pm
 
-from pymc3.aesaraf import _conversion_map, take_along_axis
+from pymc3.aesaraf import _conversion_map, extract_obs_data, take_along_axis
 from pymc3.vartypes import int_types
 
 FLOATX = str(aesara.config.floatX)
@@ -250,3 +251,49 @@ class TestTakeAlongAxis:
         indices.tag.test_value = np.zeros((1,) * indices.ndim, dtype=FLOATX)
         with pytest.raises(IndexError):
             take_along_axis(arr, indices)
+
+
+def test_extract_obs_data():
+
+    with pytest.raises(TypeError):
+        extract_obs_data(aet.matrix())
+
+    data = np.random.normal(size=(2, 3))
+    data_at = aet.as_tensor(data)
+    mask = np.random.binomial(1, 0.5, size=(2, 3)).astype(bool)
+
+    for val_at in (data_at, aesara.shared(data)):
+        res = extract_obs_data(val_at)
+
+        assert isinstance(res, np.ndarray)
+        assert np.array_equal(res, data)
+
+    # AdvancedIncSubtensor check
+    data_m = np.ma.MaskedArray(data, mask)
+    missing_values = data_at.type()[mask]
+    constant = aet.as_tensor(data_m.filled())
+    z_at = aet.set_subtensor(constant[mask.nonzero()], missing_values)
+
+    assert isinstance(z_at.owner.op, AdvancedIncSubtensor)
+
+    res = extract_obs_data(z_at)
+
+    assert isinstance(res, np.ndarray)
+    assert np.ma.allequal(res, data_m)
+
+    # AdvancedIncSubtensor1 check
+    data = np.random.normal(size=(3,))
+    data_at = aet.as_tensor(data)
+    mask = np.random.binomial(1, 0.5, size=(3,)).astype(bool)
+
+    data_m = np.ma.MaskedArray(data, mask)
+    missing_values = data_at.type()[mask]
+    constant = aet.as_tensor(data_m.filled())
+    z_at = aet.set_subtensor(constant[mask.nonzero()], missing_values)
+
+    assert isinstance(z_at.owner.op, AdvancedIncSubtensor1)
+
+    res = extract_obs_data(z_at)
+
+    assert isinstance(res, np.ndarray)
+    assert np.ma.allequal(res, data_m)
