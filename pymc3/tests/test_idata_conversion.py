@@ -570,10 +570,6 @@ class TestDataPyMC3:
 
 
 class TestPyMC3WarmupHandling:
-    @pytest.mark.skipif(
-        not hasattr(pm.backends.base.SamplerReport, "n_draws"),
-        reason="requires pymc3 3.9 or higher",
-    )
     @pytest.mark.parametrize("save_warmup", [False, True])
     @pytest.mark.parametrize("chains", [1, 2])
     @pytest.mark.parametrize("tune,draws", [(0, 50), (10, 40), (30, 0)])
