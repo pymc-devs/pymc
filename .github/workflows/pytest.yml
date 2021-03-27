@@ -75,7 +75,6 @@ jobs:
             pymc3/tests/test_updates.py
 
           - |
-            pymc3/tests/test_dist_math.py
             pymc3/tests/test_distributions.py
             pymc3/tests/test_distributions_random.py
             pymc3/tests/test_examples.py
