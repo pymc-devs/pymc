@@ -19,6 +19,7 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
+from aesara.tensor.random.basic import multinomial
 from scipy import interpolate, stats
 
 import pymc3 as pm
@@ -91,16 +92,13 @@ def test_alltrue_shape():
 
 
 class MultinomialA(Discrete):
-    def __init__(self, n, p, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    rv_op = multinomial
 
-        self.n = n
-        self.p = p
+    @classmethod
+    def dist(cls, n, p, *args, **kwargs):
+        return super().dist([n, p], **kwargs)
 
-    def logp(self, value):
-        n = self.n
-        p = self.p
-
+    def logp(value, n, p):
         return bound(
             factln(n) - factln(value).sum() + (value * aet.log(p)).sum(),
             value >= 0,
@@ -112,16 +110,13 @@ class MultinomialA(Discrete):
 
 
 class MultinomialB(Discrete):
-    def __init__(self, n, p, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    rv_op = multinomial
 
-        self.n = n
-        self.p = p
+    @classmethod
+    def dist(cls, n, p, *args, **kwargs):
+        return super().dist([n, p], **kwargs)
 
-    def logp(self, value):
-        n = self.n
-        p = self.p
-
+    def logp(value, n, p):
         return bound(
             factln(n) - factln(value).sum() + (value * aet.log(p)).sum(),
             aet.all(value >= 0),
@@ -132,18 +127,17 @@ class MultinomialB(Discrete):
         )
 
 
-@pytest.mark.xfail(reason="This test relies on the deprecated Distribution interface")
 def test_multinomial_bound():
 
     x = np.array([1, 5])
     n = x.sum()
 
     with pm.Model() as modelA:
-        p_a = pm.Dirichlet("p", floatX(np.ones(2)), shape=(2,))
+        p_a = pm.Dirichlet("p", floatX(np.ones(2)))
         MultinomialA("x", n, p_a, observed=x)
 
     with pm.Model() as modelB:
-        p_b = pm.Dirichlet("p", floatX(np.ones(2)), shape=(2,))
+        p_b = pm.Dirichlet("p", floatX(np.ones(2)))
         MultinomialB("x", n, p_b, observed=x)
 
     assert np.isclose(
@@ -151,7 +145,6 @@ def test_multinomial_bound():
     )
 
 
-@pytest.mark.xfail(reason="MvNormal not implemented")
 class TestMvNormalLogp:
     def test_logp(self):
         np.random.seed(42)
@@ -192,11 +185,10 @@ class TestMvNormalLogp:
         delta_val = floatX(np.random.randn(5, 2))
         verify_grad(func, [chol_vec_val, delta_val])
 
-    @pytest.mark.skip(reason="Fix in aesara not released yet: Theano#5908")
     @aesara.config.change_flags(compute_test_value="ignore")
     def test_hessian(self):
         chol_vec = aet.vector("chol_vec")
-        chol_vec.tag.test_value = np.array([0.1, 2, 3])
+        chol_vec.tag.test_value = floatX(np.array([0.1, 2, 3]))
         chol = aet.stack(
             [
                 aet.stack([aet.exp(0.1 * chol_vec[0]), 0]),
@@ -205,9 +197,10 @@ class TestMvNormalLogp:
         )
         cov = aet.dot(chol, chol.T)
         delta = aet.matrix("delta")
-        delta.tag.test_value = np.ones((5, 2))
+        delta.tag.test_value = floatX(np.ones((5, 2)))
         logp = MvNormalLogp()(cov, delta)
         g_cov, g_delta = aet.grad(logp, [cov, delta])
+        # TODO: What's the test?  Something needs to be asserted.
         aet.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
 
 
