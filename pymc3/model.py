@@ -552,18 +552,18 @@ class treedict(dict):
 
 
 class ValueGradFunction:
-    """Create a aesara function that computes a value and its gradient.
+    """Create a Aesara function that computes a value and its gradient.
 
     Parameters
     ----------
     costs: list of aesara variables
-        We compute the weighted sum of the specified aesara values, and the gradient
+        We compute the weighted sum of the specified Aesara values, and the gradient
         of that sum. The weights can be specified with `ValueGradFunction.set_weights`.
-    grad_vars: list of named aesara variables or None
+    grad_vars: list of named Aesara variables or None
         The arguments with respect to which the gradient is computed.
-    extra_vars: list of named aesara variables or None
-        Other arguments of the function that are assumed constant. They
-        are stored in shared variables and can be set using
+    extra_vars_and_values: dict of Aesara variables and their initial values
+        Other arguments of the function that are assumed constant and their
+        values. They are stored in shared variables and can be set using
         `set_extra_values`.
     dtype: str, default=aesara.config.floatX
         The dtype of the arrays.
@@ -589,25 +589,25 @@ class ValueGradFunction:
         self,
         costs,
         grad_vars,
-        extra_vars=None,
+        extra_vars_and_values=None,
         *,
         dtype=None,
         casting="no",
         compute_grads=True,
         **kwargs,
     ):
-        if extra_vars is None:
-            extra_vars = []
+        if extra_vars_and_values is None:
+            extra_vars_and_values = {}
 
-        names = [arg.name for arg in grad_vars + extra_vars]
+        names = [arg.name for arg in grad_vars + list(extra_vars_and_values.keys())]
         if any(name is None for name in names):
             raise ValueError("Arguments must be named.")
         if len(set(names)) != len(names):
             raise ValueError("Names of the arguments are not unique.")
 
         self._grad_vars = grad_vars
-        self._extra_vars = extra_vars
-        self._extra_var_names = {var.name for var in extra_vars}
+        self._extra_vars = list(extra_vars_and_values.keys())
+        self._extra_var_names = {var.name for var in extra_vars_and_values.keys()}
 
         if dtype is None:
             dtype = aesara.config.floatX
@@ -640,8 +640,8 @@ class ValueGradFunction:
 
         givens = []
         self._extra_vars_shared = {}
-        for var in extra_vars:
-            shared = aesara.shared(var.tag.test_value, var.name + "_shared__")
+        for var, value in extra_vars_and_values.items():
+            shared = aesara.shared(value, var.name + "_shared__")
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
 
@@ -904,8 +904,13 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             costs = [self.logpt]
 
         input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
-        extra_vars = [var for var in self.free_RVs if var in input_vars]
-        return ValueGradFunction(costs, grad_vars, extra_vars, **kwargs)
+        extra_vars = [getattr(var.tag, "value_var", var) for var in self.free_RVs]
+        extra_vars_and_values = {
+            var: self.test_point[var.name]
+            for var in extra_vars
+            if var in input_vars and var not in grad_vars
+        }
+        return ValueGradFunction(costs, grad_vars, extra_vars_and_values, **kwargs)
 
     @property
     def logpt(self):
