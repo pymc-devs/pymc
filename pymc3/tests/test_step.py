@@ -754,7 +754,7 @@ class TestPopulationSamplers:
     def test_demcmc_warning_on_small_populations(self):
         """Test that a warning is raised when n_chains <= n_dims"""
         with Model() as model:
-            Normal("n", mu=0, sigma=1, shape=(2, 3))
+            Normal("n", mu=0, sigma=1, size=(2, 3))
             with pytest.warns(UserWarning) as record:
                 sample(
                     draws=5,
@@ -770,7 +770,7 @@ class TestPopulationSamplers:
     def test_demcmc_tune_parameter(self):
         """Tests that validity of the tune setting is checked"""
         with Model() as model:
-            Normal("n", mu=0, sigma=1, shape=(2, 3))
+            Normal("n", mu=0, sigma=1, size=(2, 3))
 
             step = DEMetropolis()
             assert step.tune is None
@@ -817,7 +817,7 @@ class TestMetropolis:
         """Re-use of the step method instance with cores=1 must not leak tuning information between chains."""
         with Model() as pmodel:
             D = 3
-            Normal("n", 0, 2, shape=(D,))
+            Normal("n", 0, 2, size=(D,))
             trace = sample(
                 tune=600,
                 draws=500,
@@ -836,7 +836,7 @@ class TestMetropolis:
 class TestDEMetropolisZ:
     def test_tuning_lambda_sequential(self):
         with Model() as pmodel:
-            Normal("n", 0, 2, shape=(3,))
+            Normal("n", 0, 2, size=(3,))
             trace = sample(
                 tune=1000,
                 draws=500,
@@ -854,7 +854,7 @@ class TestDEMetropolisZ:
 
     def test_tuning_epsilon_parallel(self):
         with Model() as pmodel:
-            Normal("n", 0, 2, shape=(3,))
+            Normal("n", 0, 2, size=(3,))
             trace = sample(
                 tune=1000,
                 draws=500,
@@ -872,7 +872,7 @@ class TestDEMetropolisZ:
 
     def test_tuning_none(self):
         with Model() as pmodel:
-            Normal("n", 0, 2, shape=(3,))
+            Normal("n", 0, 2, size=(3,))
             trace = sample(
                 tune=1000,
                 draws=500,
@@ -892,7 +892,7 @@ class TestDEMetropolisZ:
         """Re-use of the step method instance with cores=1 must not leak tuning information between chains."""
         with Model() as pmodel:
             D = 3
-            Normal("n", 0, 2, shape=(D,))
+            Normal("n", 0, 2, size=(D,))
             trace = sample(
                 tune=1000,
                 draws=500,
@@ -917,7 +917,7 @@ class TestDEMetropolisZ:
         tune_drop_fraction = 0.85
         draws = 200
         with Model() as pmodel:
-            Normal("n", 0, 2, shape=(3,))
+            Normal("n", 0, 2, size=(3,))
             step = DEMetropolisZ(tune_drop_fraction=tune_drop_fraction)
             trace = sample(
                 tune=tune, draws=draws, step=step, cores=1, chains=1, discard_tuned_samples=False
@@ -932,7 +932,7 @@ class TestDEMetropolisZ:
     )
     def test_competence(self, variable, has_grad, outcome):
         with Model() as pmodel:
-            Normal("n", 0, 2, shape=(3,))
+            Normal("n", 0, 2, size=(3,))
             Binomial("b", n=2, p=0.3)
         assert DEMetropolisZ.competence(pmodel[variable], has_grad=has_grad) == outcome
         pass
@@ -940,7 +940,7 @@ class TestDEMetropolisZ:
     @pytest.mark.parametrize("tune_setting", ["foo", True, False])
     def test_invalid_tune(self, tune_setting):
         with Model() as pmodel:
-            Normal("n", 0, 2, shape=(3,))
+            Normal("n", 0, 2, size=(3,))
             with pytest.raises(ValueError):
                 DEMetropolisZ(tune=tune_setting)
         pass
@@ -948,7 +948,7 @@ class TestDEMetropolisZ:
     def test_custom_proposal_dist(self):
         with Model() as pmodel:
             D = 3
-            Normal("n", 0, 2, shape=(D,))
+            Normal("n", 0, 2, size=(D,))
             trace = sample(
                 tune=100,
                 draws=50,
@@ -988,10 +988,10 @@ class TestNutsCheckTrace:
 
     def test_linalg(self, caplog):
         with Model():
-            a = Normal("a", shape=2)
+            a = Normal("a", size=2)
             a = at.switch(a > 0, np.inf, a)
             b = at.slinalg.solve(floatX(np.eye(2)), a)
-            Normal("c", mu=b, shape=2)
+            Normal("c", mu=b, size=2, testval=floatX(np.r_[0.0, 0.0]))
             caplog.clear()
             trace = sample(20, init=None, tune=5, chains=2)
             warns = [msg.msg for msg in caplog.records]
@@ -1400,9 +1400,9 @@ class TestMLDA:
         tune = 100
         draws = 50
         with Model() as coarse_model:
-            Normal("n", 0, 2.2, shape=(3,))
+            Normal("n", 0, 2.2, size=(3,))
         with Model():
-            Normal("n", 0, 2, shape=(3,))
+            Normal("n", 0, 2, size=(3,))
             step = MLDA(coarse_models=[coarse_model])
             trace = sample(tune=tune, draws=draws, step=step, chains=1, discard_tuned_samples=False)
             assert len(trace) == tune + draws
@@ -1415,7 +1415,7 @@ class TestMLDA:
         """Test if competence function returns expected
         results for different models"""
         with Model() as pmodel:
-            Normal("n", 0, 2, shape=(3,))
+            Normal("n", 0, 2, size=(3,))
             Binomial("b", n=2, p=0.3)
         assert MLDA.competence(pmodel[variable], has_grad=has_grad) == outcome
 
@@ -1423,11 +1423,11 @@ class TestMLDA:
         """Test that when you give a single integer it is applied to all levels and
         when you give a list the list is applied correctly."""
         with Model() as coarse_model_0:
-            Normal("n", 0, 2.2, shape=(3,))
+            Normal("n", 0, 2.2, size=(3,))
         with Model() as coarse_model_1:
-            Normal("n", 0, 2.1, shape=(3,))
+            Normal("n", 0, 2.1, size=(3,))
         with Model():
-            Normal("n", 0, 2.0, shape=(3,))
+            Normal("n", 0, 2.0, size=(3,))
 
             step_1 = MLDA(coarse_models=[coarse_model_0, coarse_model_1], subsampling_rates=3)
             assert len(step_1.subsampling_rates) == 2
