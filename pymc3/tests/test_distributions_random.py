@@ -28,8 +28,7 @@ from scipy.special import expit
 
 import pymc3 as pm
 
-from pymc3.aesaraf import floatX, intX
-from pymc3.distributions import change_rv_size
+from pymc3.aesaraf import change_rv_size, floatX, intX
 from pymc3.distributions.dist_math import clipped_beta_rvs
 from pymc3.distributions.shape_utils import to_tuple
 from pymc3.exceptions import ShapeError

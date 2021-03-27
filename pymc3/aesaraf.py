@@ -11,24 +11,37 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Dict, List
+from typing import Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union
 
 import aesara
+import aesara.tensor as at
 import numpy as np
 
-from aesara import scalar
-from aesara import tensor as at
+from aesara import config, scalar
 from aesara.gradient import grad
-from aesara.graph.basic import Apply, Constant, graph_inputs
-from aesara.graph.op import Op
+from aesara.graph.basic import (
+    Apply,
+    Constant,
+    Variable,
+    clone_replace,
+    graph_inputs,
+    walk,
+)
+from aesara.graph.op import Op, compute_test_value
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 from aesara.tensor.elemwise import Elemwise
+from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorVariable
 
 from pymc3.data import GeneratorAdapter
 from pymc3.vartypes import continuous_types, int_types, typefilter
+
+PotentialShapeType = Union[
+    int, np.ndarray, Tuple[Union[int, Variable], ...], List[Union[int, Variable]], Variable
+]
+
 
 __all__ = [
     "gradient",
@@ -48,6 +61,142 @@ __all__ = [
     "at_rng",
     "take_along_axis",
 ]
+
+
+def change_rv_size(
+    rv_var: TensorVariable,
+    new_size: PotentialShapeType,
+    expand: Optional[bool] = False,
+) -> TensorVariable:
+    """Change or expand the size of a `RandomVariable`.
+
+    Parameters
+    ==========
+    rv_var
+        The `RandomVariable` output.
+    new_size
+        The new size.
+    expand:
+        Whether or not to completely replace the `size` parameter in `rv_var`
+        with `new_size` or simply prepend it to the existing `size`.
+
+    """
+    rv_node = rv_var.owner
+    rng, size, dtype, *dist_params = rv_node.inputs
+    name = rv_var.name
+    tag = rv_var.tag
+
+    if expand:
+        new_size = tuple(np.atleast_1d(new_size)) + tuple(size)
+
+    new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
+    rv_var = new_rv_node.outputs[-1]
+    rv_var.name = name
+    for k, v in tag.__dict__.items():
+        rv_var.tag.__dict__.setdefault(k, v)
+
+    if config.compute_test_value != "off":
+        compute_test_value(new_rv_node)
+
+    return rv_var
+
+
+def extract_rv_and_value_vars(
+    var: TensorVariable,
+) -> Tuple[TensorVariable, TensorVariable]:
+    """Extract a random variable and its corresponding value variable from a generic
+    `TensorVariable`.
+
+    Parameters
+    ==========
+    var
+        A variable corresponding to a `RandomVariable`.
+
+    Returns
+    =======
+    The first value in the tuple is the `RandomVariable`, and the second is the
+    measure-space variable that corresponds with the latter (i.e. the "value"
+    variable).
+
+    """
+    if not var.owner:
+        return None, None
+
+    if isinstance(var.owner.op, RandomVariable):
+        rv_value = getattr(var.tag, "observations", getattr(var.tag, "value_var", None))
+        return var, rv_value
+
+    return None, None
+
+
+def rv_ancestors(
+    graphs: Iterable[TensorVariable], walk_past_rvs: bool = False
+) -> Generator[TensorVariable, None, None]:
+    """Yield everything except the inputs of ``RandomVariable``s.
+
+    Parameters
+    ==========
+    graphs
+        The graphs to walk.
+    walk_past_rvs
+        If ``True``, do descend into ``RandomVariable``s.
+    """
+
+    def expand(var):
+        if var.owner and (walk_past_rvs or not isinstance(var.owner.op, RandomVariable)):
+            return reversed(var.owner.inputs)
+
+    yield from walk(graphs, expand, False)
+
+
+def replace_rvs_in_graphs(
+    graphs: Iterable[TensorVariable],
+    replacement_fn: Callable[[TensorVariable], Dict[TensorVariable, TensorVariable]],
+    initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
+) -> Tuple[TensorVariable, Dict[TensorVariable, TensorVariable]]:
+    """Replace random variables in graphs
+
+    This will *not* recompute test values.
+
+    Parameters
+    ==========
+    graphs
+        The graphs in which random variables are to be replaced.
+
+    Returns
+    =======
+    Tuple containing the transformed graphs and a ``dict`` of the replacements
+    that were made.
+    """
+    replacements = {}
+    if initial_replacements:
+        replacements.update(initial_replacements)
+
+    for var in rv_ancestors(graphs):
+        if var.owner and isinstance(var.owner.op, RandomVariable):
+            replacement_fn(var, replacements)
+
+    if replacements:
+        graphs = clone_replace(graphs, replacements)
+
+    return graphs, replacements
+
+
+def rvs_to_value_vars(
+    graphs: Iterable[TensorVariable], initial_replacements: Dict[TensorVariable, TensorVariable]
+) -> Tuple[Iterable[TensorVariable], Dict[TensorVariable, TensorVariable]]:
+    """Replace random variables in graphs with their value variables.
+
+    This will *not* recompute test values.
+    """
+
+    def value_var_replacements(var, replacements):
+        rv_var, rv_value_var = extract_rv_and_value_vars(var)
+
+        if rv_value_var is not None:
+            replacements[var] = rv_value_var
+
+    return replace_rvs_in_graphs(graphs, value_var_replacements, initial_replacements)
 
 
 def extract_obs_data(x: TensorVariable) -> np.ndarray:
@@ -70,6 +219,31 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
         return np.ma.MaskedArray(array_data, mask)
 
     raise TypeError(f"Data cannot be extracted from {x}")
+
+
+def apply_transforms(
+    graphs: Iterable[TensorVariable],
+) -> Tuple[TensorVariable, Dict[TensorVariable, TensorVariable]]:
+    """Apply the transforms associated with each random variable in `graphs`.
+
+    This will *not* recompute test values.
+    """
+
+    def transform_replacements(var, replacements):
+        rv_var, rv_value_var = extract_rv_and_value_vars(var)
+
+        if rv_value_var is None:
+            return
+
+        transform = getattr(rv_value_var.tag, "transform", None)
+
+        if transform is None:
+            return
+
+        trans_rv_value = transform.backward(rv_var, rv_value_var)
+        replacements[var] = trans_rv_value
+
+    return replace_rvs_in_graphs(graphs, transform_replacements)
 
 
 def inputvars(a):
