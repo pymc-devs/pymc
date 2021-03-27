@@ -21,7 +21,7 @@ from numpy import array, ma
 from pymc3 import ImputationWarning, Model, Normal, sample, sample_prior_predictive
 
 
-@pytest.mark.xfail(reason="Missing values not fully refactored")
+# @pytest.mark.xfail(reason="Missing values not fully refactored")
 def test_missing():
     data = ma.masked_values([1, 2, -1, 4, -1], value=-1)
     with Model() as model:
@@ -30,9 +30,12 @@ def test_missing():
             Normal("y", x, 1, observed=data)
 
     (y_missing,) = model.missing_values
-    assert y_missing.tag.test_value.shape == (2,)
+    assert y_missing.eval().shape == (2,)
 
-    model.logp(model.test_point)
+    # In v3, the log-likelihoods for these missing points are zero, and the
+    # missing data point values are the `Distribution`'s "default" values.
+    test_point = model.test_point
+    model.logp(test_point)
 
     with model:
         prior_trace = sample_prior_predictive()
