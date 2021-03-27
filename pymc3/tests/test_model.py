@@ -420,3 +420,14 @@ def test_model_pickle_deterministic(tmpdir):
     file_path = tmpdir.join("model.p")
     with open(file_path, "wb") as buff:
         pickle.dump(model, buff)
+
+
+def test_model_vars():
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        pm.Normal("x", a)
+
+    with pytest.warns(DeprecationWarning):
+        old_vars = model.vars
+
+    assert old_vars == model.value_vars
