@@ -967,6 +967,8 @@ class TestSamplePriorPredictive(SeededTest):
             a = pm.Uniform("a", lower=0, upper=1, size=10)
             b = pm.Binomial("b", n=1, p=a, size=10)
 
+        model.default_rng.get_value(borrow=True).seed(232093)
+
         b_sampler = aesara.function([], b)
         avg = np.stack([b_sampler() for i in range(10000)]).mean(0)
         npt.assert_array_almost_equal(avg, 0.5 * np.ones((10,)), decimal=2)
