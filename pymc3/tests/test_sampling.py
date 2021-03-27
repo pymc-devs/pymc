@@ -877,7 +877,9 @@ def test_init_jitter(testval, jitter_max_retries, expectation):
         # Starting value is negative (invalid) when np.random.rand returns 0 (jitter = -1)
         # and positive (valid) when it returns 1 (jitter = 1)
         with mock.patch("numpy.random.rand", side_effect=[0, 0, 0, 1, 0]):
-            start = pm.sampling._init_jitter(m, chains=1, jitter_max_retries=jitter_max_retries)
+            start = pm.sampling._init_jitter(
+                m, m.test_point, chains=1, jitter_max_retries=jitter_max_retries
+            )
             pm.util.check_start_vals(start, m)
 
 

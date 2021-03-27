@@ -274,7 +274,10 @@ def test_full_adapt_sampling(seed=289586):
     with pymc3.Model() as model:
         pymc3.MvNormal("a", mu=np.zeros(len(L)), chol=L, size=len(L))
 
-        pot = quadpotential.QuadPotentialFullAdapt(model.size, np.zeros(model.size))
+        initial_point = model.test_point
+        initial_point_size = sum(initial_point[n.name].size for n in model.vars)
+
+        pot = quadpotential.QuadPotentialFullAdapt(initial_point_size, np.zeros(initial_point_size))
         step = pymc3.NUTS(model=model, potential=pot)
         pymc3.sample(draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1)
 
