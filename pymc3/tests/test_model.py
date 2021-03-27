@@ -59,17 +59,17 @@ class TestBaseModel:
     def test_setattr_properly_works(self):
         with pm.Model() as model:
             pm.Normal("v1")
-            assert len(model.vars) == 1
+            assert len(model.value_vars) == 1
             with pm.Model("sub") as submodel:
                 submodel.register_rv(pm.Normal.dist(), "v1")
                 assert hasattr(submodel, "v1")
-                assert len(submodel.vars) == 1
-            assert len(model.vars) == 2
+                assert len(submodel.value_vars) == 1
+            assert len(model.value_vars) == 2
             with submodel:
                 submodel.register_rv(pm.Normal.dist(), "v2")
                 assert hasattr(submodel, "v2")
-                assert len(submodel.vars) == 2
-            assert len(model.vars) == 3
+                assert len(submodel.value_vars) == 2
+            assert len(model.value_vars) == 3
 
     def test_context_passes_vars_to_parent_model(self):
         with pm.Model() as model:
@@ -356,7 +356,7 @@ def test_multiple_observed_rv():
     assert not model["x"] == model["mu"]
     assert model["x"] == model["x"]
     assert model["x"] in model.observed_RVs
-    assert not model["x"] in model.vars
+    assert not model["x"] in model.value_vars
 
 
 def test_tempered_logp_dlogp():

@@ -50,7 +50,7 @@ def test_find_MAP_discrete():
         Binomial("s", n=n, p=p, observed=yes)
 
         map_est1 = starting.find_MAP()
-        map_est2 = starting.find_MAP(vars=model.vars)
+        map_est2 = starting.find_MAP(vars=model.value_vars)
 
     close_to(map_est1["p"], 0.6086956533498806, tol)
 

@@ -264,7 +264,7 @@ def make_shared_replacements(point, vars, model):
     -------
     Dict of variable -> new shared variable
     """
-    othervars = set(model.vars) - set(vars)
+    othervars = set(model.value_vars) - set(vars)
     return {
         var: aesara.shared(point[var.name], var.name + "_shared", broadcastable=var.broadcastable)
         for var in othervars

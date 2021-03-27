@@ -112,7 +112,7 @@ class TestARM12_6(SeededTest):
                 start=start,
                 vars=[model["groupmean"], model["sd_interval__"], model["floor_m"]],
             )
-            step = pm.NUTS(model.vars, scaling=start)
+            step = pm.NUTS(model.value_vars, scaling=start)
             pm.sample(50, step=step, start=start)
 
 
@@ -155,11 +155,11 @@ class TestARM12_6Uranium(SeededTest):
                 }
             )
 
-            start = pm.find_MAP(start, model.vars[:-1])
+            start = pm.find_MAP(start, model.value_vars[:-1])
             H = model.fastd2logp()
             h = np.diag(H(start))
 
-            step = pm.HamiltonianMC(model.vars, h)
+            step = pm.HamiltonianMC(model.value_vars, h)
             pm.sample(50, step=step, start=start)
 
 

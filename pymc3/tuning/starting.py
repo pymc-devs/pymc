@@ -184,7 +184,7 @@ def nan_to_high(x):
 
 
 def allinmodel(vars, model):
-    notin = [v for v in vars if v not in model.vars]
+    notin = [v for v in vars if v not in model.value_vars]
     if notin:
         notin = list(map(get_var_name, notin))
         raise ValueError("Some variables not in the model: " + str(notin))

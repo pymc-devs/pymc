@@ -74,7 +74,7 @@ class SMC:
         self.max_steps = n_steps
         self.proposed = draws * n_steps
         self.acc_rate = 1
-        self.variables = inputvars(self.model.vars)
+        self.variables = inputvars(self.model.value_vars)
         self.weights = np.ones(self.draws) / self.draws
         self.log_marginal_likelihood = 0
         self.sim_data = []

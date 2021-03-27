@@ -639,7 +639,7 @@ class TestMetropolisProposal:
         _, model, _ = mv_simple()
         with model:
             initial_point = model.test_point
-            initial_point_size = sum(initial_point[n.name].size for n in model.vars)
+            initial_point_size = sum(initial_point[n.name].size for n in model.value_vars)
 
             s = np.ones(initial_point_size)
             sampler = Metropolis(S=s)
@@ -1066,7 +1066,7 @@ class TestMLDA:
             assert isinstance(sampler.step_method_below.proposal_dist, UniformProposal)
 
             initial_point = model.test_point
-            initial_point_size = sum(initial_point[n.name].size for n in model.vars)
+            initial_point_size = sum(initial_point[n.name].size for n in model.value_vars)
             s = np.ones(initial_point_size)
             sampler = MLDA(coarse_models=[model_coarse], base_sampler="Metropolis", base_S=s)
             assert isinstance(sampler.proposal_dist, RecursiveDAProposal)
@@ -1101,7 +1101,7 @@ class TestMLDA:
         _, model_very_coarse, _ = mv_simple_very_coarse()
         with model:
             initial_point = model.test_point
-            initial_point_size = sum(initial_point[n.name].size for n in model.vars)
+            initial_point_size = sum(initial_point[n.name].size for n in model.value_vars)
             s = np.ones(initial_point_size) + 2.0
             sampler = MLDA(
                 coarse_models=[model_very_coarse, model_coarse],
