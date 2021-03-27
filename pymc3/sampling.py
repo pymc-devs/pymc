@@ -43,7 +43,7 @@ from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
 from pymc3.blocking import DictToArrayBijection
 from pymc3.exceptions import IncorrectArgumentsError, SamplingError
-from pymc3.model import Model, Point, all_continuous, modelcontext
+from pymc3.model import Model, Point, modelcontext
 from pymc3.parallel_sampling import Draw, _cpu_count
 from pymc3.step_methods import (
     NUTS,
@@ -231,6 +231,21 @@ def _print_step_hierarchy(s: Step, level=0) -> None:
             ]
         )
         _log.info(">" * level + f"{s.__class__.__name__}: [{varnames}]")
+
+
+def all_continuous(vars):
+    """Check that vars not include discrete variables or BART variables, excepting observed RVs."""
+
+    vars_ = [var for var in vars if not (var.owner and hasattr(var.tag, "observations"))]
+    if any(
+        [
+            (var.dtype in discrete_types or (var.owner and isinstance(var.owner.op, pm.BART)))
+            for var in vars_
+        ]
+    ):
+        return False
+    else:
+        return True
 
 
 def sample(

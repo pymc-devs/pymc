@@ -1495,18 +1495,3 @@ def Potential(name, var, model=None):
     model.potentials.append(var)
     model.add_random_variable(var)
     return var
-
-
-def all_continuous(vars):
-    """Check that vars not include discrete variables or BART variables, excepting observed RVs."""
-
-    vars_ = [var for var in vars if not (var.owner and hasattr(var.tag, "observations"))]
-    if any(
-        [
-            (var.dtype in pm.discrete_types or (var.owner and isinstance(var.owner.op, pm.BART)))
-            for var in vars_
-        ]
-    ):
-        return False
-    else:
-        return True
