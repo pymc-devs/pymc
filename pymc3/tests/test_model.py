@@ -11,18 +11,21 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import pickle
 import unittest
 
 import aesara
+import aesara.sparse as sparse
 import aesara.tensor as at
 import numpy as np
+import numpy.ma as ma
 import numpy.testing as npt
 import pandas as pd
 import pytest
+import scipy.sparse as sps
 
 from aesara.tensor.subtensor import AdvancedIncSubtensor
+from aesara.tensor.var import TensorConstant
 
 import pymc3 as pm
 
@@ -440,3 +443,49 @@ def test_model_var_maps():
 
     assert model.rvs_to_values == {a: a.tag.value_var, x: x.tag.value_var}
     assert model.values_to_rvs == {a.tag.value_var: a, x.tag.value_var: x}
+
+
+def test_make_obs_var():
+    """
+    Check returned values for `data` given known inputs to `as_tensor()`.
+
+    Note that ndarrays should return a TensorConstant and sparse inputs
+    should return a Sparse Aesara object.
+    """
+    # Create the various inputs to the function
+    input_name = "testing_inputs"
+    sparse_input = sps.csr_matrix(np.eye(3))
+    dense_input = np.arange(9).reshape((3, 3))
+    masked_array_input = ma.array(dense_input, mask=(np.mod(dense_input, 2) == 0))
+
+    # Create a fake model and fake distribution to be used for the test
+    fake_model = pm.Model()
+    with fake_model:
+        fake_distribution = pm.Normal.dist(mu=0, sigma=1)
+        # Create the testval attribute simply for the sake of model testing
+        fake_distribution.name = input_name
+
+    # Check function behavior using the various inputs
+    dense_output = pm.model.make_obs_var(fake_distribution, dense_input)
+    sparse_output = pm.model.make_obs_var(fake_distribution, sparse_input)
+    masked_output = pm.model.make_obs_var(fake_distribution, masked_array_input)
+
+    # Ensure that the missing values are appropriately set to None
+    for func_output in [dense_output, sparse_output]:
+        assert func_output.tag.missing_values is None
+
+    # Ensure that the Aesara variable names are correctly set.
+    # Note that the output for masked inputs do not have their names set
+    # to the passed value.
+    for func_output in [dense_output, sparse_output]:
+        assert func_output.name == input_name
+
+    # Ensure the that returned functions are all of the correct type
+    assert isinstance(dense_output.tag.observations, TensorConstant)
+    assert sparse.basic._is_sparse_variable(sparse_output.tag.observations)
+
+    # Masked output is something weird. Just ensure it has missing values
+    # self.assertIsInstance(masked_output, TensorConstant)
+    assert masked_output.tag.missing_values is not None
+
+    return None
