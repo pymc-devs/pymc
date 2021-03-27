@@ -31,7 +31,6 @@ jobs:
             --ignore=pymc3/tests/test_mixture.py
             --ignore=pymc3/tests/test_model_graph.py
             --ignore=pymc3/tests/test_modelcontext.py
-            --ignore=pymc3/tests/test_models_linear.py
             --ignore=pymc3/tests/test_parallel_sampling.py
             --ignore=pymc3/tests/test_profile.py
             --ignore=pymc3/tests/test_random.py
@@ -54,6 +53,7 @@ jobs:
             --ignore=pymc3/tests/test_examples.py
             --ignore=pymc3/tests/test_glm.py
             --ignore=pymc3/tests/test_glm_utils.py
+            --ignore=pymc3/tests/test_glm_linear.py
             --ignore=pymc3/tests/test_gp.py
             --ignore=pymc3/tests/test_model.py
             --ignore=pymc3/tests/test_model_func.py

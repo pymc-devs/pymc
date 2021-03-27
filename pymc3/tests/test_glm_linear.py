@@ -19,6 +19,7 @@ from pymc3 import Model, Normal, Slice, Uniform, find_MAP, sample
 from pymc3.glm import GLM, LinearComponent
 from pymc3.tests.helpers import SeededTest
 
+pytestmark = pytest.mark.xfail(reason="LinearComponent model has not been refactored for v4")
 
 # Generate data
 def generate_data(intercept, slope, size=700):
