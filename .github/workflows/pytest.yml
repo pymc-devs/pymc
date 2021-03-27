@@ -53,10 +53,10 @@ jobs:
             --ignore=pymc3/tests/test_updates.py
             --ignore=pymc3/tests/test_examples.py
             --ignore=pymc3/tests/test_glm.py
+            --ignore=pymc3/tests/test_glm_utils.py
             --ignore=pymc3/tests/test_gp.py
             --ignore=pymc3/tests/test_model.py
             --ignore=pymc3/tests/test_model_func.py
-            --ignore=pymc3/tests/test_models_utils.py
             --ignore=pymc3/tests/test_ode.py
             --ignore=pymc3/tests/test_posdef_sym.py
             --ignore=pymc3/tests/test_quadpotential.py
@@ -78,10 +78,10 @@ jobs:
             pymc3/tests/test_distributions_random.py
             pymc3/tests/test_examples.py
             pymc3/tests/test_glm.py
+            pymc3/tests/test_glm_utils.py
             pymc3/tests/test_gp.py
             pymc3/tests/test_model.py
             pymc3/tests/test_model_func.py
-            pymc3/tests/test_models_utils.py
             pymc3/tests/test_ode.py
             pymc3/tests/test_posdef_sym.py
             pymc3/tests/test_quadpotential.py
