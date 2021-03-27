@@ -979,9 +979,9 @@ class TestNutsCheckTrace:
 
     def test_linalg(self, caplog):
         with Model():
-            a = Normal("a", size=2, testval=floatX(np.zeros(2)))
-            a = at.switch(a > 0, np.inf, a)
-            b = at.slinalg.solve(floatX(np.eye(2)), a)
+            a = Normal("a", size=2)
+            a = aet.switch(a > 0, np.inf, a)
+            b = aet.slinalg.solve(floatX(np.eye(2)), a)
             Normal("c", mu=b, size=2, testval=floatX(np.r_[0.0, 0.0]))
             caplog.clear()
             trace = sample(20, init=None, tune=5, chains=2)
