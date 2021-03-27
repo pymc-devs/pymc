@@ -106,7 +106,6 @@ def mv_simple():
             "x",
             at.constant(mu),
             tau=at.constant(tau),
-            size=3,
             testval=floatX_array([0.1, 1.0, 0.8]),
         )
     H = tau
@@ -123,7 +122,6 @@ def mv_simple_coarse():
             "x",
             at.constant(mu),
             tau=at.constant(tau),
-            size=3,
             testval=floatX_array([0.1, 1.0, 0.8]),
         )
     H = tau
@@ -140,7 +138,6 @@ def mv_simple_very_coarse():
             "x",
             at.constant(mu),
             tau=at.constant(tau),
-            size=3,
             testval=floatX_array([0.1, 1.0, 0.8]),
         )
     H = tau
@@ -153,7 +150,7 @@ def mv_simple_discrete():
     n = 5
     p = floatX_array([0.15, 0.85])
     with pm.Model() as model:
-        pm.Multinomial("x", n, at.constant(p), size=d, testval=np.array([1, 4]))
+        pm.Multinomial("x", n, at.constant(p), testval=np.array([1, 4]))
         mu = n * p
         # covariance matrix
         C = np.zeros((d, d))
@@ -187,7 +184,7 @@ def mv_prior_simple():
 
     with pm.Model() as model:
         x = pm.Flat("x", size=n)
-        x_obs = pm.MvNormal("x_obs", observed=obs, mu=x, cov=noise * np.eye(n), size=n)
+        x_obs = pm.MvNormal("x_obs", observed=obs, mu=x, cov=noise * np.eye(n))
 
     return model.test_point, model, (K, L, mu_post, std_post, noise)
 
