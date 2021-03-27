@@ -1457,20 +1457,6 @@ def make_obs_var(rv_var: TensorVariable, data: Union[np.ndarray]) -> TensorVaria
     return rv_var
 
 
-def _walk_up_rv(rv, formatting="plain"):
-    """Walk up aesara graph to get inputs for deterministic RV."""
-    all_rvs = []
-    parents = list(itertools.chain(*[j.inputs for j in rv.get_parents()]))
-    if parents:
-        for parent in parents:
-            all_rvs.extend(_walk_up_rv(parent, formatting=formatting))
-    else:
-        name = rv.name if rv.name else "Constant"
-        fmt = r"\text{{{name}}}" if "latex" in formatting else "{name}"
-        all_rvs.append(fmt.format(name=name))
-    return all_rvs
-
-
 def Deterministic(name, var, model=None, dims=None):
     """Create a named deterministic variable
 
