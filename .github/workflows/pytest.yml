@@ -66,6 +66,7 @@ jobs:
             --ignore=pymc3/tests/test_distributions_random.py
 
           - |
+            pymc3/tests/test_modelcontext.py
             pymc3/tests/test_dist_math.py
             pymc3/tests/test_minibatches.py
             pymc3/tests/test_pickling.py
