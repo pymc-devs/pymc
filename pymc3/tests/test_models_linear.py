@@ -52,7 +52,7 @@ class TestGLM(SeededTest):
             sigma = Uniform("sigma", 0, 20)  # yields sigma_interval__
             Normal("y_obs", mu=lm.y_est, sigma=sigma, observed=self.y_linear)  # yields y_obs
             start = find_MAP(vars=[sigma])
-            step = Slice(model.vars)
+            step = Slice(model.value_vars)
             trace = sample(
                 500, tune=0, step=step, start=start, progressbar=False, random_seed=self.random_seed
             )
@@ -68,7 +68,7 @@ class TestGLM(SeededTest):
             sigma = Uniform("sigma", 0, 20)
             Normal("y_obs", mu=lm.y_est, sigma=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
-            step = Slice(model.vars)
+            step = Slice(model.value_vars)
             trace = sample(
                 500, tune=0, step=step, start=start, progressbar=False, random_seed=self.random_seed
             )
@@ -82,7 +82,7 @@ class TestGLM(SeededTest):
             vars_to_create = {"glm_sd", "glm_sd_log__", "glm_y", "glm_x0", "glm_Intercept"}
             GLM(self.data_linear["x"], self.data_linear["y"], name="glm")
             start = find_MAP()
-            step = Slice(model.vars)
+            step = Slice(model.value_vars)
             trace = sample(
                 500, tune=0, step=step, start=start, progressbar=False, random_seed=self.random_seed
             )
@@ -96,7 +96,7 @@ class TestGLM(SeededTest):
             NAME = "glm"
             GLM.from_formula("y ~ x", self.data_linear, name=NAME)
             start = find_MAP()
-            step = Slice(model.vars)
+            step = Slice(model.value_vars)
             trace = sample(
                 500, tune=0, step=step, start=start, progressbar=False, random_seed=self.random_seed
             )
