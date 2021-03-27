@@ -223,7 +223,7 @@ class TestValueGradFunction(unittest.TestCase):
     def test_no_extra(self):
         a = at.vector("a")
         a.tag.test_value = np.zeros(3, dtype=a.dtype)
-        f_grad = ValueGradFunction([a.sum()], [a], [], mode="FAST_COMPILE")
+        f_grad = ValueGradFunction([a.sum()], [a], {}, mode="FAST_COMPILE")
         assert f_grad._extra_vars == []
 
     def test_invalid_type(self):

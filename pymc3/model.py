@@ -377,10 +377,10 @@ class ValueGradFunction:
         compute_grads=True,
         **kwargs,
     ):
-        if extra_vars is None:
-            extra_vars = []
+        if extra_vars_and_values is None:
+            extra_vars_and_values = {}
 
-        names = [arg.name for arg in grad_vars + extra_vars]
+        names = [arg.name for arg in grad_vars + list(extra_vars_and_values.keys())]
         if any(name is None for name in names):
             raise ValueError("Arguments must be named.")
         if len(set(names)) != len(names):
@@ -421,8 +421,8 @@ class ValueGradFunction:
 
         givens = []
         self._extra_vars_shared = {}
-        for var in extra_vars:
-            shared = aesara.shared(var.tag.test_value, var.name + "_shared__")
+        for var, value in extra_vars_and_values.items():
+            shared = aesara.shared(value, var.name + "_shared__")
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
 
@@ -694,8 +694,13 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             costs = [self.logpt]
 
         input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
-        extra_vars = [var for var in self.free_RVs if var in input_vars]
-        return ValueGradFunction(costs, grad_vars, extra_vars, **kwargs)
+        extra_vars = [getattr(var.tag, "value_var", var) for var in self.free_RVs]
+        extra_vars_and_values = {
+            var: self.test_point[var.name]
+            for var in extra_vars
+            if var in input_vars and var not in grad_vars
+        }
+        return ValueGradFunction(costs, grad_vars, extra_vars_and_values, **kwargs)
 
     @property
     def logpt(self):
