@@ -328,7 +328,6 @@ def test_partial_trace_sample():
         # TODO: Assert something to make this a real test
 
 
-@pytest.mark.xfail
 def test_chain_idx():
     # see https://github.com/pymc-devs/pymc3/issues/4469
     with pm.Model():
@@ -340,6 +339,7 @@ def test_chain_idx():
         trace = pm.sample(draws=150, tune=10, chain_idx=1)
 
         ppc = pm.sample_posterior_predictive(trace)
+        # TODO FIXME: Assert something.
         ppc = pm.sample_posterior_predictive(trace, keep_size=True)
 
 
@@ -798,22 +798,7 @@ class TestSamplePPCW(SeededTest):
             pm.sample_posterior_predictive_w(samples=5, traces=[trace, trace], models=[m, m])
 
 
-@pytest.mark.parametrize(
-    "method",
-    [
-        "advi",
-        "ADVI+adapt_diag",
-        "advi+adapt_diag_grad",
-        "advi_map",
-        "jitter+adapt_diag",
-        "adapt_diag",
-        "map",
-        "adapt_full",
-        "jitter+adapt_full",
-    ],
-)
-@pytest.mark.xfail(reason="ADVI not refactored for v4", exception=NotImplementedError)
-def test_exec_nuts_init(method):
+def check_exec_nuts_init(method):
     with pm.Model() as model:
         pm.Normal("a", mu=0, sigma=1, size=2)
         pm.HalfNormal("b", sigma=1)
@@ -822,12 +807,42 @@ def test_exec_nuts_init(method):
         assert isinstance(start, list)
         assert len(start) == 1
         assert isinstance(start[0], dict)
-        assert "a" in start[0] and "b" in start[0]
+        assert model.a.tag.value_var.name in start[0]
+        assert model.b.tag.value_var.name in start[0]
         start, _ = pm.init_nuts(init=method, n_init=10, chains=2)
         assert isinstance(start, list)
         assert len(start) == 2
         assert isinstance(start[0], dict)
-        assert "a" in start[0] and "b" in start[0]
+        assert model.a.tag.value_var.name in start[0]
+        assert model.b.tag.value_var.name in start[0]
+
+
+@pytest.mark.xfail(reason="ADVI not refactored for v4")
+@pytest.mark.parametrize(
+    "method",
+    [
+        "advi",
+        "ADVI+adapt_diag",
+        "advi+adapt_diag_grad",
+        "advi_map",
+    ],
+)
+def test_exec_nuts_advi_init(method):
+    check_exec_nuts_init(method)
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        "jitter+adapt_diag",
+        "adapt_diag",
+        "map",
+        "adapt_full",
+        "jitter+adapt_full",
+    ],
+)
+def test_exec_nuts_init(method):
+    check_exec_nuts_init(method)
 
 
 @pytest.mark.parametrize(
