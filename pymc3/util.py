@@ -32,6 +32,94 @@ LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
 UNSET = object()
 
 
+def withparent(meth):
+    """Helper wrapper that passes calls to parent's instance"""
+
+    def wrapped(self, *args, **kwargs):
+        res = meth(self, *args, **kwargs)
+        if getattr(self, "parent", None) is not None:
+            getattr(self.parent, meth.__name__)(*args, **kwargs)
+        return res
+
+    # Unfortunately functools wrapper fails
+    # when decorating built-in methods so we
+    # need to fix that improper behaviour
+    wrapped.__name__ = meth.__name__
+    return wrapped
+
+
+class treelist(list):
+    """A list that passes mutable extending operations used in Model
+    to parent list instance.
+    Extending treelist you will also extend its parent
+    """
+
+    def __init__(self, iterable=(), parent=None):
+        super().__init__(iterable)
+        assert isinstance(parent, list) or parent is None
+        self.parent = parent
+        if self.parent is not None:
+            self.parent.extend(self)
+
+    # typechecking here works bad
+    append = withparent(list.append)
+    __iadd__ = withparent(list.__iadd__)
+    extend = withparent(list.extend)
+
+    def tree_contains(self, item):
+        if isinstance(self.parent, treedict):
+            return list.__contains__(self, item) or self.parent.tree_contains(item)
+        elif isinstance(self.parent, list):
+            return list.__contains__(self, item) or self.parent.__contains__(item)
+        else:
+            return list.__contains__(self, item)
+
+    def __setitem__(self, key, value):
+        raise NotImplementedError(
+            "Method is removed as we are not able to determine appropriate logic for it"
+        )
+
+    # Added this because mypy didn't like having __imul__ without __mul__
+    # This is my best guess about what this should do.  I might be happier
+    # to kill both of these if they are not used.
+    def __mul__(self, other) -> "treelist":
+        return cast("treelist", list.__mul__(self, other))
+
+    def __imul__(self, other) -> "treelist":
+        t0 = len(self)
+        list.__imul__(self, other)
+        if self.parent is not None:
+            self.parent.extend(self[t0:])
+        return self  # python spec says should return the result.
+
+
+class treedict(dict):
+    """A dict that passes mutable extending operations used in Model
+    to parent dict instance.
+    Extending treedict you will also extend its parent
+    """
+
+    def __init__(self, iterable=(), parent=None, **kwargs):
+        super().__init__(iterable, **kwargs)
+        assert isinstance(parent, dict) or parent is None
+        self.parent = parent
+        if self.parent is not None:
+            self.parent.update(self)
+
+    # typechecking here works bad
+    __setitem__ = withparent(dict.__setitem__)
+    update = withparent(dict.update)
+
+    def tree_contains(self, item):
+        # needed for `add_random_variable` method
+        if isinstance(self.parent, treedict):
+            return dict.__contains__(self, item) or self.parent.tree_contains(item)
+        elif isinstance(self.parent, dict):
+            return dict.__contains__(self, item) or self.parent.__contains__(item)
+        else:
+            return dict.__contains__(self, item)
+
+
 def escape_latex(strng):
     r"""Consistently escape LaTeX special characters for _repr_latex_ in IPython
 
