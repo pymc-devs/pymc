@@ -28,7 +28,7 @@ import pymc3 as pm
 
 from pymc3 import Deterministic, Potential
 from pymc3.blocking import RaveledVars
-from pymc3.distributions import Normal, transforms
+from pymc3.distributions import Normal, logpt_sum, transforms
 from pymc3.model import ValueGradFunction
 
 
@@ -157,7 +157,7 @@ class TestObserved:
                 Normal("n", observed=x)
 
     def test_observed_type(self):
-        X_ = np.random.randn(100, 5).astype(aesara.config.floatX)
+        X_ = pm.floatX(np.random.randn(100, 5))
         X = pm.floatX(aesara.shared(X_))
         with pm.Model():
             x1 = pm.Normal("x1", observed=X_)
@@ -278,7 +278,7 @@ class TestValueGradFunction(unittest.TestCase):
         assert val == 21
         npt.assert_allclose(grad, [5, 5, 5, 1, 1, 1, 1, 1, 1])
 
-    @pytest.mark.xfail(reason="Missing distributions")
+    @pytest.mark.xfail(reason="Lognormal not refactored for v4")
     def test_edge_case(self):
         # Edge case discovered in #2948
         ndim = 3
@@ -297,7 +297,7 @@ class TestValueGradFunction(unittest.TestCase):
         assert dlogp.size == 4
         npt.assert_allclose(dlogp, 0.0, atol=1e-5)
 
-    @pytest.mark.xfail(reason="Missing distributions")
+    @pytest.mark.xfail(reason="Missing values not refactored for v4")
     def test_tensor_type_conversion(self):
         # case described in #3122
         X = np.random.binomial(1, 0.5, 10)
@@ -311,23 +311,24 @@ class TestValueGradFunction(unittest.TestCase):
 
         assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
 
-    @pytest.mark.xfail(reason="Missing distributions")
-    def test_aesara_switch_broadcast_edge_cases(self):
+    def test_aesara_switch_broadcast_edge_cases_1(self):
         # Tests against two subtle issues related to a previous bug in Theano
         # where `tt.switch` would not always broadcast tensors with single
         # values https://github.com/pymc-devs/aesara/issues/270
 
         # Known issue 1: https://github.com/pymc-devs/pymc3/issues/4389
-        data = np.zeros(10)
+        data = pm.floatX(np.zeros(10))
         with pm.Model() as m:
             p = pm.Beta("p", 1, 1)
             obs = pm.Bernoulli("obs", p=p, observed=data)
-        # Assert logp is correct
+
         npt.assert_allclose(
-            obs.logp(m.test_point),
+            logpt_sum(obs).eval({p.tag.value_var: pm.floatX(np.array(0.0))}),
             np.log(0.5) * 10,
         )
 
+    @pytest.mark.xfail(reason="TruncatedNormal not refactored for v4")
+    def test_aesara_switch_broadcast_edge_cases_2(self):
         # Known issue 2: https://github.com/pymc-devs/pymc3/issues/4417
         # fmt: off
         data = np.array([
@@ -338,11 +339,11 @@ class TestValueGradFunction(unittest.TestCase):
         with pm.Model() as m:
             mu = pm.Normal("mu", 0, 5)
             obs = pm.TruncatedNormal("obs", mu=mu, sigma=1, lower=-1, upper=2, observed=data)
-        # Assert dlogp is correct
+
         npt.assert_allclose(m.dlogp([mu])({"mu": 0}), 2.499424682024436, rtol=1e-5)
 
 
-@pytest.mark.xfail(reason="DensityDist not supported")
+@pytest.mark.xfail(reason="DensityDist not refactored for v4")
 def test_multiple_observed_rv():
     "Test previously buggy multi-observed RV comparison code."
     y1_data = np.random.randn(10)
