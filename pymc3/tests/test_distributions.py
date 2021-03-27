@@ -36,7 +36,7 @@ from scipy.special import erf, logit
 
 import pymc3 as pm
 
-from pymc3.aesaraf import floatX
+from pymc3.aesaraf import change_rv_size, floatX
 from pymc3.distributions import (
     AR1,
     CAR,
@@ -98,7 +98,6 @@ from pymc3.distributions import (
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
-    change_rv_size,
     continuous,
     logcdf,
     logpt,
