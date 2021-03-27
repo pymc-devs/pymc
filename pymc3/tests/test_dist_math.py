@@ -125,7 +125,6 @@ class MultinomialB(Discrete):
         )
 
 
-@pytest.mark.xfail(reason="This test relies on the deprecated Distribution interface")
 def test_multinomial_bound():
 
     x = np.array([1, 5])
@@ -144,7 +143,6 @@ def test_multinomial_bound():
     )
 
 
-@pytest.mark.xfail(reason="MvNormal not implemented")
 class TestMvNormalLogp:
     def test_logp(self):
         np.random.seed(42)
@@ -187,21 +185,21 @@ class TestMvNormalLogp:
 
     @aesara.config.change_flags(compute_test_value="ignore")
     def test_hessian(self):
-        chol_vec = at.vector("chol_vec")
+        chol_vec = aet.vector("chol_vec")
         chol_vec.tag.test_value = floatX(np.array([0.1, 2, 3]))
-        chol = at.stack(
+        chol = aet.stack(
             [
                 at.stack([at.exp(0.1 * chol_vec[0]), 0]),
                 at.stack([chol_vec[1], 2 * at.exp(chol_vec[2])]),
             ]
         )
-        cov = at.dot(chol, chol.T)
-        delta = at.matrix("delta")
+        cov = aet.dot(chol, chol.T)
+        delta = aet.matrix("delta")
         delta.tag.test_value = floatX(np.ones((5, 2)))
         logp = MvNormalLogp()(cov, delta)
-        g_cov, g_delta = at.grad(logp, [cov, delta])
+        g_cov, g_delta = aet.grad(logp, [cov, delta])
         # TODO: What's the test?  Something needs to be asserted.
-        at.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
+        aet.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
 
 
 class TestSplineWrapper:
