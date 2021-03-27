@@ -829,6 +829,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
+            self.values_to_rvs = treedict(parent=self.parent.values_to_rvs)
+            self.rvs_to_values = treedict(parent=self.parent.rvs_to_values)
             self.free_RVs = treelist(parent=self.parent.free_RVs)
             self.observed_RVs = treelist(parent=self.parent.observed_RVs)
             self.deterministics = treelist(parent=self.parent.deterministics)
@@ -836,6 +838,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.missing_values = treelist(parent=self.parent.missing_values)
         else:
             self.named_vars = treedict()
+            self.values_to_rvs = treedict()
+            self.rvs_to_values = treedict()
             self.free_RVs = treelist()
             self.observed_RVs = treelist()
             self.deterministics = treelist()
@@ -1183,6 +1187,11 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         self.named_vars[var.name] = var
         if not hasattr(self, self.name_of(var.name)):
             setattr(self, self.name_of(var.name), var)
+
+        value_var = getattr(var.tag, "value_var", None)
+        self.rvs_to_values[var] = value_var
+        if value_var is not None:
+            self.values_to_rvs[value_var] = var
 
     @property
     def prefix(self):
