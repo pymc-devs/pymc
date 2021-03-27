@@ -863,7 +863,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def ndim(self):
-        return sum(var.ndim for var in self.vars)
+        return sum(var.ndim for var in self.value_vars)
 
     def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
         """Compile a aesara function that computes logp and gradient.
@@ -966,7 +966,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             return at.sum(factors)
 
     @property
-    def vars(self):
+    def value_vars(self):
         """List of unobserved random variables used as inputs to the model's
         log-likelihood (which excludes deterministics).
         """
@@ -1045,12 +1045,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     @property
     def disc_vars(self):
         """All the discrete variables in the model"""
-        return list(typefilter(self.vars, discrete_types))
+        return list(typefilter(self.value_vars, discrete_types))
 
     @property
     def cont_vars(self):
         """All the continuous variables in the model"""
-        return list(typefilter(self.vars, continuous_types))
+        return list(typefilter(self.value_vars, continuous_types))
 
     def shape_from_dims(self, dims):
         shape = []
@@ -1223,7 +1223,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """
         with self:
             return aesara.function(
-                self.vars,
+                self.value_vars,
                 outs,
                 allow_input_downcast=True,
                 on_unused_input="ignore",
@@ -1310,7 +1310,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         flat_view
         """
         if vars is None:
-            vars = self.vars
+            vars = self.value_vars
         if order is not None:
             var_map = {v.name: v for v in vars}
             vars = [var_map[n] for n in order]
@@ -1514,7 +1514,7 @@ def Point(*args, filter_model_vars=False, **kwargs):
     return {
         get_var_name(k): np.array(v)
         for k, v in d.items()
-        if not filter_model_vars or (get_var_name(k) in map(get_var_name, model.vars))
+        if not filter_model_vars or (get_var_name(k) in map(get_var_name, model.value_vars))
     }
 
 

@@ -131,7 +131,7 @@ class BaseStochasticGradient(ArrayStepShared):
         model = modelcontext(model)
 
         if vars is None:
-            vars = model.vars
+            vars = model.value_vars
 
         vars = inputvars(vars)
 

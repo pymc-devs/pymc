@@ -153,7 +153,7 @@ class Metropolis(ArrayStepShared):
         initial_values = model.test_point
 
         if vars is None:
-            vars = model.vars
+            vars = model.value_vars
         vars = pm.inputvars(vars)
 
         if S is None:
@@ -662,7 +662,7 @@ class DEMetropolis(PopulationArrayStepShared):
 
         model = pm.modelcontext(model)
         initial_values = model.test_point
-        initial_values_size = sum(initial_values[n.name].size for n in model.vars)
+        initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
             vars = model.cont_vars
@@ -811,7 +811,7 @@ class DEMetropolisZ(ArrayStepShared):
     ):
         model = pm.modelcontext(model)
         initial_values = model.test_point
-        initial_values_size = sum(initial_values[n.name].size for n in model.vars)
+        initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
             vars = model.cont_vars
