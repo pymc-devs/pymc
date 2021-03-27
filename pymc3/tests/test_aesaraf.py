@@ -36,21 +36,26 @@ class TestBroadcasting:
         """Check if pm.make_shared_replacements preserves broadcasting."""
 
         with pm.Model() as test_model:
-            test1 = pm.Normal("test1", mu=0.0, sigma=1.0, shape=(1, 10))
-            test2 = pm.Normal("test2", mu=0.0, sigma=1.0, shape=(10, 1))
+            test1 = pm.Normal("test1", mu=0.0, sigma=1.0, size=(1, 10))
+            test2 = pm.Normal("test2", mu=0.0, sigma=1.0, size=(10, 1))
 
         # Replace test1 with a shared variable, keep test 2 the same
-        replacement = pm.make_shared_replacements([test_model.test2], test_model)
-        assert test_model.test1.broadcastable == replacement[test_model.test1].broadcastable
+        replacement = pm.make_shared_replacements(
+            test_model.test_point, [test_model.test2], test_model
+        )
+        assert (
+            test_model.test1.broadcastable
+            == replacement[test_model.test1.tag.value_var].broadcastable
+        )
 
     def test_metropolis_sampling(self):
         """Check if the Metropolis sampler can handle broadcasting."""
         with pm.Model() as test_model:
-            test1 = pm.Normal("test1", mu=0.0, sigma=1.0, shape=(1, 10))
-            test2 = pm.Normal("test2", mu=test1, sigma=1.0, shape=(10, 10))
+            test1 = pm.Normal("test1", mu=0.0, sigma=1.0, size=(1, 10))
+            test2 = pm.Normal("test2", mu=test1, sigma=1.0, size=(10, 10))
 
             step = pm.Metropolis()
-            # This should fail immediately if broadcasting does not work.
+            # TODO FIXME: Assert whatever it is we're testing
             pm.sample(tune=5, draws=7, cores=1, step=step, compute_convergence_checks=False)
 
 
