@@ -38,16 +38,10 @@ import pymc3 as pm
 from pymc3.aesaraf import generator, gradient, hessian, inputvars
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.data import GenTensorVariable, Minibatch
-from pymc3.distributions import (
-    change_rv_size,
-    logp_transform,
-    logpt,
-    logpt_sum,
-    no_transform_object,
-)
+from pymc3.distributions import change_rv_size, logp_transform, logpt, logpt_sum
 from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
-from pymc3.util import WithMemoization, get_var_name
+from pymc3.util import UNSET, WithMemoization, get_var_name
 from pymc3.vartypes import continuous_types, discrete_types, isgenerator, typefilter
 
 __all__ = [
@@ -1094,9 +1088,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             else:
                 self.coords[name] = coords[name]
 
-    def register_rv(
-        self, rv_var, name, data=None, total_size=None, dims=None, transform=no_transform_object
-    ):
+    def register_rv(self, rv_var, name, data=None, total_size=None, dims=None, transform=UNSET):
         """Register an (un)observed random variable with the model.
 
         Parameters
@@ -1159,7 +1151,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         # Make the value variable a transformed value variable,
         # if there's an applicable transform
-        if transform is no_transform_object:
+        if transform is UNSET:
             transform = logp_transform(rv_var.owner.op)
 
         if transform is not None:

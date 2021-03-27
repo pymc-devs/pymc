@@ -23,12 +23,13 @@ import dill
 import numpy as np
 import xarray
 
-from aesara.tensor.var import TensorVariable
 from cachetools import LRUCache, cachedmethod
 
 from pymc3.exceptions import SamplingError
 
 LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
+
+UNSET = object()
 
 
 def escape_latex(strng):

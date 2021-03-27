@@ -26,7 +26,7 @@ import dill
 
 from aesara.tensor.random.op import RandomVariable
 
-from pymc3.distributions import _logcdf, _logp, no_transform_object
+from pymc3.distributions import _logcdf, _logp
 
 if TYPE_CHECKING:
     from typing import Optional, Callable
@@ -40,7 +40,7 @@ from aesara.compile.sharedvalue import SharedVariable
 from aesara.graph.basic import Constant
 from aesara.tensor.var import TensorVariable
 
-from pymc3.util import get_repr_for_variable
+from pymc3.util import UNSET, get_repr_for_variable
 from pymc3.vartypes import string_types
 
 __all__ = [
@@ -161,7 +161,7 @@ class Distribution(metaclass=DistributionMeta):
         if "shape" in kwargs:
             raise DeprecationWarning("The `shape` keyword is deprecated; use `size`.")
 
-        transform = kwargs.pop("transform", no_transform_object)
+        transform = kwargs.pop("transform", UNSET)
 
         rv_out = cls.dist(*args, rng=rng, **kwargs)
 
