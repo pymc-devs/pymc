@@ -139,7 +139,7 @@ class BaseStochasticGradient(ArrayStepShared):
         self.batch_size = batch_size
         self.total_size = total_size
         _value_error(
-            total_size != None or batch_size != None,
+            total_size is not None or batch_size != None,
             "total_size and batch_size of training data have to be specified",
         )
         self.expected_iter = int(total_size / batch_size)
@@ -165,7 +165,7 @@ class BaseStochasticGradient(ArrayStepShared):
         self.dlogp_elemwise = elemwise_dlogL(vars, model, flat_view)
         self.q_size = int(sum(v.dsize for v in self.vars))
 
-        if minibatch_tensors != None:
+        if minibatch_tensors is not None:
             _check_minibatches(minibatch_tensors, minibatches)
             self.minibatches = minibatches
 
