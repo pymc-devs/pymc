@@ -431,3 +431,12 @@ def test_model_vars():
         old_vars = model.vars
 
     assert old_vars == model.value_vars
+
+
+def test_model_var_maps():
+    with pm.Model() as model:
+        a = pm.Uniform("a")
+        x = pm.Normal("x", a)
+
+    assert model.rvs_to_values == {a: a.tag.value_var, x: x.tag.value_var}
+    assert model.values_to_rvs == {a.tag.value_var: a, x.tag.value_var: x}
