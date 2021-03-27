@@ -216,7 +216,7 @@ class TestValueGradFunction(unittest.TestCase):
     def test_no_extra(self):
         a = at.vector("a")
         a.tag.test_value = np.zeros(3, dtype=a.dtype)
-        f_grad = ValueGradFunction([a.sum()], [a], [], mode="FAST_COMPILE")
+        f_grad = ValueGradFunction([a.sum()], [a], {}, mode="FAST_COMPILE")
         assert f_grad._extra_vars == []
 
     def test_invalid_type(self):
@@ -225,25 +225,22 @@ class TestValueGradFunction(unittest.TestCase):
         a.dshape = (3,)
         a.dsize = 3
         with pytest.raises(TypeError) as err:
-            ValueGradFunction([a.sum()], [a], [], mode="FAST_COMPILE")
+            ValueGradFunction([a.sum()], [a], {}, mode="FAST_COMPILE")
         err.match("Invalid dtype")
 
     def setUp(self):
         extra1 = at.iscalar("extra1")
         extra1_ = np.array(0, dtype=extra1.dtype)
-        extra1.tag.test_value = extra1_
         extra1.dshape = tuple()
         extra1.dsize = 1
 
         val1 = at.vector("val1")
         val1_ = np.zeros(3, dtype=val1.dtype)
-        val1.tag.test_value = val1_
         val1.dshape = (3,)
         val1.dsize = 3
 
         val2 = at.matrix("val2")
         val2_ = np.zeros((2, 3), dtype=val2.dtype)
-        val2.tag.test_value = val2_
         val2.dshape = (2, 3)
         val2.dsize = 6
 
@@ -253,7 +250,9 @@ class TestValueGradFunction(unittest.TestCase):
 
         self.cost = extra1 * val1.sum() + val2.sum()
 
-        self.f_grad = ValueGradFunction([self.cost], [val1, val2], [extra1], mode="FAST_COMPILE")
+        self.f_grad = ValueGradFunction(
+            [self.cost], [val1, val2], {extra1: extra1_}, mode="FAST_COMPILE"
+        )
 
     def test_extra_not_set(self):
         with pytest.raises(ValueError) as err:
