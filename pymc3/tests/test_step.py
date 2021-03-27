@@ -500,6 +500,10 @@ class TestStepMethods:  # yield test doesn't work subclassing object
     def teardown_class(self):
         shutil.rmtree(self.temp_dir)
 
+    @pytest.mark.xfail(
+        reason="This test is too ambiguous/broad and completely RNG-state specific. "
+        "It needs to be refactored or removed."
+    )
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_sample_exact(self):
         for step_method in self.master_samples:
