@@ -67,7 +67,7 @@ class BlockedStep:
         elif "vars" in kwargs:
             vars = kwargs.pop("vars")
         else:  # Assume all model variables
-            vars = model.vars
+            vars = model.value_vars
 
         # get the actual inputs from the vars
         # vars = inputvars(vars)

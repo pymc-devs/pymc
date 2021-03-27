@@ -30,9 +30,9 @@ def test_leapfrog_reversible():
     n = 3
     np.random.seed(42)
     start, model, _ = models.non_normal(n)
-    size = sum(start[n.name].size for n in model.vars)
+    size = sum(start[n.name].size for n in model.value_vars)
     scaling = floatX(np.random.rand(size))
-    step = BaseHMC(vars=model.vars, model=model, scaling=scaling)
+    step = BaseHMC(vars=model.value_vars, model=model, scaling=scaling)
     step.integrator._logp_dlogp_func.set_extra_values({})
     astart = DictToArrayBijection.map(start)
     p = RaveledVars(floatX(step.potential.random()), astart.point_map_info)

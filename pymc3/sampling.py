@@ -198,7 +198,7 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
     # Use competence classmethods to select step methods for remaining
     # variables
     selected_steps = defaultdict(list)
-    for var in model.vars:
+    for var in model.value_vars:
         if var not in assigned_vars:
             # determine if a gradient can be computed
             has_gradient = var.dtype not in discrete_types
@@ -498,7 +498,7 @@ def sample(
     if not model.free_RVs:
         raise ValueError("The model does not contain any free variables.")
 
-    if step is None and init is not None and all_continuous(model.vars):
+    if step is None and init is not None and all_continuous(model.value_vars):
         try:
             # By default, try to use NUTS
             _log.info("Auto-assigning NUTS sampler...")
@@ -587,7 +587,7 @@ def sample(
             )
             _log.info(f"Population sampling ({chains} chains)")
 
-            initial_point_model_size = sum(start[n.name].size for n in model.vars)
+            initial_point_model_size = sum(start[n.name].size for n in model.value_vars)
 
             if has_demcmc and chains < 3:
                 raise ValueError(
@@ -2078,8 +2078,8 @@ def init_nuts(
     """
     model = modelcontext(model)
 
-    vars = kwargs.get("vars", model.vars)
-    if set(vars) != set(model.vars):
+    vars = kwargs.get("vars", model.value_vars)
+    if set(vars) != set(model.value_vars):
         raise ValueError("Must use init_nuts on all variables of a model.")
     if not all_continuous(vars):
         raise ValueError("init_nuts can only be used for models with only " "continuous variables.")
@@ -2193,14 +2193,14 @@ def init_nuts(
         initial_point = model.test_point
         start = [initial_point] * chains
         mean = np.mean([apoint.data] * chains, axis=0)
-        initial_point_model_size = sum(initial_point[n.name].size for n in model.vars)
+        initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)
         cov = np.eye(initial_point_model_size)
         potential = quadpotential.QuadPotentialFullAdapt(initial_point_model_size, mean, cov, 10)
     elif init == "jitter+adapt_full":
         initial_point = model.test_point
         start = _init_jitter(model, initial_point, chains, jitter_max_retries)
         mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
-        initial_point_model_size = sum(initial_point[n.name].size for n in model.vars)
+        initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)
         cov = np.eye(initial_point_model_size)
         potential = quadpotential.QuadPotentialFullAdapt(initial_point_model_size, mean, cov, 10)
     else:
