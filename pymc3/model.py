@@ -1497,13 +1497,6 @@ def Potential(name, var, model=None):
     return var
 
 
-def as_iterargs(data):
-    if isinstance(data, tuple):
-        return data
-    else:
-        return [data]
-
-
 def all_continuous(vars):
     """Check that vars not include discrete variables or BART variables, excepting observed RVs."""
 
