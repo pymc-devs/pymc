@@ -16,6 +16,7 @@ from typing import Callable, Dict, Generator, Iterable, List, Optional, Tuple, U
 import aesara
 import aesara.tensor as at
 import numpy as np
+import scipy.sparse as sps
 
 from aesara import config, scalar
 from aesara.gradient import grad
@@ -35,8 +36,7 @@ from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorVariable
 
-from pymc3.data import GeneratorAdapter
-from pymc3.vartypes import continuous_types, int_types, typefilter
+from pymc3.vartypes import continuous_types, int_types, isgenerator, typefilter
 
 PotentialShapeType = Union[
     int, np.ndarray, Tuple[Union[int, Variable], ...], List[Union[int, Variable]], Variable
@@ -60,7 +60,60 @@ __all__ = [
     "set_at_rng",
     "at_rng",
     "take_along_axis",
+    "pandas_to_array",
 ]
+
+
+def pandas_to_array(data):
+    """Convert a pandas object to a NumPy array.
+
+    XXX: When `data` is a generator, this will return a Aesara tensor!
+
+    """
+    if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
+        # typically, but not limited to pandas objects
+        vals = data.to_numpy()
+        mask = data.isnull().to_numpy()
+        if mask.any():
+            # there are missing values
+            ret = np.ma.MaskedArray(vals, mask)
+        else:
+            ret = vals
+    elif isinstance(data, np.ndarray):
+        if isinstance(data, np.ma.MaskedArray):
+            if not data.mask.any():
+                # empty mask
+                ret = data.filled()
+            else:
+                # already masked and rightly so
+                ret = data
+        else:
+            # already a ndarray, but not masked
+            mask = np.isnan(data)
+            if np.any(mask):
+                ret = np.ma.MaskedArray(data, mask)
+            else:
+                # no masking required
+                ret = data
+    elif isinstance(data, Variable):
+        ret = data
+    elif sps.issparse(data):
+        ret = data
+    elif isgenerator(data):
+        ret = generator(data)
+    else:
+        ret = np.asarray(data)
+
+    # type handling to enable index variables when data is int:
+    if hasattr(data, "dtype"):
+        if "int" in str(data.dtype):
+            return intX(ret)
+        # otherwise, assume float:
+        else:
+            return floatX(ret)
+    # needed for uses of this function other than with pm.Data:
+    else:
+        return floatX(ret)
 
 
 def change_rv_size(
@@ -551,6 +604,8 @@ class GeneratorOp(Op):
     __props__ = ("generator",)
 
     def __init__(self, gen, default=None):
+        from pymc3.data import GeneratorAdapter
+
         super().__init__()
         if not isinstance(gen, GeneratorAdapter):
             gen = GeneratorAdapter(gen)
@@ -573,6 +628,8 @@ class GeneratorOp(Op):
     __call__ = aesara.config.change_flags(compute_test_value="off")(Op.__call__)
 
     def set_gen(self, gen):
+        from pymc3.data import GeneratorAdapter
+
         if not isinstance(gen, GeneratorAdapter):
             gen = GeneratorAdapter(gen)
         if not gen.tensortype == self.generator.tensortype:

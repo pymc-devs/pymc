@@ -32,6 +32,8 @@ from aesara.tensor.var import TensorVariable
 
 import pymc3 as pm
 
+from pymc3.aesaraf import pandas_to_array
+
 __all__ = [
     "get_data",
     "GeneratorAdapter",
@@ -524,9 +526,9 @@ class Data:
             )
         name = model.name_for(name)
 
-        # `pm.model.pandas_to_array` takes care of parameter `value` and
+        # `pandas_to_array` takes care of parameter `value` and
         # transforms it to something digestible for pymc3
-        shared_object = aesara.shared(pm.model.pandas_to_array(value), name)
+        shared_object = aesara.shared(pandas_to_array(value), name)
 
         if isinstance(dims, str):
             dims = (dims,)
