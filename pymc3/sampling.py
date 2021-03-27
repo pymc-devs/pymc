@@ -1886,7 +1886,8 @@ def sample_posterior_predictive_w(
         y = np.zeros(shape=lengths[1])
         b = np.broadcast(x, y)
         for var in variables:
-            shape = np.shape(np.atleast_1d(var.distribution.default()))
+            # XXX: This needs to be refactored
+            shape = None  # np.shape(np.atleast_1d(var.distribution.default()))
             if shape != b.shape:
                 size.append(b.shape)
             else:
