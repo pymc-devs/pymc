@@ -448,11 +448,16 @@ def sample(
         random_seed = None
     if chains == 1 and isinstance(random_seed, int):
         random_seed = [random_seed]
+
     if random_seed is None or isinstance(random_seed, int):
         if random_seed is not None:
-            # np.random.seed(random_seed)
-            model.default_rng.get_value(borrow=True).seed(random_seed)
+            np.random.seed(random_seed)
         random_seed = [np.random.randint(2 ** 30) for _ in range(chains)]
+
+    # TODO: We need to do something about multiple seeds and this single,
+    # shared RNG state.
+    model.default_rng.get_value(borrow=True).seed(random_seed)
+
     if not isinstance(random_seed, abc.Iterable):
         raise TypeError("Invalid value for `random_seed`. Must be tuple, list or int")
 
