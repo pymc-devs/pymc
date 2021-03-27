@@ -966,6 +966,14 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             return at.sum(factors)
 
     @property
+    def vars(self):
+        warnings.warn(
+            "Model.vars has been deprecated. Use Model.value_vars instead.",
+            DeprecationWarning,
+        )
+        return self.value_vars
+
+    @property
     def value_vars(self):
         """List of unobserved random variables used as inputs to the model's
         log-likelihood (which excludes deterministics).
