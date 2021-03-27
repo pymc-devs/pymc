@@ -33,16 +33,14 @@ from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.tensor.var import TensorVariable
 from pandas import Series
 
-import pymc3 as pm
-
-from pymc3.aesaraf import change_rv_size, generator, gradient, hessian, inputvars
+from pymc3.aesaraf import change_rv_size, gradient, hessian, inputvars, pandas_to_array
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.data import GenTensorVariable, Minibatch
 from pymc3.distributions import logp_transform, logpt, logpt_sum
 from pymc3.exceptions import ImputationWarning
 from pymc3.math import flatten_list
 from pymc3.util import UNSET, WithMemoization, get_var_name, treedict, treelist
-from pymc3.vartypes import continuous_types, discrete_types, isgenerator, typefilter
+from pymc3.vartypes import continuous_types, discrete_types, typefilter
 
 __all__ = [
     "Model",
@@ -1336,58 +1334,6 @@ class LoosePointFunc:
 
 
 compilef = fastfn
-
-
-def pandas_to_array(data):
-    """Convert a pandas object to a NumPy array.
-
-    XXX: When `data` is a generator, this will return a Aesara tensor!
-
-    """
-    if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
-        # typically, but not limited to pandas objects
-        vals = data.to_numpy()
-        mask = data.isnull().to_numpy()
-        if mask.any():
-            # there are missing values
-            ret = np.ma.MaskedArray(vals, mask)
-        else:
-            ret = vals
-    elif isinstance(data, np.ndarray):
-        if isinstance(data, np.ma.MaskedArray):
-            if not data.mask.any():
-                # empty mask
-                ret = data.filled()
-            else:
-                # already masked and rightly so
-                ret = data
-        else:
-            # already a ndarray, but not masked
-            mask = np.isnan(data)
-            if np.any(mask):
-                ret = np.ma.MaskedArray(data, mask)
-            else:
-                # no masking required
-                ret = data
-    elif isinstance(data, Variable):
-        ret = data
-    elif sps.issparse(data):
-        ret = data
-    elif isgenerator(data):
-        ret = generator(data)
-    else:
-        ret = np.asarray(data)
-
-    # type handling to enable index variables when data is int:
-    if hasattr(data, "dtype"):
-        if "int" in str(data.dtype):
-            return pm.intX(ret)
-        # otherwise, assume float:
-        else:
-            return pm.floatX(ret)
-    # needed for uses of this function other than with pm.Data:
-    else:
-        return pm.floatX(ret)
 
 
 def make_obs_var(rv_var: TensorVariable, data: Union[np.ndarray]) -> TensorVariable:

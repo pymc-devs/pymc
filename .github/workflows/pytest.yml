@@ -56,7 +56,6 @@ jobs:
             --ignore=pymc3/tests/test_gp.py
             --ignore=pymc3/tests/test_model.py
             --ignore=pymc3/tests/test_model_func.py
-            --ignore=pymc3/tests/test_model_helpers.py
             --ignore=pymc3/tests/test_models_utils.py
             --ignore=pymc3/tests/test_ode.py
             --ignore=pymc3/tests/test_posdef_sym.py
@@ -82,7 +81,6 @@ jobs:
             pymc3/tests/test_gp.py
             pymc3/tests/test_model.py
             pymc3/tests/test_model_func.py
-            pymc3/tests/test_model_helpers.py
             pymc3/tests/test_models_utils.py
             pymc3/tests/test_ode.py
             pymc3/tests/test_posdef_sym.py
