@@ -241,7 +241,7 @@ class TestGLMLinear(SeededTest):
             pm.sample(50, pm.Slice(), start=start)
 
 
-@pytest.mark.xfail(reason="Metropolis samplers haven't been refactored")
+@pytest.mark.xfail(reason="ZeroInflatedPoisson hasn't been refactored for v4")
 class TestLatentOccupancy(SeededTest):
     """
     From the PyMC example list
