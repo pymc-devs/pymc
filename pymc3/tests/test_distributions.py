@@ -2789,7 +2789,7 @@ def test_car_logp(size):
     """
     np.random.seed(1)
 
-    xs = np.random.randn(*shape)
+    xs = np.random.randn(*size)
 
     # d x d adjacency matrix for a square (d=4) of rook-adjacent sites
     W = np.array(
@@ -2806,7 +2806,7 @@ def test_car_logp(size):
     cov = np.linalg.inv(prec)
     scipy_logp = scipy.stats.multivariate_normal.logpdf(xs, mu, cov)
 
-    car_logp = CAR.dist(mu, W, alpha, tau, shape=shape).logp(xs).eval()
+    car_logp = logpt(CAR.dist(mu, W, alpha, tau, size=size), xs).eval()
 
     # Check to make sure that the CAR and MVN log PDFs are equivalent
     # up to an additive constant which is independent of the CAR parameters
