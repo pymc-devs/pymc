@@ -426,8 +426,9 @@ def sample(
     """
     model = modelcontext(model)
     start = deepcopy(start)
+    model_initial_point = model.test_point
     if start is None:
-        check_start_vals(model.test_point, model)
+        check_start_vals(model_initial_point, model)
     else:
         if isinstance(start, dict):
             update_start_vals(start, model.test_point, model)
@@ -514,13 +515,14 @@ def sample(
             _log.info("Initializing NUTS failed. " "Falling back to elementwise auto-assignment.")
             _log.debug("Exception in init nuts", exec_info=True)
             step = assign_step_methods(model, step, step_kwargs=kwargs)
+            start = model_initial_point
     else:
+        start = model_initial_point
         step = assign_step_methods(model, step, step_kwargs=kwargs)
 
     if isinstance(step, list):
         step = CompoundStep(step)
-    if start is None:
-        start = {}
+
     if isinstance(start, dict):
         start = [start] * chains
 
@@ -579,17 +581,20 @@ def sample(
                 ]
             )
             _log.info(f"Population sampling ({chains} chains)")
+
+            initial_point_model_size = sum(start[n.name].size for n in model.vars)
+
             if has_demcmc and chains < 3:
                 raise ValueError(
                     "DEMetropolis requires at least 3 chains. "
                     "For this {}-dimensional model you should use ≥{} chains".format(
-                        model.size, model.size + 1
+                        initial_point_model_size, initial_point_model_size + 1
                     )
                 )
-            if has_demcmc and chains <= model.size:
+            if has_demcmc and chains <= initial_point_model_size:
                 warnings.warn(
                     "DEMetropolis should be used with more chains than dimensions! "
-                    "(The model has {} dimensions.)".format(model.size),
+                    "(The model has {} dimensions.)".format(initial_point_model_size),
                     UserWarning,
                 )
             _print_step_hierarchy(step)
@@ -1964,7 +1969,7 @@ def sample_prior_predictive(
     return prior
 
 
-def _init_jitter(model, chains, jitter_max_retries):
+def _init_jitter(model, point, chains, jitter_max_retries):
     """Apply a uniform jitter in [-1, 1] to the test value as starting point in each chain.
 
     pymc3.util.check_start_vals is used to test whether the jittered starting values produce
@@ -1974,6 +1979,7 @@ def _init_jitter(model, chains, jitter_max_retries):
     Parameters
     ----------
     model : pymc3.Model
+    point : dict
     chains : int
     jitter_max_retries : int
         Maximum number of repeated attempts at initializing values (per chain).
@@ -1986,7 +1992,7 @@ def _init_jitter(model, chains, jitter_max_retries):
     start = []
     for _ in range(chains):
         for i in range(jitter_max_retries + 1):
-            mean = {var: val.copy() for var, val in model.test_point.items()}
+            mean = {var: val.copy() for var, val in point.items()}
             for val in mean.values():
                 val[...] += 2 * np.random.rand(*val.shape) - 1
 
@@ -2103,7 +2109,7 @@ def init_nuts(
         n = len(var)
         potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
     elif init == "jitter+adapt_diag":
-        start = _init_jitter(model, chains, jitter_max_retries)
+        start = _init_jitter(model, model.test_point, chains, jitter_max_retries)
         mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
         var = np.ones_like(mean)
         n = len(var)
@@ -2179,15 +2185,19 @@ def init_nuts(
         start = [start] * chains
         potential = quadpotential.QuadPotentialFull(cov)
     elif init == "adapt_full":
-        start = [model.test_point] * chains
+        initial_point = model.test_point
+        start = [initial_point] * chains
         mean = np.mean([apoint.data] * chains, axis=0)
-        cov = np.eye(model.size)
-        potential = quadpotential.QuadPotentialFullAdapt(model.size, mean, cov, 10)
+        initial_point_model_size = sum(initial_point[n.name].size for n in model.vars)
+        cov = np.eye(initial_point_model_size)
+        potential = quadpotential.QuadPotentialFullAdapt(initial_point_model_size, mean, cov, 10)
     elif init == "jitter+adapt_full":
-        start = _init_jitter(model, chains, jitter_max_retries)
+        initial_point = model.test_point
+        start = _init_jitter(model, initial_point, chains, jitter_max_retries)
         mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
-        cov = np.eye(model.size)
-        potential = quadpotential.QuadPotentialFullAdapt(model.size, mean, cov, 10)
+        initial_point_model_size = sum(initial_point[n.name].size for n in model.vars)
+        cov = np.eye(initial_point_model_size)
+        potential = quadpotential.QuadPotentialFullAdapt(initial_point_model_size, mean, cov, 10)
     else:
         raise ValueError(f"Unknown initializer: {init}.")
 
