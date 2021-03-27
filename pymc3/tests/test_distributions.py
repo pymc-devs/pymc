@@ -2144,24 +2144,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=3),
         )
 
-    @pytest.mark.parametrize(
-        "a, n, shape",
-        [
-            [[0.25, 0.25, 0.25, 0.25], 1, (1, 4)],
-            [[0.3, 0.6, 0.05, 0.05], 2, (1, 4)],
-            [[0.3, 0.6, 0.05, 0.05], 10, (1, 4)],
-            [[0.25, 0.25, 0.25, 0.25], 1, (2, 4)],
-            [[0.3, 0.6, 0.05, 0.05], 2, (3, 4)],
-            [[[0.25, 0.25, 0.25, 0.25], [0.26, 0.26, 0.26, 0.22]], [1, 10], (2, 4)],
-        ],
-    )
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_dirichlet_multinomial_defaultval(self, a, n, shape):
-        a = np.asarray(a)
-        with Model() as model:
-            m = DirichletMultinomial("m", n=n, a=a, size=shape)
-        assert_allclose(m.distribution._defaultval.eval().sum(axis=-1), n)
-
     @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_dirichlet_multinomial_vec(self):
         vals = np.array([[2, 4, 4], [3, 3, 4]])
@@ -2528,29 +2510,25 @@ def test_bound():
     np.random.seed(42)
     UnboundNormal = Bound(Normal)
     dist = UnboundNormal.dist(mu=0, sigma=1)
-    assert dist.transform is None
-    assert dist.default() == 0.0
+    # assert dist.transform is None
     assert isinstance(dist.random(), np.ndarray)
 
     LowerNormal = Bound(Normal, lower=1)
     dist = LowerNormal.dist(mu=0, sigma=1)
     assert logpt(dist, 0).eval() == -np.inf
-    assert dist.default() > 1
-    assert dist.transform is not None
+    # assert dist.transform is not None
     assert np.all(dist.random() > 1)
 
     UpperNormal = Bound(Normal, upper=-1)
     dist = UpperNormal.dist(mu=0, sigma=1)
     assert logpt(dist, -0.5).eval() == -np.inf
-    assert dist.default() < -1
-    assert dist.transform is not None
+    # assert dist.transform is not None
     assert np.all(dist.random() < -1)
 
     ArrayNormal = Bound(Normal, lower=[1, 2], upper=[2, 3])
     dist = ArrayNormal.dist(mu=0, sigma=1, size=2)
     assert_equal(logpt(dist, [0.5, 3.5]).eval(), -np.array([np.inf, np.inf]))
-    assert_equal(dist.default(), np.array([1.5, 2.5]))
-    assert dist.transform is not None
+    # assert dist.transform is not None
     with pytest.raises(ValueError) as err:
         dist.random()
     err.match("Drawing samples from distributions with array-valued")
@@ -2566,7 +2544,6 @@ def test_bound():
     dist = ArrayNormal.dist(mu=0, sigma=1, size=2)
     logp = logpt(dist, [0.5, 3.5]).eval({lower: lower.tag.test_value})
     assert_equal(logp, -np.array([np.inf, np.inf]))
-    assert_equal(dist.default(), np.array([2, 2.5]))
     assert dist.transform is not None
 
     with Model():
