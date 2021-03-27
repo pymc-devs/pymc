@@ -862,12 +862,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return self.parent is None
 
     @property
-    def size(self):
-        return sum(self.test_point[n.name].size for n in self.free_RVs)
-
-    @property
     def ndim(self):
-        return sum(var.ndim for var in self.free_RVs)
+        return sum(var.ndim for var in self.vars)
 
     def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
         """Compile a aesara function that computes logp and gradient.
