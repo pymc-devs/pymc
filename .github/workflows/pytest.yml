@@ -26,7 +26,6 @@ jobs:
         # 5th block: These tests PASS without a single XFAIL
         # 6th block: These have some XFAILs
           - |
-            --ignore=pymc3/tests/test_distribution_defaults.py
             --ignore=pymc3/tests/test_distributions_timeseries.py
             --ignore=pymc3/tests/test_missing.py
             --ignore=pymc3/tests/test_mixture.py
