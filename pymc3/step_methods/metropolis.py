@@ -662,13 +662,14 @@ class DEMetropolis(PopulationArrayStepShared):
 
         model = pm.modelcontext(model)
         initial_values = model.test_point
+        initial_values_size = sum(initial_values[n.name].size for n in model.vars)
 
         if vars is None:
             vars = model.cont_vars
         vars = pm.inputvars(vars)
 
         if S is None:
-            S = np.ones(model.size)
+            S = np.ones(initial_values_size)
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
@@ -678,7 +679,7 @@ class DEMetropolis(PopulationArrayStepShared):
         self.scaling = np.atleast_1d(scaling).astype("d")
         if lamb is None:
             # default to the optimal lambda for normally distributed targets
-            lamb = 2.38 / np.sqrt(2 * model.size)
+            lamb = 2.38 / np.sqrt(2 * initial_values_size)
         self.lamb = float(lamb)
         if tune not in {None, "scaling", "lambda"}:
             raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')
@@ -810,13 +811,14 @@ class DEMetropolisZ(ArrayStepShared):
     ):
         model = pm.modelcontext(model)
         initial_values = model.test_point
+        initial_values_size = sum(initial_values[n.name].size for n in model.vars)
 
         if vars is None:
             vars = model.cont_vars
         vars = pm.inputvars(vars)
 
         if S is None:
-            S = np.ones(model.size)
+            S = np.ones(initial_values_size)
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
@@ -826,7 +828,7 @@ class DEMetropolisZ(ArrayStepShared):
         self.scaling = np.atleast_1d(scaling).astype("d")
         if lamb is None:
             # default to the optimal lambda for normally distributed targets
-            lamb = 2.38 / np.sqrt(2 * model.size)
+            lamb = 2.38 / np.sqrt(2 * initial_values_size)
         self.lamb = float(lamb)
         if tune not in {None, "scaling", "lambda"}:
             raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')

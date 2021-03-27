@@ -32,7 +32,7 @@ def test_leapfrog_reversible():
     n = 3
     np.random.seed(42)
     start, model, _ = models.non_normal(n)
-    size = model.size
+    size = sum(start[n.name].size for n in model.vars)
     scaling = floatX(np.random.rand(size))
     step = BaseHMC(vars=model.vars, model=model, scaling=scaling)
     step.integrator._logp_dlogp_func.set_extra_values({})
