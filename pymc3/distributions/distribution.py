@@ -179,9 +179,6 @@ class Distribution(metaclass=DistributionMeta):
 
         return rv_var
 
-    def default(self):
-        return np.asarray(self.get_test_val(self.testval, self.defaults), self.dtype)
-
     def get_test_val(self, val, defaults):
         if val is None:
             for v in defaults:
