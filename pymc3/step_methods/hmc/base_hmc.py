@@ -151,7 +151,7 @@ class BaseHMC(arraystep.GradientSharedStep):
 
         if not np.isfinite(start.energy):
             model = self._model
-            check_test_point = model.check_test_point()
+            check_test_point = model.point_logps()
             error_logp = check_test_point.loc[
                 (np.abs(check_test_point) >= 1e20) | np.isnan(check_test_point)
             ]

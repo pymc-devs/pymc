@@ -1132,8 +1132,15 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         return flat_view
 
-    def check_test_point(self, point=None, round_vals=2):
-        """Checks log probability of `point` for all random variables in the model.
+    def check_test_point(self, *args, **kwargs):
+        warnings.warn(
+            "`Model.check_test_point` has been deprecated. Use `Model.point_logps` instead.",
+            DeprecationWarning,
+        )
+        return self.point_logps(*args, **kwargs)
+
+    def point_logps(self, point=None, round_vals=2):
+        """Computes the log probability of `point` for all random variables in the model.
 
         Parameters
         ----------

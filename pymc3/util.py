@@ -304,7 +304,7 @@ def check_start_vals(start, model):
                 "Valid keys are: {}, but {} was supplied".format(valid_keys, extra_keys)
             )
 
-        initial_eval = model.check_test_point(point=elem)
+        initial_eval = model.point_logps(point=elem)
 
         if not np.all(np.isfinite(initial_eval)):
             raise SamplingError(
