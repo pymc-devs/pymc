@@ -293,8 +293,8 @@ class TestValueGradFunction(unittest.TestCase):
             step = pm.NUTS()
 
         func = step._logp_dlogp_func
-        func.set_extra_values(m.test_point)
-        q = func.dict_to_array(m.test_point)
+        func.set_extra_values(m.initial_point)
+        q = func.dict_to_array(m.initial_point)
         logp, dlogp = func(q)
         assert logp.size == 1
         assert dlogp.size == 4
@@ -489,3 +489,15 @@ def test_make_obs_var():
     assert masked_output.tag.missing_values is not None
 
     return None
+
+
+def test_initial_point():
+
+    with pm.Model() as model:
+        a = pm.Uniform("a")
+        pm.Normal("x", a)
+
+    with pytest.warns(DeprecationWarning):
+        initial_point = model.test_point
+
+    assert all(var.name in initial_point for var in model.value_vars)

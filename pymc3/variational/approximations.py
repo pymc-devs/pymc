@@ -71,10 +71,10 @@ class MeanFieldGroup(Group):
 
     def create_shared_params(self, start=None):
         if start is None:
-            start = self.model.test_point
+            start = self.model.initial_point
         else:
             start_ = start.copy()
-            update_start_vals(start_, self.model.test_point, self.model)
+            update_start_vals(start_, self.model.initial_point, self.model)
             start = start_
         if self.batched:
             start = start[self.group[0].name][0]
@@ -126,10 +126,10 @@ class FullRankGroup(Group):
 
     def create_shared_params(self, start=None):
         if start is None:
-            start = self.model.test_point
+            start = self.model.initial_point
         else:
             start_ = start.copy()
-            update_start_vals(start_, self.model.test_point, self.model)
+            update_start_vals(start_, self.model.initial_point, self.model)
             start = start_
         if self.batched:
             start = start[self.group[0].name][0]
@@ -240,9 +240,9 @@ class EmpiricalGroup(Group):
                 raise opvi.ParametrizationError("Need `trace` or `size` to initialize")
             else:
                 if start is None:
-                    start = self.model.test_point
+                    start = self.model.initial_point
                 else:
-                    start_ = self.model.test_point.copy()
+                    start_ = self.model.initial_point.copy()
                     update_start_vals(start_, start, self.model)
                     start = start_
                 start = pm.floatX(DictToArrayBijection.map(start))

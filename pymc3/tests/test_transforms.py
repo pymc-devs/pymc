@@ -288,7 +288,7 @@ class TestElementWiseLogp(SeededTest):
         x0 = x.tag.value_var
         assert x.ndim == logpt(x).ndim
 
-        pt = model.test_point
+        pt = model.initial_point
         array = np.random.randn(*pt[x0.name].shape)
         transform = x0.tag.transform
         logp_notrans = logpt(x, transform.backward(x, array), transformed=False)
@@ -305,7 +305,7 @@ class TestElementWiseLogp(SeededTest):
         x0 = x.tag.value_var
         assert (x.ndim - 1) == logpt(x).ndim
 
-        pt = model.test_point
+        pt = model.initial_point
         array = np.random.randn(*pt[x0.name].shape)
         transform = x0.tag.transform
         logp_nojac = logpt(x, transform.backward(x, array), transformed=False)

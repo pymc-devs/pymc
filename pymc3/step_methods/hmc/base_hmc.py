@@ -97,7 +97,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         # size.
         # XXX: If the dimensions of these terms change, the step size
         # dimension-scaling should change as well, no?
-        test_point = self._model.test_point
+        test_point = self._model.initial_point
         continuous_vars = [test_point[v.name] for v in self._model.cont_vars]
         size = sum(v.size for v in continuous_vars)
 
