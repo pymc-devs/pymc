@@ -30,7 +30,7 @@ class TestData(SeededTest):
         with pm.Model() as model:
             X = pm.Data("X", data_values)
             pm.Normal("y", 0, 1, observed=X)
-            model.logp(model.test_point)
+            model.logp(model.initial_point)
 
     @pytest.mark.xfail(reason="Competence hasn't been updated")
     def test_sample(self):

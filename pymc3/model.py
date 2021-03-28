@@ -687,7 +687,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
         extra_vars = [getattr(var.tag, "value_var", var) for var in self.free_RVs]
         extra_vars_and_values = {
-            var: self.test_point[var.name]
+            var: self.initial_point[var.name]
             for var in extra_vars
             if var in input_vars and var not in grad_vars
         }
@@ -797,10 +797,14 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def test_point(self):
-        """Test point used to check that the model doesn't generate errors
+        warnings.warn(
+            "`Model.test_point` has been deprecated. Use `Model.initial_point` instead.",
+            DeprecationWarning,
+        )
+        return self.initial_point
 
-        TODO: This should be replaced with proper initial value support.
-        """
+    @property
+    def initial_point(self):
         points = []
         for rv_var in self.free_RVs:
             value_var = rv_var.tag.value_var
@@ -1078,7 +1082,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """
         f = self.makefn(outs, profile=profile, *args, **kwargs)
         if point is None:
-            point = self.test_point
+            point = self.initial_point
 
         for _ in range(n):
             f(**point)
@@ -1128,14 +1132,14 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         return flat_view
 
-    def check_test_point(self, test_point=None, round_vals=2):
-        """Checks log probability of test_point for all random variables in the model.
+    def check_test_point(self, point=None, round_vals=2):
+        """Checks log probability of `point` for all random variables in the model.
 
         Parameters
         ----------
-        test_point: Point
-            Point to be evaluated.
-            if None, then all model.test_point is used
+        point: Point
+            Point to be evaluated.  If ``None``, then ``model.initial_point``
+            is used.
         round_vals: int
             Number of decimals to round log-probabilities
 
@@ -1143,13 +1147,13 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         -------
         Pandas Series
         """
-        if test_point is None:
-            test_point = self.test_point
+        if point is None:
+            point = self.initial_point
 
         return Series(
             {
                 rv.name: np.round(
-                    self.fn(logpt_sum(rv, getattr(rv.tag, "observations", None)))(test_point),
+                    self.fn(logpt_sum(rv, getattr(rv.tag, "observations", None)))(point),
                     round_vals,
                 )
                 for rv in self.basic_RVs

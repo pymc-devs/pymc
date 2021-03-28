@@ -34,7 +34,7 @@ def test_missing():
 
     # In v3, the log-likelihoods for these missing points are zero, and the
     # missing data point values are the `Distribution`'s "default" values.
-    test_point = model.test_point
+    test_point = model.initial_point
     model.logp(test_point)
 
     with model:
@@ -53,7 +53,7 @@ def test_missing_pandas():
     (y_missing,) = model.missing_values
     assert y_missing.tag.test_value.shape == (2,)
 
-    model.logp(model.test_point)
+    model.logp(model.initial_point)
 
     with model:
         prior_trace = sample_prior_predictive()
@@ -72,7 +72,7 @@ def test_missing_with_predictors():
     (y_missing,) = model.missing_values
     assert y_missing.tag.test_value.shape == (2,)
 
-    model.logp(model.test_point)
+    model.logp(model.initial_point)
 
     with model:
         prior_trace = sample_prior_predictive()

@@ -52,7 +52,7 @@ class TestBroadcasting:
 
         # Replace test1 with a shared variable, keep test 2 the same
         replacement = pm.make_shared_replacements(
-            test_model.test_point, [test_model.test2], test_model
+            test_model.initial_point, [test_model.test2], test_model
         )
         assert (
             test_model.test1.broadcastable
