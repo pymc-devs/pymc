@@ -41,7 +41,6 @@ jobs:
             --ignore=pymc3/tests/test_tracetab.py
             --ignore=pymc3/tests/test_tuning.py
             --ignore=pymc3/tests/test_types.py
-            --ignore=pymc3/tests/test_util.py
             --ignore=pymc3/tests/test_variational_inference.py
             --ignore=pymc3/tests/test_sampling_jax.py
             --ignore=pymc3/tests/test_dist_math.py
