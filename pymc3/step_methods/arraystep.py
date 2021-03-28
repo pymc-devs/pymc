@@ -271,13 +271,11 @@ class PopulationArrayStepShared(ArrayStepShared):
         return
 
 
-class GradientSharedStep(BlockedStep):
+class GradientSharedStep(ArrayStepShared):
     def __init__(
         self, vars, model=None, blocked=True, dtype=None, logp_dlogp_func=None, **aesara_kwargs
     ):
         model = modelcontext(model)
-        self.vars = vars
-        self.blocked = blocked
 
         if logp_dlogp_func is None:
             func = model.logp_dlogp_function(vars, dtype=dtype, **aesara_kwargs)
@@ -286,26 +284,11 @@ class GradientSharedStep(BlockedStep):
 
         self._logp_dlogp_func = func
 
+        super().__init__(vars, func._extra_vars_shared, blocked)
+
     def step(self, point):
-        self._logp_dlogp_func.set_extra_values(point)
-
-        array = DictToArrayBijection.map(point)
-
-        stats = None
-        if self.generates_stats:
-            apoint, stats = self.astep(array)
-        else:
-            apoint = self.astep(array)
-
-        if not isinstance(apoint, RaveledVars):
-            # We assume that the mapping has stayed the same
-            apoint = RaveledVars(apoint, array.point_map_info)
-
-        point = DictToArrayBijection.rmap(apoint)
-
-        if stats is not None:
-            return point, stats
-        return point
+        self._logp_dlogp_func._extra_are_set = True
+        return super().step(point)
 
     def astep(self, apoint):
         raise NotImplementedError()
