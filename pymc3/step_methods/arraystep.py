@@ -69,8 +69,8 @@ class BlockedStep:
         else:  # Assume all model variables
             vars = model.value_vars
 
-        # get the actual inputs from the vars
-        # vars = inputvars(vars)
+        if not isinstance(vars, (tuple, list)):
+            vars = [vars]
 
         if len(vars) == 0:
             raise ValueError("No free random variables to sample.")
