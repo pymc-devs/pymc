@@ -93,7 +93,7 @@ class SMC:
         else:
             init_rnd = self.start
 
-        init = self.model.test_point
+        init = self.model.initial_point
 
         for v in self.variables:
             var_info[v.name] = (init[v.name].shape, init[v.name].size)
@@ -108,7 +108,7 @@ class SMC:
 
     def setup_kernel(self):
         """Set up the likelihood logp function based on the chosen kernel."""
-        initial_values = self.model.test_point
+        initial_values = self.model.initial_point
         shared = make_shared_replacements(initial_values, self.variables, self.model)
 
         if self.kernel == "abc":

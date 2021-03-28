@@ -276,7 +276,7 @@ def check_start_vals(start, model):
     ----------
     start : dict, or array of dict
         Starting point in parameter space (or partial point)
-        Defaults to ``trace.point(-1))`` if there is a trace provided and model.test_point if not
+        Defaults to ``trace.point(-1))`` if there is a trace provided and model.initial_point if not
         (defaults to empty dict). Initialization methods for NUTS (see ``init`` keyword) can
         overwrite the default.
     model : Model object
@@ -304,7 +304,7 @@ def check_start_vals(start, model):
                 "Valid keys are: {}, but {} was supplied".format(valid_keys, extra_keys)
             )
 
-        initial_eval = model.check_test_point(test_point=elem)
+        initial_eval = model.check_test_point(point=elem)
 
         if not np.all(np.isfinite(initial_eval)):
             raise SamplingError(

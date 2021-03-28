@@ -414,8 +414,8 @@ initialised within the same model) as input, for example:
         z = pm.Normal('z', 0., 10., shape=10)
         x = pm.Normal('x', z, 1., shape=10)
 
-    print(m.test_point)
-    print(m.dict_to_array(m.test_point))  # ==> m.bijection.map(m.test_point)
+    print(m.initial_point)
+    print(m.dict_to_array(m.initial_point))  # ==> m.bijection.map(m.initial_point)
     print(m.bijection.rmap(np.arange(20)))
 
 
@@ -707,7 +707,7 @@ list of CompoundStep in a for-loop for one sample circle.
 
 For each sampler, it implements a ``step.step`` method to perform MH
 updates. Each time a dictionary (``point`` in ``PyMC3`` land, same
-structure as ``model.test_point``) is passed as input and output a new
+structure as ``model.initial_point``) is passed as input and output a new
 dictionary with the free\_RVs being sampled now has a new value (if
 accepted, see
 `here <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/step_methods/compound.py#L27>`__

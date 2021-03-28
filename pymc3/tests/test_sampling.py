@@ -450,7 +450,7 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test list input
-            ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
+            ppc0 = pm.sample_posterior_predictive([model.initial_point], samples=10)
             # # deprecated argument is not introduced to fast version [2019/08/20:rpg]
             ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
             # test empty ppc
@@ -505,7 +505,7 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test list input
-            ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
+            ppc0 = pm.sample_posterior_predictive([model.initial_point], samples=10)
             ppc = pm.sample_posterior_predictive(trace, samples=12, var_names=[])
             assert len(ppc) == 0
 
@@ -569,7 +569,7 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test list input
-            # ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
+            # ppc0 = pm.sample_posterior_predictive([model.initial_point], samples=10)
             # TODO: Assert something about the output
             # ppc = pm.sample_posterior_predictive(trace, samples=12, var_names=[])
             # assert len(ppc) == 0
@@ -589,7 +589,7 @@ class TestSamplePPC(SeededTest):
 
         with model:
             # test list input
-            ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
+            ppc0 = pm.sample_posterior_predictive([model.initial_point], samples=10)
             assert ppc0 == {}
             ppc = pm.sample_posterior_predictive(trace, samples=1000, var_names=["b"])
             assert len(ppc) == 1
@@ -893,7 +893,7 @@ def test_init_jitter(testval, jitter_max_retries, expectation):
         # and positive (valid) when it returns 1 (jitter = 1)
         with mock.patch("numpy.random.rand", side_effect=[0, 0, 0, 1, 0]):
             start = pm.sampling._init_jitter(
-                m, m.test_point, chains=1, jitter_max_retries=jitter_max_retries
+                m, m.initial_point, chains=1, jitter_max_retries=jitter_max_retries
             )
             pm.util.check_start_vals(start, m)
 

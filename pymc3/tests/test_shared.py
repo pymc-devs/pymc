@@ -26,7 +26,7 @@ class TestShared(SeededTest):
             data_values = np.array([0.5, 0.4, 5, 2])
             X = aesara.shared(np.asarray(data_values, dtype=aesara.config.floatX), borrow=True)
             pm.Normal("y", 0, 1, observed=X)
-            model.logp(model.test_point)
+            model.logp(model.initial_point)
 
     def test_sample(self):
         x = np.random.normal(size=100)

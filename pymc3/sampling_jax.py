@@ -52,7 +52,7 @@ def sample_tfp_nuts(
     logp_fn_jax = fns[0]
 
     rv_names = [rv.name for rv in model.free_RVs]
-    init_state = [model.test_point[rv_name] for rv_name in rv_names]
+    init_state = [model.initial_point[rv_name] for rv_name in rv_names]
     init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
 
     @jax.pmap
@@ -138,7 +138,7 @@ def sample_numpyro_nuts(
     logp_fn_jax = fns[0]
 
     rv_names = [rv.name for rv in model.free_RVs]
-    init_state = [model.test_point[rv_name] for rv_name in rv_names]
+    init_state = [model.initial_point[rv_name] for rv_name in rv_names]
     init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
 
     @jax.jit

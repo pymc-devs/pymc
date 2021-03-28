@@ -93,7 +93,7 @@ class TestUpdateStartVals(SeededTest):
             "upper_interval__": 0.693147180559945,
             "interv_interval__": 0.4519851237430569,
         }
-        pm.util.update_start_vals(start, model.test_point, model)
+        pm.util.update_start_vals(start, model.initial_point, model)
         assert_almost_equal(start["lower_interval__"], test_point["lower_interval__"])
         assert_almost_equal(start["upper_interval__"], test_point["upper_interval__"])
         assert_almost_equal(start["interv_interval__"], test_point["interv_interval__"])
@@ -109,7 +109,7 @@ class TestCheckStartVals(SeededTest):
             b = pm.Uniform("b", lower=2.0, upper=3.0)
 
         start = {"a": 0.3, "b": 2.1}
-        pm.util.update_start_vals(start, model.test_point, model)
+        pm.util.update_start_vals(start, model.initial_point, model)
         pm.util.check_start_vals(start, model)
 
     def test_invalid_start_point(self):
@@ -118,7 +118,7 @@ class TestCheckStartVals(SeededTest):
             b = pm.Uniform("b", lower=2.0, upper=3.0)
 
         start = {"a": np.nan, "b": np.nan}
-        pm.util.update_start_vals(start, model.test_point, model)
+        pm.util.update_start_vals(start, model.initial_point, model)
         with pytest.raises(pm.exceptions.SamplingError):
             pm.util.check_start_vals(start, model)
 
@@ -128,7 +128,7 @@ class TestCheckStartVals(SeededTest):
             b = pm.Uniform("b", lower=2.0, upper=3.0)
 
         start = {"a": 0.3, "b": 2.1, "c": 1.0}
-        pm.util.update_start_vals(start, model.test_point, model)
+        pm.util.update_start_vals(start, model.initial_point, model)
         with pytest.raises(KeyError):
             pm.util.check_start_vals(start, model)
 
