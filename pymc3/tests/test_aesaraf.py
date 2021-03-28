@@ -24,6 +24,7 @@ import pytest
 import scipy.sparse as sps
 
 from aesara.graph.basic import Variable
+from aesara.tensor.random.basic import normal, uniform
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.type import TensorType
 from aesara.tensor.var import TensorVariable
@@ -35,6 +36,7 @@ from pymc3.aesaraf import (
     extract_obs_data,
     pandas_to_array,
     take_along_axis,
+    walk_model,
 )
 from pymc3.vartypes import int_types
 
@@ -393,3 +395,26 @@ def test_pandas_to_array(input_dtype):
     assert hasattr(wrapped, "set_default")
     # Make sure the returned object is a Aesara TensorVariable
     assert isinstance(wrapped, TensorVariable)
+
+
+def test_walk_model():
+    d = aet.vector("d")
+    b = aet.vector("b")
+    c = uniform(0.0, d)
+    c.name = "c"
+    e = aet.log(c)
+    a = normal(e, b)
+    a.name = "a"
+
+    test_graph = aet.exp(a + 1)
+    res = list(walk_model((test_graph,)))
+    assert a in res
+    assert c not in res
+
+    res = list(walk_model((test_graph,), walk_past_rvs=True))
+    assert a in res
+    assert c in res
+
+    res = list(walk_model((test_graph,), walk_past_rvs=True, stop_at_vars={e}))
+    assert a in res
+    assert c not in res

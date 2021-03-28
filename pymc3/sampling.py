@@ -37,7 +37,7 @@ from fastprogress.fastprogress import progress_bar
 
 import pymc3 as pm
 
-from pymc3.aesaraf import change_rv_size, inputvars, rv_ancestors
+from pymc3.aesaraf import change_rv_size, inputvars, walk_model
 from pymc3.backends.arviz import _DefaultTrace
 from pymc3.backends.base import BaseTrace, MultiTrace
 from pymc3.backends.ndarray import NDArray
@@ -1695,7 +1695,7 @@ def sample_posterior_predictive(
     if not hasattr(_trace, "varnames"):
         inputs_and_names = [
             (rv, rv.name)
-            for rv in rv_ancestors(vars_to_sample, walk_past_rvs=True)
+            for rv in walk_model(vars_to_sample, walk_past_rvs=True)
             if rv not in vars_to_sample
             and rv in model.named_vars.values()
             and not isinstance(rv, SharedVariable)
