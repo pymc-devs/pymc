@@ -25,8 +25,6 @@ import xarray
 
 from cachetools import LRUCache, cachedmethod
 
-from pymc3.exceptions import SamplingError
-
 LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
 
 UNSET = object()
@@ -261,57 +259,6 @@ def get_repr_for_variable(variable, formatting="plain"):
 def get_var_name(var):
     """Get an appropriate, plain variable name for a variable."""
     return getattr(var, "name", str(var))
-
-
-def update_start_vals(a, b, model):
-    r"""Update a with b, without overwriting existing keys."""
-    a.update({k: v for k, v in b.items() if k not in a})
-
-
-def check_start_vals(start, model):
-    r"""Check that the starting values for MCMC do not cause the relevant log probability
-    to evaluate to something invalid (e.g. Inf or NaN)
-
-    Parameters
-    ----------
-    start : dict, or array of dict
-        Starting point in parameter space (or partial point)
-        Defaults to ``trace.point(-1))`` if there is a trace provided and model.initial_point if not
-        (defaults to empty dict). Initialization methods for NUTS (see ``init`` keyword) can
-        overwrite the default.
-    model : Model object
-    Raises
-    ______
-    KeyError if the parameters provided by `start` do not agree with the parameters contained
-        within `model`
-    pymc3.exceptions.SamplingError if the evaluation of the parameters in `start` leads to an
-        invalid (i.e. non-finite) state
-    Returns
-    -------
-    None
-    """
-    start_points = [start] if isinstance(start, dict) else start
-    for elem in start_points:
-
-        for k, v in elem.items():
-            elem[k] = np.asarray(v, dtype=model[k].dtype)
-
-        if not set(elem.keys()).issubset(model.named_vars.keys()):
-            extra_keys = ", ".join(set(elem.keys()) - set(model.named_vars.keys()))
-            valid_keys = ", ".join(model.named_vars.keys())
-            raise KeyError(
-                "Some start parameters do not appear in the model!\n"
-                "Valid keys are: {}, but {} was supplied".format(valid_keys, extra_keys)
-            )
-
-        initial_eval = model.point_logps(point=elem)
-
-        if not np.all(np.isfinite(initial_eval)):
-            raise SamplingError(
-                "Initial evaluation of model at starting point failed!\n"
-                "Starting values:\n{}\n\n"
-                "Initial evaluation results:\n{}".format(elem, str(initial_eval))
-            )
 
 
 def get_transformed(z):
