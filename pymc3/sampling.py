@@ -312,7 +312,7 @@ def sample(
         Number of iterations of initializer. Only works for 'ADVI' init methods.
     start : dict, or array of dict
         Starting point in parameter space (or partial point)
-        Defaults to ``trace.point(-1))`` if there is a trace provided and model.test_point if not
+        Defaults to ``trace.point(-1))`` if there is a trace provided and model.initial_point if not
         (defaults to empty dict). Initialization methods for NUTS (see ``init`` keyword) can
         overwrite the default.
     trace : backend, list, or MultiTrace
@@ -440,15 +440,15 @@ def sample(
     """
     model = modelcontext(model)
     start = deepcopy(start)
-    model_initial_point = model.test_point
+    model_initial_point = model.initial_point
     if start is None:
         check_start_vals(model_initial_point, model)
     else:
         if isinstance(start, dict):
-            update_start_vals(start, model.test_point, model)
+            update_start_vals(start, model.initial_point, model)
         else:
             for chain_start_vals in start:
-                update_start_vals(chain_start_vals, model.test_point, model)
+                update_start_vals(chain_start_vals, model.initial_point, model)
         check_start_vals(start, model)
 
     if cores is None:
@@ -913,7 +913,7 @@ def iter_sample(
         Step function
     start : dict
         Starting point in parameter space (or partial point). Defaults to trace.point(-1)) if
-        there is a trace provided and model.test_point if not (defaults to empty dict)
+        there is a trace provided and model.initial_point if not (defaults to empty dict)
     trace : backend, list, or MultiTrace
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
@@ -971,7 +971,7 @@ def _iter_sample(
         Step function
     start : dict, optional
         Starting point in parameter space (or partial point). Defaults to trace.point(-1)) if
-        there is a trace provided and model.test_point if not (defaults to empty dict)
+        there is a trace provided and model.initial_point if not (defaults to empty dict)
     trace : backend, list, MultiTrace, or None
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
@@ -1008,7 +1008,7 @@ def _iter_sample(
     if len(strace) > 0:
         update_start_vals(start, strace.point(-1), model)
     else:
-        update_start_vals(start, model.test_point, model)
+        update_start_vals(start, model.initial_point, model)
 
     try:
         step = CompoundStep(step)
@@ -1283,7 +1283,7 @@ def _prepare_iter_population(
         if len(strace) > 0:
             update_start_vals(start[c], strace.point(-1), model)
         else:
-            update_start_vals(start[c], model.test_point, model)
+            update_start_vals(start[c], model.initial_point, model)
 
     # 2. create a population (points) that tracks each chain
     # it is updated as the chains are advanced
@@ -1480,7 +1480,7 @@ def _mp_sample(
             strace = _choose_backend(None, idx, model=model)
         # for user supply start value, fill-in missing value if the supplied
         # dict does not contain all parameters
-        update_start_vals(start[idx - chain], model.test_point, model)
+        update_start_vals(start[idx - chain], model.initial_point, model)
         if step.generates_stats and strace.supports_sampler_stats:
             strace.setup(draws + tune, idx, step.stats_dtypes)
         else:
@@ -2120,16 +2120,16 @@ def init_nuts(
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="relative"),
     ]
 
-    apoint = DictToArrayBijection.map(model.test_point)
+    apoint = DictToArrayBijection.map(model.initial_point)
 
     if init == "adapt_diag":
-        start = [model.test_point] * chains
+        start = [model.initial_point] * chains
         mean = np.mean([apoint.data] * chains, axis=0)
         var = np.ones_like(mean)
         n = len(var)
         potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
     elif init == "jitter+adapt_diag":
-        start = _init_jitter(model, model.test_point, chains, jitter_max_retries)
+        start = _init_jitter(model, model.initial_point, chains, jitter_max_retries)
         mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
         var = np.ones_like(mean)
         n = len(var)
@@ -2205,14 +2205,14 @@ def init_nuts(
         start = [start] * chains
         potential = quadpotential.QuadPotentialFull(cov)
     elif init == "adapt_full":
-        initial_point = model.test_point
+        initial_point = model.initial_point
         start = [initial_point] * chains
         mean = np.mean([apoint.data] * chains, axis=0)
         initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)
         cov = np.eye(initial_point_model_size)
         potential = quadpotential.QuadPotentialFullAdapt(initial_point_model_size, mean, cov, 10)
     elif init == "jitter+adapt_full":
-        initial_point = model.test_point
+        initial_point = model.initial_point
         start = _init_jitter(model, initial_point, chains, jitter_max_retries)
         mean = np.mean([DictToArrayBijection.map(vals).data for vals in start], axis=0)
         initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)

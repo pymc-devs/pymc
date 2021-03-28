@@ -61,7 +61,7 @@ def find_MAP(
 
     Parameters
     ----------
-    start: `dict` of parameter values (Defaults to `model.test_point`)
+    start: `dict` of parameter values (Defaults to `model.initial_point`)
     vars: list
         List of variables to optimize and set to optimum (Defaults to all continuous).
     method: string or callable
@@ -100,9 +100,9 @@ def find_MAP(
     allinmodel(vars, model)
     start = copy.deepcopy(start)
     if start is None:
-        start = model.test_point
+        start = model.initial_point
     else:
-        update_start_vals(start, model.test_point, model)
+        update_start_vals(start, model.initial_point, model)
     check_start_vals(start, model)
 
     start = Point(start, model=model)
