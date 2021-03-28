@@ -236,7 +236,8 @@ def replace_rvs_in_graphs(
 
 
 def rvs_to_value_vars(
-    graphs: Iterable[TensorVariable], initial_replacements: Dict[TensorVariable, TensorVariable]
+    graphs: Iterable[TensorVariable],
+    initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
 ) -> Tuple[Iterable[TensorVariable], Dict[TensorVariable, TensorVariable]]:
     """Replace random variables in graphs with their value variables.
 
