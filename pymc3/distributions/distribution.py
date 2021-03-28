@@ -34,11 +34,6 @@ if TYPE_CHECKING:
 import aesara
 import aesara.graph.basic
 import aesara.tensor as at
-import numpy as np
-
-from aesara.compile.sharedvalue import SharedVariable
-from aesara.graph.basic import Constant
-from aesara.tensor.var import TensorVariable
 
 from pymc3.util import UNSET, get_repr_for_variable
 from pymc3.vartypes import string_types
@@ -178,36 +173,6 @@ class Distribution(metaclass=DistributionMeta):
             rv_var.tag.test_value = testval
 
         return rv_var
-
-    def get_test_val(self, val, defaults):
-        if val is None:
-            for v in defaults:
-                if hasattr(self, v):
-                    attr_val = self.getattr_value(v)
-                    if np.all(np.isfinite(attr_val)):
-                        return attr_val
-            raise AttributeError(
-                "%s has no finite default value to use, "
-                "checked: %s. Pass testval argument or "
-                "adjust so value is finite." % (self, str(defaults))
-            )
-        else:
-            return self.getattr_value(val)
-
-    def getattr_value(self, val):
-        if isinstance(val, string_types):
-            val = getattr(self, val)
-
-        if isinstance(val, TensorVariable):
-            return val.tag.test_value
-
-        if isinstance(val, SharedVariable):
-            return val.get_value()
-
-        if isinstance(val, Constant):
-            return val.value
-
-        return val
 
     def _distr_parameters_for_repr(self):
         """Return the names of the parameters for this distribution (e.g. "mu"
