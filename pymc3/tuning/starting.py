@@ -31,12 +31,7 @@ import pymc3 as pm
 from pymc3.aesaraf import inputvars
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.model import Point, modelcontext
-from pymc3.util import (
-    check_start_vals,
-    get_default_varnames,
-    get_var_name,
-    update_start_vals,
-)
+from pymc3.util import get_default_varnames, get_var_name
 from pymc3.vartypes import discrete_types, typefilter
 
 __all__ = ["find_MAP"]
@@ -102,8 +97,8 @@ def find_MAP(
     if start is None:
         start = model.initial_point
     else:
-        update_start_vals(start, model.initial_point, model)
-    check_start_vals(start, model)
+        model.update_start_vals(start, model.initial_point)
+    model.check_start_vals(start)
 
     start = Point(start, model=model)
 
