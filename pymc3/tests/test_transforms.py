@@ -229,7 +229,7 @@ def test_interval_near_boundary():
     with pm.Model() as model:
         pm.Uniform("x", testval=x0, lower=lb, upper=ub)
 
-    log_prob = model.check_test_point()
+    log_prob = model.point_logps()
     np.testing.assert_allclose(log_prob, np.array([-52.68]))
 
 
