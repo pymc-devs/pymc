@@ -501,3 +501,16 @@ def test_initial_point():
         initial_point = model.test_point
 
     assert all(var.name in initial_point for var in model.value_vars)
+
+
+def test_point_logps():
+
+    with pm.Model() as model:
+        a = pm.Uniform("a")
+        pm.Normal("x", a)
+
+    with pytest.warns(DeprecationWarning):
+        logp_vals = model.check_test_point()
+
+    assert "x" in logp_vals.keys()
+    assert "a" in logp_vals.keys()
