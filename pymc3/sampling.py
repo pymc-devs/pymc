@@ -61,12 +61,10 @@ from pymc3.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc3.step_methods.hmc import quadpotential
 from pymc3.util import (
     chains_and_samples,
-    check_start_vals,
     dataset_to_point_list,
     get_default_varnames,
     get_untransformed_name,
     is_transformed_name,
-    update_start_vals,
 )
 from pymc3.vartypes import discrete_types
 
@@ -442,14 +440,14 @@ def sample(
     start = deepcopy(start)
     model_initial_point = model.initial_point
     if start is None:
-        check_start_vals(model_initial_point, model)
+        model.check_start_vals(model_initial_point)
     else:
         if isinstance(start, dict):
-            update_start_vals(start, model.initial_point, model)
+            model.update_start_vals(start, model.initial_point)
         else:
             for chain_start_vals in start:
-                update_start_vals(chain_start_vals, model.initial_point, model)
-        check_start_vals(start, model)
+                model.update_start_vals(chain_start_vals, model.initial_point)
+        model.check_start_vals(start)
 
     if cores is None:
         cores = min(4, _cpu_count())
@@ -528,7 +526,7 @@ def sample(
             )
             if start is None:
                 start = start_
-                check_start_vals(start, model)
+                model.check_start_vals(start)
         except (AttributeError, NotImplementedError, tg.NullTypeGradError):
             # gradient computation failed
             _log.info("Initializing NUTS failed. " "Falling back to elementwise auto-assignment.")
@@ -1006,9 +1004,9 @@ def _iter_sample(
     strace = _choose_backend(trace, chain, model=model)
 
     if len(strace) > 0:
-        update_start_vals(start, strace.point(-1), model)
+        model.update_start_vals(start, strace.point(-1))
     else:
-        update_start_vals(start, model.initial_point, model)
+        model.update_start_vals(start, model.initial_point)
 
     try:
         step = CompoundStep(step)
@@ -1281,9 +1279,9 @@ def _prepare_iter_population(
     for c, strace in enumerate(traces):
         # initialize the trace size and variable transforms
         if len(strace) > 0:
-            update_start_vals(start[c], strace.point(-1), model)
+            model.update_start_vals(start[c], strace.point(-1))
         else:
-            update_start_vals(start[c], model.initial_point, model)
+            model.update_start_vals(start[c], model.initial_point)
 
     # 2. create a population (points) that tracks each chain
     # it is updated as the chains are advanced
@@ -1480,7 +1478,7 @@ def _mp_sample(
             strace = _choose_backend(None, idx, model=model)
         # for user supply start value, fill-in missing value if the supplied
         # dict does not contain all parameters
-        update_start_vals(start[idx - chain], model.initial_point, model)
+        model.update_start_vals(start[idx - chain], model.initial_point)
         if step.generates_stats and strace.supports_sampler_stats:
             strace.setup(draws + tune, idx, step.stats_dtypes)
         else:
@@ -1992,9 +1990,10 @@ def sample_prior_predictive(
 def _init_jitter(model, point, chains, jitter_max_retries):
     """Apply a uniform jitter in [-1, 1] to the test value as starting point in each chain.
 
-    pymc3.util.check_start_vals is used to test whether the jittered starting values produce
-    a finite log probability. Invalid values are resampled unless `jitter_max_retries` is achieved,
-    in which case the last sampled values are returned.
+    ``model.check_start_vals`` is used to test whether the jittered starting
+    values produce a finite log probability. Invalid values are resampled
+    unless `jitter_max_retries` is achieved, in which case the last sampled
+    values are returned.
 
     Parameters
     ----------
@@ -2018,7 +2017,7 @@ def _init_jitter(model, point, chains, jitter_max_retries):
 
             if i < jitter_max_retries:
                 try:
-                    check_start_vals(mean, model)
+                    model.check_start_vals(mean)
                 except SamplingError:
                     pass
                 else:

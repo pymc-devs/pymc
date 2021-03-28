@@ -26,6 +26,7 @@ import scipy.sparse as sps
 
 from aesara.tensor.subtensor import AdvancedIncSubtensor
 from aesara.tensor.var import TensorConstant
+from numpy.testing import assert_almost_equal
 
 import pymc3 as pm
 
@@ -33,6 +34,7 @@ from pymc3 import Deterministic, Potential
 from pymc3.blocking import RaveledVars
 from pymc3.distributions import Normal, logpt_sum, transforms
 from pymc3.model import ValueGradFunction
+from pymc3.tests.helpers import SeededTest
 
 
 class NewModel(pm.Model):
@@ -514,3 +516,99 @@ def test_point_logps():
 
     assert "x" in logp_vals.keys()
     assert "a" in logp_vals.keys()
+
+
+class TestUpdateStartVals(SeededTest):
+    def setup_method(self):
+        super().setup_method()
+
+    def test_soft_update_all_present(self):
+        model = pm.Model()
+        start = {"a": 1, "b": 2}
+        test_point = {"a": 3, "b": 4}
+        model.update_start_vals(start, test_point)
+        assert start == {"a": 1, "b": 2}
+
+    def test_soft_update_one_missing(self):
+        model = pm.Model()
+        start = {
+            "a": 1,
+        }
+        test_point = {"a": 3, "b": 4}
+        model.update_start_vals(start, test_point)
+        assert start == {"a": 1, "b": 4}
+
+    def test_soft_update_empty(self):
+        model = pm.Model()
+        start = {}
+        test_point = {"a": 3, "b": 4}
+        model.update_start_vals(start, test_point)
+        assert start == test_point
+
+    def test_soft_update_transformed(self):
+        with pm.Model() as model:
+            pm.Exponential("a", 1)
+        start = {"a": 2.0}
+        test_point = {"a_log__": 0}
+        model.update_start_vals(start, test_point)
+        assert_almost_equal(np.exp(start["a_log__"]), start["a"])
+
+    def test_soft_update_parent(self):
+        with pm.Model() as model:
+            a = pm.Uniform("a", lower=0.0, upper=1.0)
+            b = pm.Uniform("b", lower=2.0, upper=3.0)
+            pm.Uniform("lower", lower=a, upper=3.0)
+            pm.Uniform("upper", lower=0.0, upper=b)
+            pm.Uniform("interv", lower=a, upper=b)
+
+        initial_point = {
+            "a_interval__": np.array(0.0, dtype=aesara.config.floatX),
+            "b_interval__": np.array(0.0, dtype=aesara.config.floatX),
+            "lower_interval__": np.array(0.0, dtype=aesara.config.floatX),
+            "upper_interval__": np.array(0.0, dtype=aesara.config.floatX),
+            "interv_interval__": np.array(0.0, dtype=aesara.config.floatX),
+        }
+        start = {"a": 0.3, "b": 2.1, "lower": 1.4, "upper": 1.4, "interv": 1.4}
+        test_point = {
+            "lower_interval__": -0.3746934494414109,
+            "upper_interval__": 0.693147180559945,
+            "interv_interval__": 0.4519851237430569,
+        }
+        model.update_start_vals(start, initial_point)
+        assert_almost_equal(start["lower_interval__"], test_point["lower_interval__"])
+        assert_almost_equal(start["upper_interval__"], test_point["upper_interval__"])
+        assert_almost_equal(start["interv_interval__"], test_point["interv_interval__"])
+
+
+class TestCheckStartVals(SeededTest):
+    def setup_method(self):
+        super().setup_method()
+
+    def test_valid_start_point(self):
+        with pm.Model() as model:
+            a = pm.Uniform("a", lower=0.0, upper=1.0)
+            b = pm.Uniform("b", lower=2.0, upper=3.0)
+
+        start = {"a": 0.3, "b": 2.1}
+        model.update_start_vals(start, model.initial_point)
+        model.check_start_vals(start)
+
+    def test_invalid_start_point(self):
+        with pm.Model() as model:
+            a = pm.Uniform("a", lower=0.0, upper=1.0)
+            b = pm.Uniform("b", lower=2.0, upper=3.0)
+
+        start = {"a": np.nan, "b": np.nan}
+        model.update_start_vals(start, model.initial_point)
+        with pytest.raises(pm.exceptions.SamplingError):
+            model.check_start_vals(start)
+
+    def test_invalid_variable_name(self):
+        with pm.Model() as model:
+            a = pm.Uniform("a", lower=0.0, upper=1.0)
+            b = pm.Uniform("b", lower=2.0, upper=3.0)
+
+        start = {"a": 0.3, "b": 2.1, "c": 1.0}
+        model.update_start_vals(start, model.initial_point)
+        with pytest.raises(KeyError):
+            model.check_start_vals(start)

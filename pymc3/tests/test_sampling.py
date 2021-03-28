@@ -895,7 +895,7 @@ def test_init_jitter(testval, jitter_max_retries, expectation):
             start = pm.sampling._init_jitter(
                 m, m.initial_point, chains=1, jitter_max_retries=jitter_max_retries
             )
-            pm.util.check_start_vals(start, m)
+            m.check_start_vals(start)
 
 
 @pytest.fixture(scope="class")
