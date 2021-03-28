@@ -18,7 +18,7 @@ import threading
 import warnings
 
 from sys import modules
-from typing import TYPE_CHECKING, Any, List, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, TypeVar, Union
 
 import aesara
 import aesara.graph.basic
@@ -33,11 +33,18 @@ from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.tensor.var import TensorVariable
 from pandas import Series
 
-from pymc3.aesaraf import change_rv_size, gradient, hessian, inputvars, pandas_to_array
+from pymc3.aesaraf import (
+    apply_transforms,
+    change_rv_size,
+    gradient,
+    hessian,
+    inputvars,
+    pandas_to_array,
+)
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.data import GenTensorVariable, Minibatch
 from pymc3.distributions import logp_transform, logpt, logpt_sum
-from pymc3.exceptions import ImputationWarning
+from pymc3.exceptions import ImputationWarning, SamplingError
 from pymc3.math import flatten_list
 from pymc3.util import UNSET, WithMemoization, get_var_name, treedict, treelist
 from pymc3.vartypes import continuous_types, discrete_types, typefilter
@@ -1132,6 +1139,80 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         return flat_view
 
+    def update_start_vals(self, a: Dict[str, np.ndarray], b: Dict[str, np.ndarray]):
+        r"""Update point `a` with `b`, without overwriting existing keys.
+
+        Values specified for transformed variables in `a` will be recomputed
+        conditional on the valures of `b` and stored in `b`.
+
+        """
+        # TODO FIXME XXX: If we're going to incrementally update transformed
+        # variables, we should do it in topological order.
+        for a_name, a_value in tuple(a.items()):
+            # If the name is a random variable, get its value variable and
+            # potentially transform it
+            var = self.named_vars.get(a_name, None)
+            value_var = self.rvs_to_values.get(var, None)
+            if value_var:
+                transform = getattr(value_var.tag, "transform", None)
+                if transform:
+                    fval_graph = transform.forward(var, a_value)
+                    (fval_graph,), _ = apply_transforms((fval_graph,))
+                    fval_graph_inputs = {i: b[i.name] for i in inputvars(fval_graph) if i.name in b}
+                    rv_var_value = fval_graph.eval(fval_graph_inputs)
+                    # Why are these transformed values stored in `b`?  They're
+                    # not going to be used to update `a`.
+                    b[value_var.name] = rv_var_value
+
+        a.update({k: v for k, v in b.items() if k not in a})
+
+    def check_start_vals(self, start):
+        r"""Check that the starting values for MCMC do not cause the relevant log probability
+        to evaluate to something invalid (e.g. Inf or NaN)
+
+        Parameters
+        ----------
+        start : dict, or array of dict
+            Starting point in parameter space (or partial point)
+            Defaults to ``trace.point(-1))`` if there is a trace provided and
+            ``model.initial_point`` if not (defaults to empty dict). Initialization
+            methods for NUTS (see ``init`` keyword) can overwrite the default.
+
+        Raises
+        ------
+        ``KeyError`` if the parameters provided by `start` do not agree with the
+        parameters contained within the model.
+
+        ``pymc3.exceptions.SamplingError`` if the evaluation of the parameters
+        in ``start`` leads to an invalid (i.e. non-finite) state
+
+        Returns
+        -------
+        None
+        """
+        start_points = [start] if isinstance(start, dict) else start
+        for elem in start_points:
+
+            for k, v in elem.items():
+                elem[k] = np.asarray(v, dtype=self[k].dtype)
+
+            if not set(elem.keys()).issubset(self.named_vars.keys()):
+                extra_keys = ", ".join(set(elem.keys()) - set(self.named_vars.keys()))
+                valid_keys = ", ".join(self.named_vars.keys())
+                raise KeyError(
+                    "Some start parameters do not appear in the model!\n"
+                    "Valid keys are: {}, but {} was supplied".format(valid_keys, extra_keys)
+                )
+
+            initial_eval = self.point_logps(point=elem)
+
+            if not np.all(np.isfinite(initial_eval)):
+                raise SamplingError(
+                    "Initial evaluation of model at starting point failed!\n"
+                    "Starting values:\n{}\n\n"
+                    "Initial evaluation results:\n{}".format(elem, str(initial_eval))
+                )
+
     def check_test_point(self, *args, **kwargs):
         warnings.warn(
             "`Model.check_test_point` has been deprecated. Use `Model.point_logps` instead.",
@@ -1340,7 +1421,7 @@ class LoosePointFunc:
         self.model = model
 
     def __call__(self, *args, **kwargs):
-        point = Point(model=self.model, *args, **kwargs)
+        point = Point(model=self.model, *args, filter_model_vars=True, **kwargs)
         return self.f(**point)
 
 

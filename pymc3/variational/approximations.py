@@ -24,7 +24,6 @@ import pymc3 as pm
 from pymc3.blocking import DictToArrayBijection
 from pymc3.distributions.dist_math import rho2sigma
 from pymc3.math import batched_diag
-from pymc3.util import update_start_vals
 from pymc3.variational import flows, opvi
 from pymc3.variational.opvi import Approximation, Group, node_property
 
@@ -74,7 +73,7 @@ class MeanFieldGroup(Group):
             start = self.model.initial_point
         else:
             start_ = start.copy()
-            update_start_vals(start_, self.model.initial_point, self.model)
+            self.model.update_start_vals(start_, self.model.initial_point)
             start = start_
         if self.batched:
             start = start[self.group[0].name][0]
@@ -129,7 +128,7 @@ class FullRankGroup(Group):
             start = self.model.initial_point
         else:
             start_ = start.copy()
-            update_start_vals(start_, self.model.initial_point, self.model)
+            self.model.update_start_vals(start_, self.model.initial_point)
             start = start_
         if self.batched:
             start = start[self.group[0].name][0]
@@ -243,7 +242,7 @@ class EmpiricalGroup(Group):
                     start = self.model.initial_point
                 else:
                     start_ = self.model.initial_point.copy()
-                    update_start_vals(start_, start, self.model)
+                    self.model.update_start_vals(start_, start)
                     start = start_
                 start = pm.floatX(DictToArrayBijection.map(start))
                 # Initialize particles
