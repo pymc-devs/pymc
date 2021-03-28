@@ -11,7 +11,17 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Callable, Dict, Generator, Iterable, List, Optional, Tuple, Union
+from typing import (
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 import aesara
 import aesara.tensor as at
@@ -182,21 +192,33 @@ def extract_rv_and_value_vars(
     return None, None
 
 
-def rv_ancestors(
-    graphs: Iterable[TensorVariable], walk_past_rvs: bool = False
+def walk_model(
+    graphs: Iterable[TensorVariable],
+    walk_past_rvs: bool = False,
+    stop_at_vars: Optional[Set[TensorVariable]] = None,
 ) -> Generator[TensorVariable, None, None]:
-    """Yield everything except the inputs of ``RandomVariable``s.
+    """Walk model graphs and yield their nodes.
+
+    By default, these walks will not go past ``RandomVariable`` nodes.
 
     Parameters
     ==========
     graphs
         The graphs to walk.
     walk_past_rvs
-        If ``True``, do descend into ``RandomVariable``s.
+        If ``True``, the walk will not terminate at ``RandomVariable``s.
+    stop_at_vars
+        A list of variables at which the walk will terminate.
     """
+    if stop_at_vars is None:
+        stop_at_vars = set()
 
     def expand(var):
-        if var.owner and (walk_past_rvs or not isinstance(var.owner.op, RandomVariable)):
+        if (
+            var.owner
+            and (walk_past_rvs or not isinstance(var.owner.op, RandomVariable))
+            and (var not in stop_at_vars)
+        ):
             return reversed(var.owner.inputs)
 
     yield from walk(graphs, expand, False)
@@ -225,7 +247,7 @@ def replace_rvs_in_graphs(
     if initial_replacements:
         replacements.update(initial_replacements)
 
-    for var in rv_ancestors(graphs):
+    for var in walk_model(graphs):
         if var.owner and isinstance(var.owner.op, RandomVariable):
             replacement_fn(var, replacements)
 
