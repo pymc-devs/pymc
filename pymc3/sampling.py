@@ -755,7 +755,6 @@ def _sample_many(
                 traces.append(trace)
             break
         else:
-
             traces.append(trace)
     return MultiTrace(traces)
 
