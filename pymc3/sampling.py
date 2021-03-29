@@ -100,7 +100,7 @@ _log = logging.getLogger("pymc3")
 
 
 def instantiate_steppers(
-    _model, steps: List[Step], selected_steps, step_kwargs=None
+    model, steps: List[Step], selected_steps, step_kwargs=None
 ) -> Union[Step, List[Step]]:
     """Instantiate steppers assigned to the model variables.
 
@@ -110,7 +110,7 @@ def instantiate_steppers(
     Parameters
     ----------
     model : Model object
-        A fully-specified model object; legacy argument -- ignored
+        A fully-specified model object
     steps : list
         A list of zero or more step function instances that have been assigned to some subset of
         the model's parameters.
@@ -134,7 +134,7 @@ def instantiate_steppers(
         if vars:
             args = step_kwargs.get(step_class.name, {})
             used_keys.add(step_class.name)
-            step = step_class(vars=vars, **args)
+            step = step_class(vars=vars, model=model, **args)
             steps.append(step)
 
     unused_args = set(step_kwargs).difference(used_keys)
@@ -600,7 +600,7 @@ def sample(
             )
             _log.info(f"Population sampling ({chains} chains)")
 
-            initial_point_model_size = sum(start[n.name].size for n in model.value_vars)
+            initial_point_model_size = sum(start[0][n.name].size for n in model.value_vars)
 
             if has_demcmc and chains < 3:
                 raise ValueError(
@@ -1014,7 +1014,7 @@ def _iter_sample(
     except TypeError:
         pass
 
-    point = Point(start, model=model)
+    point = Point(start, model=model, filter_model_vars=True)
 
     if step.generates_stats and strace.supports_sampler_stats:
         strace.setup(draws, chain, step.stats_dtypes)
