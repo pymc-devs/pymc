@@ -14,12 +14,12 @@
 from typing import Any, Dict, List, Tuple
 
 import aesara
-import aesara.tensor as at
 import numpy as np
 import numpy.random as nr
 import scipy.linalg
 
-from aesara.tensor.random.basic import CategoricalRV
+from aesara.graph.fg import MissingInputError
+from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
 
 import pymc3 as pm
 
@@ -362,13 +362,22 @@ class BinaryMetropolis(ArrayStep):
         and Categorical variables with k=1.
         """
         distribution = getattr(var.owner, "op", None)
-        if isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
-            return Competence.IDEAL
+
+        if isinstance(distribution, BernoulliRV):
+            return Competence.COMPATIBLE
 
         if isinstance(distribution, CategoricalRV):
-            k = at.get_scalar_constant_value(distribution.owner.inputs[2])
-            if k == 2:
-                return Competence.IDEAL
+            # TODO: We could compute the initial value of `k`
+            # if we had a model object.
+            # k_graph = var.owner.inputs[3].shape[-1]
+            # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
+            # k = model.fn(k_graph)(initial_point)
+            try:
+                k = var.owner.inputs[3].shape[-1].eval()
+                if k == 2:
+                    return Competence.COMPATIBLE
+            except MissingInputError:
+                pass
         return Competence.INCOMPATIBLE
 
 
@@ -449,13 +458,22 @@ class BinaryGibbsMetropolis(ArrayStep):
         and Categorical variables with k=2.
         """
         distribution = getattr(var.owner, "op", None)
-        if isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
+
+        if isinstance(distribution, BernoulliRV):
             return Competence.IDEAL
 
         if isinstance(distribution, CategoricalRV):
-            k = at.get_scalar_constant_value(distribution.owner.inputs[2])
-            if k == 2:
-                return Competence.IDEAL
+            # TODO: We could compute the initial value of `k`
+            # if we had a model object.
+            # k_graph = var.owner.inputs[3].shape[-1]
+            # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
+            # k = model.fn(k_graph)(initial_point)
+            try:
+                k = var.owner.inputs[3].shape[-1].eval()
+                if k == 2:
+                    return Competence.IDEAL
+            except MissingInputError:
+                pass
         return Competence.INCOMPATIBLE
 
 
@@ -585,13 +603,23 @@ class CategoricalGibbsMetropolis(ArrayStep):
         Categorical variables.
         """
         distribution = getattr(var.owner, "op", None)
+
         if isinstance(distribution, CategoricalRV):
-            k = at.get_scalar_constant_value(distribution.owner.inputs[2])
-            if k == 2:
-                return Competence.IDEAL
+            # TODO: We could compute the initial value of `k`
+            # if we had a model object.
+            # k_graph = var.owner.inputs[3].shape[-1]
+            # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
+            # k = model.fn(k_graph)(initial_point)
+            try:
+                k = var.owner.inputs[3].shape[-1].eval()
+                if k > 2:
+                    return Competence.IDEAL
+            except MissingInputError:
+                pass
+
             return Competence.COMPATIBLE
 
-        if isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
+        if isinstance(distribution, BernoulliRV):
             return Competence.COMPATIBLE
 
         return Competence.INCOMPATIBLE
