@@ -34,12 +34,12 @@ from aesara.tensor.var import TensorVariable
 from pandas import Series
 
 from pymc3.aesaraf import (
-    apply_transforms,
     change_rv_size,
     gradient,
     hessian,
     inputvars,
     pandas_to_array,
+    rvs_to_value_vars,
 )
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.data import GenTensorVariable, Minibatch
@@ -1157,7 +1157,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 transform = getattr(value_var.tag, "transform", None)
                 if transform:
                     fval_graph = transform.forward(var, a_value)
-                    (fval_graph,), _ = apply_transforms((fval_graph,))
+                    (fval_graph,), _ = rvs_to_value_vars((fval_graph,), apply_transforms=True)
                     fval_graph_inputs = {i: b[i.name] for i in inputvars(fval_graph) if i.name in b}
                     rv_var_value = fval_graph.eval(fval_graph_inputs)
                     # Why are these transformed values stored in `b`?  They're
