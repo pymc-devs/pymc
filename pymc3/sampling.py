@@ -755,6 +755,7 @@ def _sample_many(
                 traces.append(trace)
             break
         else:
+
             traces.append(trace)
     return MultiTrace(traces)
 
@@ -869,6 +870,8 @@ def _sample(
         A ``BaseTrace`` object that contains the samples for this chain.
     """
     skip_first = kwargs.get("skip_first", 0)
+
+    trace = copy(trace)
 
     sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed, callback)
     _pbar_data = {"chain": chain, "divergences": 0}
