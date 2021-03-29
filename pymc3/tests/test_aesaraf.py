@@ -243,7 +243,7 @@ class TestTakeAlongAxis:
         slicer = [slice(None)] * len(shape)
         for i in range(indices.shape[axis]):
             slicer[axis] = i
-            inds = indices[slicer].reshape(shape[:_axis] + (1,) + shape[_axis + 1 :])
+            inds = indices[tuple(slicer)].reshape(shape[:_axis] + (1,) + shape[_axis + 1 :])
             inds = _make_along_axis_idx(shape, inds, _axis)
             expected_grad[inds] += 1
         expected_grad *= 2 * arr
