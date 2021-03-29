@@ -85,6 +85,7 @@ jobs:
             pymc3/tests/test_posdef_sym.py
             pymc3/tests/test_quadpotential.py
             pymc3/tests/test_shape_handling.py
+            pymc3/tests/test_step.py
 
       fail-fast: false
     runs-on: ${{ matrix.os }}
