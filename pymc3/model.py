@@ -677,11 +677,16 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         if tempered:
             with self:
+                # Convert random variables into their log-likelihood inputs and
+                # apply their transforms, if any
+                potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
+
                 free_RVs_logp = at.sum(
                     [
                         at.sum(logpt(var, getattr(var.tag, "value_var", None)))
-                        for var in self.free_RVs + self.potentials
+                        for var in self.free_RVs
                     ]
+                    + list(potentials)
                 )
                 observed_RVs_logp = at.sum(
                     [at.sum(logpt(obs, obs.tag.observations)) for obs in self.observed_RVs]
@@ -706,7 +711,13 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         with self:
             factors = [logpt_sum(var, getattr(var.tag, "value_var", None)) for var in self.free_RVs]
             factors += [logpt_sum(obs, obs.tag.observations) for obs in self.observed_RVs]
-            factors += self.potentials
+
+            # Convert random variables into their log-likelihood inputs and
+            # apply their transforms, if any
+            potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
+
+            factors += potentials
+
             logp_var = at.sum([at.sum(factor) for factor in factors])
             if self.name:
                 logp_var.name = "__logp_%s" % self.name
@@ -730,8 +741,14 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             factors += [
                 logpt_sum(obs, obs.tag.observations, jacobian=False) for obs in self.observed_RVs
             ]
-            factors += self.potentials
+
+            # Convert random variables into their log-likelihood inputs and
+            # apply their transforms, if any
+            potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
+            factors += potentials
+
             logp_var = at.sum([at.sum(factor) for factor in factors])
+
             if self.name:
                 logp_var.name = "__logp_nojac_%s" % self.name
             else:
@@ -750,7 +767,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def datalogpt(self):
         with self:
             factors = [logpt(obs, obs.tag.observations) for obs in self.observed_RVs]
-            factors += [at.sum(factor) for factor in self.potentials]
+
+            # Convert random variables into their log-likelihood inputs and
+            # apply their transforms, if any
+            potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
+
+            factors += [at.sum(factor) for factor in potentials]
             return at.sum(factors)
 
     @property
