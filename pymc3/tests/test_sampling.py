@@ -678,6 +678,8 @@ class TestSamplePPC(SeededTest):
             npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
     def test_deterministic_of_observed_modified_interface(self):
+        np.random.seed(4982)
+
         meas_in_1 = pm.aesaraf.floatX(2 + 4 * np.random.randn(100))
         meas_in_2 = pm.aesaraf.floatX(5 + 4 * np.random.randn(100))
         with pm.Model() as model:
