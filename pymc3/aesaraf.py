@@ -34,10 +34,11 @@ from aesara.graph.basic import (
     Apply,
     Constant,
     Variable,
-    clone_replace,
+    clone_get_equiv,
     graph_inputs,
     walk,
 )
+from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op, compute_test_value
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 from aesara.tensor.elemwise import Elemwise
@@ -192,89 +193,6 @@ def extract_rv_and_value_vars(
     return None, None
 
 
-def walk_model(
-    graphs: Iterable[TensorVariable],
-    walk_past_rvs: bool = False,
-    stop_at_vars: Optional[Set[TensorVariable]] = None,
-) -> Generator[TensorVariable, None, None]:
-    """Walk model graphs and yield their nodes.
-
-    By default, these walks will not go past ``RandomVariable`` nodes.
-
-    Parameters
-    ==========
-    graphs
-        The graphs to walk.
-    walk_past_rvs
-        If ``True``, the walk will not terminate at ``RandomVariable``s.
-    stop_at_vars
-        A list of variables at which the walk will terminate.
-    """
-    if stop_at_vars is None:
-        stop_at_vars = set()
-
-    def expand(var):
-        if (
-            var.owner
-            and (walk_past_rvs or not isinstance(var.owner.op, RandomVariable))
-            and (var not in stop_at_vars)
-        ):
-            return reversed(var.owner.inputs)
-
-    yield from walk(graphs, expand, False)
-
-
-def replace_rvs_in_graphs(
-    graphs: Iterable[TensorVariable],
-    replacement_fn: Callable[[TensorVariable], Dict[TensorVariable, TensorVariable]],
-    initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
-) -> Tuple[TensorVariable, Dict[TensorVariable, TensorVariable]]:
-    """Replace random variables in graphs
-
-    This will *not* recompute test values.
-
-    Parameters
-    ==========
-    graphs
-        The graphs in which random variables are to be replaced.
-
-    Returns
-    =======
-    Tuple containing the transformed graphs and a ``dict`` of the replacements
-    that were made.
-    """
-    replacements = {}
-    if initial_replacements:
-        replacements.update(initial_replacements)
-
-    for var in walk_model(graphs):
-        if var.owner and isinstance(var.owner.op, RandomVariable):
-            replacement_fn(var, replacements)
-
-    if replacements:
-        graphs = clone_replace(graphs, replacements)
-
-    return graphs, replacements
-
-
-def rvs_to_value_vars(
-    graphs: Iterable[TensorVariable],
-    initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
-) -> Tuple[Iterable[TensorVariable], Dict[TensorVariable, TensorVariable]]:
-    """Replace random variables in graphs with their value variables.
-
-    This will *not* recompute test values.
-    """
-
-    def value_var_replacements(var, replacements):
-        rv_var, rv_value_var = extract_rv_and_value_vars(var)
-
-        if rv_value_var is not None:
-            replacements[var] = rv_value_var
-
-    return replace_rvs_in_graphs(graphs, value_var_replacements, initial_replacements)
-
-
 def extract_obs_data(x: TensorVariable) -> np.ndarray:
     """Extract data observed symbolic variables.
 
@@ -297,29 +215,135 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
     raise TypeError(f"Data cannot be extracted from {x}")
 
 
-def apply_transforms(
+def walk_model(
     graphs: Iterable[TensorVariable],
+    walk_past_rvs: bool = False,
+    stop_at_vars: Optional[Set[TensorVariable]] = None,
+    expand_fn: Callable[[TensorVariable], Iterable[TensorVariable]] = lambda var: [],
+) -> Generator[TensorVariable, None, None]:
+    """Walk model graphs and yield their nodes.
+
+    By default, these walks will not go past ``RandomVariable`` nodes.
+
+    Parameters
+    ==========
+    graphs
+        The graphs to walk.
+    walk_past_rvs
+        If ``True``, the walk will not terminate at ``RandomVariable``s.
+    stop_at_vars
+        A list of variables at which the walk will terminate.
+    expand_fn
+        A function that returns the next variable(s) to be traversed.
+    """
+    if stop_at_vars is None:
+        stop_at_vars = set()
+
+    def expand(var):
+        new_vars = expand_fn(var)
+
+        if (
+            var.owner
+            and (walk_past_rvs or not isinstance(var.owner.op, RandomVariable))
+            and (var not in stop_at_vars)
+        ):
+            new_vars.extend(reversed(var.owner.inputs))
+
+        return new_vars
+
+    yield from walk(graphs, expand, False)
+
+
+def replace_rvs_in_graphs(
+    graphs: Iterable[TensorVariable],
+    replacement_fn: Callable[[TensorVariable], Dict[TensorVariable, TensorVariable]],
+    initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
+    **kwargs,
 ) -> Tuple[TensorVariable, Dict[TensorVariable, TensorVariable]]:
-    """Apply the transforms associated with each random variable in `graphs`.
+    """Replace random variables in graphs
 
     This will *not* recompute test values.
+
+    Parameters
+    ==========
+    graphs
+        The graphs in which random variables are to be replaced.
+
+    Returns
+    =======
+    Tuple containing the transformed graphs and a ``dict`` of the replacements
+    that were made.
+    """
+    replacements = {}
+    if initial_replacements:
+        replacements.update(initial_replacements)
+
+    def expand_replace(var):
+        new_nodes = []
+        if var.owner and isinstance(var.owner.op, RandomVariable):
+            new_nodes.extend(replacement_fn(var, replacements))
+        return new_nodes
+
+    for var in walk_model(graphs, expand_fn=expand_replace, **kwargs):
+        pass
+
+    if replacements:
+        inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
+        equiv = {k: k for k in replacements.keys()}
+        equiv = clone_get_equiv(inputs, graphs, False, False, equiv)
+
+        fg = FunctionGraph(
+            [equiv[i] for i in inputs],
+            [equiv[o] for o in graphs],
+            clone=False,
+        )
+
+        fg.replace_all(replacements.items(), import_missing=True)
+
+        graphs = list(fg.outputs)
+
+    return graphs, replacements
+
+
+def rvs_to_value_vars(
+    graphs: Iterable[TensorVariable],
+    apply_transforms: bool = False,
+    initial_replacements: Optional[Dict[TensorVariable, TensorVariable]] = None,
+    **kwargs,
+) -> Tuple[TensorVariable, Dict[TensorVariable, TensorVariable]]:
+    """Replace random variables in graphs with their value variables.
+
+    This will *not* recompute test values in the resulting graphs.
+
+    Parameters
+    ==========
+    graphs
+        The graphs in which to perform the replacements.
+    apply_transforms
+        If ``True``, apply each value variable's transform.
+    initial_replacements
+        A ``dict`` containing the initial replacements to be made.
+
     """
 
     def transform_replacements(var, replacements):
         rv_var, rv_value_var = extract_rv_and_value_vars(var)
 
         if rv_value_var is None:
-            return
+            return []
 
         transform = getattr(rv_value_var.tag, "transform", None)
 
-        if transform is None:
-            return
+        if transform is None or not apply_transforms:
+            replacements[var] = rv_value_var
+            return []
 
         trans_rv_value = transform.backward(rv_var, rv_value_var)
         replacements[var] = trans_rv_value
 
-    return replace_rvs_in_graphs(graphs, transform_replacements)
+        return [trans_rv_value]
+
+    return replace_rvs_in_graphs(graphs, transform_replacements, initial_replacements, **kwargs)
 
 
 def inputvars(a):

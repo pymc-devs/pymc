@@ -25,6 +25,7 @@ import scipy.sparse as sps
 
 from aesara.graph.basic import Variable
 from aesara.tensor.random.basic import normal, uniform
+from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.type import TensorType
 from aesara.tensor.var import TensorVariable
@@ -35,6 +36,7 @@ from pymc3.aesaraf import (
     _conversion_map,
     extract_obs_data,
     pandas_to_array,
+    rvs_to_value_vars,
     take_along_axis,
     walk_model,
 )
@@ -418,3 +420,56 @@ def test_walk_model():
     res = list(walk_model((test_graph,), walk_past_rvs=True, stop_at_vars={e}))
     assert a in res
     assert c not in res
+
+
+def test_rvs_to_value_vars():
+
+    with pm.Model() as m:
+        a = pm.Uniform("a", 0.0, 1.0)
+        b = pm.Uniform("b", 0, a + 1.0)
+        c = pm.Normal("c")
+        d = aet.log(c + b) + 2.0
+
+    a_value_var = m.rvs_to_values[a]
+    assert a_value_var.tag.transform
+
+    b_value_var = m.rvs_to_values[b]
+    c_value_var = m.rvs_to_values[c]
+
+    (res,), replaced = rvs_to_value_vars((d,))
+
+    assert res.owner.op == aet.add
+    log_output = res.owner.inputs[0]
+    assert log_output.owner.op == aet.log
+    log_add_output = res.owner.inputs[0].owner.inputs[0]
+    assert log_add_output.owner.op == aet.add
+    c_output = log_add_output.owner.inputs[0]
+
+    # We make sure that the random variables were replaced
+    # with their value variables
+    assert c_output == c_value_var
+    b_output = log_add_output.owner.inputs[1]
+    assert b_output == b_value_var
+
+    res_ancestors = list(walk_model((res,), walk_past_rvs=True))
+    res_rv_ancestors = [
+        v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
+    ]
+
+    # There shouldn't be any `RandomVariable`s in the resulting graph
+    assert len(res_rv_ancestors) == 0
+    assert b_value_var in res_ancestors
+    assert c_value_var in res_ancestors
+    assert a_value_var not in res_ancestors
+
+    (res,), replaced = rvs_to_value_vars((d,), apply_transforms=True)
+
+    res_ancestors = list(walk_model((res,), walk_past_rvs=True))
+    res_rv_ancestors = [
+        v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
+    ]
+
+    assert len(res_rv_ancestors) == 0
+    assert a_value_var in res_ancestors
+    assert b_value_var in res_ancestors
+    assert c_value_var in res_ancestors
