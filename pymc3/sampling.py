@@ -201,13 +201,14 @@ def assign_step_methods(model, step=None, methods=STEP_METHODS, step_kwargs=None
             has_gradient = var.dtype not in discrete_types
             if has_gradient:
                 try:
-                    tg.grad(model.logpt, var.tag.value_var)
-                except (AttributeError, NotImplementedError, tg.NullTypeGradError):
+                    tg.grad(model.logpt, var)
+                except (NotImplementedError, tg.NullTypeGradError):
                     has_gradient = False
             # select the best method
+            rv_var = model.values_to_rvs[var]
             selected = max(
                 methods,
-                key=lambda method, var=var, has_gradient=has_gradient: method._competence(
+                key=lambda method, var=rv_var, has_gradient=has_gradient: method._competence(
                     var, has_gradient
                 ),
             )
