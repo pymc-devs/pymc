@@ -19,18 +19,13 @@ import aesara.tensor as at
 import numpy as np
 
 from aesara import config
-from aesara.graph.basic import clone_replace, graph_inputs, io_toposort
+from aesara.graph.basic import graph_inputs, io_toposort
 from aesara.graph.op import Op, compute_test_value
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import AdvancedSubtensor, AdvancedSubtensor1, Subtensor
 from aesara.tensor.var import TensorVariable
 
-from pymc3.aesaraf import (
-    apply_transforms,
-    extract_rv_and_value_vars,
-    floatX,
-    rvs_to_value_vars,
-)
+from pymc3.aesaraf import extract_rv_and_value_vars, floatX, rvs_to_value_vars
 
 
 @singledispatch
@@ -180,9 +175,6 @@ def logpt(
     else:
         logp_var = _logcdf(rv_node.op, rv_var, *dist_params, **kwargs)
 
-    if transformed and not cdf:
-        (logp_var,), _ = apply_transforms((logp_var,))
-
     transform = getattr(rv_value_var.tag, "transform", None) if rv_value_var else None
 
     if transform and transformed and not cdf and jacobian:
@@ -193,10 +185,11 @@ def logpt(
             logp_var += transformed_jacobian
 
     # Replace random variables with their value variables
-    (logp_var,), replaced = rvs_to_value_vars((logp_var,), {rv_var: rv_value})
-
-    if rv_value_var != rv_value:
-        (logp_var,) = clone_replace((logp_var,), replace={rv_value_var: rv_value})
+    (logp_var,), _ = rvs_to_value_vars(
+        (logp_var,),
+        apply_transforms=transformed and not cdf,
+        initial_replacements={rv_var: rv_value, rv_value_var: rv_value},
+    )
 
     if sum:
         logp_var = at.sum(logp_var)
