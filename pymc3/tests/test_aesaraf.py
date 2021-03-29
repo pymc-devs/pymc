@@ -400,15 +400,15 @@ def test_pandas_to_array(input_dtype):
 
 
 def test_walk_model():
-    d = aet.vector("d")
-    b = aet.vector("b")
+    d = at.vector("d")
+    b = at.vector("b")
     c = uniform(0.0, d)
     c.name = "c"
-    e = aet.log(c)
+    e = at.log(c)
     a = normal(e, b)
     a.name = "a"
 
-    test_graph = aet.exp(a + 1)
+    test_graph = at.exp(a + 1)
     res = list(walk_model((test_graph,)))
     assert a in res
     assert c not in res
@@ -428,7 +428,7 @@ def test_rvs_to_value_vars():
         a = pm.Uniform("a", 0.0, 1.0)
         b = pm.Uniform("b", 0, a + 1.0)
         c = pm.Normal("c")
-        d = aet.log(c + b) + 2.0
+        d = at.log(c + b) + 2.0
 
     a_value_var = m.rvs_to_values[a]
     assert a_value_var.tag.transform
@@ -438,11 +438,11 @@ def test_rvs_to_value_vars():
 
     (res,), replaced = rvs_to_value_vars((d,))
 
-    assert res.owner.op == aet.add
+    assert res.owner.op == at.add
     log_output = res.owner.inputs[0]
-    assert log_output.owner.op == aet.log
+    assert log_output.owner.op == at.log
     log_add_output = res.owner.inputs[0].owner.inputs[0]
-    assert log_add_output.owner.op == aet.add
+    assert log_add_output.owner.op == at.add
     c_output = log_add_output.owner.inputs[0]
 
     # We make sure that the random variables were replaced
