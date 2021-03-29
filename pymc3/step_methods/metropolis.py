@@ -23,7 +23,7 @@ from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
 
 import pymc3 as pm
 
-from pymc3.aesaraf import floatX
+from pymc3.aesaraf import floatX, rvs_to_value_vars
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.step_methods.arraystep import (
     ArrayStep,
@@ -408,8 +408,8 @@ class BinaryGibbsMetropolis(ArrayStep):
         # transition probabilities
         self.transit_p = transit_p
 
-        # XXX: This needs to be refactored
-        self.dim = None  # sum(v.dsize for v in vars)
+        initial_point = model.initial_point
+        self.dim = sum(initial_point[v.name].size for v in vars)
 
         if order == "random":
             self.shuffle_dims = True
@@ -491,7 +491,10 @@ class CategoricalGibbsMetropolis(ArrayStep):
     def __init__(self, vars, proposal="uniform", order="random", model=None):
 
         model = pm.modelcontext(model)
+
         vars = pm.inputvars(vars)
+
+        initial_point = model.initial_point
 
         dimcats = []
         # The above variable is a list of pairs (aggregate dimension, number
@@ -500,20 +503,23 @@ class CategoricalGibbsMetropolis(ArrayStep):
         # categories, we will have dimcats = [(0, M), (1, M), (2, N), (3, N), (4, N)].
         for v in vars:
 
-            distr = getattr(v.owner, "op", None)
+            v_init_val = initial_point[v.name]
+
+            rv_var = model.values_to_rvs[v]
+            distr = getattr(rv_var.owner, "op", None)
 
             if isinstance(distr, CategoricalRV):
-                # XXX: This needs to be refactored
-                k = None  # draw_values([distr.k])[0]
-            elif isinstance(distr, pm.Bernoulli) or (v.dtype in pm.bool_types):
+                k_graph = rv_var.owner.inputs[3].shape[-1]
+                (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
+                k = model.fn(k_graph)(initial_point)
+            elif isinstance(distr, BernoulliRV):
                 k = 2
             else:
                 raise ValueError(
                     "All variables must be categorical or binary" + "for CategoricalGibbsMetropolis"
                 )
             start = len(dimcats)
-            # XXX: This needs to be refactored
-            dimcats += None  # [(dim, k) for dim in range(start, start + v.dsize)]
+            dimcats += [(dim, k) for dim in range(start, start + v_init_val.size)]
 
         if order == "random":
             self.shuffle_dims = True
@@ -543,17 +549,15 @@ class CategoricalGibbsMetropolis(ArrayStep):
         if self.shuffle_dims:
             nr.shuffle(dimcats)
 
-        q = np.copy(q0)
+        q = RaveledVars(np.copy(q0), point_map_info)
         logp_curr = logp(q)
 
         for dim, k in dimcats:
-            curr_val, q[dim] = q[dim], sample_except(k, q[dim])
+            curr_val, q.data[dim] = q.data[dim], sample_except(k, q.data[dim])
             logp_prop = logp(q)
-            q[dim], accepted = metrop_select(logp_prop - logp_curr, q[dim], curr_val)
+            q.data[dim], accepted = metrop_select(logp_prop - logp_curr, q.data[dim], curr_val)
             if accepted:
                 logp_curr = logp_prop
-
-        q = RaveledVars(q, point_map_info)
 
         return q
 
@@ -566,24 +570,22 @@ class CategoricalGibbsMetropolis(ArrayStep):
         if self.shuffle_dims:
             nr.shuffle(dimcats)
 
-        q = np.copy(q0)
+        q = RaveledVars(np.copy(q0), point_map_info)
         logp_curr = logp(q)
 
         for dim, k in dimcats:
             logp_curr = self.metropolis_proportional(q, logp, logp_curr, dim, k)
 
-        q = RaveledVars(q, point_map_info)
-
         return q
 
     def metropolis_proportional(self, q, logp, logp_curr, dim, k):
-        given_cat = int(q[dim])
+        given_cat = int(q.data[dim])
         log_probs = np.zeros(k)
         log_probs[given_cat] = logp_curr
         candidates = list(range(k))
         for candidate_cat in candidates:
             if candidate_cat != given_cat:
-                q[dim] = candidate_cat
+                q.data[dim] = candidate_cat
                 log_probs[candidate_cat] = logp(q)
         probs = softmax(log_probs)
         prob_curr, probs[given_cat] = probs[given_cat], 0.0
@@ -591,9 +593,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
         proposed_cat = nr.choice(candidates, p=probs)
         accept_ratio = (1.0 - prob_curr) / (1.0 - probs[proposed_cat])
         if not np.isfinite(accept_ratio) or nr.uniform() >= accept_ratio:
-            q[dim] = given_cat
+            q.data[dim] = given_cat
             return logp_curr
-        q[dim] = proposed_cat
+        q.data[dim] = proposed_cat
         return log_probs[proposed_cat]
 
     @staticmethod
@@ -744,7 +746,7 @@ class DEMetropolis(PopulationArrayStepShared):
         r1 = DictToArrayBijection.map(self.population[ir1])
         r2 = DictToArrayBijection.map(self.population[ir2])
         # propose a jump
-        q = floatX(q0 + self.lamb * (r1 - r2) + epsilon)
+        q = floatX(q0 + self.lamb * (r1.data - r2.data) + epsilon)
 
         accept = self.delta_logp(q, q0)
         q_new, accepted = metrop_select(accept, q, q0)

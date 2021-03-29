@@ -26,7 +26,7 @@ from aesara.tensor.sharedvar import TensorSharedVariable
 import pymc3 as pm
 
 from pymc3.blocking import DictToArrayBijection
-from pymc3.model import Model
+from pymc3.model import Model, Point
 from pymc3.step_methods.arraystep import ArrayStepShared, Competence, metrop_select
 from pymc3.step_methods.compound import CompoundStep
 from pymc3.step_methods.metropolis import (
@@ -746,7 +746,8 @@ class MLDA(ArrayStepShared):
 
         # Call the recursive DA proposal to get proposed sample
         # and convert dict -> numpy array
-        q = DictToArrayBijection.map(self.proposal_dist(q0_dict))
+        pre_q = self.proposal_dist(q0_dict)
+        q = DictToArrayBijection.map(pre_q)
 
         # Evaluate MLDA acceptance log-ratio
         # If proposed sample from lower levels is the same as current one,
@@ -1141,4 +1142,7 @@ class RecursiveDAProposal(Proposal):
         # return sample with index self.subchain_selection from the generated
         # sequence of length self.subsampling_rate. The index is set within
         # MLDA's astep() function
-        return self.trace.point(-self.subsampling_rate + self.subchain_selection)
+        new_point = self.trace.point(-self.subsampling_rate + self.subchain_selection)
+        new_point = Point(new_point, model=self.model_below, filter_model_vars=True)
+
+        return new_point
