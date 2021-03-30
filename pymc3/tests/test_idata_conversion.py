@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from aesara.tensor.subtensor import AdvancedIncSubtensor
 from arviz import InferenceData
 from arviz.tests.helpers import check_multiple_attrs
 from numpy import ma
@@ -295,27 +296,23 @@ class TestDataPyMC3:
         assert np.all(idata2.constant_data.x.dim1.values == np.array(new_dim1))
         assert np.all(idata2.constant_data.x.dim2.values == np.array(["c1", "c2"]))
 
-    @pytest.mark.xfail(reason="Missing data not refactored for v4")
     def test_missing_data_model(self):
         # source pymc3/pymc3/tests/test_missing.py
         data = ma.masked_values([1, 2, -1, 4, -1], value=-1)
         model = pm.Model()
         with model:
             x = pm.Normal("x", 1, 1)
-            pm.Normal("y", x, 1, observed=data)
+            y = pm.Normal("y", x, 1, observed=data)
             inference_data = pm.sample(100, chains=2, return_inferencedata=True)
 
         # make sure that data is really missing
-        (y_missing,) = model.missing_values
-        # TODO: Test values aren't enabled anymore
-        assert y_missing.tag.test_value.shape == (2,)
+        assert isinstance(y.owner.op, AdvancedIncSubtensor)
 
         test_dict = {"posterior": ["x"], "observed_data": ["y"], "log_likelihood": ["y"]}
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
 
     @pytest.mark.xfail(reason="LKJCholeskyCov not refactored for v4")
-    @pytest.mark.xfail(reason="Missing data not refactored for v4")
     def test_mv_missing_data_model(self):
         data = ma.masked_values([[1, 2], [2, 2], [-1, 4], [2, -1], [-1, -1]], value=-1)
 
@@ -324,13 +321,11 @@ class TestDataPyMC3:
             mu = pm.Normal("mu", 0, 1, size=2)
             sd_dist = pm.HalfNormal.dist(1.0)
             chol, *_ = pm.LKJCholeskyCov("chol_cov", n=2, eta=1, sd_dist=sd_dist, compute_corr=True)
-            pm.MvNormal("y", mu=mu, chol=chol, observed=data)
+            y = pm.MvNormal("y", mu=mu, chol=chol, observed=data)
             inference_data = pm.sample(100, chains=2, return_inferencedata=True)
 
         # make sure that data is really missing
-        (y_missing,) = model.missing_values
-        # TODO: Test values aren't enabled anymore
-        assert y_missing.tag.test_value.shape == (4,)
+        assert isinstance(y.owner.op, AdvancedIncSubtensor)
 
         test_dict = {
             "posterior": ["mu", "chol_cov"],
