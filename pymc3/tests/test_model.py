@@ -24,6 +24,7 @@ import pandas as pd
 import pytest
 import scipy.sparse as sps
 
+from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor
 from aesara.tensor.var import TensorConstant
 from numpy.testing import assert_almost_equal
@@ -31,9 +32,9 @@ from numpy.testing import assert_almost_equal
 import pymc3 as pm
 
 from pymc3 import Deterministic, Potential
-from pymc3.blocking import RaveledVars
+from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.distributions import Normal, logpt_sum, transforms
-from pymc3.model import ValueGradFunction
+from pymc3.model import Point, ValueGradFunction
 from pymc3.tests.helpers import SeededTest
 
 
@@ -201,20 +202,9 @@ def test_duplicate_vars():
 def test_empty_observed():
     data = pd.DataFrame(np.ones((2, 3)) / 3)
     data.values[:] = np.nan
-    with pm.Model(aesara_config={"compute_test_value": "raise"}):
+    with pm.Model():
         a = pm.Normal("a", observed=data)
-
-        assert isinstance(a.tag.observations.owner.op, AdvancedIncSubtensor)
-        # The masked observations are replaced by elements of the RV `a`,
-        # which means that they should all have the same sample test values
-        a_data = a.tag.observations.owner.inputs[1]
-        npt.assert_allclose(a.tag.test_value.flatten(), a_data.tag.test_value)
-
-        # Let's try this again with another distribution
-        b = pm.Gamma("b", alpha=1, beta=1, observed=data)
-        assert isinstance(b.tag.observations.owner.op, AdvancedIncSubtensor)
-        b_data = b.tag.observations.owner.inputs[1]
-        npt.assert_allclose(b.tag.test_value.flatten(), b_data.tag.test_value)
+        assert not hasattr(a.tag, "observations")
 
 
 class TestValueGradFunction(unittest.TestCase):
@@ -302,8 +292,8 @@ class TestValueGradFunction(unittest.TestCase):
         assert dlogp.size == 4
         npt.assert_allclose(dlogp, 0.0, atol=1e-5)
 
-    def test_tensor_type_conversion(self):
-        # case described in #3122
+    def test_missing_data(self):
+        # Originally from a case described in #3122
         X = np.random.binomial(1, 0.5, 10)
         X[0] = -1  # masked a single value
         X = np.ma.masked_values(X, value=-1)
@@ -312,9 +302,16 @@ class TestValueGradFunction(unittest.TestCase):
             x2 = pm.Bernoulli("x2", x1, observed=X)
 
         gf = m.logp_dlogp_function()
+        gf._extra_are_set = True
 
-        # TODO: Assert something.
-        # assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
+        m.default_rng.get_value(borrow=True).seed(102)
+
+        # The gradient should have random values as inputs, so its value should
+        # change every time we evaluate it at the same point
+        #
+        # TODO: We could probably use a better test than this.
+        res = [gf(DictToArrayBijection.map(Point(m.test_point, model=m))) for i in range(20)]
+        assert np.var(res) > 0.0
 
     def test_aesara_switch_broadcast_edge_cases_1(self):
         # Tests against two subtle issues related to a previous bug in Theano
@@ -474,7 +471,7 @@ def test_make_obs_var():
 
     # Ensure that the missing values are appropriately set to None
     for func_output in [dense_output, sparse_output]:
-        assert func_output.tag.missing_values is None
+        assert isinstance(func_output.owner.op, RandomVariable)
 
     # Ensure that the Aesara variable names are correctly set.
     # Note that the output for masked inputs do not have their names set
@@ -488,9 +485,7 @@ def test_make_obs_var():
 
     # Masked output is something weird. Just ensure it has missing values
     # self.assertIsInstance(masked_output, TensorConstant)
-    assert masked_output.tag.missing_values is not None
-
-    return None
+    assert isinstance(masked_output.owner.op, AdvancedIncSubtensor)
 
 
 def test_initial_point():
