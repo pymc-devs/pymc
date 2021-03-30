@@ -21,8 +21,15 @@ import numpy as np
 from aesara import config
 from aesara.graph.basic import graph_inputs, io_toposort
 from aesara.graph.op import Op, compute_test_value
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.subtensor import AdvancedSubtensor, AdvancedSubtensor1, Subtensor
+from aesara.graph.type import CType
+from aesara.tensor.subtensor import (
+    AdvancedIncSubtensor,
+    AdvancedIncSubtensor1,
+    AdvancedSubtensor,
+    AdvancedSubtensor1,
+    IncSubtensor,
+    Subtensor,
+)
 from aesara.tensor.var import TensorVariable
 
 from pymc3.aesaraf import extract_rv_and_value_vars, floatX, rvs_to_value_vars
@@ -98,7 +105,7 @@ def _get_scaling(total_size, shape, ndim):
 
 
 def logpt(
-    rv_var: TensorVariable,
+    var: TensorVariable,
     rv_value: Optional[TensorVariable] = None,
     *,
     jacobian: bool = True,
@@ -110,19 +117,19 @@ def logpt(
 ) -> TensorVariable:
     """Create a measure-space (i.e. log-likelihood) graph for a random variable at a given point.
 
-    The input `rv_var` determines which log-likelihood graph is used and
-    `rv_value` is that graph's input parameter.  For example, if `rv_var` is
-    the output of a `NormalRV` `Op`, then the output is
-    ``normal_log_pdf(rv_value)``.
+    The input `var` determines which log-likelihood graph is used and
+    `rv_value` is that graph's input parameter.  For example, if `var` is
+    the output of a ``NormalRV`` ``Op``, then the output is a graph of the
+    density function for `var` set to the value `rv_value`.
 
     Parameters
     ==========
-    rv_var
+    var
         The `RandomVariable` output that determines the log-likelihood graph.
     rv_value
-        The variable that represents the value of `rv_var` in its
-        log-likelihood.  If no value is provided, `rv_var.tag.value_var` will
-        be checked and, when available, used.
+        The variable that represents the value of `var` in its log-likelihood.
+        If no `rv_value` is provided, ``var.tag.value_var`` will be checked
+        and, when available, used.
     jacobian
         Whether or not to include the Jacobian term.
     scaling
@@ -136,7 +143,7 @@ def logpt(
 
     """
 
-    rv_var, rv_value_var = extract_rv_and_value_vars(rv_var)
+    rv_var, rv_value_var = extract_rv_and_value_vars(var)
 
     if rv_value is None:
 
@@ -147,19 +154,30 @@ def logpt(
     else:
         rv_value = at.as_tensor(rv_value)
 
-        # Make sure that the value is compatible with the random variable
-        rv_value = rv_var.type.filter_variable(rv_value.astype(rv_var.dtype))
+        if rv_var is not None:
+            # Make sure that the value is compatible with the random variable
+            rv_value = rv_var.type.filter_variable(rv_value.astype(rv_var.dtype))
 
         if rv_value_var is None:
             rv_value_var = rv_value
 
+    if rv_var is None:
+
+        if var.owner is not None:
+            return _logp(
+                var.owner.op,
+                rv_value,
+                var.owner.inputs,
+                jacobian=jacobian,
+                scaling=scaling,
+                transformed=transformed,
+                cdf=cdf,
+                sum=sum,
+            )
+
+        return at.zeros_like(var)
+
     rv_node = rv_var.owner
-
-    if not rv_node:
-        return at.zeros_like(rv_var)
-
-    if not isinstance(rv_node.op, RandomVariable):
-        return _logp(rv_node.op, rv_value, rv_node.inputs)
 
     rng, size, dtype, *dist_params = rv_node.inputs
 
@@ -223,30 +241,47 @@ def _logp(op: Op, value: TensorVariable, *dist_params, **kwargs):
     return at.zeros_like(value)
 
 
+def convert_indices(indices, entry):
+    if indices and isinstance(entry, CType):
+        rval = indices.pop(0)
+        return rval
+    elif isinstance(entry, slice):
+        return slice(
+            convert_indices(indices, entry.start),
+            convert_indices(indices, entry.stop),
+            convert_indices(indices, entry.step),
+        )
+    else:
+        return entry
+
+
+def index_from_subtensor(idx_list, indices):
+    """Compute a useable index tuple from the inputs of a ``*Subtensor**`` ``Op``."""
+    index = tuple(tuple(convert_indices(indices, idx) for idx in idx_list) if idx_list else indices)
+    if len(index) == 1:
+        index = index[0]
+    return index
+
+
+@_logp.register(IncSubtensor)
+@_logp.register(AdvancedIncSubtensor)
+@_logp.register(AdvancedIncSubtensor1)
+def incsubtensor_logp(op, value, inputs, **kwargs):
+    rv_var, rv_values, *indices = inputs
+
+    index = index_from_subtensor(getattr(op, "idx_list", None), indices)
+
+    new_values = at.set_subtensor(rv_var[index], rv_values)
+    logp_var = logpt(rv_var, new_values, **kwargs)
+
+    return logp_var
+
+
 @_logp.register(Subtensor)
 @_logp.register(AdvancedSubtensor)
 @_logp.register(AdvancedSubtensor1)
 def subtensor_logp(op, value, *inputs, **kwargs):
-
-    # TODO: Compute the log-likelihood for a subtensor/index operation.
     raise NotImplementedError()
-
-    # "Flatten" and sum an array of indexed RVs' log-likelihoods
-    # rv_var, missing_values =
-    #
-    # missing_values = missing_values.data
-    # logp_var = at.sum(
-    #     [
-    #         logpt(
-    #             rv_var,
-    #         )
-    #         for idx, missing in zip(
-    #             np.ndindex(missing_values.shape), missing_values.flatten()
-    #         )
-    #         if missing
-    #     ]
-    # )
-    # return logp_var
 
 
 def logcdf(*args, **kwargs):
