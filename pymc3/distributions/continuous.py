@@ -20,13 +20,17 @@ nodes in PyMC.
 
 import aesara.tensor as at
 import numpy as np
+from typing import Union
 
 from aesara.assert_op import Assert
+from aesara.tensor.var import TensorVariable
+from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.basic import (
     BetaRV,
     cauchy,
     exponential,
     gamma,
+    gumbel,
     halfcauchy,
     halfnormal,
     invgamma,
@@ -258,11 +262,7 @@ class Uniform(BoundedContinuous):
         return at.switch(
             at.lt(value, lower) | at.lt(upper, lower),
             -np.inf,
-            at.switch(
-                at.lt(value, upper),
-                at.log(value - lower) - at.log(upper - lower),
-                0,
-            ),
+            at.switch(at.lt(value, upper), at.log(value - lower) - at.log(upper - lower), 0,),
         )
 
 
@@ -496,10 +496,7 @@ class Normal(Continuous):
         -------
         TensorVariable
         """
-        return bound(
-            normal_lcdf(mu, sigma, value),
-            0 < sigma,
-        )
+        return bound(normal_lcdf(mu, sigma, value), 0 < sigma,)
 
 
 class TruncatedNormal(BoundedContinuous):
@@ -833,11 +830,7 @@ class HalfNormal(PositiveContinuous):
         TensorVariable
         """
         z = zvalue(value, mu=loc, sigma=sigma)
-        return bound(
-            at.log1p(-at.erfc(z / at.sqrt(2.0))),
-            loc <= value,
-            0 < sigma,
-        )
+        return bound(at.log1p(-at.erfc(z / at.sqrt(2.0))), loc <= value, 0 < sigma,)
 
     def _distr_parameters_for_repr(self):
         return ["sigma"]
@@ -1053,11 +1046,7 @@ class Wald(PositiveContinuous):
         b = 2.0 / l + normal_lcdf(0, 1, -(q + 1.0) / r)
 
         return bound(
-            at.switch(
-                at.lt(value, np.inf),
-                a + log1pexp(b - a),
-                0,
-            ),
+            at.switch(at.lt(value, np.inf), a + log1pexp(b - a), 0,),
             0 < value,
             0 < mu,
             0 < lam,
@@ -1219,11 +1208,7 @@ class Beta(UnitContinuous):
             )
 
         return bound(
-            at.switch(
-                at.lt(value, 1),
-                at.log(incomplete_beta(alpha, beta, value)),
-                0,
-            ),
+            at.switch(at.lt(value, 1), at.log(incomplete_beta(alpha, beta, value)), 0,),
             0 <= value,
             0 < alpha,
             0 < beta,
@@ -1418,11 +1403,7 @@ class Exponential(PositiveContinuous):
         TensorVariable
         """
         a = lam * value
-        return bound(
-            log1mexp(a),
-            0 <= value,
-            0 <= lam,
-        )
+        return bound(log1mexp(a), 0 <= value, 0 <= lam,)
 
 
 class Laplace(Continuous):
@@ -1538,11 +1519,7 @@ class Laplace(Continuous):
             at.switch(
                 at.le(value, a),
                 at.log(0.5) + y,
-                at.switch(
-                    at.gt(y, 1),
-                    at.log1p(-0.5 * at.exp(-y)),
-                    at.log(1 - 0.5 * at.exp(-y)),
-                ),
+                at.switch(at.gt(y, 1), at.log1p(-0.5 * at.exp(-y)), at.log(1 - 0.5 * at.exp(-y)),),
             ),
             0 < b,
         )
@@ -1799,11 +1776,7 @@ class Lognormal(PositiveContinuous):
         sigma = self.sigma
         tau = self.tau
 
-        return bound(
-            normal_lcdf(mu, sigma, at.log(value)),
-            0 < value,
-            0 < tau,
-        )
+        return bound(normal_lcdf(mu, sigma, at.log(value)), 0 < value, 0 < tau,)
 
 
 class StudentT(Continuous):
@@ -1967,12 +1940,7 @@ class StudentT(Continuous):
         sqrt_t2_nu = at.sqrt(t ** 2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
 
-        return bound(
-            at.log(incomplete_beta(nu / 2.0, nu / 2.0, x)),
-            0 < nu,
-            0 < sigma,
-            0 < lam,
-        )
+        return bound(at.log(incomplete_beta(nu / 2.0, nu / 2.0, x)), 0 < nu, 0 < sigma, 0 < lam,)
 
 
 class Pareto(Continuous):
@@ -2107,11 +2075,7 @@ class Pareto(Continuous):
         alpha = self.alpha
         arg = (m / value) ** alpha
         return bound(
-            at.switch(
-                at.le(arg, 1e-5),
-                at.log1p(-arg),
-                at.log(1 - arg),
-            ),
+            at.switch(at.le(arg, 1e-5), at.log1p(-arg), at.log(1 - arg),),
             m <= value,
             0 < alpha,
             0 < m,
@@ -2209,10 +2173,7 @@ class Cauchy(Continuous):
         -------
         TensorVariable
         """
-        return bound(
-            at.log(0.5 + at.arctan((value - alpha) / beta) / np.pi),
-            0 < beta,
-        )
+        return bound(at.log(0.5 + at.arctan((value - alpha) / beta) / np.pi), 0 < beta,)
 
 
 class HalfCauchy(PositiveContinuous):
@@ -2296,11 +2257,7 @@ class HalfCauchy(PositiveContinuous):
         -------
         TensorVariable
         """
-        return bound(
-            at.log(2 * at.arctan((value - loc) / beta) / np.pi),
-            loc <= value,
-            0 < beta,
-        )
+        return bound(at.log(2 * at.arctan((value - loc) / beta) / np.pi), loc <= value, 0 < beta,)
 
 
 class Gamma(PositiveContinuous):
@@ -2768,12 +2725,7 @@ class Weibull(PositiveContinuous):
         alpha = self.alpha
         beta = self.beta
         a = (value / beta) ** alpha
-        return bound(
-            log1mexp(a),
-            0 <= value,
-            0 < alpha,
-            0 < beta,
-        )
+        return bound(log1mexp(a), 0 <= value, 0 < alpha, 0 < beta,)
 
 
 class HalfStudentT(PositiveContinuous):
@@ -3532,43 +3484,29 @@ class Gumbel(Continuous):
     beta: float
         Scale parameter (beta > 0).
     """
+    rv_op = gumbel
 
-    def __init__(self, mu=0, beta=1.0, **kwargs):
-        self.mu = at.as_tensor_variable(floatX(mu))
-        self.beta = at.as_tensor_variable(floatX(beta))
+    @classmethod
+    def dist(
+        cls, mu: float = None, beta: float = None, no_assert: bool = False, **kwargs
+    ) -> RandomVariable:
 
-        assert_negative_support(beta, "beta", "Gumbel")
+        mu = at.as_tensor_variable(floatX(mu))
+        beta = at.as_tensor_variable(floatX(beta))
 
-        self.mean = self.mu + self.beta * np.euler_gamma
-        self.median = self.mu - self.beta * at.log(at.log(2))
-        self.mode = self.mu
-        self.variance = (np.pi ** 2 / 6.0) * self.beta ** 2
+        if not no_assert:
+            assert_negative_support(beta, "beta", "Gumbel")
 
-        super().__init__(**kwargs)
+        return super().dist([mu, beta], **kwargs)
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Gumbel distribution.
+    def _distr_parameters_for_repr(self):
+        return ["mu", "beta"]
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # mu, sigma = draw_values([self.mu, self.beta], point=point, size=size)
-        # return generate_samples(
-        #     stats.gumbel_r.rvs, loc=mu, scale=sigma, dist_shape=self.shape, size=size
-        # )
-
-    def logp(self, value):
+    def logp(
+        value: Union[float, np.ndarray, TensorVariable],
+        mu: Union[float, np.ndarray, TensorVariable],
+        beta: Union[float, np.ndarray, TensorVariable],
+    ) -> TensorVariable:
         """
         Calculate log-probability of Gumbel distribution at specified value.
 
@@ -3582,15 +3520,14 @@ class Gumbel(Continuous):
         -------
         TensorVariable
         """
-        mu = self.mu
-        beta = self.beta
         scaled = (value - mu) / beta
-        return bound(
-            -scaled - at.exp(-scaled) - at.log(self.beta),
-            0 < beta,
-        )
+        return bound(-scaled - at.exp(-scaled) - at.log(beta), 0 < beta,)
 
-    def logcdf(self, value):
+    def logcdf(
+        value: Union[float, np.ndarray, TensorVariable],
+        mu: Union[float, np.ndarray, TensorVariable],
+        beta: Union[float, np.ndarray, TensorVariable],
+    ) -> TensorVariable:
         """
         Compute the log of the cumulative distribution function for Gumbel distribution
         at the specified value.
@@ -3605,13 +3542,7 @@ class Gumbel(Continuous):
         -------
         TensorVariable
         """
-        beta = self.beta
-        mu = self.mu
-
-        return bound(
-            -at.exp(-(value - mu) / beta),
-            0 < beta,
-        )
+        return bound(-at.exp(-(value - mu) / beta), 0 < beta,)
 
 
 class Rice(PositiveContinuous):
@@ -3870,8 +3801,7 @@ class Logistic(Continuous):
         s = self.s
 
         return bound(
-            -(value - mu) / s - at.log(s) - 2 * at.log1p(at.exp(-(value - mu) / s)),
-            s > 0,
+            -(value - mu) / s - at.log(s) - 2 * at.log1p(at.exp(-(value - mu) / s)), s > 0,
         )
 
     def logcdf(self, value):
@@ -3891,10 +3821,7 @@ class Logistic(Continuous):
         """
         mu = self.mu
         s = self.s
-        return bound(
-            -log1pexp(-(value - mu) / s),
-            0 < s,
-        )
+        return bound(-log1pexp(-(value - mu) / s), 0 < s,)
 
 
 class LogitNormal(UnitContinuous):
@@ -4253,7 +4180,5 @@ class Moyal(Continuous):
         sigma = self.sigma
 
         scaled = (value - mu) / sigma
-        return bound(
-            at.log(at.erfc(at.exp(-scaled / 2) * (2 ** -0.5))),
-            0 < sigma,
-        )
+        return bound(at.log(at.erfc(at.exp(-scaled / 2) * (2 ** -0.5))), 0 < sigma,)
+
