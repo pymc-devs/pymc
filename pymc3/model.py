@@ -430,7 +430,7 @@ class ValueGradFunction:
             givens.append((var, shared))
 
         if compute_grads:
-            grads = grad(cost, grad_vars)
+            grads = grad(cost, grad_vars, disconnected_inputs="ignore")
             for grad_wrt, var in zip(grads, grad_vars):
                 grad_wrt.name = f"{var.name}_grad"
             outputs = [cost] + grads
@@ -619,7 +619,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.observed_RVs = treelist(parent=self.parent.observed_RVs)
             self.deterministics = treelist(parent=self.parent.deterministics)
             self.potentials = treelist(parent=self.parent.potentials)
-            self.missing_values = treelist(parent=self.parent.missing_values)
         else:
             self.named_vars = treedict()
             self.values_to_rvs = treedict()
@@ -628,7 +627,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.observed_RVs = treelist()
             self.deterministics = treelist()
             self.potentials = treelist()
-            self.missing_values = treelist()
 
     @property
     def model(self):
@@ -929,6 +927,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         if data is None:
             self.free_RVs.append(rv_var)
+            self.create_value_var(rv_var, transform)
         else:
             if (
                 isinstance(data, Variable)
@@ -941,21 +940,26 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
             rv_var = make_obs_var(rv_var, data)
 
-            self.observed_RVs.append(rv_var)
+            self.create_value_var(rv_var, transform)
 
-            if rv_var.tag.missing_values:
-                self.free_RVs.append(rv_var.tag.missing_values)
-                self.missing_values.append(rv_var.tag.missing_values)
-                self.named_vars[rv_var.tag.missing_values.name] = rv_var.tag.missing_values
+            if hasattr(rv_var.tag, "observations"):
+                self.observed_RVs.append(rv_var)
 
-        # Create a `TensorVariable` that will be used as the random
-        # variable's "value" in log-likelihood graphs.
-        #
-        # In general, we'll call this type of variable the "value" variable.
-        #
-        # In all other cases, the role of the value variable is taken by
-        # observed data. That's why value variables are only referenced in
-        # this branch of the conditional.
+        self.add_random_variable(rv_var, dims)
+
+        return rv_var
+
+    def create_value_var(self, rv_var: TensorVariable, transform: Any) -> TensorVariable:
+        """Create a ``TensorVariable`` that will be used as the random
+        variable's "value" in log-likelihood graphs.
+
+        In general, we'll call this type of variable the "value" variable.
+
+        In all other cases, the role of the value variable is taken by
+        observed data. That's why value variables are only referenced in
+        this branch of the conditional.
+
+        """
         value_var = rv_var.type()
 
         if aesara.config.compute_test_value != "off":
@@ -977,9 +981,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 value_var.tag.test_value = transform.forward(rv_var, value_var).tag.test_value
             self.named_vars[value_var.name] = value_var
 
-        self.add_random_variable(rv_var, dims)
-
-        return rv_var
+        return value_var
 
     def add_random_variable(self, var, dims=None):
         """Add a random variable to the named variables of the model."""
@@ -1493,9 +1495,14 @@ def make_obs_var(rv_var: TensorVariable, data: Union[np.ndarray]) -> TensorVaria
         else:
             rv_var.tag.test_value = data
 
-    missing_values = None
     mask = getattr(data, "mask", None)
     if mask is not None:
+
+        if mask.all():
+            # If there are no observed values, this variable isn't really
+            # observed.
+            return rv_var
+
         impute_message = (
             f"Data in {rv_var} contains missing values and"
             " will be automatically imputed from the"
@@ -1503,15 +1510,17 @@ def make_obs_var(rv_var: TensorVariable, data: Union[np.ndarray]) -> TensorVaria
         )
         warnings.warn(impute_message, ImputationWarning)
 
-        missing_values = rv_var[mask]
-        constant = at.as_tensor_variable(data.filled())
-        data = at.set_subtensor(constant[mask.nonzero()], missing_values)
+        comp_data = at.as_tensor_variable(data.compressed())
+        data = at.as_tensor_variable(data)
+        data.tag.mask = mask
+
+        rv_var = at.set_subtensor(rv_var[~mask], comp_data)
+        rv_var.name = name
     elif sps.issparse(data):
         data = sparse.basic.as_sparse(data, name=name)
     else:
         data = at.as_tensor_variable(data, name=name)
 
-    rv_var.tag.missing_values = missing_values
     rv_var.tag.observations = data
 
     return rv_var
