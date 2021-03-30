@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 import scipy.stats.distributions as sp
 
+from aesara.gradient import DisconnectedGrad
 from aesara.graph.basic import Constant, graph_inputs
 from aesara.graph.fg import FunctionGraph
 from aesara.tensor.random.op import RandomVariable
@@ -110,7 +111,10 @@ def test_logpt_univariate_incsubtensor(indices, size):
         v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
     )
 
-    assert res_rv_ancestors == (a,)
+    # The imputed missing values are drawn from the original distribution
+    (a_new,) = res_rv_ancestors
+    assert a_new is not a
+    assert a_new.owner.op == a.owner.op
 
     fg = FunctionGraph(
         [v for v in graph_inputs((a_idx_logp,)) if not isinstance(v, Constant)],
@@ -118,8 +122,12 @@ def test_logpt_univariate_incsubtensor(indices, size):
         clone=False,
     )
 
-    ((a_client, _),) = fg.clients[a]
+    ((a_client, _),) = fg.clients[a_new]
+    # The imputed values should be treated as constants when gradients are
+    # taken
+    assert isinstance(a_client.op, DisconnectedGrad)
 
+    ((a_client, _),) = fg.clients[a_client.outputs[0]]
     assert isinstance(a_client.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1))
     indices = tuple(i.eval() for i in a_client.inputs[2:])
     np.testing.assert_almost_equal(indices, indices)
