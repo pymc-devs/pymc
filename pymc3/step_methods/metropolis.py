@@ -12,21 +12,22 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
 import numpy as np
 import numpy.random as nr
-import theano
 import scipy.linalg
 
-from ..distributions import draw_values
-from .arraystep import (
-    ArrayStepShared,
-    PopulationArrayStepShared,
-    ArrayStep,
-    metrop_select,
-    Competence,
-)
 import pymc3 as pm
-from pymc3.theanof import floatX
+
+from pymc3.aesaraf import floatX
+from pymc3.distributions import draw_values
+from pymc3.step_methods.arraystep import (
+    ArrayStep,
+    ArrayStepShared,
+    Competence,
+    PopulationArrayStepShared,
+    metrop_select,
+)
 
 __all__ = [
     "Metropolis",
@@ -94,29 +95,7 @@ class MultivariateNormalProposal(Proposal):
 
 
 class Metropolis(ArrayStepShared):
-    """
-    Metropolis-Hastings sampling step
-
-    Parameters
-    ----------
-    vars: list
-        List of variables for sampler
-    S: standard deviation or covariance matrix
-        Some measure of variance to parameterize proposal distribution
-    proposal_dist: function
-        Function that returns zero-mean deviates when parameterized with
-        S (and n). Defaults to normal.
-    scaling: scalar or array
-        Initial scale factor for proposal. Defaults to 1.
-    tune: bool
-        Flag for tuning. Defaults to True.
-    tune_interval: int
-        The frequency of tuning. Defaults to 100 iterations.
-    model: PyMC Model
-        Optional model for sampling step. Defaults to None (taken from context).
-    mode:  string or `Mode` instance.
-        compilation mode passed to Theano functions
-    """
+    """Metropolis-Hastings sampling step"""
 
     name = "metropolis"
 
@@ -143,6 +122,28 @@ class Metropolis(ArrayStepShared):
         mode=None,
         **kwargs
     ):
+        """Create an instance of a Metropolis stepper
+
+        Parameters
+        ----------
+        vars: list
+            List of variables for sampler
+        S: standard deviation or covariance matrix
+            Some measure of variance to parameterize proposal distribution
+        proposal_dist: function
+            Function that returns zero-mean deviates when parameterized with
+            S (and n). Defaults to normal.
+        scaling: scalar or array
+            Initial scale factor for proposal. Defaults to 1.
+        tune: bool
+            Flag for tuning. Defaults to True.
+        tune_interval: int
+            The frequency of tuning. Defaults to 100 iterations.
+        model: PyMC Model
+            Optional model for sampling step. Defaults to None (taken from context).
+        mode: string or `Mode` instance.
+            compilation mode passed to Aesara functions
+        """
 
         model = pm.modelcontext(model)
 
@@ -363,7 +364,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         e.g., [0, 2, 1, ...]. Default is random
     transit_p: float
         The diagonal of the transition kernel. A value > .5 gives anticorrelated proposals,
-        which resulting in more efficient antithetical sampling.
+        which resulting in more efficient antithetical sampling. Default is 0.8
     model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
 
@@ -570,7 +571,7 @@ class DEMetropolis(PopulationArrayStepShared):
     model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
     mode:  string or `Mode` instance.
-        compilation mode passed to Theano functions
+        compilation mode passed to Aesara functions
 
     References
     ----------
@@ -712,7 +713,7 @@ class DEMetropolisZ(ArrayStepShared):
     model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
     mode:  string or `Mode` instance.
-        compilation mode passed to Theano functions
+        compilation mode passed to Aesara functions
 
     References
     ----------
@@ -886,6 +887,6 @@ def delta_logp(logp, vars, shared):
 
     logp1 = pm.CallableTensor(logp0)(inarray1)
 
-    f = theano.function([inarray1, inarray0], logp1 - logp0)
+    f = aesara.function([inarray1, inarray0], logp1 - logp0)
     f.trust_input = True
     return f

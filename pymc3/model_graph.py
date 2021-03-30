@@ -13,17 +13,18 @@
 #   limitations under the License.
 
 from collections import deque
-from typing import Dict, Iterator, Set, Optional
+from typing import Dict, Iterator, NewType, Optional, Set
 
-VarName = str
+from aesara.compile import SharedVariable
+from aesara.graph.basic import walk
+from aesara.tensor.var import TensorVariable
 
-from theano.gof.graph import stack_search
-from theano.compile import SharedVariable
-from theano.tensor import Tensor
-
-from .util import get_default_varnames, get_var_name
-from .model import ObservedRV
 import pymc3 as pm
+
+from pymc3.model import ObservedRV
+from pymc3.util import get_default_varnames, get_var_name
+
+VarName = NewType("VarName", str)
 
 
 class ModelGraph:
@@ -45,17 +46,17 @@ class ModelGraph:
                 deterministics.append(v)
         return deterministics
 
-    def _get_ancestors(self, var: Tensor, func) -> Set[Tensor]:
+    def _get_ancestors(self, var: TensorVariable, func) -> Set[TensorVariable]:
         """Get all ancestors of a function, doing some accounting for deterministics."""
 
         # this contains all of the variables in the model EXCEPT var...
         vars = set(self.var_list)
         vars.remove(var)
 
-        blockers = set()  # type: Set[Tensor]
-        retval = set()  # type: Set[Tensor]
+        blockers = set()  # type: Set[TensorVariable]
+        retval = set()  # type: Set[TensorVariable]
 
-        def _expand(node) -> Optional[Iterator[Tensor]]:
+        def _expand(node) -> Optional[Iterator[TensorVariable]]:
             if node in blockers:
                 return None
             elif node in vars:
@@ -68,7 +69,7 @@ class ModelGraph:
             else:
                 return None
 
-        stack_search(start=deque([func]), expand=_expand, mode="bfs")
+        list(walk(deque([func]), _expand, bfs=True))
         return retval
 
     def _filter_parents(self, var, parents) -> Set[VarName]:
@@ -86,7 +87,7 @@ class ModelGraph:
                 raise AssertionError("Do not know what to do with {}".format(get_var_name(p)))
         return keep
 
-    def get_parents(self, var: Tensor) -> Set[VarName]:
+    def get_parents(self, var: TensorVariable) -> Set[VarName]:
         """Get the named nodes that are direct inputs to the var"""
         if hasattr(var, "transformed"):
             func = var.transformed.logpt
@@ -166,7 +167,7 @@ class ModelGraph:
             if hasattr(v, "observations"):
                 try:
                     # To get shape of _observed_ data container `pm.Data`
-                    # (wrapper for theano.SharedVariable) we evaluate it.
+                    # (wrapper for aesara.SharedVariable) we evaluate it.
                     shape = tuple(v.observations.shape.eval())
                 except AttributeError:
                     shape = v.observations.shape

@@ -12,17 +12,21 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import re
 import functools
-from typing import List, Dict, Tuple, Union
+import re
+import warnings
 
+from typing import Dict, List, Tuple, Union
+
+import arviz
+import dill
 import numpy as np
 import xarray
-import arviz
+
+from aesara.tensor.var import TensorVariable
+from cachetools import LRUCache, cachedmethod
 
 from pymc3.exceptions import SamplingError
-from theano.tensor import TensorVariable
-
 
 LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
 
@@ -129,7 +133,13 @@ def get_default_varnames(var_iterator, include_transformed):
 
 def get_repr_for_variable(variable, formatting="plain"):
     """Build a human-readable string representation for a variable."""
-    name = variable.name if variable is not None else None
+    if variable is not None and hasattr(variable, "name"):
+        name = variable.name
+    elif type(variable) in [float, int, str]:
+        name = str(variable)
+    else:
+        name = None
+
     if name is None and variable is not None:
         if hasattr(variable, "get_parents"):
             try:
@@ -161,7 +171,7 @@ def get_repr_for_variable(variable, formatting="plain"):
 
 def get_var_name(var):
     """Get an appropriate, plain variable name for a variable. Necessary
-    because we override theano.tensor.TensorVariable.__str__ to give informative
+    because we override aesara.tensor.var.TensorVariable.__str__ to give informative
     string representations to our pymc3.PyMC3Variables, yet we want to use the
     plain name as e.g. keys in dicts.
     """
@@ -258,6 +268,14 @@ def biwrap(wrapper):
 # FIXME: this function is poorly named, because it returns a LIST of
 # points, not a dictionary of points.
 def dataset_to_point_dict(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
+    warnings.warn(
+        "dataset_to_point_dict was renamed to dataset_to_point_list and will be removed!",
+        DeprecationWarning,
+    )
+    return dataset_to_point_list(ds)
+
+
+def dataset_to_point_list(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
     # grab posterior samples for each variable
     _samples: Dict[str, np.ndarray] = {vn: ds[vn].values for vn in ds.keys()}
     # make dicts
@@ -288,3 +306,76 @@ def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tupl
     nchains = coords["chain"].sizes["chain"]
     nsamples = coords["draw"].sizes["draw"]
     return nchains, nsamples
+
+
+def hashable(a=None) -> int:
+    """
+    Hashes many kinds of objects, including some that are unhashable through the builtin `hash` function.
+    Lists and tuples are hashed based on their elements.
+    """
+    if isinstance(a, dict):
+        # first hash the keys and values with hashable
+        # then hash the tuple of int-tuples with the builtin
+        return hash(tuple((hashable(k), hashable(v)) for k, v in a.items()))
+    if isinstance(a, (tuple, list)):
+        # lists are mutable and not hashable by default
+        # for memoization, we need the hash to depend on the items
+        return hash(tuple(hashable(i) for i in a))
+    try:
+        return hash(a)
+    except TypeError:
+        pass
+    # Not hashable >>>
+    try:
+        return hash(dill.dumps(a))
+    except Exception:
+        if hasattr(a, "__dict__"):
+            return hashable(a.__dict__)
+        else:
+            return id(a)
+
+
+def hash_key(*args, **kwargs):
+    return tuple(HashableWrapper(a) for a in args + tuple(kwargs.items()))
+
+
+class HashableWrapper:
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __hash__(self):
+        return hashable(self.obj)
+
+    def __eq__(self, other):
+        return self.obj == other
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self.obj})"
+
+
+class WithMemoization:
+    def __hash__(self):
+        return hash(id(self))
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state.pop("_cache", None)
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+
+def locally_cachedmethod(f):
+
+    from collections import defaultdict
+
+    def self_cache_fn(f_name):
+        def cf(self):
+            return self.__dict__.setdefault("_cache", defaultdict(lambda: LRUCache(128)))[f_name]
+
+        return cf
+
+    return cachedmethod(self_cache_fn(f.__name__), key=hash_key)(f)

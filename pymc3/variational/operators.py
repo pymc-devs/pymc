@@ -11,13 +11,15 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import aesara
 
-from theano import tensor as tt
-from pymc3.theanof import change_flags
-from . import opvi
-from pymc3.variational.opvi import Operator, ObjectiveFunction
-from pymc3.variational.stein import Stein
+from aesara import tensor as at
+
 import pymc3 as pm
+
+from pymc3.variational import opvi
+from pymc3.variational.opvi import ObjectiveFunction, Operator
+from pymc3.variational.stein import Stein
 
 __all__ = ["KL", "KSD"]
 
@@ -73,7 +75,7 @@ class KSDObjective(ObjectiveFunction):
             raise opvi.ParametrizationError("Op should be KSD")
         ObjectiveFunction.__init__(self, op, tf)
 
-    @change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
         op = self.op  # type: KSD
         grad = op.apply(self.tf)
@@ -86,7 +88,7 @@ class KSDObjective(ObjectiveFunction):
         else:
             params = self.test_params + kwargs["more_tf_params"]
             grad *= pm.floatX(-1)
-        grads = tt.grad(None, params, known_grads={z: grad})
+        grads = at.grad(None, params, known_grads={z: grad})
         return self.approx.set_size_and_deterministic(
             grads, nmc, 0, kwargs.get("more_replacements")
         )

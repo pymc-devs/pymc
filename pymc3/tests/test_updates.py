@@ -12,28 +12,28 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytest
+import aesara
 import numpy as np
-import theano
-from theano.configparser import change_flags
+import pytest
+
 from pymc3.variational.updates import (
-    sgd,
-    momentum,
-    nesterov_momentum,
-    adagrad,
-    rmsprop,
     adadelta,
+    adagrad,
+    adagrad_window,
     adam,
     adamax,
-    adagrad_window,
+    momentum,
+    nesterov_momentum,
+    rmsprop,
+    sgd,
 )
 
-_a = theano.shared(1.0)
+_a = aesara.shared(1.0)
 _b = _a * 2
 
-_m = theano.shared(np.empty((10,), theano.config.floatX))
+_m = aesara.shared(np.empty((10,), aesara.config.floatX))
 _n = _m.sum()
-_m2 = theano.shared(np.empty((10, 10, 10), theano.config.floatX))
+_m2 = aesara.shared(np.empty((10, 10, 10), aesara.config.floatX))
 _n2 = _b + _n + _m2.sum()
 
 
@@ -71,7 +71,7 @@ _n2 = _b + _n + _m2.sum()
     ids=["scalar", "matrix", "mixed"],
 )
 def test_updates_fast(opt, loss_and_params, kwargs, getter):
-    with change_flags(compute_test_value="ignore"):
+    with aesara.config.change_flags(compute_test_value="ignore"):
         loss, param = getter(loss_and_params)
         args = dict()
         args.update(**kwargs)

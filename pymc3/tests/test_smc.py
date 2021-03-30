@@ -12,10 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pymc3 as pm
+import aesara.tensor as at
 import numpy as np
-import theano.tensor as tt
-from .helpers import SeededTest
+import pytest
+
+import pymc3 as pm
+
+from pymc3.tests.helpers import SeededTest
 
 
 class TestSMC(SeededTest):
@@ -36,16 +39,16 @@ class TestSMC(SeededTest):
 
         def two_gaussians(x):
             log_like1 = (
-                -0.5 * n * tt.log(2 * np.pi)
-                - 0.5 * tt.log(dsigma)
+                -0.5 * n * at.log(2 * np.pi)
+                - 0.5 * at.log(dsigma)
                 - 0.5 * (x - mu1).T.dot(isigma).dot(x - mu1)
             )
             log_like2 = (
-                -0.5 * n * tt.log(2 * np.pi)
-                - 0.5 * tt.log(dsigma)
+                -0.5 * n * at.log(2 * np.pi)
+                - 0.5 * at.log(dsigma)
                 - 0.5 * (x - mu2).T.dot(isigma).dot(x - mu2)
             )
-            return tt.log(w1 * tt.exp(log_like1) + w2 * tt.exp(log_like2))
+            return at.log(w1 * at.exp(log_like1) + w2 * at.exp(log_like2))
 
         with pm.Model() as self.SMC_test:
             X = pm.Uniform("X", lower=-2, upper=2.0, shape=n)
@@ -187,3 +190,23 @@ class TestSMCABC(SeededTest):
         assert expected == self.s._repr_latex_()
         assert self.s._repr_latex_() == self.s.__latex__()
         assert self.SMABC_test.model._repr_latex_() == self.SMABC_test.model.__latex__()
+
+    def test_name_is_string_type(self):
+        with self.SMABC_potential:
+            assert not self.SMABC_potential.name
+            trace = pm.sample_smc(draws=10, kernel="ABC")
+            assert isinstance(trace._straces[0].name, str)
+
+    def test_named_models_are_unsupported(self):
+        def normal_sim(a, b):
+            return np.random.normal(a, b, 1000)
+
+        with pm.Model(name="NamedModel"):
+            a = pm.Normal("a", mu=0, sigma=1)
+            b = pm.HalfNormal("b", sigma=1)
+            c = pm.Potential("c", pm.math.switch(a > 0, 0, -np.inf))
+            s = pm.Simulator(
+                "s", normal_sim, params=(a, b), sum_stat="sort", epsilon=1, observed=self.data
+            )
+            with pytest.raises(NotImplementedError, match="named models"):
+                pm.sample_smc(draws=10, kernel="ABC")

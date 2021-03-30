@@ -1,4 +1,4 @@
-If you have questions about a specific use case, or you are not sure whether this is a bug or not, please post it to our discourse channel: https://discourse.pymc.io  
+If you have questions about a specific use case, or you are not sure whether this is a bug or not, please post it to our discourse channel: https://discourse.pymc.io
 
 ## Description of your problem
 
@@ -18,7 +18,7 @@ If you have questions about a specific use case, or you are not sure whether thi
 ## Versions and main components
 
 * PyMC3 Version:
-* Theano Version:
+* Aesara Version:
 * Python Version:
 * Operating system:
 * How did you install PyMC3: (conda/pip)

@@ -17,15 +17,26 @@ Created on May 12, 2012
 
 @author: john
 """
-from .arraystep import ArrayStep, Competence
-from ..distributions.discrete import Categorical
-from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones, arange
-from numpy.random import uniform
 from warnings import warn
 
-from theano.gof.graph import inputs
-from theano.tensor import add
-from ..model import modelcontext
+from aesara.graph.basic import graph_inputs
+from aesara.tensor import add
+from numpy import (
+    arange,
+    array,
+    cumsum,
+    empty,
+    exp,
+    max,
+    nested_iters,
+    ones,
+    searchsorted,
+)
+from numpy.random import uniform
+
+from pymc3.distributions.discrete import Categorical
+from pymc3.model import modelcontext
+from pymc3.step_methods.arraystep import ArrayStep, Competence
 
 __all__ = ["ElemwiseCategorical"]
 
@@ -69,7 +80,7 @@ class ElemwiseCategorical(ArrayStep):
 
 
 def elemwise_logp(model, var):
-    terms = [v.logp_elemwiset for v in model.basic_RVs if var in inputs([v.logpt])]
+    terms = [v.logp_elemwiset for v in model.basic_RVs if var in graph_inputs([v.logpt])]
     return model.fn(add(*terms))
 
 

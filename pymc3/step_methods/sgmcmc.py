@@ -12,14 +12,16 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from collections import OrderedDict
 import warnings
 
-from .arraystep import ArrayStepShared
-from ..model import modelcontext, inputvars
-import theano.tensor as tt
-from ..theanof import tt_rng, make_shared_replacements
-import theano
+from collections import OrderedDict
+
+import aesara
+import aesara.tensor as at
+
+from pymc3.aesaraf import at_rng, make_shared_replacements
+from pymc3.model import inputvars, modelcontext
+from pymc3.step_methods.arraystep import ArrayStepShared
 
 __all__ = []
 
@@ -43,8 +45,8 @@ def _check_minibatches(minibatch_tensors, minibatches):
 
 def prior_dlogp(vars, model, flat_view):
     """Returns the gradient of the prior on the parameters as a vector of size D x 1"""
-    terms = tt.concatenate([theano.grad(var.logpt, var).flatten() for var in vars], axis=0)
-    dlogp = theano.clone(terms, flat_view.replacements, strict=False)
+    terms = at.concatenate([aesara.grad(var.logpt, var).flatten() for var in vars], axis=0)
+    dlogp = aesara.clone_replace(terms, flat_view.replacements, strict=False)
 
     return dlogp
 
@@ -61,12 +63,14 @@ def elemwise_dlogL(vars, model, flat_view):
     # calculate fisher information
     terms = []
     for var in vars:
-        output, _ = theano.scan(
-            lambda i, logX=logL, v=var: theano.grad(logX[i], v).flatten(),
-            sequences=[tt.arange(logL.shape[0])],
+        output, _ = aesara.scan(
+            lambda i, logX=logL, v=var: aesara.grad(logX[i], v).flatten(),
+            sequences=[at.arange(logL.shape[0])],
         )
         terms.append(output)
-    dlogL = theano.clone(tt.concatenate(terms, axis=1), flat_view.replacements, strict=False)
+    dlogL = aesara.clone_replace(
+        at.concatenate(terms, axis=1), flat_view.replacements, strict=False
+    )
     return dlogL
 
 
@@ -104,7 +108,7 @@ class BaseStochasticGradient(ArrayStepShared):
     Defining a BaseStochasticGradient needs
     custom implementation of the following methods:
         - :code: `.mk_training_fn()`
-            Returns a theano function which is called for each sampling step
+            Returns a aesara function which is called for each sampling step
         - :code: `._initialize_values()`
             Returns None it creates class variables which are required for the training fn
     """
@@ -143,9 +147,9 @@ class BaseStochasticGradient(ArrayStepShared):
         # set random stream
         self.random = None
         if random_seed is None:
-            self.random = tt_rng()
+            self.random = at_rng()
         else:
-            self.random = tt_rng(random_seed)
+            self.random = at_rng(random_seed)
 
         self.step_size = step_size
 
@@ -167,7 +171,7 @@ class BaseStochasticGradient(ArrayStepShared):
 
             # Replace input shared variables with tensors
             def is_shared(t):
-                return isinstance(t, theano.compile.sharedvalue.SharedVariable)
+                return isinstance(t, aesara.compile.sharedvalue.SharedVariable)
 
             tensors = [(t.type() if is_shared(t) else t) for t in minibatch_tensors]
             updates = OrderedDict(

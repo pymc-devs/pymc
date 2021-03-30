@@ -12,19 +12,28 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import logging
+import warnings
+
+from typing import List, Optional, Type, Union
+
+import aesara
 import arviz as az
 import numpy as np
-import warnings
-import logging
-from typing import Union, List, Optional, Type
-import theano
-import theano.tensor as tt
 
-from .arraystep import ArrayStepShared, metrop_select, Competence
-from .compound import CompoundStep
-from .metropolis import Proposal, Metropolis, DEMetropolisZ, delta_logp
-from ..model import Model
+from aesara.tensor.sharedvar import TensorSharedVariable
+
 import pymc3 as pm
+
+from pymc3.model import Model
+from pymc3.step_methods.arraystep import ArrayStepShared, Competence, metrop_select
+from pymc3.step_methods.compound import CompoundStep
+from pymc3.step_methods.metropolis import (
+    DEMetropolisZ,
+    Metropolis,
+    Proposal,
+    delta_logp,
+)
 
 __all__ = [
     "MetropolisMLDA",
@@ -246,7 +255,7 @@ class MLDA(ArrayStepShared):
         (taken from context). This model should be the finest of all
         multilevel models.
     mode :  string or `Mode` instance.
-        Compilation mode passed to Theano functions
+        Compilation mode passed to Aesara functions
     subsampling_rates : integer or list of integers
         One interger for all levels or a list with one number for each level
         (excluding the finest level).
@@ -267,7 +276,7 @@ class MLDA(ArrayStepShared):
         the PyMC3 model (also demonstrated in the example notebook):
             - Include a `pm.Data()` variable with the name `Q` in the
             model description of all levels.
-            - Use a Theano Op to calculate the forward model (or the
+            - Use a Aesara Op to calculate the forward model (or the
             combination of a forward model and a likelihood). This Op
             should have a `perform()` method which (in addition to all
             the other calculations), calculates the quantity of interest
@@ -292,7 +301,7 @@ class MLDA(ArrayStepShared):
             extra variables mu_B and Sigma_B, which will capture
             the bias between different levels. All these variables
             should be instantiated using the pm.Data method.
-            - Use a Theano Op to define the forward model (and
+            - Use a Aesara Op to define the forward model (and
             optionally the likelihood) for all levels. The Op needs
             to store the result of each forward model calculation
             to the variable model_output of the PyMC3 model,
@@ -325,7 +334,7 @@ class MLDA(ArrayStepShared):
         ...                       tune=100, step=step_method,
         ...                       random_seed=123)
         ...
-        ... pm.summary(trace, kind="stats")
+        ... az.summary(trace, kind="stats")
            mean     sd  hdi_3%  hdi_97%
         x  0.99  0.987  -0.734    2.992
 
@@ -347,10 +356,6 @@ class MLDA(ArrayStepShared):
     # except level 0 where the user can choose
     default_blocked = True
     generates_stats = True
-
-    # stat data types are different, depending on the base sampler.
-    # these are assigned in the init method.
-    stats_dtypes = None
 
     def __init__(
         self,
@@ -415,7 +420,7 @@ class MLDA(ArrayStepShared):
                     "for storing the fine Q."
                     "Use pm.Data() to define it."
                 )
-            if not isinstance(self.model.Q, tt.sharedvar.TensorSharedVariable):
+            if not isinstance(self.model.Q, TensorSharedVariable):
                 raise TypeError(
                     "The variable 'Q' in the model definition is not of type "
                     "'TensorSharedVariable'. Use pm.Data() to define the"
@@ -450,8 +455,8 @@ class MLDA(ArrayStepShared):
                     "Use pm.Data() to define it."
                 )
             if not (
-                isinstance(self.model_below.mu_B, tt.sharedvar.TensorSharedVariable)
-                and isinstance(self.model_below.Sigma_B, tt.sharedvar.TensorSharedVariable)
+                isinstance(self.model_below.mu_B, TensorSharedVariable)
+                and isinstance(self.model_below.Sigma_B, TensorSharedVariable)
             ):
                 raise TypeError(
                     "At least one of the variables 'mu_B' and 'Sigma_B' "
@@ -545,12 +550,12 @@ class MLDA(ArrayStepShared):
 
         self.accepted = 0
 
-        # Construct theano function for current-level model likelihood
+        # Construct aesara function for current-level model likelihood
         # (for use in acceptance)
         shared = pm.make_shared_replacements(vars, model)
         self.delta_logp = delta_logp_inverse(model.logpt, vars, shared)
 
-        # Construct theano function for below-level model likelihood
+        # Construct aesara function for below-level model likelihood
         # (for use in acceptance)
         model_below = pm.modelcontext(self.model_below)
         vars_below = [var for var in model_below.vars if var.name in self.var_names]
@@ -960,7 +965,7 @@ def delta_logp_inverse(logp, vars, shared):
 
     logp1 = pm.CallableTensor(logp0)(inarray1)
 
-    f = theano.function([inarray1, inarray0], -logp0 + logp1)
+    f = aesara.function([inarray1, inarray0], -logp0 + logp1)
     f.trust_input = True
     return f
 

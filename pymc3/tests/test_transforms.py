@@ -12,60 +12,62 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pymc3.distributions.transforms as tr
-import pymc3 as pm
+import aesara
+import aesara.tensor as at
 import numpy as np
 import pytest
 
-import theano
-import theano.tensor as tt
-from .helpers import SeededTest
-from .test_distributions import (
-    Simplex,
-    Rplusbig,
-    Rminusbig,
-    Unit,
-    R,
-    Vector,
-    MultiSimplex,
-    Circ,
-    SortedVector,
-    UnitSortedVector,
-)
-from .checks import close_to, close_to_logical
-from ..theanof import jacobian
+from aesara.tensor.var import TensorConstant
 
+import pymc3 as pm
+import pymc3.distributions.transforms as tr
+
+from pymc3.aesaraf import jacobian
+from pymc3.tests.checks import close_to, close_to_logical
+from pymc3.tests.helpers import SeededTest
+from pymc3.tests.test_distributions import (
+    Circ,
+    MultiSimplex,
+    R,
+    Rminusbig,
+    Rplusbig,
+    Simplex,
+    SortedVector,
+    Unit,
+    UnitSortedVector,
+    Vector,
+)
 
 # some transforms (stick breaking) require additon of small slack in order to be numerically
 # stable. The minimal addable slack for float32 is higher thus we need to be less strict
-tol = 1e-7 if theano.config.floatX == "float64" else 1e-6
+tol = 1e-7 if aesara.config.floatX == "float64" else 1e-6
 
 
-def check_transform(transform, domain, constructor=tt.dscalar, test=0):
+def check_transform(transform, domain, constructor=at.dscalar, test=0):
     x = constructor("x")
     x.tag.test_value = test
     # test forward and forward_val
-    forward_f = theano.function([x], transform.forward(x))
+    forward_f = aesara.function([x], transform.forward(x))
     # test transform identity
-    identity_f = theano.function([x], transform.backward(transform.forward(x)))
+    identity_f = aesara.function([x], transform.backward(transform.forward(x)))
     for val in domain.vals:
         close_to(val, identity_f(val), tol)
         close_to(transform.forward_val(val), forward_f(val), tol)
 
 
 def check_vector_transform(transform, domain):
-    return check_transform(transform, domain, tt.dvector, test=np.array([0, 0]))
+    return check_transform(transform, domain, at.dvector, test=np.array([0, 0]))
 
 
-def get_values(transform, domain=R, constructor=tt.dscalar, test=0):
+def get_values(transform, domain=R, constructor=at.dscalar, test=0):
     x = constructor("x")
     x.tag.test_value = test
-    f = theano.function([x], transform.backward(x))
+    f = aesara.function([x], transform.backward(x))
     return np.array([f(val) for val in domain.vals])
 
 
 def check_jacobian_det(
-    transform, domain, constructor=tt.dscalar, test=0, make_comparable=None, elemwise=False
+    transform, domain, constructor=at.dscalar, test=0, make_comparable=None, elemwise=False
 ):
     y = constructor("y")
     y.tag.test_value = test
@@ -75,15 +77,15 @@ def check_jacobian_det(
         x = make_comparable(x)
 
     if not elemwise:
-        jac = tt.log(tt.nlinalg.det(jacobian(x, [y])))
+        jac = at.log(at.nlinalg.det(jacobian(x, [y])))
     else:
-        jac = tt.log(tt.abs_(tt.diag(jacobian(x, [y]))))
+        jac = at.log(at.abs_(at.diag(jacobian(x, [y]))))
 
     # ljd = log jacobian det
-    actual_ljd = theano.function([y], jac)
+    actual_ljd = aesara.function([y], jac)
 
-    computed_ljd = theano.function(
-        [y], tt.as_tensor_variable(transform.jacobian_det(y)), on_unused_input="ignore"
+    computed_ljd = aesara.function(
+        [y], at.as_tensor_variable(transform.jacobian_det(y)), on_unused_input="ignore"
     )
 
     for yval in domain.vals:
@@ -99,27 +101,27 @@ def test_stickbreaking():
     check_vector_transform(tr.stick_breaking, Simplex(4))
 
     check_transform(
-        tr.stick_breaking, MultiSimplex(3, 2), constructor=tt.dmatrix, test=np.zeros((2, 2))
+        tr.stick_breaking, MultiSimplex(3, 2), constructor=at.dmatrix, test=np.zeros((2, 2))
     )
 
 
 def test_stickbreaking_bounds():
-    vals = get_values(tr.stick_breaking, Vector(R, 2), tt.dvector, np.array([0, 0]))
+    vals = get_values(tr.stick_breaking, Vector(R, 2), at.dvector, np.array([0, 0]))
 
     close_to(vals.sum(axis=1), 1, tol)
     close_to_logical(vals > 0, True, tol)
     close_to_logical(vals < 1, True, tol)
 
     check_jacobian_det(
-        tr.stick_breaking, Vector(R, 2), tt.dvector, np.array([0, 0]), lambda x: x[:-1]
+        tr.stick_breaking, Vector(R, 2), at.dvector, np.array([0, 0]), lambda x: x[:-1]
     )
 
 
 def test_stickbreaking_accuracy():
     val = np.array([-30])
-    x = tt.dvector("x")
+    x = at.dvector("x")
     x.tag.test_value = val
-    identity_f = theano.function([x], tr.stick_breaking.forward(tr.stick_breaking.backward(x)))
+    identity_f = aesara.function([x], tr.stick_breaking.forward(tr.stick_breaking.backward(x)))
     close_to(val, identity_f(val), tol)
 
 
@@ -127,14 +129,14 @@ def test_sum_to_1():
     check_vector_transform(tr.sum_to_1, Simplex(2))
     check_vector_transform(tr.sum_to_1, Simplex(4))
 
-    check_jacobian_det(tr.sum_to_1, Vector(Unit, 2), tt.dvector, np.array([0, 0]), lambda x: x[:-1])
+    check_jacobian_det(tr.sum_to_1, Vector(Unit, 2), at.dvector, np.array([0, 0]), lambda x: x[:-1])
 
 
 def test_log():
     check_transform(tr.log, Rplusbig)
 
     check_jacobian_det(tr.log, Rplusbig, elemwise=True)
-    check_jacobian_det(tr.log, Vector(Rplusbig, 2), tt.dvector, [0, 0], elemwise=True)
+    check_jacobian_det(tr.log, Vector(Rplusbig, 2), at.dvector, [0, 0], elemwise=True)
 
     vals = get_values(tr.log)
     close_to_logical(vals > 0, True, tol)
@@ -144,7 +146,7 @@ def test_log_exp_m1():
     check_transform(tr.log_exp_m1, Rplusbig)
 
     check_jacobian_det(tr.log_exp_m1, Rplusbig, elemwise=True)
-    check_jacobian_det(tr.log_exp_m1, Vector(Rplusbig, 2), tt.dvector, [0, 0], elemwise=True)
+    check_jacobian_det(tr.log_exp_m1, Vector(Rplusbig, 2), at.dvector, [0, 0], elemwise=True)
 
     vals = get_values(tr.log_exp_m1)
     close_to_logical(vals > 0, True, tol)
@@ -154,7 +156,7 @@ def test_logodds():
     check_transform(tr.logodds, Unit)
 
     check_jacobian_det(tr.logodds, Unit, elemwise=True)
-    check_jacobian_det(tr.logodds, Vector(Unit, 2), tt.dvector, [0.5, 0.5], elemwise=True)
+    check_jacobian_det(tr.logodds, Vector(Unit, 2), at.dvector, [0.5, 0.5], elemwise=True)
 
     vals = get_values(tr.logodds)
     close_to_logical(vals > 0, True, tol)
@@ -166,7 +168,7 @@ def test_lowerbound():
     check_transform(trans, Rplusbig)
 
     check_jacobian_det(trans, Rplusbig, elemwise=True)
-    check_jacobian_det(trans, Vector(Rplusbig, 2), tt.dvector, [0, 0], elemwise=True)
+    check_jacobian_det(trans, Vector(Rplusbig, 2), at.dvector, [0, 0], elemwise=True)
 
     vals = get_values(trans)
     close_to_logical(vals > 0, True, tol)
@@ -177,7 +179,7 @@ def test_upperbound():
     check_transform(trans, Rminusbig)
 
     check_jacobian_det(trans, Rminusbig, elemwise=True)
-    check_jacobian_det(trans, Vector(Rminusbig, 2), tt.dvector, [-1, -1], elemwise=True)
+    check_jacobian_det(trans, Vector(Rminusbig, 2), at.dvector, [-1, -1], elemwise=True)
 
     vals = get_values(trans)
     close_to_logical(vals < 0, True, tol)
@@ -196,6 +198,19 @@ def test_interval():
         close_to_logical(vals < b, True, tol)
 
 
+@pytest.mark.skipif(aesara.config.floatX == "float32", reason="Test fails on 32 bit")
+def test_interval_near_boundary():
+    lb = -1.0
+    ub = 1e-7
+    x0 = np.nextafter(ub, lb)
+
+    with pm.Model() as model:
+        pm.Uniform("x", testval=x0, lower=lb, upper=ub)
+
+    log_prob = model.check_test_point()
+    np.testing.assert_allclose(log_prob.values, np.array([-52.68]))
+
+
 def test_circular():
     trans = tr.circular
     check_transform(trans, Circ)
@@ -206,27 +221,34 @@ def test_circular():
     close_to_logical(vals > -np.pi, True, tol)
     close_to_logical(vals < np.pi, True, tol)
 
-    assert isinstance(trans.forward(1), tt.TensorConstant)
+    assert isinstance(trans.forward(1), TensorConstant)
 
 
 def test_ordered():
     check_vector_transform(tr.ordered, SortedVector(6))
 
-    check_jacobian_det(tr.ordered, Vector(R, 2), tt.dvector, np.array([0, 0]), elemwise=False)
+    check_jacobian_det(tr.ordered, Vector(R, 2), at.dvector, np.array([0, 0]), elemwise=False)
 
-    vals = get_values(tr.ordered, Vector(R, 3), tt.dvector, np.zeros(3))
+    vals = get_values(tr.ordered, Vector(R, 3), at.dvector, np.zeros(3))
     close_to_logical(np.diff(vals) >= 0, True, tol)
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
-def test_chain():
+def test_chain_values():
+    chain_tranf = tr.Chain([tr.logodds, tr.ordered])
+    vals = get_values(chain_tranf, Vector(R, 5), at.dvector, np.zeros(5))
+    close_to_logical(np.diff(vals) >= 0, True, tol)
+
+
+@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+def test_chain_vector_transform():
     chain_tranf = tr.Chain([tr.logodds, tr.ordered])
     check_vector_transform(chain_tranf, UnitSortedVector(3))
 
-    check_jacobian_det(chain_tranf, Vector(R, 4), tt.dvector, np.zeros(4), elemwise=False)
 
-    vals = get_values(chain_tranf, Vector(R, 5), tt.dvector, np.zeros(5))
-    close_to_logical(np.diff(vals) >= 0, True, tol)
+@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+def test_chain_jacob_det():
+    chain_tranf = tr.Chain([tr.logodds, tr.ordered])
+    check_jacobian_det(chain_tranf, Vector(R, 4), at.dvector, np.zeros(4), elemwise=False)
 
 
 class TestElementWiseLogp(SeededTest):
@@ -247,7 +269,7 @@ class TestElementWiseLogp(SeededTest):
         pt[x.name] = array
         dist = x.distribution
         logp_nojac = x0.distribution.logp(dist.transform_used.backward(array))
-        jacob_det = dist.transform_used.jacobian_det(theano.shared(array))
+        jacob_det = dist.transform_used.jacobian_det(aesara.shared(array))
         assert x.logp_elemwiset.ndim == jacob_det.ndim
 
         elementwiselogp = logp_nojac + jacob_det
@@ -264,7 +286,7 @@ class TestElementWiseLogp(SeededTest):
         pt[x.name] = array
         dist = x.distribution
         logp_nojac = x0.distribution.logp(dist.transform_used.backward(array))
-        jacob_det = dist.transform_used.jacobian_det(theano.shared(array))
+        jacob_det = dist.transform_used.jacobian_det(aesara.shared(array))
         assert x.logp_elemwiset.ndim == jacob_det.ndim
 
         if vect_opt == 0:
@@ -356,7 +378,7 @@ class TestElementWiseLogp(SeededTest):
             (np.ones(3), (4, 3)),
         ],
     )
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_half_normal_ordered(self, sd, shape):
         testval = np.sort(np.abs(np.random.randn(*shape)))
         model = self.build_model(

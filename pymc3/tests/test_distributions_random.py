@@ -13,44 +13,51 @@
 #   limitations under the License.
 
 import itertools
-import pytest
+import sys
+
+from contextlib import ExitStack as does_not_raise
+
+import aesara
 import numpy as np
-import numpy.testing as npt
-import scipy.stats as st
-from scipy.special import expit
-from scipy import linalg
 import numpy.random as nr
-import theano
+import numpy.testing as npt
+import pytest
+import scipy.stats as st
+
+from scipy import linalg
+from scipy.special import expit
 
 import pymc3 as pm
+
 from pymc3.distributions.dist_math import clipped_beta_rvs
 from pymc3.distributions.distribution import (
-    draw_values,
     _DrawValuesContext,
     _DrawValuesContextBlocker,
+    draw_values,
     to_tuple,
 )
-from .helpers import SeededTest
-from .test_distributions import (
-    build_model,
+from pymc3.exceptions import ShapeError
+from pymc3.tests.helpers import SeededTest
+from pymc3.tests.test_distributions import (
     Domain,
-    product,
-    R,
-    Rplus,
-    Rplusbig,
-    Runif,
-    Rplusdunif,
-    Unit,
+    I,
     Nat,
     NatSmall,
-    I,
-    Simplex,
-    Vector,
     PdMatrix,
     PdMatrixChol,
     PdMatrixCholUpper,
-    RealMatrix,
+    R,
     RandomPdMatrix,
+    RealMatrix,
+    Rplus,
+    Rplusbig,
+    Rplusdunif,
+    Runif,
+    Simplex,
+    Unit,
+    Vector,
+    build_model,
+    product,
 )
 
 
@@ -200,12 +207,19 @@ class TestDrawValuesContext:
 class BaseTestCases:
     class BaseTestCase(SeededTest):
         shape = 5
+        # the following are the default values of the distribution that take effect
+        # when the parametrized shape/size in the test case is None.
+        # For every distribution that defaults to non-scalar shapes they must be
+        # specified by the inheriting Test class. example: TestGaussianRandomWalk
+        default_shape = ()
+        default_size = ()
 
         def setup_method(self, *args, **kwargs):
             super().setup_method(*args, **kwargs)
             self.model = pm.Model()
 
         def get_random_variable(self, shape, with_vector_params=False, name=None):
+            """ Creates a RandomVariable of the parametrized distribution. """
             if with_vector_params:
                 params = {
                     key: value * np.ones(self.shape, dtype=np.dtype(type(value)))
@@ -216,100 +230,87 @@ class BaseTestCases:
             if name is None:
                 name = self.distribution.__name__
             with self.model:
-                if shape is None:
-                    return self.distribution(name, transform=None, **params)
-                else:
-                    try:
+                try:
+                    if shape is None:
+                        # in the test case parametrization "None" means "no specified (default)"
+                        return self.distribution(name, transform=None, **params)
+                    else:
                         return self.distribution(name, shape=shape, transform=None, **params)
-                    except TypeError:
-                        if np.sum(np.atleast_1d(shape)) == 0:
-                            pytest.skip("Timeseries must have positive shape")
-                        raise
+                except TypeError:
+                    if np.sum(np.atleast_1d(shape)) == 0:
+                        pytest.skip("Timeseries must have positive shape")
+                    raise
 
         @staticmethod
         def sample_random_variable(random_variable, size):
+            """ Draws samples from a RandomVariable using its .random() method. """
             try:
-                return random_variable.random(size=size)
-            except AttributeError:
-                return random_variable.distribution.random(size=size)
-
-        @pytest.mark.parametrize("size", [None, 5, (4, 5)], ids=str)
-        def test_scalar_parameter_shape(self, size):
-            rv = self.get_random_variable(None)
-            if size is None:
-                expected = (1,)
-            else:
-                expected = np.atleast_1d(size).tolist()
-            actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
-            assert tuple(expected) == actual
-
-        @pytest.mark.parametrize("size", [None, 5, (4, 5)], ids=str)
-        def test_scalar_shape(self, size):
-            shape = 10
-            rv = self.get_random_variable(shape)
-
-            if size is None:
-                expected = []
-            else:
-                expected = np.atleast_1d(size).tolist()
-            expected.append(shape)
-            actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
-            assert tuple(expected) == actual
-
-        @pytest.mark.parametrize("size", [None, 5, (4, 5)], ids=str)
-        def test_parameters_1d_shape(self, size):
-            rv = self.get_random_variable(self.shape, with_vector_params=True)
-            if size is None:
-                expected = []
-            else:
-                expected = np.atleast_1d(size).tolist()
-            expected.append(self.shape)
-            actual = self.sample_random_variable(rv, size).shape
-            assert tuple(expected) == actual
-
-        @pytest.mark.parametrize("size", [None, 5, (4, 5)], ids=str)
-        def test_broadcast_shape(self, size):
-            broadcast_shape = (2 * self.shape, self.shape)
-            rv = self.get_random_variable(broadcast_shape, with_vector_params=True)
-            if size is None:
-                expected = []
-            else:
-                expected = np.atleast_1d(size).tolist()
-            expected.extend(broadcast_shape)
-            actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
-            assert tuple(expected) == actual
-
-        @pytest.mark.parametrize(
-            "shape", [(), (1,), (1, 1), (1, 2), (10, 10, 1), (10, 10, 2)], ids=str
-        )
-        def test_different_shapes_and_sample_sizes(self, shape):
-            prefix = self.distribution.__name__
-
-            rv = self.get_random_variable(shape, name=f"{prefix}_{shape}")
-            for size in (None, 1, 5, (4, 5)):
                 if size is None:
-                    s = []
+                    return random_variable.random()
                 else:
-                    try:
-                        s = list(size)
-                    except TypeError:
-                        s = [size]
-                    if s == [1]:
-                        s = []
-                if shape not in ((), (1,)):
-                    s.extend(shape)
-                e = tuple(s)
-                a = self.sample_random_variable(rv, size).shape
-                assert e == a
+                    return random_variable.random(size=size)
+            except AttributeError:
+                if size is None:
+                    return random_variable.distribution.random()
+                else:
+                    return random_variable.distribution.random(size=size)
+
+        @pytest.mark.parametrize("size", [None, (), 1, (1,), 5, (4, 5)], ids=str)
+        @pytest.mark.parametrize("shape", [None, ()], ids=str)
+        def test_scalar_distribution_shape(self, shape, size):
+            """ Draws samples of different [size] from a scalar [shape] RV. """
+            rv = self.get_random_variable(shape)
+            exp_shape = self.default_shape if shape is None else tuple(np.atleast_1d(shape))
+            exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
+            expected = exp_size + exp_shape
+            actual = np.shape(self.sample_random_variable(rv, size))
+            assert (
+                expected == actual
+            ), f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
+            # check that negative size raises an error
+            with pytest.raises(ValueError):
+                self.sample_random_variable(rv, size=-2)
+            with pytest.raises(ValueError):
+                self.sample_random_variable(rv, size=(3, -2))
+
+        @pytest.mark.parametrize("size", [None, ()], ids=str)
+        @pytest.mark.parametrize(
+            "shape", [None, (), (1,), (1, 1), (1, 2), (10, 11, 1), (9, 10, 2)], ids=str
+        )
+        def test_scalar_sample_shape(self, shape, size):
+            """ Draws samples of scalar [size] from a [shape] RV. """
+            rv = self.get_random_variable(shape)
+            exp_shape = self.default_shape if shape is None else tuple(np.atleast_1d(shape))
+            exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
+            expected = exp_size + exp_shape
+            actual = np.shape(self.sample_random_variable(rv, size))
+            assert (
+                expected == actual
+            ), f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
+
+        @pytest.mark.parametrize("size", [None, 3, (4, 5)], ids=str)
+        @pytest.mark.parametrize("shape", [None, 1, (10, 11, 1)], ids=str)
+        def test_vector_params(self, shape, size):
+            shape = self.shape
+            rv = self.get_random_variable(shape, with_vector_params=True)
+            exp_shape = self.default_shape if shape is None else tuple(np.atleast_1d(shape))
+            exp_size = self.default_size if size is None else tuple(np.atleast_1d(size))
+            expected = exp_size + exp_shape
+            actual = np.shape(self.sample_random_variable(rv, size))
+            assert (
+                expected == actual
+            ), f"Sample size {size} from {shape}-shaped RV had shape {actual}. Expected: {expected}"
+
+        @pytest.mark.parametrize("shape", [-2, 0, (0,), (2, 0), (5, 0, 3)])
+        def test_shape_error_on_zero_shape_rv(self, shape):
+            with pytest.raises(ValueError, match="not allowed"):
+                self.get_random_variable(shape)
 
 
 class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
     distribution = pm.GaussianRandomWalk
     params = {"mu": 1.0, "sigma": 1.0}
-
-    @pytest.mark.xfail(reason="Supporting this makes a nasty API")
-    def test_broadcast_shape(self):
-        super().test_broadcast_shape()
+    default_shape = (1,)
 
 
 class TestNormal(BaseTestCases.BaseTestCase):
@@ -375,6 +376,11 @@ class TestExponential(BaseTestCases.BaseTestCase):
 class TestLaplace(BaseTestCases.BaseTestCase):
     distribution = pm.Laplace
     params = {"mu": 1.0, "b": 1.0}
+
+
+class TestAsymmetricLaplace(BaseTestCases.BaseTestCase):
+    distribution = pm.AsymmetricLaplace
+    params = {"kappa": 1.0, "b": 1.0, "mu": 0.0}
 
 
 class TestLognormal(BaseTestCases.BaseTestCase):
@@ -507,6 +513,11 @@ class TestGeometric(BaseTestCases.BaseTestCase):
     params = {"p": 0.5}
 
 
+class TestHyperGeometric(BaseTestCases.BaseTestCase):
+    distribution = pm.HyperGeometric
+    params = {"N": 50, "k": 25, "n": 10}
+
+
 class TestMoyal(BaseTestCases.BaseTestCase):
     distribution = pm.Moyal
     params = {"mu": 0.0, "sigma": 1.0}
@@ -529,6 +540,24 @@ class TestCategorical(BaseTestCases.BaseTestCase):
         p = np.ones((3, 7, 5))
         assert pm.Categorical.dist(p=p).random().shape == (3, 7)
         assert pm.Categorical.dist(p=p).random(size=4).shape == (4, 3, 7)
+
+
+class TestDirichlet(SeededTest):
+    @pytest.mark.parametrize(
+        "shape, size",
+        [
+            ((2), (1)),
+            ((2), (2)),
+            ((2, 2), (2, 100)),
+            ((3, 4), (3, 4)),
+            ((3, 4), (3, 4, 100)),
+            ((3, 4), (100)),
+            ((3, 4), (1)),
+        ],
+    )
+    def test_dirichlet_random_shape(self, shape, size):
+        out_shape = to_tuple(size) + to_tuple(shape)
+        assert pm.Dirichlet.dist(a=np.ones(shape)).random(size=size).shape == out_shape
 
 
 class TestScalarParameterSamples(SeededTest):
@@ -623,6 +652,17 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(pm.Laplace, {"mu": R, "b": Rplus}, ref_rand=ref_rand)
 
+    def test_laplace_asymmetric(self):
+        def ref_rand(size, kappa, b, mu):
+            u = np.random.uniform(size=size)
+            switch = kappa ** 2 / (1 + kappa ** 2)
+            non_positive_x = mu + kappa * np.log(u * (1 / switch)) / b
+            positive_x = mu - np.log((1 - u) * (1 + kappa ** 2)) / (kappa * b)
+            draws = non_positive_x * (u <= switch) + positive_x * (u > switch)
+            return draws
+
+        pymc3_random(pm.AsymmetricLaplace, {"b": Rplus, "kappa": Rplus, "mu": R}, ref_rand=ref_rand)
+
     def test_lognormal(self):
         def ref_rand(size, mu, tau):
             return np.exp(mu + (tau ** -0.5) * st.norm.rvs(loc=0.0, scale=1.0, size=size))
@@ -708,6 +748,10 @@ class TestScalarParameterSamples(SeededTest):
     def test_binomial(self):
         pymc3_random_discrete(pm.Binomial, {"n": Nat, "p": Unit}, ref_rand=st.binom.rvs)
 
+    @pytest.mark.xfail(
+        sys.platform.startswith("win"),
+        reason="Known issue: https://github.com/pymc-devs/pymc3/pull/4269",
+    )
     def test_beta_binomial(self):
         pymc3_random_discrete(
             pm.BetaBinomial, {"n": Nat, "alpha": Rplus, "beta": Rplus}, ref_rand=self._beta_bin
@@ -738,6 +782,22 @@ class TestScalarParameterSamples(SeededTest):
 
     def test_geometric(self):
         pymc3_random_discrete(pm.Geometric, {"p": Unit}, size=500, fails=50, ref_rand=nr.geometric)
+
+    def test_hypergeometric(self):
+        def ref_rand(size, N, k, n):
+            return st.hypergeom.rvs(M=N, n=k, N=n, size=size)
+
+        pymc3_random_discrete(
+            pm.HyperGeometric,
+            {
+                "N": Domain([10, 11, 12, 13], "int64"),
+                "k": Domain([4, 5, 6, 7], "int64"),
+                "n": Domain([6, 7, 8, 9], "int64"),
+            },
+            size=500,
+            fails=50,
+            ref_rand=ref_rand,
+        )
 
     def test_discrete_uniform(self):
         def ref_rand(size, lower, upper):
@@ -826,6 +886,12 @@ class TestScalarParameterSamples(SeededTest):
                 size, mu, rowcov=np.dot(rowchol, rowchol.T), colcov=np.dot(colchol, colchol.T)
             )
 
+        def ref_rand_chol_transpose(size, mu, rowchol, colchol):
+            colchol = colchol.T
+            return ref_rand(
+                size, mu, rowcov=np.dot(rowchol, rowchol.T), colcov=np.dot(colchol, colchol.T)
+            )
+
         def ref_rand_uchol(size, mu, rowchol, colchol):
             return ref_rand(
                 size, mu, rowcov=np.dot(rowchol.T, rowchol), colcov=np.dot(colchol.T, colchol)
@@ -835,7 +901,7 @@ class TestScalarParameterSamples(SeededTest):
             pymc3_random(
                 pm.MatrixNormal,
                 {"mu": RealMatrix(n, n), "rowcov": PdMatrix(n), "colcov": PdMatrix(n)},
-                size=n,
+                size=100,
                 valuedomain=RealMatrix(n, n),
                 ref_rand=ref_rand,
             )
@@ -844,7 +910,7 @@ class TestScalarParameterSamples(SeededTest):
             pymc3_random(
                 pm.MatrixNormal,
                 {"mu": RealMatrix(n, n), "rowchol": PdMatrixChol(n), "colchol": PdMatrixChol(n)},
-                size=n,
+                size=100,
                 valuedomain=RealMatrix(n, n),
                 ref_rand=ref_rand_chol,
             )
@@ -854,6 +920,22 @@ class TestScalarParameterSamples(SeededTest):
             #     size=n, valuedomain=RealMatrix(n, n), ref_rand=ref_rand_uchol,
             #     extra_args={'lower': False}
             # )
+
+            # 2 sample test fails because cov becomes different if chol is transposed beforehand.
+            # This implicity means we need transpose of chol after drawing values in
+            # MatrixNormal.random method to match stats.matrix_normal.rvs method
+            with pytest.raises(AssertionError):
+                pymc3_random(
+                    pm.MatrixNormal,
+                    {
+                        "mu": RealMatrix(n, n),
+                        "rowchol": PdMatrixChol(n),
+                        "colchol": PdMatrixChol(n),
+                    },
+                    size=100,
+                    valuedomain=RealMatrix(n, n),
+                    ref_rand=ref_rand_chol_transpose,
+                )
 
     def test_kronecker_normal(self):
         def ref_rand(size, mu, covs, sigma):
@@ -918,9 +1000,9 @@ class TestScalarParameterSamples(SeededTest):
 
     def test_mv_t(self):
         def ref_rand(size, nu, Sigma, mu):
-            normal = st.multivariate_normal.rvs(cov=Sigma, size=size).T
-            chi2 = st.chi2.rvs(df=nu, size=size)
-            return mu + np.sqrt(nu) * (normal / chi2).T
+            normal = st.multivariate_normal.rvs(cov=Sigma, size=size)
+            chi2 = st.chi2.rvs(df=nu, size=size)[..., None]
+            return mu + (normal / np.sqrt(chi2 / nu))
 
         for n in [2, 3]:
             pymc3_random(
@@ -943,6 +1025,70 @@ class TestScalarParameterSamples(SeededTest):
                 size=100,
                 ref_rand=ref_rand,
             )
+
+    def test_dirichlet_multinomial(self):
+        def ref_rand(size, a, n):
+            k = a.shape[-1]
+            out = np.empty((size, k), dtype=int)
+            for i in range(size):
+                p = nr.dirichlet(a)
+                x = nr.multinomial(n=n, pvals=p)
+                out[i, :] = x
+            return out
+
+        for n in [2, 3]:
+            pymc3_random_discrete(
+                pm.DirichletMultinomial,
+                {"a": Vector(Rplus, n), "n": Nat},
+                valuedomain=Vector(Nat, n),
+                size=1000,
+                ref_rand=ref_rand,
+            )
+
+    @pytest.mark.parametrize(
+        "a, shape, n",
+        [
+            [[0.25, 0.25, 0.25, 0.25], 4, 2],
+            [[0.25, 0.25, 0.25, 0.25], (1, 4), 3],
+            [[0.25, 0.25, 0.25, 0.25], (10, 4), [2] * 10],
+            [[0.25, 0.25, 0.25, 0.25], (10, 1, 4), 5],
+            [[[0.25, 0.25, 0.25, 0.25]], (2, 4), [7, 11]],
+            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), 13],
+            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (1, 2, 4), [23, 29]],
+            [
+                [[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]],
+                (10, 2, 4),
+                [31, 37],
+            ],
+            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), [17, 19]],
+        ],
+    )
+    def test_dirichlet_multinomial_shape(self, a, shape, n):
+        a = np.asarray(a)
+        with pm.Model() as model:
+            m = pm.DirichletMultinomial("m", n=n, a=a, shape=shape)
+        samp0 = m.random()
+        samp1 = m.random(size=1)
+        samp2 = m.random(size=2)
+
+        shape_ = to_tuple(shape)
+        assert to_tuple(samp0.shape) == shape_
+        assert to_tuple(samp1.shape) == (1, *shape_)
+        assert to_tuple(samp2.shape) == (2, *shape_)
+
+    @pytest.mark.parametrize(
+        "n, a, shape, expectation",
+        [
+            ([5], [[1000, 1, 1], [1, 1, 1000]], (2, 3), does_not_raise()),
+            ([5, 3], [[1000, 1, 1], [1, 1, 1000]], (2, 3), does_not_raise()),
+            ([[5]], [[1000, 1, 1], [1, 1, 1000]], (2, 3), pytest.raises(ShapeError)),
+            ([[5], [3]], [[1000, 1, 1], [1, 1, 1000]], (2, 3), pytest.raises(ShapeError)),
+        ],
+    )
+    def test_dirichlet_multinomial_dist_ShapeError(self, n, a, shape, expectation):
+        m = pm.DirichletMultinomial.dist(n=n, a=a, shape=shape)
+        with expectation:
+            m.random()
 
     def test_multinomial(self):
         def ref_rand(size, p, n):
@@ -981,7 +1127,7 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(pm.Moyal, {"mu": R, "sigma": Rplus}, ref_rand=ref_rand)
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_interpolated(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
@@ -1150,7 +1296,7 @@ class TestDensityDist:
                 shape=shape,
                 random=normal_dist.random,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         size = 100
@@ -1173,7 +1319,7 @@ class TestDensityDist:
                 random=normal_dist.random,
                 wrap_random_with_dist_shape=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         with pytest.raises(RuntimeError):
@@ -1196,7 +1342,7 @@ class TestDensityDist:
                 wrap_random_with_dist_shape=False,
                 check_shape_in_random=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         ppc = pm.sample_posterior_predictive(trace, samples=samples, model=model)
@@ -1219,7 +1365,7 @@ class TestDensityDist:
                 random=rvs,
                 wrap_random_with_dist_shape=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         size = 100
@@ -1239,7 +1385,7 @@ class TestDensityDist:
                 random=rvs,
                 wrap_random_with_dist_shape=False,
             )
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         size = 100
@@ -1252,7 +1398,7 @@ class TestDensityDist:
             mu = pm.Normal("mu", 0, 1)
             normal_dist = pm.Normal.dist(mu, 1)
             pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
-            trace = pm.sample(100)
+            trace = pm.sample(100, cores=1)
 
         samples = 500
         with pytest.raises(ValueError):
@@ -1548,7 +1694,7 @@ class TestNestedRandom(SeededTest):
         assert prior["target"].shape == (prior_samples,) + shape
 
 
-def generate_shapes(include_params=False, xfail=False):
+def generate_shapes(include_params=False):
     # fmt: off
     mudim_as_event = [
         [None, 1, 3, 10, (10, 3), 100],
@@ -1567,20 +1713,13 @@ def generate_shapes(include_params=False, xfail=False):
         del mudim_as_event[-1]
         del mudim_as_dist[-1]
     data = itertools.chain(itertools.product(*mudim_as_event), itertools.product(*mudim_as_dist))
-    if xfail:
-        data = list(data)
-        for index in range(len(data)):
-            if data[index][0] in (None, 1):
-                data[index] = pytest.param(
-                    *data[index], marks=pytest.mark.xfail(reason="wait for PR #4214")
-                )
     return data
 
 
 class TestMvNormal(SeededTest):
     @pytest.mark.parametrize(
         ["sample_shape", "dist_shape", "mu_shape", "param"],
-        generate_shapes(include_params=True, xfail=False),
+        generate_shapes(include_params=True),
         ids=str,
     )
     def test_with_np_arrays(self, sample_shape, dist_shape, mu_shape, param):
@@ -1590,7 +1729,7 @@ class TestMvNormal(SeededTest):
 
     @pytest.mark.parametrize(
         ["sample_shape", "dist_shape", "mu_shape"],
-        generate_shapes(include_params=False, xfail=True),
+        generate_shapes(include_params=False),
         ids=str,
     )
     def test_with_chol_rv(self, sample_shape, dist_shape, mu_shape):
@@ -1607,7 +1746,7 @@ class TestMvNormal(SeededTest):
 
     @pytest.mark.parametrize(
         ["sample_shape", "dist_shape", "mu_shape"],
-        generate_shapes(include_params=False, xfail=True),
+        generate_shapes(include_params=False),
         ids=str,
     )
     def test_with_cov_rv(self, sample_shape, dist_shape, mu_shape):
@@ -1635,6 +1774,10 @@ class TestMvNormal(SeededTest):
         for var in "abcd":
             assert not np.isnan(np.std(samples[var]))
 
+        for var in "bcd":
+            std = np.std(samples[var] - samples["a"])
+            np.testing.assert_allclose(std, 1, rtol=1e-2)
+
     def test_issue_3829(self):
         with pm.Model() as model:
             x = pm.MvNormal("x", mu=np.zeros(5), cov=np.eye(5), shape=(2, 5))
@@ -1655,3 +1798,76 @@ class TestMvNormal(SeededTest):
             prior_pred = pm.sample_prior_predictive(1)
 
         assert prior_pred["X"].shape == (1, N, 2)
+
+
+def test_matrix_normal_random_with_random_variables():
+    """
+    This test checks for shape correctness when using MatrixNormal distribution
+    with parameters as random variables.
+    Originally reported - https://github.com/pymc-devs/pymc3/issues/3585
+    """
+    K = 3
+    D = 15
+    mu_0 = np.zeros((D, K))
+    lambd = 1.0
+    with pm.Model() as model:
+        sd_dist = pm.HalfCauchy.dist(beta=2.5)
+        packedL = pm.LKJCholeskyCov("packedL", eta=2, n=D, sd_dist=sd_dist)
+        L = pm.expand_packed_triangular(D, packedL, lower=True)
+        Sigma = pm.Deterministic("Sigma", L.dot(L.T))  # D x D covariance
+        mu = pm.MatrixNormal(
+            "mu", mu=mu_0, rowcov=(1 / lambd) * Sigma, colcov=np.eye(K), shape=(D, K)
+        )
+        prior = pm.sample_prior_predictive(2)
+
+    assert prior["mu"].shape == (2, D, K)
+
+
+class TestMvGaussianRandomWalk(SeededTest):
+    @pytest.mark.parametrize(
+        ["sample_shape", "dist_shape", "mu_shape", "param"],
+        generate_shapes(include_params=True),
+        ids=str,
+    )
+    def test_with_np_arrays(self, sample_shape, dist_shape, mu_shape, param):
+        dist = pm.MvGaussianRandomWalk.dist(
+            mu=np.ones(mu_shape), **{param: np.eye(3)}, shape=dist_shape
+        )
+        output_shape = to_tuple(sample_shape) + dist_shape
+        assert dist.random(size=sample_shape).shape == output_shape
+
+    @pytest.mark.xfail
+    @pytest.mark.parametrize(
+        ["sample_shape", "dist_shape", "mu_shape"],
+        generate_shapes(include_params=False),
+        ids=str,
+    )
+    def test_with_chol_rv(self, sample_shape, dist_shape, mu_shape):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            chol, corr, stds = pm.LKJCholeskyCov(
+                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            mv = pm.MvGaussianRandomWalk("mv", mu, chol=chol, shape=dist_shape)
+            prior = pm.sample_prior_predictive(samples=sample_shape)
+
+        assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape
+
+    @pytest.mark.xfail
+    @pytest.mark.parametrize(
+        ["sample_shape", "dist_shape", "mu_shape"],
+        generate_shapes(include_params=False),
+        ids=str,
+    )
+    def test_with_cov_rv(self, sample_shape, dist_shape, mu_shape):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0, shape=mu_shape)
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            chol, corr, stds = pm.LKJCholeskyCov(
+                "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+            )
+            mv = pm.MvGaussianRandomWalk("mv", mu, cov=pm.math.dot(chol, chol.T), shape=dist_shape)
+            prior = pm.sample_prior_predictive(samples=sample_shape)
+
+        assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape

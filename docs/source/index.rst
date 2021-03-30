@@ -23,12 +23,14 @@
 
     X, y = linear_training_data()
     with pm.Model() as linear_model:
-        weights = pm.Normal('weights', mu=0, sigma=1)
-        noise = pm.Gamma('noise', alpha=2, beta=1)
-        y_observed = pm.Normal('y_observed',
-                    mu=X @ weights,
-                    sigma=noise,
-                    observed=y)
+        weights = pm.Normal("weights", mu=0, sigma=1)
+        noise = pm.Gamma("noise", alpha=2, beta=1)
+        y_observed = pm.Normal(
+            "y_observed",
+            mu=X @ weights,
+            sigma=noise,
+            observed=y,
+        )
 
         prior = pm.sample_prior_predictive()
         posterior = pm.sample()
@@ -52,13 +54,6 @@
 
     conda install -c conda-forge pymc3
 
-.. raw:: html
-
-                    <h3 class="ui header">Via pypi:</h3>
-
-.. code-block:: bash
-
-    pip install pymc3
 
 .. raw:: html
 
@@ -94,7 +89,7 @@
                     </div>
                 </a>
 
-                <a class="ui link card" href="/notebooks/variational_api_quickstart.html">
+                <a class="ui link card" href="/pymc-examples/examples/variational_inference/variational_api_quickstart.html">
                     <div class="content">
                         <div class="header">Variational Inference</div>
                         <div class="description">Variational inference saves computational cost by turning a problem of integration into one of optimization. PyMC3's variational API supports a number of cutting edge algorithms, as well as minibatch for scaling to large datasets.
@@ -102,10 +97,10 @@
                     </div>
                 </a>
 
-                <a class="ui link card" href="/PyMC3_and_Theano.html">
+                <a class="ui link card" href="/PyMC3_and_Aesara.html">
                     <div class="content">
-                        <div class="header">PyMC3 and Theano</div>
-                        <div class="description">Theano is the deep-learning library PyMC3 uses to construct probability distributions and then access the gradient in order to implement cutting edge inference algorithms. More advanced models may be built by understanding this layer.
+                        <div class="header">PyMC3 and Aesara</div>
+                        <div class="description">Aesara is the library PyMC3 uses to construct probability distributions and then access the gradient in order to implement cutting edge inference algorithms. More advanced models may be built by understanding this layer.
                         </div>
                     </div>
                 </a>
@@ -120,8 +115,12 @@
 
         <div class="ui vertical segment">
             <h2 class="ui dividing header">Citing PyMC3</h2>
-            <p>Salvatier J., Wiecki T.V., Fonnesbeck C. (2016) Probabilistic programming in Python using PyMC3. PeerJ
-                Computer Science 2:e55 <a href="https://doi.org/10.7717/peerj-cs.55">DOI: 10.7717/peerj-cs.55</a>.</p>
+            <p>Please choose from the following:</p>
+            <ul>
+                <li><a href="https://doi.org/10.7717/peerj-cs.55" rel="nofollow"><img alt="DOIpaper" src="https://camo.githubusercontent.com/6a7e1c555ea828c2f9253f7cff0868debe9fdc711694424b913bf95f6d2da9dd/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f444f492d31302e37373137253246706565726a2d2d63732e35352d626c7565" data-canonical-src="https://img.shields.io/badge/DOI-10.7717%2Fpeerj--cs.55-blue" style="max-width:100%;"></a> <em>Probabilistic programming in Python using PyMC3</em>, Salvatier J., Wiecki T.V., Fonnesbeck C. (2016)</li>
+                <li><a href="https://doi.org/10.5281/zenodo.4603970" rel="nofollow"><img alt="DOIzenodo" src="https://camo.githubusercontent.com/2b33f91dc16d9e7ad37aede0119d197776fbef41b8080c7e38a3629df3d9c201/68747470733a2f2f7a656e6f646f2e6f72672f62616467652f444f492f31302e353238312f7a656e6f646f2e343630333937302e737667" data-canonical-src="https://zenodo.org/badge/DOI/10.5281/zenodo.4603970.svg" style="max-width:100%;"></a> A DOI for all versions.</li>
+                <li>DOIs for specific versions are shown on Zenodo and under <a href="https://github.com/pymc-devs/pymc3/releases">Releases</a></li>
+            </ul>
             <p>See <a href="https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&cites=6936955228135731011">Google Scholar</a> for a continuously updated list of papers citing PyMC3.</p>
         </div>
 

@@ -12,21 +12,23 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import ctypes
+import logging
 import multiprocessing
 import multiprocessing.sharedctypes
-import ctypes
-import time
-import logging
 import pickle
-from collections import namedtuple
-import traceback
 import platform
-from pymc3.exceptions import SamplingError
+import time
+import traceback
+
+from collections import namedtuple
 
 import numpy as np
+
 from fastprogress.fastprogress import progress_bar
 
-from . import theanof
+from pymc3 import aesaraf
+from pymc3.exceptions import SamplingError
 
 logger = logging.getLogger("pymc3")
 
@@ -97,7 +99,7 @@ class _Process:
         self._step_method_is_pickled = step_method_is_pickled
         self._shared_point = shared_point
         self._seed = seed
-        self._tt_seed = seed + 1
+        self._at_seed = seed + 1
         self._draws = draws
         self._tune = tune
         self._pickle_backend = pickle_backend
@@ -168,7 +170,7 @@ class _Process:
 
     def _start_loop(self):
         np.random.seed(self._seed)
-        theanof.set_tt_rng(self._tt_seed)
+        aesaraf.set_at_rng(self._at_seed)
 
         draw = 0
         tuning = True

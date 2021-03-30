@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import numpy as np
+
 from scipy import stats
 
 from pymc3.backends.report import SamplerWarning, WarningType

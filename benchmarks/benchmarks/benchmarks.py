@@ -11,22 +11,23 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import time
 import timeit
 
+import aesara
+import aesara.tensor as at
+import arviz as az
 import numpy as np
 import pandas as pd
+
 import pymc3 as pm
-import theano
-import theano.tensor as tt
 
 
 def glm_hierarchical_model(random_seed=123):
     """Sample glm hierarchical model to use in benchmarks"""
     np.random.seed(random_seed)
     data = pd.read_csv(pm.get_data("radon.csv"))
-    data["log_radon"] = data["log_radon"].astype(theano.config.floatX)
+    data["log_radon"] = data["log_radon"].astype(aesara.config.floatX)
     county_idx = data.county_code.values
 
     n_counties = len(data.county.unique())
@@ -60,8 +61,8 @@ def mixture_model(random_seed=1234):
         mu = pm.Normal("mu", mu=0.0, sd=10.0, shape=w_true.shape)
         enforce_order = pm.Potential(
             "enforce_order",
-            tt.switch(mu[0] - mu[1] <= 0, 0.0, -np.inf)
-            + tt.switch(mu[1] - mu[2] <= 0, 0.0, -np.inf),
+            at.switch(mu[0] - mu[1] <= 0, 0.0, -np.inf)
+            + at.switch(mu[1] - mu[2] <= 0, 0.0, -np.inf),
         )
         tau = pm.Gamma("tau", alpha=1.0, beta=1.0, shape=w_true.shape)
         pm.NormalMixture("x_obs", w=w, mu=mu, tau=tau, observed=x)
@@ -191,7 +192,7 @@ class NUTSInitSuite:
                 compute_convergence_checks=False,
             )
             tot = time.time() - t0
-        ess = float(pm.ess(trace, var_names=["mu_a"])["mu_a"].values)
+        ess = float(az.ess(trace, var_names=["mu_a"])["mu_a"].values)
         return ess / tot
 
     def track_marginal_mixture_model_ess(self, init):
@@ -213,7 +214,7 @@ class NUTSInitSuite:
                 compute_convergence_checks=False,
             )
             tot = time.time() - t0
-        ess = pm.ess(trace, var_names=["mu"])["mu"].values.min()  # worst case
+        ess = az.ess(trace, var_names=["mu"])["mu"].values.min()  # worst case
         return ess / tot
 
 
@@ -244,7 +245,7 @@ class CompareMetropolisNUTSSuite:
                 compute_convergence_checks=False,
             )
             tot = time.time() - t0
-        ess = float(pm.ess(trace, var_names=["mu_a"])["mu_a"].values)
+        ess = float(az.ess(trace, var_names=["mu_a"])["mu_a"].values)
         return ess / tot
 
 
@@ -303,7 +304,7 @@ class DifferentialEquationSuite:
             t0 = time.time()
             trace = pm.sample(500, tune=1000, chains=2, cores=2, random_seed=0)
             tot = time.time() - t0
-        ess = pm.ess(trace)
+        ess = az.ess(trace)
         return np.mean([ess.sigma, ess.gamma]) / tot
 
 

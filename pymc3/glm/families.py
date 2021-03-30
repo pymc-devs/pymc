@@ -13,12 +13,14 @@
 #   limitations under the License.
 
 import numbers
-import numpy as np
+
 from copy import copy
 
-import theano.tensor as tt
-from ..model import modelcontext
-from .. import distributions as pm_dists
+import aesara.tensor as at
+import numpy as np
+
+from pymc3 import distributions as pm_dists
+from pymc3.model import modelcontext
 
 __all__ = ["Normal", "StudentT", "Binomial", "Poisson", "NegativeBinomial"]
 
@@ -34,9 +36,9 @@ class Identity:
 
 
 identity = Identity()
-logit = tt.nnet.sigmoid
-inverse = tt.inv
-exp = tt.exp
+logit = at.nnet.sigmoid
+inverse = at.inv
+exp = at.exp
 
 
 class Family:
@@ -78,7 +80,7 @@ class Family:
 
         Parameters
         ----------
-        y_est: theano.tensor
+        y_est: aesara.tensor
             Estimate of dependent variable
         y_data: array
             Observed dependent variable

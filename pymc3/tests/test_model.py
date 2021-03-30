@@ -12,20 +12,22 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytest
-import theano
-import theano.tensor as tt
-import numpy as np
 import pickle
-import pandas as pd
-import numpy.testing as npt
 import unittest
 
+import aesara
+import aesara.tensor as at
+import numpy as np
+import numpy.testing as npt
+import pandas as pd
+import pytest
+
 import pymc3 as pm
+
+from pymc3 import Deterministic, Potential
 from pymc3.distributions import HalfCauchy, Normal, transforms
-from pymc3 import Potential, Deterministic
 from pymc3.model import ValueGradFunction
-from .helpers import select_by_precision
+from pymc3.tests.helpers import select_by_precision
 
 
 class NewModel(pm.Model):
@@ -37,8 +39,8 @@ class NewModel(pm.Model):
         self.v2 = pm.Normal("v2", mu=0, sigma=1)
         # 2) Potentials and Deterministic variables with method too
         # be sure that names will not overlap with other same models
-        pm.Deterministic("d", tt.constant(1))
-        pm.Potential("p", tt.constant(1))
+        pm.Deterministic("d", at.constant(1))
+        pm.Potential("p", at.constant(1))
 
 
 class DocstringModel(pm.Model):
@@ -48,7 +50,7 @@ class DocstringModel(pm.Model):
         Normal("v2", mu=mean, sigma=sigma)
         Normal("v3", mu=mean, sigma=HalfCauchy("sd", beta=10, testval=1.0))
         Deterministic("v3_sq", self.v3 ** 2)
-        Potential("p1", tt.constant(1))
+        Potential("p1", at.constant(1))
 
 
 class TestBaseModel:
@@ -154,7 +156,7 @@ class TestObserved:
 
     def test_observed_type(self):
         X_ = np.random.randn(100, 5)
-        X = pm.floatX(theano.shared(X_))
+        X = pm.floatX(aesara.shared(X_))
         with pm.Model():
             x1 = pm.Normal("x1", observed=X_)
             x2 = pm.Normal("x2", observed=X)
@@ -163,21 +165,21 @@ class TestObserved:
         assert x2.type == X.type
 
 
-class TestTheanoConfig:
+class TestAesaraConfig:
     def test_set_testval_raise(self):
-        with theano.configparser.change_flags(compute_test_value="off"):
+        with aesara.config.change_flags(compute_test_value="off"):
             with pm.Model():
-                assert theano.config.compute_test_value == "raise"
-            assert theano.config.compute_test_value == "off"
+                assert aesara.config.compute_test_value == "raise"
+            assert aesara.config.compute_test_value == "off"
 
     def test_nested(self):
-        with theano.configparser.change_flags(compute_test_value="off"):
-            with pm.Model(theano_config={"compute_test_value": "ignore"}):
-                assert theano.config.compute_test_value == "ignore"
-                with pm.Model(theano_config={"compute_test_value": "warn"}):
-                    assert theano.config.compute_test_value == "warn"
-                assert theano.config.compute_test_value == "ignore"
-            assert theano.config.compute_test_value == "off"
+        with aesara.config.change_flags(compute_test_value="off"):
+            with pm.Model(aesara_config={"compute_test_value": "ignore"}):
+                assert aesara.config.compute_test_value == "ignore"
+                with pm.Model(aesara_config={"compute_test_value": "warn"}):
+                    assert aesara.config.compute_test_value == "warn"
+                assert aesara.config.compute_test_value == "ignore"
+            assert aesara.config.compute_test_value == "off"
 
 
 def test_matrix_multiplication():
@@ -260,7 +262,7 @@ def test_empty_observed():
 
 class TestValueGradFunction(unittest.TestCase):
     def test_no_extra(self):
-        a = tt.vector("a")
+        a = at.vector("a")
         a.tag.test_value = np.zeros(3, dtype=a.dtype)
         a.dshape = (3,)
         a.dsize = 3
@@ -268,7 +270,7 @@ class TestValueGradFunction(unittest.TestCase):
         assert f_grad.size == 3
 
     def test_invalid_type(self):
-        a = tt.ivector("a")
+        a = at.ivector("a")
         a.tag.test_value = np.zeros(3, dtype=a.dtype)
         a.dshape = (3,)
         a.dsize = 3
@@ -277,19 +279,19 @@ class TestValueGradFunction(unittest.TestCase):
         err.match("Invalid dtype")
 
     def setUp(self):
-        extra1 = tt.iscalar("extra1")
+        extra1 = at.iscalar("extra1")
         extra1_ = np.array(0, dtype=extra1.dtype)
         extra1.tag.test_value = extra1_
         extra1.dshape = tuple()
         extra1.dsize = 1
 
-        val1 = tt.vector("val1")
+        val1 = at.vector("val1")
         val1_ = np.zeros(3, dtype=val1.dtype)
         val1.tag.test_value = val1_
         val1.dshape = (3,)
         val1.dsize = 3
 
-        val2 = tt.matrix("val2")
+        val2 = at.matrix("val2")
         val2_ = np.zeros((2, 3), dtype=val2.dtype)
         val2.tag.test_value = val2_
         val2.dshape = (2, 3)
@@ -363,6 +365,34 @@ class TestValueGradFunction(unittest.TestCase):
         gf = m.logp_dlogp_function()
 
         assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
+
+    def test_aesara_switch_broadcast_edge_cases(self):
+        # Tests against two subtle issues related to a previous bug in Aesara where at.switch would not
+        # always broadcast tensors with single values https://github.com/pymc-devs/aesara/issues/270
+
+        # Known issue 1: https://github.com/pymc-devs/pymc3/issues/4389
+        data = np.zeros(10)
+        with pm.Model() as m:
+            p = pm.Beta("p", 1, 1)
+            obs = pm.Bernoulli("obs", p=p, observed=data)
+        # Assert logp is correct
+        npt.assert_allclose(
+            obs.logp(m.test_point),
+            np.log(0.5) * 10,
+        )
+
+        # Known issue 2: https://github.com/pymc-devs/pymc3/issues/4417
+        # fmt: off
+        data = np.array([
+            1.35202174, -0.83690274, 1.11175166, 1.29000367, 0.21282749,
+            0.84430966, 0.24841369, 0.81803141, 0.20550244, -0.45016253,
+        ])
+        # fmt: on
+        with pm.Model() as m:
+            mu = pm.Normal("mu", 0, 5)
+            obs = pm.TruncatedNormal("obs", mu=mu, sigma=1, lower=-1, upper=2, observed=data)
+        # Assert dlogp is correct
+        npt.assert_allclose(m.dlogp([mu])({"mu": 0}), 2.499424682024436, rtol=1e-5)
 
 
 def test_multiple_observed_rv():

@@ -12,19 +12,20 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
 import numpy as np
-import theano
-from theano import tensor as tt
+
+from aesara import tensor as at
+from aesara.graph.basic import Variable
+from aesara.tensor.var import TensorVariable
 
 import pymc3 as pm
-from pymc3.distributions.dist_math import rho2sigma
-from . import opvi
-from pymc3.variational.opvi import Group, Approximation, node_property
-from pymc3.util import update_start_vals
-from pymc3.theanof import change_flags
-from pymc3.math import batched_diag
-from pymc3.variational import flows
 
+from pymc3.distributions.dist_math import rho2sigma
+from pymc3.math import batched_diag
+from pymc3.util import update_start_vals
+from pymc3.variational import flows, opvi
+from pymc3.variational.opvi import Approximation, Group, node_property
 
 __all__ = ["MeanField", "FullRank", "Empirical", "NormalizingFlow", "sample_approx"]
 
@@ -54,13 +55,13 @@ class MeanFieldGroup(Group):
         if self.batched:
             return batched_diag(var)
         else:
-            return tt.diag(var)
+            return at.diag(var)
 
     @node_property
     def std(self):
         return rho2sigma(self.rho)
 
-    @change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         if not self._check_user_params():
@@ -83,8 +84,8 @@ class MeanFieldGroup(Group):
             start = np.tile(start, (self.bdim, 1))
             rho = np.tile(rho, (self.bdim, 1))
         return {
-            "mu": theano.shared(pm.floatX(start), "mu"),
-            "rho": theano.shared(pm.floatX(rho), "rho"),
+            "mu": aesara.shared(pm.floatX(start), "mu"),
+            "rho": aesara.shared(pm.floatX(rho), "rho"),
         }
 
     @node_property
@@ -98,7 +99,7 @@ class MeanFieldGroup(Group):
     def symbolic_logq_not_scaled(self):
         z0 = self.symbolic_initial
         std = rho2sigma(self.rho)
-        logdet = tt.log(std)
+        logdet = at.log(std)
         logq = pm.Normal.dist().logp(z0) - logdet
         return logq.sum(range(1, logq.ndim))
 
@@ -115,7 +116,7 @@ class FullRankGroup(Group):
     short_name = "full_rank"
     alias_names = frozenset(["fr"])
 
-    @change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         if not self._check_user_params():
@@ -134,21 +135,21 @@ class FullRankGroup(Group):
         else:
             start = self.bij.map(start)
         n = self.ddim
-        L_tril = np.eye(n)[np.tril_indices(n)].astype(theano.config.floatX)
+        L_tril = np.eye(n)[np.tril_indices(n)].astype(aesara.config.floatX)
         if self.batched:
             start = np.tile(start, (self.bdim, 1))
             L_tril = np.tile(L_tril, (self.bdim, 1))
-        return {"mu": theano.shared(start, "mu"), "L_tril": theano.shared(L_tril, "L_tril")}
+        return {"mu": aesara.shared(start, "mu"), "L_tril": aesara.shared(L_tril, "L_tril")}
 
     @node_property
     def L(self):
         if self.batched:
-            L = tt.zeros((self.ddim, self.ddim, self.bdim))
-            L = tt.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"].T)
+            L = at.zeros((self.ddim, self.ddim, self.bdim))
+            L = at.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"].T)
             L = L.dimshuffle(2, 0, 1)
         else:
-            L = tt.zeros((self.ddim, self.ddim))
-            L = tt.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"])
+            L = at.zeros((self.ddim, self.ddim))
+            L = at.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"])
         return L
 
     @node_property
@@ -159,16 +160,16 @@ class FullRankGroup(Group):
     def cov(self):
         L = self.L
         if self.batched:
-            return tt.batched_dot(L, L.swapaxes(-1, -2))
+            return at.batched_dot(L, L.swapaxes(-1, -2))
         else:
             return L.dot(L.T)
 
     @node_property
     def std(self):
         if self.batched:
-            return tt.sqrt(batched_diag(self.cov))
+            return at.sqrt(batched_diag(self.cov))
         else:
-            return tt.sqrt(tt.diag(self.cov))
+            return at.sqrt(at.diag(self.cov))
 
     @property
     def num_tril_entries(self):
@@ -190,7 +191,7 @@ class FullRankGroup(Group):
             # it's gonna be so slow
             # scan is computed over batch and then summed up
             # output shape is (batch, samples)
-            return theano.scan(logq, [z.swapaxes(0, 1), self.mean, self.L])[0].sum(0)
+            return aesara.scan(logq, [z.swapaxes(0, 1), self.mean, self.L])[0].sum(0)
         else:
             return pm.MvNormal.dist(mu=self.mean, chol=self.L).logp(z)
 
@@ -203,7 +204,7 @@ class FullRankGroup(Group):
             # initial: bxsxd
             # L: bxdxd
             initial = initial.swapaxes(0, 1)
-            return tt.batched_dot(initial, L.swapaxes(1, 2)).swapaxes(0, 1) + mu
+            return at.batched_dot(initial, L.swapaxes(1, 2)).swapaxes(0, 1) + mu
         else:
             return initial.dot(L.T) + mu
 
@@ -219,7 +220,7 @@ class EmpiricalGroup(Group):
     __param_spec__ = dict(histogram=("s", "d"))
     short_name = "empirical"
 
-    @change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         self._check_trace()
@@ -255,7 +256,7 @@ class EmpiricalGroup(Group):
                 for j in range(len(trace)):
                     histogram[i] = self.bij.map(trace.point(j, t))
                     i += 1
-        return dict(histogram=theano.shared(pm.floatX(histogram), "histogram"))
+        return dict(histogram=aesara.shared(pm.floatX(histogram), "histogram"))
 
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)
@@ -265,7 +266,7 @@ class EmpiricalGroup(Group):
     def randidx(self, size=None):
         if size is None:
             size = (1,)
-        elif isinstance(size, tt.TensorVariable):
+        elif isinstance(size, TensorVariable):
             if size.ndim < 1:
                 size = size[None]
             elif size.ndim > 1:
@@ -279,16 +280,16 @@ class EmpiricalGroup(Group):
         ).astype("int32")
 
     def _new_initial(self, size, deterministic, more_replacements=None):
-        theano_condition_is_here = isinstance(deterministic, tt.Variable)
-        if theano_condition_is_here:
-            return tt.switch(
+        aesara_condition_is_here = isinstance(deterministic, Variable)
+        if aesara_condition_is_here:
+            return at.switch(
                 deterministic,
-                tt.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1),
+                at.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1),
                 self.histogram[self.randidx(size)],
             )
         else:
             if deterministic:
-                return tt.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1)
+                return at.repeat(self.mean.dimshuffle("x", 0), size if size is not None else 1, -1)
             else:
                 return self.histogram[self.randidx(size)]
 
@@ -311,10 +312,10 @@ class EmpiricalGroup(Group):
 
     @node_property
     def std(self):
-        return tt.sqrt(tt.diag(self.cov))
+        return at.sqrt(at.diag(self.cov))
 
     def __str__(self):
-        if isinstance(self.histogram, theano.compile.SharedVariable):
+        if isinstance(self.histogram, aesara.compile.SharedVariable):
             shp = ", ".join(map(str, self.histogram.shape.eval()))
         else:
             shp = "None, " + str(self.ddim)
@@ -371,7 +372,7 @@ class NormalizingFlowGroup(Group):
     """
     default_flow = "scale-loc"
 
-    @change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         # objects to be resolved
@@ -585,7 +586,7 @@ class Empirical(SingleGroupApproximation):
 
         Parameters
         ----------
-        node: Theano Variables (or Theano expressions)
+        node: Aesara Variables (or Aesara expressions)
 
         Returns
         -------
@@ -594,9 +595,9 @@ class Empirical(SingleGroupApproximation):
         node = self.to_flat_input(node)
 
         def sample(post):
-            return theano.clone(node, {self.input: post})
+            return aesara.clone_replace(node, {self.input: post})
 
-        nodes, _ = theano.scan(sample, self.histogram)
+        nodes, _ = aesara.scan(sample, self.histogram)
         return nodes
 
 

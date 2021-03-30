@@ -13,19 +13,24 @@
 #   limitations under the License.
 
 import logging
+
+import aesara
+import aesara.tensor as at
 import numpy as np
 import scipy
-import theano
-import theano.tensor as tt
-from theano.gof.op import get_test_value
-from ..ode import utils
-from ..exceptions import ShapeError, DtypeError
+
+from aesara.graph.basic import Apply
+from aesara.graph.op import Op, get_test_value
+from aesara.tensor.type import TensorType
+
+from pymc3.exceptions import DtypeError, ShapeError
+from pymc3.ode import utils
 
 _log = logging.getLogger("pymc3")
-floatX = theano.config.floatX
+floatX = aesara.config.floatX
 
 
-class DifferentialEquation(theano.Op):
+class DifferentialEquation(Op):
     r"""
     Specify an ordinary differential equation
 
@@ -61,12 +66,12 @@ class DifferentialEquation(theano.Op):
         ode_model = DifferentialEquation(func=odefunc, times=times, n_states=1, n_theta=1, t0=0)
     """
     _itypes = [
-        tt.TensorType(floatX, (False,)),  # y0 as 1D floatX vector
-        tt.TensorType(floatX, (False,)),  # theta as 1D floatX vector
+        TensorType(floatX, (False,)),  # y0 as 1D floatX vector
+        TensorType(floatX, (False,)),  # theta as 1D floatX vector
     ]
     _otypes = [
-        tt.TensorType(floatX, (False, False)),  # model states as floatX of shape (T, S)
-        tt.TensorType(
+        TensorType(floatX, (False, False)),  # model states as floatX of shape (T, S)
+        TensorType(
             floatX, (False, False, False)
         ),  # sensitivities as floatX of shape (T, S, len(y0) + len(theta))
     ]
@@ -138,7 +143,7 @@ class DifferentialEquation(theano.Op):
 
         # store symbolic output in dictionary such that it can be accessed in the grad method
         self._output_sensitivities[hash(inputs)] = sens
-        return theano.Apply(self, inputs, (states, sens))
+        return Apply(self, inputs, (states, sens))
 
     def __call__(self, y0, theta, return_sens=False, **kwargs):
         if isinstance(y0, (list, tuple)) and not len(y0) == self.n_states:
@@ -149,8 +154,8 @@ class DifferentialEquation(theano.Op):
             )
 
         # convert inputs to tensors (and check their types)
-        y0 = tt.cast(tt.unbroadcast(tt.as_tensor_variable(y0), 0), floatX)
-        theta = tt.cast(tt.unbroadcast(tt.as_tensor_variable(theta), 0), floatX)
+        y0 = at.cast(at.unbroadcast(at.as_tensor_variable(y0), 0), floatX)
+        theta = at.cast(at.unbroadcast(at.as_tensor_variable(theta), 0), floatX)
         inputs = [y0, theta]
         for i, (input_val, itype) in enumerate(zip(inputs, self._itypes)):
             if not input_val.type == itype:
@@ -159,9 +164,9 @@ class DifferentialEquation(theano.Op):
                 )
 
         # use default implementation to prepare symbolic outputs (via make_node)
-        states, sens = super(theano.Op, self).__call__(y0, theta, **kwargs)
+        states, sens = super().__call__(y0, theta, **kwargs)
 
-        if theano.config.compute_test_value != "off":
+        if aesara.config.compute_test_value != "off":
             # compute test values from input test values
             test_states, test_sens = self._simulate(
                 y0=get_test_value(y0), theta=get_test_value(theta)
@@ -210,7 +215,7 @@ class DifferentialEquation(theano.Op):
         # simulate states and sensitivities in one forward pass
         output_storage[0][0], output_storage[1][0] = self._simulate(y0, theta)
 
-    def infer_shape(self, node, input_shapes):
+    def infer_shape(self, fgraph, node, input_shapes):
         s_y0, s_theta = input_shapes
         output_shapes = [(self.n_times, self.n_states), (self.n_times, self.n_states, self.n_p)]
         return output_shapes
@@ -230,8 +235,8 @@ class DifferentialEquation(theano.Op):
         # for each parameter, multiply sensitivities with the output gradient and sum the result
         # sens is (n_times, n_states, n_p)
         # ograds is (n_times, n_states)
-        grads = [tt.sum(sens[:, :, p] * ograds) for p in range(self.n_p)]
+        grads = [at.sum(sens[:, :, p] * ograds) for p in range(self.n_p)]
 
         # return separate gradient tensors for y0 and theta inputs
-        result = tt.stack(grads[: self.n_states]), tt.stack(grads[self.n_states :])
+        result = at.stack(grads[: self.n_states]), at.stack(grads[self.n_states :])
         return result

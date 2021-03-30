@@ -13,63 +13,75 @@
 #   limitations under the License.
 
 import sys
-import theano.tensor as tt
 
-# pylint: disable=unused-import
-import theano
-from theano.tensor import (
-    constant,
-    flatten,
-    zeros_like,
-    ones_like,
-    stack,
-    concatenate,
-    sum,
-    prod,
-    lt,
-    gt,
-    le,
-    ge,
-    eq,
-    neq,
-    switch,
-    clip,
-    where,
-    and_,
-    or_,
-    abs_,
-    exp,
-    log,
-    cos,
-    sin,
-    tan,
-    cosh,
-    sinh,
-    tanh,
-    sqr,
-    sqrt,
-    erf,
-    erfc,
-    erfinv,
-    erfcinv,
-    dot,
-    maximum,
-    minimum,
-    sgn,
-    ceil,
-    floor,
-)
-from theano.tensor.nlinalg import det, matrix_inverse, extract_diag, matrix_dot, trace
-import theano.tensor.slinalg
-import theano.sparse
-from theano.tensor.nnet import sigmoid
-from theano.gof import Op, Apply
+from functools import partial, reduce
+
+import aesara
+import aesara.sparse
+import aesara.tensor as at
+import aesara.tensor.slinalg  # pylint: disable=unused-import
 import numpy as np
 import scipy as sp
-import scipy.sparse
+import scipy.sparse  # pylint: disable=unused-import
+
+from aesara.graph.basic import Apply
+from aesara.graph.op import Op
+
+# pylint: disable=unused-import
+from aesara.tensor import (
+    abs_,
+    and_,
+    ceil,
+    clip,
+    concatenate,
+    constant,
+    cos,
+    cosh,
+    dot,
+    eq,
+    erf,
+    erfc,
+    erfcinv,
+    erfinv,
+    exp,
+    flatten,
+    floor,
+    ge,
+    gt,
+    le,
+    log,
+    lt,
+    maximum,
+    minimum,
+    neq,
+    ones_like,
+    or_,
+    prod,
+    sgn,
+    sin,
+    sinh,
+    sqr,
+    sqrt,
+    stack,
+    sum,
+    switch,
+    tan,
+    tanh,
+    where,
+    zeros_like,
+)
+
+try:
+    from aesara.tensor.basic import extract_diag
+except ImportError:
+    from aesara.tensor.nlinalg import extract_diag
+
+
+from aesara.tensor.nlinalg import det, matrix_dot, matrix_inverse, trace
+from aesara.tensor.nnet import sigmoid
 from scipy.linalg import block_diag as scipy_block_diag
-from pymc3.theanof import floatX, largest_common_dtype, ix_
-from functools import reduce, partial
+
+from pymc3.aesaraf import floatX, ix_, largest_common_dtype
 
 # pylint: enable=unused-import
 
@@ -88,7 +100,7 @@ def kronecker(*Ks):
     np.ndarray :
         Block matrix Kroncker product of the argument matrices.
     """
-    return reduce(tt.slinalg.kron, Ks)
+    return reduce(at.slinalg.kron, Ks)
 
 
 def cartesian(*arrays):
@@ -96,11 +108,17 @@ def cartesian(*arrays):
 
     Parameters
     ----------
-    arrays: 1D array-like
-            1D arrays where earlier arrays loop more slowly than later ones
+    arrays: N-D array-like
+            N-D arrays where earlier arrays loop more slowly than later ones
     """
     N = len(arrays)
-    return np.stack(np.meshgrid(*arrays, indexing="ij"), -1).reshape(-1, N)
+    arrays_np = [np.asarray(x) for x in arrays]
+    arrays_2d = [x[:, None] if np.asarray(x).ndim == 1 else x for x in arrays_np]
+    arrays_integer = [np.arange(len(x)) for x in arrays_2d]
+    product_integers = np.stack(np.meshgrid(*arrays_integer, indexing="ij"), -1).reshape(-1, N)
+    return np.concatenate(
+        [array[product_integers[:, i]] for i, array in enumerate(arrays_2d)], axis=-1
+    )
 
 
 def kron_matrix_op(krons, m, op):
@@ -135,17 +153,17 @@ def kron_matrix_op(krons, m, op):
         raise ValueError(f"m must have ndim <= 2, not {m.ndim}")
     res = kron_vector_op(m)
     res_shape = res.shape
-    return tt.reshape(res, (res_shape[1], res_shape[0])).T
+    return at.reshape(res, (res_shape[1], res_shape[0])).T
 
 
 # Define kronecker functions that work on 1D and 2D arrays
-kron_dot = partial(kron_matrix_op, op=tt.dot)
-kron_solve_lower = partial(kron_matrix_op, op=tt.slinalg.solve_lower_triangular)
-kron_solve_upper = partial(kron_matrix_op, op=tt.slinalg.solve_upper_triangular)
+kron_dot = partial(kron_matrix_op, op=at.dot)
+kron_solve_lower = partial(kron_matrix_op, op=at.slinalg.solve_lower_triangular)
+kron_solve_upper = partial(kron_matrix_op, op=at.slinalg.solve_upper_triangular)
 
 
 def flat_outer(a, b):
-    return tt.outer(a, b).ravel()
+    return at.outer(a, b).ravel()
 
 
 def kron_diag(*diags):
@@ -161,23 +179,24 @@ def kron_diag(*diags):
 
 def tround(*args, **kwargs):
     """
-    Temporary function to silence round warning in Theano. Please remove
+    Temporary function to silence round warning in Aesara. Please remove
     when the warning disappears.
     """
     kwargs["mode"] = "half_to_even"
-    return tt.round(*args, **kwargs)
+    return at.round(*args, **kwargs)
 
 
 def logsumexp(x, axis=None, keepdims=True):
     # Adapted from https://github.com/Theano/Theano/issues/1563
-    x_max = tt.max(x, axis=axis, keepdims=True)
-    res = tt.log(tt.sum(tt.exp(x - x_max), axis=axis, keepdims=True)) + x_max
+    x_max = at.max(x, axis=axis, keepdims=True)
+    x_max = at.switch(at.isinf(x_max), 0, x_max)
+    res = at.log(at.sum(at.exp(x - x_max), axis=axis, keepdims=True)) + x_max
     return res if keepdims else res.squeeze()
 
 
 def logaddexp(a, b):
     diff = b - a
-    return tt.switch(diff > 0, b + tt.log1p(tt.exp(-diff)), a + tt.log1p(tt.exp(diff)))
+    return at.switch(diff > 0, b + at.log1p(at.exp(-diff)), a + at.log1p(at.exp(diff)))
 
 
 def logdiffexp(a, b):
@@ -192,7 +211,7 @@ def logdiffexp_numpy(a, b):
 
 def invlogit(x, eps=sys.float_info.epsilon):
     """The inverse of the logit function, 1 / (1 + exp(-x))."""
-    return (1.0 - 2.0 * eps) / (1.0 + tt.exp(-x)) + eps
+    return (1.0 - 2.0 * eps) / (1.0 + at.exp(-x)) + eps
 
 
 def logbern(log_p):
@@ -202,7 +221,7 @@ def logbern(log_p):
 
 
 def logit(p):
-    return tt.log(p / (floatX(1) - p))
+    return at.log(p / (floatX(1) - p))
 
 
 def log1pexp(x):
@@ -210,18 +229,25 @@ def log1pexp(x):
 
     This function is numerically more stable than the naive approach.
     """
-    return tt.nnet.softplus(x)
+    return at.nnet.softplus(x)
 
 
 def log1mexp(x):
-    """Return log(1 - exp(-x)).
+    r"""Return log(1 - exp(-x)).
 
     This function is numerically more stable than the naive approach.
 
     For details, see
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
+
+    References
+        ----------
+        .. [Machler2012] Martin Mächler (2012).
+            "Accurately computing `\log(1-\exp(- \mid a \mid))` Assessed by the Rmpfr
+            package"
+
     """
-    return tt.switch(tt.lt(x, 0.683), tt.log(-tt.expm1(-x)), tt.log1p(-tt.exp(-x)))
+    return at.switch(at.lt(x, 0.6931471805599453), at.log(-at.expm1(-x)), at.log1p(-at.exp(-x)))
 
 
 def log1mexp_numpy(x):
@@ -230,11 +256,17 @@ def log1mexp_numpy(x):
     For details, see
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
     """
-    return np.where(x < 0.683, np.log(-np.expm1(-x)), np.log1p(-np.exp(-x)))
+    x = np.asarray(x)
+    out = np.empty_like(x)
+    mask = x < 0.6931471805599453  # log(2)
+    out[mask] = np.log(-np.expm1(-x[mask]))
+    mask = ~mask
+    out[mask] = np.log1p(-np.exp(-x[mask]))
+    return out
 
 
 def flatten_list(tensors):
-    return tt.concatenate([var.ravel() for var in tensors])
+    return at.concatenate([var.ravel() for var in tensors])
 
 
 class LogDet(Op):
@@ -249,8 +281,8 @@ class LogDet(Op):
     """
 
     def make_node(self, x):
-        x = theano.tensor.as_tensor_variable(x)
-        o = theano.tensor.scalar(dtype=x.dtype)
+        x = aesara.tensor.as_tensor_variable(x)
+        o = aesara.tensor.scalar(dtype=x.dtype)
         return Apply(self, [x], [o])
 
     def perform(self, node, inputs, outputs, params=None):
@@ -300,7 +332,7 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
     ----------
     n: int
         The number of rows of the triangular matrix.
-    packed: theano.vector
+    packed: aesara.vector
         The matrix in packed format.
     lower: bool, default=True
         If true, assume that the matrix is lower triangular.
@@ -319,16 +351,16 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
         diag_idxs = np.arange(2, n + 2)[::-1].cumsum() - n - 1
         return packed[diag_idxs]
     elif lower:
-        out = tt.zeros((n, n), dtype=theano.config.floatX)
+        out = at.zeros((n, n), dtype=aesara.config.floatX)
         idxs = np.tril_indices(n)
-        return tt.set_subtensor(out[idxs], packed)
+        return at.set_subtensor(out[idxs], packed)
     elif not lower:
-        out = tt.zeros((n, n), dtype=theano.config.floatX)
+        out = at.zeros((n, n), dtype=aesara.config.floatX)
         idxs = np.triu_indices(n)
-        return tt.set_subtensor(out[idxs], packed)
+        return at.set_subtensor(out[idxs], packed)
 
 
-class BatchedDiag(tt.Op):
+class BatchedDiag(Op):
     """
     Fast BatchedDiag allocation
     """
@@ -336,11 +368,11 @@ class BatchedDiag(tt.Op):
     __props__ = ()
 
     def make_node(self, diag):
-        diag = tt.as_tensor_variable(diag)
+        diag = at.as_tensor_variable(diag)
         if diag.type.ndim != 2:
             raise TypeError("data argument must be a matrix", diag.type)
 
-        return tt.Apply(self, [diag], [tt.tensor3(dtype=diag.dtype)])
+        return Apply(self, [diag], [at.tensor3(dtype=diag.dtype)])
 
     def perform(self, node, ins, outs, params=None):
         (C,) = ins
@@ -356,22 +388,22 @@ class BatchedDiag(tt.Op):
 
     def grad(self, inputs, gout):
         (gz,) = gout
-        idx = tt.arange(gz.shape[-1])
+        idx = at.arange(gz.shape[-1])
         return [gz[..., idx, idx]]
 
-    def infer_shape(self, nodes, shapes):
+    def infer_shape(self, fgraph, nodes, shapes):
         return [(shapes[0][0],) + (shapes[0][1],) * 2]
 
 
 def batched_diag(C):
-    C = tt.as_tensor(C)
+    C = at.as_tensor(C)
     dim = C.shape[-1]
     if C.ndim == 2:
         # diag -> matrices
         return BatchedDiag()(C)
     elif C.ndim == 3:
         # matrices -> diag
-        idx = tt.arange(dim)
+        idx = at.arange(dim)
         return C[..., idx, idx]
     else:
         raise ValueError("Input should be 2 or 3 dimensional")
@@ -389,14 +421,14 @@ class BlockDiagonalMatrix(Op):
     def make_node(self, *matrices):
         if not matrices:
             raise ValueError("no matrices to allocate")
-        matrices = list(map(tt.as_tensor, matrices))
+        matrices = list(map(at.as_tensor, matrices))
         if any(mat.type.ndim != 2 for mat in matrices):
             raise TypeError("all data arguments must be matrices")
         if self.sparse:
-            out_type = theano.sparse.matrix(self.format, dtype=largest_common_dtype(matrices))
+            out_type = aesara.sparse.matrix(self.format, dtype=largest_common_dtype(matrices))
         else:
-            out_type = theano.tensor.matrix(dtype=largest_common_dtype(matrices))
-        return tt.Apply(self, matrices, [out_type])
+            out_type = aesara.tensor.matrix(dtype=largest_common_dtype(matrices))
+        return Apply(self, matrices, [out_type])
 
     def perform(self, node, inputs, output_storage, params=None):
         dtype = largest_common_dtype(inputs)
@@ -406,21 +438,21 @@ class BlockDiagonalMatrix(Op):
             output_storage[0][0] = scipy_block_diag(*inputs).astype(dtype)
 
     def grad(self, inputs, gout):
-        shapes = tt.stack([i.shape for i in inputs])
+        shapes = at.stack([i.shape for i in inputs])
         index_end = shapes.cumsum(0)
         index_begin = index_end - shapes
         slices = [
             ix_(
-                tt.arange(index_begin[i, 0], index_end[i, 0]),
-                tt.arange(index_begin[i, 1], index_end[i, 1]),
+                at.arange(index_begin[i, 0], index_end[i, 0]),
+                at.arange(index_begin[i, 1], index_end[i, 1]),
             )
             for i in range(len(inputs))
         ]
         return [gout[0][slc] for slc in slices]
 
-    def infer_shape(self, nodes, shapes):
+    def infer_shape(self, fgraph, nodes, shapes):
         first, second = zip(*shapes)
-        return [(tt.add(*first), tt.add(*second))]
+        return [(at.add(*first), at.add(*second))]
 
 
 def block_diagonal(matrices, sparse=False, format="csr"):

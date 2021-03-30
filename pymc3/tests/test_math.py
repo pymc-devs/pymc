@@ -12,27 +12,31 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
+import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
-import theano
-import theano.tensor as tt
+import pytest
+
+from scipy.special import logsumexp as scipy_logsumexp
+
+from pymc3.aesaraf import floatX
 from pymc3.math import (
     LogDet,
-    logdet,
-    probit,
-    invprobit,
-    expand_packed_triangular,
-    log1pexp,
-    log1mexp,
-    log1mexp_numpy,
-    kronecker,
     cartesian,
+    expand_packed_triangular,
+    invprobit,
     kron_dot,
     kron_solve_lower,
+    kronecker,
+    log1mexp,
+    log1mexp_numpy,
+    log1pexp,
+    logdet,
+    logsumexp,
+    probit,
 )
-from .helpers import SeededTest, verify_grad
-import pytest
-from pymc3.theanof import floatX
+from pymc3.tests.helpers import SeededTest, verify_grad
 
 
 def test_kronecker():
@@ -41,7 +45,7 @@ def test_kronecker():
     [a, b, c] = [np.random.rand(3, 3 + i) for i in range(3)]
 
     custom = kronecker(a, b, c)  # Custom version
-    nested = tt.slinalg.kron(a, tt.slinalg.kron(b, c))
+    nested = at.slinalg.kron(a, at.slinalg.kron(b, c))
     np.testing.assert_array_almost_equal(custom.eval(), nested.eval())  # Standard nested version
 
 
@@ -67,7 +71,24 @@ def test_cartesian():
         ]
     )
     auto_cart = cartesian(a, b, c)
-    np.testing.assert_array_almost_equal(manual_cartesian, auto_cart)
+    np.testing.assert_array_equal(manual_cartesian, auto_cart)
+
+
+def test_cartesian_2d():
+    np.random.seed(1)
+    a = [[1, 2], [3, 4]]
+    b = [5, 6]
+    c = [0]
+    manual_cartesian = np.array(
+        [
+            [1, 2, 5, 0],
+            [1, 2, 6, 0],
+            [3, 4, 5, 0],
+            [3, 4, 6, 0],
+        ]
+    )
+    auto_cart = cartesian(a, b, c)
+    np.testing.assert_array_equal(manual_cartesian, auto_cart)
 
 
 def test_kron_dot():
@@ -79,7 +100,7 @@ def test_kron_dot():
     x = np.random.rand(tot_size).reshape((tot_size, 1))
     # Construct entire kronecker product then multiply
     big = kronecker(*Ks)
-    slow_ans = tt.dot(big, x)
+    slow_ans = at.dot(big, x)
     # Use tricks to avoid construction of entire kronecker product
     fast_ans = kron_dot(Ks, x)
     np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
@@ -94,7 +115,7 @@ def test_kron_solve_lower():
     x = np.random.rand(tot_size).reshape((tot_size, 1))
     # Construct entire kronecker product then solve
     big = kronecker(*Ls)
-    slow_ans = tt.slinalg.solve_lower_triangular(big, x)
+    slow_ans = at.slinalg.solve_lower_triangular(big, x)
     # Use tricks to avoid construction of entire kronecker product
     fast_ans = kron_solve_lower(Ls, x)
     np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
@@ -129,6 +150,7 @@ def test_log1pexp():
 
 def test_log1mexp():
     vals = np.array([-1, 0, 1e-20, 1e-4, 10, 100, 1e20])
+    vals_ = vals.copy()
     # import mpmath
     # mpmath.mp.dps = 1000
     # [float(mpmath.log(1 - mpmath.exp(-x))) for x in vals]
@@ -147,6 +169,15 @@ def test_log1mexp():
     npt.assert_allclose(actual, expected)
     actual_ = log1mexp_numpy(vals)
     npt.assert_allclose(actual_, expected)
+    # Check that input was not changed in place
+    npt.assert_allclose(vals, vals_)
+
+
+def test_log1mexp_numpy_no_warning():
+    """Assert RuntimeWarning is not raised for very small numbers"""
+    with pytest.warns(None) as record:
+        log1mexp_numpy(1e-25)
+    assert not record
 
 
 class TestLogDet(SeededTest):
@@ -156,10 +187,10 @@ class TestLogDet(SeededTest):
         self.op_class = LogDet
         self.op = logdet
 
-    @theano.configparser.change_flags(compute_test_value="ignore")
+    @aesara.config.change_flags(compute_test_value="ignore")
     def validate(self, input_mat):
-        x = theano.tensor.matrix()
-        f = theano.function([x], self.op(x))
+        x = aesara.tensor.matrix()
+        f = aesara.function([x], self.op(x))
         out = f(input_mat)
         svd_diag = np.linalg.svd(input_mat, compute_uv=False)
         numpy_out = np.sum(np.log(np.abs(svd_diag)))
@@ -171,24 +202,24 @@ class TestLogDet(SeededTest):
         verify_grad(self.op, [input_mat])
 
     @pytest.mark.skipif(
-        theano.config.device in ["cuda", "gpu"],
+        aesara.config.device in ["cuda", "gpu"],
         reason="No logDet implementation on GPU.",
     )
     def test_basic(self):
         # Calls validate with different params
         test_case_1 = np.random.randn(3, 3) / np.sqrt(3)
         test_case_2 = np.random.randn(10, 10) / np.sqrt(10)
-        self.validate(test_case_1.astype(theano.config.floatX))
-        self.validate(test_case_2.astype(theano.config.floatX))
+        self.validate(test_case_1.astype(aesara.config.floatX))
+        self.validate(test_case_2.astype(aesara.config.floatX))
 
 
 def test_expand_packed_triangular():
     with pytest.raises(ValueError):
-        x = tt.matrix("x")
-        x.tag.test_value = np.array([[1.0]], dtype=theano.config.floatX)
+        x = at.matrix("x")
+        x.tag.test_value = np.array([[1.0]], dtype=aesara.config.floatX)
         expand_packed_triangular(5, x)
     N = 5
-    packed = tt.vector("packed")
+    packed = at.vector("packed")
     packed.tag.test_value = floatX(np.zeros(N * (N + 1) // 2))
     with pytest.raises(TypeError):
         expand_packed_triangular(packed.shape[0], packed)
@@ -206,3 +237,27 @@ def test_expand_packed_triangular():
     assert np.all(expand_upper.eval({packed: upper_packed}) == upper)
     assert np.all(expand_diag_lower.eval({packed: lower_packed}) == floatX(np.diag(vals)))
     assert np.all(expand_diag_upper.eval({packed: upper_packed}) == floatX(np.diag(vals)))
+
+
+@pytest.mark.parametrize(
+    "values, axis, keepdims",
+    [
+        (np.array([-4, -2]), None, True),
+        (np.array([-np.inf, -2]), None, True),
+        (np.array([-2, np.inf]), None, True),
+        (np.array([-np.inf, -np.inf]), None, True),
+        (np.array([np.inf, np.inf]), None, True),
+        (np.array([-np.inf, np.inf]), None, True),
+        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), None, True),
+        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 0, True),
+        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 1, True),
+        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 0, False),
+        (np.array([[-np.inf, -np.inf], [-np.inf, -np.inf]]), 1, False),
+        (np.array([[-2, np.inf], [-np.inf, -np.inf]]), 0, True),
+    ],
+)
+def test_logsumexp(values, axis, keepdims):
+    npt.assert_almost_equal(
+        logsumexp(values, axis=axis, keepdims=keepdims).eval(),
+        scipy_logsumexp(values, axis=axis, keepdims=keepdims),
+    )

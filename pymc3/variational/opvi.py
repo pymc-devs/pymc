@@ -49,19 +49,25 @@ import collections
 import itertools
 import warnings
 
+import aesara
+import aesara.tensor as at
 import numpy as np
-import theano
-import theano.tensor as tt
+
+from aesara.graph.basic import Variable
 
 import pymc3 as pm
-from pymc3.util import get_transformed
-from .updates import adagrad_window
-from ..blocking import ArrayOrdering, DictToArrayBijection, VarMap
-from ..backends import NDArray
-from ..model import modelcontext
-from ..theanof import tt_rng, change_flags, identity
-from ..util import get_default_varnames
-from ..memoize import WithMemoization, memoize
+
+from pymc3.aesaraf import at_rng, identity
+from pymc3.backends import NDArray
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection, VarMap
+from pymc3.model import modelcontext
+from pymc3.util import (
+    WithMemoization,
+    get_default_varnames,
+    get_transformed,
+    locally_cachedmethod,
+)
+from pymc3.variational.updates import adagrad_window
 
 __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximation"]
 
@@ -111,24 +117,26 @@ def append_name(name):
 
 def node_property(f):
     """A shortcut for wrapping method to accessible tensor"""
+
     if isinstance(f, str):
 
         def wrapper(fn):
-            return property(
-                memoize(change_flags(compute_test_value="off")(append_name(f)(fn)), bound=True)
-            )
+            ff = append_name(f)(fn)
+            f_ = aesara.config.change_flags(compute_test_value="off")(ff)
+            return property(locally_cachedmethod(f_))
 
         return wrapper
     else:
-        return property(memoize(change_flags(compute_test_value="off")(f), bound=True))
+        f_ = aesara.config.change_flags(compute_test_value="off")(f)
+        return property(locally_cachedmethod(f_))
 
 
-@change_flags(compute_test_value="ignore")
+@aesara.config.change_flags(compute_test_value="ignore")
 def try_to_set_test_value(node_in, node_out, s):
     _s = s
     if s is None:
         s = 1
-    s = theano.compile.view_op(tt.as_tensor(s))
+    s = aesara.compile.view_op(at.as_tensor(s))
     if not isinstance(node_in, (list, tuple)):
         node_in = [node_in]
     if not isinstance(node_out, (list, tuple)):
@@ -145,7 +153,7 @@ def try_to_set_test_value(node_in, node_out, s):
                 o.tag.test_value = tv
 
 
-class ObjectiveUpdates(theano.OrderedUpdates):
+class ObjectiveUpdates(aesara.OrderedUpdates):
     """OrderedUpdates extension for storing loss"""
 
     loss = None
@@ -286,7 +294,7 @@ class ObjectiveFunction:
         if self.op.returns_loss:
             updates.loss = obj_target
 
-    @change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def step_function(
         self,
         obj_n_mc=None,
@@ -330,13 +338,13 @@ class ObjectiveFunction:
         score: `bool`
             calculate loss on each step? Defaults to False for speed
         fn_kwargs: `dict`
-            Add kwargs to theano.function (e.g. `{'profile': True}`)
+            Add kwargs to aesara.function (e.g. `{'profile': True}`)
         more_replacements: `dict`
             Apply custom replacements before calculating gradients
 
         Returns
         -------
-        `theano.function`
+        `aesara.function`
         """
         if fn_kwargs is None:
             fn_kwargs = {}
@@ -354,12 +362,12 @@ class ObjectiveFunction:
             total_grad_norm_constraint=total_grad_norm_constraint,
         )
         if score:
-            step_fn = theano.function([], updates.loss, updates=updates, **fn_kwargs)
+            step_fn = aesara.function([], updates.loss, updates=updates, **fn_kwargs)
         else:
-            step_fn = theano.function([], None, updates=updates, **fn_kwargs)
+            step_fn = aesara.function([], None, updates=updates, **fn_kwargs)
         return step_fn
 
-    @change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def score_function(
         self, sc_n_mc=None, more_replacements=None, fn_kwargs=None
     ):  # pragma: no cover
@@ -372,11 +380,11 @@ class ObjectiveFunction:
         more_replacements:
             Apply custom replacements before compiling a function
         fn_kwargs: `dict`
-            arbitrary kwargs passed to `theano.function`
+            arbitrary kwargs passed to `aesara.function`
 
         Returns
         -------
-        theano.function
+        aesara.function
         """
         if fn_kwargs is None:
             fn_kwargs = {}
@@ -385,9 +393,9 @@ class ObjectiveFunction:
         if more_replacements is None:
             more_replacements = {}
         loss = self(sc_n_mc, more_replacements=more_replacements)
-        return theano.function([], loss, **fn_kwargs)
+        return aesara.function([], loss, **fn_kwargs)
 
-    @change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
         if "more_tf_params" in kwargs:
             m = -1.0
@@ -499,7 +507,7 @@ def collect_shared_to_list(params):
         return list(
             t[1]
             for t in sorted(params.items(), key=lambda t: t[0])
-            if isinstance(t[1], theano.compile.SharedVariable)
+            if isinstance(t[1], aesara.compile.SharedVariable)
         )
     elif params is None:
         return []
@@ -837,7 +845,7 @@ class Group(WithMemoization):
         self._vfam = vfam
         self._local = local
         self._batched = rowwise
-        self._rng = tt_rng(random_seed)
+        self._rng = at_rng(random_seed)
         model = modelcontext(model)
         self.model = model
         self.group = group
@@ -890,7 +898,7 @@ class Group(WithMemoization):
                 shape = (-1,) + shape
             elif self.batched:
                 shape = (self.bdim,) + shape
-            self._user_params[name] = tt.as_tensor(param).reshape(shape)
+            self._user_params[name] = at.as_tensor(param).reshape(shape)
         return True
 
     def _initial_type(self, name):
@@ -905,9 +913,9 @@ class Group(WithMemoization):
         tensor
         """
         if self.batched:
-            return tt.tensor3(name)
+            return at.tensor3(name)
         else:
-            return tt.matrix(name)
+            return at.matrix(name)
 
     def _input_type(self, name):
         R"""*Dev* - input type with given name. The correct type depends on `self.batched`
@@ -921,11 +929,11 @@ class Group(WithMemoization):
         tensor
         """
         if self.batched:
-            return tt.matrix(name)
+            return at.matrix(name)
         else:
-            return tt.vector(name)
+            return at.vector(name)
 
-    @change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         if not group:
             raise GroupError("Got empty group")
@@ -1015,11 +1023,11 @@ class Group(WithMemoization):
         shape vector
         """
         if self.batched:
-            bdim = tt.as_tensor(self.bdim)
-            bdim = theano.clone(bdim, more_replacements)
-            return tt.stack([size, bdim, dim])
+            bdim = at.as_tensor(self.bdim)
+            bdim = aesara.clone_replace(bdim, more_replacements)
+            return at.stack([size, bdim, dim])
         else:
-            return tt.stack([size, dim])
+            return at.stack([size, dim])
 
     @node_property
     def bdim(self):
@@ -1066,22 +1074,22 @@ class Group(WithMemoization):
         """
         if size is None:
             size = 1
-        if not isinstance(deterministic, tt.Variable):
+        if not isinstance(deterministic, Variable):
             deterministic = np.int8(deterministic)
         dim, dist_name, dist_map = (self.ddim, self.initial_dist_name, self.initial_dist_map)
         dtype = self.symbolic_initial.dtype
-        dim = tt.as_tensor(dim)
-        size = tt.as_tensor(size)
+        dim = at.as_tensor(dim)
+        size = at.as_tensor(size)
         shape = self._new_initial_shape(size, dim, more_replacements)
         # apply optimizations if possible
-        if not isinstance(deterministic, tt.Variable):
+        if not isinstance(deterministic, Variable):
             if deterministic:
-                return tt.ones(shape, dtype) * dist_map
+                return at.ones(shape, dtype) * dist_map
             else:
-                return getattr(self._rng, dist_name)(shape)
+                return getattr(self._rng, dist_name)(size=shape)
         else:
-            sample = getattr(self._rng, dist_name)(shape)
-            initial = tt.switch(deterministic, tt.ones(shape, dtype) * dist_map, sample)
+            sample = getattr(self._rng, dist_name)(size=shape)
+            initial = at.switch(deterministic, at.ones(shape, dtype) * dist_map, sample)
             return initial
 
     @node_property
@@ -1106,7 +1114,7 @@ class Group(WithMemoization):
         else:
             return self.symbolic_random
 
-    @change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(self, node, s, d, more_replacements=None):
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
@@ -1114,7 +1122,7 @@ class Group(WithMemoization):
         Parameters
         ----------
         node: :class:`Variable`
-            Theano node with symbolically applied VI replacements
+            Aesara node with symbolically applied VI replacements
         s: scalar
             desired number of samples
         d: bool or int
@@ -1127,13 +1135,13 @@ class Group(WithMemoization):
         :class:`Variable` with applied replacements, ready to use
         """
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
-        node_out = theano.clone(node, flat2rand)
+        node_out = aesara.clone_replace(node, flat2rand)
         try_to_set_test_value(node, node_out, s)
         return node_out
 
     def to_flat_input(self, node):
         """*Dev* - replace vars with flattened view stored in `self.inputs`"""
-        return theano.clone(node, self.replacements)
+        return aesara.clone_replace(node, self.replacements)
 
     def symbolic_sample_over_posterior(self, node):
         """*Dev* - performs sampling of node applying independent samples from posterior each time.
@@ -1141,12 +1149,12 @@ class Group(WithMemoization):
         """
         node = self.to_flat_input(node)
         random = self.symbolic_random.astype(self.symbolic_initial.dtype)
-        random = tt.patternbroadcast(random, self.symbolic_initial.broadcastable)
+        random = at.patternbroadcast(random, self.symbolic_initial.broadcastable)
 
         def sample(post):
-            return theano.clone(node, {self.input: post})
+            return aesara.clone_replace(node, {self.input: post})
 
-        nodes, _ = theano.scan(sample, random)
+        nodes, _ = aesara.scan(sample, random)
         return nodes
 
     def symbolic_single_sample(self, node):
@@ -1156,8 +1164,8 @@ class Group(WithMemoization):
         """
         node = self.to_flat_input(node)
         random = self.symbolic_random.astype(self.symbolic_initial.dtype)
-        random = tt.patternbroadcast(random, self.symbolic_initial.broadcastable)
-        return theano.clone(node, {self.input: random[0]})
+        random = at.patternbroadcast(random, self.symbolic_initial.broadcastable)
+        return aesara.clone_replace(node, {self.input: random[0]})
 
     def make_size_and_deterministic_replacements(self, s, d, more_replacements=None):
         """*Dev* - creates correct replacements for initial depending on
@@ -1177,15 +1185,15 @@ class Group(WithMemoization):
         dict with replacements for initial
         """
         initial = self._new_initial(s, d, more_replacements)
-        initial = tt.patternbroadcast(initial, self.symbolic_initial.broadcastable)
+        initial = at.patternbroadcast(initial, self.symbolic_initial.broadcastable)
         if more_replacements:
-            initial = theano.clone(initial, more_replacements)
+            initial = aesara.clone_replace(initial, more_replacements)
         return {self.symbolic_initial: initial}
 
     @node_property
     def symbolic_normalizing_constant(self):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`"""
-        t = self.to_flat_input(tt.max([v.scaling for v in self.group]))
+        t = self.to_flat_input(at.max([v.scaling for v in self.group]))
         t = self.symbolic_single_sample(t)
         return pm.floatX(t)
 
@@ -1277,7 +1285,7 @@ class Approximation(WithMemoization):
     """
 
     def __init__(self, groups, model=None):
-        self._scale_cost_to_minibatch = theano.shared(np.int8(1))
+        self._scale_cost_to_minibatch = aesara.shared(np.int8(1))
         model = modelcontext(model)
         if not model.free_RVs:
             raise TypeError("Model does not have FreeRVs")
@@ -1336,22 +1344,22 @@ class Approximation(WithMemoization):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`.
         Here the effect is controlled by `self.scale_cost_to_minibatch`
         """
-        t = tt.max(
+        t = at.max(
             self.collect("symbolic_normalizing_constant")
             + [var.scaling for var in self.model.observed_RVs]
         )
-        t = tt.switch(self._scale_cost_to_minibatch, t, tt.constant(1, dtype=t.dtype))
+        t = at.switch(self._scale_cost_to_minibatch, t, at.constant(1, dtype=t.dtype))
         return pm.floatX(t)
 
     @node_property
     def symbolic_logq(self):
         """*Dev* - collects `symbolic_logq` for all groups"""
-        return tt.add(*self.collect("symbolic_logq"))
+        return at.add(*self.collect("symbolic_logq"))
 
     @node_property
     def logq(self):
         """*Dev* - collects `logQ` for all groups"""
-        return tt.add(*self.collect("logq"))
+        return at.add(*self.collect("logq"))
 
     @node_property
     def logq_norm(self):
@@ -1360,7 +1368,7 @@ class Approximation(WithMemoization):
 
     @node_property
     def _sized_symbolic_varlogp_and_datalogp(self):
-        """*Dev* - computes sampled prior term from model via `theano.scan`"""
+        """*Dev* - computes sampled prior term from model via `aesara.scan`"""
         varlogp_s, datalogp_s = self.symbolic_sample_over_posterior(
             [self.model.varlogpt, self.model.datalogpt]
         )
@@ -1368,55 +1376,55 @@ class Approximation(WithMemoization):
 
     @node_property
     def sized_symbolic_varlogp(self):
-        """*Dev* - computes sampled prior term from model via `theano.scan`"""
+        """*Dev* - computes sampled prior term from model via `aesara.scan`"""
         return self._sized_symbolic_varlogp_and_datalogp[0]  # shape (s,)
 
     @node_property
     def sized_symbolic_datalogp(self):
-        """*Dev* - computes sampled data term from model via `theano.scan`"""
+        """*Dev* - computes sampled data term from model via `aesara.scan`"""
         return self._sized_symbolic_varlogp_and_datalogp[1]  # shape (s,)
 
     @node_property
     def sized_symbolic_logp(self):
-        """*Dev* - computes sampled logP from model via `theano.scan`"""
+        """*Dev* - computes sampled logP from model via `aesara.scan`"""
         return self.sized_symbolic_varlogp + self.sized_symbolic_datalogp  # shape (s,)
 
     @node_property
     def logp(self):
-        """*Dev* - computes :math:`E_{q}(logP)` from model via `theano.scan` that can be optimized later"""
+        """*Dev* - computes :math:`E_{q}(logP)` from model via `aesara.scan` that can be optimized later"""
         return self.varlogp + self.datalogp
 
     @node_property
     def varlogp(self):
-        """*Dev* - computes :math:`E_{q}(prior term)` from model via `theano.scan` that can be optimized later"""
+        """*Dev* - computes :math:`E_{q}(prior term)` from model via `aesara.scan` that can be optimized later"""
         return self.sized_symbolic_varlogp.mean(0)
 
     @node_property
     def datalogp(self):
-        """*Dev* - computes :math:`E_{q}(data term)` from model via `theano.scan` that can be optimized later"""
+        """*Dev* - computes :math:`E_{q}(data term)` from model via `aesara.scan` that can be optimized later"""
         return self.sized_symbolic_datalogp.mean(0)
 
     @node_property
     def _single_symbolic_varlogp_and_datalogp(self):
-        """*Dev* - computes sampled prior term from model via `theano.scan`"""
+        """*Dev* - computes sampled prior term from model via `aesara.scan`"""
         varlogp, datalogp = self.symbolic_single_sample([self.model.varlogpt, self.model.datalogpt])
         return varlogp, datalogp
 
     @node_property
     def single_symbolic_varlogp(self):
-        """*Dev* - for single MC sample estimate of :math:`E_{q}(prior term)` `theano.scan`
+        """*Dev* - for single MC sample estimate of :math:`E_{q}(prior term)` `aesara.scan`
         is not needed and code can be optimized"""
         return self._single_symbolic_varlogp_and_datalogp[0]
 
     @node_property
     def single_symbolic_datalogp(self):
-        """*Dev* - for single MC sample estimate of :math:`E_{q}(data term)` `theano.scan`
+        """*Dev* - for single MC sample estimate of :math:`E_{q}(data term)` `aesara.scan`
         is not needed and code can be optimized"""
         return self._single_symbolic_varlogp_and_datalogp[1]
 
     @node_property
     def single_symbolic_logp(self):
-        """*Dev* - for single MC sample estimate of :math:`E_{q}(logP)` `theano.scan`
+        """*Dev* - for single MC sample estimate of :math:`E_{q}(logP)` `aesara.scan`
         is not needed and code can be optimized"""
         return self.single_symbolic_datalogp + self.single_symbolic_varlogp
 
@@ -1467,7 +1475,7 @@ class Approximation(WithMemoization):
         flat2rand.update(more_replacements)
         return flat2rand
 
-    @change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(self, node, s, d, more_replacements=None):
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
@@ -1475,7 +1483,7 @@ class Approximation(WithMemoization):
         Parameters
         ----------
         node: :class:`Variable`
-            Theano node with symbolically applied VI replacements
+            Aesara node with symbolically applied VI replacements
         s: scalar
             desired number of samples
         d: bool or int
@@ -1490,14 +1498,14 @@ class Approximation(WithMemoization):
         _node = node
         optimizations = self.get_optimization_replacements(s, d)
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
-        node = theano.clone(node, optimizations)
-        node = theano.clone(node, flat2rand)
+        node = aesara.clone_replace(node, optimizations)
+        node = aesara.clone_replace(node, flat2rand)
         try_to_set_test_value(_node, node, s)
         return node
 
     def to_flat_input(self, node):
         """*Dev* - replace vars with flattened view stored in `self.inputs`"""
-        return theano.clone(node, self.replacements)
+        return aesara.clone_replace(node, self.replacements)
 
     def symbolic_sample_over_posterior(self, node):
         """*Dev* - performs sampling of node applying independent samples from posterior each time.
@@ -1506,9 +1514,9 @@ class Approximation(WithMemoization):
         node = self.to_flat_input(node)
 
         def sample(*post):
-            return theano.clone(node, dict(zip(self.inputs, post)))
+            return aesara.clone_replace(node, dict(zip(self.inputs, post)))
 
-        nodes, _ = theano.scan(sample, self.symbolic_randoms)
+        nodes, _ = aesara.scan(sample, self.symbolic_randoms)
         return nodes
 
     def symbolic_single_sample(self, node):
@@ -1519,11 +1527,11 @@ class Approximation(WithMemoization):
         node = self.to_flat_input(node)
         post = [v[0] for v in self.symbolic_randoms]
         inp = self.inputs
-        return theano.clone(node, dict(zip(inp, post)))
+        return aesara.clone_replace(node, dict(zip(inp, post)))
 
     def get_optimization_replacements(self, s, d):
         """*Dev* - optimizations for logP. If sample size is static and equal to 1:
-        then `theano.scan` MC estimate is replaced with single sample without call to `theano.scan`.
+        then `aesara.scan` MC estimate is replaced with single sample without call to `aesara.scan`.
         """
         repl = collections.OrderedDict()
         # avoid scan if size is constant and equal to one
@@ -1532,13 +1540,13 @@ class Approximation(WithMemoization):
             repl[self.datalogp] = self.single_symbolic_datalogp
         return repl
 
-    @change_flags(compute_test_value="off")
+    @aesara.config.change_flags(compute_test_value="off")
     def sample_node(self, node, size=None, deterministic=False, more_replacements=None):
         """Samples given node or nodes over shared posterior
 
         Parameters
         ----------
-        node: Theano Variables (or Theano expressions)
+        node: Aesara Variables (or Aesara expressions)
         size: None or scalar
             number of samples
         more_replacements: `dict`
@@ -1552,7 +1560,7 @@ class Approximation(WithMemoization):
         sampled node(s) with replacements
         """
         node_in = node
-        node = theano.clone(node, more_replacements)
+        node = aesara.clone_replace(node, more_replacements)
         if size is None:
             node_out = self.symbolic_single_sample(node)
         else:
@@ -1562,7 +1570,7 @@ class Approximation(WithMemoization):
         return node_out
 
     def rslice(self, name):
-        """*Dev* - vectorized sampling for named random variable without call to `theano.scan`.
+        """*Dev* - vectorized sampling for named random variable without call to `aesara.scan`.
         This node still needs :func:`set_size_and_deterministic` to be evaluated
         """
 
@@ -1581,15 +1589,13 @@ class Approximation(WithMemoization):
             raise KeyError("%r not found" % name)
         return found
 
-    @property
-    @memoize(bound=True)
-    @change_flags(compute_test_value="off")
+    @node_property
     def sample_dict_fn(self):
-        s = tt.iscalar()
+        s = at.iscalar()
         names = [v.name for v in self.model.free_RVs]
         sampled = [self.rslice(name) for name in names]
         sampled = self.set_size_and_deterministic(sampled, s, 0)
-        sample_fn = theano.function([s], sampled)
+        sample_fn = aesara.function([s], sampled)
 
         def inner(draws=100):
             _samples = sample_fn(draws)
@@ -1653,7 +1659,7 @@ class Approximation(WithMemoization):
 
     @node_property
     def symbolic_random(self):
-        return tt.concatenate(self.collect("symbolic_random2d"), axis=-1)
+        return at.concatenate(self.collect("symbolic_random2d"), axis=-1)
 
     def __str__(self):
         if len(self.groups) < 5:
@@ -1674,7 +1680,7 @@ class Approximation(WithMemoization):
     def joint_histogram(self):
         if not self.all_histograms:
             raise VariationalInferenceError("%s does not consist of all Empirical approximations")
-        return tt.concatenate(self.collect("histogram"), axis=-1)
+        return at.concatenate(self.collect("histogram"), axis=-1)
 
     @property
     def params(self):

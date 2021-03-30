@@ -14,29 +14,27 @@
 
 from copy import copy
 
-import theano
-
-from pymc3.sampling import sample
-from pymc3.model import Model
-from pymc3.step_methods import NUTS, Metropolis, Slice, HamiltonianMC, MLDA
-from pymc3.distributions import Normal
-from pymc3.theanof import change_flags
-
+import aesara
 import numpy as np
+
+from pymc3.distributions import Normal
+from pymc3.model import Model
+from pymc3.sampling import sample
+from pymc3.step_methods import MLDA, NUTS, HamiltonianMC, Metropolis, Slice
 
 
 class TestType:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
 
     def setup_method(self):
-        # save theano config object
-        self.theano_config = copy(theano.config)
+        # save aesara config object
+        self.aesara_config = copy(aesara.config)
 
     def teardown_method(self):
-        # restore theano config
-        theano.config = self.theano_config
+        # restore aesara config
+        aesara.config = self.aesara_config
 
-    @change_flags({"floatX": "float64", "warn_float64": "ignore"})
+    @aesara.config.change_flags({"floatX": "float64", "warn_float64": "ignore"})
     def test_float64(self):
         with Model() as model:
             x = Normal("x", testval=np.array(1.0, dtype="float64"))
@@ -49,7 +47,7 @@ class TestType:
             with model:
                 sample(10, sampler())
 
-    @change_flags({"floatX": "float32", "warn_float64": "warn"})
+    @aesara.config.change_flags({"floatX": "float32", "warn_float64": "warn"})
     def test_float32(self):
         with Model() as model:
             x = Normal("x", testval=np.array(1.0, dtype="float32"))
@@ -62,7 +60,7 @@ class TestType:
             with model:
                 sample(10, sampler())
 
-    @change_flags({"floatX": "float64", "warn_float64": "ignore"})
+    @aesara.config.change_flags({"floatX": "float64", "warn_float64": "ignore"})
     def test_float64_MLDA(self):
         data = np.random.randn(5)
 
@@ -80,7 +78,7 @@ class TestType:
         with model:
             sample(10, MLDA(coarse_models=[coarse_model]))
 
-    @change_flags({"floatX": "float32", "warn_float64": "warn"})
+    @aesara.config.change_flags({"floatX": "float32", "warn_float64": "warn"})
     def test_float32_MLDA(self):
         data = np.random.randn(5).astype("float32")
 

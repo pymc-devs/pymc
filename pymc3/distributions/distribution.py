@@ -12,28 +12,48 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numbers
 import contextvars
-import dill
 import inspect
+import multiprocessing
+import numbers
+import sys
+import types
+import warnings
+
 from typing import TYPE_CHECKING
+
+import dill
 
 if TYPE_CHECKING:
     from typing import Optional, Callable
 
+import aesara
+import aesara.graph.basic
+import aesara.tensor as at
 import numpy as np
-import theano.tensor as tt
-from theano import function
-from ..util import get_repr_for_variable, get_var_name
-import theano
-from ..memoize import memoize
-from ..model import Model, build_named_node_tree, FreeRV, ObservedRV, MultiObservedRV, ContextMeta
-from ..vartypes import string_types, theano_constant
-from .shape_utils import (
-    to_tuple,
-    get_broadcastable_dist_samples,
+
+from aesara import function
+from aesara.compile.sharedvalue import SharedVariable
+from aesara.graph.basic import Constant
+from aesara.tensor.type import TensorType as AesaraTensorType
+from aesara.tensor.var import TensorVariable
+from cachetools import LRUCache, cached
+
+from pymc3.distributions.shape_utils import (
     broadcast_dist_samples_shape,
+    get_broadcastable_dist_samples,
+    to_tuple,
 )
+from pymc3.model import (
+    ContextMeta,
+    FreeRV,
+    Model,
+    MultiObservedRV,
+    ObservedRV,
+    build_named_node_tree,
+)
+from pymc3.util import get_repr_for_variable, get_var_name, hash_key
+from pymc3.vartypes import string_types
 
 __all__ = [
     "DensityDist",
@@ -49,6 +69,8 @@ __all__ = [
 vectorized_ppc = contextvars.ContextVar(
     "vectorized_ppc", default=None
 )  # type: contextvars.ContextVar[Optional[Callable]]
+
+PLATFORM = sys.platform
 
 
 class _Unpickling:
@@ -90,6 +112,12 @@ class Distribution:
                 dims = (dims,)
             shape = model.shape_from_dims(dims)
 
+        # failsafe against 0-shapes
+        if shape is not None and any(np.atleast_1d(shape) <= 0):
+            raise ValueError(
+                f"Distribution initialized with invalid shape {shape}. This is not allowed."
+            )
+
         # Some distributions do not accept shape=None
         if has_shape or shape is not None:
             dist = cls.dist(*args, **kwargs, shape=shape)
@@ -124,29 +152,29 @@ class Distribution:
     def get_test_val(self, val, defaults):
         if val is None:
             for v in defaults:
-                if hasattr(self, v) and np.all(np.isfinite(self.getattr_value(v))):
-                    return self.getattr_value(v)
-        else:
-            return self.getattr_value(val)
-
-        if val is None:
+                if hasattr(self, v):
+                    attr_val = self.getattr_value(v)
+                    if np.all(np.isfinite(attr_val)):
+                        return attr_val
             raise AttributeError(
                 "%s has no finite default value to use, "
                 "checked: %s. Pass testval argument or "
                 "adjust so value is finite." % (self, str(defaults))
             )
+        else:
+            return self.getattr_value(val)
 
     def getattr_value(self, val):
         if isinstance(val, string_types):
             val = getattr(self, val)
 
-        if isinstance(val, tt.TensorVariable):
+        if isinstance(val, TensorVariable):
             return val.tag.test_value
 
-        if isinstance(val, tt.sharedvar.TensorSharedVariable):
+        if isinstance(val, SharedVariable):
             return val.get_value()
 
-        if isinstance(val, theano_constant):
+        if isinstance(val, Constant):
             return val.value
 
         return val
@@ -240,7 +268,7 @@ class Distribution:
         Subclasses can use this to improve the speed of logp evaluations
         if only the sum of the logp values is needed.
         """
-        return tt.sum(self.logp(*args, **kwargs))
+        return at.sum(self.logp(*args, **kwargs))
 
     __latex__ = _repr_latex_
 
@@ -248,7 +276,7 @@ class Distribution:
 def TensorType(dtype, shape, broadcastable=None):
     if broadcastable is None:
         broadcastable = np.atleast_1d(shape) == 1
-    return tt.TensorType(str(dtype), broadcastable)
+    return AesaraTensorType(str(dtype), broadcastable)
 
 
 class NoDistribution(Distribution):
@@ -287,7 +315,7 @@ class NoDistribution(Distribution):
         -------
         TensorVariable
         """
-        return tt.zeros_like(x)
+        return at.zeros_like(x)
 
     def _distr_parameters_for_repr(self):
         return []
@@ -298,7 +326,7 @@ class Discrete(Distribution):
 
     def __init__(self, shape=(), dtype=None, defaults=("mode",), *args, **kwargs):
         if dtype is None:
-            if theano.config.floatX == "float32":
+            if aesara.config.floatX == "float32":
                 dtype = "int16"
             else:
                 dtype = "int64"
@@ -316,7 +344,7 @@ class Continuous(Distribution):
 
     def __init__(self, shape=(), dtype=None, defaults=("median", "mean", "mode"), *args, **kwargs):
         if dtype is None:
-            dtype = theano.config.floatX
+            dtype = aesara.config.floatX
         super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
 
@@ -347,7 +375,7 @@ class DensityDist(Distribution):
 
         logp: callable
             A callable that has the following signature ``logp(value)`` and
-            returns a theano tensor that represents the distribution's log
+            returns a aesara tensor that represents the distribution's log
             probability density.
         shape: tuple (Optional): defaults to `()`
             The shape of the distribution. The default value indicates a scalar.
@@ -502,9 +530,22 @@ class DensityDist(Distribution):
 
         """
         if dtype is None:
-            dtype = theano.config.floatX
+            dtype = aesara.config.floatX
         super().__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
+        if type(self.logp) == types.MethodType:
+            if PLATFORM != "linux":
+                warnings.warn(
+                    "You are passing a bound method as logp for DensityDist, this can lead to "
+                    "errors when sampling on platforms other than Linux. Consider using a "
+                    "plain function instead, or subclass Distribution."
+                )
+            elif type(multiprocessing.get_context()) != multiprocessing.context.ForkContext:
+                warnings.warn(
+                    "You are passing a bound method as logp for DensityDist, this can lead to "
+                    "errors when sampling when multiprocessing cannot rely on forking. Consider using a "
+                    "plain function instead, or subclass Distribution."
+                )
         self.rand = random
         self.wrap_random_with_dist_shape = wrap_random_with_dist_shape
         self.check_shape_in_random = check_shape_in_random
@@ -513,7 +554,15 @@ class DensityDist(Distribution):
         # We use dill to serialize the logp function, as this is almost
         # always defined in the notebook and won't be pickled correctly.
         # Fix https://github.com/pymc-devs/pymc3/issues/3844
-        logp = dill.dumps(self.logp)
+        try:
+            logp = dill.dumps(self.logp)
+        except RecursionError as err:
+            if type(self.logp) == types.MethodType:
+                raise ValueError(
+                    "logp for DensityDist is a bound method, leading to RecursionError while serializing"
+                ) from err
+            else:
+                raise err
         vals = self.__dict__.copy()
         vals["logp"] = logp
         return vals
@@ -563,7 +612,7 @@ class DensityDist(Distribution):
                             "DensityDist random method cannot "
                             "adapt to shape changes in the distribution's "
                             "shape, which sometimes are necessary for sampling "
-                            "when the model uses pymc3.Data or theano shared "
+                            "when the model uses pymc3.Data or aesara shared "
                             "tensors, or when the DensityDist has observed "
                             "values.\n"
                             "This check can be disabled by passing "
@@ -628,9 +677,7 @@ class _DrawValuesContextBlocker(_DrawValuesContext):
 
 
 def is_fast_drawable(var):
-    return isinstance(
-        var, (numbers.Number, np.ndarray, theano_constant, tt.sharedvar.SharedVariable)
-    )
+    return isinstance(var, (numbers.Number, np.ndarray, Constant, SharedVariable))
 
 
 def draw_values(params, point=None, size=None):
@@ -645,13 +692,14 @@ def draw_values(params, point=None, size=None):
             c) parameter can be fixed using tag.test_value (last resort)
 
         3) The parameter is a tensor variable/constant. Can be evaluated using
-        theano.function, but a variable may contain nodes which
+        aesara.function, but a variable may contain nodes which
 
             a) are named parameters in the point
             b) are RVs with a random method
     """
     # The following check intercepts and redirects calls to
     # draw_values in the context of sample_posterior_predictive
+    size = to_tuple(size)
     ppc_sampler = vectorized_ppc.get(None)
     if ppc_sampler is not None:
         # this is being done inside new, vectorized sample_posterior_predictive
@@ -710,20 +758,19 @@ def draw_values(params, point=None, size=None):
             if (next_, size) in drawn:
                 # If the node already has a givens value, skip it
                 continue
-            elif isinstance(next_, (theano_constant, tt.sharedvar.SharedVariable)):
-                # If the node is a theano.tensor.TensorConstant or a
-                # theano.tensor.sharedvar.SharedVariable, its value will be
-                # available automatically in _compile_theano_function so
-                # we can skip it. Furthermore, if this node was treated as a
-                # TensorVariable that should be compiled by theano in
-                # _compile_theano_function, it would raise a `TypeError:
-                # ('Constants not allowed in param list', ...)` for
-                # TensorConstant, and a `TypeError: Cannot use a shared
-                # variable (...) as explicit input` for SharedVariable.
-                # ObservedRV and MultiObservedRV instances are ViewOPs
-                # of TensorConstants or SharedVariables, we must add them
-                # to the stack or risk evaluating deterministics with the
-                # wrong values (issue #3354)
+            elif isinstance(next_, (Constant, SharedVariable)):
+                # If the node is a aesara.tensor.TensorConstant or a
+                # SharedVariable, its value will be available automatically in
+                # _compile_aesara_function so we can skip it. Furthermore, if
+                # this node was treated as a TensorVariable that should be
+                # compiled by aesara in _compile_aesara_function, it would
+                # raise a `TypeError: ('Constants not allowed in param list',
+                # ...)` for TensorConstant, and a `TypeError: Cannot use a
+                # shared variable (...) as explicit input` for SharedVariable.
+                # ObservedRV and MultiObservedRV instances are ViewOPs of
+                # TensorConstants or SharedVariables, we must add them to the
+                # stack or risk evaluating deterministics with the wrong values
+                # (issue #3354)
                 stack.extend(
                     [
                         node
@@ -745,7 +792,7 @@ def draw_values(params, point=None, size=None):
                     value = _draw_value(next_, point=point, givens=temp_givens, size=size)
                     givens[next_.name] = (next_, value)
                     drawn[(next_, size)] = value
-                except theano.gof.fg.MissingInputError:
+                except aesara.graph.fg.MissingInputError:
                     # The node failed, so we must add the node's parents to
                     # the stack of nodes to try to draw from. We exclude the
                     # nodes in the `params` list.
@@ -788,17 +835,17 @@ def draw_values(params, point=None, size=None):
                         value = _draw_value(param, point=point, givens=givens.values(), size=size)
                         evaluated[param_idx] = drawn[(param, size)] = value
                         givens[param.name] = (param, value)
-                    except theano.gof.fg.MissingInputError:
+                    except aesara.graph.fg.MissingInputError:
                         missing_inputs.add(param_idx)
 
     return [evaluated[j] for j in params]  # set the order back
 
 
-@memoize
-def _compile_theano_function(param, vars, givens=None):
-    """Compile theano function for a given parameter and input variables.
+@cached(LRUCache(128), key=hash_key)
+def _compile_aesara_function(param, vars, givens=None):
+    """Compile aesara function for a given parameter and input variables.
 
-    This function is memoized to avoid repeating costly theano compilations
+    This function is memoized to avoid repeating costly aesara compilations
     when repeatedly drawing values, which is done when generating posterior
     predictive samples.
 
@@ -806,11 +853,11 @@ def _compile_theano_function(param, vars, givens=None):
     ----------
     param: Model variable from which to draw value
     vars: Children variables of `param`
-    givens: Variables to be replaced in the Theano graph
+    givens: Variables to be replaced in the Aesara graph
 
     Returns
     -------
-    A compiled theano function that takes the values of `vars` as input
+    A compiled aesara function that takes the values of `vars` as input
         positional args
     """
     f = function(
@@ -821,32 +868,32 @@ def _compile_theano_function(param, vars, givens=None):
         on_unused_input="ignore",
         allow_input_downcast=True,
     )
-    return vectorize_theano_function(f, inputs=vars, output=param)
+    return vectorize_aesara_function(f, inputs=vars, output=param)
 
 
-def vectorize_theano_function(f, inputs, output):
-    """Takes a compiled theano function and wraps it with a vectorized version.
-    Theano compiled functions expect inputs and outputs of a fixed number of
+def vectorize_aesara_function(f, inputs, output):
+    """Takes a compiled aesara function and wraps it with a vectorized version.
+    Aesara compiled functions expect inputs and outputs of a fixed number of
     dimensions. In our context, these usually come from deterministics which
     are compiled against a given RV, with its core shape. If we draw i.i.d.
     samples from said RV, we would not be able to compute the deterministic
     over the i.i.d sampled dimensions (i.e. those that are not the core
-    dimensions of the RV). To deal with this problem, we wrap the theano
+    dimensions of the RV). To deal with this problem, we wrap the aesara
     compiled function with numpy.vectorize, providing the correct signature
     for the core dimensions. The extra dimensions, will be interpreted as
     i.i.d. sampled axis and will be broadcast following the usual rules.
 
     Parameters
     ----------
-    f: theano compiled function
-    inputs: list of theano variables used as inputs for the function
-    givens: theano variable which is the output of the function
+    f: aesara compiled function
+    inputs: list of aesara variables used as inputs for the function
+    givens: aesara variable which is the output of the function
 
     Notes
     -----
-    If inputs is an empty list (theano function with no inputs needed), then
+    If inputs is an empty list (aesara function with no inputs needed), then
     the same `f` is returned.
-    Only functions that return a single theano variable's value can be
+    Only functions that return a single aesara variable's value can be
     vectorized.
 
     Returns
@@ -882,27 +929,27 @@ def _draw_value(param, point=None, givens=None, size=None):
 
     Parameters
     ----------
-    param: number, array like, theano variable or pymc3 random variable
+    param: number, array like, aesara variable or pymc3 random variable
         The value or distribution. Constants or shared variables
-        will be converted to an array and returned. Theano variables
+        will be converted to an array and returned. Aesara variables
         are evaluated. If `param` is a pymc3 random variables, draw
         a new value from it and return that, unless a value is specified
         in `point`.
     point: dict, optional
         A dictionary from pymc3 variable names to their values.
     givens: dict, optional
-        A dictionary from theano variables to their values. These values
-        are used to evaluate `param` if it is a theano variable.
+        A dictionary from aesara variables to their values. These values
+        are used to evaluate `param` if it is a aesara variable.
     size: int, optional
         Number of samples
     """
     if isinstance(param, (numbers.Number, np.ndarray)):
         return param
-    elif isinstance(param, theano_constant):
+    elif isinstance(param, Constant):
         return param.value
-    elif isinstance(param, tt.sharedvar.SharedVariable):
+    elif isinstance(param, SharedVariable):
         return param.get_value()
-    elif isinstance(param, (tt.TensorVariable, MultiObservedRV)):
+    elif isinstance(param, (TensorVariable, MultiObservedRV)):
         if point and hasattr(param, "model") and param.name in point:
             return point[param.name]
         elif hasattr(param, "random") and param.random is not None:
@@ -925,7 +972,7 @@ def _draw_value(param, point=None, givens=None, size=None):
                     return dist_tmp.random(point=point, size=size)
                 except (ValueError, TypeError):
                     # reset shape to account for shape changes
-                    # with theano.shared inputs
+                    # with aesara.shared inputs
                     dist_tmp.shape = np.array([])
                     # We want to draw values to infer the dist_shape,
                     # we don't want to store these drawn values to the context
@@ -949,27 +996,17 @@ def _draw_value(param, point=None, givens=None, size=None):
                 variables = values = []
             # We only truly care if the ancestors of param that were given
             # value have the matching dshape and val.shape
-            param_ancestors = set(theano.gof.graph.ancestors([param], blockers=list(variables)))
+            param_ancestors = set(aesara.graph.basic.ancestors([param], blockers=list(variables)))
             inputs = [(var, val) for var, val in zip(variables, values) if var in param_ancestors]
             if inputs:
                 input_vars, input_vals = list(zip(*inputs))
             else:
                 input_vars = []
                 input_vals = []
-            func = _compile_theano_function(param, input_vars)
+            func = _compile_aesara_function(param, input_vars)
             output = func(*input_vals)
             return output
     raise ValueError("Unexpected type in draw_value: %s" % type(param))
-
-
-def _is_one_d(dist_shape):
-    if hasattr(dist_shape, "dshape") and dist_shape.dshape in ((), (0,), (1,)):
-        return True
-    elif hasattr(dist_shape, "shape") and dist_shape.shape in ((), (0,), (1,)):
-        return True
-    elif to_tuple(dist_shape) == ():
-        return True
-    return False
 
 
 def generate_samples(generator, *args, **kwargs):
@@ -1005,7 +1042,6 @@ def generate_samples(generator, *args, **kwargs):
     Any remaining args and kwargs are passed on to the generator function.
     """
     dist_shape = kwargs.pop("dist_shape", ())
-    one_d = _is_one_d(dist_shape)
     size = kwargs.pop("size", None)
     broadcast_shape = kwargs.pop("broadcast_shape", None)
     not_broadcast_kwargs = kwargs.pop("not_broadcast_kwargs", None)
@@ -1081,21 +1117,5 @@ def generate_samples(generator, *args, **kwargs):
         samples = generator(size=dist_bcast_shape, *args, **kwargs)
     else:
         samples = generator(size=size_tup + dist_bcast_shape, *args, **kwargs)
-    samples = np.asarray(samples)
 
-    # reshape samples here
-    if samples.ndim > 0 and samples.shape[0] == 1 and size_tup == (1,):
-        if (
-            len(samples.shape) > len(dist_shape)
-            and samples.shape[-len(dist_shape) :] == dist_shape[-len(dist_shape) :]
-        ):
-            samples = samples.reshape(samples.shape[1:])
-
-    if (
-        one_d
-        and samples.ndim > 0
-        and samples.shape[-1] == 1
-        and (samples.shape != size_tup or size_tup == tuple() or size_tup == (1,))
-    ):
-        samples = samples.reshape(samples.shape[:-1])
     return np.asarray(samples)

@@ -15,13 +15,14 @@
 import logging
 
 import numpy as np
-from theano import function as theano_function
 
-from .arraystep import ArrayStepShared, Competence
-from ..distributions import BART
-from ..distributions.tree import Tree
-from ..model import modelcontext
-from ..theanof import inputvars, make_shared_replacements, join_nonshared_inputs
+from aesara import function as aesara_function
+
+from pymc3.aesaraf import inputvars, join_nonshared_inputs, make_shared_replacements
+from pymc3.distributions import BART
+from pymc3.distributions.tree import Tree
+from pymc3.model import modelcontext
+from pymc3.step_methods.arraystep import ArrayStepShared, Competence
 
 _log = logging.getLogger("pymc3")
 
@@ -63,8 +64,13 @@ class PGBART(ArrayStepShared):
 
         self.tune = True
         self.idx = 0
+        self.iter = 0
+        self.sum_trees = []
+        self.chunk = chunk
+
         if chunk == "auto":
             self.chunk = max(1, int(self.bart.m * 0.1))
+        self.bart.chunk = self.chunk
         self.num_particles = num_particles
         self.log_num_particles = np.log(num_particles)
         self.indices = list(range(1, num_particles))
@@ -95,14 +101,14 @@ class PGBART(ArrayStepShared):
             self.idx = 0
 
         for idx in range(self.idx, self.idx + self.chunk):
-            if idx > bart.m:
+            if idx >= bart.m:
                 break
             self.idx += 1
             tree = bart.trees[idx]
             R_j = bart.get_residuals_loo(tree)
             # Generate an initial set of SMC particles
             # at the end of the algorithm we return one of these particles as the new tree
-            particles = self.init_particles(tree.tree_id, R_j, bart.num_observations)
+            particles = self.init_particles(tree.tree_id, R_j, num_observations)
 
             for t in range(1, max_stages):
                 # Get old particle at stage t
@@ -146,6 +152,11 @@ class PGBART(ArrayStepShared):
             bart.sum_trees_output = bart.Y - R_j + new_prediction
 
             if not self.tune:
+                self.iter += 1
+                self.sum_trees.append(new_tree.tree)
+                if not self.iter % bart.m:
+                    bart.all_trees.append(self.sum_trees)
+                    self.sum_trees = []
                 for index in new_tree.used_variates:
                     variable_inclusion[index] += 1
 
@@ -263,7 +274,7 @@ class ParticleTree:
 
 
 def logp(out_vars, vars, shared):
-    """Compile Theano function of the model and the input and output variables.
+    """Compile Aesara function of the model and the input and output variables.
 
     Parameters
     ----------
@@ -272,9 +283,9 @@ def logp(out_vars, vars, shared):
     vars: List
         containing :class:`pymc3.Distribution` for the input variables
     shared: List
-        containing :class:`theano.tensor.Tensor` for depended shared data
+        containing :class:`aesara.tensor.Tensor` for depended shared data
     """
     out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
-    f = theano_function([inarray0], out_list[0])
+    f = aesara_function([inarray0], out_list[0])
     f.trust_input = True
     return f

@@ -12,14 +12,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara.tensor as at
 import numpy as np
 import numpy.random as nr
-import theano.tensor as tt
 
-from .arraystep import ArrayStep, Competence
-from ..model import modelcontext
-from ..theanof import inputvars
-from ..distributions import draw_values
+from pymc3.aesaraf import inputvars
+from pymc3.distributions import draw_values
+from pymc3.model import modelcontext
+from pymc3.step_methods.arraystep import ArrayStep, Competence
 
 __all__ = ["EllipticalSlice"]
 
@@ -44,7 +44,7 @@ def get_chol(cov, chol):
         raise ValueError("Must pass exactly one of cov or chol")
 
     if cov is not None:
-        chol = tt.slinalg.cholesky(cov)
+        chol = at.slinalg.cholesky(cov)
     return chol
 
 
@@ -86,7 +86,7 @@ class EllipticalSlice(ArrayStep):
     def __init__(self, vars=None, prior_cov=None, prior_chol=None, model=None, **kwargs):
         self.model = modelcontext(model)
         chol = get_chol(prior_cov, prior_chol)
-        self.prior_chol = tt.as_tensor_variable(chol)
+        self.prior_chol = at.as_tensor_variable(chol)
 
         if vars is None:
             vars = self.model.cont_vars

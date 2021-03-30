@@ -12,17 +12,29 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numpy as np
-import theano.tensor as tt
-from scipy import stats
 import warnings
 
-from .dist_math import bound, factln, binomln, betaln, logpow, random_choice
-from .distribution import Discrete, draw_values, generate_samples
-from .shape_utils import broadcast_distribution_samples
-from pymc3.math import tround, sigmoid, logaddexp, logit, log1pexp
-from ..theanof import floatX, intX, take_along_axis
+import aesara.tensor as at
+import numpy as np
 
+from scipy import stats
+
+from pymc3.aesaraf import floatX, intX, take_along_axis
+from pymc3.distributions.dist_math import (
+    betaln,
+    binomln,
+    bound,
+    factln,
+    incomplete_beta,
+    log_diff_normal_cdf,
+    logpow,
+    normal_lccdf,
+    normal_lcdf,
+    random_choice,
+)
+from pymc3.distributions.distribution import Discrete, draw_values, generate_samples
+from pymc3.distributions.shape_utils import broadcast_distribution_samples
+from pymc3.math import log1mexp, log1pexp, logaddexp, logit, logsumexp, sigmoid, tround
 
 __all__ = [
     "Binomial",
@@ -38,6 +50,7 @@ __all__ = [
     "ZeroInflatedNegativeBinomial",
     "DiscreteUniform",
     "Geometric",
+    "HyperGeometric",
     "Categorical",
     "OrderedLogistic",
 ]
@@ -59,7 +72,8 @@ class Binomial(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.arange(0, 22)
         ns = [10, 17]
         ps = [0.5, 0.7]
@@ -87,9 +101,9 @@ class Binomial(Discrete):
 
     def __init__(self, n, p, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.n = n = tt.as_tensor_variable(intX(n))
-        self.p = p = tt.as_tensor_variable(floatX(p))
-        self.mode = tt.cast(tround(n * p), self.dtype)
+        self.n = n = at.as_tensor_variable(intX(n))
+        self.p = p = at.as_tensor_variable(floatX(p))
+        self.mode = at.cast(tround(n * p), self.dtype)
 
     def random(self, point=None, size=None):
         r"""
@@ -119,7 +133,7 @@ class Binomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -132,6 +146,42 @@ class Binomial(Discrete):
             binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
             0 <= value,
             value <= n,
+            0 <= p,
+            p <= 1,
+        )
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Binomial distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log CDF is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # incomplete_beta function can only handle scalar values (see #4342)
+        if np.ndim(value):
+            raise TypeError(
+                f"Binomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
+        n = self.n
+        p = self.p
+        value = at.floor(value)
+
+        return bound(
+            at.switch(
+                at.lt(value, n),
+                at.log(incomplete_beta(n - value, value + 1, 1 - p)),
+                0,
+            ),
+            0 <= value,
+            0 < n,
             0 <= p,
             p <= 1,
         )
@@ -157,7 +207,8 @@ class BetaBinomial(Discrete):
         import numpy as np
         import scipy.stats as st
         from scipy import special
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
 
         def BetaBinom(a, b, n, x):
             pmf = special.binom(n, x) * (special.beta(x+a, n-x+b) / special.beta(a, b))
@@ -194,13 +245,13 @@ class BetaBinomial(Discrete):
 
     def __init__(self, alpha, beta, n, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
-        self.beta = beta = tt.as_tensor_variable(floatX(beta))
-        self.n = n = tt.as_tensor_variable(intX(n))
-        self.mode = tt.cast(tround(alpha / (alpha + beta)), "int8")
+        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
+        self.beta = beta = at.as_tensor_variable(floatX(beta))
+        self.n = n = at.as_tensor_variable(intX(n))
+        self.mode = at.cast(tround(alpha / (alpha + beta)), "int8")
 
     def _random(self, alpha, beta, n, size=None):
-        size = size or 1
+        size = size or ()
         p = stats.beta.rvs(a=alpha, b=beta, size=size).flatten()
         # Sometimes scipy.beta returns nan. Ugh.
         while np.any(np.isnan(p)):
@@ -251,7 +302,7 @@ class BetaBinomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -259,14 +310,50 @@ class BetaBinomial(Discrete):
         """
         alpha = self.alpha
         beta = self.beta
+        n = self.n
         return bound(
-            binomln(self.n, value)
-            + betaln(value + alpha, self.n - value + beta)
-            - betaln(alpha, beta),
+            binomln(n, value) + betaln(value + alpha, n - value + beta) - betaln(alpha, beta),
             value >= 0,
-            value <= self.n,
+            value <= n,
             alpha > 0,
             beta > 0,
+        )
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for BetaBinomial distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log CDF is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # logcdf can only handle scalar values at the moment
+        if np.ndim(value):
+            raise TypeError(
+                f"BetaBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
+        alpha = self.alpha
+        beta = self.beta
+        n = self.n
+        safe_lower = at.switch(at.lt(value, 0), value, 0)
+
+        return bound(
+            at.switch(
+                at.lt(value, n),
+                logsumexp(self.logp(at.arange(safe_lower, value + 1)), keepdims=False),
+                0,
+            ),
+            0 <= value,
+            0 <= n,
+            0 < alpha,
+            0 < beta,
         )
 
 
@@ -284,7 +371,8 @@ class Bernoulli(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = [0, 1]
         for p in [0, 0.5, 0.8]:
             pmf = st.bernoulli.pmf(x, p)
@@ -316,14 +404,14 @@ class Bernoulli(Discrete):
             raise ValueError("Specify one of p and logit_p")
         if p is not None:
             self._is_logit = False
-            self.p = p = tt.as_tensor_variable(floatX(p))
+            self.p = p = at.as_tensor_variable(floatX(p))
             self._logit_p = logit(p)
         else:
             self._is_logit = True
-            self.p = tt.nnet.sigmoid(floatX(logit_p))
-            self._logit_p = tt.as_tensor_variable(logit_p)
+            self.p = at.nnet.sigmoid(floatX(logit_p))
+            self._logit_p = at.as_tensor_variable(logit_p)
 
-        self.mode = tt.cast(tround(self.p), "int8")
+        self.mode = at.cast(tround(self.p), "int8")
 
     def random(self, point=None, size=None):
         r"""
@@ -353,20 +441,52 @@ class Bernoulli(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
         TensorVariable
         """
         if self._is_logit:
-            lp = tt.switch(value, self._logit_p, -self._logit_p)
+            lp = at.switch(value, self._logit_p, -self._logit_p)
             return -log1pexp(-lp)
         else:
             p = self.p
             return bound(
-                tt.switch(value, tt.log(p), tt.log(1 - p)), value >= 0, value <= 1, p >= 0, p <= 1
+                at.switch(value, at.log(p), at.log(1 - p)),
+                value >= 0,
+                value <= 1,
+                p >= 0,
+                p <= 1,
             )
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Bernoulli distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or aesara tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        p = self.p
+
+        return bound(
+            at.switch(
+                at.lt(value, 1),
+                at.log1p(-p),
+                0,
+            ),
+            0 <= value,
+            0 <= p,
+            p <= 1,
+        )
 
     def _distr_parameters_for_repr(self):
         return ["p"]
@@ -387,7 +507,8 @@ class DiscreteWeibull(Discrete):
         import numpy as np
         import scipy.stats as st
         from scipy import special
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
 
         def DiscreteWeibull(q, b, x):
             return q**(x**b) - q**((x + 1)**b)
@@ -414,35 +535,10 @@ class DiscreteWeibull(Discrete):
     def __init__(self, q, beta, *args, **kwargs):
         super().__init__(*args, defaults=("median",), **kwargs)
 
-        self.q = q = tt.as_tensor_variable(floatX(q))
-        self.beta = beta = tt.as_tensor_variable(floatX(beta))
+        self.q = at.as_tensor_variable(floatX(q))
+        self.beta = at.as_tensor_variable(floatX(beta))
 
         self.median = self._ppf(0.5)
-
-    def logp(self, value):
-        r"""
-        Calculate log-probability of DiscreteWeibull distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-        q = self.q
-        beta = self.beta
-
-        return bound(
-            tt.log(tt.power(q, tt.power(value, beta)) - tt.power(q, tt.power(value + 1, beta))),
-            0 <= value,
-            0 < q,
-            q < 1,
-            0 < beta,
-        )
 
     def _ppf(self, p):
         r"""
@@ -452,7 +548,7 @@ class DiscreteWeibull(Discrete):
         q = self.q
         beta = self.beta
 
-        return (tt.ceil(tt.power(tt.log(1 - p) / tt.log(q), 1.0 / beta)) - 1).astype("int64")
+        return (at.ceil(at.power(at.log(1 - p) / at.log(q), 1.0 / beta)) - 1).astype("int64")
 
     def _random(self, q, beta, size=None):
         p = np.random.uniform(size=size)
@@ -480,6 +576,56 @@ class DiscreteWeibull(Discrete):
 
         return generate_samples(self._random, q, beta, dist_shape=self.shape, size=size)
 
+    def logp(self, value):
+        r"""
+        Calculate log-probability of DiscreteWeibull distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or aesara tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        q = self.q
+        beta = self.beta
+        return bound(
+            at.log(at.power(q, at.power(value, beta)) - at.power(q, at.power(value + 1, beta))),
+            0 <= value,
+            0 < q,
+            q < 1,
+            0 < beta,
+        )
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Discrete Weibull distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or aesara tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        q = self.q
+        beta = self.beta
+
+        return bound(
+            at.log1p(-at.power(q, at.power(value + 1, beta))),
+            0 <= value,
+            0 < q,
+            q < 1,
+            0 < beta,
+        )
+
 
 class Poisson(Discrete):
     R"""
@@ -496,7 +642,8 @@ class Poisson(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.arange(0, 15)
         for m in [0.5, 3, 8]:
             pmf = st.poisson.pmf(x, m)
@@ -527,8 +674,8 @@ class Poisson(Discrete):
 
     def __init__(self, mu, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.mode = intX(tt.floor(mu))
+        self.mu = mu = at.as_tensor_variable(floatX(mu))
+        self.mode = intX(at.floor(mu))
 
     def random(self, point=None, size=None):
         r"""
@@ -558,7 +705,7 @@ class Poisson(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -567,7 +714,34 @@ class Poisson(Discrete):
         mu = self.mu
         log_prob = bound(logpow(mu, value) - factln(value) - mu, mu >= 0, value >= 0)
         # Return zero when mu and value are both zero
-        return tt.switch(tt.eq(mu, 0) * tt.eq(value, 0), 0, log_prob)
+        return at.switch(at.eq(mu, 0) * at.eq(value, 0), 0, log_prob)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Poisson distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or aesara tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        mu = self.mu
+        value = at.floor(value)
+        # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
+        safe_mu = at.switch(at.lt(mu, 0), 0, mu)
+        safe_value = at.switch(at.lt(value, 0), 0, value)
+
+        return bound(
+            at.log(at.gammaincc(safe_value + 1, safe_mu)),
+            0 <= value,
+            0 <= mu,
+        )
 
 
 class NegativeBinomial(Discrete):
@@ -590,7 +764,8 @@ class NegativeBinomial(Discrete):
         import numpy as np
         import scipy.stats as st
         from scipy import special
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
 
         def NegBinom(a, m, x):
             pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
@@ -635,16 +810,16 @@ class NegativeBinomial(Discrete):
     def __init__(self, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         mu, alpha = self.get_mu_alpha(mu, alpha, p, n)
-        self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
-        self.mode = intX(tt.floor(mu))
+        self.mu = mu = at.as_tensor_variable(floatX(mu))
+        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
+        self.mode = intX(at.floor(mu))
 
     def get_mu_alpha(self, mu=None, alpha=None, p=None, n=None):
         self._param_type = ["mu", "alpha"]
         if alpha is None:
             if n is not None:
                 self._param_type[1] = "n"
-                self.n = tt.as_tensor_variable(intX(n))
+                self.n = at.as_tensor_variable(intX(n))
                 alpha = n
             else:
                 raise ValueError("Incompatible parametrization. Must specify either alpha or n.")
@@ -654,7 +829,7 @@ class NegativeBinomial(Discrete):
         if mu is None:
             if p is not None:
                 self._param_type[0] = "p"
-                self.p = tt.as_tensor_variable(floatX(p))
+                self.p = at.as_tensor_variable(floatX(p))
                 mu = alpha * (1 - p) / p
             else:
                 raise ValueError("Incompatible parametrization. Must specify either mu or p.")
@@ -705,7 +880,7 @@ class NegativeBinomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -723,7 +898,39 @@ class NegativeBinomial(Discrete):
         )
 
         # Return Poisson when alpha gets very large.
-        return tt.switch(tt.gt(alpha, 1e10), Poisson.dist(self.mu).logp(value), negbinom)
+        return at.switch(at.gt(alpha, 1e10), Poisson.dist(self.mu).logp(value), negbinom)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for NegativeBinomial distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log CDF is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # incomplete_beta function can only handle scalar values (see #4342)
+        if np.ndim(value):
+            raise TypeError(
+                f"NegativeBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
+        # TODO: avoid `p` recomputation if distribution was defined in terms of `p`
+        alpha = self.alpha
+        p = alpha / (self.mu + alpha)
+
+        return bound(
+            at.log(incomplete_beta(alpha, at.floor(value) + 1, p)),
+            0 <= value,
+            0 < alpha,
+            0 <= p,
+            p <= 1,
+        )
 
     def _distr_parameters_for_repr(self):
         return self._param_type
@@ -744,7 +951,8 @@ class Geometric(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.arange(1, 11)
         for p in [0.1, 0.25, 0.75]:
             pmf = st.geom.pmf(x, p)
@@ -768,7 +976,7 @@ class Geometric(Discrete):
 
     def __init__(self, p, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.p = p = tt.as_tensor_variable(floatX(p))
+        self.p = p = at.as_tensor_variable(floatX(p))
         self.mode = 1
 
     def random(self, point=None, size=None):
@@ -799,14 +1007,194 @@ class Geometric(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
         TensorVariable
         """
         p = self.p
-        return bound(tt.log(p) + logpow(1 - p, value - 1), 0 <= p, p <= 1, value >= 1)
+        return bound(at.log(p) + logpow(1 - p, value - 1), 0 <= p, p <= 1, value >= 1)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Geometric distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or aesara tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        p = self.p
+
+        return bound(
+            log1mexp(-at.log1p(-p) * value),
+            0 <= value,
+            0 <= p,
+            p <= 1,
+        )
+
+
+class HyperGeometric(Discrete):
+    R"""
+    Discrete hypergeometric distribution.
+
+    The probability of :math:`x` successes in a sequence of :math:`n` bernoulli
+    trials taken without replacement from a population of :math:`N` objects,
+    containing :math:`k` good (or successful or Type I) objects.
+    The pmf of this distribution is
+
+    .. math:: f(x \mid N, n, k) = \frac{\binom{k}{x}\binom{N-k}{n-x}}{\binom{N}{n}}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
+        x = np.arange(1, 15)
+        N = 50
+        k = 10
+        for n in [20, 25]:
+            pmf = st.hypergeom.pmf(x, N, k, n)
+            plt.plot(x, pmf, '-o', label='n = {}'.format(n))
+        plt.plot(x, pmf, '-o', label='N = {}'.format(N))
+        plt.plot(x, pmf, '-o', label='k = {}'.format(k))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  =============================
+    Support   :math:`x \in \left[\max(0, n - N + k), \min(k, n)\right]`
+    Mean      :math:`\dfrac{nk}{N}`
+    Variance  :math:`\dfrac{(N-n)nk(N-k)}{(N-1)N^2}`
+    ========  =============================
+
+    Parameters
+    ----------
+    N : integer
+        Total size of the population
+    k : integer
+        Number of successful individuals in the population
+    n : integer
+        Number of samples drawn from the population
+    """
+
+    def __init__(self, N, k, n, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.N = intX(N)
+        self.k = intX(k)
+        self.n = intX(n)
+        self.mode = intX(at.floor((n + 1) * (k + 1) / (N + 2)))
+
+    def random(self, point=None, size=None):
+        r"""
+        Draw random values from HyperGeometric distribution.
+
+        Parameters
+        ----------
+        point : dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size : int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+
+        N, k, n = draw_values([self.N, self.k, self.n], point=point, size=size)
+        return generate_samples(self._random, N, k, n, dist_shape=self.shape, size=size)
+
+    def _random(self, M, n, N, size=None):
+        r"""Wrapper around scipy stat's hypergeom.rvs"""
+        try:
+            samples = stats.hypergeom.rvs(M=M, n=n, N=N, size=size)
+            return samples
+        except ValueError:
+            raise ValueError("Domain error in arguments")
+
+    def logp(self, value):
+        r"""
+        Calculate log-probability of HyperGeometric distribution at specified value.
+
+        Parameters
+        ----------
+        value : numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or aesara tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        N = self.N
+        k = self.k
+        n = self.n
+        tot, good = N, k
+        bad = tot - good
+        result = (
+            betaln(good + 1, 1)
+            + betaln(bad + 1, 1)
+            + betaln(tot - n + 1, n + 1)
+            - betaln(value + 1, good - value + 1)
+            - betaln(n - value + 1, bad - n + value + 1)
+            - betaln(tot + 1, 1)
+        )
+        # value in [max(0, n - N + k), min(k, n)]
+        lower = at.switch(at.gt(n - N + k, 0), n - N + k, 0)
+        upper = at.switch(at.lt(k, n), k, n)
+        return bound(result, lower <= value, value <= upper)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for HyperGeometric distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log CDF is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # logcdf can only handle scalar values at the moment
+        if np.ndim(value):
+            raise TypeError(
+                f"HyperGeometric.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
+        # TODO: Use lower upper in locgdf for smarter logsumexp?
+        N = self.N
+        n = self.n
+        k = self.k
+        safe_lower = at.switch(at.lt(value, 0), value, 0)
+
+        return bound(
+            at.switch(
+                at.lt(value, n),
+                logsumexp(self.logp(at.arange(safe_lower, value + 1)), keepdims=False),
+                0,
+            ),
+            0 <= value,
+            0 < N,
+            0 <= k,
+            0 <= n,
+            k <= N,
+            n <= N,
+        )
 
 
 class DiscreteUniform(Discrete):
@@ -821,7 +1209,8 @@ class DiscreteUniform(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         ls = [1, -2]
         us = [6, 2]
         for l, u in zip(ls, us):
@@ -850,9 +1239,9 @@ class DiscreteUniform(Discrete):
 
     def __init__(self, lower, upper, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.lower = intX(tt.floor(lower))
-        self.upper = intX(tt.floor(upper))
-        self.mode = tt.maximum(intX(tt.floor((upper + lower) / 2.0)), self.lower)
+        self.lower = intX(at.floor(lower))
+        self.upper = intX(at.floor(upper))
+        self.mode = at.maximum(intX(at.floor((upper + lower) / 2.0)), self.lower)
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
@@ -888,7 +1277,7 @@ class DiscreteUniform(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -896,7 +1285,39 @@ class DiscreteUniform(Discrete):
         """
         upper = self.upper
         lower = self.lower
-        return bound(-tt.log(upper - lower + 1), lower <= value, value <= upper)
+        return bound(
+            at.fill(value, -at.log(upper - lower + 1)),
+            lower <= value,
+            value <= upper,
+        )
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for Discrete uniform distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or aesara tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        upper = self.upper
+        lower = self.lower
+
+        return bound(
+            at.switch(
+                at.lt(value, upper),
+                at.log(at.minimum(at.floor(value), upper) - lower + 1) - at.log(upper - lower + 1),
+                0,
+            ),
+            lower <= value,
+            lower <= upper,
+        )
 
 
 class Categorical(Discrete):
@@ -912,7 +1333,8 @@ class Categorical(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         ps = [[0.1, 0.6, 0.3], [0.3, 0.1, 0.1, 0.5]]
         for p in ps:
             x = range(len(p))
@@ -937,17 +1359,17 @@ class Categorical(Discrete):
     def __init__(self, p, *args, **kwargs):
         super().__init__(*args, **kwargs)
         try:
-            self.k = tt.shape(p)[-1].tag.test_value
+            self.k = at.shape(p)[-1].tag.test_value
         except AttributeError:
-            self.k = tt.shape(p)[-1]
-        p = tt.as_tensor_variable(floatX(p))
+            self.k = at.shape(p)[-1]
+        p = at.as_tensor_variable(floatX(p))
 
         # From #2082, it may be dangerous to automatically rescale p at this
         # point without checking for positiveness
         self.p = p
-        self.mode = tt.argmax(p, axis=-1)
+        self.mode = at.argmax(p, axis=-1)
         if self.mode.ndim == 1:
-            self.mode = tt.squeeze(self.mode)
+            self.mode = at.squeeze(self.mode)
 
     def random(self, point=None, size=None):
         r"""
@@ -972,7 +1394,7 @@ class Categorical(Discrete):
         return generate_samples(
             random_choice,
             p=p,
-            broadcast_shape=p.shape[:-1] or (1,),
+            broadcast_shape=p.shape[:-1],
             dist_shape=self.shape,
             size=size,
         )
@@ -985,7 +1407,7 @@ class Categorical(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -995,27 +1417,27 @@ class Categorical(Discrete):
         k = self.k
 
         # Clip values before using them for indexing
-        value_clip = tt.clip(value, 0, k - 1)
+        value_clip = at.clip(value, 0, k - 1)
 
-        p = p_ / tt.sum(p_, axis=-1, keepdims=True)
+        p = p_ / at.sum(p_, axis=-1, keepdims=True)
 
         if p.ndim > 1:
             if p.ndim > value_clip.ndim:
-                value_clip = tt.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
+                value_clip = at.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
             elif p.ndim < value_clip.ndim:
-                p = tt.shape_padleft(p, value_clip.ndim - p_.ndim)
+                p = at.shape_padleft(p, value_clip.ndim - p_.ndim)
             pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
-            a = tt.log(
+            a = at.log(
                 take_along_axis(
                     p.dimshuffle(pattern),
                     value_clip,
                 )
             )
         else:
-            a = tt.log(p[value_clip])
+            a = at.log(p[value_clip])
 
         return bound(
-            a, value >= 0, value <= (k - 1), tt.all(p_ >= 0, axis=-1), tt.all(p <= 1, axis=-1)
+            a, value >= 0, value <= (k - 1), at.all(p_ >= 0, axis=-1), at.all(p <= 1, axis=-1)
         )
 
 
@@ -1035,7 +1457,7 @@ class Constant(Discrete):
             DeprecationWarning,
         )
         super().__init__(*args, **kwargs)
-        self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
+        self.mean = self.median = self.mode = self.c = c = at.as_tensor_variable(c)
 
     def random(self, point=None, size=None):
         r"""
@@ -1070,14 +1492,14 @@ class Constant(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
         TensorVariable
         """
         c = self.c
-        return bound(0, tt.eq(value, c))
+        return bound(0, at.eq(value, c))
 
 
 ConstantDist = Constant
@@ -1103,7 +1525,8 @@ class ZeroInflatedPoisson(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.arange(0, 22)
         psis = [0.7, 0.4]
         thetas = [8, 4]
@@ -1135,8 +1558,8 @@ class ZeroInflatedPoisson(Discrete):
 
     def __init__(self, psi, theta, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.theta = theta = tt.as_tensor_variable(floatX(theta))
-        self.psi = psi = tt.as_tensor_variable(floatX(psi))
+        self.theta = theta = at.as_tensor_variable(floatX(theta))
+        self.psi = at.as_tensor_variable(floatX(psi))
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
 
@@ -1170,7 +1593,7 @@ class ZeroInflatedPoisson(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1179,13 +1602,37 @@ class ZeroInflatedPoisson(Discrete):
         psi = self.psi
         theta = self.theta
 
-        logp_val = tt.switch(
-            tt.gt(value, 0),
-            tt.log(psi) + self.pois.logp(value),
-            logaddexp(tt.log1p(-psi), tt.log(psi) - theta),
+        logp_val = at.switch(
+            at.gt(value, 0),
+            at.log(psi) + self.pois.logp(value),
+            logaddexp(at.log1p(-psi), at.log(psi) - theta),
         )
 
         return bound(logp_val, 0 <= value, 0 <= psi, psi <= 1, 0 <= theta)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for ZeroInflatedPoisson distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or aesara tensor.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        psi = self.psi
+
+        return bound(
+            logaddexp(at.log1p(-psi), at.log(psi) + self.pois.logcdf(value)),
+            0 <= value,
+            0 <= psi,
+            psi <= 1,
+        )
 
 
 class ZeroInflatedBinomial(Discrete):
@@ -1206,7 +1653,8 @@ class ZeroInflatedBinomial(Discrete):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.arange(0, 25)
         ns = [10, 20]
         ps = [0.5, 0.7]
@@ -1241,9 +1689,9 @@ class ZeroInflatedBinomial(Discrete):
 
     def __init__(self, psi, n, p, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.n = n = tt.as_tensor_variable(intX(n))
-        self.p = p = tt.as_tensor_variable(floatX(p))
-        self.psi = psi = tt.as_tensor_variable(floatX(psi))
+        self.n = n = at.as_tensor_variable(intX(n))
+        self.p = p = at.as_tensor_variable(floatX(p))
+        self.psi = psi = at.as_tensor_variable(floatX(psi))
         self.bin = Binomial.dist(n, p)
         self.mode = self.bin.mode
 
@@ -1277,7 +1725,7 @@ class ZeroInflatedBinomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1287,13 +1735,42 @@ class ZeroInflatedBinomial(Discrete):
         p = self.p
         n = self.n
 
-        logp_val = tt.switch(
-            tt.gt(value, 0),
-            tt.log(psi) + self.bin.logp(value),
-            logaddexp(tt.log1p(-psi), tt.log(psi) + n * tt.log1p(-p)),
+        logp_val = at.switch(
+            at.gt(value, 0),
+            at.log(psi) + self.bin.logp(value),
+            logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
         )
 
         return bound(logp_val, 0 <= value, value <= n, 0 <= psi, psi <= 1, 0 <= p, p <= 1)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for ZeroInflatedBinomial distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log CDF is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # logcdf can only handle scalar values due to limitation in Binomial.logcdf
+        if np.ndim(value):
+            raise TypeError(
+                f"ZeroInflatedBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+
+        psi = self.psi
+
+        return bound(
+            logaddexp(at.log1p(-psi), at.log(psi) + self.bin.logcdf(value)),
+            0 <= value,
+            0 <= psi,
+            psi <= 1,
+        )
 
 
 class ZeroInflatedNegativeBinomial(Discrete):
@@ -1326,7 +1803,8 @@ class ZeroInflatedNegativeBinomial(Discrete):
         import numpy as np
         import scipy.stats as st
         from scipy import special
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
 
         def ZeroInfNegBinom(a, m, psi, x):
             pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
@@ -1366,9 +1844,9 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     def __init__(self, psi, mu, alpha, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mu = mu = tt.as_tensor_variable(floatX(mu))
-        self.alpha = alpha = tt.as_tensor_variable(floatX(alpha))
-        self.psi = psi = tt.as_tensor_variable(floatX(psi))
+        self.mu = mu = at.as_tensor_variable(floatX(mu))
+        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
+        self.psi = psi = at.as_tensor_variable(floatX(psi))
         self.nb = NegativeBinomial.dist(mu, alpha)
         self.mode = self.nb.mode
 
@@ -1415,7 +1893,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -1425,14 +1903,42 @@ class ZeroInflatedNegativeBinomial(Discrete):
         mu = self.mu
         psi = self.psi
 
-        logp_other = tt.log(psi) + self.nb.logp(value)
+        logp_other = at.log(psi) + self.nb.logp(value)
         logp_0 = logaddexp(
-            tt.log1p(-psi), tt.log(psi) + alpha * (tt.log(alpha) - tt.log(alpha + mu))
+            at.log1p(-psi), at.log(psi) + alpha * (at.log(alpha) - at.log(alpha + mu))
         )
 
-        logp_val = tt.switch(tt.gt(value, 0), logp_other, logp_0)
+        logp_val = at.switch(at.gt(value, 0), logp_other, logp_0)
 
         return bound(logp_val, 0 <= value, 0 <= psi, psi <= 1, mu > 0, alpha > 0)
+
+    def logcdf(self, value):
+        """
+        Compute the log of the cumulative distribution function for ZeroInflatedNegativeBinomial distribution
+        at the specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value for which log CDF is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # logcdf can only handle scalar values due to limitation in NegativeBinomial.logcdf
+        if np.ndim(value):
+            raise TypeError(
+                f"ZeroInflatedNegativeBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
+            )
+        psi = self.psi
+
+        return bound(
+            logaddexp(at.log1p(-psi), at.log(psi) + self.nb.logcdf(value)),
+            0 <= value,
+            0 <= psi,
+            psi <= 1,
+        )
 
 
 class OrderedLogistic(Categorical):
@@ -1502,18 +2008,146 @@ class OrderedLogistic(Categorical):
     """
 
     def __init__(self, eta, cutpoints, *args, **kwargs):
-        self.eta = tt.as_tensor_variable(floatX(eta))
-        self.cutpoints = tt.as_tensor_variable(cutpoints)
+        self.eta = at.as_tensor_variable(floatX(eta))
+        self.cutpoints = at.as_tensor_variable(cutpoints)
 
-        pa = sigmoid(self.cutpoints - tt.shape_padright(self.eta))
-        p_cum = tt.concatenate(
+        pa = sigmoid(self.cutpoints - at.shape_padright(self.eta))
+        p_cum = at.concatenate(
             [
-                tt.zeros_like(tt.shape_padright(pa[..., 0])),
+                at.zeros_like(at.shape_padright(pa[..., 0])),
                 pa,
-                tt.ones_like(tt.shape_padright(pa[..., 0])),
+                at.ones_like(at.shape_padright(pa[..., 0])),
             ],
             axis=-1,
         )
         p = p_cum[..., 1:] - p_cum[..., :-1]
 
         super().__init__(p=p, *args, **kwargs)
+
+
+class OrderedProbit(Categorical):
+    R"""
+    Ordered Probit log-likelihood.
+
+    Useful for regression on ordinal data values whose values range
+    from 1 to K as a function of some predictor, :math:`\eta`. The
+    cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
+    mapped to which of the K observed dependent variables.  The number
+    of cutpoints is K - 1.  It is recommended that the cutpoints are
+    constrained to be ordered.
+
+    In order to stabilize the computation, log-likelihood is computed
+    in log space using the scaled error function `erfcx`.
+
+    .. math::
+
+       f(k \mid \eta, c) = \left\{
+         \begin{array}{l}
+           1 - \text{normal_cdf}(0, \sigma, \eta - c_1)
+             \,, \text{if } k = 0 \\
+           \text{normal_cdf}(0, \sigma, \eta - c_{k - 1}) -
+           \text{normal_cdf}(0, \sigma, \eta - c_{k})
+             \,, \text{if } 0 < k < K \\
+           \text{normal_cdf}(0, \sigma, \eta - c_{K - 1})
+             \,, \text{if } k = K \\
+         \end{array}
+       \right.
+
+    Parameters
+    ----------
+    eta : float
+        The predictor.
+    c : array
+        The length K - 1 array of cutpoints which break :math:`\eta` into
+        ranges.  Do not explicitly set the first and last elements of
+        :math:`c` to negative and positive infinity.
+
+    sigma: float
+         The standard deviation of probit function.
+    Example
+    --------
+    .. code:: python
+
+        # Generate data for a simple 1 dimensional example problem
+        n1_c = 300; n2_c = 300; n3_c = 300
+        cluster1 = np.random.randn(n1_c) + -1
+        cluster2 = np.random.randn(n2_c) + 0
+        cluster3 = np.random.randn(n3_c) + 2
+
+        x = np.concatenate((cluster1, cluster2, cluster3))
+        y = np.concatenate((1*np.ones(n1_c),
+                            2*np.ones(n2_c),
+                            3*np.ones(n3_c))) - 1
+
+        # Ordered probit regression
+        with pm.Model() as model:
+            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
+                                  transform=pm.distributions.transforms.ordered)
+            y_ = pm.OrderedProbit("y", cutpoints=cutpoints, eta=x, observed=y)
+            tr = pm.sample(1000)
+
+        # Plot the results
+        plt.hist(cluster1, 30, alpha=0.5);
+        plt.hist(cluster2, 30, alpha=0.5);
+        plt.hist(cluster3, 30, alpha=0.5);
+        plt.hist(tr["cutpoints"][:,0], 80, alpha=0.2, color='k');
+        plt.hist(tr["cutpoints"][:,1], 80, alpha=0.2, color='k');
+
+    """
+
+    def __init__(self, eta, cutpoints, *args, **kwargs):
+
+        self.eta = at.as_tensor_variable(floatX(eta))
+        self.cutpoints = at.as_tensor_variable(cutpoints)
+
+        probits = at.shape_padright(self.eta) - self.cutpoints
+        _log_p = at.concatenate(
+            [
+                at.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
+                log_diff_normal_cdf(0, 1, probits[..., :-1], probits[..., 1:]),
+                at.shape_padright(normal_lcdf(0, 1, probits[..., -1])),
+            ],
+            axis=-1,
+        )
+        _log_p = at.as_tensor_variable(floatX(_log_p))
+
+        self._log_p = _log_p
+        self.mode = at.argmax(_log_p, axis=-1)
+        p = at.exp(_log_p)
+
+        super().__init__(p=p, *args, **kwargs)
+
+    def logp(self, value):
+        r"""
+        Calculate log-probability of Ordered Probit distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log probabilities for multiple
+            values are desired the values must be provided in a numpy array or aesara tensor
+
+        Returns
+        -------
+        TensorVariable
+        """
+        logp = self._log_p
+        k = self.k
+
+        # Clip values before using them for indexing
+        value_clip = at.clip(value, 0, k - 1)
+
+        if logp.ndim > 1:
+            if logp.ndim > value_clip.ndim:
+                value_clip = at.shape_padleft(value_clip, logp.ndim - value_clip.ndim)
+            elif logp.ndim < value_clip.ndim:
+                logp = at.shape_padleft(logp, value_clip.ndim - logp.ndim)
+            pattern = (logp.ndim - 1,) + tuple(range(logp.ndim - 1))
+            a = take_along_axis(
+                logp.dimshuffle(pattern),
+                value_clip,
+            )
+        else:
+            a = logp[value_clip]
+
+        return bound(a, value >= 0, value <= (k - 1))

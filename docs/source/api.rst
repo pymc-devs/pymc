@@ -1,3 +1,8 @@
+:orphan:
+
+..
+    _"api" is referenced in html_theme_options docs/source/conf.py
+
 .. _api:
 
 ***************
@@ -22,7 +27,6 @@ API Reference
    api/variables
    api/shape_utils
    api/ode
-
 
 Indices and tables
 ===================

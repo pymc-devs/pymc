@@ -16,41 +16,57 @@
 # -*- coding: utf-8 -*-
 
 import warnings
+
+import aesara
+import aesara.tensor as at
 import numpy as np
 import scipy
-import theano
-import theano.tensor as tt
 
-from scipy import stats, linalg
+from aesara.graph.basic import Apply
+from aesara.graph.op import Op, get_test_value
+from aesara.graph.utils import TestValueError
+from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
+from aesara.tensor.slinalg import (
+    Cholesky,
+    Solve,
+    solve_lower_triangular,
+    solve_upper_triangular,
+)
+from aesara.tensor.type import TensorType
+from scipy import linalg, stats
 
-from theano.gof.op import get_test_value
-from theano.gof.utils import TestValueError
-from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
-from theano.tensor.slinalg import Cholesky
 import pymc3 as pm
 
-from pymc3.theanof import floatX
-from . import transforms
-from .distribution import Continuous, Discrete, draw_values, generate_samples, _DrawValuesContext
-from ..model import Deterministic
-from .continuous import ChiSquared, Normal
-from .special import gammaln, multigammaln
-from .dist_math import bound, logpow, factln
-from .shape_utils import to_tuple, broadcast_dist_samples_to
-from ..math import kron_dot, kron_diag, kron_solve_lower, kronecker
-
+from pymc3.aesaraf import floatX, intX
+from pymc3.distributions import transforms
+from pymc3.distributions.continuous import ChiSquared, Normal
+from pymc3.distributions.dist_math import bound, factln, logpow
+from pymc3.distributions.distribution import (
+    Continuous,
+    Discrete,
+    _DrawValuesContext,
+    draw_values,
+    generate_samples,
+)
+from pymc3.distributions.shape_utils import broadcast_dist_samples_to, to_tuple
+from pymc3.distributions.special import gammaln, multigammaln
+from pymc3.exceptions import ShapeError
+from pymc3.math import kron_diag, kron_dot, kron_solve_lower, kronecker
+from pymc3.model import Deterministic
 
 __all__ = [
     "MvNormal",
     "MvStudentT",
     "Dirichlet",
     "Multinomial",
+    "DirichletMultinomial",
     "Wishart",
     "WishartBartlett",
     "LKJCorr",
     "LKJCholeskyCov",
     "MatrixNormal",
     "KroneckerNormal",
+    "CAR",
 ]
 
 
@@ -66,8 +82,8 @@ class _QuadFormBase(Continuous):
             raise ValueError(
                 "Incompatible parameterization. Specify exactly one of tau, cov, or chol."
             )
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.solve_lower = tt.slinalg.Solve(A_structure="lower_triangular")
+        self.mu = mu = at.as_tensor_variable(mu)
+        self.solve_lower = Solve(A_structure="lower_triangular")
         # Step methods and advi do not catch LinAlgErrors at the
         # moment. We work around that by using a cholesky op
         # that returns a nan as first entry instead of raising
@@ -77,7 +93,7 @@ class _QuadFormBase(Continuous):
         if cov is not None:
             self.k = cov.shape[0]
             self._cov_type = "cov"
-            cov = tt.as_tensor_variable(cov)
+            cov = at.as_tensor_variable(cov)
             if cov.ndim != 2:
                 raise ValueError("cov must be two dimensional.")
             self.chol_cov = cholesky(cov)
@@ -86,7 +102,7 @@ class _QuadFormBase(Continuous):
         elif tau is not None:
             self.k = tau.shape[0]
             self._cov_type = "tau"
-            tau = tt.as_tensor_variable(tau)
+            tau = at.as_tensor_variable(tau)
             if tau.ndim != 2:
                 raise ValueError("tau must be two dimensional.")
             self.chol_tau = cholesky(tau)
@@ -97,7 +113,7 @@ class _QuadFormBase(Continuous):
             self._cov_type = "chol"
             if chol.ndim != 2:
                 raise ValueError("chol must be two dimensional.")
-            self.chol_cov = tt.as_tensor_variable(chol)
+            self.chol_cov = at.as_tensor_variable(chol)
             self._n = self.chol_cov.shape[-1]
 
     def _quaddist(self, value):
@@ -128,16 +144,16 @@ class _QuadFormBase(Continuous):
 
     def _quaddist_chol(self, delta):
         chol_cov = self.chol_cov
-        diag = tt.nlinalg.diag(chol_cov)
+        diag = at.diag(chol_cov)
         # Check if the covariance matrix is positive definite.
-        ok = tt.all(diag > 0)
+        ok = at.all(diag > 0)
         # If not, replace the diagonal. We return -inf later, but
         # need to prevent solve_lower from throwing an exception.
-        chol_cov = tt.switch(ok, chol_cov, 1)
+        chol_cov = at.switch(ok, chol_cov, 1)
 
         delta_trans = self.solve_lower(chol_cov, delta.T).T
         quaddist = (delta_trans ** 2).sum(axis=-1)
-        logdet = tt.sum(tt.log(diag))
+        logdet = at.sum(at.log(diag))
         return quaddist, logdet, ok
 
     def _quaddist_cov(self, delta):
@@ -145,16 +161,16 @@ class _QuadFormBase(Continuous):
 
     def _quaddist_tau(self, delta):
         chol_tau = self.chol_tau
-        diag = tt.nlinalg.diag(chol_tau)
+        diag = at.diag(chol_tau)
         # Check if the precision matrix is positive definite.
-        ok = tt.all(diag > 0)
+        ok = at.all(diag > 0)
         # If not, replace the diagonal. We return -inf later, but
         # need to prevent solve_lower from throwing an exception.
-        chol_tau = tt.switch(ok, chol_tau, 1)
+        chol_tau = at.switch(ok, chol_tau, 1)
 
-        delta_trans = tt.dot(delta, chol_tau)
+        delta_trans = at.dot(delta, chol_tau)
         quaddist = (delta_trans ** 2).sum(axis=-1)
-        logdet = -tt.sum(tt.log(diag))
+        logdet = -at.sum(at.log(diag))
         return quaddist, logdet, ok
 
     def _cov_param_for_repr(self):
@@ -226,7 +242,7 @@ class MvNormal(_QuadFormBase):
         chol, _, _ = pm.LKJCholeskyCov('chol_cov', n=3, eta=2,
             sd_dist=sd_dist, compute_corr=True)
         vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=(5, 3))
-        vals = pm.Deterministic('vals', tt.dot(chol, vals_raw.T).T)
+        vals = pm.Deterministic('vals', at.dot(chol, vals_raw.T).T)
     """
 
     def __init__(self, mu, cov=None, tau=None, chol=None, lower=True, *args, **kwargs):
@@ -318,10 +334,10 @@ class MvStudentT(_QuadFormBase):
                1+\frac{1}{\nu}
                ({\mathbf x}-{\mu})^T
                {\Sigma}^{-1}({\mathbf x}-{\mu})
-             \right]^{(\nu+p)/2}}
+             \right]^{-(\nu+p)/2}}
 
     ========  =============================================
-    Support   :math:`x \in \mathbb{R}^k`
+    Support   :math:`x \in \mathbb{R}^p`
     Mean      :math:`\mu` if :math:`\nu > 1` else undefined
     Variance  :math:`\frac{\nu}{\mu-2}\Sigma`
                   if :math:`\nu>2` else undefined
@@ -353,7 +369,7 @@ class MvStudentT(_QuadFormBase):
                 raise ValueError("Specify only one of cov and Sigma")
             cov = Sigma
         super().__init__(mu=mu, cov=cov, tau=tau, chol=chol, lower=lower, *args, **kwargs)
-        self.nu = nu = tt.as_tensor_variable(nu)
+        self.nu = nu = at.as_tensor_variable(nu)
         self.mean = self.median = self.mode = self.mu = self.mu
 
     def random(self, point=None, size=None):
@@ -387,8 +403,10 @@ class MvStudentT(_QuadFormBase):
 
             samples = dist.random(point, size)
 
-        chi2 = np.random.chisquare
-        return (np.sqrt(nu) * samples.T / chi2(nu, size)).T + mu
+        chi2_samples = np.random.chisquare(nu, size)
+        # Add distribution shape to chi2 samples
+        chi2_samples = chi2_samples.reshape(chi2_samples.shape + (1,) * len(self.shape))
+        return (samples / np.sqrt(chi2_samples / nu)) + mu
 
     def logp(self, value):
         """
@@ -412,7 +430,7 @@ class MvStudentT(_QuadFormBase):
             - gammaln(self.nu / 2.0)
             - 0.5 * k * floatX(np.log(self.nu * np.pi))
         )
-        inner = -(self.nu + k) / 2.0 * tt.log1p(quaddist / self.nu)
+        inner = -(self.nu + k) / 2.0 * at.log1p(quaddist / self.nu)
         return bound(norm + inner - logdet, ok)
 
     def _distr_parameters_for_repr(self):
@@ -461,32 +479,10 @@ class Dirichlet(Continuous):
 
         super().__init__(transform=transform, *args, **kwargs)
 
-        self.size_prefix = tuple(self.shape[:-1])
-        self.a = a = tt.as_tensor_variable(a)
-        self.mean = a / tt.sum(a)
+        self.a = a = at.as_tensor_variable(a)
+        self.mean = a / at.sum(a)
 
-        self.mode = tt.switch(tt.all(a > 1), (a - 1) / tt.sum(a - 1), np.nan)
-
-    def _random(self, a, size=None):
-        gen = stats.dirichlet.rvs
-        shape = tuple(np.atleast_1d(self.shape))
-        if size[-len(shape) :] == shape:
-            real_size = size[: -len(shape)]
-        else:
-            real_size = size
-        if self.size_prefix:
-            if real_size and real_size[0] == 1:
-                real_size = real_size[1:] + self.size_prefix
-            else:
-                real_size = real_size + self.size_prefix
-
-        if a.ndim == 1:
-            samples = gen(alpha=a, size=real_size)
-        else:
-            unrolled = a.reshape((np.prod(a.shape[:-1]), a.shape[-1]))
-            samples = np.array([gen(alpha=aa, size=1) for aa in unrolled])
-            samples = samples.reshape(a.shape)
-        return samples
+        self.mode = at.switch(at.all(a > 1), (a - 1) / at.sum(a - 1), np.nan)
 
     def random(self, point=None, size=None):
         """
@@ -506,7 +502,10 @@ class Dirichlet(Continuous):
         array
         """
         a = draw_values([self.a], point=point, size=size)[0]
-        samples = generate_samples(self._random, a=a, dist_shape=self.shape, size=size)
+        output_shape = to_tuple(size) + to_tuple(self.shape)
+        a = broadcast_dist_samples_to(to_shape=output_shape, samples=[a], size=size)[0]
+        samples = stats.gamma.rvs(a=a, size=output_shape)
+        samples = samples / samples.sum(-1, keepdims=True)
         return samples
 
     def logp(self, value):
@@ -527,11 +526,10 @@ class Dirichlet(Continuous):
 
         # only defined for sum(value) == 1
         return bound(
-            tt.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(tt.sum(a, axis=-1)),
-            tt.all(value >= 0),
-            tt.all(value <= 1),
-            np.logical_not(a.broadcastable),
-            tt.all(a > 0),
+            at.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(at.sum(a, axis=-1)),
+            value >= 0,
+            value <= 1,
+            a > 0,
             broadcast_conditions=False,
         )
 
@@ -575,21 +573,21 @@ class Multinomial(Discrete):
     def __init__(self, n, p, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        p = p / tt.sum(p, axis=-1, keepdims=True)
+        p = p / at.sum(p, axis=-1, keepdims=True)
 
         if len(self.shape) > 1:
-            self.n = tt.shape_padright(n)
-            self.p = p if p.ndim > 1 else tt.shape_padleft(p)
+            self.n = at.shape_padright(n)
+            self.p = p if p.ndim > 1 else at.shape_padleft(p)
         else:
             # n is a scalar, p is a 1d array
-            self.n = tt.as_tensor_variable(n)
-            self.p = tt.as_tensor_variable(p)
+            self.n = at.as_tensor_variable(n)
+            self.p = at.as_tensor_variable(p)
 
         self.mean = self.n * self.p
-        mode = tt.cast(tt.round(self.mean), "int32")
-        diff = self.n - tt.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = tt.abs_(diff) > 0
-        mode = tt.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
+        mode = at.cast(at.round(self.mean), "int32")
+        diff = self.n - at.sum(mode, axis=-1, keepdims=True)
+        inc_bool_arr = at.abs_(diff) > 0
+        mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         self.mode = mode
 
     def _random(self, n, p, size=None, raw_size=None):
@@ -672,14 +670,168 @@ class Multinomial(Discrete):
         p = self.p
 
         return bound(
-            factln(n) + tt.sum(-factln(x) + logpow(p, x), axis=-1, keepdims=True),
-            tt.all(x >= 0),
-            tt.all(tt.eq(tt.sum(x, axis=-1, keepdims=True), n)),
-            tt.all(p <= 1),
-            tt.all(tt.eq(tt.sum(p, axis=-1), 1)),
-            tt.all(tt.ge(n, 0)),
+            factln(n) + at.sum(-factln(x) + logpow(p, x), axis=-1, keepdims=True),
+            x >= 0,
+            at.eq(at.sum(x, axis=-1, keepdims=True), n),
+            p <= 1,
+            at.eq(at.sum(p, axis=-1), 1),
+            n >= 0,
             broadcast_conditions=False,
         )
+
+
+class DirichletMultinomial(Discrete):
+    R"""Dirichlet Multinomial log-likelihood.
+
+    Dirichlet mixture of Multinomials distribution, with a marginalized PMF.
+
+    .. math::
+
+    f(x \mid n, a) = \frac{\Gamma(n + 1)\Gamma(\sum a_k)}
+                              {\Gamma(\n + \sum a_k)}
+                         \prod_{k=1}^K
+                         \frac{\Gamma(x_k +  a_k)}
+                              {\Gamma(x_k + 1)\Gamma(a_k)}
+
+    ==========  ===========================================
+    Support     :math:`x \in \{0, 1, \ldots, n\}` such that
+                :math:`\sum x_i = n`
+    Mean        :math:`n \frac{a_i}{\sum{a_k}}`
+    ==========  ===========================================
+
+    Parameters
+    ----------
+    n : int or array
+        Total counts in each replicate. If n is an array its shape must be (N,)
+        with N = a.shape[0]
+
+    a : one- or two-dimensional array
+        Dirichlet parameter. Elements must be strictly positive.
+        The number of categories is given by the length of the last axis.
+
+    shape : integer tuple
+        Describes shape of distribution. For example if n=array([5, 10]), and
+        a=array([1, 1, 1]), shape should be (2, 3).
+    """
+
+    def __init__(self, n, a, shape, *args, **kwargs):
+
+        super().__init__(shape=shape, defaults=("_defaultval",), *args, **kwargs)
+
+        n = intX(n)
+        a = floatX(a)
+        if len(self.shape) > 1:
+            self.n = at.shape_padright(n)
+            self.a = at.as_tensor_variable(a) if a.ndim > 1 else at.shape_padleft(a)
+        else:
+            # n is a scalar, p is a 1d array
+            self.n = at.as_tensor_variable(n)
+            self.a = at.as_tensor_variable(a)
+
+        p = self.a / self.a.sum(-1, keepdims=True)
+
+        self.mean = self.n * p
+        # Mode is only an approximation. Exact computation requires a complex
+        # iterative algorithm as described in https://doi.org/10.1016/j.spl.2009.09.013
+        mode = at.cast(at.round(self.mean), "int32")
+        diff = self.n - at.sum(mode, axis=-1, keepdims=True)
+        inc_bool_arr = at.abs_(diff) > 0
+        mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
+        self._defaultval = mode
+
+    def _random(self, n, a, size=None):
+        # numpy will cast dirichlet and multinomial samples to float64 by default
+        original_dtype = a.dtype
+
+        # Thanks to the default shape handling done in generate_values, the last
+        # axis of n is a dummy axis that allows it to broadcast well with `a`
+        n = np.broadcast_to(n, size)
+        a = np.broadcast_to(a, size)
+        n = n[..., 0]
+
+        # np.random.multinomial needs `n` to be a scalar int and `a` a
+        # sequence so we semi flatten them and iterate over them
+        n_ = n.reshape([-1])
+        a_ = a.reshape([-1, a.shape[-1]])
+        p_ = np.array([np.random.dirichlet(aa) for aa in a_])
+        samples = np.array([np.random.multinomial(nn, pp) for nn, pp in zip(n_, p_)])
+        samples = samples.reshape(a.shape)
+
+        # We cast back to the original dtype
+        return samples.astype(original_dtype)
+
+    def random(self, point=None, size=None):
+        """
+        Draw random values from Dirichlet-Multinomial distribution.
+
+        Parameters
+        ----------
+        point: dict, optional
+            Dict of variable values on which random values are to be
+            conditioned (uses default point if not specified).
+        size: int, optional
+            Desired size of random sample (returns one sample if not
+            specified).
+
+        Returns
+        -------
+        array
+        """
+        n, a = draw_values([self.n, self.a], point=point, size=size)
+        samples = generate_samples(
+            self._random,
+            n,
+            a,
+            dist_shape=self.shape,
+            size=size,
+        )
+
+        # If distribution is initialized with .dist(), valid init shape is not asserted.
+        # Under normal use in a model context valid init shape is asserted at start.
+        expected_shape = to_tuple(size) + to_tuple(self.shape)
+        sample_shape = tuple(samples.shape)
+        if sample_shape != expected_shape:
+            raise ShapeError(
+                f"Expected sample shape was {expected_shape} but got {sample_shape}. "
+                "This may reflect an invalid initialization shape."
+            )
+
+        return samples
+
+    def logp(self, value):
+        """
+        Calculate log-probability of DirichletMultinomial distribution
+        at specified value.
+
+        Parameters
+        ----------
+        value: integer array
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        a = self.a
+        n = self.n
+        sum_a = a.sum(axis=-1, keepdims=True)
+
+        const = (gammaln(n + 1) + gammaln(sum_a)) - gammaln(n + sum_a)
+        series = gammaln(value + a) - (gammaln(value + 1) + gammaln(a))
+        result = const + series.sum(axis=-1, keepdims=True)
+        # Bounds checking to confirm parameters and data meet all constraints
+        # and that each observation value_i sums to n_i.
+        return bound(
+            result,
+            value >= 0,
+            a > 0,
+            n >= 0,
+            at.eq(value.sum(axis=-1, keepdims=True), n),
+            broadcast_conditions=False,
+        )
+
+    def _distr_parameters_for_repr(self):
+        return ["n", "a"]
 
 
 def posdef(AA):
@@ -690,7 +842,7 @@ def posdef(AA):
         return 0
 
 
-class PosDefMatrix(theano.Op):
+class PosDefMatrix(Op):
     """
     Check if input is positive definite. Input should be a square matrix.
 
@@ -702,10 +854,10 @@ class PosDefMatrix(theano.Op):
     # Compulsory if itypes and otypes are not defined
 
     def make_node(self, x):
-        x = tt.as_tensor_variable(x)
+        x = at.as_tensor_variable(x)
         assert x.ndim == 2
-        o = tt.TensorType(dtype="int8", broadcastable=[])()
-        return theano.Apply(self, [x], [o])
+        o = TensorType(dtype="int8", broadcastable=[])()
+        return Apply(self, [x], [o])
 
     # Python implementation:
     def perform(self, node, inputs, outputs):
@@ -718,12 +870,12 @@ class PosDefMatrix(theano.Op):
             pm._log.exception("Failed to check if %s positive definite", x)
             raise
 
-    def infer_shape(self, node, shapes):
+    def infer_shape(self, fgraph, node, shapes):
         return [[]]
 
     def grad(self, inp, grads):
         (x,) = inp
-        return [x.zeros_like(theano.config.floatX)]
+        return [x.zeros_like(aesara.config.floatX)]
 
     def __str__(self):
         return "MatrixIsPositiveDefinite"
@@ -780,11 +932,11 @@ class Wishart(Continuous):
             "https://github.com/pymc-devs/pymc3/issues/538.",
             UserWarning,
         )
-        self.nu = nu = tt.as_tensor_variable(nu)
-        self.p = p = tt.as_tensor_variable(V.shape[0])
-        self.V = V = tt.as_tensor_variable(V)
+        self.nu = nu = at.as_tensor_variable(nu)
+        self.p = p = at.as_tensor_variable(V.shape[0])
+        self.V = V = at.as_tensor_variable(V)
         self.mean = nu * V
-        self.mode = tt.switch(tt.ge(nu, p + 1), (nu - p - 1) * V, np.nan)
+        self.mode = at.switch(at.ge(nu, p + 1), (nu - p - 1) * V, np.nan)
 
     def random(self, point=None, size=None):
         """
@@ -830,15 +982,15 @@ class Wishart(Continuous):
 
         return bound(
             (
-                (nu - p - 1) * tt.log(IXI)
+                (nu - p - 1) * at.log(IXI)
                 - trace(matrix_inverse(V).dot(X))
-                - nu * p * tt.log(2)
-                - nu * tt.log(IVI)
+                - nu * p * at.log(2)
+                - nu * at.log(IVI)
                 - 2 * multigammaln(nu / 2.0, p)
             )
             / 2,
             matrix_pos_def(X),
-            tt.eq(X, X.T),
+            at.eq(X, X.T),
             nu > (p - 1),
             broadcast_conditions=False,
         )
@@ -908,44 +1060,44 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
         diag_testval = None
         tril_testval = None
 
-    c = tt.sqrt(
+    c = at.sqrt(
         ChiSquared("%s_c" % name, nu - np.arange(2, 2 + n_diag), shape=n_diag, testval=diag_testval)
     )
     pm._log.info("Added new variable %s_c to model diagonal of Wishart." % name)
     z = Normal("%s_z" % name, 0.0, 1.0, shape=n_tril, testval=tril_testval)
     pm._log.info("Added new variable %s_z to model off-diagonals of Wishart." % name)
     # Construct A matrix
-    A = tt.zeros(S.shape, dtype=np.float32)
-    A = tt.set_subtensor(A[diag_idx], c)
-    A = tt.set_subtensor(A[tril_idx], z)
+    A = at.zeros(S.shape, dtype=np.float32)
+    A = at.set_subtensor(A[diag_idx], c)
+    A = at.set_subtensor(A[tril_idx], z)
 
     # L * A * A.T * L.T ~ Wishart(L*L.T, nu)
     if return_cholesky:
-        return Deterministic(name, tt.dot(L, A))
+        return Deterministic(name, at.dot(L, A))
     else:
-        return Deterministic(name, tt.dot(tt.dot(tt.dot(L, A), A.T), L.T))
+        return Deterministic(name, at.dot(at.dot(at.dot(L, A), A.T), L.T))
 
 
 def _lkj_normalizing_constant(eta, n):
     if eta == 1:
-        result = gammaln(2.0 * tt.arange(1, int((n - 1) / 2) + 1)).sum()
+        result = gammaln(2.0 * at.arange(1, int((n - 1) / 2) + 1)).sum()
         if n % 2 == 1:
             result += (
-                0.25 * (n ** 2 - 1) * tt.log(np.pi)
-                - 0.25 * (n - 1) ** 2 * tt.log(2.0)
+                0.25 * (n ** 2 - 1) * at.log(np.pi)
+                - 0.25 * (n - 1) ** 2 * at.log(2.0)
                 - (n - 1) * gammaln(int((n + 1) / 2))
             )
         else:
             result += (
-                0.25 * n * (n - 2) * tt.log(np.pi)
-                + 0.25 * (3 * n ** 2 - 4 * n) * tt.log(2.0)
+                0.25 * n * (n - 2) * at.log(np.pi)
+                + 0.25 * (3 * n ** 2 - 4 * n) * at.log(2.0)
                 + n * gammaln(n / 2)
                 - (n - 1) * gammaln(n)
             )
     else:
         result = -(n - 1) * gammaln(eta + 0.5 * (n - 1))
-        k = tt.arange(1, n)
-        result += (0.5 * k * tt.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))).sum()
+        k = at.arange(1, n)
+        result += (0.5 * k * at.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))).sum()
     return result
 
 
@@ -955,8 +1107,8 @@ class _LKJCholeskyCov(Continuous):
     """
 
     def __init__(self, eta, n, sd_dist, *args, **kwargs):
-        self.n = n
-        self.eta = eta
+        self.n = at.as_tensor_variable(n)
+        self.eta = at.as_tensor_variable(eta)
 
         if "transform" in kwargs and kwargs["transform"] is not None:
             raise ValueError("Invalid parameter: transform.")
@@ -998,22 +1150,22 @@ class _LKJCholeskyCov(Continuous):
         eta = self.eta
 
         diag_idxs = self.diag_idxs
-        cumsum = tt.cumsum(x ** 2)
-        variance = tt.zeros(n)
-        variance = tt.inc_subtensor(variance[0], x[0] ** 2)
-        variance = tt.inc_subtensor(variance[1:], cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
-        sd_vals = tt.sqrt(variance)
+        cumsum = at.cumsum(x ** 2)
+        variance = at.zeros(n)
+        variance = at.inc_subtensor(variance[0], x[0] ** 2)
+        variance = at.inc_subtensor(variance[1:], cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
+        sd_vals = at.sqrt(variance)
 
         logp_sd = self.sd_dist.logp(sd_vals).sum()
         corr_diag = x[diag_idxs] / sd_vals
 
-        logp_lkj = (2 * eta - 3 + n - tt.arange(n)) * tt.log(corr_diag)
-        logp_lkj = tt.sum(logp_lkj)
+        logp_lkj = (2 * eta - 3 + n - at.arange(n)) * at.log(corr_diag)
+        logp_lkj = at.sum(logp_lkj)
 
         # Compute the log det jacobian of the second transformation
         # described in the docstring.
-        idx = tt.arange(n)
-        det_invjac = tt.log(corr_diag) - idx * tt.log(sd_vals)
+        idx = at.arange(n)
+        det_invjac = at.log(corr_diag) - idx * at.log(sd_vals)
         det_invjac = det_invjac.sum()
 
         norm = _lkj_normalizing_constant(eta, n)
@@ -1121,6 +1273,9 @@ class _LKJCholeskyCov(Continuous):
             samples = np.reshape(samples, size + sample_shape)
         return samples
 
+    def _distr_parameters_for_repr(self):
+        return ["eta", "n"]
+
 
 def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=True, *args, **kwargs):
     R"""Wrapper function for covariance matrix with LKJ distributed correlations.
@@ -1200,10 +1355,10 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
 
             # Or transform an uncorrelated normal:
             vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=10)
-            vals = tt.dot(chol, vals_raw)
+            vals = at.dot(chol, vals_raw)
 
             # Or compute the covariance matrix
-            cov = tt.dot(chol, chol.T)
+            cov = at.dot(chol, chol.T)
 
     **Implementation** In the unconstrained space all values of the cholesky factor
     are stored untransformed, except for the diagonal entries, where
@@ -1263,9 +1418,9 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
     else:
         chol = pm.expand_packed_triangular(n, packed_chol, lower=True)
         # compute covariance matrix
-        cov = tt.dot(chol, chol.T)
+        cov = at.dot(chol, chol.T)
         # extract standard deviations and rho
-        stds = tt.sqrt(tt.diag(cov))
+        stds = at.sqrt(at.diag(cov))
         inv_stds = 1 / stds
         corr = inv_stds[None, :] * cov * inv_stds[:, None]
         if store_in_trace:
@@ -1414,14 +1569,14 @@ class LKJCorr(Continuous):
         eta = self.eta
 
         X = x[self.tri_index]
-        X = tt.fill_diagonal(X, 1)
+        X = at.fill_diagonal(X, 1)
 
         result = _lkj_normalizing_constant(eta, n)
-        result += (eta - 1.0) * tt.log(det(X))
+        result += (eta - 1.0) * at.log(det(X))
         return bound(
             result,
-            tt.all(X <= 1),
-            tt.all(X >= -1),
+            X >= -1,
+            X <= 1,
             matrix_pos_def(X),
             eta > 0,
             broadcast_conditions=False,
@@ -1437,7 +1592,7 @@ class MatrixNormal(Continuous):
 
     .. math::
        f(x \mid \mu, U, V) =
-           \frac{1}{(2\pi |U|^n |V|^m)^{1/2}}
+           \frac{1}{(2\pi^{m n} |U|^n |V|^m)^{1/2}}
            \exp\left\{
                 -\frac{1}{2} \mathrm{Tr}[ V^{-1} (x-\mu)^{\prime} U^{-1} (x-\mu)]
             \right\}
@@ -1514,7 +1669,7 @@ class MatrixNormal(Continuous):
 
             # Setup left covariance matrix
             scale = pm.Lognormal('scale', mu=np.log(true_scale), sigma=0.5)
-            rowcov = tt.nlinalg.diag([scale**(2*i) for i in range(m)])
+            rowcov = at.diag([scale**(2*i) for i in range(m)])
 
             vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,
                                    observed=data, shape=(m, n))
@@ -1539,10 +1694,10 @@ class MatrixNormal(Continuous):
         assert len(shape) == 2, "shape must have length 2: mxn"
         self.shape = shape
         super().__init__(shape=shape, *args, **kwargs)
-        self.mu = tt.as_tensor_variable(mu)
+        self.mu = at.as_tensor_variable(mu)
         self.mean = self.median = self.mode = self.mu
-        self.solve_lower = tt.slinalg.solve_lower_triangular
-        self.solve_upper = tt.slinalg.solve_upper_triangular
+        self.solve_lower = solve_lower_triangular
+        self.solve_upper = solve_upper_triangular
 
     def _setup_matrices(self, colcov, colchol, coltau, rowcov, rowchol, rowtau):
         cholesky = Cholesky(lower=True, on_error="raise")
@@ -1557,7 +1712,7 @@ class MatrixNormal(Continuous):
         if rowcov is not None:
             self.m = rowcov.shape[0]
             self._rowcov_type = "cov"
-            rowcov = tt.as_tensor_variable(rowcov)
+            rowcov = at.as_tensor_variable(rowcov)
             if rowcov.ndim != 2:
                 raise ValueError("rowcov must be two dimensional.")
             self.rowchol_cov = cholesky(rowcov)
@@ -1566,7 +1721,7 @@ class MatrixNormal(Continuous):
             raise ValueError("rowtau not supported at this time")
             self.m = rowtau.shape[0]
             self._rowcov_type = "tau"
-            rowtau = tt.as_tensor_variable(rowtau)
+            rowtau = at.as_tensor_variable(rowtau)
             if rowtau.ndim != 2:
                 raise ValueError("rowtau must be two dimensional.")
             self.rowchol_tau = cholesky(rowtau)
@@ -1576,7 +1731,7 @@ class MatrixNormal(Continuous):
             self._rowcov_type = "chol"
             if rowchol.ndim != 2:
                 raise ValueError("rowchol must be two dimensional.")
-            self.rowchol_cov = tt.as_tensor_variable(rowchol)
+            self.rowchol_cov = at.as_tensor_variable(rowchol)
 
         # Among-column matrices
         if len([i for i in [coltau, colcov, colchol] if i is not None]) != 1:
@@ -1588,7 +1743,7 @@ class MatrixNormal(Continuous):
         if colcov is not None:
             self.n = colcov.shape[0]
             self._colcov_type = "cov"
-            colcov = tt.as_tensor_variable(colcov)
+            colcov = at.as_tensor_variable(colcov)
             if colcov.ndim != 2:
                 raise ValueError("colcov must be two dimensional.")
             self.colchol_cov = cholesky(colcov)
@@ -1597,7 +1752,7 @@ class MatrixNormal(Continuous):
             raise ValueError("coltau not supported at this time")
             self.n = coltau.shape[0]
             self._colcov_type = "tau"
-            coltau = tt.as_tensor_variable(coltau)
+            coltau = at.as_tensor_variable(coltau)
             if coltau.ndim != 2:
                 raise ValueError("coltau must be two dimensional.")
             self.colchol_tau = cholesky(coltau)
@@ -1607,7 +1762,7 @@ class MatrixNormal(Continuous):
             self._colcov_type = "chol"
             if colchol.ndim != 2:
                 raise ValueError("colchol must be two dimensional.")
-            self.colchol_cov = tt.as_tensor_variable(colchol)
+            self.colchol_cov = at.as_tensor_variable(colchol)
 
     def random(self, point=None, size=None):
         """
@@ -1629,27 +1784,19 @@ class MatrixNormal(Continuous):
         mu, colchol, rowchol = draw_values(
             [self.mu, self.colchol_cov, self.rowchol_cov], point=point, size=size
         )
-        if size is None:
-            size = ()
-        if size in (None, ()):
-            standard_normal = np.random.standard_normal((self.shape[0], colchol.shape[-1]))
-            samples = mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T))
-        else:
-            samples = []
-            size = tuple(np.atleast_1d(size))
-            if mu.shape == tuple(self.shape):
-                for _ in range(np.prod(size)):
-                    standard_normal = np.random.standard_normal((self.shape[0], colchol.shape[-1]))
-                    samples.append(mu + np.matmul(rowchol, np.matmul(standard_normal, colchol.T)))
-            else:
-                for j in range(np.prod(size)):
-                    standard_normal = np.random.standard_normal(
-                        (self.shape[0], colchol[j].shape[-1])
-                    )
-                    samples.append(
-                        mu[j] + np.matmul(rowchol[j], np.matmul(standard_normal, colchol[j].T))
-                    )
-            samples = np.array(samples).reshape(size + tuple(self.shape))
+        size = to_tuple(size)
+        dist_shape = to_tuple(self.shape)
+        output_shape = size + dist_shape
+
+        # Broadcasting all parameters
+        (mu,) = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)
+        rowchol = np.broadcast_to(rowchol, shape=size + rowchol.shape[-2:])
+
+        colchol = np.broadcast_to(colchol, shape=size + colchol.shape[-2:])
+        colchol = np.swapaxes(colchol, -1, -2)  # Take transpose
+
+        standard_normal = np.random.standard_normal(output_shape)
+        samples = mu + np.matmul(rowchol, np.matmul(standard_normal, colchol))
         return samples
 
     def _trquaddist(self, value):
@@ -1662,15 +1809,15 @@ class MatrixNormal(Continuous):
 
         # Find exponent piece by piece
         right_quaddist = self.solve_lower(rowchol_cov, delta)
-        quaddist = tt.nlinalg.matrix_dot(right_quaddist.T, right_quaddist)
+        quaddist = at.nlinalg.matrix_dot(right_quaddist.T, right_quaddist)
         quaddist = self.solve_lower(colchol_cov, quaddist)
         quaddist = self.solve_upper(colchol_cov.T, quaddist)
-        trquaddist = tt.nlinalg.trace(quaddist)
+        trquaddist = at.nlinalg.trace(quaddist)
 
-        coldiag = tt.nlinalg.diag(colchol_cov)
-        rowdiag = tt.nlinalg.diag(rowchol_cov)
-        half_collogdet = tt.sum(tt.log(coldiag))  # logdet(M) = 2*Tr(log(L))
-        half_rowlogdet = tt.sum(tt.log(rowdiag))  # Using Cholesky: M = L L^T
+        coldiag = at.diag(colchol_cov)
+        rowdiag = at.diag(rowchol_cov)
+        half_collogdet = at.sum(at.log(coldiag))  # logdet(M) = 2*Tr(log(L))
+        half_rowlogdet = at.sum(at.log(rowdiag))  # Using Cholesky: M = L L^T
         return trquaddist, half_collogdet, half_rowlogdet
 
     def logp(self, value):
@@ -1729,7 +1876,7 @@ class KroneckerNormal(Continuous):
         :math:`[(v_1, Q_1), (v_2, Q_2), ...]` such that
         :math:`K_i = Q_i \text{diag}(v_i) Q_i'`. For example::
 
-            v_i, Q_i = tt.nlinalg.eigh(K_i)
+            v_i, Q_i = at.nlinalg.eigh(K_i)
 
     sigma: scalar, variable
         Standard deviation of the Gaussian white noise.
@@ -1790,7 +1937,7 @@ class KroneckerNormal(Continuous):
     def __init__(self, mu, covs=None, chols=None, evds=None, sigma=None, *args, **kwargs):
         self._setup(covs, chols, evds, sigma)
         super().__init__(*args, **kwargs)
-        self.mu = tt.as_tensor_variable(mu)
+        self.mu = at.as_tensor_variable(mu)
         self.mean = self.median = self.mode = self.mu
 
     def _setup(self, covs, chols, evds, sigma):
@@ -1812,21 +1959,21 @@ class KroneckerNormal(Continuous):
             else:
                 # Otherwise use cholesky as usual
                 self.chols = list(map(self.cholesky, self.covs))
-                self.chol_diags = list(map(tt.nlinalg.diag, self.chols))
-                self.sizes = tt.as_tensor_variable([chol.shape[0] for chol in self.chols])
-                self.N = tt.prod(self.sizes)
+                self.chol_diags = list(map(at.diag, self.chols))
+                self.sizes = at.as_tensor_variable([chol.shape[0] for chol in self.chols])
+                self.N = at.prod(self.sizes)
         elif chols is not None:
             self._cov_type = "chol"
             if self.is_noisy:  # A strange case...
                 # Noise requires eigendecomposition
-                covs = [tt.dot(chol, chol.T) for chol in chols]
+                covs = [at.dot(chol, chol.T) for chol in chols]
                 eigh_map = map(eigh, covs)
                 self._setup_evd(eigh_map)
             else:
                 self.chols = chols
-                self.chol_diags = list(map(tt.nlinalg.diag, self.chols))
-                self.sizes = tt.as_tensor_variable([chol.shape[0] for chol in self.chols])
-                self.N = tt.prod(self.sizes)
+                self.chol_diags = list(map(at.diag, self.chols))
+                self.sizes = at.as_tensor_variable([chol.shape[0] for chol in self.chols])
+                self.N = at.prod(self.sizes)
         else:
             self._cov_type = "evd"
             self._setup_evd(evds)
@@ -1834,10 +1981,10 @@ class KroneckerNormal(Continuous):
     def _setup_evd(self, eigh_iterable):
         self._isEVD = True
         eigs_sep, Qs = zip(*eigh_iterable)  # Unzip
-        self.Qs = list(map(tt.as_tensor_variable, Qs))
-        self.QTs = list(map(tt.transpose, self.Qs))
+        self.Qs = list(map(at.as_tensor_variable, Qs))
+        self.QTs = list(map(at.transpose, self.Qs))
 
-        self.eigs_sep = list(map(tt.as_tensor_variable, eigs_sep))
+        self.eigs_sep = list(map(at.as_tensor_variable, eigs_sep))
         self.eigs = kron_diag(*self.eigs_sep)  # Combine separate eigs
         if self.is_noisy:
             self.eigs += self.sigma ** 2
@@ -1849,28 +1996,28 @@ class KroneckerNormal(Continuous):
             if self._cov_type == "cov":
                 cov = kronecker(*self.covs)
                 if self.is_noisy:
-                    cov = cov + self.sigma ** 2 * tt.identity_like(cov)
+                    cov = cov + self.sigma ** 2 * at.identity_like(cov)
                 self.mv_params["cov"] = cov
             elif self._cov_type == "chol":
                 if self.is_noisy:
                     covs = []
                     for eig, Q in zip(self.eigs_sep, self.Qs):
-                        cov_i = tt.dot(Q, tt.dot(tt.diag(eig), Q.T))
+                        cov_i = at.dot(Q, at.dot(at.diag(eig), Q.T))
                         covs.append(cov_i)
                     cov = kronecker(*covs)
                     if self.is_noisy:
-                        cov = cov + self.sigma ** 2 * tt.identity_like(cov)
+                        cov = cov + self.sigma ** 2 * at.identity_like(cov)
                     self.mv_params["chol"] = self.cholesky(cov)
                 else:
                     self.mv_params["chol"] = kronecker(*self.chols)
             elif self._cov_type == "evd":
                 covs = []
                 for eig, Q in zip(self.eigs_sep, self.Qs):
-                    cov_i = tt.dot(Q, tt.dot(tt.diag(eig), Q.T))
+                    cov_i = at.dot(Q, at.dot(at.diag(eig), Q.T))
                     covs.append(cov_i)
                 cov = kronecker(*covs)
                 if self.is_noisy:
-                    cov = cov + self.sigma ** 2 * tt.identity_like(cov)
+                    cov = cov + self.sigma ** 2 * at.identity_like(cov)
                 self.mv_params["cov"] = cov
 
     def random(self, point=None, size=None):
@@ -1910,16 +2057,16 @@ class KroneckerNormal(Continuous):
         delta = value - self.mu
         if self._isEVD:
             sqrt_quad = kron_dot(self.QTs, delta.T)
-            sqrt_quad = sqrt_quad / tt.sqrt(self.eigs[:, None])
-            logdet = tt.sum(tt.log(self.eigs))
+            sqrt_quad = sqrt_quad / at.sqrt(self.eigs[:, None])
+            logdet = at.sum(at.log(self.eigs))
         else:
             sqrt_quad = kron_solve_lower(self.chols, delta.T)
             logdet = 0
             for chol_size, chol_diag in zip(self.sizes, self.chol_diags):
-                logchol = tt.log(chol_diag) * self.N / chol_size
-                logdet += tt.sum(2 * logchol)
+                logchol = at.log(chol_diag) * self.N / chol_size
+                logdet += at.sum(2 * logchol)
         # Square each sample
-        quad = tt.batched_dot(sqrt_quad.T, sqrt_quad.T)
+        quad = at.batched_dot(sqrt_quad.T, sqrt_quad.T)
         if onedim:
             quad = quad[0]
         return quad, logdet
@@ -1939,7 +2086,132 @@ class KroneckerNormal(Continuous):
         TensorVariable
         """
         quad, logdet = self._quaddist(value)
-        return -(quad + logdet + self.N * tt.log(2 * np.pi)) / 2.0
+        return -(quad + logdet + self.N * at.log(2 * np.pi)) / 2.0
 
     def _distr_parameters_for_repr(self):
         return ["mu"]
+
+
+class CAR(Continuous):
+    R"""
+    Likelihood for a conditional autoregression. This is a special case of the
+    multivariate normal with an adjacency-structured covariance matrix.
+
+    .. math::
+
+       f(x \mid W, \alpha, \tau) =
+           \frac{|T|^{1/2}}{(2\pi)^{k/2}}
+           \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime} T^{-1} (x-\mu) \right\}
+
+    where :math:`T = (\tau D(I-\alpha W))^{-1}` and :math:`D = diag(\sum_i W_{ij})`.
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{R}^k`
+    Mean      :math:`\mu \in \mathbb{R}^k`
+    Variance  :math:`(\tau D(I-\alpha W))^{-1}`
+    ========  ==========================
+
+    Parameters
+    ----------
+    mu: array
+        Real-valued mean vector
+    W: Numpy matrix
+        Symmetric adjacency matrix of 1s and 0s indicating
+        adjacency between elements.
+    alpha: float or array
+        Autoregression parameter taking values between -1 and 1. Values closer to 0 indicate weaker
+        correlation and values closer to 1 indicate higher autocorrelation. For most use cases, the
+        support of alpha should be restricted to (0, 1)
+    tau: float or array
+        Positive precision variable controlling the scale of the underlying normal variates.
+    sparse: bool, default=False
+        Determines whether or not sparse computations are used
+
+    References
+    ----------
+    ..  Jin, X., Carlin, B., Banerjee, S.
+        "Generalized Hierarchical Multivariate CAR Models for Areal Data"
+        Biometrics, Vol. 61, No. 4 (Dec., 2005), pp. 950-961
+    """
+
+    def __init__(self, mu, W, alpha, tau, sparse=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        D = W.sum(axis=0)
+        d, _ = W.shape
+
+        self.d = d
+        self.median = self.mode = self.mean = self.mu = at.as_tensor_variable(mu)
+        self.sparse = sparse
+
+        if not W.ndim == 2 or not np.allclose(W, W.T):
+            raise ValueError("W must be a symmetric adjacency matrix.")
+
+        if sparse:
+            W_sparse = scipy.sparse.csr_matrix(W)
+            self.W = aesara.sparse.as_sparse_variable(W_sparse)
+        else:
+            self.W = at.as_tensor_variable(W)
+
+        # eigenvalues of D^−1/2 * W * D^−1/2
+        Dinv_sqrt = np.diag(1 / np.sqrt(D))
+        DWD = np.matmul(np.matmul(Dinv_sqrt, W), Dinv_sqrt)
+        self.lam = scipy.linalg.eigvalsh(DWD)
+        self.D = at.as_tensor_variable(D)
+
+        tau = at.as_tensor_variable(tau)
+        if tau.ndim > 0:
+            self.tau = tau[:, None]
+        else:
+            self.tau = tau
+
+        alpha = at.as_tensor_variable(alpha)
+        if alpha.ndim > 0:
+            self.alpha = alpha[:, None]
+        else:
+            self.alpha = alpha
+
+    def logp(self, value):
+        """
+        Calculate log-probability of a CAR-distributed vector
+        at specified value. This log probability function differs from
+        the true CAR log density (AKA a multivariate normal with CAR-structured
+        covariance matrix) by an additive constant.
+
+        Parameters
+        ----------
+        value: array
+            Value for which log-probability is calculated.
+
+        Returns
+        -------
+        TensorVariable
+        """
+
+        if value.ndim == 1:
+            value = value[None, :]
+
+        logtau = self.d * at.log(self.tau).sum()
+        logdet = at.log(1 - self.alpha.T * self.lam[:, None]).sum()
+        delta = value - self.mu
+
+        if self.sparse:
+            Wdelta = aesara.sparse.dot(delta, self.W)
+        else:
+            Wdelta = at.dot(delta, self.W)
+
+        tau_dot_delta = self.D[None, :] * delta - self.alpha * Wdelta
+        logquad = (self.tau * delta * tau_dot_delta).sum(axis=-1)
+        return bound(
+            0.5 * (logtau + logdet - logquad),
+            self.alpha >= -1,
+            self.alpha <= 1,
+            self.tau > 0,
+            broadcast_conditions=False,
+        )
+
+    def random(self, point=None, size=None):
+        raise NotImplementedError("Sampling from a CAR distribution is not supported.")
+
+    def _distr_parameters_for_repr(self):
+        return ["mu", "W", "alpha", "tau"]

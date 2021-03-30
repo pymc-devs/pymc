@@ -12,17 +12,20 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import aesara
+import aesara.tensor as at
+import arviz as az
 import matplotlib
 import numpy as np
 import pandas as pd
-import pymc3 as pm
-import theano.tensor as tt
 import pytest
-import theano
-from pymc3.theanof import floatX
+
 from packaging import version
 
-from .helpers import SeededTest
+import pymc3 as pm
+
+from pymc3.aesaraf import floatX
+from pymc3.tests.helpers import SeededTest
 
 if version.parse(matplotlib.__version__) < version.parse("3.3"):
     matplotlib.use("Agg", warn=False)
@@ -65,7 +68,7 @@ class TestARM5_4(SeededTest):
 
         with pm.Model() as model:
             effects = pm.Normal("effects", mu=0, sigma=100, shape=len(P.columns))
-            logit_p = tt.dot(floatX(np.array(P)), effects)
+            logit_p = at.dot(floatX(np.array(P)), effects)
             pm.Bernoulli("s", logit_p=logit_p, observed=floatX(data.switch.values))
         return model
 
@@ -183,14 +186,14 @@ def build_disaster_model(masked=False):
         # Allocate appropriate Poisson rates to years before and after current
         # switchpoint location
         idx = np.arange(years)
-        rate = tt.switch(switchpoint >= idx, early_mean, late_mean)
+        rate = at.switch(switchpoint >= idx, early_mean, late_mean)
         # Data likelihood
         pm.Poisson("disasters", rate, observed=disasters_data)
     return model
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestDisasterModel(SeededTest):
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     # Time series of recorded coal mining disasters in the UK from 1851 to 1962
     def test_disaster_model(self):
         model = build_disaster_model(masked=False)
@@ -200,8 +203,9 @@ class TestDisasterModel(SeededTest):
             # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
-            pm.summary(tr)
+            az.summary(tr)
 
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_disaster_model_missing(self):
         model = build_disaster_model(masked=True)
         with model:
@@ -210,7 +214,7 @@ class TestDisasterModel(SeededTest):
             # Use slice sampler for means (other variables auto-selected)
             step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
             tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
-            pm.summary(tr)
+            az.summary(tr)
 
 
 class TestGLMLinear(SeededTest):
@@ -291,7 +295,7 @@ class TestLatentOccupancy(SeededTest):
 
 
 @pytest.mark.xfail(
-    condition=(theano.config.floatX == "float32"),
+    condition=(aesara.config.floatX == "float32"),
     reason="Fails on float32 due to starting inf at starting logP",
 )
 class TestRSV(SeededTest):

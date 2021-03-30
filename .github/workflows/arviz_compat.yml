@@ -9,15 +9,17 @@ jobs:
   pytest:
     strategy:
       matrix:
-        os: [ubuntu-18.04]
+        os: [ubuntu-latest, macos-latest]
         floatx: [float64]
         test-subset:
+          - pymc3/tests/test_distributions.py
+          - pymc3/tests/test_distributions_random.py
           - pymc3/tests/test_sampling.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      THEANO_FLAGS: floatX=${{ matrix.floatx }},gcc.cxxflags='-march=native'
+      AESARA_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
     defaults:
       run:
         shell: bash -l {0}
@@ -26,27 +28,39 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v1
         env:
-          # Increase this value to reset cache if environment-dev-py38.yml has not changed
+          # Increase this value to reset cache if environment-dev-py39.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/environment-dev-py38.yml') }}
+            hashFiles('conda-envs/environment-dev-py39.yml') }}
+      - name: Cache multiple paths
+        uses: actions/cache@v2
+        env:
+          # Increase this value to reset cache if requirements.txt has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: |
+            ~/.cache/pip
+            $RUNNER_TOOL_CACHE/Python/*
+            ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{
+            hashFiles('requirements.txt') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: pymc3-dev-py38
+          activate-environment: pymc3-dev-py39
           channel-priority: strict
-          environment-file: conda-envs/environment-dev-py38.yml
+          environment-file: conda-envs/environment-dev-py39.yml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Install pymc3
         run: |
-          conda activate pymc3-dev-py38
+          conda activate pymc3-dev-py39
           pip install -e .
           python --version
       - name: Install latest arviz
         run: |
-          conda activate pymc3-dev-py38
-          conda remove arviz -y
+          conda activate pymc3-dev-py39
+          pip uninstall arviz -y
           pip install git+git://github.com/arviz-devs/arviz.git
       - name: Run tests
         run: |

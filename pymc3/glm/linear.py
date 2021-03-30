@@ -12,13 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import theano.tensor as tt
+import aesara.tensor as at
 import numpy as np
-from ..distributions import Normal, Flat
-from . import families
-from ..model import Model, Deterministic
-from .utils import any_to_tensor_and_labels
 
+from pymc3.distributions import Flat, Normal
+from pymc3.glm import families
+from pymc3.glm.utils import any_to_tensor_and_labels
+from pymc3.model import Deterministic, Model
 
 __all__ = ["LinearComponent", "GLM"]
 
@@ -39,7 +39,7 @@ class LinearComponent(Model):
         use `Regressor` key for defining default prior for all regressors
             defaults to Normal.dist(mu=0, tau=1.0E-6)
     vars: dict - random variables instead of creating new ones
-    offset: scalar, or numpy/theano array with the same shape as y
+    offset: scalar, or numpy/aesara array with the same shape as y
         this can be used to specify an a priori known component to be
         included in the linear predictor during fitting.
     """
@@ -73,7 +73,7 @@ class LinearComponent(Model):
         x, labels = any_to_tensor_and_labels(x, labels)
         # now we have x, shape and labels
         if intercept:
-            x = tt.concatenate([tt.ones((x.shape[0], 1), x.dtype), x], axis=1)
+            x = at.concatenate([at.ones((x.shape[0], 1), x.dtype), x], axis=1)
             labels = ["Intercept"] + labels
         coeffs = list()
         for name in labels:
@@ -94,7 +94,7 @@ class LinearComponent(Model):
                         ),
                     )
                 coeffs.append(v)
-        self.coeffs = tt.stack(coeffs, axis=0)
+        self.coeffs = at.stack(coeffs, axis=0)
         self.y_est = x.dot(self.coeffs) + offset
 
     @classmethod
@@ -149,7 +149,7 @@ class GLM(LinearComponent):
     init: dict - test_vals for coefficients
     vars: dict - random variables instead of creating new ones
     family: pymc3..families object
-    offset: scalar, or numpy/theano array with the same shape as y
+    offset: scalar, or numpy/aesara array with the same shape as y
         this can be used to specify an a priori known component to be
         included in the linear predictor during fitting.
     """

@@ -12,26 +12,31 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from itertools import combinations
-from typing import Tuple
-import numpy as np
 import unittest.mock as mock
 
-import numpy.testing as npt
+from contextlib import ExitStack as does_not_raise
+from itertools import combinations
+from typing import Tuple
+
+import aesara
+import aesara.tensor as at
 import arviz as az
-import pymc3 as pm
-import theano.tensor as tt
-from theano import shared
-import theano
-from pymc3.tests.models import simple_init
-from pymc3.tests.helpers import SeededTest
-from pymc3.exceptions import IncorrectArgumentsError
-from scipy import stats
+import numpy as np
+import numpy.testing as npt
 import pytest
 
+from aesara import shared
+from scipy import stats
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+import pymc3 as pm
+
+from pymc3.backends.ndarray import NDArray
+from pymc3.exceptions import IncorrectArgumentsError, SamplingError
+from pymc3.tests.helpers import SeededTest
+from pymc3.tests.models import simple_init
+
+
+@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestSample(SeededTest):
     def setup_method(self):
         super().setup_method()
@@ -280,6 +285,27 @@ class TestSample(SeededTest):
             assert len(trace) == trace_cancel_length
 
 
+def test_sample_find_MAP_does_not_modify_start():
+    # see https://github.com/pymc-devs/pymc3/pull/4458
+    with pm.Model():
+        pm.Lognormal("untransformed")
+
+        # make sure find_Map does not modify the start dict
+        start = {"untransformed": 2}
+        pm.find_MAP(start=start)
+        assert start == {"untransformed": 2}
+
+        # make sure sample does not modify the start dict
+        start = {"untransformed": 0.2}
+        pm.sample(draws=10, step=pm.Metropolis(), tune=5, start=start, chains=3)
+        assert start == {"untransformed": 0.2}
+
+        # make sure sample does not modify the start when passes as list of dict
+        start = [{"untransformed": 2}, {"untransformed": 0.2}]
+        pm.sample(draws=10, step=pm.Metropolis(), tune=5, start=start, chains=2)
+        assert start == [{"untransformed": 2}, {"untransformed": 0.2}]
+
+
 def test_empty_model():
     with pm.Model():
         pm.Normal("a", observed=1)
@@ -295,7 +321,49 @@ def test_partial_trace_sample():
         trace = pm.sample(trace=[a])
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+@pytest.mark.xfail
+def test_chain_idx():
+    # see https://github.com/pymc-devs/pymc3/issues/4469
+    with pm.Model():
+        mu = pm.Normal("mu")
+        x = pm.Normal("x", mu=mu, sigma=1, observed=np.asarray(3))
+        # note draws-tune must be >100 AND we need an observed RV for this to properly
+        # trigger convergence checks, which is one particular case in which this failed
+        # before
+        trace = pm.sample(draws=150, tune=10, chain_idx=1)
+
+        ppc = pm.sample_posterior_predictive(trace)
+        ppc = pm.sample_posterior_predictive(trace, keep_size=True)
+
+
+@pytest.mark.parametrize(
+    "n_points, tune, expected_length, expected_n_traces",
+    [
+        ((5, 2, 2), 0, 2, 3),
+        ((6, 1, 1), 1, 6, 1),
+    ],
+)
+def test_choose_chains(n_points, tune, expected_length, expected_n_traces):
+    with pm.Model() as model:
+        a = pm.Normal("a", mu=0, sigma=1)
+        trace_0 = NDArray(model)
+        trace_1 = NDArray(model)
+        trace_2 = NDArray(model)
+        trace_0.setup(n_points[0], 1)
+        trace_1.setup(n_points[1], 1)
+        trace_2.setup(n_points[2], 1)
+        for _ in range(n_points[0]):
+            trace_0.record({"a": 0})
+        for _ in range(n_points[1]):
+            trace_1.record({"a": 0})
+        for _ in range(n_points[2]):
+            trace_2.record({"a": 0})
+        traces, length = pm.sampling._choose_chains([trace_0, trace_1, trace_2], tune=tune)
+    assert length == expected_length
+    assert expected_n_traces == len(traces)
+
+
+@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
 class TestNamedSampling(SeededTest):
     def test_shared_named(self):
         G_var = shared(value=np.atleast_2d(1.0), broadcastable=(True, False), name="G")
@@ -309,7 +377,7 @@ class TestNamedSampling(SeededTest):
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=tt.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
+                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
             )
             res = theta.random()
             assert np.isclose(res, 0.0)
@@ -325,13 +393,13 @@ class TestNamedSampling(SeededTest):
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=tt.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
+                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
             )
             res = theta.random()
             assert np.isclose(res, 0.0)
 
     def test_constant_named(self):
-        G_var = tt.constant(np.atleast_2d(1.0), name="G")
+        G_var = at.constant(np.atleast_2d(1.0), name="G")
         with pm.Model():
             theta0 = pm.Normal(
                 "theta0",
@@ -341,7 +409,7 @@ class TestNamedSampling(SeededTest):
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=tt.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
+                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
             )
 
             res = theta.random()
@@ -374,8 +442,7 @@ class TestSamplePPC(SeededTest):
             ppc0 = pm.sample_posterior_predictive([model.test_point], samples=10)
             ppc0 = pm.fast_sample_posterior_predictive([model.test_point], samples=10)
             # deprecated argument is not introduced to fast version [2019/08/20:rpg]
-            with pytest.warns(DeprecationWarning):
-                ppc = pm.sample_posterior_predictive(trace, vars=[a])
+            ppc = pm.sample_posterior_predictive(trace, var_names=["a"])
             # test empty ppc
             ppc = pm.sample_posterior_predictive(trace, var_names=[])
             assert len(ppc) == 0
@@ -486,8 +553,6 @@ class TestSamplePPC(SeededTest):
             # Not for fast_sample_posterior_predictive
             with pytest.raises(IncorrectArgumentsError):
                 ppc = pm.sample_posterior_predictive(trace, size=4, keep_size=True)
-            with pytest.raises(IncorrectArgumentsError):
-                ppc = pm.sample_posterior_predictive(trace, vars=[a], var_names=["a"])
             # test wrong type argument
             bad_trace = {"mu": stats.norm.rvs(size=1000)}
             with pytest.raises(TypeError):
@@ -571,8 +636,8 @@ class TestSamplePPC(SeededTest):
     def test_model_shared_variable(self):
         x = np.random.randn(100)
         y = x > 0
-        x_shared = theano.shared(x)
-        y_shared = theano.shared(y)
+        x_shared = aesara.shared(x)
+        y_shared = aesara.shared(y)
         with pm.Model() as model:
             coeff = pm.Normal("x", mu=0, sd=1)
             logistic = pm.Deterministic("p", pm.math.sigmoid(coeff * x_shared))
@@ -605,8 +670,10 @@ class TestSamplePPC(SeededTest):
         npt.assert_allclose(post_pred["p"], expected_p)
 
     def test_deterministic_of_observed(self):
-        meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(10))
-        meas_in_2 = pm.theanof.floatX(5 + 4 * np.random.randn(10))
+        np.random.seed(8442)
+
+        meas_in_1 = pm.aesaraf.floatX(2 + 4 * np.random.randn(10))
+        meas_in_2 = pm.aesaraf.floatX(5 + 4 * np.random.randn(10))
         nchains = 2
         with pm.Model() as model:
             mu_in_1 = pm.Normal("mu_in_1", 0, 1)
@@ -621,16 +688,7 @@ class TestSamplePPC(SeededTest):
 
             trace = pm.sample(100, chains=nchains)
             np.random.seed(0)
-            with pytest.warns(DeprecationWarning):
-                ppc = pm.sample_posterior_predictive(
-                    model=model,
-                    trace=trace,
-                    samples=len(trace) * nchains,
-                    vars=(model.deterministics + model.basic_RVs),
-                )
-
-            rtol = 1e-5 if theano.config.floatX == "float64" else 1e-4
-            npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
+            rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-4
 
             np.random.seed(0)
             ppc = pm.sample_posterior_predictive(
@@ -653,8 +711,8 @@ class TestSamplePPC(SeededTest):
             npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
     def test_deterministic_of_observed_modified_interface(self):
-        meas_in_1 = pm.theanof.floatX(2 + 4 * np.random.randn(100))
-        meas_in_2 = pm.theanof.floatX(5 + 4 * np.random.randn(100))
+        meas_in_1 = pm.aesaraf.floatX(2 + 4 * np.random.randn(100))
+        meas_in_2 = pm.aesaraf.floatX(5 + 4 * np.random.randn(100))
         with pm.Model() as model:
             mu_in_1 = pm.Normal("mu_in_1", 0, 1)
             sigma_in_1 = pm.HalfNormal("sd_in_1", 1)
@@ -677,7 +735,7 @@ class TestSamplePPC(SeededTest):
                 var_names=[x.name for x in (model.deterministics + model.basic_RVs)],
             )
 
-            rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3
+            rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-3
             npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
             ppc = pm.fast_sample_posterior_predictive(
@@ -687,7 +745,7 @@ class TestSamplePPC(SeededTest):
                 var_names=[x.name for x in (model.deterministics + model.basic_RVs)],
             )
 
-            rtol = 1e-5 if theano.config.floatX == "float64" else 1e-3
+            rtol = 1e-5 if aesara.config.floatX == "float64" else 1e-3
             npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
     def test_variable_type(self):
@@ -702,32 +760,82 @@ class TestSamplePPC(SeededTest):
             assert ppc["a"].dtype.kind == "f"
             assert ppc["b"].dtype.kind == "i"
 
+    def test_potentials_warning(self):
+        warning_msg = "The effect of Potentials on other parameters is ignored during"
+        with pm.Model() as m:
+            a = pm.Normal("a", 0, 1)
+            p = pm.Potential("p", a + 1)
+            obs = pm.Normal("obs", a, 1, observed=5)
+
+        trace = az.from_dict({"a": np.random.rand(10)})
+        with m:
+            with pytest.warns(UserWarning, match=warning_msg):
+                pm.sample_posterior_predictive(trace, samples=5)
+
+            with pytest.warns(UserWarning, match=warning_msg):
+                pm.fast_sample_posterior_predictive(trace, samples=5)
+
 
 class TestSamplePPCW(SeededTest):
     def test_sample_posterior_predictive_w(self):
-        data0 = np.random.normal(0, 1, size=500)
+        data0 = np.random.normal(0, 1, size=50)
+        warning_msg = "The number of samples is too small to check convergence reliably"
 
         with pm.Model() as model_0:
             mu = pm.Normal("mu", mu=0, sigma=1)
             y = pm.Normal("y", mu=mu, sigma=1, observed=data0)
-            trace_0 = pm.sample()
+            with pytest.warns(UserWarning, match=warning_msg):
+                trace_0 = pm.sample(10, tune=0, chains=2, return_inferencedata=False)
             idata_0 = az.from_pymc3(trace_0)
 
         with pm.Model() as model_1:
             mu = pm.Normal("mu", mu=0, sigma=1, shape=len(data0))
             y = pm.Normal("y", mu=mu, sigma=1, observed=data0)
-            trace_1 = pm.sample()
+            with pytest.warns(UserWarning, match=warning_msg):
+                trace_1 = pm.sample(10, tune=0, chains=2, return_inferencedata=False)
             idata_1 = az.from_pymc3(trace_1)
+
+        with pm.Model() as model_2:
+            # Model with no observed RVs.
+            mu = pm.Normal("mu", mu=0, sigma=1)
+            with pytest.warns(UserWarning, match=warning_msg):
+                trace_2 = pm.sample(10, tune=0, return_inferencedata=False)
 
         traces = [trace_0, trace_1]
         idatas = [idata_0, idata_1]
         models = [model_0, model_1]
 
         ppc = pm.sample_posterior_predictive_w(traces, 100, models)
-        assert ppc["y"].shape == (100, 500)
+        assert ppc["y"].shape == (100, 50)
 
         ppc = pm.sample_posterior_predictive_w(idatas, 100, models)
-        assert ppc["y"].shape == (100, 500)
+        assert ppc["y"].shape == (100, 50)
+
+        with model_0:
+            ppc = pm.sample_posterior_predictive_w([idata_0.posterior], None)
+            assert ppc["y"].shape == (20, 50)
+
+        with pytest.raises(ValueError, match="The number of traces and weights should be the same"):
+            pm.sample_posterior_predictive_w([idata_0.posterior], 100, models, weights=[0.5, 0.5])
+
+        with pytest.raises(ValueError, match="The number of models and weights should be the same"):
+            pm.sample_posterior_predictive_w([idata_0.posterior], 100, models)
+
+        with pytest.raises(
+            ValueError, match="The number of observed RVs should be the same for all models"
+        ):
+            pm.sample_posterior_predictive_w([trace_0, trace_2], 100, [model_0, model_2])
+
+    def test_potentials_warning(self):
+        warning_msg = "The effect of Potentials on other parameters is ignored during"
+        with pm.Model() as m:
+            a = pm.Normal("a", 0, 1)
+            p = pm.Potential("p", a + 1)
+            obs = pm.Normal("obs", a, 1, observed=5)
+
+        trace = az.from_dict({"a": np.random.rand(10)})
+        with pytest.warns(UserWarning, match=warning_msg):
+            pm.sample_posterior_predictive_w(samples=5, traces=[trace, trace], models=[m, m])
 
 
 @pytest.mark.parametrize(
@@ -759,6 +867,57 @@ def test_exec_nuts_init(method):
         assert len(start) == 2
         assert isinstance(start[0], dict)
         assert "a" in start[0] and "b_log__" in start[0]
+
+
+@pytest.mark.parametrize(
+    "init, start, expectation",
+    [
+        ("auto", None, pytest.raises(SamplingError)),
+        ("jitter+adapt_diag", None, pytest.raises(SamplingError)),
+        ("auto", {"x": 0}, does_not_raise()),
+        ("jitter+adapt_diag", {"x": 0}, does_not_raise()),
+        ("adapt_diag", None, does_not_raise()),
+    ],
+)
+def test_default_sample_nuts_jitter(init, start, expectation, monkeypatch):
+    # This test tries to check whether the starting points returned by init_nuts are actually
+    # being used when pm.sample() is called without specifying an explicit start point (see
+    # https://github.com/pymc-devs/pymc3/pull/4285).
+    def _mocked_init_nuts(*args, **kwargs):
+        if init == "adapt_diag":
+            start_ = [{"x": np.array(0.79788456)}]
+        else:
+            start_ = [{"x": np.array(-0.04949886)}]
+        _, step = pm.init_nuts(*args, **kwargs)
+        return start_, step
+
+    monkeypatch.setattr("pymc3.sampling.init_nuts", _mocked_init_nuts)
+    with pm.Model() as m:
+        x = pm.HalfNormal("x", transform=None)
+        with expectation:
+            pm.sample(tune=1, draws=0, chains=1, init=init, start=start)
+
+
+@pytest.mark.parametrize(
+    "testval, jitter_max_retries, expectation",
+    [
+        (0, 0, pytest.raises(SamplingError)),
+        (0, 1, pytest.raises(SamplingError)),
+        (0, 4, does_not_raise()),
+        (0, 10, does_not_raise()),
+        (1, 0, does_not_raise()),
+    ],
+)
+def test_init_jitter(testval, jitter_max_retries, expectation):
+    with pm.Model() as m:
+        pm.HalfNormal("x", transform=None, testval=testval)
+
+    with expectation:
+        # Starting value is negative (invalid) when np.random.rand returns 0 (jitter = -1)
+        # and positive (valid) when it returns 1 (jitter = 1)
+        with mock.patch("numpy.random.rand", side_effect=[0, 0, 0, 1, 0]):
+            start = pm.sampling._init_jitter(m, chains=1, jitter_max_retries=jitter_max_retries)
+            pm.util.check_start_vals(start, m)
 
 
 @pytest.fixture(scope="class")
@@ -796,9 +955,8 @@ class TestSamplePriorPredictive(SeededTest):
             with pm.Model():
                 mu = pm.Gamma("mu", 3, 1, shape=1)
                 goals = pm.Poisson("goals", mu, shape=shape)
-                with pytest.warns(DeprecationWarning):
-                    trace1 = pm.sample_prior_predictive(10, vars=["mu", "goals"])
-                    trace2 = pm.sample_prior_predictive(10, var_names=["mu", "goals"])
+                trace1 = pm.sample_prior_predictive(10, var_names=["mu", "mu", "goals"])
+                trace2 = pm.sample_prior_predictive(10, var_names=["mu", "goals"])
             if shape == 2:  # want to test shape as an int
                 shape = (2,)
             assert trace1["goals"].shape == (10,) + shape
@@ -846,7 +1004,7 @@ class TestSamplePriorPredictive(SeededTest):
             phi = pm.Beta("phi", alpha=1.0, beta=1.0)
 
             kappa_log = pm.Exponential("logkappa", lam=5.0)
-            kappa = pm.Deterministic("kappa", tt.exp(kappa_log))
+            kappa = pm.Deterministic("kappa", at.exp(kappa_log))
 
             thetas = pm.Beta("thetas", alpha=phi * kappa, beta=(1.0 - phi) * kappa, shape=n)
 
@@ -877,7 +1035,6 @@ class TestSamplePriorPredictive(SeededTest):
         assert gen2["y"].shape == (draws, n2)
 
     def test_density_dist(self):
-
         obs = np.random.normal(-1, 0.1, size=10)
         with pm.Model():
             mu = pm.Normal("mu", 0, 1)
@@ -913,11 +1070,21 @@ class TestSamplePriorPredictive(SeededTest):
     def test_bounded_dist(self):
         with pm.Model() as model:
             BoundedNormal = pm.Bound(pm.Normal, lower=0.0)
-            x = BoundedNormal("x", mu=tt.zeros((3, 1)), sd=1 * tt.ones((3, 1)), shape=(3, 1))
+            x = BoundedNormal("x", mu=at.zeros((3, 1)), sd=1 * at.ones((3, 1)), shape=(3, 1))
 
         with model:
             prior_trace = pm.sample_prior_predictive(5)
             assert prior_trace["x"].shape == (5, 3, 1)
+
+    def test_potentials_warning(self):
+        warning_msg = "The effect of Potentials on other parameters is ignored during"
+        with pm.Model() as m:
+            a = pm.Normal("a", 0, 1)
+            p = pm.Potential("p", a + 1)
+
+        with m:
+            with pytest.warns(UserWarning, match=warning_msg):
+                pm.sample_prior_predictive(samples=5)
 
 
 class TestSamplePosteriorPredictive:

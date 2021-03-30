@@ -13,54 +13,65 @@
 #   limitations under the License.
 
 import shutil
-import tempfile
 import sys
+import tempfile
 
-from .checks import close_to
-from .models import (
-    simple_categorical,
-    mv_simple,
-    mv_simple_coarse,
-    mv_simple_very_coarse,
-    mv_simple_discrete,
-    mv_prior_simple,
-    simple_2model_continuous,
-)
-from pymc3.sampling import assign_step_methods, sample
-from pymc3.exceptions import SamplingError
-from pymc3.model import Model, Potential, set_data
+from math import isclose
 
-from pymc3.step_methods import (
-    NUTS,
-    BinaryGibbsMetropolis,
-    CategoricalGibbsMetropolis,
-    Metropolis,
-    Slice,
-    CompoundStep,
-    NormalProposal,
-    UniformProposal,
-    MultivariateNormalProposal,
-    RecursiveDAProposal,
-    HamiltonianMC,
-    EllipticalSlice,
-    DEMetropolis,
-    DEMetropolisZ,
-    MLDA,
-)
-from pymc3.step_methods.mlda import extract_Q_estimate
-from pymc3.theanof import floatX
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Beta, HalfNormal, MvNormal
-from pymc3.data import Data
-
-from numpy.testing import assert_array_almost_equal
+import aesara
+import aesara.tensor as at
 import arviz as az
 import numpy as np
 import numpy.testing as npt
 import pytest
-import theano
-import theano.tensor as tt
-from .helpers import select_by_precision
-from math import isclose
+
+from aesara.compile.ops import as_op
+from aesara.graph.op import Op
+from numpy.testing import assert_array_almost_equal
+
+from pymc3.aesaraf import floatX
+from pymc3.data import Data
+from pymc3.distributions import (
+    Bernoulli,
+    Beta,
+    Binomial,
+    Categorical,
+    HalfNormal,
+    MvNormal,
+    Normal,
+)
+from pymc3.exceptions import SamplingError
+from pymc3.model import Model, Potential, set_data
+from pymc3.sampling import assign_step_methods, sample
+from pymc3.step_methods import (
+    MLDA,
+    NUTS,
+    BinaryGibbsMetropolis,
+    CategoricalGibbsMetropolis,
+    CompoundStep,
+    DEMetropolis,
+    DEMetropolisZ,
+    EllipticalSlice,
+    HamiltonianMC,
+    Metropolis,
+    MultivariateNormalProposal,
+    NormalProposal,
+    RecursiveDAProposal,
+    Slice,
+    UniformProposal,
+)
+from pymc3.step_methods.mlda import extract_Q_estimate
+from pymc3.tests.checks import close_to
+from pymc3.tests.helpers import select_by_precision
+from pymc3.tests.models import (
+    mv_prior_simple,
+    mv_simple,
+    mv_simple_coarse,
+    mv_simple_discrete,
+    mv_simple_very_coarse,
+    simple_2model_continuous,
+    simple_categorical,
+)
 
 
 class TestStepMethods:  # yield test doesn't work subclassing object
@@ -489,7 +500,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
     def teardown_class(self):
         shutil.rmtree(self.temp_dir)
 
-    @pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_sample_exact(self):
         for step_method in self.master_samples:
             self.check_trace(step_method)
@@ -580,7 +591,7 @@ class TestStepMethods:  # yield test doesn't work subclassing object
             self.check_stat(check, trace, step.__class__.__name__)
 
     def test_step_discrete(self):
-        if theano.config.floatX == "float32":
+        if aesara.config.floatX == "float32":
             return  # Cannot use @skip because it only skips one iteration of the yield
         start, model, (mu, C) = mv_simple_discrete()
         unc = np.diag(C) ** 0.5
@@ -646,7 +657,7 @@ class TestCompoundStep:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS, DEMetropolis)
 
     @pytest.mark.skipif(
-        theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues"
+        aesara.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues"
     )
     def test_non_blocked(self):
         """Test that samplers correctly create non-blocked compound steps."""
@@ -656,7 +667,7 @@ class TestCompoundStep:
                 assert isinstance(sampler(blocked=False), CompoundStep)
 
     @pytest.mark.skipif(
-        theano.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues"
+        aesara.config.floatX == "float32", reason="Test fails on 32 bit due to linalg issues"
     )
     def test_blocked(self):
         _, model = simple_2model_continuous()
@@ -705,17 +716,17 @@ class TestAssignStepMethods:
         with Model() as model:
             x = Normal("x", 0, 1)
 
-            # a custom Theano Op that does not have a grad:
-            is_64 = theano.config.floatX == "float64"
-            itypes = [tt.dscalar] if is_64 else [tt.fscalar]
-            otypes = [tt.dscalar] if is_64 else [tt.fscalar]
+            # a custom Aesara Op that does not have a grad:
+            is_64 = aesara.config.floatX == "float64"
+            itypes = [at.dscalar] if is_64 else [at.fscalar]
+            otypes = [at.dscalar] if is_64 else [at.fscalar]
 
-            @theano.as_op(itypes, otypes)
+            @as_op(itypes, otypes)
             def kill_grad(x):
                 return x
 
             data = np.random.normal(size=(100,))
-            Normal("y", mu=kill_grad(x), sigma=1, observed=data.astype(theano.config.floatX))
+            Normal("y", mu=kill_grad(x), sigma=1, observed=data.astype(aesara.config.floatX))
 
             steps = assign_step_methods(model, [])
         assert isinstance(steps, Slice)
@@ -946,8 +957,8 @@ class TestDEMetropolisZ:
         pass
 
 
-@pytest.mark.xfail(condition=(theano.config.floatX == "float32"), reason="Fails on float32")
 class TestNutsCheckTrace:
+    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_multiple_samplers(self, caplog):
         with Model():
             prob = Beta("prob", alpha=5.0, beta=3.0)
@@ -975,8 +986,8 @@ class TestNutsCheckTrace:
     def test_linalg(self, caplog):
         with Model():
             a = Normal("a", shape=2)
-            a = tt.switch(a > 0, np.inf, a)
-            b = tt.slinalg.solve(floatX(np.eye(2)), a)
+            a = at.switch(a > 0, np.inf, a)
+            b = at.slinalg.solve(floatX(np.eye(2)), a)
             Normal("c", mu=b, shape=2)
             caplog.clear()
             trace = sample(20, init=None, tune=5, chains=2)
@@ -1123,7 +1134,7 @@ class TestMLDA:
             Normal("x", 0, 1)
             for stepper in TestMLDA.steppers:
                 step = stepper(coarse_models=[coarse_model])
-                trace = sample(chains=2, cores=1, draws=20, tune=0, step=step)
+                trace = sample(chains=2, cores=1, draws=20, tune=0, step=step, random_seed=1)
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
                 assert (
                     len(set(samples)) == 2
@@ -1140,7 +1151,7 @@ class TestMLDA:
             Normal("x", 0, 1)
             for stepper in TestMLDA.steppers:
                 step = stepper(coarse_models=[coarse_model])
-                trace = sample(chains=2, cores=2, draws=20, tune=0, step=step)
+                trace = sample(chains=2, cores=2, draws=20, tune=0, step=step, random_seed=1)
                 samples = np.array(trace.get_values("x", combine=False))[:, 5]
                 assert len(set(samples)) == 2, "Parallelized {} " "chains are identical.".format(
                     stepper
@@ -1166,7 +1177,7 @@ class TestMLDA:
             Normal("x", 5.0, 1.0)
             for coarse_model in possible_coarse_models:
                 step = MLDA(coarse_models=[coarse_model], subsampling_rates=3)
-                trace = sample(chains=1, draws=500, tune=100, step=step)
+                trace = sample(chains=1, draws=500, tune=100, step=step, random_seed=1)
                 acc.append(trace.get_sampler_stats("accepted").mean())
             assert acc[0] > acc[1] > acc[2], (
                 "Acceptance rate is not "
@@ -1429,7 +1440,7 @@ class TestMLDA:
         """Test that AEM estimates mu_B and Sigma_B in
         the coarse models of a 3-level LR example correctly"""
         # create data for linear regression
-        if theano.config.floatX == "float32":
+        if aesara.config.floatX == "float32":
             p = "float32"
         else:
             p = "float64"
@@ -1447,13 +1458,13 @@ class TestMLDA:
         np.fill_diagonal(s, sigma ** 2)
 
         # forward model Op - here, just the regression equation
-        class ForwardModel(tt.Op):
-            if theano.config.floatX == "float32":
-                itypes = [tt.fvector]
-                otypes = [tt.fvector]
+        class ForwardModel(Op):
+            if aesara.config.floatX == "float32":
+                itypes = [at.fvector]
+                otypes = [at.fvector]
             else:
-                itypes = [tt.dvector]
-                otypes = [tt.dvector]
+                itypes = [at.dvector]
+                otypes = [at.dvector]
 
             def __init__(self, x, pymc3_model):
                 self.x = x
@@ -1483,7 +1494,7 @@ class TestMLDA:
             intercept = Normal("Intercept", 0, sigma=20)
             x_coeff = Normal("x", 0, sigma=20)
 
-            theta = tt.as_tensor_variable([intercept, x_coeff])
+            theta = at.as_tensor_variable([intercept, x_coeff])
 
             mout.append(ForwardModel(x, coarse_model_0))
 
@@ -1503,7 +1514,7 @@ class TestMLDA:
             intercept = Normal("Intercept", 0, sigma=20)
             x_coeff = Normal("x", 0, sigma=20)
 
-            theta = tt.as_tensor_variable([intercept, x_coeff])
+            theta = at.as_tensor_variable([intercept, x_coeff])
 
             mout.append(ForwardModel(x, coarse_model_1))
 
@@ -1522,7 +1533,7 @@ class TestMLDA:
             intercept = Normal("Intercept", 0, sigma=20)
             x_coeff = Normal("x", 0, sigma=20)
 
-            theta = tt.as_tensor_variable([intercept, x_coeff])
+            theta = at.as_tensor_variable([intercept, x_coeff])
 
             mout.append(ForwardModel(x, model))
 
@@ -1558,7 +1569,7 @@ class TestMLDA:
         model with multiple levels where approximate levels have fewer data.
         """
         # arithmetic precision
-        if theano.config.floatX == "float32":
+        if aesara.config.floatX == "float32":
             p = "float32"
         else:
             p = "float64"
@@ -1589,13 +1600,13 @@ class TestMLDA:
         nchains = 1
 
         # define likelihoods with different Q
-        class Likelihood1(tt.Op):
-            if theano.config.floatX == "float32":
-                itypes = [tt.fvector]
-                otypes = [tt.fscalar]
+        class Likelihood1(Op):
+            if aesara.config.floatX == "float32":
+                itypes = [at.fvector]
+                otypes = [at.fscalar]
             else:
-                itypes = [tt.dvector]
-                otypes = [tt.dscalar]
+                itypes = [at.dvector]
+                otypes = [at.dscalar]
 
             def __init__(self, x, y, pymc3_model):
                 self.x = x
@@ -1612,13 +1623,13 @@ class TestMLDA:
                     -(0.5 / s ** 2) * np.sum((temp - self.y) ** 2, dtype=p), dtype=p
                 )
 
-        class Likelihood2(tt.Op):
-            if theano.config.floatX == "float32":
-                itypes = [tt.fvector]
-                otypes = [tt.fscalar]
+        class Likelihood2(Op):
+            if aesara.config.floatX == "float32":
+                itypes = [at.fvector]
+                otypes = [at.fscalar]
             else:
-                itypes = [tt.dvector]
-                otypes = [tt.dscalar]
+                itypes = [at.dvector]
+                otypes = [at.dscalar]
 
             def __init__(self, x, y, pymc3_model):
                 self.x = x
@@ -1643,7 +1654,7 @@ class TestMLDA:
                 coarse_models = []
 
                 with Model() as coarse_model_0:
-                    if theano.config.floatX == "float32":
+                    if aesara.config.floatX == "float32":
                         Q = Data("Q", np.float32(0.0))
                     else:
                         Q = Data("Q", np.float64(0.0))
@@ -1652,7 +1663,7 @@ class TestMLDA:
                     intercept = Normal("Intercept", 0, sigma=20)
                     x_coeff = Normal("x", 0, sigma=20)
 
-                    theta = tt.as_tensor_variable([intercept, x_coeff])
+                    theta = at.as_tensor_variable([intercept, x_coeff])
 
                     mout.append(f(x_coarse_0, y_coarse_0, coarse_model_0))
                     Potential("likelihood", mout[0](theta))
@@ -1660,7 +1671,7 @@ class TestMLDA:
                     coarse_models.append(coarse_model_0)
 
                 with Model() as coarse_model_1:
-                    if theano.config.floatX == "float32":
+                    if aesara.config.floatX == "float32":
                         Q = Data("Q", np.float32(0.0))
                     else:
                         Q = Data("Q", np.float64(0.0))
@@ -1669,7 +1680,7 @@ class TestMLDA:
                     intercept = Normal("Intercept", 0, sigma=20)
                     x_coeff = Normal("x", 0, sigma=20)
 
-                    theta = tt.as_tensor_variable([intercept, x_coeff])
+                    theta = at.as_tensor_variable([intercept, x_coeff])
 
                     mout.append(f(x_coarse_1, y_coarse_1, coarse_model_1))
                     Potential("likelihood", mout[1](theta))
@@ -1677,7 +1688,7 @@ class TestMLDA:
                     coarse_models.append(coarse_model_1)
 
                 with Model() as model:
-                    if theano.config.floatX == "float32":
+                    if aesara.config.floatX == "float32":
                         Q = Data("Q", np.float32(0.0))
                     else:
                         Q = Data("Q", np.float64(0.0))
@@ -1686,7 +1697,7 @@ class TestMLDA:
                     intercept = Normal("Intercept", 0, sigma=20)
                     x_coeff = Normal("x", 0, sigma=20)
 
-                    theta = tt.as_tensor_variable([intercept, x_coeff])
+                    theta = at.as_tensor_variable([intercept, x_coeff])
 
                     mout.append(f(x, y, model))
                     Potential("likelihood", mout[-1](theta))

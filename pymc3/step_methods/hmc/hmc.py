@@ -14,11 +14,10 @@
 
 import numpy as np
 
-from ..arraystep import Competence
-from pymc3.vartypes import discrete_types
+from pymc3.step_methods.arraystep import Competence
+from pymc3.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
 from pymc3.step_methods.hmc.integration import IntegrationError
-from pymc3.step_methods.hmc.base_hmc import BaseHMC, HMCStepData, DivergenceInfo
-
+from pymc3.vartypes import discrete_types
 
 __all__ = ["HamiltonianMC"]
 
@@ -60,7 +59,7 @@ class HamiltonianMC(BaseHMC):
 
         Parameters
         ----------
-        vars: list of theano variables
+        vars: list of aesara variables
         path_length: float, default=2
             total length to travel
         step_rand: function float -> float, default=unif

@@ -14,12 +14,16 @@
 import multiprocessing
 import os
 
-import pytest
-import pymc3.parallel_sampling as ps
-import pymc3 as pm
-import theano
-import theano.tensor as tt
+import aesara
+import aesara.tensor as at
 import numpy as np
+import pytest
+
+from aesara.compile.ops import as_op
+from aesara.tensor.type import TensorType
+
+import pymc3 as pm
+import pymc3.parallel_sampling as ps
 
 
 def test_context():
@@ -57,10 +61,10 @@ def test_bad_unpickle():
         assert "could not be unpickled" in str(exc_info.getrepr(style="short"))
 
 
-tt_vector = tt.TensorType(theano.config.floatX, [False])
+at_vector = TensorType(aesara.config.floatX, [False])
 
 
-@theano.as_op([tt_vector, tt.iscalar], [tt_vector])
+@as_op([at_vector, at.iscalar], [at_vector])
 def _crash_remote_process(a, master_pid):
     if os.getpid() != master_pid:
         os.exit(0)
@@ -77,8 +81,8 @@ def test_remote_pipe_closed():
     master_pid = os.getpid()
     with pm.Model():
         x = pm.Normal("x", shape=2, mu=0.1)
-        tt_pid = tt.as_tensor_variable(np.array(master_pid, dtype="int32"))
-        pm.Normal("y", mu=_crash_remote_process(x, tt_pid), shape=2)
+        at_pid = at.as_tensor_variable(np.array(master_pid, dtype="int32"))
+        pm.Normal("y", mu=_crash_remote_process(x, at_pid), shape=2)
 
         step = pm.Metropolis()
         with pytest.raises(RuntimeError, match="Chain [0-9] failed"):
@@ -159,3 +163,43 @@ def test_iterator():
     with sampler:
         for draw in sampler:
             pass
+
+
+def test_spawn_densitydist_function():
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+
+        def func(x):
+            return -2 * (x ** 2).sum()
+
+        obs = pm.DensityDist("density_dist", func, observed=np.random.randn(100))
+        trace = pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
+
+
+def test_spawn_densitydist_bound_method():
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+        normal_dist = pm.Normal.dist(mu, 1)
+        obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
+        msg = "logp for DensityDist is a bound method, leading to RecursionError while serializing"
+        with pytest.raises(ValueError, match=msg):
+            trace = pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
+
+
+def test_spawn_densitydist_syswarning(monkeypatch):
+    monkeypatch.setattr("pymc3.distributions.distribution.PLATFORM", "win32")
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+        normal_dist = pm.Normal.dist(mu, 1)
+        with pytest.warns(UserWarning, match="errors when sampling on platforms"):
+            obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))
+
+
+def test_spawn_densitydist_mpctxwarning(monkeypatch):
+    ctx = multiprocessing.get_context("spawn")
+    monkeypatch.setattr(multiprocessing, "get_context", lambda: ctx)
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+        normal_dist = pm.Normal.dist(mu, 1)
+        with pytest.warns(UserWarning, match="errors when sampling when multiprocessing"):
+            obs = pm.DensityDist("density_dist", normal_dist.logp, observed=np.random.randn(100))

@@ -14,7 +14,8 @@
 
 import pickle
 import traceback
-from .models import simple_model
+
+from pymc3.tests.models import simple_model
 
 
 class TestPickling:

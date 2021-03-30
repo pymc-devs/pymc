@@ -13,28 +13,28 @@
 #   limitations under the License.
 
 from collections.abc import Iterable
-import numpy as np
-import theano
-import theano.tensor as tt
-import warnings
 
-from ..math import logsumexp
-from .dist_math import bound, random_choice
-from .distribution import (
+import aesara
+import aesara.tensor as at
+import numpy as np
+
+from pymc3.aesaraf import _conversion_map, take_along_axis
+from pymc3.distributions.continuous import Normal, get_tau_sigma
+from pymc3.distributions.dist_math import bound, random_choice
+from pymc3.distributions.distribution import (
     Discrete,
     Distribution,
-    draw_values,
-    generate_samples,
     _DrawValuesContext,
     _DrawValuesContextBlocker,
+    draw_values,
+    generate_samples,
 )
-from .shape_utils import (
-    to_tuple,
+from pymc3.distributions.shape_utils import (
     broadcast_distribution_samples,
     get_broadcastable_dist_samples,
+    to_tuple,
 )
-from .continuous import get_tau_sigma, Normal
-from ..theanof import _conversion_map, take_along_axis
+from pymc3.math import logsumexp
 
 __all__ = ["Mixture", "NormalMixture", "MixtureSameFamily"]
 
@@ -143,15 +143,15 @@ class Mixture(Distribution):
             )
         shape = kwargs.pop("shape", ())
 
-        self.w = w = tt.as_tensor_variable(w)
+        self.w = w = at.as_tensor_variable(w)
         self.comp_dists = comp_dists
 
         defaults = kwargs.pop("defaults", [])
 
         if all_discrete(comp_dists):
-            default_dtype = _conversion_map[theano.config.floatX]
+            default_dtype = _conversion_map[aesara.config.floatX]
         else:
-            default_dtype = theano.config.floatX
+            default_dtype = aesara.config.floatX
 
             try:
                 self.mean = (w * self._comp_means()).sum(axis=-1)
@@ -166,9 +166,9 @@ class Mixture(Distribution):
             if isinstance(comp_dists, Distribution):
                 comp_mode_logps = comp_dists.logp(comp_dists.mode)
             else:
-                comp_mode_logps = tt.stack([cd.logp(cd.mode) for cd in comp_dists])
+                comp_mode_logps = at.stack([cd.logp(cd.mode) for cd in comp_dists])
 
-            mode_idx = tt.argmax(tt.log(w) + comp_mode_logps, axis=-1)
+            mode_idx = at.argmax(at.log(w) + comp_mode_logps, axis=-1)
             self.mode = self._comp_modes()[mode_idx]
 
             if "mode" not in defaults:
@@ -253,7 +253,7 @@ class Mixture(Distribution):
                 val_shape = tuple(value.shape.eval())
             except AttributeError:
                 val_shape = value.shape
-            except theano.gof.MissingInputError:
+            except aesara.graph.fg.MissingInputError:
                 val_shape = None
             try:
                 self_shape = tuple(self.shape)
@@ -292,26 +292,26 @@ class Mixture(Distribution):
                 if ndim <= 1:
                     ndim = len(comp_dists.shape) - 1
             if ndim < len(comp_dists.shape):
-                value_ = tt.shape_padright(value, len(comp_dists.shape) - ndim)
+                value_ = at.shape_padright(value, len(comp_dists.shape) - ndim)
             else:
                 value_ = value
             return comp_dists.logp(value_)
         else:
-            return tt.squeeze(
-                tt.stack([comp_dist.logp(value) for comp_dist in comp_dists], axis=-1)
+            return at.squeeze(
+                at.stack([comp_dist.logp(value) for comp_dist in comp_dists], axis=-1)
             )
 
     def _comp_means(self):
         try:
-            return tt.as_tensor_variable(self.comp_dists.mean)
+            return at.as_tensor_variable(self.comp_dists.mean)
         except AttributeError:
-            return tt.squeeze(tt.stack([comp_dist.mean for comp_dist in self.comp_dists], axis=-1))
+            return at.squeeze(at.stack([comp_dist.mean for comp_dist in self.comp_dists], axis=-1))
 
     def _comp_modes(self):
         try:
-            return tt.as_tensor_variable(self.comp_dists.mode)
+            return at.as_tensor_variable(self.comp_dists.mode)
         except AttributeError:
-            return tt.squeeze(tt.stack([comp_dist.mode for comp_dist in self.comp_dists], axis=-1))
+            return at.squeeze(at.stack([comp_dist.mode for comp_dist in self.comp_dists], axis=-1))
 
     def _comp_samples(self, point=None, size=None, comp_dist_shapes=None, broadcast_shape=None):
         if self.comp_is_distribution:
@@ -418,7 +418,7 @@ class Mixture(Distribution):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -427,10 +427,10 @@ class Mixture(Distribution):
         w = self.w
 
         return bound(
-            logsumexp(tt.log(w) + self._comp_logp(value), axis=-1, keepdims=False),
+            logsumexp(at.log(w) + self._comp_logp(value), axis=-1, keepdims=False),
             w >= 0,
             w <= 1,
-            tt.allclose(w.sum(axis=-1), 1),
+            at.allclose(w.sum(axis=-1), 1),
             broadcast_conditions=False,
         )
 
@@ -602,17 +602,38 @@ class NormalMixture(Mixture):
         of the mixture distribution, with one axis being
         the number of components.
 
-    Note: You only have to pass in sigma or tau, but not both.
+    Notes
+    -----
+    You only have to pass in sigma or tau, but not both.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        n_components = 3
+
+        with pm.Model() as gauss_mix:
+            μ = pm.Normal(
+                "μ",
+                data.mean(),
+                10,
+                shape=n_components,
+                transform=pm.transforms.ordered,
+                testval=[1, 2, 3],
+            )
+            σ = pm.HalfNormal("σ", 10, shape=n_components)
+            weights = pm.Dirichlet("w", np.ones(n_components))
+
+            pm.NormalMixture("y", w=weights, mu=μ, sigma=σ, observed=data)
     """
 
     def __init__(self, w, mu, sigma=None, tau=None, sd=None, comp_shape=(), *args, **kwargs):
         if sd is not None:
             sigma = sd
-            warnings.warn("sd is deprecated, use sigma instead", DeprecationWarning)
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        self.mu = mu = tt.as_tensor_variable(mu)
-        self.sigma = self.sd = sigma = tt.as_tensor_variable(sigma)
+        self.mu = mu = at.as_tensor_variable(mu)
+        self.sigma = self.sd = sigma = at.as_tensor_variable(sigma)
 
         super().__init__(w, Normal.dist(mu, sigma=sigma, shape=comp_shape), *args, **kwargs)
 
@@ -654,7 +675,7 @@ class MixtureSameFamily(Distribution):
     """
 
     def __init__(self, w, comp_dists, mixture_axis=-1, *args, **kwargs):
-        self.w = tt.as_tensor_variable(w)
+        self.w = at.as_tensor_variable(w)
         if not isinstance(comp_dists, Distribution):
             raise TypeError(
                 "The MixtureSameFamily distribution only accepts Distribution "
@@ -676,19 +697,19 @@ class MixtureSameFamily(Distribution):
         # Compute the mode so we don't always have to pass a testval
         defaults = kwargs.pop("defaults", [])
         event_shape = self.comp_dists.shape[mixture_axis + 1 :]
-        _w = tt.shape_padleft(
-            tt.shape_padright(w, len(event_shape)),
+        _w = at.shape_padleft(
+            at.shape_padright(w, len(event_shape)),
             len(self.comp_dists.shape) - w.ndim - len(event_shape),
         )
         mode = take_along_axis(
             self.comp_dists.mode,
-            tt.argmax(_w, keepdims=True),
+            at.argmax(_w, keepdims=True),
             axis=mixture_axis,
         )
         self.mode = mode[(..., 0) + (slice(None),) * len(event_shape)]
 
         if not all_discrete(comp_dists):
-            mean = tt.as_tensor_variable(self.comp_dists.mean)
+            mean = at.as_tensor_variable(self.comp_dists.mean)
             self.mean = (_w * mean).sum(axis=mixture_axis)
             if "mean" not in defaults:
                 defaults.append("mean")
@@ -704,7 +725,7 @@ class MixtureSameFamily(Distribution):
         ----------
         value : numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or theano tensor
+            values are desired the values must be provided in a numpy array or aesara tensor
 
         Returns
         -------
@@ -721,7 +742,7 @@ class MixtureSameFamily(Distribution):
         # We first have to pad the shape of w to the right with ones
         # so that it can broadcast with the event_shape.
 
-        w = tt.shape_padright(w, len(event_shape))
+        w = at.shape_padright(w, len(event_shape))
 
         # Second, we have to add the mixture_axis to the value tensor
         # To insert the mixture axis at the correct location, we use the
@@ -730,14 +751,14 @@ class MixtureSameFamily(Distribution):
         # than the ones present in the comp_dists.
         comp_dists_ndim = len(comp_dists.shape)
 
-        value = tt.shape_padaxis(value, axis=mixture_axis - comp_dists_ndim)
+        value = at.shape_padaxis(value, axis=mixture_axis - comp_dists_ndim)
 
         comp_logp = comp_dists.logp(value)
         return bound(
-            logsumexp(tt.log(w) + comp_logp, axis=mixture_axis, keepdims=False),
+            logsumexp(at.log(w) + comp_logp, axis=mixture_axis, keepdims=False),
             w >= 0,
             w <= 1,
-            tt.allclose(w.sum(axis=mixture_axis - comp_dists_ndim), 1),
+            at.allclose(w.sum(axis=mixture_axis - comp_dists_ndim), 1),
             broadcast_conditions=False,
         )
 
@@ -846,12 +867,6 @@ class MixtureSameFamily(Distribution):
 
         # The `samples` array still has the `mixture_axis`, so we must remove it:
         output = samples[(..., 0) + (slice(None),) * len(event_shape)]
-
-        # Final oddity: if size == 1, pymc3 defaults to reducing the sample_shape dimension
-        # We do this to stay consistent with the rest of the package even though
-        # we shouldn't have to do it.
-        if size == 1:
-            output = output[0]
         return output
 
     def _distr_parameters_for_repr(self):

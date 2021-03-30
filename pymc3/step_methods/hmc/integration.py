@@ -15,8 +15,8 @@
 from collections import namedtuple
 
 import numpy as np
-from scipy import linalg
 
+from scipy import linalg
 
 State = namedtuple("State", "q, p, v, q_grad, energy, model_logp")
 

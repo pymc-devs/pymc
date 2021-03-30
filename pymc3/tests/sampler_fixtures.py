@@ -12,14 +12,17 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pymc3 as pm
-from pymc3.util import get_var_name
+import aesara.tensor as at
+import arviz as az
 import numpy as np
 import numpy.testing as npt
-from scipy import stats
-import theano.tensor as tt
 
-from .helpers import SeededTest
+from scipy import stats
+
+import pymc3 as pm
+
+from pymc3.tests.helpers import SeededTest
+from pymc3.util import get_var_name
 
 
 class KnownMean:
@@ -121,9 +124,9 @@ class LKJCholeskyCovFixture(KnownCDF):
             sd_dist = pm.Lognormal.dist(mu=sd_mu, sigma=sd_mu / 10.0, shape=5)
             chol_packed = pm.LKJCholeskyCov("chol_packed", eta=3, n=5, sd_dist=sd_dist)
             chol = pm.expand_packed_triangular(5, chol_packed, lower=True)
-            cov = tt.dot(chol, chol.T)
-            stds = tt.sqrt(tt.diag(cov))
-            pm.Deterministic("log_stds", tt.log(stds))
+            cov = at.dot(chol, chol.T)
+            stds = at.sqrt(at.diag(cov))
+            pm.Deterministic("log_stds", at.log(stds))
             corr = cov / stds[None, :] / stds[:, None]
             corr_entries_unit = (corr[np.tril_indices(5, -1)] + 1) / 2
             pm.Deterministic("corr_entries_unit", corr_entries_unit)
@@ -144,12 +147,12 @@ class BaseSampler(SeededTest):
 
     def test_neff(self):
         if hasattr(self, "min_n_eff"):
-            n_eff = pm.ess(self.trace[self.burn :])
+            n_eff = az.ess(self.trace[self.burn :])
             for var in n_eff:
                 npt.assert_array_less(self.min_n_eff, n_eff[var])
 
     def test_Rhat(self):
-        rhat = pm.rhat(self.trace[self.burn :])
+        rhat = az.rhat(self.trace[self.burn :])
         for var in rhat:
             npt.assert_allclose(rhat[var], 1, rtol=0.01)
 

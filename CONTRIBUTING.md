@@ -15,6 +15,8 @@ We appreciate being notified of problems with the existing PyMC code. We prefer 
 
 Please verify that your issue is not being currently addressed by other issues or pull requests by using the GitHub search tool to look for key words in the project issue tracker.
 
+Filter on the ["beginner friendly"](https://github.com/pymc-devs/pymc3/issues?q=is%3Aopen+is%3Aissue+label%3A%22beginner+friendly%22) label for issues which are good for new contributors.
+
 # Contributing code via pull requests
 
 While issue reporting is valuable, we strongly encourage users who are inclined to do so to submit patches for new or existing issues via pull requests. This is particularly the case for simple fixes, such as typos or tweaks to documentation, which do not require a heavy investment of time and attention.
@@ -38,7 +40,7 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
 3. Create a ``feature`` branch to hold your development changes:
 
    ```bash
-   $ git switch -c my-feature
+   $ git checkout -b my-feature
    ```
 
    Always use a ``feature`` branch. It's good practice to never routinely work on the ``master`` branch of any repository.
@@ -46,8 +48,8 @@ The preferred workflow for contributing to PyMC3 is to fork the [GitHub reposito
 4. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``. The easiest (and recommended) way to set up a development environment is via [miniconda](https://docs.conda.io/en/latest/miniconda.html):
 
    ```bash
-   $ conda env create -f conda-envs/environment-dev-py36.yml  # or py37 or py38
-   $ conda activate pymc3-dev-py36
+   $ conda env create -f conda-envs/environment-dev-py37.yml  # or py38 or py39
+   $ conda activate pymc3-dev-py37
    $ pip install -e .
    ```
 
@@ -111,7 +113,7 @@ tools:
   $ pytest --cov=pymc3 pymc3/tests/<name of test>.py
   ```
 
-* No `pre-commit` errors: see the [Python code style](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Python-Code-Style) and [Jupyter Notebook style](https://github.com/pymc-devs/pymc3/wiki/PyMC's-Jupyter-Notebook-Style) page from our Wiki on how to install and run it.
+* No `pre-commit` errors: see the [Python code style](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Python-Code-Style) and [Jupyter Notebook style](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Jupyter-Notebook-Style-Guide) page from our Wiki on how to install and run it.
 
 ## Developing in Docker
 
@@ -143,7 +145,10 @@ docker exec -it pymc3 jupyter notebook list
 
 ## Style guide
 
-Follow [TensorFlow's style guide](https://www.tensorflow.org/community/contribute/code_style) or the [Google style guide](https://google.github.io/styleguide/pyguide.html) for writing code, which more or less follows PEP 8.
+We have configured a pre-commit hook that checks for `black`-compliant code style.
+We encourage you to configure the pre-commit hook as described in the [PyMC3 Python Code Style Wiki Page](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Python-Code-Style), because it will automatically enforce the code style on your commits.
+
+Similarly, consult the [PyMC's Jupyter Notebook Style](https://github.com/pymc-devs/pymc3/wiki/PyMC3-Jupyter-Notebook-Style-Guide) guides for notebooks.
 
 For documentation strings, we *prefer* [numpy style](https://numpydoc.readthedocs.io/en/latest/format.html) to comply with the style that predominates in our upstream dependencies.
 

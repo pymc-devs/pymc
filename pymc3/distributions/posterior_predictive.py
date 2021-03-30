@@ -1,54 +1,47 @@
-import numbers
-from typing import (
-    List,
-    Dict,
-    Any,
-    Optional,
-    Tuple,
-    Union,
-    cast,
-    TYPE_CHECKING,
-    Callable,
-    overload,
-    Set,
-)
-import warnings
+from __future__ import annotations
+
+import contextvars
 import logging
+import numbers
+import warnings
+
 from collections import UserDict
 from contextlib import AbstractContextManager
-import contextvars
-from typing_extensions import Protocol, Literal
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, cast, overload
 
+import aesara.graph.basic
+import aesara.graph.fg
 import numpy as np
-import theano
-import theano.tensor as tt
-from xarray import Dataset
-from arviz import InferenceData
 
-from ..backends.base import MultiTrace
-from .distribution import (
+from aesara.compile.sharedvalue import SharedVariable
+from aesara.graph.basic import Constant
+from aesara.tensor.var import TensorVariable
+from arviz import InferenceData
+from typing_extensions import Literal, Protocol
+from xarray import Dataset
+
+from pymc3.backends.base import MultiTrace
+from pymc3.distributions.distribution import (
+    _compile_aesara_function,
     _DrawValuesContext,
     _DrawValuesContextBlocker,
     is_fast_drawable,
-    _compile_theano_function,
     vectorized_ppc,
 )
-from ..model import (
+from pymc3.exceptions import IncorrectArgumentsError
+from pymc3.model import (
     Model,
-    get_named_nodes_and_relations,
-    ObservedRV,
     MultiObservedRV,
+    ObservedRV,
+    get_named_nodes_and_relations,
     modelcontext,
 )
-from ..exceptions import IncorrectArgumentsError
-from ..vartypes import theano_constant
-from ..util import dataset_to_point_dict, chains_and_samples, get_var_name
+from pymc3.util import chains_and_samples, dataset_to_point_list, get_var_name
 
 # Failing tests:
 #    test_mixture_random_shape::test_mixture_random_shape
 #
 
-PosteriorPredictiveTrace = Dict[str, np.ndarray]
 Point = Dict[str, np.ndarray]
 
 
@@ -56,13 +49,7 @@ class HasName(Protocol):
     name: str
 
 
-if TYPE_CHECKING:
-    _TraceDictParent = UserDict[str, np.ndarray]
-else:
-    _TraceDictParent = UserDict
-
-
-class _TraceDict(_TraceDictParent):
+class _TraceDict(UserDict):
     """This class extends the standard trace-based representation
     of traces by adding some helpful attributes used in posterior predictive
     sampling.
@@ -71,26 +58,26 @@ class _TraceDict(_TraceDictParent):
     ~~~~~~~~~~
         varnames: list of strings"""
 
-    varnames: List[str]
+    varnames: list[str]
     _len: int
-    data: Dict[str, np.ndarray]
+    data: Point
 
     def __init__(
         self,
-        point_list: Optional[List[Dict[str, np.ndarray]]] = None,
-        multi_trace: Optional[MultiTrace] = None,
-        dict: Optional[Dict[str, np.ndarray]] = None,
+        point_list: list[Point] | None = None,
+        multi_trace: MultiTrace | None = None,
+        dict_: Point | None = None,
     ):
         """"""
         if multi_trace:
-            assert point_list is None and dict is None
-            self.data = {}  # Dict[str, np.ndarray]
+            assert point_list is None and dict_ is None
+            self.data = {}
             self._len = sum(len(multi_trace._straces[chain]) for chain in multi_trace.chains)
             self.varnames = multi_trace.varnames
             for vn in multi_trace.varnames:
                 self.data[vn] = multi_trace.get_values(vn)
         if point_list is not None:
-            assert multi_trace is None and dict is None
+            assert multi_trace is None and dict_ is None
             self.varnames = varnames = list(point_list[0].keys())
             rep_values = [point_list[0][varname] for varname in varnames]
             # translate the point list.
@@ -112,18 +99,18 @@ class _TraceDict(_TraceDictParent):
             for i, point in enumerate(point_list):
                 for var, value in point.items():
                     self.data[var][i] = value
-        if dict is not None:
+        if dict_ is not None:
             assert point_list is None and multi_trace is None
-            self.data = dict
-            self.varnames = list(dict.keys())
-            self._len = dict[self.varnames[0]].shape[0]
+            self.data = dict_
+            self.varnames = list(dict_.keys())
+            self._len = dict_[self.varnames[0]].shape[0]
         assert self.varnames is not None and self._len is not None and self.data is not None
 
     def __len__(self) -> int:
         return self._len
 
-    def _extract_slice(self, slc: slice) -> "_TraceDict":
-        sliced_dict: Dict[str, np.ndarray] = {}
+    def _extract_slice(self, slc: slice) -> _TraceDict:
+        sliced_dict: Point = {}
 
         def apply_slice(arr: np.ndarray) -> np.ndarray:
             if len(arr.shape) == 1:
@@ -133,14 +120,14 @@ class _TraceDict(_TraceDictParent):
 
         for vn, arr in self.data.items():
             sliced_dict[vn] = apply_slice(arr)
-        return _TraceDict(dict=sliced_dict)
+        return _TraceDict(dict_=sliced_dict)
 
     @overload
-    def __getitem__(self, item: Union[str, HasName]) -> np.ndarray:
+    def __getitem__(self, item: str | HasName) -> np.ndarray:
         ...
 
     @overload
-    def __getitem__(self, item: Union[slice, int]) -> "_TraceDict":
+    def __getitem__(self, item: slice | int) -> _TraceDict:
         ...
 
     def __getitem__(self, item):
@@ -149,7 +136,7 @@ class _TraceDict(_TraceDictParent):
         elif isinstance(item, slice):
             return self._extract_slice(item)
         elif isinstance(item, int):
-            return _TraceDict(dict={k: np.atleast_1d(v[item]) for k, v in self.data.items()})
+            return _TraceDict(dict_={k: np.atleast_1d(v[item]) for k, v in self.data.items()})
         elif hasattr(item, "name"):
             return super().__getitem__(item.name)
         else:
@@ -157,13 +144,13 @@ class _TraceDict(_TraceDictParent):
 
 
 def fast_sample_posterior_predictive(
-    trace: Union[MultiTrace, Dataset, InferenceData, List[Dict[str, np.ndarray]]],
-    samples: Optional[int] = None,
-    model: Optional[Model] = None,
-    var_names: Optional[List[str]] = None,
+    trace: MultiTrace | Dataset | InferenceData | list[dict[str, np.ndarray]],
+    samples: int | None = None,
+    model: Model | None = None,
+    var_names: list[str] | None = None,
     keep_size: bool = False,
     random_seed=None,
-) -> Dict[str, np.ndarray]:
+) -> dict[str, np.ndarray]:
     """Generate posterior predictive samples from a model given a trace.
 
     This is a vectorized alternative to the standard ``sample_posterior_predictive`` function.
@@ -209,10 +196,10 @@ def fast_sample_posterior_predictive(
 
     if isinstance(trace, InferenceData):
         nchains, ndraws = chains_and_samples(trace)
-        trace = dataset_to_point_dict(trace.posterior)
+        trace = dataset_to_point_list(trace.posterior)
     elif isinstance(trace, Dataset):
         nchains, ndraws = chains_and_samples(trace)
-        trace = dataset_to_point_dict(trace)
+        trace = dataset_to_point_list(trace)
     elif isinstance(trace, MultiTrace):
         nchains = trace.nchains
         ndraws = len(trace)
@@ -225,6 +212,14 @@ def fast_sample_posterior_predictive(
 
     model = modelcontext(model)
     assert model is not None
+
+    if model.potentials:
+        warnings.warn(
+            "The effect of Potentials on other parameters is ignored during posterior predictive sampling. "
+            "This is likely to lead to invalid or biased predictive samples.",
+            UserWarning,
+        )
+
     with model:
 
         if keep_size and samples is not None:
@@ -244,7 +239,7 @@ def fast_sample_posterior_predictive(
 
         assert isinstance(_trace, _TraceDict)
 
-        _samples: List[int] = []
+        _samples: list[int] = []
         # temporary replacement for more complicated logic.
         max_samples: int = len_trace
         if samples is None or samples == max_samples:
@@ -283,7 +278,7 @@ def fast_sample_posterior_predictive(
             _ETPParent = UserDict
 
         class _ExtendableTrace(_ETPParent):
-            def extend_trace(self, trace: Dict[str, np.ndarray]) -> None:
+            def extend_trace(self, trace: dict[str, np.ndarray]) -> None:
                 for k, v in trace.items():
                     if k in self.data:
                         self.data[k] = np.concatenate((self.data[k], v))
@@ -295,22 +290,20 @@ def fast_sample_posterior_predictive(
             strace = _trace if s == len_trace else _trace[slice(0, s)]
             try:
                 values = posterior_predictive_draw_values(cast(List[Any], vars), strace, s)
-                new_trace: Dict[str, np.ndarray] = {k.name: v for (k, v) in zip(vars, values)}
+                new_trace: dict[str, np.ndarray] = {k.name: v for (k, v) in zip(vars, values)}
                 ppc_trace.extend_trace(new_trace)
             except KeyboardInterrupt:
                 pass
 
-        if keep_size:
-            return {
-                k: ary.reshape((nchains, ndraws, *ary.shape[1:])) for k, ary in ppc_trace.items()
-            }
-        # this gets us a Dict[str, np.ndarray] instead of my wrapped equiv.
-        return ppc_trace.data
+    if keep_size:
+        return {k: ary.reshape((nchains, ndraws, *ary.shape[1:])) for k, ary in ppc_trace.items()}
+    # this gets us a Dict[str, np.ndarray] instead of my wrapped equiv.
+    return ppc_trace.data
 
 
 def posterior_predictive_draw_values(
-    vars: List[Any], trace: _TraceDict, samples: int
-) -> List[np.ndarray]:
+    vars: list[Any], trace: _TraceDict, samples: int
+) -> list[np.ndarray]:
     with _PosteriorPredictiveSampler(vars, trace, samples, None) as sampler:
         return sampler.draw_values()
 
@@ -319,25 +312,25 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
     """The process of posterior predictive sampling is quite complicated so this provides a central data store."""
 
     # inputs
-    vars: List[Any]
+    vars: list[Any]
     trace: _TraceDict
     samples: int
-    size: Optional[int]  # not supported!
+    size: int | None  # not supported!
 
     # other slots
     logger: logging.Logger
 
     # for the search
-    evaluated: Dict[int, np.ndarray]
-    symbolic_params: List[Tuple[int, Any]]
+    evaluated: dict[int, np.ndarray]
+    symbolic_params: list[tuple[int, Any]]
 
     # set by make_graph...
-    leaf_nodes: Dict[str, Any]
-    named_nodes_parents: Dict[str, Any]
-    named_nodes_children: Dict[str, Any]
+    leaf_nodes: dict[str, Any]
+    named_nodes_parents: dict[str, Any]
+    named_nodes_children: dict[str, Any]
     _tok: contextvars.Token
 
-    def __init__(self, vars, trace: _TraceDict, samples, model: Optional[Model], size=None):
+    def __init__(self, vars, trace: _TraceDict, samples, model: Model | None, size=None):
         if size is not None:
             raise NotImplementedError(
                 "sample_posterior_predictive does not support the size argument at this time."
@@ -349,7 +342,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
         self.size = size
         self.logger = logging.getLogger("posterior_predictive")
 
-    def __enter__(self) -> "_PosteriorPredictiveSampler":
+    def __enter__(self) -> _PosteriorPredictiveSampler:
         self._tok = vectorized_ppc.set(posterior_predictive_draw_values)
         return self
 
@@ -357,7 +350,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
         vectorized_ppc.reset(self._tok)
         return False
 
-    def draw_values(self) -> List[np.ndarray]:
+    def draw_values(self) -> list[np.ndarray]:
         vars = self.vars
         trace = self.trace
         samples = self.samples
@@ -383,13 +376,13 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                 if (next_, samples) in drawn:
                     # If the node already has a givens value, skip it
                     continue
-                elif isinstance(next_, (theano_constant, tt.sharedvar.SharedVariable)):
-                    # If the node is a theano.tensor.TensorConstant or a
-                    # theano.tensor.sharedvar.SharedVariable, its value will be
-                    # available automatically in _compile_theano_function so
+                elif isinstance(next_, (Constant, SharedVariable)):
+                    # If the node is a aesara.tensor.TensorConstant or a
+                    # aesara.tensor.sharedvar.SharedVariable, its value will be
+                    # available automatically in _compile_aesara_function so
                     # we can skip it. Furthermore, if this node was treated as a
-                    # TensorVariable that should be compiled by theano in
-                    # _compile_theano_function, it would raise a `TypeError:
+                    # TensorVariable that should be compiled by aesara in
+                    # _compile_aesara_function, it would raise a `TypeError:
                     # ('Constants not allowed in param list', ...)` for
                     # TensorConstant, and a `TypeError: Cannot use a shared
                     # variable (...) as explicit input` for SharedVariable.
@@ -419,7 +412,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                         assert isinstance(value, np.ndarray)
                         givens[next_.name] = (next_, value)
                         drawn[(next_, samples)] = value
-                    except theano.gof.fg.MissingInputError:
+                    except aesara.graph.fg.MissingInputError:
                         # The node failed, so we must add the node's parents to
                         # the stack of nodes to try to draw from. We exclude the
                         # nodes in the `params` list.
@@ -434,8 +427,8 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
             # the below makes sure the graph is evaluated in order
             # test_distributions_random::TestDrawValues::test_draw_order fails without it
             # The remaining params that must be drawn are all hashable
-            to_eval: Set[int] = set()
-            missing_inputs: Set[int] = {j for j, p in self.symbolic_params}
+            to_eval: set[int] = set()
+            missing_inputs: set[int] = {j for j, p in self.symbolic_params}
 
             while to_eval or missing_inputs:
                 if to_eval == missing_inputs:
@@ -464,7 +457,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                             assert isinstance(value, np.ndarray)
                             self.evaluated[param_idx] = drawn[(param, samples)] = value
                             givens[param.name] = (param, value)
-                        except theano.gof.fg.MissingInputError:
+                        except aesara.graph.fg.MissingInputError:
                             missing_inputs.add(param_idx)
         return [self.evaluated[j] for j in params]
 
@@ -473,19 +466,19 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
         from the posterior predictive distribution.  Notably it initializes the
         ``_DrawValuesContext`` bookkeeping object and evaluates the "fast drawable"
         parts of the model."""
-        vars: List[Any] = self.vars
+        vars: list[Any] = self.vars
         trace: _TraceDict = self.trace
         samples: int = self.samples
-        leaf_nodes: Dict[str, Any]
-        named_nodes_parents: Dict[str, Any]
-        named_nodes_children: Dict[str, Any]
+        leaf_nodes: dict[str, Any]
+        named_nodes_parents: dict[str, Any]
+        named_nodes_children: dict[str, Any]
 
         # initialization phase
         context = _DrawValuesContext.get_context()
         assert isinstance(context, _DrawValuesContext)
         with context:
             drawn = context.drawn_vars
-            evaluated: Dict[int, Any] = {}
+            evaluated: dict[int, Any] = {}
             symbolic_params = []
             for i, var in enumerate(vars):
                 if is_fast_drawable(var):
@@ -530,14 +523,14 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     else:
                         self.named_nodes_children[k].update(nnc[k])
 
-    def draw_value(self, param, trace: Optional[_TraceDict] = None, givens=None):
+    def draw_value(self, param, trace: _TraceDict | None = None, givens=None):
         """Draw a set of random values from a distribution or return a constant.
 
         Parameters
         ----------
-        param: number, array like, theano variable or pymc3 random variable
+        param: number, array like, aesara variable or pymc3 random variable
             The value or distribution. Constants or shared variables
-            will be converted to an array and returned. Theano variables
+            will be converted to an array and returned. Aesara variables
             are evaluated. If `param` is a pymc3 random variable, draw
             values from it and return that (as ``np.ndarray``), unless a
             value is specified in the ``trace``.
@@ -545,8 +538,8 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
             A dictionary from pymc3 variable names to samples of their values
             used to provide context for evaluating ``param``.
         givens: dict, optional
-            A dictionary from theano variables to their values. These values
-            are used to evaluate ``param`` if it is a theano variable.
+            A dictionary from aesara variables to their values. These values
+            are used to evaluate ``param`` if it is a aesara variable.
         """
         samples = self.samples
 
@@ -555,11 +548,9 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
             param,
             point: _TraceDict,
             size: int,
-            shape: Tuple[int, ...],
+            shape: tuple[int, ...],
         ) -> np.ndarray:
             val = meth(point=point, size=size)
-            if size == 1:
-                val = np.expand_dims(val, axis=0)
             try:
                 assert val.shape == (size,) + shape, (
                     "Sampling from random of %s yields wrong shape" % param
@@ -579,17 +570,17 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
 
         if isinstance(param, (numbers.Number, np.ndarray)):
             return param
-        elif isinstance(param, theano_constant):
+        elif isinstance(param, Constant):
             return param.value
-        elif isinstance(param, tt.sharedvar.SharedVariable):
+        elif isinstance(param, SharedVariable):
             return param.get_value()
-        elif isinstance(param, (tt.TensorVariable, MultiObservedRV)):
+        elif isinstance(param, (TensorVariable, MultiObservedRV)):
             if hasattr(param, "model") and trace and param.name in trace.varnames:
                 return trace[param.name]
             elif hasattr(param, "random") and param.random is not None:
                 model = modelcontext(None)
                 assert isinstance(model, Model)
-                shape: Tuple[int, ...] = tuple(_param_shape(param, model))
+                shape: tuple[int, ...] = tuple(_param_shape(param, model))
                 return random_sample(param.random, param, point=trace, size=samples, shape=shape)
             elif (
                 hasattr(param, "distribution")
@@ -600,7 +591,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     # shape inspection for ObservedRV
                     dist_tmp = param.distribution
                     try:
-                        distshape: Tuple[int, ...] = tuple(param.observations.shape.eval())
+                        distshape: tuple[int, ...] = tuple(param.observations.shape.eval())
                     except AttributeError:
                         distshape = tuple(param.observations.shape)
 
@@ -615,7 +606,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                         )
                     except (ValueError, TypeError):
                         # reset shape to account for shape changes
-                        # with theano.shared inputs
+                        # with aesara.shared inputs
                         dist_tmp.shape = ()
                         # We want to draw values to infer the dist_shape,
                         # we don't want to store these drawn values to the context
@@ -660,7 +651,9 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     variables = values = []
                 # We only truly care if the ancestors of param that were given
                 # value have the matching dshape and val.shape
-                param_ancestors = set(theano.gof.graph.ancestors([param], blockers=list(variables)))
+                param_ancestors = set(
+                    aesara.graph.basic.ancestors([param], blockers=list(variables))
+                )
                 inputs = [
                     (var, val) for var, val in zip(variables, values) if var in param_ancestors
                 ]
@@ -669,7 +662,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                 else:
                     input_vars = []
                     input_vals = []
-                func = _compile_theano_function(param, input_vars)
+                func = _compile_aesara_function(param, input_vars)
                 if not input_vars:
                     assert input_vals == []  # AFAICT if there are now vars, there can't be vals
                     output = func(*input_vals)
@@ -685,7 +678,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
         raise ValueError("Unexpected type in draw_value: %s" % type(param))
 
 
-def _param_shape(var_desig, model: Model) -> Tuple[int, ...]:
+def _param_shape(var_desig, model: Model) -> tuple[int, ...]:
     if isinstance(var_desig, str):
         v = model[var_desig]
     else:
@@ -693,7 +686,7 @@ def _param_shape(var_desig, model: Model) -> Tuple[int, ...]:
     if hasattr(v, "observations"):
         try:
             # To get shape of _observed_ data container `pm.Data`
-            # (wrapper for theano.SharedVariable) we evaluate it.
+            # (wrapper for SharedVariable) we evaluate it.
             shape = tuple(v.observations.shape.eval())
         except AttributeError:
             shape = v.observations.shape

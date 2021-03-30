@@ -12,13 +12,17 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from logging.handlers import BufferingHandler
 import contextlib
+
+from logging.handlers import BufferingHandler
+
+import aesara
 import numpy.random as nr
-from theano.sandbox.rng_mrg import MRG_RandomStreams
-from ..theanof import set_tt_rng, tt_rng
-import theano
-from theano.gradient import verify_grad as tt_verify_grad
+
+from aesara.gradient import verify_grad as at_verify_grad
+from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
+
+from pymc3.aesaraf import at_rng, set_at_rng
 
 
 class SeededTest:
@@ -30,11 +34,11 @@ class SeededTest:
 
     def setup_method(self):
         nr.seed(self.random_seed)
-        self.old_tt_rng = tt_rng()
-        set_tt_rng(MRG_RandomStreams(self.random_seed))
+        self.old_at_rng = at_rng()
+        set_at_rng(RandomStream(self.random_seed))
 
     def teardown_method(self):
-        set_tt_rng(self.old_tt_rng)
+        set_at_rng(self.old_at_rng)
 
 
 class LoggingHandler(BufferingHandler):
@@ -100,7 +104,7 @@ class Matcher:
 
 def select_by_precision(float64, float32):
     """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
-    decimal = float64 if theano.config.floatX == "float64" else float32
+    decimal = float64 if aesara.config.floatX == "float64" else float32
     return decimal
 
 
@@ -112,4 +116,4 @@ def not_raises():
 def verify_grad(op, pt, n_tests=2, rng=None, *args, **kwargs):
     if rng is None:
         rng = nr.RandomState(411342)
-    tt_verify_grad(op, pt, n_tests, rng, *args, **kwargs)
+    at_verify_grad(op, pt, n_tests, rng, *args, **kwargs)
