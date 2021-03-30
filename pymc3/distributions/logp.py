@@ -19,7 +19,8 @@ import aesara.tensor as at
 import numpy as np
 
 from aesara import config
-from aesara.graph.basic import graph_inputs, io_toposort
+from aesara.gradient import disconnected_grad
+from aesara.graph.basic import Constant, clone, graph_inputs, io_toposort
 from aesara.graph.op import Op, compute_test_value
 from aesara.graph.type import CType
 from aesara.tensor.subtensor import (
@@ -147,7 +148,7 @@ def logpt(
 
     if rv_value is None:
 
-        if rv_value_var is None:
+        if rv_var is not None and rv_value_var is None:
             raise ValueError(f"No value variable specified or associated with {rv_var}")
 
         rv_value = rv_value_var
@@ -271,7 +272,13 @@ def incsubtensor_logp(op, value, inputs, **kwargs):
 
     index = index_from_subtensor(getattr(op, "idx_list", None), indices)
 
-    new_values = at.set_subtensor(rv_var[index], rv_values)
+    _, (new_rv_var,) = clone(
+        tuple(v for v in graph_inputs((rv_var,)) if not isinstance(v, Constant)),
+        (rv_var,),
+        copy_inputs=False,
+        copy_orphans=False,
+    )
+    new_values = at.set_subtensor(disconnected_grad(new_rv_var)[index], rv_values)
     logp_var = logpt(rv_var, new_values, **kwargs)
 
     return logp_var
