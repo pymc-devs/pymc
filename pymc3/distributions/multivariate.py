@@ -1925,6 +1925,44 @@ class KroneckerNormal(Continuous):
         return ["mu"]
 
 
+class CARRV(RandomVariable):
+    name = "car"
+    ndim_supp = 1
+    ndims_params = [1, 2, 1, 1, 0]
+    dtype = "floatX"
+    _print_name = ("CAR", "\\operatorname{CAR}")
+
+    @classmethod
+    def rng_fn(cls, rng: np.random.RandomState,  mu, W, alpha, tau, size):
+        """
+        Implementation of algorithm from paper
+        Havard Rue, 2001. "Fast sampling of Gaussian Markov random fields,"
+        Journal of the Royal Statistical Society Series B, Royal Statistical Society,
+        vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288
+        """
+        D = scipy.sparse.diags(W.sum(axis=0))
+        if not scipy.sparse.issparse(W):
+            W = scipy.sparse.csr_matrix(W)
+        tau = scipy.sparse.csr_matrix(tau)
+        alpha = scipy.sparse.csr_matrix(alpha)
+        perm_array = scipy.sparse.csgraph.reverse_cuthill_mckee(W,  symmetric_mode=True)
+        W = W[perm_array, :]
+        W = W[:, perm_array]
+        Q = tau.multiply((D - alpha.multiply(W)))
+        Qb = Q.diagonal()
+        u = 1
+        while np.count_nonzero(Q.diagonal(u)) > 0:
+            Qb = np.vstack((np.pad(Q.diagonal(u), (u, 0), constant_values=(0, 0)), Qb))
+            u += 1
+        L = scipy.linalg.cholesky_banded(Qb, lower=False)
+        z = rng.normal(size=W.shape[0], loc=mu)
+        samples = scipy.linalg.cho_solve_banded((L, False), z)
+        return samples
+
+
+car = CARRV()
+
+
 class CAR(Continuous):
     r"""
     Likelihood for a conditional autoregression. This is a special case of the
@@ -1966,45 +2004,36 @@ class CAR(Continuous):
         "Generalized Hierarchical Multivariate CAR Models for Areal Data"
         Biometrics, Vol. 61, No. 4 (Dec., 2005), pp. 950-961
     """
+    rv_op = car
 
-    def __init__(self, mu, W, alpha, tau, sparse=False, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    @classmethod
+    def dist(cls,  mu, W, alpha, tau, sparse=False, *args, **kwargs):
 
-        D = W.sum(axis=0)
-        d, _ = W.shape
-
-        self.d = d
-        self.median = self.mode = self.mean = self.mu = at.as_tensor_variable(mu)
-        self.sparse = sparse
+        mu = at.as_tensor_variable(mu)
 
         if not W.ndim == 2 or not np.allclose(W, W.T):
             raise ValueError("W must be a symmetric adjacency matrix.")
 
         if sparse:
             W_sparse = scipy.sparse.csr_matrix(W)
-            self.W = aesara.sparse.as_sparse_variable(W_sparse)
+            W = aesara.sparse.as_sparse_variable(W_sparse)
         else:
-            self.W = at.as_tensor_variable(W)
+            W = at.as_tensor_variable(W)
 
         # eigenvalues of D^−1/2 * W * D^−1/2
-        Dinv_sqrt = np.diag(1 / np.sqrt(D))
-        DWD = np.matmul(np.matmul(Dinv_sqrt, W), Dinv_sqrt)
-        self.lam = scipy.linalg.eigvalsh(DWD)
-        self.D = at.as_tensor_variable(D)
+
+        #D = aet.as_tensor_variable(D)
 
         tau = at.as_tensor_variable(tau)
         if tau.ndim > 0:
-            self.tau = tau[:, None]
-        else:
-            self.tau = tau
+            tau = tau[:, None]
 
         alpha = at.as_tensor_variable(alpha)
         if alpha.ndim > 0:
-            self.alpha = alpha[:, None]
-        else:
-            self.alpha = alpha
+            alpha = alpha[:, None]
+        return super().dist([mu, W, alpha, tau], **kwargs)
 
-    def logp(self, value):
+    def logp(value, mu, W, alpha, tau, sparse=False):
         """
         Calculate log-probability of a CAR-distributed vector
         at specified value. This log probability function differs from
@@ -2021,30 +2050,35 @@ class CAR(Continuous):
         TensorVariable
         """
 
+        D = W.sum(axis=0)
+
+        Dinv_sqrt = np.diag(1 / np.sqrt(D))
+        DWD = np.matmul(np.matmul(Dinv_sqrt, W), Dinv_sqrt)
+        lam = scipy.linalg.eigvalsh(DWD)
+
+        d, _ = W.shape
+
         if value.ndim == 1:
             value = value[None, :]
 
-        logtau = self.d * at.log(self.tau).sum()
-        logdet = at.log(1 - self.alpha.T * self.lam[:, None]).sum()
-        delta = value - self.mu
+        logtau = d * at.log(tau).sum()
+        logdet = at.log(1 - alpha.T * lam[:, None]).sum()
+        delta = value - mu
 
-        if self.sparse:
-            Wdelta = aesara.sparse.dot(delta, self.W)
+        if sparse:
+            Wdelta = aesara.sparse.dot(delta, W)
         else:
-            Wdelta = at.dot(delta, self.W)
+            Wdelta = at.dot(delta, W)
 
-        tau_dot_delta = self.D[None, :] * delta - self.alpha * Wdelta
-        logquad = (self.tau * delta * tau_dot_delta).sum(axis=-1)
+        tau_dot_delta = D[None, :] * delta - alpha * Wdelta
+        logquad = (tau * delta * tau_dot_delta).sum(axis=-1)
         return bound(
             0.5 * (logtau + logdet - logquad),
-            self.alpha >= -1,
-            self.alpha <= 1,
-            self.tau > 0,
-            broadcast_conditions=False,
+            at.all(alpha <= 1),
+            at.all(alpha >= -1),
+            tau > 0,
         )
 
-    def random(self, point=None, size=None):
-        raise NotImplementedError("Sampling from a CAR distribution is not supported.")
 
     def _distr_parameters_for_repr(self):
         return ["mu", "W", "alpha", "tau"]
