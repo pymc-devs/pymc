@@ -833,9 +833,6 @@ class Group(WithMemoization):
         options=None,
         **kwargs,
     ):
-        # XXX: Needs to be refactored for v4
-        raise NotImplementedError("This class needs to be refactored for v4")
-
         if local and not self.supports_batched:
             raise LocalGroupError("%s does not support local groups" % self.__class__)
         if local and rowwise:
@@ -959,7 +956,7 @@ class Group(WithMemoization):
         self.group = [get_transformed(var) for var in self.group]
 
         # XXX: This needs to be refactored
-        # self.ordering = ArrayOrdering([])
+        self.point_map_info = []
         self.replacements = dict()
         for var in self.group:
             if var.type.numpy_dtype.name in discrete_types:
@@ -975,18 +972,18 @@ class Group(WithMemoization):
                 # self.ordering.size += None  # (np.prod(var.dshape[1:])).astype(int)
                 if self.local:
                     # XXX: This needs to be refactored
-                    shape = None  # (-1,) + var.dshape[1:]
+                    shape = (-1,) + var.dshape[1:]
                 else:
                     # XXX: This needs to be refactored
-                    shape = None  # var.dshape
+                    shape = var.dshape
             else:
                 # XXX: This needs to be refactored
                 # self.ordering.size += None  # var.dsize
                 # XXX: This needs to be refactored
-                shape = None  # var.dshape
+                shape = var.dshape
             # end = self.ordering.size
             # XXX: This needs to be refactored
-            vmap = None  # VarMap(var.name, slice(begin, end), shape, var.dtype)
+            vmap = (var.name, shape, var.dtype)
             # self.ordering.vmap.append(vmap)
             # self.ordering.by_name[vmap.var] = vmap
             vr = self.input[..., vmap.slc].reshape(shape).astype(vmap.dtyp)
