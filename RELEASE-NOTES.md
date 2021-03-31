@@ -1,5 +1,10 @@
 # Release Notes
 
+## PyMC3 3.11.3 (TBD)
+### Maintenance
++ A deprecation warning from the `semver` package we use for checking backend compatibility was dealt with (see [#4547](https://github.com/pymc-devs/pymc3/pull/4547)).
++ `theano.printing.pydotprint` is now hotfixed upon import (see [#4594](https://github.com/pymc-devs/pymc3/pull/4594)).
+
 ## PyMC3 3.11.2 (14 March 2021)
 
 ### New Features
