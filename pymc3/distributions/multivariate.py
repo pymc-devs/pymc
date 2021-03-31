@@ -2020,10 +2020,6 @@ class CAR(Continuous):
         else:
             W = at.as_tensor_variable(W)
 
-        # eigenvalues of D^−1/2 * W * D^−1/2
-
-        #D = aet.as_tensor_variable(D)
-
         tau = at.as_tensor_variable(tau)
         if tau.ndim > 0:
             tau = tau[:, None]
@@ -2078,7 +2074,6 @@ class CAR(Continuous):
             at.all(alpha >= -1),
             tau > 0,
         )
-
 
     def _distr_parameters_for_repr(self):
         return ["mu", "W", "alpha", "tau"]
