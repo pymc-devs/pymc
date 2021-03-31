@@ -34,6 +34,7 @@ from aesara.tensor.random.basic import (
     halfnormal,
     invgamma,
     normal,
+    pareto,
     uniform,
 )
 from aesara.tensor.random.op import RandomVariable
@@ -2029,23 +2030,19 @@ class Pareto(Continuous):
     m: float
         Scale parameter (m > 0).
     """
+    rv_op = pareto
 
-    def __init__(self, alpha, m, transform="lowerbound", *args, **kwargs):
-        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
-        self.m = m = at.as_tensor_variable(floatX(m))
-
-        self.mean = at.switch(at.gt(alpha, 1), alpha * m / (alpha - 1.0), np.inf)
-        self.median = m * 2.0 ** (1.0 / alpha)
-        self.variance = at.switch(
-            at.gt(alpha, 2), (alpha * m ** 2) / ((alpha - 2.0) * (alpha - 1.0) ** 2), np.inf
-        )
+    @classmethod
+    def dist(
+        cls, alpha: float = None, m: float = None, no_assert: bool = False, **kwargs
+    ) -> RandomVariable:
+        alpha = at.as_tensor_variable(floatX(alpha))
+        m = at.as_tensor_variable(floatX(m))
 
         assert_negative_support(alpha, "alpha", "Pareto")
         assert_negative_support(m, "m", "Pareto")
 
-        if transform == "lowerbound":
-            transform = transforms.lowerbound(self.m)
-        super().__init__(transform=transform, *args, **kwargs)
+        return super().dist([alpha, m], **kwargs)
 
     def _random(self, alpha, m, size=None):
         u = np.random.uniform(size=size)
@@ -2071,7 +2068,11 @@ class Pareto(Continuous):
         # alpha, m = draw_values([self.alpha, self.m], point=point, size=size)
         # return generate_samples(self._random, alpha, m, dist_shape=self.shape, size=size)
 
-    def logp(self, value):
+    def logp(
+        value: Union[float, np.ndarray, TensorVariable],
+        alpha: Union[float, np.ndarray, TensorVariable],
+        m: Union[float, np.ndarray, TensorVariable],
+    ):
         """
         Calculate log-probability of Pareto distribution at specified value.
 
@@ -2085,8 +2086,6 @@ class Pareto(Continuous):
         -------
         TensorVariable
         """
-        alpha = self.alpha
-        m = self.m
         return bound(
             at.log(alpha) + logpow(m, alpha) - logpow(value, alpha + 1),
             value >= m,
@@ -2097,7 +2096,11 @@ class Pareto(Continuous):
     def _distr_parameters_for_repr(self):
         return ["alpha", "m"]
 
-    def logcdf(self, value):
+    def logcdf(
+        value: Union[float, np.ndarray, TensorVariable],
+        alpha: Union[float, np.ndarray, TensorVariable],
+        m: Union[float, np.ndarray, TensorVariable],
+    ):
         """
         Compute the log of the cumulative distribution function for Pareto distribution
         at the specified value.
@@ -2112,8 +2115,6 @@ class Pareto(Continuous):
         -------
         TensorVariable
         """
-        m = self.m
-        alpha = self.alpha
         arg = (m / value) ** alpha
         return bound(
             at.switch(
