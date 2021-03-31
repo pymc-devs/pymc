@@ -1402,7 +1402,6 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=4, float32=3),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_pareto(self):
         self.check_logp(
             Pareto,

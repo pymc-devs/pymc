@@ -342,12 +342,6 @@ class TestStudentT(BaseTestCases.BaseTestCase):
     params = {"nu": 5.0, "mu": 0.0, "lam": 1.0}
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestPareto(BaseTestCases.BaseTestCase):
-    distribution = pm.Pareto
-    params = {"alpha": 0.5, "m": 1.0}
-
-
 @pytest.mark.skip(reason="This test is covered by Aesara")
 class TestCauchy(BaseTestCases.BaseTestCase):
     distribution = pm.Cauchy
@@ -680,13 +674,6 @@ class TestScalarParameterSamples(SeededTest):
             return st.invgamma.rvs(a=alpha, scale=beta, size=size)
 
         pymc3_random(pm.InverseGamma, {"alpha": Rplus, "beta": Rplus}, ref_rand=ref_rand)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_pareto(self):
-        def ref_rand(size, alpha, m):
-            return st.pareto.rvs(alpha, scale=m, size=size)
-
-        pymc3_random(pm.Pareto, {"alpha": Rplusbig, "m": Rplusbig}, ref_rand=ref_rand)
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_ex_gaussian(self):
