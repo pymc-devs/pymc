@@ -1928,7 +1928,7 @@ class KroneckerNormal(Continuous):
 class CARRV(RandomVariable):
     name = "car"
     ndim_supp = 1
-    ndims_params = [1, 2, 1, 1, 0]
+    ndims_params = [1, 2, 1, 1]
     dtype = "floatX"
     _print_name = ("CAR", "\\operatorname{CAR}")
 
