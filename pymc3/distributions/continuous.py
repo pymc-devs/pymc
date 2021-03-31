@@ -31,6 +31,7 @@ from aesara.tensor.random.basic import (
     halfnormal,
     invgamma,
     normal,
+    pareto,
     uniform,
 )
 from scipy import stats
@@ -258,11 +259,7 @@ class Uniform(BoundedContinuous):
         return at.switch(
             at.lt(value, lower) | at.lt(upper, lower),
             -np.inf,
-            at.switch(
-                at.lt(value, upper),
-                at.log(value - lower) - at.log(upper - lower),
-                0,
-            ),
+            at.switch(at.lt(value, upper), at.log(value - lower) - at.log(upper - lower), 0,),
         )
 
 
@@ -496,10 +493,7 @@ class Normal(Continuous):
         -------
         TensorVariable
         """
-        return bound(
-            normal_lcdf(mu, sigma, value),
-            0 < sigma,
-        )
+        return bound(normal_lcdf(mu, sigma, value), 0 < sigma,)
 
 
 class TruncatedNormal(BoundedContinuous):
@@ -833,11 +827,7 @@ class HalfNormal(PositiveContinuous):
         TensorVariable
         """
         z = zvalue(value, mu=loc, sigma=sigma)
-        return bound(
-            at.log1p(-at.erfc(z / at.sqrt(2.0))),
-            loc <= value,
-            0 < sigma,
-        )
+        return bound(at.log1p(-at.erfc(z / at.sqrt(2.0))), loc <= value, 0 < sigma,)
 
     def _distr_parameters_for_repr(self):
         return ["sigma"]
@@ -1053,11 +1043,7 @@ class Wald(PositiveContinuous):
         b = 2.0 / l + normal_lcdf(0, 1, -(q + 1.0) / r)
 
         return bound(
-            at.switch(
-                at.lt(value, np.inf),
-                a + log1pexp(b - a),
-                0,
-            ),
+            at.switch(at.lt(value, np.inf), a + log1pexp(b - a), 0,),
             0 < value,
             0 < mu,
             0 < lam,
@@ -1219,11 +1205,7 @@ class Beta(UnitContinuous):
             )
 
         return bound(
-            at.switch(
-                at.lt(value, 1),
-                at.log(incomplete_beta(alpha, beta, value)),
-                0,
-            ),
+            at.switch(at.lt(value, 1), at.log(incomplete_beta(alpha, beta, value)), 0,),
             0 <= value,
             0 < alpha,
             0 < beta,
@@ -1418,11 +1400,7 @@ class Exponential(PositiveContinuous):
         TensorVariable
         """
         a = lam * value
-        return bound(
-            log1mexp(a),
-            0 <= value,
-            0 <= lam,
-        )
+        return bound(log1mexp(a), 0 <= value, 0 <= lam,)
 
 
 class Laplace(Continuous):
@@ -1538,11 +1516,7 @@ class Laplace(Continuous):
             at.switch(
                 at.le(value, a),
                 at.log(0.5) + y,
-                at.switch(
-                    at.gt(y, 1),
-                    at.log1p(-0.5 * at.exp(-y)),
-                    at.log(1 - 0.5 * at.exp(-y)),
-                ),
+                at.switch(at.gt(y, 1), at.log1p(-0.5 * at.exp(-y)), at.log(1 - 0.5 * at.exp(-y)),),
             ),
             0 < b,
         )
@@ -1799,11 +1773,7 @@ class Lognormal(PositiveContinuous):
         sigma = self.sigma
         tau = self.tau
 
-        return bound(
-            normal_lcdf(mu, sigma, at.log(value)),
-            0 < value,
-            0 < tau,
-        )
+        return bound(normal_lcdf(mu, sigma, at.log(value)), 0 < value, 0 < tau,)
 
 
 class StudentT(Continuous):
@@ -1967,12 +1937,7 @@ class StudentT(Continuous):
         sqrt_t2_nu = at.sqrt(t ** 2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
 
-        return bound(
-            at.log(incomplete_beta(nu / 2.0, nu / 2.0, x)),
-            0 < nu,
-            0 < sigma,
-            0 < lam,
-        )
+        return bound(at.log(incomplete_beta(nu / 2.0, nu / 2.0, x)), 0 < nu, 0 < sigma, 0 < lam,)
 
 
 class Pareto(Continuous):
@@ -2020,23 +1985,19 @@ class Pareto(Continuous):
     m: float
         Scale parameter (m > 0).
     """
+    rv_op = pareto
 
-    def __init__(self, alpha, m, transform="lowerbound", *args, **kwargs):
-        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
-        self.m = m = at.as_tensor_variable(floatX(m))
-
-        self.mean = at.switch(at.gt(alpha, 1), alpha * m / (alpha - 1.0), np.inf)
-        self.median = m * 2.0 ** (1.0 / alpha)
-        self.variance = at.switch(
-            at.gt(alpha, 2), (alpha * m ** 2) / ((alpha - 2.0) * (alpha - 1.0) ** 2), np.inf
-        )
+    @classmethod
+    def dist(
+        cls, alpha: float = None, m: float = None, no_assert: bool = False, **kwargs
+    ) -> RandomVariable:
+        alpha = at.as_tensor_variable(floatX(alpha))
+        m = at.as_tensor_variable(floatX(m))
 
         assert_negative_support(alpha, "alpha", "Pareto")
         assert_negative_support(m, "m", "Pareto")
 
-        if transform == "lowerbound":
-            transform = transforms.lowerbound(self.m)
-        super().__init__(transform=transform, *args, **kwargs)
+        return super().dist([alpha, m], **kwargs)
 
     def _random(self, alpha, m, size=None):
         u = np.random.uniform(size=size)
@@ -2062,7 +2023,11 @@ class Pareto(Continuous):
         # alpha, m = draw_values([self.alpha, self.m], point=point, size=size)
         # return generate_samples(self._random, alpha, m, dist_shape=self.shape, size=size)
 
-    def logp(self, value):
+    def logp(
+        value: Union[float, np.ndarray, TensorVariable],
+        alpha: Union[float, np.ndarray, TensorVariable],
+        m: Union[float, np.ndarray, TensorVariable],
+    ):
         """
         Calculate log-probability of Pareto distribution at specified value.
 
@@ -2076,8 +2041,6 @@ class Pareto(Continuous):
         -------
         TensorVariable
         """
-        alpha = self.alpha
-        m = self.m
         return bound(
             at.log(alpha) + logpow(m, alpha) - logpow(value, alpha + 1),
             value >= m,
@@ -2088,7 +2051,11 @@ class Pareto(Continuous):
     def _distr_parameters_for_repr(self):
         return ["alpha", "m"]
 
-    def logcdf(self, value):
+    def logcdf(
+        value: Union[float, np.ndarray, TensorVariable],
+        alpha: Union[float, np.ndarray, TensorVariable],
+        m: Union[float, np.ndarray, TensorVariable],
+    ):
         """
         Compute the log of the cumulative distribution function for Pareto distribution
         at the specified value.
@@ -2103,15 +2070,9 @@ class Pareto(Continuous):
         -------
         TensorVariable
         """
-        m = self.m
-        alpha = self.alpha
         arg = (m / value) ** alpha
         return bound(
-            at.switch(
-                at.le(arg, 1e-5),
-                at.log1p(-arg),
-                at.log(1 - arg),
-            ),
+            at.switch(at.le(arg, 1e-5), at.log1p(-arg), at.log(1 - arg),),
             m <= value,
             0 < alpha,
             0 < m,
@@ -2209,10 +2170,7 @@ class Cauchy(Continuous):
         -------
         TensorVariable
         """
-        return bound(
-            at.log(0.5 + at.arctan((value - alpha) / beta) / np.pi),
-            0 < beta,
-        )
+        return bound(at.log(0.5 + at.arctan((value - alpha) / beta) / np.pi), 0 < beta,)
 
 
 class HalfCauchy(PositiveContinuous):
@@ -2296,11 +2254,7 @@ class HalfCauchy(PositiveContinuous):
         -------
         TensorVariable
         """
-        return bound(
-            at.log(2 * at.arctan((value - loc) / beta) / np.pi),
-            loc <= value,
-            0 < beta,
-        )
+        return bound(at.log(2 * at.arctan((value - loc) / beta) / np.pi), loc <= value, 0 < beta,)
 
 
 class Gamma(PositiveContinuous):
@@ -2768,12 +2722,7 @@ class Weibull(PositiveContinuous):
         alpha = self.alpha
         beta = self.beta
         a = (value / beta) ** alpha
-        return bound(
-            log1mexp(a),
-            0 <= value,
-            0 < alpha,
-            0 < beta,
-        )
+        return bound(log1mexp(a), 0 <= value, 0 < alpha, 0 < beta,)
 
 
 class HalfStudentT(PositiveContinuous):
@@ -3585,10 +3534,7 @@ class Gumbel(Continuous):
         mu = self.mu
         beta = self.beta
         scaled = (value - mu) / beta
-        return bound(
-            -scaled - at.exp(-scaled) - at.log(self.beta),
-            0 < beta,
-        )
+        return bound(-scaled - at.exp(-scaled) - at.log(self.beta), 0 < beta,)
 
     def logcdf(self, value):
         """
@@ -3608,10 +3554,7 @@ class Gumbel(Continuous):
         beta = self.beta
         mu = self.mu
 
-        return bound(
-            -at.exp(-(value - mu) / beta),
-            0 < beta,
-        )
+        return bound(-at.exp(-(value - mu) / beta), 0 < beta,)
 
 
 class Rice(PositiveContinuous):
@@ -3870,8 +3813,7 @@ class Logistic(Continuous):
         s = self.s
 
         return bound(
-            -(value - mu) / s - at.log(s) - 2 * at.log1p(at.exp(-(value - mu) / s)),
-            s > 0,
+            -(value - mu) / s - at.log(s) - 2 * at.log1p(at.exp(-(value - mu) / s)), s > 0,
         )
 
     def logcdf(self, value):
@@ -3891,10 +3833,7 @@ class Logistic(Continuous):
         """
         mu = self.mu
         s = self.s
-        return bound(
-            -log1pexp(-(value - mu) / s),
-            0 < s,
-        )
+        return bound(-log1pexp(-(value - mu) / s), 0 < s,)
 
 
 class LogitNormal(UnitContinuous):
@@ -4253,7 +4192,5 @@ class Moyal(Continuous):
         sigma = self.sigma
 
         scaled = (value - mu) / sigma
-        return bound(
-            at.log(at.erfc(at.exp(-scaled / 2) * (2 ** -0.5))),
-            0 < sigma,
-        )
+        return bound(at.log(at.erfc(at.exp(-scaled / 2) * (2 ** -0.5))), 0 < sigma,)
+
