@@ -62,8 +62,22 @@ def __set_compiler_flags():
     theano.config.gcc__cxxflags = f"{current} -Wno-c++11-narrowing"
 
 
+def _hotfix_theano_printing():
+    """ This is a workaround for https://github.com/pymc-devs/aesara/issues/309 """
+    try:
+        import pydot
+        import theano.printing
+
+        if theano.printing.Node != pydot.Node:
+            theano.printing.Node = pydot.Node
+    except ImportError:
+        # pydot is not installed
+        pass
+
+
 _check_backend_version()
 __set_compiler_flags()
+_hotfix_theano_printing()
 
 from pymc3 import gp, ode, sampling
 from pymc3.backends import load_trace, save_trace
