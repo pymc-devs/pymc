@@ -3032,8 +3032,7 @@ def test_ordered_probit_probs():
     assert isinstance(x, TensorVariable)
 
 
-@pytest.mark.xfail(reason="Distribution not refactored yet")
-@pytest.mark.parametrize("size", [(1,), (4,)], ids=str)
+@pytest.mark.parametrize("size", [(), (1,), (4,)], ids=str)
 def test_car_logp(size):
     """
     Tests the log probability function for the CAR distribution by checking
@@ -3059,7 +3058,9 @@ def test_car_logp(size):
     cov = np.linalg.inv(prec)
     scipy_logp = scipy.stats.multivariate_normal.logpdf(xs, mu, cov)
 
-    car_logp = logp(CAR.dist(mu, W, alpha, tau, size=size), xs).eval()
+    car_dist = CAR.dist(mu, W, alpha, tau, size=size)
+    xs = np.broadcast_to(xs, size + mu.shape)
+    car_logp = logpt(car_dist, xs).eval()
 
     # Check to make sure that the CAR and MVN log PDFs are equivalent
     # up to an additive constant which is independent of the CAR parameters

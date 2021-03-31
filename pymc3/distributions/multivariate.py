@@ -1926,7 +1926,7 @@ class KroneckerNormal(Continuous):
 class CARRV(RandomVariable):
     name = "car"
     ndim_supp = 1
-    ndims_params = [1, 2, 1, 1]
+    ndims_params = [1, 2, 0, 0]
     dtype = "floatX"
     _print_name = ("CAR", "\\operatorname{CAR}")
 
@@ -1940,18 +1940,9 @@ class CARRV(RandomVariable):
             W = at.as_tensor_variable(W)
 
         tau = at.as_tensor_variable(tau)
-        if tau.ndim > 0:
-            tau = tau[:, None]
-
         alpha = at.as_tensor_variable(alpha)
-        if alpha.ndim > 0:
-            alpha = alpha[:, None]
 
-        if tau.ndim == 0:
-            tau = tau * at.ones(mu.shape)
-        if alpha.ndim == 0:
-            alpha = alpha * at.ones(mu.shape)
-        return super().make_node(rng, size, dtype, *(mu, W, alpha, tau))
+        return super().make_node(rng, size, dtype, mu, W, alpha, tau)
 
     @classmethod
     def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, size):
@@ -2062,9 +2053,9 @@ class CAR(Continuous):
 
         D = W.sum(axis=0)
 
-        Dinv_sqrt = np.diag(1 / np.sqrt(D))
-        DWD = np.matmul(np.matmul(Dinv_sqrt, W), Dinv_sqrt)
-        lam = scipy.linalg.eigvalsh(DWD)
+        Dinv_sqrt = at.diag(1 / at.sqrt(D))
+        DWD = at.dot(at.dot(Dinv_sqrt, W), Dinv_sqrt)
+        lam = at.slinalg.eigvalsh(DWD, at.eye(DWD.shape[0]))
 
         d, _ = W.shape
 
@@ -2088,6 +2079,3 @@ class CAR(Continuous):
             at.all(alpha >= -1),
             tau > 0,
         )
-
-    def _distr_parameters_for_repr(self):
-        return ["mu", "W", "alpha", "tau"]
