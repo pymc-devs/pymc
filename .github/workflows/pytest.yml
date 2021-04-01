@@ -134,6 +134,7 @@ jobs:
         run: |
           conda activate pymc3-dev-py37
           pip install -e .
+          pip install --pre -U polyagamma
           python --version
       - name: Run tests
         run: |
@@ -211,6 +212,7 @@ jobs:
         run: |
           conda activate pymc3-dev-py38
           pip install -e .
+          pip install --pre -U polyagamma
           python --version
       - name: Run tests
         # This job uses a cmd shell, therefore the environment variable syntax is different!

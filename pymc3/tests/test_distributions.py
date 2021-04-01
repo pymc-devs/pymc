@@ -19,6 +19,22 @@ import aesara
 import aesara.tensor as at
 import numpy as np
 import numpy.random as nr
+
+try:
+    from polyagamma import polyagamma_cdf, polyagamma_pdf
+
+    _polyagamma_not_installed = False
+except ImportError:  # pragma: no cover
+
+    _polyagamma_not_installed = True
+
+    def polyagamma_pdf(*args, **kwargs):
+        raise RuntimeError("polyagamma package is not installed!")
+
+    def polyagamma_cdf(*args, **kwargs):
+        raise RuntimeError("polyagamma package is not installed!")
+
+
 import pytest
 import scipy.stats
 import scipy.stats.distributions as sp
@@ -953,6 +969,26 @@ class TestMatchesScipy:
         with Model():
             x = PositiveNormal("x", mu=0, sigma=1, transform=None)
         assert np.isinf(logp(x, -1).eval())
+
+    @pytest.mark.skipif(
+        condition=_polyagamma_not_installed,
+        reason="`polyagamma package is not available/installed.",
+    )
+    def test_polyagamma(self):
+        self.check_logp(
+            pm.PolyaGamma,
+            Rplus,
+            {"h": Rplus, "z": R},
+            lambda value, h, z: polyagamma_pdf(value, h, z, return_log=True),
+            decimal=select_by_precision(float64=6, float32=-1),
+        )
+        self.check_logcdf(
+            pm.PolyaGamma,
+            Rplus,
+            {"h": Rplus, "z": R},
+            lambda value, h, z: polyagamma_cdf(value, h, z, return_log=True),
+            decimal=select_by_precision(float64=6, float32=-1),
+        )
 
     def test_discrete_unif(self):
         self.check_logp(
