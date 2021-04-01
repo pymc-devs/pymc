@@ -1933,7 +1933,7 @@ class CARRV(RandomVariable):
     _print_name = ("CAR", "\\operatorname{CAR}")
 
     @classmethod
-    def rng_fn(cls, rng: np.random.RandomState,  mu, W, alpha, tau, size):
+    def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, size):
         """
         Implementation of algorithm from paper
         Havard Rue, 2001. "Fast sampling of Gaussian Markov random fields,"
@@ -1945,10 +1945,10 @@ class CARRV(RandomVariable):
             W = scipy.sparse.csr_matrix(W)
         tau = scipy.sparse.csr_matrix(tau)
         alpha = scipy.sparse.csr_matrix(alpha)
-        perm_array = scipy.sparse.csgraph.reverse_cuthill_mckee(W,  symmetric_mode=True)
+        perm_array = scipy.sparse.csgraph.reverse_cuthill_mckee(W, symmetric_mode=True)
         W = W[perm_array, :]
         W = W[:, perm_array]
-        Q = tau.multiply((D - alpha.multiply(W)))
+        Q = tau.multiply(D - alpha.multiply(W))
         Qb = Q.diagonal()
         u = 1
         while np.count_nonzero(Q.diagonal(u)) > 0:
@@ -2007,7 +2007,7 @@ class CAR(Continuous):
     rv_op = car
 
     @classmethod
-    def dist(cls,  mu, W, alpha, tau, sparse=False, *args, **kwargs):
+    def dist(cls, mu, W, alpha, tau, sparse=False, *args, **kwargs):
 
         mu = at.as_tensor_variable(mu)
 
