@@ -20,11 +20,15 @@ nodes in PyMC.
 
 from typing import List, Optional, Tuple, Union
 
+import aesara
 import aesara.tensor as at
 import numpy as np
 
 from aesara.assert_op import Assert
+from aesara.graph.basic import Apply
+from aesara.graph.op import Op
 from aesara.tensor import gammaln
+from aesara.tensor.extra_ops import broadcast_shape
 from aesara.tensor.random.basic import (
     BetaRV,
     WeibullRV,
@@ -47,6 +51,21 @@ from aesara.tensor.random.basic import (
 )
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorConstant, TensorVariable
+
+try:
+    from polyagamma import polyagamma_cdf, polyagamma_pdf, random_polyagamma
+except ImportError:  # pragma: no cover
+
+    def random_polyagamma(*args, **kwargs):
+        raise RuntimeError("polyagamma package is not installed!")
+
+    def polyagamma_pdf(*args, **kwargs):
+        raise RuntimeError("polyagamma package is not installed!")
+
+    def polyagamma_cdf(*args, **kwargs):
+        raise RuntimeError("polyagamma package is not installed!")
+
+
 from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.special import expit
@@ -103,6 +122,7 @@ __all__ = [
     "Rice",
     "Moyal",
     "AsymmetricLaplace",
+    "PolyaGamma",
 ]
 
 
@@ -4007,3 +4027,201 @@ class Moyal(Continuous):
             at.log(at.erfc(at.exp(-scaled / 2) * (2 ** -0.5))),
             0 < sigma,
         )
+
+
+class PolyaGammaRV(RandomVariable):
+    """Polya-Gamma random variable."""
+
+    name = "polyagamma"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "floatX"
+    _print_name = ("PG", "\\operatorname{PG}")
+
+    def __call__(self, h=1.0, z=0.0, size=None, **kwargs):
+        return super().__call__(h, z, size=size, **kwargs)
+
+    @classmethod
+    def rng_fn(cls, rng, h, z, size=None):
+        """
+        Generate a random sample from the distribution with the given parameters
+
+        Parameters
+        ----------
+        rng : {None, int, array_like[ints], SeedSequence, BitGenerator, Generator}
+            A seed to initialize the random number generator. If None, then fresh,
+            unpredictable entropy will be pulled from the OS. If an ``int`` or
+            ``array_like[ints]`` is passed, then it will be passed to
+            `SeedSequence` to derive the initial `BitGenerator` state. One may also
+            pass in a `SeedSequence` instance.
+            Additionally, when passed a `BitGenerator`, it will be wrapped by
+            `Generator`. If passed a `Generator`, it will be returned unaltered.
+        h : scalar or sequence
+            The shape parameter of the distribution.
+        z : scalar or sequence
+            The exponential tilting parameter.
+        size : int or tuple of ints, optional
+            The number of elements to draw from the distribution. If size is
+            ``None`` (default) then a single value is returned. If a tuple of
+            integers is passed, the returned array will have the same shape.
+            If the element(s) of size is not an integer type, it will be truncated
+            to the largest integer smaller than its value (e.g (2.1, 1) -> (2, 1)).
+            This parameter only applies if `h` and `z` are scalars.
+        """
+        # handle the kind of rng passed to the sampler
+        bg = rng._bit_generator if isinstance(rng, np.random.RandomState) else rng
+        return random_polyagamma(h, z, size=size, random_state=bg).astype(aesara.config.floatX)
+
+
+polyagamma = PolyaGammaRV()
+
+
+class _PolyaGammaLogDistFunc(Op):
+    __props__ = ("get_pdf",)
+
+    def __init__(self, get_pdf=False):
+        self.get_pdf = get_pdf
+
+    def make_node(self, x, h, z):
+        x = at.as_tensor_variable(floatX(x))
+        h = at.as_tensor_variable(floatX(h))
+        z = at.as_tensor_variable(floatX(z))
+        shape = broadcast_shape(x, h, z)
+        broadcastable = [] if not shape else [False] * len(shape)
+        return Apply(self, [x, h, z], [at.TensorType(aesara.config.floatX, broadcastable)()])
+
+    def perform(self, node, ins, outs):
+        x, h, z = ins[0], ins[1], ins[2]
+        outs[0][0] = (
+            polyagamma_pdf(x, h, z, return_log=True)
+            if self.get_pdf
+            else polyagamma_cdf(x, h, z, return_log=True)
+        ).astype(aesara.config.floatX)
+
+
+class PolyaGamma(PositiveContinuous):
+    r"""
+    The Polya-Gamma distribution.
+
+    The distribution is parametrized by ``h`` (shape parameter) and ``z``
+    (exponential tilting parameter). The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid h, z) = cosh^h(\frac{z}{2})e^{-\frac{1}{2}xz^2}f(x \mid h, 0),
+    where :math:`f(x \mid h, 0)` is the pdf of a :math:`PG(h, 0)` variable.
+    Notice that the pdf of this distribution is expressed as an alternating-sign
+    sum of inverse-Gaussian densities.
+
+    .. math::
+
+        X = \Sigma_{k=1}^{\infty}\frac{Ga(h, 1)}{d_k},
+
+    where :math:`d_k = 2(k - 0.5)^2\pi^2 + z^2/2`, :math:`Ga(h, 1)` is a gamma
+    random variable with shape  parameter ``h`` and scale parameter ``1``.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        from polyagamma import polyagamma_pdf
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0.01, 5, 500);x.sort()
+        hs = [1., 5., 10., 15.]
+        zs = [0.] * 4
+        for h, z in zip(hs, zs):
+            pdf = polyagamma_pdf(x, h=h, z=z)
+            plt.plot(x, pdf, label=r'$h$ = {}, $z$ = {}'.format(h, z))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  =============================
+    Support   :math:`x \in (0, \infty)`
+    Mean      :math:`dfrac{h}{4} if :math:`z=0`, :math:`\dfrac{tanh(z/2)h}{2z}` otherwise.
+    Variance  :math:`0.041666688h` if :math:`z=0`, :math:`\dfrac{h(sinh(z) - z)(1 - tanh^2(z/2))}{4z^3}` otherwise.
+    ========  =============================
+
+    Parameters
+    ----------
+    h: float, optional
+        The shape parameter of the distribution (h > 0).
+    z: float, optional
+        The exponential tilting parameter of the distribution.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        rng = np.random.default_rng()
+        with pm.Model():
+            x = pm.PolyaGamma('x', h=1, z=5.5)
+        with pm.Model():
+            x = pm.PolyaGamma('x', h=25, z=-2.3, rng=rng, size=(100, 5))
+
+    References
+    ----------
+    .. [1] Polson, Nicholas G., James G. Scott, and Jesse Windle.
+           "Bayesian inference for logistic models using Pólya–Gamma latent
+           variables." Journal of the American statistical Association
+           108.504 (2013): 1339-1349.
+    .. [2] Windle, Jesse, Nicholas G. Polson, and James G. Scott.
+           "Sampling Polya-Gamma random variates: alternate and approximate
+           techniques." arXiv preprint arXiv:1405.0506 (2014)
+    .. [3] Luc Devroye. "On exact simulation algorithms for some distributions
+           related to Jacobi theta functions." Statistics & Probability Letters,
+           Volume 79, Issue 21, (2009): 2251-2259.
+    .. [4] Windle, J. (2013). Forecasting high-dimensional, time-varying
+           variance-covariance matrices with high-frequency data and sampling
+           Pólya-Gamma random variates for posterior distributions derived
+           from logistic likelihoods.(PhD thesis). Retrieved from
+           http://hdl.handle.net/2152/21842
+    """
+    rv_op = polyagamma
+
+    @classmethod
+    def dist(cls, h=1.0, z=0.0, **kwargs):
+        h = at.as_tensor_variable(floatX(h))
+        z = at.as_tensor_variable(floatX(z))
+
+        msg = f"The variable {h} specified for PolyaGamma has non-positive "
+        msg += "values, making it unsuitable for this parameter."
+        Assert(msg)(h, at.all(at.gt(h, 0.0)))
+
+        return super().dist([h, z], **kwargs)
+
+    def logp(value, h, z):
+        """
+        Calculate log-probability of Polya-Gamma distribution at specified value.
+
+        Parameters
+        ----------
+        value: numeric
+            Value(s) for which log-probability is calculated. If the log
+            probabilities for multiple values are desired the values must be
+            provided in a numpy array.
+
+        Returns
+        -------
+        TensorVariable
+        """
+
+        return bound(_PolyaGammaLogDistFunc(True)(value, h, z), h > 0, value > 0)
+
+    def logcdf(value, h, z):
+        """
+        Compute the log of the cumulative distribution function for the
+        Polya-Gamma distribution at the specified value.
+
+        Parameters
+        ----------
+        value: numeric or np.ndarray or `TensorVariable`
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return bound(_PolyaGammaLogDistFunc(False)(value, h, z), h > 0, value > 0)
