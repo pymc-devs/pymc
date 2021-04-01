@@ -240,12 +240,6 @@ class TestGaussianRandomWalk(BaseTestCases.BaseTestCase):
     default_shape = (1,)
 
 
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestNormal(BaseTestCases.BaseTestCase):
-    distribution = pm.Normal
-    params = {"mu": 0.0, "tau": 1.0}
-
-
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestTruncatedNormal(BaseTestCases.BaseTestCase):
     distribution = pm.TruncatedNormal
@@ -268,18 +262,6 @@ class TestTruncatedNormalUpper(BaseTestCases.BaseTestCase):
 class TestSkewNormal(BaseTestCases.BaseTestCase):
     distribution = pm.SkewNormal
     params = {"mu": 0.0, "sigma": 1.0, "alpha": 5.0}
-
-
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestHalfNormal(BaseTestCases.BaseTestCase):
-    distribution = pm.HalfNormal
-    params = {"tau": 1.0}
-
-
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestUniform(BaseTestCases.BaseTestCase):
-    distribution = pm.Uniform
-    params = {"lower": 0.0, "upper": 1.0}
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
@@ -305,12 +287,6 @@ class TestKumaraswamy(BaseTestCases.BaseTestCase):
     params = {"a": 1.0, "b": 1.0}
 
 
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestExponential(BaseTestCases.BaseTestCase):
-    distribution = pm.Exponential
-    params = {"lam": 1.0}
-
-
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestLaplace(BaseTestCases.BaseTestCase):
     distribution = pm.Laplace
@@ -333,30 +309,6 @@ class TestLognormal(BaseTestCases.BaseTestCase):
 class TestStudentT(BaseTestCases.BaseTestCase):
     distribution = pm.StudentT
     params = {"nu": 5.0, "mu": 0.0, "lam": 1.0}
-
-
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestCauchy(BaseTestCases.BaseTestCase):
-    distribution = pm.Cauchy
-    params = {"alpha": 1.0, "beta": 1.0}
-
-
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestHalfCauchy(BaseTestCases.BaseTestCase):
-    distribution = pm.HalfCauchy
-    params = {"beta": 1.0}
-
-
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestGamma(BaseTestCases.BaseTestCase):
-    distribution = pm.Gamma
-    params = {"alpha": 1.0, "beta": 1.0}
-
-
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestInverseGamma(BaseTestCases.BaseTestCase):
-    distribution = pm.InverseGamma
-    params = {"alpha": 0.5, "beta": 0.5}
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
@@ -401,12 +353,6 @@ class TestLogitNormal(BaseTestCases.BaseTestCase):
     params = {"mu": 0.0, "sigma": 1.0}
 
 
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestBinomial(BaseTestCases.BaseTestCase):
-    distribution = pm.Binomial
-    params = {"n": 5, "p": 0.5}
-
-
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestBetaBinomial(BaseTestCases.BaseTestCase):
     distribution = pm.BetaBinomial
@@ -419,21 +365,10 @@ class TestBernoulli(BaseTestCases.BaseTestCase):
     params = {"p": 0.5}
 
 
+@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestDiscreteWeibull(BaseTestCases.BaseTestCase):
     distribution = pm.DiscreteWeibull
     params = {"q": 0.25, "beta": 2.0}
-
-
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestPoisson(BaseTestCases.BaseTestCase):
-    distribution = pm.Poisson
-    params = {"mu": 1.0}
-
-
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestNegativeBinomial(BaseTestCases.BaseTestCase):
-    distribution = pm.NegativeBinomial
-    params = {"mu": 1.0, "alpha": 1.0}
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
@@ -482,45 +417,6 @@ class TestHyperGeometric(BaseTestCases.BaseTestCase):
 class TestMoyal(BaseTestCases.BaseTestCase):
     distribution = pm.Moyal
     params = {"mu": 0.0, "sigma": 1.0}
-
-
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestCategorical(BaseTestCases.BaseTestCase):
-    distribution = pm.Categorical
-    params = {"p": np.ones(BaseTestCases.BaseTestCase.shape)}
-
-    def get_random_variable(
-        self, shape, with_vector_params=False, **kwargs
-    ):  # don't transform categories
-        return super().get_random_variable(shape, with_vector_params=False, **kwargs)
-
-    def test_probability_vector_shape(self):
-        """Check that if a 2d array of probabilities are passed to categorical correct shape is returned"""
-        p = np.ones((10, 5))
-        assert pm.Categorical.dist(p=p).random().shape == (10,)
-        assert pm.Categorical.dist(p=p).random(size=4).shape == (4, 10)
-        p = np.ones((3, 7, 5))
-        assert pm.Categorical.dist(p=p).random().shape == (3, 7)
-        assert pm.Categorical.dist(p=p).random(size=4).shape == (4, 3, 7)
-
-
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestDirichlet(SeededTest):
-    @pytest.mark.parametrize(
-        "shape, size",
-        [
-            ((2), (1)),
-            ((2), (2)),
-            ((2, 2), (2, 100)),
-            ((3, 4), (3, 4)),
-            ((3, 4), (3, 4, 100)),
-            ((3, 4), (100)),
-            ((3, 4), (1)),
-        ],
-    )
-    def test_dirichlet_random_shape(self, shape, size):
-        out_shape = to_tuple(size) + to_tuple(shape)
-        assert pm.Dirichlet.dist(a=np.ones(shape)).random(size=size).shape == out_shape
 
 
 class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
