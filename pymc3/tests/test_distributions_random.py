@@ -550,9 +550,7 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
         # I am assuming there will always only be 1 Apply parent node in this context
         return parents[0].inputs
 
-    def test_pymc_params_match_rv_ones(
-        self, pymc_params, expected_aesara_params, pymc_dist, decimal=6
-    ):
+    def _pymc_params_match_rv_ones(self, pymc_params, expected_aesara_params, pymc_dist, decimal=6):
         pymc_dist_output = pymc_dist.dist(**dict(pymc_params))
         aesera_dist_inputs = self.get_inputs_from_apply_node_outputs(pymc_dist_output)[3:]
         assert len(expected_aesara_params) == len(aesera_dist_inputs)
@@ -563,52 +561,88 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
 
     def test_normal(self):
         params = [("mu", 5.0), ("sigma", 10.0)]
-        self.test_pymc_params_match_rv_ones(params, params, pm.Normal)
+        self._pymc_params_match_rv_ones(params, params, pm.Normal)
 
     def test_uniform(self):
         params = [("lower", 0.5), ("upper", 1.5)]
-        self.test_pymc_params_match_rv_ones(params, params, pm.Uniform)
+        self._pymc_params_match_rv_ones(params, params, pm.Uniform)
 
     def test_half_normal(self):
         params, expected_aesara_params = [("sigma", 10.0)], [("mean", 0), ("sigma", 10.0)]
-        self.test_pymc_params_match_rv_ones(params, expected_aesara_params, pm.HalfNormal)
+        self._pymc_params_match_rv_ones(params, expected_aesara_params, pm.HalfNormal)
 
     def test_beta_alpha_beta(self):
         params = [("alpha", 2.0), ("beta", 5.0)]
-        self.test_pymc_params_match_rv_ones(params, params, pm.Beta)
+        self._pymc_params_match_rv_ones(params, params, pm.Beta)
 
     def test_beta_mu_sigma(self):
         params = [("mu", 2.0), ("sigma", 5.0)]
         expected_alpha, expected_beta = pm.Beta.get_alpha_beta(mu=params[0][1], sigma=params[1][1])
         expected_params = [("alpha", expected_alpha), ("beta", expected_beta)]
-        self.test_pymc_params_match_rv_ones(params, expected_params, pm.Beta)
+        self._pymc_params_match_rv_ones(params, expected_params, pm.Beta)
 
     @pytest.mark.skip(reason="Expected to fail due to bug")
     def test_exponential(self):
         params = [("lam", 10.0)]
         expected_params = [("lam", 1 / params[0][1])]
-        self.test_pymc_params_match_rv_ones(params, expected_params, pm.Exponential)
+        self._pymc_params_match_rv_ones(params, expected_params, pm.Exponential)
 
     def test_cauchy(self):
         params = [("alpha", 2.0), ("beta", 5.0)]
-        self.test_pymc_params_match_rv_ones(params, params, pm.Cauchy)
+        self._pymc_params_match_rv_ones(params, params, pm.Cauchy)
 
     def test_half_cauchy(self):
         params = [("alpha", 2.0), ("beta", 5.0)]
-        self.test_pymc_params_match_rv_ones(params, params, pm.HalfCauchy)
+        self._pymc_params_match_rv_ones(params, params, pm.HalfCauchy)
 
     @pytest.mark.skip(reason="Expected to fail due to bug")
     def test_gamma_alpha_beta(self):
         params = [("alpha", 2.0), ("beta", 5.0)]
         expected_params = [("alpha", params[0][1]), ("beta", 1 / params[1][1])]
-        self.test_pymc_params_match_rv_ones(params, expected_params, pm.Gamma)
+        self._pymc_params_match_rv_ones(params, expected_params, pm.Gamma)
 
     @pytest.mark.skip(reason="Expected to fail due to bug")
     def test_gamma_mu_sigma(self):
         params = [("mu", 2.0), ("sigma", 5.0)]
         expected_alpha, expected_beta = pm.Gamma.get_alpha_beta(mu=params[0][1], sigma=params[1][1])
         expected_params = [("alpha", expected_alpha), ("beta", 1 / expected_beta)]
-        self.test_pymc_params_match_rv_ones(params, expected_params, pm.Gamma)
+        self._pymc_params_match_rv_ones(params, expected_params, pm.Gamma)
+
+    def test_inverse_gamma_alpha_beta(self):
+        params = [("alpha", 2.0), ("beta", 5.0)]
+        self._pymc_params_match_rv_ones(params, params, pm.InverseGamma)
+
+    def test_inverse_gamma_mu_sigma(self):
+        params = [("mu", 2.0), ("sigma", 5.0)]
+        expected_alpha, expected_beta = pm.InverseGamma._get_alpha_beta(
+            mu=params[0][1], sigma=params[1][1], alpha=None, beta=None
+        )
+        expected_params = [("alpha", expected_alpha), ("beta", expected_beta)]
+        self._pymc_params_match_rv_ones(params, expected_params, pm.InverseGamma)
+
+    def test_binomial(self):
+        params = [("n", 100), ("p", 0.33)]
+        self._pymc_params_match_rv_ones(params, params, pm.Binomial)
+
+    def test_negative_binomial(self):
+        params = [("n", 100), ("p", 0.33)]
+        self._pymc_params_match_rv_ones(params, params, pm.NegativeBinomial)
+
+    def test_negative_binomial_mu_sigma(self):
+        params = [("mu", 5.0), ("alpha", 8.0)]
+        expected_n, expected_p = pm.NegativeBinomial.get_n_p(
+            mu=params[0][1], alpha=params[1][1], n=None, p=None
+        )
+        expected_params = [("n", expected_n), ("p", expected_p)]
+        self._pymc_params_match_rv_ones(params, expected_params, pm.NegativeBinomial)
+
+    def test_bernoulli(self):
+        params = [("p", 0.33)]
+        self._pymc_params_match_rv_ones(params, params, pm.Bernoulli)
+
+    def test_poisson(self):
+        params = [("mu", 4)]
+        self._pymc_params_match_rv_ones(params, params, pm.Poisson)
 
 
 class TestScalarParameterSamples(SeededTest):
@@ -706,13 +740,6 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(pm.StudentT, {"nu": Rplus, "mu": R, "lam": Rplus}, ref_rand=ref_rand)
 
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_inverse_gamma(self):
-        def ref_rand(size, alpha, beta):
-            return st.invgamma.rvs(a=alpha, scale=beta, size=size)
-
-        pymc3_random(pm.InverseGamma, {"alpha": Rplus, "beta": Rplus}, ref_rand=ref_rand)
-
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_pareto(self):
         def ref_rand(size, alpha, m):
@@ -759,10 +786,6 @@ class TestScalarParameterSamples(SeededTest):
             with pytest.raises(ValueError):
                 f.random(1)
 
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_binomial(self):
-        pymc3_random_discrete(pm.Binomial, {"n": Nat, "p": Unit}, ref_rand=st.binom.rvs)
-
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     @pytest.mark.xfail(
         sys.platform.startswith("win"),
@@ -775,29 +798,6 @@ class TestScalarParameterSamples(SeededTest):
 
     def _beta_bin(self, n, alpha, beta, size=None):
         return st.binom.rvs(n, st.beta.rvs(a=alpha, b=beta, size=size))
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_bernoulli(self):
-        pymc3_random_discrete(
-            pm.Bernoulli, {"p": Unit}, ref_rand=lambda size, p=None: st.bernoulli.rvs(p, size=size)
-        )
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_poisson(self):
-        pymc3_random_discrete(pm.Poisson, {"mu": Rplusbig}, size=500, ref_rand=st.poisson.rvs)
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_negative_binomial(self):
-        def ref_rand(size, alpha, mu):
-            return st.nbinom.rvs(alpha, alpha / (mu + alpha), size=size)
-
-        pymc3_random_discrete(
-            pm.NegativeBinomial,
-            {"mu": Rplusbig, "alpha": Rplusbig},
-            size=100,
-            fails=50,
-            ref_rand=ref_rand,
-        )
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_geometric(self):
