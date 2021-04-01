@@ -24,13 +24,18 @@ from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
+    AdvancedSubtensor,
+    AdvancedSubtensor1,
     IncSubtensor,
+    Subtensor,
 )
 
 from pymc3.aesaraf import floatX, walk_model
 from pymc3.distributions.continuous import Normal, Uniform
+from pymc3.distributions.discrete import Bernoulli
 from pymc3.distributions.logp import logpt
 from pymc3.model import Model
+from pymc3.tests.helpers import select_by_precision
 
 
 def test_logpt_basic():
@@ -73,7 +78,7 @@ def test_logpt_basic():
         ((np.array([0, 1, 4]), np.array([0, 1, 4])), (5, 5)),
     ],
 )
-def test_logpt_univariate_incsubtensor(indices, size):
+def test_logpt_incsubtensor(indices, size):
     """Make sure we can compute a log-likelihood for ``Y[idx] = data`` where ``Y`` is univariate."""
 
     mu = floatX(np.power(10, np.arange(np.prod(size)))).reshape(size)
@@ -81,8 +86,8 @@ def test_logpt_univariate_incsubtensor(indices, size):
     sigma = 0.001
     rng = aesara.shared(np.random.RandomState(232), borrow=True)
 
-    with Model() as m:
-        a = Normal("a", mu, sigma, size=size, rng=rng)
+    a = Normal.dist(mu, sigma, size=size, rng=rng)
+    a.name = "a"
 
     a_idx = at.set_subtensor(a[indices], data)
 
@@ -131,3 +136,55 @@ def test_logpt_univariate_incsubtensor(indices, size):
     assert isinstance(a_client.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1))
     indices = tuple(i.eval() for i in a_client.inputs[2:])
     np.testing.assert_almost_equal(indices, indices)
+
+
+def test_logpt_subtensor():
+    """Make sure we can compute a log-likelihood for ``Y[I]`` where ``Y`` and ``I`` are random variables."""
+
+    size = 5
+
+    mu_base = floatX(np.power(10, np.arange(np.prod(size)))).reshape(size)
+    mu = np.stack([mu_base, -mu_base])
+    sigma = 0.001
+    rng = aesara.shared(np.random.RandomState(232), borrow=True)
+
+    A_rv = Normal.dist(mu, sigma, rng=rng)
+    A_rv.name = "A"
+
+    p = 0.5
+
+    I_rv = Bernoulli.dist(p, size=size, rng=rng)
+    I_rv.name = "I"
+
+    A_idx = A_rv[I_rv, at.ogrid[A_rv.shape[-1] :]]
+
+    assert isinstance(A_idx.owner.op, (Subtensor, AdvancedSubtensor, AdvancedSubtensor1))
+
+    A_idx_value_var = A_idx.type()
+    A_idx_value_var.name = "A_idx_value"
+
+    I_value_var = I_rv.type()
+    I_value_var.name = "I_value"
+
+    A_idx_logp = logpt(A_idx, {A_idx: A_idx_value_var, I_rv: I_value_var})
+
+    logp_vals_fn = aesara.function([A_idx_value_var, I_value_var], A_idx_logp)
+
+    # The compiled graph should not contain any `RandomVariables`
+    assert not any(isinstance(n.op, RandomVariable) for n in logp_vals_fn.maker.fgraph.apply_nodes)
+
+    decimals = select_by_precision(float64=6, float32=4)
+
+    for i in range(10):
+        bern_sp = sp.bernoulli(p)
+        I_value = bern_sp.rvs(size=size).astype(I_rv.dtype)
+
+        norm_sp = sp.norm(mu[I_value, np.ogrid[mu.shape[1] :]], sigma)
+        A_idx_value = norm_sp.rvs().astype(A_idx.dtype)
+
+        exp_obs_logps = norm_sp.logpdf(A_idx_value)
+        exp_obs_logps += bern_sp.logpmf(I_value)
+
+        logp_vals = logp_vals_fn(A_idx_value, I_value)
+
+        np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)
