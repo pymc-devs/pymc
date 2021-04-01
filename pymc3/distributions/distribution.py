@@ -96,15 +96,17 @@ class DistributionMeta(ABCMeta):
             if class_logp:
 
                 @_logp.register(rv_type)
-                def logp(op, value, *dist_params, **kwargs):
-                    return class_logp(value, *dist_params, **kwargs)
+                def logp(op, var, rvs_to_values, *dist_params, **kwargs):
+                    value_var = rvs_to_values.get(var, var)
+                    return class_logp(value_var, *dist_params, **kwargs)
 
             class_logcdf = clsdict.get("logcdf")
             if class_logcdf:
 
                 @_logcdf.register(rv_type)
-                def logcdf(op, value, *dist_params, **kwargs):
-                    return class_logcdf(value, *dist_params, **kwargs)
+                def logcdf(op, var, rvs_to_values, *dist_params, **kwargs):
+                    value_var = rvs_to_values.get(var, var)
+                    return class_logcdf(value_var, *dist_params, **kwargs)
 
             # class_transform = clsdict.get("transform")
             # if class_transform:
