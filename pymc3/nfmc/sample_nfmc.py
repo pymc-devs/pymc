@@ -30,8 +30,8 @@ from pymc3.nfmc.nfmc import NFMC
 
 def sample_nfmc(
     draws=500,
+    init_method='prior',
     init_samples=None,
-    init_el2o=None,
     absEL2O=1e-10,
     fracEL2O=1e-2,
     pareto=False,
@@ -43,6 +43,7 @@ def sample_nfmc(
     nf_iter=3,
     model=None,
     frac_validate=0.1,
+    iteration=None,
     alpha=(0,0),
     verbose=False,
     n_component=None,
@@ -75,9 +76,9 @@ def sample_nfmc(
     start: dict, or array of dict
         Starting point in parameter space. It should be a list of dict with length `chains`.
         When None (default) the starting point is sampled from the prior distribution.
-    init_el2o: str
-        If specified, tells us to initialize with EL2O algorithm. Currently must be set to
-        either None or 'full_rank'. Will add option for 'gauss_mix' later.
+    init_method: str
+        Tells us how to initialize the NFMC fits. Default is 'prior'. If this is supplied along with init_samples
+        we use those instead. Current options are 'prior', 'full_rank', 'lbfgs'.
     norm_tol: float
         Fractional difference in the evidence estimate between two steps. If it falls below this we
         stop iterating over the NF fits.
@@ -105,8 +106,6 @@ def sample_nfmc(
         convergence statistics. Default is 2.
 
     """
-
-    assert init_el2o is None or init_el2o == 'full_rank'
     
     _log = logging.getLogger("pymc3")
     _log.info("Initializing normalizing flow based sampling...")
@@ -138,8 +137,8 @@ def sample_nfmc(
 
     params = (
         draws,
+        init_method,
         init_samples,
-        init_el2o,
         absEL2O,
         fracEL2O,
         pareto,
@@ -151,6 +150,7 @@ def sample_nfmc(
         nf_iter,
         model,
         frac_validate,
+        iteration,
         alpha,
         cores,
         verbose,
@@ -181,11 +181,13 @@ def sample_nfmc(
         evidence,
         weighted_samples,
         importance_weights,
+        logq,
     ) = zip(*results)
     trace = MultiTrace(traces)
     trace.report.evidence = evidence
     trace.report.weighted_samples = weighted_samples
     trace.report.importance_weights = importance_weights
+    trace.report.logq = logq
     trace.report._n_draws = draws
     trace.report._t_sampling = time.time() - t1
     
@@ -194,8 +196,8 @@ def sample_nfmc(
 
 def sample_nfmc_int(
     draws,
+    init_method,
     init_samples,
-    init_el2o,
     absEL2O,
     fracEL2O,
     pareto,
@@ -207,6 +209,7 @@ def sample_nfmc_int(
     nf_iter,
     model,
     frac_validate,
+    iteration,
     alpha,
     cores,
     verbose,
@@ -233,8 +236,8 @@ def sample_nfmc_int(
     nfmc = NFMC(
         draws=draws,
         model=model,
+        init_method=init_method,
         init_samples=init_samples,
-        init_el2o=init_el2o,
         absEL2O=absEL2O,
         fracEL2O=fracEL2O,
         pareto=pareto,
@@ -242,6 +245,7 @@ def sample_nfmc_int(
         random_seed=random_seed,
         chain=chain,
         frac_validate=frac_validate,
+        iteration=iteration,
         alpha=alpha,
         verbose=verbose,
         optim_iter=optim_iter,
@@ -265,12 +269,17 @@ def sample_nfmc_int(
     stage = 1
     nfmc.initialize_var_info()
     nfmc.setup_logp()
-    if init_el2o is not None:
-        print(f'Initializing with EL2O approximation family: {init_el2o}')
+    if init_method == 'prior':
+        nfmc.initialize_population()
+    elif init_method == 'full_rank':
+        print(f'Initializing with full-rank EL2O approx family.')
         nfmc.get_map_laplace()
         nfmc.run_el2o()
+    elif init_method == 'lbfgs':
+        print(f'Using L-BFGS optimization and Hessian to initialize.')
+        nfmc.initialize_lbfgs()
     else:
-        nfmc.initialize_population()
+        raise ValueError('init_method must be one of: prior, full_rank or lbfgs.')
 
     '''
     # Run the optimization ...
@@ -314,4 +323,5 @@ def sample_nfmc_int(
         nfmc.evidence,
         nfmc.weighted_samples,
         nfmc.importance_weights,
+        nfmc.all_logq,
     )

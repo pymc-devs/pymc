@@ -58,14 +58,15 @@ class NFMC:
         self,
         draws=500,
         model=None,
+        init_method='prior',
         init_samples=None,
-        init_el2o=None,
         absEL2O=1e-10,
         fracEL2O=1e-2,
         pareto=False,
         random_seed=-1,
         chain=0,
         frac_validate=0.1,
+        iteration=None,
         alpha=(0,0),
         optim_iter=1000,
         ftol=2.220446049250313e-9,
@@ -91,13 +92,13 @@ class NFMC:
         self.draws = draws
         self.model = model
         self.init_samples = init_samples
-        self.init_el2o = init_el2o
         self.absEL2O = 1e-10
         self.fracEL2O = 1e-2
         self.pareto = pareto,
         self.random_seed = random_seed
         self.chain = chain
         self.frac_validate = frac_validate
+        self.iteration = iteration
         self.alpha = alpha
         self.optim_iter = optim_iter
         self.ftol = ftol
@@ -158,6 +159,7 @@ class NFMC:
 
         self.weighted_samples = np.empty((0, np.shape(self.prior_samples)[1]))
         self.importance_weights = np.array([])
+        self.all_logq = np.array([])
         self.posterior = np.empty((0, np.shape(self.prior_samples)[1]))
         self.nf_models = []
 
@@ -225,7 +227,7 @@ class NFMC:
 
         self.nf_model = GIS(torch.from_numpy(self.prior_samples[:val_idx, ...].astype(np.float32)),
                             torch.from_numpy(self.prior_samples[val_idx:, ...].astype(np.float32)),
-                            alpha=None, verbose=self.verbose, n_component=self.n_component,
+                            iteration=self.iteration, alpha=None, verbose=self.verbose, n_component=self.n_component,
                             interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=self.bw_factor,
                             edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
                             NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
@@ -233,9 +235,11 @@ class NFMC:
         
         self.nf_samples, self.logq = self.nf_model.sample(self.draws, device=torch.device('cpu'))
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
+        self.logq = self.logq.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
+        self.all_logq = np.append(self.all_logq, self.logq)
         self.get_posterior_logp()
-        log_weight = self.posterior_logp - self.logq.numpy().astype(np.float64)
+        log_weight = self.posterior_logp - self.logq
         self.evidence = np.mean(np.exp(log_weight))
         
         if self.pareto:
@@ -249,6 +253,23 @@ class NFMC:
         self.importance_weights = np.append(self.importance_weights, self.weights)
         self.nf_models.append(self.nf_model)
 
+    def initialize_lbfgs(self):
+        """Initialize using L-BFGS optimization and Hessian."""
+        self.map_dict, self.scipy_opt = find_MAP(model=self.model, method='L-BFGS-B', return_raw=True)
+        self.mu_map = []
+        for v in self.variables:
+            self.mu_map.append(self.map_dict[v.name])
+        self.mu_map = np.array(self.mu_map)
+        self.lbfgs_hess_inv = self.scipy_opt.hess_inv.todense()
+        self.prior_samples = np.random.multivariate_normal(self.mu_map, self.lbfgs_hess_inv, size=self.draws)
+        self.weighted_samples = np.empty((0, np.shape(self.prior_samples)[1]))
+        self.importance_weights = np.array([])
+        self.all_logq = np.array([])
+        self.posterior = np.empty((0, np.shape(self.prior_samples)[1]))
+        self.nf_models = []
+        print(f'LBFGS hess = {self.lbfgs_hess_inv}')
+        print(f'Autodiff hess = {np.linalg.inv(self.target_hessian(self.mu_map.reshape(-1, len(self.mu_map))))}')
+        
     def logq_fr_el2o(self, z, mu, Sigma):
         """Logq for full-rank Gaussian family."""
         return jnp.reshape(jax.scipy.stats.multivariate_normal.logpdf(z, mu, Sigma), ()) 
@@ -298,6 +319,7 @@ class NFMC:
         self.prior_samples = np.random.multivariate_normal(self.mu_k.squeeze(), self.Sigma_k, size=self.draws)
         self.weighted_samples = np.empty((0, np.shape(self.prior_samples)[1]))
         self.importance_weights = np.array([])
+        self.all_logq = np.array([])
         self.posterior = np.empty((0, np.shape(self.prior_samples)[1]))
         self.nf_models = []
         
@@ -309,7 +331,7 @@ class NFMC:
                             torch.from_numpy(self.weighted_samples[val_idx:, ...].astype(np.float32)),
                             weight_train=torch.from_numpy(self.importance_weights[:val_idx, ...].astype(np.float32)),
                             weight_validate=torch.from_numpy(self.importance_weights[val_idx:, ...].astype(np.float32)),
-                            alpha=self.alpha, verbose=self.verbose, n_component=self.n_component,
+                            iteration=self.iteration, alpha=self.alpha, verbose=self.verbose, n_component=self.n_component,
                             interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=self.bw_factor,
                             edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
                             NBfirstlayer=self.NBfirstlayer, logit=self.logit, Whiten=self.Whiten,
@@ -317,9 +339,11 @@ class NFMC:
         
         self.nf_samples, self.logq = self.nf_model.sample(self.draws, device=torch.device('cpu'))
         self.nf_samples = self.nf_samples.numpy().astype(np.float64)
+        self.logq = self.logq.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
+        self.all_logq =	np.append(self.all_logq, self.logq)
         self.get_posterior_logp()
-        log_weight = self.posterior_logp - self.logq.numpy().astype(np.float64)
+        log_weight = self.posterior_logp - self.logq
         self.evidence = np.mean(np.exp(log_weight))
 
         if self.pareto:
