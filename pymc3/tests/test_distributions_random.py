@@ -24,13 +24,13 @@ import pytest
 import scipy.stats as st
 
 from numpy.testing import assert_almost_equal
-from scipy import linalg
 from scipy.special import expit
 
 import pymc3 as pm
 
 from pymc3.aesaraf import floatX, intX
 from pymc3.distributions import change_rv_size
+from pymc3.distributions.multivariate import quaddist_matrix
 from pymc3.distributions.shape_utils import to_tuple
 from pymc3.exceptions import ShapeError
 from pymc3.tests.helpers import SeededTest
@@ -41,7 +41,6 @@ from pymc3.tests.test_distributions import (
     NatSmall,
     PdMatrix,
     PdMatrixChol,
-    PdMatrixCholUpper,
     R,
     RandomPdMatrix,
     RealMatrix,
@@ -644,6 +643,34 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
         params = [("mu", 4)]
         self._pymc_params_match_rv_ones(params, params, pm.Poisson)
 
+    def test_mv_distribution(self):
+        params = [("mu", np.array([1.0, 2.0])), ("cov", np.array([[2.0, 0.0], [0.0, 3.5]]))]
+        self._pymc_params_match_rv_ones(params, params, pm.MvNormal)
+
+    def test_mv_distribution_chol(self):
+        params = [("mu", np.array([1.0, 2.0])), ("chol", np.array([[2.0, 0.0], [0.0, 3.5]]))]
+        expected_cov = quaddist_matrix(chol=params[1][1])
+        expected_params = [("mu", np.array([1.0, 2.0])), ("cov", expected_cov.eval())]
+        self._pymc_params_match_rv_ones(params, expected_params, pm.MvNormal)
+
+    def test_mv_distribution_tau(self):
+        params = [("mu", np.array([1.0, 2.0])), ("tau", np.array([[2.0, 0.0], [0.0, 3.5]]))]
+        expected_cov = quaddist_matrix(tau=params[1][1])
+        expected_params = [("mu", np.array([1.0, 2.0])), ("cov", expected_cov.eval())]
+        self._pymc_params_match_rv_ones(params, expected_params, pm.MvNormal)
+
+    def test_dirichlet(self):
+        params = [("a", np.array([1.0, 2.0]))]
+        self._pymc_params_match_rv_ones(params, params, pm.Dirichlet)
+
+    def test_multinomial(self):
+        params = [("n", 85), ("p", np.array([0.28, 0.62, 0.10]))]
+        self._pymc_params_match_rv_ones(params, params, pm.Multinomial)
+
+    def test_categorical(self):
+        params = [("p", np.array([0.28, 0.62, 0.10]))]
+        self._pymc_params_match_rv_ones(params, params, pm.Categorical)
+
 
 class TestScalarParameterSamples(SeededTest):
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
@@ -840,65 +867,12 @@ class TestScalarParameterSamples(SeededTest):
             pm.DiscreteWeibull, {"q": Unit, "beta": Rplusdunif}, ref_rand=ref_rand
         )
 
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    @pytest.mark.parametrize("s", [2, 3, 4])
-    def test_categorical_random(self, s):
-        def ref_rand(size, p):
-            return nr.choice(np.arange(p.shape[0]), p=p, size=size)
-
-        pymc3_random_discrete(pm.Categorical, {"p": Simplex(s)}, ref_rand=ref_rand)
-
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_constant_dist(self):
         def ref_rand(size, c):
             return c * np.ones(size, dtype=int)
 
         pymc3_random_discrete(pm.Constant, {"c": I}, ref_rand=ref_rand)
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_mv_normal(self):
-        def ref_rand(size, mu, cov):
-            return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
-
-        def ref_rand_tau(size, mu, tau):
-            return ref_rand(size, mu, linalg.inv(tau))
-
-        def ref_rand_chol(size, mu, chol):
-            return ref_rand(size, mu, np.dot(chol, chol.T))
-
-        def ref_rand_uchol(size, mu, chol):
-            return ref_rand(size, mu, np.dot(chol.T, chol))
-
-        for n in [2, 3]:
-            pymc3_random(
-                pm.MvNormal,
-                {"mu": Vector(R, n), "cov": PdMatrix(n)},
-                size=100,
-                valuedomain=Vector(R, n),
-                ref_rand=ref_rand,
-            )
-            pymc3_random(
-                pm.MvNormal,
-                {"mu": Vector(R, n), "tau": PdMatrix(n)},
-                size=100,
-                valuedomain=Vector(R, n),
-                ref_rand=ref_rand_tau,
-            )
-            pymc3_random(
-                pm.MvNormal,
-                {"mu": Vector(R, n), "chol": PdMatrixChol(n)},
-                size=100,
-                valuedomain=Vector(R, n),
-                ref_rand=ref_rand_chol,
-            )
-            pymc3_random(
-                pm.MvNormal,
-                {"mu": Vector(R, n), "chol": PdMatrixCholUpper(n)},
-                size=100,
-                valuedomain=Vector(R, n),
-                ref_rand=ref_rand_uchol,
-                extra_args={"lower": False},
-            )
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_matrix_normal(self):
@@ -1042,20 +1016,6 @@ class TestScalarParameterSamples(SeededTest):
                 ref_rand=ref_rand,
             )
 
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_dirichlet(self):
-        def ref_rand(size, a):
-            return st.dirichlet.rvs(a, size=size)
-
-        for n in [2, 3]:
-            pymc3_random(
-                pm.Dirichlet,
-                {"a": Vector(Rplus, n)},
-                valuedomain=Simplex(n),
-                size=100,
-                ref_rand=ref_rand,
-            )
-
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_dirichlet_multinomial(self):
         def ref_rand(size, a, n):
@@ -1122,20 +1082,6 @@ class TestScalarParameterSamples(SeededTest):
         m = pm.DirichletMultinomial.dist(n=n, a=a, shape=shape)
         with expectation:
             m.random()
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_multinomial(self):
-        def ref_rand(size, p, n):
-            return nr.multinomial(pvals=p, n=n, size=size)
-
-        for n in [2, 3]:
-            pymc3_random_discrete(
-                pm.Multinomial,
-                {"p": Simplex(n), "n": Nat},
-                valuedomain=Vector(Nat, n),
-                size=100,
-                ref_rand=ref_rand,
-            )
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_gumbel(self):
