@@ -1932,6 +1932,15 @@ class CARRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("CAR", "\\operatorname{CAR}")
 
+    def make_node(self, rng, size, dtype, *dist_params):
+        mu, W, alpha, tau = dist_params
+        if tau.ndim == 0:
+            tau = tau.reshape(mu.shape)
+        if alpha.ndim == 0:
+            alpha = alpha.reshape(mu.shape)
+        dist_params = (mu, W, alpha, tau)
+        return super().make_node(rng, size, dtype, *dist_params)
+
     @classmethod
     def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, size):
         """
