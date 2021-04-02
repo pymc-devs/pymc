@@ -1,7 +1,7 @@
 import torch
 import torch.optim as optim
 
-
+'''
 def ObjectiveG(x, pg, p, w=None, perdim=True):
     
     px, indices = torch.sort(x, dim=-1)
@@ -13,7 +13,14 @@ def ObjectiveG(x, pg, p, w=None, perdim=True):
     else:
         WD = torch.mean(torch.abs(px-pg) ** p, dim=-1)
     return WD
-
+'''
+def ObjectiveG(x, pg, p, w=None, perdim=True):
+    if w is None:
+        w = torch.ones(x.shape[1]) / x.shape[1]
+    if perdim:
+        return torch.mean(torch.abs(torch.sum(w*torch.exp(-x**2/2), dim=-1) - 0.5**0.5)**p)
+    else:
+        return torch.abs(torch.sum(w*torch.exp(-x**2/2), dim=-1) - 0.5**0.5)**p
 
 def Objective(x, x2, p, perdim=True):
 
