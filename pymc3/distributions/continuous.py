@@ -2486,7 +2486,7 @@ class Gamma(PositiveContinuous):
     Gamma log-likelihood.
 
     Represents the sum of alpha exponentially distributed random variables,
-    each of which has mean beta.
+    each of which has rate beta.
 
     The pdf of this distribution is
 
