@@ -470,8 +470,9 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
         self._pymc_params_match_rv_ones(params, params, pm.Cauchy)
 
     def test_half_cauchy(self):
-        params = [("alpha", 2.0), ("beta", 5.0)]
-        self._pymc_params_match_rv_ones(params, params, pm.HalfCauchy)
+        params = [("beta", 5.0)]
+        expected_params = [("alpha", 0.0), ("beta", 5.0)]
+        self._pymc_params_match_rv_ones(params, expected_params, pm.HalfCauchy)
 
     @pytest.mark.skip(reason="Expected to fail due to bug")
     def test_gamma_alpha_beta(self):
@@ -518,21 +519,27 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
         params = [("p", 0.33)]
         self._pymc_params_match_rv_ones(params, params, pm.Bernoulli)
 
+    def test_bernoulli_logit_p(self):
+        logit_p_parameter = 1.0
+        bernoulli_sample = pm.Bernoulli.dist(logit_p=logit_p_parameter)
+        with pytest.raises(ValueError):
+            bernoulli_sample.eval()
+
     def test_poisson(self):
         params = [("mu", 4)]
         self._pymc_params_match_rv_ones(params, params, pm.Poisson)
 
-    def test_mv_distribution(self):
+    def test_mv_normal_distribution(self):
         params = [("mu", np.array([1.0, 2.0])), ("cov", np.array([[2.0, 0.0], [0.0, 3.5]]))]
         self._pymc_params_match_rv_ones(params, params, pm.MvNormal)
 
-    def test_mv_distribution_chol(self):
+    def test_mv_normal_distribution_chol(self):
         params = [("mu", np.array([1.0, 2.0])), ("chol", np.array([[2.0, 0.0], [0.0, 3.5]]))]
         expected_cov = quaddist_matrix(chol=params[1][1])
         expected_params = [("mu", np.array([1.0, 2.0])), ("cov", expected_cov.eval())]
         self._pymc_params_match_rv_ones(params, expected_params, pm.MvNormal)
 
-    def test_mv_distribution_tau(self):
+    def test_mv_normal_distribution_tau(self):
         params = [("mu", np.array([1.0, 2.0])), ("tau", np.array([[2.0, 0.0], [0.0, 3.5]]))]
         expected_cov = quaddist_matrix(tau=params[1][1])
         expected_params = [("mu", np.array([1.0, 2.0])), ("cov", expected_cov.eval())]
