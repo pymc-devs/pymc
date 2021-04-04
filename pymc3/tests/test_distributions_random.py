@@ -587,9 +587,6 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
         params = [("n", 85), ("p", np.array([0.28, 0.62, 0.10]))]
         self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Multinomial)
 
-    @pytest.mark.xfail(
-        reason="Requires bug fix in aesara 2.0.5 release. Commit id 02378861f1a77135f2556018630092a09262ea76"
-    )
     def test_categorical(self):
         params = [("p", np.array([0.28, 0.62, 0.10]))]
         self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Categorical)
