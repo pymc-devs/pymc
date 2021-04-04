@@ -20,6 +20,7 @@ from contextlib import ExitStack as does_not_raise
 import aesara
 import numpy as np
 import numpy.random as nr
+import numpy.testing as npt
 import pytest
 import scipy.stats as st
 
@@ -32,7 +33,7 @@ from pymc3.aesaraf import change_rv_size, floatX, intX
 from pymc3.distributions.dist_math import clipped_beta_rvs
 from pymc3.distributions.shape_utils import to_tuple
 from pymc3.exceptions import ShapeError
-from pymc3.tests.helpers import SeededTest
+from pymc3.tests.helpers import SeededTest, select_by_precision
 from pymc3.tests.test_distributions import (
     Domain,
     I,
@@ -626,13 +627,6 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(pm.Beta, {"alpha": Rplus, "beta": Rplus}, ref_rand=ref_rand)
 
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_exponential(self):
-        def ref_rand(size, lam):
-            return nr.exponential(scale=1.0 / lam, size=size)
-
-        pymc3_random(pm.Exponential, {"lam": Rplus}, ref_rand=ref_rand)
-
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_laplace(self):
         def ref_rand(size, mu, b):
@@ -679,20 +673,6 @@ class TestScalarParameterSamples(SeededTest):
             return st.halfcauchy.rvs(scale=beta, size=size)
 
         pymc3_random(pm.HalfCauchy, {"beta": Rplusbig}, ref_rand=ref_rand)
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_gamma_alpha_beta(self):
-        def ref_rand(size, alpha, beta):
-            return st.gamma.rvs(alpha, scale=1.0 / beta, size=size)
-
-        pymc3_random(pm.Gamma, {"alpha": Rplusbig, "beta": Rplusbig}, ref_rand=ref_rand)
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_gamma_mu_sigma(self):
-        def ref_rand(size, mu, sigma):
-            return st.gamma.rvs(mu ** 2 / sigma ** 2, scale=sigma ** 2 / mu, size=size)
-
-        pymc3_random(pm.Gamma, {"mu": Rplusbig, "sigma": Rplusbig}, ref_rand=ref_rand)
 
     @pytest.mark.skip(reason="This test is covered by Aesara")
     def test_inverse_gamma(self):
@@ -1787,7 +1767,7 @@ class TestMvNormal(SeededTest):
 
         for var in "bcd":
             std = np.std(samples[var] - samples["a"])
-            np.testing.assert_allclose(std, 1, rtol=1e-2)
+            npt.assert_allclose(std, 1, rtol=1e-2)
 
     def test_issue_3829(self):
         with pm.Model() as model:
@@ -1884,3 +1864,36 @@ class TestMvGaussianRandomWalk(SeededTest):
             prior = pm.sample_prior_predictive(samples=sample_shape)
 
         assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape
+
+
+def test_exponential_parameterization():
+    test_lambda = floatX(10.0)
+
+    exp_pymc = pm.Exponential.dist(lam=test_lambda)
+    (rv_scale,) = exp_pymc.owner.inputs[3:]
+
+    npt.assert_almost_equal(rv_scale.eval(), 1 / test_lambda)
+
+
+def test_gamma_parameterization():
+
+    test_alpha = floatX(10.0)
+    test_beta = floatX(100.0)
+
+    gamma_pymc = pm.Gamma.dist(alpha=test_alpha, beta=test_beta)
+    rv_alpha, rv_inv_beta = gamma_pymc.owner.inputs[3:]
+
+    assert np.array_equal(rv_alpha.eval(), test_alpha)
+
+    decimal = select_by_precision(float64=6, float32=3)
+
+    npt.assert_almost_equal(rv_inv_beta.eval(), 1.0 / test_beta, decimal)
+
+    test_mu = test_alpha / test_beta
+    test_sigma = np.sqrt(test_mu / test_beta)
+
+    gamma_pymc = pm.Gamma.dist(mu=test_mu, sigma=test_sigma)
+    rv_alpha, rv_inv_beta = gamma_pymc.owner.inputs[3:]
+
+    npt.assert_almost_equal(rv_alpha.eval(), test_alpha, decimal)
+    npt.assert_almost_equal(rv_inv_beta.eval(), 1.0 / test_beta, decimal)

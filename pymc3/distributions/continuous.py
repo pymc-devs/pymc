@@ -1382,32 +1382,35 @@ class Exponential(PositiveContinuous):
     @classmethod
     def dist(cls, lam, *args, **kwargs):
         lam = at.as_tensor_variable(floatX(lam))
-        # mean = 1.0 / lam
-        # median = mean * at.log(2)
-        # mode = at.zeros_like(lam)
-
-        # variance = lam ** -2
 
         assert_negative_support(lam, "lam", "Exponential")
-        return super().dist([lam], **kwargs)
 
-    def logp(value, lam):
+        # Aesara exponential op is parametrized in terms of mu (1/lam)
+        return super().dist([at.inv(lam)], **kwargs)
+
+    def logp(value, mu):
         """
         Calculate log-probability of Exponential distribution at specified value.
 
         Parameters
         ----------
         value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            Value(s) for which log-probability is calculated. If the log
+            probabilities for multiple values are desired the values must be
+            provided in a numpy array or aesara tensor
 
         Returns
         -------
         TensorVariable
         """
-        return bound(at.log(lam) - lam * value, value >= 0, lam > 0)
+        lam = at.inv(mu)
+        return bound(
+            at.log(lam) - lam * value,
+            value >= 0,
+            lam > 0,
+        )
 
-    def logcdf(value, lam):
+    def logcdf(value, mu):
         r"""
         Compute the log of cumulative distribution function for the Exponential distribution
         at the specified value.
@@ -1415,16 +1418,17 @@ class Exponential(PositiveContinuous):
         Parameters
         ----------
         value: numeric or np.ndarray or aesara.tensor
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            Value(s) for which log CDF is calculated. If the log CDF for
+            multiple values are desired the values must be provided in a numpy
+            array or aesara tensor.
 
         Returns
         -------
         TensorVariable
         """
-        a = lam * value
+        lam = at.inv(mu)
         return bound(
-            log1mexp(a),
+            log1mexp(lam * value),
             0 <= value,
             0 <= lam,
         )
@@ -2376,15 +2380,13 @@ class Gamma(PositiveContinuous):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
-        # mean = alpha / beta
-        # mode = at.maximum((alpha - 1) / beta, 0)
-        # variance = alpha / beta ** 2
 
         if not no_assert:
             assert_negative_support(alpha, "alpha", "Gamma")
             assert_negative_support(beta, "beta", "Gamma")
 
-        return super().dist([alpha, at.inv(beta)], **kwargs)
+        # The Aesara `GammaRV` `Op` will invert the `beta` parameter itself
+        return super().dist([alpha, beta], **kwargs)
 
     @classmethod
     def get_alpha_beta(cls, alpha=None, beta=None, mu=None, sigma=None):
@@ -2402,23 +2404,22 @@ class Gamma(PositiveContinuous):
 
         return alpha, beta
 
-    def _distr_parameters_for_repr(self):
-        return ["alpha", "beta"]
-
-    def logp(value, alpha, beta):
+    def logp(value, alpha, inv_beta):
         """
         Calculate log-probability of Gamma distribution at specified value.
 
         Parameters
         ----------
         value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or `TensorVariable`.
+            Value(s) for which log-probability is calculated. If the log
+            probabilities for multiple values are desired the values must be
+            provided in a numpy array or `TensorVariable`.
 
         Returns
         -------
         TensorVariable
         """
+        beta = at.inv(inv_beta)
         return bound(
             -gammaln(alpha) + logpow(beta, alpha) - beta * value + logpow(value, alpha - 1),
             value >= 0,
@@ -2426,7 +2427,7 @@ class Gamma(PositiveContinuous):
             beta > 0,
         )
 
-    def logcdf(value, alpha, beta):
+    def logcdf(value, alpha, inv_beta):
         """
         Compute the log of the cumulative distribution function for Gamma distribution
         at the specified value.
@@ -2434,13 +2435,16 @@ class Gamma(PositiveContinuous):
         Parameters
         ----------
         value: numeric or np.ndarray or `TensorVariable`
-            Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or `TensorVariable`.
+            Value(s) for which log CDF is calculated. If the log CDF for
+            multiple values are desired the values must be provided in a numpy
+            array or `TensorVariable`.
 
         Returns
         -------
         TensorVariable
         """
+        beta = at.inv(inv_beta)
+
         # Avoid C-assertion when the gammainc function is called with invalid values (#4340)
         safe_alpha = at.switch(at.lt(alpha, 0), 0, alpha)
         safe_beta = at.switch(at.lt(beta, 0), 0, beta)
