@@ -429,15 +429,23 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
         return parents[0].inputs
 
     def _compare_pymc_sampling_with_aesara_one(
-        self, pymc_params, expected_aesara_params, pymc_dist, size=15, decimal=6
+        self,
+        pymc_params,
+        expected_aesara_params,
+        pymc_dist,
+        size=15,
+        decimal=6,
+        sampling_aesara_params=None,
     ):
         pymc_params.append(("size", size))
         pymc_dist_output = pymc_dist.dist(
             rng=aesara.shared(self.get_random_state()), **dict(pymc_params)
         )
         self._pymc_params_match_aesara_rv_ones(pymc_dist_output, expected_aesara_params, decimal)
+        if sampling_aesara_params is None:
+            sampling_aesara_params = expected_aesara_params
         self._pymc_sample_matches_aeasara_rv_one(
-            pymc_dist_output, pymc_dist, expected_aesara_params, size, decimal
+            pymc_dist_output, pymc_dist, sampling_aesara_params, size, decimal
         )
 
     def _pymc_params_match_aesara_rv_ones(
@@ -482,7 +490,6 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
         expected_params = [("alpha", expected_alpha), ("beta", expected_beta)]
         self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.Beta)
 
-    @pytest.mark.skip(reason="Expected to fail due to bug")
     def test_exponential(self):
         params = [("lam", 10.0)]
         expected_params = [("lam", 1 / params[0][1])]
@@ -497,25 +504,29 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
         expected_params = [("alpha", 0.0), ("beta", 5.0)]
         self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.HalfCauchy)
 
-    @pytest.mark.skip(reason="Expected to fail due to bug")
     def test_gamma_alpha_beta(self):
         params = [("alpha", 2.0), ("beta", 5.0)]
         expected_params = [("alpha", params[0][1]), ("beta", 1 / params[1][1])]
-        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.Gamma)
+        sampling_aesara_params = [("alpha", params[0][1]), ("beta", params[1][1])]
+        self._compare_pymc_sampling_with_aesara_one(
+            params, expected_params, pm.Gamma, sampling_aesara_params=sampling_aesara_params
+        )
 
-    @pytest.mark.skip(reason="Expected to fail due to bug")
     def test_gamma_mu_sigma(self):
-        params = [("mu", 2.0), ("sigma", 5.0)]
+        params = [("mu", 0.5), ("sigma", 0.25)]
         expected_alpha, expected_beta = pm.Gamma.get_alpha_beta(mu=params[0][1], sigma=params[1][1])
         expected_params = [("alpha", expected_alpha), ("beta", 1 / expected_beta)]
-        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.Gamma)
+        sampling_aesara_params = [("alpha", expected_alpha), ("beta", expected_beta)]
+        self._compare_pymc_sampling_with_aesara_one(
+            params, expected_params, pm.Gamma, sampling_aesara_params=sampling_aesara_params
+        )
 
     def test_inverse_gamma_alpha_beta(self):
         params = [("alpha", 2.0), ("beta", 5.0)]
         self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.InverseGamma)
 
     def test_inverse_gamma_mu_sigma(self):
-        params = [("mu", 2.0), ("sigma", 5.0)]
+        params = [("mu", 0.5), ("sigma", 0.25)]
         expected_alpha, expected_beta = pm.InverseGamma._get_alpha_beta(
             mu=params[0][1], sigma=params[1][1], alpha=None, beta=None
         )
