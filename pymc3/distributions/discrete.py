@@ -16,7 +16,14 @@ import warnings
 import aesara.tensor as at
 import numpy as np
 
-from aesara.tensor.random.basic import bernoulli, binomial, categorical, nbinom, poisson
+from aesara.tensor.random.basic import (
+    RandomVariable,
+    bernoulli,
+    binomial,
+    categorical,
+    nbinom,
+    poisson,
+)
 from scipy import stats
 
 from pymc3.aesaraf import floatX, intX, take_along_axis
@@ -434,6 +441,22 @@ class Bernoulli(Discrete):
         return ["p"]
 
 
+class DiscreteWeibullRV(RandomVariable):
+    name = "discrete_weibull"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "int64"
+    _print_name = ("dWeibull", "\\operatorname{dWeibull}")
+
+    @classmethod
+    def rng_fn(cls, rng, q, beta, size):
+        p = rng.uniform(size=size)
+        return np.ceil(np.power(np.log(1 - p) / np.log(q), 1.0 / beta)) - 1
+
+
+discrete_weibull = DiscreteWeibullRV()
+
+
 class DiscreteWeibull(Discrete):
     R"""Discrete Weibull log-likelihood
 
@@ -473,51 +496,15 @@ class DiscreteWeibull(Discrete):
     Variance  :math:`2 \sum_{x = 1}^{\infty} x q^{x^{\beta}} - \mu - \mu^2`
     ========  ======================
     """
+    rv_op = discrete_weibull
 
-    def __init__(self, q, beta, *args, **kwargs):
-        super().__init__(*args, defaults=("median",), **kwargs)
+    @classmethod
+    def dist(cls, q, beta, *args, **kwargs):
+        q = at.as_tensor_variable(floatX(q))
+        beta = at.as_tensor_variable(floatX(beta))
+        return super().dist([q, beta], **kwargs)
 
-        self.q = at.as_tensor_variable(floatX(q))
-        self.beta = at.as_tensor_variable(floatX(beta))
-
-        self.median = self._ppf(0.5)
-
-    def _ppf(self, p):
-        r"""
-        The percentile point function (the inverse of the cumulative
-        distribution function) of the discrete Weibull distribution.
-        """
-        q = self.q
-        beta = self.beta
-
-        return (at.ceil(at.power(at.log(1 - p) / at.log(q), 1.0 / beta)) - 1).astype("int64")
-
-    def _random(self, q, beta, size=None):
-        p = np.random.uniform(size=size)
-
-        return np.ceil(np.power(np.log(1 - p) / np.log(q), 1.0 / beta)) - 1
-
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from DiscreteWeibull distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # q, beta = draw_values([self.q, self.beta], point=point, size=size)
-        # return generate_samples(self._random, q, beta, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(value, q, beta):
         r"""
         Calculate log-probability of DiscreteWeibull distribution at specified value.
 
@@ -531,8 +518,6 @@ class DiscreteWeibull(Discrete):
         -------
         TensorVariable
         """
-        q = self.q
-        beta = self.beta
         return bound(
             at.log(at.power(q, at.power(value, beta)) - at.power(q, at.power(value + 1, beta))),
             0 <= value,
@@ -541,7 +526,7 @@ class DiscreteWeibull(Discrete):
             0 < beta,
         )
 
-    def logcdf(self, value):
+    def logcdf(value, q, beta):
         """
         Compute the log of the cumulative distribution function for Discrete Weibull distribution
         at the specified value.
@@ -556,9 +541,6 @@ class DiscreteWeibull(Discrete):
         -------
         TensorVariable
         """
-        q = self.q
-        beta = self.beta
-
         return bound(
             at.log1p(-at.power(q, at.power(value + 1, beta))),
             0 <= value,

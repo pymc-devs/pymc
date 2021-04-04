@@ -1557,7 +1557,6 @@ class TestMatchesScipy:
             {"p": Unit},
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_discrete_weibull(self):
         self.check_logp(
             DiscreteWeibull,
