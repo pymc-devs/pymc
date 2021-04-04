@@ -1193,15 +1193,23 @@ class Beta(UnitContinuous):
     ========  ==============================================================
 
     Beta distribution can be parameterized either in terms of alpha and
-    beta or mean and standard deviation. The link between the two
-    parametrizations is given by
+    beta, or mean and standard deviation. The link between the two parametrizations is given by
 
     .. math::
 
        \alpha &= \mu \kappa \\
        \beta  &= (1 - \mu) \kappa
-
        \text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1
+
+    We can also use an alternative parameterisation using the mean and the sum of alpha and beta.
+    The link would be given by
+
+    .. math::
+
+       \alpha &= \mu \nu \\
+       \beta  &= (1 - \mu) \nu
+       \text{where } \nu = \alpha + \beta > 0
+
 
     Parameters
     ----------
@@ -1213,6 +1221,8 @@ class Beta(UnitContinuous):
         Alternative mean (0 < mu < 1).
     sigma: float
         Alternative standard deviation (0 < sigma < sqrt(mu * (1 - mu))).
+    nu: float
+        Alternative parameterisation using sum of alpha and beta (nu = alpha + beta > 0)
 
     Notes
     -----
@@ -1220,11 +1230,11 @@ class Beta(UnitContinuous):
     the binomial distribution.
     """
 
-    def __init__(self, alpha=None, beta=None, mu=None, sigma=None, sd=None, *args, **kwargs):
+    def __init__(self, alpha=None, beta=None, mu=None, sigma=None, sd=None, nu=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if sd is not None:
             sigma = sd
-        alpha, beta = self.get_alpha_beta(alpha, beta, mu, sigma)
+        alpha, beta = self.get_alpha_beta(alpha, beta, mu, sigma, nu)
         self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
         self.beta = beta = at.as_tensor_variable(floatX(beta))
 
@@ -1236,19 +1246,21 @@ class Beta(UnitContinuous):
         assert_negative_support(alpha, "alpha", "Beta")
         assert_negative_support(beta, "beta", "Beta")
 
-    def get_alpha_beta(self, alpha=None, beta=None, mu=None, sigma=None):
+    def get_alpha_beta(self, alpha=None, beta=None, mu=None, sigma=None, nu=None):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sigma is not None):
             kappa = mu * (1 - mu) / sigma ** 2 - 1
             alpha = mu * kappa
             beta = (1 - mu) * kappa
+        elif (mu is not None) and (nu is not None):
+            alpha = mu*nu
+            beta = (1 - mu)*nu
         else:
             raise ValueError(
                 "Incompatible parameterization. Either use alpha "
-                "and beta, or mu and sigma to specify distribution."
+                "and beta, or mu and sigma, or mu and nu to specify distribution."
             )
-
         return alpha, beta
 
     def random(self, point=None, size=None):
