@@ -24,7 +24,7 @@ import numpy.testing as npt
 import pytest
 import scipy.stats as st
 
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_array_almost_equal
 from scipy.special import expit
 
 import pymc3 as pm
@@ -428,8 +428,21 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
         # I am assuming there will always only be 1 Apply parent node in this context
         return parents[0].inputs
 
-    def _pymc_params_match_rv_ones(self, pymc_params, expected_aesara_params, pymc_dist, decimal=6):
-        pymc_dist_output = pymc_dist.dist(**dict(pymc_params))
+    def _compare_pymc_sampling_with_aesara_one(
+        self, pymc_params, expected_aesara_params, pymc_dist, size=15, decimal=6
+    ):
+        pymc_params.append(("size", size))
+        pymc_dist_output = pymc_dist.dist(
+            rng=aesara.shared(self.get_random_state()), **dict(pymc_params)
+        )
+        self._pymc_params_match_aesara_rv_ones(pymc_dist_output, expected_aesara_params, decimal)
+        self._pymc_sample_matches_aeasara_rv_one(
+            pymc_dist_output, pymc_dist, expected_aesara_params, size, decimal
+        )
+
+    def _pymc_params_match_aesara_rv_ones(
+        self, pymc_dist_output, expected_aesara_params, decimal=6
+    ):
         aesera_dist_inputs = self.get_inputs_from_apply_node_outputs(pymc_dist_output)[3:]
         assert len(expected_aesara_params) == len(aesera_dist_inputs)
         for (expected_name, expected_value), actual_variable in zip(
@@ -437,59 +450,69 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
         ):
             assert_almost_equal(expected_value, actual_variable.eval(), decimal=decimal)
 
+    def _pymc_sample_matches_aeasara_rv_one(
+        self, pymc_dist_output, pymc_dist, expected_aesara_params, size, decimal
+    ):
+        sample = pymc_dist.rv_op(
+            *[p[1] for p in expected_aesara_params],
+            size=size,
+            rng=aesara.shared(self.get_random_state()),
+        )
+        assert_array_almost_equal(pymc_dist_output.eval(), sample.eval(), decimal=decimal)
+
     def test_normal(self):
         params = [("mu", 5.0), ("sigma", 10.0)]
-        self._pymc_params_match_rv_ones(params, params, pm.Normal)
+        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Normal)
 
     def test_uniform(self):
         params = [("lower", 0.5), ("upper", 1.5)]
-        self._pymc_params_match_rv_ones(params, params, pm.Uniform)
+        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Uniform)
 
     def test_half_normal(self):
         params, expected_aesara_params = [("sigma", 10.0)], [("mean", 0), ("sigma", 10.0)]
-        self._pymc_params_match_rv_ones(params, expected_aesara_params, pm.HalfNormal)
+        self._compare_pymc_sampling_with_aesara_one(params, expected_aesara_params, pm.HalfNormal)
 
     def test_beta_alpha_beta(self):
         params = [("alpha", 2.0), ("beta", 5.0)]
-        self._pymc_params_match_rv_ones(params, params, pm.Beta)
+        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Beta)
 
     def test_beta_mu_sigma(self):
-        params = [("mu", 2.0), ("sigma", 5.0)]
+        params = [("mu", 0.5), ("sigma", 0.25)]
         expected_alpha, expected_beta = pm.Beta.get_alpha_beta(mu=params[0][1], sigma=params[1][1])
         expected_params = [("alpha", expected_alpha), ("beta", expected_beta)]
-        self._pymc_params_match_rv_ones(params, expected_params, pm.Beta)
+        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.Beta)
 
     @pytest.mark.skip(reason="Expected to fail due to bug")
     def test_exponential(self):
         params = [("lam", 10.0)]
         expected_params = [("lam", 1 / params[0][1])]
-        self._pymc_params_match_rv_ones(params, expected_params, pm.Exponential)
+        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.Exponential)
 
     def test_cauchy(self):
         params = [("alpha", 2.0), ("beta", 5.0)]
-        self._pymc_params_match_rv_ones(params, params, pm.Cauchy)
+        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Cauchy)
 
     def test_half_cauchy(self):
         params = [("beta", 5.0)]
         expected_params = [("alpha", 0.0), ("beta", 5.0)]
-        self._pymc_params_match_rv_ones(params, expected_params, pm.HalfCauchy)
+        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.HalfCauchy)
 
     @pytest.mark.skip(reason="Expected to fail due to bug")
     def test_gamma_alpha_beta(self):
         params = [("alpha", 2.0), ("beta", 5.0)]
         expected_params = [("alpha", params[0][1]), ("beta", 1 / params[1][1])]
-        self._pymc_params_match_rv_ones(params, expected_params, pm.Gamma)
+        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.Gamma)
 
     @pytest.mark.skip(reason="Expected to fail due to bug")
     def test_gamma_mu_sigma(self):
         params = [("mu", 2.0), ("sigma", 5.0)]
         expected_alpha, expected_beta = pm.Gamma.get_alpha_beta(mu=params[0][1], sigma=params[1][1])
         expected_params = [("alpha", expected_alpha), ("beta", 1 / expected_beta)]
-        self._pymc_params_match_rv_ones(params, expected_params, pm.Gamma)
+        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.Gamma)
 
     def test_inverse_gamma_alpha_beta(self):
         params = [("alpha", 2.0), ("beta", 5.0)]
-        self._pymc_params_match_rv_ones(params, params, pm.InverseGamma)
+        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.InverseGamma)
 
     def test_inverse_gamma_mu_sigma(self):
         params = [("mu", 2.0), ("sigma", 5.0)]
@@ -497,15 +520,15 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
             mu=params[0][1], sigma=params[1][1], alpha=None, beta=None
         )
         expected_params = [("alpha", expected_alpha), ("beta", expected_beta)]
-        self._pymc_params_match_rv_ones(params, expected_params, pm.InverseGamma)
+        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.InverseGamma)
 
     def test_binomial(self):
         params = [("n", 100), ("p", 0.33)]
-        self._pymc_params_match_rv_ones(params, params, pm.Binomial)
+        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Binomial)
 
     def test_negative_binomial(self):
         params = [("n", 100), ("p", 0.33)]
-        self._pymc_params_match_rv_ones(params, params, pm.NegativeBinomial)
+        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.NegativeBinomial)
 
     def test_negative_binomial_mu_sigma(self):
         params = [("mu", 5.0), ("alpha", 8.0)]
@@ -513,11 +536,11 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
             mu=params[0][1], alpha=params[1][1], n=None, p=None
         )
         expected_params = [("n", expected_n), ("p", expected_p)]
-        self._pymc_params_match_rv_ones(params, expected_params, pm.NegativeBinomial)
+        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.NegativeBinomial)
 
     def test_bernoulli(self):
         params = [("p", 0.33)]
-        self._pymc_params_match_rv_ones(params, params, pm.Bernoulli)
+        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Bernoulli)
 
     def test_bernoulli_logit_p(self):
         logit_p_parameter = 1.0
@@ -526,36 +549,39 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
             bernoulli_sample.eval()
 
     def test_poisson(self):
-        params = [("mu", 4)]
-        self._pymc_params_match_rv_ones(params, params, pm.Poisson)
+        params = [("mu", 4.0)]
+        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Poisson)
 
     def test_mv_normal_distribution(self):
         params = [("mu", np.array([1.0, 2.0])), ("cov", np.array([[2.0, 0.0], [0.0, 3.5]]))]
-        self._pymc_params_match_rv_ones(params, params, pm.MvNormal)
+        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.MvNormal)
 
     def test_mv_normal_distribution_chol(self):
         params = [("mu", np.array([1.0, 2.0])), ("chol", np.array([[2.0, 0.0], [0.0, 3.5]]))]
         expected_cov = quaddist_matrix(chol=params[1][1])
         expected_params = [("mu", np.array([1.0, 2.0])), ("cov", expected_cov.eval())]
-        self._pymc_params_match_rv_ones(params, expected_params, pm.MvNormal)
+        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.MvNormal)
 
     def test_mv_normal_distribution_tau(self):
         params = [("mu", np.array([1.0, 2.0])), ("tau", np.array([[2.0, 0.0], [0.0, 3.5]]))]
         expected_cov = quaddist_matrix(tau=params[1][1])
         expected_params = [("mu", np.array([1.0, 2.0])), ("cov", expected_cov.eval())]
-        self._pymc_params_match_rv_ones(params, expected_params, pm.MvNormal)
+        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.MvNormal)
 
     def test_dirichlet(self):
         params = [("a", np.array([1.0, 2.0]))]
-        self._pymc_params_match_rv_ones(params, params, pm.Dirichlet)
+        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Dirichlet)
 
     def test_multinomial(self):
         params = [("n", 85), ("p", np.array([0.28, 0.62, 0.10]))]
-        self._pymc_params_match_rv_ones(params, params, pm.Multinomial)
+        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Multinomial)
 
+    @pytest.mark.xfail(
+        reason="Requires bug fix in aesara 2.0.5 release. Commit id 02378861f1a77135f2556018630092a09262ea76"
+    )
     def test_categorical(self):
         params = [("p", np.array([0.28, 0.62, 0.10]))]
-        self._pymc_params_match_rv_ones(params, params, pm.Categorical)
+        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Categorical)
 
 
 class TestScalarParameterSamples(SeededTest):
