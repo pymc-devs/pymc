@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-#!/usr/bin/env python
+# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import warnings
@@ -397,7 +397,6 @@ class Dirichlet(Continuous):
 
     @classmethod
     def dist(cls, a, **kwargs):
-
         a = at.as_tensor_variable(a)
         # mean = a / at.sum(a)
         # mode = at.switch(at.all(a > 1), (a - 1) / at.sum(a - 1), np.nan)
@@ -491,7 +490,6 @@ class Multinomial(Discrete):
 
     @classmethod
     def dist(cls, n, p, *args, **kwargs):
-
         p = p / at.sum(p, axis=-1, keepdims=True)
         n = at.as_tensor_variable(n)
         p = at.as_tensor_variable(p)
@@ -910,11 +908,11 @@ class Wishart(Continuous):
 
         return bound(
             (
-                (nu - p - 1) * at.log(IXI)
-                - trace(matrix_inverse(V).dot(X))
-                - nu * p * at.log(2)
-                - nu * at.log(IVI)
-                - 2 * multigammaln(nu / 2.0, p)
+                    (nu - p - 1) * at.log(IXI)
+                    - trace(matrix_inverse(V).dot(X))
+                    - nu * p * at.log(2)
+                    - nu * at.log(IVI)
+                    - 2 * multigammaln(nu / 2.0, p)
             )
             / 2,
             matrix_pos_def(X),
@@ -1011,16 +1009,16 @@ def _lkj_normalizing_constant(eta, n):
         result = gammaln(2.0 * at.arange(1, int((n - 1) / 2) + 1)).sum()
         if n % 2 == 1:
             result += (
-                0.25 * (n ** 2 - 1) * at.log(np.pi)
-                - 0.25 * (n - 1) ** 2 * at.log(2.0)
-                - (n - 1) * gammaln(int((n + 1) / 2))
+                    0.25 * (n ** 2 - 1) * at.log(np.pi)
+                    - 0.25 * (n - 1) ** 2 * at.log(2.0)
+                    - (n - 1) * gammaln(int((n + 1) / 2))
             )
         else:
             result += (
-                0.25 * n * (n - 2) * at.log(np.pi)
-                + 0.25 * (3 * n ** 2 - 4 * n) * at.log(2.0)
-                + n * gammaln(n / 2)
-                - (n - 1) * gammaln(n)
+                    0.25 * n * (n - 2) * at.log(np.pi)
+                    + 0.25 * (3 * n ** 2 - 4 * n) * at.log(2.0)
+                    + n * gammaln(n / 2)
+                    - (n - 1) * gammaln(n)
             )
     else:
         result = -(n - 1) * gammaln(eta + 0.5 * (n - 1))
@@ -1968,9 +1966,11 @@ class CARRV(RandomVariable):
             W = scipy.sparse.csr_matrix(W)
         tau = scipy.sparse.csr_matrix(tau)
         alpha = scipy.sparse.csr_matrix(alpha)
+
         perm_array = scipy.sparse.csgraph.reverse_cuthill_mckee(W, symmetric_mode=True)
         W = W[perm_array, :]
         W = W[:, perm_array]
+
         Q = tau.multiply(D - alpha.multiply(W))
         Qb = Q.diagonal()
         u = 1
@@ -1978,8 +1978,14 @@ class CARRV(RandomVariable):
             Qb = np.vstack((np.pad(Q.diagonal(u), (u, 0), constant_values=(0, 0)), Qb))
             u += 1
         L = scipy.linalg.cholesky_banded(Qb, lower=False)
-        z = rng.normal(size=W.shape[0], loc=mu)
-        samples = scipy.linalg.cho_solve_banded((L, False), z)
+
+        size = tuple(size or ())
+        if size:
+            mu = np.broadcast_to(mu, size + mu.shape)
+        z = rng.normal(loc=mu)
+        samples = np.empty(z.shape)
+        for idx in np.ndindex(mu.shape[:-1]):
+            samples[idx] = scipy.linalg.cho_solve_banded((L, False), z)
         return samples
 
 
