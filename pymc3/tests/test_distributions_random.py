@@ -428,168 +428,172 @@ class TestCorrectParametrizationMappingPymcToScipy(SeededTest):
         # I am assuming there will always only be 1 Apply parent node in this context
         return parents[0].inputs
 
-    def _compare_pymc_sampling_with_aesara_one(
+    def _compare_pymc_sampling_with_aesara(
         self,
+        pymc_dist,
         pymc_params,
         expected_aesara_params,
-        pymc_dist,
         size=15,
         decimal=6,
         sampling_aesara_params=None,
     ):
-        pymc_params.append(("size", size))
-        pymc_dist_output = pymc_dist.dist(
-            rng=aesara.shared(self.get_random_state()), **dict(pymc_params)
-        )
-        self._pymc_params_match_aesara_rv_ones(pymc_dist_output, expected_aesara_params, decimal)
+        pymc_params["size"] = size
+        pymc_dist_output = pymc_dist.dist(rng=aesara.shared(self.get_random_state()), **pymc_params)
+        self._pymc_params_match_aesara_rv(pymc_dist_output, expected_aesara_params, decimal)
         if sampling_aesara_params is None:
             sampling_aesara_params = expected_aesara_params
-        self._pymc_sample_matches_aeasara_rv_one(
+        self._pymc_sample_matches_aeasara_rv(
             pymc_dist_output, pymc_dist, sampling_aesara_params, size, decimal
         )
 
-    def _pymc_params_match_aesara_rv_ones(
-        self, pymc_dist_output, expected_aesara_params, decimal=6
-    ):
+    def _pymc_params_match_aesara_rv(self, pymc_dist_output, expected_aesara_params, decimal=6):
         aesera_dist_inputs = self.get_inputs_from_apply_node_outputs(pymc_dist_output)[3:]
         assert len(expected_aesara_params) == len(aesera_dist_inputs)
         for (expected_name, expected_value), actual_variable in zip(
-            expected_aesara_params, aesera_dist_inputs
+            expected_aesara_params.items(), aesera_dist_inputs
         ):
             assert_almost_equal(expected_value, actual_variable.eval(), decimal=decimal)
 
-    def _pymc_sample_matches_aeasara_rv_one(
+    def _pymc_sample_matches_aeasara_rv(
         self, pymc_dist_output, pymc_dist, expected_aesara_params, size, decimal
     ):
         sample = pymc_dist.rv_op(
-            *[p[1] for p in expected_aesara_params],
+            *[p for p in expected_aesara_params.values()],
             size=size,
             rng=aesara.shared(self.get_random_state()),
         )
         assert_array_almost_equal(pymc_dist_output.eval(), sample.eval(), decimal=decimal)
 
     def test_normal(self):
-        params = [("mu", 5.0), ("sigma", 10.0)]
-        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Normal)
+        params = {"mu": 5.0, "sigma": 10.0}
+        self._compare_pymc_sampling_with_aesara(pm.Normal, params, params.copy())
 
     def test_uniform(self):
-        params = [("lower", 0.5), ("upper", 1.5)]
-        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Uniform)
+        params = {"lower": 0.5, "upper": 1.5}
+        self._compare_pymc_sampling_with_aesara(pm.Uniform, params, params.copy())
 
     def test_half_normal(self):
-        params, expected_aesara_params = [("sigma", 10.0)], [("mean", 0), ("sigma", 10.0)]
-        self._compare_pymc_sampling_with_aesara_one(params, expected_aesara_params, pm.HalfNormal)
+        params, expected_aesara_params = {"sigma": 10.0}, {"mean": 0, "sigma": 10.0}
+        self._compare_pymc_sampling_with_aesara(
+            pm.HalfNormal,
+            params,
+            expected_aesara_params,
+        )
 
     def test_beta_alpha_beta(self):
-        params = [("alpha", 2.0), ("beta", 5.0)]
-        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Beta)
+        params = {"alpha": 2.0, "beta": 5.0}
+        self._compare_pymc_sampling_with_aesara(pm.Beta, params, params.copy())
 
     def test_beta_mu_sigma(self):
-        params = [("mu", 0.5), ("sigma", 0.25)]
-        expected_alpha, expected_beta = pm.Beta.get_alpha_beta(mu=params[0][1], sigma=params[1][1])
-        expected_params = [("alpha", expected_alpha), ("beta", expected_beta)]
-        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.Beta)
+        params = {"mu": 0.5, "sigma": 0.25}
+        expected_alpha, expected_beta = pm.Beta.get_alpha_beta(
+            mu=params["mu"], sigma=params["sigma"]
+        )
+        expected_params = {"alpha": expected_alpha, "beta": expected_beta}
+        self._compare_pymc_sampling_with_aesara(pm.Beta, params, expected_params)
 
     def test_exponential(self):
-        params = [("lam", 10.0)]
-        expected_params = [("lam", 1 / params[0][1])]
-        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.Exponential)
+        params = {"lam": 10.0}
+        expected_params = {"lam": 1.0 / params["lam"]}
+        self._compare_pymc_sampling_with_aesara(pm.Exponential, params, expected_params)
 
     def test_cauchy(self):
-        params = [("alpha", 2.0), ("beta", 5.0)]
-        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Cauchy)
+        params = {"alpha": 2.0, "beta": 5.0}
+        self._compare_pymc_sampling_with_aesara(pm.Cauchy, params, params.copy())
 
     def test_half_cauchy(self):
-        params = [("beta", 5.0)]
-        expected_params = [("alpha", 0.0), ("beta", 5.0)]
-        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.HalfCauchy)
+        params = {"beta": 5.0}
+        expected_params = {"alpha": 0.0, "beta": 5.0}
+        self._compare_pymc_sampling_with_aesara(pm.HalfCauchy, params, expected_params)
 
     def test_gamma_alpha_beta(self):
-        params = [("alpha", 2.0), ("beta", 5.0)]
-        expected_params = [("alpha", params[0][1]), ("beta", 1 / params[1][1])]
-        sampling_aesara_params = [("alpha", params[0][1]), ("beta", params[1][1])]
-        self._compare_pymc_sampling_with_aesara_one(
-            params, expected_params, pm.Gamma, sampling_aesara_params=sampling_aesara_params
+        params = {"alpha": 2.0, "beta": 5.0}
+        expected_params = {"alpha": params["alpha"], "beta": 1 / params["beta"]}
+        sampling_aesara_params = {"alpha": params["alpha"], "beta": params["beta"]}
+        self._compare_pymc_sampling_with_aesara(
+            pm.Gamma, params, expected_params, sampling_aesara_params=sampling_aesara_params
         )
 
     def test_gamma_mu_sigma(self):
-        params = [("mu", 0.5), ("sigma", 0.25)]
-        expected_alpha, expected_beta = pm.Gamma.get_alpha_beta(mu=params[0][1], sigma=params[1][1])
-        expected_params = [("alpha", expected_alpha), ("beta", 1 / expected_beta)]
-        sampling_aesara_params = [("alpha", expected_alpha), ("beta", expected_beta)]
-        self._compare_pymc_sampling_with_aesara_one(
-            params, expected_params, pm.Gamma, sampling_aesara_params=sampling_aesara_params
+        params = {"mu": 0.5, "sigma": 0.25}
+        expected_alpha, expected_beta = pm.Gamma.get_alpha_beta(
+            mu=params["mu"], sigma=params["sigma"]
+        )
+        expected_params = {"alpha": expected_alpha, "beta": 1 / expected_beta}
+        sampling_aesara_params = {"alpha": expected_alpha, "beta": expected_beta}
+        self._compare_pymc_sampling_with_aesara(
+            pm.Gamma, params, expected_params, sampling_aesara_params=sampling_aesara_params
         )
 
     def test_inverse_gamma_alpha_beta(self):
-        params = [("alpha", 2.0), ("beta", 5.0)]
-        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.InverseGamma)
+        params = {"alpha": 2.0, "beta": 5.0}
+        self._compare_pymc_sampling_with_aesara(pm.InverseGamma, params, params.copy())
 
     def test_inverse_gamma_mu_sigma(self):
-        params = [("mu", 0.5), ("sigma", 0.25)]
+        params = {"mu": 0.5, "sigma": 0.25}
         expected_alpha, expected_beta = pm.InverseGamma._get_alpha_beta(
-            mu=params[0][1], sigma=params[1][1], alpha=None, beta=None
+            alpha=None, beta=None, mu=params["mu"], sigma=params["sigma"]
         )
-        expected_params = [("alpha", expected_alpha), ("beta", expected_beta)]
-        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.InverseGamma)
+        expected_params = {"alpha": expected_alpha, "beta": expected_beta}
+        self._compare_pymc_sampling_with_aesara(pm.InverseGamma, params, expected_params)
 
     def test_binomial(self):
-        params = [("n", 100), ("p", 0.33)]
-        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Binomial)
+        params = {"n": 100, "p": 0.33}
+        self._compare_pymc_sampling_with_aesara(pm.Binomial, params, params.copy())
 
     def test_negative_binomial(self):
-        params = [("n", 100), ("p", 0.33)]
-        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.NegativeBinomial)
+        params = {"n": 100, "p": 0.33}
+        self._compare_pymc_sampling_with_aesara(pm.NegativeBinomial, params, params.copy())
 
     def test_negative_binomial_mu_sigma(self):
-        params = [("mu", 5.0), ("alpha", 8.0)]
+        params = {"mu": 5.0, "alpha": 8.0}
         expected_n, expected_p = pm.NegativeBinomial.get_n_p(
-            mu=params[0][1], alpha=params[1][1], n=None, p=None
+            mu=params["mu"], alpha=params["alpha"], n=None, p=None
         )
-        expected_params = [("n", expected_n), ("p", expected_p)]
-        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.NegativeBinomial)
+        expected_params = {"n": expected_n, "p": expected_p}
+        self._compare_pymc_sampling_with_aesara(pm.NegativeBinomial, params, expected_params)
 
     def test_bernoulli(self):
-        params = [("p", 0.33)]
-        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Bernoulli)
+        params = {"p": 0.33}
+        self._compare_pymc_sampling_with_aesara(pm.Bernoulli, params, params.copy())
 
     def test_bernoulli_logit_p(self):
-        logit_p_parameter = 1.0
-        bernoulli_sample = pm.Bernoulli.dist(logit_p=logit_p_parameter)
+        params = {"logit_p": 1.0}
+        bernoulli_sample = pm.Bernoulli.dist(logit_p=params["logit_p"])
         with pytest.raises(ValueError):
             bernoulli_sample.eval()
 
     def test_poisson(self):
-        params = [("mu", 4.0)]
-        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Poisson)
+        params = {"mu": 4.0}
+        self._compare_pymc_sampling_with_aesara(pm.Poisson, params, params.copy())
 
     def test_mv_normal_distribution(self):
-        params = [("mu", np.array([1.0, 2.0])), ("cov", np.array([[2.0, 0.0], [0.0, 3.5]]))]
-        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.MvNormal)
+        params = {"mu": np.array([1.0, 2.0]), "cov": np.array([[2.0, 0.0], [0.0, 3.5]])}
+        self._compare_pymc_sampling_with_aesara(pm.MvNormal, params, params.copy())
 
     def test_mv_normal_distribution_chol(self):
-        params = [("mu", np.array([1.0, 2.0])), ("chol", np.array([[2.0, 0.0], [0.0, 3.5]]))]
-        expected_cov = quaddist_matrix(chol=params[1][1])
-        expected_params = [("mu", np.array([1.0, 2.0])), ("cov", expected_cov.eval())]
-        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.MvNormal)
+        params = {"mu": np.array([1.0, 2.0]), "chol": np.array([[2.0, 0.0], [0.0, 3.5]])}
+        expected_cov = quaddist_matrix(chol=params["chol"])
+        expected_params = {"mu": np.array([1.0, 2.0]), "cov": expected_cov.eval()}
+        self._compare_pymc_sampling_with_aesara(pm.MvNormal, params, expected_params)
 
     def test_mv_normal_distribution_tau(self):
-        params = [("mu", np.array([1.0, 2.0])), ("tau", np.array([[2.0, 0.0], [0.0, 3.5]]))]
-        expected_cov = quaddist_matrix(tau=params[1][1])
-        expected_params = [("mu", np.array([1.0, 2.0])), ("cov", expected_cov.eval())]
-        self._compare_pymc_sampling_with_aesara_one(params, expected_params, pm.MvNormal)
+        params = {"mu": np.array([1.0, 2.0]), "tau": np.array([[2.0, 0.0], [0.0, 3.5]])}
+        expected_cov = quaddist_matrix(tau=params["tau"])
+        expected_params = {"mu": np.array([1.0, 2.0]), "cov": expected_cov.eval()}
+        self._compare_pymc_sampling_with_aesara(pm.MvNormal, params, expected_params)
 
     def test_dirichlet(self):
-        params = [("a", np.array([1.0, 2.0]))]
-        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Dirichlet)
+        params = {"a": np.array([1.0, 2.0])}
+        self._compare_pymc_sampling_with_aesara(pm.Dirichlet, params, params.copy())
 
     def test_multinomial(self):
-        params = [("n", 85), ("p", np.array([0.28, 0.62, 0.10]))]
-        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Multinomial)
+        params = {"n": 85, "p": np.array([0.28, 0.62, 0.10])}
+        self._compare_pymc_sampling_with_aesara(pm.Multinomial, params, params.copy())
 
     def test_categorical(self):
-        params = [("p", np.array([0.28, 0.62, 0.10]))]
-        self._compare_pymc_sampling_with_aesara_one(params, list(params), pm.Categorical)
+        params = {"p": np.array([0.28, 0.62, 0.10])}
+        self._compare_pymc_sampling_with_aesara(pm.Categorical, params, params.copy())
 
 
 class TestScalarParameterSamples(SeededTest):
