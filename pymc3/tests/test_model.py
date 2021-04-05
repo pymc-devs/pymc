@@ -14,6 +14,8 @@
 import pickle
 import unittest
 
+from functools import reduce
+
 import aesara
 import aesara.sparse as sparse
 import aesara.tensor as at
@@ -25,7 +27,6 @@ import pytest
 import scipy.sparse as sps
 
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.subtensor import AdvancedIncSubtensor
 from aesara.tensor.var import TensorConstant
 from numpy.testing import assert_almost_equal
 
@@ -304,14 +305,14 @@ class TestValueGradFunction(unittest.TestCase):
         gf = m.logp_dlogp_function()
         gf._extra_are_set = True
 
-        m.default_rng.get_value(borrow=True).seed(102)
+        assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
 
-        # The gradient should have random values as inputs, so its value should
-        # change every time we evaluate it at the same point
-        #
-        # TODO: We could probably use a better test than this.
-        res = [gf(DictToArrayBijection.map(Point(m.test_point, model=m))) for i in range(20)]
-        assert np.var(res) > 0.0
+        pnt = m.test_point.copy()
+        del pnt["x2_missing"]
+
+        res = [gf(DictToArrayBijection.map(Point(pnt, model=m))) for i in range(5)]
+
+        assert reduce(lambda x, y: np.array_equal(x, y) and y, res) is not False
 
     def test_aesara_switch_broadcast_edge_cases_1(self):
         # Tests against two subtle issues related to a previous bug in Theano
@@ -465,9 +466,12 @@ def test_make_obs_var():
         fake_distribution.name = input_name
 
     # Check function behavior using the various inputs
-    dense_output = pm.model.make_obs_var(fake_distribution, dense_input)
-    sparse_output = pm.model.make_obs_var(fake_distribution, sparse_input)
-    masked_output = pm.model.make_obs_var(fake_distribution, masked_array_input)
+    dense_output = fake_model.make_obs_var(fake_distribution, dense_input, None, None)
+    del fake_model.named_vars[fake_distribution.name]
+    sparse_output = fake_model.make_obs_var(fake_distribution, sparse_input, None, None)
+    del fake_model.named_vars[fake_distribution.name]
+    masked_output = fake_model.make_obs_var(fake_distribution, masked_array_input, None, None)
+    assert not isinstance(masked_output, RandomVariable)
 
     # Ensure that the missing values are appropriately set to None
     for func_output in [dense_output, sparse_output]:
@@ -484,8 +488,10 @@ def test_make_obs_var():
     assert sparse.basic._is_sparse_variable(sparse_output.tag.observations)
 
     # Masked output is something weird. Just ensure it has missing values
-    # self.assertIsInstance(masked_output, TensorConstant)
-    assert isinstance(masked_output.owner.op, AdvancedIncSubtensor)
+    assert {"testing_inputs_missing"} == {v.name for v in fake_model.vars}
+    assert {"testing_inputs", "testing_inputs_observed"} == {
+        v.name for v in fake_model.observed_RVs
+    }
 
 
 def test_initial_point():

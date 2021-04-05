@@ -306,9 +306,13 @@ class TestDataPyMC3:
             inference_data = pm.sample(100, chains=2, return_inferencedata=True)
 
         # make sure that data is really missing
-        assert isinstance(y.owner.op, AdvancedIncSubtensor)
+        assert "y_missing" in model.named_vars
 
-        test_dict = {"posterior": ["x"], "observed_data": ["y"], "log_likelihood": ["y"]}
+        test_dict = {
+            "posterior": ["x", "y", "y_missing"],
+            "observed_data": ["y_observed"],
+            "log_likelihood": ["y_observed"],
+        }
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
 
