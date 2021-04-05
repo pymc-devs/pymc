@@ -33,7 +33,7 @@ from pymc3.aesaraf import change_rv_size, floatX, intX
 from pymc3.distributions.multivariate import quaddist_matrix
 from pymc3.distributions.shape_utils import to_tuple
 from pymc3.exceptions import ShapeError
-from pymc3.tests.helpers import SeededTest, select_by_precision
+from pymc3.tests.helpers import SeededTest
 from pymc3.tests.test_distributions import (
     Domain,
     I,
@@ -1758,36 +1758,3 @@ class TestMvGaussianRandomWalk(SeededTest):
             prior = pm.sample_prior_predictive(samples=sample_shape)
 
         assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape
-
-
-def test_exponential_parameterization():
-    test_lambda = floatX(10.0)
-
-    exp_pymc = pm.Exponential.dist(lam=test_lambda)
-    (rv_scale,) = exp_pymc.owner.inputs[3:]
-
-    npt.assert_almost_equal(rv_scale.eval(), 1 / test_lambda)
-
-
-def test_gamma_parameterization():
-
-    test_alpha = floatX(10.0)
-    test_beta = floatX(100.0)
-
-    gamma_pymc = pm.Gamma.dist(alpha=test_alpha, beta=test_beta)
-    rv_alpha, rv_inv_beta = gamma_pymc.owner.inputs[3:]
-
-    assert np.array_equal(rv_alpha.eval(), test_alpha)
-
-    decimal = select_by_precision(float64=6, float32=3)
-
-    npt.assert_almost_equal(rv_inv_beta.eval(), 1.0 / test_beta, decimal)
-
-    test_mu = test_alpha / test_beta
-    test_sigma = np.sqrt(test_mu / test_beta)
-
-    gamma_pymc = pm.Gamma.dist(mu=test_mu, sigma=test_sigma)
-    rv_alpha, rv_inv_beta = gamma_pymc.owner.inputs[3:]
-
-    npt.assert_almost_equal(rv_alpha.eval(), test_alpha, decimal)
-    npt.assert_almost_equal(rv_inv_beta.eval(), 1.0 / test_beta, decimal)
