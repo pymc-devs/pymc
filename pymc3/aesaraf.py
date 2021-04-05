@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 from typing import (
     Callable,
     Dict,
@@ -169,19 +171,17 @@ def change_rv_size(
 def extract_rv_and_value_vars(
     var: TensorVariable,
 ) -> Tuple[TensorVariable, TensorVariable]:
-    """Extract a random variable and its corresponding value variable from a generic
-    `TensorVariable`.
+    """Return a random variable and it's observations or value variable, or ``None``.
 
     Parameters
     ==========
     var
-        A variable corresponding to a `RandomVariable`.
+        A variable corresponding to a ``RandomVariable``.
 
     Returns
     =======
-    The first value in the tuple is the `RandomVariable`, and the second is the
-    measure-space variable that corresponds with the latter (i.e. the "value"
-    variable).
+    The first value in the tuple is the ``RandomVariable``, and the second is the
+    measure/log-likelihood value variable that corresponds with the latter.
 
     """
     if not var.owner:
@@ -195,7 +195,7 @@ def extract_rv_and_value_vars(
 
 
 def extract_obs_data(x: TensorVariable) -> np.ndarray:
-    """Extract data observed symbolic variables.
+    """Extract data from observed symbolic variables.
 
     Raises
     ------
@@ -331,17 +331,24 @@ def rvs_to_value_vars(
         rv_var, rv_value_var = extract_rv_and_value_vars(var)
 
         if rv_value_var is None:
+            warnings.warn(
+                f"No value variable found for {rv_var}; "
+                "the random variable will not be replaced."
+            )
             return []
 
         transform = getattr(rv_value_var.tag, "transform", None)
 
         if transform is None or not apply_transforms:
             replacements[var] = rv_value_var
-            return []
+            # In case the value variable is itself a graph, we walk it for
+            # potential replacements
+            return [rv_value_var]
 
         trans_rv_value = transform.backward(rv_var, rv_value_var)
         replacements[var] = trans_rv_value
 
+        # Walk the transformed variable and make replacements
         return [trans_rv_value]
 
     return replace_rvs_in_graphs(graphs, transform_replacements, initial_replacements, **kwargs)

@@ -30,6 +30,8 @@ import scipy.sparse as sps
 from aesara.compile.sharedvalue import SharedVariable
 from aesara.gradient import grad
 from aesara.graph.basic import Constant, Variable, graph_inputs
+from aesara.graph.fg import FunctionGraph, MissingInputError
+from aesara.tensor.random.opt import local_subtensor_rv_lift
 from aesara.tensor.var import TensorVariable
 from pandas import Series
 
@@ -680,10 +682,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 potentials, _ = rvs_to_value_vars(self.potentials, apply_transforms=True)
 
                 free_RVs_logp = at.sum(
-                    [
-                        at.sum(logpt(var, getattr(var.tag, "value_var", None)))
-                        for var in self.free_RVs
-                    ]
+                    [at.sum(logpt(var, self.rvs_to_values.get(var, None))) for var in self.free_RVs]
                     + list(potentials)
                 )
                 observed_RVs_logp = at.sum(
@@ -695,7 +694,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             costs = [self.logpt]
 
         input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
-        extra_vars = [getattr(var.tag, "value_var", var) for var in self.free_RVs]
+        extra_vars = [self.rvs_to_values.get(var, var) for var in self.free_RVs]
         extra_vars_and_values = {
             var: self.initial_point[var.name]
             for var in extra_vars
@@ -707,7 +706,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def logpt(self):
         """Aesara scalar of log-probability of the model"""
         with self:
-            factors = [logpt_sum(var, getattr(var.tag, "value_var", None)) for var in self.free_RVs]
+            factors = [logpt_sum(var, self.rvs_to_values.get(var, None)) for var in self.free_RVs]
             factors += [logpt_sum(obs, obs.tag.observations) for obs in self.observed_RVs]
 
             # Convert random variables into their log-likelihood inputs and
@@ -786,7 +785,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         """List of unobserved random variables used as inputs to the model's
         log-likelihood (which excludes deterministics).
         """
-        return [v.tag.value_var for v in self.free_RVs]
+        return [self.rvs_to_values[v] for v in self.free_RVs]
 
     @property
     def basic_RVs(self):
@@ -844,16 +843,16 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 if rv_var_value is None:
                     try:
                         rv_var_value = rv_var.eval()
-                    except Exception:
-                        raise Exception(f"Couldn't generate an initial value for {rv_var}")
+                    except MissingInputError:
+                        raise MissingInputError(f"Couldn't generate an initial value for {rv_var}")
 
                 transform = getattr(value_var.tag, "transform", None)
 
                 if transform:
                     try:
                         rv_var_value = transform.forward(rv_var, rv_var_value).eval()
-                    except Exception:
-                        raise Exception(f"Couldn't generate an initial value for {rv_var}")
+                    except MissingInputError:
+                        raise MissingInputError(f"Couldn't generate an initial value for {rv_var}")
 
                 var_value = rv_var_value
                 value_var.tag.test_value = var_value
@@ -916,6 +915,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             upscales logp of variable with ``coef = total_size/var.shape[0]``
         dims: tuple
             Dimension names for the variable.
+        transform
+            A transform for the random variable in log-likelihood space.
 
         Returns
         -------
@@ -928,6 +929,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if data is None:
             self.free_RVs.append(rv_var)
             self.create_value_var(rv_var, transform)
+            self.add_random_variable(rv_var, dims)
         else:
             if (
                 isinstance(data, Variable)
@@ -938,14 +940,129 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
             data = pandas_to_array(data)
 
-            rv_var = make_obs_var(rv_var, data)
+            # `rv_var` is potentially a new variable (e.g. the original
+            # variable could have its size changed to match the data, or be a
+            # new graph that accounts for missing data)
+            rv_var = self.make_obs_var(rv_var, data, dims, transform)
 
+        return rv_var
+
+    def make_obs_var(
+        self, rv_var: TensorVariable, data: np.ndarray, dims, transform: Optional[Any]
+    ) -> TensorVariable:
+        """Create a `TensorVariable` for an observed random variable.
+
+        Parameters
+        ==========
+        rv_var
+            The random variable that is observed.
+        data
+            The observed data.
+        dims: tuple
+            Dimension names for the variable.
+        transform
+            A transform for the random variable in log-likelihood space.
+
+        """
+        name = rv_var.name
+        data = pandas_to_array(data).astype(rv_var.dtype)
+
+        # The shapes of the observed random variable and its data might not
+        # match.  We need need to update the observed random variable's `size`
+        # (i.e. number of samples) so that it matches the data.
+
+        # Setting `size` produces a random variable with shape `size +
+        # support_shape`, where `len(support_shape) == op.ndim_supp`, we need
+        # to disregard the last `op.ndim_supp`-many dimensions when we
+        # determine the appropriate `size` value from `data.shape`.
+        ndim_supp = rv_var.owner.op.ndim_supp
+        if ndim_supp > 0:
+            new_size = data.shape[:-ndim_supp]
+        else:
+            new_size = data.shape
+
+        rv_var = change_rv_size(rv_var, new_size)
+
+        if aesara.config.compute_test_value != "off":
+            test_value = getattr(rv_var.tag, "test_value", None)
+
+            if test_value is not None:
+                # We try to reuse the old test value
+                rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.tag.test_value.shape)
+            else:
+                rv_var.tag.test_value = data
+
+        mask = getattr(data, "mask", None)
+        if mask is not None:
+
+            if mask.all():
+                # If there are no observed values, this variable isn't really
+                # observed.
+                return rv_var
+
+            impute_message = (
+                f"Data in {rv_var} contains missing values and"
+                " will be automatically imputed from the"
+                " sampling distribution."
+            )
+            warnings.warn(impute_message, ImputationWarning)
+
+            # We can get a random variable comprised of only the unobserved
+            # entries by lifting the indices through the `RandomVariable` `Op`.
+
+            masked_rv_var = rv_var[mask.nonzero()]
+
+            fgraph = FunctionGraph(
+                [i for i in graph_inputs((masked_rv_var,)) if not isinstance(i, Constant)],
+                [masked_rv_var],
+                clone=False,
+            )
+
+            (missing_rv_var,) = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
+
+            self.register_rv(missing_rv_var, f"{name}_missing", transform=transform)
+
+            # Now, we lift the non-missing observed values and produce a new
+            # `rv_var` that contains only those.
+            #
+            # The end result is two disjoint distributions: one for the missing
+            # values, and another for the non-missing values.
+
+            antimask_idx = (~mask).nonzero()
+            nonmissing_data = at.as_tensor_variable(data[antimask_idx])
+            unmasked_rv_var = rv_var[antimask_idx]
+            unmasked_rv_var = unmasked_rv_var.owner.clone().default_output()
+
+            fgraph = FunctionGraph(
+                [i for i in graph_inputs((unmasked_rv_var,)) if not isinstance(i, Constant)],
+                [unmasked_rv_var],
+                clone=False,
+            )
+            (observed_rv_var,) = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
+            observed_rv_var.name = f"{name}_observed"
+
+            observed_rv_var.tag.observations = nonmissing_data
+
+            self.create_value_var(observed_rv_var, transform)
+            self.add_random_variable(observed_rv_var, dims)
+            self.observed_RVs.append(observed_rv_var)
+
+            rv_var = at.zeros(data.shape)
+            rv_var = at.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
+            rv_var = at.set_subtensor(rv_var[antimask_idx], observed_rv_var)
+            rv_var = Deterministic(name, rv_var, self, dims)
+        elif sps.issparse(data):
+            data = sparse.basic.as_sparse(data, name=name)
+            rv_var.tag.observations = data
             self.create_value_var(rv_var, transform)
-
-            if hasattr(rv_var.tag, "observations"):
-                self.observed_RVs.append(rv_var)
-
-        self.add_random_variable(rv_var, dims)
+            self.add_random_variable(rv_var, dims)
+            self.observed_RVs.append(rv_var)
+        else:
+            data = at.as_tensor_variable(data, name=name)
+            rv_var.tag.observations = data
+            self.create_value_var(rv_var, transform)
+            self.add_random_variable(rv_var, dims)
+            self.observed_RVs.append(rv_var)
 
         return rv_var
 
@@ -971,15 +1088,18 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         # Make the value variable a transformed value variable,
         # if there's an applicable transform
-        if transform is UNSET:
+        if transform is UNSET and rv_var.owner:
             transform = logp_transform(rv_var.owner.op)
 
-        if transform is not None:
+        if transform is not None and transform is not UNSET:
             value_var.tag.transform = transform
             value_var.name = f"{value_var.name}_{transform.name}__"
             if aesara.config.compute_test_value != "off":
                 value_var.tag.test_value = transform.forward(rv_var, value_var).tag.test_value
             self.named_vars[value_var.name] = value_var
+
+        self.rvs_to_values[rv_var] = value_var
+        self.values_to_rvs[value_var] = rv_var
 
         return value_var
 
@@ -997,11 +1117,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         self.named_vars[var.name] = var
         if not hasattr(self, self.name_of(var.name)):
             setattr(self, self.name_of(var.name), var)
-
-        value_var = getattr(var.tag, "value_var", None)
-        self.rvs_to_values[var] = value_var
-        if value_var is not None:
-            self.values_to_rvs[value_var] = var
 
     @property
     def prefix(self):
@@ -1450,80 +1565,6 @@ class LoosePointFunc:
 
 
 compilef = fastfn
-
-
-def make_obs_var(rv_var: TensorVariable, data: Union[np.ndarray]) -> TensorVariable:
-    """Create a `TensorVariable` for an observed random variable.
-
-    Parameters
-    ==========
-    rv_var: TensorVariable
-        The random variable that is observed.
-    data: ndarray
-        The observed data.
-
-    Returns
-    =======
-    The new observed random variable
-
-    """
-    name = rv_var.name
-    data = pandas_to_array(data).astype(rv_var.dtype)
-
-    # The shapes of the observed random variable and its data might not
-    # match.  We need need to update the observed random variable's `size`
-    # (i.e. number of samples) so that it matches the data.
-
-    # Setting `size` produces a random variable with shape `size +
-    # support_shape`, where `len(support_shape) == op.ndim_supp`, we need
-    # to disregard the last `op.ndim_supp`-many dimensions when we
-    # determine the appropriate `size` value from `data.shape`.
-    ndim_supp = rv_var.owner.op.ndim_supp
-    if ndim_supp > 0:
-        new_size = data.shape[:-ndim_supp]
-    else:
-        new_size = data.shape
-
-    rv_var = change_rv_size(rv_var, new_size)
-
-    if aesara.config.compute_test_value != "off":
-        test_value = getattr(rv_var.tag, "test_value", None)
-
-        if test_value is not None:
-            # We try to reuse the old test value
-            rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.tag.test_value.shape)
-        else:
-            rv_var.tag.test_value = data
-
-    mask = getattr(data, "mask", None)
-    if mask is not None:
-
-        if mask.all():
-            # If there are no observed values, this variable isn't really
-            # observed.
-            return rv_var
-
-        impute_message = (
-            f"Data in {rv_var} contains missing values and"
-            " will be automatically imputed from the"
-            " sampling distribution."
-        )
-        warnings.warn(impute_message, ImputationWarning)
-
-        comp_data = at.as_tensor_variable(data.compressed())
-        data = at.as_tensor_variable(data)
-        data.tag.mask = mask
-
-        rv_var = at.set_subtensor(rv_var[~mask], comp_data)
-        rv_var.name = name
-    elif sps.issparse(data):
-        data = sparse.basic.as_sparse(data, name=name)
-    else:
-        data = at.as_tensor_variable(data, name=name)
-
-    rv_var.tag.observations = data
-
-    return rv_var
 
 
 def Deterministic(name, var, model=None, dims=None):
