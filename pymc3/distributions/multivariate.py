@@ -1932,17 +1932,31 @@ class CARRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("CAR", "\\operatorname{CAR}")
 
-    def make_node(self, rng, size, dtype, *dist_params):
-        mu, W, alpha, tau = dist_params
+    def make_node(self, rng, size, dtype, mu, W, alpha, tau, sparse):
+        mu = at.as_tensor_variable(mu)
+
+        if sparse:
+            W_sparse = scipy.sparse.csr_matrix(W)
+            W = aesara.sparse.as_sparse_variable(W_sparse)
+        else:
+            W = at.as_tensor_variable(W)
+
+        tau = at.as_tensor_variable(tau)
+        if tau.ndim > 0:
+            tau = tau[:, None]
+
+        alpha = at.as_tensor_variable(alpha)
+        if alpha.ndim > 0:
+            alpha = alpha[:, None]
+
         if tau.ndim == 0:
             tau = tau.reshape(mu.shape)
         if alpha.ndim == 0:
             alpha = alpha.reshape(mu.shape)
-        dist_params = (mu, W, alpha, tau)
-        return super().make_node(rng, size, dtype, *dist_params)
+        return super().make_node(rng, size, dtype, [mu, W, alpha, tau, sparse])
 
     @classmethod
-    def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, size):
+    def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, sparse, size):
         """
         Implementation of algorithm from paper
         Havard Rue, 2001. "Fast sampling of Gaussian Markov random fields,"
@@ -1950,7 +1964,7 @@ class CARRV(RandomVariable):
         vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288
         """
         D = scipy.sparse.diags(W.sum(axis=0))
-        if not scipy.sparse.issparse(W):
+        if not sparse:
             W = scipy.sparse.csr_matrix(W)
         tau = scipy.sparse.csr_matrix(tau)
         alpha = scipy.sparse.csr_matrix(alpha)
@@ -2018,25 +2032,10 @@ class CAR(Continuous):
     @classmethod
     def dist(cls, mu, W, alpha, tau, sparse=False, *args, **kwargs):
 
-        mu = at.as_tensor_variable(mu)
-
         if not W.ndim == 2 or not np.allclose(W, W.T):
             raise ValueError("W must be a symmetric adjacency matrix.")
 
-        if sparse:
-            W_sparse = scipy.sparse.csr_matrix(W)
-            W = aesara.sparse.as_sparse_variable(W_sparse)
-        else:
-            W = at.as_tensor_variable(W)
-
-        tau = at.as_tensor_variable(tau)
-        if tau.ndim > 0:
-            tau = tau[:, None]
-
-        alpha = at.as_tensor_variable(alpha)
-        if alpha.ndim > 0:
-            alpha = alpha[:, None]
-        return super().dist([mu, W, alpha, tau], **kwargs)
+        return super().dist([mu, W, alpha, tau, sparse], **kwargs)
 
     def logp(value, mu, W, alpha, tau, sparse=False):
         """
