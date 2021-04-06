@@ -427,27 +427,23 @@ class BinaryGibbsMetropolis(ArrayStep):
 
     def astep(self, q0: RaveledVars, logp) -> RaveledVars:
 
-        point_map_info = q0.point_map_info
-        q0 = q0.data
-
         order = self.order
         if self.shuffle_dims:
             nr.shuffle(order)
 
-        q = np.copy(q0)
+        q = RaveledVars(np.copy(q0.data), q0.point_map_info)
+
         logp_curr = logp(q)
 
         for idx in order:
             # No need to do metropolis update if the same value is proposed,
             # as you will get the same value regardless of accepted or reject
             if nr.rand() < self.transit_p:
-                curr_val, q[idx] = q[idx], True - q[idx]
+                curr_val, q.data[idx] = q.data[idx], True - q.data[idx]
                 logp_prop = logp(q)
-                q[idx], accepted = metrop_select(logp_prop - logp_curr, q[idx], curr_val)
+                q.data[idx], accepted = metrop_select(logp_prop - logp_curr, q.data[idx], curr_val)
                 if accepted:
                     logp_curr = logp_prop
-
-        q = RaveledVars(q, point_map_info)
 
         return q
 
