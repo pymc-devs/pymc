@@ -908,11 +908,11 @@ class Wishart(Continuous):
 
         return bound(
             (
-                    (nu - p - 1) * at.log(IXI)
-                    - trace(matrix_inverse(V).dot(X))
-                    - nu * p * at.log(2)
-                    - nu * at.log(IVI)
-                    - 2 * multigammaln(nu / 2.0, p)
+                (nu - p - 1) * at.log(IXI)
+                - trace(matrix_inverse(V).dot(X))
+                - nu * p * at.log(2)
+                - nu * at.log(IVI)
+                - 2 * multigammaln(nu / 2.0, p)
             )
             / 2,
             matrix_pos_def(X),
@@ -1009,16 +1009,16 @@ def _lkj_normalizing_constant(eta, n):
         result = gammaln(2.0 * at.arange(1, int((n - 1) / 2) + 1)).sum()
         if n % 2 == 1:
             result += (
-                    0.25 * (n ** 2 - 1) * at.log(np.pi)
-                    - 0.25 * (n - 1) ** 2 * at.log(2.0)
-                    - (n - 1) * gammaln(int((n + 1) / 2))
+                0.25 * (n ** 2 - 1) * at.log(np.pi)
+                - 0.25 * (n - 1) ** 2 * at.log(2.0)
+                - (n - 1) * gammaln(int((n + 1) / 2))
             )
         else:
             result += (
-                    0.25 * n * (n - 2) * at.log(np.pi)
-                    + 0.25 * (3 * n ** 2 - 4 * n) * at.log(2.0)
-                    + n * gammaln(n / 2)
-                    - (n - 1) * gammaln(n)
+                0.25 * n * (n - 2) * at.log(np.pi)
+                + 0.25 * (3 * n ** 2 - 4 * n) * at.log(2.0)
+                + n * gammaln(n / 2)
+                - (n - 1) * gammaln(n)
             )
     else:
         result = -(n - 1) * gammaln(eta + 0.5 * (n - 1))
@@ -1929,7 +1929,7 @@ class CARRV(RandomVariable):
     ndims_params = [1, 2, 1, 1]
     dtype = "floatX"
     _print_name = ("CAR", "\\operatorname{CAR}")
-q
+
     def make_node(self, rng, size, dtype, mu, W, alpha, tau, sparse=False):
         mu = at.as_tensor_variable(mu)
 
