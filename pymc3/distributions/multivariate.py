@@ -1929,8 +1929,8 @@ class CARRV(RandomVariable):
     ndims_params = [1, 2, 1, 1]
     dtype = "floatX"
     _print_name = ("CAR", "\\operatorname{CAR}")
-
-    def make_node(self, rng, size, dtype, mu, W, alpha, tau, sparse):
+q
+    def make_node(self, rng, size, dtype, mu, W, alpha, tau, sparse=False):
         mu = at.as_tensor_variable(mu)
 
         if sparse:
@@ -1948,13 +1948,13 @@ class CARRV(RandomVariable):
             alpha = alpha[:, None]
 
         if tau.ndim == 0:
-            tau = tau.reshape(mu.shape)
+            tau = tau * at.ones(mu.shape)
         if alpha.ndim == 0:
-            alpha = alpha.reshape(mu.shape)
-        return super().make_node(rng, size, dtype, [mu, W, alpha, tau, sparse])
+            alpha = alpha * at.ones(mu.shape)
+        return super().make_node(rng, size, dtype, *(mu, W, alpha, tau))
 
     @classmethod
-    def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, sparse, size):
+    def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, size):
         """
         Implementation of algorithm from paper
         Havard Rue, 2001. "Fast sampling of Gaussian Markov random fields,"
@@ -1962,7 +1962,7 @@ class CARRV(RandomVariable):
         vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288
         """
         D = scipy.sparse.diags(W.sum(axis=0))
-        if not sparse:
+        if not scipy.sparse.issparse(W):
             W = scipy.sparse.csr_matrix(W)
         tau = scipy.sparse.csr_matrix(tau)
         alpha = scipy.sparse.csr_matrix(alpha)
@@ -1985,7 +1985,7 @@ class CARRV(RandomVariable):
         z = rng.normal(loc=mu)
         samples = np.empty(z.shape)
         for idx in np.ndindex(mu.shape[:-1]):
-            samples[idx] = scipy.linalg.cho_solve_banded((L, False), z)
+            samples[idx] = scipy.linalg.cho_solve_banded((L, False), z[idx])
         return samples
 
 
