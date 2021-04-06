@@ -4,23 +4,46 @@ This document describes the high-level architecture of PyMC3.
 If you want to familiarize yourself with the code base, you are just in the right place!
 
 
-## Bird's Eye View
+# Bird's Eye View
 
 ![Architecture](docs/Architecture.png)
 
 On the highest level, PyMC3 is a thing which lets you define probabilistic graphs or models
-and then magically handles the sampling for you.
+and then magically handles "the rest" for you. Core to any Bayesian library
+is the posterior estimation which PyMC3 does. However there are numerous
+other useful sets of functionality, from prior and posterior predictive sampling,
+GraphviZ model, as well as various helper functions.
 
-There are a couple of APIs that let you do this with the `pm.Model` context manager API
-being the most common.
+PyMC3 includes a couple of posterior estimation techniqes in particular
+* MCMC
+* Variational Inference
+* Sequential Monte Carlo
 
 The most relevant modules of PyMC3 are shown visually below, as well as their
 relation to other major packages. Not all modules are shown, either because
 they are smaller or self explanatory in scope, or they're pending
 deprecation
 
-**Everything below this is from a reference implementation and needs to be updated*
-## Modules
+**Everything below this is from a reference implementation and needs to be updated**
+# Modules
+The codebase of PyMC3 is split among single python file modules at the root
+level, as well as directories with python code for logical groups of functionality.
+Admittedly the split is a slightly arbitrary. For this guide modules are 
+detailed in the order that a normal user would typically encounter them during
+a nominal workflow
+
+## /model.py
+
+## distributions/
+
+## /sampling.py
+
+There are a couple of APIs that let you do this with the `pm.Model` context manager API
+being the most common.
+
+## step_methods/
+
+## tests/
 *TODO* 
 
 Note also which crates are **API Boundaries**.
