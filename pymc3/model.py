@@ -467,7 +467,7 @@ class ValueGradFunction:
             raise ValueError("Extra values are not set.")
 
         if isinstance(grad_vars, RaveledVars):
-            grad_vars = DictToArrayBijection.rmap(grad_vars, as_list=True)
+            grad_vars = list(DictToArrayBijection.rmap(grad_vars).values())
 
         cost, *grads = self._aesara_function(*grad_vars)
 
