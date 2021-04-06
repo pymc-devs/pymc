@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 import aesara
 import numpy as np
@@ -425,7 +425,7 @@ class BinaryGibbsMetropolis(ArrayStep):
 
         super().__init__(vars, [model.fastlogp])
 
-    def astep(self, q0: RaveledVars, logp) -> RaveledVars:
+    def astep(self, q0: RaveledVars, logp: Callable[[RaveledVars], np.ndarray]) -> RaveledVars:
 
         order = self.order
         if self.shuffle_dims:
@@ -475,6 +475,7 @@ class BinaryGibbsMetropolis(ArrayStep):
 
 class CategoricalGibbsMetropolis(ArrayStep):
     """A Metropolis-within-Gibbs step method optimized for categorical variables.
+
     This step method works for Bernoulli variables as well, but it is not
     optimized for them, like BinaryGibbsMetropolis is. Step method supports
     two types of proposals: A uniform proposal and a proportional proposal,
@@ -573,6 +574,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
             logp_curr = self.metropolis_proportional(q, logp, logp_curr, dim, k)
 
         return q
+
+    def astep(self, q0, logp):
+        raise NotImplementedError()
 
     def metropolis_proportional(self, q, logp, logp_curr, dim, k):
         given_cat = int(q.data[dim])
