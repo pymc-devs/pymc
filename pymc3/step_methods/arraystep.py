@@ -12,20 +12,23 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from abc import ABC, abstractmethod
 from enum import IntEnum, unique
-from typing import Dict, List
+from typing import Dict, List, Tuple, TypeVar, Union
 
 import numpy as np
 
 from aesara.graph.basic import Variable
 from numpy.random import uniform
 
-from pymc3.blocking import DictToArrayBijection, RaveledVars
+from pymc3.blocking import DictToArrayBijection, PointType, RaveledVars
 from pymc3.model import modelcontext
 from pymc3.step_methods.compound import CompoundStep
 from pymc3.util import get_var_name
 
 __all__ = ["ArrayStep", "ArrayStepShared", "metrop_select", "Competence"]
+
+StatsType = TypeVar("StatsType")
 
 
 @unique
@@ -44,7 +47,7 @@ class Competence(IntEnum):
     IDEAL = 3
 
 
-class BlockedStep:
+class BlockedStep(ABC):
 
     generates_stats = False
     stats_dtypes: List[Dict[str, np.dtype]] = []
@@ -99,6 +102,10 @@ class BlockedStep:
     def __getnewargs_ex__(self):
         return self.__newargs
 
+    @abstractmethod
+    def step(point: PointType, *args, **kwargs) -> Union[PointType, Tuple[PointType, StatsType]]:
+        """Perform a single step of the sampler."""
+
     @staticmethod
     def competence(var, has_grad):
         return Competence.INCOMPATIBLE
@@ -139,7 +146,7 @@ class ArrayStep(BlockedStep):
         self.allvars = allvars
         self.blocked = blocked
 
-    def step(self, point: Dict[str, np.ndarray]):
+    def step(self, point: PointType):
 
         partial_funcs_and_point = [DictToArrayBijection.mapf(x, start_point=point) for x in self.fs]
         if self.allvars:
@@ -164,8 +171,11 @@ class ArrayStep(BlockedStep):
 
         return point_new
 
-    def astep(self, apoint: RaveledVars, point: Dict[str, np.ndarray]):
-        raise NotImplementedError()
+    @abstractmethod
+    def astep(
+        self, apoint: RaveledVars, point: PointType, *args
+    ) -> Union[RaveledVars, Tuple[RaveledVars, StatsType]]:
+        """Perform a single sample step in a raveled and concatenated parameter space."""
 
 
 class ArrayStepShared(BlockedStep):
@@ -212,9 +222,6 @@ class ArrayStepShared(BlockedStep):
             return new_point, stats
 
         return new_point
-
-    def astep(self, apoint: RaveledVars):
-        raise NotImplementedError()
 
 
 class PopulationArrayStepShared(ArrayStepShared):
@@ -278,9 +285,6 @@ class GradientSharedStep(ArrayStepShared):
         self._logp_dlogp_func._extra_are_set = True
         return super().step(point)
 
-    def astep(self, apoint):
-        raise NotImplementedError()
-
 
 def metrop_select(mr, q, q0):
     """Perform rejection/acceptance step for Metropolis class samplers.
@@ -300,6 +304,8 @@ def metrop_select(mr, q, q0):
     q or q0
     """
     # Compare acceptance ratio to uniform random number
+    # TODO XXX: This `uniform` is not given a model-specific RNG state, which
+    # means that sampler runs that use it will not be reproducible.
     if np.isfinite(mr) and np.log(uniform()) < mr:
         return q, True
     else:

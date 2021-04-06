@@ -15,6 +15,7 @@
 import logging
 import time
 
+from abc import abstractmethod
 from collections import namedtuple
 
 import numpy as np
@@ -24,7 +25,8 @@ from pymc3.backends.report import SamplerWarning, WarningType
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.exceptions import SamplingError
 from pymc3.model import Point, modelcontext
-from pymc3.step_methods import arraystep, step_sizes
+from pymc3.step_methods import step_sizes
+from pymc3.step_methods.arraystep import GradientSharedStep
 from pymc3.step_methods.hmc import integration
 from pymc3.step_methods.hmc.quadpotential import QuadPotentialDiagAdapt, quad_potential
 from pymc3.tuning import guess_scaling
@@ -36,7 +38,7 @@ HMCStepData = namedtuple("HMCStepData", "end, accept_stat, divergence_info, stat
 DivergenceInfo = namedtuple("DivergenceInfo", "message, exec_info, state, state_div")
 
 
-class BaseHMC(arraystep.GradientSharedStep):
+class BaseHMC(GradientSharedStep):
     """Superclass to implement Hamiltonian/hybrid monte carlo."""
 
     default_blocked = True
@@ -85,8 +87,6 @@ class BaseHMC(arraystep.GradientSharedStep):
         if vars is None:
             vars = self._model.cont_vars
 
-        # vars = inputvars(vars)
-
         super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **aesara_kwargs)
 
         self.adapt_step_size = adapt_step_size
@@ -132,12 +132,12 @@ class BaseHMC(arraystep.GradientSharedStep):
         self._samples_after_tune = 0
         self._num_divs_sample = 0
 
+    @abstractmethod
     def _hamiltonian_step(self, start, p0, step_size):
         """Compute one hamiltonian trajectory and return the next state.
 
         Subclasses must overwrite this method and return a `HMCStepData`.
         """
-        raise NotImplementedError("Abstract method")
 
     def astep(self, q0):
         """Perform a single HMC iteration."""
