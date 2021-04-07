@@ -23,7 +23,7 @@ import pandas as pd
 import pytest
 import scipy.sparse as sps
 
-from aesara.graph.basic import Variable
+from aesara.graph.basic import Variable, ancestors
 from aesara.tensor.random.basic import normal, uniform
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
@@ -34,6 +34,7 @@ import pymc3 as pm
 
 from pymc3.aesaraf import (
     _conversion_map,
+    change_rv_size,
     extract_obs_data,
     pandas_to_array,
     rvs_to_value_vars,
@@ -44,6 +45,27 @@ from pymc3.vartypes import int_types
 
 FLOATX = str(aesara.config.floatX)
 INTX = str(_conversion_map[FLOATX])
+
+
+def test_change_rv_size():
+    loc = at.as_tensor_variable([1, 2])
+    rv = normal(loc=loc)
+    assert rv.ndim == 1
+    assert rv.eval().shape == (2,)
+
+    rv_new = change_rv_size(rv, new_size=(3,), expand=True)
+    assert rv_new.ndim == 2
+    assert rv_new.eval().shape == (3, 2)
+
+    # Make sure that the shape used to determine the expanded size doesn't
+    # depend on the old `RandomVariable`.
+    rv_new_ancestors = set(ancestors((rv_new,)))
+    assert loc in rv_new_ancestors
+    assert rv not in rv_new_ancestors
+
+    rv_newer = change_rv_size(rv_new, new_size=(4,), expand=True)
+    assert rv_newer.ndim == 3
+    assert rv_newer.eval().shape == (4, 3, 2)
 
 
 class TestBroadcasting:
