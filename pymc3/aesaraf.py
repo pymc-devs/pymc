@@ -141,8 +141,7 @@ def change_rv_size(
     new_size
         The new size.
     expand:
-        Whether or not to completely replace the `size` parameter in `rv_var`
-        with `new_size` or simply prepend it to the existing `size`.
+        Expand the existing size by `new_size`.
 
     """
     rv_node = rv_var.owner
@@ -151,6 +150,8 @@ def change_rv_size(
     tag = rv_var.tag
 
     if expand:
+        if rv_node.op.ndim_supp == 0 and at.get_vector_length(size) == 0:
+            size = rv_node.op._infer_shape(size, dist_params)
         new_size = tuple(np.atleast_1d(new_size)) + tuple(size)
 
     new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
