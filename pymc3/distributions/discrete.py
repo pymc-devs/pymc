@@ -16,8 +16,15 @@ import warnings
 import aesara.tensor as at
 import numpy as np
 
-from aesara.tensor.random.basic import bernoulli, binomial, categorical, nbinom, poisson
+from aesara.tensor.random.basic import (
+    BernoulliRV,
+    binomial,
+    categorical,
+    nbinom,
+    poisson,
+)
 from scipy import stats
+from scipy.special import expit
 
 from pymc3.aesaraf import floatX, intX, take_along_axis
 from pymc3.distributions.dist_math import (
@@ -32,7 +39,7 @@ from pymc3.distributions.dist_math import (
     normal_lcdf,
 )
 from pymc3.distributions.distribution import Discrete
-from pymc3.math import log1mexp, logaddexp, logsumexp, sigmoid, tround
+from pymc3.math import log1mexp, log1pexp, logaddexp, logit, logsumexp, sigmoid, tround
 
 __all__ = [
     "Binomial",
@@ -332,6 +339,19 @@ class BetaBinomial(Discrete):
         )
 
 
+class BernoulliLogitRV(BernoulliRV):
+    name = "bernoulli_logit"
+    _print_name = ("BernLogit", "\\operatorname{BernLogit}")
+
+    @classmethod
+    def rng_fn(cls, rng, logitp, size=None):
+        p = expit(logitp)
+        return stats.bernoulli.rvs(p, size=size, random_state=rng)
+
+
+bernoulli_logit = BernoulliLogitRV()
+
+
 class Bernoulli(Discrete):
     R"""Bernoulli log-likelihood
 
@@ -368,16 +388,29 @@ class Bernoulli(Discrete):
     ----------
     p: float
         Probability of success (0 < p < 1).
+    logit_p: float
+        Alternative logit of sucess probability.
     """
-    rv_op = bernoulli
+    rv_op = bernoulli_logit
 
     @classmethod
     def dist(cls, p=None, logit_p=None, *args, **kwargs):
-        p = at.as_tensor_variable(floatX(p))
-        # mode = at.cast(tround(p), "int8")
-        return super().dist([p], **kwargs)
+        logit_p = cls.get_logitp(p=p, logit_p=logit_p)
+        logit_p = at.as_tensor_variable(floatX(logit_p))
+        return super().dist([logit_p], **kwargs)
 
-    def logp(value, p):
+    @classmethod
+    def get_logitp(cls, p=None, logit_p=None):
+        if p is not None and logit_p is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
+        elif p is None and logit_p is None:
+            raise ValueError("Incompatible parametrization. Must specify either p or logit_p.")
+
+        if logit_p is None:
+            logit_p = logit(p)
+        return logit_p
+
+    def logp(value, logit_p):
         r"""
         Calculate log-probability of Bernoulli distribution at specified value.
 
@@ -391,19 +424,15 @@ class Bernoulli(Discrete):
         -------
         TensorVariable
         """
-        # if self._is_logit:
-        #     lp = at.switch(value, self._logit_p, -self._logit_p)
-        #     return -log1pexp(-lp)
-        # else:
+        lp = at.switch(value, -logit_p, logit_p)
         return bound(
-            at.switch(value, at.log(p), at.log(1 - p)),
-            value >= 0,
+            -log1pexp(lp),
+            0 <= value,
             value <= 1,
-            p >= 0,
-            p <= 1,
+            ~at.isnan(logit_p),
         )
 
-    def logcdf(value, p):
+    def logcdf(value, logit_p):
         """
         Compute the log of the cumulative distribution function for Bernoulli distribution
         at the specified value.
@@ -422,12 +451,11 @@ class Bernoulli(Discrete):
         return bound(
             at.switch(
                 at.lt(value, 1),
-                at.log1p(-p),
+                -log1pexp(logit_p),
                 0,
             ),
             0 <= value,
-            0 <= p,
-            p <= 1,
+            ~at.isnan(logit_p),
         )
 
     def _distr_parameters_for_repr(self):

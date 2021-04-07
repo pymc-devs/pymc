@@ -731,10 +731,15 @@ class TestScalarParameterSamples(SeededTest):
     def _beta_bin(self, n, alpha, beta, size=None):
         return st.binom.rvs(n, st.beta.rvs(a=alpha, b=beta, size=size))
 
-    @pytest.mark.skip(reason="This test is covered by Aesara")
     def test_bernoulli(self):
         pymc3_random_discrete(
-            pm.Bernoulli, {"p": Unit}, ref_rand=lambda size, p=None: st.bernoulli.rvs(p, size=size)
+            pm.Bernoulli, {"p": Unit}, ref_rand=lambda size, p: st.bernoulli.rvs(p, size=size)
+        )
+
+        pymc3_random_discrete(
+            pm.Bernoulli,
+            {"logit_p": R},
+            ref_rand=lambda size, logit_p: st.bernoulli.rvs(expit(logit_p), size=size),
         )
 
     @pytest.mark.skip(reason="This test is covered by Aesara")

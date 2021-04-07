@@ -51,7 +51,6 @@ def get_city_data():
     return data.merge(unique, "inner", on="fips")
 
 
-@pytest.mark.xfail(reason="Bernoulli distribution not refactored")
 class TestARM5_4(SeededTest):
     def build_model(self):
         data = pd.read_csv(
@@ -68,7 +67,7 @@ class TestARM5_4(SeededTest):
         P["1"] = 1
 
         with pm.Model() as model:
-            effects = pm.Normal("effects", mu=0, sigma=100, shape=len(P.columns))
+            effects = pm.Normal("effects", mu=0, sigma=100, size=len(P.columns))
             logit_p = at.dot(floatX(np.array(P)), effects)
             pm.Bernoulli("s", logit_p=logit_p, observed=floatX(data.switch.values))
         return model

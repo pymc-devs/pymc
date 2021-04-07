@@ -1221,7 +1221,6 @@ class TestMatchesScipy:
             n_samples=10,
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.parametrize(
         "mu, p, alpha, n, expected",
         [
@@ -1522,21 +1521,6 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
         )
 
-    @pytest.mark.xfail(reason="Bernoulli logit_p not refactored yet")
-    def test_bernoulli_logit_p(self):
-        self.check_logp(
-            Bernoulli,
-            Bool,
-            {"logit_p": R},
-            lambda value, logit_p: sp.bernoulli.logpmf(value, scipy.special.expit(logit_p)),
-        )
-        self.check_logcdf(
-            Bernoulli,
-            Bool,
-            {"logit_p": R},
-            lambda value, logit_p: sp.bernoulli.logcdf(value, scipy.special.expit(logit_p)),
-        )
-
     def test_bernoulli(self):
         self.check_logp(
             Bernoulli,
@@ -1555,6 +1539,32 @@ class TestMatchesScipy:
             Bool,
             {"p": Unit},
         )
+
+    def test_bernoulli_logitp(self):
+        self.check_logp(
+            Bernoulli,
+            Bool,
+            {"logit_p": R},
+            lambda value, logit_p: sp.bernoulli.logpmf(value, scipy.special.expit(logit_p)),
+        )
+        self.check_logcdf(
+            Bernoulli,
+            Bool,
+            {"logit_p": R},
+            lambda value, logit_p: sp.bernoulli.logcdf(value, scipy.special.expit(logit_p)),
+        )
+
+    @pytest.mark.parametrize(
+        "p, logit_p, expected",
+        [
+            (None, None, "Must specify either p or logit_p."),
+            (0.5, 0.5, "Can't specify both p and logit_p."),
+        ],
+    )
+    def test_bernoulli_init_fail(self, p, logit_p, expected):
+        with Model():
+            with pytest.raises(ValueError, match=f"Incompatible parametrization. {expected}"):
+                Bernoulli("x", p=p, logit_p=logit_p)
 
     @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_discrete_weibull(self):
