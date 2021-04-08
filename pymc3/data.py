@@ -464,7 +464,7 @@ def align_minibatches(batches=None):
 
 
 class Data:
-    """Data container class that wraps the aesara ``SharedVariable`` class
+    """Data container class that wraps the Aesara ``SharedVariable`` class
     and lets the model be aware of its inputs and outputs.
 
     Parameters

@@ -417,7 +417,7 @@ def test_pandas_to_array(input_dtype):
     # Make sure the returned object has .set_gen and .set_default methods
     assert hasattr(wrapped, "set_gen")
     assert hasattr(wrapped, "set_default")
-    # Make sure the returned object is a Aesara TensorVariable
+    # Make sure the returned object is an Aesara TensorVariable
     assert isinstance(wrapped, TensorVariable)
 
 

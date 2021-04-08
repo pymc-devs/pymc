@@ -113,7 +113,7 @@ class Binomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -277,7 +277,7 @@ class BetaBinomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -385,7 +385,7 @@ class Bernoulli(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -412,7 +412,7 @@ class Bernoulli(Discrete):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -525,7 +525,7 @@ class DiscreteWeibull(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -550,7 +550,7 @@ class DiscreteWeibull(Discrete):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -628,7 +628,7 @@ class Poisson(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -647,7 +647,7 @@ class Poisson(Discrete):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -765,7 +765,7 @@ class NegativeBinomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -885,7 +885,7 @@ class Geometric(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -903,7 +903,7 @@ class Geometric(Discrete):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -1010,7 +1010,7 @@ class HyperGeometric(Discrete):
         ----------
         value : numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -1155,7 +1155,7 @@ class DiscreteUniform(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -1178,7 +1178,7 @@ class DiscreteUniform(Discrete):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -1333,7 +1333,7 @@ class Constant(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -1434,7 +1434,7 @@ class ZeroInflatedPoisson(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -1460,7 +1460,7 @@ class ZeroInflatedPoisson(Discrete):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -1566,7 +1566,7 @@ class ZeroInflatedBinomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -1734,7 +1734,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -1966,7 +1966,7 @@ class OrderedProbit(Categorical):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------

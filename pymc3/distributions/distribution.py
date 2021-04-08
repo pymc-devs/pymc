@@ -331,7 +331,7 @@ class DensityDist(Distribution):
 
         logp: callable
             A callable that has the following signature ``logp(value)`` and
-            returns a aesara tensor that represents the distribution's log
+            returns an Aesara tensor that represents the distribution's log
             probability density.
         shape: tuple (Optional): defaults to `()`
             The shape of the distribution. The default value indicates a scalar.

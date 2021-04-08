@@ -193,7 +193,7 @@ explicit about the conversion. For example:
 ``logp`` method, very different behind the curtain
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The ``logp`` method is straightforward - it is a Aesara function within each
+The ``logp`` method is straightforward - it is an Aesara function within each
 distribution. It has the following signature:
 
 .. code:: python
@@ -201,7 +201,7 @@ distribution. It has the following signature:
     def logp(self, value):
         # GET PARAMETERS
         param1, param2, ... = self.params1, self.params2, ...
-        # EVALUATE LOG-LIKELIHOOD FUNCTION, all inputs are (or array that could be convert to) aesara tensor
+        # EVALUATE LOG-LIKELIHOOD FUNCTION, all inputs are (or array that could be convert to) Aesara tensor
         total_log_prob = f(param1, param2, ..., value)
         return total_log_prob
 
@@ -360,7 +360,7 @@ cannot be transformed.
 
    ``Factor`` basically `enable and assign the
    logp <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/model.py#L195-L276>`__
-   (representated as a tensor also) property to a Aesara tensor (thus
+   (representated as a tensor also) property to an Aesara tensor (thus
    making it a random variable). For a ``TransformedRV``, it transforms the
    distribution into a ``TransformedDistribution``, and then ``model.Var`` is
    called again to added the RV associated with the
@@ -474,7 +474,7 @@ sum them together to get the model logp:
             ...
             return logp
 
-which returns a Aesara tensor that its value depends on the free
+which returns an Aesara tensor that its value depends on the free
 parameters in the model (i.e., its parent nodes from the Aesara
 graph).You can evaluate or compile into a python callable (that you can
 pass numpy as input args). Note that the logp tensor depends on its
@@ -751,7 +751,7 @@ We love NUTS, or to be more precise Dynamic HMC with complex stopping
 rules. This part is actually all done outside of Aesara, for NUTS, it
 includes: the leapfrog, dual averaging, tunning of mass matrix and step
 size, the tree building, sampler related statistics like divergence and
-energy checking. We actually have a Aesara version of HMC, but it has never
+energy checking. We actually have an Aesara version of HMC, but it has never
 been used, and has been removed from the main repository. It can still be
 found in the `git history
 <https://github.com/pymc-devs/pymc3/pull/3734/commits/0fdae8207fd14f66635f3673ef267b2b8817aa68>`__,
