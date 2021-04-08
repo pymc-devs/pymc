@@ -336,11 +336,11 @@ class Factor:
 
 
 class ValueGradFunction:
-    """Create a Aesara function that computes a value and its gradient.
+    """Create an Aesara function that computes a value and its gradient.
 
     Parameters
     ----------
-    costs: list of aesara variables
+    costs: list of Aesara variables
         We compute the weighted sum of the specified Aesara values, and the gradient
         of that sum. The weights can be specified with `ValueGradFunction.set_weights`.
     grad_vars: list of named Aesara variables or None
@@ -484,7 +484,7 @@ class ValueGradFunction:
 
     @property
     def profile(self):
-        """Profiling information of the underlying aesara function."""
+        """Profiling information of the underlying Aesara function."""
         return self._aesara_function.profile
 
 
@@ -508,9 +508,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         So that 'nested' model contributes to the variables and
         likelihood factors of parent model.
     aesara_config: dict
-        A dictionary of aesara config values that should be set
+        A dictionary of Aesara config values that should be set
         temporarily in the model context. See the documentation
-        of aesara for a complete list.
+        of Aesara for a complete list.
     check_bounds: bool
         Ensure that input parameters to distributions are in a valid
         range. If your model is built in a way where you know your
@@ -652,7 +652,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return sum(var.ndim for var in self.value_vars)
 
     def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
-        """Compile a aesara function that computes logp and gradient.
+        """Compile an Aesara function that computes logp and gradient.
 
         Parameters
         ----------
@@ -1036,7 +1036,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 raise e
 
     def makefn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Aesara function which returns ``outs`` and takes the variable
+        """Compiles an Aesara function which returns ``outs`` and takes the variable
         ancestors of ``outs`` as inputs.
 
         Parameters
@@ -1061,7 +1061,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             )
 
     def fn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Aesara function which returns the values of ``outs``
+        """Compiles an Aesara function which returns the values of ``outs``
         and takes values of model vars as arguments.
 
         Parameters
@@ -1076,7 +1076,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return LoosePointFunc(self.makefn(outs, mode, *args, **kwargs), self)
 
     def fastfn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Aesara function which returns ``outs`` and takes values
+        """Compiles an Aesara function which returns ``outs`` and takes values
         of model vars as a dict as an argument.
 
         Parameters
@@ -1092,7 +1092,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return FastPointFunc(f)
 
     def profile(self, outs, n=1000, point=None, profile=True, *args, **kwargs):
-        """Compiles and profiles a Aesara function which returns ``outs`` and
+        """Compiles and profiles an Aesara function which returns ``outs`` and
         takes values of model vars as a dict as an argument.
 
         Parameters
@@ -1371,7 +1371,7 @@ def set_data(new_data, model=None):
 
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
-    """Compiles a Aesara function which returns the values of ``outs`` and
+    """Compiles an Aesara function which returns the values of ``outs`` and
     takes values of model vars as arguments.
 
     Parameters
@@ -1388,7 +1388,7 @@ def fn(outs, mode=None, model=None, *args, **kwargs):
 
 
 def fastfn(outs, mode=None, model=None):
-    """Compiles a Aesara function which returns ``outs`` and takes values of model
+    """Compiles an Aesara function which returns ``outs`` and takes values of model
     vars as a dict as an argument.
 
     Parameters
@@ -1532,7 +1532,7 @@ def Deterministic(name, var, model=None, dims=None):
     Parameters
     ----------
     name: str
-    var: aesara variables
+    var: Aesara variables
 
     Returns
     -------
@@ -1552,7 +1552,7 @@ def Potential(name, var, model=None):
     Parameters
     ----------
     name: str
-    var: aesara variables
+    var: Aesara variables
 
     Returns
     -------

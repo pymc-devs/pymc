@@ -158,7 +158,7 @@ other type of random variable.  The first argument is the name of the random
 variable representing the function we are placing the prior over.
 The second argument is the inputs to the function that the prior is over,
 :code:`X`.  The inputs are usually known and present in the data, but they can
-also be PyMC3 random variables.  If the inputs are a Aesara tensor or a
+also be PyMC3 random variables.  If the inputs are an Aesara tensor or a
 PyMC3 random variable, the :code:`shape` needs to be given.
 
 Usually at this point, inference is performed on the model.  The

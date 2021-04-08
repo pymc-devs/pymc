@@ -104,7 +104,7 @@ def any_to_tensor_and_labels(x, labels=None):
     # we should check that we can extract labels
     if labels is None and not isinstance(x, Variable):
         labels = ["x%d" % i for i in range(x.shape[1])]
-    # for aesara variables we should have labels from user
+    # for Aesara variables we should have labels from user
     elif labels is None:
         raise ValueError("Please provide labels as " "we cannot infer shape of input")
     else:  # trust labels, user knows what he is doing

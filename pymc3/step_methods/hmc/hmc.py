@@ -59,7 +59,7 @@ class HamiltonianMC(BaseHMC):
 
         Parameters
         ----------
-        vars: list of aesara variables
+        vars: list of Aesara variables
         path_length: float, default=2
             total length to travel
         step_rand: function float -> float, default=unif

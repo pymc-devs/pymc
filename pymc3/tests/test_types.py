@@ -27,7 +27,7 @@ class TestType:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
 
     def setup_method(self):
-        # save aesara config object
+        # save Aesara config object
         self.aesara_config = copy(aesara.config)
 
     def teardown_method(self):

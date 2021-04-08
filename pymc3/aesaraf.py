@@ -78,7 +78,7 @@ __all__ = [
 def pandas_to_array(data):
     """Convert a pandas object to a NumPy array.
 
-    XXX: When `data` is a generator, this will return a Aesara tensor!
+    XXX: When `data` is a generator, this will return an Aesara tensor!
 
     """
     if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
@@ -349,11 +349,11 @@ def rvs_to_value_vars(
 
 def inputvars(a):
     """
-    Get the inputs into a aesara variables
+    Get the inputs into Aesara variables
 
     Parameters
     ----------
-        a: aesara variable
+        a: Aesara variable
 
     Returns
     -------
@@ -362,24 +362,24 @@ def inputvars(a):
     return [v for v in graph_inputs(makeiter(a)) if isinstance(v, TensorVariable)]
 
 
-def cont_inputs(f):
+def cont_inputs(a):
     """
-    Get the continuous inputs into a aesara variables
+    Get the continuous inputs into Aesara variables
 
     Parameters
     ----------
-        a: aesara variable
+        a: Aesara variable
 
     Returns
     -------
         r: list of tensor variables that are continuous inputs
     """
-    return typefilter(inputvars(f), continuous_types)
+    return typefilter(inputvars(a), continuous_types)
 
 
 def floatX(X):
     """
-    Convert a aesara tensor or numpy array to aesara.config.floatX type.
+    Convert an Aesara tensor or numpy array to aesara.config.floatX type.
     """
     try:
         return X.astype(aesara.config.floatX)
@@ -554,12 +554,12 @@ def join_nonshared_inputs(
     make_shared: bool = False,
 ):
     """
-    Takes a list of aesara Variables and joins their non shared inputs into a single input.
+    Takes a list of Aesara Variables and joins their non shared inputs into a single input.
 
     Parameters
     ----------
     point: a sample point
-    xs: list of aesara tensors
+    xs: list of Aesara tensors
     vars: list of variables to join
 
     Returns

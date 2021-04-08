@@ -26,7 +26,7 @@ from pymc3.ode.utils import augment_system
 
 
 def test_gradients():
-    """Tests the computation of the sensitivities from the aesara computation graph"""
+    """Tests the computation of the sensitivities from the Aesara computation graph"""
 
     # ODE system for which to compute gradients
     def ode_func(y, t, p):

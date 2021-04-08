@@ -12,7 +12,7 @@ What is Aesara
 
 Aesara is a package that allows us to define functions involving array
 operations and linear algebra. When we define a PyMC3 model, we implicitly
-build up a Aesara function from the space of our parameters to
+build up an Aesara function from the space of our parameters to
 their posterior probability density up to a constant factor. We then use
 symbolic manipulations of this function to also get access to its gradient.
 
@@ -159,7 +159,7 @@ where with the normal likelihood :math:`N(x|μ,σ^2)`
 
 To build that function we need to keep track of two things: The parameter
 space (the *free variables*) and the logp function. For each free variable
-we generate a Aesara variable. And for each variable (observed or otherwise)
+we generate an Aesara variable. And for each variable (observed or otherwise)
 we add a term to the global logp. In the background something similar to
 this is happening::
 
@@ -177,7 +177,7 @@ So calling `pm.Normal()` modifies the model: It changes the logp function
 of the model. If the `observed` keyword isn't set it also creates a new
 free variable. In contrast, `pm.Normal.dist()` doesn't care about the model,
 it just creates an object that represents the normal distribution. Calling
-`logp` on this object creates a Aesara variable for the logp probability
+`logp` on this object creates an Aesara variable for the logp probability
 or log probability density of the distribution, but again without changing
 the model in any way.
 

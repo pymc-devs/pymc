@@ -109,7 +109,7 @@ class BaseStochasticGradient(ArrayStepShared):
     Defining a BaseStochasticGradient needs
     custom implementation of the following methods:
         - :code: `.mk_training_fn()`
-            Returns a aesara function which is called for each sampling step
+            Returns an Aesara function which is called for each sampling step
         - :code: `._initialize_values()`
             Returns None it creates class variables which are required for the training fn
     """

@@ -280,7 +280,7 @@ class MLDA(ArrayStepShared):
         the PyMC3 model (also demonstrated in the example notebook):
             - Include a `pm.Data()` variable with the name `Q` in the
             model description of all levels.
-            - Use a Aesara Op to calculate the forward model (or the
+            - Use an Aesara Op to calculate the forward model (or the
             combination of a forward model and a likelihood). This Op
             should have a `perform()` method which (in addition to all
             the other calculations), calculates the quantity of interest
@@ -305,7 +305,7 @@ class MLDA(ArrayStepShared):
             extra variables mu_B and Sigma_B, which will capture
             the bias between different levels. All these variables
             should be instantiated using the pm.Data method.
-            - Use a Aesara Op to define the forward model (and
+            - Use an Aesara Op to define the forward model (and
             optionally the likelihood) for all levels. The Op needs
             to store the result of each forward model calculation
             to the variable model_output of the PyMC3 model,
@@ -555,12 +555,12 @@ class MLDA(ArrayStepShared):
 
         self.accepted = 0
 
-        # Construct aesara function for current-level model likelihood
+        # Construct Aesara function for current-level model likelihood
         # (for use in acceptance)
         shared = pm.make_shared_replacements(initial_values, value_vars, model)
         self.delta_logp = delta_logp_inverse(initial_values, model.logpt, value_vars, shared)
 
-        # Construct aesara function for below-level model likelihood
+        # Construct Aesara function for below-level model likelihood
         # (for use in acceptance)
         model_below = pm.modelcontext(self.model_below)
         vars_below = [var for var in model_below.value_vars if var.name in self.var_names]
