@@ -18,8 +18,8 @@ import numpy as np
 import theano.tensor as tt
 
 from scipy.special import logsumexp
-from scipy.stats import multivariate_normal
-from scipy.optimize import minimize
+from scipy.stats import multivariate_normal, median_abs_deviation
+from scipy.optimize import minimize, approx_fprime
 from theano import function as theano_function
 import arviz as az
 import jax
@@ -63,6 +63,12 @@ class NFMC:
         absEL2O=1e-10,
         fracEL2O=1e-2,
         pareto=False,
+        local_thresh=3,
+        local_step_size=0.1,
+        local_grad=True,
+        init_local=True,
+        nf_local_iter=0,
+        max_line_search=2,
         random_seed=-1,
         chain=0,
         frac_validate=0.1,
@@ -91,10 +97,17 @@ class NFMC:
 
         self.draws = draws
         self.model = model
+        self.init_method = init_method
         self.init_samples = init_samples
         self.absEL2O = 1e-10
         self.fracEL2O = 1e-2
         self.pareto = pareto,
+        self.local_thresh = local_thresh
+        self.local_step_size = local_step_size
+        self.local_grad = local_grad
+        self.init_local = init_local
+        self.nf_local_iter = nf_local_iter
+        self.max_line_search = max_line_search
         self.random_seed = random_seed
         self.chain = chain
         self.frac_validate = frac_validate
@@ -158,7 +171,6 @@ class NFMC:
             self.prior_samples = np.copy(self.init_samples)
 
         self.weighted_samples = np.empty((0, np.shape(self.prior_samples)[1]))
-        self.importance_weights = np.array([])
         self.all_logq = np.array([])
         self.posterior = np.empty((0, np.shape(self.prior_samples)[1]))
         self.nf_models = []
@@ -210,6 +222,10 @@ class NFMC:
         hessians = [self.posterior_hessian_func(val) for val in param_vals]
         return np.array(hessians).squeeze()
 
+    def sinf_logq(self, param_vals):
+        sinf_logq = self.nf_model.evaluate_density(torch.from_numpy(param_vals.astype(np.float32))).numpy().astype(np.float64)
+        return sinf_logq.item()
+
     def callback(self, xk):
         self.optim_iter_samples = np.append(self.optim_iter_samples, np.array([xk]), axis=0)
     
@@ -220,7 +236,49 @@ class NFMC:
                  options={'maxiter': self.optim_iter, 'ftol': self.ftol, 'gtol': self.gtol},
                  jac=self.optim_target_dlogp, callback=self.callback)
         return self.optim_iter_samples 
-        
+
+    def local_exploration(self, logq_func=None, dlogq_func=None):
+        """Perform local exploration."""
+        self.high_iw_idx = np.where(self.weights >= 1 / self.draws + self.local_thresh * median_abs_deviation(self.weights))[0]
+        self.high_iw_samples = self.nf_samples[self.high_iw_idx, ...]
+        self.high_weights = self.weights[self.high_iw_idx]
+        print(f'Number of points we perform additional local exploration around = {len(self.high_iw_idx)}')
+
+        self.local_samples = np.empty((0, np.shape(self.high_iw_samples)[1]))
+        self.local_weights = np.array([])
+        self.modified_weights = np.array([])
+
+        for i, sample in enumerate(self.high_iw_samples):
+            sample = sample.reshape(-1, len(sample))
+            if self.local_grad:
+                if dlogq_func is None:
+                    raise Exception('Using gradient-based exploration requires you to supply dlogq_func.')
+                self.log_weight_grad = self.target_dlogp(sample.astype(np.float64)) - dlogq_func(sample.astype(np.float64))
+            elif not self.local_grad:
+                if logq_func is None:
+                    raise Exception('Gradient-free approximates gradients with finite difference. Requires you to supply logq_func.')
+                self.log_weight_grad = approx_fprime(sample, self.target_logp, np.finfo(float).eps) - approx_fprime(sample, logq_func, np.finfo(float).eps)
+
+            self.log_weight_grad = np.asarray(self.log_weight_grad).astype(np.float64)
+            delta = 1.0 * self.local_step_size
+            proposed_step = sample + delta * self.log_weight_grad
+            line_search_iter = 0
+
+            while self.target_logp(proposed_step) < self.target_logp(sample):
+                delta = delta / 2.0
+                proposed_step = sample + delta * self.log_weight_grad
+                line_search_iter += 1
+                if line_search_iter >= self.max_line_search:
+                    break
+                
+            self.local_weights = np.append(self.local_weights,
+                                           self.high_weights[i] * np.exp(self.target_logp(proposed_step)) / (np.exp(self.target_logp(proposed_step)) + np.exp(self.target_logp(sample))))
+            self.modified_weights = np.append(self.modified_weights,
+                                              self.high_weights[i] * np.exp(self.target_logp(sample)) / (np.exp(self.target_logp(proposed_step)) + np.exp(self.target_logp(sample))))
+            self.local_samples = np.append(self.local_samples, proposed_step, axis=0)
+
+        self.weights[self.high_iw_idx] = self.modified_weights
+    
     def initialize_nf(self):
         """Intialize the first NF approx, by fitting to the prior samples."""
         val_idx = int((1 - self.frac_validate) * self.prior_samples.shape[0])
@@ -250,7 +308,14 @@ class NFMC:
             self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
 
         self.weights = self.weights / np.sum(self.weights)
-        self.importance_weights = np.append(self.importance_weights, self.weights)
+        self.importance_weights = np.copy(self.weights)
+        if self.init_local:
+            # 07/04/21 Note the arguments here are temporary until we have SINF derivatives! Modify once those are implemented.
+            self.local_exploration(logq_func=None, dlogq_func=lambda x: approx_fprime(x.squeeze(), self.sinf_logq, np.finfo(float).eps))
+            self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
+            self.importance_weights = np.copy(self.weights)
+            self.importance_weights = np.append(self.importance_weights, self.local_weights)
+
         self.nf_models.append(self.nf_model)
 
     def initialize_lbfgs(self):
@@ -259,16 +324,37 @@ class NFMC:
         self.mu_map = []
         for v in self.variables:
             self.mu_map.append(self.map_dict[v.name])
-        self.mu_map = np.array(self.mu_map)
-        self.lbfgs_hess_inv = self.scipy_opt.hess_inv.todense()
-        self.prior_samples = np.random.multivariate_normal(self.mu_map, self.lbfgs_hess_inv, size=self.draws)
-        self.weighted_samples = np.empty((0, np.shape(self.prior_samples)[1]))
-        self.importance_weights = np.array([])
+        self.mu_map = np.array(self.mu_map).squeeze()
+        print(self.mu_map)
+
+        if self.init_method == 'lbfgs':
+            self.hess_inv = self.scipy_opt.hess_inv.todense()
+        if self.init_method == 'map+laplace':
+            self.hess_inv = np.linalg.inv(self.target_hessian(self.mu_map.reshape(-1, len(self.mu_map))))
+
+        self.weighted_samples = np.random.multivariate_normal(self.mu_map, self.hess_inv, size=self.draws)
+        self.nf_samples = np.copy(self.weighted_samples)
+        self.get_posterior_logp()
+        log_weight = self.posterior_logp - multivariate_normal.logpdf(self.nf_samples, self.mu_map, self.hess_inv)
+        self.evidence = np.mean(np.exp(log_weight))
+        
+        if self.pareto:
+            psiw = az.psislw(log_weight)
+            self.weights = np.exp(psiw[0])
+        elif not self.pareto:
+            self.weights = np.exp(log_weight)
+            self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
+
+        self.weights = self.weights / np.sum(self.weights)
+        self.importance_weights = np.copy(self.weights)
+        if self.init_local:
+            self.local_exploration(None, dlogq_func=jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_map, self.hess_inv)))
+            self.importance_weights = np.copy(self.weights)
+            self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
+            self.importance_weights = np.append(self.importance_weights, self.local_weights)
+            
         self.all_logq = np.array([])
-        self.posterior = np.empty((0, np.shape(self.prior_samples)[1]))
         self.nf_models = []
-        print(f'LBFGS hess = {self.lbfgs_hess_inv}')
-        print(f'Autodiff hess = {np.linalg.inv(self.target_hessian(self.mu_map.reshape(-1, len(self.mu_map))))}')
         
     def logq_fr_el2o(self, z, mu, Sigma):
         """Logq for full-rank Gaussian family."""
@@ -276,11 +362,12 @@ class NFMC:
 
     def get_map_laplace(self):
         """Find the MAP+Laplace solution for the model."""
-        self.map_dict = find_MAP(model=self.model)
+        self.map_dict = find_MAP(model=self.model, method='L-BFGS-B')
         self.mu_map = []
         for v in self.variables:
             self.mu_map.append(self.map_dict[v.name])
-        self.mu_map = np.array(self.mu_map)
+        self.mu_map = np.array(self.mu_map).squeeze()
+        print(np.shape(self.mu_map))
         self.Sigma_map = np.linalg.inv(self.target_hessian(self.mu_map.reshape(-1, len(self.mu_map))))
         print(f'MAP estimate = {self.map_dict}')
         
@@ -312,17 +399,35 @@ class NFMC:
                                                                    np.sum((self.target_hessian(self.zk) - 
                                                                            jax.vmap(jax.hessian(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)), in_axes=0)(self.zk))**2)
             ))
-            
 
         print(f'Final EL2O mu = {self.mu_k}')
         print(f'Final EL2O Sigma = {self.Sigma_k}')
-        self.prior_samples = np.random.multivariate_normal(self.mu_k.squeeze(), self.Sigma_k, size=self.draws)
-        self.weighted_samples = np.empty((0, np.shape(self.prior_samples)[1]))
-        self.importance_weights = np.array([])
-        self.all_logq = np.array([])
-        self.posterior = np.empty((0, np.shape(self.prior_samples)[1]))
-        self.nf_models = []
+        self.weighted_samples = np.random.multivariate_normal(self.mu_k.squeeze(), self.Sigma_k, size=self.draws)
+        self.nf_samples = np.copy(self.weighted_samples)
+
+        self.get_posterior_logp()
+        log_weight = self.posterior_logp - multivariate_normal.logpdf(self.nf_samples, self.mu_k.squeeze(), self.Sigma_k)
+        self.evidence = np.mean(np.exp(log_weight))
+
+        if self.pareto:
+            psiw = az.psislw(log_weight)
+            self.weights = np.exp(psiw[0])
+        elif not self.pareto:
+            self.weights = np.exp(log_weight)
+            self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
+
+        self.weights = self.weights / np.sum(self.weights)
+        self.importance_weights = np.copy(self.weights)
         
+        if self.init_local:
+            self.local_exploration(logq_func=None, dlogq_func=jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)))
+            self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
+            self.importance_weights = np.copy(self.weights)
+            self.importance_weights = np.append(self.importance_weights, self.local_weights)
+
+        self.all_logq = np.array([])
+        self.nf_models = []
+
     def fit_nf(self):
         """Fit the NF model for a given iteration after initialization."""
         val_idx = int((1 - self.frac_validate) * self.weighted_samples.shape[0])
@@ -355,7 +460,34 @@ class NFMC:
 
         self.weights = self.weights / np.sum(self.weights)
         self.importance_weights = np.append(self.importance_weights, self.weights)
+        if self.nf_local_iter > 0:
+            # 07/04/21 Note the arguments here are temporary until we have SINF derivatives! Modify once those are implemented.
+            self.local_exploration(logq_func=None, dlogq_func=lambda x: approx_fprime(x.squeeze(), self.sinf_logq, np.finfo(float).eps))
+            self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
+            self.importance_weights[-len(self.weights):] = self.weights
+            self.importance_weights = np.append(self.importance_weights, self.local_weights)
+            
         self.nf_models.append(self.nf_model)
+
+    def reinitialize_nf(self):
+        """Draw a fresh set of samples from the most recent NF fit. Used to start a set of NF fits without local exploration."""
+        self.nf_samples, self.logq = self.nf_model.sample(self.draws, device=torch.device('cpu'))
+        self.nf_samples = self.nf_samples.numpy().astype(np.float64)
+        self.logq = self.logq.numpy().astype(np.float64)
+        self.weighted_samples = np.copy(self.nf_samples)
+        self.all_logq = np.copy(self.logq)
+        self.get_posterior_logp()
+        log_weight = self.posterior_logp - self.logq
+
+        if self.pareto:
+            psiw = az.psislw(log_weight)
+            self.weights = np.exp(psiw[0])
+        elif not self.pareto:
+            self.weights = np.exp(log_weight)
+            self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
+
+        self.weights = self.weights / np.sum(self.weights)
+        self.importance_weights = np.copy(self.weights)
         
     def resample_iter(self):
         """Resample at a given NF fit iteration, to obtain samples for the next stage."""

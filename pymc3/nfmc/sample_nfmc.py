@@ -35,6 +35,13 @@ def sample_nfmc(
     absEL2O=1e-10,
     fracEL2O=1e-2,
     pareto=False,
+    local_thresh=3,
+    local_step_size=0.1,
+    local_grad=True,
+    init_local=True,
+    full_local=False,
+    nf_local_iter=3,
+    max_line_search=2,
     k_trunc=0.25,
     norm_tol=0.01,
     optim_iter=1000,
@@ -142,6 +149,13 @@ def sample_nfmc(
         absEL2O,
         fracEL2O,
         pareto,
+        local_thresh,
+        local_step_size,
+        local_grad,
+        init_local,
+        full_local,
+        nf_local_iter,
+        max_line_search,
         k_trunc,
         norm_tol,
         optim_iter,
@@ -201,6 +215,13 @@ def sample_nfmc_int(
     absEL2O,
     fracEL2O,
     pareto,
+    local_thresh,
+    local_step_size,
+    local_grad,
+    init_local,
+    full_local,
+    nf_local_iter,
+    max_line_search,
     k_trunc,
     norm_tol,
     optim_iter,
@@ -241,6 +262,12 @@ def sample_nfmc_int(
         absEL2O=absEL2O,
         fracEL2O=fracEL2O,
         pareto=pareto,
+        local_thresh=local_thresh,
+        local_step_size=local_step_size,
+        local_grad=local_grad,
+        init_local=init_local,
+	nf_local_iter=nf_local_iter,
+        max_line_search=max_line_search,
         k_trunc=k_trunc,
         random_seed=random_seed,
         chain=chain,
@@ -271,15 +298,17 @@ def sample_nfmc_int(
     nfmc.setup_logp()
     if init_method == 'prior':
         nfmc.initialize_population()
+        nfmc.initialize_nf()
     elif init_method == 'full_rank':
         print(f'Initializing with full-rank EL2O approx family.')
         nfmc.get_map_laplace()
+        print('Got to MAP+LAPLACE before dying')
         nfmc.run_el2o()
-    elif init_method == 'lbfgs':
-        print(f'Using L-BFGS optimization and Hessian to initialize.')
+    elif init_method == 'lbfgs' or init_method == 'map+laplace':
+        print(f'Using {init_method} to initialize.')
         nfmc.initialize_lbfgs()
     else:
-        raise ValueError('init_method must be one of: prior, full_rank or lbfgs.')
+        raise ValueError('init_method must be one of: prior, full_rank, lbfgs or map+laplace.')
 
     '''
     # Run the optimization ...
@@ -300,15 +329,23 @@ def sample_nfmc_int(
         np.random.shuffle(optim_results)
     nfmc.optim_samples = np.copy(optim_results)
     '''
-
-    print('Fitting the first NF approx to the initial samples ...')
-    nfmc.initialize_nf()
     iter_evidence = 1.0 * nfmc.evidence
-    
+
+    if nf_local_iter > 0:
+        print(f'Using local exploration to improve the SINF initialization for {nf_local_iter} iterations.')
+        for j in range(nf_local_iter):
+            nfmc.fit_nf()
+        print('Re-initializing SINF fits using samples from latest iteration after local exploration.')
+        nfmc.reinitialize_nf()
+        nfmc.nf_local_iter = 0
+            
     for i in range(nf_iter):
 
         if _log is not None:
             _log.info(f"Stage: {stage:3d}, Normalizing Constant Estimate: {nfmc.evidence}")
+
+        if full_local:
+            nfmc.nf_local_iter = 1
         nfmc.fit_nf()
         stage += 1
         if np.abs((iter_evidence - nfmc.evidence) / nfmc.evidence) <= norm_tol:
