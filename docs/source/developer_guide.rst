@@ -202,7 +202,7 @@ function within each distribution. It has the following signature:
     def logp(self, value):
         # GET PARAMETERS
         param1, param2, ... = self.params1, self.params2, ...
-        # EVALUATE LOG-LIKELIHOOD FUNCTION, all inputs are (or array that could be convert to) aesara tensor
+        # EVALUATE LOG-LIKELIHOOD FUNCTION, all inputs are (or array that could be convert to) Aesara tensor
         total_log_prob = f(param1, param2, ..., value)
         return total_log_prob
 

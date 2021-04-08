@@ -609,8 +609,8 @@ class ValueGradFunction:
     ----------
     size: int
         The number of elements in the parameter array.
-    profile: aesara profiling object or None
-        The profiling object of the aesara function that computes value and
+    profile: Aesara profiling object or None
+        The profiling object of the Aesara function that computes value and
         gradient. This is None unless `profile=True` was set in the
         kwargs.
     """

@@ -137,7 +137,7 @@ class ArrayStep(BlockedStep):
     ----------
     vars: list
         List of variables for sampler.
-    fs: list of logp aesara functions
+    fs: list of logp Aesara functions
     allvars: Boolean (default False)
     blocked: Boolean (default True)
     """
@@ -177,7 +177,7 @@ class ArrayStepShared(BlockedStep):
         Parameters
         ----------
         vars: list of sampling variables
-        shared: dict of aesara variable -> shared variable
+        shared: dict of Aesara variable -> shared variable
         blocked: Boolean (default True)
         """
         self.vars = vars
@@ -212,7 +212,7 @@ class PopulationArrayStepShared(ArrayStepShared):
         Parameters
         ----------
         vars: list of sampling variables
-        shared: dict of aesara variable -> shared variable
+        shared: dict of Aesara variable -> shared variable
         blocked: Boolean (default True)
         """
         self.population = None

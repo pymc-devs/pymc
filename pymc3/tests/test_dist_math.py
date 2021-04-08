@@ -188,7 +188,7 @@ class TestMvNormalLogp:
         delta_val = floatX(np.random.randn(5, 2))
         verify_grad(func, [chol_vec_val, delta_val])
 
-    @pytest.mark.skip(reason="Fix in aesara not released yet: Theano#5908")
+    @pytest.mark.skip(reason="Fix in Aesara not released yet: Theano#5908")
     @aesara.config.change_flags(compute_test_value="ignore")
     def test_hessian(self):
         chol_vec = at.vector("chol_vec")

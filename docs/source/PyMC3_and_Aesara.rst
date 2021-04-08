@@ -123,7 +123,7 @@ Changing elements of an array is possible using `at.set_subtensor`::
     a = at.vector('a')
     b = at.set_subtensor(a[:10], 1)
 
-    # is roughly equivalent to this (although aesara avoids
+    # is roughly equivalent to this (although Aesara avoids
     # the copy if `a` isn't used anymore)
     a = np.random.randn(10)
     b = a.copy()

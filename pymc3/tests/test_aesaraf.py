@@ -208,7 +208,7 @@ class TestTakeAlongAxis:
             _axis = len(shape) + axis
         else:
             _axis = axis
-        # Setup the aesara function
+        # Setup the Aesara function
         t_arr, t_indices = self.get_input_tensors(shape)
         t_out2 = aesara.grad(
             at.sum(self._output_tensor(t_arr ** 2, t_indices, axis)),

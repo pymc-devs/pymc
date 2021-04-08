@@ -657,7 +657,7 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
-    # Using aesara constant to prevent upcasting of float32
+    # Using Aesara constant to prevent upcasting of float32
     one = at.constant(1)
 
     for param, grad in zip(params, grads):
@@ -749,7 +749,7 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
-    # Using aesara constant to prevent upcasting of float32
+    # Using Aesara constant to prevent upcasting of float32
     one = at.constant(1)
 
     for param, grad in zip(params, grads):
@@ -842,7 +842,7 @@ def adam(
     t_prev = aesara.shared(pm.aesaraf.floatX(0.0))
     updates = OrderedDict()
 
-    # Using aesara constant to prevent upcasting of float32
+    # Using Aesara constant to prevent upcasting of float32
     one = at.constant(1)
 
     t = t_prev + 1
@@ -930,7 +930,7 @@ def adamax(
     t_prev = aesara.shared(pm.aesaraf.floatX(0.0))
     updates = OrderedDict()
 
-    # Using aesara constant to prevent upcasting of float32
+    # Using Aesara constant to prevent upcasting of float32
     one = at.constant(1)
 
     t = t_prev + 1

@@ -39,7 +39,7 @@ class LinearComponent(Model):
         use `Regressor` key for defining default prior for all regressors
             defaults to Normal.dist(mu=0, tau=1.0E-6)
     vars: dict - random variables instead of creating new ones
-    offset: scalar, or numpy/aesara array with the same shape as y
+    offset: scalar, or numpy/Aesara array with the same shape as y
         this can be used to specify an a priori known component to be
         included in the linear predictor during fitting.
     """
@@ -149,7 +149,7 @@ class GLM(LinearComponent):
     init: dict - test_vals for coefficients
     vars: dict - random variables instead of creating new ones
     family: pymc3..families object
-    offset: scalar, or numpy/aesara array with the same shape as y
+    offset: scalar, or numpy/Aesara array with the same shape as y
         this can be used to specify an a priori known component to be
         included in the linear predictor during fitting.
     """
