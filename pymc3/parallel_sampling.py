@@ -127,6 +127,15 @@ class _Process:
                     self._step_method = dill.loads(data)
                 except Exception:
                     raise ValueError(unpickle_error)
+            elif self._pickle_backend == "cloudpickle":
+                try:
+                    import cloudpickle
+                except ImportError:
+                    raise ValueError("cloudpickle must be installed for pickle_backend='cloudpickle'.")
+                try:
+                    self._step_method = cloudpickle.loads(data)
+                except Exception:
+                    raise ValueError(unpickle_error)
             else:
                 raise ValueError("Unknown pickle backend")
 
@@ -429,6 +438,12 @@ class ParallelSampler:
                 except ImportError:
                     raise ValueError("dill must be installed for pickle_backend='dill'.")
                 step_method_pickled = dill.dumps(step_method, protocol=-1)
+            elif pickle_backend == "cloudpickle":
+                try:
+                    import cloudpickle
+                except ImportError:
+                    raise ValueError("cloudpickle must be installed for pickle_backend='cloudpickle'.")
+                step_method_pickled = cloudpickle.dumps(step_method, protocol=-1)
 
             step_method_pickled = mp_ctx.Array("b", step_method_pickled, lock=False)
 

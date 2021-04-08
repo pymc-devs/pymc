@@ -348,7 +348,7 @@ def sample(
         A multiprocessing context for parallel sampling. See multiprocessing
         documentation for details.
     pickle_backend : str
-        One of `'pickle'` or `'dill'`. The library used to pickle models
+        One of `'pickle'`, `'dill'` or `'cloudpickle`'. The library used to pickle models
         in parallel sampling if the multiprocessing context is not of type
         `fork`.
 
