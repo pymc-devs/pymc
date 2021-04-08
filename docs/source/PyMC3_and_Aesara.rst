@@ -17,7 +17,7 @@ their posterior probability density up to a constant factor. We then use
 symbolic manipulations of this function to also get access to its gradient.
 
 For a thorough introduction to Aesara see the
-`aesara docs <https://aesara.readthedocs.io/en/latest/>`_,
+`Aesara docs <https://aesara.readthedocs.io/en/latest/>`_,
 but for the most part you don't need detailed knowledge about it as long
 as you are not trying to define new distributions or other extensions
 of PyMC3. But let's look at a simple example to get a rough
