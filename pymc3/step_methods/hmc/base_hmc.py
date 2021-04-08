@@ -19,8 +19,9 @@ from collections import namedtuple
 
 import numpy as np
 
-from pymc3.aesaraf import floatX, inputvars
+from pymc3.aesaraf import floatX
 from pymc3.backends.report import SamplerWarning, WarningType
+from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.exceptions import SamplingError
 from pymc3.model import Point, modelcontext
 from pymc3.step_methods import arraystep, step_sizes
@@ -83,14 +84,22 @@ class BaseHMC(arraystep.GradientSharedStep):
 
         if vars is None:
             vars = self._model.cont_vars
-        vars = inputvars(vars)
 
-        super().__init__(vars, blocked=blocked, model=model, dtype=dtype, **aesara_kwargs)
+        # vars = inputvars(vars)
+
+        super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **aesara_kwargs)
 
         self.adapt_step_size = adapt_step_size
         self.Emax = Emax
         self.iter_count = 0
-        size = self._logp_dlogp_func.size
+
+        # We're using the initial/test point to determine the (initial) step
+        # size.
+        # XXX: If the dimensions of these terms change, the step size
+        # dimension-scaling should change as well, no?
+        test_point = self._model.initial_point
+        continuous_vars = [test_point[v.name] for v in self._model.cont_vars]
+        size = sum(v.size for v in continuous_vars)
 
         self.step_size = step_scale / (size ** 0.25)
         self.step_adapt = step_sizes.DualAverageAdaptation(
@@ -105,8 +114,8 @@ class BaseHMC(arraystep.GradientSharedStep):
             potential = QuadPotentialDiagAdapt(size, mean, var, 10)
 
         if isinstance(scaling, dict):
-            point = Point(scaling, model=model)
-            scaling = guess_scaling(point, model=model, vars=vars)
+            point = Point(scaling, model=self._model)
+            scaling = guess_scaling(point, model=self._model, vars=vars)
 
         if scaling is not None and potential is not None:
             raise ValueError("Can not specify both potential and scaling.")
@@ -136,15 +145,17 @@ class BaseHMC(arraystep.GradientSharedStep):
         process_start = time.process_time()
 
         p0 = self.potential.random()
+        p0 = RaveledVars(p0, q0.point_map_info)
+
         start = self.integrator.compute_state(q0, p0)
 
         if not np.isfinite(start.energy):
             model = self._model
-            check_test_point = model.check_test_point()
+            check_test_point = model.point_logps()
             error_logp = check_test_point.loc[
                 (np.abs(check_test_point) >= 1e20) | np.isnan(check_test_point)
             ]
-            self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
+            self.potential.raise_ok(q0.point_map_info)
             message_energy = (
                 "Bad initial energy, check any log probabilities that "
                 "are inf or -inf, nan or very small:\n{}".format(error_logp.to_string())
@@ -165,7 +176,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         if self._step_rand is not None:
             step_size = self._step_rand(step_size)
 
-        hmc_step = self._hamiltonian_step(start, p0, step_size)
+        hmc_step = self._hamiltonian_step(start, p0.data, step_size)
 
         perf_end = time.perf_counter()
         process_end = time.process_time()
@@ -184,9 +195,11 @@ class BaseHMC(arraystep.GradientSharedStep):
                 self._num_divs_sample += 1
                 # We don't want to fill up all memory with divergence info
                 if self._num_divs_sample < 100 and info.state is not None:
-                    point = self._logp_dlogp_func.array_to_dict(info.state.q)
+                    point = DictToArrayBijection.rmap(info.state.q)
+
                 if self._num_divs_sample < 100 and info.state_div is not None:
-                    point_dest = self._logp_dlogp_func.array_to_dict(info.state_div.q)
+                    point = DictToArrayBijection.rmap(info.state_div.q)
+
                 if self._num_divs_sample < 100:
                     info_store = info
             warning = SamplerWarning(

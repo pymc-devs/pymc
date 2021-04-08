@@ -16,39 +16,27 @@ import numpy
 import pandas as pd
 import pytest
 
+from aesara.tensor.subtensor import AdvancedIncSubtensor
 from numpy import array, ma
 
 from pymc3 import ImputationWarning, Model, Normal, sample, sample_prior_predictive
 
 
-def test_missing():
-    data = ma.masked_values([1, 2, -1, 4, -1], value=-1)
+@pytest.mark.parametrize(
+    "data",
+    [ma.masked_values([1, 2, -1, 4, -1], value=-1), pd.DataFrame([1, 2, numpy.nan, 4, numpy.nan])],
+)
+def test_missing(data):
+
     with Model() as model:
         x = Normal("x", 1, 1)
         with pytest.warns(ImputationWarning):
-            Normal("y", x, 1, observed=data)
+            y = Normal("y", x, 1, observed=data)
 
-    (y_missing,) = model.missing_values
-    assert y_missing.tag.test_value.shape == (2,)
+    assert isinstance(y.owner.op, AdvancedIncSubtensor)
 
-    model.logp(model.test_point)
-
-    with model:
-        prior_trace = sample_prior_predictive()
-    assert {"x", "y"} <= set(prior_trace.keys())
-
-
-def test_missing_pandas():
-    data = pd.DataFrame([1, 2, numpy.nan, 4, numpy.nan])
-    with Model() as model:
-        x = Normal("x", 1, 1)
-        with pytest.warns(ImputationWarning):
-            Normal("y", x, 1, observed=data)
-
-    (y_missing,) = model.missing_values
-    assert y_missing.tag.test_value.shape == (2,)
-
-    model.logp(model.test_point)
+    test_point = model.initial_point
+    assert not numpy.isnan(model.logp(test_point))
 
     with model:
         prior_trace = sample_prior_predictive()
@@ -61,12 +49,12 @@ def test_missing_with_predictors():
     with Model() as model:
         x = Normal("x", 1, 1)
         with pytest.warns(ImputationWarning):
-            Normal("y", x * predictors, 1, observed=data)
+            y = Normal("y", x * predictors, 1, observed=data)
 
-    (y_missing,) = model.missing_values
-    assert y_missing.tag.test_value.shape == (2,)
+    assert isinstance(y.owner.op, AdvancedIncSubtensor)
 
-    model.logp(model.test_point)
+    test_point = model.initial_point
+    assert not numpy.isnan(model.logp(test_point))
 
     with model:
         prior_trace = sample_prior_predictive()
@@ -79,7 +67,7 @@ def test_missing_dual_observations():
         obs2 = ma.masked_values([-1, -1, 6, -1, 8], value=-1)
         beta1 = Normal("beta1", 1, 1)
         beta2 = Normal("beta2", 2, 1)
-        latent = Normal("theta", shape=5)
+        latent = Normal("theta", size=5)
         with pytest.warns(ImputationWarning):
             ovar1 = Normal("o1", mu=beta1 * latent, observed=obs1)
         with pytest.warns(ImputationWarning):
@@ -87,9 +75,15 @@ def test_missing_dual_observations():
 
         prior_trace = sample_prior_predictive()
         assert {"beta1", "beta2", "theta", "o1", "o2"} <= set(prior_trace.keys())
+        # TODO: Assert something
         sample()
 
 
+@pytest.mark.skip(
+    reason="This doesn't make sense in v4, because there are no "
+    "explicit variables to sample.  The missing values are "
+    "implicit random variables."
+)
 def test_internal_missing_observations():
     with Model() as model:
         obs1 = ma.masked_values([1, 2, -1, 4, -1], value=-1)
@@ -101,4 +95,5 @@ def test_internal_missing_observations():
 
         prior_trace = sample_prior_predictive()
         assert {"theta1", "theta2"} <= set(prior_trace.keys())
+        # TODO: Assert something
         sample()

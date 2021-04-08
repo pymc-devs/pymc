@@ -11,12 +11,12 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import warnings
 
 import aesara.tensor as at
 import numpy as np
 
+from aesara.tensor.random.basic import bernoulli, binomial, categorical, nbinom, poisson
 from scipy import stats
 
 from pymc3.aesaraf import floatX, intX, take_along_axis
@@ -30,11 +30,9 @@ from pymc3.distributions.dist_math import (
     logpow,
     normal_lccdf,
     normal_lcdf,
-    random_choice,
 )
-from pymc3.distributions.distribution import Discrete, draw_values, generate_samples
-from pymc3.distributions.shape_utils import broadcast_distribution_samples
-from pymc3.math import log1mexp, log1pexp, logaddexp, logit, logsumexp, sigmoid, tround
+from pymc3.distributions.distribution import Discrete
+from pymc3.math import log1mexp, logaddexp, logsumexp, sigmoid, tround
 
 __all__ = [
     "Binomial",
@@ -98,34 +96,16 @@ class Binomial(Discrete):
     p: float
         Probability of success in each trial (0 < p < 1).
     """
+    rv_op = binomial
 
-    def __init__(self, n, p, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.n = n = at.as_tensor_variable(intX(n))
-        self.p = p = at.as_tensor_variable(floatX(p))
-        self.mode = at.cast(tround(n * p), self.dtype)
+    @classmethod
+    def dist(cls, n, p, *args, **kwargs):
+        n = at.as_tensor_variable(intX(n))
+        p = at.as_tensor_variable(floatX(p))
+        # mode = at.cast(tround(n * p), self.dtype)
+        return super().dist([n, p], **kwargs)
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from Binomial distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        n, p = draw_values([self.n, self.p], point=point, size=size)
-        return generate_samples(stats.binom.rvs, n=n, p=p, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(value, n, p):
         r"""
         Calculate log-probability of Binomial distribution at specified value.
 
@@ -139,9 +119,6 @@ class Binomial(Discrete):
         -------
         TensorVariable
         """
-        n = self.n
-        p = self.p
-
         return bound(
             binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
             0 <= value,
@@ -150,7 +127,7 @@ class Binomial(Discrete):
             p <= 1,
         )
 
-    def logcdf(self, value):
+    def logcdf(value, n, p):
         """
         Compute the log of the cumulative distribution function for Binomial distribution
         at the specified value.
@@ -170,8 +147,6 @@ class Binomial(Discrete):
                 f"Binomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
-        n = self.n
-        p = self.p
         value = at.floor(value)
 
         return bound(
@@ -289,10 +264,10 @@ class BetaBinomial(Discrete):
         -------
         array
         """
-        alpha, beta, n = draw_values([self.alpha, self.beta, self.n], point=point, size=size)
-        return generate_samples(
-            self._random, alpha=alpha, beta=beta, n=n, dist_shape=self.shape, size=size
-        )
+        # alpha, beta, n = draw_values([self.alpha, self.beta, self.n], point=point, size=size)
+        # return generate_samples(
+        #     self._random, alpha=alpha, beta=beta, n=n, dist_shape=self.shape, size=size
+        # )
 
     def logp(self, value):
         r"""
@@ -393,47 +368,16 @@ class Bernoulli(Discrete):
     ----------
     p: float
         Probability of success (0 < p < 1).
-    logit_p: float
-        Logit of success probability. Only one of `p` and `logit_p`
-        can be specified.
     """
+    rv_op = bernoulli
 
-    def __init__(self, p=None, logit_p=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if sum(int(var is None) for var in [p, logit_p]) != 1:
-            raise ValueError("Specify one of p and logit_p")
-        if p is not None:
-            self._is_logit = False
-            self.p = p = at.as_tensor_variable(floatX(p))
-            self._logit_p = logit(p)
-        else:
-            self._is_logit = True
-            self.p = at.nnet.sigmoid(floatX(logit_p))
-            self._logit_p = at.as_tensor_variable(logit_p)
+    @classmethod
+    def dist(cls, p=None, logit_p=None, *args, **kwargs):
+        p = at.as_tensor_variable(floatX(p))
+        # mode = at.cast(tround(p), "int8")
+        return super().dist([p], **kwargs)
 
-        self.mode = at.cast(tround(self.p), "int8")
-
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from Bernoulli distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        p = draw_values([self.p], point=point, size=size)[0]
-        return generate_samples(stats.bernoulli.rvs, p, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(value, p):
         r"""
         Calculate log-probability of Bernoulli distribution at specified value.
 
@@ -447,20 +391,19 @@ class Bernoulli(Discrete):
         -------
         TensorVariable
         """
-        if self._is_logit:
-            lp = at.switch(value, self._logit_p, -self._logit_p)
-            return -log1pexp(-lp)
-        else:
-            p = self.p
-            return bound(
-                at.switch(value, at.log(p), at.log(1 - p)),
-                value >= 0,
-                value <= 1,
-                p >= 0,
-                p <= 1,
-            )
+        # if self._is_logit:
+        #     lp = at.switch(value, self._logit_p, -self._logit_p)
+        #     return -log1pexp(-lp)
+        # else:
+        return bound(
+            at.switch(value, at.log(p), at.log(1 - p)),
+            value >= 0,
+            value <= 1,
+            p >= 0,
+            p <= 1,
+        )
 
-    def logcdf(self, value):
+    def logcdf(value, p):
         """
         Compute the log of the cumulative distribution function for Bernoulli distribution
         at the specified value.
@@ -475,7 +418,6 @@ class Bernoulli(Discrete):
         -------
         TensorVariable
         """
-        p = self.p
 
         return bound(
             at.switch(
@@ -572,9 +514,8 @@ class DiscreteWeibull(Discrete):
         -------
         array
         """
-        q, beta = draw_values([self.q, self.beta], point=point, size=size)
-
-        return generate_samples(self._random, q, beta, dist_shape=self.shape, size=size)
+        # q, beta = draw_values([self.q, self.beta], point=point, size=size)
+        # return generate_samples(self._random, q, beta, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         r"""
@@ -671,33 +612,15 @@ class Poisson(Discrete):
     The Poisson distribution can be derived as a limiting case of the
     binomial distribution.
     """
+    rv_op = poisson
 
-    def __init__(self, mu, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.mu = mu = at.as_tensor_variable(floatX(mu))
-        self.mode = intX(at.floor(mu))
+    @classmethod
+    def dist(cls, mu, *args, **kwargs):
+        mu = at.as_tensor_variable(floatX(mu))
+        # mode = intX(at.floor(mu))
+        return super().dist([mu], *args, **kwargs)
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from Poisson distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        mu = draw_values([self.mu], point=point, size=size)[0]
-        return generate_samples(stats.poisson.rvs, mu, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(value, mu):
         r"""
         Calculate log-probability of Poisson distribution at specified value.
 
@@ -711,12 +634,11 @@ class Poisson(Discrete):
         -------
         TensorVariable
         """
-        mu = self.mu
         log_prob = bound(logpow(mu, value) - factln(value) - mu, mu >= 0, value >= 0)
         # Return zero when mu and value are both zero
         return at.switch(at.eq(mu, 0) * at.eq(value, 0), 0, log_prob)
 
-    def logcdf(self, value):
+    def logcdf(value, mu):
         """
         Compute the log of the cumulative distribution function for Poisson distribution
         at the specified value.
@@ -731,7 +653,6 @@ class Poisson(Discrete):
         -------
         TensorVariable
         """
-        mu = self.mu
         value = at.floor(value)
         # Avoid C-assertion when the gammaincc function is called with invalid values (#4340)
         safe_mu = at.switch(at.lt(mu, 0), 0, mu)
@@ -806,73 +727,37 @@ class NegativeBinomial(Discrete):
     n: float
         Alternative number of target success trials (n > 0)
     """
+    rv_op = nbinom
 
-    def __init__(self, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        mu, alpha = self.get_mu_alpha(mu, alpha, p, n)
-        self.mu = mu = at.as_tensor_variable(floatX(mu))
-        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
-        self.mode = intX(at.floor(mu))
+    @classmethod
+    def dist(cls, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
+        n, p = cls.get_mu_alpha(mu, alpha, p, n)
+        n = at.as_tensor_variable(floatX(n))
+        p = at.as_tensor_variable(floatX(p))
+        return super().dist([n, p], *args, **kwargs)
 
-    def get_mu_alpha(self, mu=None, alpha=None, p=None, n=None):
-        self._param_type = ["mu", "alpha"]
-        if alpha is None:
-            if n is not None:
-                self._param_type[1] = "n"
-                self.n = at.as_tensor_variable(intX(n))
-                alpha = n
+    @classmethod
+    def get_mu_alpha(cls, mu=None, alpha=None, p=None, n=None):
+        if n is None:
+            if alpha is not None:
+                n = at.as_tensor_variable(floatX(alpha))
             else:
                 raise ValueError("Incompatible parametrization. Must specify either alpha or n.")
-        elif n is not None:
+        elif alpha is not None:
             raise ValueError("Incompatible parametrization. Can't specify both alpha and n.")
 
-        if mu is None:
-            if p is not None:
-                self._param_type[0] = "p"
-                self.p = at.as_tensor_variable(floatX(p))
-                mu = alpha * (1 - p) / p
+        if p is None:
+            if mu is not None:
+                mu = at.as_tensor_variable(floatX(mu))
+                p = n / (mu + n)
             else:
                 raise ValueError("Incompatible parametrization. Must specify either mu or p.")
-        elif p is not None:
+        elif mu is not None:
             raise ValueError("Incompatible parametrization. Can't specify both mu and p.")
 
-        return mu, alpha
+        return n, p
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from NegativeBinomial distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        mu, alpha = draw_values([self.mu, self.alpha], point=point, size=size)
-        g = generate_samples(self._random, mu=mu, alpha=alpha, dist_shape=self.shape, size=size)
-        g[g == 0] = np.finfo(float).eps  # Just in case
-        return np.asarray(stats.poisson.rvs(g)).reshape(g.shape)
-
-    def _random(self, mu, alpha, size):
-        r"""Wrapper around stats.gamma.rvs that converts NegativeBinomial's
-        parametrization to scipy.gamma. All parameter arrays should have
-        been broadcasted properly by generate_samples at this point and size is
-        the scipy.rvs representation.
-        """
-        return stats.gamma.rvs(
-            a=alpha,
-            scale=mu / alpha,
-            size=size,
-        )
-
-    def logp(self, value):
+    def logp(value, n, p):
         r"""
         Calculate log-probability of NegativeBinomial distribution at specified value.
 
@@ -886,8 +771,8 @@ class NegativeBinomial(Discrete):
         -------
         TensorVariable
         """
-        mu = self.mu
-        alpha = self.alpha
+        alpha = n
+        mu = alpha * (1 - p) / p
         negbinom = bound(
             binomln(value + alpha - 1, value)
             + logpow(mu / (mu + alpha), value)
@@ -898,9 +783,9 @@ class NegativeBinomial(Discrete):
         )
 
         # Return Poisson when alpha gets very large.
-        return at.switch(at.gt(alpha, 1e10), Poisson.dist(self.mu).logp(value), negbinom)
+        return at.switch(at.gt(alpha, 1e10), Poisson.logp(value, mu), negbinom)
 
-    def logcdf(self, value):
+    def logcdf(value, n, p):
         """
         Compute the log of the cumulative distribution function for NegativeBinomial distribution
         at the specified value.
@@ -920,20 +805,13 @@ class NegativeBinomial(Discrete):
                 f"NegativeBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
-        # TODO: avoid `p` recomputation if distribution was defined in terms of `p`
-        alpha = self.alpha
-        p = alpha / (self.mu + alpha)
-
         return bound(
-            at.log(incomplete_beta(alpha, at.floor(value) + 1, p)),
+            at.log(incomplete_beta(n, at.floor(value) + 1, p)),
             0 <= value,
-            0 < alpha,
+            0 < n,
             0 <= p,
             p <= 1,
         )
-
-    def _distr_parameters_for_repr(self):
-        return self._param_type
 
 
 class Geometric(Discrete):
@@ -996,8 +874,8 @@ class Geometric(Discrete):
         -------
         array
         """
-        p = draw_values([self.p], point=point, size=size)[0]
-        return generate_samples(np.random.geometric, p, dist_shape=self.shape, size=size)
+        # p = draw_values([self.p], point=point, size=size)[0]
+        # return generate_samples(np.random.geometric, p, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         r"""
@@ -1113,8 +991,8 @@ class HyperGeometric(Discrete):
         array
         """
 
-        N, k, n = draw_values([self.N, self.k, self.n], point=point, size=size)
-        return generate_samples(self._random, N, k, n, dist_shape=self.shape, size=size)
+        # N, k, n = draw_values([self.N, self.k, self.n], point=point, size=size)
+        # return generate_samples(self._random, N, k, n, dist_shape=self.shape, size=size)
 
     def _random(self, M, n, N, size=None):
         r"""Wrapper around scipy stat's hypergeom.rvs"""
@@ -1266,8 +1144,8 @@ class DiscreteUniform(Discrete):
         -------
         array
         """
-        lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
-        return generate_samples(self._random, lower, upper, dist_shape=self.shape, size=size)
+        # lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
+        # return generate_samples(self._random, lower, upper, dist_shape=self.shape, size=size)
 
     def logp(self, value):
         r"""
@@ -1355,51 +1233,20 @@ class Categorical(Discrete):
         p > 0 and the elements of p must sum to 1. They will be automatically
         rescaled otherwise.
     """
+    rv_op = categorical
 
-    def __init__(self, p, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        try:
-            self.k = at.shape(p)[-1].tag.test_value
-        except AttributeError:
-            self.k = at.shape(p)[-1]
+    @classmethod
+    def dist(cls, p, **kwargs):
+
         p = at.as_tensor_variable(floatX(p))
 
-        # From #2082, it may be dangerous to automatically rescale p at this
-        # point without checking for positiveness
-        self.p = p
-        self.mode = at.argmax(p, axis=-1)
-        if self.mode.ndim == 1:
-            self.mode = at.squeeze(self.mode)
+        # mode = at.argmax(p, axis=-1)
+        # if mode.ndim == 1:
+        #     mode = at.squeeze(mode)
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from Categorical distribution.
+        return super().dist([p], **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        p, k = draw_values([self.p, self.k], point=point, size=size)
-        p = p / np.sum(p, axis=-1, keepdims=True)
-
-        return generate_samples(
-            random_choice,
-            p=p,
-            broadcast_shape=p.shape[:-1],
-            dist_shape=self.shape,
-            size=size,
-        )
-
-    def logp(self, value):
+    def logp(value, p):
         r"""
         Calculate log-probability of Categorical distribution at specified value.
 
@@ -1407,19 +1254,17 @@ class Categorical(Discrete):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
+<<<<<<< HEAD
             values are desired the values must be provided in a numpy array or Aesara tensor
+=======
+            values are desired the values must be provided in a numpy array or `TensorVariable`
+>>>>>>> upstream/v4
 
-        Returns
-        -------
-        TensorVariable
         """
-        p_ = self.p
-        k = self.k
-
-        # Clip values before using them for indexing
-        value_clip = at.clip(value, 0, k - 1)
-
+        k = at.shape(p)[-1]
+        p_ = p
         p = p_ / at.sum(p_, axis=-1, keepdims=True)
+        value_clip = at.clip(value, 0, k - 1)
 
         if p.ndim > 1:
             if p.ndim > value_clip.ndim:
@@ -1476,13 +1321,13 @@ class Constant(Discrete):
         -------
         array
         """
-        c = draw_values([self.c], point=point, size=size)[0]
-        dtype = np.array(c).dtype
-
-        def _random(c, dtype=dtype, size=None):
-            return np.full(size, fill_value=c, dtype=dtype)
-
-        return generate_samples(_random, c=c, dist_shape=self.shape, size=size).astype(dtype)
+        # c = draw_values([self.c], point=point, size=size)[0]
+        # dtype = np.array(c).dtype
+        #
+        # def _random(c, dtype=dtype, size=None):
+        #     return np.full(size, fill_value=c, dtype=dtype)
+        #
+        # return generate_samples(_random, c=c, dist_shape=self.shape, size=size).astype(dtype)
 
     def logp(self, value):
         r"""
@@ -1580,10 +1425,10 @@ class ZeroInflatedPoisson(Discrete):
         -------
         array
         """
-        theta, psi = draw_values([self.theta, self.psi], point=point, size=size)
-        g = generate_samples(stats.poisson.rvs, theta, dist_shape=self.shape, size=size)
-        g, psi = broadcast_distribution_samples([g, psi], size=size)
-        return g * (np.random.random(g.shape) < psi)
+        # theta, psi = draw_values([self.theta, self.psi], point=point, size=size)
+        # g = generate_samples(stats.poisson.rvs, theta, dist_shape=self.shape, size=size)
+        # g, psi = broadcast_distribution_samples([g, psi], size=size)
+        # return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
         r"""
@@ -1712,10 +1557,10 @@ class ZeroInflatedBinomial(Discrete):
         -------
         array
         """
-        n, p, psi = draw_values([self.n, self.p, self.psi], point=point, size=size)
-        g = generate_samples(stats.binom.rvs, n, p, dist_shape=self.shape, size=size)
-        g, psi = broadcast_distribution_samples([g, psi], size=size)
-        return g * (np.random.random(g.shape) < psi)
+        # n, p, psi = draw_values([self.n, self.p, self.psi], point=point, size=size)
+        # g = generate_samples(stats.binom.rvs, n, p, dist_shape=self.shape, size=size)
+        # g, psi = broadcast_distribution_samples([g, psi], size=size)
+        # return g * (np.random.random(g.shape) < psi)
 
     def logp(self, value):
         r"""
@@ -1867,11 +1712,11 @@ class ZeroInflatedNegativeBinomial(Discrete):
         -------
         array
         """
-        mu, alpha, psi = draw_values([self.mu, self.alpha, self.psi], point=point, size=size)
-        g = generate_samples(self._random, mu=mu, alpha=alpha, dist_shape=self.shape, size=size)
-        g[g == 0] = np.finfo(float).eps  # Just in case
-        g, psi = broadcast_distribution_samples([g, psi], size=size)
-        return stats.poisson.rvs(g) * (np.random.random(g.shape) < psi)
+        # mu, alpha, psi = draw_values([self.mu, self.alpha, self.psi], point=point, size=size)
+        # g = generate_samples(self._random, mu=mu, alpha=alpha, dist_shape=self.shape, size=size)
+        # g[g == 0] = np.finfo(float).eps  # Just in case
+        # g, psi = broadcast_distribution_samples([g, psi], size=size)
+        # return stats.poisson.rvs(g) * (np.random.random(g.shape) < psi)
 
     def _random(self, mu, alpha, size):
         r"""Wrapper around stats.gamma.rvs that converts NegativeBinomial's

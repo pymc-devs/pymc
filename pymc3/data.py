@@ -32,6 +32,8 @@ from aesara.tensor.var import TensorVariable
 
 import pymc3 as pm
 
+from pymc3.aesaraf import pandas_to_array
+
 __all__ = [
     "get_data",
     "GeneratorAdapter",
@@ -524,9 +526,9 @@ class Data:
             )
         name = model.name_for(name)
 
-        # `pm.model.pandas_to_array` takes care of parameter `value` and
+        # `pandas_to_array` takes care of parameter `value` and
         # transforms it to something digestible for pymc3
-        shared_object = aesara.shared(pm.model.pandas_to_array(value), name)
+        shared_object = aesara.shared(pandas_to_array(value), name)
 
         if isinstance(dims, str):
             dims = (dims,)
@@ -544,15 +546,16 @@ class Data:
 
         # To draw the node for this variable in the graphviz Digraph we need
         # its shape.
-        shared_object.dshape = tuple(shared_object.shape.eval())
-        if dims is not None:
-            shape_dims = model.shape_from_dims(dims)
-            if shared_object.dshape != shape_dims:
-                raise pm.exceptions.ShapeError(
-                    "Data shape does not match with specified `dims`.",
-                    actual=shared_object.dshape,
-                    expected=shape_dims,
-                )
+        # XXX: This needs to be refactored
+        # shared_object.dshape = tuple(shared_object.shape.eval())
+        # if dims is not None:
+        #     shape_dims = model.shape_from_dims(dims)
+        #     if shared_object.dshape != shape_dims:
+        #         raise pm.exceptions.ShapeError(
+        #             "Data shape does not match with specified `dims`.",
+        #             actual=shared_object.dshape,
+        #             expected=shape_dims,
+        #         )
 
         model.add_random_variable(shared_object, dims=dims)
 

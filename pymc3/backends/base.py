@@ -61,7 +61,18 @@ class BaseTrace(ABC):
         model = modelcontext(model)
         self.model = model
         if vars is None:
-            vars = model.unobserved_RVs
+            vars = []
+            for v in model.unobserved_RVs:
+                var = getattr(v.tag, "value_var", v)
+                transform = getattr(var.tag, "transform", None)
+                if transform:
+                    # We need to create and add an un-transformed version of
+                    # each transformed variable
+                    untrans_var = transform.backward(v, var)
+                    untrans_var.name = v.name
+                    vars.append(untrans_var)
+                vars.append(var)
+
         self.vars = vars
         self.varnames = [var.name for var in vars]
         self.fn = model.fastfn(vars)
@@ -69,9 +80,9 @@ class BaseTrace(ABC):
         # Get variable shapes. Most backends will need this
         # information.
         if test_point is None:
-            test_point = model.test_point
+            test_point = model.initial_point
         else:
-            test_point_ = model.test_point.copy()
+            test_point_ = model.initial_point.copy()
             test_point_.update(test_point)
             test_point = test_point_
         var_values = list(zip(self.varnames, self.fn(test_point)))

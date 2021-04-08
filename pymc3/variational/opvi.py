@@ -59,7 +59,6 @@ import pymc3 as pm
 
 from pymc3.aesaraf import at_rng, identity
 from pymc3.backends import NDArray
-from pymc3.blocking import ArrayOrdering, DictToArrayBijection, VarMap
 from pymc3.model import modelcontext
 from pymc3.util import (
     WithMemoization,
@@ -68,6 +67,7 @@ from pymc3.util import (
     locally_cachedmethod,
 )
 from pymc3.variational.updates import adagrad_window
+from pymc3.vartypes import discrete_types
 
 __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximation"]
 
@@ -833,6 +833,9 @@ class Group(WithMemoization):
         options=None,
         **kwargs,
     ):
+        # XXX: Needs to be refactored for v4
+        raise NotImplementedError("This class needs to be refactored for v4")
+
         if local and not self.supports_batched:
             raise LocalGroupError("%s does not support local groups" % self.__class__)
         if local and rowwise:
@@ -953,11 +956,13 @@ class Group(WithMemoization):
         self.input = self._input_type(self.__class__.__name__ + "_symbolic_input")
         # I do some staff that is not supported by standard __init__
         # so I have to to it by myself
-        self.ordering = ArrayOrdering([])
-        self.replacements = dict()
         self.group = [get_transformed(var) for var in self.group]
+
+        # XXX: This needs to be refactored
+        # self.ordering = ArrayOrdering([])
+        self.replacements = dict()
         for var in self.group:
-            if isinstance(var.distribution, pm.Discrete):
+            if var.type.numpy_dtype.name in discrete_types:
                 raise ParametrizationError(f"Discrete variables are not supported by VI: {var}")
             begin = self.ddim
             if self.batched:
@@ -966,22 +971,27 @@ class Group(WithMemoization):
                         raise LocalGroupError("Local variable should not be scalar")
                     else:
                         raise BatchedGroupError("Batched variable should not be scalar")
-                self.ordering.size += (np.prod(var.dshape[1:])).astype(int)
+                # XXX: This needs to be refactored
+                # self.ordering.size += None  # (np.prod(var.dshape[1:])).astype(int)
                 if self.local:
-                    shape = (-1,) + var.dshape[1:]
+                    # XXX: This needs to be refactored
+                    shape = None  # (-1,) + var.dshape[1:]
                 else:
-                    shape = var.dshape
+                    # XXX: This needs to be refactored
+                    shape = None  # var.dshape
             else:
-                self.ordering.size += var.dsize
-                shape = var.dshape
-            end = self.ordering.size
-            vmap = VarMap(var.name, slice(begin, end), shape, var.dtype)
-            self.ordering.vmap.append(vmap)
-            self.ordering.by_name[vmap.var] = vmap
+                # XXX: This needs to be refactored
+                # self.ordering.size += None  # var.dsize
+                # XXX: This needs to be refactored
+                shape = None  # var.dshape
+            # end = self.ordering.size
+            # XXX: This needs to be refactored
+            vmap = None  # VarMap(var.name, slice(begin, end), shape, var.dtype)
+            # self.ordering.vmap.append(vmap)
+            # self.ordering.by_name[vmap.var] = vmap
             vr = self.input[..., vmap.slc].reshape(shape).astype(vmap.dtyp)
             vr.name = vmap.var + "_vi_replacement"
             self.replacements[var] = vr
-        self.bij = DictToArrayBijection(self.ordering, {})
 
     def _finalize_init(self):
         """*Dev* - clean up after init"""
@@ -1033,7 +1043,8 @@ class Group(WithMemoization):
     def bdim(self):
         if not self.local:
             if self.batched:
-                return self.ordering.vmap[0].shp[0]
+                # XXX: This needs to be refactored
+                return None  # self.ordering.vmap[0].shp[0]
             else:
                 return 1
         else:
@@ -1041,11 +1052,13 @@ class Group(WithMemoization):
 
     @node_property
     def ndim(self):
-        return self.ordering.size * self.bdim
+        # XXX: This needs to be refactored
+        return None  # self.ordering.size * self.bdim
 
     @property
     def ddim(self):
-        return self.ordering.size
+        # XXX: This needs to be refactored
+        return None  # self.ordering.size
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         """*Dev* - allocates new initial random generator
@@ -1151,10 +1164,10 @@ class Group(WithMemoization):
         random = self.symbolic_random.astype(self.symbolic_initial.dtype)
         random = at.patternbroadcast(random, self.symbolic_initial.broadcastable)
 
-        def sample(post):
+        def sample(post, node):
             return aesara.clone_replace(node, {self.input: post})
 
-        nodes, _ = aesara.scan(sample, random)
+        nodes, _ = aesara.scan(sample, random, non_sequences=[node])
         return nodes
 
     def symbolic_single_sample(self, node):
@@ -1288,7 +1301,7 @@ class Approximation(WithMemoization):
         self._scale_cost_to_minibatch = aesara.shared(np.int8(1))
         model = modelcontext(model)
         if not model.free_RVs:
-            raise TypeError("Model does not have FreeRVs")
+            raise TypeError("Model does not have an free RVs")
         self.groups = list()
         seen = set()
         rest = None
@@ -1513,10 +1526,11 @@ class Approximation(WithMemoization):
         """
         node = self.to_flat_input(node)
 
-        def sample(*post):
-            return aesara.clone_replace(node, dict(zip(self.inputs, post)))
+        def sample(*post, node, inputs):
+            node, inputs = post[-2:]
+            return aesara.clone_replace(node, dict(zip(inputs, post)))
 
-        nodes, _ = aesara.scan(sample, self.symbolic_randoms)
+        nodes, _ = aesara.scan(sample, self.symbolic_randoms, non_sequences=[node, inputs])
         return nodes
 
     def symbolic_single_sample(self, node):
@@ -1619,7 +1633,8 @@ class Approximation(WithMemoization):
             Samples drawn from variational posterior.
         """
         vars_sampled = get_default_varnames(
-            self.model.unobserved_RVs, include_transformed=include_transformed
+            [v.tag.value_var for v in self.model.unobserved_RVs],
+            include_transformed=include_transformed,
         )
         samples = self.sample_dict_fn(draws)  # type: dict
         points = ({name: records[i] for name, records in samples.items()} for i in range(draws))

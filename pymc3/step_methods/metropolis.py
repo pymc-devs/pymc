@@ -11,16 +11,20 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from typing import Any, Dict, List, Tuple
 
 import aesara
 import numpy as np
 import numpy.random as nr
 import scipy.linalg
 
+from aesara.graph.fg import MissingInputError
+from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
+
 import pymc3 as pm
 
-from pymc3.aesaraf import floatX
-from pymc3.distributions import draw_values
+from pymc3.aesaraf import floatX, rvs_to_value_vars
+from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.step_methods.arraystep import (
     ArrayStep,
     ArrayStepShared,
@@ -146,13 +150,14 @@ class Metropolis(ArrayStepShared):
         """
 
         model = pm.modelcontext(model)
+        initial_values = model.initial_point
 
         if vars is None:
-            vars = model.vars
+            vars = model.value_vars
         vars = pm.inputvars(vars)
 
         if S is None:
-            S = np.ones(sum(v.dsize for v in vars))
+            S = np.ones(sum(initial_values[v.name].size for v in vars))
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
@@ -171,7 +176,7 @@ class Metropolis(ArrayStepShared):
 
         # Determine type of variables
         self.discrete = np.concatenate(
-            [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in vars]
+            [[v.dtype in pm.discrete_types] * (initial_values[v.name].size or 1) for v in vars]
         )
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
@@ -183,8 +188,8 @@ class Metropolis(ArrayStepShared):
 
         self.mode = mode
 
-        shared = pm.make_shared_replacements(vars, model)
-        self.delta_logp = delta_logp(model.logpt, vars, shared)
+        shared = pm.make_shared_replacements(initial_values, vars, model)
+        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
         super().__init__(vars, shared)
 
     def reset_tuning(self):
@@ -193,7 +198,11 @@ class Metropolis(ArrayStepShared):
             setattr(self, attr, initial_value)
         return
 
-    def astep(self, q0):
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
+
         if not self.steps_until_tune and self.tune:
             # Tune scaling parameter
             self.scaling = tune(self.scaling, self.accepted / float(self.tune_interval))
@@ -216,6 +225,7 @@ class Metropolis(ArrayStepShared):
 
         accept = self.delta_logp(q, q0)
         q_new, accepted = metrop_select(accept, q, q0)
+
         self.accepted += accepted
 
         self.steps_until_tune -= 1
@@ -226,6 +236,8 @@ class Metropolis(ArrayStepShared):
             "accept": np.exp(accept),
             "accepted": accepted,
         }
+
+        q_new = RaveledVars(q_new, point_map_info)
 
         return q_new, [stats]
 
@@ -315,7 +327,10 @@ class BinaryMetropolis(ArrayStep):
 
         super().__init__(vars, [model.fastlogp])
 
-    def astep(self, q0, logp):
+    def astep(self, q0: RaveledVars, logp) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
 
         # Convert adaptive_scale_factor to a jump probability
         p_jump = 1.0 - 0.5 ** self.scaling
@@ -336,6 +351,8 @@ class BinaryMetropolis(ArrayStep):
             "p_jump": p_jump,
         }
 
+        q_new = RaveledVars(q_new, point_map_info)
+
         return q_new, [stats]
 
     @staticmethod
@@ -344,11 +361,23 @@ class BinaryMetropolis(ArrayStep):
         BinaryMetropolis is only suitable for binary (bool)
         and Categorical variables with k=1.
         """
-        distribution = getattr(var.distribution, "parent_dist", var.distribution)
-        if isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
+        distribution = getattr(var.owner, "op", None)
+
+        if isinstance(distribution, BernoulliRV):
             return Competence.COMPATIBLE
-        elif isinstance(distribution, pm.Categorical) and (distribution.k == 2):
-            return Competence.COMPATIBLE
+
+        if isinstance(distribution, CategoricalRV):
+            # TODO: We could compute the initial value of `k`
+            # if we had a model object.
+            # k_graph = var.owner.inputs[3].shape[-1]
+            # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
+            # k = model.fn(k_graph)(initial_point)
+            try:
+                k = var.owner.inputs[3].shape[-1].eval()
+                if k == 2:
+                    return Competence.COMPATIBLE
+            except MissingInputError:
+                pass
         return Competence.INCOMPATIBLE
 
 
@@ -379,7 +408,8 @@ class BinaryGibbsMetropolis(ArrayStep):
         # transition probabilities
         self.transit_p = transit_p
 
-        self.dim = sum(v.dsize for v in vars)
+        initial_point = model.initial_point
+        self.dim = sum(initial_point[v.name].size for v in vars)
 
         if order == "random":
             self.shuffle_dims = True
@@ -395,7 +425,11 @@ class BinaryGibbsMetropolis(ArrayStep):
 
         super().__init__(vars, [model.fastlogp])
 
-    def astep(self, q0, logp):
+    def astep(self, q0: RaveledVars, logp) -> RaveledVars:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
+
         order = self.order
         if self.shuffle_dims:
             nr.shuffle(order)
@@ -413,6 +447,8 @@ class BinaryGibbsMetropolis(ArrayStep):
                 if accepted:
                     logp_curr = logp_prop
 
+        q = RaveledVars(q, point_map_info)
+
         return q
 
     @staticmethod
@@ -421,11 +457,23 @@ class BinaryGibbsMetropolis(ArrayStep):
         BinaryMetropolis is only suitable for Bernoulli
         and Categorical variables with k=2.
         """
-        distribution = getattr(var.distribution, "parent_dist", var.distribution)
-        if isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
+        distribution = getattr(var.owner, "op", None)
+
+        if isinstance(distribution, BernoulliRV):
             return Competence.IDEAL
-        elif isinstance(distribution, pm.Categorical) and (distribution.k == 2):
-            return Competence.IDEAL
+
+        if isinstance(distribution, CategoricalRV):
+            # TODO: We could compute the initial value of `k`
+            # if we had a model object.
+            # k_graph = var.owner.inputs[3].shape[-1]
+            # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
+            # k = model.fn(k_graph)(initial_point)
+            try:
+                k = var.owner.inputs[3].shape[-1].eval()
+                if k == 2:
+                    return Competence.IDEAL
+            except MissingInputError:
+                pass
         return Competence.INCOMPATIBLE
 
 
@@ -443,7 +491,10 @@ class CategoricalGibbsMetropolis(ArrayStep):
     def __init__(self, vars, proposal="uniform", order="random", model=None):
 
         model = pm.modelcontext(model)
+
         vars = pm.inputvars(vars)
+
+        initial_point = model.initial_point
 
         dimcats = []
         # The above variable is a list of pairs (aggregate dimension, number
@@ -451,17 +502,24 @@ class CategoricalGibbsMetropolis(ArrayStep):
         # variable with M categories and y being a 3-D variable with N
         # categories, we will have dimcats = [(0, M), (1, M), (2, N), (3, N), (4, N)].
         for v in vars:
-            distr = getattr(v.distribution, "parent_dist", v.distribution)
-            if isinstance(distr, pm.Categorical):
-                k = draw_values([distr.k])[0]
-            elif isinstance(distr, pm.Bernoulli) or (v.dtype in pm.bool_types):
+
+            v_init_val = initial_point[v.name]
+
+            rv_var = model.values_to_rvs[v]
+            distr = getattr(rv_var.owner, "op", None)
+
+            if isinstance(distr, CategoricalRV):
+                k_graph = rv_var.owner.inputs[3].shape[-1]
+                (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
+                k = model.fn(k_graph)(initial_point)
+            elif isinstance(distr, BernoulliRV):
                 k = 2
             else:
                 raise ValueError(
                     "All variables must be categorical or binary" + "for CategoricalGibbsMetropolis"
                 )
             start = len(dimcats)
-            dimcats += [(dim, k) for dim in range(start, start + v.dsize)]
+            dimcats += [(dim, k) for dim in range(start, start + v_init_val.size)]
 
         if order == "random":
             self.shuffle_dims = True
@@ -482,28 +540,37 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         super().__init__(vars, [model.fastlogp])
 
-    def astep_unif(self, q0, logp):
+    def astep_unif(self, q0: RaveledVars, logp) -> RaveledVars:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
+
         dimcats = self.dimcats
         if self.shuffle_dims:
             nr.shuffle(dimcats)
 
-        q = np.copy(q0)
+        q = RaveledVars(np.copy(q0), point_map_info)
         logp_curr = logp(q)
 
         for dim, k in dimcats:
-            curr_val, q[dim] = q[dim], sample_except(k, q[dim])
+            curr_val, q.data[dim] = q.data[dim], sample_except(k, q.data[dim])
             logp_prop = logp(q)
-            q[dim], accepted = metrop_select(logp_prop - logp_curr, q[dim], curr_val)
+            q.data[dim], accepted = metrop_select(logp_prop - logp_curr, q.data[dim], curr_val)
             if accepted:
                 logp_curr = logp_prop
+
         return q
 
-    def astep_prop(self, q0, logp):
+    def astep_prop(self, q0: RaveledVars, logp) -> RaveledVars:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
+
         dimcats = self.dimcats
         if self.shuffle_dims:
             nr.shuffle(dimcats)
 
-        q = np.copy(q0)
+        q = RaveledVars(np.copy(q0), point_map_info)
         logp_curr = logp(q)
 
         for dim, k in dimcats:
@@ -512,13 +579,13 @@ class CategoricalGibbsMetropolis(ArrayStep):
         return q
 
     def metropolis_proportional(self, q, logp, logp_curr, dim, k):
-        given_cat = int(q[dim])
+        given_cat = int(q.data[dim])
         log_probs = np.zeros(k)
         log_probs[given_cat] = logp_curr
         candidates = list(range(k))
         for candidate_cat in candidates:
             if candidate_cat != given_cat:
-                q[dim] = candidate_cat
+                q.data[dim] = candidate_cat
                 log_probs[candidate_cat] = logp(q)
         probs = softmax(log_probs)
         prob_curr, probs[given_cat] = probs[given_cat], 0.0
@@ -526,9 +593,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
         proposed_cat = nr.choice(candidates, p=probs)
         accept_ratio = (1.0 - prob_curr) / (1.0 - probs[proposed_cat])
         if not np.isfinite(accept_ratio) or nr.uniform() >= accept_ratio:
-            q[dim] = given_cat
+            q.data[dim] = given_cat
             return logp_curr
-        q[dim] = proposed_cat
+        q.data[dim] = proposed_cat
         return log_probs[proposed_cat]
 
     @staticmethod
@@ -537,13 +604,26 @@ class CategoricalGibbsMetropolis(ArrayStep):
         CategoricalGibbsMetropolis is only suitable for Bernoulli and
         Categorical variables.
         """
-        distribution = getattr(var.distribution, "parent_dist", var.distribution)
-        if isinstance(distribution, pm.Categorical):
-            if distribution.k > 2:
-                return Competence.IDEAL
+        distribution = getattr(var.owner, "op", None)
+
+        if isinstance(distribution, CategoricalRV):
+            # TODO: We could compute the initial value of `k`
+            # if we had a model object.
+            # k_graph = var.owner.inputs[3].shape[-1]
+            # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
+            # k = model.fn(k_graph)(initial_point)
+            try:
+                k = var.owner.inputs[3].shape[-1].eval()
+                if k > 2:
+                    return Competence.IDEAL
+            except MissingInputError:
+                pass
+
             return Competence.COMPATIBLE
-        elif isinstance(distribution, pm.Bernoulli) or (var.dtype in pm.bool_types):
+
+        if isinstance(distribution, BernoulliRV):
             return Competence.COMPATIBLE
+
         return Competence.INCOMPATIBLE
 
 
@@ -611,13 +691,15 @@ class DEMetropolis(PopulationArrayStepShared):
     ):
 
         model = pm.modelcontext(model)
+        initial_values = model.initial_point
+        initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
             vars = model.cont_vars
         vars = pm.inputvars(vars)
 
         if S is None:
-            S = np.ones(model.ndim)
+            S = np.ones(initial_values_size)
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
@@ -627,7 +709,7 @@ class DEMetropolis(PopulationArrayStepShared):
         self.scaling = np.atleast_1d(scaling).astype("d")
         if lamb is None:
             # default to the optimal lambda for normally distributed targets
-            lamb = 2.38 / np.sqrt(2 * model.ndim)
+            lamb = 2.38 / np.sqrt(2 * initial_values_size)
         self.lamb = float(lamb)
         if tune not in {None, "scaling", "lambda"}:
             raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')
@@ -638,11 +720,15 @@ class DEMetropolis(PopulationArrayStepShared):
 
         self.mode = mode
 
-        shared = pm.make_shared_replacements(vars, model)
-        self.delta_logp = delta_logp(model.logpt, vars, shared)
+        shared = pm.make_shared_replacements(initial_values, vars, model)
+        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
         super().__init__(vars, shared)
 
-    def astep(self, q0):
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
+
         if not self.steps_until_tune and self.tune:
             if self.tune == "scaling":
                 self.scaling = tune(self.scaling, self.accepted / float(self.tune_interval))
@@ -657,10 +743,10 @@ class DEMetropolis(PopulationArrayStepShared):
         # differential evolution proposal
         # select two other chains
         ir1, ir2 = np.random.choice(self.other_chains, 2, replace=False)
-        r1 = self.bij.map(self.population[ir1])
-        r2 = self.bij.map(self.population[ir2])
+        r1 = DictToArrayBijection.map(self.population[ir1])
+        r2 = DictToArrayBijection.map(self.population[ir2])
         # propose a jump
-        q = floatX(q0 + self.lamb * (r1 - r2) + epsilon)
+        q = floatX(q0 + self.lamb * (r1.data - r2.data) + epsilon)
 
         accept = self.delta_logp(q, q0)
         q_new, accepted = metrop_select(accept, q, q0)
@@ -675,6 +761,8 @@ class DEMetropolis(PopulationArrayStepShared):
             "accept": np.exp(accept),
             "accepted": accepted,
         }
+
+        q_new = RaveledVars(q_new, point_map_info)
 
         return q_new, [stats]
 
@@ -752,13 +840,15 @@ class DEMetropolisZ(ArrayStepShared):
         **kwargs
     ):
         model = pm.modelcontext(model)
+        initial_values = model.initial_point
+        initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
 
         if vars is None:
             vars = model.cont_vars
         vars = pm.inputvars(vars)
 
         if S is None:
-            S = np.ones(model.ndim)
+            S = np.ones(initial_values_size)
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
@@ -768,7 +858,7 @@ class DEMetropolisZ(ArrayStepShared):
         self.scaling = np.atleast_1d(scaling).astype("d")
         if lamb is None:
             # default to the optimal lambda for normally distributed targets
-            lamb = 2.38 / np.sqrt(2 * model.ndim)
+            lamb = 2.38 / np.sqrt(2 * initial_values_size)
         self.lamb = float(lamb)
         if tune not in {None, "scaling", "lambda"}:
             raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')
@@ -791,8 +881,8 @@ class DEMetropolisZ(ArrayStepShared):
 
         self.mode = mode
 
-        shared = pm.make_shared_replacements(vars, model)
-        self.delta_logp = delta_logp(model.logpt, vars, shared)
+        shared = pm.make_shared_replacements(initial_values, vars, model)
+        self.delta_logp = delta_logp(initial_values, model.logpt, vars, shared)
         super().__init__(vars, shared)
 
     def reset_tuning(self):
@@ -803,7 +893,11 @@ class DEMetropolisZ(ArrayStepShared):
             setattr(self, attr, initial_value)
         return
 
-    def astep(self, q0):
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, List[Dict[str, Any]]]:
+
+        point_map_info = q0.point_map_info
+        q0 = q0.data
+
         # same tuning scheme as DEMetropolis
         if not self.steps_until_tune and self.tune:
             if self.tune_target == "scaling":
@@ -849,6 +943,8 @@ class DEMetropolisZ(ArrayStepShared):
             "accepted": accepted,
         }
 
+        q_new = RaveledVars(q_new, point_map_info)
+
         return q_new, [stats]
 
     def stop_tuning(self):
@@ -879,8 +975,8 @@ def softmax(x):
     return e_x / np.sum(e_x, axis=0)
 
 
-def delta_logp(logp, vars, shared):
-    [logp0], inarray0 = pm.join_nonshared_inputs([logp], vars, shared)
+def delta_logp(point, logp, vars, shared):
+    [logp0], inarray0 = pm.join_nonshared_inputs(point, [logp], vars, shared)
 
     tensor_type = inarray0.type
     inarray1 = tensor_type("inarray1")

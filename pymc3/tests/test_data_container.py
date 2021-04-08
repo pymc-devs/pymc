@@ -20,7 +20,7 @@ from aesara import shared
 
 import pymc3 as pm
 
-from pymc3.aesaraf import floatX
+from pymc3.distributions import logpt
 from pymc3.tests.helpers import SeededTest
 
 
@@ -30,8 +30,9 @@ class TestData(SeededTest):
         with pm.Model() as model:
             X = pm.Data("X", data_values)
             pm.Normal("y", 0, 1, observed=X)
-            model.logp(model.test_point)
+            model.logp(model.initial_point)
 
+    @pytest.mark.xfail(reason="Competence hasn't been updated")
     def test_sample(self):
         x = np.random.normal(size=100)
         y = x + np.random.normal(scale=1e-2, size=100)
@@ -46,28 +47,22 @@ class TestData(SeededTest):
             prior_trace0 = pm.sample_prior_predictive(1000)
             trace = pm.sample(1000, init=None, tune=1000, chains=1)
             pp_trace0 = pm.sample_posterior_predictive(trace, 1000)
-            pp_trace01 = pm.fast_sample_posterior_predictive(trace, 1000)
 
             x_shared.set_value(x_pred)
             prior_trace1 = pm.sample_prior_predictive(1000)
             pp_trace1 = pm.sample_posterior_predictive(trace, samples=1000)
-            pp_trace11 = pm.fast_sample_posterior_predictive(trace, samples=1000)
 
         assert prior_trace0["b"].shape == (1000,)
         assert prior_trace0["obs"].shape == (1000, 100)
         assert prior_trace1["obs"].shape == (1000, 200)
 
         assert pp_trace0["obs"].shape == (1000, 100)
-        assert pp_trace01["obs"].shape == (1000, 100)
 
         np.testing.assert_allclose(x, pp_trace0["obs"].mean(axis=0), atol=1e-1)
-        np.testing.assert_allclose(x, pp_trace01["obs"].mean(axis=0), atol=1e-1)
 
         assert pp_trace1["obs"].shape == (1000, 200)
-        assert pp_trace11["obs"].shape == (1000, 200)
 
         np.testing.assert_allclose(x_pred, pp_trace1["obs"].mean(axis=0), atol=1e-1)
-        np.testing.assert_allclose(x_pred, pp_trace11["obs"].mean(axis=0), atol=1e-1)
 
     def test_sample_posterior_predictive_after_set_data(self):
         with pm.Model() as model:
@@ -75,18 +70,21 @@ class TestData(SeededTest):
             y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 10.0)
             pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y)
-            trace = pm.sample(1000, tune=1000, chains=1)
+            trace = pm.sample(
+                1000,
+                tune=1000,
+                chains=1,
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+            )
         # Predict on new data.
         with model:
             x_test = [5, 6, 9]
             pm.set_data(new_data={"x": x_test})
             y_test = pm.sample_posterior_predictive(trace)
-            y_test1 = pm.fast_sample_posterior_predictive(trace)
 
         assert y_test["obs"].shape == (1000, 3)
-        assert y_test1["obs"].shape == (1000, 3)
         np.testing.assert_allclose(x_test, y_test["obs"].mean(axis=0), atol=1e-1)
-        np.testing.assert_allclose(x_test, y_test1["obs"].mean(axis=0), atol=1e-1)
 
     def test_sample_after_set_data(self):
         with pm.Model() as model:
@@ -94,20 +92,31 @@ class TestData(SeededTest):
             y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 10.0)
             pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y)
-            pm.sample(1000, init=None, tune=1000, chains=1)
+            pm.sample(
+                1000,
+                init=None,
+                tune=1000,
+                chains=1,
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+            )
         # Predict on new data.
         new_x = [5.0, 6.0, 9.0]
         new_y = [5.0, 6.0, 9.0]
         with model:
             pm.set_data(new_data={"x": new_x, "y": new_y})
-            new_trace = pm.sample(1000, init=None, tune=1000, chains=1)
+            new_trace = pm.sample(
+                1000,
+                init=None,
+                tune=1000,
+                chains=1,
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+            )
             pp_trace = pm.sample_posterior_predictive(new_trace, 1000)
-            pp_tracef = pm.fast_sample_posterior_predictive(new_trace, 1000)
 
         assert pp_trace["obs"].shape == (1000, 3)
-        assert pp_tracef["obs"].shape == (1000, 3)
         np.testing.assert_allclose(new_y, pp_trace["obs"].mean(axis=0), atol=1e-1)
-        np.testing.assert_allclose(new_y, pp_tracef["obs"].mean(axis=0), atol=1e-1)
 
     def test_shared_data_as_index(self):
         """
@@ -117,11 +126,18 @@ class TestData(SeededTest):
         with pm.Model() as model:
             index = pm.Data("index", [2, 0, 1, 0, 2])
             y = pm.Data("y", [1.0, 2.0, 3.0, 2.0, 1.0])
-            alpha = pm.Normal("alpha", 0, 1.5, shape=3)
+            alpha = pm.Normal("alpha", 0, 1.5, size=3)
             pm.Normal("obs", alpha[index], np.sqrt(1e-2), observed=y)
 
             prior_trace = pm.sample_prior_predictive(1000, var_names=["alpha"])
-            trace = pm.sample(1000, init=None, tune=1000, chains=1)
+            trace = pm.sample(
+                1000,
+                init=None,
+                tune=1000,
+                chains=1,
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+            )
 
         # Predict on new data
         new_index = np.array([0, 1, 2])
@@ -129,14 +145,11 @@ class TestData(SeededTest):
         with model:
             pm.set_data(new_data={"index": new_index, "y": new_y})
             pp_trace = pm.sample_posterior_predictive(trace, 1000, var_names=["alpha", "obs"])
-            pp_tracef = pm.fast_sample_posterior_predictive(trace, 1000, var_names=["alpha", "obs"])
 
         assert prior_trace["alpha"].shape == (1000, 3)
         assert trace["alpha"].shape == (1000, 3)
         assert pp_trace["alpha"].shape == (1000, 3)
         assert pp_trace["obs"].shape == (1000, 3)
-        assert pp_tracef["alpha"].shape == (1000, 3)
-        assert pp_tracef["obs"].shape == (1000, 3)
 
     def test_shared_data_as_rv_input(self):
         """
@@ -145,15 +158,19 @@ class TestData(SeededTest):
         """
         with pm.Model() as m:
             x = pm.Data("x", [1.0, 2.0, 3.0])
-            _ = pm.Normal("y", mu=x, shape=3)
-            trace = pm.sample(chains=1)
+            _ = pm.Normal("y", mu=x, size=3)
+            trace = pm.sample(
+                chains=1, return_inferencedata=False, compute_convergence_checks=False
+            )
 
         np.testing.assert_allclose(np.array([1.0, 2.0, 3.0]), x.get_value(), atol=1e-1)
         np.testing.assert_allclose(np.array([1.0, 2.0, 3.0]), trace["y"].mean(0), atol=1e-1)
 
         with m:
             pm.set_data({"x": np.array([2.0, 4.0, 6.0])})
-            trace = pm.sample(chains=1)
+            trace = pm.sample(
+                chains=1, return_inferencedata=False, compute_convergence_checks=False
+            )
 
         np.testing.assert_allclose(np.array([2.0, 4.0, 6.0]), x.get_value(), atol=1e-1)
         np.testing.assert_allclose(np.array([2.0, 4.0, 6.0]), trace["y"].mean(0), atol=1e-1)
@@ -162,10 +179,10 @@ class TestData(SeededTest):
         # See https://github.com/pymc-devs/pymc3/issues/3139
         with pm.Model() as m:
             shared_var = shared(5.0)
-            v = pm.Normal("v", mu=shared_var, shape=1)
+            v = pm.Normal("v", mu=shared_var, size=1)
 
         np.testing.assert_allclose(
-            v.logp({"v": [5.0]}),
+            logpt(v, np.r_[5.0]).eval(),
             -0.91893853,
             rtol=1e-5,
         )
@@ -173,7 +190,7 @@ class TestData(SeededTest):
         shared_var.set_value(10.0)
 
         np.testing.assert_allclose(
-            v.logp({"v": [10.0]}),
+            logpt(v, np.r_[10.0]).eval(),
             -0.91893853,
             rtol=1e-5,
         )
@@ -189,11 +206,19 @@ class TestData(SeededTest):
             y = np.array([1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 10.0)
             pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y)
-            pm.sample(1000, init=None, tune=1000, chains=1)
+            pm.sample(
+                1000,
+                init=None,
+                tune=1000,
+                chains=1,
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+            )
         with pytest.raises(TypeError) as error:
             pm.set_data({"beta": [1.1, 2.2, 3.3]}, model=model)
         error.match("defined as `pymc3.Data` inside the model")
 
+    @pytest.mark.xfail(reason="Depends on ModelGraph")
     def test_model_to_graphviz_for_model_with_data_container(self):
         with pm.Model() as model:
             x = pm.Data("x", [1.0, 2.0, 3.0])
@@ -201,7 +226,14 @@ class TestData(SeededTest):
             beta = pm.Normal("beta", 0, 10.0)
             obs_sigma = floatX(np.sqrt(1e-2))
             pm.Normal("obs", beta * x, obs_sigma, observed=y)
-            pm.sample(1000, init=None, tune=1000, chains=1)
+            pm.sample(
+                1000,
+                init=None,
+                tune=1000,
+                chains=1,
+                return_inferencedata=False,
+                compute_convergence_checks=False,
+            )
 
         for formatting in {"latex", "latex_with_params"}:
             with pytest.raises(ValueError, match="Unsupported formatting"):

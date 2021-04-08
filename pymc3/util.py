@@ -23,12 +23,99 @@ import dill
 import numpy as np
 import xarray
 
-from aesara.tensor.var import TensorVariable
 from cachetools import LRUCache, cachedmethod
 
-from pymc3.exceptions import SamplingError
-
 LATEX_ESCAPE_RE = re.compile(r"(%|_|\$|#|&)", re.MULTILINE)
+
+UNSET = object()
+
+
+def withparent(meth):
+    """Helper wrapper that passes calls to parent's instance"""
+
+    def wrapped(self, *args, **kwargs):
+        res = meth(self, *args, **kwargs)
+        if getattr(self, "parent", None) is not None:
+            getattr(self.parent, meth.__name__)(*args, **kwargs)
+        return res
+
+    # Unfortunately functools wrapper fails
+    # when decorating built-in methods so we
+    # need to fix that improper behaviour
+    wrapped.__name__ = meth.__name__
+    return wrapped
+
+
+class treelist(list):
+    """A list that passes mutable extending operations used in Model
+    to parent list instance.
+    Extending treelist you will also extend its parent
+    """
+
+    def __init__(self, iterable=(), parent=None):
+        super().__init__(iterable)
+        assert isinstance(parent, list) or parent is None
+        self.parent = parent
+        if self.parent is not None:
+            self.parent.extend(self)
+
+    # typechecking here works bad
+    append = withparent(list.append)
+    __iadd__ = withparent(list.__iadd__)
+    extend = withparent(list.extend)
+
+    def tree_contains(self, item):
+        if isinstance(self.parent, treedict):
+            return list.__contains__(self, item) or self.parent.tree_contains(item)
+        elif isinstance(self.parent, list):
+            return list.__contains__(self, item) or self.parent.__contains__(item)
+        else:
+            return list.__contains__(self, item)
+
+    def __setitem__(self, key, value):
+        raise NotImplementedError(
+            "Method is removed as we are not able to determine appropriate logic for it"
+        )
+
+    # Added this because mypy didn't like having __imul__ without __mul__
+    # This is my best guess about what this should do.  I might be happier
+    # to kill both of these if they are not used.
+    def __mul__(self, other) -> "treelist":
+        return cast("treelist", list.__mul__(self, other))
+
+    def __imul__(self, other) -> "treelist":
+        t0 = len(self)
+        list.__imul__(self, other)
+        if self.parent is not None:
+            self.parent.extend(self[t0:])
+        return self  # python spec says should return the result.
+
+
+class treedict(dict):
+    """A dict that passes mutable extending operations used in Model
+    to parent dict instance.
+    Extending treedict you will also extend its parent
+    """
+
+    def __init__(self, iterable=(), parent=None, **kwargs):
+        super().__init__(iterable, **kwargs)
+        assert isinstance(parent, dict) or parent is None
+        self.parent = parent
+        if self.parent is not None:
+            self.parent.update(self)
+
+    # typechecking here works bad
+    __setitem__ = withparent(dict.__setitem__)
+    update = withparent(dict.update)
+
+    def tree_contains(self, item):
+        # needed for `add_random_variable` method
+        if isinstance(self.parent, treedict):
+            return dict.__contains__(self, item) or self.parent.tree_contains(item)
+        elif isinstance(self.parent, dict):
+            return dict.__contains__(self, item) or self.parent.__contains__(item)
+        else:
+            return dict.__contains__(self, item)
 
 
 def escape_latex(strng):
@@ -170,75 +257,8 @@ def get_repr_for_variable(variable, formatting="plain"):
 
 
 def get_var_name(var):
-    """Get an appropriate, plain variable name for a variable. Necessary
-    because we override aesara.tensor.var.TensorVariable.__str__ to give informative
-    string representations to our pymc3.PyMC3Variables, yet we want to use the
-    plain name as e.g. keys in dicts.
-    """
-    if isinstance(var, TensorVariable):
-        return super(TensorVariable, var).__str__()
-    else:
-        return str(var)
-
-
-def update_start_vals(a, b, model):
-    r"""Update a with b, without overwriting existing keys. Values specified for
-    transformed variables on the original scale are also transformed and inserted.
-    """
-    if model is not None:
-        for free_RV in model.free_RVs:
-            tname = free_RV.name
-            for name in a:
-                if is_transformed_name(tname) and get_untransformed_name(tname) == name:
-                    transform_func = [
-                        d.transformation for d in model.deterministics if d.name == name
-                    ]
-                    if transform_func:
-                        b[tname] = transform_func[0].forward_val(a[name], point=b)
-
-    a.update({k: v for k, v in b.items() if k not in a})
-
-
-def check_start_vals(start, model):
-    r"""Check that the starting values for MCMC do not cause the relevant log probability
-    to evaluate to something invalid (e.g. Inf or NaN)
-
-    Parameters
-    ----------
-    start : dict, or array of dict
-        Starting point in parameter space (or partial point)
-        Defaults to ``trace.point(-1))`` if there is a trace provided and model.test_point if not
-        (defaults to empty dict). Initialization methods for NUTS (see ``init`` keyword) can
-        overwrite the default.
-    model : Model object
-    Raises
-    ______
-    KeyError if the parameters provided by `start` do not agree with the parameters contained
-        within `model`
-    pymc3.exceptions.SamplingError if the evaluation of the parameters in `start` leads to an
-        invalid (i.e. non-finite) state
-    Returns
-    -------
-    None
-    """
-    start_points = [start] if isinstance(start, dict) else start
-    for elem in start_points:
-        if not set(elem.keys()).issubset(model.named_vars.keys()):
-            extra_keys = ", ".join(set(elem.keys()) - set(model.named_vars.keys()))
-            valid_keys = ", ".join(model.named_vars.keys())
-            raise KeyError(
-                "Some start parameters do not appear in the model!\n"
-                "Valid keys are: {}, but {} was supplied".format(valid_keys, extra_keys)
-            )
-
-        initial_eval = model.check_test_point(test_point=elem)
-
-        if not np.all(np.isfinite(initial_eval)):
-            raise SamplingError(
-                "Initial evaluation of model at starting point failed!\n"
-                "Starting values:\n{}\n\n"
-                "Initial evaluation results:\n{}".format(elem, str(initial_eval))
-            )
+    """Get an appropriate, plain variable name for a variable."""
+    return getattr(var, "name", str(var))
 
 
 def get_transformed(z):

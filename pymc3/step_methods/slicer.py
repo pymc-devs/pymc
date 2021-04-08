@@ -18,6 +18,7 @@ import numpy as np
 import numpy.random as nr
 
 from pymc3.aesaraf import inputvars
+from pymc3.blocking import RaveledVars
 from pymc3.model import modelcontext
 from pymc3.step_methods.arraystep import ArrayStep, Competence
 from pymc3.vartypes import continuous_types
@@ -61,24 +62,28 @@ class Slice(ArrayStep):
         super().__init__(vars, [self.model.fastlogp], **kwargs)
 
     def astep(self, q0, logp):
-        self.w = np.resize(self.w, len(q0))  # this is a repmat
-        q = np.copy(q0)  # TODO: find out if we need this
-        ql = np.copy(q0)  # l for left boundary
-        qr = np.copy(q0)  # r for right boudary
-        for i in range(len(q0)):
+        q0_val = q0.data
+        self.w = np.resize(self.w, len(q0_val))  # this is a repmat
+        q = np.copy(q0_val)  # TODO: find out if we need this
+        ql = np.copy(q0_val)  # l for left boundary
+        qr = np.copy(q0_val)  # r for right boudary
+        for i in range(len(q0_val)):
             # uniformly sample from 0 to p(q), but in log space
-            y = logp(q) - nr.standard_exponential()
+            q_ra = RaveledVars(q, q0.point_map_info)
+            y = logp(q_ra) - nr.standard_exponential()
             ql[i] = q[i] - nr.uniform(0, self.w[i])
             qr[i] = q[i] + self.w[i]
             # Stepping out procedure
             cnt = 0
-            while y <= logp(ql):  # changed lt to leq  for locally uniform posteriors
+            while y <= logp(
+                RaveledVars(ql, q0.point_map_info)
+            ):  # changed lt to leq  for locally uniform posteriors
                 ql[i] -= self.w[i]
                 cnt += 1
                 if cnt > self.iter_limit:
                     raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
             cnt = 0
-            while y <= logp(qr):
+            while y <= logp(RaveledVars(qr, q0.point_map_info)):
                 qr[i] += self.w[i]
                 cnt += 1
                 if cnt > self.iter_limit:
@@ -86,11 +91,11 @@ class Slice(ArrayStep):
 
             cnt = 0
             q[i] = nr.uniform(ql[i], qr[i])
-            while logp(q) < y:  # Changed leq to lt, to accomodate for locally flat posteriors
+            while logp(q_ra) < y:  # Changed leq to lt, to accomodate for locally flat posteriors
                 # Sample uniformly from slice
-                if q[i] > q0[i]:
+                if q[i] > q0_val[i]:
                     qr[i] = q[i]
-                elif q[i] < q0[i]:
+                elif q[i] < q0_val[i]:
                     ql[i] = q[i]
                 q[i] = nr.uniform(ql[i], qr[i])
                 cnt += 1
@@ -114,7 +119,7 @@ class Slice(ArrayStep):
     @staticmethod
     def competence(var, has_grad):
         if var.dtype in continuous_types:
-            if not has_grad and (var.shape is None or var.shape.ndim == 1):
+            if not has_grad and var.ndim == 0:
                 return Competence.PREFERRED
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE

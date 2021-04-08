@@ -271,13 +271,17 @@ def test_full_adapt_sampling(seed=289586):
     L[np.triu_indices_from(L, 1)] = 0.0
 
     with pymc3.Model() as model:
-        pymc3.MvNormal("a", mu=np.zeros(len(L)), chol=L, shape=len(L))
+        pymc3.MvNormal("a", mu=np.zeros(len(L)), chol=L, size=len(L))
 
-        pot = quadpotential.QuadPotentialFullAdapt(model.ndim, np.zeros(model.ndim))
+        initial_point = model.initial_point
+        initial_point_size = sum(initial_point[n.name].size for n in model.value_vars)
+
+        pot = quadpotential.QuadPotentialFullAdapt(initial_point_size, np.zeros(initial_point_size))
         step = pymc3.NUTS(model=model, potential=pot)
         pymc3.sample(draws=10, tune=1000, random_seed=seed, step=step, cores=1, chains=1)
 
 
+@pytest.mark.xfail(reason="ADVI has not been refactored for v4")
 def test_issue_3965():
     with pymc3.Model():
         pymc3.Normal("n")

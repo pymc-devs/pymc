@@ -19,14 +19,11 @@ from pymc3.aesaraf import floatX
 from pymc3.distributions.continuous import Flat, Normal
 from pymc3.distributions.timeseries import AR, AR1, GARCH11, EulerMaruyama
 from pymc3.model import Model
-from pymc3.sampling import (
-    fast_sample_posterior_predictive,
-    sample,
-    sample_posterior_predictive,
-)
+from pymc3.sampling import sample, sample_posterior_predictive
 from pymc3.tests.helpers import select_by_precision
 
-pytestmark = pytest.mark.usefixtures("seeded_test")
+# pytestmark = pytest.mark.usefixtures("seeded_test")
+pytestmark = pytest.mark.xfail(reason="This test relies on the deprecated Distribution interface")
 
 
 def test_AR():
@@ -45,7 +42,7 @@ def test_AR():
         rho = Normal("rho", 0.0, 1.0)
         y1 = AR1("y1", rho, 1.0, observed=data)
         y2 = AR("y2", rho, 1.0, init=Normal.dist(0, 1), observed=data)
-    np.testing.assert_allclose(y1.logp(t.test_point), y2.logp(t.test_point))
+    np.testing.assert_allclose(y1.logp(t.initial_point), y2.logp(t.initial_point))
 
     # AR1 + constant
     with Model() as t:
@@ -79,7 +76,7 @@ def test_AR_nd():
         for i in range(n):
             AR("y_%d" % i, beta[:, i], sigma=1.0, shape=T, testval=y_tp[:, i])
 
-    np.testing.assert_allclose(t0.logp(t0.test_point), t1.logp(t1.test_point))
+    np.testing.assert_allclose(t0.logp(t0.initial_point), t1.logp(t1.initial_point))
 
 
 def test_GARCH11():
@@ -160,12 +157,9 @@ def test_linear():
         trace = sample(init="advi+adapt_diag", chains=1)
 
     ppc = sample_posterior_predictive(trace, model=model)
-    ppcf = fast_sample_posterior_predictive(trace, model=model)
-    # test
+
     p95 = [2.5, 97.5]
     lo, hi = np.percentile(trace[lamh], p95, axis=0)
     assert (lo < lam) and (lam < hi)
     lo, hi = np.percentile(ppc["zh"], p95, axis=0)
-    assert ((lo < z) * (z < hi)).mean() > 0.95
-    lo, hi = np.percentile(ppcf["zh"], p95, axis=0)
     assert ((lo < z) * (z < hi)).mean() > 0.95

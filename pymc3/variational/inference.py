@@ -166,7 +166,8 @@ class Inference:
                 if np.isnan(current_param).any():
                     name_slc = []
                     tmp_hold = list(range(current_param.size))
-                    vmap = self.approx.groups[0].bij.ordering.vmap
+                    # XXX: This needs to be refactored
+                    vmap = None  # self.approx.groups[0].bij.ordering.vmap
                     for vmap_ in vmap:
                         slclen = len(tmp_hold[vmap_.slc])
                         for j in range(slclen):
@@ -215,7 +216,8 @@ class Inference:
                     current_param = self.approx.params[0].get_value()
                     name_slc = []
                     tmp_hold = list(range(current_param.size))
-                    vmap = self.approx.groups[0].bij.ordering.vmap
+                    # XXX: This needs to be refactored
+                    vmap = None  # self.approx.groups[0].bij.ordering.vmap
                     for vmap_ in vmap:
                         slclen = len(tmp_hold[vmap_.slc])
                         for j in range(slclen):

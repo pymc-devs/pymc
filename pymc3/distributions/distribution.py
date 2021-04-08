@@ -11,18 +11,22 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
 import contextvars
 import inspect
 import multiprocessing
-import numbers
 import sys
 import types
 import warnings
 
+from abc import ABCMeta
+from copy import copy
 from typing import TYPE_CHECKING
 
 import dill
+
+from aesara.tensor.random.op import RandomVariable
+
+from pymc3.distributions import _logcdf, _logp
 
 if TYPE_CHECKING:
     from typing import Optional, Callable
@@ -30,29 +34,8 @@ if TYPE_CHECKING:
 import aesara
 import aesara.graph.basic
 import aesara.tensor as at
-import numpy as np
 
-from aesara import function
-from aesara.compile.sharedvalue import SharedVariable
-from aesara.graph.basic import Constant
-from aesara.tensor.type import TensorType as AesaraTensorType
-from aesara.tensor.var import TensorVariable
-from cachetools import LRUCache, cached
-
-from pymc3.distributions.shape_utils import (
-    broadcast_dist_samples_shape,
-    get_broadcastable_dist_samples,
-    to_tuple,
-)
-from pymc3.model import (
-    ContextMeta,
-    FreeRV,
-    Model,
-    MultiObservedRV,
-    ObservedRV,
-    build_named_node_tree,
-)
-from pymc3.util import get_repr_for_variable, get_var_name, hash_key
+from pymc3.util import UNSET, get_repr_for_variable
 from pymc3.vartypes import string_types
 
 __all__ = [
@@ -61,9 +44,6 @@ __all__ = [
     "Continuous",
     "Discrete",
     "NoDistribution",
-    "TensorType",
-    "draw_values",
-    "generate_samples",
 ]
 
 vectorized_ppc = contextvars.ContextVar(
@@ -77,13 +57,81 @@ class _Unpickling:
     pass
 
 
-class Distribution:
+class DistributionMeta(ABCMeta):
+    def __new__(cls, name, bases, clsdict):
+
+        # Forcefully deprecate old v3 `Distribution`s
+        if "random" in clsdict:
+
+            def _random(*args, **kwargs):
+                warnings.warn(
+                    "The old `Distribution.random` interface is deprecated.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                return clsdict["random"](*args, **kwargs)
+
+            clsdict["random"] = _random
+
+        rv_op = clsdict.setdefault("rv_op", None)
+        rv_type = None
+
+        if isinstance(rv_op, RandomVariable):
+            if not rv_op.inplace:
+                # TODO: This is a temporary work-around.
+                # Remove this once we know what we want regarding RNG states
+                # and their propagation.
+                rv_op = copy(rv_op)
+                rv_op.inplace = True
+                clsdict["rv_op"] = rv_op
+
+            rv_type = type(rv_op)
+
+        new_cls = super().__new__(cls, name, bases, clsdict)
+
+        if rv_type is not None:
+            # Create dispatch functions
+
+            class_logp = clsdict.get("logp")
+            if class_logp:
+
+                @_logp.register(rv_type)
+                def logp(op, var, rvs_to_values, *dist_params, **kwargs):
+                    value_var = rvs_to_values.get(var, var)
+                    return class_logp(value_var, *dist_params, **kwargs)
+
+            class_logcdf = clsdict.get("logcdf")
+            if class_logcdf:
+
+                @_logcdf.register(rv_type)
+                def logcdf(op, var, rvs_to_values, *dist_params, **kwargs):
+                    value_var = rvs_to_values.get(var, var)
+                    return class_logcdf(value_var, *dist_params, **kwargs)
+
+            # class_transform = clsdict.get("transform")
+            # if class_transform:
+            #
+            #     @logp_transform.register(rv_type)
+            #     def transform(op, *args, **kwargs):
+            #         return class_transform(*args, **kwargs)
+
+            # Register the Aesara `RandomVariable` type as a subclass of this
+            # `Distribution` type.
+            new_cls.register(rv_type)
+
+        return new_cls
+
+
+class Distribution(metaclass=DistributionMeta):
     """Statistical distribution"""
 
+    rv_class = None
+    rv_op = None
+
     def __new__(cls, name, *args, **kwargs):
-        if name is _Unpickling:
-            return object.__new__(cls)  # for pickle
         try:
+            from pymc3.model import Model
+
             model = Model.get_context()
         except TypeError:
             raise TypeError(
@@ -93,91 +141,40 @@ class Distribution:
                 "for a standalone distribution."
             )
 
+        rng = kwargs.pop("rng", None)
+
+        if rng is None:
+            rng = model.default_rng
+
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
 
         data = kwargs.pop("observed", None)
-        cls.data = data
-        if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
-            raise TypeError("observed needs to be data but got: {}".format(type(data)))
+
         total_size = kwargs.pop("total_size", None)
 
         dims = kwargs.pop("dims", None)
-        has_shape = "shape" in kwargs
-        shape = kwargs.pop("shape", None)
-        if dims is not None:
-            if shape is not None:
-                raise ValueError("Specify only one of 'dims' or 'shape'")
-            if isinstance(dims, string_types):
-                dims = (dims,)
-            shape = model.shape_from_dims(dims)
 
-        # failsafe against 0-shapes
-        if shape is not None and any(np.atleast_1d(shape) <= 0):
-            raise ValueError(
-                f"Distribution initialized with invalid shape {shape}. This is not allowed."
-            )
+        if "shape" in kwargs:
+            raise DeprecationWarning("The `shape` keyword is deprecated; use `size`.")
 
-        # Some distributions do not accept shape=None
-        if has_shape or shape is not None:
-            dist = cls.dist(*args, **kwargs, shape=shape)
-        else:
-            dist = cls.dist(*args, **kwargs)
-        return model.Var(name, dist, data, total_size, dims=dims)
+        transform = kwargs.pop("transform", UNSET)
 
-    def __getnewargs__(self):
-        return (_Unpickling,)
+        rv_out = cls.dist(*args, rng=rng, **kwargs)
+
+        return model.register_rv(rv_out, name, data, total_size, dims=dims, transform=transform)
 
     @classmethod
-    def dist(cls, *args, **kwargs):
-        dist = object.__new__(cls)
-        dist.__init__(*args, **kwargs)
-        return dist
+    def dist(cls, dist_params, **kwargs):
 
-    def __init__(
-        self, shape, dtype, testval=None, defaults=(), transform=None, broadcastable=None, dims=None
-    ):
-        self.shape = np.atleast_1d(shape)
-        if False in (np.floor(self.shape) == self.shape):
-            raise TypeError("Expected int elements in shape")
-        self.dtype = dtype
-        self.type = TensorType(self.dtype, self.shape, broadcastable)
-        self.testval = testval
-        self.defaults = defaults
-        self.transform = transform
+        testval = kwargs.pop("testval", None)
 
-    def default(self):
-        return np.asarray(self.get_test_val(self.testval, self.defaults), self.dtype)
+        rv_var = cls.rv_op(*dist_params, **kwargs)
 
-    def get_test_val(self, val, defaults):
-        if val is None:
-            for v in defaults:
-                if hasattr(self, v):
-                    attr_val = self.getattr_value(v)
-                    if np.all(np.isfinite(attr_val)):
-                        return attr_val
-            raise AttributeError(
-                "%s has no finite default value to use, "
-                "checked: %s. Pass testval argument or "
-                "adjust so value is finite." % (self, str(defaults))
-            )
-        else:
-            return self.getattr_value(val)
+        if testval is not None:
+            rv_var.tag.test_value = testval
 
-    def getattr_value(self, val):
-        if isinstance(val, string_types):
-            val = getattr(self, val)
-
-        if isinstance(val, TensorVariable):
-            return val.tag.test_value
-
-        if isinstance(val, SharedVariable):
-            return val.get_value()
-
-        if isinstance(val, Constant):
-            return val.value
-
-        return val
+        return rv_var
 
     def _distr_parameters_for_repr(self):
         """Return the names of the parameters for this distribution (e.g. "mu"
@@ -248,35 +245,7 @@ class Distribution:
         """Magic method name for IPython to use for LaTeX formatting."""
         return self._str_repr(formatting=formatting, **kwargs)
 
-    def logp_nojac(self, *args, **kwargs):
-        """Return the logp, but do not include a jacobian term for transforms.
-
-        If we use different parametrizations for the same distribution, we
-        need to add the determinant of the jacobian of the transformation
-        to make sure the densities still describe the same distribution.
-        However, MAP estimates are not invariant with respect to the
-        parametrization, we need to exclude the jacobian terms in this case.
-
-        This function should be overwritten in base classes for transformed
-        distributions.
-        """
-        return self.logp(*args, **kwargs)
-
-    def logp_sum(self, *args, **kwargs):
-        """Return the sum of the logp values for the given observations.
-
-        Subclasses can use this to improve the speed of logp evaluations
-        if only the sum of the logp values is needed.
-        """
-        return at.sum(self.logp(*args, **kwargs))
-
     __latex__ = _repr_latex_
-
-
-def TensorType(dtype, shape, broadcastable=None):
-    if broadcastable is None:
-        broadcastable = np.atleast_1d(shape) == 1
-    return AesaraTensorType(str(dtype), broadcastable)
 
 
 class NoDistribution(Distribution):
@@ -286,7 +255,6 @@ class NoDistribution(Distribution):
         dtype,
         testval=None,
         defaults=(),
-        transform=None,
         parent_dist=None,
         *args,
         **kwargs,
@@ -324,28 +292,16 @@ class NoDistribution(Distribution):
 class Discrete(Distribution):
     """Base class for discrete distributions"""
 
-    def __init__(self, shape=(), dtype=None, defaults=("mode",), *args, **kwargs):
-        if dtype is None:
-            if aesara.config.floatX == "float32":
-                dtype = "int16"
-            else:
-                dtype = "int64"
-        if dtype != "int16" and dtype != "int64":
-            raise TypeError("Discrete classes expect dtype to be int16 or int64.")
+    def __new__(cls, name, *args, **kwargs):
 
-        if kwargs.get("transform", None) is not None:
-            raise ValueError("Transformations for discrete distributions " "are not allowed.")
+        if kwargs.get("transform", None):
+            raise ValueError("Transformations for discrete distributions")
 
-        super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
+        return super().__new__(cls, name, *args, **kwargs)
 
 
 class Continuous(Distribution):
     """Base class for continuous distributions"""
-
-    def __init__(self, shape=(), dtype=None, defaults=("median", "mean", "mode"), *args, **kwargs):
-        if dtype is None:
-            dtype = aesara.config.floatX
-        super().__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
 
 class DensityDist(Distribution):
@@ -386,38 +342,8 @@ class DensityDist(Distribution):
         testval: number or array (Optional)
             The ``testval`` of the RV's tensor that follow the ``DensityDist``
             distribution.
-        random: None or callable (Optional)
-            If ``None``, no random method is attached to the ``DensityDist``
-            instance.
-            If a callable, it is used as the distribution's ``random`` method.
-            The behavior of this callable can be altered with the
-            ``wrap_random_with_dist_shape`` parameter.
-            The supplied callable must have the following signature:
-            ``random(point=None, size=None, **kwargs)``, where ``point`` is a
-            ``None`` or a dictionary of random variable names and their
-            corresponding values (similar to what ``MultiTrace.get_point``
-            returns). ``size`` is the number of IID draws to take from the
-            distribution. Any extra keyword argument can be added as required.
-        wrap_random_with_dist_shape: bool (Optional)
-            If ``True``, the provided ``random`` callable is passed through
-            ``generate_samples`` to make the random number generator aware of
-            the ``DensityDist`` instance's ``shape``.
-            If ``False``, it is used exactly as it was provided.
-        check_shape_in_random: bool (Optional)
-            If ``True``, the shape of the random samples generate in the
-            ``random`` method is checked with the expected return shape. This
-            test is only performed if ``wrap_random_with_dist_shape is False``.
         args, kwargs: (Optional)
             These are passed to the parent class' ``__init__``.
-
-        Notes
-        -----
-            If the ``random`` method is wrapped with dist shape, what this
-            means is that the ``random`` callable will be wrapped with the
-            :func:`~genereate_samples` function. The distribution's shape will
-            be passed to :func:`~generate_samples` as the ``dist_shape``
-            parameter. Any extra ``kwargs`` provided to ``random`` will be
-            passed as ``not_broadcast_kwargs`` of :func:`~generate_samples`.
 
         Examples
         --------
@@ -430,19 +356,9 @@ class DensityDist(Distribution):
                         'density_dist',
                         normal_dist.logp,
                         observed=np.random.randn(100),
-                        random=normal_dist.random
                     )
                     trace = pm.sample(100)
 
-            If the ``DensityDist`` is multidimensional, some care must be taken
-            with the supplied ``random`` method. By default, the supplied random
-            is wrapped by :func:`~generate_samples` to make it aware of the
-            multidimensional distribution's shape.
-            This can be prevented setting ``wrap_random_with_dist_shape=False``.
-            Furthermore, the ``size`` parameter is interpreted as the number of
-            IID draws to take from this multidimensional distribution.
-
-
             .. code-block:: python
 
                 with pm.Model():
@@ -453,77 +369,6 @@ class DensityDist(Distribution):
                         normal_dist.logp,
                         observed=np.random.randn(100, 3),
                         shape=3,
-                        random=normal_dist.random,
-                    )
-                    prior = pm.sample_prior_predictive(10)['density_dist']
-                assert prior.shape == (10, 100, 3)
-
-            If ``wrap_random_with_dist_shape=False``, we start to get samples of
-            an incorrect shape. By default, we can try to catch these situations.
-
-
-            .. code-block:: python
-
-                with pm.Model():
-                    mu = pm.Normal('mu', 0 , 1)
-                    normal_dist = pm.Normal.dist(mu, 1, shape=3)
-                    dens = pm.DensityDist(
-                        'density_dist',
-                        normal_dist.logp,
-                        observed=np.random.randn(100, 3),
-                        shape=3,
-                        random=normal_dist.random,
-                        wrap_random_with_dist_shape=False, # Is True by default
-                    )
-                    err = None
-                    try:
-                        prior = pm.sample_prior_predictive(10)['density_dist']
-                    except RuntimeError as e:
-                        err = e
-                    assert isinstance(err, RuntimeError)
-
-            The default catching can be disabled with the
-            ``check_shape_in_random`` parameter.
-
-
-            .. code-block:: python
-
-                with pm.Model():
-                    mu = pm.Normal('mu', 0 , 1)
-                    normal_dist = pm.Normal.dist(mu, 1, shape=3)
-                    dens = pm.DensityDist(
-                        'density_dist',
-                        normal_dist.logp,
-                        observed=np.random.randn(100, 3),
-                        shape=3,
-                        random=normal_dist.random,
-                        wrap_random_with_dist_shape=False, # Is True by default
-                        check_shape_in_random=False, # Is True by default
-                    )
-                    prior = pm.sample_prior_predictive(10)['density_dist']
-                    # We get samples with an incorrect shape
-                    assert prior.shape != (10, 100, 3)
-
-            If you use callables that work with ``scipy.stats`` rvs, you must
-            be aware that their ``size`` parameter is not the number of IID
-            samples to draw from a distribution, but the desired ``shape`` of
-            the returned array of samples. It is the user's responsibility to
-            wrap the callable to make it comply with PyMC3's interpretation
-            of ``size``.
-
-
-            .. code-block:: python
-
-                with pm.Model():
-                    mu = pm.Normal('mu', 0 , 1)
-                    normal_dist = pm.Normal.dist(mu, 1, shape=3)
-                    dens = pm.DensityDist(
-                        'density_dist',
-                        normal_dist.logp,
-                        observed=np.random.randn(100, 3),
-                        shape=3,
-                        random=stats.norm.rvs,
-                        pymc3_size_interpretation=False, # Is True by default
                     )
                     prior = pm.sample_prior_predictive(10)['density_dist']
                 assert prior.shape == (10, 100, 3)
@@ -571,6 +416,7 @@ class DensityDist(Distribution):
         vals["logp"] = dill.loads(vals["logp"])
         self.__dict__ = vals
 
+<<<<<<< HEAD
     def random(self, point=None, size=None, **kwargs):
         if self.rand is not None:
             not_broadcast_kwargs = dict(point=point)
@@ -1119,3 +965,7 @@ def generate_samples(generator, *args, **kwargs):
         samples = generator(size=size_tup + dist_bcast_shape, *args, **kwargs)
 
     return np.asarray(samples)
+=======
+    def _distr_parameters_for_repr(self):
+        return []
+>>>>>>> upstream/v4

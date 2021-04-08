@@ -59,6 +59,7 @@ class PGBART(ArrayStepShared):
     def __init__(self, vars=None, num_particles=10, max_stages=5000, chunk="auto", model=None):
         _log.warning("The BART model is experimental. Use with caution.")
         model = modelcontext(model)
+        initial_values = model.initial_point
         vars = inputvars(vars)
         self.bart = vars[0].distribution
 
@@ -80,8 +81,8 @@ class PGBART(ArrayStepShared):
             p = ParticleTree(self.bart.trees[i], self.bart.prior_prob_leaf_node)
             self.old_trees_particles_list.append(p)
 
-        shared = make_shared_replacements(vars, model)
-        self.likelihood_logp = logp([model.datalogpt], vars, shared)
+        shared = make_shared_replacements(initial_values, vars, model)
+        self.likelihood_logp = logp(initial_values, [model.datalogpt], vars, shared)
         super().__init__(vars, shared)
 
     def astep(self, _):
@@ -169,7 +170,8 @@ class PGBART(ArrayStepShared):
         """
         PGBART is only suitable for BART distributions
         """
-        if isinstance(var.distribution, BART):
+        dist = getattr(var.owner, "op", None)
+        if isinstance(dist, BART):
             return Competence.IDEAL
         return Competence.INCOMPATIBLE
 
@@ -273,7 +275,7 @@ class ParticleTree:
             self.expansion_nodes = self.expansion_nodes_history[t]
 
 
-def logp(out_vars, vars, shared):
+def logp(point, out_vars, vars, shared):
     """Compile Aesara function of the model and the input and output variables.
 
     Parameters
@@ -285,7 +287,7 @@ def logp(out_vars, vars, shared):
     shared: List
         containing :class:`aesara.tensor.Tensor` for depended shared data
     """
-    out_list, inarray0 = join_nonshared_inputs(out_vars, vars, shared)
+    out_list, inarray0 = join_nonshared_inputs(point, out_vars, vars, shared)
     f = aesara_function([inarray0], out_list[0])
     f.trust_input = True
     return f
