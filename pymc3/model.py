@@ -145,28 +145,28 @@ def incorporate_methods(source, destination, methods, wrapper=None, override=Fal
 
 
 def get_named_nodes_and_relations(graph):
-    """Get the named nodes in a aesara graph (i.e., nodes whose name
+    """Get the named nodes in an Aesara graph (i.e., nodes whose name
     attribute is not None) along with their relationships (i.e., the
     node's named parents, and named children, while skipping unnamed
     intermediate nodes)
 
     Parameters
     ----------
-    graph: a aesara node
+    graph: an Aesara node
 
     Returns:
     --------
     leaf_dict: Dict[str, node]
         A dictionary of name:node pairs, of the named nodes that
-        have no named ancestors in the provided aesara graph.
+        have no named ancestors in the provided Aesara graph.
     descendents: Dict[node, Set[node]]
-        Each key is a aesara named node, and the corresponding value
-        is the set of aesara named nodes that are descendents with no
+        Each key is an Aesara named node, and the corresponding value
+        is the set of Aesara named nodes that are descendents with no
         intervening named nodes in the supplied ``graph``.
     ancestors: Dict[node, Set[node]]
         A dictionary of node:set([ancestors]) pairs. Each key
-        is a aesara named node, and the corresponding value is the set
-        of aesara named nodes that are ancestors with no intervening named
+        is an Aesara named node, and the corresponding value is the set
+        of Aesara named nodes that are ancestors with no intervening named
         nodes in the supplied ``graph``.
 
     """
@@ -224,28 +224,28 @@ def _get_named_nodes_and_relations(graph, descendent, descendents, ancestors):
 
 def build_named_node_tree(graphs):
     """Build the combined descence/ancestry tree of named nodes (i.e., nodes
-    whose name attribute is not None) in a list (or iterable) of aesara graphs.
+    whose name attribute is not None) in a list (or iterable) of Aesara graphs.
     The relationship tree does not include unnamed intermediate nodes present
     in the supplied graphs.
 
     Parameters
     ----------
-    graphs - iterable of aesara graphs
+    graphs - iterable of Aesara graphs
 
     Returns:
     --------
     leaf_dict: Dict[str, node]
         A dictionary of name:node pairs, of the named nodes that
-        have no named ancestors in the provided aesara graphs.
+        have no named ancestors in the provided Aesara graphs.
     descendents: Dict[node, Set[node]]
         A dictionary of node:set([parents]) pairs. Each key is
-        a aesara named node, and the corresponding value is the set of
-        aesara named nodes that are descendents with no intervening named
+        an Aesara named node, and the corresponding value is the set of
+        Aesara named nodes that are descendents with no intervening named
         nodes in the supplied ``graphs``.
     ancestors: Dict[node, Set[node]]
         A dictionary of node:set([ancestors]) pairs. Each key
-        is a aesara named node, and the corresponding value is the set
-        of aesara named nodes that are ancestors with no intervening named
+        is an Aesara named node, and the corresponding value is the set
+        of Aesara named nodes that are ancestors with no intervening named
         nodes in the supplied ``graphs``.
 
     """
@@ -580,16 +580,16 @@ class treedict(dict):
 
 
 class ValueGradFunction:
-    """Create a aesara function that computes a value and its gradient.
+    """Create an Aesara function that computes a value and its gradient.
 
     Parameters
     ----------
-    costs: list of aesara variables
-        We compute the weighted sum of the specified aesara values, and the gradient
+    costs: list of Aesara variables
+        We compute the weighted sum of the specified Aesara values, and the gradient
         of that sum. The weights can be specified with `ValueGradFunction.set_weights`.
-    grad_vars: list of named aesara variables or None
+    grad_vars: list of named Aesara variables or None
         The arguments with respect to which the gradient is computed.
-    extra_vars: list of named aesara variables or None
+    extra_vars: list of named Aesara variables or None
         Other arguments of the function that are assumed constant. They
         are stored in shared variables and can be set using
         `set_extra_values`.
@@ -809,9 +809,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         So that 'nested' model contributes to the variables and
         likelihood factors of parent model.
     aesara_config: dict
-        A dictionary of aesara config values that should be set
+        A dictionary of Aesara config values that should be set
         temporarily in the model context. See the documentation
-        of aesara for a complete list. Set config key
+        of Aesara for a complete list. Set config key
         ``compute_test_value`` to `raise` if it is None.
     check_bounds: bool
         Ensure that input parameters to distributions are in a valid
@@ -975,7 +975,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return self.bijection.mapf(self.fastdlogp(vars))
 
     def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
-        """Compile a aesara function that computes logp and gradient.
+        """Compile an Aesara function that computes logp and gradient.
 
         Parameters
         ----------
@@ -1242,7 +1242,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 raise e
 
     def makefn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Aesara function which returns ``outs`` and takes the variable
+        """Compiles an Aesara function which returns ``outs`` and takes the variable
         ancestors of ``outs`` as inputs.
 
         Parameters
@@ -1267,7 +1267,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             )
 
     def fn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Aesara function which returns the values of ``outs``
+        """Compiles an Aesara function which returns the values of ``outs``
         and takes values of model vars as arguments.
 
         Parameters
@@ -1282,7 +1282,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return LoosePointFunc(self.makefn(outs, mode, *args, **kwargs), self)
 
     def fastfn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Aesara function which returns ``outs`` and takes values
+        """Compiles an Aesara function which returns ``outs`` and takes values
         of model vars as a dict as an argument.
 
         Parameters
@@ -1298,7 +1298,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return FastPointFunc(f)
 
     def profile(self, outs, n=1000, point=None, profile=True, *args, **kwargs):
-        """Compiles and profiles a Aesara function which returns ``outs`` and
+        """Compiles and profiles an Aesara function which returns ``outs`` and
         takes values of model vars as a dict as an argument.
 
         Parameters
@@ -1487,7 +1487,7 @@ def set_data(new_data, model=None):
 
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
-    """Compiles a Aesara function which returns the values of ``outs`` and
+    """Compiles an Aesara function which returns the values of ``outs`` and
     takes values of model vars as arguments.
 
     Parameters
@@ -1504,7 +1504,7 @@ def fn(outs, mode=None, model=None, *args, **kwargs):
 
 
 def fastfn(outs, mode=None, model=None):
-    """Compiles a Aesara function which returns ``outs`` and takes values of model
+    """Compiles an Aesara function which returns ``outs`` and takes values of model
     vars as a dict as an argument.
 
     Parameters
@@ -1653,8 +1653,8 @@ class FreeRV(Factor, PyMC3Variable):
         """
         Parameters
         ----------
-        type: aesara type (optional)
-        owner: aesara owner (optional)
+        type: Aesara type (optional)
+        owner: Aesara owner (optional)
         name: str
         distribution: Distribution
         model: Model
@@ -1697,7 +1697,7 @@ class FreeRV(Factor, PyMC3Variable):
 def pandas_to_array(data):
     """Convert a pandas object to a NumPy array.
 
-    XXX: When `data` is a generator, this will return a Aesara tensor!
+    XXX: When `data` is a generator, this will return an Aesara tensor!
 
     """
     if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
@@ -1801,8 +1801,8 @@ class ObservedRV(Factor, PyMC3Variable):
         """
         Parameters
         ----------
-        type: aesara type (optional)
-        owner: aesara owner (optional)
+        type: Aesara type (optional)
+        owner: Aesara owner (optional)
         name: str
         distribution: Distribution
         model: Model
@@ -1858,8 +1858,8 @@ class MultiObservedRV(Factor):
         """
         Parameters
         ----------
-        type: aesara type (optional)
-        owner: aesara owner (optional)
+        type: Aesara type (optional)
+        owner: Aesara owner (optional)
         name: str
         distribution: Distribution
         model: Model
@@ -1898,7 +1898,7 @@ class MultiObservedRV(Factor):
 
 
 def _walk_up_rv(rv, formatting="plain"):
-    """Walk up aesara graph to get inputs for deterministic RV."""
+    """Walk up an Aesara graph to get inputs for deterministic RV."""
     all_rvs = []
     parents = list(itertools.chain(*[j.inputs for j in rv.get_parents()]))
     if parents:
@@ -1940,7 +1940,7 @@ def Deterministic(name, var, model=None, dims=None):
     Parameters
     ----------
     name: str
-    var: aesara variables
+    var: Aesara variables
 
     Returns
     -------
@@ -1961,7 +1961,7 @@ def Potential(name, var, model=None):
     Parameters
     ----------
     name: str
-    var: aesara variables
+    var: Aesara variables
 
     Returns
     -------
@@ -1979,8 +1979,8 @@ class TransformedRV(PyMC3Variable):
     Parameters
     ----------
 
-    type: aesara type (optional)
-    owner: aesara owner (optional)
+    type: Aesara type (optional)
+    owner: Aesara owner (optional)
     name: str
     distribution: Distribution
     model: Model

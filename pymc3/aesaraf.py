@@ -50,11 +50,11 @@ __all__ = [
 
 def inputvars(a):
     """
-    Get the inputs into a aesara variables
+    Get the inputs into an Aesara variables
 
     Parameters
     ----------
-        a: aesara variable
+        a: an Aesara variable
 
     Returns
     -------
@@ -65,11 +65,11 @@ def inputvars(a):
 
 def cont_inputs(f):
     """
-    Get the continuous inputs into a aesara variables
+    Get the continuous inputs into Aesara variables
 
     Parameters
     ----------
-        a: aesara variable
+        a: Aesara variable
 
     Returns
     -------
@@ -80,7 +80,7 @@ def cont_inputs(f):
 
 def floatX(X):
     """
-    Convert a aesara tensor or numpy array to aesara.config.floatX type.
+    Convert an Aesara tensor or numpy array to aesara.config.floatX type.
     """
     try:
         return X.astype(aesara.config.floatX)
@@ -94,7 +94,7 @@ _conversion_map = {"float64": "int32", "float32": "int16", "float16": "int8", "f
 
 def intX(X):
     """
-    Convert a aesara tensor or numpy array to aesara.tensor.int32 type.
+    Convert an Aesara tensor or numpy array to aesara.tensor.int32 type.
     """
     intX = _conversion_map[aesara.config.floatX]
     try:
@@ -248,11 +248,11 @@ def make_shared_replacements(vars, model):
 
 def join_nonshared_inputs(xs, vars, shared, make_shared=False):
     """
-    Takes a list of aesara Variables and joins their non shared inputs into a single input.
+    Takes a list of Aesara Variables and joins their non shared inputs into a single input.
 
     Parameters
     ----------
-    xs: list of aesara tensors
+    xs: list of Aesara tensors
     vars: list of variables to join
 
     Returns
@@ -320,7 +320,7 @@ identity = Elemwise(scalar_identity, name="identity")
 
 class GeneratorOp(Op):
     """
-    Generator Op is designed for storing python generators inside aesara graph.
+    Generator Op is designed for storing python generators inside an Aesara graph.
 
     __call__ creates TensorVariable
         It has 2 new methods
@@ -413,7 +413,7 @@ def at_rng(random_seed=None):
     ----------
     random_seed: int
         If not None
-        returns *new* aesara random generator without replacing package global one
+        returns *new* Aesara random generator without replacing package global one
 
     Returns
     -------

@@ -181,7 +181,7 @@ We get
     \frac{d}{d\theta}\mu(\theta)
         = - \frac{\mu(\theta)^2}{1 + \theta\mu(\theta) + e^{-\theta\mu(\theta)}}
 
-Now, we use this to define a Aesara `Op`, that also computes the gradient::
+Now, we use this to define an Aesara `Op`, that also computes the gradient::
 
     import aesara
     import aesara.tensor as at

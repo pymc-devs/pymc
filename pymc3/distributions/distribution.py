@@ -375,7 +375,7 @@ class DensityDist(Distribution):
 
         logp: callable
             A callable that has the following signature ``logp(value)`` and
-            returns a aesara tensor that represents the distribution's log
+            returns an Aesara tensor that represents the distribution's log
             probability density.
         shape: tuple (Optional): defaults to `()`
             The shape of the distribution. The default value indicates a scalar.
@@ -612,7 +612,7 @@ class DensityDist(Distribution):
                             "DensityDist random method cannot "
                             "adapt to shape changes in the distribution's "
                             "shape, which sometimes are necessary for sampling "
-                            "when the model uses pymc3.Data or aesara shared "
+                            "when the model uses pymc3.Data or Aesara shared "
                             "tensors, or when the DensityDist has observed "
                             "values.\n"
                             "This check can be disabled by passing "
@@ -759,11 +759,11 @@ def draw_values(params, point=None, size=None):
                 # If the node already has a givens value, skip it
                 continue
             elif isinstance(next_, (Constant, SharedVariable)):
-                # If the node is a aesara.tensor.TensorConstant or a
+                # If the node is an aesara.tensor.TensorConstant or a
                 # SharedVariable, its value will be available automatically in
                 # _compile_aesara_function so we can skip it. Furthermore, if
                 # this node was treated as a TensorVariable that should be
-                # compiled by aesara in _compile_aesara_function, it would
+                # compiled by Aesara in _compile_aesara_function, it would
                 # raise a `TypeError: ('Constants not allowed in param list',
                 # ...)` for TensorConstant, and a `TypeError: Cannot use a
                 # shared variable (...) as explicit input` for SharedVariable.
@@ -843,9 +843,9 @@ def draw_values(params, point=None, size=None):
 
 @cached(LRUCache(128), key=hash_key)
 def _compile_aesara_function(param, vars, givens=None):
-    """Compile aesara function for a given parameter and input variables.
+    """Compile Aesara function for a given parameter and input variables.
 
-    This function is memoized to avoid repeating costly aesara compilations
+    This function is memoized to avoid repeating costly Aesara compilations
     when repeatedly drawing values, which is done when generating posterior
     predictive samples.
 
@@ -857,7 +857,7 @@ def _compile_aesara_function(param, vars, givens=None):
 
     Returns
     -------
-    A compiled aesara function that takes the values of `vars` as input
+    A compiled Aesara function that takes the values of `vars` as input
         positional args
     """
     f = function(
@@ -872,28 +872,28 @@ def _compile_aesara_function(param, vars, givens=None):
 
 
 def vectorize_aesara_function(f, inputs, output):
-    """Takes a compiled aesara function and wraps it with a vectorized version.
+    """Takes a compiled Aesara function and wraps it with a vectorized version.
     Aesara compiled functions expect inputs and outputs of a fixed number of
     dimensions. In our context, these usually come from deterministics which
     are compiled against a given RV, with its core shape. If we draw i.i.d.
     samples from said RV, we would not be able to compute the deterministic
     over the i.i.d sampled dimensions (i.e. those that are not the core
-    dimensions of the RV). To deal with this problem, we wrap the aesara
+    dimensions of the RV). To deal with this problem, we wrap the Aesara
     compiled function with numpy.vectorize, providing the correct signature
     for the core dimensions. The extra dimensions, will be interpreted as
     i.i.d. sampled axis and will be broadcast following the usual rules.
 
     Parameters
     ----------
-    f: aesara compiled function
-    inputs: list of aesara variables used as inputs for the function
-    givens: aesara variable which is the output of the function
+    f: Aesara compiled function
+    inputs: list of Aesara variables used as inputs for the function
+    givens: Aesara variable which is the output of the function
 
     Notes
     -----
-    If inputs is an empty list (aesara function with no inputs needed), then
+    If inputs is an empty list (Aesara function with no inputs needed), then
     the same `f` is returned.
-    Only functions that return a single aesara variable's value can be
+    Only functions that return a single Aesara variable's value can be
     vectorized.
 
     Returns
@@ -929,7 +929,7 @@ def _draw_value(param, point=None, givens=None, size=None):
 
     Parameters
     ----------
-    param: number, array like, aesara variable or pymc3 random variable
+    param: number, array like, Aesara variable or pymc3 random variable
         The value or distribution. Constants or shared variables
         will be converted to an array and returned. Aesara variables
         are evaluated. If `param` is a pymc3 random variables, draw
@@ -938,8 +938,8 @@ def _draw_value(param, point=None, givens=None, size=None):
     point: dict, optional
         A dictionary from pymc3 variable names to their values.
     givens: dict, optional
-        A dictionary from aesara variables to their values. These values
-        are used to evaluate `param` if it is a aesara variable.
+        A dictionary from Aesara variables to their values. These values
+        are used to evaluate `param` if it is an Aesara variable.
     size: int, optional
         Number of samples
     """

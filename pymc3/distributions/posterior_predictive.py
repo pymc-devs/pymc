@@ -377,11 +377,11 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
                     # If the node already has a givens value, skip it
                     continue
                 elif isinstance(next_, (Constant, SharedVariable)):
-                    # If the node is a aesara.tensor.TensorConstant or a
+                    # If the node is an aesara.tensor.TensorConstant or a
                     # aesara.tensor.sharedvar.SharedVariable, its value will be
                     # available automatically in _compile_aesara_function so
                     # we can skip it. Furthermore, if this node was treated as a
-                    # TensorVariable that should be compiled by aesara in
+                    # TensorVariable that should be compiled by Aesara in
                     # _compile_aesara_function, it would raise a `TypeError:
                     # ('Constants not allowed in param list', ...)` for
                     # TensorConstant, and a `TypeError: Cannot use a shared
@@ -528,7 +528,7 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
 
         Parameters
         ----------
-        param: number, array like, aesara variable or pymc3 random variable
+        param: number, array like, Aesara variable or pymc3 random variable
             The value or distribution. Constants or shared variables
             will be converted to an array and returned. Aesara variables
             are evaluated. If `param` is a pymc3 random variable, draw
@@ -538,8 +538,8 @@ class _PosteriorPredictiveSampler(AbstractContextManager):
             A dictionary from pymc3 variable names to samples of their values
             used to provide context for evaluating ``param``.
         givens: dict, optional
-            A dictionary from aesara variables to their values. These values
-            are used to evaluate ``param`` if it is a aesara variable.
+            A dictionary from Aesara variables to their values. These values
+            are used to evaluate ``param`` if it is an Aesara variable.
         """
         samples = self.samples
 

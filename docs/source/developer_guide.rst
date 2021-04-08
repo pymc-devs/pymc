@@ -194,7 +194,7 @@ Random method and logp method, very different behind the curtain
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In short, the random method is scipy/numpy-based, and the logp method is
-Aesara-based. The ``logp`` method is straightforward - it is a Aesara
+Aesara-based. The ``logp`` method is straightforward - it is an Aesara
 function within each distribution. It has the following signature:
 
 .. code:: python
@@ -225,7 +225,7 @@ itself <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66
 
 .. code:: python
 
-        # self is a aesara.tensor with a distribution attached
+        # self is an aesara.tensor with a distribution attached
         self.logp_sum_unscaledt = distribution.logp_sum(self)
         self.logp_nojac_unscaledt = distribution.logp_nojac(self)
 
@@ -452,7 +452,7 @@ as for ``FreeRV`` and ``ObservedRV``, they are ``TensorVariable``\s with
 
 ``Factor`` basically `enable and assign the
 logp <https://github.com/pymc-devs/pymc3/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc3/model.py#L195-L276>`__
-(representated as a tensor also) property to a Aesara tensor (thus
+(representated as a tensor also) property to an Aesara tensor (thus
 making it a random variable). For a ``TransformedRV``, it transforms the
 distribution into a ``TransformedDistribution``, and then ``model.Var`` is
 called again to added the RV associated with the
@@ -566,7 +566,7 @@ sum them together to get the model logp:
             ...
             return logp
 
-which returns a Aesara tensor that its value depends on the free
+which returns an Aesara tensor that its value depends on the free
 parameters in the model (i.e., its parent nodes from the Aesara
 graph).You can evaluate or compile into a python callable (that you can
 pass numpy as input args). Note that the logp tensor depends on its
@@ -627,7 +627,7 @@ does not edit or rewrite the graph directly.
 .. code:: python
 
     class ValueGradFunction:
-        """Create a aesara function that computes a value and its gradient.
+        """Create an Aesara function that computes a value and its gradient.
         ...
         """
         def __init__(self, logpt, grad_vars, extra_vars=[], dtype=None,
@@ -647,7 +647,7 @@ does not edit or rewrite the graph directly.
             # Extra vars are a subset of free_RVs that are not input to the compiled function.
             # But nonetheless logpt depends on these RVs.
             # This is set up as a dict of aesara.shared tensors, but givens (a list of
-            # tuple(free_RVs, aesara.shared)) is the actual list that goes into the aesara function
+            # tuple(free_RVs, aesara.shared)) is the actual list that goes into the Aesara function
             givens = []
             self._extra_vars_shared = {}
             for var in extra_vars:
@@ -656,7 +656,7 @@ does not edit or rewrite the graph directly.
                 givens.append((var, shared))
 
             # See the implementation below. Basically, it clones the logpt and replaces its
-            # input with a *single* 1d aesara tensor
+            # input with a *single* 1d Aesara tensor
             self._vars_joined, self._logpt_joined = self._build_joined(
                 self._logpt, grad_vars, self._ordering.vmap)
 
@@ -930,7 +930,7 @@ We love NUTS, or to be more precise Dynamic HMC with complex stopping
 rules. This part is actually all done outside of Aesara, for NUTS, it
 includes: the leapfrog, dual averaging, tunning of mass matrix and step
 size, the tree building, sampler related statistics like divergence and
-energy checking. We actually have a Aesara version of HMC, but it has never
+energy checking. We actually have an Aesara version of HMC, but it has never
 been used, and has been removed from the main repository. It can still be
 found in the `git history
 <https://github.com/pymc-devs/pymc3/pull/3734/commits/0fdae8207fd14f66635f3673ef267b2b8817aa68>`__,
