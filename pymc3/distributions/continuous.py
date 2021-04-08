@@ -304,7 +304,7 @@ class Flat(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -321,7 +321,7 @@ class Flat(Continuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -361,7 +361,7 @@ class HalfFlat(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -378,7 +378,7 @@ class HalfFlat(PositiveContinuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -681,7 +681,7 @@ class TruncatedNormal(BoundedContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -808,7 +808,7 @@ class HalfNormal(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -832,7 +832,7 @@ class HalfNormal(PositiveContinuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -1006,7 +1006,7 @@ class Wald(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -1039,7 +1039,7 @@ class Wald(PositiveContinuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -1187,7 +1187,7 @@ class Beta(UnitContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -1327,7 +1327,7 @@ class Kumaraswamy(UnitContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -1398,7 +1398,7 @@ class Exponential(PositiveContinuous):
         value: numeric
             Value(s) for which log-probability is calculated. If the log
             probabilities for multiple values are desired the values must be
-            provided in a numpy array or aesara tensor
+            provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -1421,7 +1421,7 @@ class Exponential(PositiveContinuous):
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for
             multiple values are desired the values must be provided in a numpy
-            array or aesara tensor.
+            array or Aesara tensor.
 
         Returns
         -------
@@ -1515,7 +1515,7 @@ class Laplace(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -1535,7 +1535,7 @@ class Laplace(Continuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -1643,7 +1643,7 @@ class AsymmetricLaplace(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -1772,7 +1772,7 @@ class Lognormal(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -1799,7 +1799,7 @@ class Lognormal(PositiveContinuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -1925,7 +1925,7 @@ class StudentT(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -2080,7 +2080,7 @@ class Pareto(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -2109,7 +2109,7 @@ class Pareto(Continuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -2194,7 +2194,7 @@ class Cauchy(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -2213,7 +2213,7 @@ class Cauchy(Continuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -2279,7 +2279,7 @@ class HalfCauchy(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -2300,7 +2300,7 @@ class HalfCauchy(PositiveContinuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -2566,7 +2566,7 @@ class InverseGamma(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -2588,7 +2588,7 @@ class InverseGamma(PositiveContinuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -2742,7 +2742,7 @@ class Weibull(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -2769,7 +2769,7 @@ class Weibull(PositiveContinuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -2890,7 +2890,7 @@ class HalfStudentT(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -3031,7 +3031,7 @@ class ExGaussian(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -3072,7 +3072,7 @@ class ExGaussian(Continuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3188,7 +3188,7 @@ class VonMises(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -3317,7 +3317,7 @@ class SkewNormal(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -3439,7 +3439,7 @@ class Triangular(BoundedContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -3467,7 +3467,7 @@ class Triangular(BoundedContinuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3572,7 +3572,7 @@ class Gumbel(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -3597,7 +3597,7 @@ class Gumbel(Continuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3750,7 +3750,7 @@ class Rice(PositiveContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -3855,7 +3855,7 @@ class Logistic(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -3878,7 +3878,7 @@ class Logistic(Continuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
@@ -3981,7 +3981,7 @@ class LogitNormal(UnitContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -4112,7 +4112,7 @@ class Interpolated(BoundedContinuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -4215,7 +4215,7 @@ class Moyal(Continuous):
         ----------
         value: numeric
             Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor
+            values are desired the values must be provided in a numpy array or Aesara tensor
 
         Returns
         -------
@@ -4238,7 +4238,7 @@ class Moyal(Continuous):
         ----------
         value: numeric or np.ndarray or aesara.tensor
             Value(s) for which log CDF is calculated. If the log CDF for multiple
-            values are desired the values must be provided in a numpy array or aesara tensor.
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------

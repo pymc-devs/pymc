@@ -425,7 +425,7 @@ class ADVI(KLqp):
 
         The tensors to which mini-bathced samples are supplied are
         handled separately by using callbacks in :func:`Inference.fit` method
-        that change storage of shared aesara variable or by :func:`pymc3.generator`
+        that change storage of shared Aesara variable or by :func:`pymc3.generator`
         that automatically iterates over minibatches and defined beforehand.
 
     -   (optional) Parameters of deterministic mappings

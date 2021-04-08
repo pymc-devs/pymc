@@ -64,7 +64,7 @@ class BaseHMC(arraystep.GradientSharedStep):
 
         Parameters
         ----------
-        vars: list of aesara variables
+        vars: list of Aesara variables
         scaling: array_like, ndim = {1,2}
             Scaling for momentum distribution. 1d arrays interpreted matrix
             diagonal.
@@ -78,7 +78,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         potential: Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods.
-        **aesara_kwargs: passed to aesara functions
+        **aesara_kwargs: passed to Aesara functions
         """
         self._model = modelcontext(model)
 

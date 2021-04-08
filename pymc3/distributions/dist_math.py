@@ -189,14 +189,14 @@ def log_diff_normal_cdf(mu, sigma, x, y):
 
 def sigma2rho(sigma):
     """
-    `sigma -> rho` aesara converter
+    `sigma -> rho` Aesara converter
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
     return at.log(at.exp(at.abs_(sigma)) - 1.0)
 
 
 def rho2sigma(rho):
     """
-    `rho -> sigma` aesara converter
+    `rho -> sigma` Aesara converter
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
     return at.nnet.softplus(rho)
 
@@ -317,7 +317,7 @@ def MvNormalLogp():
 
 class SplineWrapper(Op):
     """
-    Creates a aesara operation from scipy.interpolate.UnivariateSpline
+    Creates an Aesara operation from scipy.interpolate.UnivariateSpline
     """
 
     __props__ = ("spline",)
