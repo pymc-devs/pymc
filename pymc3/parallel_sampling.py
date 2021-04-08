@@ -111,9 +111,11 @@ class _Process:
             "or forkserver."
         )
         if self._step_method_is_pickled:
+            data = bytes(self._step_method)
+
             if self._pickle_backend == "pickle":
                 try:
-                    self._step_method = pickle.loads(self._step_method)
+                    self._step_method = pickle.loads(data)
                 except Exception:
                     raise ValueError(unpickle_error)
             elif self._pickle_backend == "dill":
@@ -122,7 +124,7 @@ class _Process:
                 except ImportError:
                     raise ValueError("dill must be installed for pickle_backend='dill'.")
                 try:
-                    self._step_method = dill.loads(self._step_method)
+                    self._step_method = dill.loads(data)
                 except Exception:
                     raise ValueError(unpickle_error)
             else:
@@ -427,6 +429,8 @@ class ParallelSampler:
                 except ImportError:
                     raise ValueError("dill must be installed for pickle_backend='dill'.")
                 step_method_pickled = dill.dumps(step_method, protocol=-1)
+
+            step_method_pickled = mp_ctx.Array("b", step_method_pickled, lock=False)
 
         self._samplers = [
             ProcessAdapter(
