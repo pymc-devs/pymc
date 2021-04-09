@@ -3032,7 +3032,7 @@ def test_ordered_probit_probs():
     assert isinstance(x, TensorVariable)
 
 
-@pytest.mark.parametrize("size", [(), (1,), (4,)], ids=str)
+@pytest.mark.parametrize("size", [(), (1,), (4,), (4, 4, 4)], ids=str)
 def test_car_logp(size):
     """
     Tests the log probability function for the CAR distribution by checking
@@ -3041,16 +3041,16 @@ def test_car_logp(size):
     """
     np.random.seed(1)
 
-    xs = np.random.randn(*size)
-
     # d x d adjacency matrix for a square (d=4) of rook-adjacent sites
     W = np.array(
         [[0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
     )
 
-    tau = 2.0
+    tau = 2
     alpha = 0.5
     mu = np.zeros(4)
+
+    xs = np.random.randn(*(size + mu.shape))
 
     # Compute CAR covariance matrix and resulting MVN logp
     D = W.sum(axis=0)
@@ -3059,7 +3059,7 @@ def test_car_logp(size):
     scipy_logp = scipy.stats.multivariate_normal.logpdf(xs, mu, cov)
 
     car_dist = CAR.dist(mu, W, alpha, tau, size=size)
-    xs = np.broadcast_to(xs, size + mu.shape)
+    #xs = np.broadcast_to(xs, size + mu.shape)
     car_logp = logpt(car_dist, xs).eval()
 
     # Check to make sure that the CAR and MVN log PDFs are equivalent
