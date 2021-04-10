@@ -289,6 +289,11 @@ class TestSample(SeededTest):
             )
             assert len(trace) == trace_cancel_length
 
+    def test_sequential_backend(self):
+        with self.model:
+            backend = NDArray()
+            trace = pm.sample(10, cores=1, chains=2, trace=backend)
+
 
 @pytest.mark.xfail(reason="Lognormal not refactored for v4")
 def test_sample_find_MAP_does_not_modify_start():
