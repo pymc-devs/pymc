@@ -19,6 +19,7 @@
 - `pm.make_shared_replacements` now retains broadcasting information which fixes issues with Metropolis samplers (see [#4492](https://github.com/pymc-devs/pymc3/pull/4492)).
 
 **Release manager** for 3.11.2: Michael Osthege ([@michaelosthege](https://github.com/michaelosthege))
+- `pm.intX` did bad job with downcasting integers. It is fixed in [#4569](https://github.com/pymc-devs/pymc3/pull/4569). 
 
 ## PyMC3 3.11.1 (12 February 2021)
 
