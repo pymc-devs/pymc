@@ -78,7 +78,7 @@ class TestData(SeededTest):
             trace = pm.sample(1000, tune=1000, chains=1)
         # Predict on new data.
         with model:
-            x_test = [5, 6, 9]
+            x_test = [5.0, 6.0, 9.0]
             pm.set_data(new_data={"x": x_test})
             y_test = pm.sample_posterior_predictive(trace)
             y_test1 = pm.fast_sample_posterior_predictive(trace)
