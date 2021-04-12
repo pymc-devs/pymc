@@ -1122,11 +1122,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def prefix(self):
-        if self.name:
-            val = self.name
-            return f"{val}_"
-        else: 
-            return ""
+        return f"{self.name}_" if self.name else ""
 
     def name_for(self, name):
         """Checks if name has prefix and adds if needed"""
