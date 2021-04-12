@@ -25,6 +25,24 @@ they are smaller or self explanatory in scope, or they're pending
 deprecation
 
 **Everything below this is from a reference implementation and needs to be updated**
+
+## Things that are not in PyMC3
+It it easier to start with functionality that is not present in PyMC3 but
+rather deferred to outside libraries. If seeking to understand any 
+of the topics below refer to that specific library
+
+### Aesara
+* Gradient computation
+* Random number generation
+* Low level tensor operation definition
+* Low level operation graphs
+
+### ArviZ
+* Plotting e.g. Traceplot, rankplots, posterior plots
+* Diagnostics e.g. Rhat, Effective Sample Size, Leave One Out comparison
+* Inference Data structure
+
+
 # Modules
 The codebase of PyMC3 is split among single python file modules at the root
 level, as well as directories with python code for logical groups of functionality.
