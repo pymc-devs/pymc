@@ -8,9 +8,10 @@ If you want to familiarize yourself with the code base, you are just in the righ
 
 ![Architecture](docs/Architecture.png)
 
-On the highest level, PyMC3 is a thing which lets you define probabilistic graphs or models
-and then magically handles "the rest" for you. Core to any Bayesian library
-is the posterior estimation which PyMC3 does. However there are numerous
+On the highest level, PyMC3 lets you define probabilistic graphs or models
+that can be easily used to compute log probabilities for posterior inference
+or to draw random samples for prior and posterior prediction. 
+However there are numerous
 other useful sets of functionality, from prior and posterior predictive sampling,
 GraphviZ model, as well as various helper functions.
 
@@ -24,9 +25,8 @@ relation to other major packages. Not all modules are shown, either because
 they are smaller or self explanatory in scope, or they're pending
 deprecation
 
-**Everything below this is from a reference implementation and needs to be updated**
 
-## Things that are not in PyMC3
+## Functionality not in PyMC3
 It it easier to start with functionality that is not present in PyMC3 but
 rather deferred to outside libraries. If seeking to understand any 
 of the topics below refer to that specific library
