@@ -7,7 +7,7 @@ from collections import defaultdict
 
 xla_flags = os.getenv("XLA_FLAGS", "").lstrip("--")
 xla_flags = re.sub(r"xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
-os.environ["XLA_FLAGS"] = " ".join(["--xla_force_host_platform_device_count={}".format(100)])
+os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"])
 
 import aesara.graph.fg
 import arviz as az

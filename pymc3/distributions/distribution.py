@@ -99,7 +99,7 @@ class Distribution:
         data = kwargs.pop("observed", None)
         cls.data = data
         if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
-            raise TypeError("observed needs to be data but got: {}".format(type(data)))
+            raise TypeError(f"observed needs to be data but got: {type(data)}")
         total_size = kwargs.pop("total_size", None)
 
         dims = kwargs.pop("dims", None)

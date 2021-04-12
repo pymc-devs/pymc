@@ -212,7 +212,7 @@ class IdentityOp(scalar.UnaryScalarOp):
         return grads
 
     def c_code(self, node, name, inp, out, sub):
-        return "{z} = {x};".format(x=inp[0], z=out[0])
+        return f"{out[0]} = {inp[0]};"
 
     def __eq__(self, other):
         return isinstance(self, type(other))

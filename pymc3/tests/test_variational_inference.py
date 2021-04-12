@@ -145,7 +145,7 @@ def test_init_groups(three_var_model, raises, grouping):
         ({}, {MeanFieldGroup: (["one"], {}), FullRankGroup: (["two", "three"], {})}),
         ({}, {MeanFieldGroup: (["one"], {}), EmpiricalGroup: (["two", "three"], {"size": 100})}),
     ],
-    ids=lambda t: ", ".join("{}: {}".format(k.__name__, v[0]) for k, v in t[1].items()),
+    ids=lambda t: ", ".join(f"{k.__name__}: {v[0]}" for k, v in t[1].items()),
 )
 def three_var_groups(request, three_var_model):
     kw, grouping = request.param
@@ -199,7 +199,7 @@ def aevb_initial():
         (NormalizingFlowGroup, {"flow": "radial"}),
         (NormalizingFlowGroup, {"flow": "radial-loc"}),
     ],
-    ids=lambda t: "{c}: {d}".format(c=t[0].__name__, d=t[1]),
+    ids=lambda t: f"{t[0].__name__}: {t[1]}",
 )
 def parametric_grouped_approxes(request):
     return request.param
