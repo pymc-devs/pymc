@@ -1125,7 +1125,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if self.name:
             val = self.name
             return f"{val}_"
-        else 
+        else: 
             return ""
 
     def name_for(self, name):
