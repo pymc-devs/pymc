@@ -1958,25 +1958,29 @@ class CARRV(RandomVariable):
         tau = scipy.sparse.csr_matrix(tau)
         alpha = scipy.sparse.csr_matrix(alpha)
 
-        perm_array = scipy.sparse.csgraph.reverse_cuthill_mckee(W, symmetric_mode=True)
-        W = W[perm_array, :]
-        W = W[:, perm_array]
-
         Q = tau.multiply(D - alpha.multiply(W))
+
+        perm_array = scipy.sparse.csgraph.reverse_cuthill_mckee(Q, symmetric_mode=True)
+        inv_perm = np.argsort(perm_array)
+
+        Q = Q[perm_array, :][:, perm_array]
+
         Qb = Q.diagonal()
         u = 1
         while np.count_nonzero(Q.diagonal(u)) > 0:
             Qb = np.vstack((np.pad(Q.diagonal(u), (u, 0), constant_values=(0, 0)), Qb))
             u += 1
+
         L = scipy.linalg.cholesky_banded(Qb, lower=False)
 
         size = tuple(size or ())
         if size:
             mu = np.broadcast_to(mu, size + mu.shape)
-        z = rng.normal(loc=mu)
+        z = rng.normal(size=mu.shape)
         samples = np.empty(z.shape)
         for idx in np.ndindex(mu.shape[:-1]):
-            samples[idx] = scipy.linalg.cho_solve_banded((L, False), z[idx])
+            samples[idx] = scipy.linalg.cho_solve_banded((L, False), z[idx]) + mu[idx][perm_array]
+        samples = samples[..., inv_perm]
         return samples
 
 

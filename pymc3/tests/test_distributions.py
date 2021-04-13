@@ -3059,7 +3059,7 @@ def test_car_logp(size):
     scipy_logp = scipy.stats.multivariate_normal.logpdf(xs, mu, cov)
 
     car_dist = CAR.dist(mu, W, alpha, tau, size=size)
-    #xs = np.broadcast_to(xs, size + mu.shape)
+    # xs = np.broadcast_to(xs, size + mu.shape)
     car_logp = logpt(car_dist, xs).eval()
 
     # Check to make sure that the CAR and MVN log PDFs are equivalent
@@ -3068,6 +3068,37 @@ def test_car_logp(size):
 
     # Check to make sure all the delta values are identical.
     assert np.allclose(delta_logp - delta_logp[0], 0.0)
+
+
+@pytest.mark.parametrize("size", [(100,), (100, 2)], ids=str)
+def test_car_rng_fn(size):
+    delta = 0.05  # limit for KS p-value
+    n_fails = 10  # Allows the KS fails a certain number of times
+
+    W = np.array(
+        [[0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
+    )
+
+    tau = 2
+    alpha = 0.5
+    mu = np.array([1, 1, 1, 1])
+
+    D = W.sum(axis=0)
+    prec = tau * (np.diag(D) - alpha * W)
+    cov = np.linalg.inv(prec)
+
+    p, f = delta, n_fails
+    while p <= delta and f > 0:
+        with Model():
+            car = pm.CAR("car", mu, W, alpha, tau, size=size)
+            mn = pm.MvNormal("mn", mu, cov, size=size)
+            check = pm.sample_prior_predictive(100)
+        car_smp, mn_smp = check["car"], check["mn"]
+        _, p = scipy.stats.ks_2samp(
+            np.atleast_1d(car_smp).flatten(), np.atleast_1d(mn_smp).flatten()
+        )
+        f -= 1
+    assert p > delta
 
 
 class TestBugfixes:
