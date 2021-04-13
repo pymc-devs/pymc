@@ -253,8 +253,6 @@ class Uniform(BoundedContinuous):
     def dist(cls, lower=0, upper=1, **kwargs):
         lower = at.as_tensor_variable(floatX(lower))
         upper = at.as_tensor_variable(floatX(upper))
-        # mean = (upper + lower) / 2.0
-        # median = self.mean
         return super().dist([lower, upper], **kwargs)
 
     def logp(value, lower, upper):
@@ -270,7 +268,11 @@ class Uniform(BoundedContinuous):
         -------
         TensorVariable
         """
-        return bound(-at.log(upper - lower), value >= lower, value <= upper)
+        return bound(
+            at.fill(value, -at.log(upper - lower)),
+            value >= lower,
+            value <= upper,
+        )
 
     def logcdf(value, lower, upper):
         """
