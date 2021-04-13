@@ -239,10 +239,11 @@ class NFMC:
 
     def local_exploration(self, logq_func=None, dlogq_func=None):
         """Perform local exploration."""
-        self.high_iw_idx = np.where(self.weights >= 1 / self.draws + self.local_thresh * median_abs_deviation(self.weights))[0]
+        self.high_iw_idx = np.where(self.weights >= (1 + self.local_thresh) / self.draws)[0]
+        self.num_local = len(self.high_iw_idx)
         self.high_iw_samples = self.nf_samples[self.high_iw_idx, ...]
         self.high_weights = self.weights[self.high_iw_idx]
-        print(f'Number of points we perform additional local exploration around = {len(self.high_iw_idx)}')
+        print(f'Number of points we perform additional local exploration around = {self.num_local}')
 
         self.local_samples = np.empty((0, np.shape(self.high_iw_samples)[1]))
         self.local_weights = np.array([])
@@ -488,7 +489,20 @@ class NFMC:
 
         self.weights = self.weights / np.sum(self.weights)
         self.importance_weights = np.copy(self.weights)
-        
+
+    def final_nf(self):
+        """Final NF fit used to ensure the target distribution is the asymptotic distribution of our importance sampling."""
+        if self.num_local > 0:
+
+            print('Performing final NF fit without local exploration.')
+            self.nf_local_iter = 0
+            self.fit_nf()
+
+        resampling_indexes = np.random.choice(
+            np.arange(len(self.weights)), size=self.draws, p=self.weights/np.sum(self.weights)
+        )
+        self.posterior = self.nf_samples[resampling_indexes, ...]
+            
     def resample_iter(self):
         """Resample at a given NF fit iteration, to obtain samples for the next stage."""
         resampling_indexes = np.random.choice(

@@ -337,6 +337,12 @@ def sample_nfmc_int(
             nfmc.fit_nf()
         print('Re-initializing SINF fits using samples from latest iteration after local exploration.')
         nfmc.reinitialize_nf()
+
+    if full_local:
+        print('Using local exploration at every iteration except the final one (where IW exceed the local threshold).')
+        nfmc.nf_local_iter = 1
+    elif not full_local:
+        print('No longer using local exploration after warmup iterations.')
         nfmc.nf_local_iter = 0
             
     for i in range(nf_iter):
@@ -344,16 +350,18 @@ def sample_nfmc_int(
         if _log is not None:
             _log.info(f"Stage: {stage:3d}, Normalizing Constant Estimate: {nfmc.evidence}")
 
-        if full_local:
-            nfmc.nf_local_iter = 1
         nfmc.fit_nf()
         stage += 1
         if np.abs((iter_evidence - nfmc.evidence) / nfmc.evidence) <= norm_tol:
-            print('Normalizing constant estimate has stabilised - ending NF fits.')
+            print(f"Stage: {stage:3d}, Normalizing Constant Estimate: {nfmc.evidence}")
+            print("Normalizing constant estimate has stabilised - ending NF fits.")
             break
         iter_evidence = 1.0 * nfmc.evidence
-        
-    nfmc.resample()
+
+    if full_local:
+        nfmc.final_nf()
+    elif not full_local:
+        nfmc.resample()
 
     return (
         nfmc.posterior_to_trace(),
