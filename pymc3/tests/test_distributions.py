@@ -883,7 +883,6 @@ class TestMatchesScipy:
             assert logpt(invalid_dist, np.array(0.5)).eval() == -np.inf
             assert logcdf(invalid_dist, np.array(2.0)).eval() == -np.inf
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_triangular(self):
         self.check_logp(
             Triangular,
@@ -898,12 +897,20 @@ class TestMatchesScipy:
             lambda value, c, lower, upper: sp.triang.logcdf(value, c - lower, lower, upper - lower),
             skip_paramdomain_outside_edge_test=True,
         )
-        # Custom logp check for invalid value
-        valid_dist = Triangular.dist(lower=0, upper=1, c=2.0)
-        assert np.all(logpt(valid_dist, np.array([1.9, 2.0, 2.1])).tag.test_value == -np.inf)
+
+        # Custom logp/logcdf check for values outside of domain
+        valid_dist = Triangular.dist(lower=0, upper=1, c=0.9, size=2)
+        with aesara.config.change_flags(mode=Mode("py")):
+            assert np.all(logpt(valid_dist, np.array([-1, 2])).eval() == -np.inf)
+            assert np.all(logcdf(valid_dist, np.array([-1, 2])).eval() == [-np.inf, 0])
 
         # Custom logp / logcdf check for invalid parameters
-        invalid_dist = Triangular.dist(lower=1, upper=0, c=2.0)
+        invalid_dist = Triangular.dist(lower=1, upper=0, c=0.1)
+        with aesara.config.change_flags(mode=Mode("py")):
+            assert logpt(invalid_dist, 0.5).eval() == -np.inf
+            assert logcdf(invalid_dist, 2).eval() == -np.inf
+
+        invalid_dist = Triangular.dist(lower=0, upper=1, c=2.0)
         with aesara.config.change_flags(mode=Mode("py")):
             assert logpt(invalid_dist, 0.5).eval() == -np.inf
             assert logcdf(invalid_dist, 2).eval() == -np.inf
@@ -1121,7 +1128,6 @@ class TestMatchesScipy:
             lambda value, lam: sp.expon.logcdf(value, 0, 1 / lam),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_geometric(self):
         self.check_logp(
             Geometric,
@@ -1141,7 +1147,6 @@ class TestMatchesScipy:
             {"p": Unit},
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_hypergeometric(self):
         def modified_scipy_hypergeom_logpmf(value, N, k, n):
             # Convert nan to -np.inf
@@ -1263,7 +1268,6 @@ class TestMatchesScipy:
             laplace_asymmetric_logpdf,
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_lognormal(self):
         self.check_logp(
             Lognormal,
@@ -1271,11 +1275,25 @@ class TestMatchesScipy:
             {"mu": R, "tau": Rplusbig},
             lambda value, mu, tau: floatX(sp.lognorm.logpdf(value, tau ** -0.5, 0, np.exp(mu))),
         )
+        self.check_logp(
+            Lognormal,
+            Rplus,
+            {"mu": R, "sigma": Rplusbig},
+            lambda value, mu, sigma: floatX(sp.lognorm.logpdf(value, sigma, 0, np.exp(mu))),
+            n_samples=5,  # Just testing alternative parametrization
+        )
         self.check_logcdf(
             Lognormal,
             Rplus,
             {"mu": R, "tau": Rplusbig},
             lambda value, mu, tau: sp.lognorm.logcdf(value, tau ** -0.5, 0, np.exp(mu)),
+        )
+        self.check_logcdf(
+            Lognormal,
+            Rplus,
+            {"mu": R, "sigma": Rplusbig},
+            lambda value, mu, sigma: sp.lognorm.logcdf(value, sigma, 0, np.exp(mu)),
+            n_samples=5,  # Just testing alternative parametrization
         )
 
     @pytest.mark.xfail(reason="Distribution not refactored yet")
@@ -1413,7 +1431,6 @@ class TestMatchesScipy:
             lambda value, alpha, m: sp.pareto.logcdf(value, alpha, scale=m),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_weibull_logp(self):
         self.check_logp(
             Weibull,
@@ -1422,7 +1439,6 @@ class TestMatchesScipy:
             lambda value, alpha, beta: sp.exponweib.logpdf(value, 1, alpha, scale=beta),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.xfail(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
@@ -2381,7 +2397,6 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_vonmises(self):
         self.check_logp(
             VonMises,
@@ -2402,7 +2417,6 @@ class TestMatchesScipy:
 
         self.check_logcdf(Gumbel, R, {"mu": R, "beta": Rplusbig}, gumbellcdf)
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_logistic(self):
         self.check_logp(
             Logistic,

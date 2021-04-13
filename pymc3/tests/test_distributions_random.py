@@ -297,7 +297,7 @@ class TestAsymmetricLaplace(BaseTestCases.BaseTestCase):
     params = {"kappa": 1.0, "b": 1.0, "mu": 0.0}
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
+@pytest.mark.skip(reason="This test is covered by Aesara")
 class TestLognormal(BaseTestCases.BaseTestCase):
     distribution = pm.Lognormal
     params = {"mu": 1.0, "tau": 1.0}
@@ -315,7 +315,6 @@ class TestChiSquared(BaseTestCases.BaseTestCase):
     params = {"nu": 2.0}
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestWeibull(BaseTestCases.BaseTestCase):
     distribution = pm.Weibull
     params = {"alpha": 1.0, "beta": 1.0}
@@ -327,7 +326,7 @@ class TestExGaussian(BaseTestCases.BaseTestCase):
     params = {"mu": 0.0, "sigma": 1.0, "nu": 1.0}
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
+@pytest.mark.skip(reason="This test is covered by Aesara")
 class TestVonMises(BaseTestCases.BaseTestCase):
     distribution = pm.VonMises
     params = {"mu": 0.0, "kappa": 1.0}
@@ -381,13 +380,13 @@ class TestDiscreteUniform(BaseTestCases.BaseTestCase):
     params = {"lower": 0.0, "upper": 10.0}
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
+@pytest.mark.skip(reason="This test is covered by Aesara")
 class TestGeometric(BaseTestCases.BaseTestCase):
     distribution = pm.Geometric
     params = {"p": 0.5}
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
+@pytest.mark.skip(reason="This test is covered by Aesara")
 class TestHyperGeometric(BaseTestCases.BaseTestCase):
     distribution = pm.HyperGeometric
     params = {"N": 50, "k": 25, "n": 10}
@@ -867,7 +866,7 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(pm.AsymmetricLaplace, {"b": Rplus, "kappa": Rplus, "mu": R}, ref_rand=ref_rand)
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
+    @pytest.mark.skip(reason="This test is covered by Aesara")
     def test_lognormal(self):
         def ref_rand(size, mu, tau):
             return np.exp(mu + (tau ** -0.5) * st.norm.rvs(loc=0.0, scale=1.0, size=size))
@@ -888,14 +887,14 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(pm.ExGaussian, {"mu": R, "sigma": Rplus, "nu": Rplus}, ref_rand=ref_rand)
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
+    @pytest.mark.skip(reason="This test is covered by Aesara")
     def test_vonmises(self):
         def ref_rand(size, mu, kappa):
-            return st.vonmises.rvs(size=size, loc=mu, kappa=kappa)
+            x = st.vonmises.rvs(size=size, loc=mu, kappa=kappa)
 
         pymc3_random(pm.VonMises, {"mu": R, "kappa": Rplus}, ref_rand=ref_rand)
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
+    @pytest.mark.skip(reason="This test is covered by Aesara")
     def test_triangular(self):
         def ref_rand(size, lower, upper, c):
             scale = upper - lower
@@ -933,11 +932,34 @@ class TestScalarParameterSamples(SeededTest):
     def _beta_bin(self, n, alpha, beta, size=None):
         return st.binom.rvs(n, st.beta.rvs(a=alpha, b=beta, size=size))
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
+    @pytest.mark.skip(reason="This test is covered by Aesara")
+    def test_bernoulli(self):
+        pymc3_random_discrete(
+            pm.Bernoulli, {"p": Unit}, ref_rand=lambda size, p=None: st.bernoulli.rvs(p, size=size)
+        )
+
+    @pytest.mark.skip(reason="This test is covered by Aesara")
+    def test_poisson(self):
+        pymc3_random_discrete(pm.Poisson, {"mu": Rplusbig}, size=500, ref_rand=st.poisson.rvs)
+
+    @pytest.mark.skip(reason="This test is covered by Aesara")
+    def test_negative_binomial(self):
+        def ref_rand(size, alpha, mu):
+            return st.nbinom.rvs(alpha, alpha / (mu + alpha), size=size)
+
+        pymc3_random_discrete(
+            pm.NegativeBinomial,
+            {"mu": Rplusbig, "alpha": Rplusbig},
+            size=100,
+            fails=50,
+            ref_rand=ref_rand,
+        )
+
+    @pytest.mark.skip(reason="This test is covered by Aesara")
     def test_geometric(self):
         pymc3_random_discrete(pm.Geometric, {"p": Unit}, size=500, fails=50, ref_rand=nr.geometric)
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
+    @pytest.mark.skip(reason="This test is covered by Aesara")
     def test_hypergeometric(self):
         def ref_rand(size, N, k, n):
             return st.hypergeom.rvs(M=N, n=k, N=n, size=size)
@@ -972,6 +994,22 @@ class TestScalarParameterSamples(SeededTest):
         pymc3_random_discrete(
             pm.DiscreteWeibull, {"q": Unit, "beta": Rplusdunif}, ref_rand=ref_rand
         )
+
+    # TODO: Remove wasteful test
+    def test_weibull(self):
+        def ref_rand(size, alpha, beta):
+            u = np.random.uniform(size=size)
+            return beta * np.power(-np.log(u), 1 / alpha)
+
+        pymc3_random(pm.Weibull, {"alpha": Rplusbig, "beta": Rplusbig}, ref_rand=ref_rand)
+
+    @pytest.mark.skip(reason="This test is covered by Aesara")
+    @pytest.mark.parametrize("s", [2, 3, 4])
+    def test_categorical_random(self, s):
+        def ref_rand(size, p):
+            return nr.choice(np.arange(p.shape[0]), p=p, size=size)
+
+        pymc3_random_discrete(pm.Categorical, {"p": Simplex(s)}, ref_rand=ref_rand)
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_constant_dist(self):
@@ -1940,3 +1978,115 @@ class TestMvGaussianRandomWalk(SeededTest):
             prior = pm.sample_prior_predictive(samples=sample_shape)
 
         assert prior["mv"].shape == to_tuple(sample_shape) + dist_shape
+
+
+def test_exponential_parameterization():
+    test_lambda = floatX(10.0)
+
+    exp_pymc = pm.Exponential.dist(lam=test_lambda)
+    (rv_scale,) = exp_pymc.owner.inputs[3:]
+
+    npt.assert_almost_equal(rv_scale.eval(), 1 / test_lambda)
+
+
+def test_gamma_parameterization():
+
+    test_alpha = floatX(10.0)
+    test_beta = floatX(100.0)
+
+    gamma_pymc = pm.Gamma.dist(alpha=test_alpha, beta=test_beta)
+    rv_alpha, rv_inv_beta = gamma_pymc.owner.inputs[3:]
+
+    assert np.array_equal(rv_alpha.eval(), test_alpha)
+
+    decimal = select_by_precision(float64=6, float32=3)
+
+    npt.assert_almost_equal(rv_inv_beta.eval(), 1.0 / test_beta, decimal)
+
+    test_mu = test_alpha / test_beta
+    test_sigma = np.sqrt(test_mu / test_beta)
+
+    gamma_pymc = pm.Gamma.dist(mu=test_mu, sigma=test_sigma)
+    rv_alpha, rv_inv_beta = gamma_pymc.owner.inputs[3:]
+
+    npt.assert_almost_equal(rv_alpha.eval(), test_alpha, decimal)
+    npt.assert_almost_equal(rv_inv_beta.eval(), 1.0 / test_beta, decimal)
+
+
+def test_geometric_parameterization():
+    test_p = floatX(0.9)
+
+    geom_pymc = pm.Geometric.dist(p=test_p)
+    (rv_p,) = geom_pymc.owner.inputs[3:]
+
+    npt.assert_almost_equal(rv_p.eval(), test_p)
+
+
+def test_hypergeometric_parameterization():
+    test_N = intX(20.0)
+    test_k = intX(12.0)
+    test_n = intX(5)
+
+    hypergeom_pymc = pm.HyperGeometric.dist(N=test_N, k=test_k, n=test_n)
+    rv_good, rv_bad, rv_sample = hypergeom_pymc.owner.inputs[3:]
+
+    npt.assert_almost_equal(rv_good.eval(), test_k)
+    npt.assert_almost_equal(rv_bad.eval(), test_N - test_k)
+    npt.assert_almost_equal(rv_sample.eval(), test_n)
+
+
+def test_logistic_parameterization():
+    test_mu = floatX(1.0)
+    test_s = floatX(2)
+
+    logistic_pymc = pm.Logistic.dist(mu=test_mu, s=test_s)
+    rv_loc, rv_scale = logistic_pymc.owner.inputs[3:]
+
+    npt.assert_almost_equal(rv_loc.eval(), test_mu)
+    npt.assert_almost_equal(rv_scale.eval(), test_s)
+
+
+def test_lognormal_parameterization():
+    test_mu = floatX(1.0)
+    test_tau = floatX(5)
+
+    lognormal_pymc = pm.Lognormal.dist(mu=test_mu, tau=test_tau)
+    rv_loc, rv_scale = lognormal_pymc.owner.inputs[3:]
+
+    npt.assert_almost_equal(rv_loc.eval(), test_mu)
+    npt.assert_almost_equal(rv_scale.eval(), test_tau ** -0.5)
+
+
+def test_triangular_parameterization():
+    test_lower = floatX(0)
+    test_upper = floatX(1)
+    test_c = float(0.5)
+
+    triang_pymc = pm.Triangular.dist(lower=test_lower, upper=test_upper, c=test_c)
+    rv_left, rv_mode, rv_right = triang_pymc.owner.inputs[3:]
+
+    npt.assert_almost_equal(rv_left.eval(), test_lower)
+    npt.assert_almost_equal(rv_mode.eval(), test_c)
+    npt.assert_almost_equal(rv_right.eval(), test_upper)
+
+
+def test_vonmises_parameterization():
+    test_mu = floatX(-2.1)
+    test_kappa = floatX(5)
+
+    vonmises_pymc = pm.VonMises.dist(mu=test_mu, kappa=test_kappa)
+    rv_mu, rv_kappa = vonmises_pymc.owner.inputs[3:]
+
+    npt.assert_almost_equal(rv_mu.eval(), test_mu)
+    npt.assert_almost_equal(rv_kappa.eval(), test_kappa)
+
+
+def test_weibull_parameterization():
+    test_alpha = floatX(1)
+    test_beta = floatX(2)
+
+    weibull_pymc = pm.Weibull.dist(alpha=test_alpha, beta=test_beta)
+    rv_alpha, rv_beta = weibull_pymc.owner.inputs[3:]
+
+    npt.assert_almost_equal(rv_alpha.eval(), test_alpha)
+    npt.assert_almost_equal(rv_beta.eval(), test_beta)

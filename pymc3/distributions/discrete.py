@@ -21,6 +21,8 @@ from aesara.tensor.random.basic import (
     bernoulli,
     binomial,
     categorical,
+    geometric,
+    hypergeometric,
     nbinom,
     poisson,
 )
@@ -833,32 +835,14 @@ class Geometric(Discrete):
         Probability of success on an individual trial (0 < p <= 1).
     """
 
-    def __init__(self, p, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.p = p = at.as_tensor_variable(floatX(p))
-        self.mode = 1
+    rv_op = geometric
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from Geometric distribution.
+    @classmethod
+    def dist(cls, p, *args, **kwargs):
+        p = at.as_tensor_variable(floatX(p))
+        return super().dist([p], *args, **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # p = draw_values([self.p], point=point, size=size)[0]
-        # return generate_samples(np.random.geometric, p, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(value, p):
         r"""
         Calculate log-probability of Geometric distribution at specified value.
 
@@ -872,10 +856,14 @@ class Geometric(Discrete):
         -------
         TensorVariable
         """
-        p = self.p
-        return bound(at.log(p) + logpow(1 - p, value - 1), 0 <= p, p <= 1, value >= 1)
+        return bound(
+            at.log(p) + logpow(1 - p, value - 1),
+            0 <= p,
+            p <= 1,
+            value >= 1,
+        )
 
-    def logcdf(self, value):
+    def logcdf(value, p):
         """
         Compute the log of the cumulative distribution function for Geometric distribution
         at the specified value.
@@ -890,7 +878,6 @@ class Geometric(Discrete):
         -------
         TensorVariable
         """
-        p = self.p
 
         return bound(
             log1mexp(-at.log1p(-p) * value),
@@ -947,43 +934,16 @@ class HyperGeometric(Discrete):
         Number of samples drawn from the population
     """
 
-    def __init__(self, N, k, n, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.N = intX(N)
-        self.k = intX(k)
-        self.n = intX(n)
-        self.mode = intX(at.floor((n + 1) * (k + 1) / (N + 2)))
+    rv_op = hypergeometric
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from HyperGeometric distribution.
+    @classmethod
+    def dist(cls, N, k, n, *args, **kwargs):
+        good = at.as_tensor_variable(intX(k))
+        bad = at.as_tensor_variable(intX(N - k))
+        n = at.as_tensor_variable(intX(n))
+        return super().dist([good, bad, n], *args, **kwargs)
 
-        Parameters
-        ----------
-        point : dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size : int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-
-        # N, k, n = draw_values([self.N, self.k, self.n], point=point, size=size)
-        # return generate_samples(self._random, N, k, n, dist_shape=self.shape, size=size)
-
-    def _random(self, M, n, N, size=None):
-        r"""Wrapper around scipy stat's hypergeom.rvs"""
-        try:
-            samples = stats.hypergeom.rvs(M=M, n=n, N=N, size=size)
-            return samples
-        except ValueError:
-            raise ValueError("Domain error in arguments")
-
-    def logp(self, value):
+    def logp(value, good, bad, n):
         r"""
         Calculate log-probability of HyperGeometric distribution at specified value.
 
@@ -997,11 +957,8 @@ class HyperGeometric(Discrete):
         -------
         TensorVariable
         """
-        N = self.N
-        k = self.k
-        n = self.n
-        tot, good = N, k
-        bad = tot - good
+
+        tot = good + bad
         result = (
             betaln(good + 1, 1)
             + betaln(bad + 1, 1)
@@ -1011,11 +968,11 @@ class HyperGeometric(Discrete):
             - betaln(tot + 1, 1)
         )
         # value in [max(0, n - N + k), min(k, n)]
-        lower = at.switch(at.gt(n - N + k, 0), n - N + k, 0)
-        upper = at.switch(at.lt(k, n), k, n)
+        lower = at.switch(at.gt(n - tot + good, 0), n - tot + good, 0)
+        upper = at.switch(at.lt(good, n), good, n)
         return bound(result, lower <= value, value <= upper)
 
-    def logcdf(self, value):
+    def logcdf(value, good, bad, n):
         """
         Compute the log of the cumulative distribution function for HyperGeometric distribution
         at the specified value.
@@ -1035,23 +992,24 @@ class HyperGeometric(Discrete):
                 f"HyperGeometric.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
+        N = good + bad
         # TODO: Use lower upper in locgdf for smarter logsumexp?
-        N = self.N
-        n = self.n
-        k = self.k
         safe_lower = at.switch(at.lt(value, 0), value, 0)
 
         return bound(
             at.switch(
                 at.lt(value, n),
-                logsumexp(self.logp(at.arange(safe_lower, value + 1)), keepdims=False),
+                logsumexp(
+                    HyperGeometric.logp(at.arange(safe_lower, value + 1), good, bad, n),
+                    keepdims=False,
+                ),
                 0,
             ),
             0 <= value,
             0 < N,
-            0 <= k,
+            0 <= good,
             0 <= n,
-            k <= N,
+            good <= N,
             n <= N,
         )
 
