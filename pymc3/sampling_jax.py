@@ -47,7 +47,7 @@ def sample_tfp_nuts(
 
     seed = jax.random.PRNGKey(random_seed)
 
-    fgraph = aesara.graph.fg.FunctionGraph(model.free_RVs, [model.logpt])
+    fgraph = model.logp.f.maker.fgraph
     fns = jax_funcify(fgraph)
     logp_fn_jax = fns[0]
 
