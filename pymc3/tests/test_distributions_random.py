@@ -426,7 +426,6 @@ class TestBernoulli(BaseTestCases.BaseTestCase):
     params = {"p": 0.5}
 
 
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestDiscreteWeibull(BaseTestCases.BaseTestCase):
     distribution = pm.DiscreteWeibull
     params = {"q": 0.25, "beta": 2.0}
@@ -784,7 +783,6 @@ class TestScalarParameterSamples(SeededTest):
             pm.DiscreteUniform, {"lower": -NatSmall, "upper": NatSmall}, ref_rand=ref_rand
         )
 
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_discrete_weibull(self):
         def ref_rand(size, q, beta):
             u = np.random.uniform(size=size)
