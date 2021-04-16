@@ -309,7 +309,7 @@ class TestDataPyMC3:
         assert "y_missing" in model.named_vars
 
         test_dict = {
-            "posterior": ["x", "y", "y_missing"],
+            "posterior": ["x", "y_missing"],
             "observed_data": ["y_observed"],
             "log_likelihood": ["y_observed"],
         }
