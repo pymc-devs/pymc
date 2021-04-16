@@ -66,6 +66,7 @@ from pymc3.distributions.dist_math import (
 from pymc3.distributions.distribution import Continuous
 from pymc3.distributions.special import log_i0
 from pymc3.math import invlogit, log1mexp, log1pexp, logdiffexp, logit
+from pymc3.util import UNSET
 
 __all__ = [
     "Uniform",
@@ -111,10 +112,6 @@ class UnitContinuous(Continuous):
     """Base class for continuous distributions on [0,1]"""
 
 
-class BoundedContinuous(Continuous):
-    """Base class for bounded continuous distributions"""
-
-
 class CircularContinuous(Continuous):
     """Base class for circular continuous distributions"""
 
@@ -129,31 +126,36 @@ def unit_cont_transform(op):
     return transforms.logodds
 
 
-@logp_transform.register(BoundedContinuous)
-def bounded_cont_transform(op):
-    def transform_params(rv_var):
-        _, _, _, *args = rv_var.owner.inputs
-        if hasattr(op, "bound_args"):
-            # Use explicit argument position for lower and upper bound
-            # TODO: Enforce this for all bounded rvs?
-            lower = args[op.bound_args[0]]
-            upper = args[op.bound_args[1]]
-        else:
-            # Assume first argument is lower bound and second is upper bound
-            # Will fail if number of arguments is different than 2
-            lower, upper = args
-
-        print(lower.eval(), upper.eval())
-        lower = at.as_tensor_variable(lower) if lower is not None else None
-        upper = at.as_tensor_variable(upper) if upper is not None else None
-        return lower, upper
-
-    return transforms.interval(transform_params)
-
-
 @logp_transform.register(CircularContinuous)
 def circ_cont_transform(op):
     return transforms.circular
+
+
+class BoundedContinuous(Continuous):
+    """Base class for bounded continuous distributions"""
+
+    transform_args = None
+
+    def __new__(cls, *args, **kwargs):
+        transform = kwargs.get("transform", UNSET)
+        if transform is UNSET:
+            kwargs["transform"] = cls.default_transform()
+        return super().__new__(cls, *args, **kwargs)
+
+    @classmethod
+    def default_transform(cls):
+        if cls.transform_args is None:
+            raise ValueError(f"Must specify transform args for {cls.__name__} bounded distribution")
+
+        def transform_params(rv_var):
+            _, _, _, *args = rv_var.owner.inputs
+            lower = args[cls.transform_args[0]]
+            upper = args[cls.transform_args[1]]
+            lower = at.as_tensor_variable(lower) if lower is not None else None
+            upper = at.as_tensor_variable(upper) if upper is not None else None
+            return lower, upper
+
+        return transforms.interval(transform_params)
 
 
 def assert_negative_support(var, label, distname, value=-1e-6):
@@ -242,6 +244,7 @@ class Uniform(BoundedContinuous):
         Upper limit.
     """
     rv_op = uniform
+    transform_args = [0, 1]  # Lower, Upper
 
     @classmethod
     def dist(cls, lower=0, upper=1, **kwargs):
@@ -3335,7 +3338,7 @@ class Triangular(BoundedContinuous):
     """
 
     rv_op = triangular
-    rv_op.bound_args = [0, 2]  # TODO: Find less hacking solution?
+    transform_args = [0, 2]  # lower, upper
 
     @classmethod
     def dist(cls, lower=0, upper=1, c=0.5, *args, **kwargs):

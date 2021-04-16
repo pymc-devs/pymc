@@ -109,13 +109,6 @@ class DistributionMeta(ABCMeta):
                     value_var = rvs_to_values.get(var, var)
                     return class_logcdf(value_var, *dist_params, **kwargs)
 
-            # class_transform = clsdict.get("transform")
-            # if class_transform:
-            #
-            #     @logp_transform.register(rv_type)
-            #     def transform(op, *args, **kwargs):
-            #         return class_transform(*args, **kwargs)
-
             # Register the Aesara `RandomVariable` type as a subclass of this
             # `Distribution` type.
             new_cls.register(rv_type)
