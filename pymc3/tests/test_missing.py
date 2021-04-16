@@ -80,10 +80,10 @@ def test_missing_dual_observations():
         prior_trace = sample_prior_predictive()
         assert {"beta1", "beta2", "theta", "o1", "o2"} <= set(prior_trace.keys())
         # TODO: Assert something
-        trace = sample(chains=1)
+        trace = sample(chains=1, draws=50)
 
 
-def test_internal_missing_observations():
+def test_interval_missing_observations():
     with Model() as model:
         obs1 = ma.masked_values([1, 2, -1, 4, -1], value=-1)
         obs2 = ma.masked_values([-1, -1, 6, -1, 8], value=-1)
@@ -109,8 +109,8 @@ def test_internal_missing_observations():
         assert prior_trace["theta2"].shape[-1] == obs2.shape[0]
 
         # Make sure that the observed values are newly generated samples
-        assert np.var(prior_trace["theta1_observed"]) > 0.0
-        assert np.var(prior_trace["theta2_observed"]) > 0.0
+        assert np.all(np.var(prior_trace["theta1_observed"], 0) > 0.0)
+        assert np.all(np.var(prior_trace["theta2_observed"], 0) > 0.0)
 
         # Make sure the missing parts of the combined deterministic matches the
         # sampled missing and observed variable values
@@ -121,7 +121,7 @@ def test_internal_missing_observations():
 
         assert {"theta1", "theta2"} <= set(prior_trace.keys())
 
-        trace = sample(chains=1)
+        trace = sample(chains=1, draws=50, compute_convergence_checks=False)
 
         assert np.all(0 < trace["theta1_missing"].mean(0))
         assert np.all(0 < trace["theta2_missing"].mean(0))

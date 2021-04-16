@@ -60,7 +60,7 @@ def find_hessian(point, vars=None, model=None):
     """
     model = modelcontext(model)
     H = model.fastd2logp(vars)
-    return H(Point(point, model=model))
+    return H(Point(point, filter_model_vars=True, model=model))
 
 
 def find_hessian_diag(point, vars=None, model=None):
