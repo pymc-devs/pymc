@@ -32,8 +32,15 @@ def sample_nfmc(
     draws=500,
     init_method='prior',
     init_samples=None,
+    start=None,
     absEL2O=1e-10,
     fracEL2O=1e-2,
+    scipy_map_method='L-BFGS-B',
+    adam_lr=1e-3,
+    adam_b1=0.9,
+    adam_b2=0.999,
+    adam_eps=1.0e-8,
+    adam_steps=1000,    
     pareto=False,
     local_thresh=3,
     local_step_size=0.1,
@@ -146,8 +153,15 @@ def sample_nfmc(
         draws,
         init_method,
         init_samples,
+        start,
         absEL2O,
         fracEL2O,
+        scipy_map_method,
+        adam_lr,
+        adam_b1,
+        adam_b2,
+        adam_eps,
+        adam_steps,
         pareto,
         local_thresh,
         local_step_size,
@@ -212,8 +226,15 @@ def sample_nfmc_int(
     draws,
     init_method,
     init_samples,
+    start,
     absEL2O,
     fracEL2O,
+    scipy_map_method,
+    adam_lr,
+    adam_b1,
+    adam_b2,
+    adam_eps,
+    adam_steps,
     pareto,
     local_thresh,
     local_step_size,
@@ -259,8 +280,15 @@ def sample_nfmc_int(
         model=model,
         init_method=init_method,
         init_samples=init_samples,
+        start=start,
         absEL2O=absEL2O,
         fracEL2O=fracEL2O,
+        scipy_map_method=scipy_map_method,
+        adam_lr=adam_lr,
+        adam_b1=adam_b1,
+        adam_b2=adam_b2,
+        adam_eps=adam_eps,
+        adam_steps=adam_steps,
         pareto=pareto,
         local_thresh=local_thresh,
         local_step_size=local_step_size,
@@ -293,6 +321,10 @@ def sample_nfmc_int(
         patch=patch,
         shape=shape,
     )
+
+    iter_sample_dict = {}
+    iter_weight_dict = {}
+    
     stage = 1
     nfmc.initialize_var_info()
     nfmc.setup_logp()
@@ -306,10 +338,16 @@ def sample_nfmc_int(
         nfmc.run_el2o()
     elif init_method == 'lbfgs' or init_method == 'map+laplace':
         print(f'Using {init_method} to initialize.')
-        nfmc.initialize_lbfgs()
+        nfmc.initialize_map_hess()
+    elif init_method == 'adam':
+        print(f'Using ADAM optimization to intialize (Jax implementation).')
+        nfmc.adam_map_hess()
     else:
-        raise ValueError('init_method must be one of: prior, full_rank, lbfgs or map+laplace.')
+        raise ValueError('init_method must be one of: prior, full_rank, lbfgs, adam or map+laplace.')
 
+    iter_sample_dict['q_init0'] = nfmc.nf_samples
+    iter_weight_dict['q_init0'] = nfmc.weights
+    
     '''
     # Run the optimization ...
     print('Running initial optimization ...')
@@ -335,6 +373,8 @@ def sample_nfmc_int(
         print(f'Using local exploration to improve the SINF initialization for {nf_local_iter} iterations.')
         for j in range(nf_local_iter):
             nfmc.fit_nf()
+            iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_samples
+            iter_weight_dict[f'q_init{int(j + 1)}'] = nfmc.weights
         print('Re-initializing SINF fits using samples from latest iteration after local exploration.')
         nfmc.reinitialize_nf()
 
@@ -351,9 +391,13 @@ def sample_nfmc_int(
             _log.info(f"Stage: {stage:3d}, Normalizing Constant Estimate: {nfmc.evidence}")
 
         nfmc.fit_nf()
+        iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_samples
+        iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
         stage += 1
         if np.abs((iter_evidence - nfmc.evidence) / nfmc.evidence) <= norm_tol:
             print(f"Stage: {stage:3d}, Normalizing Constant Estimate: {nfmc.evidence}")
+            iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_samples
+            iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
             print("Normalizing constant estimate has stabilised - ending NF fits.")
             break
         iter_evidence = 1.0 * nfmc.evidence
@@ -362,11 +406,12 @@ def sample_nfmc_int(
         nfmc.final_nf()
     elif not full_local:
         nfmc.resample()
+    iter_sample_dict['posterior'] = nfmc.posterior
 
     return (
         nfmc.posterior_to_trace(),
         nfmc.evidence,
-        nfmc.weighted_samples,
-        nfmc.importance_weights,
+        iter_sample_dict,
+        iter_weight_dict,
         nfmc.all_logq,
     )

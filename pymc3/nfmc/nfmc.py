@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 from collections import OrderedDict
+import copy
 
 import numpy as np
 import theano.tensor as tt
@@ -24,13 +25,12 @@ from theano import function as theano_function
 import arviz as az
 import jax
 import jax.numpy as jnp
-
-# This is temporary, until I've turned it into a full variational method.
-#from pymc3.el2o.el2o_basic import *
+from jax.experimental import optimizers as jax_optimizers
 
 from pymc3.tuning.scaling import find_hessian
 from pymc3.tuning.starting import find_MAP
 from pymc3.backends.ndarray import NDArray
+from pymc3.blocking import ArrayOrdering, DictToArrayBijection
 from pymc3.model import Point, modelcontext
 from pymc3.sampling import sample_prior_predictive
 from pymc3.theanof import (
@@ -41,6 +41,14 @@ from pymc3.theanof import (
     gradient,
     hessian,
 )
+from pymc3.util import (
+    check_start_vals,
+    get_default_varnames,
+    get_var_name,
+    update_start_vals,
+)
+from pymc3.vartypes import discrete_types, typefilter
+
 
 # SINF code for fitting the normalizing flow.
 from pymc3.sinf.GIS import GIS
@@ -60,8 +68,15 @@ class NFMC:
         model=None,
         init_method='prior',
         init_samples=None,
+        start=None,
         absEL2O=1e-10,
         fracEL2O=1e-2,
+        scipy_map_method='L-BFGS-B',
+        adam_lr=1e-3,
+        adam_b1=0.9,
+        adam_b2=0.999,
+        adam_eps=1.0e-8,
+        adam_steps=1000,
         pareto=False,
         local_thresh=3,
         local_step_size=0.1,
@@ -97,19 +112,34 @@ class NFMC:
 
         self.draws = draws
         self.model = model
+
+        # Init method params.
         self.init_method = init_method
         self.init_samples = init_samples
-        self.absEL2O = 1e-10
-        self.fracEL2O = 1e-2
-        self.pareto = pareto,
+        self.start = start
+        self.absEL2O = absEL2O
+        self.fracEL2O = fracEL2O
+        self.scipy_map_method = scipy_map_method
+        self.adam_lr = adam_lr
+        self.adam_b1 = adam_b1
+        self.adam_b2 = adam_b2
+        self.adam_eps = adam_eps
+        self.adam_steps = adam_steps
+        
+        self.pareto = pareto
+
+        # Local exploration params.
         self.local_thresh = local_thresh
         self.local_step_size = local_step_size
         self.local_grad = local_grad
         self.init_local = init_local
         self.nf_local_iter = nf_local_iter
         self.max_line_search = max_line_search
+
         self.random_seed = random_seed
         self.chain = chain
+
+        # Separating out so I can keep track. These are SINF params.
         self.frac_validate = frac_validate
         self.iteration = iteration
         self.alpha = alpha
@@ -232,11 +262,92 @@ class NFMC:
     def optimize(self, sample):
         """Optimize the prior samples"""
         self.optim_iter_samples = np.array([sample])
-        minimize(self.optim_target_logp, x0=sample, method='L-BFGS-B',
+        minimize(self.optim_target_logp, x0=sample, method=self.scipy_map_method,
                  options={'maxiter': self.optim_iter, 'ftol': self.ftol, 'gtol': self.gtol},
                  jac=self.optim_target_dlogp, callback=self.callback)
         return self.optim_iter_samples 
 
+    def optimization_start(self):
+        """Setup for optimization starting point."""
+        disc_vars = list(typefilter(self.variables, discrete_types))
+        allinmodel(self.variables, self.model)
+        self.start = copy.deepcopy(self.start)
+        if self.start is None:
+            self.start = self.model.test_point
+        else:
+            update_start_vals(self.start, self.model.test_point, self.model)
+        check_start_vals(self.start, self.model)
+
+        self.start = Point(self.start, model=self.model)
+        self.bij = DictToArrayBijection(ArrayOrdering(self.variables), self.start)
+        self.start = self.bij.map(self.start)
+        print(self.start)
+    
+    def update_adam(self, step, opt_state, opt_update, get_params):
+        """Jax implemented ADAM update."""
+        params = np.asarray(get_params(opt_state)).astype(np.float64)
+        params = params.reshape(-1, len(params))
+        value = self.target_logp(params)
+        grads = -1 * jnp.asarray(self.target_dlogp(params))
+        opt_state = opt_update(step, grads, opt_state)
+        update_params = np.asarray(get_params(opt_state)).astype(np.float64)
+        update_params = update_params.reshape(-1, len(update_params))
+        return value, opt_state, update_params
+
+    def adam_map_hess(self):
+        """Use ADAM to find the MAP solution."""
+        self.optimization_start()
+        opt_init, opt_update, get_params = jax_optimizers.adam(step_size=self.adam_lr, b1=self.adam_b1,
+                                                               b2=self.adam_b2, eps=self.adam_eps)
+        opt_state = opt_init(self.start)
+
+        for i in range(self.adam_steps):
+            value, opt_state, update_params = self.update_adam(i, opt_state, opt_update, get_params)
+            target_diff = np.abs((value - self.target_logp(update_params)) / max(value, self.target_logp(update_params)))
+            if target_diff <= self.ftol:
+                print(f'ADAM converged at step {i}')
+                break
+        self.mu_map = update_params.squeeze()
+        print(f'ADAM map solution = {self.mu_map}')
+        self.hess_inv = np.linalg.inv(self.target_hessian(self.mu_map.reshape(-1, len(self.mu_map))))
+        if not np.all(np.linalg.eigvals(self.hess_inv) > 0):
+            print(f'Autodiff Hessian is not positive semi-definite. Building Hessian with L-BFGS run starting from ADAM MAP.')
+            vars = get_default_varnames(self.model.unobserved_RVs, include_transformed=False)
+            adam_map_start = {var.name: value for var, value in zip(vars, self.model.fastfn(vars)(self.bij.rmap(self.mu_map)))}
+            self.map_dict, self.scipy_opt = find_MAP(start=adam_map_start, model=self.model, method=self.scipy_map_method, return_raw=True)
+            self.mu_map = np.array([])
+            for v in self.variables:
+                self.mu_map = np.append(self.mu_map, self.map_dict[v.name])
+            self.hess_inv = self.scipy_opt.hess_inv.todense()
+        print(f'Final MAP solution = {self.mu_map}')
+        print(f'Inverse Hessian at MAP = {self.hess_inv}')
+
+        self.weighted_samples = np.random.multivariate_normal(self.mu_map, self.hess_inv, size=self.draws)
+        self.nf_samples = np.copy(self.weighted_samples)
+        self.get_posterior_logp()
+        log_weight = self.posterior_logp - multivariate_normal.logpdf(self.nf_samples, self.mu_map.squeeze(), self.hess_inv)
+        self.evidence = np.mean(np.exp(log_weight))
+
+        if self.pareto:
+            psiw = az.psislw(log_weight)
+            self.weights = np.exp(psiw[0])
+        elif not self.pareto:
+            self.weights = np.exp(log_weight)
+            self.weights = np.clip(self.weights, 0, np.mean(self.weights) * len(self.weights)**self.k_trunc)
+
+        self.weights = self.weights / np.sum(self.weights)
+        self.importance_weights = np.copy(self.weights)
+        if self.init_local:
+            self.local_exploration(None, dlogq_func=jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_map, self.hess_inv)))
+            self.importance_weights = np.copy(self.weights)
+            self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
+            self.importance_weights = np.append(self.importance_weights, self.local_weights)
+            self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
+            self.weights = np.append(self.weights, self.local_weights)
+
+        self.all_logq = np.array([])
+        self.nf_models = []
+        
     def local_exploration(self, logq_func=None, dlogq_func=None):
         """Perform local exploration."""
         self.high_iw_idx = np.where(self.weights >= (1 + self.local_thresh) / self.draws)[0]
@@ -316,12 +427,14 @@ class NFMC:
             self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
             self.importance_weights = np.copy(self.weights)
             self.importance_weights = np.append(self.importance_weights, self.local_weights)
-
+            self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
+            self.weights = np.append(self.weights, self.local_weights)
+            
         self.nf_models.append(self.nf_model)
 
-    def initialize_lbfgs(self):
-        """Initialize using L-BFGS optimization and Hessian."""
-        self.map_dict, self.scipy_opt = find_MAP(model=self.model, method='L-BFGS-B', return_raw=True)
+    def initialize_map_hess(self):
+        """Initialize using scipy MAP optimization and Hessian."""
+        self.map_dict, self.scipy_opt = find_MAP(start=self.start, model=self.model, method=self.scipy_map_method, return_raw=True)
         self.mu_map = []
         for v in self.variables:
             self.mu_map.append(self.map_dict[v.name])
@@ -329,6 +442,7 @@ class NFMC:
         print(self.mu_map)
 
         if self.init_method == 'lbfgs':
+            assert self.scipy_map_method == 'L-BFGS-B'
             self.hess_inv = self.scipy_opt.hess_inv.todense()
         if self.init_method == 'map+laplace':
             self.hess_inv = np.linalg.inv(self.target_hessian(self.mu_map.reshape(-1, len(self.mu_map))))
@@ -353,6 +467,8 @@ class NFMC:
             self.importance_weights = np.copy(self.weights)
             self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
             self.importance_weights = np.append(self.importance_weights, self.local_weights)
+            self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
+            self.weights = np.append(self.weights, self.local_weights)
             
         self.all_logq = np.array([])
         self.nf_models = []
@@ -363,7 +479,7 @@ class NFMC:
 
     def get_map_laplace(self):
         """Find the MAP+Laplace solution for the model."""
-        self.map_dict = find_MAP(model=self.model, method='L-BFGS-B')
+        self.map_dict = find_MAP(start=self.start, model=self.model, method=self.scipy_map_method)
         self.mu_map = []
         for v in self.variables:
             self.mu_map.append(self.map_dict[v.name])
@@ -425,7 +541,9 @@ class NFMC:
             self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
             self.importance_weights = np.copy(self.weights)
             self.importance_weights = np.append(self.importance_weights, self.local_weights)
-
+            self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
+            self.weights = np.append(self.weights, self.local_weights)
+            
         self.all_logq = np.array([])
         self.nf_models = []
 
@@ -467,6 +585,8 @@ class NFMC:
             self.weighted_samples = np.append(self.weighted_samples, self.local_samples, axis=0)
             self.importance_weights[-len(self.weights):] = self.weights
             self.importance_weights = np.append(self.importance_weights, self.local_weights)
+            self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
+            self.weights = np.append(self.weights, self.local_weights)
             
         self.nf_models.append(self.nf_model)
 
@@ -558,133 +678,8 @@ def logp_forw(out_vars, vars, shared):
     f.trust_input = True
     return f
 
-'''
-def callback(xk):
-    """Function used as a callback during optimization steps.
-    
-    Parameters
-    ----------
-    xk: Array
-        Array containing the current parameter vector for the given optimization step.
-    """
-    optim_iter_samples = np.append(optim_iter_samples, np.array([xk]), axis=0)
-'''
-
-
-'''
-
-# RG: Not going to worry about simulation based inference for now - just stick with analytic likelihoods.
-
-class PseudoLikelihood:
-    """
-    Pseudo Likelihood.
-
-    epsilon: float
-        Standard deviation of the gaussian pseudo likelihood.
-    observations: array-like
-        observed data
-    function: python function
-        data simulator
-    params: list
-        names of the variables parameterizing the simulator.
-    model: PyMC3 model
-    var_info: dict
-        generated by ``SMC.initialize_population``
-    variables: list
-        Model variables.
-    distance : str or callable
-        Distance function.
-    sum_stat: str or callable
-        Summary statistics.
-    size : int
-        Number of simulated datasets to save. When this number is exceeded the counter will be
-        restored to zero and it will start saving again.
-    save_sim_data : bool
-        whether to save or not the simulated data.
-    save_log_pseudolikelihood : bool
-        whether to save or not the log pseudolikelihood values.
-    """
-
-    def __init__(
-        self,
-        epsilon,
-        observations,
-        function,
-        params,
-        model,
-        var_info,
-        variables,
-        distance,
-        sum_stat,
-        size,
-        save_sim_data,
-        save_log_pseudolikelihood,
-    ):
-        self.epsilon = epsilon
-        self.function = function
-        self.params = params
-        self.model = model
-        self.var_info = var_info
-        self.variables = variables
-        self.varnames = [v.name for v in self.variables]
-        self.distance = distance
-        self.sum_stat = sum_stat
-        self.unobserved_RVs = [v.name for v in self.model.unobserved_RVs]
-        self.get_unobserved_fn = self.model.fastfn(self.model.unobserved_RVs)
-        self.size = size
-        self.save_sim_data = save_sim_data
-        self.save_log_pseudolikelihood = save_log_pseudolikelihood
-        self.sim_data_l = []
-        self.lpl_l = []
-
-        self.observations = self.sum_stat(observations)
-
-    def posterior_to_function(self, posterior):
-        """Turn posterior samples into function parameters to feed the simulator."""
-        model = self.model
-        var_info = self.var_info
-
-        varvalues = []
-        samples = {}
-        size = 0
-        for var in self.variables:
-            shape, new_size = var_info[var.name]
-            varvalues.append(posterior[size : size + new_size].reshape(shape))
-            size += new_size
-        point = {k: v for k, v in zip(self.varnames, varvalues)}
-        for varname, value in zip(self.unobserved_RVs, self.get_unobserved_fn(point)):
-            if varname in self.params:
-                samples[varname] = value
-        return samples
-
-    def save_data(self, sim_data):
-        """Save simulated data."""
-        if len(self.sim_data_l) == self.size:
-            self.sim_data_l = []
-        self.sim_data_l.append(sim_data)
-
-    def get_data(self):
-        """Get simulated data."""
-        return np.array(self.sim_data_l)
-
-    def save_lpl(self, elemwise):
-        """Save log pseudolikelihood values."""
-        if len(self.lpl_l) == self.size:
-            self.lpl_l = []
-        self.lpl_l.append(elemwise)
-
-    def get_lpl(self):
-        """Get log pseudolikelihood values."""
-        return np.array(self.lpl_l)
-
-    def __call__(self, posterior):
-        """Compute the pseudolikelihood."""
-        func_parameters = self.posterior_to_function(posterior)
-        sim_data = self.function(**func_parameters)
-        if self.save_sim_data:
-            self.save_data(sim_data)
-        elemwise = self.distance(self.epsilon, self.observations, self.sum_stat(sim_data))
-        if self.save_log_pseudolikelihood:
-            self.save_lpl(elemwise)
-        return elemwise.sum()
-'''
+def allinmodel(vars, model):
+    notin = [v for v in vars if v not in model.vars]
+    if notin:
+        notin = list(map(get_var_name, notin))
+        raise ValueError("Some variables not in the model: " + str(notin))
