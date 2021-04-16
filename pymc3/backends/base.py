@@ -61,17 +61,7 @@ class BaseTrace(ABC):
         model = modelcontext(model)
         self.model = model
         if vars is None:
-            vars = []
-            for v in model.unobserved_RVs:
-                var = getattr(v.tag, "value_var", v)
-                transform = getattr(var.tag, "transform", None)
-                if transform:
-                    # We need to create and add an un-transformed version of
-                    # each transformed variable
-                    untrans_var = transform.backward(v, var)
-                    untrans_var.name = v.name
-                    vars.append(untrans_var)
-                vars.append(var)
+            vars = model.unobserved_value_vars
 
         self.vars = vars
         self.varnames = [var.name for var in vars]

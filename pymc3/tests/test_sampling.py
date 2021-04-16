@@ -1098,3 +1098,12 @@ class TestSamplePosteriorPredictive:
         idat = pm.to_inference_data(trace)
         with pmodel:
             pp = pm.sample_posterior_predictive(idat.posterior, var_names=["d"])
+
+
+def test_sample_deterministic():
+    with pm.Model() as model:
+        x = pm.HalfNormal("x", 1)
+        y = pm.Deterministic("y", x + 100)
+        trace = pm.sample(chains=1, draws=50, compute_convergence_checks=False)
+
+    np.testing.assert_allclose(trace["y"], trace["x"] + 100)
