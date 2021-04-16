@@ -790,6 +790,29 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return [self.rvs_to_values[v] for v in self.free_RVs]
 
     @property
+    def unobserved_value_vars(self):
+        """List of all random variables (including untransformed projections),
+        as well as deterministics used as inputs and outputs of the the model's
+        log-likelihood graph
+        """
+        vars = []
+        for rv in self.free_RVs:
+            value_var = self.rvs_to_values[rv]
+            transform = getattr(value_var.tag, "transform", None)
+            if transform is not None:
+                # We need to create and add an un-transformed version of
+                # each transformed variable
+                untrans_value_var = transform.backward(rv, value_var)
+                untrans_value_var.name = rv.name
+                vars.append(untrans_value_var)
+            vars.append(value_var)
+
+        # Remove rvs from deterministics graph
+        deterministics, _ = rvs_to_value_vars(self.deterministics, apply_transforms=True)
+
+        return vars + deterministics
+
+    @property
     def basic_RVs(self):
         """List of random variables the model is defined in terms of
         (which excludes deterministics).
@@ -803,7 +826,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def unobserved_RVs(self):
-        """List of all random variable, including deterministic ones.
+        """List of all random variables, including deterministic ones.
 
         These are the actual random variable terms that make up the
         "sample-space" graph (i.e. you can sample these graphs by compiling them
@@ -1049,10 +1072,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.add_random_variable(observed_rv_var, dims)
             self.observed_RVs.append(observed_rv_var)
 
+            # Create deterministic that combines observed and missing
             rv_var = at.zeros(data.shape)
             rv_var = at.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
             rv_var = at.set_subtensor(rv_var[antimask_idx], observed_rv_var)
             rv_var = Deterministic(name, rv_var, self, dims)
+
         elif sps.issparse(data):
             data = sparse.basic.as_sparse(data, name=name)
             rv_var.tag.observations = data
