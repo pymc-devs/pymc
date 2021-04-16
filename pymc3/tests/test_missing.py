@@ -12,19 +12,23 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numpy
+import aesara
+import numpy as np
 import pandas as pd
 import pytest
 
-from aesara.tensor.subtensor import AdvancedIncSubtensor
 from numpy import array, ma
 
-from pymc3 import ImputationWarning, Model, Normal, sample, sample_prior_predictive
+from pymc3.distributions.continuous import Gamma, Normal, Uniform
+from pymc3.distributions.transforms import Interval
+from pymc3.exceptions import ImputationWarning
+from pymc3.model import Model
+from pymc3.sampling import sample, sample_prior_predictive
 
 
 @pytest.mark.parametrize(
     "data",
-    [ma.masked_values([1, 2, -1, 4, -1], value=-1), pd.DataFrame([1, 2, numpy.nan, 4, numpy.nan])],
+    [ma.masked_values([1, 2, -1, 4, -1], value=-1), pd.DataFrame([1, 2, np.nan, 4, np.nan])],
 )
 def test_missing(data):
 
@@ -33,10 +37,10 @@ def test_missing(data):
         with pytest.warns(ImputationWarning):
             y = Normal("y", x, 1, observed=data)
 
-    assert isinstance(y.owner.op, AdvancedIncSubtensor)
+    assert "y_missing" in model.named_vars
 
     test_point = model.initial_point
-    assert not numpy.isnan(model.logp(test_point))
+    assert not np.isnan(model.logp(test_point))
 
     with model:
         prior_trace = sample_prior_predictive()
@@ -51,10 +55,10 @@ def test_missing_with_predictors():
         with pytest.warns(ImputationWarning):
             y = Normal("y", x * predictors, 1, observed=data)
 
-    assert isinstance(y.owner.op, AdvancedIncSubtensor)
+    assert "y_missing" in model.named_vars
 
     test_point = model.initial_point
-    assert not numpy.isnan(model.logp(test_point))
+    assert not np.isnan(model.logp(test_point))
 
     with model:
         prior_trace = sample_prior_predictive()
@@ -76,24 +80,62 @@ def test_missing_dual_observations():
         prior_trace = sample_prior_predictive()
         assert {"beta1", "beta2", "theta", "o1", "o2"} <= set(prior_trace.keys())
         # TODO: Assert something
-        sample()
+        trace = sample(chains=1)
 
 
-@pytest.mark.skip(
-    reason="This doesn't make sense in v4, because there are no "
-    "explicit variables to sample.  The missing values are "
-    "implicit random variables."
-)
 def test_internal_missing_observations():
     with Model() as model:
         obs1 = ma.masked_values([1, 2, -1, 4, -1], value=-1)
         obs2 = ma.masked_values([-1, -1, 6, -1, 8], value=-1)
+
+        rng = aesara.shared(np.random.RandomState(2323), borrow=True)
+
         with pytest.warns(ImputationWarning):
-            theta1 = Normal("theta1", mu=2, observed=obs1)
+            theta1 = Uniform("theta1", 0, 5, observed=obs1, rng=rng)
         with pytest.warns(ImputationWarning):
-            theta2 = Normal("theta2", mu=theta1, observed=obs2)
+            theta2 = Normal("theta2", mu=theta1, observed=obs2, rng=rng)
+
+        assert "theta1_observed_interval__" in model.named_vars
+        assert "theta1_missing_interval__" in model.named_vars
+        assert isinstance(
+            model.rvs_to_values[model.named_vars["theta1_observed"]].tag.transform, Interval
+        )
 
         prior_trace = sample_prior_predictive()
+
+        # Make sure the observed + missing combined deterministics have the
+        # same shape as the original observations vectors
+        assert prior_trace["theta1"].shape[-1] == obs1.shape[0]
+        assert prior_trace["theta2"].shape[-1] == obs2.shape[0]
+
+        # Make sure that the observed values are newly generated samples
+        assert np.var(prior_trace["theta1_observed"]) > 0.0
+        assert np.var(prior_trace["theta2_observed"]) > 0.0
+
+        # Make sure the missing parts of the combined deterministic matches the
+        # sampled missing and observed variable values
+        assert np.mean(prior_trace["theta1"][:, obs1.mask] - prior_trace["theta1_missing"]) == 0.0
+        assert np.mean(prior_trace["theta1"][:, ~obs1.mask] - prior_trace["theta1_observed"]) == 0.0
+        assert np.mean(prior_trace["theta2"][:, obs2.mask] - prior_trace["theta2_missing"]) == 0.0
+        assert np.mean(prior_trace["theta2"][:, ~obs2.mask] - prior_trace["theta2_observed"]) == 0.0
+
         assert {"theta1", "theta2"} <= set(prior_trace.keys())
-        # TODO: Assert something
-        sample()
+
+        trace = sample(chains=1)
+
+        assert np.all(0 < trace["theta1_missing"].mean(0))
+        assert np.all(0 < trace["theta2_missing"].mean(0))
+
+
+def test_double_counting():
+    with Model(check_bounds=False) as m1:
+        x = Gamma("x", 1, 1, size=4)
+
+    logp_val = m1.logp({"x_log__": np.array([0, 0, 0, 0])})
+    assert logp_val == -4.0
+
+    with Model(check_bounds=False) as m2:
+        x = Gamma("x", 1, 1, observed=[1, 1, 1, np.nan])
+
+    logp_val = m2.logp({"x_missing_log__": np.array([0])})
+    assert logp_val == -4.0

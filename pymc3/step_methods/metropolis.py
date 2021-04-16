@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 import aesara
 import numpy as np
@@ -425,29 +425,25 @@ class BinaryGibbsMetropolis(ArrayStep):
 
         super().__init__(vars, [model.fastlogp])
 
-    def astep(self, q0: RaveledVars, logp) -> RaveledVars:
-
-        point_map_info = q0.point_map_info
-        q0 = q0.data
+    def astep(self, q0: RaveledVars, logp: Callable[[RaveledVars], np.ndarray]) -> RaveledVars:
 
         order = self.order
         if self.shuffle_dims:
             nr.shuffle(order)
 
-        q = np.copy(q0)
+        q = RaveledVars(np.copy(q0.data), q0.point_map_info)
+
         logp_curr = logp(q)
 
         for idx in order:
             # No need to do metropolis update if the same value is proposed,
             # as you will get the same value regardless of accepted or reject
             if nr.rand() < self.transit_p:
-                curr_val, q[idx] = q[idx], True - q[idx]
+                curr_val, q.data[idx] = q.data[idx], True - q.data[idx]
                 logp_prop = logp(q)
-                q[idx], accepted = metrop_select(logp_prop - logp_curr, q[idx], curr_val)
+                q.data[idx], accepted = metrop_select(logp_prop - logp_curr, q.data[idx], curr_val)
                 if accepted:
                     logp_curr = logp_prop
-
-        q = RaveledVars(q, point_map_info)
 
         return q
 
@@ -479,6 +475,7 @@ class BinaryGibbsMetropolis(ArrayStep):
 
 class CategoricalGibbsMetropolis(ArrayStep):
     """A Metropolis-within-Gibbs step method optimized for categorical variables.
+
     This step method works for Bernoulli variables as well, but it is not
     optimized for them, like BinaryGibbsMetropolis is. Step method supports
     two types of proposals: A uniform proposal and a proportional proposal,
@@ -577,6 +574,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
             logp_curr = self.metropolis_proportional(q, logp, logp_curr, dim, k)
 
         return q
+
+    def astep(self, q0, logp):
+        raise NotImplementedError()
 
     def metropolis_proportional(self, q, logp, logp_curr, dim, k):
         given_cat = int(q.data[dim])

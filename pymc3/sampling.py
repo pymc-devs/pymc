@@ -870,6 +870,8 @@ def _sample(
     """
     skip_first = kwargs.get("skip_first", 0)
 
+    trace = copy(trace)
+
     sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed, callback)
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"

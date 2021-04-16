@@ -19,11 +19,16 @@ Classes for working with subsets of parameters.
 """
 import collections
 
-from typing import Dict, List, Optional, Union
+from functools import partial
+from typing import Callable, Dict, Optional, TypeVar
 
 import numpy as np
 
 __all__ = ["DictToArrayBijection"]
+
+
+T = TypeVar("T")
+PointType = Dict[str, np.ndarray]
 
 # `point_map_info` is a tuple of tuples containing `(name, shape, dtype)` for
 # each of the raveled variables.
@@ -38,7 +43,7 @@ class DictToArrayBijection:
     """
 
     @staticmethod
-    def map(var_dict: Dict[str, np.ndarray]) -> RaveledVars:
+    def map(var_dict: PointType) -> RaveledVars:
         """Map a dictionary of names and variables to a concatenated 1D array space."""
         vars_info = tuple((v, k, v.shape, v.dtype) for k, v in var_dict.items())
         raveled_vars = [v[0].ravel() for v in vars_info]
@@ -50,42 +55,41 @@ class DictToArrayBijection:
 
     @staticmethod
     def rmap(
-        array: RaveledVars, as_list: Optional[bool] = False
-    ) -> Union[Dict[str, np.ndarray], List[np.ndarray]]:
+        array: RaveledVars,
+        start_point: Optional[PointType] = None,
+    ) -> PointType:
         """Map 1D concatenated array to a dictionary of variables in their original spaces.
 
         Parameters
         ==========
         array
             The array to map.
-        as_list
-            When ``True``, return a list of the original variables instead of a
-            ``dict`` keyed each variable's name.
+        start_point
+            An optional dictionary of initial values.
+
         """
-        if as_list:
-            res = []
+        if start_point:
+            res = dict(start_point)
         else:
             res = {}
 
         if not isinstance(array, RaveledVars):
-            raise TypeError("`apt` must be a `RaveledVars` type")
+            raise TypeError("`array` must be a `RaveledVars` type")
 
         last_idx = 0
         for name, shape, dtype in array.point_map_info:
             arr_len = np.prod(shape, dtype=int)
             var = array.data[last_idx : last_idx + arr_len].reshape(shape).astype(dtype)
-            if as_list:
-                res.append(var)
-            else:
-                res[name] = var
+            res[name] = var
             last_idx += arr_len
 
         return res
 
     @classmethod
-    def mapf(cls, f):
-        """
-         function f: DictSpace -> T to ArraySpace -> T
+    def mapf(cls, f: Callable[[PointType], T], start_point: Optional[PointType] = None) -> T:
+        """Create a callable that first maps back to ``dict`` inputs and then applies a function.
+
+        function f: DictSpace -> T to ArraySpace -> T
 
         Parameters
         ----------
@@ -95,7 +99,7 @@ class DictToArrayBijection:
         -------
         f: array -> T
         """
-        return Compose(f, cls.rmap)
+        return Compose(f, partial(cls.rmap, start_point=start_point))
 
 
 class Compose:
