@@ -23,7 +23,7 @@ from pymc3.distributions.continuous import Gamma, Normal, Uniform
 from pymc3.distributions.transforms import Interval
 from pymc3.exceptions import ImputationWarning
 from pymc3.model import Model
-from pymc3.sampling import sample, sample_prior_predictive
+from pymc3.sampling import sample, sample_posterior_predictive, sample_prior_predictive
 
 
 @pytest.mark.parametrize(
@@ -125,6 +125,16 @@ def test_interval_missing_observations():
 
         assert np.all(0 < trace["theta1_missing"].mean(0))
         assert np.all(0 < trace["theta2_missing"].mean(0))
+        assert "theta1" not in trace.varnames
+        assert "theta2" not in trace.varnames
+
+        # Make sure that the observed values are newly generated samples and that
+        # the observed and deterministic matche
+        pp_trace = sample_posterior_predictive(trace)
+        assert np.all(np.var(pp_trace["theta1"], 0) > 0.0)
+        assert np.all(np.var(pp_trace["theta2"], 0) > 0.0)
+        assert np.mean(pp_trace["theta1"][:, ~obs1.mask] - pp_trace["theta1_observed"]) == 0.0
+        assert np.mean(pp_trace["theta2"][:, ~obs2.mask] - pp_trace["theta2_observed"]) == 0.0
 
 
 def test_double_counting():
@@ -139,3 +149,17 @@ def test_double_counting():
 
     logp_val = m2.logp({"x_missing_log__": np.array([0])})
     assert logp_val == -4.0
+
+
+def test_missing_logp():
+    with Model() as m:
+        theta1 = Normal("theta1", 0, 5, observed=[0, 1, 2, 3, 4])
+        theta2 = Normal("theta2", mu=theta1, observed=[0, 1, 2, 3, 4])
+    m_logp = m.logp()
+
+    with Model() as m_missing:
+        theta1 = Normal("theta1", 0, 5, observed=np.array([0, 1, np.nan, 3, np.nan]))
+        theta2 = Normal("theta2", mu=theta1, observed=np.array([np.nan, np.nan, 2, np.nan, 4]))
+    m_missing_logp = m_missing.logp({"theta1_missing": [2, 4], "theta2_missing": [0, 1, 3]})
+
+    assert m_logp == m_missing_logp

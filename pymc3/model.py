@@ -621,6 +621,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.rvs_to_values = treedict(parent=self.parent.rvs_to_values)
             self.free_RVs = treelist(parent=self.parent.free_RVs)
             self.observed_RVs = treelist(parent=self.parent.observed_RVs)
+            self.auto_deterministics = treelist(parent=self.parent.auto_deterministics)
             self.deterministics = treelist(parent=self.parent.deterministics)
             self.potentials = treelist(parent=self.parent.potentials)
         else:
@@ -629,6 +630,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.rvs_to_values = treedict()
             self.free_RVs = treelist()
             self.observed_RVs = treelist()
+            self.auto_deterministics = treelist()
             self.deterministics = treelist()
             self.potentials = treelist()
 
@@ -1076,7 +1078,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             rv_var = at.zeros(data.shape)
             rv_var = at.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
             rv_var = at.set_subtensor(rv_var[antimask_idx], observed_rv_var)
-            rv_var = Deterministic(name, rv_var, self, dims)
+            rv_var = Deterministic(name, rv_var, self, dims, auto=True)
 
         elif sps.issparse(data):
             data = sparse.basic.as_sparse(data, name=name)
@@ -1594,13 +1596,17 @@ class LoosePointFunc:
 compilef = fastfn
 
 
-def Deterministic(name, var, model=None, dims=None):
+def Deterministic(name, var, model=None, dims=None, auto=False):
     """Create a named deterministic variable
 
     Parameters
     ----------
     name: str
     var: Aesara variables
+    auto: bool
+        Add automatically created deterministics (e.g., when imputing missing values)
+        to a separate model.auto_deterministics list for filtering during sampling.
+
 
     Returns
     -------
@@ -1608,7 +1614,10 @@ def Deterministic(name, var, model=None, dims=None):
     """
     model = modelcontext(model)
     var = var.copy(model.name_for(name))
-    model.deterministics.append(var)
+    if auto:
+        model.auto_deterministics.append(var)
+    else:
+        model.deterministics.append(var)
     model.add_random_variable(var, dims)
 
     return var

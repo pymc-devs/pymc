@@ -105,7 +105,7 @@ def test_find_MAP_issue_4488():
         y = Deterministic("y", x + 1)
         map_estimate = find_MAP()
 
-    assert not set.difference({"x", "x_missing", "x_missing_log__", "y"}, set(map_estimate.keys()))
+    assert not set.difference({"x_missing", "x_missing_log__", "y"}, set(map_estimate.keys()))
     assert np.isclose(map_estimate["x_missing"], 0.2)
     np.testing.assert_array_equal(map_estimate["y"], [2.0, map_estimate["x_missing"][0] + 1])
 
