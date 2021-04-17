@@ -41,8 +41,8 @@ class SeededTest:
     def teardown_method(self):
         set_at_rng(self.old_at_rng)
 
-    def get_random_state(self):
-        if self.random_state is None:
+    def get_random_state(self, reset=False):
+        if self.random_state is None or reset:
             self.random_state = nr.RandomState(self.random_seed)
         return self.random_state
 
