@@ -361,12 +361,6 @@ class TestBetaBinomial(BaseTestCases.BaseTestCase):
     params = {"n": 5, "alpha": 1.0, "beta": 1.0}
 
 
-@pytest.mark.skip(reason="This test is covered by Aesara")
-class TestBernoulli(BaseTestCases.BaseTestCase):
-    distribution = pm.Bernoulli
-    params = {"p": 0.5}
-
-
 class TestDiscreteWeibull(BaseTestCases.BaseTestCase):
     distribution = pm.DiscreteWeibull
     params = {"q": 0.25, "beta": 2.0}
