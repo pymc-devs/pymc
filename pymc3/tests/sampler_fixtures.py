@@ -92,7 +92,7 @@ class BetaBinomialFixture(KnownCDF):
     @classmethod
     def make_model(cls):
         with pm.Model() as model:
-            p = pm.Beta("p", [0.5, 0.5, 1.0], [0.5, 0.5, 1.0], size=3)
+            p = pm.Beta("p", [0.5, 0.5, 1.0], [0.5, 0.5, 1.0])
             pm.Binomial("y", p=p, n=[4, 12, 9], observed=[1, 2, 9])
         return model
 
