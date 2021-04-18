@@ -19,7 +19,7 @@ import pkgutil
 import urllib.request
 
 from copy import copy
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 
 import aesara
 import aesara.tensor as at
@@ -502,7 +502,7 @@ class Data:
     >>> for data_vals in observed_data:
     ...     with model:
     ...         # Switch out the observed dataset
-    ...         pm.set_data({'data': data_vals})
+    ...         model.set_data('data', data_vals)
     ...         traces.append(pm.sample())
 
     To set the value of the data container variable, check out
@@ -543,6 +543,11 @@ class Data:
 
         if export_index_as_coords:
             model.add_coords(coords)
+        elif dims:
+            # Register new dimension lengths
+            for d, dname in enumerate(dims):
+                if not dname in model.dim_lengths:
+                    model.add_coord(dname, values=None, length=shared_object.shape[d])
 
         # To draw the node for this variable in the graphviz Digraph we need
         # its shape.
@@ -562,7 +567,7 @@ class Data:
         return shared_object
 
     @staticmethod
-    def set_coords(model, value, dims=None):
+    def set_coords(model, value, dims=None) -> Dict[str, Sequence]:
         coords = {}
 
         # If value is a df or a series, we interpret the index as coords:

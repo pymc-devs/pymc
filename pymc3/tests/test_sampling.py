@@ -1087,16 +1087,15 @@ class TestSamplePosteriorPredictive:
 
         with pmodel:
             prior = pm.sample_prior_predictive(samples=20)
-
-        idat = pm.to_inference_data(trace, prior=prior)
+            idat = pm.to_inference_data(trace, prior=prior)
 
         with pmodel:
             pp = pm.sample_posterior_predictive(idat.prior, var_names=["d"])
 
     def test_sample_from_xarray_posterior(self, point_list_arg_bug_fixture):
         pmodel, trace = point_list_arg_bug_fixture
-        idat = pm.to_inference_data(trace)
         with pmodel:
+            idat = pm.to_inference_data(trace)
             pp = pm.sample_posterior_predictive(idat.posterior, var_names=["d"])
 
 
