@@ -50,7 +50,7 @@ Admittedly the split is a slightly arbitrary. For this guide modules are
 detailed in the order that a normal user would typically encounter them during
 a nominal workflow
 
-## /model.py
+## model.py
 
 ## distributions/
 
