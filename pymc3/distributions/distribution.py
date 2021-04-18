@@ -78,7 +78,13 @@ class DistributionMeta(ABCMeta):
                 )
                 return clsdict["random"](*args, **kwargs)
 
+
             clsdict["random"] = _random
+        data = kwargs.pop("observed", None)
+        cls.data = data
+        if isinstance(data, ObservedRV) or isinstance(data, FreeRV):
+            raise TypeError("Observed needs to be data but got: {}".format(type(data)))
+        total_size = kwargs.pop("total_size", None)
 
         rv_op = clsdict.setdefault("rv_op", None)
         rv_type = None
