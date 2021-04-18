@@ -338,12 +338,6 @@ class TestVonMises(BaseTestCases.BaseTestCase):
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestGumbel(BaseTestCases.BaseTestCase):
-    distribution = pm.Gumbel
-    params = {"mu": 0.0, "beta": 1.0}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestLogistic(BaseTestCases.BaseTestCase):
     distribution = pm.Logistic
     params = {"mu": 0.0, "s": 1.0}
@@ -417,8 +411,8 @@ class TestMoyal(BaseTestCases.BaseTestCase):
 class BaseTestDistribution(SeededTest):
     pymc_dist: Optional[Callable] = None
     pymc_dist_params = dict()
-    expected_dist: Optional[Callable] = None
-    expected_dist_params = dict()
+    reference_dist: Optional[Callable] = None
+    reference_dist_params = dict()
     expected_rv_op_params = dict()
     tests_to_run = []
     size = 15
@@ -430,40 +424,40 @@ class BaseTestDistribution(SeededTest):
 
     def test_distribution(self):
         self._instantiate_pymc_rv()
-        if self.expected_dist is not None:
-            self.expected_dist_outcome = self.expected_dist()(
-                **self.expected_dist_params, size=self.size
+        if self.reference_dist is not None:
+            self.reference_dist_draws = self.reference_dist()(
+                **self.reference_dist_params, size=self.size
             )
         for test_name in self.tests_to_run:
             self.run_test(test_name)
 
     def run_test(self, test_name):
         {
-            "check_pymc_dist_matches_expected": self._check_pymc_draws_match_expected,
+            "check_pymc_dist_matches_reference": self._check_pymc_draws_match_reference,
             "check_pymc_params_match_rv_op": self._check_pymc_params_match_rv_op,
-            "check_distribution_size": self._check_distribution_size,
+            "check_rv_size": self._check_rv_size,
         }[test_name]()
 
     def _instantiate_pymc_rv(self, dist_params=None):
         params = dist_params if dist_params else self.pymc_dist_params
         with pm.Model():
-            self.pymc_dist_output = self.pymc_dist(
+            self.pymc_rv = self.pymc_dist(
                 **params,
                 size=self.size,
                 rng=aesara.shared(self.get_random_state(reset=True)),
                 name=f"{self.pymc_dist.rv_op.name}_test",
             )
 
-    def _check_pymc_draws_match_expected(self):
+    def _check_pymc_draws_match_reference(self):
         # need to re-instantiate it to make sure that the order of drawings match the reference distribution one
         self._instantiate_pymc_rv()
         assert_array_almost_equal(
-            self.pymc_dist_output.eval(), self.expected_dist_outcome, decimal=self.decimal
+            self.pymc_rv.eval(), self.reference_dist_draws, decimal=self.decimal
         )
 
     def _check_pymc_params_match_rv_op(self) -> None:
         try:
-            aesera_dist_inputs = self.pymc_dist_output.get_parents()[0].inputs[3:]
+            aesera_dist_inputs = self.pymc_rv.get_parents()[0].inputs[3:]
         except:
             raise Exception("Parent Apply node missing from output")
         assert len(self.expected_rv_op_params) == len(aesera_dist_inputs)
@@ -472,26 +466,18 @@ class BaseTestDistribution(SeededTest):
         ):
             assert_almost_equal(expected_value, actual_variable.eval(), decimal=self.decimal)
 
-    def _check_distribution_size(self):
+    def _check_rv_size(self):
         # test sizes
         sizes_to_check = self.sizes_to_check or [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
-        sizes_expected = self.sizes_expected or [
-            (),
-            (),
-            (1,),
-            (1,),
-            (5,),
-            (4, 5),
-            (2, 4, 2),
-        ]
+        sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
         for size, expected in zip(sizes_to_check, sizes_expected):
-            actual = change_rv_size(self.pymc_dist_output, size).eval().shape
+            actual = change_rv_size(self.pymc_rv, size).eval().shape
             assert actual == expected
 
         # test negative sizes raise
         for size in [-2, (3, -2)]:
             with pytest.raises(ValueError):
-                change_rv_size(self.pymc_dist_output, size).eval()
+                change_rv_size(self.pymc_rv, size).eval()
 
         # test multi-parameters sampling for univariate distributions
         if self.pymc_dist.rv_op.ndim_supp == 0:
@@ -506,7 +492,7 @@ class BaseTestDistribution(SeededTest):
                 (5, self.repeated_params_shape),
             ]
             for size, expected in zip(sizes_to_check, sizes_expected):
-                actual = change_rv_size(self.pymc_dist_output, size).eval().shape
+                actual = change_rv_size(self.pymc_rv, size).eval().shape
                 assert actual == expected
 
 
@@ -526,13 +512,13 @@ class TestGumbelDistribution(BaseTestDistribution):
     pymc_dist = pm.Gumbel
     pymc_dist_params = {"mu": 1.5, "beta": 3.0}
     expected_rv_op_params = {"mu": 1.5, "beta": 3.0}
-    expected_dist_params = {"loc": 1.5, "scale": 3.0}
+    reference_dist_params = {"loc": 1.5, "scale": 3.0}
     size = 15
-    expected_dist = seeded_scipy_distribution_builder("gumbel_r")
+    reference_dist = seeded_scipy_distribution_builder("gumbel_r")
     tests_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_distribution_size",
-        "check_pymc_dist_matches_expected",
+        "check_rv_size",
+        "check_pymc_dist_matches_reference",
     ]
 
 
@@ -540,13 +526,13 @@ class TestNormalDistribution(BaseTestDistribution):
     pymc_dist = pm.Normal
     pymc_dist_params = {"mu": 5.0, "sigma": 10.0}
     expected_rv_op_params = {"mu": 5.0, "sigma": 10.0}
-    expected_dist_params = {"loc": 5.0, "scale": 10.0}
+    reference_dist_params = {"loc": 5.0, "scale": 10.0}
     size = 15
-    expected_dist = seeded_numpy_distribution_builder("normal")
+    reference_dist = seeded_numpy_distribution_builder("normal")
     tests_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_distribution_size",
-        "check_pymc_dist_matches_expected",
+        "check_rv_size",
+        "check_pymc_dist_matches_reference",
     ]
 
 
@@ -718,7 +704,7 @@ class TestPoissonDistribution(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestMvNormalDistributionDistribution(BaseTestDistribution):
+class TestMvNormalDistribution(BaseTestDistribution):
     pymc_dist = pm.MvNormal
     pymc_dist_params = {
         "mu": np.array([1.0, 2.0]),
@@ -730,10 +716,10 @@ class TestMvNormalDistributionDistribution(BaseTestDistribution):
     }
     sizes_to_check = [None, (1), (2, 3)]
     sizes_expected = [(2,), (1, 2), (2, 3, 2)]
-    tests_to_run = ["check_pymc_params_match_rv_op", "check_distribution_size"]
+    tests_to_run = ["check_pymc_params_match_rv_op", "check_rv_size"]
 
 
-class TestMvNormalDistributionCholDistribution(BaseTestDistribution):
+class TestMvNormalDistributionChol(BaseTestDistribution):
     pymc_dist = pm.MvNormal
     pymc_dist_params = {
         "mu": np.array([1.0, 2.0]),
@@ -746,7 +732,7 @@ class TestMvNormalDistributionCholDistribution(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestMvNormalDistributionTauDistribution(BaseTestDistribution):
+class TestMvNormalDistributionTau(BaseTestDistribution):
     pymc_dist = pm.MvNormal
     pymc_dist_params = {
         "mu": np.array([1.0, 2.0]),
@@ -772,7 +758,7 @@ class TestMultinomialDistribution(BaseTestDistribution):
     expected_rv_op_params = {"n": 85, "p": np.array([0.28, 0.62, 0.10])}
     sizes_to_check = [None, (1), (4,), (3, 2)]
     sizes_expected = [(3,), (1, 3), (4, 3), (3, 2, 3)]
-    tests_to_run = ["check_pymc_params_match_rv_op", "check_distribution_size"]
+    tests_to_run = ["check_pymc_params_match_rv_op", "check_rv_size"]
 
 
 class TestCategoricalDistribution(BaseTestDistribution):
