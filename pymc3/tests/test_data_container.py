@@ -17,6 +17,8 @@ import pandas as pd
 import pytest
 
 from aesara import shared
+from aesara.tensor.sharedvar import ScalarSharedVariable
+from aesara.tensor.var import TensorVariable
 
 import pymc3 as pm
 
@@ -272,9 +274,15 @@ class TestData(SeededTest):
 
         assert "rows" in pmodel.coords
         assert pmodel.coords["rows"] == ["R1", "R2", "R3", "R4", "R5"]
+        assert "rows" in pmodel.dim_lengths
+        assert isinstance(pmodel.dim_lengths["rows"], ScalarSharedVariable)
+        assert pmodel.dim_lengths["rows"].eval() == 5
         assert "columns" in pmodel.coords
         assert pmodel.coords["columns"] == ["C1", "C2", "C3", "C4", "C5", "C6", "C7"]
         assert pmodel.RV_dims == {"observations": ("rows", "columns")}
+        assert "columns" in pmodel.dim_lengths
+        assert isinstance(pmodel.dim_lengths["columns"], ScalarSharedVariable)
+        assert pmodel.dim_lengths["columns"].eval() == 7
 
     def test_implicit_coords_series(self):
         ser_sales = pd.Series(

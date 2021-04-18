@@ -162,10 +162,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         self.trace = trace
 
         # this permits us to get the model from command-line argument or from with model:
-        try:
-            self.model = modelcontext(model)
-        except TypeError:
-            self.model = None
+        self.model = modelcontext(model)
 
         self.attrs = None
         if trace is not None:
@@ -223,10 +220,14 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         self.coords = {} if coords is None else coords
         if hasattr(self.model, "coords"):
             self.coords = {**self.model.coords, **self.coords}
+        self.coords = {key: value for key, value in self.coords.items() if value is not None}
 
         self.dims = {} if dims is None else dims
         if hasattr(self.model, "RV_dims"):
-            model_dims = {k: list(v) for k, v in self.model.RV_dims.items()}
+            model_dims = {
+                var_name: [dim for dim in dims if dim is not None]
+                for var_name, dims in self.model.RV_dims.items()
+            }
             self.dims = {**model_dims, **self.dims}
 
         self.density_dist_obs = density_dist_obs
