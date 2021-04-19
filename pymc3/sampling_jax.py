@@ -123,6 +123,7 @@ def sample_numpyro_nuts(
     random_seed=10,
     model=None,
     progress_bar=True,
+    chain_method="parallel",
     keep_untransformed=False,
 ):
     from numpyro.infer import MCMC, NUTS
@@ -135,13 +136,12 @@ def sample_numpyro_nuts(
 
     fgraph = aesara.graph.fg.FunctionGraph(model.free_RVs, [model.logpt])
     fns = jax_funcify(fgraph)
-    logp_fn_jax = fns[0]
+    logp_fn_jax = jax.jit(fns[0])
 
     rv_names = [rv.name for rv in model.free_RVs]
     init_state = [model.test_point[rv_name] for rv_name in rv_names]
     init_state_batched = jax.tree_map(lambda x: np.repeat(x[None, ...], chains, axis=0), init_state)
 
-    @jax.jit
     def _sample(current_state, seed):
         step_size = jax.tree_map(jax.numpy.ones_like, init_state)
         nuts_kernel = NUTS(
@@ -159,7 +159,7 @@ def sample_numpyro_nuts(
             num_samples=draws,
             num_chains=chains,
             postprocess_fn=None,
-            chain_method="parallel",
+            chain_method=chain_method,
             progress_bar=progress_bar,
         )
 
