@@ -125,7 +125,7 @@ def sample_numpyro_nuts(
     progress_bar=True,
     chain_method="parallel",
     keep_untransformed=False,
-    jit_sample_fn=False,
+    jit_sample_fn=True,
 ):
     from numpyro.infer import MCMC, NUTS
 
@@ -137,6 +137,7 @@ def sample_numpyro_nuts(
 
     fgraph = aesara.graph.fg.FunctionGraph(model.free_RVs, [model.logpt])
     fns = jax_funcify(fgraph)
+
     logp_fn_jax = jax.jit(fns[0]) if not jit_sample_fn else fns[0]
 
     rv_names = [rv.name for rv in model.free_RVs]
