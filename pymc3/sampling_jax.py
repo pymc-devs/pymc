@@ -125,6 +125,7 @@ def sample_numpyro_nuts(
     progress_bar=True,
     chain_method="parallel",
     keep_untransformed=False,
+    jit_sample_fn=False,
 ):
     from numpyro.infer import MCMC, NUTS
 
@@ -136,7 +137,7 @@ def sample_numpyro_nuts(
 
     fgraph = aesara.graph.fg.FunctionGraph(model.free_RVs, [model.logpt])
     fns = jax_funcify(fgraph)
-    logp_fn_jax = jax.jit(fns[0])
+    logp_fn_jax = jax.jit(fns[0]) if not jit_sample_fn else fns[0]
 
     rv_names = [rv.name for rv in model.free_RVs]
     init_state = [model.test_point[rv_name] for rv_name in rv_names]
@@ -167,6 +168,8 @@ def sample_numpyro_nuts(
         samples = pmap_numpyro.get_samples(group_by_chain=True)
         leapfrogs_taken = pmap_numpyro.get_extra_fields(group_by_chain=True)["num_steps"]
         return samples, leapfrogs_taken
+
+    _sample = jax.jit(_sample) if jit_sample_fn else _sample
 
     print("Compiling...")
     tic2 = pd.Timestamp.now()
