@@ -28,6 +28,7 @@ import dill
 
 from aesara.graph.basic import Variable
 from aesara.tensor.random.op import RandomVariable
+from aesara.tensor.shape import SpecifyShape, specify_shape
 
 from pymc3.aesaraf import change_rv_size, pandas_to_array
 from pymc3.distributions import _logcdf, _logp
@@ -253,6 +254,13 @@ class Distribution(metaclass=DistributionMeta):
         rv_out = cls.dist(*args, rng=rng, testval=None, **kwargs)
         n_implied = rv_out.ndim
 
+        # The `.dist()` can wrap automatically with a SpecifyShape Op which brings informative
+        # error messages earlier in model construction.
+        # Here, however, the underyling RV must be used - a new SpecifyShape Op can be added at the end.
+        assert_shape = None
+        if isinstance(rv_out.owner.op, SpecifyShape):
+            rv_out, assert_shape = rv_out.owner.inputs
+
         # `dims` are only available with this API, because `.dist()` can be used
         # without a modelcontext and dims are not tracked at the Aesara level.
         if dims is not None:
@@ -292,7 +300,15 @@ class Distribution(metaclass=DistributionMeta):
             # Assigning the testval earlier causes trouble because the RV may not be created with the final shape already.
             rv_out.tag.test_value = testval
 
-        return model.register_rv(rv_out, name, observed, total_size, dims=dims, transform=transform)
+        rv_registered = model.register_rv(
+            rv_out, name, observed, total_size, dims=dims, transform=transform
+        )
+
+        # Wrapping in specify_shape now does not break transforms:
+        if assert_shape is not None:
+            rv_registered = specify_shape(rv_registered, assert_shape)
+
+        return rv_registered
 
     @classmethod
     def dist(
@@ -314,6 +330,9 @@ class Distribution(metaclass=DistributionMeta):
 
             Ellipsis (...) may be used in the last position of the tuple,
             and automatically expand to the shape implied by RV inputs.
+
+            Without Ellipsis, a `SpecifyShape` Op is automatically applied,
+            constraining this model variable to exactly the specified shape.
         size : int, tuple, Variable, optional
             A scalar or tuple for replicating the RV in addition
             to its implied shape/dimensionality.
@@ -330,6 +349,7 @@ class Distribution(metaclass=DistributionMeta):
             raise NotImplementedError("The use of a `.dist(dims=...)` API is not yet supported.")
 
         shape, _, size = _validate_shape_dims_size(shape=shape, size=size)
+        assert_shape = None
 
         # Create the RV without specifying size or testval.
         # The size will be expanded later (if necessary) and only then the testval fits.
@@ -338,13 +358,16 @@ class Distribution(metaclass=DistributionMeta):
         if shape is None and size is None:
             size = ()
         elif shape is not None:
+            # SpecifyShape is automatically applied for symbolic and non-Ellipsis shapes
             if isinstance(shape, Variable):
+                assert_shape = shape
                 size = ()
             else:
                 if Ellipsis in shape:
                     size = tuple(shape[:-1])
                 else:
                     size = tuple(shape[: len(shape) - rv_native.ndim])
+                    assert_shape = shape
         # no-op conditions:
         # `elif size is not None` (User already specified how to expand the RV)
         # `else` (Unreachable)
@@ -353,6 +376,9 @@ class Distribution(metaclass=DistributionMeta):
             rv_out = change_rv_size(rv_var=rv_native, new_size=size, expand=True)
         else:
             rv_out = rv_native
+
+        if assert_shape is not None:
+            rv_out = specify_shape(rv_out, shape=assert_shape)
 
         if testval is not None:
             rv_out.tag.test_value = testval
