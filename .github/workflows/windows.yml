@@ -7,14 +7,12 @@ on:
 
 jobs:
   pytest:
-    if: false
     strategy:
       matrix:
         os: [windows-latest]
         floatx: [float64]
         test-subset:
-          - pymc3/tests/test_distributions_random.py
-          - pymc3/tests/test_sampling.py
+          - pymc3/tests/test_model.py
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
