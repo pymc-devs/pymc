@@ -25,6 +25,8 @@ from aesara.graph.basic import Constant, clone, graph_inputs, io_toposort
 from aesara.graph.fg import FunctionGraph
 from aesara.graph.op import Op, compute_test_value
 from aesara.graph.type import CType
+from aesara.scalar.basic import Add, Mul
+from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.random.opt import local_subtensor_rv_lift
 from aesara.tensor.subtensor import (
@@ -37,7 +39,12 @@ from aesara.tensor.subtensor import (
 )
 from aesara.tensor.var import TensorVariable
 
-from pymc3.aesaraf import extract_rv_and_value_vars, floatX, rvs_to_value_vars
+from pymc3.aesaraf import (
+    extract_rv_and_value_vars,
+    floatX,
+    rvs_to_value_vars,
+    walk_model,
+)
 
 
 @singledispatch
@@ -260,6 +267,130 @@ def _logp(
     """
     value_var = rvs_to_values.get(var, var)
     return at.zeros_like(value_var)
+    # raise NotImplementedError(f"Logp cannot be computed for op {op}")
+
+
+@_logp.register(Elemwise)
+def logp_elemwise(op, *args, **kwargs):
+    if hasattr(op, "scalar_op"):
+        return _logp(op.scalar_op, *args, **kwargs)
+    raise NotImplementedError
+
+
+# TODO: Implement DimShuffle logp?
+# @_logp.register(DimShuffle)
+# def logp_dimshuffle(op, var, *args, **kwargs):
+#     if var.owner and len(var.owner.inputs) == 1:
+#         inp = var.owner.inputs[0]
+#         if inp.owner and hasattr(inp.owner, 'op'):
+#             return _logp(inp.owner.op, inp, *args, **kwargs)
+#     raise NotImplementedError
+
+
+def find_rv_branch(inputs):
+    """
+    Helper function to find which input branch(es) contain unregistered random variables
+    """
+    rv_branch = []
+    no_rv_branch = []
+
+    for inp in inputs:
+        res_ancestors = list(walk_model((inp,), walk_past_rvs=True))
+        # unregistered variables do not contain a value_var tag
+        res_unregistered_ancestors = [
+            v
+            for v in res_ancestors
+            if v.owner
+            and isinstance(v.owner.op, RandomVariable)
+            and not getattr(v.tag, "value_var", False)
+        ]
+        if res_unregistered_ancestors:
+            rv_branch.append(inp)
+        else:
+            no_rv_branch.append(inp)
+
+    return rv_branch, no_rv_branch
+
+
+@_logp.register(Add)
+def add_logp(op, var, rvs_to_values, *add_inputs, **kwargs):
+
+    if len(add_inputs) != 2:
+        raise ValueError(f"Expected 2 inputs but got: {len(add_inputs)}")
+
+    rv, loc = find_rv_branch(add_inputs)
+
+    if len(rv) != 1:
+        raise NotImplementedError(
+            f"Logp of addition requires one branch with an unregistered RandomVariable but got {len(rv)}"
+        )
+
+    rv = rv[0]
+    rv_value = rvs_to_values.get(rv, getattr(rv.tag, "value_var", rv))
+    loc = loc[0]
+    loc_value = rvs_to_values.get(loc, getattr(loc.tag, "value_var", loc))
+
+    new_rvs_to_values = rvs_to_values.copy()
+    new_rvs_to_values[rv] = rv_value
+
+    logp_rv = logpt(rv, new_rvs_to_values, **kwargs)
+    fgraph = FunctionGraph(
+        [i for i in graph_inputs((logp_rv,)) if not isinstance(i, Constant)],
+        [logp_rv],
+        clone=False,
+    )
+
+    var_value = rvs_to_values.get(var, var)
+
+    fgraph.add_input(loc_value)
+    fgraph.add_input(var_value)
+    fgraph.replace(rv_value, var_value - loc_value)
+
+    logp_rv.name = f"__logp_{var.name}"
+
+    return logp_rv
+
+
+@_logp.register(Mul)
+def mul_logp(op, var, rvs_to_values, *mul_inputs, **kwargs):
+
+    if len(mul_inputs) != 2:
+        raise ValueError(f"Expected 2 inputs but got: {len(mul_inputs)}")
+
+    rv, scale = find_rv_branch(mul_inputs)
+
+    if len(rv) != 1:
+        raise NotImplementedError(
+            f"Logp of product requires one branch with an unregistered RandomVariable but got {len(rv)}"
+        )
+
+    rv = rv[0]
+    rv_value = rvs_to_values.get(rv, getattr(rv.tag, "value_var", rv))
+    scale = scale[0]
+    scale_value = rvs_to_values.get(scale, getattr(scale.tag, "value_var", scale))
+
+    new_rvs_to_values = rvs_to_values.copy()
+    new_rvs_to_values[rv] = rv_value
+
+    logp_rv = logpt(rv, new_rvs_to_values, **kwargs)
+    fgraph = FunctionGraph(
+        [i for i in graph_inputs((logp_rv,)) if not isinstance(i, Constant)],
+        [logp_rv],
+        clone=False,
+    )
+
+    var_value = rvs_to_values.get(var, var)
+
+    fgraph.add_input(scale_value)
+    fgraph.add_input(var_value)
+    # TODO: This is not correct for discrete variables
+    # TODO: Undefined behavior for scale = 0
+    fgraph.replace(rv_value, var_value / scale_value)
+
+    logp_rv = fgraph.outputs[0] - at.log(at.abs_(scale_value))
+    logp_rv.name = f"__logp_{var.name}"
+
+    return logp_rv
 
 
 def convert_indices(indices, entry):

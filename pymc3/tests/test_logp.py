@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from contextlib import ExitStack as does_not_raise
+
 import aesara
 import aesara.tensor as at
 import numpy as np
@@ -31,7 +33,7 @@ from aesara.tensor.subtensor import (
 )
 
 from pymc3.aesaraf import floatX, walk_model
-from pymc3.distributions.continuous import Normal, Uniform
+from pymc3.distributions.continuous import Exponential, Normal, Uniform
 from pymc3.distributions.discrete import Bernoulli
 from pymc3.distributions.logp import logpt
 from pymc3.model import Model
@@ -67,6 +69,140 @@ def test_logpt_basic():
     assert b_value_var in res_ancestors
     assert c_value_var in res_ancestors
     assert a_value_var in res_ancestors
+
+
+def test_logpt_add():
+    """
+    Mare sure we can compute a log-likelihood for ``loc + Y`` where ``Y`` is an unregistered
+    random variable and ``loc`` is an tensor variable or a registered random variable
+    """
+    with Model() as m:
+        loc = Uniform("loc", 0, 1)
+        x = Normal.dist(0, 1) + loc
+        m.register_rv(x, "x")
+
+    loc_value_var = m.rvs_to_values[loc]
+    x_value_var = m.rvs_to_values[x]
+
+    x_logp = logpt(x, m.rvs_to_values[x])
+
+    res_ancestors = list(walk_model((x_logp,), walk_past_rvs=True))
+    res_rv_ancestors = [
+        v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
+    ]
+
+    # There shouldn't be any `RandomVariable`s in the resulting graph
+    assert len(res_rv_ancestors) == 0
+    assert loc_value_var in res_ancestors
+    assert x_value_var in res_ancestors
+
+    # Test logp is correct
+    f_logp = aesara.function([x_value_var, loc_value_var], x_logp)
+    np.testing.assert_almost_equal(f_logp(50, 50), sp.norm(50, 1).logpdf(50))
+    np.testing.assert_almost_equal(f_logp(50, 0), sp.norm(0, 1).logpdf(50), decimal=5)
+
+
+def test_logpt_mul():
+    """
+    Mare sure we can compute a log-likelihood for ``scale * Y`` where ``Y`` is an unregistered
+    random variable and ``scale`` is an tensor variable or a registered random variable
+    """
+    with Model() as m:
+        scale = Uniform("scale", 0, 1)
+        x = Exponential.dist(1) * scale
+        m.register_rv(x, "x")
+
+    scale_value_var = m.rvs_to_values[scale]
+    x_value_var = m.rvs_to_values[x]
+
+    x_logp = logpt(x, m.rvs_to_values[x])
+
+    res_ancestors = list(walk_model((x_logp,), walk_past_rvs=True))
+    res_rv_ancestors = [
+        v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
+    ]
+
+    # There shouldn't be any `RandomVariable`s in the resulting graph
+    assert len(res_rv_ancestors) == 0
+    assert scale_value_var in res_ancestors
+    assert x_value_var in res_ancestors
+
+    # Test logp is correct
+    f_logp = aesara.function([x_value_var, scale_value_var], x_logp)
+    np.testing.assert_almost_equal(f_logp(0, 5), sp.expon(scale=5).logpdf(0))
+    np.testing.assert_almost_equal(f_logp(-2, -2), sp.expon(scale=2).logpdf(2))
+    assert f_logp(2, -2) == -np.inf
+
+
+def test_logpt_mul_add():
+    """
+    Mare sure we can compute a log-likelihood for ``loc + scale * Y`` where ``Y`` is an unregistered
+    random variable and ``loc`` and ``scale`` are tensor variables or registered random variables
+    """
+    with Model() as m:
+        loc = Uniform("loc", 0, 1)
+        scale = Uniform("scale", 0, 1)
+        x = loc + scale * Normal.dist(0, 1)
+        m.register_rv(x, "x")
+
+    loc_value_var = m.rvs_to_values[loc]
+    scale_value_var = m.rvs_to_values[scale]
+    x_value_var = m.rvs_to_values[x]
+
+    x_logp = logpt(x, m.rvs_to_values[x])
+
+    res_ancestors = list(walk_model((x_logp,), walk_past_rvs=True))
+    res_rv_ancestors = [
+        v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
+    ]
+
+    # There shouldn't be any `RandomVariable`s in the resulting graph
+    assert len(res_rv_ancestors) == 0
+    assert loc_value_var in res_ancestors
+    assert scale_value_var in res_ancestors
+    assert x_value_var in res_ancestors
+
+    # Test logp is correct
+    f_logp = aesara.function([x_value_var, loc_value_var, scale_value_var], x_logp)
+    np.testing.assert_almost_equal(f_logp(-1, 0, 2), sp.norm(0, 2).logpdf(-1))
+    np.testing.assert_almost_equal(f_logp(95, 100, 15), sp.norm(100, 15).logpdf(95), decimal=6)
+
+
+def test_logpt_not_implemented():
+    """Test that logpt for add and mul fail if inputs are 0 or 2 unregistered rvs"""
+
+    with Model() as m:
+        variable1 = at.as_tensor_variable(1, "variable1")
+        variable2 = at.scalar("variable2")
+        unregistered1 = Normal.dist(0, 1)
+        unregistered2 = Normal.dist(0, 1)
+        registered1 = Normal("registered1", 0, 1)
+        registered2 = Normal("registered2", 0, 1)
+
+        x_fail1 = variable1 + variable2
+        x_fail2 = unregistered1 + unregistered2
+        x_fail3 = registered1 + variable1
+        x_fail4 = registered1 + registered2
+
+        x_pass1 = variable1 + unregistered2
+        x_pass2 = unregistered1 + variable2
+        x_pass3 = registered1 + unregistered1
+
+        m.register_rv(x_fail1, "x_fail1")
+        m.register_rv(x_fail2, "x_fail2")
+        m.register_rv(x_fail3, "x_fail3")
+        m.register_rv(x_fail4, "x_fail4")
+        m.register_rv(x_pass1, "x_pass1")
+        m.register_rv(x_pass2, "x_pass2")
+        m.register_rv(x_pass3, "x_pass3")
+
+    for rv, value_var in m.rvs_to_values.items():
+        if "fail" in rv.name:
+            with pytest.raises(NotImplementedError):
+                logpt(rv, value_var)
+        else:
+            with does_not_raise():
+                logpt(rv, value_var)
 
 
 @pytest.mark.parametrize(
