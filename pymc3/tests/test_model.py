@@ -613,3 +613,11 @@ class TestCheckStartVals(SeededTest):
         model.update_start_vals(start, model.initial_point)
         with pytest.raises(KeyError):
             model.check_start_vals(start)
+
+
+def test_observed_broadcast():
+    with pm.Model() as model:
+        pm.Normal("x1", mu=0, sd=1, observed=np.random.normal(size=(3, 4)))
+        model.logp()
+        pm.Normal("x2", mu=0, sd=1, observed=np.random.normal(size=(3, 1)))
+        model.logp()
