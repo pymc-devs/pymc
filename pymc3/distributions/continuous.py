@@ -2641,6 +2641,7 @@ class ChiSquared(Gamma):
         super().__init__(alpha=nu / 2.0, beta=0.5, *args, **kwargs)
 
 
+# TODO: Remove this once logpt for multiplication is working!
 class WeibullBetaRV(WeibullRV):
     ndims_params = [0, 0]
 
