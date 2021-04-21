@@ -135,11 +135,11 @@ def _validate_shape_dims_size(
 ) -> Tuple[Optional[Shape], Optional[Dims], Optional[Size]]:
     # Raise on unsupported parametrization
     if shape is not None and dims is not None:
-        raise ValueError("Passing both `shape` ({shape}) and `dims` ({dims}) is not supported!")
+        raise ValueError(f"Passing both `shape` ({shape}) and `dims` ({dims}) is not supported!")
     if dims is not None and size is not None:
-        raise ValueError("Passing both `dims` ({dims}) and `size` ({size}) is not supported!")
+        raise ValueError(f"Passing both `dims` ({dims}) and `size` ({size}) is not supported!")
     if shape is not None and size is not None:
-        raise ValueError("Passing both `shape` ({shape}) and `size` ({size}) is not supported!")
+        raise ValueError(f"Passing both `shape` ({shape}) and `size` ({size}) is not supported!")
 
     # Raise on invalid types
     if not isinstance(shape, (type(None), int, list, tuple, Variable)):
@@ -172,7 +172,7 @@ def _validate_shape_dims_size(
     if not _valid_ellipsis_position(dims):
         raise ValueError(f"Ellipsis in `dims` may only appear in the last position. Actual: {dims}")
     if size is not None and Ellipsis in size:
-        raise ValueError("The `size` parameter cannot contain an Ellipsis. Actual: {size}")
+        raise ValueError(f"The `size` parameter cannot contain an Ellipsis. Actual: {size}")
     return shape, dims, size
 
 
