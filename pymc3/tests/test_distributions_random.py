@@ -508,7 +508,7 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
     )
 
 
-class TestGumbelDistribution(BaseTestDistribution):
+class TestGumbel(BaseTestDistribution):
     pymc_dist = pm.Gumbel
     pymc_dist_params = {"mu": 1.5, "beta": 3.0}
     expected_rv_op_params = {"mu": 1.5, "beta": 3.0}
@@ -522,7 +522,7 @@ class TestGumbelDistribution(BaseTestDistribution):
     ]
 
 
-class TestNormalDistribution(BaseTestDistribution):
+class TestNormal(BaseTestDistribution):
     pymc_dist = pm.Normal
     pymc_dist_params = {"mu": 5.0, "sigma": 10.0}
     expected_rv_op_params = {"mu": 5.0, "sigma": 10.0}
@@ -536,7 +536,7 @@ class TestNormalDistribution(BaseTestDistribution):
     ]
 
 
-class TestNormalTauDistribution(BaseTestDistribution):
+class TestNormalTau(BaseTestDistribution):
     pymc_dist = pm.Normal
     tau, sigma = get_tau_sigma(tau=25.0)
     pymc_dist_params = {"mu": 1.0, "sigma": sigma}
@@ -544,28 +544,28 @@ class TestNormalTauDistribution(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestNormalSdDistribution(BaseTestDistribution):
+class TestNormalSd(BaseTestDistribution):
     pymc_dist = pm.Normal
     pymc_dist_params = {"mu": 1.0, "sd": 5.0}
     expected_rv_op_params = {"mu": 1.0, "sigma": 5.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestUniformDistribution(BaseTestDistribution):
+class TestUniform(BaseTestDistribution):
     pymc_dist = pm.Uniform
     pymc_dist_params = {"lower": 0.5, "upper": 1.5}
     expected_rv_op_params = {"lower": 0.5, "upper": 1.5}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestHalfNormalDistribution(BaseTestDistribution):
+class TestHalfNormal(BaseTestDistribution):
     pymc_dist = pm.HalfNormal
     pymc_dist_params = {"sigma": 10.0}
     expected_rv_op_params = {"mean": 0, "sigma": 10.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestHalfNormalTauDistribution(BaseTestDistribution):
+class TestHalfNormalTau(BaseTestDistribution):
     pymc_dist = pm.Normal
     tau, sigma = get_tau_sigma(tau=25.0)
     pymc_dist_params = {"sigma": sigma}
@@ -573,21 +573,21 @@ class TestHalfNormalTauDistribution(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestHalfNormalSdDistribution(BaseTestDistribution):
+class TestHalfNormalSd(BaseTestDistribution):
     pymc_dist = pm.Normal
     pymc_dist_params = {"sd": 5.0}
     expected_rv_op_params = {"mu": 0.0, "sigma": 5.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestBetaAlphaBetaDistribution(BaseTestDistribution):
+class TestBeta(BaseTestDistribution):
     pymc_dist = pm.Beta
     pymc_dist_params = {"alpha": 2.0, "beta": 5.0}
     expected_rv_op_params = {"alpha": 2.0, "beta": 5.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestBetaMuSigmaDistribution(BaseTestDistribution):
+class TestBetaMuSigma(BaseTestDistribution):
     pymc_dist = pm.Beta
     pymc_dist_params = {"mu": 0.5, "sigma": 0.25}
     expected_alpha, expected_beta = pm.Beta.get_alpha_beta(
@@ -597,35 +597,35 @@ class TestBetaMuSigmaDistribution(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestExponentialDistribution(BaseTestDistribution):
+class TestExponential(BaseTestDistribution):
     pymc_dist = pm.Exponential
     pymc_dist_params = {"lam": 10.0}
     expected_rv_op_params = {"lam": 1.0 / pymc_dist_params["lam"]}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestCauchyDistribution(BaseTestDistribution):
+class TestCauchy(BaseTestDistribution):
     pymc_dist = pm.Cauchy
     pymc_dist_params = {"alpha": 2.0, "beta": 5.0}
     expected_rv_op_params = {"alpha": 2.0, "beta": 5.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestHalfCauchyDistribution(BaseTestDistribution):
+class TestHalfCauchyn(BaseTestDistribution):
     pymc_dist = pm.HalfCauchy
     pymc_dist_params = {"beta": 5.0}
     expected_rv_op_params = {"alpha": 0.0, "beta": 5.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestGammaAlphaBetaDistribution(BaseTestDistribution):
+class TestGamma(BaseTestDistribution):
     pymc_dist = pm.Gamma
     pymc_dist_params = {"alpha": 2.0, "beta": 5.0}
     expected_rv_op_params = {"alpha": 2.0, "beta": 1 / 5.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestGammaMuSigmaDistribution(BaseTestDistribution):
+class TestGammaMuSigma(BaseTestDistribution):
     pymc_dist = pm.Gamma
     pymc_dist_params = {"mu": 0.5, "sigma": 0.25}
     expected_alpha, expected_beta = pm.Gamma.get_alpha_beta(
@@ -635,14 +635,14 @@ class TestGammaMuSigmaDistribution(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestInverseGammaAlphaBetaDistribution(BaseTestDistribution):
+class TestInverseGamma(BaseTestDistribution):
     pymc_dist = pm.InverseGamma
     pymc_dist_params = {"alpha": 2.0, "beta": 5.0}
     expected_rv_op_params = {"alpha": 2.0, "beta": 5.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestInverseGammaMuSigmaDistribution(BaseTestDistribution):
+class TestInverseGammaMuSigma(BaseTestDistribution):
     pymc_dist = pm.InverseGamma
     pymc_dist_params = {"mu": 0.5, "sigma": 0.25}
     expected_alpha, expected_beta = pm.InverseGamma._get_alpha_beta(
@@ -655,21 +655,21 @@ class TestInverseGammaMuSigmaDistribution(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestBinomialDistribution(BaseTestDistribution):
+class TestBinomial(BaseTestDistribution):
     pymc_dist = pm.Binomial
     pymc_dist_params = {"n": 100, "p": 0.33}
     expected_rv_op_params = {"n": 100, "p": 0.33}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestNegativeBinomialVDistribution(BaseTestDistribution):
+class TestNegativeBinomial(BaseTestDistribution):
     pymc_dist = pm.NegativeBinomial
     pymc_dist_params = {"n": 100, "p": 0.33}
     expected_rv_op_params = {"n": 100, "p": 0.33}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestNegativeBinomialMuSigmaDistribution(BaseTestDistribution):
+class TestNegativeBinomialMuSigma(BaseTestDistribution):
     pymc_dist = pm.NegativeBinomial
     pymc_dist_params = {"mu": 5.0, "alpha": 8.0}
     expected_n, expected_p = pm.NegativeBinomial.get_n_p(
@@ -682,7 +682,7 @@ class TestNegativeBinomialMuSigmaDistribution(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestBernoulliDistribution(BaseTestDistribution):
+class TestBernoulli(BaseTestDistribution):
     pymc_dist = pm.Bernoulli
     pymc_dist_params = {"p": 0.33}
     expected_rv_op_params = {"p": 0.33}
@@ -690,21 +690,21 @@ class TestBernoulliDistribution(BaseTestDistribution):
 
 
 @pytest.mark.skip("Still not implemented")
-class TestBernoulliLogitPDistribution(BaseTestDistribution):
+class TestBernoulliLogitP(BaseTestDistribution):
     pymc_dist = pm.Bernoulli
     pymc_dist_params = {"logit_p": 1.0}
     expected_rv_op_params = {"mean": 0, "sigma": 10.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestPoissonDistribution(BaseTestDistribution):
+class TestPoisson(BaseTestDistribution):
     pymc_dist = pm.Poisson
     pymc_dist_params = {"mu": 4.0}
     expected_rv_op_params = {"mu": 4.0}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestMvNormalDistribution(BaseTestDistribution):
+class TestMvNormal(BaseTestDistribution):
     pymc_dist = pm.MvNormal
     pymc_dist_params = {
         "mu": np.array([1.0, 2.0]),
@@ -719,7 +719,7 @@ class TestMvNormalDistribution(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op", "check_rv_size"]
 
 
-class TestMvNormalDistributionChol(BaseTestDistribution):
+class TestMvNormalChol(BaseTestDistribution):
     pymc_dist = pm.MvNormal
     pymc_dist_params = {
         "mu": np.array([1.0, 2.0]),
@@ -732,7 +732,7 @@ class TestMvNormalDistributionChol(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestMvNormalDistributionTau(BaseTestDistribution):
+class TestMvNormalTau(BaseTestDistribution):
     pymc_dist = pm.MvNormal
     pymc_dist_params = {
         "mu": np.array([1.0, 2.0]),
@@ -745,14 +745,14 @@ class TestMvNormalDistributionTau(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestDirichletDistribution(BaseTestDistribution):
+class TestDirichlet(BaseTestDistribution):
     pymc_dist = pm.Dirichlet
     pymc_dist_params = {"a": np.array([1.0, 2.0])}
     expected_rv_op_params = {"a": np.array([1.0, 2.0])}
     tests_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestMultinomialDistribution(BaseTestDistribution):
+class TestMultinomial(BaseTestDistribution):
     pymc_dist = pm.Multinomial
     pymc_dist_params = {"n": 85, "p": np.array([0.28, 0.62, 0.10])}
     expected_rv_op_params = {"n": 85, "p": np.array([0.28, 0.62, 0.10])}
@@ -761,7 +761,7 @@ class TestMultinomialDistribution(BaseTestDistribution):
     tests_to_run = ["check_pymc_params_match_rv_op", "check_rv_size"]
 
 
-class TestCategoricalDistribution(BaseTestDistribution):
+class TestCategorical(BaseTestDistribution):
     pymc_dist = pm.Categorical
     pymc_dist_params = {"p": np.array([0.28, 0.62, 0.10])}
     expected_rv_op_params = {"p": np.array([0.28, 0.62, 0.10])}
