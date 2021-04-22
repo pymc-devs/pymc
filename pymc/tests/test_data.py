@@ -87,7 +87,7 @@ class TestData(SeededTest):
             )
         # Predict on new data.
         with model:
-            x_test = [5, 6, 9]
+            x_test = [5.0, 6.0, 9.0]
             pm.set_data(new_data={"x": x_test})
             y_test = pm.sample_posterior_predictive(trace)
 
@@ -111,7 +111,7 @@ class TestData(SeededTest):
             )
         # Predict on new data.
         with model:
-            x_test = [5, 6]
+            x_test = [5.0, 6.0]
             pm.set_data(new_data={"x": x_test}, coords={"obs_id": ["a", "b"]})
             pm.sample_posterior_predictive(idata, extend_inferencedata=True, predictions=True)
 

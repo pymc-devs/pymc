@@ -244,7 +244,7 @@ def test_convert_observed_data(input_dtype):
     assert isinstance(aesara_output, Variable)
     npt.assert_allclose(aesara_output.eval(), aesara_graph_input.eval())
     intX = pm.aesaraf._conversion_map[aesara.config.floatX]
-    if dense_input.dtype == intX or dense_input.dtype == aesara.config.floatX:
+    if "int" in str(dense_input.dtype) or dense_input.dtype == aesara.config.floatX:
         assert aesara_output.owner is None  # func should not have added new nodes
         assert aesara_output.name == input_name
     else:
@@ -254,7 +254,8 @@ def test_convert_observed_data(input_dtype):
     if "float" in input_dtype:
         assert aesara_output.dtype == aesara.config.floatX
     else:
-        assert aesara_output.dtype == intX
+        # only cast floats, leave ints as is
+        assert aesara_output.dtype == input_dtype
 
     # Check function behavior with generator data
     generator_output = func(square_generator)

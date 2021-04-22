@@ -444,6 +444,9 @@ def intX(X):
     """
     Convert a aesara tensor or numpy array to aesara.tensor.int32 type.
     """
+    # check value is already int, do nothing in this case
+    if (hasattr(X, "dtype") and "int" in str(X.dtype)) or isinstance(X, int):
+        return X
     intX = _conversion_map[aesara.config.floatX]
     try:
         return X.astype(intX)
