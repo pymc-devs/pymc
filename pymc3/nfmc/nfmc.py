@@ -200,6 +200,8 @@ class NFMC:
             
             self.prior_samples = np.copy(self.init_samples)
 
+        print(f'Prior samples = {np.shape(self.prior_samples)}')
+            
         self.weighted_samples = np.empty((0, np.shape(self.prior_samples)[1]))
         self.all_logq = np.array([])
         self.posterior = np.empty((0, np.shape(self.prior_samples)[1]))
@@ -218,19 +220,16 @@ class NFMC:
     def get_prior_logp(self):
         """Get the prior log probabilities."""
         priors = [self.prior_logp_func(sample) for sample in self.nf_samples]
-
         self.prior_logp = np.array(priors).squeeze()
 
     def get_likelihood_logp(self):
         """Get the likelihood log probabilities."""
         likelihoods = [self.likelihood_logp_func(sample) for sample in self.nf_samples]
-
         self.likelihood_logp = np.array(likelihoods).squeeze()
 
     def get_posterior_logp(self):
         """Get the posterior log probabilities."""
         posteriors = [self.posterior_logp_func(sample) for sample in self.nf_samples]
-
         self.posterior_logp = np.array(posteriors).squeeze()
 
     def optim_target_logp(self, param_vals):
@@ -277,21 +276,25 @@ class NFMC:
         else:
             update_start_vals(self.start, self.model.test_point, self.model)
         check_start_vals(self.start, self.model)
+        print(self.start)
 
         self.start = Point(self.start, model=self.model)
+        print(self.start)
         self.bij = DictToArrayBijection(ArrayOrdering(self.variables), self.start)
         self.start = self.bij.map(self.start)
+        self.adam_logp = self.bij.mapf(self.model.fastlogp_nojac)
+        self.adam_dlogp = self.bij.mapf(self.model.fastdlogp_nojac(self.variables))
         print(self.start)
     
     def update_adam(self, step, opt_state, opt_update, get_params):
         """Jax implemented ADAM update."""
         params = np.asarray(get_params(opt_state)).astype(np.float64)
-        params = params.reshape(-1, len(params))
-        value = self.target_logp(params)
-        grads = -1 * jnp.asarray(self.target_dlogp(params))
+        #params = params.reshape(-1, len(params))
+        value = np.float64(self.adam_logp(floatX(params.squeeze())))
+        grads = -1 * jnp.asarray(np.float64(self.adam_dlogp(floatX(params.squeeze()))))
         opt_state = opt_update(step, grads, opt_state)
         update_params = np.asarray(get_params(opt_state)).astype(np.float64)
-        update_params = update_params.reshape(-1, len(update_params))
+        #update_params = update_params.reshape(-1, len(update_params))
         return value, opt_state, update_params
 
     def adam_map_hess(self):
@@ -303,21 +306,28 @@ class NFMC:
 
         for i in range(self.adam_steps):
             value, opt_state, update_params = self.update_adam(i, opt_state, opt_update, get_params)
-            target_diff = np.abs((value - self.target_logp(update_params)) / max(value, self.target_logp(update_params)))
+            target_diff = np.abs((value - np.float64(self.adam_logp(floatX(update_params)))) / max(value, np.float64(self.adam_logp(floatX(update_params)))))
             if target_diff <= self.ftol:
                 print(f'ADAM converged at step {i}')
                 break
-        self.mu_map = update_params.squeeze()
+        vars = get_default_varnames(self.model.unobserved_RVs, include_transformed=True)
+        print(self.variables)
+        self.map_dict = {var.name: value for var, value in zip(vars, self.model.fastfn(vars)(self.bij.rmap(update_params.squeeze())))}
+        self.mu_map = []
+        for v in self.variables:
+            self.mu_map.append(self.map_dict[v.name])
+        self.mu_map = np.array(self.mu_map).squeeze()
+        
+        print(f'BIJ rmap = {self.map_dict}')
         print(f'ADAM map solution = {self.mu_map}')
         self.hess_inv = np.linalg.inv(self.target_hessian(self.mu_map.reshape(-1, len(self.mu_map))))
         if not np.all(np.linalg.eigvals(self.hess_inv) > 0):
             print(f'Autodiff Hessian is not positive semi-definite. Building Hessian with L-BFGS run starting from ADAM MAP.')
-            vars = get_default_varnames(self.model.unobserved_RVs, include_transformed=False)
-            adam_map_start = {var.name: value for var, value in zip(vars, self.model.fastfn(vars)(self.bij.rmap(self.mu_map)))}
-            self.map_dict, self.scipy_opt = find_MAP(start=adam_map_start, model=self.model, method=self.scipy_map_method, return_raw=True)
-            self.mu_map = np.array([])
+            self.map_dict, self.scipy_opt = find_MAP(start=self.map_dict, model=self.model, method=self.scipy_map_method, return_raw=True)
+            self.mu_map = []
             for v in self.variables:
-                self.mu_map = np.append(self.mu_map, self.map_dict[v.name])
+                self.mu_map.append(self.map_dict[v.name])
+            self.mu_map = np.array(self.mu_map).squeeze()
             self.hess_inv = self.scipy_opt.hess_inv.todense()
         print(f'Final MAP solution = {self.mu_map}')
         print(f'Inverse Hessian at MAP = {self.hess_inv}')
@@ -350,7 +360,7 @@ class NFMC:
         
     def local_exploration(self, logq_func=None, dlogq_func=None):
         """Perform local exploration."""
-        self.high_iw_idx = np.where(self.weights >= (1 + self.local_thresh) / self.draws)[0]
+        self.high_iw_idx = np.where(self.weights >= self.local_thresh / self.draws)[0]
         self.num_local = len(self.high_iw_idx)
         self.high_iw_samples = self.nf_samples[self.high_iw_idx, ...]
         self.high_weights = self.weights[self.high_iw_idx]
@@ -382,13 +392,13 @@ class NFMC:
                 line_search_iter += 1
                 if line_search_iter >= self.max_line_search:
                     break
-                
+
             self.local_weights = np.append(self.local_weights,
                                            self.high_weights[i] * np.exp(self.target_logp(proposed_step)) / (np.exp(self.target_logp(proposed_step)) + np.exp(self.target_logp(sample))))
             self.modified_weights = np.append(self.modified_weights,
                                               self.high_weights[i] * np.exp(self.target_logp(sample)) / (np.exp(self.target_logp(proposed_step)) + np.exp(self.target_logp(sample))))
             self.local_samples = np.append(self.local_samples, proposed_step, axis=0)
-
+            
         self.weights[self.high_iw_idx] = self.modified_weights
     
     def initialize_nf(self):
@@ -435,6 +445,8 @@ class NFMC:
     def initialize_map_hess(self):
         """Initialize using scipy MAP optimization and Hessian."""
         self.map_dict, self.scipy_opt = find_MAP(start=self.start, model=self.model, method=self.scipy_map_method, return_raw=True)
+        print(f'lbfgs map dict = {self.map_dict}')
+        print(self.variables)
         self.mu_map = []
         for v in self.variables:
             self.mu_map.append(self.map_dict[v.name])
@@ -599,7 +611,8 @@ class NFMC:
         self.all_logq = np.copy(self.logq)
         self.get_posterior_logp()
         log_weight = self.posterior_logp - self.logq
-
+        self.evidence = np.mean(np.exp(log_weight))
+        
         if self.pareto:
             psiw = az.psislw(log_weight)
             self.weights = np.exp(psiw[0])
@@ -646,7 +659,7 @@ class NFMC:
         """Save results into a PyMC3 trace."""
         lenght_pos = len(self.posterior)
         varnames = [v.name for v in self.variables]
-        
+        print(f'posterior to trace varnames = {varnames}')
         with self.model:
             strace = NDArray(name=self.model.name)
             strace.setup(lenght_pos, self.chain)

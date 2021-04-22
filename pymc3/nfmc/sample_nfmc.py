@@ -325,7 +325,6 @@ def sample_nfmc_int(
     iter_sample_dict = {}
     iter_weight_dict = {}
     
-    stage = 1
     nfmc.initialize_var_info()
     nfmc.setup_logp()
     if init_method == 'prior':
@@ -348,43 +347,35 @@ def sample_nfmc_int(
     iter_sample_dict['q_init0'] = nfmc.nf_samples
     iter_weight_dict['q_init0'] = nfmc.weights
     
-    '''
-    # Run the optimization ...
-    print('Running initial optimization ...')
-    if parallel:
-        loggers = [_log] + [None] * (cores - 1)
-        pool = mp.Pool(cores)
-        optim_results = pool.starmap(
-            nfmc.optimize, [sample for sample in nfmc.prior_samples]
-        )
-        pool.close()
-        pool.join()
-        np.random.shuffle(np.array(optim_results))
-    elif not parallel:
-        optim_results = np.empty((0, np.shape(nfmc.prior_samples)[1]))
-        for sample in nfmc.prior_samples:
-            optim_results = np.append(optim_results, nfmc.optimize(sample), axis=0)
-        np.random.shuffle(optim_results)
-    nfmc.optim_samples = np.copy(optim_results)
-    '''
     iter_evidence = 1.0 * nfmc.evidence
 
     if nf_local_iter > 0:
-        print(f'Using local exploration to improve the SINF initialization for {nf_local_iter} iterations.')
+        print(f'Using local exploration to improve the SINF initialization.')
         for j in range(nf_local_iter):
+            print(f"Local exploration iteration: {int(j + 1)}, Normalizing Constant Estimate: {nfmc.evidence}")
             nfmc.fit_nf()
             iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_samples
             iter_weight_dict[f'q_init{int(j + 1)}'] = nfmc.weights
+            if np.abs((iter_evidence - nfmc.evidence) / nfmc.evidence) <= norm_tol:
+                print(f"Local exploration iteration: {int(j + 1)}, Normalizing Constant Estimate: {nfmc.evidence}")
+                print(f"Normalizing constant estimate has stabilised during local exploration initialization - ending NF fits with local exploration.")
+                iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_samples
+                iter_weight_dict[f'q_init{int(j + 1)}'] = nfmc.weights
+                break
+            iter_evidence = 1.0 * nfmc.evidence
         print('Re-initializing SINF fits using samples from latest iteration after local exploration.')
         nfmc.reinitialize_nf()
-
+        iter_evidence = 1.0 * nfmc.evidence
+        
     if full_local:
         print('Using local exploration at every iteration except the final one (where IW exceed the local threshold).')
         nfmc.nf_local_iter = 1
     elif not full_local:
-        print('No longer using local exploration after warmup iterations.')
+        print('No longer using local exploration after warm-up iterations.')
         nfmc.nf_local_iter = 0
-            
+
+    stage = 1
+        
     for i in range(nf_iter):
 
         if _log is not None:
@@ -394,7 +385,7 @@ def sample_nfmc_int(
         iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_samples
         iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
         stage += 1
-        if np.abs((iter_evidence - nfmc.evidence) / nfmc.evidence) <= norm_tol:
+        if stage > 1 and np.abs((iter_evidence - nfmc.evidence) / nfmc.evidence) <= norm_tol:
             print(f"Stage: {stage:3d}, Normalizing Constant Estimate: {nfmc.evidence}")
             iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_samples
             iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
