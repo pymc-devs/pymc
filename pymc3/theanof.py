@@ -93,6 +93,9 @@ def intX(X):
     """
     Convert a theano tensor or numpy array to theano.tensor.int32 type.
     """
+    # check value is already int, do nothing in this case
+    if (hasattr(X, "dtype") and "int" in str(X.dtype)) or isinstance(X, int):
+        return X
     intX = _conversion_map[theano.config.floatX]
     try:
         return X.astype(intX)

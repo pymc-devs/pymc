@@ -82,7 +82,7 @@ class TestHelperFunc:
         assert isinstance(theano_output, theano.graph.basic.Variable)
         npt.assert_allclose(theano_output.eval(), theano_graph_input.eval())
         intX = pm.theanof._conversion_map[theano.config.floatX]
-        if dense_input.dtype == intX or dense_input.dtype == theano.config.floatX:
+        if "int" in str(dense_input.dtype) or dense_input.dtype == theano.config.floatX:
             assert theano_output.owner is None  # func should not have added new nodes
             assert theano_output.name == input_name
         else:
@@ -92,7 +92,8 @@ class TestHelperFunc:
         if "float" in input_dtype:
             assert theano_output.dtype == theano.config.floatX
         else:
-            assert theano_output.dtype == intX
+            # only cast floats, leave ints as is
+            assert theano_output.dtype == input_dtype
 
         # Check function behavior with generator data
         generator_output = func(square_generator)
