@@ -171,11 +171,6 @@ def get_tau_sigma(tau=None, sigma=None):
         else:
             sigma = tau ** -0.5
 
-    # cast tau and sigma to float in a way that works for both np.arrays
-    # and pure python
-    tau = 1.0 * tau
-    sigma = 1.0 * sigma
-
     return floatX(tau), floatX(sigma)
 
 
