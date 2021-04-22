@@ -32,6 +32,7 @@ import pymc3 as pm
 
 from pymc3.aesaraf import change_rv_size, floatX, intX
 from pymc3.distributions.continuous import get_tau_sigma
+from pymc3.distributions.dist_math import clipped_beta_rvs
 from pymc3.distributions.multivariate import quaddist_matrix
 from pymc3.distributions.shape_utils import to_tuple
 from pymc3.exceptions import ShapeError
@@ -278,11 +279,6 @@ class TestWald(BaseTestCases.BaseTestCase):
     params = {"mu": 1.0, "lam": 1.0, "alpha": 0.0}
 
 
-class TestBeta(BaseTestCases.BaseTestCase):
-    distribution = pm.Beta
-    params = {"alpha": 1.0, "beta": 1.0}
-
-
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestKumaraswamy(BaseTestCases.BaseTestCase):
     distribution = pm.Kumaraswamy
@@ -355,11 +351,6 @@ class TestBetaBinomial(BaseTestCases.BaseTestCase):
     params = {"n": 5, "alpha": 1.0, "beta": 1.0}
 
 
-class TestDiscreteWeibull(BaseTestCases.BaseTestCase):
-    distribution = pm.DiscreteWeibull
-    params = {"q": 0.25, "beta": 2.0}
-
-
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestConstant(BaseTestCases.BaseTestCase):
     distribution = pm.Constant
@@ -426,17 +417,10 @@ class BaseTestDistribution(SeededTest):
         self._instantiate_pymc_rv()
         if self.reference_dist is not None:
             self.reference_dist_draws = self.reference_dist()(
-                **self.reference_dist_params, size=self.size
+                size=self.size, **self.reference_dist_params
             )
-        for test_name in self.tests_to_run:
-            self.run_test(test_name)
-
-    def run_test(self, test_name):
-        {
-            "check_pymc_dist_matches_reference": self._check_pymc_draws_match_reference,
-            "check_pymc_params_match_rv_op": self._check_pymc_params_match_rv_op,
-            "check_rv_size": self._check_rv_size,
-        }[test_name]()
+        for check_name in self.tests_to_run:
+            getattr(self, check_name)()
 
     def _instantiate_pymc_rv(self, dist_params=None):
         params = dist_params if dist_params else self.pymc_dist_params
@@ -448,25 +432,22 @@ class BaseTestDistribution(SeededTest):
                 name=f"{self.pymc_dist.rv_op.name}_test",
             )
 
-    def _check_pymc_draws_match_reference(self):
+    def check_pymc_draws_match_reference(self):
         # need to re-instantiate it to make sure that the order of drawings match the reference distribution one
         self._instantiate_pymc_rv()
         assert_array_almost_equal(
             self.pymc_rv.eval(), self.reference_dist_draws, decimal=self.decimal
         )
 
-    def _check_pymc_params_match_rv_op(self) -> None:
-        try:
-            aesera_dist_inputs = self.pymc_rv.get_parents()[0].inputs[3:]
-        except:
-            raise Exception("Parent Apply node missing from output")
+    def check_pymc_params_match_rv_op(self) -> None:
+        aesera_dist_inputs = self.pymc_rv.get_parents()[0].inputs[3:]
         assert len(self.expected_rv_op_params) == len(aesera_dist_inputs)
         for (expected_name, expected_value), actual_variable in zip(
             self.expected_rv_op_params.items(), aesera_dist_inputs
         ):
             assert_almost_equal(expected_value, actual_variable.eval(), decimal=self.decimal)
 
-    def _check_rv_size(self):
+    def check_rv_size(self):
         # test sizes
         sizes_to_check = self.sizes_to_check or [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
         sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
@@ -506,6 +487,28 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
     return lambda self: functools.partial(
         getattr(np.random.RandomState, dist_name), self.get_random_state()
     )
+
+
+class TestDiscreteWeibull(BaseTestDistribution):
+    def discrete_weibul_rng_fn(self):
+        p = seeded_numpy_distribution_builder("uniform")
+        return (
+            lambda size, q, beta: np.ceil(
+                np.power(np.log(1 - p(self)(size=size)) / np.log(q), 1.0 / beta)
+            )
+            - 1
+        )
+
+    pymc_dist = pm.DiscreteWeibull
+    pymc_dist_params = {"q": 0.25, "beta": 2.0}
+    expected_rv_op_params = {"q": 0.25, "beta": 2.0}
+    reference_dist_params = {"q": 0.25, "beta": 2.0}
+    reference_dist = discrete_weibul_rng_fn
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+        "check_pymc_dist_matches_reference",
+    ]
 
 
 class TestGumbel(BaseTestDistribution):
@@ -584,7 +587,16 @@ class TestBeta(BaseTestDistribution):
     pymc_dist = pm.Beta
     pymc_dist_params = {"alpha": 2.0, "beta": 5.0}
     expected_rv_op_params = {"alpha": 2.0, "beta": 5.0}
-    tests_to_run = ["check_pymc_params_match_rv_op"]
+    reference_dist_params = {"a": 2.0, "b": 5.0}
+    size = 15
+    reference_dist = lambda self: functools.partial(
+        clipped_beta_rvs, random_state=self.get_random_state()
+    )
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+        "check_pymc_params_match_rv_op",
+    ]
 
 
 class TestBetaMuSigma(BaseTestDistribution):
