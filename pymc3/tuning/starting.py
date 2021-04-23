@@ -157,9 +157,7 @@ def find_MAP(
 
     mx0 = RaveledVars(mx0, x0.point_map_info)
 
-    vars = get_default_varnames(
-        [v.tag.value_var for v in model.unobserved_RVs], include_transformed
-    )
+    vars = get_default_varnames(model.unobserved_value_vars, include_transformed)
     mx = {
         var.name: value
         for var, value in zip(vars, model.fastfn(vars)(DictToArrayBijection.rmap(mx0)))

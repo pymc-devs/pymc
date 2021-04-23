@@ -16,7 +16,17 @@ import numpy as np
 
 from pytest import raises
 
-from pymc3 import Beta, Binomial, Model, Normal, Point, Uniform, find_MAP
+from pymc3 import (
+    Beta,
+    Binomial,
+    Deterministic,
+    Gamma,
+    Model,
+    Normal,
+    Point,
+    Uniform,
+    find_MAP,
+)
 from pymc3.tests.checks import close_to
 from pymc3.tests.helpers import select_by_precision
 from pymc3.tests.models import non_normal, simple_arbitrary_det, simple_model
@@ -86,6 +96,18 @@ def test_find_MAP():
 
     close_to(map_est2["mu"], 0, tol)
     close_to(map_est2["sigma"], 1, tol)
+
+
+def test_find_MAP_issue_4488():
+    # Test for https://github.com/pymc-devs/pymc3/issues/4488
+    with Model() as m:
+        x = Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
+        y = Deterministic("y", x + 1)
+        map_estimate = find_MAP()
+
+    assert not set.difference({"x_missing", "x_missing_log__", "y"}, set(map_estimate.keys()))
+    assert np.isclose(map_estimate["x_missing"], 0.2)
+    np.testing.assert_array_equal(map_estimate["y"], [2.0, map_estimate["x_missing"][0] + 1])
 
 
 def test_allinmodel():

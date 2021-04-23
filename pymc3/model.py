@@ -18,10 +18,20 @@ import threading
 import warnings
 
 from sys import modules
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import aesara
-import aesara.graph.basic
 import aesara.sparse as sparse
 import aesara.tensor as at
 import numpy as np
@@ -32,11 +42,11 @@ from aesara.gradient import grad
 from aesara.graph.basic import Constant, Variable, graph_inputs
 from aesara.graph.fg import FunctionGraph, MissingInputError
 from aesara.tensor.random.opt import local_subtensor_rv_lift
+from aesara.tensor.sharedvar import ScalarSharedVariable
 from aesara.tensor.var import TensorVariable
 from pandas import Series
 
 from pymc3.aesaraf import (
-    change_rv_size,
     gradient,
     hessian,
     inputvars,
@@ -46,7 +56,7 @@ from pymc3.aesaraf import (
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.data import GenTensorVariable, Minibatch
 from pymc3.distributions import logp_transform, logpt, logpt_sum
-from pymc3.exceptions import ImputationWarning, SamplingError
+from pymc3.exceptions import ImputationWarning, SamplingError, ShapeError
 from pymc3.math import flatten_list
 from pymc3.util import UNSET, WithMemoization, get_var_name, treedict, treelist
 from pymc3.vartypes import continuous_types, discrete_types, typefilter
@@ -606,8 +616,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     def __init__(self, name="", model=None, aesara_config=None, coords=None, check_bounds=True):
         self.name = name
-        self.coords = {}
-        self.RV_dims = {}
+        self._coords = {}
+        self._RV_dims = {}
+        self._dim_lengths = {}
         self.add_coords(coords)
         self.check_bounds = check_bounds
 
@@ -621,6 +632,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.rvs_to_values = treedict(parent=self.parent.rvs_to_values)
             self.free_RVs = treelist(parent=self.parent.free_RVs)
             self.observed_RVs = treelist(parent=self.parent.observed_RVs)
+            self.auto_deterministics = treelist(parent=self.parent.auto_deterministics)
             self.deterministics = treelist(parent=self.parent.deterministics)
             self.potentials = treelist(parent=self.parent.potentials)
         else:
@@ -629,6 +641,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.rvs_to_values = treedict()
             self.free_RVs = treelist()
             self.observed_RVs = treelist()
+            self.auto_deterministics = treelist()
             self.deterministics = treelist()
             self.potentials = treelist()
 
@@ -790,6 +803,29 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return [self.rvs_to_values[v] for v in self.free_RVs]
 
     @property
+    def unobserved_value_vars(self):
+        """List of all random variables (including untransformed projections),
+        as well as deterministics used as inputs and outputs of the the model's
+        log-likelihood graph
+        """
+        vars = []
+        for rv in self.free_RVs:
+            value_var = self.rvs_to_values[rv]
+            transform = getattr(value_var.tag, "transform", None)
+            if transform is not None:
+                # We need to create and add an un-transformed version of
+                # each transformed variable
+                untrans_value_var = transform.backward(rv, value_var)
+                untrans_value_var.name = rv.name
+                vars.append(untrans_value_var)
+            vars.append(value_var)
+
+        # Remove rvs from deterministics graph
+        deterministics, _ = rvs_to_value_vars(self.deterministics, apply_transforms=True)
+
+        return vars + deterministics
+
+    @property
     def basic_RVs(self):
         """List of random variables the model is defined in terms of
         (which excludes deterministics).
@@ -802,8 +838,29 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         return self.free_RVs + self.observed_RVs
 
     @property
+    def RV_dims(self) -> Dict[str, Tuple[Union[str, None], ...]]:
+        """Tuples of dimension names for specific model variables.
+
+        Entries in the tuples may be ``None``, if the RV dimension was not given a name.
+        """
+        return self._RV_dims
+
+    @property
+    def coords(self) -> Dict[str, Union[Sequence, None]]:
+        """Coordinate values for model dimensions."""
+        return self._coords
+
+    @property
+    def dim_lengths(self) -> Dict[str, Tuple[Variable, ...]]:
+        """The symbolic lengths of dimensions in the model.
+
+        The values are typically instances of ``TensorVariable`` or ``ScalarSharedVariable``.
+        """
+        return self._dim_lengths
+
+    @property
     def unobserved_RVs(self):
-        """List of all random variable, including deterministic ones.
+        """List of all random variables, including deterministic ones.
 
         These are the actual random variable terms that make up the
         "sample-space" graph (i.e. you can sample these graphs by compiling them
@@ -888,20 +945,144 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             shape.extend(np.shape(self.coords[dim]))
         return tuple(shape)
 
-    def add_coords(self, coords):
+    def add_coord(
+        self,
+        name: str,
+        values: Optional[Sequence] = None,
+        *,
+        length: Optional[Variable] = None,
+    ):
+        """Registers a dimension coordinate with the model.
+
+        Parameters
+        ----------
+        name : str
+            Name of the dimension.
+            Forbidden: {"chain", "draw", "__sample__"}
+        values : optional, array-like
+            Coordinate values or ``None`` (for auto-numbering).
+            If ``None`` is passed, a ``length`` must be specified.
+        length : optional, scalar
+            A symbolic scalar of the dimensions length.
+            Defaults to ``aesara.shared(len(values))``.
+        """
+        if name in {"draw", "chain", "__sample__"}:
+            raise ValueError(
+                "Dimensions can not be named `draw`, `chain` or `__sample__`, "
+                "as those are reserved for use in `InferenceData`."
+            )
+        if values is None and length is None:
+            raise ValueError(
+                f"Either `values` or `length` must be specified for the '{name}' dimension."
+            )
+        if length is not None and not isinstance(length, Variable):
+            raise ValueError(
+                f"The `length` passed for the '{name}' coord must be an Aesara Variable or None."
+            )
+        if name in self.coords:
+            if not values.equals(self.coords[name]):
+                raise ValueError(f"Duplicate and incompatiple coordinate: {name}.")
+        else:
+            self._coords[name] = values
+            self._dim_lengths[name] = length or aesara.shared(len(values))
+
+    def add_coords(
+        self,
+        coords: Dict[str, Optional[Sequence]],
+        *,
+        lengths: Optional[Dict[str, Union[Variable, None]]] = None,
+    ):
+        """Vectorized version of ``Model.add_coord``."""
         if coords is None:
             return
+        lengths = lengths or {}
 
-        for name in coords:
-            if name in {"draw", "chain"}:
-                raise ValueError(
-                    "Dimensions can not be named `draw` or `chain`, as they are reserved for the sampler's outputs."
+        for name, values in coords.items():
+            self.add_coord(name, values, length=lengths.get(name, None))
+
+    def set_data(
+        self,
+        name: str,
+        values: Dict[str, Optional[Sequence]],
+        coords: Optional[Dict[str, Sequence]] = None,
+    ):
+        """Changes the values of a data variable in the model.
+
+        In contrast to pm.Data().set_value, this method can also
+        update the corresponding coordinates.
+
+        Parameters
+        ----------
+        name : str
+            Name of a shared variable in the model.
+        values : array-like
+            New values for the shared variable.
+        coords : optional, dict
+            New coordinate values for dimensions of the shared variable.
+            Must be provided for all named dimensions that change in length
+            and already have coordinate values.
+        """
+        shared_object = self[name]
+        if not isinstance(shared_object, SharedVariable):
+            raise TypeError(
+                f"The variable `{name}` must be a `SharedVariable` (e.g. `pymc3.Data`) allow updating. "
+                f"The current type is: {type(shared_object)}"
+            )
+
+        if isinstance(values, list):
+            values = np.array(values)
+        values = pandas_to_array(values)
+        dims = self.RV_dims.get(name, None) or ()
+        coords = coords or {}
+
+        if values.ndim != shared_object.ndim:
+            raise ValueError(
+                f"New values for '{name}' must have {shared_object.ndim} dimensions, just like the original."
+            )
+
+        for d, dname in enumerate(dims):
+            length_tensor = self.dim_lengths[dname]
+            old_length = length_tensor.eval()
+            new_length = values.shape[d]
+            original_coords = self.coords.get(dname, None)
+            new_coords = coords.get(dname, None)
+
+            length_changed = new_length != old_length
+
+            # Reject resizing if we already know that it would create shape problems.
+            # NOTE: If there are multiple pm.Data containers sharing this dim, but the user only
+            #       changes the values for one of them, they will run into shape problems nonetheless.
+            length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
+            if not isinstance(length_belongs_to, SharedVariable) and length_changed:
+                raise ShapeError(
+                    f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
+                    f"because the dimension was initialized from '{length_belongs_to}' which is not a shared variable. "
+                    f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
+                    f"for example by a model variable.",
+                    actual=new_length,
+                    expected=old_length,
                 )
-            if name in self.coords:
-                if not coords[name].equals(self.coords[name]):
-                    raise ValueError("Duplicate and incompatiple coordinate: %s." % name)
-            else:
-                self.coords[name] = coords[name]
+            if original_coords is not None and length_changed:
+                if length_changed and new_coords is None:
+                    raise ValueError(
+                        f"The '{name}' variable already had {len(original_coords)} coord values defined for"
+                        f"its {dname} dimension. With the new values this dimension changes to length "
+                        f"{new_length}, so new coord values for the {dname} dimension are required."
+                    )
+            if new_coords is not None:
+                # Update the registered coord values (also if they were None)
+                if len(new_coords) != new_length:
+                    raise ShapeError(
+                        f"Length of new coordinate values for dimension '{dname}' does not match the provided values.",
+                        actual=len(new_coords),
+                        expected=new_length,
+                    )
+                self._coords[dname] = new_coords
+            if isinstance(length_tensor, ScalarSharedVariable) and new_length != old_length:
+                # Updating the shared variable resizes dependent nodes that use this dimension for their `size`.
+                length_tensor.set_value(new_length)
+
+        shared_object.set_value(values)
 
     def register_rv(self, rv_var, name, data=None, total_size=None, dims=None, transform=UNSET):
         """Register an (un)observed random variable with the model.
@@ -938,7 +1119,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 and not isinstance(data, (GenTensorVariable, Minibatch))
                 and data.owner is not None
             ):
-                raise TypeError("Observed data cannot consist of symbolic variables.")
+                raise TypeError(
+                    "Variables that depend on other nodes cannot be used for observed data."
+                    f"The data variable was: {data}"
+                )
 
             data = pandas_to_array(data)
 
@@ -958,6 +1142,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         ==========
         rv_var
             The random variable that is observed.
+            Its dimensionality must be compatible with the data already.
         data
             The observed data.
         dims: tuple
@@ -969,21 +1154,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         name = rv_var.name
         data = pandas_to_array(data).astype(rv_var.dtype)
 
-        # The shapes of the observed random variable and its data might not
-        # match.  We need need to update the observed random variable's `size`
-        # (i.e. number of samples) so that it matches the data.
-
-        # Setting `size` produces a random variable with shape `size +
-        # support_shape`, where `len(support_shape) == op.ndim_supp`, we need
-        # to disregard the last `op.ndim_supp`-many dimensions when we
-        # determine the appropriate `size` value from `data.shape`.
-        ndim_supp = rv_var.owner.op.ndim_supp
-        if ndim_supp > 0:
-            new_size = data.shape[:-ndim_supp]
-        else:
-            new_size = data.shape
-
-        rv_var = change_rv_size(rv_var, new_size)
+        if data.ndim != rv_var.ndim:
+            raise ShapeError(
+                "Dimensionality of data and RV don't match.", actual=data.ndim, expected=rv_var.ndim
+            )
 
         if aesara.config.compute_test_value != "off":
             test_value = getattr(rv_var.tag, "test_value", None)
@@ -1049,10 +1223,12 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             self.add_random_variable(observed_rv_var, dims)
             self.observed_RVs.append(observed_rv_var)
 
+            # Create deterministic that combines observed and missing
             rv_var = at.zeros(data.shape)
             rv_var = at.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
             rv_var = at.set_subtensor(rv_var[antimask_idx], observed_rv_var)
-            rv_var = Deterministic(name, rv_var, self, dims)
+            rv_var = Deterministic(name, rv_var, self, dims, auto=True)
+
         elif sps.issparse(data):
             data = sparse.basic.as_sparse(data, name=name)
             rv_var.tag.observations = data
@@ -1105,7 +1281,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
         return value_var
 
-    def add_random_variable(self, var, dims=None):
+    def add_random_variable(self, var, dims: Optional[Tuple[Union[str, None], ...]] = None):
         """Add a random variable to the named variables of the model."""
         if self.named_vars.tree_contains(var.name):
             raise ValueError(f"Variable name {var.name} already exists.")
@@ -1113,8 +1289,8 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         if dims is not None:
             if isinstance(dims, str):
                 dims = (dims,)
-            assert all(dim in self.coords for dim in dims)
-            self.RV_dims[var.name] = dims
+            assert all(dim in self.coords or dim is None for dim in dims)
+            self._RV_dims[var.name] = dims
 
         self.named_vars[var.name] = var
         if not hasattr(self, self.name_of(var.name)):
@@ -1473,18 +1649,7 @@ def set_data(new_data, model=None):
     model = modelcontext(model)
 
     for variable_name, new_value in new_data.items():
-        if isinstance(model[variable_name], SharedVariable):
-            if isinstance(new_value, list):
-                new_value = np.array(new_value)
-            model[variable_name].set_value(pandas_to_array(new_value))
-        else:
-            message = (
-                "The variable `{}` must be defined as `pymc3."
-                "Data` inside the model to allow updating. The "
-                "current type is: "
-                "{}.".format(variable_name, type(model[variable_name]))
-            )
-            raise TypeError(message)
+        model.set_data(variable_name, new_value)
 
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
@@ -1569,13 +1734,17 @@ class LoosePointFunc:
 compilef = fastfn
 
 
-def Deterministic(name, var, model=None, dims=None):
+def Deterministic(name, var, model=None, dims=None, auto=False):
     """Create a named deterministic variable
 
     Parameters
     ----------
     name: str
     var: Aesara variables
+    auto: bool
+        Add automatically created deterministics (e.g., when imputing missing values)
+        to a separate model.auto_deterministics list for filtering during sampling.
+
 
     Returns
     -------
@@ -1583,7 +1752,10 @@ def Deterministic(name, var, model=None, dims=None):
     """
     model = modelcontext(model)
     var = var.copy(model.name_for(name))
-    model.deterministics.append(var)
+    if auto:
+        model.auto_deterministics.append(var)
+    else:
+        model.deterministics.append(var)
     model.add_random_variable(var, dims)
 
     return var

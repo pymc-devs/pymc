@@ -174,12 +174,7 @@ class BaseTestCases:
                         # in the test case parametrization "None" means "no specified (default)"
                         return self.distribution(name, transform=None, **params)
                     else:
-                        ndim_supp = self.distribution.rv_op.ndim_supp
-                        if ndim_supp == 0:
-                            size = shape
-                        else:
-                            size = shape[:-ndim_supp]
-                        return self.distribution(name, size=size, transform=None, **params)
+                        return self.distribution(name, shape=shape, transform=None, **params)
                 except TypeError:
                     if np.sum(np.atleast_1d(shape)) == 0:
                         pytest.skip("Timeseries must have positive shape")
@@ -188,10 +183,9 @@ class BaseTestCases:
         @staticmethod
         def sample_random_variable(random_variable, size):
             """ Draws samples from a RandomVariable using its .random() method. """
-            if size is None:
-                return random_variable.eval()
-            else:
-                return change_rv_size(random_variable, size, expand=True).eval()
+            if size:
+                random_variable = change_rv_size(random_variable, size, expand=True)
+            return random_variable.eval()
 
         @pytest.mark.parametrize("size", [None, (), 1, (1,), 5, (4, 5)], ids=str)
         @pytest.mark.parametrize("shape", [None, ()], ids=str)

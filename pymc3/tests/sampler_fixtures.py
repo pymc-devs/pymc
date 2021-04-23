@@ -92,7 +92,7 @@ class BetaBinomialFixture(KnownCDF):
     @classmethod
     def make_model(cls):
         with pm.Model() as model:
-            p = pm.Beta("p", [0.5, 0.5, 1.0], [0.5, 0.5, 1.0], size=3)
+            p = pm.Beta("p", [0.5, 0.5, 1.0], [0.5, 0.5, 1.0])
             pm.Binomial("y", p=p, n=[4, 12, 9], observed=[1, 2, 9])
         return model
 
@@ -155,13 +155,15 @@ class BaseSampler(SeededTest):
 
     def test_neff(self):
         if hasattr(self, "min_n_eff"):
-            idata = to_inference_data(self.trace[self.burn :])
+            with self.model:
+                idata = to_inference_data(self.trace[self.burn :])
             n_eff = az.ess(idata)
             for var in n_eff:
                 npt.assert_array_less(self.min_n_eff, n_eff[var])
 
     def test_Rhat(self):
-        idata = to_inference_data(self.trace[self.burn :])
+        with self.model:
+            idata = to_inference_data(self.trace[self.burn :])
         rhat = az.rhat(idata)
         for var in rhat:
             npt.assert_allclose(rhat[var], 1, rtol=0.01)

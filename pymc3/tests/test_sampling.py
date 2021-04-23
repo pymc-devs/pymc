@@ -213,7 +213,7 @@ class TestSample(SeededTest):
                 return_inferencedata=True,
                 discard_tuned_samples=True,
                 idata_kwargs={"prior": prior},
-                random_seed=-1
+                random_seed=-1,
             )
             assert "prior" in result
             assert isinstance(result, InferenceData)
@@ -385,11 +385,10 @@ class TestNamedSampling(SeededTest):
                 "theta0",
                 mu=np.atleast_2d(0),
                 tau=np.atleast_2d(1e20),
-                size=(1, 1),
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
+                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
             )
             res = theta.eval()
             assert np.isclose(res, 0.0)
@@ -401,11 +400,10 @@ class TestNamedSampling(SeededTest):
                 "theta0",
                 mu=np.atleast_2d(0),
                 tau=np.atleast_2d(1e20),
-                size=(1, 1),
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
+                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
             )
             res = theta.eval()
             assert np.isclose(res, 0.0)
@@ -417,11 +415,10 @@ class TestNamedSampling(SeededTest):
                 "theta0",
                 mu=np.atleast_2d(0),
                 tau=np.atleast_2d(1e20),
-                size=(1, 1),
                 testval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
+                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), shape=(1, 1)
             )
 
             res = theta.eval()
@@ -936,14 +933,13 @@ class TestSamplePriorPredictive(SeededTest):
         npt.assert_array_almost_equal(prior["positive_mu"], np.abs(prior["mu"]), decimal=4)
 
     def test_respects_shape(self):
-        for shape in (2, (2,), (10, 2), (10, 10)):
+        for shape in ((2,), (10, 2), (10, 10)):
             with pm.Model():
-                mu = pm.Gamma("mu", 3, 1, size=1)
-                goals = pm.Poisson("goals", mu, size=shape)
+                mu = pm.Gamma("mu", 3, 1)
+                goals = pm.Poisson("goals", mu, shape=shape)
+                assert goals.eval().shape == shape, f"Current shape setting: {shape}"
                 trace1 = pm.sample_prior_predictive(10, var_names=["mu", "mu", "goals"])
                 trace2 = pm.sample_prior_predictive(10, var_names=["mu", "goals"])
-            if shape == 2:  # want to test shape as an int
-                shape = (2,)
             assert trace1["goals"].shape == (10,) + shape
             assert trace2["goals"].shape == (10,) + shape
 
@@ -971,14 +967,14 @@ class TestSamplePriorPredictive(SeededTest):
 
     def test_layers(self):
         with pm.Model() as model:
-            a = pm.Uniform("a", lower=0, upper=1, size=10)
-            b = pm.Binomial("b", n=1, p=a, size=10)
+            a = pm.Uniform("a", lower=0, upper=1, size=5)
+            b = pm.Binomial("b", n=1, p=a, size=7)
 
         model.default_rng.get_value(borrow=True).seed(232093)
 
         b_sampler = aesara.function([], b)
         avg = np.stack([b_sampler() for i in range(10000)]).mean(0)
-        npt.assert_array_almost_equal(avg, 0.5 * np.ones((10,)), decimal=2)
+        npt.assert_array_almost_equal(avg, 0.5 * np.ones((7, 5)), decimal=2)
 
     def test_transformed(self):
         n = 18
@@ -1087,14 +1083,22 @@ class TestSamplePosteriorPredictive:
 
         with pmodel:
             prior = pm.sample_prior_predictive(samples=20)
-
-        idat = pm.to_inference_data(trace, prior=prior)
+            idat = pm.to_inference_data(trace, prior=prior)
 
         with pmodel:
             pp = pm.sample_posterior_predictive(idat.prior, var_names=["d"])
 
     def test_sample_from_xarray_posterior(self, point_list_arg_bug_fixture):
         pmodel, trace = point_list_arg_bug_fixture
-        idat = pm.to_inference_data(trace)
         with pmodel:
+            idat = pm.to_inference_data(trace)
             pp = pm.sample_posterior_predictive(idat.posterior, var_names=["d"])
+
+
+def test_sample_deterministic():
+    with pm.Model() as model:
+        x = pm.HalfNormal("x", 1)
+        y = pm.Deterministic("y", x + 100)
+        trace = pm.sample(chains=1, draws=50, compute_convergence_checks=False)
+
+    np.testing.assert_allclose(trace["y"], trace["x"] + 100)
