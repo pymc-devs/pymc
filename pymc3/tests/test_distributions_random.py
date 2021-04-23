@@ -414,6 +414,7 @@ class BaseTestDistribution(SeededTest):
     repeated_params_shape = 5
 
     def test_distribution(self):
+        self.validate_tests_list()
         self._instantiate_pymc_rv()
         if self.reference_dist is not None:
             self.reference_dist_draws = self.reference_dist()(
@@ -439,7 +440,7 @@ class BaseTestDistribution(SeededTest):
             self.pymc_rv.eval(), self.reference_dist_draws, decimal=self.decimal
         )
 
-    def check_pymc_params_match_rv_op(self) -> None:
+    def check_pymc_params_match_rv_op(self):
         aesera_dist_inputs = self.pymc_rv.get_parents()[0].inputs[3:]
         assert len(self.expected_rv_op_params) == len(aesera_dist_inputs)
         for (expected_name, expected_value), actual_variable in zip(
@@ -476,6 +477,11 @@ class BaseTestDistribution(SeededTest):
                 actual = change_rv_size(self.pymc_rv, size).eval().shape
                 assert actual == expected
 
+    def validate_tests_list(self):
+        assert len(self.tests_to_run) == len(
+            set(self.tests_to_run)
+        ), "There are duplicates in the list of tests_to_run"
+
 
 def seeded_scipy_distribution_builder(dist_name: str) -> Callable:
     return lambda self: functools.partial(
@@ -490,24 +496,24 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
 
 
 class TestDiscreteWeibull(BaseTestDistribution):
-    def discrete_weibul_rng_fn(self):
-        p = seeded_numpy_distribution_builder("uniform")
-        return (
-            lambda size, q, beta: np.ceil(
-                np.power(np.log(1 - p(self)(size=size)) / np.log(q), 1.0 / beta)
-            )
-            - 1
+    def discrete_weibul_rng_fn(self, size, q, beta, uniform_rng_fct):
+        return np.ceil(np.power(np.log(1 - uniform_rng_fct(size=size)) / np.log(q), 1.0 / beta)) - 1
+
+    def seeded_discrete_weibul_rng_fn(self):
+        uniform_rng_fct = functools.partial(
+            getattr(np.random.RandomState, "uniform"), self.get_random_state()
         )
+        return functools.partial(self.discrete_weibul_rng_fn, uniform_rng_fct=uniform_rng_fct)
 
     pymc_dist = pm.DiscreteWeibull
     pymc_dist_params = {"q": 0.25, "beta": 2.0}
     expected_rv_op_params = {"q": 0.25, "beta": 2.0}
     reference_dist_params = {"q": 0.25, "beta": 2.0}
-    reference_dist = discrete_weibul_rng_fn
+    reference_dist = seeded_discrete_weibul_rng_fn
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_size",
-        "check_pymc_dist_matches_reference",
+        "check_pymc_draws_match_reference",
     ]
 
 
@@ -521,7 +527,7 @@ class TestGumbel(BaseTestDistribution):
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_size",
-        "check_pymc_dist_matches_reference",
+        "check_pymc_draws_match_reference",
     ]
 
 
@@ -535,7 +541,7 @@ class TestNormal(BaseTestDistribution):
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_size",
-        "check_pymc_dist_matches_reference",
+        "check_pymc_draws_match_reference",
     ]
 
 
@@ -595,7 +601,7 @@ class TestBeta(BaseTestDistribution):
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_rv_size",
-        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
     ]
 
 
