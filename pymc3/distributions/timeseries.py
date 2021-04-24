@@ -156,18 +156,39 @@ class AR(distribution.Continuous):
         -------
         TensorVariable
         """
+
+        if self.rho.ndim > 2:
+            # Assumes a matrix of cross-series coefficients
+            # for each time lag
+            bcast_fn = at.dot
+            if self.constant:
+                raise NotImplementedError(
+                    "Cross-series lags not currently supported with constant=True"
+                )
+        else:
+            bcast_fn = at.mul
+
         if self.constant:
             x = at.add(
-                *[self.rho[i + 1] * value[self.p - (i + 1) : -(i + 1)] for i in range(self.p)]
+                *[
+                    bcast_fn(value[self.p - (i + 1) : -(i + 1)], self.rho[i + 1])
+                    for i in range(self.p)
+                ]
             )
+
             eps = value[self.p :] - self.rho[0] - x
         else:
             if self.p == 1:
-                x = self.rho * value[:-1]
+                x = bcast_fn(value[:-1], self.rho[0])
+
             else:
                 x = at.add(
-                    *[self.rho[i] * value[self.p - (i + 1) : -(i + 1)] for i in range(self.p)]
+                    *[
+                        bcast_fn(value[self.p - (i + 1) : -(i + 1)], self.rho[i])
+                        for i in range(self.p)
+                    ]
                 )
+
             eps = value[self.p :] - x
 
         innov_like = Normal.dist(mu=0.0, tau=self.tau).logp(eps)
