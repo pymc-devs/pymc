@@ -49,9 +49,9 @@ vectorized_ppc = contextvars.ContextVar(
 
 PLATFORM = sys.platform
 
-Shape = Union[int, Sequence[Union[str, type(Ellipsis)]], Variable]
-Dims = Union[str, Sequence[Union[str, None, type(Ellipsis)]]]
-Size = Union[int, Tuple[int, ...]]
+Shape = Union[int, Sequence[Union[int, type(Ellipsis), Variable]], Variable]
+Dims = Union[str, Sequence[Union[str, type(Ellipsis), None]]]
+Size = Union[int, Sequence[Union[int, type(Ellipsis), Variable]], Variable]
 
 
 class _Unpickling:
@@ -139,7 +139,7 @@ def _validate_shape_dims_size(
         raise ValueError("The `shape` parameter must be an int, list or tuple.")
     if not isinstance(dims, (type(None), str, list, tuple)):
         raise ValueError("The `dims` parameter must be a str, list or tuple.")
-    if not isinstance(size, (type(None), int, list, tuple)):
+    if not isinstance(size, (type(None), int, list, tuple, Variable)):
         raise ValueError("The `size` parameter must be an int, list or tuple.")
 
     # Auto-convert non-tupled parameters
@@ -155,17 +155,14 @@ def _validate_shape_dims_size(
         shape = tuple(shape)
     if not isinstance(dims, (type(None), tuple)):
         dims = tuple(dims)
-    if not isinstance(size, (type(None), tuple)):
+    if not isinstance(size, (type(None), tuple, Variable)):
         size = tuple(size)
 
-    if not _valid_ellipsis_position(shape):
-        raise ValueError(
-            f"Ellipsis in `shape` may only appear in the last position. Actual: {shape}"
-        )
-    if not _valid_ellipsis_position(dims):
-        raise ValueError(f"Ellipsis in `dims` may only appear in the last position. Actual: {dims}")
-    if size is not None and Ellipsis in size:
-        raise ValueError(f"The `size` parameter cannot contain an Ellipsis. Actual: {size}")
+    for kwarg, val in dict(shape=shape, dims=dims, size=size).items():
+        if not _valid_ellipsis_position(val):
+            raise ValueError(
+                f"Ellipsis in `{kwarg}` may only appear in the last position. Actual: {val}"
+            )
     return shape, dims, size
 
 
@@ -240,12 +237,12 @@ class Distribution(metaclass=DistributionMeta):
             rng = model.default_rng
 
         _, dims, _ = _validate_shape_dims_size(dims=dims)
-        resize = None
+        batch_shape = None
 
         # Create the RV without specifying testval, because the testval may have a shape
         # that only matches after replicating with a size implied by dims (see below).
         rv_out = cls.dist(*args, rng=rng, testval=None, **kwargs)
-        n_implied = rv_out.ndim
+        ndim_implied = rv_out.ndim
 
         # The `.dist()` can wrap automatically with a SpecifyShape Op which brings informative
         # error messages earlier in model construction.
@@ -261,33 +258,33 @@ class Distribution(metaclass=DistributionMeta):
                 # Auto-complete the dims tuple to the full length
                 dims = (*dims[:-1], *[None] * rv_out.ndim)
 
-            n_resize = len(dims) - n_implied
+            ndim_batch = len(dims) - ndim_implied
 
-            # All resize dims must be known already (numerically or symbolically).
-            unknown_resize_dims = set(dims[:n_resize]) - set(model.dim_lengths)
-            if unknown_resize_dims:
+            # All batch dims must be known already (numerically or symbolically).
+            unknown_batch_dims = set(dims[:ndim_batch]) - set(model.dim_lengths)
+            if unknown_batch_dims:
                 raise KeyError(
-                    f"Dimensions {unknown_resize_dims} are unknown to the model and cannot be used to specify a `size`."
+                    f"Dimensions {unknown_batch_dims} are unknown to the model and cannot be used to specify a `size`."
                 )
 
-            # The numeric/symbolic resize tuple can be created using model.RV_dim_lengths
-            resize = tuple(model.dim_lengths[dname] for dname in dims[:n_resize])
+            # The numeric/symbolic batch shape can be created using model.RV_dim_lengths
+            batch_shape = tuple(model.dim_lengths[dname] for dname in dims[:ndim_batch])
         elif observed is not None:
             if not hasattr(observed, "shape"):
                 observed = pandas_to_array(observed)
-            n_resize = observed.ndim - n_implied
-            resize = tuple(observed.shape[d] for d in range(n_resize))
+            ndim_batch = observed.ndim - ndim_implied
+            batch_shape = tuple(observed.shape[d] for d in range(ndim_batch))
 
-        if resize:
+        if batch_shape:
             # A batch size was specified through `dims`, or implied by `observed`.
-            rv_out = change_rv_size(rv_var=rv_out, new_size=resize, expand=True)
+            rv_out = change_rv_size(rv_var=rv_out, new_size=batch_shape, expand=True)
 
         if dims is not None:
             # Now that we have a handle on the output RV, we can register named implied dimensions that
             # were not yet known to the model, such that they can be used for size further downstream.
-            for di, dname in enumerate(dims[n_resize:]):
+            for di, dname in enumerate(dims[ndim_batch:]):
                 if not dname in model.dim_lengths:
-                    model.add_coord(dname, values=None, length=rv_out.shape[n_resize + di])
+                    model.add_coord(dname, values=None, length=rv_out.shape[ndim_batch + di])
 
         if testval is not None:
             # Assigning the testval earlier causes trouble because the RV may not be created with the final shape already.
@@ -329,6 +326,9 @@ class Distribution(metaclass=DistributionMeta):
         size : int, tuple, Variable, optional
             A scalar or tuple for replicating the RV in addition
             to its implied shape/dimensionality.
+
+            Ellipsis (...) may be used in the last position of the tuple,
+            such that only batch dimensions must be specified.
         testval : optional
             Test value to be attached to the output RV.
             Must match its shape exactly.
@@ -344,29 +344,46 @@ class Distribution(metaclass=DistributionMeta):
         shape, _, size = _validate_shape_dims_size(shape=shape, size=size)
         assert_shape = None
 
-        # Create the RV without specifying size or testval.
-        # The size will be expanded later (if necessary) and only then the testval fits.
+        # Create the RV without specifying size or testval, because we don't know
+        # a-priori if `size` contains a batch shape.
+        # In the end `testval` must match the final shape, but it is
+        # not taken into consideration when creating the RV.
+        # Batch-shape expansion (if necessary) of the RV happens later.
         rv_native = cls.rv_op(*dist_params, size=None, **kwargs)
 
-        if shape is None and size is None:
-            size = ()
-        elif shape is not None:
-            # SpecifyShape is automatically applied for symbolic and non-Ellipsis shapes
-            if isinstance(shape, Variable):
-                assert_shape = shape
-                size = ()
+        # Now we know the implied dimensionality and can figure out the batch shape
+        batch_shape = ()
+        if size is not None:
+            if not isinstance(size, Variable) and Ellipsis in size:
+                batch_shape = size[:-1]
             else:
-                if Ellipsis in shape:
-                    size = tuple(shape[:-1])
+                # Parametrization through size does not include support dimensions,
+                # but may include a batch shape.
+                ndim_support = rv_native.owner.op.ndim_supp
+                ndim_inputs = rv_native.ndim - ndim_support
+                # Be careful to avoid len(size) because it may be symbolic
+                if ndim_inputs == 0:
+                    batch_shape = size
                 else:
-                    size = tuple(shape[: len(shape) - rv_native.ndim])
-                    assert_shape = shape
-        # no-op conditions:
-        # `elif size is not None` (User already specified how to expand the RV)
-        # `else` (Unreachable)
+                    batch_shape = size[:-ndim_inputs]
+        elif shape is not None:
+            if not isinstance(shape, Variable) and Ellipsis in shape:
+                # Can't assert a shape without knowing all dimension lengths.
+                # The batch shape are all entries before ...
+                batch_shape = tuple(shape[:-1])
+            else:
+                # Fully symbolic, or without Ellipsis shapes can be asserted.
+                assert_shape = shape
+                # The batch shape are the entries that preceed the implied dimensions.
+                # Be careful to avoid len(shape) because it may be symbolic
+                if rv_native.ndim == 0:
+                    batch_shape = shape
+                else:
+                    batch_shape = shape[: -rv_native.ndim]
+        # else: both dimensionality kwargs are None
 
-        if size:
-            rv_out = change_rv_size(rv_var=rv_native, new_size=size, expand=True)
+        if batch_shape:
+            rv_out = change_rv_size(rv_var=rv_native, new_size=batch_shape, expand=True)
         else:
             rv_out = rv_native
 

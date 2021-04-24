@@ -2074,29 +2074,33 @@ class TestMatchesScipy:
     @pytest.mark.parametrize(
         "p, size, n",
         [
-            [[0.25, 0.25, 0.25, 0.25], (4,), 2],
-            [[0.25, 0.25, 0.25, 0.25], (1, 4), 3],
+            [[0.25, 0.25, 0.25, 0.25], (7,), 2],
+            [[0.25, 0.25, 0.25, 0.25], (1, 7), 3],
             # 3: expect to fail
-            # [[.25, .25, .25, .25], (10, 4)],
-            [[0.25, 0.25, 0.25, 0.25], (10, 1, 4), 5],
+            # [[.25, .25, .25, .25], (10, 7)],
+            [[0.25, 0.25, 0.25, 0.25], (10, 1, 7), 5],
             # 5: expect to fail
-            # [[[.25, .25, .25, .25]], (2, 4), [7, 11]],
-            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), 13],
-            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (1, 2, 4), [23, 29]],
+            # [[[.25, .25, .25, .25]], (2, 5), [7, 11]],
+            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (5, 2), 13],
+            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (5, 7, 2), [23, 29]],
             [
                 [[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]],
-                (10, 2, 4),
+                (10, 8, 2),
                 [31, 37],
             ],
-            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (2, 4), [17, 19]],
+            [[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]], (3, 2), [17, 19]],
         ],
     )
     def test_multinomial_random(self, p, size, n):
         p = np.asarray(p)
         with Model() as model:
             m = Multinomial("m", n=n, p=p, size=size)
-
-        assert m.eval().shape == size + p.shape
+        # The support has length 4 in all test parametrizations!
+        # Broadcasting of the `p` parameter does not affect the ndim_supp
+        # of the Op, hence the broadcasted p must be included in `size`.
+        support_shape = (p.shape[-1],)
+        assert support_shape == (4,)
+        assert m.eval().shape == size + support_shape
 
     @pytest.mark.skip(reason="Moment calculations have not been refactored yet")
     def test_multinomial_mode_with_shape(self):
@@ -2197,7 +2201,7 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=6, float32=3),
         )
 
-        dist = Multinomial.dist(n=n, p=p, size=2)
+        dist = Multinomial.dist(n=n, p=p, size=(2, ...))
         sample = dist.eval()
         assert_allclose(sample, np.stack([vals, vals], axis=0))
 

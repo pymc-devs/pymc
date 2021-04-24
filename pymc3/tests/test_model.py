@@ -35,6 +35,7 @@ import pymc3 as pm
 from pymc3 import Deterministic, Potential
 from pymc3.blocking import DictToArrayBijection, RaveledVars
 from pymc3.distributions import Normal, logpt_sum, transforms
+from pymc3.exceptions import ShapeError
 from pymc3.model import Point, ValueGradFunction
 from pymc3.tests.helpers import SeededTest
 
@@ -464,6 +465,10 @@ def test_make_obs_var():
         fake_distribution = pm.Normal.dist(mu=0, sigma=1, size=(3, 3))
         # Create the testval attribute simply for the sake of model testing
         fake_distribution.name = input_name
+
+    # The function requires data and RV dimensionality to be compatible
+    with pytest.raises(ShapeError, match="Dimensionality of data and RV don't match."):
+        fake_model.make_obs_var(fake_distribution, np.ones((3, 3, 1)), None, None)
 
     # Check function behavior using the various inputs
     # dense, sparse: Ensure that the missing values are appropriately set to None

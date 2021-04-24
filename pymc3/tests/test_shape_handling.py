@@ -18,6 +18,7 @@ import numpy as np
 import pytest
 
 from aesara import tensor as at
+from aesara.tensor.shape import SpecifyShape
 
 import pymc3 as pm
 
@@ -225,70 +226,81 @@ def test_sample_generate_values(fixture_model, fixture_sizes):
 
 
 class TestShapeDimsSize:
-    @pytest.mark.parametrize("param_shape", [(), (3,)])
-    @pytest.mark.parametrize("batch_shape", [(), (3,)])
-    @pytest.mark.parametrize(
-        "parametrization",
-        [
-            "implicit",
-            "shape",
-            "shape...",
-            "dims",
-            "dims...",
-            "size",
-        ],
-    )
-    def test_param_and_batch_shape_combos(
-        self, param_shape: tuple, batch_shape: tuple, parametrization: str
-    ):
+    @pytest.mark.parametrize("support_shape", [(), (9,)])
+    @pytest.mark.parametrize("input_shape", [(), (2,), (3, 5)])
+    @pytest.mark.parametrize("batch_shape", [(), (6,), (7, 8)])
+    def test_parametrization_combos(self, support_shape, input_shape, batch_shape):
+        ndim_batch = len(batch_shape)
+        ndim_inputs = len(input_shape)
+        ndim_support = len(support_shape)
+        ndim = ndim_batch + ndim_inputs + ndim_support
+
+        if ndim_support == 0:
+            dist = pm.Normal
+            inputs = dict(mu=np.ones(input_shape))
+            expected = batch_shape + input_shape
+        elif ndim_support == 1:
+            dist = pm.MvNormal
+            mu_shape = input_shape + support_shape
+            inputs = dict(mu=np.ones(mu_shape), cov=np.eye(support_shape[0]))
+            expected = batch_shape + input_shape + support_shape
+        else:
+            raise NotImplementedError(
+                f"No tests implemented for {ndim_support}-dimensional RV support."
+            )
+
+        # Without dimensionality kwargs, the RV shape depends only on its inputs and support
+        assert dist.dist(**inputs).eval().shape == input_shape + support_shape
+
+        # The `shape` includes the support dims (0 in the case of univariates).
+        assert (
+            dist.dist(**inputs, shape=(*batch_shape, *input_shape, *support_shape)).eval().shape
+            == expected
+        )
+
+        # In contrast, `size` is without support dims
+        assert dist.dist(**inputs, size=(*batch_shape, *input_shape)).eval().shape == expected
+
+        # With Ellipsis in the last position, `shape` is independent of all parameter and support dims.
+        assert dist.dist(**inputs, shape=(*batch_shape, ...)).eval().shape == expected
+
+        # This test uses fixed-length dimensions that are specified through model coords.
+        # Here those coords are created depending on the test parametrization.
         coords = {}
-        param_dims = []
+        support_dims = []
+        input_dims = []
         batch_dims = []
 
-        # Create coordinates corresponding to the parameter shape
-        for d in param_shape:
-            dname = f"param_dim_{d}"
+        for d in support_shape:
+            dname = f"support_dim_{d}"
             coords[dname] = [f"c_{i}" for i in range(d)]
-            param_dims.append(dname)
-        assert len(param_dims) == len(param_shape)
-        # Create coordinates corresponding to the batch shape
+            support_dims.append(dname)
+        assert len(support_dims) == ndim_support
+
+        for d in input_shape:
+            dname = f"input_dim_{d}"
+            coords[dname] = [f"c_{i}" for i in range(d)]
+            input_dims.append(dname)
+        assert len(input_dims) == ndim_inputs
+
         for d in batch_shape:
             dname = f"batch_dim_{d}"
             coords[dname] = [f"c_{i}" for i in range(d)]
             batch_dims.append(dname)
-        assert len(batch_dims) == len(batch_shape)
+        assert len(batch_dims) == ndim_batch
 
+        # The `dims` are only available with a model.
         with pm.Model(coords=coords) as pmodel:
-            mu = aesara.shared(np.random.normal(size=param_shape))
+            rv_dims_full = dist(
+                "rv_dims_full", **inputs, dims=batch_dims + input_dims + support_dims
+            )
+            assert rv_dims_full.eval().shape == expected
+            assert len(pmodel.RV_dims["rv_dims_full"]) == ndim
+            assert rv_dims_full.eval().shape == expected
 
-            with pytest.warns(None):
-                if parametrization == "implicit":
-                    rv = pm.Normal("rv", mu=mu).shape == param_shape
-                else:
-                    if parametrization == "shape":
-                        rv = pm.Normal("rv", mu=mu, shape=batch_shape + param_shape)
-                        assert rv.eval().shape == batch_shape + param_shape
-                    elif parametrization == "shape...":
-                        rv = pm.Normal("rv", mu=mu, shape=(*batch_shape, ...))
-                        assert rv.eval().shape == batch_shape + param_shape
-                    elif parametrization == "dims":
-                        rv = pm.Normal("rv", mu=mu, dims=batch_dims + param_dims)
-                        assert rv.eval().shape == batch_shape + param_shape
-                    elif parametrization == "dims...":
-                        rv = pm.Normal("rv", mu=mu, dims=(*batch_dims, ...))
-                        n_size = len(batch_shape)
-                        n_implied = len(param_shape)
-                        ndim = n_size + n_implied
-                        assert len(pmodel.RV_dims["rv"]) == ndim, pmodel.RV_dims
-                        assert len(pmodel.RV_dims["rv"][:n_size]) == len(batch_dims)
-                        assert len(pmodel.RV_dims["rv"][n_size:]) == len(param_dims)
-                        if n_implied > 0:
-                            assert pmodel.RV_dims["rv"][-1] is None
-                    elif parametrization == "size":
-                        rv = pm.Normal("rv", mu=mu, size=batch_shape)
-                        assert rv.eval().shape == batch_shape + param_shape
-                    else:
-                        raise NotImplementedError("Invalid test case parametrization.")
+            rv_dims_ellipsis = dist("rv_dims_ellipsis", **inputs, dims=(*batch_dims, ...))
+            assert len(pmodel.RV_dims["rv_dims_ellipsis"]) == ndim
+            assert rv_dims_ellipsis.eval().shape == expected
 
     def test_define_dims_on_the_fly(self):
         with pm.Model() as pmodel:
@@ -316,7 +328,7 @@ class TestShapeDimsSize:
             assert "first" in pmodel.dim_lengths
             assert "second" in pmodel.dim_lengths
             # two dimensions are implied; a "third" dimension is created
-            y = pm.Normal("y", mu=x, size=2, dims=("third", "first", "second"))
+            y = pm.Normal("y", mu=x, shape=(2, ...), dims=("third", "first", "second"))
             assert "third" in pmodel.dim_lengths
             assert y.eval().shape() == (2, 1, 4)
 
@@ -346,20 +358,48 @@ class TestShapeDimsSize:
             pm.Normal("x2", mu=0, sd=1, observed=np.random.normal(size=(3, 1)))
             model.logp()
 
-    def test_dist_api_works(self):
+    def test_dist_api_basics(self):
         mu = aesara.shared(np.array([1, 2, 3]))
         with pytest.raises(NotImplementedError, match="API is not yet supported"):
             pm.Normal.dist(mu=mu, dims=("town",))
         assert pm.Normal.dist(mu=mu, shape=(3,)).eval().shape == (3,)
         assert pm.Normal.dist(mu=mu, shape=(5, 3)).eval().shape == (5, 3)
         assert pm.Normal.dist(mu=mu, shape=(7, ...)).eval().shape == (7, 3)
-        assert pm.Normal.dist(mu=mu, size=(4,)).eval().shape == (4, 3)
+        assert pm.Normal.dist(mu=mu, size=(4, 3)).eval().shape == (4, 3)
+        assert pm.Normal.dist(mu=mu, size=(8, ...)).eval().shape == (8, 3)
+
+    def test_tensor_shape(self):
+        s1 = at.scalar(dtype="int32")
+        rv = pm.Uniform.dist(1, [1, 2], shape=[s1, 2])
+        f = aesara.function([s1], rv, mode=aesara.Mode("py"))
+        assert f(3).shape == (3, 2)
+        assert f(7).shape == (7, 2)
+
+        # As long as its length is fixed, it can also be a vector Variable
+        rv_a = pm.Normal.dist(size=(7, 3))
+        assert rv_a.shape.ndim == 1
+        rv_b = pm.MvNormal.dist(mu=np.ones(3), cov=np.eye(3), shape=rv_a.shape)
+        assert rv_b.eval().shape == (7, 3)
+
+    def test_tensor_size(self):
+        s1 = at.scalar(dtype="int32")
+        s2 = at.scalar(dtype="int32")
+        rv = pm.Uniform.dist(1, [1, 2], size=[s1, s2, ...])
+        f = aesara.function([s1, s2], rv, mode=aesara.Mode("py"))
+        assert f(3, 5).shape == (3, 5, 2)
+        assert f(7, 3).shape == (7, 3, 2)
+
+        # As long as its length is fixed, it can also be a vector Variable
+        rv_a = pm.Normal.dist(size=(7, 4))
+        assert rv_a.shape.ndim == 1
+        rv_b = pm.MvNormal.dist(mu=np.ones(3), cov=np.eye(3), size=rv_a.shape)
+        assert rv_b.eval().shape == (7, 4, 3)
 
     def test_auto_assert_shape(self):
         with pytest.raises(AssertionError, match="will never match"):
             pm.Normal.dist(mu=[1, 2], shape=[])
 
-        mu = at.vector(name="mu_input")
+        mu = at.vector()
         rv = pm.Normal.dist(mu=mu, shape=[3, 4])
         f = aesara.function([mu], rv, mode=aesara.Mode("py"))
         assert f([1, 2, 3, 4]).shape == (3, 4)
@@ -368,24 +408,20 @@ class TestShapeDimsSize:
             f([1, 2])
 
         # The `shape` can be symbolic!
-        s = at.vector(dtype="int32")
-        rv = pm.Uniform.dist(2, [4, 5], shape=s)
-        f = aesara.function([s], rv, mode=aesara.Mode("py"))
-        f(
-            [
-                2,
-            ]
-        )
+        # This example has a batch dimension too, so under the hood it
+        # becomes a symbolic input to `specify_shape` AND a symbolic `batch_shape`.
+        s1 = at.scalar(dtype="int32")
+        s2 = at.scalar(dtype="int32")
+        rv = pm.Uniform.dist(2, [4, 5], shape=[s1, s2])
+        assert isinstance(rv.owner.op, SpecifyShape)
+        f = aesara.function([s1, s2], rv, mode=aesara.Mode("py"))
+        assert f(3, 2).shape == (3, 2)
+        assert f(7, 2).shape == (7, 2)
         with pytest.raises(
             AssertionError,
-            match=r"Got 1 dimensions \(shape \(2,\)\), expected 2 dimensions with shape \(3, 4\).",
+            match=r"Got shape \(3, 2\), expected \(3, 4\).",
         ):
-            f([3, 4])
-        with pytest.raises(
-            AssertionError,
-            match=r"Got 1 dimensions \(shape \(2,\)\), expected 0 dimensions with shape \(\).",
-        ):
-            f([])
+            f(3, 4)
         pass
 
     def test_lazy_flavors(self):
@@ -394,7 +430,7 @@ class TestShapeDimsSize:
         _validate_shape_dims_size(dims="town")
         _validate_shape_dims_size(size=7)
 
-        assert pm.Uniform.dist(2, [4, 5], size=[3, 4]).eval().shape == (3, 4, 2)
+        assert pm.Uniform.dist(2, [4, 5], size=[3, 4, 2]).eval().shape == (3, 4, 2)
         assert pm.Uniform.dist(2, [4, 5], shape=[3, 2]).eval().shape == (3, 2)
         with pm.Model(coords=dict(town=["Greifswald", "Madrid"])):
             assert pm.Normal("n2", mu=[1, 2], dims=("town",)).eval().shape == (2,)
@@ -417,5 +453,5 @@ class TestShapeDimsSize:
             _validate_shape_dims_size(shape=(3, ..., 2))
         with pytest.raises(ValueError, match="may only appear in the last position"):
             _validate_shape_dims_size(dims=(..., "town"))
-        with pytest.raises(ValueError, match="cannot contain"):
-            _validate_shape_dims_size(size=(3, ...))
+        with pytest.raises(ValueError, match="may only appear in the last position"):
+            _validate_shape_dims_size(size=(3, ..., ...))

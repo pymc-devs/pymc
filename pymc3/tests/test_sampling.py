@@ -967,14 +967,14 @@ class TestSamplePriorPredictive(SeededTest):
 
     def test_layers(self):
         with pm.Model() as model:
-            a = pm.Uniform("a", lower=0, upper=1, size=5)
-            b = pm.Binomial("b", n=1, p=a, size=7)
+            a = pm.Uniform("a", lower=0, upper=1, size=10)
+            b = pm.Binomial("b", n=1, p=a)
 
         model.default_rng.get_value(borrow=True).seed(232093)
 
         b_sampler = aesara.function([], b)
         avg = np.stack([b_sampler() for i in range(10000)]).mean(0)
-        npt.assert_array_almost_equal(avg, 0.5 * np.ones((7, 5)), decimal=2)
+        npt.assert_array_almost_equal(avg, 0.5 * np.ones((10,)), decimal=2)
 
     def test_transformed(self):
         n = 18
