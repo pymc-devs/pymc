@@ -97,7 +97,9 @@ class AR(distribution.Continuous):
     Parameters
     ----------
     rho: tensor
-        Tensor of autoregressive coefficients. The first dimension is the p lag.
+        Tensor of autoregressive coefficients. The first dimension is the p lag. For allowing
+        cross-series dependencies, rho must have 3 dimensions. For example, a rho of shape (2,3,3)
+        indicates that 2 lags are to be used for 3 series, each assumed to be dependent upon the other 2.
     sigma: float
         Standard deviation of innovation (sigma > 0). (only required if tau is not specified)
     tau: float
