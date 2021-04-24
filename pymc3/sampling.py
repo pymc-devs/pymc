@@ -480,6 +480,7 @@ def sample(
             " complications in your downstream analysis. Please consider to switch to `InferenceData`:\n"
             "`pm.sample(..., return_inferencedata=True)`",
             UserWarning,
+            stacklevel=2,
         )
 
     if return_inferencedata is None:
@@ -614,6 +615,7 @@ def sample(
                     "DEMetropolis should be used with more chains than dimensions! "
                     "(The model has {} dimensions.)".format(initial_point_model_size),
                     UserWarning,
+                    stacklevel=2,
                 )
             _print_step_hierarchy(step)
             trace = _sample_population(parallelize=cores > 1, **sample_args)
@@ -666,7 +668,9 @@ def sample(
 
     if compute_convergence_checks:
         if draws - tune < 100:
-            warnings.warn("The number of samples is too small to check convergence reliably.")
+            warnings.warn(
+                "The number of samples is too small to check convergence reliably.", stacklevel=2
+            )
         else:
             trace.report._run_convergence_checks(idata, model)
     trace.report._log_summary()
@@ -1664,7 +1668,8 @@ def sample_posterior_predictive(
         warnings.warn(
             "samples parameter is smaller than nchains times ndraws, some draws "
             "and/or chains may not be represented in the returned posterior "
-            "predictive sample"
+            "predictive sample",
+            stacklevel=2,
         )
 
     model = modelcontext(model)
@@ -1674,6 +1679,7 @@ def sample_posterior_predictive(
             "The effect of Potentials on other parameters is ignored during posterior predictive sampling. "
             "This is likely to lead to invalid or biased predictive samples.",
             UserWarning,
+            stacklevel=2,
         )
 
     if var_names is not None:
@@ -1829,6 +1835,7 @@ def sample_posterior_predictive_w(
                 "The effect of Potentials on other parameters is ignored during posterior predictive sampling. "
                 "This is likely to lead to invalid or biased predictive samples.",
                 UserWarning,
+                stacklevel=2,
             )
             break
 
@@ -1952,6 +1959,7 @@ def sample_prior_predictive(
             "The effect of Potentials on other parameters is ignored during prior predictive sampling. "
             "This is likely to lead to invalid or biased predictive samples.",
             UserWarning,
+            stacklevel=2,
         )
 
     if var_names is None:
