@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import sys
+
 import aesara
 import numpy as np
 import pytest
@@ -168,7 +170,9 @@ class TestSensitivityInitialCondition:
         np.testing.assert_array_equal(np.ravel(model5_sens_ic), model5._sens_ic)
 
 
-@pytest.mark.xfail(reason="See https://github.com/pymc-devs/pymc3/issues/4652.")
+@pytest.mark.xfail(
+    condition=sys.platform == "win32", reason="See https://github.com/pymc-devs/pymc3/issues/4652."
+)
 def test_logp_scalar_ode():
     """Test the computation of the log probability for these models"""
 
