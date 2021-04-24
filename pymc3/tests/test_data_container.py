@@ -163,7 +163,7 @@ class TestData(SeededTest):
         with pm.Model() as m:
             x = pm.Data("x", [1.0, 2.0, 3.0])
             assert x.eval().shape == (3,)
-            y = pm.Normal("y", mu=x, size=2)
+            y = pm.Normal("y", mu=x, shape=(2, ...))
             assert y.eval().shape == (2, 3)
             idata = pm.sample(
                 chains=1,
