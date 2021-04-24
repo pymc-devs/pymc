@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import sys
+
 import aesara
 import numpy as np
 import pytest
@@ -333,7 +335,10 @@ class TestShapeDimsSize:
             assert y.eval().shape == (3, 2)
             assert z.eval().shape == (3, 2)
 
-    @pytest.mark.xfail(reason="See https://github.com/pymc-devs/pymc3/issues/4652.")
+    @pytest.mark.xfail(
+        condition=sys.platform == "win32",
+        reason="See https://github.com/pymc-devs/pymc3/issues/4652.",
+    )
     def test_observed_with_column_vector(self):
         with pm.Model() as model:
             pm.Normal("x1", mu=0, sd=1, observed=np.random.normal(size=(3, 4)))
