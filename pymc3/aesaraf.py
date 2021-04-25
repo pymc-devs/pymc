@@ -50,6 +50,7 @@ from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorVariable
 
+from pymc3.exceptions import ShapeError
 from pymc3.vartypes import continuous_types, int_types, isgenerator, typefilter
 
 PotentialShapeType = Union[
@@ -147,6 +148,10 @@ def change_rv_size(
         Expand the existing size by `new_size`.
 
     """
+    new_size_ndim = new_size.ndim if isinstance(new_size, Variable) else np.ndim(new_size)
+    if new_size_ndim > 1:
+        raise ShapeError("The `new_size` must be ≤1-dimensional.", actual=new_size_ndim)
+    new_size = at.as_tensor_variable(new_size, ndim=1)
     if isinstance(rv_var.owner.op, SpecifyShape):
         rv_var = rv_var.owner.inputs[0]
     rv_node = rv_var.owner
@@ -157,7 +162,7 @@ def change_rv_size(
     if expand:
         if rv_node.op.ndim_supp == 0 and at.get_vector_length(size) == 0:
             size = rv_node.op._infer_shape(size, dist_params)
-        new_size = tuple(np.atleast_1d(new_size)) + tuple(size)
+        new_size = tuple(new_size) + tuple(size)
 
     new_rv_node = rv_node.op.make_node(rng, new_size, dtype, *dist_params)
     rv_var = new_rv_node.outputs[-1]
