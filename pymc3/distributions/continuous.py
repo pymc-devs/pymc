@@ -36,6 +36,7 @@ from aesara.tensor.random.basic import (
     normal,
     pareto,
     uniform,
+    weibull,
 )
 from aesara.tensor.random.op import RandomVariable
 from aesara.tensor.var import TensorVariable
@@ -2690,46 +2691,23 @@ class Weibull(PositiveContinuous):
     beta: float
         Scale parameter (beta > 0).
     """
+    rv_op = weibull
 
-    def __init__(self, alpha, beta, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
-        self.beta = beta = at.as_tensor_variable(floatX(beta))
-        self.mean = beta * at.exp(gammaln(1 + 1.0 / alpha))
-        self.median = beta * at.exp(gammaln(at.log(2))) ** (1.0 / alpha)
-        self.variance = beta ** 2 * at.exp(gammaln(1 + 2.0 / alpha)) - self.mean ** 2
-        self.mode = at.switch(
-            alpha >= 1, beta * ((alpha - 1) / alpha) ** (1 / alpha), 0
-        )  # Reference: https://en.wikipedia.org/wiki/Weibull_distribution
+    @classmethod
+    def dist(cls, alpha, beta, *args, **kwargs):
+        alpha = at.as_tensor_variable(floatX(alpha))
+        beta = at.as_tensor_variable(floatX(beta))
 
         assert_negative_support(alpha, "alpha", "Weibull")
         assert_negative_support(beta, "beta", "Weibull")
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Weibull distribution.
+        return super().dist([alpha, beta], **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # alpha, beta = draw_values([self.alpha, self.beta], point=point, size=size)
-        #
-        # def _random(a, b, size=None):
-        #     return b * (-np.log(np.random.uniform(size=size))) ** (1 / a)
-        #
-        # return generate_samples(_random, alpha, beta, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(
+        value: Union[float, np.ndarray, TensorVariable],
+        alpha: Union[float, np.ndarray, TensorVariable],
+        beta: Union[float, np.ndarray, TensorVariable],
+    ) -> RandomVariable:
         """
         Calculate log-probability of Weibull distribution at specified value.
 
@@ -2743,8 +2721,7 @@ class Weibull(PositiveContinuous):
         -------
         TensorVariable
         """
-        alpha = self.alpha
-        beta = self.beta
+
         return bound(
             at.log(alpha)
             - at.log(beta)
@@ -2755,7 +2732,11 @@ class Weibull(PositiveContinuous):
             beta > 0,
         )
 
-    def logcdf(self, value):
+    def logcdf(
+        value: Union[float, np.ndarray, TensorVariable],
+        alpha: Union[float, np.ndarray, TensorVariable],
+        beta: Union[float, np.ndarray, TensorVariable],
+    ):
         r"""
         Compute the log of the cumulative distribution function for Weibull distribution
         at the specified value.
@@ -2770,8 +2751,7 @@ class Weibull(PositiveContinuous):
         -------
         TensorVariable
         """
-        alpha = self.alpha
-        beta = self.beta
+
         a = (value / beta) ** alpha
         return bound(
             log1mexp(a),
