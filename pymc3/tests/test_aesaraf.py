@@ -41,6 +41,7 @@ from pymc3.aesaraf import (
     take_along_axis,
     walk_model,
 )
+from pymc3.exceptions import ShapeError
 from pymc3.vartypes import int_types
 
 FLOATX = str(aesara.config.floatX)
@@ -52,6 +53,11 @@ def test_change_rv_size():
     rv = normal(loc=loc)
     assert rv.ndim == 1
     assert rv.eval().shape == (2,)
+
+    with pytest.raises(ShapeError, match="must be ≤1-dimensional"):
+        change_rv_size(rv, new_size=[[2, 3]])
+    with pytest.raises(ShapeError, match="must be ≤1-dimensional"):
+        change_rv_size(rv, new_size=at.as_tensor_variable([[2, 3], [4, 5]]))
 
     rv_new = change_rv_size(rv, new_size=(3,), expand=True)
     assert rv_new.ndim == 2
