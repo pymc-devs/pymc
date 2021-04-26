@@ -33,6 +33,8 @@ def sample_nfmc(
     init_method='prior',
     init_samples=None,
     start=None,
+    init_EL2O='adam',
+    use_hess_EL2O=False,
     absEL2O=1e-10,
     fracEL2O=1e-2,
     scipy_map_method='L-BFGS-B',
@@ -40,7 +42,15 @@ def sample_nfmc(
     adam_b1=0.9,
     adam_b2=0.999,
     adam_eps=1.0e-8,
-    adam_steps=1000,    
+    adam_steps=1000,
+    simulator=None,
+    model_data=None,
+    sim_data_cov=None,
+    sim_size=None,
+    sim_params=None,
+    sim_start=None,
+    sim_optim_method='lbfgs',
+    sim_tol=0.01,
     pareto=False,
     local_thresh=3,
     local_step_size=0.1,
@@ -154,6 +164,8 @@ def sample_nfmc(
         init_method,
         init_samples,
         start,
+        init_EL2O,
+        use_hess_EL2O,
         absEL2O,
         fracEL2O,
         scipy_map_method,
@@ -162,6 +174,14 @@ def sample_nfmc(
         adam_b2,
         adam_eps,
         adam_steps,
+        simulator,
+        model_data,
+        sim_data_cov,
+        sim_size,
+        sim_params,
+	sim_start,
+        sim_optim_method,
+        sim_tol,
         pareto,
         local_thresh,
         local_step_size,
@@ -206,13 +226,13 @@ def sample_nfmc(
         results.append(sample_nfmc_int(*params, random_seed[i], i, _log))
     (
         traces,
-        evidence,
+        log_evidence,
         weighted_samples,
         importance_weights,
         logq,
     ) = zip(*results)
     trace = MultiTrace(traces)
-    trace.report.evidence = evidence
+    trace.report.log_evidence = log_evidence
     trace.report.weighted_samples = weighted_samples
     trace.report.importance_weights = importance_weights
     trace.report.logq = logq
@@ -227,6 +247,8 @@ def sample_nfmc_int(
     init_method,
     init_samples,
     start,
+    init_EL2O,
+    use_hess_EL2O,
     absEL2O,
     fracEL2O,
     scipy_map_method,
@@ -235,6 +257,14 @@ def sample_nfmc_int(
     adam_b2,
     adam_eps,
     adam_steps,
+    simulator,
+    model_data,
+    sim_data_cov,
+    sim_size,
+    sim_params,
+    sim_start,
+    sim_optim_method,
+    sim_tol,
     pareto,
     local_thresh,
     local_step_size,
@@ -281,6 +311,8 @@ def sample_nfmc_int(
         init_method=init_method,
         init_samples=init_samples,
         start=start,
+        init_EL2O=init_EL2O,
+        use_hess_EL2O=use_hess_EL2O,
         absEL2O=absEL2O,
         fracEL2O=fracEL2O,
         scipy_map_method=scipy_map_method,
@@ -289,6 +321,14 @@ def sample_nfmc_int(
         adam_b2=adam_b2,
         adam_eps=adam_eps,
         adam_steps=adam_steps,
+        simulator=simulator,
+        model_data=model_data,
+        sim_data_cov=sim_data_cov,
+        sim_size=sim_size,
+        sim_params=sim_params,
+	sim_start=sim_start,
+        sim_optim_method=sim_optim_method,
+        sim_tol=sim_tol,
         pareto=pareto,
         local_thresh=local_thresh,
         local_step_size=local_step_size,
@@ -333,7 +373,6 @@ def sample_nfmc_int(
     elif init_method == 'full_rank':
         print(f'Initializing with full-rank EL2O approx family.')
         nfmc.get_map_laplace()
-        print('Got to MAP+LAPLACE before dying')
         nfmc.run_el2o()
     elif init_method == 'lbfgs' or init_method == 'map+laplace':
         print(f'Using {init_method} to initialize.')
@@ -341,31 +380,34 @@ def sample_nfmc_int(
     elif init_method == 'adam':
         print(f'Using ADAM optimization to intialize (Jax implementation).')
         nfmc.adam_map_hess()
+    elif init_method == 'simulation':
+        print('Using simulation based initialization.')
+        nfmc.simulation_init()
     else:
-        raise ValueError('init_method must be one of: prior, full_rank, lbfgs, adam or map+laplace.')
+        raise ValueError('init_method must be one of: prior, full_rank, lbfgs, adam, map+laplace or simulation.')
 
     iter_sample_dict['q_init0'] = nfmc.nf_samples
     iter_weight_dict['q_init0'] = nfmc.weights
     
-    iter_evidence = 1.0 * nfmc.evidence
+    iter_log_evidence = 1.0 * nfmc.log_evidence
 
     if nf_local_iter > 0:
         print(f'Using local exploration to improve the SINF initialization.')
         for j in range(nf_local_iter):
-            print(f"Local exploration iteration: {int(j + 1)}, Normalizing Constant Estimate: {nfmc.evidence}")
+            print(f"Local exploration iteration: {int(j + 1)}, logZ Estimate: {nfmc.log_evidence}")
             nfmc.fit_nf()
             iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_samples
             iter_weight_dict[f'q_init{int(j + 1)}'] = nfmc.weights
-            if np.abs((iter_evidence - nfmc.evidence) / nfmc.evidence) <= norm_tol:
-                print(f"Local exploration iteration: {int(j + 1)}, Normalizing Constant Estimate: {nfmc.evidence}")
+            if abs(iter_log_evidence - nfmc.log_evidence) / max(abs(nfmc.log_evidence), abs(iter_log_evidence), 1) <= norm_tol:
+                print(f"Local exploration iteration: {int(j + 1)}, logZ Estimate: {nfmc.log_evidence}")
                 print(f"Normalizing constant estimate has stabilised during local exploration initialization - ending NF fits with local exploration.")
                 iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_samples
                 iter_weight_dict[f'q_init{int(j + 1)}'] = nfmc.weights
                 break
-            iter_evidence = 1.0 * nfmc.evidence
+            iter_log_evidence = 1.0 * nfmc.log_evidence
         print('Re-initializing SINF fits using samples from latest iteration after local exploration.')
         nfmc.reinitialize_nf()
-        iter_evidence = 1.0 * nfmc.evidence
+        iter_log_evidence = 1.0 * nfmc.log_evidence
         
     if full_local:
         print('Using local exploration at every iteration except the final one (where IW exceed the local threshold).')
@@ -379,19 +421,19 @@ def sample_nfmc_int(
     for i in range(nf_iter):
 
         if _log is not None:
-            _log.info(f"Stage: {stage:3d}, Normalizing Constant Estimate: {nfmc.evidence}")
+            _log.info(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence}")
 
         nfmc.fit_nf()
         iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_samples
         iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
         stage += 1
-        if stage > 1 and np.abs((iter_evidence - nfmc.evidence) / nfmc.evidence) <= norm_tol:
-            print(f"Stage: {stage:3d}, Normalizing Constant Estimate: {nfmc.evidence}")
+        if stage > 1 and abs(iter_log_evidence - nfmc.log_evidence) / max(abs(nfmc.log_evidence), abs(iter_log_evidence), 1) <= norm_tol:
+            print(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence}")
             iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_samples
             iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
             print("Normalizing constant estimate has stabilised - ending NF fits.")
             break
-        iter_evidence = 1.0 * nfmc.evidence
+        iter_log_evidence = 1.0 * nfmc.log_evidence
 
     if full_local:
         nfmc.final_nf()
@@ -401,7 +443,7 @@ def sample_nfmc_int(
 
     return (
         nfmc.posterior_to_trace(),
-        nfmc.evidence,
+        nfmc.log_evidence,
         iter_sample_dict,
         iter_weight_dict,
         nfmc.all_logq,
