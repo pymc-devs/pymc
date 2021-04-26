@@ -75,7 +75,7 @@ def elemwise_dlogL(vars, model, flat_view):
 
 
 class BaseStochasticGradient(ArrayStepShared):
-    R"""
+    r"""
     BaseStochasticGradient Object
 
     For working with BaseStochasticGradient Object

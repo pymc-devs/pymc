@@ -45,7 +45,7 @@ __all__ = ["Latent", "Marginal", "TP", "MarginalSparse", "LatentKron", "Marginal
 
 
 class Base:
-    R"""
+    r"""
     Base class.
     """
 
@@ -76,7 +76,7 @@ class Base:
 
 @conditioned_vars(["X", "f"])
 class Latent(Base):
-    R"""
+    r"""
     Latent Gaussian process.
 
     The `gp.Latent` class is a direct implementation of a GP.  No additive
@@ -145,7 +145,7 @@ class Latent(Base):
         return f
 
     def prior(self, name, X, reparameterize=True, **kwargs):
-        R"""
+        r"""
         Returns the GP prior distribution evaluated over the input
         locations `X`.
 
@@ -201,7 +201,7 @@ class Latent(Base):
         return mu, cov
 
     def conditional(self, name, Xnew, given=None, **kwargs):
-        R"""
+        r"""
         Returns the conditional distribution evaluated over new input
         locations `Xnew`.
 
@@ -287,7 +287,7 @@ class TP(Latent):
         return f
 
     def prior(self, name, X, reparameterize=True, **kwargs):
-        R"""
+        r"""
         Returns the TP prior distribution evaluated over the input
         locations `X`.
 
@@ -327,7 +327,7 @@ class TP(Latent):
         return nu2, mu, covT
 
     def conditional(self, name, Xnew, **kwargs):
-        R"""
+        r"""
         Returns the conditional distribution evaluated over new input
         locations `Xnew`.
 
@@ -355,7 +355,7 @@ class TP(Latent):
 
 @conditioned_vars(["X", "y", "noise"])
 class Marginal(Base):
-    R"""
+    r"""
     Marginal Gaussian process.
 
     The `gp.Marginal` class is an implementation of the sum of a GP
@@ -407,7 +407,7 @@ class Marginal(Base):
         return mu, cov
 
     def marginal_likelihood(self, name, X, y, noise, is_observed=True, **kwargs):
-        R"""
+        r"""
         Returns the marginal likelihood distribution, given the input
         locations `X` and the data `y`.
 
@@ -491,7 +491,7 @@ class Marginal(Base):
             return mu, cov if pred_noise else stabilize(cov)
 
     def conditional(self, name, Xnew, pred_noise=False, given=None, **kwargs):
-        R"""
+        r"""
         Returns the conditional distribution evaluated over new input
         locations `Xnew`.
 
@@ -529,7 +529,7 @@ class Marginal(Base):
         return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False, given=None):
-        R"""
+        r"""
         Return the mean vector and covariance matrix of the conditional
         distribution as numpy arrays, given a `point`, such as the MAP
         estimate or a sample from a `trace`.
@@ -557,7 +557,7 @@ class Marginal(Base):
         return draw_values([mu, cov], point=point)
 
     def predictt(self, Xnew, diag=False, pred_noise=False, given=None):
-        R"""
+        r"""
         Return the mean vector and covariance matrix of the conditional
         distribution as symbolic variables.
 
@@ -582,7 +582,7 @@ class Marginal(Base):
 
 @conditioned_vars(["X", "Xu", "y", "sigma"])
 class MarginalSparse(Marginal):
-    R"""
+    r"""
     Approximate marginal Gaussian process.
 
     The `gp.MarginalSparse` class is an implementation of the sum of a GP
@@ -693,7 +693,7 @@ class MarginalSparse(Marginal):
         return -1.0 * (constant + logdet + quadratic + trace)
 
     def marginal_likelihood(self, name, X, Xu, y, noise=None, is_observed=True, **kwargs):
-        R"""
+        r"""
         Returns the approximate marginal likelihood distribution, given the input
         locations `X`, inducing point locations `Xu`, data `y`, and white noise
         standard deviations `sigma`.
@@ -791,7 +791,7 @@ class MarginalSparse(Marginal):
         return X, Xu, y, sigma, cov_total, mean_total
 
     def conditional(self, name, Xnew, pred_noise=False, given=None, **kwargs):
-        R"""
+        r"""
         Returns the approximate conditional distribution of the GP evaluated over
         new input locations `Xnew`.
 
@@ -822,7 +822,7 @@ class MarginalSparse(Marginal):
 
 @conditioned_vars(["Xs", "f"])
 class LatentKron(Base):
-    R"""
+    r"""
     Latent Gaussian process whose covariance is a tensor product kernel.
 
     The `gp.LatentKron` class is a direct implementation of a GP with a
@@ -974,7 +974,7 @@ class LatentKron(Base):
 
 @conditioned_vars(["Xs", "y", "sigma"])
 class MarginalKron(Base):
-    R"""
+    r"""
     Marginal Gaussian process whose covariance is a tensor product kernel.
 
     The `gp.MarginalKron` class is an implementation of the sum of a
@@ -1173,7 +1173,7 @@ class MarginalKron(Base):
         return pm.MvNormal(name, mu=mu, cov=cov, shape=shape, **kwargs)
 
     def predict(self, Xnew, point=None, diag=False, pred_noise=False):
-        R"""
+        r"""
         Return the mean vector and covariance matrix of the conditional
         distribution as numpy arrays, given a `point`, such as the MAP
         estimate or a sample from a `trace`.
@@ -1196,7 +1196,7 @@ class MarginalKron(Base):
         return draw_values([mu, cov], point=point)
 
     def predictt(self, Xnew, diag=False, pred_noise=False):
-        R"""
+        r"""
         Return the mean vector and covariance matrix of the conditional
         distribution as symbolic variables.
 

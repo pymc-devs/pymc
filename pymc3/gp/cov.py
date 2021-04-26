@@ -300,7 +300,7 @@ class WhiteNoise(Covariance):
 
 
 class Circular(Covariance):
-    R"""
+    r"""
     Circular Kernel.
 
     .. math::

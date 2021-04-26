@@ -181,7 +181,7 @@ class _QuadFormBase(Continuous):
 
 
 class MvNormal(_QuadFormBase):
-    R"""
+    r"""
     Multivariate normal log-likelihood.
 
     .. math::
@@ -321,7 +321,7 @@ class MvNormal(_QuadFormBase):
 
 
 class MvStudentT(_QuadFormBase):
-    R"""
+    r"""
     Multivariate Student-T log-likelihood.
 
     .. math::
@@ -438,7 +438,7 @@ class MvStudentT(_QuadFormBase):
 
 
 class Dirichlet(Continuous):
-    R"""
+    r"""
     Dirichlet log-likelihood.
 
     .. math::
@@ -538,7 +538,7 @@ class Dirichlet(Continuous):
 
 
 class Multinomial(Discrete):
-    R"""
+    r"""
     Multinomial log-likelihood.
 
     Generalizes binomial distribution, but instead of each trial resulting
@@ -681,7 +681,7 @@ class Multinomial(Discrete):
 
 
 class DirichletMultinomial(Discrete):
-    R"""Dirichlet Multinomial log-likelihood.
+    r"""Dirichlet Multinomial log-likelihood.
 
     Dirichlet mixture of Multinomials distribution, with a marginalized PMF.
 
@@ -885,7 +885,7 @@ matrix_pos_def = PosDefMatrix()
 
 
 class Wishart(Continuous):
-    R"""
+    r"""
     Wishart log-likelihood.
 
     The Wishart distribution is the probability distribution of the
@@ -1102,7 +1102,7 @@ def _lkj_normalizing_constant(eta, n):
 
 
 class _LKJCholeskyCov(Continuous):
-    R"""Underlying class for covariance matrix with LKJ distributed correlations.
+    r"""Underlying class for covariance matrix with LKJ distributed correlations.
     See docs for LKJCholeskyCov function for more details on how to use it in models.
     """
 
@@ -1278,7 +1278,7 @@ class _LKJCholeskyCov(Continuous):
 
 
 def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=True, *args, **kwargs):
-    R"""Wrapper function for covariance matrix with LKJ distributed correlations.
+    r"""Wrapper function for covariance matrix with LKJ distributed correlations.
 
     This defines a distribution over Cholesky decomposed covariance
     matrices, such that the underlying correlation matrices follow an
@@ -1431,7 +1431,7 @@ def LKJCholeskyCov(name, eta, n, sd_dist, compute_corr=False, store_in_trace=Tru
 
 
 class LKJCorr(Continuous):
-    R"""
+    r"""
     The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
 
     The LKJ distribution is a prior distribution for correlation matrices.
@@ -1587,7 +1587,7 @@ class LKJCorr(Continuous):
 
 
 class MatrixNormal(Continuous):
-    R"""
+    r"""
     Matrix-valued normal log-likelihood.
 
     .. math::
@@ -1846,7 +1846,7 @@ class MatrixNormal(Continuous):
 
 
 class KroneckerNormal(Continuous):
-    R"""
+    r"""
     Multivariate normal log-likelihood with Kronecker-structured covariance.
 
     .. math::
@@ -2093,7 +2093,7 @@ class KroneckerNormal(Continuous):
 
 
 class CAR(Continuous):
-    R"""
+    r"""
     Likelihood for a conditional autoregression. This is a special case of the
     multivariate normal with an adjacency-structured covariance matrix.
 

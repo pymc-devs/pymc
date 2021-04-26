@@ -50,7 +50,7 @@ def all_discrete(comp_dists):
 
 
 class Mixture(Distribution):
-    R"""
+    r"""
     Mixture log-likelihood
 
     Often used to model subpopulation heterogeneity
@@ -573,7 +573,7 @@ class Mixture(Distribution):
 
 
 class NormalMixture(Mixture):
-    R"""
+    r"""
     Normal mixture log-likelihood
 
     .. math::
@@ -642,7 +642,7 @@ class NormalMixture(Mixture):
 
 
 class MixtureSameFamily(Distribution):
-    R"""
+    r"""
     Mixture Same Family log-likelihood
     This distribution handles mixtures of multivariate distributions in a vectorized
     manner. It is used over Mixture distribution when the mixture components are not

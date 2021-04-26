@@ -57,7 +57,7 @@ __all__ = [
 
 
 class Binomial(Discrete):
-    R"""
+    r"""
     Binomial log-likelihood.
 
     The discrete probability distribution of the number of successes
@@ -188,7 +188,7 @@ class Binomial(Discrete):
 
 
 class BetaBinomial(Discrete):
-    R"""
+    r"""
     Beta-binomial log-likelihood.
 
     Equivalent to binomial random variable with success probability
@@ -358,7 +358,7 @@ class BetaBinomial(Discrete):
 
 
 class Bernoulli(Discrete):
-    R"""Bernoulli log-likelihood
+    r"""Bernoulli log-likelihood
 
     The Bernoulli distribution describes the probability of successes
     (x=1) and failures (x=0).
@@ -493,7 +493,7 @@ class Bernoulli(Discrete):
 
 
 class DiscreteWeibull(Discrete):
-    R"""Discrete Weibull log-likelihood
+    r"""Discrete Weibull log-likelihood
 
     The discrete Weibull distribution is a flexible model of count data that
     can handle both over- and under-dispersion.
@@ -628,7 +628,7 @@ class DiscreteWeibull(Discrete):
 
 
 class Poisson(Discrete):
-    R"""
+    r"""
     Poisson log-likelihood.
 
     Often used to model the number of events occurring in a fixed period
@@ -937,7 +937,7 @@ class NegativeBinomial(Discrete):
 
 
 class Geometric(Discrete):
-    R"""
+    r"""
     Geometric log-likelihood.
 
     The probability that the first success in a sequence of Bernoulli
@@ -1042,7 +1042,7 @@ class Geometric(Discrete):
 
 
 class HyperGeometric(Discrete):
-    R"""
+    r"""
     Discrete hypergeometric distribution.
 
     The probability of :math:`x` successes in a sequence of :math:`n` bernoulli
@@ -1198,7 +1198,7 @@ class HyperGeometric(Discrete):
 
 
 class DiscreteUniform(Discrete):
-    R"""
+    r"""
     Discrete uniform distribution.
     The pmf of this distribution is
 
@@ -1321,7 +1321,7 @@ class DiscreteUniform(Discrete):
 
 
 class Categorical(Discrete):
-    R"""
+    r"""
     Categorical log-likelihood.
 
     The most general discrete distribution. The pmf of this distribution is

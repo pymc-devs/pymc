@@ -768,7 +768,7 @@ class TestCoregion:
 
 
 class TestMarginalVsLatent:
-    R"""
+    r"""
     Compare the logp of models Marginal, noise=0 and Latent.
     """
 
@@ -813,7 +813,7 @@ class TestMarginalVsLatent:
 
 
 class TestMarginalVsMarginalSparse:
-    R"""
+    r"""
     Compare logp of models Marginal and MarginalSparse.
     Should be nearly equal when inducing points are same as inputs.
     """
@@ -1001,7 +1001,7 @@ class TestGPAdditive:
 
 
 class TestTP:
-    R"""
+    r"""
     Compare TP with high degress of freedom to GP
     """
 

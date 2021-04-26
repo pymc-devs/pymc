@@ -27,7 +27,7 @@ def unif(step_size, elow=0.85, ehigh=1.15):
 
 
 class HamiltonianMC(BaseHMC):
-    R"""A sampler for continuous variables based on Hamiltonian mechanics.
+    r"""A sampler for continuous variables based on Hamiltonian mechanics.
 
     See NUTS sampler for automatically tuned stopping time and step size scaling.
     """

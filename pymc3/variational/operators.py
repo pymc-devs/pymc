@@ -25,7 +25,7 @@ __all__ = ["KL", "KSD"]
 
 
 class KL(Operator):
-    R"""**Operator based on Kullback Leibler Divergence**
+    r"""**Operator based on Kullback Leibler Divergence**
 
     This operator constructs Evidence Lower Bound (ELBO) objective
 
@@ -60,7 +60,7 @@ class KL(Operator):
 
 
 class KSDObjective(ObjectiveFunction):
-    R"""Helper class for construction loss and updates for variational inference
+    r"""Helper class for construction loss and updates for variational inference
 
     Parameters
     ----------

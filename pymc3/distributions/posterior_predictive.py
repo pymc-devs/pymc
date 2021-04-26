@@ -68,7 +68,7 @@ class _TraceDict(UserDict):
         multi_trace: MultiTrace | None = None,
         dict_: Point | None = None,
     ):
-        """"""
+        """ """
         if multi_trace:
             assert point_list is None and dict_ is None
             self.data = {}

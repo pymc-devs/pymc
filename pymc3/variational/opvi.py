@@ -309,7 +309,7 @@ class ObjectiveFunction:
         score=False,
         fn_kwargs=None,
     ):
-        R"""Step function that should be called on each optimization step.
+        r"""Step function that should be called on each optimization step.
 
         Generally it solves the following problem:
 
@@ -371,7 +371,7 @@ class ObjectiveFunction:
     def score_function(
         self, sc_n_mc=None, more_replacements=None, fn_kwargs=None
     ):  # pragma: no cover
-        R"""Compile scoring function that operates which takes no inputs and returns Loss
+        r"""Compile scoring function that operates which takes no inputs and returns Loss
 
         Parameters
         ----------
@@ -407,7 +407,7 @@ class ObjectiveFunction:
 
 
 class Operator:
-    R"""**Base class for Operator**
+    r"""**Base class for Operator**
 
     Parameters
     ----------
@@ -450,7 +450,7 @@ class Operator:
     model = property(lambda self: self.approx.model)
 
     def apply(self, f):  # pragma: no cover
-        R"""Operator itself
+        r"""Operator itself
 
         .. math::
 
@@ -540,7 +540,7 @@ class TestFunction:
 
 
 class Group(WithMemoization):
-    R"""**Base class for grouping variables in VI**
+    r"""**Base class for grouping variables in VI**
 
     Grouped Approximation is used for modelling mutual dependencies
     for a specified group of variables. Base for local and global group.
@@ -865,7 +865,7 @@ class Group(WithMemoization):
         return res
 
     def _check_user_params(self, **kwargs):
-        R"""*Dev* - checks user params, allocates them if they are correct, returns True.
+        r"""*Dev* - checks user params, allocates them if they are correct, returns True.
         If they are not present, returns False
 
         Parameters
@@ -902,7 +902,7 @@ class Group(WithMemoization):
         return True
 
     def _initial_type(self, name):
-        R"""*Dev* - initial type with given name. The correct type depends on `self.batched`
+        r"""*Dev* - initial type with given name. The correct type depends on `self.batched`
 
         Parameters
         ----------
@@ -918,7 +918,7 @@ class Group(WithMemoization):
             return at.matrix(name)
 
     def _input_type(self, name):
-        R"""*Dev* - input type with given name. The correct type depends on `self.batched`
+        r"""*Dev* - input type with given name. The correct type depends on `self.batched`
 
         Parameters
         ----------

@@ -18,12 +18,12 @@ __all__ = ["Zero", "Constant", "Linear"]
 
 
 class Mean:
-    R"""
+    r"""
     Base class for mean functions
     """
 
     def __call__(self, X):
-        R"""
+        r"""
         Evaluate the mean function.
 
         Parameters
@@ -40,7 +40,7 @@ class Mean:
 
 
 class Zero(Mean):
-    R"""
+    r"""
     Zero mean function for Gaussian process.
 
     """
@@ -50,7 +50,7 @@ class Zero(Mean):
 
 
 class Constant(Mean):
-    R"""
+    r"""
     Constant mean function for Gaussian process.
 
     Parameters
@@ -68,7 +68,7 @@ class Constant(Mean):
 
 
 class Linear(Mean):
-    R"""
+    r"""
     Linear mean function for Gaussian process.
 
     Parameters

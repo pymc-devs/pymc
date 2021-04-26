@@ -32,7 +32,7 @@ __all__ = ["MeanField", "FullRank", "Empirical", "NormalizingFlow", "sample_appr
 
 @Group.register
 class MeanFieldGroup(Group):
-    R"""Mean Field approximation to the posterior where spherical Gaussian family
+    r"""Mean Field approximation to the posterior where spherical Gaussian family
     is fitted to minimize KL divergence from True posterior. It is assumed
     that latent space variables are uncorrelated that is the main drawback
     of the method
@@ -581,7 +581,7 @@ class Empirical(SingleGroupApproximation):
         super().__init__(trace=trace, size=size, **kwargs)
 
     def evaluate_over_trace(self, node):
-        R"""
+        r"""
         This allows to statically evaluate any symbolic expression over the trace.
 
         Parameters

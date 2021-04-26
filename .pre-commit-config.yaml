@@ -19,16 +19,16 @@ repos:
     - id: isort
       name: isort
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.12.0
+  rev: v2.13.0
   hooks:
     - id: pyupgrade
       args: [--py37-plus]
 - repo: https://github.com/psf/black
-  rev: 20.8b1
+  rev: 21.4b0
   hooks:
     - id: black
 - repo: https://github.com/PyCQA/pylint
-  rev: pylint-2.7.4
+  rev: pylint-2.8.1
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]
