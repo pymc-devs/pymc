@@ -449,7 +449,7 @@ class NFMC:
         
         print(f'BIJ rmap = {self.map_dict}')
         print(f'ADAM map solution = {self.mu_map}')
-        self.hess_inv = np.linalg.inv(self.target_hessian(self.mu_map.reshape(-1, len(self.mu_map))))
+        self.hess_inv = np.linalg.inv(-1 * self.target_hessian(self.mu_map.reshape(-1, len(self.mu_map))))
         if not posdef.isPD(self.hess_inv):
             print(f'Autodiff Hessian is not positive semi-definite. Building Hessian with L-BFGS run starting from ADAM MAP.')
             self.scipy_opt = minimize(self.optim_target_logp, x0=self.mu_map, method='L-BFGS-B',
@@ -699,7 +699,7 @@ class NFMC:
                 for k in range(Nk):
                     temp1 += np.outer(self.zk[k, :] - self.mu_k, self.zk[k, :] - self.mu_k)
                     temp2 += np.outer(self.zk[k, :] - self.mu_k, self.target_dlogp(self.zk[k, :].reshape(-1, len(self.zk[k, :]))))
-                self.Sigma_k = np.matmul(np.linalg.inv(temp1), temp2)
+                self.Sigma_k = -1 * np.matmul(np.linalg.inv(temp1), temp2)
             elif not self.use_hess_EL2O:
                 self.Sigma_k = np.linalg.inv(np.sum(self.target_hessian(self.zk), axis=0) / Nk)
 
