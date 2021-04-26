@@ -713,16 +713,16 @@ class NegativeBinomial(Discrete):
 
     @classmethod
     def dist(cls, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
-        n, p = cls.get_mu_alpha(mu, alpha, p, n)
+        n, p = cls.get_n_p(mu, alpha, p, n)
         n = at.as_tensor_variable(floatX(n))
         p = at.as_tensor_variable(floatX(p))
         return super().dist([n, p], *args, **kwargs)
 
     @classmethod
-    def get_mu_alpha(cls, mu=None, alpha=None, p=None, n=None):
+    def get_n_p(cls, mu=None, alpha=None, p=None, n=None):
         if n is None:
             if alpha is not None:
-                n = at.as_tensor_variable(floatX(alpha))
+                n = alpha
             else:
                 raise ValueError("Incompatible parametrization. Must specify either alpha or n.")
         elif alpha is not None:
@@ -730,7 +730,6 @@ class NegativeBinomial(Discrete):
 
         if p is None:
             if mu is not None:
-                mu = at.as_tensor_variable(floatX(mu))
                 p = n / (mu + n)
             else:
                 raise ValueError("Incompatible parametrization. Must specify either mu or p.")

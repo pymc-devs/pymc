@@ -27,6 +27,7 @@ from pymc3.aesaraf import at_rng, set_at_rng
 
 class SeededTest:
     random_seed = 20160911
+    random_state = None
 
     @classmethod
     def setup_class(cls):
@@ -39,6 +40,11 @@ class SeededTest:
 
     def teardown_method(self):
         set_at_rng(self.old_at_rng)
+
+    def get_random_state(self, reset=False):
+        if self.random_state is None or reset:
+            self.random_state = nr.RandomState(self.random_seed)
+        return self.random_state
 
 
 class LoggingHandler(BufferingHandler):
