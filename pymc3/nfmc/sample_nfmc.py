@@ -34,6 +34,7 @@ def sample_nfmc(
     init_samples=None,
     start=None,
     init_EL2O='adam',
+    mean_field_EL2O=False,
     use_hess_EL2O=False,
     absEL2O=1e-10,
     fracEL2O=1e-2,
@@ -165,6 +166,7 @@ def sample_nfmc(
         init_samples,
         start,
         init_EL2O,
+        mean_field_EL2O,
         use_hess_EL2O,
         absEL2O,
         fracEL2O,
@@ -248,6 +250,7 @@ def sample_nfmc_int(
     init_samples,
     start,
     init_EL2O,
+    mean_field_EL2O,
     use_hess_EL2O,
     absEL2O,
     fracEL2O,
@@ -312,6 +315,7 @@ def sample_nfmc_int(
         init_samples=init_samples,
         start=start,
         init_EL2O=init_EL2O,
+        mean_field_EL2O=mean_field_EL2O,
         use_hess_EL2O=use_hess_EL2O,
         absEL2O=absEL2O,
         fracEL2O=fracEL2O,
@@ -398,7 +402,7 @@ def sample_nfmc_int(
             nfmc.fit_nf()
             iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_samples
             iter_weight_dict[f'q_init{int(j + 1)}'] = nfmc.weights
-            if abs(iter_log_evidence - nfmc.log_evidence) / max(abs(nfmc.log_evidence), abs(iter_log_evidence), 1) <= norm_tol:
+            if abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol:
                 print(f"Local exploration iteration: {int(j + 1)}, logZ Estimate: {nfmc.log_evidence}")
                 print(f"Normalizing constant estimate has stabilised during local exploration initialization - ending NF fits with local exploration.")
                 iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_samples
@@ -427,7 +431,7 @@ def sample_nfmc_int(
         iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_samples
         iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
         stage += 1
-        if stage > 1 and abs(iter_log_evidence - nfmc.log_evidence) / max(abs(nfmc.log_evidence), abs(iter_log_evidence), 1) <= norm_tol:
+        if stage > 1 and abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol:
             print(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence}")
             iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_samples
             iter_weight_dict[f'q{int(stage)}'] = nfmc.weights

@@ -73,6 +73,7 @@ class NFMC:
         start=None,
         init_EL2O='adam',
         use_hess_EL2O=False,
+        mean_field_EL2O=False,
         absEL2O=1e-10,
         fracEL2O=1e-2,
         scipy_map_method='L-BFGS-B',
@@ -130,6 +131,7 @@ class NFMC:
         self.init_samples = init_samples
         self.start = start
         self.init_EL2O = init_EL2O
+        self.mean_field_EL2O = mean_field_EL2O
         self.use_hess_EL2O = use_hess_EL2O
         self.absEL2O = absEL2O
         self.fracEL2O = fracEL2O
@@ -349,7 +351,6 @@ class NFMC:
             self.map_diff = self.sim_map_arr - self.sim_params
             self.sim_update = self.data_map_arr + self.map_diff
             self.sim_samples = np.append(self.sim_samples, self.sim_update)
-            
         
             set_data({self.model_data.keys(): self.sim_data}, model=self.model)
             self.old_logp = self.get_posterior_logp(self.sim_params.reshape(-1, len(self.sim_params)))
@@ -363,24 +364,19 @@ class NFMC:
         self.nf_samples = np.copy(self.weighted_samples)
         self.get_posterior_logp()
         self.log_weight = self.posterior_logp - multivariate_normal.logpdf(self.nf_samples, self.mu_map.squeeze(), self.hess_inv, allow_singular=True)
-        print(f'Unormalized log weights = {self.log_weight}')
         self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
         self.evidence = np.exp(self.log_evidence)
         self.log_weight = self.log_weight - logsumexp(self.log_weight)
-        print(f'Normalized log weights = {self.log_weight}')
 
         if self.pareto:
             psiw = az.psislw(self.log_weight)
             self.log_weight = psiw[0]
-            print(f'Pareto logw = {self.log_weight}')
             self.weights = np.exp(self.log_weight)
-            print(f'Pareto w = {self.weights}')
         elif not self.pareto:
             self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
             self.log_weight = logsumexp(self.log_weight) - np.log(len(self.log_weight))
             self.weights = np.exp(self.log_weight)
 
-        print(f'Non-zero sim init weights = {self.weights[self.weights != 0.0]}')
         self.weights = self.weights / np.sum(self.weights)
         self.importance_weights = np.copy(self.weights)
         if self.init_local:
@@ -686,40 +682,42 @@ class NFMC:
         self.Sigma_k = self.Sigma_map
         self.EL2O = [1e10, 1]
 
-        self.zk = np.random.multivariate_normal(self.mu_k, self.Sigma_k)
-        self.zk = self.zk.reshape(-1, len(self.zk))
+        self.zk = np.random.multivariate_normal(self.mu_k, self.Sigma_k, size=len(self.mu_k))
+        #self.zk = self.zk.reshape(-1, len(self.zk))
 
         while self.EL2O[-1] > self.absEL2O and abs((self.EL2O[-1] - self.EL2O[-2]) / self.EL2O[-1]) > self.fracEL2O:
 
             self.zk = np.vstack((self.zk, np.random.multivariate_normal(self.mu_k.squeeze(), self.Sigma_k)))
             Nk = len(self.zk)
-            if self.use_hess_EL2O:
+            if not self.use_hess_EL2O:
                 temp1 = 0
                 temp2 = 0
                 for k in range(Nk):
-                    temp1 += np.outer(self.zk[k, :] - self.mu_k, self.zk[k, :] - self.mu_k)
-                    temp2 += np.outer(self.zk[k, :] - self.mu_k, self.target_dlogp(self.zk[k, :].reshape(-1, len(self.zk[k, :]))))
-                self.Sigma_k = -1 * np.matmul(np.linalg.inv(temp1), temp2)
-            elif not self.use_hess_EL2O:
+                    temp1 += np.outer(self.zk[k, :] - np.mean(self.zk, axis=0), self.zk[k, :] - np.mean(self.zk, axis=0))
+                    temp2 += np.outer(self.zk[k, :] - np.mean(self.zk, axis=0), self.target_dlogp(self.zk[k, :].reshape(-1, len(self.zk[k, :]))))
+                if self.mean_field_EL2O:
+                    self.Sigma_k = -1 * np.diag(temp2) / np.diag(temp1)
+                    self.Sigma_k = 1.0 / self.Sigma_k
+                    self.Sigma_k = self.Sigma_k * np.eye(len(self.Sigma_k))
+                elif not self.mean_field_EL2O:
+                    self.Sigma_k = -1 * np.matmul(np.linalg.inv(temp1), temp2)
+                    self.Sigma_k = np.linalg.inv(self.Sigma_k)
+            elif self.use_hess_EL2O:
                 self.Sigma_k = np.linalg.inv(np.sum(self.target_hessian(self.zk), axis=0) / Nk)
-
+                if self.mean_field_EL2O:
+                    self.Sigma_k = np.diag(self.Sigma_k) * np.eye(len(self.Sigma_k))
+                
             temp = 0
             for j in range(Nk):
-                temp += np.dot(self.Sigma_k, self.target_dlogp(self.zk[j, :].reshape(-1, len(self.zk[j, :])))) + self.zk[j, :].reshape(-1, len(self.zk[j, :]))
-            self.mu_k = temp / Nk
+                temp += np.dot(self.Sigma_k, self.target_dlogp(self.zk[j, :].reshape(-1, len(self.zk[j, :]))))
+            self.mu_k = np.mean(self.zk, axis=0) + temp / Nk
 
             self.EL2O = np.append(self.EL2O, 1 / (len(self.zk)) * (np.sum((self.target_logp(self.zk) -
                                                                            jax.vmap(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k), in_axes=0)(self.zk))**2) +
-                                                                   np.sum((self.target_dlogp(self.zk) - 
-                                                                           jax.vmap(jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)), in_axes=0)(self.zk))**2) +
-                                                                   np.sum((self.target_hessian(self.zk) - 
-                                                                           jax.vmap(jax.hessian(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)), in_axes=0)(self.zk))**2)
+                                                                   np.sum((self.target_dlogp(self.zk) -
+                                                                           jax.vmap(jax.grad(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k)), in_axes=0)(self.zk))**2)
             ))
 
-        if not posdef.isPD(self.Sigma_k):
-            print('EL2O covariance is not positive semi-definite - resorting to finding nearest PSD matrix.')
-            self.Sigma_k = posdef.nearestPD(self.Sigma_k)
-            
         print(f'Final EL2O mu = {self.mu_k}')
         print(f'Final EL2O Sigma = {self.Sigma_k}')
         self.weighted_samples = np.random.multivariate_normal(self.mu_k.squeeze(), self.Sigma_k, size=self.draws)
@@ -789,7 +787,6 @@ class NFMC:
             self.log_weight = logsumexp(self.log_weight) - np.log(len(self.log_weight))
             self.weights = np.exp(self.log_weight)
 
-        print(f'Non-zero NF weights = {self.weights[self.weights != 0.0]}')
         self.weights = self.weights / np.sum(self.weights)
         self.importance_weights = np.append(self.importance_weights, self.weights)
         if self.nf_local_iter > 0:
