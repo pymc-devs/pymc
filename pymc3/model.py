@@ -184,7 +184,7 @@ class ContextMeta(type):
             # Calling code expects to get a TypeError if the entity
             # is unfound, and there's too much to fix.
             if error_if_none:
-                raise TypeError("No %s on context stack" % str(cls))
+                raise TypeError("No {} on context stack".format(str(cls)))
             return None
         return candidate
 
@@ -201,7 +201,8 @@ class ContextMeta(type):
         # be sure not to override contexts in a subclass however!
         context_class = cls.context_class
         assert isinstance(context_class, type), (
-            "Name of context class, %s was not resolvable to a class" % context_class
+            "Name of context class, {} was not resolvable to a class"
+            .format(context_class)
         )
         if not hasattr(context_class, "contexts"):
             context_class.contexts = threading.local()
@@ -223,15 +224,15 @@ class ContextMeta(type):
                 c = getattr(modules[cls.__module__], c)
             if isinstance(c, type):
                 return c
-            raise ValueError("Cannot resolve context class %s" % c)
+            raise ValueError("Cannot resolve context class {}".format(c))
 
         assert cls is not None
         if isinstance(cls._context_class, str):
             cls._context_class = resolve_type(cls._context_class)
         if not isinstance(cls._context_class, (str, type)):
             raise ValueError(
-                "Context class for %s, %s, is not of the right type"
-                % (cls.__name__, cls._context_class)
+                "Context class for {name}, {context_class}, is not of the right type"
+                .format(name = cls.__name__, context_class = cls._context_class)
             )
         return cls._context_class
 
@@ -334,7 +335,7 @@ class Factor:
         else:
             logp = self.logp_sum_unscaledt
         if self.name is not None:
-            logp.name = "__logp_%s" % self.name
+            logp.name = "__logp_{}".format(self.name)
         return logp
 
     @property
@@ -345,7 +346,7 @@ class Factor:
         else:
             logp = at.sum(self.logp_nojac_unscaledt)
         if self.name is not None:
-            logp.name = "__logp_%s" % self.name
+            logp.name = "__logp_{}".format(self.name)
         return logp
 
 
@@ -709,7 +710,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         else:
             for i, var in enumerate(grad_vars):
                 if var.dtype not in continuous_types:
-                    raise ValueError("Can only compute the gradient of continuous types: %s" % var)
+                    raise ValueError("Can only compute the gradient of continuous types: {}".format(var))
                 # We allow one to pass the random variable terms as arguments
                 if hasattr(var.tag, "value_var"):
                     grad_vars[i] = var.tag.value_var
@@ -756,7 +757,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
             logp_var = at.sum([at.sum(factor) for factor in factors])
             if self.name:
-                logp_var.name = "__logp_%s" % self.name
+                logp_var.name = "__logp_{}".format(self.name)
             else:
                 logp_var.name = "__logp"
             return logp_var
@@ -786,7 +787,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             logp_var = at.sum([at.sum(factor) for factor in factors])
 
             if self.name:
-                logp_var.name = "__logp_nojac_%s" % self.name
+                logp_var.name = "__logp_nojac_{}".format(self.name)
             else:
                 logp_var.name = "__logp_nojac"
             return logp_var
@@ -990,10 +991,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         for dim in dims:
             if dim not in self.coords:
                 raise ValueError(
-                    "Unknown dimension name '%s'. All dimension "
+                    "Unknown dimension name '{}'. All dimension "
                     "names must be specified in the `coords` "
                     "argument of the model or through a pm.Data "
-                    "variable." % dim
+                    "variable.".format(dim)
                 )
             shape.extend(np.shape(self.coords[dim]))
         return tuple(shape)
@@ -1361,7 +1362,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
 
     @property
     def prefix(self):
-        return "%s_" % self.name if self.name else ""
+        return "{}_".format(self.name) if self.name else ""
 
     def name_for(self, name):
         """Checks if name has prefix and adds if needed"""
