@@ -184,7 +184,7 @@ class ContextMeta(type):
             # Calling code expects to get a TypeError if the entity
             # is unfound, and there's too much to fix.
             if error_if_none:
-                raise TypeError(f"No {str(cls)} on context stack")
+                raise TypeError(f"No {cls} on context stack")
             return None
         return candidate
 
@@ -200,9 +200,9 @@ class ContextMeta(type):
         # no race-condition here, contexts is a thread-local object
         # be sure not to override contexts in a subclass however!
         context_class = cls.context_class
-        assert isinstance(context_class, type), (
-            f"Name of context class, {context_class} was not resolvable to a class"
-        )
+        assert isinstance(
+            context_class, type
+        ), f"Name of context class, {context_class} was not resolvable to a class"
         if not hasattr(context_class, "contexts"):
             context_class.contexts = threading.local()
 
@@ -1589,7 +1589,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 raise SamplingError(
                     "Initial evaluation of model at starting point failed!\n"
                     f"Starting values:\n{elem}\n\n"
-                    f"Initial evaluation results:\n{str(initial_eval)}"
+                    f"Initial evaluation results:\n{initial_eval}"
                 )
 
     def check_test_point(self, *args, **kwargs):
