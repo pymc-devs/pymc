@@ -141,6 +141,13 @@ class TestSMCABC(SeededTest):
                 "s", normal_sim, params=(a, b), sum_stat="sort", epsilon=1, observed=self.data
             )
 
+        with pm.Model() as self.SMABC_log_pseudolikelihood:
+            a = pm.Normal("a", mu=0, sigma=1)
+            b = pm.HalfNormal("b", sigma=10)
+            s = pm.Simulator(
+                "s", normal_sim, params=(a, b), sum_stat="mean", epsilon=0.2, observed=self.data
+            )
+
     def test_one_gaussian(self):
         with self.SMABC_test:
             trace = pm.sample_smc(draws=1000, kernel="ABC")
@@ -210,3 +217,9 @@ class TestSMCABC(SeededTest):
             )
             with pytest.raises(NotImplementedError, match="named models"):
                 pm.sample_smc(draws=10, kernel="ABC")
+
+    def test_log_pseudolikelihood(self):
+        with self.SMABC_log_pseudolikelihood:
+            trace = pm.sample_smc(draws=1000, chains=2, kernel="ABC")
+            assert trace.report.log_pseudolikelihood[0].var() < 1
+            assert trace.report.log_pseudolikelihood[1].var() < 1
