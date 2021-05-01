@@ -1,0 +1,24 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+aesara = ">=2.0.5"
+arviz = ">=0.11.2"
+cachetools = ">=4.2.1"
+dill = "*"
+fastprogress = ">=0.2.0"
+numpy = ">=1.15.0"
+pandas = ">=0.24.0"
+patsy = ">=0.5.1"
+scipy = ">=1.2.0"
+typing-extensions = ">=3.7.4"
+statsmodels = "*"
+
+[dev-packages]
+jupyterlab = "*"
+pandas-datareader = "*"
+
+[requires]
+python_version = "3.8"
