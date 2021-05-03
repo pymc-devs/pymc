@@ -49,10 +49,7 @@ from pymc3.tests.test_distributions import (
     RealMatrix,
     Rplus,
     Rplusbig,
-    Rplusdunif,
-    Runif,
     Simplex,
-    Unit,
     Vector,
     build_model,
     product,
@@ -977,13 +974,6 @@ class TestScalarParameterSamples(SeededTest):
 
         pymc3_random(pm.AsymmetricLaplace, {"b": Rplus, "kappa": Rplus, "mu": R}, ref_rand=ref_rand)
 
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_lognormal(self):
-        def ref_rand(size, mu, tau):
-            return np.exp(mu + (tau ** -0.5) * st.norm.rvs(loc=0.0, scale=1.0, size=size))
-
-        pymc3_random(pm.Lognormal, {"mu": R, "tau": Rplusbig}, ref_rand=ref_rand)
-
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_student_t(self):
         def ref_rand(size, nu, mu, lam):
@@ -997,24 +987,6 @@ class TestScalarParameterSamples(SeededTest):
             return nr.normal(mu, sigma, size=size) + nr.exponential(scale=nu, size=size)
 
         pymc3_random(pm.ExGaussian, {"mu": R, "sigma": Rplus, "nu": Rplus}, ref_rand=ref_rand)
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_vonmises(self):
-        def ref_rand(size, mu, kappa):
-            x = st.vonmises.rvs(size=size, loc=mu, kappa=kappa)
-
-        pymc3_random(pm.VonMises, {"mu": R, "kappa": Rplus}, ref_rand=ref_rand)
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_triangular(self):
-        def ref_rand(size, lower, upper, c):
-            scale = upper - lower
-            c_ = (c - lower) / scale
-            return st.triang.rvs(size=size, loc=lower, scale=scale, c=c_)
-
-        pymc3_random(
-            pm.Triangular, {"lower": Runif, "upper": Runif + 3, "c": Runif + 1}, ref_rand=ref_rand
-        )
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_flat(self):
@@ -1043,50 +1015,6 @@ class TestScalarParameterSamples(SeededTest):
     def _beta_bin(self, n, alpha, beta, size=None):
         return st.binom.rvs(n, st.beta.rvs(a=alpha, b=beta, size=size))
 
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_bernoulli(self):
-        pymc3_random_discrete(
-            pm.Bernoulli, {"p": Unit}, ref_rand=lambda size, p=None: st.bernoulli.rvs(p, size=size)
-        )
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_poisson(self):
-        pymc3_random_discrete(pm.Poisson, {"mu": Rplusbig}, size=500, ref_rand=st.poisson.rvs)
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_negative_binomial(self):
-        def ref_rand(size, alpha, mu):
-            return st.nbinom.rvs(alpha, alpha / (mu + alpha), size=size)
-
-        pymc3_random_discrete(
-            pm.NegativeBinomial,
-            {"mu": Rplusbig, "alpha": Rplusbig},
-            size=100,
-            fails=50,
-            ref_rand=ref_rand,
-        )
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_geometric(self):
-        pymc3_random_discrete(pm.Geometric, {"p": Unit}, size=500, fails=50, ref_rand=nr.geometric)
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_hypergeometric(self):
-        def ref_rand(size, N, k, n):
-            return st.hypergeom.rvs(M=N, n=k, N=n, size=size)
-
-        pymc3_random_discrete(
-            pm.HyperGeometric,
-            {
-                "N": Domain([10, 11, 12, 13], "int64"),
-                "k": Domain([4, 5, 6, 7], "int64"),
-                "n": Domain([6, 7, 8, 9], "int64"),
-            },
-            size=500,
-            fails=50,
-            ref_rand=ref_rand,
-        )
-
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_discrete_uniform(self):
         def ref_rand(size, lower, upper):
@@ -1095,33 +1023,6 @@ class TestScalarParameterSamples(SeededTest):
         pymc3_random_discrete(
             pm.DiscreteUniform, {"lower": -NatSmall, "upper": NatSmall}, ref_rand=ref_rand
         )
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_discrete_weibull(self):
-        def ref_rand(size, q, beta):
-            u = np.random.uniform(size=size)
-
-            return np.ceil(np.power(np.log(1 - u) / np.log(q), 1.0 / beta)) - 1
-
-        pymc3_random_discrete(
-            pm.DiscreteWeibull, {"q": Unit, "beta": Rplusdunif}, ref_rand=ref_rand
-        )
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_weibull(self):
-        def ref_rand(size, alpha, beta):
-            u = np.random.uniform(size=size)
-            return beta * np.power(-np.log(u), 1 / alpha)
-
-        pymc3_random(pm.Weibull, {"alpha": Rplusbig, "beta": Rplusbig}, ref_rand=ref_rand)
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    @pytest.mark.parametrize("s", [2, 3, 4])
-    def test_categorical_random(self, s):
-        def ref_rand(size, p):
-            return nr.choice(np.arange(p.shape[0]), p=p, size=size)
-
-        pymc3_random_discrete(pm.Categorical, {"p": Simplex(s)}, ref_rand=ref_rand)
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_constant_dist(self):
@@ -1338,13 +1239,6 @@ class TestScalarParameterSamples(SeededTest):
         m = pm.DirichletMultinomial.dist(n=n, a=a, shape=shape)
         with expectation:
             m.random()
-
-    @pytest.mark.skip(reason="This test is covered by Aesara")
-    def test_logistic(self):
-        def ref_rand(size, mu, s):
-            return st.logistic.rvs(loc=mu, scale=s, size=size)
-
-        pymc3_random(pm.Logistic, {"mu": R, "s": Rplus}, ref_rand=ref_rand)
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_logitnormal(self):
