@@ -40,7 +40,6 @@ from pymc3.exceptions import ShapeError
 from pymc3.tests.helpers import SeededTest, select_by_precision
 from pymc3.tests.test_distributions import (
     Domain,
-    I,
     Nat,
     PdMatrix,
     PdMatrixChol,
@@ -312,12 +311,6 @@ class TestExGaussian(BaseTestCases.BaseTestCase):
 class TestLogitNormal(BaseTestCases.BaseTestCase):
     distribution = pm.LogitNormal
     params = {"mu": 0.0, "sigma": 1.0}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestConstant(BaseTestCases.BaseTestCase):
-    distribution = pm.Constant
-    params = {"c": 3}
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
@@ -918,6 +911,24 @@ class TestDiscreteUniform(BaseTestDistribution):
     ]
 
 
+class TestConstant(BaseTestDistribution):
+    def constant_rng_fn(self, size, c):
+        if size is None:
+            return c
+        return np.full(size, c)
+
+    pymc_dist = pm.Constant
+    pymc_dist_params = {"c": 3}
+    expected_rv_op_params = {"c": 3}
+    reference_dist_params = {"c": 3}
+    reference_dist = lambda self: self.constant_rng_fn
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
 class TestScalarParameterSamples(SeededTest):
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_bounded(self):
@@ -1026,13 +1037,6 @@ class TestScalarParameterSamples(SeededTest):
             f = pm.HalfFlat("f")
             with pytest.raises(ValueError):
                 f.random(1)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_constant_dist(self):
-        def ref_rand(size, c):
-            return c * np.ones(size, dtype=int)
-
-        pymc3_random_discrete(pm.Constant, {"c": I}, ref_rand=ref_rand)
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_matrix_normal(self):
