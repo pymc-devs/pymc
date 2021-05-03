@@ -35,6 +35,7 @@ import aesara
 import aesara.graph.basic
 import aesara.tensor as at
 
+from pymc3.printing import PrettyPrintingTensorVariable
 from pymc3.util import UNSET, get_repr_for_variable
 from pymc3.vartypes import string_types
 
@@ -155,7 +156,14 @@ class Distribution(metaclass=DistributionMeta):
 
         rv_out = cls.dist(*args, rng=rng, **kwargs)
 
-        return model.register_rv(rv_out, name, data, total_size, dims=dims, transform=transform)
+        rv_registered = model.register_rv(rv_out, name, data, total_size, dims=dims, transform=transform)
+
+        # Add in high-level string representations
+        # (simply assigning var.__str__ is not enough, since str() will default to the
+        # class- defined __str__ anyway; see https://stackoverflow.com/a/5918210/1692028
+        rv_registered.__class__ = PrettyPrintingTensorVariable
+
+        return rv_registered
 
     @classmethod
     def dist(cls, dist_params, **kwargs):
