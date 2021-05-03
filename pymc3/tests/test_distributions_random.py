@@ -13,7 +13,6 @@
 #   limitations under the License.
 import functools
 import itertools
-import sys
 
 from contextlib import ExitStack as does_not_raise
 from typing import Callable, List, Optional
@@ -310,12 +309,6 @@ class TestExGaussian(BaseTestCases.BaseTestCase):
 class TestLogitNormal(BaseTestCases.BaseTestCase):
     distribution = pm.LogitNormal
     params = {"mu": 0.0, "sigma": 1.0}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestBetaBinomial(BaseTestCases.BaseTestCase):
-    distribution = pm.BetaBinomial
-    params = {"n": 5, "alpha": 1.0, "beta": 1.0}
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
@@ -893,6 +886,17 @@ class TestWeibull(BaseTestDistribution):
     ]
 
 
+class TestBetaBinomial(BaseTestDistribution):
+    pymc_dist = pm.BetaBinomial
+    pymc_dist_params = {"alpha": 2.0, "beta": 1.0, "n": 5}
+    expected_rv_op_params = {"n": 5, "alpha": 2.0, "beta": 1.0}
+    reference_dist_params = {"n": 5, "a": 2.0, "b": 1.0}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+    ]
+
+
 class TestScalarParameterSamples(SeededTest):
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_bounded(self):
@@ -1001,19 +1005,6 @@ class TestScalarParameterSamples(SeededTest):
             f = pm.HalfFlat("f")
             with pytest.raises(ValueError):
                 f.random(1)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    @pytest.mark.xfail(
-        sys.platform.startswith("win"),
-        reason="Known issue: https://github.com/pymc-devs/pymc3/pull/4269",
-    )
-    def test_beta_binomial(self):
-        pymc3_random_discrete(
-            pm.BetaBinomial, {"n": Nat, "alpha": Rplus, "beta": Rplus}, ref_rand=self._beta_bin
-        )
-
-    def _beta_bin(self, n, alpha, beta, size=None):
-        return st.binom.rvs(n, st.beta.rvs(a=alpha, b=beta, size=size))
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_discrete_uniform(self):

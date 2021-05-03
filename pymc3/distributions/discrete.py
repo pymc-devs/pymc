@@ -19,6 +19,7 @@ import numpy as np
 from aesara.tensor.random.basic import (
     RandomVariable,
     bernoulli,
+    betabinom,
     binomial,
     categorical,
     geometric,
@@ -41,7 +42,7 @@ from pymc3.distributions.dist_math import (
     normal_lcdf,
 )
 from pymc3.distributions.distribution import Discrete
-from pymc3.math import log1mexp, logaddexp, logsumexp, sigmoid, tround
+from pymc3.math import log1mexp, logaddexp, logsumexp, sigmoid
 
 __all__ = [
     "Binomial",
@@ -227,58 +228,16 @@ class BetaBinomial(Discrete):
         beta > 0.
     """
 
-    def __init__(self, alpha, beta, n, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
-        self.beta = beta = at.as_tensor_variable(floatX(beta))
-        self.n = n = at.as_tensor_variable(intX(n))
-        self.mode = at.cast(tround(alpha / (alpha + beta)), "int8")
+    rv_op = betabinom
 
-    def _random(self, alpha, beta, n, size=None):
-        size = size or ()
-        p = stats.beta.rvs(a=alpha, b=beta, size=size).flatten()
-        # Sometimes scipy.beta returns nan. Ugh.
-        while np.any(np.isnan(p)):
-            i = np.isnan(p)
-            p[i] = stats.beta.rvs(a=alpha, b=beta, size=np.sum(i))
-        # Sigh...
-        _n, _p, _size = np.atleast_1d(n).flatten(), p.flatten(), p.shape[0]
+    @classmethod
+    def dist(cls, alpha, beta, n, *args, **kwargs):
+        alpha = at.as_tensor_variable(floatX(alpha))
+        beta = at.as_tensor_variable(floatX(beta))
+        n = at.as_tensor_variable(intX(n))
+        return super().dist([n, alpha, beta], **kwargs)
 
-        quotient, remainder = divmod(_p.shape[0], _n.shape[0])
-        if remainder != 0:
-            raise TypeError(
-                "n has a bad size! Was cast to {}, must evenly divide {}".format(
-                    _n.shape[0], _p.shape[0]
-                )
-            )
-        if quotient != 1:
-            _n = np.tile(_n, quotient)
-        samples = np.reshape(stats.binom.rvs(n=_n, p=_p, size=_size), size)
-        return samples
-
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from BetaBinomial distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # alpha, beta, n = draw_values([self.alpha, self.beta, self.n], point=point, size=size)
-        # return generate_samples(
-        #     self._random, alpha=alpha, beta=beta, n=n, dist_shape=self.shape, size=size
-        # )
-
-    def logp(self, value):
+    def logp(value, n, alpha, beta):
         r"""
         Calculate log-probability of BetaBinomial distribution at specified value.
 
@@ -292,9 +251,6 @@ class BetaBinomial(Discrete):
         -------
         TensorVariable
         """
-        alpha = self.alpha
-        beta = self.beta
-        n = self.n
         return bound(
             binomln(n, value) + betaln(value + alpha, n - value + beta) - betaln(alpha, beta),
             value >= 0,
@@ -303,7 +259,7 @@ class BetaBinomial(Discrete):
             beta > 0,
         )
 
-    def logcdf(self, value):
+    def logcdf(value, n, alpha, beta):
         """
         Compute the log of the cumulative distribution function for BetaBinomial distribution
         at the specified value.
@@ -323,15 +279,15 @@ class BetaBinomial(Discrete):
                 f"BetaBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
-        alpha = self.alpha
-        beta = self.beta
-        n = self.n
         safe_lower = at.switch(at.lt(value, 0), value, 0)
 
         return bound(
             at.switch(
                 at.lt(value, n),
-                logsumexp(self.logp(at.arange(safe_lower, value + 1)), keepdims=False),
+                logsumexp(
+                    BetaBinomial.logp(at.arange(safe_lower, value + 1), n, alpha, beta),
+                    keepdims=False,
+                ),
                 0,
             ),
             0 <= value,

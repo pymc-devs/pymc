@@ -1496,8 +1496,7 @@ class TestMatchesScipy:
             n_samples=10,
         )
 
-    # Too lazy to propagate decimal parameter through the whole chain of deps
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.xfail(reason="checkd tests has not been refactored")
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     def test_beta_binomial_distribution(self):
         self.checkd(
@@ -1506,7 +1505,6 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.skipif(
         condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
     )
@@ -1518,7 +1516,6 @@ class TestMatchesScipy:
             lambda value, alpha, beta, n: sp.betabinom.logpmf(value, a=alpha, b=beta, n=n),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
     @pytest.mark.skipif(
         condition=(SCIPY_VERSION < parse("1.4.0")), reason="betabinom is new in Scipy 1.4.0"
@@ -1531,7 +1528,6 @@ class TestMatchesScipy:
             lambda value, alpha, beta, n: sp.betabinom.logcdf(value, a=alpha, b=beta, n=n),
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_beta_binomial_selfconsistency(self):
         self.check_selfconsistency_discrete_logcdf(
             BetaBinomial,
