@@ -61,11 +61,11 @@ class ModelBackendSetupTestCase:
             with pytest.raises(ValueError):
                 self.strace.setup(self.draws, self.chain)
             with pytest.raises(ValueError):
-                vars = self.sampler_vars + [{"a": np.bool}]
+                vars = self.sampler_vars + [{"a": bool}]
                 self.strace.setup(self.draws, self.chain, vars)
         else:
             with pytest.raises((ValueError, TypeError)):
-                self.strace.setup(self.draws, self.chain, [{"a": np.bool}])
+                self.strace.setup(self.draws, self.chain, [{"a": bool}])
 
     def test_append(self):
         if self.sampler_vars is None:
@@ -103,7 +103,7 @@ class StatsTestCase:
         self.draws, self.chain = 3, 0
 
     def test_bad_dtype(self):
-        bad_vars = [{"a": np.float64}, {"a": np.bool}]
+        bad_vars = [{"a": np.float64}, {"a": bool}]
         good_vars = [{"a": np.float64}, {"a": np.float64}]
         with self.model:
             strace = self.backend(self.name)
@@ -185,7 +185,7 @@ class ModelBackendSampledTestCase:
                 cls.expected_stats[0].append(stats)
                 cls.expected_stats[1].append(stats)
                 for key, dtype in vars.items():
-                    if dtype == np.bool:
+                    if dtype == bool:
                         stats[key] = np.zeros(cls.draws, dtype=dtype)
                     else:
                         stats[key] = np.arange(cls.draws, dtype=dtype)

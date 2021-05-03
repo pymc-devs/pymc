@@ -679,7 +679,7 @@ class MLDA(ArrayStepShared):
 
         else:
             # otherwise, set it up from scratch.
-            self.stats_dtypes = [{"accept": np.float64, "accepted": np.bool, "tune": np.bool}]
+            self.stats_dtypes = [{"accept": np.float64, "accepted": bool, "tune": bool}]
 
             if isinstance(self.step_method_below, MetropolisMLDA):
                 self.stats_dtypes.append({"base_scaling": np.float64})
