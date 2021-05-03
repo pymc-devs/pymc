@@ -42,7 +42,6 @@ from pymc3.tests.test_distributions import (
     Domain,
     I,
     Nat,
-    NatSmall,
     PdMatrix,
     PdMatrixChol,
     R,
@@ -337,12 +336,6 @@ class TestZeroInflatedNegativeBinomial(BaseTestCases.BaseTestCase):
 class TestZeroInflatedBinomial(BaseTestCases.BaseTestCase):
     distribution = pm.ZeroInflatedBinomial
     params = {"n": 10, "p": 0.6, "psi": 0.3}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestDiscreteUniform(BaseTestCases.BaseTestCase):
-    distribution = pm.DiscreteUniform
-    params = {"lower": 0.0, "upper": 10.0}
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
@@ -907,6 +900,24 @@ class TestBetaBinomial(BaseTestDistribution):
     ]
 
 
+class TestDiscreteUniform(BaseTestDistribution):
+    def discrete_uniform_rng_fn(self, size, lower, upper, rng):
+        return st.randint.rvs(lower, upper + 1, size=size, random_state=rng)
+
+    pymc_dist = pm.DiscreteUniform
+    pymc_dist_params = {"lower": -1, "upper": 9}
+    expected_rv_op_params = {"lower": -1, "upper": 9}
+    reference_dist_params = {"lower": -1, "upper": 9}
+    reference_dist = lambda self: functools.partial(
+        self.discrete_uniform_rng_fn, rng=self.get_random_state()
+    )
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
 class TestScalarParameterSamples(SeededTest):
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_bounded(self):
@@ -1015,15 +1026,6 @@ class TestScalarParameterSamples(SeededTest):
             f = pm.HalfFlat("f")
             with pytest.raises(ValueError):
                 f.random(1)
-
-    @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-    def test_discrete_uniform(self):
-        def ref_rand(size, lower, upper):
-            return st.randint.rvs(lower, upper + 1, size=size)
-
-        pymc3_random_discrete(
-            pm.DiscreteUniform, {"lower": -NatSmall, "upper": NatSmall}, ref_rand=ref_rand
-        )
 
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_constant_dist(self):
