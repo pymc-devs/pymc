@@ -929,7 +929,6 @@ class TestMatchesScipy:
             x = PositiveNormal("x", mu=0, sigma=1, transform=None)
         assert np.isinf(logpt(x, -1).eval())
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_discrete_unif(self):
         self.check_logp(
             DiscreteUniform,
@@ -2817,17 +2816,16 @@ class TestBugfixes:
         assert isinstance(actual_a, np.ndarray)
         assert actual_a.shape == (X.shape[0],)
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_issue_4499(self):
         # Test for bug in Uniform and DiscreteUniform logp when setting check_bounds = False
         # https://github.com/pymc-devs/pymc3/issues/4499
         with pm.Model(check_bounds=False) as m:
             x = pm.Uniform("x", 0, 2, shape=10, transform=None)
-        assert_almost_equal(m.logp_array(np.ones(10)), -np.log(2) * 10)
+        assert_almost_equal(m.logp({"x": np.ones(10)}), -np.log(2) * 10)
 
         with pm.Model(check_bounds=False) as m:
-            x = pm.DiscreteUniform("x", 0, 1, shape=10)
-        assert_almost_equal(m.logp_array(np.ones(10)), -np.log(2) * 10)
+            x = pm.DiscreteUniform("x", 0, 1, size=10)
+        assert_almost_equal(m.logp({"x": np.ones(10)}), -np.log(2) * 10)
 
 
 @pytest.mark.xfail(reason="DensityDist no longer supported")
