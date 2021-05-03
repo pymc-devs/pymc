@@ -21,7 +21,7 @@ import pymc3 as pm
 from pymc3.backends import base, ndarray
 from pymc3.tests import backend_fixtures as bf
 
-STATS1 = [{"a": np.float64, "b": np.bool}]
+STATS1 = [{"a": np.float64, "b": bool}]
 
 STATS2 = [
     {"a": np.float64},

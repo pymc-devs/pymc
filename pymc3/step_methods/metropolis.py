@@ -108,8 +108,8 @@ class Metropolis(ArrayStepShared):
     stats_dtypes = [
         {
             "accept": np.float64,
-            "accepted": np.bool,
-            "tune": np.bool,
+            "accepted": bool,
+            "tune": bool,
             "scaling": np.float64,
         }
     ]
@@ -307,7 +307,7 @@ class BinaryMetropolis(ArrayStep):
     stats_dtypes = [
         {
             "accept": np.float64,
-            "tune": np.bool,
+            "tune": bool,
             "p_jump": np.float64,
         }
     ]
@@ -669,8 +669,8 @@ class DEMetropolis(PopulationArrayStepShared):
     stats_dtypes = [
         {
             "accept": np.float64,
-            "accepted": np.bool,
-            "tune": np.bool,
+            "accepted": bool,
+            "tune": bool,
             "scaling": np.float64,
             "lambda": np.float64,
         }
@@ -818,8 +818,8 @@ class DEMetropolisZ(ArrayStepShared):
     stats_dtypes = [
         {
             "accept": np.float64,
-            "accepted": np.bool,
-            "tune": np.bool,
+            "accepted": bool,
+            "tune": bool,
             "scaling": np.float64,
             "lambda": np.float64,
         }
