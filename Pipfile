@@ -19,6 +19,7 @@ statsmodels = "*"
 [dev-packages]
 jupyterlab = "*"
 pandas-datareader = "*"
+theano = "*"
 
 [requires]
 python_version = "3.8"
