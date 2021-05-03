@@ -478,7 +478,7 @@ class NFMC:
             print(f'Pareto w = {self.weights}')
         elif not self.pareto:
             self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
-            self.log_weight = logsumexp(self.log_weight) - np.log(len(self.log_weight))
+            self.log_weight = self.log_weight - logsumexp(self.log_weight)
             self.weights = np.exp(self.log_weight)
 
         print(f'Non-zero Adam init weights = {self.weights[self.weights != 0.0]}')
@@ -575,7 +575,7 @@ class NFMC:
             self.weights = np.exp(self.log_weight)
         elif not self.pareto:
             self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
-            self.log_weight = logsumexp(self.log_weight) - np.log(len(self.log_weight))
+            self.log_weight = self.log_weight - logsumexp(self.log_weight)
             self.weights = np.exp(self.log_weight)
 
         self.weights = self.weights / np.sum(self.weights)
@@ -627,7 +627,7 @@ class NFMC:
             self.weights = np.exp(self.log_weight)
         elif not self.pareto:
             self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
-            self.log_weight = logsumexp(self.log_weight) - np.log(len(self.log_weight))
+            self.log_weight = self.log_weight - logsumexp(self.log_weight)
             self.weights = np.exp(self.log_weight)
 
         self.weights = self.weights / np.sum(self.weights)
@@ -674,6 +674,7 @@ class NFMC:
         self.Sigma_map = np.linalg.inv(self.target_hessian(self.mu_map.reshape(-1, len(self.mu_map))))
 
         print(f'MAP estimate = {self.map_dict}')
+        print(f'Sigma estimate at MAP = {self.Sigma_map}')
         
     def run_el2o(self):
         """Run the EL2O algorithm, assuming you've got the MAP+Laplace solution."""
@@ -706,12 +707,13 @@ class NFMC:
                 self.Sigma_k = np.linalg.inv(np.sum(self.target_hessian(self.zk), axis=0) / Nk)
                 if self.mean_field_EL2O:
                     self.Sigma_k = np.diag(self.Sigma_k) * np.eye(len(self.Sigma_k))
-                
+
             temp = 0
             for j in range(Nk):
-                temp += np.dot(self.Sigma_k, self.target_dlogp(self.zk[j, :].reshape(-1, len(self.zk[j, :]))))
+                temp += np.matmul(self.Sigma_k, self.target_dlogp(self.zk[j, :].reshape(-1, len(self.zk[j, :]))))
             self.mu_k = np.mean(self.zk, axis=0) + temp / Nk
-
+            print(f'Current EL2O mu = {self.mu_k}')
+            
             self.EL2O = np.append(self.EL2O, 1 / (len(self.zk)) * (np.sum((self.target_logp(self.zk) -
                                                                            jax.vmap(lambda x: self.logq_fr_el2o(x, self.mu_k, self.Sigma_k), in_axes=0)(self.zk))**2) +
                                                                    np.sum((self.target_dlogp(self.zk) -
@@ -735,7 +737,7 @@ class NFMC:
             self.weights = np.exp(self.log_weight)
         elif not self.pareto:
             self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
-            self.log_weight = logsumexp(self.log_weight) - np.log(len(self.log_weight))
+            self.log_weight = self.log_weight - logsumexp(self.log_weight)
             self.weights = np.exp(self.log_weight)
 
         self.weights = self.weights / np.sum(self.weights)
@@ -784,7 +786,7 @@ class NFMC:
             self.weights = np.exp(self.log_weight)
         elif not self.pareto:
             self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
-            self.log_weight = logsumexp(self.log_weight) - np.log(len(self.log_weight))
+            self.log_weight = self.log_weight - logsumexp(self.log_weight)
             self.weights = np.exp(self.log_weight)
 
         self.weights = self.weights / np.sum(self.weights)
@@ -820,7 +822,7 @@ class NFMC:
             self.weights = np.exp(self.log_weight)
         elif not self.pareto:
             self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
-            self.log_weight = logsumexp(self.log_weight) - np.log(len(self.log_weight))
+            self.log_weight = self.log_weight - logsumexp(self.log_weight)
             self.weights = np.exp(self.log_weight)
 
         self.weights = self.weights / np.sum(self.weights)
