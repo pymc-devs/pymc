@@ -11,8 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import warnings
-
 import aesara.tensor as at
 import numpy as np
 
@@ -51,7 +49,6 @@ __all__ = [
     "DiscreteWeibull",
     "Poisson",
     "NegativeBinomial",
-    "ConstantDist",
     "Constant",
     "ZeroInflatedPoisson",
     "ZeroInflatedBinomial",
@@ -1164,6 +1161,23 @@ class Categorical(Discrete):
         )
 
 
+class ConstantRV(RandomVariable):
+    name = "constant"
+    ndim_supp = 0
+    ndims_params = [0]
+    dtype = "floatX"  # Should be treated as a discrete variable!
+    _print_name = ("Constant", "\\operatorname{Constant}")
+
+    @classmethod
+    def rng_fn(cls, rng, c, size=None):
+        if size is None:
+            return c.copy()
+        return np.full(size, c)
+
+
+constant = ConstantRV()
+
+
 class Constant(Discrete):
     r"""
     Constant log-likelihood.
@@ -1174,40 +1188,14 @@ class Constant(Discrete):
         Constant parameter.
     """
 
-    def __init__(self, c, *args, **kwargs):
-        warnings.warn(
-            "Constant has been deprecated. We recommend using a Deterministic object instead.",
-            DeprecationWarning,
-        )
-        super().__init__(*args, **kwargs)
-        self.mean = self.median = self.mode = self.c = c = at.as_tensor_variable(c)
+    rv_op = constant
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from Constant distribution.
+    @classmethod
+    def dist(cls, c, *args, **kwargs):
+        c = at.as_tensor_variable(floatX(c))
+        return super().dist([c], **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # c = draw_values([self.c], point=point, size=size)[0]
-        # dtype = np.array(c).dtype
-        #
-        # def _random(c, dtype=dtype, size=None):
-        #     return np.full(size, fill_value=c, dtype=dtype)
-        #
-        # return generate_samples(_random, c=c, dist_shape=self.shape, size=size).astype(dtype)
-
-    def logp(self, value):
+    def logp(value, c):
         r"""
         Calculate log-probability of Constant distribution at specified value.
 
@@ -1221,11 +1209,10 @@ class Constant(Discrete):
         -------
         TensorVariable
         """
-        c = self.c
-        return bound(0, at.eq(value, c))
-
-
-ConstantDist = Constant
+        return bound(
+            at.zeros_like(value),
+            at.eq(value, c),
+        )
 
 
 class ZeroInflatedPoisson(Discrete):
