@@ -79,7 +79,7 @@ class BaseBART(NoDistribution):
         if isinstance(X, (Series, DataFrame)):
             X = X.to_numpy()
         missing_data = np.any(np.isnan(X))
-        X = np.random.normal(X, np.std(X, 0) / 100)
+        X = np.random.normal(X, np.nanstd(X, 0) / 100000)
         Y = Y.astype(float)
         return X, Y, missing_data
 
