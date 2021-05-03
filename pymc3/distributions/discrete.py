@@ -970,6 +970,21 @@ class HyperGeometric(Discrete):
         )
 
 
+class DiscreteUniformRV(RandomVariable):
+    name = "discrete_uniform"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "int64"
+    _print_name = ("DiscreteUniform", "\\operatorname{DiscreteUniform}")
+
+    @classmethod
+    def rng_fn(cls, rng, lower, upper, size=None):
+        return stats.randint.rvs(lower, upper + 1, size=size, random_state=rng)
+
+
+discrete_uniform = DiscreteUniformRV()
+
+
 class DiscreteUniform(Discrete):
     R"""
     Discrete uniform distribution.
@@ -1010,39 +1025,15 @@ class DiscreteUniform(Discrete):
         Upper limit (upper > lower).
     """
 
-    def __init__(self, lower, upper, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.lower = intX(at.floor(lower))
-        self.upper = intX(at.floor(upper))
-        self.mode = at.maximum(intX(at.floor((upper + lower) / 2.0)), self.lower)
+    rv_op = discrete_uniform
 
-    def _random(self, lower, upper, size=None):
-        # This way seems to be the only to deal with lower and upper
-        # as array-like.
-        samples = stats.randint.rvs(lower, upper + 1, size=size)
-        return samples
+    @classmethod
+    def dist(cls, lower, upper, *args, **kwargs):
+        lower = intX(at.floor(lower))
+        upper = intX(at.floor(upper))
+        return super().dist([lower, upper], **kwargs)
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from DiscreteUniform distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # lower, upper = draw_values([self.lower, self.upper], point=point, size=size)
-        # return generate_samples(self._random, lower, upper, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(value, lower, upper):
         r"""
         Calculate log-probability of DiscreteUniform distribution at specified value.
 
@@ -1056,15 +1047,13 @@ class DiscreteUniform(Discrete):
         -------
         TensorVariable
         """
-        upper = self.upper
-        lower = self.lower
         return bound(
             at.fill(value, -at.log(upper - lower + 1)),
             lower <= value,
             value <= upper,
         )
 
-    def logcdf(self, value):
+    def logcdf(value, lower, upper):
         """
         Compute the log of the cumulative distribution function for Discrete uniform distribution
         at the specified value.
@@ -1079,8 +1068,6 @@ class DiscreteUniform(Discrete):
         -------
         TensorVariable
         """
-        upper = self.upper
-        lower = self.lower
 
         return bound(
             at.switch(
