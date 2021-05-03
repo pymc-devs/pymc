@@ -1717,11 +1717,14 @@ class OrderedLogistic(Categorical):
 
     """
 
-    def __init__(self, eta, cutpoints, *args, **kwargs):
-        self.eta = at.as_tensor_variable(floatX(eta))
-        self.cutpoints = at.as_tensor_variable(cutpoints)
+    rv_op = categorical
 
-        pa = sigmoid(self.cutpoints - at.shape_padright(self.eta))
+    @classmethod
+    def dist(cls, eta, cutpoints, *args, **kwargs):
+        eta = at.as_tensor_variable(floatX(eta))
+        cutpoints = at.as_tensor_variable(cutpoints)
+
+        pa = sigmoid(cutpoints - at.shape_padright(eta))
         p_cum = at.concatenate(
             [
                 at.zeros_like(at.shape_padright(pa[..., 0])),
@@ -1732,7 +1735,7 @@ class OrderedLogistic(Categorical):
         )
         p = p_cum[..., 1:] - p_cum[..., :-1]
 
-        super().__init__(p=p, *args, **kwargs)
+        return super().dist(p, **kwargs)
 
 
 class OrderedProbit(Categorical):
