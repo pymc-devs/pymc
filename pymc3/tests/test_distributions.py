@@ -101,6 +101,7 @@ from pymc3.distributions import (
     continuous,
     logcdf,
     logpt,
+    logpt_sum,
 )
 from pymc3.math import kronecker, logsumexp
 from pymc3.model import Deterministic, Model, Point
@@ -2297,7 +2298,6 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.parametrize("n", [2, 3, 4])
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_orderedlogistic(self, n):
         self.check_logp(
             OrderedLogistic,
@@ -2738,27 +2738,34 @@ def test_discrete_trafo():
         err.match("Transformations for discrete distributions")
 
 
+# TODO: Is this test working as expected / still relevant?
 @pytest.mark.parametrize("shape", [tuple(), (1,), (3, 1), (3, 2)], ids=str)
-@pytest.mark.xfail(reason="Distribution not refactored yet")
 def test_orderedlogistic_dimensions(shape):
     # Test for issue #3535
     loge = np.log10(np.exp(1))
     size = 7
     p = np.ones(shape + (10,)) / 10
     cutpoints = np.tile(logit(np.linspace(0, 1, 11)[1:-1]), shape + (1,))
-    obs = np.random.randint(0, 1, size=(size,) + shape)
+    obs = np.random.randint(0, 2, size=(size,) + shape)
     with Model():
         ol = OrderedLogistic(
-            "ol", eta=np.zeros(shape), cutpoints=cutpoints, size=shape, observed=obs
+            "ol",
+            eta=np.zeros(shape),
+            cutpoints=cutpoints,
+            observed=obs,
         )
-        c = Categorical("c", p=p, size=shape, observed=obs)
-    ologp = logpt(ol, 1).eval() * loge
-    clogp = logpt(c, 1) * loge
+        c = Categorical(
+            "c",
+            p=p,
+            observed=obs,
+        )
+    ologp = logpt_sum(ol, np.ones_like(obs)).eval() * loge
+    clogp = logpt_sum(c, np.ones_like(obs)).eval() * loge
     expected = -np.prod((size,) + shape)
 
-    assert c.distribution.p.ndim == (len(shape) + 1)
+    assert c.owner.inputs[3].ndim == (len(shape) + 1)
     assert np.allclose(clogp, expected)
-    assert ol.distribution.p.ndim == (len(shape) + 1)
+    assert ol.owner.inputs[3].ndim == (len(shape) + 1)
     assert np.allclose(ologp, expected)
 
 

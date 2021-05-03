@@ -929,6 +929,16 @@ class TestConstant(BaseTestDistribution):
     ]
 
 
+class TestOrderedLogistic(BaseTestDistribution):
+    pymc_dist = pm.OrderedLogistic
+    pymc_dist_params = {"eta": 0, "cutpoints": np.array([-2, 0, 2])}
+    expected_rv_op_params = {"p": np.array([0.11920292, 0.38079708, 0.38079708, 0.11920292])}
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+    ]
+
+
 class TestScalarParameterSamples(SeededTest):
     @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
     def test_bounded(self):
