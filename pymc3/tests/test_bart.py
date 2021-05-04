@@ -62,8 +62,16 @@ def test_available_splitting_rules():
     available_splitting_rules = bart.get_available_splitting_rules(
         idx_data_points, idx_split_variable
     )
-    assert available_splitting_rules.size == 2
-    np.testing.assert_almost_equal(available_splitting_rules, np.array([2.0, 2.0]), 1)
+    assert available_splitting_rules.size == 1
+    np.testing.assert_almost_equal(
+        available_splitting_rules,
+        np.array(
+            [
+                2.0,
+            ]
+        ),
+        1,
+    )
 
     idx_split_variable = 2
     idx_data_points = np.array(range(bart.num_observations), dtype="int32")

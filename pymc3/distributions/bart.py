@@ -24,9 +24,20 @@ __all__ = ["BART"]
 
 class BaseBART(NoDistribution):
     def __init__(
-        self, X, Y, m=200, alpha=0.25, split_prior=None, scale=None, inv_link=None, *args, **kwargs
+        self,
+        X,
+        Y,
+        m=200,
+        alpha=0.25,
+        split_prior=None,
+        scale=None,
+        inv_link=None,
+        jitter=False,
+        *args,
+        **kwargs,
     ):
 
+        self.jitter = jitter
         self.X, self.Y, self.missing_data = self.preprocess_XY(X, Y)
 
         super().__init__(shape=X.shape[0], dtype="float64", testval=self.Y.mean(), *args, **kwargs)
@@ -79,7 +90,8 @@ class BaseBART(NoDistribution):
         if isinstance(X, (Series, DataFrame)):
             X = X.to_numpy()
         missing_data = np.any(np.isnan(X))
-        X = np.random.normal(X, np.nanstd(X, 0) / 100000)
+        if self.jitter:
+            X = np.random.normal(X, np.nanstd(X, 0) / 100000)
         Y = Y.astype(float)
         return X, Y, missing_data
 
@@ -312,9 +324,15 @@ class BART(BaseBART):
         and the scale parameter. Defaults to None, i.e the variance is 0.
     inv_link : numpy function
         Inverse link function defaults to None, i.e. the identity function.
+    jitter : bool
+        Whether to jitter the X values or not. Defaults to False. When values of X are repeated,
+        jittering X has the effect of increasing the number of effective spliting variables,
+        otherwise it does not have any effect.
     """
 
-    def __init__(self, X, Y, m=200, alpha=0.25, split_prior=None, scale=None, inv_link=None):
+    def __init__(
+        self, X, Y, m=200, alpha=0.25, split_prior=None, scale=None, inv_link=None, jitter=False
+    ):
         super().__init__(X, Y, m, alpha, split_prior, scale, inv_link)
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):
