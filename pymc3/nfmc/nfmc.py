@@ -96,7 +96,7 @@ class NFMC:
         local_grad=True,
         init_local=True,
         nf_local_iter=0,
-        max_line_search=2,
+        max_line_search=100,
         random_seed=-1,
         chain=0,
         frac_validate=0.1,

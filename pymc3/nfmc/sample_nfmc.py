@@ -59,7 +59,7 @@ def sample_nfmc(
     init_local=True,
     full_local=False,
     nf_local_iter=3,
-    max_line_search=2,
+    max_line_search=100,
     k_trunc=0.25,
     norm_tol=0.01,
     optim_iter=1000,
