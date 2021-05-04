@@ -373,7 +373,9 @@ class NFMC:
             self.log_weight = psiw[0]
             self.weights = np.exp(self.log_weight)
         elif not self.pareto:
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
+            inf_weights = np.isinf(np.exp(self.log_weight))
+            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
+                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
             self.log_weight = logsumexp(self.log_weight) - np.log(len(self.log_weight))
             self.weights = np.exp(self.log_weight)
 
@@ -477,7 +479,9 @@ class NFMC:
             self.weights = np.exp(self.log_weight)
             print(f'Pareto w = {self.weights}')
         elif not self.pareto:
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
+            inf_weights = np.isinf(np.exp(self.log_weight))
+            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
+                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
             self.log_weight = self.log_weight - logsumexp(self.log_weight)
             self.weights = np.exp(self.log_weight)
 
@@ -574,7 +578,9 @@ class NFMC:
             self.log_weight = psiw[0]
             self.weights = np.exp(self.log_weight)
         elif not self.pareto:
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
+            inf_weights = np.isinf(np.exp(self.log_weight))
+            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
+                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
             self.log_weight = self.log_weight - logsumexp(self.log_weight)
             self.weights = np.exp(self.log_weight)
 
@@ -626,7 +632,9 @@ class NFMC:
             self.log_weight = psiw[0]
             self.weights = np.exp(self.log_weight)
         elif not self.pareto:
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
+            inf_weights = np.isinf(np.exp(self.log_weight))
+            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
+                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
             self.log_weight = self.log_weight - logsumexp(self.log_weight)
             self.weights = np.exp(self.log_weight)
 
@@ -736,7 +744,9 @@ class NFMC:
             self.log_weight = psiw[0]
             self.weights = np.exp(self.log_weight)
         elif not self.pareto:
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
+            inf_weights = np.isinf(np.exp(self.log_weight))
+            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
+                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
             self.log_weight = self.log_weight - logsumexp(self.log_weight)
             self.weights = np.exp(self.log_weight)
 
@@ -785,7 +795,9 @@ class NFMC:
             self.log_weight = psiw[0]
             self.weights = np.exp(self.log_weight)
         elif not self.pareto:
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
+            inf_weights = np.isinf(np.exp(self.log_weight))
+            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
+                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
             self.log_weight = self.log_weight - logsumexp(self.log_weight)
             self.weights = np.exp(self.log_weight)
 
@@ -821,7 +833,9 @@ class NFMC:
             self.log_weight = psiw[0]
             self.weights = np.exp(self.log_weight)
         elif not self.pareto:
-            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight) + (self.k_trunc - 1) * np.log(len(self.log_weight)))
+            inf_weights = np.isinf(np.exp(self.log_weight))
+            self.log_weight = np.clip(self.log_weight, a_min=None, a_max=logsumexp(self.log_weight[~inf_weights])
+                                      - np.log(len(self.log_weight[~inf_weights]))  + self.k_trunc * np.log(len(self.log_weight)))
             self.log_weight = self.log_weight - logsumexp(self.log_weight)
             self.weights = np.exp(self.log_weight)
 
