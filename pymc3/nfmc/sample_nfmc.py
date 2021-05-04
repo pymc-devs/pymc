@@ -231,13 +231,21 @@ def sample_nfmc(
         log_evidence,
         weighted_samples,
         importance_weights,
+        logp,
         logq,
+        train_logp,
+        train_logq,
+        logZ,
     ) = zip(*results)
     trace = MultiTrace(traces)
     trace.report.log_evidence = log_evidence
     trace.report.weighted_samples = weighted_samples
     trace.report.importance_weights = importance_weights
+    trace.report.logp = logp
     trace.report.logq = logq
+    trace.report.train_logp = train_logp
+    trace.report.train_logq = train_logq
+    trace.report.logZ = logZ
     trace.report._n_draws = draws
     trace.report._t_sampling = time.time() - t1
     
@@ -368,6 +376,11 @@ def sample_nfmc_int(
 
     iter_sample_dict = {}
     iter_weight_dict = {}
+    iter_logp_dict = {}
+    iter_logq_dict = {}
+    iter_train_logp_dict = {}
+    iter_train_logq_dict = {}
+    iter_logZ_dict = {}
     
     nfmc.initialize_var_info()
     nfmc.setup_logp()
@@ -402,11 +415,21 @@ def sample_nfmc_int(
             nfmc.fit_nf()
             iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_samples
             iter_weight_dict[f'q_init{int(j + 1)}'] = nfmc.weights
+            iter_logp_dict[f'q_init{int(j + 1)}'] = nfmc.posterior_logp
+            iter_logq_dict[f'q_init{int(j + 1)}'] = nfmc.logq
+            iter_train_logp_dict[f'q_init{int(j + 1)}'] = nfmc.train_logp
+            iter_train_logq_dict[f'q_init{int(j + 1)}'] = nfmc.train_logq
+            iter_logZ_dict[f'q_init{int(j + 1)}'] = nfmc.log_evidence
             if abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol:
                 print(f"Local exploration iteration: {int(j + 1)}, logZ Estimate: {nfmc.log_evidence}")
                 print(f"Normalizing constant estimate has stabilised during local exploration initialization - ending NF fits with local exploration.")
                 iter_sample_dict[f'q_init{int(j + 1)}'] = nfmc.nf_samples
                 iter_weight_dict[f'q_init{int(j + 1)}'] = nfmc.weights
+                iter_logp_dict[f'q_init{int(j + 1)}'] = nfmc.posterior_logp
+                iter_logq_dict[f'q_init{int(j + 1)}'] = nfmc.logq
+                iter_train_logp_dict[f'q_init{int(j + 1)}'] = nfmc.train_logp
+                iter_train_logq_dict[f'q_init{int(j + 1)}'] = nfmc.train_logq
+                iter_logZ_dict[f'q_init{int(j + 1)}'] = nfmc.log_evidence
                 break
             iter_log_evidence = 1.0 * nfmc.log_evidence
         print('Re-initializing SINF fits using samples from latest iteration after local exploration.')
@@ -430,11 +453,21 @@ def sample_nfmc_int(
         nfmc.fit_nf()
         iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_samples
         iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
+        iter_logp_dict[f'q{int(stage)}'] = nfmc.posterior_logp
+        iter_logq_dict[f'q{int(stage)}'] = nfmc.logq
+        iter_train_logp_dict[f'q{stage}'] = nfmc.train_logp
+        iter_train_logq_dict[f'q{stage}'] = nfmc.train_logq
+        iter_logZ_dict[f'q{int(stage)}'] = nfmc.log_evidence
         stage += 1
         if stage > 1 and abs(iter_log_evidence - nfmc.log_evidence) <= norm_tol:
             print(f"Stage: {stage:3d}, logZ Estimate: {nfmc.log_evidence}")
             iter_sample_dict[f'q{int(stage)}'] = nfmc.nf_samples
             iter_weight_dict[f'q{int(stage)}'] = nfmc.weights
+            iter_logp_dict[f'q{int(stage)}'] = nfmc.posterior_logp
+            iter_logq_dict[f'q{int(stage)}'] = nfmc.logq
+            iter_train_logp_dict[f'q{stage}'] = nfmc.train_logp
+            iter_train_logq_dict[f'q{stage}'] = nfmc.train_logq
+            iter_logZ_dict[f'q{int(stage)}'] = nfmc.log_evidence
             print("Normalizing constant estimate has stabilised - ending NF fits.")
             break
         iter_log_evidence = 1.0 * nfmc.log_evidence
@@ -450,5 +483,9 @@ def sample_nfmc_int(
         nfmc.log_evidence,
         iter_sample_dict,
         iter_weight_dict,
-        nfmc.all_logq,
+        iter_logp_dict,
+        iter_logq_dict,
+        iter_train_logp_dict,
+        iter_train_logq_dict,
+        iter_logZ_dict,
     )

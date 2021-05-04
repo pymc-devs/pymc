@@ -767,12 +767,14 @@ class NFMC:
 
     def fit_nf(self):
         """Fit the NF model for a given iteration after initialization."""
-        val_idx = int((1 - self.frac_validate) * self.weighted_samples.shape[0])
+        num_val = int(self.frac_validate * self.weighted_samples.shape[0])
+        val_idx = np.random.choice(np.arange(self.weighted_samples.shape[0]), size=num_val, replace=False)
+        fit_idx = np.delete(np.arange(self.weighted_samples.shape[0]), val_idx)
         
-        self.nf_model = GIS(torch.from_numpy(self.weighted_samples[:val_idx, ...].astype(np.float32)),
-                            torch.from_numpy(self.weighted_samples[val_idx:, ...].astype(np.float32)),
-                            weight_train=torch.from_numpy(self.importance_weights[:val_idx, ...].astype(np.float32)),
-                            weight_validate=torch.from_numpy(self.importance_weights[val_idx:, ...].astype(np.float32)),
+        self.nf_model = GIS(torch.from_numpy(self.weighted_samples[fit_idx, ...].astype(np.float32)),
+                            torch.from_numpy(self.weighted_samples[val_idx, ...].astype(np.float32)),
+                            weight_train=torch.from_numpy(self.importance_weights[fit_idx, ...].astype(np.float32)),
+                            weight_validate=torch.from_numpy(self.importance_weights[val_idx, ...].astype(np.float32)),
                             iteration=self.iteration, alpha=self.alpha, verbose=self.verbose, n_component=self.n_component,
                             interp_nbin=self.interp_nbin, KDE=self.KDE, bw_factor=self.bw_factor,
                             edge_bins=self.edge_bins, ndata_wT=self.ndata_wT, MSWD_max_iter=self.MSWD_max_iter,
@@ -784,6 +786,10 @@ class NFMC:
         self.logq = self.logq.numpy().astype(np.float64)
         self.weighted_samples = np.append(self.weighted_samples, self.nf_samples, axis=0)
         self.all_logq =	np.append(self.all_logq, self.logq)
+
+        self.train_logp = self.target_logp(self.weighted_samples[fit_idx, ...])
+        self.train_logq = self.nf_model.evaluate_density(torch.from_numpy(self.weighted_samples[fit_idx, ...].astype(np.float32))).numpy().astype(np.float64)
+        
         self.get_posterior_logp()
         self.log_weight = self.posterior_logp - self.logq
         self.log_evidence = logsumexp(self.log_weight) - np.log(len(self.log_weight))
@@ -812,6 +818,8 @@ class NFMC:
             self.nf_samples = np.append(self.nf_samples, self.local_samples, axis=0)
             self.log_weight = np.append(self.log_weight, self.local_log_weight)
             self.weights = np.append(self.weights, self.local_weights)
+
+        print(f'Max weight = {np.amax(self.importance_weights)}')
             
         self.nf_models.append(self.nf_model)
 
