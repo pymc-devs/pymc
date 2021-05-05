@@ -240,6 +240,9 @@ class NFMC:
         self.posterior_logp_func = logp_forw([self.model.logpt], self.variables, shared)
         self.posterior_dlogp_func = logp_forw([gradient(self.model.logpt, self.variables)], self.variables, shared)
         self.posterior_hessian_func = logp_forw([hessian(self.model.logpt, self.variables)], self.variables, shared)
+        self.posterior_logp_nojac = logp_forw([self.model.logp_nojact], self.variables, shared)
+        self.posterior_dlogp_nojac = logp_forw([gradient(self.model.logp_nojact, self.variables)], self.variables, shared)
+        self.posterior_hessian_nojac = logp_forw([hessian(self.model.logp_nojact, self.variables)], self.variables, shared)
         
     def get_prior_logp(self):
         """Get the prior log probabilities."""
@@ -263,6 +266,13 @@ class NFMC:
     def optim_target_dlogp(self, param_vals):
         return -1.0 * self.posterior_dlogp_func(param_vals)
 
+    def optim_target_logp_nojac(self, param_vals):
+        """Optimization target function"""
+        return -1.0 * self.posterior_logp_nojac(param_vals)
+
+    def optim_target_dlogp_nojac(self, param_vals):
+        return -1.0 * self.posterior_dlogp_nojac(param_vals)
+
     def target_logp(self, param_vals):
         logps = [self.posterior_logp_func(val) for val in param_vals]
         return np.array(logps).squeeze()
@@ -273,6 +283,18 @@ class NFMC:
 
     def target_hessian(self, param_vals):
         hessians = [self.posterior_hessian_func(val) for val in param_vals]
+        return np.array(hessians).squeeze()
+
+    def target_logp_nojac(self, param_vals):
+        logps = [self.posterior_logp_nojac(val) for val in param_vals]
+        return np.array(logps).squeeze()
+
+    def target_dlogp_nojac(self, param_vals):
+        dlogps = [self.posterior_dlogp_nojac(val) for val in param_vals]
+        return np.array(dlogps).squeeze()
+
+    def target_hessian_nojac(self, param_vals):
+        hessians = [self.posterior_hessian_nojac(val) for val in param_vals]
         return np.array(hessians).squeeze()
 
     def sinf_logq(self, param_vals):
@@ -450,7 +472,7 @@ class NFMC:
         self.hess_inv = np.linalg.inv(-1 * self.target_hessian(self.mu_map.reshape(-1, len(self.mu_map))))
         if not posdef.isPD(self.hess_inv):
             print(f'Autodiff Hessian is not positive semi-definite. Building Hessian with L-BFGS run starting from ADAM MAP.')
-            self.scipy_opt = minimize(self.optim_target_logp, x0=self.mu_map, method='L-BFGS-B',
+            self.scipy_opt = minimize(self.optim_target_logp_nojac, x0=self.mu_map, method='L-BFGS-B',
                                       options={'maxiter': self.optim_iter, 'ftol': self.ftol, 'gtol': self.gtol},
                                       jac=self.optim_target_dlogp)
             print(f'lbfgs Hessian inverse = {self.scipy_opt.hess_inv.todense()}')
