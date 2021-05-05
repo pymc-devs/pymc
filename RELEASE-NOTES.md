@@ -4,6 +4,7 @@
 ### Maintenance
 + A deprecation warning from the `semver` package we use for checking backend compatibility was dealt with (see [#4547](https://github.com/pymc-devs/pymc3/pull/4547)).
 + `theano.printing.pydotprint` is now hotfixed upon import (see [#4594](https://github.com/pymc-devs/pymc3/pull/4594)).
++ Fix bug in the computation of the log pseudolikelihood values (SMC-ABC). (see [#4672](https://github.com/pymc-devs/pymc3/pull/4672)).
 
 ### New Features
 + BART with non-gaussian likelihoods (see [#4675](https://github.com/pymc-devs/pymc3/pull/4675)).

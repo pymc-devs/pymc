@@ -190,8 +190,10 @@ class SMC:
         self.prior_logp = self.prior_logp[resampling_indexes]
         self.likelihood_logp = self.likelihood_logp[resampling_indexes]
         self.posterior_logp = self.prior_logp + self.likelihood_logp * self.beta
-        if self.save_sim_data:
+        if self.kernel == "abc" and self.save_sim_data:
             self.sim_data = self.sim_data[resampling_indexes]
+        if self.kernel == "abc" and self.save_log_pseudolikelihood:
+            self.log_pseudolikelihood = self.log_pseudolikelihood[resampling_indexes]
 
     def update_proposal(self):
         """Update proposal based on the covariance matrix from tempered posterior."""
