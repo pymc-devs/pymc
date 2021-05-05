@@ -23,11 +23,24 @@ __all__ = ["BART"]
 
 
 class BaseBART(NoDistribution):
-    def __init__(self, X, Y, m=200, alpha=0.25, split_prior=None, *args, **kwargs):
+    def __init__(
+        self,
+        X,
+        Y,
+        m=200,
+        alpha=0.25,
+        split_prior=None,
+        scale=None,
+        inv_link=None,
+        jitter=False,
+        *args,
+        **kwargs,
+    ):
 
+        self.jitter = jitter
         self.X, self.Y, self.missing_data = self.preprocess_XY(X, Y)
 
-        super().__init__(shape=X.shape[0], dtype="float64", testval=0, *args, **kwargs)
+        super().__init__(shape=X.shape[0], dtype="float64", testval=self.Y.mean(), *args, **kwargs)
 
         if self.X.ndim != 2:
             raise ValueError("The design matrix X must have two dimensions")
@@ -48,13 +61,24 @@ class BaseBART(NoDistribution):
                 "The value for the alpha parameter for the tree structure "
                 "must be in the interval (0, 1)"
             )
+        self.m = m
+        self.alpha = alpha
+        self.y_std = Y.std()
+
+        if scale is None:
+            self.leaf_scale = NormalSampler(sigma=None)
+        elif isinstance(scale, (int, float)):
+            self.leaf_scale = NormalSampler(sigma=Y.std() / self.m ** scale)
+
+        if inv_link is None:
+            self.inv_link = lambda x: x
+        else:
+            self.inv_link = inv_link
 
         self.num_observations = X.shape[0]
         self.num_variates = X.shape[1]
         self.available_predictors = list(range(self.num_variates))
         self.ssv = SampleSplittingVariable(split_prior, self.num_variates)
-        self.m = m
-        self.alpha = alpha
         self.trees = self.init_list_of_trees()
         self.all_trees = []
         self.mean = fast_mean()
@@ -66,7 +90,9 @@ class BaseBART(NoDistribution):
         if isinstance(X, (Series, DataFrame)):
             X = X.to_numpy()
         missing_data = np.any(np.isnan(X))
-        X = np.random.normal(X, np.std(X, 0) / 100)
+        if self.jitter:
+            X = np.random.normal(X, np.nanstd(X, 0) / 100000)
+        Y = Y.astype(float)
         return X, Y, missing_data
 
     def init_list_of_trees(self):
@@ -155,18 +181,14 @@ class BaseBART(NoDistribution):
 
     def get_residuals(self):
         """Compute the residuals."""
-        R_j = self.Y - self.sum_trees_output
-        return R_j
+        R_j = self.Y - self.inv_link(self.sum_trees_output)
 
-    def get_residuals_loo(self, tree):
-        """Compute the residuals without leaving the passed tree out."""
-        R_j = self.Y - (self.sum_trees_output - tree.predict_output(self.num_observations))
         return R_j
 
     def draw_leaf_value(self, idx_data_points):
-        """ Draw the residual mean."""
+        """Draw the residual mean."""
         R_j = self.get_residuals()[idx_data_points]
-        draw = self.mean(R_j)
+        draw = self.mean(R_j) + self.leaf_scale.random()
         return draw
 
     def predict(self, X_new):
@@ -174,13 +196,12 @@ class BaseBART(NoDistribution):
         trees = self.all_trees
         num_observations = X_new.shape[0]
         pred = np.zeros((len(trees), num_observations))
-        np.random.randint(len(trees))
         for draw, trees_to_sum in enumerate(trees):
             new_Y = np.zeros(num_observations)
             for tree in trees_to_sum:
                 new_Y += [tree.predict_out_of_sample(x) for x in X_new]
             pred[draw] = new_Y
-        return pred
+        return self.inv_link(pred)
 
 
 def compute_prior_probability(alpha):
@@ -257,6 +278,24 @@ class SampleSplittingVariable:
                     return i
 
 
+class NormalSampler:
+    def __init__(self, sigma):
+        self.size = 5000
+        self.cache = []
+        self.sigma = sigma
+
+    def random(self):
+        if self.sigma is None:
+            return 0
+        else:
+            if not self.cache:
+                self.update()
+        return self.cache.pop()
+
+    def update(self):
+        self.cache = np.random.normal(loc=0.0, scale=self.sigma, size=self.size).tolist()
+
+
 class BART(BaseBART):
     """
     BART distribution.
@@ -278,10 +317,23 @@ class BART(BaseBART):
         Each element of split_prior should be in the [0, 1] interval and the elements should sum
         to 1. Otherwise they will be normalized.
         Defaults to None, all variable have the same a prior probability
+    scale : float
+        Controls the variance of the proposed leaf value. The leaf values are computed as a
+        Gaussian with mean equal to the conditional residual mean and variance proportional to
+        the variance of the response variable, and inversely proportional to the number of trees
+        and the scale parameter. Defaults to None, i.e the variance is 0.
+    inv_link : numpy function
+        Inverse link function defaults to None, i.e. the identity function.
+    jitter : bool
+        Whether to jitter the X values or not. Defaults to False. When values of X are repeated,
+        jittering X has the effect of increasing the number of effective spliting variables,
+        otherwise it does not have any effect.
     """
 
-    def __init__(self, X, Y, m=200, alpha=0.25, split_prior=None):
-        super().__init__(X, Y, m, alpha, split_prior)
+    def __init__(
+        self, X, Y, m=200, alpha=0.25, split_prior=None, scale=None, inv_link=None, jitter=False
+    ):
+        super().__init__(X, Y, m, alpha, split_prior, scale, inv_link)
 
     def _str_repr(self, name=None, dist=None, formatting="plain"):
         if dist is None:

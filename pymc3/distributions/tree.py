@@ -45,12 +45,13 @@ class Tree:
     tree_id : int, optional
     """
 
-    def __init__(self, tree_id=0):
+    def __init__(self, tree_id=0, num_observations=0):
         self.tree_structure = {}
         self.num_nodes = 0
         self.idx_leaf_nodes = []
         self.idx_prunable_split_nodes = []
         self.tree_id = tree_id
+        self.num_observations = num_observations
 
     def __getitem__(self, index):
         return self.get_node(index)
@@ -77,11 +78,12 @@ class Tree:
         del self.tree_structure[index]
         self.num_nodes -= 1
 
-    def predict_output(self, num_observations):
-        output = np.zeros(num_observations)
+    def predict_output(self):
+        output = np.zeros(self.num_observations)
         for node_index in self.idx_leaf_nodes:
             current_node = self.get_node(node_index)
             output[current_node.idx_data_points] = current_node.value
+
         return output
 
     def predict_out_of_sample(self, x):
@@ -163,7 +165,7 @@ class Tree:
         -------
 
         """
-        new_tree = Tree(tree_id)
+        new_tree = Tree(tree_id, len(idx_data_points))
         new_tree[0] = LeafNode(index=0, value=leaf_node_value, idx_data_points=idx_data_points)
         return new_tree
 

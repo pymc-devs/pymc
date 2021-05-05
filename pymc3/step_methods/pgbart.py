@@ -86,12 +86,13 @@ class PGBART(ArrayStepShared):
 
     def astep(self, _):
         bart = self.bart
+        inv_link = bart.inv_link
         num_observations = bart.num_observations
         variable_inclusion = np.zeros(bart.num_variates, dtype="int")
 
         # For the tunning phase we restrict max_stages to a low number, otherwise it is almost sure
         # we will reach max_stages given that our first set of m trees is not good at all.
-        # Can set max_stages as a function of the number of variables/dimensions?
+        # Can set max_stages as a function of the number of variables/dimensions? XXX
         if self.tune:
             max_stages = 5
         else:
@@ -105,10 +106,11 @@ class PGBART(ArrayStepShared):
                 break
             self.idx += 1
             tree = bart.trees[idx]
-            R_j = bart.get_residuals_loo(tree)
+            old_prediction = tree.predict_output()
+            bart.sum_trees_output -= old_prediction
             # Generate an initial set of SMC particles
             # at the end of the algorithm we return one of these particles as the new tree
-            particles = self.init_particles(tree.tree_id, R_j, num_observations)
+            particles = self.init_particles(tree.tree_id, num_observations, inv_link)
 
             for t in range(1, max_stages):
                 # Get old particle at stage t
@@ -119,13 +121,12 @@ class PGBART(ArrayStepShared):
                 # Update weights. Since the prior is used as the proposal,the weights
                 # are updated additively as the ratio of the new and old log_likelihoods
                 for p_idx, p in enumerate(particles):
-                    new_likelihood = self.likelihood_logp(p.tree.predict_output(num_observations))
+                    new_likelihood = self.likelihood_logp(inv_link(p.tree.predict_output()))
                     p.log_weight += new_likelihood - p.old_likelihood_logp
                     p.old_likelihood_logp = new_likelihood
 
                 # Normalize weights
                 W, normalized_weights = self.normalize(particles)
-
                 # Resample all but first particle
                 re_n_w = normalized_weights[1:] / normalized_weights[1:].sum()
                 new_indices = np.random.choice(self.indices, size=len(self.indices), p=re_n_w)
@@ -148,8 +149,8 @@ class PGBART(ArrayStepShared):
             new_tree = np.random.choice(particles, p=normalized_weights)
             self.old_trees_particles_list[tree.tree_id] = new_tree
             bart.trees[idx] = new_tree.tree
-            new_prediction = new_tree.tree.predict_output(num_observations)
-            bart.sum_trees_output = bart.Y - R_j + new_prediction
+            new_prediction = new_tree.tree.predict_output()
+            bart.sum_trees_output += new_prediction
 
             if not self.tune:
                 self.iter += 1
@@ -161,8 +162,7 @@ class PGBART(ArrayStepShared):
                     variable_inclusion[index] += 1
 
         stats = {"variable_inclusion": variable_inclusion}
-
-        return bart.sum_trees_output, [stats]
+        return inv_link(bart.sum_trees_output), [stats]
 
     @staticmethod
     def competence(var, has_grad):
@@ -194,31 +194,26 @@ class PGBART(ArrayStepShared):
         old_tree_particle.set_particle_to_step(t)
         return old_tree_particle
 
-    def init_particles(self, tree_id, R_j, num_observations):
+    def init_particles(self, tree_id, num_observations, inv_link):
         """
         Initialize particles
         """
         # The first particle is from the tree we are trying to replace
         prev_tree = self.get_old_tree_particle(tree_id, 0)
-        likelihood = self.likelihood_logp(prev_tree.tree.predict_output(num_observations))
+        likelihood = self.likelihood_logp(inv_link(prev_tree.tree.predict_output()))
         prev_tree.old_likelihood_logp = likelihood
         prev_tree.log_weight = likelihood - self.log_num_particles
         particles = [prev_tree]
 
         # The rest of the particles are identically initialized
-        initial_value_leaf_nodes = R_j.mean()
         initial_idx_data_points_leaf_nodes = np.arange(num_observations, dtype="int32")
         new_tree = Tree.init_tree(
             tree_id=tree_id,
-            leaf_node_value=initial_value_leaf_nodes,
+            leaf_node_value=0,
             idx_data_points=initial_idx_data_points_leaf_nodes,
         )
-        likelihood_logp = self.likelihood_logp(new_tree.predict_output(num_observations))
-        log_weight = likelihood_logp - self.log_num_particles
         for i in range(1, self.num_particles):
-            particles.append(
-                ParticleTree(new_tree, self.bart.prior_prob_leaf_node, log_weight, likelihood_logp)
-            )
+            particles.append(ParticleTree(new_tree, self.bart.prior_prob_leaf_node, 0, 0))
 
         return np.array(particles)
 
@@ -237,10 +232,10 @@ class ParticleTree:
 
     def __init__(self, tree, prior_prob_leaf_node, log_weight=0, likelihood=0):
         self.tree = tree.copy()  # keeps the tree that we care at the moment
-        self.expansion_nodes = tree.idx_leaf_nodes.copy()  # This should be the array [0]
+        self.expansion_nodes = [0]
         self.tree_history = [self.tree]
         self.expansion_nodes_history = [self.expansion_nodes]
-        self.log_weight = 0
+        self.log_weight = log_weight
         self.prior_prob_leaf_node = prior_prob_leaf_node
         self.old_likelihood_logp = likelihood
         self.used_variates = []
@@ -253,7 +248,8 @@ class ParticleTree:
 
             if prob_leaf < np.random.random():
                 grow_successful, index_selected_predictor = bart.grow_tree(
-                    self.tree, index_leaf_node
+                    self.tree,
+                    index_leaf_node,
                 )
                 if grow_successful:
                     # Add new leaf nodes indexes
