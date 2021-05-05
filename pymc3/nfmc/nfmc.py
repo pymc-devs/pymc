@@ -895,14 +895,14 @@ class NFMC:
         
     def resample(self):
         """Resample all the weighted samples to obtain final posterior samples with uniform weight."""
-        resampling_indexes = np.random.choice(
-            np.arange(len(self.importance_weights)), size=self.draws, p=self.importance_weights/np.sum(self.importance_weights)
-        )
         #resampling_indexes = np.random.choice(
-        #    np.arange(len(self.weights)), size=self.draws, p=self.weights/np.sum(self.weights)
+        #    np.arange(len(self.importance_weights)), size=self.draws, p=self.importance_weights/np.sum(self.importance_weights)
         #)
-        self.posterior = self.weighted_samples[resampling_indexes, ...]
-        #self.posterior = self.nf_samples[resampling_indexes, ...]
+        resampling_indexes = np.random.choice(
+            np.arange(len(self.weights)), size=self.draws, p=self.weights/np.sum(self.weights)
+        )
+        #self.posterior = self.weighted_samples[resampling_indexes, ...]
+        self.posterior = self.nf_samples[resampling_indexes, ...]
         
     def posterior_to_trace(self):
         """Save results into a PyMC3 trace."""
