@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import logging
 
 import numpy as np
 import theano.tensor as tt
@@ -20,6 +21,7 @@ from pymc3.glm import families
 from pymc3.glm.utils import any_to_tensor_and_labels
 from pymc3.model import Deterministic, Model
 
+_log = logging.getLogger("pymc3")
 __all__ = ["LinearComponent", "GLM"]
 
 
@@ -216,6 +218,10 @@ class GLM(LinearComponent):
             See `patsy.dmatrix` and `patsy.EvalEnvironment` for details.
         Other arguments are documented in the constructor.
         """
+        _log.warning(
+            "The glm module will be deprecated soon.\nWe recommend to instead use Bambi "
+            + "https://bambinos.github.io/bambi/"
+        )
         import patsy
 
         eval_env = patsy.EvalEnvironment.capture(eval_env, reference=1)
