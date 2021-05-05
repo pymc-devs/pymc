@@ -25,6 +25,8 @@ import pytest
 import scipy.stats as st
 
 from numpy.testing import assert_almost_equal, assert_array_almost_equal
+from packaging.version import parse
+from scipy import __version__ as scipy_version
 from scipy.special import expit
 
 import pymc3 as pm
@@ -53,6 +55,8 @@ from pymc3.tests.test_distributions import (
     build_model,
     product,
 )
+
+SCIPY_VERSION = parse(scipy_version)
 
 
 def pymc3_random(
@@ -886,13 +890,19 @@ class TestWeibull(BaseTestDistribution):
     ]
 
 
+@pytest.mark.skipif(
+    condition=(SCIPY_VERSION < parse("1.4.0")),
+    reason="betabinom is new in Scipy 1.4.0",
+)
 class TestBetaBinomial(BaseTestDistribution):
     pymc_dist = pm.BetaBinomial
     pymc_dist_params = {"alpha": 2.0, "beta": 1.0, "n": 5}
     expected_rv_op_params = {"n": 5, "alpha": 2.0, "beta": 1.0}
     reference_dist_params = {"n": 5, "a": 2.0, "b": 1.0}
+    reference_dist = seeded_scipy_distribution_builder("betabinom")
     tests_to_run = [
         "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
 
