@@ -94,11 +94,11 @@ class NUTS(BaseHMC):
         {
             "depth": np.int64,
             "step_size": np.float64,
-            "tune": np.bool,
+            "tune": bool,
             "mean_tree_accept": np.float64,
             "step_size_bar": np.float64,
             "tree_size": np.float64,
-            "diverging": np.bool,
+            "diverging": bool,
             "energy_error": np.float64,
             "energy": np.float64,
             "max_energy_error": np.float64,
