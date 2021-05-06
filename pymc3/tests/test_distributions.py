@@ -2307,7 +2307,6 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.parametrize("n", [2, 3, 4])
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_orderedprobit(self, n):
         self.check_logp(
             OrderedProbit,
