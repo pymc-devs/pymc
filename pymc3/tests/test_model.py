@@ -274,7 +274,7 @@ class TestValueGradFunction(unittest.TestCase):
         assert val == 21
         npt.assert_allclose(grad, [5, 5, 5, 1, 1, 1, 1, 1, 1])
 
-    @pytest.mark.xfail(reason="Lognormal not refactored for v4")
+    @pytest.mark.xfail(reason="Test not refactored for v4")
     def test_edge_case(self):
         # Edge case discovered in #2948
         ndim = 3
