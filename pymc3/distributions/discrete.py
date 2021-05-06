@@ -668,7 +668,7 @@ class NegativeBinomial(Discrete):
 
     @classmethod
     def dist(cls, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
-        n, p = cls.get_n_p(mu, alpha, p, n)
+        n, p = cls.get_n_p(mu=mu, alpha=alpha, p=p, n=n)
         n = at.as_tensor_variable(floatX(n))
         p = at.as_tensor_variable(floatX(p))
         return super().dist([n, p], *args, **kwargs)
@@ -1482,6 +1482,21 @@ class ZeroInflatedBinomial(Discrete):
         )
 
 
+class ZeroInflatedNegBinomialRV(RandomVariable):
+    name = "zero_inflated_neg_binomial"
+    ndim_supp = 0
+    ndims_params = [0, 0, 0]
+    dtype = "int64"
+    _print_name = ("ZeroInflatedNegBinom", "\\operatorname{ZeroInflatedNegBinom}")
+
+    @classmethod
+    def rng_fn(cls, rng, psi, n, p, size):
+        return rng.negative_binomial(n=n, p=p, size=size) * (rng.random(size=size) < psi)
+
+
+zero_inflated_neg_binomial = ZeroInflatedNegBinomialRV()
+
+
 class ZeroInflatedNegativeBinomial(Discrete):
     R"""
     Zero-Inflated Negative binomial log-likelihood.
@@ -1551,50 +1566,17 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     """
 
-    def __init__(self, psi, mu, alpha, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.mu = mu = at.as_tensor_variable(floatX(mu))
-        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
-        self.psi = psi = at.as_tensor_variable(floatX(psi))
-        self.nb = NegativeBinomial.dist(mu, alpha)
-        self.mode = self.nb.mode
+    rv_op = zero_inflated_neg_binomial
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from ZeroInflatedNegativeBinomial distribution.
+    @classmethod
+    def dist(cls, psi, mu, alpha, *args, **kwargs):
+        psi = at.as_tensor_variable(floatX(psi))
+        n, p = NegativeBinomial.get_n_p(mu=mu, alpha=alpha)
+        n = at.as_tensor_variable(floatX(n))
+        p = at.as_tensor_variable(floatX(p))
+        return super().dist([psi, n, p], *args, **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # mu, alpha, psi = draw_values([self.mu, self.alpha, self.psi], point=point, size=size)
-        # g = generate_samples(self._random, mu=mu, alpha=alpha, dist_shape=self.shape, size=size)
-        # g[g == 0] = np.finfo(float).eps  # Just in case
-        # g, psi = broadcast_distribution_samples([g, psi], size=size)
-        # return stats.poisson.rvs(g) * (np.random.random(g.shape) < psi)
-
-    def _random(self, mu, alpha, size):
-        r"""Wrapper around stats.gamma.rvs that converts NegativeBinomial's
-        parametrization to scipy.gamma. All parameter arrays should have
-        been broadcasted properly by generate_samples at this point and size is
-        the scipy.rvs representation.
-        """
-        return stats.gamma.rvs(
-            a=alpha,
-            scale=mu / alpha,
-            size=size,
-        )
-
-    def logp(self, value):
+    def logp(value, psi, n, p):
         r"""
         Calculate log-probability of ZeroInflatedNegativeBinomial distribution at specified value.
 
@@ -1608,20 +1590,22 @@ class ZeroInflatedNegativeBinomial(Discrete):
         -------
         TensorVariable
         """
-        alpha = self.alpha
-        mu = self.mu
-        psi = self.psi
 
-        logp_other = at.log(psi) + self.nb.logp(value)
-        logp_0 = logaddexp(
-            at.log1p(-psi), at.log(psi) + alpha * (at.log(alpha) - at.log(alpha + mu))
+        return bound(
+            at.switch(
+                at.gt(value, 0),
+                at.log(psi) + NegativeBinomial.logp(value, n, p),
+                logaddexp(at.log1p(-psi), at.log(psi) + n * at.log(p)),
+            ),
+            0 <= value,
+            0 <= psi,
+            psi <= 1,
+            0 < n,
+            0 <= p,
+            p <= 1,
         )
 
-        logp_val = at.switch(at.gt(value, 0), logp_other, logp_0)
-
-        return bound(logp_val, 0 <= value, 0 <= psi, psi <= 1, mu > 0, alpha > 0)
-
-    def logcdf(self, value):
+    def logcdf(value, psi, n, p):
         """
         Compute the log of the cumulative distribution function for ZeroInflatedNegativeBinomial distribution
         at the specified value.
@@ -1640,13 +1624,14 @@ class ZeroInflatedNegativeBinomial(Discrete):
             raise TypeError(
                 f"ZeroInflatedNegativeBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
-        psi = self.psi
 
         return bound(
-            logaddexp(at.log1p(-psi), at.log(psi) + self.nb.logcdf(value)),
+            logaddexp(at.log1p(-psi), at.log(psi) + NegativeBinomial.logcdf(value, n, p)),
             0 <= value,
             0 <= psi,
             psi <= 1,
+            0 < p,
+            p <= 1,
         )
 
 
