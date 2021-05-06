@@ -1660,8 +1660,7 @@ class TestMatchesScipy:
             {"theta": Rplus, "psi": Unit},
         )
 
-    # Too lazy to propagate decimal parameter through the whole chain of deps
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.xfail(reason="Test not refactored yet")
     @pytest.mark.xfail(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
@@ -1673,12 +1672,37 @@ class TestMatchesScipy:
             {"mu": Rplusbig, "alpha": Rplusbig, "psi": Unit},
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_zeroinflatednegativebinomial_logcdf(self):
+    def test_zeroinflatednegativebinomial(self):
+        def logp_fn(value, psi, mu, alpha):
+            n, p = NegativeBinomial.get_n_p(mu=mu, alpha=alpha)
+            if value == 0:
+                return np.log((1 - psi) * sp.nbinom.pmf(0, n, p))
+            else:
+                return np.log(psi * sp.nbinom.pmf(value, n, p))
+
+        def logcdf_fn(value, psi, mu, alpha):
+            n, p = NegativeBinomial.get_n_p(mu=mu, alpha=alpha)
+            return np.log((1 - psi) + psi * sp.nbinom.cdf(value, n, p))
+
+        self.check_logp(
+            ZeroInflatedNegativeBinomial,
+            Nat,
+            {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
+            logp_fn,
+        )
+
+        self.check_logcdf(
+            ZeroInflatedNegativeBinomial,
+            Nat,
+            {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
+            logcdf_fn,
+            n_samples=10,
+        )
+
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedNegativeBinomial,
             Nat,
-            {"mu": Rplusbig, "alpha": Rplusbig, "psi": Unit},
+            {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
             n_samples=10,
         )
 
