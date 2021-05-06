@@ -15,10 +15,12 @@ Discrete
    ZeroInflatedNegativeBinomial
    DiscreteUniform
    Geometric
+   HyperGeometric
    Categorical
    DiscreteWeibull
    Constant
    OrderedLogistic
+   OrderedProbit
 
 .. automodule:: pymc3.distributions.discrete
    :members:
