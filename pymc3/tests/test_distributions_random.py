@@ -314,12 +314,6 @@ class TestLogitNormal(BaseTestCases.BaseTestCase):
 
 
 @pytest.mark.xfail(reason="This distribution has not been refactored for v4")
-class TestZeroInflatedPoisson(BaseTestCases.BaseTestCase):
-    distribution = pm.ZeroInflatedPoisson
-    params = {"theta": 1.0, "psi": 0.3}
-
-
-@pytest.mark.xfail(reason="This distribution has not been refactored for v4")
 class TestZeroInflatedNegativeBinomial(BaseTestCases.BaseTestCase):
     distribution = pm.ZeroInflatedNegativeBinomial
     params = {"mu": 1.0, "alpha": 1.0, "psi": 0.3}
@@ -922,6 +916,37 @@ class TestConstant(BaseTestDistribution):
     expected_rv_op_params = {"c": 3}
     reference_dist_params = {"c": 3}
     reference_dist = lambda self: self.constant_rng_fn
+    tests_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestZeroInflatedPoisson(BaseTestDistribution):
+    def zero_inflated_poisson_rng_fn(self, size, psi, theta, poisson_rng_fct, random_rng_fct):
+        return poisson_rng_fct(theta, size=size) * (random_rng_fct(size=size) < psi)
+
+    def seeded_zero_inflated_poisson_rng_fn(self):
+        poisson_rng_fct = functools.partial(
+            getattr(np.random.RandomState, "poisson"), self.get_random_state()
+        )
+
+        random_rng_fct = functools.partial(
+            getattr(np.random.RandomState, "random"), self.get_random_state()
+        )
+
+        return functools.partial(
+            self.zero_inflated_poisson_rng_fn,
+            poisson_rng_fct=poisson_rng_fct,
+            random_rng_fct=random_rng_fct,
+        )
+
+    pymc_dist = pm.ZeroInflatedPoisson
+    pymc_dist_params = {"psi": 0.9, "theta": 4.0}
+    expected_rv_op_params = {"psi": 0.9, "theta": 4.0}
+    reference_dist_params = {"psi": 0.9, "theta": 4.0}
+    reference_dist = seeded_zero_inflated_poisson_rng_fn
     tests_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",

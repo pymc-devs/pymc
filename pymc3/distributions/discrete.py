@@ -1215,6 +1215,21 @@ class Constant(Discrete):
         )
 
 
+class ZeroInflatedPoissonRV(RandomVariable):
+    name = "zero_inflated_poisson"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "int64"
+    _print_name = ("ZeroInflatedPois", "\\operatorname{ZeroInflatedPois}")
+
+    @classmethod
+    def rng_fn(cls, rng, psi, lam, size):
+        return rng.poisson(lam, size=size) * (rng.random(size=size) < psi)
+
+
+zero_inflated_poisson = ZeroInflatedPoissonRV()
+
+
 class ZeroInflatedPoisson(Discrete):
     R"""
     Zero-inflated Poisson log-likelihood.
@@ -1266,36 +1281,15 @@ class ZeroInflatedPoisson(Discrete):
         (theta >= 0).
     """
 
-    def __init__(self, psi, theta, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.theta = theta = at.as_tensor_variable(floatX(theta))
-        self.psi = at.as_tensor_variable(floatX(psi))
-        self.pois = Poisson.dist(theta)
-        self.mode = self.pois.mode
+    rv_op = zero_inflated_poisson
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from ZeroInflatedPoisson distribution.
+    @classmethod
+    def dist(cls, psi, theta, *args, **kwargs):
+        psi = at.as_tensor_variable(floatX(psi))
+        theta = at.as_tensor_variable(floatX(theta))
+        return super().dist([psi, theta], *args, **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # theta, psi = draw_values([self.theta, self.psi], point=point, size=size)
-        # g = generate_samples(stats.poisson.rvs, theta, dist_shape=self.shape, size=size)
-        # g, psi = broadcast_distribution_samples([g, psi], size=size)
-        # return g * (np.random.random(g.shape) < psi)
-
-    def logp(self, value):
+    def logp(value, psi, theta):
         r"""
         Calculate log-probability of ZeroInflatedPoisson distribution at specified value.
 
@@ -1309,18 +1303,22 @@ class ZeroInflatedPoisson(Discrete):
         -------
         TensorVariable
         """
-        psi = self.psi
-        theta = self.theta
 
         logp_val = at.switch(
             at.gt(value, 0),
-            at.log(psi) + self.pois.logp(value),
+            at.log(psi) + Poisson.logp(value, theta),
             logaddexp(at.log1p(-psi), at.log(psi) - theta),
         )
 
-        return bound(logp_val, 0 <= value, 0 <= psi, psi <= 1, 0 <= theta)
+        return bound(
+            logp_val,
+            0 <= value,
+            0 <= psi,
+            psi <= 1,
+            0 <= theta,
+        )
 
-    def logcdf(self, value):
+    def logcdf(value, psi, theta):
         """
         Compute the log of the cumulative distribution function for ZeroInflatedPoisson distribution
         at the specified value.
@@ -1335,13 +1333,13 @@ class ZeroInflatedPoisson(Discrete):
         -------
         TensorVariable
         """
-        psi = self.psi
 
         return bound(
-            logaddexp(at.log1p(-psi), at.log(psi) + self.pois.logcdf(value)),
+            logaddexp(at.log1p(-psi), at.log(psi) + Poisson.logcdf(value, theta)),
             0 <= value,
             0 <= psi,
             psi <= 1,
+            0 <= theta,
         )
 
 
