@@ -1343,6 +1343,21 @@ class ZeroInflatedPoisson(Discrete):
         )
 
 
+class ZeroInflatedBinomialRV(RandomVariable):
+    name = "zero_inflated_binomial"
+    ndim_supp = 0
+    ndims_params = [0, 0, 0]
+    dtype = "int64"
+    _print_name = ("ZeroInflatedBinom", "\\operatorname{ZeroInflatedBinom}")
+
+    @classmethod
+    def rng_fn(cls, rng, psi, n, p, size):
+        return rng.binomial(n=n, p=p, size=size) * (rng.random(size=size) < psi)
+
+
+zero_inflated_binomial = ZeroInflatedBinomialRV()
+
+
 class ZeroInflatedBinomial(Discrete):
     R"""
     Zero-inflated Binomial log-likelihood.
@@ -1395,37 +1410,16 @@ class ZeroInflatedBinomial(Discrete):
 
     """
 
-    def __init__(self, psi, n, p, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.n = n = at.as_tensor_variable(intX(n))
-        self.p = p = at.as_tensor_variable(floatX(p))
-        self.psi = psi = at.as_tensor_variable(floatX(psi))
-        self.bin = Binomial.dist(n, p)
-        self.mode = self.bin.mode
+    rv_op = zero_inflated_binomial
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from ZeroInflatedBinomial distribution.
+    @classmethod
+    def dist(cls, psi, n, p, *args, **kwargs):
+        psi = at.as_tensor_variable(floatX(psi))
+        n = at.as_tensor_variable(intX(n))
+        p = at.as_tensor_variable(floatX(p))
+        return super().dist([psi, n, p], *args, **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # n, p, psi = draw_values([self.n, self.p, self.psi], point=point, size=size)
-        # g = generate_samples(stats.binom.rvs, n, p, dist_shape=self.shape, size=size)
-        # g, psi = broadcast_distribution_samples([g, psi], size=size)
-        # return g * (np.random.random(g.shape) < psi)
-
-    def logp(self, value):
+    def logp(value, psi, n, p):
         r"""
         Calculate log-probability of ZeroInflatedBinomial distribution at specified value.
 
@@ -1439,19 +1433,24 @@ class ZeroInflatedBinomial(Discrete):
         -------
         TensorVariable
         """
-        psi = self.psi
-        p = self.p
-        n = self.n
 
         logp_val = at.switch(
             at.gt(value, 0),
-            at.log(psi) + self.bin.logp(value),
+            at.log(psi) + Binomial.logp(value, n, p),
             logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
         )
 
-        return bound(logp_val, 0 <= value, value <= n, 0 <= psi, psi <= 1, 0 <= p, p <= 1)
+        return bound(
+            logp_val,
+            0 <= value,
+            value <= n,
+            0 <= psi,
+            psi <= 1,
+            0 <= p,
+            p <= 1,
+        )
 
-    def logcdf(self, value):
+    def logcdf(value, psi, n, p):
         """
         Compute the log of the cumulative distribution function for ZeroInflatedBinomial distribution
         at the specified value.
@@ -1465,19 +1464,21 @@ class ZeroInflatedBinomial(Discrete):
         -------
         TensorVariable
         """
+
         # logcdf can only handle scalar values due to limitation in Binomial.logcdf
         if np.ndim(value):
             raise TypeError(
                 f"ZeroInflatedBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
-        psi = self.psi
-
         return bound(
-            logaddexp(at.log1p(-psi), at.log(psi) + self.bin.logcdf(value)),
+            logaddexp(at.log1p(-psi), at.log(psi) + Binomial.logcdf(value, n, p)),
             0 <= value,
+            value <= n,
             0 <= psi,
             psi <= 1,
+            0 <= p,
+            p <= 1,
         )
 
 
