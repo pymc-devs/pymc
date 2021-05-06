@@ -1040,7 +1040,6 @@ class TestSamplePriorPredictive(SeededTest):
             prior = pm.sample_prior_predictive(10)
         assert prior["mu"].shape == (10, 5)
 
-    @pytest.mark.xfail(reason="ZeroInflatedPoisson not refactored for v4")
     def test_zeroinflatedpoisson(self):
         with pm.Model():
             theta = pm.Beta("theta", alpha=1, beta=1)
