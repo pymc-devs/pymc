@@ -51,7 +51,7 @@ def get_city_data():
     return data.merge(unique, "inner", on="fips")
 
 
-@pytest.mark.xfail(reason="Bernoulli distribution not refactored")
+@pytest.mark.xfail(reason="Bernoulli logitp distribution not refactored")
 class TestARM5_4(SeededTest):
     def build_model(self):
         data = pd.read_csv(
@@ -194,7 +194,7 @@ def build_disaster_model(masked=False):
 
 
 @pytest.mark.xfail(
-    reason="DiscreteUniform hasn't been refactored"
+    reason="_check_start_shape fails with start dictionary"
     # condition=(aesara.config.floatX == "float32"), reason="Fails on float32"
 )
 class TestDisasterModel(SeededTest):
@@ -204,9 +204,9 @@ class TestDisasterModel(SeededTest):
         model = build_disaster_model(masked=False)
         with model:
             # Initial values for stochastic nodes
-            start = {"early_mean": 2.0, "late_mean": 3.0}
+            start = {"early_mean": 2, "late_mean": 3.0}
             # Use slice sampler for means (other variables auto-selected)
-            step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
+            step = pm.Slice([model["early_mean_log__"], model["late_mean_log__"]])
             tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
             az.summary(tr)
 
@@ -217,12 +217,12 @@ class TestDisasterModel(SeededTest):
             # Initial values for stochastic nodes
             start = {"early_mean": 2.0, "late_mean": 3.0}
             # Use slice sampler for means (other variables auto-selected)
-            step = pm.Slice([model.early_mean_log__, model.late_mean_log__])
+            step = pm.Slice([model["early_mean_log__"], model["late_mean_log__"]])
             tr = pm.sample(500, tune=50, start=start, step=step, chains=2)
             az.summary(tr)
 
 
-@pytest.mark.xfail(reason="ZeroInflatedPoisson hasn't been refactored for v4")
+@pytest.mark.xfail(reason="_check_start_shape fails with start dictionary")
 class TestLatentOccupancy(SeededTest):
     """
     From the PyMC example list
@@ -277,14 +277,14 @@ class TestLatentOccupancy(SeededTest):
                 "z": (self.y > 0).astype("int16"),
                 "theta": np.array(5, dtype="f"),
             }
-            step_one = pm.Metropolis([model.theta_interval__, model.psi_logodds__])
+            step_one = pm.Metropolis([model["theta_interval__"], model["psi_logodds__"]])
             step_two = pm.BinaryMetropolis([model.z])
             pm.sample(50, step=[step_one, step_two], start=start, chains=1)
 
 
 @pytest.mark.xfail(
-    # condition=(aesara.config.floatX == "float32"),
-    # reason="Fails on float32 due to starting inf at starting logP",
+    condition=(aesara.config.floatX == "float32"),
+    reason="Fails on float32 due to starting inf at starting logP",
 )
 class TestRSV(SeededTest):
     """
@@ -314,7 +314,7 @@ class TestRSV(SeededTest):
             # Prior probability
             prev_rsv = pm.Beta("prev_rsv", 1, 5, shape=3)
             # RSV in Amman
-            y_amman = pm.Binomial("y_amman", n_amman, prev_rsv, shape=3, testval=100)
+            y_amman = pm.Binomial("y_amman", n_amman, prev_rsv, shape=3)
             # Likelihood for number with RSV in hospital (assumes Pr(hosp | RSV) = 1)
             pm.Binomial("y_hosp", y_amman, market_share, observed=rsv_cases)
         return model
