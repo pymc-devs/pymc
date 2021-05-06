@@ -1682,8 +1682,7 @@ class TestMatchesScipy:
             n_samples=10,
         )
 
-    # Too lazy to propagate decimal parameter through the whole chain of deps
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.xfail(reason="Test not refactored yet")
     def test_zeroinflatedbinomial_distribution(self):
         self.checkd(
             ZeroInflatedBinomial,
@@ -1691,8 +1690,31 @@ class TestMatchesScipy:
             {"n": NatSmall, "p": Unit, "psi": Unit},
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_zeroinflatedbinomial_logcdf(self):
+    def test_zeroinflatedbinomial(self):
+        def logp_fn(value, psi, n, p):
+            if value == 0:
+                return np.log((1 - psi) * sp.binom.pmf(0, n, p))
+            else:
+                return np.log(psi * sp.binom.pmf(value, n, p))
+
+        def logcdf_fn(value, psi, n, p):
+            return np.log((1 - psi) + psi * sp.binom.cdf(value, n, p))
+
+        self.check_logp(
+            ZeroInflatedBinomial,
+            Nat,
+            {"psi": Unit, "n": NatSmall, "p": Unit},
+            logp_fn,
+        )
+
+        self.check_logcdf(
+            ZeroInflatedBinomial,
+            Nat,
+            {"psi": Unit, "n": NatSmall, "p": Unit},
+            logcdf_fn,
+            n_samples=10,
+        )
+
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedBinomial,
             Nat,
