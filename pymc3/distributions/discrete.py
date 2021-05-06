@@ -1808,12 +1808,14 @@ class OrderedProbit(Categorical):
 
     """
 
-    def __init__(self, eta, cutpoints, *args, **kwargs):
+    rv_op = categorical
 
-        self.eta = at.as_tensor_variable(floatX(eta))
-        self.cutpoints = at.as_tensor_variable(cutpoints)
+    @classmethod
+    def dist(cls, eta, cutpoints, *args, **kwargs):
+        eta = at.as_tensor_variable(floatX(eta))
+        cutpoints = at.as_tensor_variable(cutpoints)
 
-        probits = at.shape_padright(self.eta) - self.cutpoints
+        probits = at.shape_padright(eta) - cutpoints
         _log_p = at.concatenate(
             [
                 at.shape_padright(normal_lccdf(0, 1, probits[..., 0])),
@@ -1823,44 +1825,6 @@ class OrderedProbit(Categorical):
             axis=-1,
         )
         _log_p = at.as_tensor_variable(floatX(_log_p))
-
-        self._log_p = _log_p
-        self.mode = at.argmax(_log_p, axis=-1)
         p = at.exp(_log_p)
 
-        super().__init__(p=p, *args, **kwargs)
-
-    def logp(self, value):
-        r"""
-        Calculate log-probability of Ordered Probit distribution at specified value.
-
-        Parameters
-        ----------
-        value: numeric
-            Value(s) for which log-probability is calculated. If the log probabilities for multiple
-            values are desired the values must be provided in a numpy array or Aesara tensor
-
-        Returns
-        -------
-        TensorVariable
-        """
-        logp = self._log_p
-        k = self.k
-
-        # Clip values before using them for indexing
-        value_clip = at.clip(value, 0, k - 1)
-
-        if logp.ndim > 1:
-            if logp.ndim > value_clip.ndim:
-                value_clip = at.shape_padleft(value_clip, logp.ndim - value_clip.ndim)
-            elif logp.ndim < value_clip.ndim:
-                logp = at.shape_padleft(logp, value_clip.ndim - logp.ndim)
-            pattern = (logp.ndim - 1,) + tuple(range(logp.ndim - 1))
-            a = take_along_axis(
-                logp.dimshuffle(pattern),
-                value_clip,
-            )
-        else:
-            a = logp[value_clip]
-
-        return bound(a, value >= 0, value <= (k - 1))
+        return super().dist(p, **kwargs)
