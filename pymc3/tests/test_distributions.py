@@ -1618,8 +1618,7 @@ class TestMatchesScipy:
     def test_constantdist(self):
         self.check_logp(Constant, I, {"c": I}, lambda value, c: np.log(c == value))
 
-    # Too lazy to propagate decimal parameter through the whole chain of deps
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
+    @pytest.mark.xfail(reason="Test has not been refactored")
     @pytest.mark.xfail(
         condition=(aesara.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
@@ -1631,8 +1630,30 @@ class TestMatchesScipy:
             {"theta": Rplus, "psi": Unit},
         )
 
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
-    def test_zeroinflatedpoisson_logcdf(self):
+    def test_zeroinflatedpoisson(self):
+        def logp_fn(value, psi, theta):
+            if value == 0:
+                return np.log((1 - psi) * sp.poisson.pmf(0, theta))
+            else:
+                return np.log(psi * sp.poisson.pmf(value, theta))
+
+        def logcdf_fn(value, psi, theta):
+            return np.log((1 - psi) + psi * sp.poisson.cdf(value, theta))
+
+        self.check_logp(
+            ZeroInflatedPoisson,
+            Nat,
+            {"psi": Unit, "theta": Rplus},
+            logp_fn,
+        )
+
+        self.check_logcdf(
+            ZeroInflatedPoisson,
+            Nat,
+            {"psi": Unit, "theta": Rplus},
+            logcdf_fn,
+        )
+
         self.check_selfconsistency_discrete_logcdf(
             ZeroInflatedPoisson,
             Nat,
