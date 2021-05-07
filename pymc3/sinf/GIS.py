@@ -152,7 +152,7 @@ def GIS(data_train, data_validate=None, iteration=None, weight_train=None, weigh
         if NBfirstlayer:
             layer.wT[:] = torch.eye(ndim).to(device)
             NBfirstlayer = False
-        else:
+        elif ndim > 1:
             layer.fit_wT(data=data_train, weight=weight_train, ndata_wT=ndata_wT, MSWD_max_iter=MSWD_max_iter, verbose=verbose)
 
         layer.fit_spline(data=data_train, weight=weight_train, edge_bins=edge_bins, alpha=alpha, KDE=KDE, bw_factor=bw_factor, batchsize=batchsize, verbose=verbose)
