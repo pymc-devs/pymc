@@ -3072,7 +3072,7 @@ def test_car_logp(size):
 
 def test_car_rng_fn():
     delta = 0.05  # limit for KS p-value
-    n_fails = 150  # Allows the KS fails a certain number of times
+    n_fails = 15  # Allows the KS fails a certain number of times
     size = (100,)
 
     W = np.array(
@@ -3087,14 +3087,14 @@ def test_car_rng_fn():
     prec = tau * (np.diag(D) - alpha * W)
     cov = np.linalg.inv(prec)
 
-    np.random.seed(1)
+    with Model():
+        car = pm.CAR("car", mu, W, alpha, tau, size=size)
+        mn = pm.MvNormal("mn", mu, cov, size=size)
+        check = pm.sample_prior_predictive(n_fails, random_seed=1)
+
     p, f = delta, n_fails
     while p <= delta and f > 0:
-        with Model():
-            car = pm.CAR("car", mu, W, alpha, tau, size=size)
-            mn = pm.MvNormal("mn", mu, cov, size=size)
-            check = pm.sample_prior_predictive(1)
-        car_smp, mn_smp = check["car"], check["mn"]
+        car_smp, mn_smp = check["car"][f-1, :, :], check["mn"][f-1, :, :]
         p = min(
             [
                 scipy.stats.ks_2samp(
