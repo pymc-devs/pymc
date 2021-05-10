@@ -219,8 +219,8 @@ class GLM(LinearComponent):
         Other arguments are documented in the constructor.
         """
         _log.warning(
-            "The glm module will be deprecated soon.\nWe recommend to instead use Bambi "
-            + "https://bambinos.github.io/bambi/"
+            "The glm module is deprecated and will be removed in version 4.0\nWe recommend to"
+            + " instead use Bambi https://bambinos.github.io/bambi/"
         )
         import patsy
 
