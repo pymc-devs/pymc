@@ -55,7 +55,7 @@ def GIS(data_train, data_validate=None, iteration=None, weight_train=None, weigh
         best_logp_validate = -1e10
         best_Nlayer = 0
         wait = 0
-        maxwait = 10
+        maxwait = 5
 
     #logit transform
     if logit:
@@ -189,6 +189,8 @@ def GIS(data_train, data_validate=None, iteration=None, weight_train=None, weigh
                 print ('logp:', logp_train, 'time:', time.time()-t, 'iteration:', len(model.layer))
 
         if iteration is not None and len(model.layer) >= iteration:
+            if data_validate is not None:
+                model.layer = model.layer[:best_Nlayer]
             break
 
     return model
