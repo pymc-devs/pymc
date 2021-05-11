@@ -19,8 +19,11 @@ import numpy as np
 from aesara.tensor.random.basic import (
     RandomVariable,
     bernoulli,
+    betabinom,
     binomial,
     categorical,
+    geometric,
+    hypergeometric,
     nbinom,
     poisson,
 )
@@ -39,7 +42,7 @@ from pymc3.distributions.dist_math import (
     normal_lcdf,
 )
 from pymc3.distributions.distribution import Discrete
-from pymc3.math import log1mexp, logaddexp, logsumexp, sigmoid, tround
+from pymc3.math import log1mexp, logaddexp, logsumexp, sigmoid
 
 __all__ = [
     "Binomial",
@@ -225,58 +228,16 @@ class BetaBinomial(Discrete):
         beta > 0.
     """
 
-    def __init__(self, alpha, beta, n, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.alpha = alpha = at.as_tensor_variable(floatX(alpha))
-        self.beta = beta = at.as_tensor_variable(floatX(beta))
-        self.n = n = at.as_tensor_variable(intX(n))
-        self.mode = at.cast(tround(alpha / (alpha + beta)), "int8")
+    rv_op = betabinom
 
-    def _random(self, alpha, beta, n, size=None):
-        size = size or ()
-        p = stats.beta.rvs(a=alpha, b=beta, size=size).flatten()
-        # Sometimes scipy.beta returns nan. Ugh.
-        while np.any(np.isnan(p)):
-            i = np.isnan(p)
-            p[i] = stats.beta.rvs(a=alpha, b=beta, size=np.sum(i))
-        # Sigh...
-        _n, _p, _size = np.atleast_1d(n).flatten(), p.flatten(), p.shape[0]
+    @classmethod
+    def dist(cls, alpha, beta, n, *args, **kwargs):
+        alpha = at.as_tensor_variable(floatX(alpha))
+        beta = at.as_tensor_variable(floatX(beta))
+        n = at.as_tensor_variable(intX(n))
+        return super().dist([n, alpha, beta], **kwargs)
 
-        quotient, remainder = divmod(_p.shape[0], _n.shape[0])
-        if remainder != 0:
-            raise TypeError(
-                "n has a bad size! Was cast to {}, must evenly divide {}".format(
-                    _n.shape[0], _p.shape[0]
-                )
-            )
-        if quotient != 1:
-            _n = np.tile(_n, quotient)
-        samples = np.reshape(stats.binom.rvs(n=_n, p=_p, size=_size), size)
-        return samples
-
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from BetaBinomial distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # alpha, beta, n = draw_values([self.alpha, self.beta, self.n], point=point, size=size)
-        # return generate_samples(
-        #     self._random, alpha=alpha, beta=beta, n=n, dist_shape=self.shape, size=size
-        # )
-
-    def logp(self, value):
+    def logp(value, n, alpha, beta):
         r"""
         Calculate log-probability of BetaBinomial distribution at specified value.
 
@@ -290,9 +251,6 @@ class BetaBinomial(Discrete):
         -------
         TensorVariable
         """
-        alpha = self.alpha
-        beta = self.beta
-        n = self.n
         return bound(
             binomln(n, value) + betaln(value + alpha, n - value + beta) - betaln(alpha, beta),
             value >= 0,
@@ -301,7 +259,7 @@ class BetaBinomial(Discrete):
             beta > 0,
         )
 
-    def logcdf(self, value):
+    def logcdf(value, n, alpha, beta):
         """
         Compute the log of the cumulative distribution function for BetaBinomial distribution
         at the specified value.
@@ -321,15 +279,15 @@ class BetaBinomial(Discrete):
                 f"BetaBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
-        alpha = self.alpha
-        beta = self.beta
-        n = self.n
         safe_lower = at.switch(at.lt(value, 0), value, 0)
 
         return bound(
             at.switch(
                 at.lt(value, n),
-                logsumexp(self.logp(at.arange(safe_lower, value + 1)), keepdims=False),
+                logsumexp(
+                    BetaBinomial.logp(at.arange(safe_lower, value + 1), n, alpha, beta),
+                    keepdims=False,
+                ),
                 0,
             ),
             0 <= value,
@@ -833,32 +791,14 @@ class Geometric(Discrete):
         Probability of success on an individual trial (0 < p <= 1).
     """
 
-    def __init__(self, p, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.p = p = at.as_tensor_variable(floatX(p))
-        self.mode = 1
+    rv_op = geometric
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from Geometric distribution.
+    @classmethod
+    def dist(cls, p, *args, **kwargs):
+        p = at.as_tensor_variable(floatX(p))
+        return super().dist([p], *args, **kwargs)
 
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # p = draw_values([self.p], point=point, size=size)[0]
-        # return generate_samples(np.random.geometric, p, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(value, p):
         r"""
         Calculate log-probability of Geometric distribution at specified value.
 
@@ -872,10 +812,14 @@ class Geometric(Discrete):
         -------
         TensorVariable
         """
-        p = self.p
-        return bound(at.log(p) + logpow(1 - p, value - 1), 0 <= p, p <= 1, value >= 1)
+        return bound(
+            at.log(p) + logpow(1 - p, value - 1),
+            0 <= p,
+            p <= 1,
+            value >= 1,
+        )
 
-    def logcdf(self, value):
+    def logcdf(value, p):
         """
         Compute the log of the cumulative distribution function for Geometric distribution
         at the specified value.
@@ -890,7 +834,6 @@ class Geometric(Discrete):
         -------
         TensorVariable
         """
-        p = self.p
 
         return bound(
             log1mexp(-at.log1p(-p) * value),
@@ -947,43 +890,16 @@ class HyperGeometric(Discrete):
         Number of samples drawn from the population
     """
 
-    def __init__(self, N, k, n, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.N = intX(N)
-        self.k = intX(k)
-        self.n = intX(n)
-        self.mode = intX(at.floor((n + 1) * (k + 1) / (N + 2)))
+    rv_op = hypergeometric
 
-    def random(self, point=None, size=None):
-        r"""
-        Draw random values from HyperGeometric distribution.
+    @classmethod
+    def dist(cls, N, k, n, *args, **kwargs):
+        good = at.as_tensor_variable(intX(k))
+        bad = at.as_tensor_variable(intX(N - k))
+        n = at.as_tensor_variable(intX(n))
+        return super().dist([good, bad, n], *args, **kwargs)
 
-        Parameters
-        ----------
-        point : dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size : int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-
-        # N, k, n = draw_values([self.N, self.k, self.n], point=point, size=size)
-        # return generate_samples(self._random, N, k, n, dist_shape=self.shape, size=size)
-
-    def _random(self, M, n, N, size=None):
-        r"""Wrapper around scipy stat's hypergeom.rvs"""
-        try:
-            samples = stats.hypergeom.rvs(M=M, n=n, N=N, size=size)
-            return samples
-        except ValueError:
-            raise ValueError("Domain error in arguments")
-
-    def logp(self, value):
+    def logp(value, good, bad, n):
         r"""
         Calculate log-probability of HyperGeometric distribution at specified value.
 
@@ -997,11 +913,8 @@ class HyperGeometric(Discrete):
         -------
         TensorVariable
         """
-        N = self.N
-        k = self.k
-        n = self.n
-        tot, good = N, k
-        bad = tot - good
+
+        tot = good + bad
         result = (
             betaln(good + 1, 1)
             + betaln(bad + 1, 1)
@@ -1011,11 +924,11 @@ class HyperGeometric(Discrete):
             - betaln(tot + 1, 1)
         )
         # value in [max(0, n - N + k), min(k, n)]
-        lower = at.switch(at.gt(n - N + k, 0), n - N + k, 0)
-        upper = at.switch(at.lt(k, n), k, n)
+        lower = at.switch(at.gt(n - tot + good, 0), n - tot + good, 0)
+        upper = at.switch(at.lt(good, n), good, n)
         return bound(result, lower <= value, value <= upper)
 
-    def logcdf(self, value):
+    def logcdf(value, good, bad, n):
         """
         Compute the log of the cumulative distribution function for HyperGeometric distribution
         at the specified value.
@@ -1035,23 +948,24 @@ class HyperGeometric(Discrete):
                 f"HyperGeometric.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
             )
 
+        N = good + bad
         # TODO: Use lower upper in locgdf for smarter logsumexp?
-        N = self.N
-        n = self.n
-        k = self.k
         safe_lower = at.switch(at.lt(value, 0), value, 0)
 
         return bound(
             at.switch(
                 at.lt(value, n),
-                logsumexp(self.logp(at.arange(safe_lower, value + 1)), keepdims=False),
+                logsumexp(
+                    HyperGeometric.logp(at.arange(safe_lower, value + 1), good, bad, n),
+                    keepdims=False,
+                ),
                 0,
             ),
             0 <= value,
             0 < N,
-            0 <= k,
+            0 <= good,
             0 <= n,
-            k <= N,
+            good <= N,
             n <= N,
         )
 
