@@ -3094,7 +3094,7 @@ def test_car_rng_fn():
 
     p, f = delta, n_fails
     while p <= delta and f > 0:
-        car_smp, mn_smp = check["car"][f-1, :, :], check["mn"][f-1, :, :]
+        car_smp, mn_smp = check["car"][f - 1, :, :], check["mn"][f - 1, :, :]
         p = min(
             [
                 scipy.stats.ks_2samp(

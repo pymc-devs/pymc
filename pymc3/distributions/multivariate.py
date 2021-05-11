@@ -2033,7 +2033,7 @@ class CAR(Continuous):
     @classmethod
     def dist(cls, mu, W, alpha, tau, sparse=False, *args, **kwargs):
 
-        if not W.ndim == 2 or not np.allclose(W, W.T):
+        if not W.ndim == 2 or not at.allclose(W, W.T):
             raise ValueError("W must be a symmetric adjacency matrix.")
 
         return super().dist([mu, W, alpha, tau, sparse], **kwargs)
