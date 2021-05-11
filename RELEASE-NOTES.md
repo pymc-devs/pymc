@@ -4,6 +4,7 @@
 ### Breaking Changes
 - ⚠ Theano-PyMC has been replaced with Aesara, so all external references to `theano`, `tt`, and `pymc3.theanof` need to be replaced with `aesara`, `at`, and `pymc3.aesaraf` (see [4471](https://github.com/pymc-devs/pymc3/pull/4471)).
 - ArviZ `plots` and `stats` *wrappers* were removed. The functions are now just available by their original names (see [#4549](https://github.com/pymc-devs/pymc3/pull/4471) and `3.11.2` release notes).
+- The GLM submodule has been removed, please use [Bambi](https://bambinos.github.io/bambi/) instead.
 - ...
 
 ### New Features
