@@ -222,25 +222,6 @@ class TestDisasterModel(SeededTest):
             az.summary(tr)
 
 
-@pytest.mark.xfail(reason="GLM hasn't been refactored")
-class TestGLMLinear(SeededTest):
-    def build_model(self):
-        size = 50
-        true_intercept = 1
-        true_slope = 2
-        self.x = np.linspace(0, 1, size)
-        self.y = true_intercept + self.x * true_slope + np.random.normal(scale=0.5, size=size)
-        data = dict(x=self.x, y=self.y)
-        with pm.Model() as model:
-            pm.GLM.from_formula("y ~ x", data)
-        return model
-
-    def test_run(self):
-        with self.build_model():
-            start = pm.find_MAP(method="Powell")
-            pm.sample(50, pm.Slice(), start=start)
-
-
 @pytest.mark.xfail(reason="ZeroInflatedPoisson hasn't been refactored for v4")
 class TestLatentOccupancy(SeededTest):
     """
