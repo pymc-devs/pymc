@@ -369,9 +369,29 @@ class TestElementWiseLogp(SeededTest):
         self.check_transform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
+        "lower, c, upper, size",
+        [
+            (0.0, 1.0, 2.0, 2),
+            (-10, 0, 200, (2, 3)),
+            (np.zeros(3), np.ones(3), np.ones(3), (4, 3)),
+        ],
+    )
+    def test_triangular(self, lower, c, upper, size):
+        def transform_params(rv_var):
+            _, _, _, lower, _, upper = rv_var.owner.inputs
+            lower = at.as_tensor_variable(lower) if lower is not None else None
+            upper = at.as_tensor_variable(upper) if upper is not None else None
+            return lower, upper
+
+        interval = tr.Interval(transform_params)
+        model = self.build_model(
+            pm.Triangular, {"lower": lower, "c": c, "upper": upper}, size=size, transform=interval
+        )
+        self.check_transform_elementwise_logp(model)
+
+    @pytest.mark.parametrize(
         "mu,kappa,shape", [(0.0, 1.0, 2), (-0.5, 5.5, (2, 3)), (np.zeros(3), np.ones(3), (4, 3))]
     )
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_vonmises(self, mu, kappa, shape):
         model = self.build_model(
             pm.VonMises, {"mu": mu, "kappa": kappa}, shape=shape, transform=tr.circular
@@ -470,7 +490,6 @@ class TestElementWiseLogp(SeededTest):
     @pytest.mark.parametrize(
         "mu,kappa,shape", [(0.0, 1.0, (2,)), (np.zeros(3), np.ones(3), (4, 3))]
     )
-    @pytest.mark.xfail(reason="Distribution not refactored yet")
     def test_vonmises_ordered(self, mu, kappa, shape):
         testval = np.sort(np.abs(np.random.rand(*shape)))
         model = self.build_model(
@@ -514,3 +533,12 @@ class TestElementWiseLogp(SeededTest):
             pm.MvNormal, {"mu": mu, "cov": cov}, size=size, testval=testval, transform=tr.ordered
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=1)
+
+
+def test_triangular_transform():
+    with pm.Model() as m:
+        x = pm.Triangular("x", lower=0, c=1, upper=2)
+
+    transform = x.tag.value_var.tag.transform
+    assert np.isclose(transform.backward(x, -np.inf).eval(), 0)
+    assert np.isclose(transform.backward(x, np.inf).eval(), 2)
