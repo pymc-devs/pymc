@@ -1939,6 +1939,9 @@ class CARRV(RandomVariable):
         else:
             W = at.as_tensor_variable(W)
 
+        if not W.ndim == 2 or not at.allclose(W, W.T).eval():
+            raise ValueError("W must be a symmetric adjacency matrix.")
+
         tau = at.as_tensor_variable(tau)
         alpha = at.as_tensor_variable(alpha)
 
@@ -2032,10 +2035,6 @@ class CAR(Continuous):
 
     @classmethod
     def dist(cls, mu, W, alpha, tau, sparse=False, *args, **kwargs):
-
-        if not W.ndim == 2 or not at.allclose(W, W.T):
-            raise ValueError("W must be a symmetric adjacency matrix.")
-
         return super().dist([mu, W, alpha, tau, sparse], **kwargs)
 
     def logp(value, mu, W, alpha, tau, sparse=False):
