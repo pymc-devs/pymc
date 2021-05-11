@@ -134,7 +134,8 @@ def circ_cont_transform(op):
 class BoundedContinuous(Continuous):
     """Base class for bounded continuous distributions"""
 
-    transform_args = None
+    # Indices of the arguments that define the lower and upper bounds of the distribution
+    bound_args_indices = None
 
     def __new__(cls, *args, **kwargs):
         transform = kwargs.get("transform", UNSET)
@@ -144,13 +145,15 @@ class BoundedContinuous(Continuous):
 
     @classmethod
     def default_transform(cls):
-        if cls.transform_args is None:
-            raise ValueError(f"Must specify transform args for {cls.__name__} bounded distribution")
+        if cls.bound_args_indices is None:
+            raise ValueError(
+                f"Must specify bound_args_indices for {cls.__name__} bounded distribution"
+            )
 
         def transform_params(rv_var):
             _, _, _, *args = rv_var.owner.inputs
-            lower = args[cls.transform_args[0]]
-            upper = args[cls.transform_args[1]]
+            lower = args[cls.bound_args_indices[0]]
+            upper = args[cls.bound_args_indices[1]]
             lower = at.as_tensor_variable(lower) if lower is not None else None
             upper = at.as_tensor_variable(upper) if upper is not None else None
             return lower, upper
@@ -244,7 +247,7 @@ class Uniform(BoundedContinuous):
         Upper limit.
     """
     rv_op = uniform
-    transform_args = [0, 1]  # Lower, Upper
+    bound_args_indices = (0, 1)  # Lower, Upper
 
     @classmethod
     def dist(cls, lower=0, upper=1, **kwargs):
@@ -3339,7 +3342,7 @@ class Triangular(BoundedContinuous):
     """
 
     rv_op = triangular
-    transform_args = [0, 2]  # lower, upper
+    bound_args_indices = (0, 2)  # lower, upper
 
     @classmethod
     def dist(cls, lower=0, upper=1, c=0.5, *args, **kwargs):
