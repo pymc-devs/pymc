@@ -8,7 +8,7 @@
 - The `Distribution` keyword argument `testval` has been deprecated in favor of `initval`.
 - `pm.sample` now returns results as `InferenceData` instead of `MultiTrace` by default (see [#4744](https://github.com/pymc-devs/pymc3/pull/4744)).
 - `pm.sample_prior_predictive` no longer returns transformed variable values by default. Pass them by name in `var_names` if you want to obtain these draws (see [4769](https://github.com/pymc-devs/pymc3/pull/4769)).
-...
+- ...
 
 ### New Features
 - The `CAR` distribution has been added to allow for use of conditional autoregressions which often are used in spatial and network models.
@@ -20,6 +20,7 @@
 - Add `logcdf` method to Kumaraswamy distribution (see [#4706](https://github.com/pymc-devs/pymc3/pull/4706)).
 - The `OrderedMultinomial` distribution has been added for use on ordinal data which are _aggregated_ by trial, like multinomial observations, whereas `OrderedLogistic` only accepts ordinal data in a _disaggregated_ format, like categorical
   observations (see [#4773](https://github.com/pymc-devs/pymc3/pull/4773)).
+- ...
 
 ### Maintenance
 - Remove float128 dtype support (see [#4514](https://github.com/pymc-devs/pymc3/pull/4514)).
@@ -27,6 +28,7 @@
 - `Model.RV_dims` and `Model.coords` are now read-only properties. To modify the `coords` dictionary use `Model.add_coord`. Also `dims` or coordinate values that are `None` will be auto-completed (see [#4625](https://github.com/pymc-devs/pymc3/pull/4625)).
 - The length of `dims` in the model is now tracked symbolically through `Model.dim_lengths` (see [#4625](https://github.com/pymc-devs/pymc3/pull/4625)).
 - We now include `cloudpickle` as a required dependency, and no longer depend on `dill` (see [#4858](https://github.com/pymc-devs/pymc3/pull/4858)).
+- The `incomplete_beta` function in `pymc3.distributions.dist_math` was replaced by `aesara.tensor.betainc` (see [4857](https://github.com/pymc-devs/pymc3/pull/4857)).
 - ...
 
 ## PyMC3 3.11.2 (14 March 2021)
