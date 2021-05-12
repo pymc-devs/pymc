@@ -6,6 +6,7 @@
 - ArviZ `plots` and `stats` *wrappers* were removed. The functions are now just available by their original names (see [#4549](https://github.com/pymc-devs/pymc3/pull/4471) and `3.11.2` release notes).
 - The GLM submodule has been removed, please use [Bambi](https://bambinos.github.io/bambi/) instead.
 - The `Distribution` keyword argument `testval` has been deprecated in favor of `initval`.
+- The `incomplete_beta` function in `pymc3.distributions.dist_math` was replaced by an equivalent faster vectorized `betainc` Aesara `Op` (see [4519](https://github.com/pymc-devs/pymc3/pull/4519)).
 - ...
 
 ### New Features

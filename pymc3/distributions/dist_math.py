@@ -18,17 +18,16 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 """
 import aesara
+import aesara.scalar as aes
 import aesara.tensor as at
 import numpy as np
 import scipy.linalg
 import scipy.stats
 
-from aesara import scan
 from aesara.compile.builders import OpFromGraph
 from aesara.graph.basic import Apply
 from aesara.graph.op import Op
-from aesara.scalar import UnaryScalarOp, upgrade_to_float_no_complex
-from aesara.scan import until
+from aesara.scalar import ScalarOp, UnaryScalarOp, upgrade_to_float_no_complex
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.slinalg import Cholesky, Solve
 
@@ -433,169 +432,6 @@ def zvalue(value, sigma, mu):
     return (value - mu) / sigma
 
 
-def incomplete_beta_cfe(a, b, x, small):
-    """Incomplete beta continued fraction expansions
-    based on Cephes library by Steve Moshier (incbet.c).
-    small: Choose element-wise which continued fraction expansion to use.
-    """
-    BIG = at.constant(4.503599627370496e15, dtype="float64")
-    BIGINV = at.constant(2.22044604925031308085e-16, dtype="float64")
-    THRESH = at.constant(3.0 * np.MachAr().eps, dtype="float64")
-
-    zero = at.constant(0.0, dtype="float64")
-    one = at.constant(1.0, dtype="float64")
-    two = at.constant(2.0, dtype="float64")
-
-    r = one
-    k1 = a
-    k3 = a
-    k4 = a + one
-    k5 = one
-    k8 = a + two
-
-    k2 = at.switch(small, a + b, b - one)
-    k6 = at.switch(small, b - one, a + b)
-    k7 = at.switch(small, k4, a + one)
-    k26update = at.switch(small, one, -one)
-    x = at.switch(small, x, x / (one - x))
-
-    pkm2 = zero
-    qkm2 = one
-    pkm1 = one
-    qkm1 = one
-    r = one
-
-    def _step(i, pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r, a, b, x, small):
-        xk = -(x * k1 * k2) / (k3 * k4)
-        pk = pkm1 + pkm2 * xk
-        qk = qkm1 + qkm2 * xk
-        pkm2 = pkm1
-        pkm1 = pk
-        qkm2 = qkm1
-        qkm1 = qk
-
-        xk = (x * k5 * k6) / (k7 * k8)
-        pk = pkm1 + pkm2 * xk
-        qk = qkm1 + qkm2 * xk
-        pkm2 = pkm1
-        pkm1 = pk
-        qkm2 = qkm1
-        qkm1 = qk
-
-        old_r = r
-        r = at.switch(at.eq(qk, zero), r, pk / qk)
-
-        k1 += one
-        k2 += k26update
-        k3 += two
-        k4 += two
-        k5 += one
-        k6 -= k26update
-        k7 += two
-        k8 += two
-
-        big_cond = at.gt(at.abs_(qk) + at.abs_(pk), BIG)
-        biginv_cond = at.or_(at.lt(at.abs_(qk), BIGINV), at.lt(at.abs_(pk), BIGINV))
-
-        pkm2 = at.switch(big_cond, pkm2 * BIGINV, pkm2)
-        pkm1 = at.switch(big_cond, pkm1 * BIGINV, pkm1)
-        qkm2 = at.switch(big_cond, qkm2 * BIGINV, qkm2)
-        qkm1 = at.switch(big_cond, qkm1 * BIGINV, qkm1)
-
-        pkm2 = at.switch(biginv_cond, pkm2 * BIG, pkm2)
-        pkm1 = at.switch(biginv_cond, pkm1 * BIG, pkm1)
-        qkm2 = at.switch(biginv_cond, qkm2 * BIG, qkm2)
-        qkm1 = at.switch(biginv_cond, qkm1 * BIG, qkm1)
-
-        return (
-            (pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r),
-            until(at.abs_(old_r - r) < (THRESH * at.abs_(r))),
-        )
-
-    (pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r), _ = scan(
-        _step,
-        sequences=[at.arange(0, 300)],
-        outputs_info=[
-            e
-            for e in at.cast((pkm1, pkm2, qkm1, qkm2, k1, k2, k3, k4, k5, k6, k7, k8, r), "float64")
-        ],
-        non_sequences=[a, b, x, small],
-    )
-
-    return r[-1]
-
-
-def incomplete_beta_ps(a, b, value):
-    """Power series for incomplete beta
-    Use when b*x is small and value not too close to 1.
-    Based on Cephes library by Steve Moshier (incbet.c)
-    """
-    one = at.constant(1, dtype="float64")
-    ai = one / a
-    u = (one - b) * value
-    t1 = u / (a + one)
-    t = u
-    threshold = np.MachAr().eps * ai
-    s = at.constant(0, dtype="float64")
-
-    def _step(i, t, s, a, b, value):
-        t *= (i - b) * value / i
-        step = t / (a + i)
-        s += step
-        return ((t, s), until(at.abs_(step) < threshold))
-
-    (t, s), _ = scan(
-        _step,
-        sequences=[at.arange(2, 302)],
-        outputs_info=[e for e in at.cast((t, s), "float64")],
-        non_sequences=[a, b, value],
-    )
-
-    s = s[-1] + t1 + ai
-
-    t = gammaln(a + b) - gammaln(a) - gammaln(b) + a * at.log(value) + at.log(s)
-    return at.exp(t)
-
-
-def incomplete_beta(a, b, value):
-    """Incomplete beta implementation
-    Power series and continued fraction expansions chosen for best numerical
-    convergence across the board based on inputs.
-    """
-    machep = at.constant(np.MachAr().eps, dtype="float64")
-    one = at.constant(1, dtype="float64")
-    w = one - value
-
-    ps = incomplete_beta_ps(a, b, value)
-
-    flip = at.gt(value, (a / (a + b)))
-    aa, bb = a, b
-    a = at.switch(flip, bb, aa)
-    b = at.switch(flip, aa, bb)
-    xc = at.switch(flip, value, w)
-    x = at.switch(flip, w, value)
-
-    tps = incomplete_beta_ps(a, b, x)
-    tps = at.switch(at.le(tps, machep), one - machep, one - tps)
-
-    # Choose which continued fraction expansion for best convergence.
-    small = at.lt(x * (a + b - 2.0) - (a - one), 0.0)
-    cfe = incomplete_beta_cfe(a, b, x, small)
-    w = at.switch(small, cfe, cfe / xc)
-
-    # Direct incomplete beta accounting for flipped a, b.
-    t = at.exp(
-        a * at.log(x) + b * at.log(xc) + gammaln(a + b) - gammaln(a) - gammaln(b) + at.log(w / a)
-    )
-
-    t = at.switch(flip, at.switch(at.le(t, machep), one - machep, one - t), t)
-    return at.switch(
-        at.and_(flip, at.and_(at.le((b * x), one), at.le(x, 0.95))),
-        tps,
-        at.switch(at.and_(at.le(b * value, one), at.le(value, 0.95)), ps, t),
-    )
-
-
 def clipped_beta_rvs(a, b, size=None, random_state=None, dtype="float64"):
     """Draw beta distributed random samples in the open :math:`(0, 1)` interval.
 
@@ -634,3 +470,224 @@ def clipped_beta_rvs(a, b, size=None, random_state=None, dtype="float64"):
     out = scipy.stats.beta.rvs(a, b, size=size, random_state=random_state).astype(dtype)
     lower, upper = _beta_clip_values[dtype]
     return np.maximum(np.minimum(out, upper), lower)
+
+
+def _betainc_a_n(f, p, q, n):
+    """
+    Numerator (a_n) of the nth approximant of the continued fraction
+    representation of the regularized incomplete beta function
+    """
+
+    if n == 1:
+        return p * f * (q - 1) / (q * (p + 1))
+
+    p2n = p + 2 * n
+    F1 = p ** 2 * f ** 2 * (n - 1) / (q ** 2)
+    F2 = (p + q + n - 2) * (p + n - 1) * (q - n) / ((p2n - 3) * (p2n - 2) ** 2 * (p2n - 1))
+
+    return F1 * F2
+
+
+def _betainc_b_n(f, p, q, n):
+    """
+    Offset (b_n) of the nth approximant of the continued fraction
+    representation of the regularized incomplete beta function
+    """
+    pf = p * f
+    p2n = p + 2 * n
+
+    N1 = 2 * (pf + 2 * q) * n * (n + p - 1) + p * q * (p - 2 - pf)
+    D1 = q * (p2n - 2) * p2n
+
+    return N1 / D1
+
+
+def _betainc_da_n_dp(f, p, q, n):
+    """
+    Derivative of a_n wrt p
+    """
+
+    if n == 1:
+        return -p * f * (q - 1) / (q * (p + 1) ** 2)
+
+    pp = p ** 2
+    ppp = pp * p
+    p2n = p + 2 * n
+
+    N1 = -(n - 1) * f ** 2 * pp * (q - n)
+    N2a = (-8 + 8 * p + 8 * q) * n ** 3
+    N2b = (16 * pp + (-44 + 20 * q) * p + 26 - 24 * q) * n ** 2
+    N2c = (10 * ppp + (14 * q - 46) * pp + (-40 * q + 66) * p - 28 + 24 * q) * n
+    N2d = 2 * pp ** 2 + (-13 + 3 * q) * ppp + (-14 * q + 30) * pp
+    N2e = (-29 + 19 * q) * p + 10 - 8 * q
+
+    D1 = q ** 2 * (p2n - 3) ** 2
+    D2 = (p2n - 2) ** 3 * (p2n - 1) ** 2
+
+    return (N1 / D1) * (N2a + N2b + N2c + N2d + N2e) / D2
+
+
+def _betainc_da_n_dq(f, p, q, n):
+    """
+    Derivative of a_n wrt q
+    """
+    if n == 1:
+        return p * f / (q * (p + 1))
+
+    p2n = p + 2 * n
+    F1 = (p ** 2 * f ** 2 / (q ** 2)) * (n - 1) * (p + n - 1) * (2 * q + p - 2)
+    D1 = (p2n - 3) * (p2n - 2) ** 2 * (p2n - 1)
+
+    return F1 / D1
+
+
+def _betainc_db_n_dp(f, p, q, n):
+    """
+    Derivative of b_n wrt p
+    """
+    p2n = p + 2 * n
+    pp = p ** 2
+    q4 = 4 * q
+    p4 = 4 * p
+
+    F1 = (p * f / q) * ((-p4 - q4 + 4) * n ** 2 + (p4 - 4 + q4 - 2 * pp) * n + pp * q)
+    D1 = (p2n - 2) ** 2 * p2n ** 2
+
+    return F1 / D1
+
+
+def _betainc_db_n_dq(f, p, q, n):
+    """
+    Derivative of b_n wrt to q
+    """
+    p2n = p + 2 * n
+    return -(p ** 2 * f) / (q * (p2n - 2) * p2n)
+
+
+def _betainc_derivative(x, p, q, wrtp=True):
+    """
+    Compute the derivative of regularized incomplete beta function wrt to p (alpha) or q (beta)
+
+    Reference: Boik, R. J., & Robison-Cox, J. F. (1998). Derivatives of the incomplete beta function.
+    Journal of Statistical Software, 3(1), 1-20.
+    """
+
+    # Input validation
+    if not (0 <= x <= 1) or p < 0 or q < 0:
+        return np.nan
+
+    if x > (p / (p + q)):
+        return -_betainc_derivative(1 - x, q, p, not wrtp)
+
+    min_iters = 3
+    max_iters = 200
+    err_threshold = 1e-12
+
+    derivative_old = 0
+
+    Am2, Am1 = 1, 1
+    Bm2, Bm1 = 0, 1
+    dAm2, dAm1 = 0, 0
+    dBm2, dBm1 = 0, 0
+
+    f = (q * x) / (p * (1 - x))
+    K = np.exp(p * np.log(x) + (q - 1) * np.log1p(-x) - np.log(p) - scipy.special.betaln(p, q))
+    if wrtp:
+        dK = np.log(x) - 1 / p + scipy.special.digamma(p + q) - scipy.special.digamma(p)
+    else:
+        dK = np.log1p(-x) + scipy.special.digamma(p + q) - scipy.special.digamma(q)
+
+    for n in range(1, max_iters + 1):
+        a_n_ = _betainc_a_n(f, p, q, n)
+        b_n_ = _betainc_b_n(f, p, q, n)
+        if wrtp:
+            da_n = _betainc_da_n_dp(f, p, q, n)
+            db_n = _betainc_db_n_dp(f, p, q, n)
+        else:
+            da_n = _betainc_da_n_dq(f, p, q, n)
+            db_n = _betainc_db_n_dq(f, p, q, n)
+
+        A = a_n_ * Am2 + b_n_ * Am1
+        B = a_n_ * Bm2 + b_n_ * Bm1
+        dA = da_n * Am2 + a_n_ * dAm2 + db_n * Am1 + b_n_ * dAm1
+        dB = da_n * Bm2 + a_n_ * dBm2 + db_n * Bm1 + b_n_ * dBm1
+
+        Am2, Am1 = Am1, A
+        Bm2, Bm1 = Bm1, B
+        dAm2, dAm1 = dAm1, dA
+        dBm2, dBm1 = dBm1, dB
+
+        if n < min_iters - 1:
+            continue
+
+        F1 = A / B
+        F2 = (dA - F1 * dB) / B
+        derivative = K * (F1 * dK + F2)
+
+        errapx = abs(derivative_old - derivative)
+        d_errapx = errapx / max(err_threshold, abs(derivative))
+        derivative_old = derivative
+
+        if d_errapx <= err_threshold:
+            break
+
+        if n >= max_iters:
+            return np.nan
+
+    return derivative
+
+
+class TernaryScalarOp(ScalarOp):
+    nin = 3
+
+
+class BetaIncDda(TernaryScalarOp):
+    """
+    Gradient of the regularized incomplete beta function wrt to the first argument (a)
+    """
+
+    def impl(self, a, b, z):
+        return _betainc_derivative(z, a, b, wrtp=True)
+
+
+class BetaIncDdb(TernaryScalarOp):
+    """
+    Gradient of the regularized incomplete beta function wrt to the second argument (b)
+    """
+
+    def impl(self, a, b, z):
+        return _betainc_derivative(z, a, b, wrtp=False)
+
+
+betainc_dda_scalar = BetaIncDda(upgrade_to_float_no_complex, name="betainc_dda")
+betainc_ddb_scalar = BetaIncDdb(upgrade_to_float_no_complex, name="betainc_ddb")
+
+
+class BetaInc(TernaryScalarOp):
+    """
+    Regularized incomplete beta function
+    """
+
+    nfunc_spec = ("scipy.special.betainc", 3, 1)
+
+    def impl(self, a, b, x):
+        return scipy.special.betainc(a, b, x)
+
+    def grad(self, inp, grads):
+        a, b, z = inp
+        (gz,) = grads
+
+        return [
+            gz * betainc_dda_scalar(a, b, z),
+            gz * betainc_ddb_scalar(a, b, z),
+            gz
+            * aes.exp(
+                aes.log1p(-z) * (b - 1)
+                + aes.log(z) * (a - 1)
+                - (aes.gammaln(a) + aes.gammaln(b) - aes.gammaln(a + b))
+            ),
+        ]
+
+
+betainc_scalar = BetaInc(upgrade_to_float_no_complex, "betainc")
+betainc = Elemwise(betainc_scalar, name="Elemwise{betainc,no_inplace}")
