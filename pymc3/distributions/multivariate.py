@@ -2064,7 +2064,8 @@ class CAR(Continuous):
         logdet = at.log(1 - alpha.T * lam[:, None]).sum()
         delta = value - mu
 
-        W = aesara.sparse.as_sparse_variable(W)
+        if not isinstance(W, aesara.sparse.SparseType):
+            W = aesara.sparse.csr_from_dense(W)
         Wdelta = aesara.sparse.dot(delta, W)
 
         tau_dot_delta = D[None, :] * delta - alpha * Wdelta
