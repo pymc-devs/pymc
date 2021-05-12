@@ -59,7 +59,6 @@ from pymc3.distributions.dist_math import (
     bound,
     clipped_beta_rvs,
     i0e,
-    incomplete_beta,
     log_i0,
     log_normal,
     logpow,
@@ -1246,23 +1245,19 @@ class Beta(UnitContinuous):
 
         Parameters
         ----------
-        value: numeric
-            Value(s) for which log CDF is calculated.
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
         TensorVariable
         """
-        # incomplete_beta function can only handle scalar values (see #4342)
-        if np.ndim(value):
-            raise TypeError(
-                f"Beta.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
 
         return bound(
             at.switch(
                 at.lt(value, 1),
-                at.log(incomplete_beta(alpha, beta, value)),
+                at.log(at.betainc(alpha, beta, value)),
                 0,
             ),
             0 <= value,
@@ -1915,19 +1910,14 @@ class StudentT(Continuous):
 
         Parameters
         ----------
-        value: numeric
-            Value(s) for which log CDF is calculated.
+        value: numeric or np.ndarray or aesara.tensor
+            Value(s) for which log CDF is calculated. If the log CDF for multiple
+            values are desired the values must be provided in a numpy array or Aesara tensor.
 
         Returns
         -------
         TensorVariable
         """
-        # incomplete_beta function can only handle scalar values (see #4342)
-        if np.ndim(value):
-            raise TypeError(
-                f"StudentT.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
-
         lam, sigma = get_tau_sigma(sigma=sigma)
 
         t = (value - mu) / sigma
@@ -1935,7 +1925,7 @@ class StudentT(Continuous):
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
 
         return bound(
-            at.log(incomplete_beta(nu / 2.0, nu / 2.0, x)),
+            at.log(at.betainc(nu / 2.0, nu / 2.0, x)),
             0 < nu,
             0 < sigma,
             0 < lam,
