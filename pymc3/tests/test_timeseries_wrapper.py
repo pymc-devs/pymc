@@ -1,9 +1,10 @@
 import aesara
 import aesara.tensor as aet
 import numpy as np
-import statsmodels.api as sm
-from pymc3.timeseries.wrapper import Loglike, Score
 import pytest
+import statsmodels.api as sm
+
+from pymc3.timeseries.wrapper import Loglike, Score
 
 
 @pytest.fixture()
@@ -21,6 +22,10 @@ def mock_model():
 
 
 def test_loglike(mock_model):
+    """
+    Test that the LogLike class produces the same log-likelihood as
+    produced by statsmodels.
+    """
     inputs = aet.dvector()
     func_Loglike = aesara.function([inputs], Loglike(mock_model)(inputs))
 
@@ -33,6 +38,10 @@ def test_loglike(mock_model):
 
 
 def test_score(mock_model):
+    """
+    Test that the same derivatives are produced by the Score class as
+    are produced by statsmodels.
+    """
     inputs = aet.dvector()
     func_Score = aesara.function([inputs], Score(mock_model)(inputs))
 
@@ -42,3 +51,6 @@ def test_score(mock_model):
     actual = func_Score(theta)
     expected = mock_model.score(theta)
     assert np.allclose(actual, expected)
+
+
+# todo add test for gradient
