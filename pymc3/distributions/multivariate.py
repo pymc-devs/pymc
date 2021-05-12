@@ -1930,16 +1930,11 @@ class CARRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("CAR", "\\operatorname{CAR}")
 
-    def make_node(self, rng, size, dtype, mu, W, alpha, tau, sparse=False):
+    def make_node(self, rng, size, dtype, mu, W, alpha, tau):
         mu = at.as_tensor_variable(mu)
 
-        if sparse:
-            W_sparse = scipy.sparse.csr_matrix(W)
-            W = aesara.sparse.as_sparse_variable(W_sparse)
-        else:
-            W = at.as_tensor_variable(W)
-
-        if not W.ndim == 2 or not at.allclose(W, W.T).eval():
+        W = aesara.sparse.as_sparse_or_tensor_variable(W)
+        if not W.ndim == 2:
             raise ValueError("W must be a symmetric adjacency matrix.")
 
         tau = at.as_tensor_variable(tau)
@@ -2034,10 +2029,10 @@ class CAR(Continuous):
     rv_op = car
 
     @classmethod
-    def dist(cls, mu, W, alpha, tau, sparse=False, *args, **kwargs):
-        return super().dist([mu, W, alpha, tau, sparse], **kwargs)
+    def dist(cls, mu, W, alpha, tau, *args, **kwargs):
+        return super().dist([mu, W, alpha, tau], **kwargs)
 
-    def logp(value, mu, W, alpha, tau, sparse=False):
+    def logp(value, mu, W, alpha, tau):
         """
         Calculate log-probability of a CAR-distributed vector
         at specified value. This log probability function differs from
@@ -2069,10 +2064,8 @@ class CAR(Continuous):
         logdet = at.log(1 - alpha.T * lam[:, None]).sum()
         delta = value - mu
 
-        if sparse:
-            Wdelta = aesara.sparse.dot(delta, W)
-        else:
-            Wdelta = at.dot(delta, W)
+        W = aesara.sparse.as_sparse_variable(W)
+        Wdelta = aesara.sparse.dot(delta, W)
 
         tau_dot_delta = D[None, :] * delta - alpha * Wdelta
         logquad = (tau * delta * tau_dot_delta).sum(axis=-1)
