@@ -390,7 +390,7 @@ class PlanarFlow(LinearFlow):
             # u_: d
             # w_: d
             wu = u.dot(w)  # .
-            mwu = -1.0 + at.nnet.softplus(wu)  # .
+            mwu = -1.0 + at.softplus(wu)  # .
             # d + (. - .) * d / .
             u_h = u + (mwu - wu) * w / ((w ** 2).sum() + 1e-10)
             return u_h, w
@@ -398,7 +398,7 @@ class PlanarFlow(LinearFlow):
             # u_: bxd
             # w_: bxd
             wu = (u * w).sum(-1, keepdims=True)  # bx-
-            mwu = -1.0 + at.nnet.softplus(wu)  # bx-
+            mwu = -1.0 + at.softplus(wu)  # bx-
             # bxd + (bx- - bx-) * bxd / bx- = bxd
             u_h = u + (mwu - wu) * w / ((w ** 2).sum(-1, keepdims=True) + 1e-10)
             return u_h, w
@@ -507,7 +507,7 @@ class RadialFlow(ReferencePointFlow):
 
     def make_ab(self, a, b):
         a = at.exp(a)
-        b = -a + at.nnet.softplus(b)
+        b = -a + at.softplus(b)
         return a, b
 
 

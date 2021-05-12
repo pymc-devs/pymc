@@ -1,4 +1,4 @@
-aesara>=2.0.5
+aesara>=2.0.8
 arviz>=0.11.2
 cachetools>=4.2.1
 dill

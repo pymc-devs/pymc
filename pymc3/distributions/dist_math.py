@@ -198,7 +198,7 @@ def rho2sigma(rho):
     """
     `rho -> sigma` Aesara converter
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
-    return at.nnet.softplus(rho)
+    return at.softplus(rho)
 
 
 rho2sd = rho2sigma

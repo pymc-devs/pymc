@@ -58,6 +58,7 @@ from aesara.tensor import (
     or_,
     prod,
     sgn,
+    sigmoid,
     sin,
     sinh,
     sqr,
@@ -78,7 +79,6 @@ except ImportError:
 
 
 from aesara.tensor.nlinalg import det, matrix_dot, matrix_inverse, trace
-from aesara.tensor.nnet import sigmoid
 from scipy.linalg import block_diag as scipy_block_diag
 
 from pymc3.aesaraf import floatX, ix_, largest_common_dtype
@@ -229,7 +229,7 @@ def log1pexp(x):
 
     This function is numerically more stable than the naive approach.
     """
-    return at.nnet.softplus(x)
+    return at.softplus(x)
 
 
 def log1mexp(x):
