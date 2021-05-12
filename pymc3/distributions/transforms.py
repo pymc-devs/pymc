@@ -149,7 +149,7 @@ class LogExpM1(ElemwiseTransform):
     name = "log_exp_m1"
 
     def backward(self, rv_var, rv_value):
-        return at.nnet.softplus(rv_value)
+        return at.softplus(rv_value)
 
     def forward(self, rv_var, rv_value):
         """Inverse operation of softplus.
@@ -160,7 +160,7 @@ class LogExpM1(ElemwiseTransform):
         return at.log(1.0 - at.exp(-rv_value)) + rv_value
 
     def jacobian_det(self, rv_var, rv_value):
-        return -at.nnet.softplus(-rv_value)
+        return -at.softplus(-rv_value)
 
 
 log_exp_m1 = LogExpM1()
@@ -191,7 +191,7 @@ class Interval(ElemwiseTransform):
         a, b = self.param_extract_fn(rv_var)
 
         if a is not None and b is not None:
-            sigmoid_x = at.nnet.sigmoid(rv_value)
+            sigmoid_x = at.sigmoid(rv_value)
             return sigmoid_x * b + (1 - sigmoid_x) * a
         elif a is not None:
             return at.exp(rv_value) + a
@@ -215,7 +215,7 @@ class Interval(ElemwiseTransform):
         a, b = self.param_extract_fn(rv_var)
 
         if a is not None and b is not None:
-            s = at.nnet.softplus(-rv_value)
+            s = at.softplus(-rv_value)
             return at.log(b - a) - 2 * s - rv_value
         else:
             return rv_value
