@@ -41,6 +41,3 @@ pytestdebug.log
 
 # Codespaces
 pythonenv*
-
-Pipfile
-Pipfile.lock
