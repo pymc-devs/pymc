@@ -815,8 +815,14 @@ class TestMatchesScipy:
                 )
 
         # Test that method works with multiple values or raises informative TypeError
-        with pytest.raises(TypeError), aesara.config.change_flags(mode=Mode("py")):
-            logcdf(valid_dist, np.array([valid_value, valid_value])).eval()
+        valid_dist = change_rv_size(valid_dist, 2)
+        with aesara.config.change_flags(mode=Mode("py")):
+            try:
+                logcdf(valid_dist, np.array([valid_value, valid_value])).eval()
+            except TypeError as err:
+                assert str(err).endswith(
+                    "logcdf expects a scalar value but received a 1-dimensional object."
+                )
 
     def check_selfconsistency_discrete_logcdf(
         self, distribution, domain, paramdomains, decimal=None, n_samples=100
