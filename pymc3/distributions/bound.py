@@ -143,25 +143,6 @@ class _Bounded(Distribution):
         #     )
         pass
 
-    def _distr_parameters_for_repr(self):
-        return ["lower", "upper"]
-
-    def _distr_name_for_repr(self):
-        return "Bound"
-
-    def _str_repr(self, **kwargs):
-        distr_repr = self._wrapped._str_repr(**{**kwargs, "dist": self._wrapped})
-        if "formatting" in kwargs and "latex" in kwargs["formatting"]:
-            distr_repr = distr_repr[distr_repr.index(r" \sim") + 6 :]
-        else:
-            distr_repr = distr_repr[distr_repr.index(" ~") + 3 :]
-        self_repr = super()._str_repr(**kwargs)
-
-        if "formatting" in kwargs and "latex" in kwargs["formatting"]:
-            return self_repr + " -- " + distr_repr
-        else:
-            return self_repr + "-" + distr_repr
-
 
 class _DiscreteBounded(_Bounded, Discrete):
     def __init__(self, distribution, lower, upper, transform="infer", *args, **kwargs):

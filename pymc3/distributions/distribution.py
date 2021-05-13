@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import contextvars
-import inspect
 import multiprocessing
 import sys
 import types
@@ -36,7 +35,7 @@ import aesara.graph.basic
 import aesara.tensor as at
 
 from pymc3.printing import PrettyPrintingTensorVariable
-from pymc3.util import UNSET, get_repr_for_variable
+from pymc3.util import UNSET
 from pymc3.vartypes import string_types
 
 __all__ = [
@@ -176,77 +175,6 @@ class Distribution(metaclass=DistributionMeta):
             rv_var.tag.test_value = testval
 
         return rv_var
-
-    def _distr_parameters_for_repr(self):
-        """Return the names of the parameters for this distribution (e.g. "mu"
-        and "sigma" for Normal). Used in generating string (and LaTeX etc.)
-        representations of Distribution objects. By default based on inspection
-        of __init__, but can be overwritten if necessary (e.g. to avoid including
-        "sd" and "tau").
-        """
-        return inspect.getfullargspec(self.__init__).args[1:]
-
-    def _distr_name_for_repr(self):
-        return self.__class__.__name__
-
-    def _str_repr(self, name=None, dist=None, formatting="plain"):
-        """
-        Generate string representation for this distribution, optionally
-        including LaTeX markup (formatting='latex').
-
-        Parameters
-        ----------
-        name : str
-            name of the distribution
-        dist : Distribution
-            the distribution object
-        formatting : str
-            one of { "latex", "plain", "latex_with_params", "plain_with_params" }
-        """
-        if dist is None:
-            dist = self
-        if name is None:
-            name = "[unnamed]"
-        supported_formattings = {"latex", "plain", "latex_with_params", "plain_with_params"}
-        if not formatting in supported_formattings:
-            raise ValueError(f"Unsupported formatting ''. Choose one of {supported_formattings}.")
-
-        param_names = self._distr_parameters_for_repr()
-        param_values = [
-            get_repr_for_variable(getattr(dist, x), formatting=formatting) for x in param_names
-        ]
-
-        if "latex" in formatting:
-            param_string = ",~".join(
-                [fr"\mathit{{{name}}}={value}" for name, value in zip(param_names, param_values)]
-            )
-            if formatting == "latex_with_params":
-                return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}({params})$".format(
-                    var_name=name, distr_name=dist._distr_name_for_repr(), params=param_string
-                )
-            return r"$\text{{{var_name}}} \sim \text{{{distr_name}}}$".format(
-                var_name=name, distr_name=dist._distr_name_for_repr()
-            )
-        else:
-            # one of the plain formattings
-            param_string = ", ".join(
-                [f"{name}={value}" for name, value in zip(param_names, param_values)]
-            )
-            if formatting == "plain_with_params":
-                return f"{name} ~ {dist._distr_name_for_repr()}({param_string})"
-            return f"{name} ~ {dist._distr_name_for_repr()}"
-
-    def __str__(self, **kwargs):
-        try:
-            return self._str_repr(formatting="plain", **kwargs)
-        except:
-            return super().__str__()
-
-    def _repr_latex_(self, *, formatting="latex_with_params", **kwargs):
-        """Magic method name for IPython to use for LaTeX formatting."""
-        return self._str_repr(formatting=formatting, **kwargs)
-
-    __latex__ = _repr_latex_
 
 
 class NoDistribution(Distribution):

@@ -121,20 +121,6 @@ class Simulator(NoDistribution):
         # else:
         #     return np.array([self.function(*params) for _ in range(size[0])])
 
-    def _str_repr(self, name=None, dist=None, formatting="plain"):
-        if dist is None:
-            dist = self
-        name = name
-        function = dist.function.__name__
-        params = ", ".join([var.name for var in dist.params])
-        sum_stat = self.sum_stat.__name__ if hasattr(self.sum_stat, "__call__") else self.sum_stat
-        distance = getattr(self.distance, "__name__", self.distance.__class__.__name__)
-
-        if "latex" in formatting:
-            return f"$\\text{{{name}}} \\sim  \\text{{Simulator}}(\\text{{{function}}}({params}), \\text{{{distance}}}, \\text{{{sum_stat}}})$"
-        else:
-            return f"{name} ~ Simulator({function}({params}), {distance}, {sum_stat})"
-
 
 def identity(x):
     """Identity function, used as a summary statistics."""

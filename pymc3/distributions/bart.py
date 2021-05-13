@@ -282,16 +282,3 @@ class BART(BaseBART):
 
     def __init__(self, X, Y, m=200, alpha=0.25, split_prior=None):
         super().__init__(X, Y, m, alpha, split_prior)
-
-    def _str_repr(self, name=None, dist=None, formatting="plain"):
-        if dist is None:
-            dist = self
-        X = (type(self.X),)
-        Y = (type(self.Y),)
-        alpha = self.alpha
-        m = self.m
-
-        if "latex" in formatting:
-            return f"$\\text{{{name}}} \\sim  \\text{{BART}}(\\text{{alpha = }}\\text{{{alpha}}}, \\text{{m = }}\\text{{{m}}})$"
-        else:
-            return f"{name} ~ BART(alpha = {alpha}, m = {m})"

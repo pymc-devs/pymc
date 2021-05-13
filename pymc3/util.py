@@ -218,44 +218,6 @@ def get_default_varnames(var_iterator, include_transformed):
         return [var for var in var_iterator if not is_transformed_name(get_var_name(var))]
 
 
-def get_repr_for_variable(variable, formatting="plain"):
-    """Build a human-readable string representation for a variable."""
-    if variable is not None and hasattr(variable, "name"):
-        name = variable.name
-    elif type(variable) in [float, int, str]:
-        name = str(variable)
-    else:
-        name = None
-
-    if name is None and variable is not None:
-        if hasattr(variable, "get_parents"):
-            try:
-                names = [
-                    get_repr_for_variable(item, formatting=formatting)
-                    for item in variable.get_parents()[0].inputs
-                ]
-                # do not escape_latex these, since it is not idempotent
-                if "latex" in formatting:
-                    return "f({args})".format(
-                        args=",~".join([n for n in names if isinstance(n, str)])
-                    )
-                else:
-                    return "f({args})".format(
-                        args=", ".join([n for n in names if isinstance(n, str)])
-                    )
-            except IndexError:
-                pass
-        value = variable.eval()
-        if not value.shape or value.shape == (1,):
-            return value.item()
-        return "array"
-
-    if "latex" in formatting:
-        return fr"\text{{{name}}}"
-    else:
-        return name
-
-
 def get_var_name(var):
     """Get an appropriate, plain variable name for a variable."""
     return getattr(var, "name", str(var))
