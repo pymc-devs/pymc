@@ -1601,6 +1601,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
     def __str__(self, **kwargs):
         return self._str_repr(formatting="plain", **kwargs)
 
+    def __repr__(self):
+        return str(self)
+
     def _repr_latex_(self, *, formatting="latex", **kwargs):
         return self._str_repr(formatting=formatting, **kwargs)
 
