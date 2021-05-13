@@ -462,7 +462,6 @@ class TestLaplace(BaseTestDistribution):
     pymc_dist_params = {"mu": 0.0, "b": 1.0}
     expected_rv_op_params = {"mu": 0.0, "b": 1.0}
     reference_dist_params = {"loc": 0.0, "scale": 1.0}
-    size = 15
     reference_dist = seeded_scipy_distribution_builder("laplace")
     tests_to_run = [
         "check_pymc_params_match_rv_op",
