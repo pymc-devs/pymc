@@ -982,7 +982,7 @@ class TestNutsCheckTrace:
             a = Normal("a", size=2, testval=floatX(np.zeros(2)))
             a = at.switch(a > 0, np.inf, a)
             b = at.slinalg.solve(floatX(np.eye(2)), a)
-            Normal("c", mu=b, shape=(2,), testval=floatX(np.r_[0.0, 0.0]))
+            Normal("c", mu=b, size=2, testval=floatX(np.r_[0.0, 0.0]))
             caplog.clear()
             trace = sample(20, init=None, tune=5, chains=2)
             warns = [msg.msg for msg in caplog.records]

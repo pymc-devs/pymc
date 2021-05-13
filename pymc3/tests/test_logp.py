@@ -70,7 +70,7 @@ def test_logpt_basic():
 
 
 @pytest.mark.parametrize(
-    "indices, shape",
+    "indices, size",
     [
         (slice(0, 2), 5),
         (np.r_[True, True, False, False, True], 5),
@@ -78,15 +78,15 @@ def test_logpt_basic():
         ((np.array([0, 1, 4]), np.array([0, 1, 4])), (5, 5)),
     ],
 )
-def test_logpt_incsubtensor(indices, shape):
+def test_logpt_incsubtensor(indices, size):
     """Make sure we can compute a log-likelihood for ``Y[idx] = data`` where ``Y`` is univariate."""
 
-    mu = floatX(np.power(10, np.arange(np.prod(shape)))).reshape(shape)
+    mu = floatX(np.power(10, np.arange(np.prod(size)))).reshape(size)
     data = mu[indices]
     sigma = 0.001
     rng = aesara.shared(np.random.RandomState(232), borrow=True)
 
-    a = Normal.dist(mu, sigma, shape=shape, rng=rng)
+    a = Normal.dist(mu, sigma, size=size, rng=rng)
     a.name = "a"
 
     a_idx = at.set_subtensor(a[indices], data)

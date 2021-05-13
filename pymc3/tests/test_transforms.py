@@ -274,11 +274,11 @@ def test_chain_jacob_det():
 
 
 class TestElementWiseLogp(SeededTest):
-    def build_model(self, distfam, params, *, size=None, shape=None, transform=None, testval=None):
+    def build_model(self, distfam, params, size, transform, testval=None):
         if testval is not None:
             testval = pm.floatX(testval)
         with pm.Model() as m:
-            distfam("x", size=size, shape=shape, transform=transform, testval=testval, **params)
+            distfam("x", size=size, transform=transform, testval=testval, **params)
         return m
 
     def check_transform_elementwise_logp(self, model):
@@ -328,34 +328,32 @@ class TestElementWiseLogp(SeededTest):
         model = self.build_model(pm.HalfNormal, {"sd": sd}, size=size, transform=tr.log)
         self.check_transform_elementwise_logp(model)
 
-    @pytest.mark.parametrize("lam,size", [(2.5, 2), (5.0, (2, 3)), (np.ones(3), (4, 5))])
+    @pytest.mark.parametrize("lam,size", [(2.5, 2), (5.0, (2, 3)), (np.ones(3), (4, 3))])
     def test_exponential(self, lam, size):
         model = self.build_model(pm.Exponential, {"lam": lam}, size=size, transform=tr.log)
         self.check_transform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
-        "a,b,shape",
+        "a,b,size",
         [
             (1.0, 1.0, 2),
             (0.5, 0.5, (2, 3)),
             (np.ones(3), np.ones(3), (4, 3)),
         ],
     )
-    def test_beta(self, a, b, shape):
-        model = self.build_model(
-            pm.Beta, {"alpha": a, "beta": b}, shape=shape, transform=tr.logodds
-        )
+    def test_beta(self, a, b, size):
+        model = self.build_model(pm.Beta, {"alpha": a, "beta": b}, size=size, transform=tr.logodds)
         self.check_transform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
-        "lower,upper,shape",
+        "lower,upper,size",
         [
             (0.0, 1.0, 2),
             (0.5, 5.5, (2, 3)),
             (pm.floatX(np.zeros(3)), pm.floatX(np.ones(3)), (4, 3)),
         ],
     )
-    def test_uniform(self, lower, upper, shape):
+    def test_uniform(self, lower, upper, size):
         def transform_params(rv_var):
             _, _, _, lower, upper = rv_var.owner.inputs
             lower = at.as_tensor_variable(lower) if lower is not None else None
@@ -364,7 +362,7 @@ class TestElementWiseLogp(SeededTest):
 
         interval = tr.Interval(transform_params)
         model = self.build_model(
-            pm.Uniform, {"lower": lower, "upper": upper}, shape=shape, transform=interval
+            pm.Uniform, {"lower": lower, "upper": upper}, size=size, transform=interval
         )
         self.check_transform_elementwise_logp(model)
 
@@ -390,19 +388,19 @@ class TestElementWiseLogp(SeededTest):
         self.check_transform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
-        "mu,kappa,shape", [(0.0, 1.0, 2), (-0.5, 5.5, (2, 3)), (np.zeros(3), np.ones(3), (4, 3))]
+        "mu,kappa,size", [(0.0, 1.0, 2), (-0.5, 5.5, (2, 3)), (np.zeros(3), np.ones(3), (4, 3))]
     )
-    def test_vonmises(self, mu, kappa, shape):
+    def test_vonmises(self, mu, kappa, size):
         model = self.build_model(
-            pm.VonMises, {"mu": mu, "kappa": kappa}, shape=shape, transform=tr.circular
+            pm.VonMises, {"mu": mu, "kappa": kappa}, size=size, transform=tr.circular
         )
         self.check_transform_elementwise_logp(model)
 
     @pytest.mark.parametrize(
-        "a,shape", [(np.ones(2), None), (np.ones((2, 3)) * 0.5, None), (np.ones(3), (4,))]
+        "a,size", [(np.ones(2), None), (np.ones((2, 3)) * 0.5, None), (np.ones(3), (4,))]
     )
-    def test_dirichlet(self, a, shape):
-        model = self.build_model(pm.Dirichlet, {"a": a}, shape=shape, transform=tr.stick_breaking)
+    def test_dirichlet(self, a, size):
+        model = self.build_model(pm.Dirichlet, {"a": a}, size=size, transform=tr.stick_breaking)
         self.check_vectortransform_elementwise_logp(model, vect_opt=1)
 
     def test_normal_ordered(self):
@@ -416,59 +414,59 @@ class TestElementWiseLogp(SeededTest):
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
 
     @pytest.mark.parametrize(
-        "sd,shape",
+        "sd,size",
         [
             (2.5, (2,)),
             (np.ones(3), (4, 3)),
         ],
     )
     @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
-    def test_half_normal_ordered(self, sd, shape):
-        testval = np.sort(np.abs(np.random.randn(*shape)))
+    def test_half_normal_ordered(self, sd, size):
+        testval = np.sort(np.abs(np.random.randn(*size)))
         model = self.build_model(
             pm.HalfNormal,
             {"sd": sd},
-            shape=shape,
+            size=size,
             testval=testval,
             transform=tr.Chain([tr.log, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
 
-    @pytest.mark.parametrize("lam,shape", [(2.5, (2,)), (np.ones(3), (4, 3))])
-    def test_exponential_ordered(self, lam, shape):
-        testval = np.sort(np.abs(np.random.randn(*shape)))
+    @pytest.mark.parametrize("lam,size", [(2.5, (2,)), (np.ones(3), (4, 3))])
+    def test_exponential_ordered(self, lam, size):
+        testval = np.sort(np.abs(np.random.randn(*size)))
         model = self.build_model(
             pm.Exponential,
             {"lam": lam},
-            shape=shape,
+            size=size,
             testval=testval,
             transform=tr.Chain([tr.log, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
 
     @pytest.mark.parametrize(
-        "a,b,shape",
+        "a,b,size",
         [
             (1.0, 1.0, (2,)),
             (np.ones(3), np.ones(3), (4, 3)),
         ],
     )
-    def test_beta_ordered(self, a, b, shape):
-        testval = np.sort(np.abs(np.random.rand(*shape)))
+    def test_beta_ordered(self, a, b, size):
+        testval = np.sort(np.abs(np.random.rand(*size)))
         model = self.build_model(
             pm.Beta,
             {"alpha": a, "beta": b},
-            shape=shape,
+            size=size,
             testval=testval,
             transform=tr.Chain([tr.logodds, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
 
     @pytest.mark.parametrize(
-        "lower,upper,shape",
+        "lower,upper,size",
         [(0.0, 1.0, (2,)), (pm.floatX(np.zeros(3)), pm.floatX(np.ones(3)), (4, 3))],
     )
-    def test_uniform_ordered(self, lower, upper, shape):
+    def test_uniform_ordered(self, lower, upper, size):
         def transform_params(rv_var):
             _, _, _, lower, upper = rv_var.owner.inputs
             lower = at.as_tensor_variable(lower) if lower is not None else None
@@ -477,44 +475,42 @@ class TestElementWiseLogp(SeededTest):
 
         interval = tr.Interval(transform_params)
 
-        testval = np.sort(np.abs(np.random.rand(*shape)))
+        testval = np.sort(np.abs(np.random.rand(*size)))
         model = self.build_model(
             pm.Uniform,
             {"lower": lower, "upper": upper},
-            shape=shape,
+            size=size,
             testval=testval,
             transform=tr.Chain([interval, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=1)
 
-    @pytest.mark.parametrize(
-        "mu,kappa,shape", [(0.0, 1.0, (2,)), (np.zeros(3), np.ones(3), (4, 3))]
-    )
-    def test_vonmises_ordered(self, mu, kappa, shape):
-        testval = np.sort(np.abs(np.random.rand(*shape)))
+    @pytest.mark.parametrize("mu,kappa,size", [(0.0, 1.0, (2,)), (np.zeros(3), np.ones(3), (4, 3))])
+    def test_vonmises_ordered(self, mu, kappa, size):
+        testval = np.sort(np.abs(np.random.rand(*size)))
         model = self.build_model(
             pm.VonMises,
             {"mu": mu, "kappa": kappa},
-            shape=shape,
+            size=size,
             testval=testval,
             transform=tr.Chain([tr.circular, tr.ordered]),
         )
         self.check_vectortransform_elementwise_logp(model, vect_opt=0)
 
     @pytest.mark.parametrize(
-        "lower,upper,shape,transform",
+        "lower,upper,size,transform",
         [
             (0.0, 1.0, (2,), tr.stick_breaking),
             (0.5, 5.5, (2, 3), tr.stick_breaking),
             (np.zeros(3), np.ones(3), (4, 3), tr.Chain([tr.sum_to_1, tr.logodds])),
         ],
     )
-    def test_uniform_other(self, lower, upper, shape, transform):
-        testval = np.ones(shape) / shape[-1]
+    def test_uniform_other(self, lower, upper, size, transform):
+        testval = np.ones(size) / size[-1]
         model = self.build_model(
             pm.Uniform,
             {"lower": lower, "upper": upper},
-            shape=shape,
+            size=size,
             testval=testval,
             transform=transform,
         )

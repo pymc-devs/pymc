@@ -47,6 +47,7 @@ from aesara.tensor.var import TensorVariable
 from pandas import Series
 
 from pymc3.aesaraf import (
+    change_rv_size,
     gradient,
     hessian,
     inputvars,
@@ -958,7 +959,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         ----------
         name : str
             Name of the dimension.
-            Forbidden: {"chain", "draw", "__sample__"}
+            Forbidden: {"chain", "draw"}
         values : optional, array-like
             Coordinate values or ``None`` (for auto-numbering).
             If ``None`` is passed, a ``length`` must be specified.
@@ -966,10 +967,9 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             A symbolic scalar of the dimensions length.
             Defaults to ``aesara.shared(len(values))``.
         """
-        if name in {"draw", "chain", "__sample__"}:
+        if name in {"draw", "chain"}:
             raise ValueError(
-                "Dimensions can not be named `draw`, `chain` or `__sample__`, "
-                "as those are reserved for use in `InferenceData`."
+                "Dimensions can not be named `draw` or `chain`, as they are reserved for the sampler's outputs."
             )
         if values is None and length is None:
             raise ValueError(
@@ -981,7 +981,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             )
         if name in self.coords:
             if not values.equals(self.coords[name]):
-                raise ValueError(f"Duplicate and incompatiple coordinate: {name}.")
+                raise ValueError("Duplicate and incompatiple coordinate: %s." % name)
         else:
             self._coords[name] = values
             self._dim_lengths[name] = length or aesara.shared(len(values))
@@ -1019,18 +1019,14 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             New values for the shared variable.
         coords : optional, dict
             New coordinate values for dimensions of the shared variable.
-            Must be provided for all named dimensions that change in length
-            and already have coordinate values.
+            Must be provided for all named dimensions that change in length.
         """
         shared_object = self[name]
         if not isinstance(shared_object, SharedVariable):
             raise TypeError(
-                f"The variable `{name}` must be a `SharedVariable` (e.g. `pymc3.Data`) allow updating. "
+                f"The variable `{name}` must be defined as `pymc3.Data` inside the model to allow updating. "
                 f"The current type is: {type(shared_object)}"
             )
-
-        if isinstance(values, list):
-            values = np.array(values)
         values = pandas_to_array(values)
         dims = self.RV_dims.get(name, None) or ()
         coords = coords or {}
@@ -1052,11 +1048,10 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
             # Reject resizing if we already know that it would create shape problems.
             # NOTE: If there are multiple pm.Data containers sharing this dim, but the user only
             #       changes the values for one of them, they will run into shape problems nonetheless.
-            length_belongs_to = length_tensor.owner.inputs[0].owner.inputs[0]
-            if not isinstance(length_belongs_to, SharedVariable) and length_changed:
+            if not isinstance(length_tensor, ScalarSharedVariable) and length_changed:
                 raise ShapeError(
-                    f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
-                    f"because the dimension was initialized from '{length_belongs_to}' which is not a shared variable. "
+                    f"Resizing dimension {dname} with values of length {new_length} would lead to incompatibilities, "
+                    f"because the dimension was not initialized from a shared variable. "
                     f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
                     f"for example by a model variable.",
                     actual=new_length,
@@ -1119,10 +1114,7 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
                 and not isinstance(data, (GenTensorVariable, Minibatch))
                 and data.owner is not None
             ):
-                raise TypeError(
-                    "Variables that depend on other nodes cannot be used for observed data."
-                    f"The data variable was: {data}"
-                )
+                raise TypeError("Observed data cannot consist of symbolic variables.")
 
             data = pandas_to_array(data)
 
@@ -1142,7 +1134,6 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         ==========
         rv_var
             The random variable that is observed.
-            Its dimensionality must be compatible with the data already.
         data
             The observed data.
         dims: tuple
@@ -1154,10 +1145,21 @@ class Model(Factor, WithMemoization, metaclass=ContextMeta):
         name = rv_var.name
         data = pandas_to_array(data).astype(rv_var.dtype)
 
-        if data.ndim != rv_var.ndim:
-            raise ShapeError(
-                "Dimensionality of data and RV don't match.", actual=data.ndim, expected=rv_var.ndim
-            )
+        # The shapes of the observed random variable and its data might not
+        # match.  We need need to update the observed random variable's `size`
+        # (i.e. number of samples) so that it matches the data.
+
+        # Setting `size` produces a random variable with shape `size +
+        # support_shape`, where `len(support_shape) == op.ndim_supp`, we need
+        # to disregard the last `op.ndim_supp`-many dimensions when we
+        # determine the appropriate `size` value from `data.shape`.
+        ndim_supp = rv_var.owner.op.ndim_supp
+        if ndim_supp > 0:
+            new_size = data.shape[:-ndim_supp]
+        else:
+            new_size = data.shape
+
+        rv_var = change_rv_size(rv_var, new_size)
 
         if aesara.config.compute_test_value != "off":
             test_value = getattr(rv_var.tag, "test_value", None)
