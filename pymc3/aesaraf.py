@@ -45,7 +45,6 @@ from aesara.graph.op import Op, compute_test_value
 from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 from aesara.tensor.elemwise import Elemwise
 from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.shape import SpecifyShape
 from aesara.tensor.sharedvar import SharedVariable
 from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from aesara.tensor.var import TensorVariable
@@ -147,8 +146,6 @@ def change_rv_size(
         Expand the existing size by `new_size`.
 
     """
-    if isinstance(rv_var.owner.op, SpecifyShape):
-        rv_var = rv_var.owner.inputs[0]
     rv_node = rv_var.owner
     rng, size, dtype, *dist_params = rv_node.inputs
     name = rv_var.name
