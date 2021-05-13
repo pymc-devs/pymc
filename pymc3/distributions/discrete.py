@@ -40,6 +40,7 @@ from pymc3.distributions.dist_math import (
     normal_lcdf,
 )
 from pymc3.distributions.distribution import Discrete
+from pymc3.distributions.logp import _logcdf, _logp
 from pymc3.math import log1mexp, logaddexp, logsumexp, sigmoid
 
 __all__ = [
@@ -1306,7 +1307,7 @@ class ZeroInflatedPoisson(Discrete):
 
         logp_val = at.switch(
             at.gt(value, 0),
-            at.log(psi) + Poisson.logp(value, theta),
+            at.log(psi) + _logp(poisson, value, {}, theta),
             logaddexp(at.log1p(-psi), at.log(psi) - theta),
         )
 
@@ -1335,7 +1336,7 @@ class ZeroInflatedPoisson(Discrete):
         """
 
         return bound(
-            logaddexp(at.log1p(-psi), at.log(psi) + Poisson.logcdf(value, theta)),
+            logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(poisson, value, {}, theta)),
             0 <= value,
             0 <= psi,
             psi <= 1,
@@ -1436,7 +1437,7 @@ class ZeroInflatedBinomial(Discrete):
 
         logp_val = at.switch(
             at.gt(value, 0),
-            at.log(psi) + Binomial.logp(value, n, p),
+            at.log(psi) + _logp(binomial, value, {}, n, p),
             logaddexp(at.log1p(-psi), at.log(psi) + n * at.log1p(-p)),
         )
 
@@ -1472,7 +1473,7 @@ class ZeroInflatedBinomial(Discrete):
             )
 
         return bound(
-            logaddexp(at.log1p(-psi), at.log(psi) + Binomial.logcdf(value, n, p)),
+            logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(binomial, value, {}, n, p)),
             0 <= value,
             value <= n,
             0 <= psi,
@@ -1594,7 +1595,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
         return bound(
             at.switch(
                 at.gt(value, 0),
-                at.log(psi) + NegativeBinomial.logp(value, n, p),
+                at.log(psi) + _logp(nbinom, value, {}, n, p),
                 logaddexp(at.log1p(-psi), at.log(psi) + n * at.log(p)),
             ),
             0 <= value,
@@ -1626,7 +1627,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
             )
 
         return bound(
-            logaddexp(at.log1p(-psi), at.log(psi) + NegativeBinomial.logcdf(value, n, p)),
+            logaddexp(at.log1p(-psi), at.log(psi) + _logcdf(nbinom, value, {}, n, p)),
             0 <= value,
             0 <= psi,
             psi <= 1,
