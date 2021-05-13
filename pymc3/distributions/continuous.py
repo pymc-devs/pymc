@@ -1522,14 +1522,13 @@ class Laplace(Continuous):
     """
     rv_op = laplace
 
-    def __init__(self, mu, b, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.b = b = at.as_tensor_variable(floatX(b))
-        self.mean = self.median = self.mode = self.mu = mu = at.as_tensor_variable(floatX(mu))
-
-        self.variance = 2 * self.b ** 2
+    @classmethod
+    def dist(cls, mu, b, *args, **kwargs):
+        b = at.as_tensor_variable(floatX(b))
+        mu = at.as_tensor_variable(floatX(mu))
 
         assert_negative_support(b, "b", "Laplace")
+        return super().dist([mu, b], **kwargs)
 
     def logp(value, mu, b):
         """
