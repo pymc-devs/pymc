@@ -68,7 +68,7 @@ class TestARM5_4(SeededTest):
         P["1"] = 1
 
         with pm.Model() as model:
-            effects = pm.Normal("effects", mu=0, sigma=100, shape=len(P.columns))
+            effects = pm.Normal("effects", mu=0, sigma=100, size=len(P.columns))
             logit_p = at.dot(floatX(np.array(P)), effects)
             pm.Bernoulli("s", logit_p=logit_p, observed=floatX(data.switch.values))
         return model
@@ -94,7 +94,7 @@ class TestARM12_6(SeededTest):
             groupsd = pm.Uniform("groupsd", 0, 10.0)
             sd = pm.Uniform("sd", 0, 10.0)
             floor_m = pm.Normal("floor_m", 0, 5.0 ** -2.0)
-            means = pm.Normal("means", groupmean, groupsd ** -2.0, shape=len(self.obs_means))
+            means = pm.Normal("means", groupmean, groupsd ** -2.0, size=len(self.obs_means))
             pm.Normal("lr", floor * floor_m + means[group], sd ** -2.0, observed=lradon)
         return model
 
@@ -132,7 +132,7 @@ class TestARM12_6Uranium(SeededTest):
             sd = pm.Uniform("sd", 0, 10.0)
             floor_m = pm.Normal("floor_m", 0, 5.0 ** -2.0)
             u_m = pm.Normal("u_m", 0, 5.0 ** -2)
-            means = pm.Normal("means", groupmean, groupsd ** -2.0, shape=len(self.obs_means))
+            means = pm.Normal("means", groupmean, groupsd ** -2.0, size=len(self.obs_means))
             pm.Normal(
                 "lr",
                 floor * floor_m + means[group] + ufull * u_m,
@@ -310,11 +310,11 @@ class TestRSV(SeededTest):
             # Al Bashir hospital market share
             market_share = pm.Uniform("market_share", 0.5, 0.6)
             # Number of 1 y.o. in Amman
-            n_amman = pm.Binomial("n_amman", kids, amman_prop, shape=3)
+            n_amman = pm.Binomial("n_amman", kids, amman_prop, size=3)
             # Prior probability
-            prev_rsv = pm.Beta("prev_rsv", 1, 5, shape=3)
+            prev_rsv = pm.Beta("prev_rsv", 1, 5, size=3)
             # RSV in Amman
-            y_amman = pm.Binomial("y_amman", n_amman, prev_rsv, shape=3)
+            y_amman = pm.Binomial("y_amman", n_amman, prev_rsv, size=3)
             # Likelihood for number with RSV in hospital (assumes Pr(hosp | RSV) = 1)
             pm.Binomial("y_hosp", y_amman, market_share, observed=rsv_cases)
         return model

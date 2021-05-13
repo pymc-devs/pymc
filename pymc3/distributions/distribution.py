@@ -20,17 +20,21 @@ import warnings
 
 from abc import ABCMeta
 from copy import copy
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING
 
-import aesara
-import aesara.tensor as at
 import dill
 
-from aesara.graph.basic import Variable
 from aesara.tensor.random.op import RandomVariable
 
-from pymc3.aesaraf import change_rv_size, pandas_to_array
 from pymc3.distributions import _logcdf, _logp
+
+if TYPE_CHECKING:
+    from typing import Optional, Callable
+
+import aesara
+import aesara.graph.basic
+import aesara.tensor as at
+
 from pymc3.util import UNSET, get_repr_for_variable
 from pymc3.vartypes import string_types
 
@@ -47,10 +51,6 @@ vectorized_ppc = contextvars.ContextVar(
 )  # type: contextvars.ContextVar[Optional[Callable]]
 
 PLATFORM = sys.platform
-
-Shape = Union[int, Sequence[Union[str, type(Ellipsis)]], Variable]
-Dims = Union[str, Sequence[Union[str, None, type(Ellipsis)]]]
-Size = Union[int, Tuple[int, ...]]
 
 
 class _Unpickling:
@@ -115,111 +115,13 @@ class DistributionMeta(ABCMeta):
         return new_cls
 
 
-def _valid_ellipsis_position(items: Union[None, Shape, Dims, Size]) -> bool:
-    if items is not None and not isinstance(items, Variable) and Ellipsis in items:
-        if any(i == Ellipsis for i in items[:-1]):
-            return False
-    return True
-
-
-def _validate_shape_dims_size(
-    shape: Any = None, dims: Any = None, size: Any = None
-) -> Tuple[Optional[Shape], Optional[Dims], Optional[Size]]:
-    # Raise on unsupported parametrization
-    if shape is not None and dims is not None:
-        raise ValueError(f"Passing both `shape` ({shape}) and `dims` ({dims}) is not supported!")
-    if dims is not None and size is not None:
-        raise ValueError(f"Passing both `dims` ({dims}) and `size` ({size}) is not supported!")
-    if shape is not None and size is not None:
-        raise ValueError(f"Passing both `shape` ({shape}) and `size` ({size}) is not supported!")
-
-    # Raise on invalid types
-    if not isinstance(shape, (type(None), int, list, tuple, Variable)):
-        raise ValueError("The `shape` parameter must be an int, list or tuple.")
-    if not isinstance(dims, (type(None), str, list, tuple)):
-        raise ValueError("The `dims` parameter must be a str, list or tuple.")
-    if not isinstance(size, (type(None), int, list, tuple)):
-        raise ValueError("The `size` parameter must be an int, list or tuple.")
-
-    # Auto-convert non-tupled parameters
-    if isinstance(shape, int):
-        shape = (shape,)
-    if isinstance(dims, str):
-        dims = (dims,)
-    if isinstance(size, int):
-        size = (size,)
-
-    # Convert to actual tuples
-    if not isinstance(shape, (type(None), tuple, Variable)):
-        shape = tuple(shape)
-    if not isinstance(dims, (type(None), tuple)):
-        dims = tuple(dims)
-    if not isinstance(size, (type(None), tuple)):
-        size = tuple(size)
-
-    if not _valid_ellipsis_position(shape):
-        raise ValueError(
-            f"Ellipsis in `shape` may only appear in the last position. Actual: {shape}"
-        )
-    if not _valid_ellipsis_position(dims):
-        raise ValueError(f"Ellipsis in `dims` may only appear in the last position. Actual: {dims}")
-    if size is not None and Ellipsis in size:
-        raise ValueError(f"The `size` parameter cannot contain an Ellipsis. Actual: {size}")
-    return shape, dims, size
-
-
 class Distribution(metaclass=DistributionMeta):
     """Statistical distribution"""
 
     rv_class = None
     rv_op = None
 
-    def __new__(
-        cls,
-        name: str,
-        *args,
-        rng=None,
-        dims: Optional[Dims] = None,
-        testval=None,
-        observed=None,
-        total_size=None,
-        transform=UNSET,
-        **kwargs,
-    ) -> RandomVariable:
-        """Adds a RandomVariable corresponding to a PyMC3 distribution to the current model.
-
-        Note that all remaining kwargs must be compatible with ``.dist()``
-
-        Parameters
-        ----------
-        cls : type
-            A PyMC3 distribution.
-        name : str
-            Name for the new model variable.
-        rng : optional
-            Random number generator to use with the RandomVariable.
-        dims : tuple, optional
-            A tuple of dimension names known to the model.
-        testval : optional
-            Test value to be attached to the output RV.
-            Must match its shape exactly.
-        observed : optional
-            Observed data to be passed when registering the random variable in the model.
-            See ``Model.register_rv``.
-        total_size : float, optional
-            See ``Model.register_rv``.
-        transform : optional
-            See ``Model.register_rv``.
-        **kwargs
-            Keyword arguments that will be forwarded to ``.dist()``.
-            Most prominently: ``shape`` and ``size``
-
-        Returns
-        -------
-        rv : RandomVariable
-            The created RV, registered in the Model.
-        """
-
+    def __new__(cls, name, *args, **kwargs):
         try:
             from pymc3.model import Model
 
@@ -232,125 +134,40 @@ class Distribution(metaclass=DistributionMeta):
                 "for a standalone distribution."
             )
 
-        if not isinstance(name, string_types):
-            raise TypeError(f"Name needs to be a string but got: {name}")
+        rng = kwargs.pop("rng", None)
 
         if rng is None:
             rng = model.default_rng
 
-        _, dims, _ = _validate_shape_dims_size(dims=dims)
-        resize = None
+        if not isinstance(name, string_types):
+            raise TypeError(f"Name needs to be a string but got: {name}")
 
-        # Create the RV without specifying testval, because the testval may have a shape
-        # that only matches after replicating with a size implied by dims (see below).
-        rv_out = cls.dist(*args, rng=rng, testval=None, **kwargs)
-        n_implied = rv_out.ndim
+        data = kwargs.pop("observed", None)
 
-        # `dims` are only available with this API, because `.dist()` can be used
-        # without a modelcontext and dims are not tracked at the Aesara level.
-        if dims is not None:
-            if Ellipsis in dims:
-                # Auto-complete the dims tuple to the full length
-                dims = (*dims[:-1], *[None] * rv_out.ndim)
+        total_size = kwargs.pop("total_size", None)
 
-            n_resize = len(dims) - n_implied
+        dims = kwargs.pop("dims", None)
 
-            # All resize dims must be known already (numerically or symbolically).
-            unknown_resize_dims = set(dims[:n_resize]) - set(model.dim_lengths)
-            if unknown_resize_dims:
-                raise KeyError(
-                    f"Dimensions {unknown_resize_dims} are unknown to the model and cannot be used to specify a `size`."
-                )
+        if "shape" in kwargs:
+            raise DeprecationWarning("The `shape` keyword is deprecated; use `size`.")
 
-            # The numeric/symbolic resize tuple can be created using model.RV_dim_lengths
-            resize = tuple(model.dim_lengths[dname] for dname in dims[:n_resize])
-        elif observed is not None:
-            if not hasattr(observed, "shape"):
-                observed = pandas_to_array(observed)
-            n_resize = observed.ndim - n_implied
-            resize = tuple(observed.shape[d] for d in range(n_resize))
+        transform = kwargs.pop("transform", UNSET)
 
-        if resize:
-            # A batch size was specified through `dims`, or implied by `observed`.
-            rv_out = change_rv_size(rv_var=rv_out, new_size=resize, expand=True)
+        rv_out = cls.dist(*args, rng=rng, **kwargs)
 
-        if dims is not None:
-            # Now that we have a handle on the output RV, we can register named implied dimensions that
-            # were not yet known to the model, such that they can be used for size further downstream.
-            for di, dname in enumerate(dims[n_resize:]):
-                if not dname in model.dim_lengths:
-                    model.add_coord(dname, values=None, length=rv_out.shape[n_resize + di])
-
-        if testval is not None:
-            # Assigning the testval earlier causes trouble because the RV may not be created with the final shape already.
-            rv_out.tag.test_value = testval
-
-        return model.register_rv(rv_out, name, observed, total_size, dims=dims, transform=transform)
+        return model.register_rv(rv_out, name, data, total_size, dims=dims, transform=transform)
 
     @classmethod
-    def dist(
-        cls,
-        dist_params,
-        *,
-        shape: Optional[Shape] = None,
-        size: Optional[Size] = None,
-        testval=None,
-        **kwargs,
-    ) -> RandomVariable:
-        """Creates a RandomVariable corresponding to the `cls` distribution.
+    def dist(cls, dist_params, **kwargs):
 
-        Parameters
-        ----------
-        dist_params
-        shape : tuple, optional
-            A tuple of sizes for each dimension of the new RV.
+        testval = kwargs.pop("testval", None)
 
-            Ellipsis (...) may be used in the last position of the tuple,
-            and automatically expand to the shape implied by RV inputs.
-        size : int, tuple, Variable, optional
-            A scalar or tuple for replicating the RV in addition
-            to its implied shape/dimensionality.
-        testval : optional
-            Test value to be attached to the output RV.
-            Must match its shape exactly.
-
-        Returns
-        -------
-        rv : RandomVariable
-            The created RV.
-        """
-        if "dims" in kwargs:
-            raise NotImplementedError("The use of a `.dist(dims=...)` API is not yet supported.")
-
-        shape, _, size = _validate_shape_dims_size(shape=shape, size=size)
-
-        # Create the RV without specifying size or testval.
-        # The size will be expanded later (if necessary) and only then the testval fits.
-        rv_native = cls.rv_op(*dist_params, size=None, **kwargs)
-
-        if shape is None and size is None:
-            size = ()
-        elif shape is not None:
-            if isinstance(shape, Variable):
-                size = ()
-            else:
-                if Ellipsis in shape:
-                    size = tuple(shape[:-1])
-                else:
-                    size = tuple(shape[: len(shape) - rv_native.ndim])
-        # no-op conditions:
-        # `elif size is not None` (User already specified how to expand the RV)
-        # `else` (Unreachable)
-
-        if size:
-            rv_out = change_rv_size(rv_var=rv_native, new_size=size, expand=True)
-        else:
-            rv_out = rv_native
+        rv_var = cls.rv_op(*dist_params, **kwargs)
 
         if testval is not None:
-            rv_out.tag.test_value = testval
+            rv_var.tag.test_value = testval
 
-        return rv_out
+        return rv_var
 
     def _distr_parameters_for_repr(self):
         """Return the names of the parameters for this distribution (e.g. "mu"
