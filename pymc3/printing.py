@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import itertools
-import re
 
 from aesara.graph.basic import walk
 from aesara.tensor.basic import TensorVariable
@@ -131,25 +130,8 @@ def _str_for_expression(var, formatting):
 
 
 def _latex_escape(text):
-    """
-    :param text: a plain text message
-    :return: the message escaped to appear correctly in LaTeX
-    """
-    conv = {
-        "&": r"\&",
-        "%": r"\%",
-        "$": r"\$",
-        "#": r"\#",
-        "_": r"\_",
-        "{": r"\{",
-        "}": r"\}",
-        "~": r"\textasciitilde{}",
-        "^": r"\^{}",
-        "\\": r"\textbackslash{}",
-        "<": r"\textless{}",
-        ">": r"\textgreater{}",
-    }
-    regex = re.compile(
-        "|".join(re.escape(str(key)) for key in sorted(conv.keys(), key=lambda item: -len(item)))
-    )
-    return regex.sub(lambda match: conv[match.group()], text)
+    # Note that this is *NOT* a proper LaTeX escaper, on purpose. _repr_latex_ is
+    # primarily used in the context of Jupyter notebooks, which render using MathJax.
+    # MathJax is a subset of LaTeX proper, which expects only $ to be escaped. If we were
+    # to also escape e.g. _ (replace with \_), then "\_" will show up in the output, etc.
+    return text.replace("$", r"\$")
