@@ -1980,22 +1980,6 @@ class StudentT(Continuous):
         )
 
 
-class ParetoRV(RandomVariable):
-    name = "pareto"
-    ndim_supp = 0
-    ndims_params = [0, 0]
-    dtype = "int64"
-    _print_name = ("Pareto", "\\operatorname{Pareto}")
-
-    @classmethod
-    def rng_fn(cls, rng, alpha, m, size):
-        u = rng.uniform(size=size)
-        return m * (1.0 - u) ** (-1.0 / alpha)
-
-
-pareto = ParetoRV()
-
-
 class Pareto(Continuous):
     r"""
     Pareto log-likelihood.
