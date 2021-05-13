@@ -350,39 +350,6 @@ class TestShapeDimsSize:
         assert pm.Normal.dist(mu=mu, shape=(7, ...)).eval().shape == (7, 3)
         assert pm.Normal.dist(mu=mu, size=(4,)).eval().shape == (4, 3)
 
-    def test_auto_assert_shape(self):
-        with pytest.raises(AssertionError, match="will never match"):
-            pm.Normal.dist(mu=[1, 2], shape=[])
-
-        mu = at.vector(name="mu_input")
-        rv = pm.Normal.dist(mu=mu, shape=[3, 4])
-        f = aesara.function([mu], rv, mode=aesara.Mode("py"))
-        assert f([1, 2, 3, 4]).shape == (3, 4)
-
-        with pytest.raises(AssertionError, match=r"Got shape \(3, 2\), expected \(3, 4\)."):
-            f([1, 2])
-
-        # The `shape` can be symbolic!
-        s = at.vector(dtype="int32")
-        rv = pm.Uniform.dist(2, [4, 5], shape=s)
-        f = aesara.function([s], rv, mode=aesara.Mode("py"))
-        f(
-            [
-                2,
-            ]
-        )
-        with pytest.raises(
-            AssertionError,
-            match=r"Got 1 dimensions \(shape \(2,\)\), expected 2 dimensions with shape \(3, 4\).",
-        ):
-            f([3, 4])
-        with pytest.raises(
-            AssertionError,
-            match=r"Got 1 dimensions \(shape \(2,\)\), expected 0 dimensions with shape \(\).",
-        ):
-            f([])
-        pass
-
     def test_lazy_flavors(self):
 
         _validate_shape_dims_size(shape=5)
