@@ -23,20 +23,27 @@ from aesara.tensor.var import TensorConstant
 
 class PrettyPrintingTensorVariable(TensorVariable):
     def _str_repr(self, formatting="plain"):
-        print_name = self.name if self.name is not None else "<unnamed>"
-        dist_name = self.owner.op._print_name[0]
+        try:
+            print_name = self.name if self.name is not None else "<unnamed>"
+            dist_name = self.owner.op._print_name[0]
 
-        if "latex" in formatting:
-            print_name = r"\text{" + _latex_escape(print_name) + "}"
-            dist_name = self.owner.op._print_name[1]
+            if "latex" in formatting:
+                print_name = r"\text{" + _latex_escape(print_name) + "}"
+                dist_name = self.owner.op._print_name[1]
 
-        # first 3 args are always (rng, size, dtype), rest is relevant for distribution
-        dist_args = [_str_for_input_var(x, formatting=formatting) for x in self.owner.inputs[3:]]
+            # first 3 args are always (rng, size, dtype), rest is relevant for distribution
+            dist_args = [
+                _str_for_input_var(x, formatting=formatting) for x in self.owner.inputs[3:]
+            ]
 
-        if "latex" in formatting:
-            return r"${} \sim {}({})$".format(print_name, dist_name, ",~".join(dist_args))
-        else:
-            return r"{} ~ {}({})".format(print_name, dist_name, ", ".join(dist_args))
+            if "latex" in formatting:
+                return r"${} \sim {}({})$".format(print_name, dist_name, ",~".join(dist_args))
+            else:
+                return r"{} ~ {}({})".format(print_name, dist_name, ", ".join(dist_args))
+        except:
+            # we wrap the above in a try-block because Aesara can do some type juggling
+            # during e.g. computation of test values which makes self.owner is None
+            return super().__str__()
 
     def __latex__(self, formatting="latex", **kwargs):
         return self._str_repr(formatting=formatting)
