@@ -86,7 +86,7 @@ def test_logpt_incsubtensor(indices, shape):
     sigma = 0.001
     rng = aesara.shared(np.random.RandomState(232), borrow=True)
 
-    a = Normal.dist(mu, sigma, rng=rng)
+    a = Normal.dist(mu, sigma, shape=shape, rng=rng)
     a.name = "a"
 
     a_idx = at.set_subtensor(a[indices], data)
