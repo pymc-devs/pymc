@@ -105,7 +105,7 @@ def _str_for_constant(var, formatting):
     elif len(var.data.shape) == 1 and var.data.shape[0] == 1:
         return "{:.3g}".format(var.data[0])
     elif "latex" in formatting:
-        return r"\text{\textless{}constant\textgreater{}}"
+        return r"\text{<constant>}"
     else:
         return r"<constant>"
 
