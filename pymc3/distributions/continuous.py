@@ -152,10 +152,16 @@ class BoundedContinuous(Continuous):
 
         def transform_params(rv_var):
             _, _, _, *args = rv_var.owner.inputs
-            lower = args[cls.bound_args_indices[0]]
-            upper = args[cls.bound_args_indices[1]]
+
+            lower, upper = None, None
+            if cls.bound_args_indices[0] is not None:
+                lower = args[cls.bound_args_indices[0]]
+            if cls.bound_args_indices[1] is not None:
+                upper = args[cls.bound_args_indices[1]]
+
             lower = at.as_tensor_variable(lower) if lower is not None else None
             upper = at.as_tensor_variable(upper) if upper is not None else None
+
             return lower, upper
 
         return transforms.interval(transform_params)
@@ -1970,7 +1976,7 @@ class StudentT(Continuous):
         )
 
 
-class Pareto(Continuous):
+class Pareto(BoundedContinuous):
     r"""
     Pareto log-likelihood.
 
@@ -2016,6 +2022,7 @@ class Pareto(Continuous):
         Scale parameter (m > 0).
     """
     rv_op = pareto
+    bound_args_indices = (1, None)  # lower-bounded by `m`
 
     @classmethod
     def dist(
