@@ -1463,6 +1463,21 @@ class Exponential(PositiveContinuous):
         )
 
 
+class LaplaceRV(RandomVariable):
+    name = "laplace"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "floatX"
+    _print_name = ("Laplace", "\\operatorname{Laplace}")
+
+    @classmethod
+    def rng_fn(cls, rng, mu, b, size=None):
+        return stats.laplace.rvs(mu, b, size=size, random_state=rng)
+
+
+laplace = LaplaceRV()
+
+
 class Laplace(Continuous):
     r"""
     Laplace log-likelihood.
@@ -1505,6 +1520,7 @@ class Laplace(Continuous):
     b: float
         Scale parameter (b > 0).
     """
+    rv_op = laplace
 
     def __init__(self, mu, b, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1515,27 +1531,7 @@ class Laplace(Continuous):
 
         assert_negative_support(b, "b", "Laplace")
 
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Laplace distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # mu, b = draw_values([self.mu, self.b], point=point, size=size)
-        # return generate_samples(np.random.laplace, mu, b, dist_shape=self.shape, size=size)
-
-    def logp(self, value):
+    def logp(value, mu, b):
         """
         Calculate log-probability of Laplace distribution at specified value.
 
@@ -1549,12 +1545,9 @@ class Laplace(Continuous):
         -------
         TensorVariable
         """
-        mu = self.mu
-        b = self.b
-
         return -at.log(2 * b) - abs(value - mu) / b
 
-    def logcdf(self, value):
+    def logcdf(value, mu, b):
         """
         Compute the log of the cumulative distribution function for Laplace distribution
         at the specified value.
@@ -1569,12 +1562,10 @@ class Laplace(Continuous):
         -------
         TensorVariable
         """
-        a = self.mu
-        b = self.b
-        y = (value - a) / b
+        y = (value - mu) / b
         return bound(
             at.switch(
-                at.le(value, a),
+                at.le(value, mu),
                 at.log(0.5) + y,
                 at.switch(
                     at.gt(y, 1),
