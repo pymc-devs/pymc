@@ -1980,6 +1980,22 @@ class StudentT(Continuous):
         )
 
 
+class ParetoRV(RandomVariable):
+    name = "pareto"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "int64"
+    _print_name = ("Pareto", "\\operatorname{Pareto}")
+
+    @classmethod
+    def rng_fn(cls, rng, alpha, m, size):
+        u = rng.uniform(size=size)
+        return m * (1.0 - u) ** (-1.0 / alpha)
+
+
+pareto = ParetoRV()
+
+
 class Pareto(Continuous):
     r"""
     Pareto log-likelihood.
@@ -2038,30 +2054,6 @@ class Pareto(Continuous):
         assert_negative_support(m, "m", "Pareto")
 
         return super().dist([alpha, m], **kwargs)
-
-    def _random(self, alpha, m, size=None):
-        u = np.random.uniform(size=size)
-        return m * (1.0 - u) ** (-1.0 / alpha)
-
-    def random(self, point=None, size=None):
-        """
-        Draw random values from Pareto distribution.
-
-        Parameters
-        ----------
-        point: dict, optional
-            Dict of variable values on which random values are to be
-            conditioned (uses default point if not specified).
-        size: int, optional
-            Desired size of random sample (returns one sample if not
-            specified).
-
-        Returns
-        -------
-        array
-        """
-        # alpha, m = draw_values([self.alpha, self.m], point=point, size=size)
-        # return generate_samples(self._random, alpha, m, dist_shape=self.shape, size=size)
 
     def logp(
         value: Union[float, np.ndarray, TensorVariable],
