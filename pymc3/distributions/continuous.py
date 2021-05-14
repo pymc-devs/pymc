@@ -1814,7 +1814,7 @@ class Lognormal(PositiveContinuous):
 class StudentTRV(RandomVariable):
     name = "studentt"
     ndim_supp = 0
-    ndims_params = [0, 0]
+    ndims_params = [0, 0, 0]
     dtype = "floatX"
     _print_name = ("StudentT", "\\operatorname{StudentT}")
 
@@ -1897,9 +1897,6 @@ class StudentT(Continuous):
         nu = at.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
         lam = at.as_tensor_variable(lam)
-        sd = sigma = at.as_tensor_variable(sigma)
-        median = mode = mu = at.as_tensor_variable(mu)
-
         variance = at.switch((nu > 2) * 1, (1 / lam) * (nu / (nu - 2)), np.inf)
 
         assert_negative_support(lam, "lam (sigma)", "StudentT")
@@ -1932,9 +1929,6 @@ class StudentT(Continuous):
             nu > 0,
             sigma > 0,
         )
-
-    def _distr_parameters_for_repr(self):
-        return ["nu", "mu", "lam"]
 
     def logcdf(value, nu, mu, lam):
         """
